@@ -9,11 +9,15 @@ Copilot uses one provider-specific, headless CLI per run. The provider adapter s
 
 | Runtime | Headless command | Credential reference |
 | --- | --- | --- |
-| OpenCode | `opencode run --model provider/model [--variant effort]` | Provider credential, for example `OPENAI_API_KEY` |
-| Codex | `codex exec --ephemeral --skip-git-repo-check --model model --config 'model_provider="provider"' -` | `CODEX_API_KEY` or a controlled local ChatGPT session |
-| Cursor | `agent -p --output-format text --model model <prompt>` | `CURSOR_API_KEY` |
+| OpenCode | `opencode run --pure --agent managed-role --format json --model provider/model [--variant effort]` | Provider credential, for example `OPENAI_API_KEY` |
+| Codex | `codex exec --strict-config --ignore-user-config --ignore-rules --ephemeral --sandbox mode --model model ... -` | `OPENAI_API_KEY`, `CODEX_API_KEY`, or a controlled local ChatGPT session |
+| Cursor | `agent -p --output-format text --sandbox enabled --model model [--mode ask\|--force] <prompt>` | `CURSOR_API_KEY` |
 
-There is no user-configurable transport setting, managed server lifecycle, SDK, or provider fallback in the current architecture. Additional provider-specific flags can be supplied through the audited command override, but the transport contract remains fixed: Codex must end in `-` and receive the prompt through stdin; OpenCode and Cursor receive one positional prompt argument. Invalid transport shapes fail before the process starts. If the selected runtime is unavailable or fails, the run fails closed.
+There is no user-configurable argument or transport setting, managed server
+lifecycle, SDK, or provider fallback. Provider policies reconstruct every argv
+token: Codex ends in `-` and receives the prompt through stdin; OpenCode and
+Cursor receive one final positional prompt. Invalid selections fail before the
+process starts.
 
 At the process boundary, Copilot removes known credentials that do not belong to the selected runtime. Cursor receives `CURSOR_API_KEY` only when Cursor is the selected runtime; the enterprise credential is not used by the default Codex/OpenCode path. A local ChatGPT Codex session also takes precedence over exported Codex credentials. Repository verify commands run with a separate allowlisted environment and temporary `HOME`, without GitHub, agent, cloud, or auth-store credentials.
 
@@ -33,7 +37,10 @@ For OpenCode, Copilot validates and passes `openai/gpt-5.6-luna` explicitly. Rep
 
 ## Provisioning contract
 
-The runner must provide the selected executable and its credential reference before the Action invokes it. In GitHub Actions, the Action can provision the selected CLI using pinned version variables. In a prebuilt self-hosted image, install and verify the same pinned versions before accepting jobs.
+The runner must provide the selected executable and credential reference before
+the Action invokes it. The Action accepts only the exact versions in its runtime
+manifest: Codex `codex-cli 0.153.4`, OpenCode `1.18.3`, and Cursor Agent
+`2026.09.10-fd3934a`.
 
 Required checks:
 
@@ -63,7 +70,7 @@ The verifier reports executable availability, headless help status, and sanitize
 Use an explicit qualified model. For the recommended policy:
 
 ```bash
-opencode run --model openai/gpt-5.6-luna 'Reply with exactly READY.'
+opencode run --pure --model openai/gpt-5.6-luna 'Reply with exactly READY.'
 ```
 
 ### Codex

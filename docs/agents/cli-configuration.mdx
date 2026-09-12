@@ -23,6 +23,7 @@ with:
 | `agent-model-provider` | Provider that serves the selected model | `openai` |
 | `agent-model` | Model name without the provider prefix | `gpt-5.6-luna` |
 | `agent-effort` | Optional reasoning effort or provider-specific model variant | `high` |
+| `agent-executable` | Optional exact provider basename or absolute path | `/opt/agents/codex` |
 
 For OpenCode, these values produce the qualified model reference:
 
@@ -30,10 +31,10 @@ For OpenCode, these values produce the qualified model reference:
 openai/gpt-5.6-luna
 ```
 
-and the runtime command is equivalent to:
+and the managed runtime selection includes:
 
 ```bash
-opencode run --model openai/gpt-5.6-luna
+opencode run --pure --model openai/gpt-5.6-luna
 ```
 
 The default runtime is Codex. It accepts `CODEX_API_KEY` or a preinitialized local ChatGPT session on a controlled runner. OpenCode can independently use OpenAI as its model provider with `OPENAI_API_KEY`.
@@ -95,11 +96,14 @@ The built-in commands are provider-specific:
 
 | Runtime | Command |
 | --- | --- |
-| OpenCode | `opencode run --model provider/model [--variant effort]` |
-| Codex | `codex exec --ephemeral --skip-git-repo-check --model model --config 'model_provider="provider"' [--config 'model_reasoning_effort="effort"'] -` |
-| Cursor | `agent -p --output-format text --model model <prompt>` |
+| OpenCode | `opencode run --pure --agent managed-role --format json --model provider/model [--variant effort]` |
+| Codex | `codex exec --strict-config --ignore-user-config --ignore-rules --ephemeral --sandbox mode --model model --config 'model_provider="provider"' [--config 'model_reasoning_effort="effort"'] -` |
+| Cursor | `agent -p --output-format text --sandbox enabled --model model [--mode ask\|--force] <prompt>` |
 
-Custom commands are optional. They must remain compatible with the selected runtime and explicitly carry the selected model; Codex must carry `model_provider`, Codex/OpenCode must carry configured effort, and a Codex command must end with the standalone `-` stdin placeholder. Shell execution and automatic provider fallback are not used. The action rejects a command that violates these transport invariants before starting the CLI.
+These shapes are generated entirely by provider policy. Callers cannot add,
+remove, or reorder arguments. `agent-executable` accepts only the runtime's exact
+basename or an absolute path whose basename matches; it never accepts arguments.
+Shell execution and automatic provider fallback are not used.
 
 ## Credentials
 
@@ -108,19 +112,20 @@ Credentials are independent from allowlists:
 | Runtime/provider | Supported reference |
 | --- | --- |
 | OpenCode with OpenAI | `OPENAI_API_KEY` or a controlled local OpenCode login |
-| Codex | `CODEX_API_KEY` or a local ChatGPT Codex session on a controlled self-hosted runner |
+| Codex | `OPENAI_API_KEY`, `CODEX_API_KEY`, or a local ChatGPT Codex session on a controlled self-hosted runner |
 | Cursor | `CURSOR_API_KEY` |
 
 Never place tokens in `with`, command arguments, prompts, repository files, or logs. See [Agent CLI runners](/security-operations/operations/cli-runners), [Agent CLI provisioning](/security-operations/operations/cli-provisioning), and [Codex authentication and compliance](/security-operations/security/authentication-compliance) for operational details.
 
 ## Provisioning
 
-The Action provisions and verifies the selected CLI in GitHub Actions and, by default, reuses a preinstalled executable. If it is absent, it provisions it only when the corresponding version/checksum variable is present. Versions and the Cursor installer checksum are non-sensitive GitHub Variables:
+The Action verifies the selected CLI against the immutable runtime manifest and,
+by default, reuses a preinstalled executable only when its version matches.
+Codex and OpenCode can be installed at the manifest version; Cursor must be
+preinstalled because its public installer cannot reproduce an exact historical
+version. The only provisioning control is:
 
 ```text
-CODEX_VERSION
-OPENCODE_VERSION
-CURSOR_INSTALLER_SHA256
 AGENT_PROVISIONING=auto|always|disabled
 ```
 
@@ -133,9 +138,9 @@ The run fails before the agent starts when any of the following is invalid:
 - runtime provider;
 - model provider or model allowlist;
 - qualified model reference;
-- provider-specific command;
+- executable selection;
 - required CLI executable;
 - required credential reference;
-- pinned CLI provisioning input.
+- exact manifest version.
 
 This behavior is intentional: a run must never silently use another provider, another model, a repository-local default, or an unverified credential.

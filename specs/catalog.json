@@ -221,7 +221,7 @@
         "src/application/usecases/setup/doctor_use_case.ts",
         "src/application/policies/setup_questionnaire_policy.ts",
         "src/cli/setup_terminal_driver.ts",
-        "src/data/repository/agent_execution_policy.ts"
+        "src/application/policies/agent_execution/agent_execution_policy_dispatcher.ts"
       ],
       "tests": [
         "src/__tests__/api.test.ts",
@@ -233,7 +233,7 @@
         "src/application/usecases/steps/commit/bugbot/__tests__/load_bugbot_context_use_case.test.ts",
         "src/application/usecases/setup/__tests__/doctor_use_case.test.ts",
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
-        "src/data/repository/__tests__/agent_execution_policy.test.ts"
+        "src/application/policies/__tests__/agent_execution_plan_policy.test.ts"
       ],
       "documentation": [
         "docs/dependency-rules.md",
@@ -507,10 +507,10 @@
     {
       "id": "agent-runtime",
       "title": "Agent runtime, provider, model, and role routing",
-      "status": "as-built-baseline",
+      "status": "implemented",
       "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-11",
+      "lastVerified": "2026-09-12",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"
@@ -526,17 +526,23 @@
       ],
       "code": [
         "src/domain/agent.ts",
+        "src/domain/agent_execution_plan.ts",
         "src/application/policies/agent_task_activation_policy.ts",
         "src/application/policies/agent_configuration_validation_policy.ts",
-        "src/data/repository/agent_runtime_environment.ts",
+        "src/application/policies/agent_execution/agent_execution_policy_dispatcher.ts",
+        "src/infrastructure/agents/agent_execution_planner.ts",
+        "src/infrastructure/agents/agent_runtime_manifest.ts",
+        "src/infrastructure/agents/agent-runtime-manifest.json",
         "src/data/repository/agent_cli_provisioner.ts",
-        "src/data/repository/provider_specific_cli_adapters.ts"
+        "src/data/repository/agent_cli_execution.ts"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
         "src/application/policies/__tests__/agent_task_activation_policy.test.ts",
         "src/data/repository/__tests__/agent_cli_client.test.ts",
-        "src/data/repository/__tests__/provider_specific_cli_adapters.test.ts"
+        "src/application/policies/__tests__/agent_execution_plan_policy.test.ts",
+        "src/infrastructure/agents/__tests__/agent_execution_planner.test.ts",
+        "src/infrastructure/agents/__tests__/agent_runtime_manifest.test.ts"
       ],
       "documentation": [
         "docs/agents/execution-contract.mdx",

@@ -138,7 +138,8 @@ function definitions(): readonly QuestionDefinition[] {
     { stateId: 'agent-model-defaults', id: 'agents.findings.modelProvider', label: 'Model provider for all tasks', kind: 'choice', choices: MODEL_PROVIDERS },
     { stateId: 'agent-model-defaults', id: 'agents.findings.model', label: 'Model name for all tasks', kind: 'text' },
     { stateId: 'agent-model-defaults', id: 'agents.findings.effort', label: 'Reasoning effort for all tasks (empty uses provider default)', kind: 'text' },
-    { stateId: 'agent-model-defaults', id: 'agents.configureIndependently', label: 'Configure model provider, model, and effort independently for every task?', kind: 'boolean', read: () => false },
+    { stateId: 'agent-model-defaults', id: 'agents.findings.executable', label: 'Validated executable for all tasks (empty uses the manifest basename)', kind: 'text' },
+    { stateId: 'agent-model-defaults', id: 'agents.configureIndependently', label: 'Configure model provider, model, effort, and executable independently for every task?', kind: 'boolean', read: () => false },
     ...SETUP_AGENT_TASKS.filter((task) => task !== 'findings').flatMap((task) => agentOverrideQuestions(task)),
     ...repositoryQuestions(),
     ...deploymentQuestions(),
@@ -161,6 +162,7 @@ function agentOverrideQuestions(task: AgentTask): QuestionDefinition[] {
     { stateId: 'agent-role-overrides', id: `agents.${task}.modelProvider`, label: `${formatTask(task)} model provider`, kind: 'choice', choices: MODEL_PROVIDERS, applies },
     { stateId: 'agent-role-overrides', id: `agents.${task}.model`, label: `${formatTask(task)} model`, kind: 'text', applies },
     { stateId: 'agent-role-overrides', id: `agents.${task}.effort`, label: `${formatTask(task)} effort (empty uses provider default)`, kind: 'text', applies },
+    { stateId: 'agent-role-overrides', id: `agents.${task}.executable`, label: `${formatTask(task)} executable (empty uses the manifest basename)`, kind: 'text', applies },
   ];
 }
 
@@ -316,8 +318,8 @@ function applyAnswer(
 ): SetupConfiguration {
   const draft = cloneSetupConfiguration(configuration);
   if (question.id === 'agents.configureIndependently') return draft;
-  if (['agents.findings.modelProvider', 'agents.findings.model', 'agents.findings.effort'].includes(question.id)) {
-    const field = question.id.split('.')[2] as 'modelProvider' | 'model' | 'effort';
+  if (['agents.findings.modelProvider', 'agents.findings.model', 'agents.findings.effort', 'agents.findings.executable'].includes(question.id)) {
+    const field = question.id.split('.')[2] as 'modelProvider' | 'model' | 'effort' | 'executable';
     for (const task of SETUP_AGENT_TASKS) draft.agents[task] = { ...draft.agents[task], [field]: value as string };
     return draft;
   }

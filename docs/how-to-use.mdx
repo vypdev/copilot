@@ -359,9 +359,9 @@ When Repository Variables are enabled, setup creates the common `AGENT_*` contra
 the provider/model/effort variables for each configured `FINDINGS_*`, `FIXER_*`,
 `PLANNER_*`, `REVIEWER_*`, and `TESTER_*` role, the repository and
 project variables, and the AI/Bugbot variables. The workflow templates read
-`*_COMMAND` pass-through variables too, but custom commands are executable
-configuration and must be reviewed and added deliberately; setup does not invent
-them from a model selection.
+the optional `*_EXECUTABLE` selections too. Each value may contain only the
+provider's exact basename or an absolute path to that same executable; arguments,
+wrappers, and shell text are rejected.
 
 Release/hotfix setup also writes these bounded orchestration Variables:
 

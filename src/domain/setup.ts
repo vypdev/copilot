@@ -36,6 +36,7 @@ export interface SetupAgentRoleConfiguration {
     modelProvider: string;
     model: string;
     effort?: string;
+    executable?: string;
 }
 
 export type SetupAgentConfiguration = Record<AgentTask, SetupAgentRoleConfiguration>;

@@ -16,7 +16,7 @@ function execution(configured = true): Execution {
   return {
     ai: {
       getAgentConfiguration: () => configured
-        ? { provider: "codex", model: "model", command: "codex exec -" }
+        ? { provider: "codex", model: "model" }
         : undefined,
     },
   } as unknown as Execution;

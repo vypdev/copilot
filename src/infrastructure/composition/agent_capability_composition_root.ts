@@ -3,6 +3,8 @@ import type { FixerQueryPort } from '../../application/ports/agent_fixer_ports';
 import type { LanguageQueryPort } from '../../application/ports/agent_language_ports';
 import type { AgentCliPort } from '../agents/ports/agent_provider_ports';
 import { AgentCliClient } from '../../data/repository/agent_cli_client';
+import { AgentExecutionPlanner } from '../agents/agent_execution_planner';
+import { LoggerAgentExecutionObserverAdapter } from '../logging/logger_agent_execution_observer_adapter';
 
 import { FindingsAgentAdapter } from '../../data/repository/ai/findings_agent_adapter';
 import { FixerAgentAdapter } from '../../data/repository/ai/fixer_agent_adapter';
@@ -14,7 +16,10 @@ export interface AgentCapabilityCompositionInfrastructure {
 
 function defaultInfrastructure(): AgentCapabilityCompositionInfrastructure {
     return {
-        cli: new AgentCliClient(),
+        cli: new AgentCliClient(
+            new AgentExecutionPlanner(),
+            new LoggerAgentExecutionObserverAdapter(),
+        ),
     };
 }
 

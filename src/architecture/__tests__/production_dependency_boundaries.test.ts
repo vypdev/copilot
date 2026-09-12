@@ -26,7 +26,10 @@ function relativeModuleSpecifiers(source: string): string[] {
 
 function resolveTypeScriptImport(file: string, specifier: string): string | undefined {
     const target = resolve(dirname(file), specifier);
-    return [`${target}.ts`, join(target, 'index.ts')].find(existsSync);
+    const candidates = specifier.endsWith('.json')
+        ? [target]
+        : [`${target}.ts`, `${target}.json`, join(target, 'index.ts')];
+    return candidates.find(existsSync);
 }
 
 function layerPath(sourceRoot: string, file: string): string {

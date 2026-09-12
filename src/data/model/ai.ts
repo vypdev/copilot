@@ -1,5 +1,4 @@
 import { AgentConfiguration, AgentTask, AgentTaskConfiguration } from './agent';
-import { defaultAgentCommand } from '../../domain/agent_command';
 import {
     DEFAULT_PULL_REQUEST_DESCRIPTION_MODE,
     normalizePullRequestDescriptionMode,
@@ -32,8 +31,8 @@ export class Ai {
         bugbotCommentLimit: number,
         bugbotFixVerifyCommands: string[] = [],
         agentTasks: AgentTaskConfiguration = {
-            findings: { provider: 'codex', modelProvider: 'openai', model, command: defaultAgentCommand({ provider: 'codex', modelProvider: 'openai', model }) },
-            fixer: { provider: 'codex', modelProvider: 'openai', model, command: defaultAgentCommand({ provider: 'codex', modelProvider: 'openai', model }) },
+            findings: { provider: 'codex', modelProvider: 'openai', model },
+            fixer: { provider: 'codex', modelProvider: 'openai', model },
         },
         pullRequestDescriptionMode: PullRequestDescriptionMode = DEFAULT_PULL_REQUEST_DESCRIPTION_MODE,
         bugbotReviewConfiguration: Partial<BugbotReviewConfiguration> = DEFAULT_BUGBOT_REVIEW_CONFIGURATION,

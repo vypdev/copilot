@@ -31,7 +31,7 @@ export async function runRecommendStepsWorkflow(
     try {
         const configuration = param.ai.getAgentConfiguration('planner');
         if (!isAgentConfigurationReady(configuration)) {
-            return [failure(taskId, 'Missing agent CLI command and model.', 'configuration.invalid')];
+            return [failure(taskId, 'Missing agent model or executable.', 'configuration.invalid')];
         }
 
         const issueNumber = param.issueNumber;

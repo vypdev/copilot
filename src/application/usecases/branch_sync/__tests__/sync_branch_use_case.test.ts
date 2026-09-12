@@ -18,7 +18,7 @@ function execution(overrides: Record<string, unknown> = {}): Execution {
     pullRequest: { number: -1 },
     issueNumber: 42,
     ai: {
-      getAgentConfiguration: () => ({ provider: "codex", model: "model", command: "codex exec -" }),
+      getAgentConfiguration: () => ({ provider: "codex", model: "model" }),
       getBugbotFixVerifyCommands: () => ["pnpm test"],
     },
     ...overrides,
@@ -158,7 +158,7 @@ describe("SyncBranchUseCase", () => {
     const results = await context.useCase.invoke({
       execution: execution({
         ai: {
-          getAgentConfiguration: () => ({ provider: "codex", model: "model", command: "codex exec -" }),
+          getAgentConfiguration: () => ({ provider: "codex", model: "model" }),
           getBugbotFixVerifyCommands: () => commands,
         },
       }),

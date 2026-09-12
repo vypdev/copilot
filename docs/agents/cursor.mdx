@@ -12,17 +12,20 @@ Copilot supports Cursor at the command, provisioning, authentication, sandbox, t
 Copilot invokes Cursor non-interactively:
 
 ```text
-agent -p --output-format text --model <model> <prompt>
+agent -p --output-format text --sandbox enabled --model <model> [--mode ask|--force] <prompt>
 ```
 
-The Action can provision the official Cursor installer when all required inputs are present:
+Cursor must be preinstalled on the controlled runner and report the exact
+manifest version:
 
 ```text
-CURSOR_INSTALLER_SHA256
+2026.09.10-fd3934a
 CURSOR_API_KEY
 ```
 
-The installer checksum is verified before execution. Unofficial npm packages, shell fallbacks, and unverified downloads are not supported.
+Automatic installation cannot guarantee this immutable historical build and is
+therefore unsupported. Unofficial npm packages, shell fallbacks, and unverified
+downloads are not supported.
 
 ## Configuration
 
@@ -40,7 +43,15 @@ The runtime provider (`cursor`) is separate from the model provider and model. C
 
 ## Controlled execution environment
 
-Copilot creates a private temporary home and a default-deny Cursor configuration for every invocation. Analysis roles require sandbox mode and an approval boundary. The fixer role may use Cursor's non-interactive write mode only after Copilot's authorization and workspace-mutation preflight succeed. Repository-provided configuration cannot silently enable network access or prohibited shell tools.
+Copilot creates a private temporary home, an isolated `cli-config.json`, and the
+documented `~/.cursor/sandbox.json` for every invocation. Analysis roles use Ask
+mode plus an explicit `Write(**)` denial. The fixer role may use non-interactive
+write mode only after authorization and workspace preflight. Both modes deny the
+documented `Shell(*)`, `WebFetch(*)`, and `Mcp(*:*)` permission classes; the
+sandbox denies network by default and adds no external paths. Any repository
+authority-bearing project files (`cli.json`, `sandbox.json`, `mcp.json`, and
+`hooks.json`) are rejected rather than merged. Repository rules may still guide
+the task, but cannot widen the managed permission or sandbox boundary.
 
 Only the Cursor credential and a small allowlist of process variables reach the child process. GitHub tokens, unrelated provider credentials, cloud secrets, and arbitrary job environment values are removed.
 
@@ -66,3 +77,6 @@ Never put `CURSOR_API_KEY` in action inputs, command arguments, prompts, reposit
 - [Agent CLI configuration](/agents/cli-configuration)
 - [Agent CLI provisioning](/security-operations/operations/cli-provisioning)
 - [Agent CLI runners](/security-operations/operations/cli-runners)
+- [Official Cursor CLI configuration](https://cursor.com/docs/cli/reference/configuration)
+- [Official Cursor CLI permissions](https://cursor.com/docs/cli/reference/permissions)
+- [Official Cursor sandbox reference](https://cursor.com/docs/reference/sandbox)

@@ -13,9 +13,9 @@ jest.mock('../../data/repository/agent_cli_provisioner', () => ({
 jest.mock('../../utils/logger', () => ({ logInfo: jest.fn(), logDebugInfo: jest.fn() }));
 
 const tasks: AgentTaskConfiguration = {
-    findings: { provider: 'codex', modelProvider: 'openai', model: 'findings', command: 'codex findings' },
-    fixer: { provider: 'codex', modelProvider: 'openai', model: 'fixer', command: 'codex fixer' },
-    planner: { provider: 'opencode', modelProvider: 'anthropic', model: 'planner', command: 'opencode planner' },
+    findings: { provider: 'codex', modelProvider: 'openai', model: 'findings' },
+    fixer: { provider: 'codex', modelProvider: 'openai', model: 'fixer' },
+    planner: { provider: 'opencode', modelProvider: 'anthropic', model: 'planner' },
 };
 
 describe('prepareGithubAgentRuntime', () => {

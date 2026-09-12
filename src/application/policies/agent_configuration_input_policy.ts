@@ -1,6 +1,4 @@
 import type { AgentConfiguration, AgentTaskConfiguration } from '../../domain/agent';
-import { defaultAgentCommand } from '../../domain/agent_command';
-import { validateAgentCommand } from './agent_command_policy';
 import type { AgentConfigurationEnvironment } from '../ports/agent_configuration_ports';
 import {
     assertModelAllowlisted,
@@ -10,13 +8,14 @@ import {
     resolveModel,
     resolveModelProvider,
 } from './agent_configuration_validation_policy';
+import { validateAgentExecutableSelection } from './agent_executable_policy';
 
 export interface AgentTaskConfigurationValues {
     provider: string;
     modelProvider?: string;
     model: string;
     effort?: string;
-    command?: string;
+    executable?: string;
 }
 
 export function buildAgentConfiguration(
@@ -29,15 +28,15 @@ export function buildAgentConfiguration(
     const model = resolveModel(values.model);
     assertModelAllowlisted(modelProvider, model, environment);
     const effort = resolveEffort(values.effort);
-    const customCommand = values.command?.trim();
+    const executable = values.executable?.trim();
     const configuration = {
         provider,
         modelProvider,
         model,
         ...(effort ? { effort } : {}),
-        command: customCommand || defaultAgentCommand({ provider, modelProvider, model, effort }),
+        ...(executable ? { executable } : {}),
     } satisfies AgentConfiguration;
-    if (customCommand) validateAgentCommand(configuration);
+    validateAgentExecutableSelection(configuration);
     return configuration;
 }
 

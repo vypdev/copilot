@@ -17,7 +17,7 @@ const auditableFiles = [
 ];
 const auditableContent = auditableFiles.map(file => fs.readFileSync(file, 'utf8')).join('\\n');
 
-const agentFields = ['provider', 'model-provider', 'model', 'effort', 'command'];
+const agentFields = ['provider', 'model-provider', 'model', 'effort', 'executable'];
 const requiredInputs = [
   ...agentFields.map(field => `agent-${field}`),
   ...['planner', 'findings', 'reviewer', 'fixer', 'tester']
@@ -43,13 +43,19 @@ for (const [input, expected] of Object.entries(expectedDefaults)) {
 const forbidden = [
   'opencode-model', 'opencode-server-url', 'opencode-start-server',
   'OPENCODE_SERVER_URL', 'opencode serve', 'OPENCODE_DEFAULT_MODEL', 'OPENCODE_MODEL',
+  'agent-command', 'planner-command', 'findings-command', 'reviewer-command', 'fixer-command', 'tester-command',
+  'AGENT_COMMAND', 'PLANNER_COMMAND', 'FINDINGS_COMMAND', 'REVIEWER_COMMAND', 'FIXER_COMMAND', 'TESTER_COMMAND',
+  'CODEX_VERSION', 'OPENCODE_VERSION', 'CURSOR_INSTALLER_SHA256',
 ];
 for (const value of forbidden) {
   if (docs.includes(value) || auditableContent.includes(value)) {
     throw new Error(`Forbidden retired implementation/documentation reference: ${value}`);
   }
 }
-for (const value of ['AGENT_ALLOWED_MODEL_PROVIDERS', 'AGENT_ALLOWED_MODELS', 'opencode run --model']) {
+for (const value of [
+  'AGENT_ALLOWED_MODEL_PROVIDERS', 'AGENT_ALLOWED_MODELS', 'opencode run --pure',
+  'agent-executable', 'codex-cli 0.153.4', '1.18.3', '2026.09.10-fd3934a',
+]) {
   if (!docs.includes(value)) throw new Error(`Missing normative documentation reference: ${value}`);
 }
 for (const value of ['model_reasoning_effort', '--variant', 'AGENT_PROVISIONING']) {

@@ -10,33 +10,33 @@ export function buildAgentTasksFromInputs(read: AgentInputReader) {
         || (provider === 'cursor' ? 'cursor' : DEFAULT_MODEL_PROVIDER);
     const model = read(INPUT_KEYS.AGENT_MODEL)?.trim() || DEFAULT_AGENT_MODEL;
     const effort = read(INPUT_KEYS.AGENT_EFFORT) ?? '';
-    const command = read(INPUT_KEYS.AGENT_COMMAND) ?? '';
+    const executable = read(INPUT_KEYS.AGENT_EXECUTABLE) ?? '';
     const role = (name: string) => ({
         provider: read(`${name}-provider`),
         modelProvider: read(`${name}-model-provider`),
         model: read(`${name}-model`),
         effort: read(`${name}-effort`),
-        command: read(`${name}-command`),
+        executable: read(`${name}-executable`),
     });
     return buildAgentTasks({
         provider,
         modelProvider,
         model,
         effort,
-        command,
+        executable,
         findings: {
             provider: read(INPUT_KEYS.FINDINGS_PROVIDER),
             modelProvider: read(INPUT_KEYS.FINDINGS_MODEL_PROVIDER),
             model: read(INPUT_KEYS.FINDINGS_MODEL),
             effort: read(INPUT_KEYS.FINDINGS_EFFORT),
-            command: read(INPUT_KEYS.FINDINGS_COMMAND),
+            executable: read(INPUT_KEYS.FINDINGS_EXECUTABLE),
         },
         fixer: {
             provider: read(INPUT_KEYS.FIXER_PROVIDER),
             modelProvider: read(INPUT_KEYS.FIXER_MODEL_PROVIDER),
             model: read(INPUT_KEYS.FIXER_MODEL),
             effort: read(INPUT_KEYS.FIXER_EFFORT),
-            command: read(INPUT_KEYS.FIXER_COMMAND),
+            executable: read(INPUT_KEYS.FIXER_EXECUTABLE),
         },
         planner: role('planner'),
         reviewer: role('reviewer'),

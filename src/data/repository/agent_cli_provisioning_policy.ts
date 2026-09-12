@@ -1,10 +1,6 @@
-import type { AgentProvider } from '../model/agent';
+import { AGENT_EXECUTABLE_BASENAMES, type AgentProvider } from '../model/agent';
 
-export const DEFAULT_AGENT_EXECUTABLES: Readonly<Record<AgentProvider, string>> = {
-    codex: 'codex',
-    opencode: 'opencode',
-    cursor: 'agent',
-};
+export const DEFAULT_AGENT_EXECUTABLES = AGENT_EXECUTABLE_BASENAMES;
 
 export type AgentProvisioningMode = 'auto' | 'always' | 'disabled';
 

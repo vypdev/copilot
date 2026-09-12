@@ -29,7 +29,6 @@ function baseExecution(overrides: Record<string, unknown> = {}) {
             getAgentConfiguration: (task: 'findings' | 'fixer') => ({
                 provider: 'opencode',
                 model: 'model',
-                command: 'opencode run',
             }),
         },
         ...overrides,
@@ -68,8 +67,8 @@ describe("DoUserRequestUseCase", () => {
 
     it("returns empty results when OpenCode not configured", async () => {
         const exec = baseExecution();
-        (exec as { ai?: { getAgentConfiguration: (task: 'findings' | 'fixer') => { provider: 'opencode'; model: string; command?: string } } }).ai = {
-            getAgentConfiguration: () => ({ provider: 'opencode', model: 'model', command: '' }),
+        (exec as { ai?: { getAgentConfiguration: (task: 'findings' | 'fixer') => { provider: 'opencode'; model: string } } }).ai = {
+            getAgentConfiguration: () => ({ provider: 'opencode', model: '' }),
         };
 
         const results = await useCase.invoke({

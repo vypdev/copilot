@@ -1,68 +1,53 @@
+import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
-import { AgentCliError, type AgentCliRequest } from './agent_cli_contracts';
-import { enforceAgentExecutionPolicy } from './agent_execution_policy';
-import { prepareAgentRuntimeEnvironment } from './agent_runtime_environment';
-import { prepareAgentOutputSchema } from './agent_output_schema';
+import { lstatSync, readFileSync, realpathSync, rmSync, statSync } from 'node:fs';
+import { basename, dirname, isAbsolute, relative } from 'node:path';
+import { tmpdir } from 'node:os';
+import type { AgentExecutionPlan, AgentOutputProtocol } from '../../domain/agent_execution_plan';
+import { AgentCliError } from './agent_cli_contracts';
 
 const MAX_STDERR_BYTES = 8 * 1024;
 
-export interface PreparedAgentCliRequest extends AgentCliRequest {
-    executable: string;
-    args: string[];
-    promptMode: 'stdin' | 'argv';
-    maxOutputBytes: number;
-    maxPromptBytes: number;
-}
-
-export function runAgentCli(request: PreparedAgentCliRequest): Promise<string> {
+export function runAgentCli(plan: AgentExecutionPlan, prompt: string, signal?: AbortSignal): Promise<string> {
     return new Promise((resolve, reject) => {
-        const outputSchema = prepareAgentOutputSchema(request.provider, request.outputSchema);
-        let controlledArgs: string[];
-        let runtime: ReturnType<typeof prepareAgentRuntimeEnvironment>;
+        let runtimeDirectory: string | undefined;
         try {
-            controlledArgs = enforceAgentExecutionPolicy(
-                request.provider,
-                request.capability,
-                request.args,
-                outputSchema.path,
-            );
-            runtime = prepareAgentRuntimeEnvironment(
-                request.provider,
-                request.capability,
-                request.environment,
-                request.modelProvider,
-            );
+            runtimeDirectory = verifyOwnedRuntimeDirectory(plan.runtimeDirectory);
+            verifyAdmittedPlan(plan, runtimeDirectory);
+            if (Buffer.byteLength(prompt, 'utf8') > plan.maxPromptBytes) {
+                throw new AgentCliError(`Agent CLI prompt exceeded the ${plan.maxPromptBytes}-byte limit.`, 'configuration');
+            }
         } catch (error) {
-            outputSchema.cleanup();
-            reject(error);
+            if (runtimeDirectory) cleanupRuntimeDirectory(runtimeDirectory);
+            reject(error instanceof AgentCliError ? error : new AgentCliError('Agent execution plan integrity check failed.', 'configuration'));
             return;
         }
         let cleaned = false;
         const cleanup = () => {
             if (cleaned) return;
             cleaned = true;
-            runtime.cleanup();
-            outputSchema.cleanup();
+            cleanupRuntimeDirectory(runtimeDirectory);
         };
         const child = (() => {
             try {
-                return spawn(request.executable, request.promptMode === 'argv' ? [...controlledArgs, request.prompt] : controlledArgs, {
-                    cwd: request.cwd,
-                    env: runtime.environment,
+                return spawn(plan.executable, plan.promptMode === 'final-argv' ? [...plan.argv, prompt] : plan.argv, {
+                    cwd: plan.workspace,
+                    env: plan.environment,
                     stdio: ['pipe', 'pipe', 'pipe'],
                     shell: false,
                     detached: process.platform !== 'win32',
                 });
-            } catch (error: unknown) {
+            } catch {
                 cleanup();
-                reject(new AgentCliError(`Unable to start agent CLI: ${error instanceof Error ? error.message : String(error)}`, 'process'));
+                reject(new AgentCliError('Unable to start agent CLI.', 'process'));
                 return undefined;
             }
         })();
         if (!child) return;
-        const lifecycle = createProcessLifecycle(
+        const lifecycle = createAgentProcessLifecycle(
             child,
-            request,
+            plan,
+            signal,
             (value) => { cleanup(); resolve(value); },
             (error) => { cleanup(); reject(error); },
         );
@@ -71,19 +56,20 @@ export function runAgentCli(request: PreparedAgentCliRequest): Promise<string> {
         child.stdin.once('error', lifecycle.onStdinError);
         child.once('error', lifecycle.onError);
         child.once('close', lifecycle.onClose);
-        if (request.signal?.aborted) return lifecycle.abort();
-        request.signal?.addEventListener('abort', lifecycle.abort, { once: true });
-        child.stdin.end(request.promptMode === 'stdin' ? request.prompt : undefined);
+        if (signal?.aborted) return lifecycle.abort();
+        signal?.addEventListener('abort', lifecycle.abort, { once: true });
+        child.stdin.end(plan.promptMode === 'stdin' ? prompt : undefined);
     });
 }
 
-function createProcessLifecycle(
+export function createAgentProcessLifecycle(
     child: ReturnType<typeof spawn>,
-    request: PreparedAgentCliRequest,
+    plan: AgentExecutionPlan,
+    signal: AbortSignal | undefined,
     resolve: (value: string) => void,
     reject: (error: Error) => void,
 ) {
-    let stdout = '';
+    const stdoutChunks: Buffer[] = [];
     let stderrBytes = 0;
     let outputBytes = 0;
     let settled = false;
@@ -95,7 +81,7 @@ function createProcessLifecycle(
         settled = true;
         if (timers.timeout) clearTimeout(timers.timeout);
         if (timers.force) clearTimeout(timers.force);
-        request.signal?.removeEventListener('abort', abort);
+        signal?.removeEventListener('abort', abort);
         resolve(value);
     };
     const finishReject = (error: Error) => {
@@ -103,7 +89,7 @@ function createProcessLifecycle(
         settled = true;
         if (timers.timeout) clearTimeout(timers.timeout);
         if (timers.force) clearTimeout(timers.force);
-        request.signal?.removeEventListener('abort', abort);
+        signal?.removeEventListener('abort', abort);
         reject(error);
     };
     const beginTermination = (error: Error) => {
@@ -122,18 +108,23 @@ function createProcessLifecycle(
     const appendStdout = (chunk: Buffer) => {
         if (settled || terminationError) return;
         outputBytes += chunk.byteLength;
-        if (outputBytes > request.maxOutputBytes) {
-            beginTermination(new AgentCliError(`Agent CLI output exceeded the ${request.maxOutputBytes}-byte limit.`, 'output'));
+        if (outputBytes > plan.maxOutputBytes) {
+            beginTermination(new AgentCliError(`Agent CLI output exceeded the ${plan.maxOutputBytes}-byte limit.`, 'output'));
             return;
         }
-        stdout += chunk.toString();
+        stdoutChunks.push(chunk);
     };
     const appendStderr = (chunk: Buffer) => {
         if (settled || terminationError) return;
+        outputBytes += chunk.byteLength;
+        if (outputBytes > plan.maxOutputBytes) {
+            beginTermination(new AgentCliError(`Agent CLI output exceeded the ${plan.maxOutputBytes}-byte limit.`, 'output'));
+            return;
+        }
         stderrBytes = Math.min(stderrBytes + chunk.byteLength, MAX_STDERR_BYTES);
     };
     const onStdinError = () => beginTermination(new AgentCliError('Unable to send the prompt to the agent CLI.', 'process'));
-    const onError = (error: Error) => finishReject(new AgentCliError(`Unable to start agent CLI: ${error.message}`, 'process'));
+    const onError = () => finishReject(new AgentCliError('Unable to start agent CLI.', 'process'));
     const onClose = (code: number | null) => {
         if (terminationError) {
             finishReject(terminationError);
@@ -144,17 +135,96 @@ function createProcessLifecycle(
             finishReject(new AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75));
             return;
         }
-        const output = stdout.trim();
-        if (!output) {
-            finishReject(new AgentCliError('Agent CLI returned empty output.', 'output'));
-            return;
+        try {
+            finishResolve(decodeAgentCliOutput(plan.outputProtocol, Buffer.concat(stdoutChunks).toString('utf8')));
+        } catch (error) {
+            finishReject(error instanceof AgentCliError
+                ? error
+                : new AgentCliError('Agent CLI returned invalid output.', 'output'));
         }
-        finishResolve(output);
     };
     timers.timeout = setTimeout(() => {
-        beginTermination(new AgentCliError(`Agent CLI timed out after ${request.timeoutMs}ms.`, 'timeout'));
-    }, request.timeoutMs);
+        beginTermination(new AgentCliError(`Agent CLI timed out after ${plan.timeoutMs}ms.`, 'timeout'));
+    }, plan.timeoutMs);
     return { appendStdout, appendStderr, onStdinError, onError, onClose, abort };
+}
+
+export function decodeAgentCliOutput(protocol: AgentOutputProtocol, raw: string): string {
+    if (protocol === 'plain-text') {
+        const output = raw.trim();
+        if (!output) throw new AgentCliError('Agent CLI returned empty output.', 'output');
+        return output;
+    }
+    if (protocol === 'json-lines-text-events') return decodeJsonLinesTextEvents(raw);
+    return assertNeverOutputProtocol(protocol);
+}
+
+function decodeJsonLinesTextEvents(raw: string): string {
+    const lines = raw.split(/\r?\n/u).map(line => line.trim()).filter(Boolean);
+    const text: string[] = [];
+    for (const line of lines) {
+        let event: unknown;
+        try {
+            event = JSON.parse(line);
+        } catch {
+            throw new AgentCliError('Agent CLI returned malformed JSON event output.', 'output');
+        }
+        if (!event || typeof event !== 'object' || Array.isArray(event)) {
+            throw new AgentCliError('Agent CLI returned an invalid JSON event.', 'output');
+        }
+        const record = event as Record<string, unknown>;
+        const part = record.part;
+        if (record.type === 'text' && part && typeof part === 'object' && !Array.isArray(part)) {
+            const value = (part as Record<string, unknown>).text;
+            if (typeof value === 'string') text.push(value);
+        }
+    }
+    const output = text.join('').trim();
+    if (!output) throw new AgentCliError('Agent CLI returned no text completion events.', 'output');
+    return output;
+}
+
+function assertNeverOutputProtocol(protocol: never): never {
+    throw new AgentCliError(`Unsupported agent output protocol: ${String(protocol)}`, 'configuration');
+}
+
+function verifyOwnedRuntimeDirectory(requestedPath: string): string {
+    const runtimeDirectory = realpathSync(requestedPath);
+    const expectedParent = realpathSync(tmpdir());
+    const name = basename(runtimeDirectory);
+    const stats = statSync(runtimeDirectory);
+    if (lstatSync(requestedPath).isSymbolicLink()
+        || dirname(runtimeDirectory) !== expectedParent
+        || !/^copilot-agent-runtime-[A-Za-z0-9_-]{6}$/u.test(name)
+        || !stats.isDirectory()
+        || (stats.mode & 0o077) !== 0) {
+        throw new Error('Managed runtime directory is not an owned private execution directory.');
+    }
+    if (typeof process.getuid === 'function' && stats.uid !== process.getuid()) {
+        throw new Error('Managed runtime directory has an unexpected owner.');
+    }
+    return runtimeDirectory;
+}
+
+function verifyAdmittedPlan(plan: AgentExecutionPlan, runtimeDirectory: string): void {
+    for (const artifact of plan.artifacts) {
+        const path = realpathSync(artifact.path);
+        const relation = relative(runtimeDirectory, path);
+        if (lstatSync(artifact.path).isSymbolicLink()
+            || relation.startsWith('..')
+            || relation === ''
+            || isAbsolute(relation)) {
+            throw new Error('Managed artifact escaped its runtime directory.');
+        }
+        const stats = statSync(path);
+        if (!stats.isFile() || (stats.mode & 0o077) !== 0) throw new Error('Managed artifact permissions changed.');
+        const actual = createHash('sha256').update(readFileSync(path)).digest('hex');
+        if (actual !== artifact.sha256) throw new Error('Managed artifact hash changed.');
+    }
+}
+
+function cleanupRuntimeDirectory(runtimeDirectory: string): void {
+    rmSync(runtimeDirectory, { recursive: true, force: true });
 }
 
 function signalProcessTree(child: ReturnType<typeof spawn>, signal: NodeJS.Signals): void {

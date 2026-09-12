@@ -481,8 +481,8 @@ inputs:
   agent-model:
     description: "Selected model name without the provider prefix. The provider is configured separately with agent-model-provider."
     default: "gpt-5.6-luna"
-  agent-command:
-    description: "Optional executable command for the selected CLI agent. Defaults are model-aware: codex exec with --model and model_provider, opencode run --model provider/model, or agent -p --model. No fallback command is attempted."
+  agent-executable:
+    description: "Optional exact CLI basename or absolute executable path. Arguments, wrappers, and alternate basenames are rejected."
     default: ""
   findings-provider:
     description: "Optional provider override for findings."
@@ -497,8 +497,8 @@ inputs:
   findings-model:
     description: "Optional model override for findings."
     default: ""
-  findings-command:
-    description: "Optional CLI command override for findings."
+  findings-executable:
+    description: "Optional validated executable override for findings."
     default: ""
   fixer-provider:
     description: "Optional provider override for fixer."
@@ -513,8 +513,8 @@ inputs:
   fixer-model:
     description: "Optional model override for fixer."
     default: ""
-  fixer-command:
-    description: "Optional CLI command override for fixer."
+  fixer-executable:
+    description: "Optional validated executable override for fixer."
     default: ""
   planner-provider:
     description: "Optional provider override for planning and conversational commands."
@@ -528,8 +528,8 @@ inputs:
   planner-model:
     description: "Optional model override for planning and conversational commands."
     default: ""
-  planner-command:
-    description: "Optional CLI command override for planning."
+  planner-executable:
+    description: "Optional validated executable override for planning."
     default: ""
   reviewer-provider:
     description: "Optional provider override for pull-request review."
@@ -543,8 +543,8 @@ inputs:
   reviewer-model:
     description: "Optional model override for pull-request review."
     default: ""
-  reviewer-command:
-    description: "Optional CLI command override for pull-request review."
+  reviewer-executable:
+    description: "Optional validated executable override for pull-request review."
     default: ""
   tester-provider:
     description: "Optional provider override for future test-planning and verification tasks."
@@ -558,8 +558,8 @@ inputs:
   tester-model:
     description: "Optional model override for test tasks."
     default: ""
-  tester-command:
-    description: "Optional CLI command override for test tasks."
+  tester-executable:
+    description: "Optional validated executable override for test tasks."
     default: ""
   ai-pull-request-description-mode:
     description: "PR description policy: replace (full ownership), append (preserve human text), preserve (only explicit /copilot description), or disabled."

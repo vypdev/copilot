@@ -7,7 +7,7 @@ export interface ProgressPrerequisites {
 
 export function validateProgressPrerequisites(input: ProgressPrerequisites): string | undefined {
     if (!input.agentReady) {
-        return 'Missing required agent configuration. Provide a model and a valid CLI command.';
+        return 'Missing required agent configuration. Provide a model and a valid executable.';
     }
     if (input.issueNumber === -1) {
         return 'Issue number not found. Cannot check progress without an issue number.';

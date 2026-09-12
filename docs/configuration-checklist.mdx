@@ -11,7 +11,7 @@ description: Required checks before enabling Copilot automation.
 - [ ] `agent-effort` is set when the selected model/provider supports a specific effort or variant.
 - [ ] `AGENT_ALLOWED_MODEL_PROVIDERS` contains the selected model provider.
 - [ ] `AGENT_ALLOWED_MODELS` contains the exact qualified model.
-- [ ] `agent-command` is empty unless an audited command override is required.
+- [ ] `agent-executable` is omitted unless an exact basename or absolute executable path is required.
 - [ ] Secrets and Variables have been chosen independently as repository- or organization-scoped resources.
 - [ ] Organization-scoped resources use an intentional visibility (`selected`, `private`, or `all`) and the setup PAT has organization Actions permissions.
 - [ ] Existing organization resources are inherited deliberately; named repository overrides are listed when needed.

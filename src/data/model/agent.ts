@@ -5,4 +5,4 @@ export type {
     AgentTask,
     AgentTaskConfiguration,
 } from '../../domain/agent';
-export { isAgentConfigurationReady } from '../../domain/agent';
+export { AGENT_EXECUTABLE_BASENAMES, isAgentConfigurationReady } from '../../domain/agent';

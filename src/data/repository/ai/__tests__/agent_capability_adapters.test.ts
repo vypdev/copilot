@@ -4,12 +4,6 @@ import type { AgentConfiguration } from '../../../model/agent';
 
 const mockExecute = jest.fn();
 
-jest.mock('../../provider_cli_adapter', () => ({
-    ProviderCliAdapter: jest.fn().mockImplementation(() => ({
-        execute: mockExecute,
-    })),
-}));
-
 jest.mock('../../../../utils/logger', () => ({
     logError: jest.fn(),
 }));
@@ -19,9 +13,8 @@ describe('agent capability adapters', () => {
         provider: 'codex',
         modelProvider: 'openai',
         model: 'gpt-5',
-        command: 'codex exec --model gpt-5 --config model_provider=openai -',
     };
-    const infrastructure = { cli: { execute: jest.fn() } };
+    const infrastructure = { cli: { execute: mockExecute } };
 
     beforeEach(() => {
         jest.clearAllMocks();

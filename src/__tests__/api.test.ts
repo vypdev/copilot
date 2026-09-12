@@ -20,7 +20,7 @@ describe('Bugbot public API', () => {
       repository: { owner: 'acme', name: 'portable-project' },
       credential: { token: 'test-token' },
       target: { kind: 'branch', branch: 'feature/review' },
-      agent: { provider: 'codex', model: '', command: '' },
+      agent: { provider: 'codex', model: '' },
       configuration: {
         publicationMode: 'dry-run',
         effort: 'high',
@@ -55,7 +55,7 @@ describe('Bugbot public API', () => {
       repository: { owner: 'acme', name: 'repo' },
       credential: { token: 'test-token' },
       target: { kind: 'pull-request', number: 0, head: 'feature/review' },
-      agent: { provider: 'codex', model: 'model', command: 'codex exec -' },
+      agent: { provider: 'codex', model: 'model' },
     });
 
     await expect(review).rejects.toMatchObject({
@@ -81,7 +81,7 @@ describe('Bugbot public API', () => {
       repository: { owner: 'acme', name: 'repo' },
       credential: { token: 'test-token' },
       target: { kind: 'branch', branch: 'feature/review' },
-      agent: { provider: 'codex', model: 'model', command: 'codex exec -' },
+      agent: { provider: 'codex', model: 'model' },
       configuration: { organizationRules: [invalidRule] },
     } as unknown as BugbotReviewRequest);
 

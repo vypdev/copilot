@@ -26,28 +26,40 @@ jobs:
           PLANNER_PROVIDER: ${{ vars.PLANNER_PROVIDER }}
           REVIEWER_PROVIDER: ${{ vars.REVIEWER_PROVIDER }}
           TESTER_PROVIDER: ${{ vars.TESTER_PROVIDER }}
-          AGENT_COMMAND: ${{ vars.AGENT_COMMAND }}
+          AGENT_EXECUTABLE: ${{ vars.AGENT_EXECUTABLE }}
+          FINDINGS_EXECUTABLE: ${{ vars.FINDINGS_EXECUTABLE }}
+          FIXER_EXECUTABLE: ${{ vars.FIXER_EXECUTABLE }}
+          PLANNER_EXECUTABLE: ${{ vars.PLANNER_EXECUTABLE }}
+          REVIEWER_EXECUTABLE: ${{ vars.REVIEWER_EXECUTABLE }}
+          TESTER_EXECUTABLE: ${{ vars.TESTER_EXECUTABLE }}
         run: |
           set -euo pipefail
 
           providers=("$AGENT_PROVIDER" "$FINDINGS_PROVIDER" "$FIXER_PROVIDER" "$PLANNER_PROVIDER" "$REVIEWER_PROVIDER" "$TESTER_PROVIDER")
+          executables=("$AGENT_EXECUTABLE" "$FINDINGS_EXECUTABLE" "$FIXER_EXECUTABLE" "$PLANNER_EXECUTABLE" "$REVIEWER_EXECUTABLE" "$TESTER_EXECUTABLE")
           checked=""
-          for provider in "${providers[@]}"; do
+          for index in "${!providers[@]}"; do
+            provider="${providers[$index]}"
             [[ -z "${provider// }" ]] && continue
-            [[ " $checked " == *" $provider "* ]] && continue
-            checked="$checked $provider"
-            if [[ -n "${AGENT_COMMAND// }" && "$provider" == "$AGENT_PROVIDER" ]]; then
-              read -r executable _ <<< "$AGENT_COMMAND"
-              command -v "$executable"
-              echo "Configured agent command: $executable"
-              continue
-            fi
             case "$provider" in
-              opencode) command -v opencode; opencode --version >/dev/null; opencode run --help >/dev/null ;;
-              codex) command -v codex; codex --version >/dev/null; codex exec --help >/dev/null ;;
-              cursor) command -v agent; agent --version >/dev/null; agent --help >/dev/null ;;
+              opencode) expected_executable=opencode; expected_version=1.18.3 ;;
+              codex) expected_executable=codex; expected_version='codex-cli 0.153.4' ;;
+              cursor) expected_executable=agent; expected_version='2026.09.10-fd3934a' ;;
               *) echo "Unsupported agent provider: $provider" >&2; exit 1 ;;
             esac
+            executable="${executables[$index]:-${AGENT_EXECUTABLE:-$expected_executable}}"
+            [[ "${executable##*/}" == "$expected_executable" ]] || { echo "Invalid $provider executable basename." >&2; exit 1; }
+            if ! command -v "$executable" >/dev/null 2>&1; then
+              [[ "$executable" == "$expected_executable" ]] || { echo "Configured executable is missing: $executable" >&2; exit 1; }
+              case "$provider" in
+                codex) npm install --global '@openai/codex@0.153.4' ;;
+                opencode) npm install --global 'opencode-ai@1.18.3' ;;
+                cursor) echo 'Cursor Agent 2026.09.10-fd3934a must be preinstalled exactly.' >&2; exit 1 ;;
+              esac
+            fi
+            actual_version="$($executable --version | head -n 1)"
+            [[ "$actual_version" == "$expected_version" ]] || { echo "$provider version mismatch: expected $expected_version, received $actual_version" >&2; exit 1; }
+            [[ " $checked " == *" $provider "* ]] || checked="$checked $provider"
           done
 
           echo "Agent CLI contract passed for: $checked."

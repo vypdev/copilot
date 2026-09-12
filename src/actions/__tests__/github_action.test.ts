@@ -200,8 +200,8 @@ describe('runGitHubAction', () => {
     expect(mockMainRun).toHaveBeenCalledTimes(1);
     expect(mockMainRun.mock.calls[0][0].ai.getAgentConfiguration('planner')).toEqual(expect.objectContaining({
       model: '',
-      command: '',
     }));
+    expect(mockMainRun.mock.calls[0][0].ai.getAgentConfiguration('planner')).not.toHaveProperty('command');
   });
 
   it('fails closed when PAT identity cannot be resolved', async () => {

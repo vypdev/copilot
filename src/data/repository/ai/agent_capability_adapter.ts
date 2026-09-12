@@ -1,5 +1,4 @@
 import { AGENT_REQUEST_TIMEOUT_MS } from './agent_constants';
-import { ProviderCliAdapter } from '../provider_cli_adapter';
 
 import { getValidatedAgentConfiguration } from '../agent_configuration_policy';
 
@@ -12,10 +11,10 @@ export interface AgentCapabilityInfrastructure {
 }
 
 export abstract class AgentCapabilityAdapter {
-    protected readonly cliAdapter: ProviderCliAdapter;
+    protected readonly cliAdapter: AgentCliPort;
 
     constructor(infrastructure: AgentCapabilityInfrastructure) {
-        this.cliAdapter = new ProviderCliAdapter(infrastructure.cli);
+        this.cliAdapter = infrastructure.cli;
     }
 
     protected async execute<T>(request: {

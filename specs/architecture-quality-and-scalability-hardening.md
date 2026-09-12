@@ -1,6 +1,6 @@
 # Architecture Quality and Scalability Hardening
 
-- Status: In implementation — P0-A complete; P0-B, P1-A, and P1-B automated scope complete
+- Status: In implementation — P0-A complete; P0-B and P1-A through P1-C automated scope complete
 - Date: 2026-09-11
 - Last updated: 2026-09-12
 - Catalog capability ID: `architecture-quality-hardening`
@@ -58,7 +58,7 @@ Implementation ledger:
 | P0-B | implemented | workflow-contract, state-fence, handler, adapter, architecture, package, and coverage gates catalogued in `deployment-concurrency-and-state-fencing.md` | controlled live serialization evidence |
 | P1-A | implemented | canonical-selection, bounded-read, partial-coverage, eligibility, adapter, UX, documentation, and coverage evidence catalogued in `bugbot-context-selection-and-budgeting.md` | controlled GitHub UX evidence before first rollout |
 | P1-B | implemented | immutable questionnaire, raw terminal split, stable/skipped doctor report, query-only composition, narrow remote adapters, docs, and coverage gates | controlled GitHub permission-path evidence before first rollout |
-| P1-C | queued | implementation contract ready | implementation and acceptance evidence |
+| P1-C | implemented | exhaustive provider plans, exact runtime manifest/preflight, admitted-only process adapter, clean command-text removal, workflows/docs/catalog, and automated contract evidence | controlled provider sandbox smoke before first rollout |
 | P2 | queued | implementation contract ready | implementation and final audit evidence |
 
 The fixed safety rule is that a refactor MUST preserve observable product

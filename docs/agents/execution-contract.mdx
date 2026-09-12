@@ -1,32 +1,43 @@
 ---
 title: Agent execution contract
-description: Normative contract for runtime, model, command, authorization, and failure behavior.
+description: Normative contract for runtime, model, executable, authorization, and failure behavior.
 ---
+
 # Agent execution contract
 
-A run MUST resolve one complete tuple before invoking a CLI:
+A run resolves one complete structured selection before invoking a CLI:
 
 ```text
 runtime = agent-provider
 model = agent-model-provider/agent-model
-effort = agent-effort
-command = agent-command or the selected provider default
+effort = agent-effort (optional)
+executable = agent-executable or the runtime manifest basename
 ```
 
-The tuple is invalid if any required field is empty, malformed, outside policy, or inconsistent with the selected provider. `effort` is optional; when present it is mapped to the provider's native reasoning/variant option, and is also included as a provider-neutral execution preference where the CLI has no native flag. Validation is terminal. The implementation MUST NOT infer a missing model from a provider default.
+The selection is invalid when a required value is empty, malformed, outside an allowlist, inconsistent with the runtime, or not supported by the exact runtime manifest. Callers cannot provide command text, subcommands, flags, environment prefixes, wrapper scripts, response files, or raw argv. There is no compatibility path for those shapes.
 
-Every lifecycle role may override the complete tuple independently with `planner-*`, `findings-*`, `reviewer-*`, `fixer-*`, or `tester-*` inputs. Empty role fields inherit the common tuple. The selected runtime and model are resolved before an active task starts; inactive roles are neither provisioned nor authenticated.
-
-The built-in role assignment is:
+Every lifecycle role may override the selection independently with `planner-*`, `findings-*`, `reviewer-*`, `fixer-*`, or `tester-*`. Empty fields inherit the common selection. Inactive roles are neither authenticated nor provisioned.
 
 | Role | Responsibilities | Workspace mode |
 | --- | --- | --- |
-| `planner` | Help, recommendations, PR descriptions, plans, clarifications, estimates, and conversational answers | Read-only |
-| `findings` | Push analysis, progress, issue-context review, and intent classification | Read-only |
+| `planner` | Help, recommendations, descriptions, plans, and answers | Read-only |
+| `findings` | Push analysis, progress, context review, and classification | Read-only |
 | `reviewer` | Pull-request Bugbot analysis and review commands | Read-only |
-| `fixer` | Explicitly authorized Bugbot autofixes and repository-change requests | Workspace write |
+| `fixer` | Explicitly authorized file changes | Workspace write |
 | `tester` | Test-plan commands | Read-only |
+| language capability | Comment translation and language analysis | Read-only |
 
-Structured tasks declare a JSON Schema. Copilot validates every structured response locally for every runtime and additionally passes a compatible managed schema to Codex through its native structured-output flag. Invalid, oversized, or prose-wrapped JSON fails instead of being guessed or partially accepted.
+The runtime creates one complete `AgentExecutionPlan`. A compile-time exhaustive dispatcher calls an independent policy for Codex, OpenCode, or Cursor. The policy reconstructs all argv and default-deny provider configuration. Preflight then verifies the canonical repository root, executable ownership and permissions, exact CLI version, managed artifact hashes, hard limits, and secret-safe environment before `spawn` is possible.
 
-The contract is defined by `action.yml`, resolved by the input builder, authorized by the configuration policy, and executed by provider-specific adapters. See [Agent input reference](/agents/input-reference).
+All roles deny agent-tool network, approval escalation, MCP, plugins, subagents, session persistence, Git credentials, and ambient repository/user provider configuration. Only `fixer` receives workspace write access; trusted Copilot code remains responsible for validation, commit, push, publication, and GitHub mutation.
+
+The hard maxima are 15 minutes, 512 KiB of prompt bytes, and 4 MiB of combined process output. Structured tasks declare a JSON Schema. Copilot validates structured responses locally and also passes a compatible managed schema to Codex. Invalid, oversized, or prose-wrapped JSON is rejected.
+
+Each invocation emits bounded lifecycle observations for plan start, admitted
+preflight, and terminal execution. They include only provider, capability,
+manifest/version, workspace and output modes, artifact hashes, duration, byte
+count, and semantic result category. Prompts, response content, model names,
+argv, environment values, paths, raw stderr, and user identity are excluded by
+the observer contract.
+
+The exact supported manifest is Codex `codex-cli 0.153.4`, OpenCode `1.18.3`, and Cursor Agent `2026.09.10-fd3934a`. A different or unparseable version stops before the model process starts. See [Agent input reference](/agents/input-reference) and [Agent failure policy](/agents/failure-policy).

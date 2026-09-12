@@ -12,7 +12,7 @@ import {
     isLocalModelProvider,
     selectSafeAgentRuntimeEnvironment,
 } from './agent_credential_policy';
-import { parseAgentCommand } from '../../application/policies/agent_command_parser';
+import { getAgentRuntimeManifestEntry } from '../../infrastructure/agents/agent_runtime_manifest';
 
 export type AgentCredentialStatus = 'available' | 'missing' | 'not_required';
 
@@ -97,7 +97,9 @@ export function buildAgentCliEnvironment(
     if (hasLocalCodexSession) return isolatedEnvironment;
 
     for (const variable of allowedCredentialVariables(provider, modelProvider)) {
-        if (environment[variable] !== undefined) isolatedEnvironment[variable] = environment[variable];
+        if (environment[variable] === undefined) continue;
+        isolatedEnvironment[variable] = environment[variable];
+        break;
     }
     return isolatedEnvironment;
 }
@@ -116,9 +118,8 @@ export function checkAgentAuthentication(
     if (hasOpenCodeSession) return availableStatus(variables, 'Local OpenCode authentication available from its controlled auth store.');
     if (hasConfiguredCredential) return availableStatus(variables, `Local credentials available for ${configuration.provider}.`);
     if (configuration.provider === 'codex') {
-        const executable = configuration.command?.trim()
-            ? parseAgentCommand(configuration.command).executable
-            : 'codex';
+        const executable = configuration.executable?.trim()
+            || getAgentRuntimeManifestEntry(configuration.provider).executable;
         if (system.hasOperationalCodexLogin(executable, buildAgentCliEnvironment('codex', environment, configuration.modelProvider))) {
             return availableStatus(variables, 'Preinitialized Codex CLI login is operational on the runner.');
         }

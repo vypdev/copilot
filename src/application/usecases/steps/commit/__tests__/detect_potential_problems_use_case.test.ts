@@ -229,8 +229,8 @@ describe("DetectPotentialProblemsUseCase", () => {
   it("returns empty results when the findings CLI is not configured", async () => {
     const param = baseParam({
       ai: new Ai("", "opencode/model", false, [], false, "low", 20, [], {
-        findings: { provider: "opencode", model: "opencode/model", command: "" },
-        fixer: { provider: "opencode", model: "opencode/model", command: "" },
+        findings: { provider: "opencode", model: "" },
+        fixer: { provider: "opencode", model: "" },
       }),
     });
 

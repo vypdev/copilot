@@ -3885,8 +3885,9 @@ async function reconcileReviewState(input) {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isAgentConfigurationReady = void 0;
+exports.isAgentConfigurationReady = exports.AGENT_EXECUTABLE_BASENAMES = void 0;
 var agent_1 = __nccwpck_require__(9040);
+Object.defineProperty(exports, "AGENT_EXECUTABLE_BASENAMES", ({ enumerable: true, get: function () { return agent_1.AGENT_EXECUTABLE_BASENAMES; } }));
 Object.defineProperty(exports, "isAgentConfigurationReady", ({ enumerable: true, get: function () { return agent_1.isAgentConfigurationReady; } }));
 
 
@@ -3898,13 +3899,12 @@ Object.defineProperty(exports, "isAgentConfigurationReady", ({ enumerable: true,
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Ai = void 0;
-const agent_command_1 = __nccwpck_require__(7923);
 const pull_request_description_1 = __nccwpck_require__(5315);
 const review_configuration_1 = __nccwpck_require__(3994);
 class Ai {
     constructor(_configurationSource, model, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotMinSeverity, bugbotCommentLimit, bugbotFixVerifyCommands = [], agentTasks = {
-        findings: { provider: 'codex', modelProvider: 'openai', model, command: (0, agent_command_1.defaultAgentCommand)({ provider: 'codex', modelProvider: 'openai', model }) },
-        fixer: { provider: 'codex', modelProvider: 'openai', model, command: (0, agent_command_1.defaultAgentCommand)({ provider: 'codex', modelProvider: 'openai', model }) },
+        findings: { provider: 'codex', modelProvider: 'openai', model },
+        fixer: { provider: 'codex', modelProvider: 'openai', model },
     }, pullRequestDescriptionMode = pull_request_description_1.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE, bugbotReviewConfiguration = review_configuration_1.DEFAULT_BUGBOT_REVIEW_CONFIGURATION) {
         this.aiMembersOnly = aiMembersOnly;
         this.aiIgnoreFiles = aiIgnoreFiles;
@@ -4169,61 +4169,18 @@ exports.Result = Result;
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DEFAULT_AGENT_MODEL = exports.DEFAULT_MODEL_PROVIDER = exports.DEFAULT_AGENT_PROVIDER = void 0;
+exports.AGENT_EXECUTABLE_BASENAMES = exports.DEFAULT_AGENT_MODEL = exports.DEFAULT_MODEL_PROVIDER = exports.DEFAULT_AGENT_PROVIDER = void 0;
 exports.isAgentConfigurationReady = isAgentConfigurationReady;
 exports.DEFAULT_AGENT_PROVIDER = 'codex';
 exports.DEFAULT_MODEL_PROVIDER = 'openai';
 exports.DEFAULT_AGENT_MODEL = 'gpt-5.6-luna';
+exports.AGENT_EXECUTABLE_BASENAMES = {
+    codex: 'codex',
+    opencode: 'opencode',
+    cursor: 'agent',
+};
 function isAgentConfigurationReady(configuration) {
-    if (!configuration?.model.trim())
-        return false;
-    return Boolean(configuration.command?.trim());
-}
-
-
-/***/ }),
-
-/***/ 7923:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.defaultAgentCommand = defaultAgentCommand;
-function quote(value) {
-    if (/^[a-zA-Z0-9._:/-]+$/.test(value))
-        return value;
-    return `'${value.replace(/'/g, "'\\''")}'`;
-}
-/** Build the provider-specific, non-interactive command for an agent task. */
-function defaultAgentCommand(configuration) {
-    const model = configuration.model.trim();
-    const modelProvider = configuration.modelProvider?.trim() || 'openai';
-    const effort = configuration.effort?.trim();
-    switch (configuration.provider) {
-        case 'codex': {
-            const parts = [
-                'codex exec',
-                '--ephemeral',
-                '--skip-git-repo-check',
-                '--model',
-                quote(model),
-                '--config',
-                quote(`model_provider="${modelProvider}"`),
-            ];
-            if (effort)
-                parts.push('--config', quote(`model_reasoning_effort="${effort}"`));
-            parts.push('-');
-            return parts.join(' ');
-        }
-        case 'cursor':
-            return ['agent', '-p', '--output-format', 'text', '--model', quote(model)].join(' ');
-        case 'opencode': {
-            const parts = ['opencode', 'run', '--model', quote(`${modelProvider}/${model}`)];
-            if (effort)
-                parts.push('--variant', quote(effort));
-            return parts.join(' ');
-        }
-    }
+    return Boolean(configuration?.model.trim());
 }
 
 
@@ -6174,14 +6131,17 @@ function normalizeTarget(target) {
     };
 }
 function validateAgentConfiguration(agent) {
+    const allowedKeys = new Set(['provider', 'modelProvider', 'model', 'effort', 'executable']);
     if (!agent || typeof agent !== 'object'
+        || Object.keys(agent).some(key => !allowedKeys.has(key))
+        || !['codex', 'opencode', 'cursor'].includes(agent.provider)
         || typeof agent.model !== 'string'
-        || (agent.command !== undefined && typeof agent.command !== 'string')
+        || (agent.executable !== undefined && typeof agent.executable !== 'string')
         || (agent.modelProvider !== undefined && typeof agent.modelProvider !== 'string')
         || (agent.effort !== undefined && typeof agent.effort !== 'string')) {
         throw new application_error_1.ApplicationError('configuration.invalid', 'Agent configuration is invalid.');
     }
-    if (agent.model.length > 500 || (agent.command?.length ?? 0) > 20000
+    if (agent.model.length > 500 || (agent.executable?.length ?? 0) > 4096
         || (agent.modelProvider?.length ?? 0) > 100 || (agent.effort?.length ?? 0) > 100) {
         throw new application_error_1.ApplicationError('configuration.invalid', 'Agent configuration exceeds the supported limits.');
     }

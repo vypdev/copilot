@@ -19,9 +19,9 @@ Copilot provides extensive configuration options to customize your workflow. Use
     - `agent-model-provider`: provider serving the selected model (default: `openai`)
     - `agent-model`: model name without the provider prefix (for example `gpt-5.6-luna`)
     - `agent-effort`: optional reasoning effort or provider-specific model variant
-    - `agent-command`: optional provider-specific CLI command; custom commands must preserve explicit model selection
-    - `findings-provider`, `findings-model-provider`, `findings-model`, `findings-effort`, `findings-command`: optional findings override
-    - `fixer-provider`, `fixer-model-provider`, `fixer-model`, `fixer-effort`, `fixer-command`: optional fixer override
+    - `agent-executable`: optional exact provider executable basename or absolute path; arguments and wrappers are rejected
+    - `findings-provider`, `findings-model-provider`, `findings-model`, `findings-effort`, `findings-executable`: optional findings override
+    - `fixer-provider`, `fixer-model-provider`, `fixer-model`, `fixer-effort`, `fixer-executable`: optional fixer override
     - `AGENT_ALLOWED_MODEL_PROVIDERS`: optional comma-separated model-provider allowlist
     - `AGENT_ALLOWED_MODELS`: optional exact qualified-model allowlist
 
@@ -226,18 +226,18 @@ and `fixer-*` override that tuple for Bugbot analysis and autofix. The other rol
 are optional overrides: when at least one role-specific value is supplied, that
 role gets its own validated configuration; otherwise it inherits the common tuple.
 
-| Role | Provider | Model provider | Model | Effort | Command |
+| Role | Provider | Model provider | Model | Effort | Executable |
 | --- | --- | --- | --- | --- | --- |
-| Planner | `planner-provider` | `planner-model-provider` | `planner-model` | `planner-effort` | `planner-command` |
-| Findings | `findings-provider` | `findings-model-provider` | `findings-model` | `findings-effort` | `findings-command` |
-| Reviewer | `reviewer-provider` | `reviewer-model-provider` | `reviewer-model` | `reviewer-effort` | `reviewer-command` |
-| Fixer | `fixer-provider` | `fixer-model-provider` | `fixer-model` | `fixer-effort` | `fixer-command` |
-| Tester | `tester-provider` | `tester-model-provider` | `tester-model` | `tester-effort` | `tester-command` |
+| Planner | `planner-provider` | `planner-model-provider` | `planner-model` | `planner-effort` | `planner-executable` |
+| Findings | `findings-provider` | `findings-model-provider` | `findings-model` | `findings-effort` | `findings-executable` |
+| Reviewer | `reviewer-provider` | `reviewer-model-provider` | `reviewer-model` | `reviewer-effort` | `reviewer-executable` |
+| Fixer | `fixer-provider` | `fixer-model-provider` | `fixer-model` | `fixer-effort` | `fixer-executable` |
+| Tester | `tester-provider` | `tester-model-provider` | `tester-model` | `tester-effort` | `tester-executable` |
 
 `copilot setup` can configure the provider, model provider, model, and effort for
 these six roles independently. The setup workflow templates also accept the
-corresponding `*_COMMAND` variables when you deliberately define a custom command;
-custom commands are executable configuration and are not inferred automatically.
+corresponding `*_EXECUTABLE` variables. They select only the expected executable;
+Copilot always reconstructs the complete provider arguments and policy.
 
 ### Lifecycle labels
 

@@ -22,12 +22,12 @@ export function registerBugbotBenchmarkCommand(program: Command): void {
         .option('--agent-model-provider <provider>', 'Base model provider')
         .option('--agent-model <model>', 'Base model')
         .option('--agent-effort <effort>', 'Base effort')
-        .option('--agent-command <command>', 'Audited base command')
+        .option('--agent-executable <path>', 'Validated base executable')
         .option('--findings-provider <provider>', 'Findings runtime override')
         .option('--findings-model-provider <provider>', 'Findings model provider override')
         .option('--findings-model <model>', 'Findings model override')
         .option('--findings-effort <effort>', 'Findings effort override')
-        .option('--findings-command <command>', 'Audited findings command')
+        .option('--findings-executable <path>', 'Validated findings executable')
         .action(async (options: BugbotBenchmarkOptions) => {
             const configuration = buildDoAgentTasks(options).findings;
             const authentication = runAgentAuthenticationPreflight(configuration);

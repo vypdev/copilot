@@ -456,7 +456,7 @@ describe('mainRun', () => {
       isPush: true,
       commit: { commits: [{ id: 'commit-1' }] },
       ai: {
-        getAgentConfiguration: jest.fn(() => ({ model: 'model', command: 'agent' })),
+        getAgentConfiguration: jest.fn(() => ({ model: 'model' })),
         getPullRequestDescriptionMode: jest.fn(() => 'disabled'),
       },
     });

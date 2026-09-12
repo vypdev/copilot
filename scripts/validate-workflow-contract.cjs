@@ -70,10 +70,10 @@ const ZERO_OBJECT_ID = '0000000000000000000000000000000000000000';
 const MAJOR_ACTION_REFERENCE = /^[^/\s]+\/[^@\s]+@v[1-9]\d*$/;
 const currentCopilotManifest = yaml.load(readFileSync(path.join(repositoryRoot, 'action.yml'), 'utf8'));
 
-const BASE_AGENT_INPUTS = ['agent-provider', 'agent-model-provider', 'agent-model', 'agent-effort', 'agent-command'];
+const BASE_AGENT_INPUTS = ['agent-provider', 'agent-model-provider', 'agent-model', 'agent-effort', 'agent-executable'];
 const AGENT_ROLE_INPUTS = Object.freeze(Object.fromEntries(
   ['findings', 'fixer', 'planner', 'reviewer', 'tester'].map(role => [role, [
-    `${role}-provider`, `${role}-model-provider`, `${role}-model`, `${role}-effort`, `${role}-command`,
+    `${role}-provider`, `${role}-model-provider`, `${role}-model`, `${role}-effort`, `${role}-executable`,
   ]]),
 ));
 const WORKFLOW_AGENT_ROLES = Object.freeze({

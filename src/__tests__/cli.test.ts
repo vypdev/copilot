@@ -72,7 +72,7 @@ describe('CLI', () => {
     process.exitCode = undefined;
     process.env.AGENT_PROVIDER = 'opencode';
     process.env.AGENT_MODEL = 'test-model';
-    process.env.AGENT_COMMAND = 'opencode run --model openai/test-model';
+    process.env.AGENT_EXECUTABLE = 'opencode';
     process.env.AGENT_MODEL_PROVIDER = 'openai';
     process.env.OPENAI_API_KEY = 'test-key';
     exitSpy = jest.spyOn(process, 'exit').mockImplementation((() => {}) as () => never);

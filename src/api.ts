@@ -207,14 +207,17 @@ function normalizeTarget(target: BugbotReviewTarget): BugbotReviewTarget {
 }
 
 function validateAgentConfiguration(agent: AgentConfiguration): void {
+    const allowedKeys = new Set(['provider', 'modelProvider', 'model', 'effort', 'executable']);
     if (!agent || typeof agent !== 'object'
+        || Object.keys(agent).some(key => !allowedKeys.has(key))
+        || !['codex', 'opencode', 'cursor'].includes(agent.provider)
         || typeof agent.model !== 'string'
-        || (agent.command !== undefined && typeof agent.command !== 'string')
+        || (agent.executable !== undefined && typeof agent.executable !== 'string')
         || (agent.modelProvider !== undefined && typeof agent.modelProvider !== 'string')
         || (agent.effort !== undefined && typeof agent.effort !== 'string')) {
         throw new ApplicationError('configuration.invalid', 'Agent configuration is invalid.');
     }
-    if (agent.model.length > 500 || (agent.command?.length ?? 0) > 20_000
+    if (agent.model.length > 500 || (agent.executable?.length ?? 0) > 4_096
         || (agent.modelProvider?.length ?? 0) > 100 || (agent.effort?.length ?? 0) > 100) {
         throw new ApplicationError('configuration.invalid', 'Agent configuration exceeds the supported limits.');
     }

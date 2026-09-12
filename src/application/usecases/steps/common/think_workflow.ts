@@ -37,7 +37,7 @@ export async function runThinkWorkflow(
                     id: taskId,
                     success: false,
                     executed: false,
-                    errors: [new ApplicationError('configuration.invalid', 'Configured agent model or CLI command not found.')],
+                    errors: [new ApplicationError('configuration.invalid', 'Configured agent model or executable not found.')],
                 }),
             ];
         }

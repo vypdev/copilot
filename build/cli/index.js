@@ -50523,33 +50523,33 @@ function buildAgentTasksFromInputs(read) {
         || (provider === 'cursor' ? 'cursor' : agent_1.DEFAULT_MODEL_PROVIDER);
     const model = read(input_keys_1.INPUT_KEYS.AGENT_MODEL)?.trim() || agent_1.DEFAULT_AGENT_MODEL;
     const effort = read(input_keys_1.INPUT_KEYS.AGENT_EFFORT) ?? '';
-    const command = read(input_keys_1.INPUT_KEYS.AGENT_COMMAND) ?? '';
+    const executable = read(input_keys_1.INPUT_KEYS.AGENT_EXECUTABLE) ?? '';
     const role = (name) => ({
         provider: read(`${name}-provider`),
         modelProvider: read(`${name}-model-provider`),
         model: read(`${name}-model`),
         effort: read(`${name}-effort`),
-        command: read(`${name}-command`),
+        executable: read(`${name}-executable`),
     });
     return (0, agent_configuration_builder_1.buildAgentTasks)({
         provider,
         modelProvider,
         model,
         effort,
-        command,
+        executable,
         findings: {
             provider: read(input_keys_1.INPUT_KEYS.FINDINGS_PROVIDER),
             modelProvider: read(input_keys_1.INPUT_KEYS.FINDINGS_MODEL_PROVIDER),
             model: read(input_keys_1.INPUT_KEYS.FINDINGS_MODEL),
             effort: read(input_keys_1.INPUT_KEYS.FINDINGS_EFFORT),
-            command: read(input_keys_1.INPUT_KEYS.FINDINGS_COMMAND),
+            executable: read(input_keys_1.INPUT_KEYS.FINDINGS_EXECUTABLE),
         },
         fixer: {
             provider: read(input_keys_1.INPUT_KEYS.FIXER_PROVIDER),
             modelProvider: read(input_keys_1.INPUT_KEYS.FIXER_MODEL_PROVIDER),
             model: read(input_keys_1.INPUT_KEYS.FIXER_MODEL),
             effort: read(input_keys_1.INPUT_KEYS.FIXER_EFFORT),
-            command: read(input_keys_1.INPUT_KEYS.FIXER_COMMAND),
+            executable: read(input_keys_1.INPUT_KEYS.FIXER_EXECUTABLE),
         },
         planner: role('planner'),
         reviewer: role('reviewer'),
@@ -51925,32 +51925,32 @@ exports.INPUT_KEYS = {
     AGENT_MODEL_PROVIDER: 'agent-model-provider',
     AGENT_EFFORT: 'agent-effort',
     AGENT_MODEL: 'agent-model',
-    AGENT_COMMAND: 'agent-command',
+    AGENT_EXECUTABLE: 'agent-executable',
     FINDINGS_PROVIDER: 'findings-provider',
     FINDINGS_MODEL_PROVIDER: 'findings-model-provider',
     FINDINGS_EFFORT: 'findings-effort',
     FINDINGS_MODEL: 'findings-model',
-    FINDINGS_COMMAND: 'findings-command',
+    FINDINGS_EXECUTABLE: 'findings-executable',
     FIXER_PROVIDER: 'fixer-provider',
     FIXER_MODEL_PROVIDER: 'fixer-model-provider',
     FIXER_EFFORT: 'fixer-effort',
     FIXER_MODEL: 'fixer-model',
-    FIXER_COMMAND: 'fixer-command',
+    FIXER_EXECUTABLE: 'fixer-executable',
     PLANNER_PROVIDER: 'planner-provider',
     PLANNER_MODEL_PROVIDER: 'planner-model-provider',
     PLANNER_EFFORT: 'planner-effort',
     PLANNER_MODEL: 'planner-model',
-    PLANNER_COMMAND: 'planner-command',
+    PLANNER_EXECUTABLE: 'planner-executable',
     REVIEWER_PROVIDER: 'reviewer-provider',
     REVIEWER_MODEL_PROVIDER: 'reviewer-model-provider',
     REVIEWER_EFFORT: 'reviewer-effort',
     REVIEWER_MODEL: 'reviewer-model',
-    REVIEWER_COMMAND: 'reviewer-command',
+    REVIEWER_EXECUTABLE: 'reviewer-executable',
     TESTER_PROVIDER: 'tester-provider',
     TESTER_MODEL_PROVIDER: 'tester-model-provider',
     TESTER_EFFORT: 'tester-effort',
     TESTER_MODEL: 'tester-model',
-    TESTER_COMMAND: 'tester-command',
+    TESTER_EXECUTABLE: 'tester-executable',
     // AI configuration
     AI_PULL_REQUEST_DESCRIPTION_MODE: 'ai-pull-request-description-mode',
     AI_MEMBERS_ONLY: 'ai-members-only',
@@ -52286,202 +52286,6 @@ function hasTarget(execution) {
 
 /***/ }),
 
-/***/ 15044:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.parseAgentCommand = parseAgentCommand;
-const shellQuote = __importStar(__nccwpck_require__(75430));
-const application_error_1 = __nccwpck_require__(75999);
-/** Parses a literal agent command without allowing shell operators or substitutions. */
-function parseAgentCommand(command) {
-    const trimmed = command.trim();
-    if (!trimmed)
-        throw new application_error_1.ApplicationError('agent.policy-rejected', 'Agent CLI command must not be empty.');
-    const parsed = shellQuote.parse(trimmed, {});
-    const argv = parsed.filter((entry) => typeof entry === 'string');
-    if (argv.length !== parsed.length || argv.length === 0) {
-        throw new application_error_1.ApplicationError('agent.policy-rejected', 'Agent CLI command contains unsupported shell syntax. Use an executable and literal arguments only.');
-    }
-    return { executable: argv[0], args: argv.slice(1) };
-}
-
-
-/***/ }),
-
-/***/ 37011:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.defaultAgentCommand = void 0;
-exports.validateAgentCommand = validateAgentCommand;
-exports.cliInstallationHint = cliInstallationHint;
-const agent_command_1 = __nccwpck_require__(77923);
-Object.defineProperty(exports, "defaultAgentCommand", ({ enumerable: true, get: function () { return agent_command_1.defaultAgentCommand; } }));
-const agent_command_validation_policy_1 = __nccwpck_require__(84799);
-/** Validates a complete custom command against the selected provider configuration. */
-function validateAgentCommand(configuration) {
-    (0, agent_command_validation_policy_1.validateConfiguredAgentCommand)(configuration);
-}
-function cliInstallationHint(provider) {
-    switch (provider) {
-        case 'codex':
-            return 'Install the OpenAI Codex CLI and verify `codex exec --help` on the runner.';
-        case 'cursor':
-            return 'Install the Cursor CLI from https://cursor.com/install and verify `agent --help` on the runner.';
-        case 'opencode':
-            return 'Install OpenCode and verify `opencode run --help` on the runner.';
-    }
-}
-
-
-/***/ }),
-
-/***/ 84799:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.validateConfiguredAgentCommand = validateConfiguredAgentCommand;
-const application_error_1 = __nccwpck_require__(75999);
-const agent_command_parser_1 = __nccwpck_require__(15044);
-function validateConfiguredAgentCommand(configuration) {
-    const command = configuration.command?.trim();
-    if (!command)
-        throw new application_error_1.ApplicationError('agent.policy-rejected', `CLI command is required for ${configuration.provider}.`);
-    const { args } = (0, agent_command_parser_1.parseAgentCommand)(command);
-    validateCommandShape(configuration, args);
-    validateModelSelection(configuration, args);
-    validateProviderConfiguration(configuration, args);
-    validateEffortSelection(configuration, args);
-}
-function validateCommandShape(configuration, args) {
-    if (configuration.provider !== 'codex' && args.includes('-')) {
-        throw new application_error_1.ApplicationError('agent.policy-rejected', `${configuration.provider} command must not include the Codex stdin placeholder "-"; its prompt is passed as an argument.`);
-    }
-    if (configuration.provider === 'codex' && args.at(-1) !== '-') {
-        throw new application_error_1.ApplicationError('agent.policy-rejected', 'Codex command must end with the stdin placeholder "-".');
-    }
-    if (!hasFlag(args, '--model') && !hasFlag(args, '-m')) {
-        throw new application_error_1.ApplicationError('agent.policy-rejected', `${configuration.provider} command must select the model explicitly with --model.`);
-    }
-}
-function validateModelSelection(configuration, args) {
-    const expectedModel = configuration.provider === 'opencode'
-        ? `${configuration.modelProvider?.trim() || 'openai'}/${configuration.model.trim()}`
-        : configuration.model.trim();
-    const configuredModel = flagValue(args, ['--model', '-m']);
-    if (configuredModel !== expectedModel) {
-        throw new application_error_1.ApplicationError('agent.policy-rejected', `${configuration.provider} command must select configured model "${expectedModel}".`);
-    }
-}
-function validateProviderConfiguration(configuration, args) {
-    if (configuration.provider !== 'codex')
-        return;
-    if (!hasConfig(args, 'model_provider')) {
-        throw new application_error_1.ApplicationError('agent.policy-rejected', 'Codex command must select the model provider explicitly with --config model_provider=... .');
-    }
-    const expectedProvider = configuration.modelProvider?.trim() || 'openai';
-    if (configValue(args, 'model_provider') !== expectedProvider) {
-        throw new application_error_1.ApplicationError('agent.policy-rejected', `Codex command must select configured model provider "${expectedProvider}".`);
-    }
-}
-function validateEffortSelection(configuration, args) {
-    const effort = configuration.effort?.trim();
-    if (!effort)
-        return;
-    if (configuration.provider === 'codex') {
-        if (!hasConfig(args, 'model_reasoning_effort')) {
-            throw new application_error_1.ApplicationError('agent.policy-rejected', 'Codex command must select effort explicitly with --config model_reasoning_effort=... .');
-        }
-        if (configValue(args, 'model_reasoning_effort') !== effort) {
-            throw new application_error_1.ApplicationError('agent.policy-rejected', `Codex command must select configured effort "${effort}".`);
-        }
-        return;
-    }
-    if (configuration.provider === 'cursor') {
-        // Cursor's CLI does not expose a provider-independent effort flag.
-        // Keep the value in the domain configuration for future CLI support,
-        // but do not reject a valid custom command because of that advisory
-        // setting.
-        return;
-    }
-    if (!hasFlag(args, '--variant')) {
-        throw new application_error_1.ApplicationError('agent.policy-rejected', 'OpenCode command must select effort explicitly with --variant ... .');
-    }
-    if (flagValue(args, ['--variant']) !== effort) {
-        throw new application_error_1.ApplicationError('agent.policy-rejected', `OpenCode command must select configured effort "${effort}".`);
-    }
-}
-function hasFlag(args, flag) {
-    return args.some((argument, index) => (argument === flag && index < args.length - 1) || argument.startsWith(`${flag}=`));
-}
-function flagValue(args, flags) {
-    for (const [index, argument] of args.entries()) {
-        const inlineFlag = flags.find((flag) => argument.startsWith(`${flag}=`));
-        if (inlineFlag)
-            return argument.slice(inlineFlag.length + 1);
-        if (flags.includes(argument))
-            return args[index + 1];
-    }
-    return undefined;
-}
-function configValue(args, key) {
-    for (const [index, argument] of args.entries()) {
-        const value = argument === '--config' || argument === '-c' ? args[index + 1] : argument;
-        if (!value?.startsWith(`${key}=`))
-            continue;
-        return value.slice(key.length + 1).replace(/^['"]/, '').replace(/['"]$/, '');
-    }
-    return undefined;
-}
-function hasConfig(args, key) {
-    return args.some((argument, index) => ((argument === '--config' || argument === '-c')
-        && typeof args[index + 1] === 'string'
-        && args[index + 1].startsWith(`${key}=`)) || argument.startsWith(`${key}=`));
-}
-
-
-/***/ }),
-
 /***/ 7699:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -52491,9 +52295,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildAgentConfiguration = buildAgentConfiguration;
 exports.mergeAgentTaskValues = mergeAgentTaskValues;
 exports.buildAgentTaskConfiguration = buildAgentTaskConfiguration;
-const agent_command_1 = __nccwpck_require__(77923);
-const agent_command_policy_1 = __nccwpck_require__(37011);
 const agent_configuration_validation_policy_1 = __nccwpck_require__(60596);
+const agent_executable_policy_1 = __nccwpck_require__(12570);
 function buildAgentConfiguration(values, environment) {
     const provider = (0, agent_configuration_validation_policy_1.resolveAgentProvider)(values.provider.trim().toLowerCase());
     const modelProvider = (0, agent_configuration_validation_policy_1.resolveModelProvider)(values.modelProvider, environment, provider);
@@ -52501,16 +52304,15 @@ function buildAgentConfiguration(values, environment) {
     const model = (0, agent_configuration_validation_policy_1.resolveModel)(values.model);
     (0, agent_configuration_validation_policy_1.assertModelAllowlisted)(modelProvider, model, environment);
     const effort = (0, agent_configuration_validation_policy_1.resolveEffort)(values.effort);
-    const customCommand = values.command?.trim();
+    const executable = values.executable?.trim();
     const configuration = {
         provider,
         modelProvider,
         model,
         ...(effort ? { effort } : {}),
-        command: customCommand || (0, agent_command_1.defaultAgentCommand)({ provider, modelProvider, model, effort }),
+        ...(executable ? { executable } : {}),
     };
-    if (customCommand)
-        (0, agent_command_policy_1.validateAgentCommand)(configuration);
+    (0, agent_executable_policy_1.validateAgentExecutableSelection)(configuration);
     return configuration;
 }
 function mergeAgentTaskValues(values, overrides) {
@@ -52611,6 +52413,317 @@ function parseAllowlist(raw) {
 function assertIdentifier(value, message, pattern = /^[a-z0-9][a-z0-9_-]*$/i) {
     if (!pattern.test(value))
         throw new application_error_1.ApplicationError('configuration.invalid', message);
+}
+
+
+/***/ }),
+
+/***/ 12570:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.validateAgentExecutableSelection = validateAgentExecutableSelection;
+const agent_1 = __nccwpck_require__(89040);
+const application_error_1 = __nccwpck_require__(75999);
+/** Accepts only the provider basename or one absolute path to that binary. */
+function validateAgentExecutableSelection(configuration) {
+    const selected = configuration.executable?.trim();
+    if (!selected)
+        return;
+    const expected = agent_1.AGENT_EXECUTABLE_BASENAMES[configuration.provider];
+    const isExpectedBareName = selected === expected;
+    const isAbsolutePath = selected.startsWith('/') || /^[a-zA-Z]:[\\/]/.test(selected);
+    const selectedBasename = selected.split(/[\\/]/).at(-1);
+    const isExpectedAbsolutePath = isAbsolutePath && selectedBasename === expected;
+    if (!isExpectedBareName && !isExpectedAbsolutePath) {
+        throw new application_error_1.ApplicationError('agent.policy-rejected', `Agent executable must be the bare name "${expected}" or an absolute path with that basename.`);
+    }
+}
+
+
+/***/ }),
+
+/***/ 25690:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildProviderExecutionPolicy = buildProviderExecutionPolicy;
+const codex_execution_plan_policy_1 = __nccwpck_require__(87204);
+const cursor_execution_plan_policy_1 = __nccwpck_require__(93955);
+const opencode_execution_plan_policy_1 = __nccwpck_require__(99100);
+const provider_execution_policy_1 = __nccwpck_require__(50480);
+/** Static exhaustive dispatch: providers cannot register or bypass policy at runtime. */
+function buildProviderExecutionPolicy(input) {
+    const provider = input.configuration.provider;
+    switch (provider) {
+        case 'codex': return (0, codex_execution_plan_policy_1.buildCodexExecutionPolicy)(input);
+        case 'opencode': return (0, opencode_execution_plan_policy_1.buildOpenCodeExecutionPolicy)(input);
+        case 'cursor': return (0, cursor_execution_plan_policy_1.buildCursorExecutionPolicy)(input);
+    }
+    return (0, provider_execution_policy_1.assertNever)(provider);
+}
+
+
+/***/ }),
+
+/***/ 87204:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildCodexExecutionPolicy = buildCodexExecutionPolicy;
+const agent_execution_plan_1 = __nccwpck_require__(12253);
+const provider_execution_policy_1 = __nccwpck_require__(50480);
+function buildCodexExecutionPolicy(input) {
+    const { configuration } = input;
+    if (configuration.provider !== 'codex')
+        throw new Error('Codex policy requires Codex configuration.');
+    const workspaceMode = (0, agent_execution_plan_1.workspaceModeForCapability)(input.capability);
+    const outputSchemaPath = input.outputSchema
+        ? (0, provider_execution_policy_1.managedArtifactPath)(input.runtimeDirectory, 'response.schema.json')
+        : undefined;
+    const artifacts = outputSchemaPath ? [{
+            path: outputSchemaPath,
+            contents: JSON.stringify(input.outputSchema),
+            purpose: 'output-schema',
+        }] : [];
+    const argv = [
+        'exec',
+        '--strict-config',
+        '--ignore-user-config',
+        '--ignore-rules',
+        '--ephemeral',
+        '--sandbox', workspaceMode,
+        '--model', configuration.model,
+        '--config', `model_provider=${tomlString(configuration.modelProvider || 'openai')}`,
+        '--config', 'approval_policy="never"',
+        '--config', 'web_search="disabled"',
+        '--config', 'features.multi_agent=false',
+        '--config', 'features.skill_mcp_dependency_install=false',
+        '--config', 'history.persistence="none"',
+        '--config', 'sandbox_workspace_write.network_access=false',
+        '--config', 'sandbox_workspace_write.exclude_slash_tmp=true',
+        '--config', 'sandbox_workspace_write.exclude_tmpdir_env_var=true',
+        '--config', 'sandbox_workspace_write.writable_roots=[]',
+        '--config', 'allow_login_shell=false',
+        '--config', 'shell_environment_policy.inherit="none"',
+        '--config', 'project_doc_max_bytes=0',
+        '--config', 'mcp_servers={}',
+        '--config', 'hooks={}',
+        '--config', 'analytics.enabled=false',
+        ...(configuration.effort ? ['--config', `model_reasoning_effort=${tomlString(configuration.effort)}`] : []),
+        ...(outputSchemaPath ? ['--output-schema', outputSchemaPath] : []),
+        '-',
+    ];
+    return {
+        argv,
+        promptMode: 'stdin',
+        outputProtocol: 'plain-text',
+        workspaceMode,
+        output: outputSchemaPath ? 'native-and-local-json-schema' : 'text',
+        environment: {},
+        artifacts,
+    };
+}
+function tomlString(value) {
+    return JSON.stringify(value);
+}
+
+
+/***/ }),
+
+/***/ 93955:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildCursorExecutionPolicy = buildCursorExecutionPolicy;
+const agent_execution_plan_1 = __nccwpck_require__(12253);
+const provider_execution_policy_1 = __nccwpck_require__(50480);
+function buildCursorExecutionPolicy(input) {
+    const { configuration } = input;
+    if (configuration.provider !== 'cursor')
+        throw new Error('Cursor policy requires Cursor configuration.');
+    const workspaceMode = (0, agent_execution_plan_1.workspaceModeForCapability)(input.capability);
+    const fixer = workspaceMode === 'workspace-write';
+    const configDirectory = (0, provider_execution_policy_1.managedArtifactPath)(input.runtimeDirectory, 'cursor');
+    const cliConfigPath = (0, provider_execution_policy_1.managedArtifactPath)(configDirectory, 'cli-config.json');
+    const sandboxPath = (0, provider_execution_policy_1.managedArtifactPath)(input.runtimeDirectory, '.cursor/sandbox.json');
+    const cliConfig = {
+        version: 1,
+        editor: { vimMode: false },
+        approvalMode: 'allowlist',
+        permissions: {
+            allow: fixer ? ['Read(**)', 'Write(**)'] : ['Read(**)'],
+            deny: [
+                'Shell(*)', 'WebFetch(*)', 'Mcp(*:*)',
+                'Read(.env*)', 'Read(**/.env*)', 'Read(**/.git/**)',
+                ...(fixer ? [] : ['Write(**)']),
+                'Write(.env*)', 'Write(**/.env*)',
+                'Write(.git/**)', 'Write(**/.git/**)',
+            ],
+        },
+        sandbox: { mode: 'enabled', networkAccess: 'deny' },
+        notifications: false,
+        suggestNextPrompt: false,
+        attribution: { attributeCommitsToAgent: false, attributePRsToAgent: false },
+    };
+    const sandbox = {
+        type: fixer ? 'workspace_readwrite' : 'workspace_readonly',
+        additionalReadwritePaths: [],
+        additionalReadonlyPaths: [],
+        disableTmpWrite: true,
+        enableSharedBuildCache: false,
+        networkPolicyStrict: true,
+        networkPolicy: { default: 'deny', allow: [], deny: [] },
+    };
+    const artifacts = [
+        { path: cliConfigPath, contents: JSON.stringify(cliConfig), purpose: 'provider-config' },
+        { path: sandboxPath, contents: JSON.stringify(sandbox), purpose: 'sandbox-config' },
+        ...(input.outputSchema ? [{
+                path: (0, provider_execution_policy_1.managedArtifactPath)(input.runtimeDirectory, 'response.schema.json'),
+                contents: JSON.stringify(input.outputSchema),
+                purpose: 'output-schema',
+            }] : []),
+    ];
+    return {
+        argv: [
+            '-p', '--output-format', 'text', '--sandbox', 'enabled', '--model', configuration.model,
+            ...(fixer ? ['--force'] : ['--mode', 'ask']),
+        ],
+        promptMode: 'final-argv',
+        outputProtocol: 'plain-text',
+        workspaceMode,
+        output: input.outputSchema ? 'local-json-schema' : 'text',
+        environment: {
+            CURSOR_CONFIG_DIR: configDirectory,
+            HOME: input.runtimeDirectory,
+        },
+        artifacts,
+    };
+}
+
+
+/***/ }),
+
+/***/ 99100:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildOpenCodeExecutionPolicy = buildOpenCodeExecutionPolicy;
+const agent_execution_plan_1 = __nccwpck_require__(12253);
+const provider_execution_policy_1 = __nccwpck_require__(50480);
+const READONLY_AGENT = 'copilot-controlled-readonly';
+const FIXER_AGENT = 'copilot-controlled-fixer';
+function buildOpenCodeExecutionPolicy(input) {
+    const { configuration } = input;
+    if (configuration.provider !== 'opencode')
+        throw new Error('OpenCode policy requires OpenCode configuration.');
+    const workspaceMode = (0, agent_execution_plan_1.workspaceModeForCapability)(input.capability);
+    const fixer = workspaceMode === 'workspace-write';
+    const agentName = fixer ? FIXER_AGENT : READONLY_AGENT;
+    const permission = {
+        '*': 'deny',
+        read: 'allow',
+        glob: 'allow',
+        grep: 'allow',
+        list: 'allow',
+        lsp: 'deny',
+        edit: fixer ? 'allow' : 'deny',
+        bash: 'deny',
+        webfetch: 'deny',
+        websearch: 'deny',
+        task: 'deny',
+        skill: 'deny',
+        question: 'deny',
+        external_directory: 'deny',
+    };
+    const configDirectory = (0, provider_execution_policy_1.managedArtifactPath)(input.runtimeDirectory, 'opencode');
+    const configPath = (0, provider_execution_policy_1.managedArtifactPath)(configDirectory, 'opencode.json');
+    const config = {
+        $schema: 'https://opencode.ai/config.json',
+        autoupdate: false,
+        share: 'disabled',
+        plugin: [],
+        mcp: {},
+        instructions: [],
+        command: {},
+        lsp: false,
+        snapshot: false,
+        subagent_depth: 0,
+        permission,
+        default_agent: agentName,
+        enabled_providers: [configuration.modelProvider || 'openai'],
+        agent: {
+            [agentName]: {
+                description: 'Controlled non-interactive repository automation agent.',
+                mode: 'primary',
+                permission,
+            },
+        },
+    };
+    const artifacts = [{
+            path: configPath,
+            contents: JSON.stringify(config),
+            purpose: 'provider-config',
+        }, ...(input.outputSchema ? [{
+                path: (0, provider_execution_policy_1.managedArtifactPath)(input.runtimeDirectory, 'response.schema.json'),
+                contents: JSON.stringify(input.outputSchema),
+                purpose: 'output-schema',
+            }] : [])];
+    return {
+        argv: [
+            'run', '--pure', '--agent', agentName, '--format', 'json',
+            '--model', `${configuration.modelProvider || 'openai'}/${configuration.model}`,
+            ...(configuration.effort ? ['--variant', configuration.effort] : []),
+        ],
+        promptMode: 'final-argv',
+        outputProtocol: 'json-lines-text-events',
+        workspaceMode,
+        output: input.outputSchema ? 'local-json-schema' : 'text',
+        environment: {
+            OPENCODE_CONFIG: configPath,
+            OPENCODE_CONFIG_DIR: configDirectory,
+            OPENCODE_CONFIG_CONTENT: JSON.stringify(config),
+            OPENCODE_PERMISSION: JSON.stringify(permission),
+            OPENCODE_DISABLE_DEFAULT_PLUGINS: 'true',
+            OPENCODE_DISABLE_AUTOUPDATE: 'true',
+            OPENCODE_DISABLE_LSP_DOWNLOAD: 'true',
+            OPENCODE_DISABLE_CLAUDE_CODE: 'true',
+            OPENCODE_DISABLE_CLAUDE_CODE_PROMPT: 'true',
+            OPENCODE_DISABLE_CLAUDE_CODE_SKILLS: 'true',
+            OPENCODE_ENABLE_EXA: 'false',
+            OPENCODE_ENABLE_PARALLEL: 'false',
+        },
+        artifacts,
+    };
+}
+
+
+/***/ }),
+
+/***/ 50480:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.assertNever = assertNever;
+exports.managedArtifactPath = managedArtifactPath;
+function assertNever(value) {
+    throw new Error(`Unsupported agent provider: ${String(value)}`);
+}
+/** Build a child path deterministically without introducing filesystem authority. */
+function managedArtifactPath(runtimeDirectory, relativePath) {
+    return `${runtimeDirectory.replace(/[\\/]+$/u, '')}/${relativePath}`;
 }
 
 
@@ -55032,6 +55145,7 @@ function createDefaultSetupConfiguration() {
         modelProvider: agent_1.DEFAULT_MODEL_PROVIDER,
         model: agent_1.DEFAULT_AGENT_MODEL,
         effort: '',
+        executable: '',
     });
     const agents = Object.fromEntries(exports.SETUP_AGENT_TASKS.map(task => [task, defaultRole()]));
     const features = Object.fromEntries(Object.keys(exports.SETUP_FEATURE_DESCRIPTIONS).map(feature => [feature, feature !== 'inactiveIssueClosure']));
@@ -55194,6 +55308,7 @@ function buildSetupRepositoryVariables(configuration) {
     add('AGENT_MODEL_PROVIDER', base.modelProvider);
     add('AGENT_MODEL', base.model);
     add('AGENT_EFFORT', base.effort);
+    add('AGENT_EXECUTABLE', base.executable);
     add('AGENT_PROVISIONING', configuration.ai.provisioningMode);
     add('AGENT_ALLOWED_MODEL_PROVIDERS', unique(setup_configuration_defaults_1.SETUP_AGENT_TASKS.map(task => configuration.agents[task].modelProvider)).join(','));
     add('AGENT_ALLOWED_MODELS', unique(setup_configuration_defaults_1.SETUP_AGENT_TASKS.map(task => `${configuration.agents[task].modelProvider}/${configuration.agents[task].model}`)).join(','));
@@ -55204,6 +55319,7 @@ function buildSetupRepositoryVariables(configuration) {
         add(`${prefix}_MODEL_PROVIDER`, agent.modelProvider);
         add(`${prefix}_MODEL`, agent.model);
         add(`${prefix}_EFFORT`, agent.effort);
+        add(`${prefix}_EXECUTABLE`, agent.executable);
     }
     const repository = configuration.repository;
     add('MAIN_BRANCH', repository.mainBranch);
@@ -55324,6 +55440,7 @@ function buildAgentActionInputs(configuration) {
     add('agent-model-provider', base.modelProvider);
     add('agent-model', base.model);
     add('agent-effort', base.effort);
+    add('agent-executable', base.executable);
     for (const task of setup_configuration_defaults_1.SETUP_AGENT_TASKS) {
         const agent = configuration.agents[task];
         const prefix = `${task}-`;
@@ -55331,6 +55448,7 @@ function buildAgentActionInputs(configuration) {
         add(`${prefix}model-provider`, agent.modelProvider);
         add(`${prefix}model`, agent.model);
         add(`${prefix}effort`, agent.effort);
+        add(`${prefix}executable`, agent.executable);
     }
     return result;
 }
@@ -55905,7 +56023,8 @@ function definitions() {
         { stateId: 'agent-model-defaults', id: 'agents.findings.modelProvider', label: 'Model provider for all tasks', kind: 'choice', choices: MODEL_PROVIDERS },
         { stateId: 'agent-model-defaults', id: 'agents.findings.model', label: 'Model name for all tasks', kind: 'text' },
         { stateId: 'agent-model-defaults', id: 'agents.findings.effort', label: 'Reasoning effort for all tasks (empty uses provider default)', kind: 'text' },
-        { stateId: 'agent-model-defaults', id: 'agents.configureIndependently', label: 'Configure model provider, model, and effort independently for every task?', kind: 'boolean', read: () => false },
+        { stateId: 'agent-model-defaults', id: 'agents.findings.executable', label: 'Validated executable for all tasks (empty uses the manifest basename)', kind: 'text' },
+        { stateId: 'agent-model-defaults', id: 'agents.configureIndependently', label: 'Configure model provider, model, effort, and executable independently for every task?', kind: 'boolean', read: () => false },
         ...setup_configuration_defaults_1.SETUP_AGENT_TASKS.filter((task) => task !== 'findings').flatMap((task) => agentOverrideQuestions(task)),
         ...repositoryQuestions(),
         ...deploymentQuestions(),
@@ -55927,6 +56046,7 @@ function agentOverrideQuestions(task) {
         { stateId: 'agent-role-overrides', id: `agents.${task}.modelProvider`, label: `${formatTask(task)} model provider`, kind: 'choice', choices: MODEL_PROVIDERS, applies },
         { stateId: 'agent-role-overrides', id: `agents.${task}.model`, label: `${formatTask(task)} model`, kind: 'text', applies },
         { stateId: 'agent-role-overrides', id: `agents.${task}.effort`, label: `${formatTask(task)} effort (empty uses provider default)`, kind: 'text', applies },
+        { stateId: 'agent-role-overrides', id: `agents.${task}.executable`, label: `${formatTask(task)} executable (empty uses the manifest basename)`, kind: 'text', applies },
     ];
 }
 function repositoryQuestions() {
@@ -56070,7 +56190,7 @@ function applyAnswer(configuration, question, value) {
     const draft = (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration);
     if (question.id === 'agents.configureIndependently')
         return draft;
-    if (['agents.findings.modelProvider', 'agents.findings.model', 'agents.findings.effort'].includes(question.id)) {
+    if (['agents.findings.modelProvider', 'agents.findings.model', 'agents.findings.effort', 'agents.findings.executable'].includes(question.id)) {
         const field = question.id.split('.')[2];
         for (const task of setup_configuration_defaults_1.SETUP_AGENT_TASKS)
             draft.agents[task] = { ...draft.agents[task], [field]: value };
@@ -58324,7 +58444,7 @@ async function analyzeProgress(param, taskId, dependencies) {
     const issueNumber = param.issueNumber;
     const agentReady = (0, agent_1.isAgentConfigurationReady)(param.ai.getAgentConfiguration('findings'));
     if (!agentReady) {
-        const message = 'Missing required agent configuration. Provide a model and a valid CLI command.';
+        const message = 'Missing required agent configuration. Provide a model and a valid executable.';
         (0, logging_ports_1.logError)(message);
         return { kind: 'failure', result: failure(taskId, message, 'configuration.invalid') };
     }
@@ -58408,7 +58528,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validateProgressPrerequisites = validateProgressPrerequisites;
 function validateProgressPrerequisites(input) {
     if (!input.agentReady) {
-        return 'Missing required agent configuration. Provide a model and a valid CLI command.';
+        return 'Missing required agent configuration. Provide a model and a valid executable.';
     }
     if (input.issueNumber === -1) {
         return 'Issue number not found. Cannot check progress without an issue number.';
@@ -58768,7 +58888,7 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
     try {
         const configuration = param.ai.getAgentConfiguration('planner');
         if (!(0, agent_1.isAgentConfigurationReady)(configuration)) {
-            return [failure(taskId, 'Missing agent CLI command and model.', 'configuration.invalid')];
+            return [failure(taskId, 'Missing agent model or executable.', 'configuration.invalid')];
         }
         const issueNumber = param.issueNumber;
         if (issueNumber === -1) {
@@ -66752,7 +66872,7 @@ async function runThinkWorkflow(param, taskId, dependencies) {
                     id: taskId,
                     success: false,
                     executed: false,
-                    errors: [new application_error_1.ApplicationError('configuration.invalid', 'Configured agent model or CLI command not found.')],
+                    errors: [new application_error_1.ApplicationError('configuration.invalid', 'Configured agent model or executable not found.')],
                 }),
             ];
         }
@@ -69048,12 +69168,12 @@ function registerBugbotBenchmarkCommand(program) {
         .option('--agent-model-provider <provider>', 'Base model provider')
         .option('--agent-model <model>', 'Base model')
         .option('--agent-effort <effort>', 'Base effort')
-        .option('--agent-command <command>', 'Audited base command')
+        .option('--agent-executable <path>', 'Validated base executable')
         .option('--findings-provider <provider>', 'Findings runtime override')
         .option('--findings-model-provider <provider>', 'Findings model provider override')
         .option('--findings-model <model>', 'Findings model override')
         .option('--findings-effort <effort>', 'Findings effort override')
-        .option('--findings-command <command>', 'Audited findings command')
+        .option('--findings-executable <path>', 'Validated findings executable')
         .action(async (options) => {
         const configuration = (0, do_policy_1.buildDoAgentTasks)(options).findings;
         const authentication = (0, agent_authentication_preflight_1.runAgentAuthenticationPreflight)(configuration);
@@ -69309,17 +69429,17 @@ function registerDoCommand(program) {
         .option('--agent-model-provider <provider>', 'Provider of the selected model')
         .option('--agent-model <model>', 'Selected agent model')
         .option('--agent-effort <effort>', 'Reasoning effort or provider-specific model variant')
-        .option('--agent-command <command>', 'CLI executable for the selected agent')
+        .option('--agent-executable <path>', 'Validated agent executable basename or absolute path')
         .option('--findings-provider <provider>', 'Findings agent provider')
         .option('--findings-model-provider <provider>', 'Findings model provider')
         .option('--findings-effort <effort>', 'Findings reasoning effort or model variant')
         .option('--findings-model <model>', 'Findings agent model')
-        .option('--findings-command <command>', 'Findings CLI executable')
+        .option('--findings-executable <path>', 'Validated findings executable')
         .option('--fixer-provider <provider>', 'Fixer agent provider')
         .option('--fixer-model-provider <provider>', 'Fixer model provider')
         .option('--fixer-effort <effort>', 'Fixer reasoning effort or provider-specific model variant')
         .option('--fixer-model <model>', 'Fixer model')
-        .option('--fixer-command <command>', 'Fixer CLI executable')
+        .option('--fixer-executable <path>', 'Validated fixer executable')
         .option('--output <format>', 'Output format (text|json)', 'text')
         .action((options) => (0, do_command_handler_1.runDoCommand)(options));
 }
@@ -69343,7 +69463,7 @@ function buildDoAgentTasks(options) {
         modelProvider: read(options.agentModelProvider, "AGENT_MODEL_PROVIDER") || agent_1.DEFAULT_MODEL_PROVIDER,
         model: read(options.agentModel, "AGENT_MODEL") || agent_1.DEFAULT_AGENT_MODEL,
         effort: read(options.agentEffort, "AGENT_EFFORT"),
-        command: read(options.agentCommand, "AGENT_COMMAND"),
+        executable: read(options.agentExecutable, "AGENT_EXECUTABLE"),
         findings: buildTaskOverrides(options, "findings"),
         fixer: buildTaskOverrides(options, "fixer"),
     });
@@ -69355,14 +69475,14 @@ function buildTaskOverrides(options, task) {
             modelProvider: options.findingsModelProvider,
             model: options.findingsModel,
             effort: options.findingsEffort,
-            command: options.findingsCommand,
+            executable: options.findingsExecutable,
         }
         : {
             provider: options.fixerProvider,
             modelProvider: options.fixerModelProvider,
             model: options.fixerModel,
             effort: options.fixerEffort,
-            command: options.fixerCommand,
+            executable: options.fixerExecutable,
         };
     const prefix = task.toUpperCase();
     return {
@@ -69370,7 +69490,7 @@ function buildTaskOverrides(options, task) {
         modelProvider: read(values.modelProvider, `${prefix}_MODEL_PROVIDER`),
         model: read(values.model, `${prefix}_MODEL`),
         effort: read(values.effort, `${prefix}_EFFORT`),
-        command: read(values.command, `${prefix}_COMMAND`),
+        executable: read(values.executable, `${prefix}_EXECUTABLE`),
     };
 }
 function read(value, environmentName) {
@@ -70252,7 +70372,7 @@ const SETUP_OVERRIDE_KEYS = new Set([
     'actionInputs',
     'storage',
 ]);
-const AGENT_OVERRIDE_KEYS = new Set(['provider', 'modelProvider', 'model', 'effort']);
+const AGENT_OVERRIDE_KEYS = new Set(['provider', 'modelProvider', 'model', 'effort', 'executable']);
 const REPOSITORY_STRING_KEYS = new Set([
     'mainBranch',
     'developmentBranch',
@@ -71084,8 +71204,9 @@ exports.ACTIONS = {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isAgentConfigurationReady = void 0;
+exports.isAgentConfigurationReady = exports.AGENT_EXECUTABLE_BASENAMES = void 0;
 var agent_1 = __nccwpck_require__(89040);
+Object.defineProperty(exports, "AGENT_EXECUTABLE_BASENAMES", ({ enumerable: true, get: function () { return agent_1.AGENT_EXECUTABLE_BASENAMES; } }));
 Object.defineProperty(exports, "isAgentConfigurationReady", ({ enumerable: true, get: function () { return agent_1.isAgentConfigurationReady; } }));
 
 
@@ -71098,13 +71219,12 @@ Object.defineProperty(exports, "isAgentConfigurationReady", ({ enumerable: true,
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Ai = void 0;
-const agent_command_1 = __nccwpck_require__(77923);
 const pull_request_description_1 = __nccwpck_require__(45315);
 const review_configuration_1 = __nccwpck_require__(3994);
 class Ai {
     constructor(_configurationSource, model, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotMinSeverity, bugbotCommentLimit, bugbotFixVerifyCommands = [], agentTasks = {
-        findings: { provider: 'codex', modelProvider: 'openai', model, command: (0, agent_command_1.defaultAgentCommand)({ provider: 'codex', modelProvider: 'openai', model }) },
-        fixer: { provider: 'codex', modelProvider: 'openai', model, command: (0, agent_command_1.defaultAgentCommand)({ provider: 'codex', modelProvider: 'openai', model }) },
+        findings: { provider: 'codex', modelProvider: 'openai', model },
+        fixer: { provider: 'codex', modelProvider: 'openai', model },
     }, pullRequestDescriptionMode = pull_request_description_1.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE, bugbotReviewConfiguration = review_configuration_1.DEFAULT_BUGBOT_REVIEW_CONFIGURATION) {
         this.aiMembersOnly = aiMembersOnly;
         this.aiIgnoreFiles = aiIgnoreFiles;
@@ -72873,7 +72993,7 @@ const node_os_1 = __nccwpck_require__(70612);
 const node_path_1 = __nccwpck_require__(49411);
 const node_child_process_1 = __nccwpck_require__(17718);
 const agent_credential_policy_1 = __nccwpck_require__(36529);
-const agent_command_parser_1 = __nccwpck_require__(15044);
+const agent_runtime_manifest_1 = __nccwpck_require__(57104);
 const DEFAULT_AUTHENTICATION_SYSTEM = {
     hasOperationalCodexLogin(executable, environment) {
         try {
@@ -72936,8 +73056,10 @@ function buildAgentCliEnvironment(provider, environment = process.env, modelProv
     if (hasLocalCodexSession)
         return isolatedEnvironment;
     for (const variable of (0, agent_credential_policy_1.allowedCredentialVariables)(provider, modelProvider)) {
-        if (environment[variable] !== undefined)
-            isolatedEnvironment[variable] = environment[variable];
+        if (environment[variable] === undefined)
+            continue;
+        isolatedEnvironment[variable] = environment[variable];
+        break;
     }
     return isolatedEnvironment;
 }
@@ -72954,9 +73076,8 @@ function checkAgentAuthentication(configuration, environment = process.env, syst
     if (hasConfiguredCredential)
         return availableStatus(variables, `Local credentials available for ${configuration.provider}.`);
     if (configuration.provider === 'codex') {
-        const executable = configuration.command?.trim()
-            ? (0, agent_command_parser_1.parseAgentCommand)(configuration.command).executable
-            : 'codex';
+        const executable = configuration.executable?.trim()
+            || (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)(configuration.provider).executable;
         if (system.hasOperationalCodexLogin(executable, buildAgentCliEnvironment('codex', environment, configuration.modelProvider))) {
             return availableStatus(variables, 'Preinitialized Codex CLI login is operational on the runner.');
         }
@@ -73022,49 +73143,86 @@ function runAgentAuthenticationPreflight(configuration, environment = process.en
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AgentCliClient = void 0;
-const agent_command_parser_1 = __nccwpck_require__(15044);
-const agent_cli_contracts_1 = __nccwpck_require__(48254);
 const agent_cli_execution_1 = __nccwpck_require__(30248);
+const agent_execution_planner_1 = __nccwpck_require__(11800);
+const agent_cli_contracts_1 = __nccwpck_require__(48254);
+const NOOP_OBSERVER = { observe: () => undefined };
 class AgentCliClient {
+    constructor(planner = new agent_execution_planner_1.AgentExecutionPlanner(), observer = NOOP_OBSERVER) {
+        this.planner = planner;
+        this.observer = observer;
+    }
     async execute(request) {
-        validateRequest(request);
-        const parsed = parseCommand(request.command);
-        const promptMode = request.promptMode ?? 'stdin';
-        if (promptMode !== 'stdin' && promptMode !== 'argv') {
-            throw new agent_cli_contracts_1.AgentCliError('Agent CLI promptMode must be stdin or argv.', 'configuration');
-        }
-        return (0, agent_cli_execution_1.runAgentCli)({
-            ...request,
-            ...parsed,
-            promptMode,
-            maxOutputBytes: request.maxOutputBytes ?? 4 * 1024 * 1024,
-            maxPromptBytes: request.maxPromptBytes ?? 512 * 1024,
+        const startedAt = Date.now();
+        observeSafely(this.observer, {
+            state: 'started', phase: 'plan',
+            provider: request.configuration.provider, capability: request.capability,
         });
+        let plan;
+        try {
+            plan = this.planner.prepare(request);
+        }
+        catch (error) {
+            observeSafely(this.observer, failureObservation(request, error, 'preflight', startedAt));
+            throw error;
+        }
+        observeSafely(this.observer, {
+            state: 'admitted', phase: 'preflight',
+            provider: plan.provider, capability: plan.capability,
+            durationMilliseconds: Date.now() - startedAt,
+            manifestRevision: plan.runtimeContract.manifestRevision,
+            version: plan.runtimeContract.version,
+            workspaceMode: plan.workspaceMode,
+            outputContract: plan.output,
+            artifactHashes: plan.artifacts.map(artifact => artifact.sha256),
+        });
+        const runStartedAt = Date.now();
+        try {
+            const output = await (0, agent_cli_execution_1.runAgentCli)(plan, request.prompt, request.signal);
+            observeSafely(this.observer, {
+                state: 'completed', phase: 'run', provider: plan.provider, capability: plan.capability,
+                durationMilliseconds: Date.now() - runStartedAt,
+                outputBytes: Buffer.byteLength(output, 'utf8'),
+            });
+            return output;
+        }
+        catch (error) {
+            observeSafely(this.observer, failureObservation(request, error, 'run', runStartedAt));
+            throw error;
+        }
     }
 }
 exports.AgentCliClient = AgentCliClient;
-function validateRequest(request) {
-    if (!Number.isFinite(request.timeoutMs) || request.timeoutMs <= 0) {
-        throw new agent_cli_contracts_1.AgentCliError('Agent CLI timeout must be a finite positive number.', 'configuration');
-    }
-    if (request.maxOutputBytes !== undefined && (!Number.isFinite(request.maxOutputBytes) || request.maxOutputBytes <= 0)) {
-        throw new agent_cli_contracts_1.AgentCliError('Agent CLI maxOutputBytes must be a finite positive number.', 'configuration');
-    }
-    const maxPromptBytes = request.maxPromptBytes ?? 512 * 1024;
-    if (!Number.isFinite(maxPromptBytes) || maxPromptBytes <= 0) {
-        throw new agent_cli_contracts_1.AgentCliError('Agent CLI maxPromptBytes must be a finite positive number.', 'configuration');
-    }
-    if (Buffer.byteLength(request.prompt, 'utf8') > maxPromptBytes) {
-        throw new agent_cli_contracts_1.AgentCliError(`Agent CLI prompt exceeded the ${maxPromptBytes}-byte limit.`, 'configuration');
-    }
+function failureObservation(request, error, phase, startedAt) {
+    const category = error instanceof agent_cli_contracts_1.AgentCliError
+        ? error.category
+        : phase === 'preflight' ? 'configuration' : 'process';
+    return {
+        state: 'failed', phase,
+        provider: request.configuration.provider, capability: request.capability,
+        durationMilliseconds: Date.now() - startedAt,
+        failureCategory: category,
+        semanticCode: semanticCodeForFailure(category),
+        retryable: error instanceof agent_cli_contracts_1.AgentCliError && error.retryable,
+    };
 }
-function parseCommand(command) {
+function semanticCodeForFailure(category) {
+    if (category === 'configuration')
+        return 'agent.policy-rejected';
+    if (category === 'timeout')
+        return 'timeout';
+    if (category === 'cancelled')
+        return 'workflow.cancelled';
+    if (category === 'output')
+        return 'provider.contract-invalid';
+    return 'agent.failed';
+}
+function observeSafely(observer, observation) {
     try {
-        const parsed = (0, agent_command_parser_1.parseAgentCommand)(command);
-        return { executable: parsed.executable, args: parsed.args };
+        observer.observe(observation);
     }
-    catch (error) {
-        throw new agent_cli_contracts_1.AgentCliError(error instanceof Error ? error.message : String(error), 'configuration');
+    catch {
+        // Telemetry must never alter execution or failure semantics.
     }
 }
 
@@ -73098,24 +73256,29 @@ exports.AgentCliError = AgentCliError;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runAgentCli = runAgentCli;
+exports.createAgentProcessLifecycle = createAgentProcessLifecycle;
+exports.decodeAgentCliOutput = decodeAgentCliOutput;
+const node_crypto_1 = __nccwpck_require__(6005);
 const node_child_process_1 = __nccwpck_require__(17718);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const node_os_1 = __nccwpck_require__(70612);
 const agent_cli_contracts_1 = __nccwpck_require__(48254);
-const agent_execution_policy_1 = __nccwpck_require__(28442);
-const agent_runtime_environment_1 = __nccwpck_require__(92477);
-const agent_output_schema_1 = __nccwpck_require__(29208);
 const MAX_STDERR_BYTES = 8 * 1024;
-function runAgentCli(request) {
+function runAgentCli(plan, prompt, signal) {
     return new Promise((resolve, reject) => {
-        const outputSchema = (0, agent_output_schema_1.prepareAgentOutputSchema)(request.provider, request.outputSchema);
-        let controlledArgs;
-        let runtime;
+        let runtimeDirectory;
         try {
-            controlledArgs = (0, agent_execution_policy_1.enforceAgentExecutionPolicy)(request.provider, request.capability, request.args, outputSchema.path);
-            runtime = (0, agent_runtime_environment_1.prepareAgentRuntimeEnvironment)(request.provider, request.capability, request.environment, request.modelProvider);
+            runtimeDirectory = verifyOwnedRuntimeDirectory(plan.runtimeDirectory);
+            verifyAdmittedPlan(plan, runtimeDirectory);
+            if (Buffer.byteLength(prompt, 'utf8') > plan.maxPromptBytes) {
+                throw new agent_cli_contracts_1.AgentCliError(`Agent CLI prompt exceeded the ${plan.maxPromptBytes}-byte limit.`, 'configuration');
+            }
         }
         catch (error) {
-            outputSchema.cleanup();
-            reject(error);
+            if (runtimeDirectory)
+                cleanupRuntimeDirectory(runtimeDirectory);
+            reject(error instanceof agent_cli_contracts_1.AgentCliError ? error : new agent_cli_contracts_1.AgentCliError('Agent execution plan integrity check failed.', 'configuration'));
             return;
         }
         let cleaned = false;
@@ -73123,41 +73286,40 @@ function runAgentCli(request) {
             if (cleaned)
                 return;
             cleaned = true;
-            runtime.cleanup();
-            outputSchema.cleanup();
+            cleanupRuntimeDirectory(runtimeDirectory);
         };
         const child = (() => {
             try {
-                return (0, node_child_process_1.spawn)(request.executable, request.promptMode === 'argv' ? [...controlledArgs, request.prompt] : controlledArgs, {
-                    cwd: request.cwd,
-                    env: runtime.environment,
+                return (0, node_child_process_1.spawn)(plan.executable, plan.promptMode === 'final-argv' ? [...plan.argv, prompt] : plan.argv, {
+                    cwd: plan.workspace,
+                    env: plan.environment,
                     stdio: ['pipe', 'pipe', 'pipe'],
                     shell: false,
                     detached: process.platform !== 'win32',
                 });
             }
-            catch (error) {
+            catch {
                 cleanup();
-                reject(new agent_cli_contracts_1.AgentCliError(`Unable to start agent CLI: ${error instanceof Error ? error.message : String(error)}`, 'process'));
+                reject(new agent_cli_contracts_1.AgentCliError('Unable to start agent CLI.', 'process'));
                 return undefined;
             }
         })();
         if (!child)
             return;
-        const lifecycle = createProcessLifecycle(child, request, (value) => { cleanup(); resolve(value); }, (error) => { cleanup(); reject(error); });
+        const lifecycle = createAgentProcessLifecycle(child, plan, signal, (value) => { cleanup(); resolve(value); }, (error) => { cleanup(); reject(error); });
         child.stdout.on('data', lifecycle.appendStdout);
         child.stderr.on('data', lifecycle.appendStderr);
         child.stdin.once('error', lifecycle.onStdinError);
         child.once('error', lifecycle.onError);
         child.once('close', lifecycle.onClose);
-        if (request.signal?.aborted)
+        if (signal?.aborted)
             return lifecycle.abort();
-        request.signal?.addEventListener('abort', lifecycle.abort, { once: true });
-        child.stdin.end(request.promptMode === 'stdin' ? request.prompt : undefined);
+        signal?.addEventListener('abort', lifecycle.abort, { once: true });
+        child.stdin.end(plan.promptMode === 'stdin' ? prompt : undefined);
     });
 }
-function createProcessLifecycle(child, request, resolve, reject) {
-    let stdout = '';
+function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
+    const stdoutChunks = [];
     let stderrBytes = 0;
     let outputBytes = 0;
     let settled = false;
@@ -73171,7 +73333,7 @@ function createProcessLifecycle(child, request, resolve, reject) {
             clearTimeout(timers.timeout);
         if (timers.force)
             clearTimeout(timers.force);
-        request.signal?.removeEventListener('abort', abort);
+        signal?.removeEventListener('abort', abort);
         resolve(value);
     };
     const finishReject = (error) => {
@@ -73182,7 +73344,7 @@ function createProcessLifecycle(child, request, resolve, reject) {
             clearTimeout(timers.timeout);
         if (timers.force)
             clearTimeout(timers.force);
-        request.signal?.removeEventListener('abort', abort);
+        signal?.removeEventListener('abort', abort);
         reject(error);
     };
     const beginTermination = (error) => {
@@ -73205,19 +73367,24 @@ function createProcessLifecycle(child, request, resolve, reject) {
         if (settled || terminationError)
             return;
         outputBytes += chunk.byteLength;
-        if (outputBytes > request.maxOutputBytes) {
-            beginTermination(new agent_cli_contracts_1.AgentCliError(`Agent CLI output exceeded the ${request.maxOutputBytes}-byte limit.`, 'output'));
+        if (outputBytes > plan.maxOutputBytes) {
+            beginTermination(new agent_cli_contracts_1.AgentCliError(`Agent CLI output exceeded the ${plan.maxOutputBytes}-byte limit.`, 'output'));
             return;
         }
-        stdout += chunk.toString();
+        stdoutChunks.push(chunk);
     };
     const appendStderr = (chunk) => {
         if (settled || terminationError)
             return;
+        outputBytes += chunk.byteLength;
+        if (outputBytes > plan.maxOutputBytes) {
+            beginTermination(new agent_cli_contracts_1.AgentCliError(`Agent CLI output exceeded the ${plan.maxOutputBytes}-byte limit.`, 'output'));
+            return;
+        }
         stderrBytes = Math.min(stderrBytes + chunk.byteLength, MAX_STDERR_BYTES);
     };
     const onStdinError = () => beginTermination(new agent_cli_contracts_1.AgentCliError('Unable to send the prompt to the agent CLI.', 'process'));
-    const onError = (error) => finishReject(new agent_cli_contracts_1.AgentCliError(`Unable to start agent CLI: ${error.message}`, 'process'));
+    const onError = () => finishReject(new agent_cli_contracts_1.AgentCliError('Unable to start agent CLI.', 'process'));
     const onClose = (code) => {
         if (terminationError) {
             finishReject(terminationError);
@@ -73228,17 +73395,98 @@ function createProcessLifecycle(child, request, resolve, reject) {
             finishReject(new agent_cli_contracts_1.AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75));
             return;
         }
-        const output = stdout.trim();
-        if (!output) {
-            finishReject(new agent_cli_contracts_1.AgentCliError('Agent CLI returned empty output.', 'output'));
-            return;
+        try {
+            finishResolve(decodeAgentCliOutput(plan.outputProtocol, Buffer.concat(stdoutChunks).toString('utf8')));
         }
-        finishResolve(output);
+        catch (error) {
+            finishReject(error instanceof agent_cli_contracts_1.AgentCliError
+                ? error
+                : new agent_cli_contracts_1.AgentCliError('Agent CLI returned invalid output.', 'output'));
+        }
     };
     timers.timeout = setTimeout(() => {
-        beginTermination(new agent_cli_contracts_1.AgentCliError(`Agent CLI timed out after ${request.timeoutMs}ms.`, 'timeout'));
-    }, request.timeoutMs);
+        beginTermination(new agent_cli_contracts_1.AgentCliError(`Agent CLI timed out after ${plan.timeoutMs}ms.`, 'timeout'));
+    }, plan.timeoutMs);
     return { appendStdout, appendStderr, onStdinError, onError, onClose, abort };
+}
+function decodeAgentCliOutput(protocol, raw) {
+    if (protocol === 'plain-text') {
+        const output = raw.trim();
+        if (!output)
+            throw new agent_cli_contracts_1.AgentCliError('Agent CLI returned empty output.', 'output');
+        return output;
+    }
+    if (protocol === 'json-lines-text-events')
+        return decodeJsonLinesTextEvents(raw);
+    return assertNeverOutputProtocol(protocol);
+}
+function decodeJsonLinesTextEvents(raw) {
+    const lines = raw.split(/\r?\n/u).map(line => line.trim()).filter(Boolean);
+    const text = [];
+    for (const line of lines) {
+        let event;
+        try {
+            event = JSON.parse(line);
+        }
+        catch {
+            throw new agent_cli_contracts_1.AgentCliError('Agent CLI returned malformed JSON event output.', 'output');
+        }
+        if (!event || typeof event !== 'object' || Array.isArray(event)) {
+            throw new agent_cli_contracts_1.AgentCliError('Agent CLI returned an invalid JSON event.', 'output');
+        }
+        const record = event;
+        const part = record.part;
+        if (record.type === 'text' && part && typeof part === 'object' && !Array.isArray(part)) {
+            const value = part.text;
+            if (typeof value === 'string')
+                text.push(value);
+        }
+    }
+    const output = text.join('').trim();
+    if (!output)
+        throw new agent_cli_contracts_1.AgentCliError('Agent CLI returned no text completion events.', 'output');
+    return output;
+}
+function assertNeverOutputProtocol(protocol) {
+    throw new agent_cli_contracts_1.AgentCliError(`Unsupported agent output protocol: ${String(protocol)}`, 'configuration');
+}
+function verifyOwnedRuntimeDirectory(requestedPath) {
+    const runtimeDirectory = (0, node_fs_1.realpathSync)(requestedPath);
+    const expectedParent = (0, node_fs_1.realpathSync)((0, node_os_1.tmpdir)());
+    const name = (0, node_path_1.basename)(runtimeDirectory);
+    const stats = (0, node_fs_1.statSync)(runtimeDirectory);
+    if ((0, node_fs_1.lstatSync)(requestedPath).isSymbolicLink()
+        || (0, node_path_1.dirname)(runtimeDirectory) !== expectedParent
+        || !/^copilot-agent-runtime-[A-Za-z0-9_-]{6}$/u.test(name)
+        || !stats.isDirectory()
+        || (stats.mode & 0o077) !== 0) {
+        throw new Error('Managed runtime directory is not an owned private execution directory.');
+    }
+    if (typeof process.getuid === 'function' && stats.uid !== process.getuid()) {
+        throw new Error('Managed runtime directory has an unexpected owner.');
+    }
+    return runtimeDirectory;
+}
+function verifyAdmittedPlan(plan, runtimeDirectory) {
+    for (const artifact of plan.artifacts) {
+        const path = (0, node_fs_1.realpathSync)(artifact.path);
+        const relation = (0, node_path_1.relative)(runtimeDirectory, path);
+        if ((0, node_fs_1.lstatSync)(artifact.path).isSymbolicLink()
+            || relation.startsWith('..')
+            || relation === ''
+            || (0, node_path_1.isAbsolute)(relation)) {
+            throw new Error('Managed artifact escaped its runtime directory.');
+        }
+        const stats = (0, node_fs_1.statSync)(path);
+        if (!stats.isFile() || (stats.mode & 0o077) !== 0)
+            throw new Error('Managed artifact permissions changed.');
+        const actual = (0, node_crypto_1.createHash)('sha256').update((0, node_fs_1.readFileSync)(path)).digest('hex');
+        if (actual !== artifact.sha256)
+            throw new Error('Managed artifact hash changed.');
+    }
+}
+function cleanupRuntimeDirectory(runtimeDirectory) {
+    (0, node_fs_1.rmSync)(runtimeDirectory, { recursive: true, force: true });
 }
 function signalProcessTree(child, signal) {
     try {
@@ -73265,8 +73513,8 @@ function signalProcessTree(child, signal) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.isValidAgentConfiguration = isValidAgentConfiguration;
 exports.getValidatedAgentConfiguration = getValidatedAgentConfiguration;
-const agent_command_policy_1 = __nccwpck_require__(37011);
 const agent_configuration_validation_policy_1 = __nccwpck_require__(60596);
+const agent_executable_policy_1 = __nccwpck_require__(12570);
 const SUPPORTED_PROVIDERS = new Set(['opencode', 'codex', 'cursor']);
 const MODEL_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/;
 const MODEL_PROVIDER_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
@@ -73281,7 +73529,7 @@ function isValidAgentConfiguration(configuration) {
         return false;
     try {
         (0, agent_configuration_validation_policy_1.assertProviderModelCompatibility)(configuration.provider, configuration.modelProvider?.trim().toLowerCase() || 'openai');
-        (0, agent_command_policy_1.validateAgentCommand)(configuration);
+        (0, agent_executable_policy_1.validateAgentExecutableSelection)(configuration);
         return true;
     }
     catch {
@@ -73359,7 +73607,7 @@ const MODEL_PROVIDER_CREDENTIALS = {
 const CLI_CREDENTIALS = {
     opencode: ['OPENCODE_API_KEY'],
     cursor: ['CURSOR_API_KEY'],
-    codex: ['CODEX_API_KEY'],
+    codex: ['OPENAI_API_KEY', 'CODEX_API_KEY'],
 };
 const KNOWN_AGENT_CREDENTIALS = [...new Set([
         ...exports.COMMON_OPENCODE_CREDENTIALS,
@@ -73394,10 +73642,10 @@ function allowedCredentialVariables(provider, modelProvider) {
     if (provider === 'cursor')
         return CLI_CREDENTIALS.cursor;
     if (provider === 'codex')
-        return CLI_CREDENTIALS.codex;
+        return selected ? uniqueCredentials([selected, ...CLI_CREDENTIALS.codex]) : CLI_CREDENTIALS.codex;
     return modelProvider?.trim()
-        ? uniqueCredentials([...CLI_CREDENTIALS.opencode, ...(selected ? [selected] : [])])
-        : uniqueCredentials([...CLI_CREDENTIALS.opencode, ...exports.COMMON_OPENCODE_CREDENTIALS]);
+        ? (selected ? [selected] : [])
+        : exports.COMMON_OPENCODE_CREDENTIALS;
 }
 function credentialVariables(configuration) {
     if (configuration.provider === 'cursor')
@@ -73463,218 +73711,6 @@ function containsCredentialMaterial(value, propertyName = '') {
 }
 function uniqueCredentials(credentials) {
     return [...new Set(credentials)];
-}
-
-
-/***/ }),
-
-/***/ 28442:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.enforceAgentExecutionPolicy = enforceAgentExecutionPolicy;
-const agent_cli_contracts_1 = __nccwpck_require__(48254);
-const MUTATING_CAPABILITIES = new Set(['fixer']);
-const FORBIDDEN_CODEX_FLAGS = new Set([
-    '--dangerously-bypass-approvals-and-sandbox',
-    '--dangerously-bypass-hook-trust',
-    '--yolo',
-    '--full-auto',
-    '--approve-for-me',
-    '--search',
-    '--add-dir',
-    '--cd',
-    '-C',
-    '--profile',
-    '-p',
-    '--remote',
-    '--remote-auth-token-env',
-    '--enable',
-    '--output-last-message',
-    '-o',
-    '--output-schema',
-]);
-const CONTROLLED_CODEX_CONFIG = new Map([
-    ['approval_policy', 'never'],
-    ['sandbox_workspace_write.network_access', 'false'],
-    ['sandbox_workspace_write.exclude_slash_tmp', 'true'],
-    ['sandbox_workspace_write.exclude_tmpdir_env_var', 'true'],
-    ['sandbox_workspace_write.writable_roots', '[]'],
-    ['allow_login_shell', 'false'],
-    ['web_search', 'disabled'],
-    ['tools.web_search', 'false'],
-    ['features.web_search', 'false'],
-    ['features.web_search_cached', 'false'],
-    ['features.web_search_request', 'false'],
-    ['features.skill_mcp_dependency_install', 'false'],
-    ['agents.enabled', 'false'],
-    ['project_doc_max_bytes', '0'],
-    ['history.persistence', 'none'],
-    ['shell_environment_policy.ignore_default_excludes', 'false'],
-    ['analytics.enabled', 'false'],
-]);
-const FORBIDDEN_CODEX_CONFIG_PREFIXES = ['hooks', 'mcp_servers.', 'apps.', 'plugins.'];
-const FORBIDDEN_CURSOR_FLAGS = [
-    '--api-key', '--header', '-H', '--endpoint', '-e', '--yolo', '--auto-review',
-    '--approve-mcps', '--trust', '--workspace', '--add-dir', '--plugin-dir', '--worktree', '-w',
-    '--resume', '--continue', '--sandbox=disabled',
-];
-const FORBIDDEN_OPENCODE_FLAGS = [
-    '--auto', '--share', '--attach', '--file', '-f', '--dir', '--continue', '-c', '--session', '-s',
-    '--fork', '--command', '--password', '-p', '--username', '-u', '--hostname', '--port', '--mdns', '--cors',
-];
-/**
- * Applies a capability boundary after parsing the command and immediately
- * before spawn, so custom commands cannot bypass the runtime policy.
- */
-function enforceAgentExecutionPolicy(provider, capability, args, managedOutputSchemaPath) {
-    if (capability === undefined)
-        return [...args];
-    if (provider === 'cursor')
-        return enforceCursorPolicy(capability, args);
-    if (provider === 'opencode')
-        return enforceOpenCodePolicy(capability, args);
-    if (provider !== 'codex')
-        return [...args];
-    if (args.some((argument) => [...FORBIDDEN_CODEX_FLAGS].some((flag) => matchesFlag(argument, flag)))) {
-        throw new agent_cli_contracts_1.AgentCliError('Restricted Codex runtime flags are not allowed for agent automation.', 'configuration');
-    }
-    const configuredValues = configValues(args);
-    const forbiddenConfiguration = [...configuredValues.keys()].find((key) => FORBIDDEN_CODEX_CONFIG_PREFIXES.some((prefix) => key === prefix || key.startsWith(prefix)));
-    if (forbiddenConfiguration) {
-        throw new agent_cli_contracts_1.AgentCliError(`Codex configuration ${forbiddenConfiguration} is not allowed for agent automation.`, 'configuration');
-    }
-    for (const [key, expected] of CONTROLLED_CODEX_CONFIG) {
-        const configured = configuredValues.get(key);
-        if (configured !== undefined && configured !== expected) {
-            throw new agent_cli_contracts_1.AgentCliError(`Codex configuration ${key} must be ${expected}.`, 'configuration');
-        }
-    }
-    const expectedSandbox = MUTATING_CAPABILITIES.has(capability) ? 'workspace-write' : 'read-only';
-    const configuredSandbox = flagValue(args, ['--sandbox', '-s']);
-    if (configuredSandbox && configuredSandbox !== expectedSandbox) {
-        throw new agent_cli_contracts_1.AgentCliError(`Codex ${capability} capability requires the ${expectedSandbox} sandbox.`, 'configuration');
-    }
-    const configuredSandboxMode = configuredValues.get('sandbox_mode');
-    if (configuredSandboxMode && configuredSandboxMode !== expectedSandbox) {
-        throw new agent_cli_contracts_1.AgentCliError(`Codex configuration sandbox_mode must be ${expectedSandbox}.`, 'configuration');
-    }
-    const configuredApproval = flagValue(args, ['--ask-for-approval', '-a']);
-    if (configuredApproval && configuredApproval !== 'never') {
-        throw new agent_cli_contracts_1.AgentCliError('Codex approval policy must be never for non-interactive automation.', 'configuration');
-    }
-    const controlled = [...args];
-    const stdinIndex = controlled.at(-1) === '-' ? controlled.length - 1 : controlled.length;
-    const additions = [];
-    if (!configuredSandbox)
-        additions.push('--sandbox', expectedSandbox);
-    for (const flag of ['--strict-config', '--ignore-user-config', '--ignore-rules', '--ephemeral']) {
-        if (!controlled.includes(flag))
-            additions.push(flag);
-    }
-    for (const [key, value] of CONTROLLED_CODEX_CONFIG) {
-        if (!configuredValues.has(key))
-            additions.push('--config', `${key}=${value}`);
-    }
-    if (managedOutputSchemaPath)
-        additions.push('--output-schema', managedOutputSchemaPath);
-    controlled.splice(stdinIndex, 0, ...additions);
-    return controlled;
-}
-function enforceCursorPolicy(capability, args) {
-    rejectFlags('Cursor', args, FORBIDDEN_CURSOR_FLAGS);
-    const controlled = [...args];
-    const mutating = MUTATING_CAPABILITIES.has(capability);
-    if (!mutating && controlled.some((argument) => matchesFlag(argument, '--force') || matchesFlag(argument, '-f'))) {
-        throw new agent_cli_contracts_1.AgentCliError(`Cursor ${capability} capability cannot force tool approval.`, 'configuration');
-    }
-    const sandbox = flagValue(controlled, ['--sandbox']);
-    if (sandbox && sandbox !== 'enabled') {
-        throw new agent_cli_contracts_1.AgentCliError('Cursor agent automation requires its sandbox to be enabled.', 'configuration');
-    }
-    if (!sandbox)
-        controlled.push('--sandbox', 'enabled');
-    if (!mutating) {
-        const mode = flagValue(controlled, ['--mode']);
-        if (mode && !['ask', 'plan'].includes(mode)) {
-            throw new agent_cli_contracts_1.AgentCliError(`Cursor ${capability} capability requires ask or plan mode.`, 'configuration');
-        }
-        if (!mode && !controlled.includes('--plan'))
-            controlled.push('--mode', 'ask');
-    }
-    else if (!controlled.some((argument) => matchesFlag(argument, '--force') || matchesFlag(argument, '-f'))) {
-        // Headless Cursor otherwise pauses for tool approval and eventually times out.
-        // The isolated runtime config supplies explicit denials and the sandbox.
-        controlled.push('--force');
-    }
-    return controlled;
-}
-function enforceOpenCodePolicy(capability, args) {
-    rejectFlags('OpenCode', args, FORBIDDEN_OPENCODE_FLAGS);
-    const controlled = [...args];
-    if (!controlled.includes('--pure'))
-        controlled.push('--pure');
-    const expectedAgent = MUTATING_CAPABILITIES.has(capability)
-        ? 'copilot-controlled-fixer'
-        : 'copilot-controlled-readonly';
-    const agent = flagValue(controlled, ['--agent']);
-    if (agent && agent !== expectedAgent) {
-        throw new agent_cli_contracts_1.AgentCliError(`OpenCode ${capability} capability requires the ${expectedAgent} agent.`, 'configuration');
-    }
-    if (!agent)
-        controlled.push('--agent', expectedAgent);
-    return controlled;
-}
-function rejectFlags(provider, args, forbidden) {
-    const match = args.find((argument) => forbidden.some((flag) => matchesFlag(argument, flag)));
-    if (match)
-        throw new agent_cli_contracts_1.AgentCliError(`${provider} flag ${match} is not allowed for agent automation.`, 'configuration');
-}
-function matchesFlag(argument, flag) {
-    return argument === flag || argument.startsWith(`${flag}=`)
-        || (flag.length === 2 && flag.startsWith('-') && argument.startsWith(flag) && argument.length > 2);
-}
-function configValues(args) {
-    const values = new Map();
-    for (let index = 0; index < args.length; index += 1) {
-        const argument = args[index];
-        const raw = argument === '--config' || argument === '-c'
-            ? args[index + 1]
-            : argument.startsWith('--config=')
-                ? argument.slice('--config='.length)
-                : argument.startsWith('-c=')
-                    ? argument.slice(3)
-                    : argument.startsWith('-c') && argument.length > 2
-                        ? argument.slice(2)
-                        : undefined;
-        if (!raw)
-            continue;
-        const separator = raw.indexOf('=');
-        if (separator <= 0)
-            continue;
-        values.set(raw.slice(0, separator).trim(), stripQuotes(raw.slice(separator + 1).trim()));
-        if (argument === '--config' || argument === '-c')
-            index += 1;
-    }
-    return values;
-}
-function stripQuotes(value) {
-    return value.replace(/^(["'])(.*)\1$/, '$2');
-}
-function flagValue(args, flags) {
-    for (const [index, argument] of args.entries()) {
-        const inline = flags.find((flag) => argument.startsWith(`${flag}=`));
-        if (inline)
-            return argument.slice(inline.length + 1);
-        if (flags.includes(argument))
-            return args[index + 1];
-        const compact = flags.find((flag) => flag.length === 2 && argument.startsWith(flag) && argument.length > 2);
-        if (compact)
-            return argument.slice(compact.length);
-    }
-    return undefined;
 }
 
 
@@ -73913,57 +73949,6 @@ function isObject(value) {
 
 /***/ }),
 
-/***/ 29208:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.prepareAgentOutputSchema = prepareAgentOutputSchema;
-const node_fs_1 = __nccwpck_require__(87561);
-const node_os_1 = __nccwpck_require__(70612);
-const node_path_1 = __nccwpck_require__(49411);
-/** Writes a short-lived, owner-readable schema only for Codex native structured outputs. */
-function prepareAgentOutputSchema(provider, schema) {
-    if (provider !== 'codex' || !schema || !supportsCodexNativeSchema(schema)) {
-        return { cleanup: () => undefined };
-    }
-    const directory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-agent-schema-'));
-    const path = (0, node_path_1.join)(directory, 'response.schema.json');
-    try {
-        (0, node_fs_1.writeFileSync)(path, JSON.stringify(schema), { encoding: 'utf8', mode: 0o600 });
-        return {
-            path,
-            cleanup: () => (0, node_fs_1.rmSync)(directory, { recursive: true, force: true }),
-        };
-    }
-    catch (error) {
-        (0, node_fs_1.rmSync)(directory, { recursive: true, force: true });
-        throw error;
-    }
-}
-/** Codex strict schemas require every declared object property to be required. */
-function supportsCodexNativeSchema(schema) {
-    if (schema.type === 'object') {
-        if (!isRecord(schema.properties) || schema.additionalProperties !== false)
-            return false;
-        const properties = schema.properties;
-        const required = new Set(Array.isArray(schema.required) ? schema.required : []);
-        if (Object.keys(properties).some(property => !required.has(property)))
-            return false;
-        return Object.values(properties).every(value => !isRecord(value) || supportsCodexNativeSchema(value));
-    }
-    if (schema.type === 'array' && isRecord(schema.items))
-        return supportsCodexNativeSchema(schema.items);
-    return true;
-}
-function isRecord(value) {
-    return Boolean(value && typeof value === 'object' && !Array.isArray(value));
-}
-
-
-/***/ }),
-
 /***/ 78804:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -74017,112 +74002,6 @@ function extractReasoningFromParts(parts) {
 
 /***/ }),
 
-/***/ 92477:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.prepareAgentRuntimeEnvironment = prepareAgentRuntimeEnvironment;
-const node_fs_1 = __nccwpck_require__(87561);
-const node_os_1 = __nccwpck_require__(70612);
-const node_path_1 = __nccwpck_require__(49411);
-const agent_authentication_1 = __nccwpck_require__(51371);
-const NOOP = () => undefined;
-const READ_ONLY_OPENCODE_AGENT = 'copilot-controlled-readonly';
-const FIXER_OPENCODE_AGENT = 'copilot-controlled-fixer';
-/** Builds a per-invocation provider boundary without mutating runner configuration. */
-function prepareAgentRuntimeEnvironment(provider, capability, source = process.env, modelProvider) {
-    const environment = (0, agent_authentication_1.buildAgentCliEnvironment)(provider, source, modelProvider);
-    if (!provider || !capability)
-        return { environment, cleanup: NOOP };
-    if (provider === 'opencode')
-        return { environment: hardenOpenCode(environment, capability), cleanup: NOOP };
-    if (provider === 'cursor')
-        return hardenCursor(environment, capability);
-    return { environment, cleanup: NOOP };
-}
-function hardenOpenCode(environment, capability) {
-    const fixer = capability === 'fixer';
-    const permission = {
-        '*': 'deny',
-        read: 'allow',
-        glob: 'allow',
-        grep: 'allow',
-        lsp: 'allow',
-        edit: fixer ? 'allow' : 'deny',
-        bash: 'deny',
-        task: 'deny',
-        skill: 'deny',
-        webfetch: 'deny',
-        websearch: 'deny',
-        external_directory: 'deny',
-    };
-    const agentName = fixer ? FIXER_OPENCODE_AGENT : READ_ONLY_OPENCODE_AGENT;
-    const config = {
-        permission,
-        tools: { bash: false, webfetch: false, websearch: false, write: fixer, edit: fixer },
-        agent: {
-            [agentName]: {
-                description: 'Controlled non-interactive repository automation agent.',
-                mode: 'primary',
-                permission,
-            },
-        },
-    };
-    return {
-        ...environment,
-        OPENCODE_CONFIG_CONTENT: JSON.stringify(config),
-        OPENCODE_PERMISSION: JSON.stringify(permission),
-        OPENCODE_DISABLE_AUTOUPDATE: 'true',
-        OPENCODE_DISABLE_LSP_DOWNLOAD: 'true',
-        OPENCODE_DISABLE_CLAUDE_CODE: 'true',
-        OPENCODE_DISABLE_CLAUDE_CODE_PROMPT: 'true',
-        OPENCODE_DISABLE_CLAUDE_CODE_SKILLS: 'true',
-        OPENCODE_ENABLE_EXA: 'false',
-        OPENCODE_ENABLE_PARALLEL: 'false',
-    };
-}
-function hardenCursor(environment, capability) {
-    const runtimeHome = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-cursor-runtime-'));
-    const cursorDirectory = (0, node_path_1.join)(runtimeHome, '.cursor');
-    (0, node_fs_1.mkdirSync)(cursorDirectory, { recursive: true });
-    const fixer = capability === 'fixer';
-    (0, node_fs_1.writeFileSync)((0, node_path_1.join)(cursorDirectory, 'cli-config.json'), JSON.stringify({
-        version: 1,
-        editor: { vimMode: false },
-        approvalMode: 'allowlist',
-        permissions: {
-            allow: [],
-            deny: [
-                'Shell(git)', 'Shell(gh)', 'Shell(ssh)', 'Shell(scp)', 'Shell(curl)',
-                'Shell(wget)', 'Shell(nc)', 'Shell(rm)', 'Read(.env*)', 'Read(**/.env*)',
-            ],
-        },
-        sandbox: { mode: 'enabled' },
-    }));
-    (0, node_fs_1.writeFileSync)((0, node_path_1.join)(cursorDirectory, 'sandbox.json'), JSON.stringify({
-        type: fixer ? 'workspace_readwrite' : 'workspace_readonly',
-        additionalReadwritePaths: [],
-        additionalReadonlyPaths: [],
-        disableTmpWrite: true,
-        enableSharedBuildCache: false,
-        networkPolicyStrict: true,
-        networkPolicy: { default: 'deny', allow: [], deny: [] },
-    }));
-    return {
-        environment: {
-            ...environment,
-            HOME: runtimeHome,
-            CURSOR_CONFIG_DIR: cursorDirectory,
-        },
-        cleanup: () => (0, node_fs_1.rmSync)(runtimeHome, { recursive: true, force: true }),
-    };
-}
-
-
-/***/ }),
-
 /***/ 32152:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -74131,11 +74010,10 @@ function hardenCursor(environment, capability) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AgentCapabilityAdapter = void 0;
 const agent_constants_1 = __nccwpck_require__(46927);
-const provider_cli_adapter_1 = __nccwpck_require__(18199);
 const agent_configuration_policy_1 = __nccwpck_require__(49616);
 class AgentCapabilityAdapter {
     constructor(infrastructure) {
-        this.cliAdapter = new provider_cli_adapter_1.ProviderCliAdapter(infrastructure.cli);
+        this.cliAdapter = infrastructure.cli;
     }
     async execute(request) {
         const taskConfiguration = (0, agent_configuration_policy_1.getValidatedAgentConfiguration)(request.configuration, request.capability);
@@ -77954,85 +77832,6 @@ function selectAvailableMembers(members, currentMembers, requested) {
 
 /***/ }),
 
-/***/ 18199:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ProviderCliAdapter = void 0;
-const provider_specific_cli_adapters_1 = __nccwpck_require__(65508);
-/** Provider-neutral CLI adapter that delegates provider-specific execution to focused adapters. */
-class ProviderCliAdapter {
-    constructor(client) {
-        this.adapters = {
-            opencode: new provider_specific_cli_adapters_1.OpenCodeCliAdapter(client),
-            codex: new provider_specific_cli_adapters_1.CodexCliAdapter(client),
-            cursor: new provider_specific_cli_adapters_1.CursorCliAdapter(client),
-        };
-    }
-    execute(request) {
-        const providerRequest = request;
-        return this.adapters[request.configuration.provider].execute(providerRequest);
-    }
-}
-exports.ProviderCliAdapter = ProviderCliAdapter;
-
-
-/***/ }),
-
-/***/ 65508:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CursorCliAdapter = exports.CodexCliAdapter = exports.OpenCodeCliAdapter = void 0;
-class SpecificCliAdapter {
-    constructor(expectedProvider, client) {
-        this.expectedProvider = expectedProvider;
-        this.client = client;
-    }
-    execute(request) {
-        if (request.configuration.provider !== this.expectedProvider) {
-            throw new Error(`${this.expectedProvider} CLI adapter received ${request.configuration.provider} configuration.`);
-        }
-        const command = request.configuration.command?.trim();
-        if (!command)
-            throw new Error(`CLI command is required for ${this.expectedProvider}.`);
-        return this.client.execute({
-            command,
-            prompt: request.prompt,
-            provider: this.expectedProvider,
-            capability: request.capability,
-            ...(request.configuration.modelProvider ? { modelProvider: request.configuration.modelProvider } : {}),
-            promptMode: this.expectedProvider === 'codex' ? 'stdin' : 'argv',
-            timeoutMs: request.timeoutMs,
-            cwd: request.cwd,
-            signal: request.signal,
-            ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
-        });
-    }
-}
-class OpenCodeCliAdapter extends SpecificCliAdapter {
-    constructor(client) { super('opencode', client); }
-    execute(request) { return super.execute(request); }
-}
-exports.OpenCodeCliAdapter = OpenCodeCliAdapter;
-class CodexCliAdapter extends SpecificCliAdapter {
-    constructor(client) { super('codex', client); }
-    execute(request) { return super.execute(request); }
-}
-exports.CodexCliAdapter = CodexCliAdapter;
-class CursorCliAdapter extends SpecificCliAdapter {
-    constructor(client) { super('cursor', client); }
-    execute(request) { return super.execute(request); }
-}
-exports.CursorCliAdapter = CursorCliAdapter;
-
-
-/***/ }),
-
 /***/ 55165:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -80159,62 +79958,36 @@ exports.WORKFLOW_ACTIVE_STATUSES = [
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DEFAULT_AGENT_MODEL = exports.DEFAULT_MODEL_PROVIDER = exports.DEFAULT_AGENT_PROVIDER = void 0;
+exports.AGENT_EXECUTABLE_BASENAMES = exports.DEFAULT_AGENT_MODEL = exports.DEFAULT_MODEL_PROVIDER = exports.DEFAULT_AGENT_PROVIDER = void 0;
 exports.isAgentConfigurationReady = isAgentConfigurationReady;
 exports.DEFAULT_AGENT_PROVIDER = 'codex';
 exports.DEFAULT_MODEL_PROVIDER = 'openai';
 exports.DEFAULT_AGENT_MODEL = 'gpt-5.6-luna';
+exports.AGENT_EXECUTABLE_BASENAMES = {
+    codex: 'codex',
+    opencode: 'opencode',
+    cursor: 'agent',
+};
 function isAgentConfigurationReady(configuration) {
-    if (!configuration?.model.trim())
-        return false;
-    return Boolean(configuration.command?.trim());
+    return Boolean(configuration?.model.trim());
 }
 
 
 /***/ }),
 
-/***/ 77923:
+/***/ 12253:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.defaultAgentCommand = defaultAgentCommand;
-function quote(value) {
-    if (/^[a-zA-Z0-9._:/-]+$/.test(value))
-        return value;
-    return `'${value.replace(/'/g, "'\\''")}'`;
-}
-/** Build the provider-specific, non-interactive command for an agent task. */
-function defaultAgentCommand(configuration) {
-    const model = configuration.model.trim();
-    const modelProvider = configuration.modelProvider?.trim() || 'openai';
-    const effort = configuration.effort?.trim();
-    switch (configuration.provider) {
-        case 'codex': {
-            const parts = [
-                'codex exec',
-                '--ephemeral',
-                '--skip-git-repo-check',
-                '--model',
-                quote(model),
-                '--config',
-                quote(`model_provider="${modelProvider}"`),
-            ];
-            if (effort)
-                parts.push('--config', quote(`model_reasoning_effort="${effort}"`));
-            parts.push('-');
-            return parts.join(' ');
-        }
-        case 'cursor':
-            return ['agent', '-p', '--output-format', 'text', '--model', quote(model)].join(' ');
-        case 'opencode': {
-            const parts = ['opencode', 'run', '--model', quote(`${modelProvider}/${model}`)];
-            if (effort)
-                parts.push('--variant', quote(effort));
-            return parts.join(' ');
-        }
-    }
+exports.AGENT_OUTPUT_MAX_BYTES = exports.AGENT_PROMPT_MAX_BYTES = exports.AGENT_EXECUTION_TIMEOUT_MAX_MS = void 0;
+exports.workspaceModeForCapability = workspaceModeForCapability;
+exports.AGENT_EXECUTION_TIMEOUT_MAX_MS = 15 * 60 * 1000;
+exports.AGENT_PROMPT_MAX_BYTES = 512 * 1024;
+exports.AGENT_OUTPUT_MAX_BYTES = 4 * 1024 * 1024;
+function workspaceModeForCapability(capability) {
+    return capability === 'fixer' ? 'workspace-write' : 'read-only';
 }
 
 
@@ -81933,6 +81706,239 @@ function featureEnabled(feature, features) {
 
 /***/ }),
 
+/***/ 11800:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AgentExecutionPlanner = void 0;
+const node_crypto_1 = __nccwpck_require__(6005);
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_os_1 = __nccwpck_require__(70612);
+const node_path_1 = __nccwpck_require__(49411);
+const agent_execution_policy_dispatcher_1 = __nccwpck_require__(25690);
+const agent_execution_plan_1 = __nccwpck_require__(12253);
+const agent_cli_contracts_1 = __nccwpck_require__(48254);
+const agent_executable_policy_1 = __nccwpck_require__(12570);
+const agent_authentication_1 = __nccwpck_require__(51371);
+const agent_runtime_manifest_1 = __nccwpck_require__(57104);
+const DEFAULT_SYSTEM = {
+    resolveExecutable: resolveExecutablePath,
+    readVersion(executable, environment) {
+        return (0, node_child_process_1.execFileSync)(executable, ['--version'], {
+            env: environment,
+            encoding: 'utf8',
+            stdio: ['ignore', 'pipe', 'ignore'],
+            timeout: 15000,
+        });
+    },
+    resolveWorkspace(cwd) {
+        const requested = (0, node_fs_1.realpathSync)(cwd);
+        const root = (0, node_fs_1.realpathSync)((0, node_child_process_1.execFileSync)('git', ['rev-parse', '--show-toplevel'], {
+            cwd: requested,
+            encoding: 'utf8',
+            stdio: ['ignore', 'pipe', 'ignore'],
+            timeout: 15000,
+        }).trim());
+        if (requested !== root)
+            throw new Error('Agent cwd must be the canonical repository root.');
+        return root;
+    },
+};
+class AgentExecutionPlanner {
+    constructor(system = DEFAULT_SYSTEM) {
+        this.system = system;
+    }
+    prepare(request) {
+        const limits = validateLimits(request);
+        const sourceEnvironment = request.environment ?? process.env;
+        let runtimeDirectory;
+        try {
+            const workspace = this.system.resolveWorkspace(request.cwd ?? process.cwd());
+            rejectAmbientProviderConfiguration(request.configuration.provider, workspace);
+            const manifest = (0, agent_runtime_manifest_1.getAgentRuntimeManifest)();
+            const runtime = (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)(request.configuration.provider);
+            const requestedExecutable = request.configuration.executable?.trim() || runtime.executable;
+            (0, agent_executable_policy_1.validateAgentExecutableSelection)({
+                provider: request.configuration.provider,
+                executable: requestedExecutable,
+            });
+            const executable = this.system.resolveExecutable(requestedExecutable, sourceEnvironment);
+            validateExecutableFile(executable);
+            const safeEnvironment = (0, agent_authentication_1.buildAgentCliEnvironment)(request.configuration.provider, sourceEnvironment, request.configuration.modelProvider);
+            const version = (0, agent_runtime_manifest_1.assertAgentRuntimeVersion)(request.configuration.provider, this.system.readVersion(executable, safeEnvironment));
+            runtimeDirectory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-agent-runtime-'));
+            const gitConfigPath = (0, node_path_1.join)(runtimeDirectory, 'gitconfig');
+            const providerPolicy = (0, agent_execution_policy_dispatcher_1.buildProviderExecutionPolicy)({
+                configuration: request.configuration,
+                capability: request.capability,
+                workspace,
+                runtimeDirectory,
+                ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
+            });
+            const artifacts = materializeArtifacts([
+                { path: gitConfigPath, contents: '', purpose: 'git-config' },
+                ...providerPolicy.artifacts,
+            ]);
+            const environment = definedEnvironment({
+                ...safeEnvironment,
+                ...providerPolicy.environment,
+                GIT_TERMINAL_PROMPT: '0',
+                GIT_CONFIG_GLOBAL: gitConfigPath,
+                GIT_CONFIG_NOSYSTEM: '1',
+            });
+            return {
+                provider: request.configuration.provider,
+                capability: request.capability,
+                executable,
+                argv: providerPolicy.argv,
+                promptMode: providerPolicy.promptMode,
+                outputProtocol: providerPolicy.outputProtocol,
+                workspace,
+                workspaceMode: providerPolicy.workspaceMode,
+                childNetwork: 'deny',
+                approval: 'never',
+                sessionPersistence: false,
+                output: providerPolicy.output,
+                timeoutMs: limits.timeoutMs,
+                maxPromptBytes: limits.maxPromptBytes,
+                maxOutputBytes: limits.maxOutputBytes,
+                environment,
+                artifacts,
+                runtimeDirectory,
+                runtimeContract: {
+                    provider: request.configuration.provider,
+                    version,
+                    manifestRevision: manifest.revision,
+                },
+            };
+        }
+        catch (error) {
+            if (runtimeDirectory)
+                (0, node_fs_1.rmSync)(runtimeDirectory, { recursive: true, force: true });
+            if (error instanceof agent_cli_contracts_1.AgentCliError)
+                throw error;
+            throw new agent_cli_contracts_1.AgentCliError(`Agent execution plan rejected: ${error instanceof Error ? error.message : String(error)}`, 'configuration');
+        }
+    }
+}
+exports.AgentExecutionPlanner = AgentExecutionPlanner;
+function validateLimits(request) {
+    const timeoutMs = request.timeoutMs;
+    const maxPromptBytes = request.maxPromptBytes ?? agent_execution_plan_1.AGENT_PROMPT_MAX_BYTES;
+    const maxOutputBytes = request.maxOutputBytes ?? agent_execution_plan_1.AGENT_OUTPUT_MAX_BYTES;
+    assertBoundedLimit('timeoutMs', timeoutMs, agent_execution_plan_1.AGENT_EXECUTION_TIMEOUT_MAX_MS);
+    assertBoundedLimit('maxPromptBytes', maxPromptBytes, agent_execution_plan_1.AGENT_PROMPT_MAX_BYTES);
+    assertBoundedLimit('maxOutputBytes', maxOutputBytes, agent_execution_plan_1.AGENT_OUTPUT_MAX_BYTES);
+    if (Buffer.byteLength(request.prompt, 'utf8') > maxPromptBytes) {
+        throw new agent_cli_contracts_1.AgentCliError(`Agent CLI prompt exceeded the ${maxPromptBytes}-byte limit.`, 'configuration');
+    }
+    return { timeoutMs, maxPromptBytes, maxOutputBytes };
+}
+function assertBoundedLimit(name, value, maximum) {
+    if (!Number.isFinite(value) || value <= 0 || value > maximum) {
+        throw new agent_cli_contracts_1.AgentCliError(`Agent CLI ${name} must be a finite positive number no greater than ${maximum}.`, 'configuration');
+    }
+}
+function resolveExecutablePath(selected, environment) {
+    if ((0, node_path_1.isAbsolute)(selected))
+        return (0, node_fs_1.realpathSync)(selected);
+    const extensions = process.platform === 'win32'
+        ? (environment.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';')
+        : [''];
+    for (const directory of (environment.PATH || '').split(node_path_1.delimiter).filter(Boolean)) {
+        for (const extension of extensions) {
+            const candidate = (0, node_path_1.join)(directory, `${selected}${extension}`);
+            try {
+                (0, node_fs_1.accessSync)(candidate, node_fs_1.constants.X_OK);
+                return (0, node_fs_1.realpathSync)(candidate);
+            }
+            catch {
+                // Continue through the trusted PATH candidates.
+            }
+        }
+    }
+    throw new Error(`Agent executable "${selected}" was not found on PATH.`);
+}
+function validateExecutableFile(path) {
+    const stats = (0, node_fs_1.statSync)(path);
+    if (!stats.isFile())
+        throw new Error('Agent executable must resolve to a regular file.');
+    (0, node_fs_1.accessSync)(path, node_fs_1.constants.X_OK);
+    if ((stats.mode & 0o022) !== 0)
+        throw new Error('Agent executable must not be group- or world-writable.');
+    if (typeof process.getuid === 'function') {
+        const uid = process.getuid();
+        if (stats.uid !== uid && stats.uid !== 0)
+            throw new Error('Agent executable must be owned by the runner user or root.');
+    }
+}
+function materializeArtifacts(templates) {
+    return templates.map((template) => {
+        (0, node_fs_1.mkdirSync)((0, node_path_1.dirname)(template.path), { recursive: true, mode: 0o700 });
+        (0, node_fs_1.writeFileSync)(template.path, template.contents, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
+        return {
+            path: template.path,
+            sha256: (0, node_crypto_1.createHash)('sha256').update(template.contents).digest('hex'),
+            purpose: template.purpose,
+        };
+    });
+}
+function rejectAmbientProviderConfiguration(provider, workspace) {
+    const forbidden = provider === 'opencode'
+        ? ['opencode.json', 'opencode.jsonc', '.opencode']
+        : provider === 'cursor'
+            ? ['.cursor/cli.json', '.cursor/sandbox.json', '.cursor/mcp.json', '.cursor/hooks.json']
+            : [];
+    const match = forbidden.find(path => (0, node_fs_1.existsSync)((0, node_path_1.join)(workspace, path)));
+    if (match)
+        throw new Error(`${provider} project configuration "${match}" is not allowed for managed execution.`);
+}
+function definedEnvironment(environment) {
+    return Object.fromEntries(Object.entries(environment).filter((entry) => entry[1] !== undefined));
+}
+
+
+/***/ }),
+
+/***/ 57104:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getAgentRuntimeManifest = getAgentRuntimeManifest;
+exports.getAgentRuntimeManifestEntry = getAgentRuntimeManifestEntry;
+exports.normalizeAgentRuntimeVersion = normalizeAgentRuntimeVersion;
+exports.assertAgentRuntimeVersion = assertAgentRuntimeVersion;
+const agent_runtime_manifest_json_1 = __importDefault(__nccwpck_require__(61685));
+const manifest = agent_runtime_manifest_json_1.default;
+function getAgentRuntimeManifest() {
+    return manifest;
+}
+function getAgentRuntimeManifestEntry(provider) {
+    return manifest.providers[provider];
+}
+function normalizeAgentRuntimeVersion(output) {
+    return output.trim().split(/\r?\n/, 1)[0].trim();
+}
+function assertAgentRuntimeVersion(provider, output) {
+    const actual = normalizeAgentRuntimeVersion(output);
+    const expected = getAgentRuntimeManifestEntry(provider).version;
+    if (actual !== expected) {
+        throw new Error(`${provider} CLI version mismatch: expected ${expected}, received ${actual || 'unparseable output'}.`);
+    }
+    return actual;
+}
+
+
+/***/ }),
+
 /***/ 81849:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -82314,12 +82320,14 @@ exports.createFindingsQueryPort = createFindingsQueryPort;
 exports.createFixerQueryPort = createFixerQueryPort;
 exports.createLanguageQueryPort = createLanguageQueryPort;
 const agent_cli_client_1 = __nccwpck_require__(68570);
+const agent_execution_planner_1 = __nccwpck_require__(11800);
+const logger_agent_execution_observer_adapter_1 = __nccwpck_require__(59844);
 const findings_agent_adapter_1 = __nccwpck_require__(27725);
 const fixer_agent_adapter_1 = __nccwpck_require__(62259);
 const language_agent_adapter_1 = __nccwpck_require__(10573);
 function defaultInfrastructure() {
     return {
-        cli: new agent_cli_client_1.AgentCliClient(),
+        cli: new agent_cli_client_1.AgentCliClient(new agent_execution_planner_1.AgentExecutionPlanner(), new logger_agent_execution_observer_adapter_1.LoggerAgentExecutionObserverAdapter()),
     };
 }
 function createFindingsQueryPort(infrastructure = defaultInfrastructure()) {
@@ -83982,6 +83990,28 @@ function createLogReportAdapter() {
         clearAccumulatedLogs: logger_1.clearAccumulatedLogs,
     };
 }
+
+
+/***/ }),
+
+/***/ 59844:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LoggerAgentExecutionObserverAdapter = void 0;
+const logger_1 = __nccwpck_require__(91151);
+class LoggerAgentExecutionObserverAdapter {
+    observe(observation) {
+        if (observation.state === 'completed' || observation.state === 'failed') {
+            (0, logger_1.logInfo)(`Agent execution ${observation.state}.`, false, { agentExecution: observation });
+            return;
+        }
+        (0, logger_1.logDebugInfo)(`Agent execution ${observation.state}.`, false, { agentExecution: observation });
+    }
+}
+exports.LoggerAgentExecutionObserverAdapter = LoggerAgentExecutionObserverAdapter;
 
 
 /***/ }),
@@ -97579,6 +97609,14 @@ const chalkStderr = createChalk({level: stderrColor ? stderrColor.level : 0});
 
 "use strict";
 module.exports = JSON.parse('{"single":{"topLeft":"┌","top":"─","topRight":"┐","right":"│","bottomRight":"┘","bottom":"─","bottomLeft":"└","left":"│"},"double":{"topLeft":"╔","top":"═","topRight":"╗","right":"║","bottomRight":"╝","bottom":"═","bottomLeft":"╚","left":"║"},"round":{"topLeft":"╭","top":"─","topRight":"╮","right":"│","bottomRight":"╯","bottom":"─","bottomLeft":"╰","left":"│"},"bold":{"topLeft":"┏","top":"━","topRight":"┓","right":"┃","bottomRight":"┛","bottom":"━","bottomLeft":"┗","left":"┃"},"singleDouble":{"topLeft":"╓","top":"─","topRight":"╖","right":"║","bottomRight":"╜","bottom":"─","bottomLeft":"╙","left":"║"},"doubleSingle":{"topLeft":"╒","top":"═","topRight":"╕","right":"│","bottomRight":"╛","bottom":"═","bottomLeft":"╘","left":"│"},"classic":{"topLeft":"+","top":"-","topRight":"+","right":"|","bottomRight":"+","bottom":"-","bottomLeft":"+","left":"|"},"arrow":{"topLeft":"↘","top":"↓","topRight":"↙","right":"←","bottomRight":"↖","bottom":"↑","bottomLeft":"↗","left":"→"}}');
+
+/***/ }),
+
+/***/ 61685:
+/***/ ((module) => {
+
+"use strict";
+module.exports = JSON.parse('{"revision":"2026-09-12.p1-c.1","providers":{"codex":{"executable":"codex","version":"codex-cli 0.153.4","package":"@openai/codex"},"opencode":{"executable":"opencode","version":"1.18.3","package":"opencode-ai"},"cursor":{"executable":"agent","version":"2026.09.10-fd3934a"}}}');
 
 /***/ })
 

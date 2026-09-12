@@ -37,7 +37,7 @@ function baseExecution() {
         currentConfiguration: { parentBranch: "develop" },
         branches: { development: "develop" },
         ai: {
-            getAgentConfiguration: () => ({ provider: 'opencode', model: 'model', command: 'opencode run' }),
+            getAgentConfiguration: () => ({ provider: 'opencode', model: 'model' }),
             getBugbotFixVerifyCommands: () => ["pnpm test"],
             getBugbotReviewConfiguration: () => ({ organizationRules: [] }),
             getAiIgnoreFiles: () => [],
@@ -133,7 +133,7 @@ describe("BugbotAutofixUseCase", () => {
     it("returns empty results when OpenCode not configured", async () => {
         const exec = baseExecution();
         (exec as { ai?: unknown }).ai = {
-            getAgentConfiguration: () => ({ provider: 'opencode', model: 'model', command: '' }),
+            getAgentConfiguration: () => ({ provider: 'opencode', model: '' }),
             getBugbotFixVerifyCommands: () => ["pnpm test"],
         };
 

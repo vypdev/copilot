@@ -70,27 +70,27 @@ jobs:
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
           agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
           agent-effort: ${{ vars.AGENT_EFFORT }}
-          agent-command: ${{ vars.AGENT_COMMAND }}
+          agent-executable: ${{ vars.AGENT_EXECUTABLE }}
           findings-provider: ${{ vars.FINDINGS_PROVIDER }}
           findings-model-provider: ${{ vars.FINDINGS_MODEL_PROVIDER }}
           findings-model: ${{ vars.FINDINGS_MODEL }}
           findings-effort: ${{ vars.FINDINGS_EFFORT }}
-          findings-command: ${{ vars.FINDINGS_COMMAND }}
+          findings-executable: ${{ vars.FINDINGS_EXECUTABLE }}
           fixer-provider: ${{ vars.FIXER_PROVIDER }}
           fixer-model-provider: ${{ vars.FIXER_MODEL_PROVIDER }}
           fixer-model: ${{ vars.FIXER_MODEL }}
           fixer-effort: ${{ vars.FIXER_EFFORT }}
-          fixer-command: ${{ vars.FIXER_COMMAND }}
+          fixer-executable: ${{ vars.FIXER_EXECUTABLE }}
           planner-provider: ${{ vars.PLANNER_PROVIDER }}
           planner-model-provider: ${{ vars.PLANNER_MODEL_PROVIDER }}
           planner-model: ${{ vars.PLANNER_MODEL }}
           planner-effort: ${{ vars.PLANNER_EFFORT }}
-          planner-command: ${{ vars.PLANNER_COMMAND }}
+          planner-executable: ${{ vars.PLANNER_EXECUTABLE }}
           reviewer-provider: ${{ vars.REVIEWER_PROVIDER }}
           reviewer-model-provider: ${{ vars.REVIEWER_MODEL_PROVIDER }}
           reviewer-model: ${{ vars.REVIEWER_MODEL }}
           reviewer-effort: ${{ vars.REVIEWER_EFFORT }}
-          reviewer-command: ${{ vars.REVIEWER_COMMAND }}
+          reviewer-executable: ${{ vars.REVIEWER_EXECUTABLE }}
           project-ids: ${{ vars.PROJECT_IDS }}
           token: ${{ secrets.PAT }}
         env:
@@ -101,10 +101,7 @@ jobs:
           AGENT_PROVISIONING: ${{ vars.AGENT_PROVISIONING || 'auto' }}
           AGENT_ALLOWED_MODEL_PROVIDERS: ${{ vars.AGENT_ALLOWED_MODEL_PROVIDERS || 'openai' }}
           AGENT_ALLOWED_MODELS: ${{ vars.AGENT_ALLOWED_MODELS || 'openai/gpt-5.6-luna' }}
-          AGENT_COMMAND: ${{ vars.AGENT_COMMAND }}
-          CODEX_VERSION: ${{ vars.CODEX_VERSION }}
-          OPENCODE_VERSION: ${{ vars.OPENCODE_VERSION }}
-          CURSOR_INSTALLER_SHA256: ${{ vars.CURSOR_INSTALLER_SHA256 }}
+          AGENT_EXECUTABLE: ${{ vars.AGENT_EXECUTABLE }}
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

@@ -44,7 +44,7 @@ export async function analyzeProgress(
         param.ai.getAgentConfiguration('findings'),
     );
     if (!agentReady) {
-        const message = 'Missing required agent configuration. Provide a model and a valid CLI command.';
+        const message = 'Missing required agent configuration. Provide a model and a valid executable.';
         logError(message);
         return { kind: 'failure', result: failure(taskId, message, 'configuration.invalid') };
     }

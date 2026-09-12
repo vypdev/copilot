@@ -1,10 +1,10 @@
 # Agent Execution Policy Hardening
 
-- Status: Proposed — ready for implementation
+- Status: Implemented — automated gates complete; controlled provider smoke remains external
 - Date: 2026-09-11
 - Last updated: 2026-09-12
 - Catalog capability ID: `agent-runtime`
-- Last verified: 2026-09-11 at `2fec5c24a80135dd0611d3bc37e7dc3a8ab1b41a`
+- Last verified: 2026-09-12 in the P1-C implementation worktree
 - Owners: Copilot maintainers and security reviewers
 - Scope: replace the shared permissive CLI policy with exhaustive provider
   plans, isolated runtime configuration, versioned runtime evidence, and
@@ -34,11 +34,11 @@ There are no installed users to preserve. The first implementation removes
 executable selection; it contains no deprecation or compatibility path.
 
 ```text
-role + provider + model + command -> provider policy -> verified plan
-                                     -> isolated files/env -> spawn -> schema validation
+role + provider + model + executable -> provider policy -> verified plan
+                                        -> isolated files/env -> spawn -> schema validation
 ```
 
-## 2. Problem, current behavior, and evidence
+## 2. Problem, pre-implementation behavior, and evidence
 
 ### 2.1 Problem
 
@@ -48,7 +48,7 @@ then augmented, leaving a broad grammar and provider-specific bypass risk. The
 policy is security-sensitive, but version/config behavior and effective
 sandbox behavior are not a versioned executable contract.
 
-### 2.2 Current behavior
+### 2.2 Pre-implementation behavior
 
 1. `enforceAgentExecutionPolicy` is fail-open for undefined capability and
    unknown provider.
@@ -88,7 +88,7 @@ runtime SDD.
 | Actor | Goal | Entry point | Visible surfaces |
 |---|---|---|---|
 | Contributor | get useful agent output without hidden authority | GitHub workflow/command | comment, check, changed files |
-| Repository owner | select provider/model while retaining safety | Variables/setup/CLI flags | config and doctor |
+| Repository owner | select provider/model while retaining safety | Variables/setup/CLI flags | config, doctor, provisioning |
 | Maintainer | add/upgrade one provider without shared-policy regressions | code/runtime manifest | CI and docs |
 | Security reviewer | prove effective authority before spawn | plan/config/smoke evidence | Job Summary and fixtures |
 
@@ -115,7 +115,9 @@ provider version and smoke evidence accepted by the runtime.
    or direct commit/push ownership.
 3. It does not make sandbox/network/approval/environment limits configurable.
 4. It does not support arbitrary custom CLI flags or wrapper scripts.
-5. It does not guarantee provider model availability; readiness/doctor reports it.
+5. It does not guarantee provider model availability. Target-runner provisioning
+   and execution preflight report CLI support; doctor reports setup/configuration
+   and credential readiness rather than inspecting a different local runtime.
 
 ### 4.3 Fixed product and safety invariants
 
@@ -173,6 +175,7 @@ AgentExecutionPlan {
   executable: validated absolute path
   argv: readonly reconstructed tokens
   promptMode: stdin | final-argv
+  outputProtocol: plain-text | json-lines-text-events
   workspace: canonical real path
   workspaceMode: read-only | workspace-write
   childNetwork: deny
@@ -237,7 +240,9 @@ verification commands later through its existing validated trusted runner.
 
 Managed argv includes `exec`, `--strict-config`, `--ignore-user-config`,
 `--ignore-rules`, `--ephemeral`, `--sandbox read-only|workspace-write`,
-`--ask-for-approval never`, explicit model/provider/effort, and terminal `-`.
+explicit model/provider/effort, and terminal `-`. Managed configuration sets
+`approval_policy="never"`; the accepted CLI version does not expose an
+equivalent `exec` flag.
 Structured roles also receive a managed `--output-schema` file and always undergo
 local validation.
 
@@ -257,11 +262,14 @@ points to an empty ephemeral directory; `OPENCODE_CONFIG_CONTENT` contains the
 complete managed configuration; default plugins, update checks, LSP downloads,
 sharing, session continuation, attach/server, files, and remote commands are off.
 
-Both managed agents allow read/glob/grep/list and the reviewed LSP only. They
-deny bash, webfetch, websearch, task, skill, external_directory, question,
+Both managed agents allow read/glob/grep/list only. They deny LSP, bash,
+webfetch, websearch, task, skill, external_directory, question,
 session sharing, and wildcard/MCP tools. The readonly agent denies edit; the
 fixer agent allows edit only under the workspace. All unspecified permissions
-are deny. The config bytes and schema version are hashed into the plan.
+are deny. The config bytes and schema version are hashed into the plan. The
+generic process adapter decodes bounded JSON-line text events according to the
+plan's output protocol; malformed or textless event streams fail closed before
+semantic response validation.
 
 ### 6.6 Cursor policy
 
@@ -269,14 +277,17 @@ Managed argv is `agent -p --output-format text --sandbox enabled --model <model>
 read roles add `--mode ask` and never `--force`. Fixer uses the ordinary agent
 mode plus `--force` only after managed permissions/sandbox preflight passes.
 
-`CURSOR_CONFIG_DIR` points to an ephemeral schema-version-1 config. Managed
-permissions deny Shell, MCP, plugins, subagents, external reads, Git mutation,
-and every unspecified action; readonly allows workspace read only; fixer also
-allows workspace write. A managed `sandbox.json` uses
+`CURSOR_CONFIG_DIR` points to an ephemeral schema-version-1 config and the
+ephemeral home contains the documented `.cursor/sandbox.json`. Managed
+permissions deny `Shell(*)`, `WebFetch(*)`, `Mcp(*:*)`, sensitive/external reads,
+Git mutation, and every unspecified action; readonly explicitly denies all
+writes, while fixer allows workspace write. A managed `sandbox.json` uses
 `workspace_readonly|workspace_readwrite`, no additional paths, temp writes off,
-and `networkPolicy: {default: "deny", allow: [], deny: []}`. Project Cursor
-config is rejected unless byte-identical to the managed policy, and exact-version
-smoke proves ambient/user files cannot broaden it.
+and `networkPolicy: {default: "deny", allow: [], deny: []}`. Authority-bearing
+project Cursor files (`cli.json`, `sandbox.json`, `mcp.json`, and `hooks.json`)
+are rejected rather than merged. Repository rules may guide the task but cannot
+widen the managed permission/sandbox boundary; exact-version smoke proves that
+ambient/user files cannot broaden it.
 
 If Cursor cannot prove isolated config, child-network denial, read/write mode,
 and approval behavior on the current platform/version, the provider or fixer
@@ -295,7 +306,7 @@ verified versions:
 
 Any different/unparseable version fails preflight. Upgrades require one PR that
 updates the exact version, provider fixture snapshots, official-source links,
-all automated contract/smoke tests, doctor/provisioning, and a reviewed human
+all automated contract/smoke tests, target-runner provisioning, and a reviewed human
 smoke. The provisioning workflow installs the manifest version or validates an
 already installed exact match; it never silently upgrades.
 
@@ -317,7 +328,7 @@ Existing provider/model/effort and per-role override precedence remains.
 `agent-command` is invalid and has no replacement that accepts arguments;
 `agent-executable` may select only the validated binary described above. The
 recommended default remains Codex. OpenCode and Cursor are explicit alternatives
-and require exact manifest support in doctor.
+and require exact manifest support in target-runner provisioning and preflight.
 
 Sandbox, write role, network, approvals, environment, config directory,
 permissions, plugins/MCP/subagents, session persistence, process limits, output
@@ -334,7 +345,7 @@ repository Variables/action inputs.
 | Application | complete request, exhaustive dispatch, semantic errors | raw spawn/config files |
 | Provider adapters | Codex/OpenCode/Cursor pure plan builders | other provider branches |
 | Infrastructure | executable/version/artifact preflight, isolated files, spawn | role/product decisions |
-| Entrypoints/setup | structured config resolution and doctor/provisioning | argv mutation |
+| Entrypoints/setup | structured config resolution, setup doctor, target-runner provisioning | argv mutation |
 | Presentation | rejected/failed/completed view | raw stderr/prompt/secret |
 
 Each provider policy lives in a separate file with no import of another provider
@@ -349,7 +360,7 @@ cannot accept raw command/provider/capability fields.
    without policy and role matrix changes.
 3. AST rules prohibit raw command spawn, `shell:true`, ambient `process.env`
    forwarding, and cross-provider policy imports.
-4. Golden argv/config/environment/artifact fixtures exist per 3 providers x 5 roles.
+4. Golden argv/config/environment/artifact fixtures exist per 3 providers x 6 roles.
 5. Adversarial configuration tests reject the removed command field, executable
    arguments/wrappers, and every unknown or duplicate structured selection.
 6. Integration smokes execute safe read/write/network/shell/plugin/subagent
@@ -402,20 +413,24 @@ GitHub UI. Existing locale/fallback and narrow Markdown rules apply.
 
 ## 12. Observability and operational UX
 
-Emit provider, role, policy/manifest revision, version, workspace mode, output
-contract, plan/preflight/run phase, duration, byte counts, termination reason,
-and semantic code. Record artifact hashes, never bytes/paths containing user
-identity. Do not emit prompt, output content, argv, environment values, or raw
-stderr. Doctor reports each role/provider as supported, unsupported, missing,
-or version mismatch with one action.
+The typed observer emits a plan-start event, an admitted preflight event, and one
+terminal run event. The bounded records contain provider, role, manifest
+revision/version, workspace mode, output contract, artifact hashes, phase,
+duration, output byte count, failure category, retryability, and semantic code.
+They never contain model/prompt/output content, argv, environment values, raw
+stderr, executable/workspace/artifact paths, or user identity. Setup doctor
+reports structured configuration and credential readiness. The target-runner
+provisioning check reports supported, missing, or version-mismatched CLIs with
+one action; execution preflight repeats the exact-version check before spawn.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
 1. Product compatibility/migration is not applicable because there are no
-   installed users. `agent-command` is removed in the initial implementation;
+   installed users. The prior command-text shape was removed in the initial implementation;
    no parser, warning period, deprecated field, alias, or dual adapter is built.
 2. Land the final plan, provider policies, exact runtime manifest, provisioning,
-   doctor, managed artifacts, workflows, setup assets, schema, and docs atomically.
+   setup-doctor parity, managed artifacts, workflows, setup assets, schema, and
+   docs atomically.
 3. After merge, process adapters accept only `AgentExecutionPlan`; every removed
    input is unknown/invalid and cannot reach spawn.
 4. Intermediate branch commits MAY stage the replacement, but the merge and
@@ -434,7 +449,7 @@ count separately only when authority/argv differs.
 | State/process lifecycle | 2 | timeout/cancel/cleanup and no-spawn rejection |
 | Application dispatch | 3 | complete plan, semantic failure, structured output |
 | Provider adapters | 4 | Codex/OpenCode/Cursor config plus version manifest |
-| Workflow/setup contracts | 2 | provisioning pin and doctor parity |
+| Workflow/setup contracts | 2 | provisioning pin and doctor configuration parity |
 | UX/sanitization | 1 | rejection/partial view without sensitive fields |
 | Integration/security | 2 | effective sandbox matrix and env/credential isolation |
 | **Total** | **18** | no double counting |
@@ -462,8 +477,8 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
 ## 16. Acceptance scenarios
 
 1. Missing/unknown provider, role, model tuple, or plan field prevents spawn.
-2. Every 3-provider x 5-role plan has expected workspace authority and fixed limits.
-3. `agent-command`, caller argv, arguments in `agent-executable`, and unknown
+2. Every 3-provider x 6-role plan has expected workspace authority and fixed limits.
+3. Removed command-text fields, caller argv, arguments in `agent-executable`, and unknown
    execution inputs are rejected; managed argv is deterministic and uses `shell:false`.
 4. A non-manifest version or mismatched artifact hash prevents spawn with one action.
 5. Read roles cannot write; fixer writes only workspace; all roles lack Git mutation.
@@ -473,7 +488,8 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
 8. Timeout/cancel terminates the process group, discards output, and cleans only
    its owned temp directory.
 9. Ambient/project/user config cannot broaden effective authority in smoke fixtures.
-10. Provisioning and doctor agree on exact versions and provider support.
+10. Target-runner provisioning and execution preflight agree on exact versions;
+    doctor agrees with the structured provider/model/credential configuration.
 11. Negative fixtures prove removed command shapes are invalid and no parser,
     alias, deprecated field, or compatibility adapter ships.
 
@@ -484,7 +500,7 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
 | complete fail-closed plan | role policy/dispatcher | exhaustive/type/no-spawn tests | execution contract |
 | provider isolation | three plan policies/artifacts | golden and effective smoke matrix | provider pages |
 | executable selection | configuration policy/preflight | invalid-path and removed-input fixtures | CLI/configuration reference |
-| runtime support | manifest/preflight/provisioning/doctor | exact-version/hash tests | setup/runtime pages |
+| runtime support | manifest/preflight/provisioning | exact-version/hash tests | setup/runtime pages |
 | process/output safety | process adapter/schema validator | env, timeout, size, schema tests | failure/security docs |
 | safe UX/observability | semantic mapper/presenter | redaction/view tests | troubleshooting |
 
@@ -492,7 +508,8 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
 
 1. Define plan, role authority, executable selection, and exhaustive dispatcher tests.
 2. Implement three independent policies and golden managed artifacts.
-3. Add exact runtime manifest, version/hash preflight, provisioning, and doctor.
+3. Add exact runtime manifest, version/hash preflight, target-runner provisioning,
+   and setup-doctor configuration parity.
 4. Change the process adapter to consume only plans; add effective sandbox/env/
    lifecycle smokes.
 5. Remove `agent-command` and its parser; update setup/workflows/schema/docs/SDD/
@@ -500,15 +517,16 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
 
 ## 19. Definition of Done
 
-- [ ] Every active request produces one complete plan or semantic pre-spawn rejection.
-- [ ] Provider/role dispatch is exhaustive and three policies are independent.
-- [ ] Managed argv, artifacts, environments, versions, and limits match golden evidence.
+- [x] Every active request produces one complete plan or semantic pre-spawn rejection.
+- [x] Provider/role dispatch is exhaustive and three policies are independent.
+- [x] Managed argv, artifacts, environments, versions, and limits match golden evidence.
 - [ ] Effective sandbox tests prove role writes, child network, config, approval,
       secrets, Git, MCP/plugins/subagents, and persistence boundaries.
-- [ ] Provisioning, doctor, workflow inputs, docs, and manifest agree.
-- [ ] At least 18 distinct cases and all coverage/architecture/security gates pass.
-- [ ] Removed command inputs fail negative fixtures and no legacy code ships.
-- [ ] No fail-open path, raw spawn, unknown flag, ambient environment, temporary
+- [x] Provisioning, preflight, setup doctor, workflow inputs, docs, and manifest
+      agree within their explicit runtime versus configuration responsibilities.
+- [x] At least 18 distinct automated cases and all repository coverage/architecture/security gates pass.
+- [x] Removed command inputs fail negative fixtures and no legacy code ships.
+- [x] No fail-open path, raw spawn, unknown flag, ambient environment, temporary
       waiver, or unresolved provider decision remains.
 
 ## 20. References and decisions

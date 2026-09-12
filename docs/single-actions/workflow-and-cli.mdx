@@ -376,17 +376,17 @@ Runs the configured **fixer/build agent** locally with a prompt. This is the CLI
 | `--agent-model-provider <provider>` | No | `AGENT_MODEL_PROVIDER` | Model provider override. |
 | `--agent-model <model>` | No | `AGENT_MODEL` | Model override. |
 | `--agent-effort <effort>` | No | `AGENT_EFFORT` | Reasoning effort or provider-specific variant. |
-| `--agent-command <command>` | No | `AGENT_COMMAND` | Audited common agent command override. |
+| `--agent-executable <path>` | No | `AGENT_EXECUTABLE` | Exact provider basename or absolute executable path; no arguments. |
 | `--findings-provider <provider>` | No | `FINDINGS_PROVIDER` | Findings task runtime override. |
 | `--findings-model-provider <provider>` | No | `FINDINGS_MODEL_PROVIDER` | Findings model provider override. |
 | `--findings-model <model>` | No | `FINDINGS_MODEL` | Findings model override. |
 | `--findings-effort <effort>` | No | `FINDINGS_EFFORT` | Findings effort override. |
-| `--findings-command <command>` | No | `FINDINGS_COMMAND` | Findings command override. |
+| `--findings-executable <path>` | No | `FINDINGS_EXECUTABLE` | Findings executable selection. |
 | `--fixer-provider <provider>` | No | `FIXER_PROVIDER` | Fixer task runtime override. |
 | `--fixer-model-provider <provider>` | No | `FIXER_MODEL_PROVIDER` | Fixer model provider override. |
 | `--fixer-model <model>` | No | `FIXER_MODEL` | Fixer model override. |
 | `--fixer-effort <effort>` | No | `FIXER_EFFORT` | Fixer effort override. |
-| `--fixer-command <command>` | No | `FIXER_COMMAND` | Fixer command override. |
+| `--fixer-executable <path>` | No | `FIXER_EXECUTABLE` | Fixer executable selection. |
 | `-d, --debug` | No | `false` | Enables debug logging. |
 
 The primary agent values fall back to `AGENT_*` variables; task-specific values fall back to `FINDINGS_*` and `FIXER_*`. Credentials remain in the provider's supported environment or local credential store. Do not put credentials in command arguments or custom command values.

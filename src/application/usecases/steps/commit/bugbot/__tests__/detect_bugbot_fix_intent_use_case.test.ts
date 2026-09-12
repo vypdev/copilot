@@ -36,7 +36,7 @@ function baseExecution(overrides: Partial<Execution> = {}): Execution {
         },
         pullRequest: { isPullRequestReviewComment: false, commentBody: "", number: 0 },
         ai: {
-            getAgentConfiguration: () => ({ provider: 'opencode', model: 'model', command: 'opencode run' }),
+            getAgentConfiguration: () => ({ provider: 'opencode', model: 'model' }),
             getBugbotReviewConfiguration: () => ({ organizationRules: [] }),
             getAiIgnoreFiles: () => [],
         },

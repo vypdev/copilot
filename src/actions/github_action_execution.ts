@@ -144,7 +144,6 @@ function disableAgentTasks(tasks: AgentTaskConfiguration): AgentTaskConfiguratio
         Object.entries(tasks).map(([task, configuration]) => [task, {
             ...configuration,
             model: '',
-            command: '',
         }]),
     ) as unknown as AgentTaskConfiguration;
 }

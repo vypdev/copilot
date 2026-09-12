@@ -1,7 +1,10 @@
 # Agent Runtime, Provider, Model, and Role Routing
 
-- Status: As-built baseline
+- Status: Implemented
 - Date: 2026-09-11
+- Last updated: 2026-09-12
+- Catalog capability ID: `agent-runtime`
+- Last verified: 2026-09-12 in the P1-C implementation worktree
 - Owners: Copilot maintainers
 - Scope: resolve, validate, provision, authenticate, authorize, and execute provider-neutral agent roles
 - Related issues/PRs: comment automation, Bugbot, setup, PR lifecycle, and
@@ -12,11 +15,12 @@
 ## 1. Executive summary
 
 Copilot resolves one complete runtime/model tuple for each reachable agent role:
-provider runtime, model provider, model, optional effort, and audited command.
+provider runtime, model provider, model, optional effort, and optional validated
+executable selection.
 Common values may be overridden per planner, findings, reviewer, fixer, or tester.
 Only roles reachable from the current event are provisioned and authenticated.
 Invalid configuration or runtime failure is terminal for that capability; no
-silent provider/model/command fallback is attempted.
+silent provider/model/executable fallback is attempted.
 
 ```text
 event/command -> active roles -> common + role override -> validate allowlists
@@ -36,32 +40,32 @@ agents running for read-only tasks.
 ### 2.2 Current behavior
 
 1. `agent-*` supplies the common tuple; role-specific fields inherit only when blank.
-2. Supported runtimes are `codex`, `opencode`, and experimental `cursor`.
-3. Provider/model formats, runtime support, command tokens, and configured allowlists are validated.
+2. Supported runtimes are exact-manifest Codex, OpenCode, and Cursor builds.
+3. Provider/model formats, executable selection, exact runtime support, and configured allowlists are validated.
 4. Event/command policy calculates active roles before runtime preparation.
 5. `ai-members-only` may prevent all requested agent runtime preparation for an unauthorized actor.
-6. Provisioning mode (`auto`, `always`, `disabled`) and pinned/checksummed
-   installer policy decide whether a missing runtime may be installed.
-7. Provider-specific adapters derive safe argv/environment and execution mode;
-   callers use semantic findings/fixer/language ports.
-8. Structured responses are validated locally for every provider; invalid or oversized output fails.
+6. Provisioning mode (`auto`, `always`, `disabled`) installs only manifest-owned
+   Codex/OpenCode versions; Cursor requires the exact preinstalled manifest build.
+7. An exhaustive dispatcher selects one independent provider policy, and a
+   preflight planner produces the complete admitted execution plan.
+8. A generic process adapter consumes only admitted plans; OpenCode JSON events
+   are decoded before provider-neutral local schema validation.
 
 ### 2.3 Evidence and contract classification
 
-- Observed behavior: agent domain, configuration/activation policies, runtime
-  environment, CLI provisioner/execution/provider adapters, setup workflows,
+- Observed behavior: agent domain, configuration/activation policies, execution
+  planner, runtime manifest, CLI provisioner/process adapter, setup workflows,
   architecture/security tests, and agent docs.
 - Intentional contract: complete tuple, no implicit fallback, active-role-only
   preparation, semantic ports, local schema validation, and credential isolation.
-- Known debt and limitations: Cursor remains experimental; provider CLI flags
-  and authentication may change externally; one central execution policy owns
-  security-sensitive branching for every provider; live
-  credential/provisioning checks remain environment-specific; cost estimates
+- Known debt and limitations: provider CLI flags and authentication may change
+  externally; manifest upgrades require reviewed fixtures and controlled live
+  smoke evidence; credential checks remain environment-specific; cost estimates
   are not product guarantees.
 - Unknown rationale: current default model choice is operational configuration,
   not a permanent architecture decision.
-- Proposed improvements: provider-specific pure execution policies and an
-  exhaustive compile-time dispatcher are specified in
+- Implemented hardening: provider-specific execution policies and an exhaustive
+  compile-time dispatcher are specified in
   [`agent-execution-policy-hardening.md`](./agent-execution-policy-hardening.md),
   under the shared gates in
   [`architecture-quality-and-scalability-hardening.md`](./architecture-quality-and-scalability-hardening.md).
@@ -75,7 +79,7 @@ agents running for read-only tasks.
 | Repository owner | select approved runtime/model | setup/Variables/inputs | plan/docs/run |
 | Workflow | request capabilities | event/single action | Job Summary/logs |
 | Agent role | perform bounded task | semantic port | structured/text result |
-| Provider CLI | execute model request | adapter argv/stdin | process output |
+| Provider CLI | execute model request | admitted argv/stdin | process output |
 
 Runtime provider selects the executable; model provider selects who serves the
 model. Roles are planner (read), findings (read), reviewer (read), fixer (write
@@ -99,8 +103,8 @@ not merely configured.
 ### 4.3 Fixed product/safety invariants
 
 1. Missing/malformed/unsupported tuple or disallowed model fails before execution.
-2. Command overrides cannot contain unsafe shell structure or secret values.
-3. Read-only roles cannot receive write/network/approval authority beyond their adapter contract.
+2. Callers cannot provide command text or argv; executable selection accepts no arguments or wrappers.
+3. Read-only roles cannot receive write/network/approval authority beyond their admitted plan.
 4. Agent processes never receive GitHub git credentials.
 5. Structured output is locally validated even if the provider validates it.
 
@@ -110,11 +114,11 @@ not merely configured.
 |---|---|---|---|
 | Selection | provider implies model | independent qualified model | explicit behavior |
 | Roles | one runtime eagerly prepared | only active role tuples | lower cost/risk |
-| Command | caller builds shell string | adapter builds argv | injection resistance |
+| Invocation | caller supplies command text | provider policy builds argv | injection resistance |
 | Failure | silent fallback | terminal named error | auditability |
 | Output | trust provider JSON | local schema/size check | consistent contract |
 
-No legacy behavior is supported and no runtime change is proposed.
+No legacy behavior is supported; the hardened runtime is the only contract.
 
 ## 6. Functional behavior and state model
 
@@ -124,14 +128,14 @@ No legacy behavior is supported and no runtime change is proposed.
 2. Merge common tuple with complete role overrides and validate.
 3. Enforce model-provider/model allowlists and provisioning policy.
 4. Verify CLI and credential/login readiness.
-5. Invoke the provider adapter in the role workspace mode.
+5. Invoke the generic process adapter with the admitted role plan.
 6. Bound/parse/validate output and return semantic result.
 
 ### 6.2 Alternative paths
 
 - Different active roles in one workflow may use different runtimes/models.
 - Existing Codex login may satisfy an explicit credential alternative.
-- `auto` provisions only missing active runtimes; `always` reprovisions under pin/checksum policy.
+- `auto` provisions only missing active runtimes; `always` reinstalls Codex/OpenCode at the exact manifest version.
 - Optional effort maps to Codex reasoning, OpenCode variant, or provider-neutral context for Cursor.
 
 ### 6.3 State model
@@ -158,14 +162,14 @@ not treat a partial installer as authenticated success.
 | `agent-model-provider` | `openai` | validated identifier + allowlist | repository/run |
 | `agent-model` | `gpt-5.6-luna` | validated unqualified model + allowlist | repository/run |
 | `agent-effort` | empty | validated provider-supported value | repository/run |
-| `agent-command` | provider default | audited command tokens | repository/run |
+| `agent-executable` | manifest basename | exact basename or absolute path to it | repository/run |
 | `<role>-*` | inherit common tuple | same bounds | repository/run |
 | `AGENT_PROVISIONING` | `auto` | auto/always/disabled | runner/repository |
 | allowlists | setup-derived exact values | comma-separated exact providers/models | workflow environment |
 
 Model values MUST not repeat provider prefixes. A meaningful alternative is
 OpenCode with an explicitly qualified allowed provider/model. Cursor requires
-the documented credential and installer checksum. No-fallback, local schema,
+the documented credential and exact preinstalled manifest version. No-fallback, local schema,
 active-role-only, credential isolation, and permission modes are not configurable.
 
 ## 8. Clean Architecture design
@@ -175,8 +179,8 @@ active-role-only, credential isolation, and permission modes are not configurabl
 | Domain | provider/role/config tuple | process/env |
 | Policies | activation, inheritance, runtime support, validation | CLI invocation |
 | Application ports | findings/fixer/language capability requests | provider DTO/flags |
-| Data adapters | provider-neutral capability to CLI client | workflow routing |
-| Infrastructure ports/adapters | executable/process/auth/provisioning | product role policy |
+| Data adapters | provider-neutral capability and generic process lifecycle | workflow routing/provider authority |
+| Infrastructure planning | executable/version/artifact preflight | product role decisions |
 | Entrypoints/setup | inputs and composition | provider-specific branching beyond adapters |
 
 ```mermaid
@@ -184,8 +188,9 @@ flowchart LR
   E[Event/command] --> A[Active-role policy]
   A --> C[Effective tuple policy]
   C --> P[Semantic capability port]
-  P --> D[Provider CLI adapter]
-  D --> O[Local output validator]
+  P --> D[Admitted execution plan]
+  D --> G[Generic process adapter]
+  G --> O[Local output validator]
 ```
 
 Dependency/cycle tests, CLI entrypoint tests, provider-port boundaries,
@@ -224,7 +229,7 @@ Credentials remain in provider-supported environment/login stores and are never
 command arguments, prompts, result payloads, or catalog/config examples. Read
 roles use read-only/no-approval/network-restricted modes where supported. Write
 roles receive workspace access only after actor authorization and still cannot
-own trusted git. Commands use validated argv, bounded environment, timeouts,
+own trusted git. Processes use policy-owned argv, bounded environment, timeouts,
 output limits, redaction, and local schemas. Repository instructions are
 untrusted input, not authorization.
 
@@ -241,7 +246,7 @@ that require smoke evidence.
 
 There is no legacy provider alias or silent model fallback. Blank role fields
 inherit common fields; invalid explicit values fail. A new provider/model is
-rolled out by updating domain types, runtime-support/allowlist policy, adapter,
+rolled out by updating domain types, runtime-support/allowlist policy, provider plan,
 setup/workflows, credentials, docs, tests, and controlled smoke evidence.
 Rollback restores the prior tuple/version; provider-created external effects are
 handled under that provider's policy.
@@ -252,13 +257,13 @@ handled under that provider's policy.
 |---|---:|---|
 | Activation/config/runtime support | 30 | event roles, inheritance, formats, allowlists |
 | Provision/auth/execution state | 24 | modes, retries, timeout, partial install |
-| Provider adapters/error mapping | 24 | argv/stdin/env/effort/output per provider |
-| Workflow/setup contracts | 16 | secrets, pins, checksums, active inputs |
+| Provider plans/error mapping | 24 | argv/stdin/env/effort/output per provider |
+| Workflow/setup contracts | 16 | secrets, exact manifest versions, active inputs |
 | UX/sanitization | 12 | phase/errors/redaction/narrow output |
 | Integration/security/cutover | 18 | role→provider, injection, credentials, new provider |
 | **Total** | **124** | no double counting |
 
-Global thresholds remain; activation/configuration/command policies SHOULD reach
+Global thresholds remain; activation/configuration/executable policies SHOULD reach
 100% branch coverage. Use fake executables/processes/credentials and no live
 provider in unit/integration tests. Each provider requires controlled smoke tests
 for read and applicable write modes. Human evidence covers setup/doctor/action/CLI
@@ -277,13 +282,13 @@ errors and credential masking.
 
 1. An event prepares only its reachable roles.
 2. Blank role fields inherit common tuple; invalid explicit values do not fallback.
-3. Disallowed provider/model or unsafe command fails before process execution.
+3. Disallowed provider/model or unsafe executable selection fails before process execution.
 4. Each provider receives its documented argv/stdin/effort without secrets.
 5. Unauthorized mutation request prepares no write role.
 6. Missing CLI/auth reports one phase-specific recovery action.
 7. Invalid/oversized structured output is rejected locally and not published.
 8. Runtime failure does not invoke a second provider/model.
-9. Adding a provider cannot pass without adapter, security, workflow, docs, and smoke evidence.
+9. Adding a provider cannot pass without an exhaustive plan policy, security, workflow, docs, and smoke evidence.
 
 ## 17. Requirements traceability
 
@@ -292,7 +297,7 @@ errors and credential masking.
 | active roles | activation policy | activation tests | execution contract |
 | tuple/allowlist | config policies | builder/policy tests | model selection |
 | provisioning/auth | provisioner/preflight adapters | repository/infra tests | provisioning/credentials |
-| semantic execution | capability/provider adapters | adapter tests | runtime/CLI commands |
+| semantic execution | capability adapter/provider plans | policy and process tests | runtime/CLI commands |
 | local validation/security | parsers/schema/environment | security tests | failure/trust docs |
 
 ## 18. Maintenance sequence
@@ -307,7 +312,7 @@ errors and credential masking.
 
 - [ ] The 124-case budget, coverage, architecture, workflow, and docs gates pass.
 - [ ] Every active/inactive, config, provisioning, auth, execution, and validation state is tested.
-- [ ] Credentials, commands, output, read/write authority, and no-fallback rules pass security review.
+- [ ] Credentials, executable selection, output, read/write authority, and no-fallback rules pass security review.
 - [ ] All five UI states and setup/action/CLI surfaces are accessible and redacted.
 - [ ] Provider smoke evidence and rollback instructions exist.
 - [ ] Documentation and catalog reflect exact current defaults/allowlists.

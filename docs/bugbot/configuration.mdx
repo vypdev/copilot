@@ -21,13 +21,13 @@ env:
   CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
 ```
 
-For this configuration, Bugbot starts from this provider command:
+For this configuration, Bugbot constructs a managed invocation beginning with:
 
 ```text
-codex exec --ephemeral --skip-git-repo-check --model gpt-5.6-luna --config 'model_provider="openai"' -
+codex exec --strict-config --ignore-user-config --ignore-rules --ephemeral --sandbox read-only --model gpt-5.6-luna --config 'model_provider="openai"' -
 ```
 
-`agent-provider` selects the CLI runtime. `agent-model-provider` and `agent-model` select the qualified model. Allowlists are checked before execution and failures are terminal. Immediately before spawn, the Action adds its controlled approval, sandbox, no-network, ephemeral, config/rules isolation, plugin/tool, and environment restrictions. For Codex, it enforces `read-only` for reviewer/findings tasks and `workspace-write` for fixer tasks and rejects dangerous bypass flags. The child environment contains only safe runtime variables and the credential selected for that provider. See [Agent CLI configuration](/agents/cli-configuration).
+`agent-provider` selects the CLI runtime. `agent-model-provider` and `agent-model` select the qualified model. Allowlists are checked before execution and failures are terminal. Trusted provider policy owns the complete argv, approval, sandbox, no-network, ephemeral, config/rules isolation, plugin/tool, and environment restrictions. For Codex, it enforces `read-only` for reviewer/findings tasks and `workspace-write` for fixer tasks. The child environment contains only safe runtime variables and the credential selected for that provider. See [Agent CLI configuration](/agents/cli-configuration).
 
 ## bugbot-severity
 

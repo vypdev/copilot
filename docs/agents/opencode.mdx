@@ -21,10 +21,11 @@ env:
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-Copilot constructs the qualified model reference `openai/gpt-5.6-luna` and invokes:
+Copilot constructs the qualified model reference `openai/gpt-5.6-luna`; its managed policy owns this argv shape:
 
 ```bash
-opencode run --model openai/gpt-5.6-luna --variant high
+opencode run --pure --agent copilot-controlled-readonly --format json \
+  --model openai/gpt-5.6-luna --variant high
 ```
 
 The runtime (`opencode`), model provider (`openai`), model (`gpt-5.6-luna`), credential, and allowlist are separate concerns. See [Agent CLI configuration](/agents/cli-configuration) for the complete contract.
@@ -39,10 +40,10 @@ OpenCode supports many providers and local models. That flexibility does not cha
 
 ## Runtime and provisioning
 
-The Action can provision only the selected runtime in GitHub Actions using pinned version variables. OpenCode is installed as:
+The Action provisions only the selected runtime. OpenCode is pinned by the reviewed runtime manifest and installed as:
 
 ```bash
-npm install --global "opencode-ai@${OPENCODE_VERSION}"
+npm install --global "opencode-ai@1.18.3"
 ```
 
 The binary must pass version and headless-help checks before use:
@@ -56,11 +57,11 @@ See [Agent CLI provisioning](/security-operations/operations/cli-provisioning) a
 
 ## OpenCode behavior controlled by Copilot
 
-- The model is passed explicitly with `--model provider/model`.
-- The optional effort/variant is passed explicitly with `--variant`.
-- Custom OpenCode commands without an explicit `--model` are rejected.
-- No interactive TUI login is available during a headless run.
-- Additional OpenCode CLI capabilities can be enabled through an audited custom `agent-command`; the common contract deliberately does not start or manage a background HTTP daemon.
+- The exact supported version is `1.18.3`; every other version is rejected before execution.
+- `--pure`, the managed role, JSON event output, model, and optional `--variant` are reconstructed by policy.
+- The isolated config has wildcard default deny. It allows read/glob/grep/list, allows edit only for `fixer`, and denies bash, LSP, web, tasks, skills, questions, external directories, plugins, MCP, subagent depth, and session sharing.
+- The config directory and contents are ephemeral and hashed; repository OpenCode configuration is rejected.
+- No interactive TUI login or arbitrary CLI arguments are available during a headless run.
 - A provider failure is terminal; Copilot does not fall back to another provider or model.
 - Repository-local OpenCode defaults cannot silently replace the selected qualified model.
 
@@ -69,7 +70,7 @@ See [Agent CLI provisioning](/security-operations/operations/cli-provisioning) a
 Only run a real provider request when the user has authorized the provider, credential, and cost. A harmless test for the recommended configuration is:
 
 ```bash
-timeout 120s opencode run --model openai/gpt-5.6-luna \
+timeout 120s opencode run --pure --model openai/gpt-5.6-luna \
   'Reply with exactly READY. Do not inspect or modify files.'
 ```
 
@@ -79,7 +80,7 @@ The expected evidence is `READY` and exit code `0`. A successful binary/help che
 
 ### Missing executable
 
-Install the pinned OpenCode version with the runner's `npm`, then rerun:
+Install the manifest OpenCode version with the runner's `npm`, then rerun:
 
 ```bash
 command -v opencode
@@ -97,7 +98,7 @@ Check the three `agent-*` values and the two allowlists. The qualified model mus
 
 ### Configuration appears to be ignored
 
-Check for a custom `agent-command`. OpenCode commands must contain an explicit `--model`. Do not rely on a repository or global default to select the model.
+Remove repository `opencode.json`, `opencode.jsonc`, or `.opencode` configuration from the managed workspace. Copilot intentionally rejects ambient provider configuration rather than merging it with its policy.
 
 ## Related pages
 
@@ -105,3 +106,5 @@ Check for a custom `agent-command`. OpenCode commands must contain an explicit `
 - [Agent CLI provisioning](/security-operations/operations/cli-provisioning)
 - [Bugbot configuration](/bugbot/configuration)
 - [Authentication](/authentication)
+- [Official OpenCode configuration](https://opencode.ai/docs/config/)
+- [Official OpenCode permissions](https://opencode.ai/docs/permissions/)

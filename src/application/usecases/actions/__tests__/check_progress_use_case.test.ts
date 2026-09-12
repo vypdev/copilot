@@ -90,7 +90,7 @@ describe('CheckProgressUseCase', () => {
 
     expect(results[0].success).toBe(false);
     expect(results[0].errors.map((error) => error.message)).toContain(
-      'Missing required agent configuration. Provide a model and a valid CLI command.'
+      'Missing required agent configuration. Provide a model and a valid executable.'
     );
     expect(mockAskAgent).not.toHaveBeenCalled();
   });
