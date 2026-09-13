@@ -1,148 +1,165 @@
 import { UpdatePullRequestDescriptionUseCase } from '../update_pull_request_description_use_case';
 import { Ai } from '../../../../../data/model/ai';
+import type {
+  PullRequestDescriptionContext,
+  PullRequestDescriptionRequest,
+} from '../../../pull_request_workflow_context';
 
 jest.mock('../../../../../utils/logger', () => ({
-  logInfo: jest.fn(),
-  logDebugInfo: jest.fn(),
-  logError: jest.fn(),
+  logInfo: jest.fn(), logDebugInfo: jest.fn(), logError: jest.fn(),
 }));
 
 const mockGetIssueDescription = jest.fn();
-
 const mockGetAllMembers = jest.fn();
-jest.mock('../../../../../data/repository/organization/organization_members_repository', () => ({
-  OrganizationMembersRepository: jest.fn().mockImplementation(() => ({
-    getAllMembers: mockGetAllMembers,
-  })),
-}));
-
 const mockAskAgent = jest.fn();
-
 const mockUpdateDescription = jest.fn();
+const mockGetDetails = jest.fn();
 
-function baseParam(overrides: Record<string, unknown> = {}) {
+function context(overrides: Partial<PullRequestDescriptionContext> = {}): PullRequestDescriptionContext {
+  const ai = new Ai('http://localhost:4096', 'model', false, [], false, 'low', 20);
   return {
-    owner: 'o',
-    repo: 'r',
+    eventName: 'pull_request',
     issueNumber: 42,
-    tokens: { token: 't' },
-    pullRequest: { number: 10, head: 'feature/42-x', base: 'develop', creator: 'alice' },
-    ai: new Ai('http://localhost:4096', 'model', false, [], false, 'low', 20),
+    pullRequest: {
+      number: 10,
+      headBranch: 'feature/42-x',
+      baseBranch: 'develop',
+      creator: 'alice',
+      body: 'Human context',
+    },
+    mode: 'replace',
+    membersOnly: false,
+    agentConfiguration: ai.getAgentConfiguration('planner'),
     ...overrides,
-  } as unknown as Parameters<UpdatePullRequestDescriptionUseCase['invoke']>[0];
+  };
+}
+
+function request(
+  overrides: Partial<PullRequestDescriptionContext> = {},
+  trigger: PullRequestDescriptionRequest['trigger'] = 'automatic',
+): PullRequestDescriptionRequest {
+  return { context: context(overrides), trigger };
 }
 
 describe('UpdatePullRequestDescriptionUseCase', () => {
   let useCase: UpdatePullRequestDescriptionUseCase;
 
   beforeEach(() => {
-    mockGetIssueDescription.mockClear();
-    mockGetAllMembers.mockClear();
-    mockAskAgent.mockClear();
-    mockUpdateDescription.mockClear();
+    jest.clearAllMocks();
     useCase = new UpdatePullRequestDescriptionUseCase(
-      { updateDescription: mockUpdateDescription },
+      { updateDescription: mockUpdateDescription, getDetails: mockGetDetails },
       { getDescription: mockGetIssueDescription },
-      { getAllMembers: mockGetAllMembers, getRandomMembers: jest.fn() },
-      { query: (request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }) => mockAskAgent(request.configuration, request.agentId, request.prompt, request.options) },
+      { getAllMembers: mockGetAllMembers },
+      { query: (value) => mockAskAgent(value) },
     );
     mockGetIssueDescription.mockResolvedValue('Issue description');
     mockGetAllMembers.mockResolvedValue(['alice', 'bob']);
     mockAskAgent.mockResolvedValue('## Summary\nPR does X.');
+    mockGetDetails.mockResolvedValue({ body: 'Remote human context', headBranch: 'feature/42-x', baseBranch: 'develop' });
     mockUpdateDescription.mockResolvedValue(undefined);
   });
 
-  it('returns failure when head or base branch is missing', async () => {
-    const param = baseParam({ pullRequest: { number: 10, head: '', base: 'develop', creator: 'alice' } });
-    const results = await useCase.invoke(param);
-    expect(results[0].success).toBe(false);
-    expect(results[0].steps?.some((s) => s.includes('Could not determine PR branches'))).toBe(true);
+  it.each(['replace', 'append'] as const)('runs %s automatically', async (mode) => {
+    const results = await useCase.invoke(request({ mode }));
+    expect(results[0]).toMatchObject({ success: true, executed: true });
+    expect(mockUpdateDescription).toHaveBeenCalledWith(10, expect.stringContaining('PR does X'));
   });
 
-  it('returns failure when no issue description', async () => {
-    mockGetIssueDescription.mockResolvedValue('');
-    const param = baseParam();
-    const results = await useCase.invoke(param);
-    expect(results[0].success).toBe(false);
-    expect(results[0].steps?.some((s) => s.includes('No issue description'))).toBe(true);
-  });
-
-  it('generates a description for a PR without a linked issue', async () => {
-    mockGetIssueDescription.mockResolvedValue(undefined);
-    mockAskAgent.mockResolvedValue('# Summary\n\nGenerated from the PR diff.');
-    const param = baseParam({
-      issueNumber: -1,
-      pullRequest: { number: 12, head: 'feature/no-issue', base: 'develop', creator: 'alice' },
-    });
-
-    const results = await useCase.invoke(param);
-
-    expect(results[0].success).toBe(true);
-    expect(mockGetIssueDescription).not.toHaveBeenCalled();
-    expect(mockUpdateDescription).toHaveBeenCalledWith(
-      'o',
-      'r',
-      12,
-      expect.stringContaining('# Summary'),
-      't',
-    );
-    expect(mockAskAgent.mock.calls[0][2]).toContain('Do not add a Closes line');
-  });
-
-  it('updates PR description when AI returns body and creator is team member', async () => {
-    const param = baseParam();
-    const results = await useCase.invoke(param);
-    expect(mockAskAgent).toHaveBeenCalled();
-    const prompt = mockAskAgent.mock.calls[0][2];
-    expect(prompt).toContain('feature/42-x');
-    expect(prompt).toContain('develop');
-    expect(prompt).toContain('Issue description');
-    expect(prompt).toContain('Closes #42');
-    expect(mockUpdateDescription).toHaveBeenCalledWith('o', 'r', 10, '## Summary\nPR does X.', 't');
-    expect(mockUpdateDescription.mock.calls[0][3]).not.toContain('copilot:managed-pr-description');
-    expect(results.some((r) => r.success === true)).toBe(true);
-  });
-
-  it('returns failure when AI returns empty description', async () => {
-    mockAskAgent.mockResolvedValue('');
-    const param = baseParam();
-    const results = await useCase.invoke(param);
-    expect(results[0].success).toBe(false);
-    expect(results[0].steps?.some((s) => s.includes('did not return a PR description'))).toBe(true);
-  });
-
-  it('skips update when creator is not team member and AI members only is enabled', async () => {
-    mockGetAllMembers.mockResolvedValue(['bob', 'carol']);
-    const aiMembersOnly = new Ai(
-      'http://localhost:4096',
-      'model',
-      true, // aiMembersOnly
-      [],
-      false,
-      'low',
-      20
-    );
-    expect(aiMembersOnly.getAiMembersOnly()).toBe(true);
-    const param = baseParam({
-      pullRequest: { number: 10, head: 'feature/42-x', base: 'develop', creator: 'alice' },
-      ai: aiMembersOnly,
-    });
-    mockAskAgent.mockClear();
-
-    const results = await useCase.invoke(param);
-
-    expect(results[0].success).toBe(false);
-    expect(results[0].executed).toBe(false);
-    expect(results[0].steps?.some((s) => s.includes('not a team member') && s.includes('AI members only'))).toBe(
-      true
-    );
+  it('skips preserve mode automatically', async () => {
+    const results = await useCase.invoke(request({ mode: 'preserve' }));
+    expect(results[0]).toMatchObject({ success: false, executed: false });
     expect(mockAskAgent).not.toHaveBeenCalled();
   });
 
-  it('returns failure on error', async () => {
-    mockGetIssueDescription.mockRejectedValue(new Error('API error'));
-    const param = baseParam();
-    const results = await useCase.invoke(param);
+  it('allows preserve mode only through an authorized command and retains human text', async () => {
+    const results = await useCase.invoke(request({ mode: 'preserve', eventName: 'issue_comment' }, 'authorized-command'));
+    expect(results[0].success).toBe(true);
+    expect(mockUpdateDescription).toHaveBeenCalledWith(10, expect.stringContaining('Remote human context'));
+    expect(mockUpdateDescription.mock.calls[0][1]).toContain('copilot:managed-pr-description');
+  });
+
+  it.each(['automatic', 'authorized-command'] as const)('skips disabled mode for %s', async (trigger) => {
+    const results = await useCase.invoke(request({ mode: 'disabled' }, trigger));
+    expect(results[0]).toMatchObject({ success: false, executed: false });
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when neither event nor exact provider details supply both branches', async () => {
+    mockGetDetails.mockResolvedValue({ body: '', headBranch: '', baseBranch: 'develop' });
+    const pullRequest = { ...context().pullRequest, headBranch: '' };
+    const results = await useCase.invoke(request({ pullRequest, eventName: 'issue_comment' }, 'authorized-command'));
     expect(results[0].success).toBe(false);
+    expect(mockAskAgent).not.toHaveBeenCalled();
+  });
+
+  it('reports the missing provider base without obscuring the available head branch', async () => {
+    mockGetDetails.mockResolvedValue({ body: '', headBranch: 'feature/42-x', baseBranch: '' });
+    const pullRequest = { ...context().pullRequest, baseBranch: '' };
+
+    const results = await useCase.invoke(request({ pullRequest, eventName: 'issue_comment' }, 'authorized-command'));
+
+    expect(results[0].steps[0]).toContain('head: feature/42-x, base: missing');
+    expect(mockAskAgent).not.toHaveBeenCalled();
+  });
+
+  it('uses authoritative provider details when the event omits the base branch', async () => {
+    const pullRequest = { ...context().pullRequest, baseBranch: '' };
+
+    const results = await useCase.invoke(request({ pullRequest }));
+
+    expect(mockGetDetails).toHaveBeenCalledWith(10);
+    expect(results[0]).toMatchObject({ success: true, executed: true });
+    expect(mockUpdateDescription).toHaveBeenCalledWith(10, expect.stringContaining('PR does X'));
+  });
+
+  it('rejects an invalid pull-request number before provider or agent I/O', async () => {
+    const pullRequest = { ...context().pullRequest, number: -1 };
+
+    const results = await useCase.invoke(request({ pullRequest }));
+
+    expect(results[0]).toMatchObject({ success: false, executed: false });
+    expect(results[0].steps[0]).toContain('positive pull-request number');
+    expect(mockGetDetails).not.toHaveBeenCalled();
+    expect(mockGetIssueDescription).not.toHaveBeenCalled();
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+
+  it('does not query an issue for an unlinked PR', async () => {
+    const results = await useCase.invoke(request({ issueNumber: -1 }));
+    expect(results[0].success).toBe(true);
+    expect(mockGetIssueDescription).not.toHaveBeenCalled();
+  });
+
+  it('skips when the linked issue has no authoritative description', async () => {
+    mockGetIssueDescription.mockResolvedValue(undefined);
+
+    const results = await useCase.invoke(request());
+
+    expect(results[0]).toMatchObject({ success: false, executed: false });
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+
+  it('does not publish blank agent output', async () => {
+    mockAskAgent.mockResolvedValue('');
+    const results = await useCase.invoke(request());
+    expect(results[0]).toMatchObject({ success: false, executed: true });
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+
+  it('enforces members-only before invoking the agent', async () => {
+    mockGetAllMembers.mockResolvedValue(['bob']);
+    const results = await useCase.invoke(request({ membersOnly: true }));
+    expect(results[0]).toMatchObject({ success: false, executed: false });
+    expect(mockAskAgent).not.toHaveBeenCalled();
+  });
+
+  it('returns a semantic failure without replacing the body on provider error', async () => {
+    mockGetIssueDescription.mockRejectedValue(new Error('secret diagnostic'));
+    const results = await useCase.invoke(request());
+    expect(results[0]).toMatchObject({ success: false, executed: true });
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+    expect(JSON.stringify(results)).not.toContain('secret diagnostic');
   });
 });

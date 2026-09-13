@@ -52,14 +52,83 @@ describe('status command policy', () => {
     });
 
     it('copies and freezes finding counts from mutable execution results', () => {
-        const findingStates = { open: 2, reopened: 1, resolved: 3 };
+        const findingStates = {
+            open: 2,
+            reopened: 1,
+            fixed: 1,
+            obsolete: 1,
+            dismissed: 1,
+            'verification-required': 0,
+            unknown: 0,
+        };
         const snapshot = buildCopilotStatusSnapshot(execution({
             currentConfiguration: { results: [{ payload: { findingStates } }] },
         }) as never);
 
         findingStates.open = 99;
-        expect(snapshot.activeFindings).toEqual({ open: 2, reopened: 1, resolved: 3 });
-        expect(Object.isFrozen(snapshot.activeFindings)).toBe(true);
+        expect(snapshot.findingStates).toEqual({
+            open: 2,
+            reopened: 1,
+            verificationRequired: 0,
+            unknown: 0,
+            resolved: 3,
+        });
+        expect(Object.isFrozen(snapshot.findingStates)).toBe(true);
+    });
+
+    it('surfaces malformed owned finding-state evidence without inventing counts', () => {
+        const snapshot = buildCopilotStatusSnapshot(execution({
+            currentConfiguration: { results: [{ payload: { findingStates: { open: 1 } } }] },
+        }) as never);
+
+        expect(snapshot.findingStates).toBeUndefined();
+        expect(snapshot.findingStateEvidence).toBe('invalid');
+        expect(formatCopilotStatus(snapshot)).toContain('invalid evidence; inspect the workflow result.');
+    });
+
+    it('surfaces missing required review finding-state evidence as invalid', () => {
+        const snapshot = buildCopilotStatusSnapshot(execution({
+            currentConfiguration: { results: [{ payload: {
+                bugbotTelemetry: { schemaVersion: 1, outcome: 'no-findings', elapsedMs: 10, configuredEffort: 'smart', headSha: 'sha-123' },
+            } }] },
+        }) as never);
+
+        expect(snapshot.findingStates).toBeUndefined();
+        expect(snapshot.findingStateEvidence).toBe('invalid');
+    });
+
+    it('surfaces malformed sibling telemetry as invalid despite valid zero counts', () => {
+        const snapshot = buildCopilotStatusSnapshot(execution({
+            currentConfiguration: { results: [
+                { payload: {
+                    bugbotTelemetry: { schemaVersion: 1, outcome: 'completed', elapsedMs: 10, configuredEffort: 'smart', headSha: 'sha-123' },
+                    findingStates: {
+                        open: 0, reopened: 0, fixed: 0, obsolete: 0, dismissed: 0,
+                        'verification-required': 0, unknown: 0,
+                    },
+                } },
+                { payload: { bugbotTelemetry: { schemaVersion: 2, outcome: 'completed', elapsedMs: 10 } } },
+            ] },
+        }) as never);
+
+        expect(snapshot.findingStates).toBeUndefined();
+        expect(snapshot.findingStateEvidence).toBe('invalid');
+    });
+
+    it('renders every non-clean finding state explicitly', () => {
+        const snapshot = buildCopilotStatusSnapshot(execution({
+            currentConfiguration: { results: [{ payload: { findingStates: {
+                open: 1,
+                reopened: 2,
+                fixed: 1,
+                obsolete: 1,
+                dismissed: 1,
+                'verification-required': 3,
+                unknown: 4,
+            } } }] },
+        }) as never);
+
+        expect(formatCopilotStatus(snapshot)).toContain('1 open, 2 reopened, 3 verification required, 4 unknown, 3 resolved');
     });
 
     it('renders a markdown status result without invoking an agent', () => {

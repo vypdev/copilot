@@ -2,7 +2,7 @@ import { Result } from '../../../../data/model/result';
 import type { BoundIssueNotificationPort } from '../../../ports/issue_lifecycle_ports';
 import type { ApplicationLogReportReaderPort } from '../../../ports/logging_ports';
 import { getRandomElement } from '../../../../utils/list_utils';
-import { logError } from '../../../ports/logging_ports';
+import { logError, logInfo } from '../../../ports/logging_ports';
 import {
     buildDebugLogSection,
     hasPublishableContent,
@@ -20,7 +20,7 @@ import { buildApplicationErrorPresentation } from '../../../policies/application
 import { toApplicationError } from '../../../errors/application_error';
 
 export interface PublishResultContext {
-    readonly skipBugbotReviewSummary: boolean;
+    readonly genericCommentMode: 'publish' | 'omit-feature-owned' | 'omit-metadata-only';
     readonly debug: boolean;
     readonly target: ResultPublicationTargetInput;
     readonly presentation: ResultPublicationContext;
@@ -41,7 +41,7 @@ export interface PublishResultContextSource {
     readonly isChore: boolean;
     readonly singleAction: { readonly issue: number };
     readonly issue: { readonly number: number };
-    readonly pullRequest: { readonly number: number };
+    readonly pullRequest: { readonly number: number; readonly action: string };
     readonly release: { readonly active: boolean };
     readonly hotfix: { readonly active: boolean };
     readonly images: ResultPublicationImages;
@@ -53,9 +53,7 @@ export interface PublishResultContextSource {
 export function projectPublishResultContext(source: PublishResultContextSource): PublishResultContext {
     const results = Object.freeze(source.currentConfiguration.results.map(projectResult));
     return Object.freeze({
-        skipBugbotReviewSummary: source.isPullRequest
-            && !source.isSingleAction
-            && results.some((result) => result.id === 'DetectPotentialProblemsUseCase' && result.executed),
+        genericCommentMode: resolveGenericCommentMode(source, results),
         debug: source.debug,
         target: Object.freeze({
             isSingleAction: source.isSingleAction,
@@ -90,7 +88,10 @@ export async function runPublishResume(
     logReport: ApplicationLogReportReaderPort,
 ): Promise<Result | undefined> {
     try {
-        if (param.skipBugbotReviewSummary) return undefined;
+        if (param.genericCommentMode !== 'publish') {
+            logInfo(`Generic result comment omitted: ${param.genericCommentMode}.`);
+            return undefined;
+        }
         const sections = renderResultSections(param.results);
         const debugLogSection = buildDebugLogSection(param.debug, logReport.getAccumulatedLogsAsText());
         if (!hasPublishableContent(sections, debugLogSection)) return undefined;
@@ -112,6 +113,17 @@ export async function runPublishResume(
             errors: [semanticError],
         });
     }
+}
+
+function resolveGenericCommentMode(
+    source: PublishResultContextSource,
+    results: readonly ResultPublicationRecord[],
+): PublishResultContext['genericCommentMode'] {
+    if (!source.isPullRequest || source.isSingleAction) return 'publish';
+    if (source.pullRequest.action === 'edited') return 'omit-metadata-only';
+    return results.some((result) => result.id === 'DetectPotentialProblemsUseCase' && result.executed)
+        ? 'omit-feature-owned'
+        : 'publish';
 }
 
 function buildResumeComment(

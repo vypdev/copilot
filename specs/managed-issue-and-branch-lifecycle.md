@@ -1,7 +1,8 @@
 # Managed Issue and Branch Lifecycle
 
 - Status: As-built baseline
-- Date: 2026-09-11
+- Date: 2026-09-13
+- Last verified: 2026-09-13 on `develop` (P2-E implementation validation)
 - Owners: Copilot maintainers
 - Scope: issue admission, metadata enrichment, managed branch creation, lifecycle state, and merge-driven closure
 - Related issues/PRs: release orchestration and branch synchronization SDDs
@@ -41,7 +42,8 @@ and hotfix origin mistakes are especially hard to recover.
 5. Managed feature/bugfix/docs/chore branches originate from development;
    release branches persist development origin SHA; hotfix branches use the
    latest tag commit.
-6. A created linked branch moves the issue to in-progress and persists branch facts.
+6. A created linked branch returns immutable branch facts; the issue route then
+   moves the issue to in-progress and applies only the returned configuration patch.
 7. The workflow may answer help or recommend steps; new issues get one welcome.
 8. A merged linked PR closes the issue through the PR lifecycle.
 
@@ -103,7 +105,10 @@ waiting labels are independent dimensions.
 | Tracking | prose only | config marker + linked branch + labels | machine/human trace |
 | Completion | manual close | merged PR closes issue | lifecycle alignment |
 
-No behavior change is proposed.
+P2-E changes internal state ownership and failure reporting without changing
+the successful issue journey: leaf steps receive immutable capability requests,
+provider credentials are bound by composition, and branch facts are applied by
+the route only after the preparation step returns.
 
 ## 6. Functional behavior and state model
 
@@ -201,6 +206,7 @@ Untrusted titles/body/branch text is sanitized before Markdown or commands.
 | permission denied | issue closed/no branch | reason result | after access fix | maintainer | none |
 | origin/tag missing | special branch absent | issue/config | yes | repair branch/tag | none |
 | create/link fails | no or partial link | provider state | yes | inspect branch first | do not duplicate |
+| branch created, later metadata move fails | branch exists; configuration patch still returned | exact branch URL/name and patch | yes | continue work and retry metadata | never delete a valid branch implicitly |
 | project/metadata fails | branch may exist | branch/config | yes | retry enrichment | none |
 | stale cleanup request | wrong deletion risk | all branches | no unsafe retry | re-resolve exact targets | exact branches only |
 
@@ -240,7 +246,9 @@ managed branches after exact validation; merged commits are not erased.
 | **Total** | **90** | no double counting |
 
 Global coverage remains mandatory; changed pure branch/lifecycle policy SHOULD
-reach 95% branch coverage. Use deterministic propagation fakes, not real waits.
+reach 95% branch coverage. The P2-E issue/PR context path additionally enforces
+95% lines/statements and 90% branches/functions in its dedicated coverage gate.
+Use deterministic propagation fakes, not real waits.
 Manual evidence covers issue rendering, linked-branch discoverability, mobile,
 dark/light, and non-English fallback.
 
@@ -264,6 +272,8 @@ dark/light, and non-English fallback.
 7. A provider failure after branch creation reports the retained branch.
 8. A merged linked PR closes the issue and exposes completion.
 9. Untrusted issue text cannot inject commands, mentions, or markers.
+10. A branch helper cannot mutate route-owned configuration; the route applies
+    exactly the returned frozen patch after the step completes.
 
 ## 17. Requirements traceability
 
@@ -273,6 +283,7 @@ dark/light, and non-English fallback.
 | issue sequence | issue workflow | issue use-case tests | issue overview |
 | lifecycle facts | lifecycle domain/use case | lifecycle tests | labels pages |
 | provider linkage | branch repository/ports | repository tests | branch management |
+| route-owned state | branch preparation outcome and issue route | projection, preparation, and coordinator patch tests | branch management/architecture |
 | safe UX | presentation policies | result tests | examples |
 
 ## 18. Maintenance sequence
@@ -295,7 +306,8 @@ dark/light, and non-English fallback.
 ## 20. References and decisions
 
 - Primary sources: catalogued issue/branch code, tests, workflows, and docs.
-- Related SDDs: release orchestration; branch synchronization; PR lifecycle.
+- Related SDDs: release orchestration; branch synchronization; PR lifecycle;
+  issue and pull-request context hardening.
 - Decision: semantic origins are fixed; surface naming remains bounded configuration.
 - Rejected: arbitrary branch graphs and inferred release origin.
 - Follow-up: event-driven branch propagation is outside this baseline.

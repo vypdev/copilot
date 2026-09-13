@@ -44,3 +44,12 @@ See [AI PR description](/pull-requests/ai-description) for how the description i
 | `token` | GitHub PAT (required for linking and project updates) | — |
 
 For size thresholds, priority labels, and branch naming (used when the action infers the issue from the branch), see [Configuration](/configuration).
+
+## Fixed linkage safety rules
+
+PR-link recovery is intentionally not configurable. Repository identity and the
+PAT are bound by the action runtime; capability requests contain neither. PR and
+issue numbers must be positive safe integers, branch refs must be safe, and the
+provider target is derived from the configured repository rather than an event
+URL. The temporary marker format, default-branch observation delay, compensation
+order, and exact-body restoration cannot be weakened by workflow inputs.

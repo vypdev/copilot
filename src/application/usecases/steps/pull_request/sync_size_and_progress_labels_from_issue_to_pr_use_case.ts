@@ -1,23 +1,23 @@
-import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
-import type { IssueLabelsPort } from "../../../ports/issue_management_ports";
+import type { BoundIssueLabelsPort } from "../../../ports/issue_management_ports";
 import { logDebugInfo, logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
 import { mergeSizeAndProgressLabels, selectSizeAndProgressLabels } from './sync_size_and_progress_labels_policy';
 import { toApplicationError } from '../../../errors/application_error';
+import type { SyncPullRequestLabelsContext } from '../../pull_request_workflow_context';
 
 /**
  * Copies size and progress labels from the linked issue to the PR.
  * Used when a PR is opened so it gets the same size/progress as the issue (corner case:
  * no push has run yet, so CommitUseCase has not updated the PR).
  */
-export class SyncSizeAndProgressLabelsFromIssueToPrUseCase implements ParamUseCase<Execution, Result[]> {
+export class SyncSizeAndProgressLabelsFromIssueToPrUseCase implements ParamUseCase<SyncPullRequestLabelsContext, Result[]> {
     taskId: string = 'SyncSizeAndProgressLabelsFromIssueToPrUseCase';
 
-    constructor(private readonly issueLabelsPort: IssueLabelsPort) {}
+    constructor(private readonly issueLabelsPort: BoundIssueLabelsPort) {}
 
-    async invoke(param: Execution): Promise<Result[]> {
+    async invoke(param: SyncPullRequestLabelsContext): Promise<Result[]> {
         logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`);
 
         const result: Result[] = [];
@@ -35,13 +35,8 @@ export class SyncSizeAndProgressLabelsFromIssueToPrUseCase implements ParamUseCa
                 return result;
             }
 
-            const issueLabels = await this.issueLabelsPort.getLabels(
-                param.owner,
-                param.repo,
-                param.issueNumber,
-                param.tokens.token,
-            );
-            const sizeAndProgressFromIssue = selectSizeAndProgressLabels(issueLabels, param.labels.sizeLabels);
+            const issueLabels = await this.issueLabelsPort.getLabels(param.issueNumber);
+            const sizeAndProgressFromIssue = selectSizeAndProgressLabels(issueLabels, param.sizeLabels);
             if (sizeAndProgressFromIssue.length === 0) {
                 logDebugInfo(`Issue #${param.issueNumber} has no size or progress labels. Nothing to sync.`);
                 result.push(
@@ -55,22 +50,11 @@ export class SyncSizeAndProgressLabelsFromIssueToPrUseCase implements ParamUseCa
                 return result;
             }
 
-            const prNumber = param.pullRequest.number;
-            const prLabels = await this.issueLabelsPort.getLabels(
-                param.owner,
-                param.repo,
-                prNumber,
-                param.tokens.token,
-            );
-            const nextPrLabels = mergeSizeAndProgressLabels(prLabels, sizeAndProgressFromIssue, param.labels.sizeLabels);
+            const prNumber = param.pullRequestNumber;
+            const prLabels = await this.issueLabelsPort.getLabels(prNumber);
+            const nextPrLabels = mergeSizeAndProgressLabels(prLabels, sizeAndProgressFromIssue, param.sizeLabels);
 
-            await this.issueLabelsPort.setLabels(
-                param.owner,
-                param.repo,
-                prNumber,
-                nextPrLabels,
-                param.tokens.token,
-            );
+            await this.issueLabelsPort.setLabels(prNumber, nextPrLabels);
             logDebugInfo(`Synced size/progress labels from issue #${param.issueNumber} to PR #${prNumber}: ${sizeAndProgressFromIssue.join(', ')}`);
 
             result.push(

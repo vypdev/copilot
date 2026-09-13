@@ -1,29 +1,25 @@
-import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
-import type { BranchLifecyclePort, BranchNamePort } from "../../../ports/branch_lifecycle_ports";
+import type { BoundBranchLifecyclePort, BranchNamePort } from "../../../ports/branch_lifecycle_ports";
 import { logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
 import { toApplicationError } from "../../../errors/application_error";
+import type { RemoveObsoleteIssueBranchesContext } from '../../issue_workflow_context';
 
-export class RemoveNotNeededBranchesUseCase implements ParamUseCase<Execution, Result[]> {
+export class RemoveNotNeededBranchesUseCase implements ParamUseCase<RemoveObsoleteIssueBranchesContext, Result[]> {
     taskId = "RemoveNotNeededBranchesUseCase";
     constructor(
-        private readonly branchLifecyclePort: BranchLifecyclePort,
+        private readonly branchLifecyclePort: BoundBranchLifecyclePort,
         private readonly branchNamePort: BranchNamePort,
     ) {}
 
-    async invoke(param: Execution): Promise<Result[]> {
+    async invoke(param: RemoveObsoleteIssueBranchesContext): Promise<Result[]> {
         logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`);
         try {
-            const issueTitle = param.issue.title ?? "";
+            const issueTitle = param.issueTitle;
             if (!issueTitle) return this.missingTitleResult();
 
-            const branches = await this.branchLifecyclePort.getListOfBranches(
-                param.owner,
-                param.repo,
-                param.tokens.token,
-            );
+            const branches = await this.branchLifecyclePort.getListOfBranches();
             const sanitizedTitle = this.branchNamePort.formatBranchName(issueTitle, param.issueNumber);
             const finalBranch = `${param.managementBranch}/${param.issueNumber}-${sanitizedTitle}`;
             const candidates = this.findCandidates(param, branches, finalBranch);
@@ -46,9 +42,8 @@ export class RemoveNotNeededBranchesUseCase implements ParamUseCase<Execution, R
         }
     }
 
-    private findCandidates(param: Execution, branches: string[], finalBranch: string): string[] {
-        const branchTypes = [param.branches.featureTree, param.branches.bugfixTree];
-        return branchTypes.flatMap((type) => {
+    private findCandidates(param: RemoveObsoleteIssueBranchesContext, branches: readonly string[], finalBranch: string): string[] {
+        return param.managedBranchTypes.flatMap((type) => {
             const prefix = `${type}/${param.issueNumber}-`;
             return branches.filter((branch) => {
                 if (!branch.includes(prefix)) return false;
@@ -57,13 +52,8 @@ export class RemoveNotNeededBranchesUseCase implements ParamUseCase<Execution, R
         });
     }
 
-    private async removeBranch(param: Execution, branch: string): Promise<Result[]> {
-        const removed = await this.branchLifecyclePort.removeBranch(
-            param.owner,
-            param.repo,
-            branch,
-            param.tokens.token,
-        );
+    private async removeBranch(_param: RemoveObsoleteIssueBranchesContext, branch: string): Promise<Result[]> {
+        const removed = await this.branchLifecyclePort.removeBranch(branch);
         const inlineCode = "`";
         if (removed) {
             return [

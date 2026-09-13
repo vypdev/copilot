@@ -9,12 +9,8 @@ const mockSetIssueType = jest.fn();
 
 function baseParam() {
   return {
-    owner: 'o',
-    repo: 'r',
     issueNumber: 42,
-    labels: {} as Parameters<UpdateIssueTypeUseCase['invoke']>[0]['labels'],
-    issueTypes: {} as Parameters<UpdateIssueTypeUseCase['invoke']>[0]['issueTypes'],
-    tokens: { token: 't' },
+    issueType: { name: 'Task', description: 'Work item', color: 'BLUE' },
   } as unknown as Parameters<UpdateIssueTypeUseCase['invoke']>[0];
 }
 
@@ -34,12 +30,8 @@ describe('UpdateIssueTypeUseCase', () => {
 
     expect(results).toHaveLength(0);
     expect(mockSetIssueType).toHaveBeenCalledWith(
-      'o',
-      'r',
       42,
-      param.labels,
-      param.issueTypes,
-      't'
+      param.issueType,
     );
   });
 

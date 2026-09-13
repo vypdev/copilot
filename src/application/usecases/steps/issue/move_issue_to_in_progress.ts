@@ -1,30 +1,27 @@
-import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
-import type { ProjectBoardCommandPort } from "../../../../application/ports/project_board_command_ports";
+import type { BoundProjectBoardCommandPort } from "../../../../application/ports/project_board_command_ports";
 import { logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
 import { toApplicationError } from "../../../errors/application_error";
+import type { MoveIssueToInProgressContext } from '../../issue_workflow_context';
 
-export class MoveIssueToInProgressUseCase implements ParamUseCase<Execution, Result[]> {
+export class MoveIssueToInProgressUseCase implements ParamUseCase<MoveIssueToInProgressContext, Result[]> {
     taskId: string = 'MoveIssueToInProgressUseCase';
     
-    constructor(private readonly projectRepository: ProjectBoardCommandPort) {}
+    constructor(private readonly projectRepository: BoundProjectBoardCommandPort) {}
 
-    async invoke(param: Execution): Promise<Result[]> {
+    async invoke(param: MoveIssueToInProgressContext): Promise<Result[]> {
         logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`)
 
         const result: Result[] = []
-        const columnName = param.project.getProjectColumnIssueInProgress();
+        const columnName = param.columnName;
         try {
-            for (const project of param.project.getProjects()) {
+            for (const project of param.projects) {
                 const success = await this.projectRepository.moveIssueToColumn(
                     project,
-                    param.owner,
-                    param.repo,
                     param.issueNumber,
                     columnName,
-                    param.tokens.token,
                 );
 
                 if (success) {
@@ -34,7 +31,7 @@ export class MoveIssueToInProgressUseCase implements ParamUseCase<Execution, Res
                             success: true,
                             executed: true,
                             steps: [
-                                `Moved issue to \`${columnName}\` in [${project.title}](${project.publicUrl}).`,
+                                `Moved issue to \`${columnName}\` in [${project.title}](${project.url}).`,
                             ],
                         })
                     );

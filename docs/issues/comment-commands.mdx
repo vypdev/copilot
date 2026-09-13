@@ -48,6 +48,12 @@ Commands are recognized at the beginning of a comment, case-insensitively. They 
 
 `/copilot fix`, `/copilot dismiss`, and `/copilot implement` require arguments. The bot never treats a missing argument as permission to make a broad change.
 
+`/copilot status` reports lifecycle, waiting state, branch, labels, and the
+canonical Bugbot counts: open, reopened, verification-required, unknown, and
+resolved. If the stored workflow result owns malformed finding-state evidence,
+the command says that evidence is invalid and directs you to the workflow
+result; it never substitutes zero or a clean state.
+
 GitHub delivers a comment in the main PR conversation as an `issue_comment`
 event. Copilot uses GitHub's PR marker and exact PR number to keep that transport
 detail from changing the target: read-only commands such as `/copilot recheck`

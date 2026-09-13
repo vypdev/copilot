@@ -13,7 +13,9 @@ const entryByPath = new Map(
 const purePolicies = [
   'src/domain/bugbot/context.ts',
   'src/application/policies/bounded_concurrency_policy.ts',
+  'src/application/policies/bugbot_result_finding_state_projection_policy.ts',
   'src/application/policies/bugbot_resolution_eligibility_policy.ts',
+  'src/application/policies/bugbot_telemetry_projection_policy.ts',
   'src/application/usecases/steps/commit/bugbot/bugbot_previous_findings_context.ts',
   'src/application/usecases/steps/commit/bugbot/bugbot_review_context.ts',
 ];

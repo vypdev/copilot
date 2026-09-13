@@ -1,10 +1,10 @@
 # Semantic Errors and Capability Contexts
 
-- Status: In implementation — P0-A and P2-A through P2-D complete; remaining P2 context slices queued
+- Status: In implementation — P0-A and P2-A through P2-E complete; P2-F and P2-G queued
 - Date: 2026-09-11
-- Last updated: 2026-09-12
+- Last updated: 2026-09-13
 - Catalog capability ID: `execution-lifecycle`
-- Last verified: 2026-09-12 at `ddc7e683`
+- Last verified: 2026-09-13 on `develop` (P2-E implementation validation)
 - Owners: Copilot maintainers
 - Scope: make application failures typed and safe, stop growth of the shared
   `Execution` aggregate, and replace every leaf use-case input with a narrow immutable
@@ -318,7 +318,7 @@ context contract and the aggregate baseline decreases in the same change.
 |---|---|---|---:|
 | P2-C | Bugbot context I/O, freshness, publication, resolution, autofix, and learned-rule mutation | credentials bound in SCM/Git ports; zero Bugbot leaf imports; race/replay/publication parity | 10 |
 | P2-D | shared comment analysis: Think, permissions, translation, title, result publication, configuration, and project linking | complete; route-projected contexts, bound provider ports, issue/PR/comment parity, ceiling 75 | 8 |
-| P2-E | issue and pull-request workflow steps plus description handlers | separate issue/PR contexts; credential-bound provider commands; zero `steps/issue` and `steps/pull_request` imports | 8 |
+| P2-E | issue and pull-request workflow steps plus description handlers | complete; separate immutable issue/PR requests, credential-bound provider commands, route-owned branch patches, compensated exact-target linkage, zero leaf imports, ceiling 47 | 8 |
 | P2-F | push and single-action capabilities, including progress, release/tag, inactivity, branch sync, and remaining commit steps | capability-specific commands/queries; no leaf aggregate input; dispatch parity | 8 |
 | P2-G | final route/public boundary audit | exact justified 16-file allowlist, alias-bypass negative fixture, clean Graphify/RepoWise audit | 1 |
 
@@ -409,6 +409,24 @@ publication snapshots, and configuration target/deep-freeze behavior. Route,
 workflow, publication, and manager suites provide additional parity evidence.
 The exact checked-in aggregate inventory is 75, down from 104, and the production
 dependency graph remains acyclic.
+
+#### 6.5.6 P2-E issue and pull-request workflow cut
+
+P2-E projects separate deeply readonly requests for issue and pull-request
+steps at the two approved route coordinators. Composition captures repository
+identity and credentials once in bound lifecycle ports. The 26 production leaf
+imports and two step-interface imports are removed without aliases, overloads,
+or compatibility calls, reducing the exact inventory from 75 to 47.
+
+Branch preparation returns a frozen `BranchPreparationOutcome`; only the issue
+route applies its defined configuration patch after successful step completion.
+PR description generation has one `{ context, trigger }` request for automatic
+and authorized-command behavior. PR-to-issue linkage derives the exact target
+from bound repository identity and the validated PR number, never an event URL;
+its owned pending marker, authoritative body read, ordered compensation, and
+partial-state result make interruption and restoration failure safely
+recoverable. The complete contract and evidence live in
+`issue-and-pull-request-context-hardening.md`.
 
 ### 6.6 State machine
 
@@ -562,7 +580,7 @@ the remaining rows are mandatory floors for their clean-cut slices.
 | immutable Bugbot selection/review projections, credential exclusion, copy/freeze, trigger identities, incomplete input | 6 | `src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_operation_context.test.ts` |
 | P2-C Bugbot bound-I/O and mutation cut | 10 | reserved for P2-C |
 | P2-D shared comment-analysis cut | 8 | `src/application/usecases/steps/common/__tests__/shared_capability_context_projection.test.ts` |
-| P2-E issue/pull-request cut | 8 | reserved for P2-E |
+| P2-E issue/pull-request cut | 8 | `src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts`, `src/infrastructure/composition/__tests__/lifecycle_capability_port_binding.test.ts`, and focused issue/PR workflow suites |
 | P2-F push/single-action cut | 8 | reserved for P2-F |
 | final exact 16-file allowlist and indirect-alias audit | 1 | reserved for P2-G closure |
 | **Total** | **52** | no double counting |
@@ -587,6 +605,11 @@ parity evidence and does not inflate this case ledger.
 P2-D comment-analysis, shared-capability, publication, persistence, and binding
 path. Every owned module must remain present in the coverage report, so deleting
 or silently dropping a path from instrumentation fails the gate.
+
+`scripts/validate-issue-pull-request-context-coverage.cjs` applies the same
+95% line/statement and 90% branch/function aggregate thresholds to the P2-E
+context projection, route coordination, link compensation, description, branch
+preparation, and lifecycle binding modules. Missing owned modules fail the gate.
 
 Manual evidence: review one narrow terminal failure, one GitHub annotation/Job
 Summary, and the generated final API reference/change notice.
@@ -631,6 +654,7 @@ failure contract instead of redefining it.
 | narrow contexts | `setup_execution_boundary.ts`, `SetupExecutionContext`, and capability use cases | setup boundary, issue-resolution, branch-resolution, composition, characterization, and per-file coverage gates | architecture |
 | P2-C bound Bugbot I/O | route context projectors, bound SCM/Git composition, Bugbot workflows | P2-C projection, binding, freshness, publication, replay, API and AST cases | Bugbot architecture, programmatic API, permissions |
 | P2-D shared comment analysis | comment route projectors, shared semantic ports, configuration/publication boundaries | eight-case immutable projection ledger, route parity suites, exact 75-file ratchet, cycle test | architecture, dependency rules, comment automation |
+| P2-E issue/PR workflows | issue/PR context projectors, bound lifecycle ports, branch outcome, link compensation, unified description request | projection/binding, issue/PR sequencing, every linkage recovery edge, four description modes, exact 47-file ratchet, zero-leaf AST test | P2-E SDD, architecture, branch management, PR capabilities/troubleshooting |
 | shrinking allowlist | AST architecture check | fixture plus final inventory | dependency rules |
 
 ## 18. Implementation sequence
@@ -641,8 +665,8 @@ failure contract instead of redefining it.
    capability; install the no-growth AST baseline immediately.
 3. Replace the public Bugbot API and remove broad exports in the same slice.
 4. Replace P0-B/P1 capability inputs through P2-A setup and P2-B Bugbot analysis.
-5. Complete P2-C Bugbot bound I/O, P2-D shared comment analysis, P2-E issue/PR,
-   and P2-F push/single-action as direct capability cuts.
+5. Complete P2-C Bugbot bound I/O, P2-D shared comment analysis, and P2-E
+   issue/PR as direct capability cuts; complete P2-F push/single-action next.
 6. Run P2-G, enforce the final 16-file allowlist, and publish the final API
    reference/change notice.
 

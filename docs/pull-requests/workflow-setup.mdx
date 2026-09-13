@@ -44,6 +44,9 @@ jobs:
   copilot-pull-requests:
     name: Copilot - Pull Request
     runs-on: ubuntu-latest
+    concurrency:
+      group: copilot-bugbot-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+      cancel-in-progress: ${{ github.event_name != 'pull_request' || github.event.action != 'edited' }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5
@@ -71,6 +74,14 @@ jobs:
 - **`token`** is required (use a fine-grained PAT with repo and project permissions; see [Authentication](/authentication)).
 - **`project-ids`** is optional but needed if you want PRs linked to GitHub Project boards and moved to columns (e.g. "In Progress").
 - The conditional fetch downloads only the two commit objects needed by the incremental reviewer. Keep it when `synchronize` is enabled; a full-history checkout is not required.
+- Keep the conditional concurrency expression exactly as shown. A newer code or
+  review event cancels an obsolete analysis, while a metadata-only `edited`
+  event waits instead of canceling the active Bugbot review. If several edits
+  arrive while it waits, GitHub retains only the newest pending edit.
+- The queued metadata run keeps its own workflow result and Job Summary but does
+  not publish a generic PR comment or `Copilot / Review`. Only a result with exactly one validated,
+  current-schema Bugbot telemetry snapshot for the exact head owns that Check name; partial, skipped, and superseded
+  reviews are neutral rather than successful.
 
 
 ## What runs when

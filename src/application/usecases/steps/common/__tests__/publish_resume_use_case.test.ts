@@ -51,7 +51,7 @@ function baseParam(overrides: Partial<PublishResultContextSource> = {}) {
   return projectPublishResultContext({
     issueNumber: 42,
     issue: { number: 42 },
-    pullRequest: { number: 99 },
+    pullRequest: { number: 99, action: 'opened' },
     isIssue: false,
     isPullRequest: false,
     isPush: false,
@@ -209,6 +209,29 @@ describe('PublishResultUseCase', () => {
 
     await useCase.invoke(param);
 
+    expect(param.genericCommentMode).toBe('omit-feature-owned');
+    expect(mockAddComment).not.toHaveBeenCalled();
+  });
+
+  it('keeps metadata-only PR edits in the Job Summary without a generic conversation comment', async () => {
+    mockGetAccumulatedLogsAsText.mockReturnValue('[DEBUG] metadata normalization completed');
+    const param = baseParam({
+      isPullRequest: true,
+      pullRequest: { number: 99, action: 'edited' },
+      debug: true,
+      currentConfiguration: {
+        results: [new Result({
+          id: 'SynchronizeLifecycleStateUseCase',
+          success: true,
+          executed: true,
+          steps: ['Waiting state cleared.'],
+        })],
+      },
+    });
+
+    await useCase.invoke(param);
+
+    expect(param.genericCommentMode).toBe('omit-metadata-only');
     expect(mockAddComment).not.toHaveBeenCalled();
   });
 

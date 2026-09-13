@@ -1,4 +1,3 @@
-import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
 import { decideManagedBranchPreparation } from "../../../policies/branch_preparation_policy";
 import {
@@ -8,26 +7,33 @@ import {
 import type { BranchNamePort } from "../../../ports/branch_lifecycle_ports";
 import type {
   BranchPropagationDelayPort,
-  LinkedBranchCommandPort,
+  BoundLinkedBranchCommandPort,
 } from "../../../ports/branch_preparation_ports";
 import { logDebugInfo } from "../../../ports/logging_ports";
+import { toApplicationError } from "../../../errors/application_error";
 import { ParamUseCase } from "../../base/param_usecase";
 import { buildCommitPrefix } from "../common/execute_script_use_case";
+import {
+  branchPreparationOutcome,
+  type BranchPreparationContext,
+  type BranchPreparationOutcome,
+  type MoveIssueToInProgressContext,
+} from '../../issue_workflow_context';
 
 export interface ManagedBranchPreparationDependencies {
   branchNamePort: BranchNamePort;
-  linkedBranchCommandPort: LinkedBranchCommandPort;
+  linkedBranchCommandPort: BoundLinkedBranchCommandPort;
   branchPropagationDelayPort: BranchPropagationDelayPort;
-  moveIssueToInProgressUseCase: ParamUseCase<Execution, Result[]>;
+  moveIssueToInProgressUseCase: ParamUseCase<MoveIssueToInProgressContext, Result[]>;
 }
 
 export async function prepareManagedBranch(
-  param: Execution,
+  param: BranchPreparationContext,
   issueTitle: string,
   branches: readonly string[],
   taskId: string,
   dependencies: ManagedBranchPreparationDependencies,
-): Promise<Result[]> {
+): Promise<BranchPreparationOutcome> {
   logDebugInfo(`Branch type: ${param.managementBranch}`);
   const decision = decideManagedBranchPreparation({
     availableBranches: branches,
@@ -39,51 +45,38 @@ export async function prepareManagedBranch(
     targetBranchType: param.managementBranch,
     developmentBranch: param.branches.development,
     managedBranchTypes: [
-      param.branches.featureTree,
-      param.branches.bugfixTree,
-      param.branches.docsTree,
-      param.branches.choreTree,
-    ].filter(
-      (branchType): branchType is string =>
-        typeof branchType === "string" && branchType.length > 0,
-    ),
+      ...param.branches.managedTypes,
+    ],
     currentParentBranch: param.currentConfiguration.parentBranch,
   });
 
   if (decision.kind === "already-exists") {
-    return [
+    return branchPreparationOutcome([
       new Result({
         id: taskId,
         success: true,
         executed: false,
       }),
-    ];
+    ]);
   }
 
-  param.currentConfiguration.parentBranch = decision.parentBranch;
   const branchesResult = await dependencies.linkedBranchCommandPort.createLinkedBranch(
-    param.owner,
-    param.repo,
     decision.baseBranchName,
     decision.targetBranchName,
     param.issueNumber,
-    undefined,
-    param.tokens.token,
   );
   const lastAction = branchesResult.at(-1);
-  if (!lastAction?.success || !lastAction.executed) return branchesResult;
+  if (!lastAction?.success || !lastAction.executed) return branchPreparationOutcome(branchesResult);
 
   const branchPayload = readManagedBranchCreationPayload(lastAction.payload);
-  if (!branchPayload) return branchesResult;
-  param.currentConfiguration.workingBranch = branchPayload.newBranchName;
+  if (!branchPayload) return branchPreparationOutcome(branchesResult);
 
   const commitPrefix = await buildConfiguredCommitPrefix(
     param,
     branchPayload.newBranchName,
   );
   const presentation = buildManagedBranchPresentation({
-    owner: param.owner,
-    repo: param.repo,
+    repositoryWebUrl: param.repositoryWebUrl,
     developmentBranch: param.branches.development,
     baseBranchName: branchPayload.baseBranchName,
     baseBranchUrl: branchPayload.baseBranchUrl,
@@ -101,18 +94,41 @@ export async function prepareManagedBranch(
       reminders: presentation.reminders,
     }),
   ];
-  await dependencies.branchPropagationDelayPort.waitForLinkedBranch();
-  result.push(
-    ...(await dependencies.moveIssueToInProgressUseCase.invoke(param)),
-  );
-  return result;
+  const configurationPatch = {
+    parentBranch: decision.parentBranch,
+    workingBranch: branchPayload.newBranchName,
+  } as const;
+  try {
+    await dependencies.branchPropagationDelayPort.waitForLinkedBranch();
+    result.push(
+      ...(await dependencies.moveIssueToInProgressUseCase.invoke(param.moveToInProgress)),
+    );
+  } catch (error) {
+    const semanticError = toApplicationError(
+      error,
+      'provider.unavailable',
+      'The branch was created, but its linked issue state could not be synchronized.',
+      {
+        impact: 'The linked branch exists, but later issue metadata may be incomplete.',
+        action: 'Continue on the retained branch and rerun issue enrichment.',
+        retainedState: `The branch ${branchPayload.newBranchName} and its configuration patch were preserved.`,
+      },
+    );
+    result.push(new Result({
+      id: taskId,
+      success: false,
+      executed: true,
+      steps: ['The linked branch was retained, but issue state synchronization failed. Continue on that branch and rerun enrichment.'],
+      errors: [semanticError],
+    }));
+  }
+  return branchPreparationOutcome(result, configurationPatch);
 }
 
 async function buildConfiguredCommitPrefix(
-  param: Execution,
+  param: BranchPreparationContext,
   branchName: string,
 ): Promise<string> {
   if (!param.commitPrefixBuilder) return "";
-  param.commitPrefixBuilderParams = { branchName };
   return buildCommitPrefix(branchName, param.commitPrefixBuilder);
 }

@@ -1,6 +1,16 @@
-import { getResultPayload, type Result } from '../../data/model/result';
+import type { Result } from '../../data/model/result';
 import { sanitizeAgentMarkdown, sanitizePublishedError } from './github_comment_publication_policy';
 import { buildApplicationErrorPresentation } from './application_error_presentation_policy';
+import {
+    projectBugbotResultTelemetry,
+    type BugbotResultTelemetryProjection,
+    type BugbotTelemetryProjection,
+} from './bugbot_telemetry_projection_policy';
+import {
+    projectBugbotResultFindingStates,
+    type BugbotResultFindingStateProjection,
+} from './bugbot_result_finding_state_projection_policy';
+import { countActionableBugbotFindings } from '../../domain/bugbot/review_state';
 
 export interface ActionSummaryContext {
     readonly owner: string;
@@ -17,22 +27,20 @@ export interface ActionSummaryContext {
 /** Builds a bounded, publication-safe GitHub Actions Job Summary. */
 export function buildActionSummary(context: ActionSummaryContext): string {
     const failures = context.results.filter(result => !result.success && result.executed);
-    const findingStates = aggregateFindingStateCounts(context.results);
-    const bugbotTelemetry = context.results.map(result => getBugbotTelemetry(result.payload)).find(Boolean);
-    const hasActionableFindings = (findingStates?.open ?? 0)
-        + (findingStates?.reopened ?? 0)
-        + (findingStates?.['verification-required'] ?? 0) > 0;
-    const hasUnknownFindings = (findingStates?.unknown ?? 0) > 0;
-    const status = failures.length > 0 || hasUnknownFindings || (hasActionableFindings && context.failOnUnresolvedFindings)
-        ? '❌ Failure'
-        : hasActionableFindings
-            ? '⚠️ Findings'
-            : '✅ Success';
-    const target = context.pullRequestNumber > 0
-        ? `PR #${context.pullRequestNumber}`
-        : context.issueNumber > 0
-            ? `Issue #${context.issueNumber}`
-            : 'Repository run';
+    const findingStateProjection = projectBugbotResultFindingStates(context.results);
+    const findingStates = findingStateProjection.status === 'valid' ? findingStateProjection.counts : undefined;
+    const telemetryProjection = projectBugbotResultTelemetry(context.results);
+    const bugbotTelemetry = telemetryProjection.status === 'valid' ? telemetryProjection.telemetry : undefined;
+    const hasActionableFindings = findingStates ? countActionableBugbotFindings(findingStates) > 0 : false;
+    const hasUnknownFindings = findingStateProjection.status === 'invalid' || (findingStates?.unknown ?? 0) > 0;
+    const status = resolveActionSummaryStatus({
+        failureCount: failures.length,
+        hasUnknownFindings,
+        hasActionableFindings,
+        failOnUnresolvedFindings: context.failOnUnresolvedFindings === true,
+        bugbotTelemetry,
+    });
+    const target = resolveActionSummaryTarget(context);
     const lifecycle = context.lifecycleState ? `\`${sanitizeAgentMarkdown(context.lifecycleState, 100)}\`` : '—';
     const rows = [
         `| Status | ${status} |`,
@@ -41,8 +49,8 @@ export function buildActionSummary(context: ActionSummaryContext): string {
         `| Lifecycle | ${lifecycle} |`,
         `| PR description policy | ${escapeTable(context.pullRequestDescriptionMode ?? '—')} |`,
         `| Results | ${context.results.length} |`,
-        `| Finding states | ${formatFindingStates(findingStates)} |`,
-        `| Bugbot review | ${formatBugbotTelemetry(bugbotTelemetry)} |`,
+        `| Finding states | ${formatFindingStates(findingStateProjection)} |`,
+        `| Bugbot review | ${formatBugbotTelemetry(telemetryProjection)} |`,
     ];
 
     return [
@@ -61,72 +69,44 @@ export function buildActionSummary(context: ActionSummaryContext): string {
     ].join('\n');
 }
 
-function getBugbotTelemetry(value: unknown): { outcome: string; elapsedMs: number; configuredEffort: string } | undefined {
-    const telemetry = getResultPayload(getResultPayload(value)?.bugbotTelemetry);
-    if (!telemetry || typeof telemetry.outcome !== 'string' || typeof telemetry.elapsedMs !== 'number') return undefined;
-    return {
-        outcome: telemetry.outcome,
-        elapsedMs: telemetry.elapsedMs,
-        configuredEffort: typeof telemetry.configuredEffort === 'string' ? telemetry.configuredEffort : 'default',
-    };
+interface ActionSummaryStatusInput {
+    readonly failureCount: number;
+    readonly hasUnknownFindings: boolean;
+    readonly hasActionableFindings: boolean;
+    readonly failOnUnresolvedFindings: boolean;
+    readonly bugbotTelemetry?: BugbotTelemetryProjection;
 }
 
-function formatBugbotTelemetry(telemetry: ReturnType<typeof getBugbotTelemetry>): string {
-    return telemetry
-        ? `${escapeTable(telemetry.outcome)}, effort=${escapeTable(telemetry.configuredEffort)}, ${Math.max(0, Math.round(telemetry.elapsedMs))}ms`
-        : '—';
+function resolveActionSummaryStatus(input: ActionSummaryStatusInput): string {
+    if (input.failureCount > 0 || input.hasUnknownFindings) return '❌ Failure';
+    if (input.bugbotTelemetry?.outcome === 'failed') return '❌ Failure';
+    if (input.hasActionableFindings && input.failOnUnresolvedFindings) return '❌ Failure';
+    if (input.hasActionableFindings) return '⚠️ Findings';
+    switch (input.bugbotTelemetry?.outcome) {
+        case 'partial': return '⚠️ Partial';
+        case 'superseded': return '⏭️ Superseded';
+        case 'skipped': return '⏭️ Skipped';
+        case 'dry-run': return '🧪 Dry run';
+        default: return '✅ Success';
+    }
 }
 
-type FindingStateCounts = {
-    open: number;
-    reopened: number;
-    fixed: number;
-    obsolete: number;
-    dismissed: number;
-    'verification-required': number;
-    unknown: number;
-};
-
-function getFindingStateCounts(value: unknown): FindingStateCounts | undefined {
-    const payload = getResultPayload(value);
-    const stateCounts = getResultPayload(payload?.findingStates) as Partial<Record<keyof FindingStateCounts, unknown>> | undefined;
-    if (!stateCounts) return undefined;
-    const establishedStates = ['open', 'reopened', 'fixed', 'obsolete', 'dismissed'] as const;
-    if (!establishedStates.every(state => typeof stateCounts[state] === 'number')) return undefined;
-    return {
-        ...Object.fromEntries(establishedStates.map(state => [state, stateCounts[state]])),
-        'verification-required': typeof stateCounts['verification-required'] === 'number'
-            ? stateCounts['verification-required']
-            : 0,
-        unknown: typeof stateCounts.unknown === 'number' ? stateCounts.unknown : 0,
-    } as FindingStateCounts;
+function resolveActionSummaryTarget(context: ActionSummaryContext): string {
+    if (context.pullRequestNumber > 0) return `PR #${context.pullRequestNumber}`;
+    if (context.issueNumber > 0) return `Issue #${context.issueNumber}`;
+    return 'Repository run';
 }
 
-function aggregateFindingStateCounts(results: readonly Result[]): ReturnType<typeof getFindingStateCounts> {
-    const counts = results.map(result => getFindingStateCounts(result.payload)).filter((value): value is NonNullable<ReturnType<typeof getFindingStateCounts>> => value !== undefined);
-    if (counts.length === 0) return undefined;
-    return counts.reduce((total, current) => ({
-        open: total.open + current.open,
-        reopened: total.reopened + current.reopened,
-        fixed: total.fixed + current.fixed,
-        obsolete: total.obsolete + current.obsolete,
-        dismissed: total.dismissed + current.dismissed,
-        'verification-required': total['verification-required'] + current['verification-required'],
-        unknown: total.unknown + current.unknown,
-    }), {
-        open: 0,
-        reopened: 0,
-        fixed: 0,
-        obsolete: 0,
-        dismissed: 0,
-        'verification-required': 0,
-        unknown: 0,
-    });
+function formatBugbotTelemetry(projection: BugbotResultTelemetryProjection): string {
+    if (projection.status === 'invalid') return 'invalid';
+    if (projection.status === 'absent') return '—';
+    return `${escapeTable(projection.telemetry.outcome)}, effort=${escapeTable(projection.telemetry.configuredEffort)}, ${Math.max(0, Math.round(projection.telemetry.elapsedMs))}ms`;
 }
 
-function formatFindingStates(counts: ReturnType<typeof getFindingStateCounts>): string {
-    if (!counts) return '—';
-    return Object.entries(counts)
+function formatFindingStates(projection: BugbotResultFindingStateProjection): string {
+    if (projection.status === 'invalid') return 'invalid';
+    if (projection.status === 'absent') return '—';
+    return Object.entries(projection.counts)
         .filter(([, value]) => value > 0)
         .map(([state, value]) => `${state}=${value}`)
         .join(', ') || 'none';

@@ -74,7 +74,9 @@ import type { Execution } from '../../data/model/execution';
 import {
   bindIssueDescriptionQuery,
   bindIssueNotification,
+  bindOrganizationMembers,
 } from './shared_capability_port_binding';
+import { bindPullRequestDescription } from './lifecycle_capability_port_binding';
 
 function createDetectPotentialProblemsUseCase(binding: BugbotScmBinding): DetectPotentialProblemsUseCase {
   const bugbot = createBugbotCompositionRoot(binding);
@@ -161,9 +163,9 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
   const authenticatedUser = createAuthenticatedUserCompositionRoot();
   const bugbotGit = new BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
   const pullRequestDescription = new UpdatePullRequestDescriptionUseCase(
-    new PullRequestLifecycleRepository(createPullRequestLifecycleClient()),
-    createIssueContentCompositionRoot(),
-    createOrganizationMembersCompositionRoot(),
+    bindPullRequestDescription(new PullRequestLifecycleRepository(createPullRequestLifecycleClient()), binding),
+    bindIssueDescriptionQuery(createIssueContentCompositionRoot(), binding),
+    bindOrganizationMembers(createOrganizationMembersCompositionRoot(), binding),
     createFindingsQueryPort(),
   );
   const branchSync = new SyncBranchUseCase(
@@ -208,9 +210,9 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
   const authenticatedUser = createAuthenticatedUserCompositionRoot();
   const bugbotGit = new BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
   const pullRequestDescription = new UpdatePullRequestDescriptionUseCase(
-    new PullRequestLifecycleRepository(createPullRequestLifecycleClient()),
-    createIssueContentCompositionRoot(),
-    createOrganizationMembersCompositionRoot(),
+    bindPullRequestDescription(new PullRequestLifecycleRepository(createPullRequestLifecycleClient()), binding),
+    bindIssueDescriptionQuery(createIssueContentCompositionRoot(), binding),
+    bindOrganizationMembers(createOrganizationMembersCompositionRoot(), binding),
     createFindingsQueryPort(),
   );
   const branchSync = new SyncBranchUseCase(

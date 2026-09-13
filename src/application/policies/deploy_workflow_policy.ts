@@ -8,7 +8,7 @@ export interface DeployWorkflowExecutionContext {
     readonly title: string;
     readonly body: string;
   };
-  readonly labels: { readonly deploy: string };
+  readonly deployLabel: string;
   readonly release: { readonly active: boolean; readonly branch?: string; readonly version?: string };
   readonly hotfix: { readonly active: boolean; readonly branch?: string; readonly version?: string };
   readonly workflows: { readonly release: string; readonly hotfix: string };
@@ -25,7 +25,7 @@ export interface DeployWorkflowPlan {
 }
 
 export function resolveDeployWorkflowPlan(param: DeployWorkflowExecutionContext): DeployWorkflowPlan | undefined {
-  if (!param.issue.labeled || param.issue.labelAdded !== param.labels.deploy) return undefined;
+  if (!param.issue.labeled || param.issue.labelAdded !== param.deployLabel) return undefined;
 
   if (param.release.active && param.release.branch !== undefined) {
     return {

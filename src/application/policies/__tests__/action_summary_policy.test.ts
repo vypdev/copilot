@@ -2,6 +2,17 @@ import { Result } from '../../../data/model/result';
 import { buildActionSummary } from '../action_summary_policy';
 import { ApplicationError } from '../../errors/application_error';
 
+const findingStates = (overrides: Record<string, number> = {}) => ({
+    open: 0,
+    reopened: 0,
+    fixed: 0,
+    obsolete: 0,
+    dismissed: 0,
+    'verification-required': 0,
+    unknown: 0,
+    ...overrides,
+});
+
 describe('action summary policy', () => {
     it('renders bounded result details and lifecycle metadata', () => {
         const summary = buildActionSummary({
@@ -47,7 +58,7 @@ describe('action summary policy', () => {
                 id: 'Review',
                 success: true,
                 executed: true,
-                payload: { findingStates: { open: 1, reopened: 0, fixed: 0, obsolete: 0, dismissed: 0 } },
+                payload: { findingStates: findingStates({ open: 1 }) },
             })],
         });
 
@@ -64,7 +75,7 @@ describe('action summary policy', () => {
             failOnUnresolvedFindings: true,
             results: [new Result({
                 id: 'Review', success: true, executed: true,
-                payload: { findingStates: { open: 1, reopened: 0, fixed: 0, obsolete: 0, dismissed: 0 } },
+                payload: { findingStates: findingStates({ open: 1 }) },
             })],
         });
         expect(blockingSummary).toContain('❌ Failure');
@@ -74,8 +85,8 @@ describe('action summary policy', () => {
         const summary = buildActionSummary({
             owner: 'owner', repository: 'repo', eventName: 'pull_request', issueNumber: -1, pullRequestNumber: 12,
             results: [
-                new Result({ id: 'one', success: true, executed: true, payload: { findingStates: { open: 1, reopened: 0, fixed: 1, obsolete: 0, dismissed: 0 } } }),
-                new Result({ id: 'two', success: true, executed: true, payload: { findingStates: { open: 0, reopened: 2, fixed: 0, obsolete: 1, dismissed: 0 } } }),
+                new Result({ id: 'one', success: true, executed: true, payload: { findingStates: findingStates({ open: 1, fixed: 1 }) } }),
+                new Result({ id: 'two', success: true, executed: true, payload: { findingStates: findingStates({ reopened: 2, obsolete: 1 }) } }),
             ],
         });
 
@@ -89,14 +100,91 @@ describe('action summary policy', () => {
         expect(buildActionSummary({
             ...base,
             results: [new Result({ id: 'review', success: true, executed: true, payload: {
-                findingStates: { open: 0, reopened: 0, fixed: 0, obsolete: 0, dismissed: 0, 'verification-required': 1, unknown: 0 },
+                findingStates: findingStates({ 'verification-required': 1 }),
             } })],
         })).toContain('⚠️ Findings');
         expect(buildActionSummary({
             ...base,
             results: [new Result({ id: 'review', success: true, executed: true, payload: {
-                findingStates: { open: 0, reopened: 0, fixed: 0, obsolete: 0, dismissed: 0, 'verification-required': 0, unknown: 1 },
+                findingStates: findingStates({ unknown: 1 }),
             } })],
         })).toContain('❌ Failure');
+    });
+
+    it('fails closed and names malformed owned finding-state evidence', () => {
+        const summary = buildActionSummary({
+            owner: 'owner', repository: 'repo', eventName: 'pull_request', issueNumber: -1, pullRequestNumber: 12,
+            results: [new Result({
+                id: 'review', success: true, executed: true, payload: { findingStates: { open: 0 } },
+            })],
+        });
+
+        expect(summary).toContain('| Status | ❌ Failure |');
+        expect(summary).toContain('| Finding states | invalid |');
+    });
+
+    it('fails closed when a completed review omits required finding-state evidence', () => {
+        const summary = buildActionSummary({
+            owner: 'owner', repository: 'repo', eventName: 'pull_request', issueNumber: -1, pullRequestNumber: 12,
+            results: [new Result({
+                id: 'review', success: true, executed: true,
+                payload: { bugbotTelemetry: { schemaVersion: 1, outcome: 'completed', elapsedMs: 11, configuredEffort: 'smart', headSha: 'abc' } },
+            })],
+        });
+
+        expect(summary).toContain('| Status | ❌ Failure |');
+        expect(summary).toContain('| Finding states | invalid |');
+    });
+
+    it('fails closed when valid state counts coexist with malformed telemetry', () => {
+        const summary = buildActionSummary({
+            owner: 'owner', repository: 'repo', eventName: 'pull_request', issueNumber: -1, pullRequestNumber: 12,
+            results: [
+                new Result({
+                    id: 'valid', success: true, executed: true,
+                    payload: {
+                        bugbotTelemetry: { schemaVersion: 1, outcome: 'completed', elapsedMs: 11, configuredEffort: 'smart', headSha: 'abc' },
+                        findingStates: findingStates(),
+                    },
+                }),
+                new Result({
+                    id: 'malformed', success: true, executed: true,
+                    payload: { bugbotTelemetry: { schemaVersion: 2, outcome: 'completed', elapsedMs: 11 } },
+                }),
+            ],
+        });
+
+        expect(summary).toContain('| Status | ❌ Failure |');
+        expect(summary).toContain('| Finding states | invalid |');
+        expect(summary).toContain('| Bugbot review | invalid |');
+    });
+
+    it.each([
+        ['partial', '⚠️ Partial'],
+        ['superseded', '⏭️ Superseded'],
+        ['skipped', '⏭️ Skipped'],
+        ['dry-run', '🧪 Dry run'],
+        ['failed', '❌ Failure'],
+    ])('renders the semantic %s Bugbot outcome without claiming generic success', (outcome, status) => {
+        const requiresFindingStates = ['partial', 'dry-run'].includes(outcome);
+        const summary = buildActionSummary({
+            owner: 'owner',
+            repository: 'repo',
+            eventName: 'pull_request',
+            issueNumber: -1,
+            pullRequestNumber: 12,
+            results: [new Result({
+                id: 'Review',
+                success: true,
+                executed: true,
+                payload: {
+                    bugbotTelemetry: { schemaVersion: 1, outcome, elapsedMs: 11, configuredEffort: 'smart', headSha: 'abc' },
+                    ...(requiresFindingStates ? { findingStates: findingStates() } : {}),
+                },
+            })],
+        });
+
+        expect(summary).toContain(`| Status | ${status} |`);
+        expect(summary).toContain(`| Bugbot review | ${outcome}, effort=smart, 11ms |`);
     });
 });

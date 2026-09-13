@@ -7,3 +7,8 @@ export interface OrganizationMembersPort {
 export interface BoundOrganizationMembersPort {
     getAllMembers(): Promise<readonly string[]>;
 }
+
+/** Bound organization membership queries used for deterministic assignment. */
+export interface BoundOrganizationMemberSelectionPort extends BoundOrganizationMembersPort {
+    getRandomMembers(membersToAdd: number, currentMembers: readonly string[]): Promise<readonly string[]>;
+}

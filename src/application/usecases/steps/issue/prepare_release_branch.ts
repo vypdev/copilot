@@ -1,38 +1,43 @@
-import type { LinkedBranchCommandPort } from "../../../ports/branch_preparation_ports";
-import { Execution } from "../../../../data/model/execution";
+import type { BoundLinkedBranchCommandPort } from "../../../ports/branch_preparation_ports";
 import { getResultPayload, Result } from "../../../../data/model/result";
 import { buildCommitPrefix as buildCommitPrefixValue } from "../common/execute_script_use_case";
 import { logDebugInfo, logWarn } from "../../../ports/logging_ports";
+import {
+  branchPreparationOutcome,
+  type BranchPreparationContext,
+  type BranchPreparationOutcome,
+} from '../../issue_workflow_context';
 
 export async function prepareReleaseBranch(
-  param: Execution,
-  linkedBranchCommand: LinkedBranchCommandPort,
-  branches: string[],
+  param: BranchPreparationContext,
+  linkedBranchCommand: BoundLinkedBranchCommandPort,
+  branches: readonly string[],
   taskId: string,
-): Promise<Result[]> {
+): Promise<BranchPreparationOutcome> {
   const { release } = param;
   if (release.version === undefined || release.branch === undefined) {
     logWarn("PrepareBranches: release requested but no release version found.");
-    return [
+    return branchPreparationOutcome([
       new Result({
         id: taskId,
         success: false,
         executed: true,
         steps: ["Tried to create a release but no release version was found."],
       }),
-    ];
+    ]);
   }
 
-  param.currentConfiguration.releaseBranch = release.branch;
-  param.currentConfiguration.workingBranch = release.branch;
-  param.currentConfiguration.parentBranch = param.branches.development;
-
-  const developmentUrl = `https://github.com/${param.owner}/${param.repo}/tree/${param.branches.development}`;
-  const releaseUrl = `https://github.com/${param.owner}/${param.repo}/tree/${release.branch}`;
-  const mainUrl = `https://github.com/${param.owner}/${param.repo}/tree/${param.branches.defaultBranch}`;
+  const developmentUrl = `${param.repositoryWebUrl}/tree/${encodeURIComponent(param.branches.development)}`;
+  const releaseUrl = `${param.repositoryWebUrl}/tree/${encodeURIComponent(release.branch)}`;
+  const mainUrl = `${param.repositoryWebUrl}/tree/${encodeURIComponent(param.branches.defaultBranch)}`;
+  const basePatch = {
+    releaseBranch: release.branch,
+    workingBranch: release.branch,
+    parentBranch: param.branches.development,
+  } as const;
 
   if (branches.includes(release.branch)) {
-    return [
+    return branchPreparationOutcome([
       new Result({
         id: taskId,
         success: true,
@@ -41,36 +46,28 @@ export async function prepareReleaseBranch(
           buildReleaseReminder(param, releaseUrl, developmentUrl, mainUrl),
         ],
       }),
-    ];
+    ], basePatch);
   }
 
   const linkResult = await linkedBranchCommand.createLinkedBranch(
-    param.owner,
-    param.repo,
     param.branches.development,
     release.branch,
     param.issueNumber,
-    undefined,
-    param.tokens.token,
   );
   const lastAction = linkResult.at(-1);
-  if (!lastAction?.success) return linkResult;
+  if (!lastAction?.success || !lastAction.executed) return branchPreparationOutcome(linkResult);
 
   const branchName = getResultPayload(lastAction.payload)?.newBranchName;
   const baseSha = getResultPayload(lastAction.payload)?.baseSha;
   if (typeof branchName !== "string" || branchName.length === 0) {
-    return [
+    return branchPreparationOutcome([
       new Result({
         id: taskId,
         success: false,
         executed: true,
         steps: ["Release branch creation returned no branch name."],
       }),
-    ];
-  }
-  if (typeof baseSha === "string" && baseSha.length > 0) {
-    param.currentConfiguration.releaseOriginBranch = param.branches.development;
-    param.currentConfiguration.releaseOriginSha = baseSha;
+    ]);
   }
 
   const fence = "```";
@@ -83,7 +80,7 @@ export async function prepareReleaseBranch(
       `Commit the needed changes with this prefix:\n> ${fence}\n>${commitPrefix}\n> ${fence}`,
     );
   reminders.push(
-    `Add the **${param.labels.deploy}** label to run the \`${param.workflows.release}\` workflow. Copilot will create the immutable version tag only after the production promotion PR merges.`,
+    `Add the **${param.deployLabel}** label to run the \`${param.releaseWorkflow}\` workflow. Copilot will create the immutable version tag only after the production promotion PR merges.`,
   );
   reminders.push(
     buildReleaseReminder(param, releaseUrl, developmentUrl, mainUrl),
@@ -92,7 +89,7 @@ export async function prepareReleaseBranch(
   logDebugInfo(
     `Release branch successfully linked to issue: ${JSON.stringify(linkResult)}`,
   );
-  return [
+  return branchPreparationOutcome([
     new Result({
       id: taskId,
       success: true,
@@ -102,20 +99,24 @@ export async function prepareReleaseBranch(
       ],
       reminders,
     }),
-  ];
+  ], {
+    ...basePatch,
+    ...(typeof baseSha === 'string' && baseSha.length > 0
+      ? { releaseOriginBranch: param.branches.development, releaseOriginSha: baseSha }
+      : {}),
+  });
 }
 
 async function buildConfiguredCommitPrefix(
-  param: Execution,
+  param: BranchPreparationContext,
   branchName: string,
 ): Promise<string> {
   if (!param.commitPrefixBuilder) return "";
-  param.commitPrefixBuilderParams = { branchName };
   return buildCommitPrefixValue(branchName, param.commitPrefixBuilder);
 }
 
 function buildReleaseReminder(
-  param: Execution,
+  param: BranchPreparationContext,
   releaseUrl: string,
   developmentUrl: string,
   mainUrl: string,

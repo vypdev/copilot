@@ -201,7 +201,6 @@ function supersededResult(loadedHeadSha?: string, expectedHeadSha?: string): Res
         executed: true,
         steps: ['Potential problems detection superseded by a newer pull-request revision; no findings were published or resolved.'],
         payload: {
-            findingStates: {},
             superseded: true,
             ...(loadedHeadSha ? { analyzedHeadSha: loadedHeadSha } : {}),
             ...(expectedHeadSha ? { expectedHeadSha } : {}),

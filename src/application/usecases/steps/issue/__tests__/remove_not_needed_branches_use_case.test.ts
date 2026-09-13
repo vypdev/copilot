@@ -11,13 +11,10 @@ const mockRemoveBranch = jest.fn();
 
 function baseParam(overrides: Record<string, unknown> = {}) {
   return {
-    owner: 'o',
-    repo: 'r',
     issueNumber: 42,
-    tokens: { token: 't' },
-    issue: { title: 'Add login' },
+    issueTitle: 'Add login',
     managementBranch: 'feature',
-    branches: { featureTree: 'feature', bugfixTree: 'bugfix' },
+    managedBranchTypes: ['feature', 'bugfix'],
     ...overrides,
   } as unknown as Parameters<RemoveNotNeededBranchesUseCase['invoke']>[0];
 }
@@ -36,7 +33,7 @@ describe('RemoveNotNeededBranchesUseCase', () => {
   });
 
   it('returns a result when issue title is empty', async () => {
-    const param = baseParam({ issue: { title: '' } });
+    const param = baseParam({ issueTitle: '' });
     const results = await useCase.invoke(param);
     expect(results.some((r) => r.steps?.some((s) => s.includes('title was not found')))).toBe(true);
   });
@@ -45,7 +42,7 @@ describe('RemoveNotNeededBranchesUseCase', () => {
     const param = baseParam();
     const results = await useCase.invoke(param);
     expect(mockFormatBranchName).toHaveBeenCalledWith('Add login', 42);
-    expect(mockGetListOfBranches).toHaveBeenCalledWith('o', 'r', 't');
+    expect(mockGetListOfBranches).toHaveBeenCalledWith();
     expect(mockRemoveBranch).toHaveBeenCalled();
     expect(results.length).toBeGreaterThanOrEqual(0);
   });
@@ -83,7 +80,7 @@ describe('RemoveNotNeededBranchesUseCase', () => {
 
     const results = await useCase.invoke(param);
 
-    expect(mockRemoveBranch).toHaveBeenCalledWith('o', 'r', 'feature/42-old-name', 't');
+    expect(mockRemoveBranch).toHaveBeenCalledWith('feature/42-old-name');
     expect(results.some((r) => r.steps?.some((s) => s.includes('feature/42-old-name')))).toBe(true);
   });
 });

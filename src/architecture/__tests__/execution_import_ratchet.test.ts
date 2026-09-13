@@ -72,4 +72,63 @@ describe('Execution import ratchet', () => {
         expect(currentConsumers).toEqual(baseline.files);
         expect(currentConsumers).toHaveLength(baseline.maximum);
     });
+
+    it('keeps issue and pull-request leaf workflows free of aggregate and credential authority', () => {
+        if (!executionSymbol) throw new Error('Could not resolve the Execution model symbol.');
+        const prefixes = [
+            'src/application/usecases/steps/issue/',
+            'src/application/usecases/steps/pull_request/',
+        ];
+        const violations: string[] = [];
+        for (const source of program.getSourceFiles()) {
+            const path = repositoryPath(repositoryRoot, source.fileName);
+            if (!prefixes.some((prefix) => path.startsWith(prefix)) || path.includes('/__tests__/')) continue;
+            const visit = (node: ts.Node): void => {
+                if (ts.isIdentifier(node) && resolveAliasedSymbol(checker, node) === executionSymbol) {
+                    violations.push(`${path}:Execution`);
+                }
+                if (ts.isPropertyAccessExpression(node)
+                    && ['token', 'tokens', 'owner', 'repo'].includes(node.name.text)) {
+                    violations.push(`${path}:${node.name.text}`);
+                }
+                if (ts.isIdentifier(node) && node.text === 'invokeExplicit') {
+                    violations.push(`${path}:invokeExplicit`);
+                }
+                ts.forEachChild(node, visit);
+            };
+            visit(source);
+        }
+        expect(violations).toEqual([]);
+    });
+
+    it('keeps projected issue and pull-request request contracts credential-free', () => {
+        const contextPaths = new Set([
+            'src/application/usecases/issue_workflow_context.ts',
+            'src/application/usecases/pull_request_workflow_context.ts',
+        ]);
+        const forbiddenFields = new Set(['token', 'tokens', 'credential', 'credentials', 'owner', 'repo', 'repository']);
+        const violations: string[] = [];
+        for (const source of program.getSourceFiles()) {
+            const path = repositoryPath(repositoryRoot, source.fileName);
+            if (!contextPaths.has(path)) continue;
+            for (const statement of source.statements) {
+                if (!ts.isInterfaceDeclaration(statement)
+                    || statement.name.text.endsWith('Source')
+                    || !/(?:Context|Request|Outcome|Patch)$/u.test(statement.name.text)) continue;
+                const visit = (node: ts.Node): void => {
+                    if (ts.isPropertySignature(node)) {
+                        const name = ts.isIdentifier(node.name) || ts.isStringLiteral(node.name)
+                            ? node.name.text
+                            : undefined;
+                        if (name && forbiddenFields.has(name)) {
+                            violations.push(`${path}:${statement.name.text}.${name}`);
+                        }
+                    }
+                    ts.forEachChild(node, visit);
+                };
+                visit(statement);
+            }
+        }
+        expect(violations).toEqual([]);
+    });
 });

@@ -117,23 +117,32 @@ export class PullRequestLifecycleRepository implements PullRequestHeadShaPort {
     /** Default timeout (ms) for isLinked fetch. */
     private static readonly IS_LINKED_FETCH_TIMEOUT_MS = 10000;
 
-    isLinked = async (pullRequestUrl: string): Promise<boolean> => {
+    isLinked = async (
+        owner: string,
+        repository: string,
+        pullRequestNumber: number,
+        _token: string,
+    ): Promise<boolean> => {
+        const pullRequestUrl = `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/pull/${pullRequestNumber}`;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), PullRequestLifecycleRepository.IS_LINKED_FETCH_TIMEOUT_MS);
         try {
             const res = await fetch(pullRequestUrl, { signal: controller.signal });
-            clearTimeout(timeoutId);
             if (!res.ok) {
-                logDebugInfo(`isLinked: non-2xx response ${res.status} for ${pullRequestUrl}`);
-                return false;
+                throw new Error(`Pull-request linkage query returned HTTP ${res.status}.`);
             }
             const htmlContent = await res.text();
             return !htmlContent.includes('has_github_issues=false');
-        } catch (err) {
+        } catch (error) {
+            const semanticError = toApplicationError(
+                error,
+                'provider.unavailable',
+                `Unable to inspect issue linkage for pull request #${pullRequestNumber}.`,
+            );
+            logError(semanticError);
+            throw semanticError;
+        } finally {
             clearTimeout(timeoutId);
-            const msg = err instanceof Error ? err.message : String(err);
-            logError(`isLinked: fetch failed for ${pullRequestUrl}: ${msg}`);
-            return false;
         }
     };
 

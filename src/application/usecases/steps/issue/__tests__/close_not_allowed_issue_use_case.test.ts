@@ -11,10 +11,7 @@ const mockAddComment = jest.fn();
 
 function baseParam() {
   return {
-    owner: 'o',
-    repo: 'r',
     issueNumber: 42,
-    tokens: { token: 't' },
   } as unknown as Parameters<CloseNotAllowedIssueUseCase['invoke']>[0];
 }
 
@@ -38,13 +35,10 @@ describe('CloseNotAllowedIssueUseCase', () => {
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(true);
     expect(results[0].steps?.some((s) => s.includes('42') && s.includes('closed'))).toBe(true);
-    expect(mockCloseIssue).toHaveBeenCalledWith('o', 'r', 42, 't');
+    expect(mockCloseIssue).toHaveBeenCalledWith(42);
     expect(mockAddComment).toHaveBeenCalledWith(
-      'o',
-      'r',
       42,
       expect.stringContaining('closed because the author is not a member'),
-      't'
     );
   });
 

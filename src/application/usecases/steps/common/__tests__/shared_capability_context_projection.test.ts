@@ -268,7 +268,7 @@ describe('P2-D shared capability context projections', () => {
       isChore: false,
       singleAction: { issue: -1 },
       issue: { number: 14 },
-      pullRequest: { number: -1 },
+      pullRequest: { number: -1, action: '' },
       release: { active: false },
       hotfix: { active: false },
       images: publicationImages,

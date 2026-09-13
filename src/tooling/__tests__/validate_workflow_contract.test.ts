@@ -109,7 +109,9 @@ describe('workflow contract validator', () => {
         if (['copilot_commit.yml', 'copilot_pull_request.yml'].includes(manifest.file)) {
           expect(workflow.jobs[manifest.jobId].concurrency).toEqual({
             group: 'copilot-bugbot-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}',
-            'cancel-in-progress': true,
+            'cancel-in-progress': manifest.file === 'copilot_pull_request.yml'
+              ? "${{ github.event_name != 'pull_request' || github.event.action != 'edited' }}"
+              : true,
           });
         } else {
           expect(workflow.jobs[manifest.jobId].concurrency).toBeUndefined();
@@ -118,6 +120,19 @@ describe('workflow contract validator', () => {
       }
     }
   });
+
+  it.each(['.github/workflows', 'setup/workflows'])(
+    'rejects pull-request metadata events that can preempt an active review in %s',
+    (directory) => {
+      const file = path.join(process.cwd(), directory, 'copilot_pull_request.yml');
+      const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+      workflow.jobs['copilot-pull-requests'].concurrency['cancel-in-progress'] = true;
+
+      expect(() => validateWorkflow(file, workflow)).toThrow(
+        'queue pull_request edited events without preempting an active review',
+      );
+    },
+  );
 
   it('rejects an event workflow that removes the generic bot actor gate', () => {
     const workflow = JSON.parse(JSON.stringify(validWorkflow));

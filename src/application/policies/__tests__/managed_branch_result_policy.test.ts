@@ -22,8 +22,7 @@ describe("managed branch result policy", () => {
 
   it("builds create and rename presentations with optional commit guidance", () => {
     const created = buildManagedBranchPresentation({
-      owner: "o",
-      repo: "r",
+      repositoryWebUrl: "https://github.com/o/r",
       developmentBranch: "develop",
       baseBranchName: "develop",
       baseBranchUrl: "https://github.com/o/r/tree/develop",
@@ -37,8 +36,7 @@ describe("managed branch result policy", () => {
     expect(created.reminders[1]).toContain("feat(login):");
 
     const renamed = buildManagedBranchPresentation({
-      owner: "o",
-      repo: "r",
+      repositoryWebUrl: "https://github.com/o/r",
       developmentBranch: "develop",
       baseBranchName: "feature/42-old",
       baseBranchUrl: "https://github.com/o/r/tree/feature/42-old",

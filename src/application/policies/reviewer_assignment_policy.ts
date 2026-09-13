@@ -1,4 +1,4 @@
-export function uniqueLogins(logins: string[]): string[] {
+export function uniqueLogins(logins: readonly string[]): string[] {
     const identities = new Map<string, string>();
     for (const login of logins) {
         const identity = login.toLowerCase();
@@ -9,15 +9,15 @@ export function uniqueLogins(logins: string[]): string[] {
 
 export function buildReviewerExclusions(
     creator: string,
-    currentReviewers: string[],
-    currentAssignees: string[],
+    currentReviewers: readonly string[],
+    currentAssignees: readonly string[],
 ): string[] {
     return [creator, ...currentReviewers, ...currentAssignees];
 }
 
 export function selectEligibleReviewers(
-    members: string[],
-    exclusions: string[],
+    members: readonly string[],
+    exclusions: readonly string[],
     requiredCount: number,
 ): string[] {
     const excludedIdentities = new Set(exclusions.map((login) => login.toLowerCase()));
@@ -27,8 +27,8 @@ export function selectEligibleReviewers(
 }
 
 export function selectConfirmedReviewers(
-    requestedMembers: string[],
-    confirmedMembers: string[],
+    requestedMembers: readonly string[],
+    confirmedMembers: readonly string[],
 ): string[] {
     const requestedIdentities = new Set(requestedMembers.map((member) => member.toLowerCase()));
     const confirmedIdentities = new Set<string>();

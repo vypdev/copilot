@@ -1,13 +1,12 @@
-import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
 import type {
-  BranchListQueryPort,
+  BoundBranchLifecyclePort,
   BranchNamePort,
 } from "../../../ports/branch_lifecycle_ports";
 import type {
+  BoundLinkedBranchCommandPort,
   BranchPropagationDelayPort,
   CommitTagQueryPort,
-  LinkedBranchCommandPort,
   RemoteBranchSyncPort,
 } from "../../../ports/branch_preparation_ports";
 import { logDebugInfo, logError, logInfo } from "../../../ports/logging_ports";
@@ -18,37 +17,43 @@ import { prepareManagedBranch } from "./prepare_managed_branch";
 import { prepareHotfixBranch } from "./prepare_hotfix_branch";
 import { prepareReleaseBranch } from "./prepare_release_branch";
 import { toApplicationError } from "../../../errors/application_error";
+import {
+  branchPreparationOutcome,
+  type BranchPreparationContext,
+  type BranchPreparationOutcome,
+  type MoveIssueToInProgressContext,
+} from '../../issue_workflow_context';
 
 export class PrepareBranchesUseCase implements ParamUseCase<
-  Execution,
-  Result[]
+  BranchPreparationContext,
+  BranchPreparationOutcome
 > {
   taskId = "PrepareBranchesUseCase";
 
   constructor(
-    private readonly branchListQueryPort: BranchListQueryPort,
+    private readonly branchListQueryPort: BoundBranchLifecyclePort,
     private readonly branchNamePort: BranchNamePort,
     private readonly remoteBranchSyncPort: RemoteBranchSyncPort,
     private readonly commitTagQueryPort: CommitTagQueryPort,
-    private readonly linkedBranchCommandPort: LinkedBranchCommandPort,
+    private readonly linkedBranchCommandPort: BoundLinkedBranchCommandPort,
     private readonly branchPropagationDelayPort: BranchPropagationDelayPort,
-    private readonly moveIssueToInProgressUseCase: ParamUseCase<Execution, Result[]>,
+    private readonly moveIssueToInProgressUseCase: ParamUseCase<MoveIssueToInProgressContext, Result[]>,
   ) {}
 
-  async invoke(param: Execution): Promise<Result[]> {
+  async invoke(param: BranchPreparationContext): Promise<BranchPreparationOutcome> {
     logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`);
     const result: Result[] = [];
     try {
-      const issueTitle = param.issue.title ?? "";
-      if (!param.labels.isMandatoryBranchedLabel && issueTitle.length === 0) {
-        return [
+      const issueTitle = param.issueTitle ?? '';
+      if (!param.mandatoryBranchRequired && issueTitle.length === 0) {
+        return branchPreparationOutcome([
           new Result({
             id: this.taskId,
             success: false,
             executed: false,
             reminders: ["Tried to check the title but no one was found."],
           }),
-        ];
+        ]);
       }
 
       await this.remoteBranchSyncPort.fetchRemoteBranches();
@@ -60,14 +65,13 @@ export class PrepareBranchesUseCase implements ParamUseCase<
           reminders: ["Take a coffee break while you work ☕."],
         }),
       );
-      const branches = await this.branchListQueryPort.getListOfBranches(
-        param.owner,
-        param.repo,
-        param.tokens.token,
-      );
+      const branches = await this.branchListQueryPort.getListOfBranches();
       branches.forEach((branch) => logDebugInfo(`- ${branch}`));
-      result.push(...await this.prepareBranchByStrategy(param, issueTitle, branches));
-      return result;
+      const prepared = await this.prepareBranchByStrategy(param, issueTitle, branches);
+      return branchPreparationOutcome(
+        [...result, ...prepared.results],
+        prepared.configurationPatch,
+      );
     } catch (error) {
       const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to prepare the issue branch.');
       logError(semanticError);
@@ -82,15 +86,15 @@ export class PrepareBranchesUseCase implements ParamUseCase<
           errors: [semanticError],
         }),
       );
-      return result;
+      return branchPreparationOutcome(result);
     }
   }
 
   private async prepareBranchByStrategy(
-    param: Execution,
+    param: BranchPreparationContext,
     issueTitle: string,
-    branches: string[],
-  ): Promise<Result[]> {
+    branches: readonly string[],
+  ): Promise<BranchPreparationOutcome> {
     const strategy = selectBranchPreparationStrategy({
       hotfixActive: param.hotfix.active,
       releaseActive: param.release.active,

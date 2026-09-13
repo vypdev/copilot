@@ -15,14 +15,9 @@ jest.mock('../../../../../data/repository/project/project_board_query_repository
 
 function baseParam(overrides: Record<string, unknown> = {}) {
   return {
-    owner: 'o',
-    repo: 'r',
     issueNumber: 42,
-    tokens: { token: 't' },
-    project: {
-      getProjects: () => [{ id: 'p1', title: 'Backlog', url: 'https://github.com/org/repo/projects/1' }],
-      getProjectColumnIssueInProgress: () => 'In Progress',
-    },
+    columnName: 'In Progress',
+    projects: [{ id: 'p1', title: 'Backlog', type: 'organization', owner: 'org', url: 'https://github.com/org/repo/projects/1', number: 1 }],
     ...overrides,
   } as unknown as Parameters<MoveIssueToInProgressUseCase['invoke']>[0];
 }
@@ -31,7 +26,7 @@ describe('MoveIssueToInProgressUseCase', () => {
   let useCase: MoveIssueToInProgressUseCase;
 
   beforeEach(() => {
-    useCase = new MoveIssueToInProgressUseCase({ moveIssueToColumn: mockMoveIssueToColumn, setTaskPriority: jest.fn(), setTaskSize: jest.fn() });
+    useCase = new MoveIssueToInProgressUseCase({ moveIssueToColumn: mockMoveIssueToColumn, setTaskPriority: jest.fn() });
     mockMoveIssueToColumn.mockResolvedValue(true);
   });
 
@@ -40,11 +35,8 @@ describe('MoveIssueToInProgressUseCase', () => {
     const results = await useCase.invoke(param);
     expect(mockMoveIssueToColumn).toHaveBeenCalledWith(
       expect.any(Object),
-      'o',
-      'r',
       42,
       'In Progress',
-      't'
     );
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
@@ -84,10 +76,7 @@ describe('MoveIssueToInProgressUseCase', () => {
       number: 3,
     });
     const param = baseParam({
-      project: {
-        getProjects: () => [projectNoUrl],
-        getProjectColumnIssueInProgress: () => 'In Progress',
-      },
+      projects: [{ ...projectNoUrl, url: projectNoUrl.publicUrl }],
     });
     const results = await useCase.invoke(param);
     const builtUrl = 'https://github.com/orgs/acme/projects/3';

@@ -25,9 +25,13 @@ const DISTRIBUTED_COPILOT_ACTION = 'vypdev/copilot@v3';
 const CHECKOUT_ACTION = 'actions/checkout@v5';
 const SETUP_NODE_ACTION = 'actions/setup-node@v7';
 const BUGBOT_BRANCH_CONCURRENCY_GROUP = 'copilot-bugbot-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}';
+const BUGBOT_PULL_REQUEST_CANCEL_EXPRESSION = "${{ github.event_name != 'pull_request' || github.event.action != 'edited' }}";
 const BUGBOT_CONCURRENCY_JOBS = Object.freeze({
-  'copilot_commit.yml': 'copilot-commits',
-  'copilot_pull_request.yml': 'copilot-pull-requests',
+  'copilot_commit.yml': Object.freeze({ jobId: 'copilot-commits', cancelInProgress: true }),
+  'copilot_pull_request.yml': Object.freeze({
+    jobId: 'copilot-pull-requests',
+    cancelInProgress: BUGBOT_PULL_REQUEST_CANCEL_EXPRESSION,
+  }),
 });
 
 function assertQueueBudget(queueWaitMinutes, minimumJobTimeoutMinutes) {
@@ -304,11 +308,12 @@ function assertNoConcurrency(relativeFile, workflow) {
 }
 
 function assertReviewConcurrency(relativeFile, workflow) {
-  const targetJobId = BUGBOT_CONCURRENCY_JOBS[path.basename(relativeFile)];
-  if (!targetJobId) {
+  const contract = BUGBOT_CONCURRENCY_JOBS[path.basename(relativeFile)];
+  if (!contract) {
     assertNoConcurrency(relativeFile, workflow);
     return;
   }
+  const { jobId: targetJobId, cancelInProgress } = contract;
   if (workflow.concurrency !== undefined) {
     throw new Error(`${relativeFile} must scope Bugbot branch concurrency to job ${targetJobId}.`);
   }
@@ -320,8 +325,8 @@ function assertReviewConcurrency(relativeFile, workflow) {
       continue;
     }
     if (job.concurrency?.group !== BUGBOT_BRANCH_CONCURRENCY_GROUP
-      || job.concurrency?.['cancel-in-progress'] !== true) {
-      throw new Error(`${relativeFile} job ${jobId} must cancel superseded Bugbot runs with the shared branch concurrency group.`);
+      || job.concurrency?.['cancel-in-progress'] !== cancelInProgress) {
+      throw new Error(`${relativeFile} job ${jobId} must share the Bugbot branch group, cancel superseded code-review runs, and queue pull_request edited events without preempting an active review.`);
     }
   }
 }

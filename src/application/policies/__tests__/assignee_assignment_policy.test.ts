@@ -6,25 +6,26 @@ import {
 } from '../assignee_assignment_policy';
 
 const context = {
-  isIssue: true,
-  isPullRequest: true,
-  issue: { number: 42, desiredAssigneesCount: 2, creator: 'Alice' },
-  pullRequest: { number: 99, desiredAssigneesCount: 1, creator: 'Bob' },
+  target: 'issue' as const,
+  number: 42,
+  desiredAssigneesCount: 2,
+  creator: 'Alice',
 };
 
 describe('assignee assignment policy', () => {
   it('resolves the issue target when the event is an issue', () => {
     expect(resolveAssigneeTarget(context)).toEqual({ number: 42, desiredCount: 2 });
-    expect(resolveAssigneeTarget({ ...context, isIssue: false })).toEqual({ number: 99, desiredCount: 1 });
+    expect(resolveAssigneeTarget({ ...context, number: 99, desiredAssigneesCount: 1 })).toEqual({ number: 99, desiredCount: 1 });
   });
 
-  it('prioritizes an eligible pull request creator and matches identities case-insensitively', () => {
-    expect(resolveCreatorAssignment(context, ['bob', 'alice'], [])).toEqual({ login: 'Bob', source: 'pull request' });
+  it('selects the eligible target creator and matches identities case-insensitively', () => {
+    expect(resolveCreatorAssignment({ ...context, target: 'pull request', creator: 'Bob' }, ['bob', 'alice'], []))
+      .toEqual({ login: 'Bob', source: 'pull request' });
     expect(resolveCreatorAssignment(context, ['alice'], ['ALICE'])).toBeUndefined();
   });
 
-  it('does not select an issue creator for a pull request context', () => {
-    expect(resolveCreatorAssignment({ ...context, isIssue: false, isPullRequest: false, pullRequest: { ...context.pullRequest, creator: '' } }, ['Alice'], []))
+  it('does not select an absent creator', () => {
+    expect(resolveCreatorAssignment({ ...context, creator: '' }, ['Alice'], []))
       .toBeUndefined();
   });
 

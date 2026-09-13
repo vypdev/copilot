@@ -228,6 +228,16 @@ describe('finishGithubAction', () => {
             success: true,
             executed: true,
             steps: ['Review completed'],
+            payload: {
+                bugbotTelemetry: {
+                    schemaVersion: 1,
+                    outcome: 'no-findings',
+                    elapsedMs: 12,
+                    configuredEffort: 'smart',
+                    headSha: 'abc1234',
+                },
+                findingStates: completeFindingStates(),
+            },
         })];
 
         await finishGithubAction(
@@ -246,12 +256,75 @@ describe('finishGithubAction', () => {
         );
     });
 
+    it('keeps metadata-only PR completion out of the stable Review Check', async () => {
+        const action = Object.assign(execution(), {
+            owner: 'test-owner',
+            repo: 'test-repo',
+            eventName: 'pull_request',
+            isIssue: false,
+            isPullRequest: true,
+            pullRequest: { number: 12, action: 'edited' },
+            inputs: { pull_request: { head: { sha: 'abc1234' } } },
+        });
+        const results = [new Result({
+            id: 'UpdateTitleUseCase',
+            success: true,
+            executed: true,
+            steps: ['Title normalized'],
+        })];
+
+        await finishGithubAction(
+            action,
+            results,
+            {} as never,
+            {} as never,
+            { publish: mockEvidencePublish },
+            { publish: mockSummaryPublish },
+        );
+
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('UpdateTitleUseCase'));
+        expect(mockPublishInvoke).toHaveBeenCalledWith(expect.objectContaining({
+            genericCommentMode: 'omit-metadata-only',
+        }));
+        expect(mockEvidencePublish).not.toHaveBeenCalled();
+    });
+
+    it('keeps metadata-only failures visible without adding a generic PR comment', async () => {
+        const action = Object.assign(execution(), {
+            eventName: 'pull_request',
+            isIssue: false,
+            isPullRequest: true,
+            pullRequest: { number: 12, action: 'edited' },
+        });
+        const failure = new Result({
+            id: 'UpdateTitleUseCase',
+            success: false,
+            executed: true,
+            errors: [new ApplicationError('provider.unavailable', 'Title normalization failed.')],
+        });
+
+        await finishGithubAction(
+            action,
+            [failure],
+            {} as never,
+            {} as never,
+            undefined,
+            { publish: mockSummaryPublish },
+        );
+
+        expect(mockPublishInvoke).toHaveBeenCalledWith(expect.objectContaining({
+            genericCommentMode: 'omit-metadata-only',
+        }));
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('Title normalization failed.'));
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Title normalization failed.'));
+    });
+
     it('fails the action for unresolved findings only when the generic policy is enabled', async () => {
         const findingResult = new Result({
             id: 'DetectPotentialProblemsUseCase',
             success: true,
             executed: true,
-            payload: { findingStates: { open: 2, reopened: 1, fixed: 0, obsolete: 0, dismissed: 0 } },
+            payload: { findingStates: completeFindingStates({ open: 2, reopened: 1 }) },
         });
         const nonBlocking = Object.assign(execution(), {
             ai: new Ai('', 'model', false, [], false, 'low', 20, [], undefined, undefined, { failOnUnresolved: false }),
@@ -285,14 +358,89 @@ describe('finishGithubAction', () => {
         const resultWith = (findingStates: Record<string, number>) => new Result({
             id: 'DetectPotentialProblemsUseCase', success: true, executed: true, payload: { findingStates },
         });
-        await finishGithubAction(execution(), [resultWith({ open: 0, reopened: 0, unknown: 1 })], {} as never, {} as never);
+        await finishGithubAction(execution(), [resultWith(completeFindingStates({ unknown: 1 }))], {} as never, {} as never);
         expect(core.setFailed).toHaveBeenCalledWith('Bugbot could not verify 1 finding state(s).');
 
         jest.mocked(core.setFailed).mockClear();
         const blocking = Object.assign(execution(), {
             ai: new Ai('', 'model', false, [], false, 'low', 20, [], undefined, undefined, { failOnUnresolved: true }),
         });
-        await finishGithubAction(blocking, [resultWith({ open: 0, reopened: 0, 'verification-required': 2, unknown: 0 })], {} as never, {} as never);
+        await finishGithubAction(blocking, [resultWith(completeFindingStates({ 'verification-required': 2 }))], {} as never, {} as never);
         expect(core.setFailed).toHaveBeenCalledWith('Bugbot found 2 unresolved actionable finding(s).');
     });
+
+    it('fails closed when owned finding-state evidence is malformed', async () => {
+        const malformed = new Result({
+            id: 'DetectPotentialProblemsUseCase',
+            success: true,
+            executed: true,
+            payload: { findingStates: { open: 0 } },
+        });
+
+        await finishGithubAction(execution(), [malformed], {} as never, {} as never);
+
+        expect(core.setFailed).toHaveBeenCalledWith('Bugbot finding-state evidence is malformed.');
+    });
+
+    it('fails closed when review telemetry requires but omits finding-state evidence', async () => {
+        const missing = new Result({
+            id: 'DetectPotentialProblemsUseCase',
+            success: true,
+            executed: true,
+            payload: {
+                bugbotTelemetry: {
+                    schemaVersion: 1,
+                    outcome: 'no-findings',
+                    elapsedMs: 10,
+                    configuredEffort: 'smart',
+                    headSha: 'abc1234',
+                },
+            },
+        });
+
+        await finishGithubAction(execution(), [missing], {} as never, {} as never);
+
+        expect(core.setFailed).toHaveBeenCalledWith('Bugbot finding-state evidence is malformed.');
+    });
+
+    it('fails closed when valid review state coexists with malformed telemetry', async () => {
+        const valid = new Result({
+            id: 'valid',
+            success: true,
+            executed: true,
+            payload: {
+                bugbotTelemetry: {
+                    schemaVersion: 1,
+                    outcome: 'completed',
+                    elapsedMs: 10,
+                    configuredEffort: 'smart',
+                    headSha: 'abc1234',
+                },
+                findingStates: completeFindingStates(),
+            },
+        });
+        const malformed = new Result({
+            id: 'malformed',
+            success: true,
+            executed: true,
+            payload: { bugbotTelemetry: { schemaVersion: 2, outcome: 'completed', elapsedMs: 10 } },
+        });
+
+        await finishGithubAction(execution(), [valid, malformed], {} as never, {} as never);
+
+        expect(core.setFailed).toHaveBeenCalledWith('Bugbot finding-state evidence is malformed.');
+    });
 });
+
+function completeFindingStates(overrides: Record<string, number> = {}): Record<string, number> {
+    return {
+        open: 0,
+        reopened: 0,
+        fixed: 0,
+        obsolete: 0,
+        dismissed: 0,
+        'verification-required': 0,
+        unknown: 0,
+        ...overrides,
+    };
+}

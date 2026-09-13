@@ -14,6 +14,22 @@ The action **links the pull request to the issue** associated with its branch. T
 - Creates the **link** in GitHub (so the issue shows “Linked pull requests” and the PR shows the issue).
 - Can **post a comment** on the PR with the link or a short summary (depending on configuration).
 
+GitHub recognizes a closing reference for linkage when the PR targets the
+repository's default branch. Copilot therefore reads the current body of the
+exact repository PR, adds a temporary owned `Resolves #…` reference, temporarily
+uses the default base when needed, waits for GitHub to observe the link, and then
+restores the exact original body and base. The event's PR URL is never fetched
+or trusted as a destination.
+
+An interruption leaves a hidden pending marker so rerunning the failed GitHub
+Actions run with its original event recovers that operation before attempting a new one; it does not add a second
+reference or marker. If cleanup only partly succeeds, the result says exactly
+whether the temporary default base, the temporary body reference, or both
+remain. Restore the named PR state in GitHub if necessary, then rerun. A fully
+compensated failure says that the original body and base were restored.
+If a newer event sees a different current base, Copilot stops without writing;
+restore the base named by the failed run or start again from the current PR state.
+
 The branch name must follow the pattern that includes the issue number (e.g. `<tree>/<issue-number>-<slug>`). If the branch does not match, the action cannot link an issue. See [Issues → Branch management](/issues/branch-management) for naming conventions.
 
 ## Project linking

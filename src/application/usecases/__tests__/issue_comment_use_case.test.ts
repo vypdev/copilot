@@ -614,7 +614,7 @@ describe("IssueCommentUseCase", () => {
       {} as never,
       undefined,
       undefined,
-      { invokeExplicit: mockUpdateDescription } as never,
+      { invoke: mockUpdateDescription } as never,
       undefined,
       { invoke: mockSyncBranch } as never,
     );
@@ -635,7 +635,10 @@ describe("IssueCommentUseCase", () => {
     await routedUseCase.invoke(missingBodyExecution);
 
     expect(mockUpdateDescription).toHaveBeenCalledTimes(1);
-    expect(mockUpdateDescription).toHaveBeenCalledWith(descriptionExecution);
+    expect(mockUpdateDescription).toHaveBeenCalledWith(expect.objectContaining({
+      trigger: 'authorized-command',
+      context: expect.objectContaining({ issueNumber: descriptionExecution.issueNumber }),
+    }));
     expect(mockSyncBranch).toHaveBeenCalledTimes(1);
     expect(mockSyncBranch).toHaveBeenCalledWith({
       execution: syncExecution,

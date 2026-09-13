@@ -4,22 +4,27 @@ import { logDebugInfo, logError } from "../ports/logging_ports";
 import type { ParamUseCase } from "./base/param_usecase";
 import type { PullRequestWorkflowSteps } from "./pull_request_workflow_steps";
 import { ApplicationError } from '../errors/application_error';
-import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
+import type { BoundActorAuthorizationPort } from '../ports/actor_authorization_ports';
 import type { BugbotReviewOperationContext } from './steps/commit/bugbot/bugbot_review_operation_context';
 import { projectBugbotReviewOperationContext } from './steps/commit/bugbot/bugbot_review_operation_context';
 import type { UpdateTitleContext } from './steps/common/update_title_workflow';
 import type { ProjectContentLinkContext } from './steps/common/project_content_link_workflow';
+import type {
+  PullRequestDescriptionRequest,
+  PullRequestWorkflowStepContexts,
+} from './pull_request_workflow_context';
 
 export interface PullRequestSharedStepContexts {
   readonly title: UpdateTitleContext;
   readonly projectLink: ProjectContentLinkContext;
+  readonly steps: PullRequestWorkflowStepContexts;
 }
 
 export interface PullRequestWorkflowPorts {
-  updatePullRequestDescriptionUseCase: ParamUseCase<Execution, Result[]>;
+  updatePullRequestDescriptionUseCase: ParamUseCase<PullRequestDescriptionRequest, Result[]>;
   reviewPotentialProblemsUseCase?: ParamUseCase<BugbotReviewOperationContext, Result[]>;
   workflowSteps: PullRequestWorkflowSteps;
-  actorAuthorizationPort?: ActorAuthorizationPort;
+  actorAuthorizationPort?: BoundActorAuthorizationPort;
   sharedContexts: PullRequestSharedStepContexts;
 }
 
@@ -33,18 +38,18 @@ export async function runPullRequestWorkflow(
     logPullRequestState(param);
     const agentAllowed = await canUseAgent(param, ports.actorAuthorizationPort);
     if (param.pullRequest.isOpened) {
-      const remainingSteps: Array<ParamUseCase<Execution, Result[]>> = [
-        ports.workflowSteps.linkPullRequestIssue,
-        ports.workflowSteps.syncSizeAndProgressLabels,
-        ports.workflowSteps.checkPriorityPullRequestSize,
-      ];
       const results = await ports.workflowSteps.updateTitle.invoke(ports.sharedContexts.title);
-      results.push(...(await ports.workflowSteps.assignMemberToIssue.invoke(param)));
-      results.push(...(await ports.workflowSteps.assignReviewersToIssue.invoke(param)));
+      results.push(...(await ports.workflowSteps.assignMemberToIssue.invoke(ports.sharedContexts.steps.assignment)));
+      results.push(...(await ports.workflowSteps.assignReviewersToIssue.invoke(ports.sharedContexts.steps.reviewers)));
       results.push(...(await ports.workflowSteps.linkPullRequestProject.invoke(ports.sharedContexts.projectLink)));
-      results.push(...(await runSteps(param, remainingSteps)));
+      results.push(...(await ports.workflowSteps.linkPullRequestIssue.invoke(ports.sharedContexts.steps.linkIssue)));
+      results.push(...(await ports.workflowSteps.syncSizeAndProgressLabels.invoke(ports.sharedContexts.steps.syncLabels)));
+      results.push(...(await ports.workflowSteps.checkPriorityPullRequestSize.invoke(ports.sharedContexts.steps.priority)));
       if (agentAllowed && shouldUpdatePullRequestDescriptionAutomatically(param)) {
-        results.push(...(await ports.updatePullRequestDescriptionUseCase.invoke(param)));
+        results.push(...(await ports.updatePullRequestDescriptionUseCase.invoke({
+          context: ports.sharedContexts.steps.description,
+          trigger: 'automatic',
+        })));
       }
       if (agentAllowed) results.push(...(await runPullRequestReview(param, ports)));
       return results;
@@ -52,7 +57,10 @@ export async function runPullRequestWorkflow(
 
     if (param.pullRequest.isSynchronize) {
       const results = agentAllowed && shouldUpdatePullRequestDescriptionAutomatically(param)
-        ? await ports.updatePullRequestDescriptionUseCase.invoke(param)
+        ? await ports.updatePullRequestDescriptionUseCase.invoke({
+            context: ports.sharedContexts.steps.description,
+            trigger: 'automatic',
+          })
         : [];
       if (agentAllowed) results.push(...(await runPullRequestReview(param, ports)));
       return results;
@@ -63,7 +71,7 @@ export async function runPullRequestWorkflow(
     }
 
     if (param.pullRequest.isClosed && param.pullRequest.isMerged) {
-      return ports.workflowSteps.closeIssueAfterMerging.invoke(param);
+      return ports.workflowSteps.closeIssueAfterMerging.invoke(ports.sharedContexts.steps.closeIssue);
     }
   } catch (cause) {
     const semanticError = new ApplicationError('workflow.failed', "Unable to process the pull request.", { cause });
@@ -83,16 +91,11 @@ export async function runPullRequestWorkflow(
 
 async function canUseAgent(
   param: Execution,
-  authorization: ActorAuthorizationPort | undefined,
+  authorization: BoundActorAuthorizationPort | undefined,
 ): Promise<boolean> {
   if (!param.ai.getAiMembersOnly()) return true;
   if (!authorization) return false;
-  return authorization.isActorAllowedToModifyFiles(
-    param.owner,
-    param.repo,
-    param.actor,
-    param.tokens.token,
-  );
+  return authorization.isActorAllowedToModifyFiles(param.actor);
 }
 
 function shouldUpdatePullRequestDescriptionAutomatically(param: Execution): boolean {
@@ -110,15 +113,6 @@ async function runPullRequestReview(
 
 function shouldReviewPullRequest(param: Execution): boolean {
   return ['opened', 'reopened', 'synchronize'].includes(param.pullRequest.action);
-}
-
-async function runSteps(
-  param: Execution,
-  steps: Array<ParamUseCase<Execution, Result[]>>,
-): Promise<Result[]> {
-  const results: Result[] = [];
-  for (const step of steps) results.push(...(await step.invoke(param)));
-  return results;
 }
 
 function logPullRequestState(param: Execution): void {

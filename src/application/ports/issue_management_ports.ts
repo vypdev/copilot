@@ -6,9 +6,21 @@ export interface IssueAssigneePort {
     assignMembersToIssue(owner: string, repository: string, issueNumber: number, members: string[], token: string): Promise<string[]>;
 }
 
+/** Repository-credential-bound issue assignment authority. */
+export interface BoundIssueAssigneePort {
+    getCurrentAssignees(issueNumber: number): Promise<readonly string[]>;
+    assignMembersToIssue(issueNumber: number, members: readonly string[]): Promise<readonly string[]>;
+}
+
 export interface IssueLabelsPort {
     getLabels(owner: string, repository: string, issueNumber: number, token: string): Promise<string[]>;
     setLabels(owner: string, repository: string, issueNumber: number, labels: string[], token: string): Promise<void>;
+}
+
+/** Repository-credential-bound label query and replacement authority. */
+export interface BoundIssueLabelsPort {
+    getLabels(issueNumber: number): Promise<readonly string[]>;
+    setLabels(issueNumber: number, labels: readonly string[]): Promise<void>;
 }
 
 export interface PullRequestHeadShaPort {
@@ -41,6 +53,17 @@ export interface IssueTypeProvisioningPort {
     ensureIssueTypes(owner: string, issueTypes: IssueTypes, token: string): Promise<{ created: number; existing: number; errors: string[] }>;
 }
 
+export interface SelectedIssueType {
+    readonly name: string;
+    readonly description: string;
+    readonly color: string;
+}
+
 export interface IssueTypeAssignmentPort {
-    setIssueType(owner: string, repository: string, issueNumber: number, labels: Labels, issueTypes: IssueTypes, token: string): Promise<void>;
+    setIssueType(owner: string, repository: string, issueNumber: number, issueType: SelectedIssueType, token: string): Promise<void>;
+}
+
+/** Repository-credential-bound issue-type mutation authority. */
+export interface BoundIssueTypeAssignmentPort {
+    setIssueType(issueNumber: number, issueType: SelectedIssueType): Promise<void>;
 }

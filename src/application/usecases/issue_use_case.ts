@@ -5,19 +5,23 @@ import { getTaskEmoji } from "../../utils/task_emoji";
 import { ParamUseCase } from "./base/param_usecase";
 import type { IssueWorkflowSteps } from "./issue_workflow_steps";
 import { runIssueWorkflow } from "./issue_workflow";
-import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
+import type { BoundActorAuthorizationPort } from '../ports/actor_authorization_ports';
 import { projectCheckPermissionsContext } from './steps/common/check_permissions_workflow';
 import { projectUpdateTitleContext } from './steps/common/update_title_workflow';
 import { projectIssueContentLinkContext } from './steps/common/project_content_link_workflow';
+import {
+  projectIssueWorkflowStepContexts,
+  type AnswerIssueHelpContext,
+} from './issue_workflow_context';
 
 export class IssueUseCase implements ParamUseCase<Execution, Result[]> {
   taskId: string = "IssueUseCase";
 
   constructor(
     private readonly recommendStepsUseCase: ParamUseCase<Execution, Result[]>,
-    private readonly answerIssueHelpUseCase: ParamUseCase<Execution, Result[]>,
+    private readonly answerIssueHelpUseCase: ParamUseCase<AnswerIssueHelpContext, Result[]>,
     private readonly workflowSteps: IssueWorkflowSteps,
-    private readonly actorAuthorizationPort?: ActorAuthorizationPort,
+    private readonly actorAuthorizationPort?: BoundActorAuthorizationPort,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -31,6 +35,7 @@ export class IssueUseCase implements ParamUseCase<Execution, Result[]> {
         permissions: projectCheckPermissionsContext(param),
         title: projectUpdateTitleContext(param),
         projectLink: projectIssueContentLinkContext(param),
+        steps: projectIssueWorkflowStepContexts(param),
       },
     });
   }

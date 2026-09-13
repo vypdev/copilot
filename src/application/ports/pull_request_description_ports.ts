@@ -9,3 +9,9 @@ export interface PullRequestDescriptionCommandPort {
     /** Optional read capability used by explicit commands from issue comments. */
     getDetails?(owner: string, repository: string, pullRequestNumber: number, token: string): Promise<PullRequestDescriptionDetails>;
 }
+
+/** Repository-credential-bound PR description read/write authority. */
+export interface BoundPullRequestDescriptionPort {
+    updateDescription(pullRequestNumber: number, description: string): Promise<void>;
+    getDetails(pullRequestNumber: number): Promise<PullRequestDescriptionDetails>;
+}

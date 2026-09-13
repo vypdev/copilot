@@ -1,8 +1,8 @@
 export interface AssigneeAssignmentContext {
-    isIssue: boolean;
-    isPullRequest: boolean;
-    issue: { number: number; desiredAssigneesCount: number; creator: string };
-    pullRequest: { number: number; desiredAssigneesCount: number; creator: string };
+    readonly target: 'issue' | 'pull request';
+    readonly number: number;
+    readonly desiredAssigneesCount: number;
+    readonly creator: string;
 }
 
 export interface AssigneeTarget {
@@ -16,12 +16,10 @@ export interface CreatorAssignment {
 }
 
 export function resolveAssigneeTarget(context: AssigneeAssignmentContext): AssigneeTarget {
-    return context.isIssue
-        ? { number: context.issue.number, desiredCount: context.issue.desiredAssigneesCount }
-        : { number: context.pullRequest.number, desiredCount: context.pullRequest.desiredAssigneesCount };
+    return { number: context.number, desiredCount: context.desiredAssigneesCount };
 }
 
-function isEligibleCreator(creator: string, projectMembers: string[], currentMembers: string[]): boolean {
+function isEligibleCreator(creator: string, projectMembers: readonly string[], currentMembers: readonly string[]): boolean {
     if (!creator) return false;
     const identity = creator.toLowerCase();
     return projectMembers.some((member) => member.toLowerCase() === identity)
@@ -30,14 +28,11 @@ function isEligibleCreator(creator: string, projectMembers: string[], currentMem
 
 export function resolveCreatorAssignment(
     context: AssigneeAssignmentContext,
-    projectMembers: string[],
-    currentMembers: string[],
+    projectMembers: readonly string[],
+    currentMembers: readonly string[],
 ): CreatorAssignment | undefined {
-    if (context.isPullRequest && context.pullRequest.creator && isEligibleCreator(context.pullRequest.creator, projectMembers, currentMembers)) {
-        return { login: context.pullRequest.creator, source: 'pull request' };
-    }
-    if (context.isIssue && isEligibleCreator(context.issue.creator, projectMembers, currentMembers)) {
-        return { login: context.issue.creator, source: 'issue' };
+    if (isEligibleCreator(context.creator, projectMembers, currentMembers)) {
+        return { login: context.creator, source: context.target };
     }
     return undefined;
 }
@@ -50,7 +45,7 @@ export function calculateRemainingAssignees(
     return desiredCount - currentCount - (creatorAssigned ? 1 : 0);
 }
 
-export function selectConfirmedAssignees(requestedMembers: string[], assignedMembers: string[]): string[] {
+export function selectConfirmedAssignees(requestedMembers: readonly string[], assignedMembers: readonly string[]): string[] {
     const requestedIdentities = new Set(requestedMembers.map((member) => member.toLowerCase()));
     return assignedMembers.filter((member) => requestedIdentities.has(member.toLowerCase()));
 }
