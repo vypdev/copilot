@@ -1,7 +1,7 @@
 import { Result } from '../../../data/model/result';
 import {
+    projectBugbotResultTelemetry,
     projectBugbotTelemetry,
-    selectBugbotTelemetry,
 } from '../bugbot_telemetry_projection_policy';
 
 describe('Bugbot telemetry projection policy', () => {
@@ -56,14 +56,19 @@ describe('Bugbot telemetry projection policy', () => {
             }),
         ];
 
-        expect(selectBugbotTelemetry(results.slice(0, 2))).toEqual({
-            schemaVersion: 1,
-            outcome: 'no-findings',
-            elapsedMs: 12,
-            configuredEffort: 'default',
+        const valid = projectBugbotResultTelemetry(results.slice(0, 2));
+        expect(valid).toEqual({
+            status: 'valid',
+            telemetry: {
+                schemaVersion: 1,
+                outcome: 'no-findings',
+                elapsedMs: 12,
+                configuredEffort: 'default',
+            },
         });
-        expect(selectBugbotTelemetry([])).toBeUndefined();
-        expect(selectBugbotTelemetry(results)).toBeUndefined();
+        expect(valid.status === 'valid' && Object.isFrozen(valid.telemetry)).toBe(true);
+        expect(projectBugbotResultTelemetry([])).toEqual({ status: 'absent' });
+        expect(projectBugbotResultTelemetry(results)).toEqual({ status: 'invalid' });
     });
 
     it('rejects a valid snapshot when any second owned snapshot is malformed', () => {
@@ -82,7 +87,7 @@ describe('Bugbot telemetry projection policy', () => {
             }),
         ];
 
-        expect(selectBugbotTelemetry(results)).toBeUndefined();
-        expect(selectBugbotTelemetry([results[1]])).toBeUndefined();
+        expect(projectBugbotResultTelemetry(results)).toEqual({ status: 'invalid' });
+        expect(projectBugbotResultTelemetry([results[1]])).toEqual({ status: 'invalid' });
     });
 });

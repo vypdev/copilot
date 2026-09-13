@@ -52768,7 +52768,8 @@ function buildActionSummary(context) {
     const failures = context.results.filter(result => !result.success && result.executed);
     const findingStateProjection = (0, bugbot_result_finding_state_projection_policy_1.projectBugbotResultFindingStates)(context.results);
     const findingStates = findingStateProjection.status === 'valid' ? findingStateProjection.counts : undefined;
-    const bugbotTelemetry = (0, bugbot_telemetry_projection_policy_1.selectBugbotTelemetry)(context.results);
+    const telemetryProjection = (0, bugbot_telemetry_projection_policy_1.projectBugbotResultTelemetry)(context.results);
+    const bugbotTelemetry = telemetryProjection.status === 'valid' ? telemetryProjection.telemetry : undefined;
     const hasActionableFindings = findingStates ? (0, review_state_1.countActionableBugbotFindings)(findingStates) > 0 : false;
     const hasUnknownFindings = findingStateProjection.status === 'invalid' || (findingStates?.unknown ?? 0) > 0;
     const status = resolveActionSummaryStatus({
@@ -52788,7 +52789,7 @@ function buildActionSummary(context) {
         `| PR description policy | ${escapeTable(context.pullRequestDescriptionMode ?? '—')} |`,
         `| Results | ${context.results.length} |`,
         `| Finding states | ${formatFindingStates(findingStateProjection)} |`,
-        `| Bugbot review | ${formatBugbotTelemetry(bugbotTelemetry)} |`,
+        `| Bugbot review | ${formatBugbotTelemetry(telemetryProjection)} |`,
     ];
     return [
         '# Copilot execution',
@@ -52829,10 +52830,12 @@ function resolveActionSummaryTarget(context) {
         return `Issue #${context.issueNumber}`;
     return 'Repository run';
 }
-function formatBugbotTelemetry(telemetry) {
-    return telemetry
-        ? `${escapeTable(telemetry.outcome)}, effort=${escapeTable(telemetry.configuredEffort)}, ${Math.max(0, Math.round(telemetry.elapsedMs))}ms`
-        : '—';
+function formatBugbotTelemetry(projection) {
+    if (projection.status === 'invalid')
+        return 'invalid';
+    if (projection.status === 'absent')
+        return '—';
+    return `${escapeTable(projection.telemetry.outcome)}, effort=${escapeTable(projection.telemetry.configuredEffort)}, ${Math.max(0, Math.round(projection.telemetry.elapsedMs))}ms`;
 }
 function formatFindingStates(projection) {
     if (projection.status === 'invalid')
@@ -54487,11 +54490,13 @@ const OUTCOMES_REQUIRING_FINDING_STATES = new Set([
 /** Validates and aggregates the one canonical finding-state payload shape used by result presentation. */
 function projectBugbotResultFindingStates(results) {
     const aggregate = (0, review_state_1.countBugbotFindingStates)([]);
+    const telemetryProjection = (0, bugbot_telemetry_projection_policy_1.projectBugbotResultTelemetry)(results);
+    if (telemetryProjection.status === 'invalid')
+        return { status: 'invalid' };
     let found = false;
-    let required = false;
+    const required = telemetryProjection.status === 'valid'
+        && OUTCOMES_REQUIRING_FINDING_STATES.has(telemetryProjection.telemetry.outcome);
     for (const result of results) {
-        const telemetry = (0, bugbot_telemetry_projection_policy_1.projectBugbotTelemetry)(result.payload);
-        required || (required = telemetry !== undefined && OUTCOMES_REQUIRING_FINDING_STATES.has(telemetry.outcome));
         const projected = projectResultFindingStates(result.payload);
         if (projected.status === 'invalid')
             return projected;
@@ -54826,7 +54831,7 @@ function escapeRegExp(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectBugbotTelemetry = projectBugbotTelemetry;
-exports.selectBugbotTelemetry = selectBugbotTelemetry;
+exports.projectBugbotResultTelemetry = projectBugbotResultTelemetry;
 const result_1 = __nccwpck_require__(73817);
 const BUGBOT_REVIEW_OUTCOMES = [
     'completed',
@@ -54858,12 +54863,17 @@ function projectBugbotTelemetry(value) {
         ...(headSha ? { headSha } : {}),
     };
 }
-/** Accepts exactly one semantic review snapshot; ambiguous result sets fail closed. */
-function selectBugbotTelemetry(results) {
+/** Projects exact owned-snapshot cardinality without conflating absence and invalid evidence. */
+function projectBugbotResultTelemetry(results) {
     const telemetryResults = results.filter((result) => hasBugbotTelemetryField(result.payload));
+    if (telemetryResults.length === 0)
+        return { status: 'absent' };
     if (telemetryResults.length !== 1)
-        return undefined;
-    return projectBugbotTelemetry(telemetryResults[0].payload);
+        return { status: 'invalid' };
+    const telemetry = projectBugbotTelemetry(telemetryResults[0].payload);
+    return telemetry
+        ? { status: 'valid', telemetry: Object.freeze(telemetry) }
+        : { status: 'invalid' };
 }
 function isBugbotReviewOutcome(value) {
     return typeof value === 'string' && BUGBOT_REVIEW_OUTCOMES.includes(value);
@@ -54981,7 +54991,8 @@ function buildCopilotEvidence(context) {
     if (!headSha)
         return undefined;
     const isReviewEvent = context.eventName.startsWith('pull_request');
-    const bugbotTelemetry = (0, bugbot_telemetry_projection_policy_1.selectBugbotTelemetry)(context.results);
+    const telemetryProjection = (0, bugbot_telemetry_projection_policy_1.projectBugbotResultTelemetry)(context.results);
+    const bugbotTelemetry = telemetryProjection.status === 'valid' ? telemetryProjection.telemetry : undefined;
     if (!isEligibleEvidenceSource(isReviewEvent, bugbotTelemetry, headSha))
         return undefined;
     const failures = context.results.filter(result => !result.success && result.executed).length;

@@ -1,6 +1,6 @@
 import type { Result } from '../../data/model/result';
 import type { CopilotEvidence } from '../ports/copilot_evidence_ports';
-import { selectBugbotTelemetry, type BugbotTelemetryProjection } from './bugbot_telemetry_projection_policy';
+import { projectBugbotResultTelemetry, type BugbotTelemetryProjection } from './bugbot_telemetry_projection_policy';
 import { projectBugbotResultFindingStates } from './bugbot_result_finding_state_projection_policy';
 import { countActionableBugbotFindings } from '../../domain/bugbot/review_state';
 
@@ -17,7 +17,8 @@ export function buildCopilotEvidence(context: CopilotEvidenceContext): CopilotEv
     const headSha = context.headSha?.trim();
     if (!headSha) return undefined;
     const isReviewEvent = context.eventName.startsWith('pull_request');
-    const bugbotTelemetry = selectBugbotTelemetry(context.results);
+    const telemetryProjection = projectBugbotResultTelemetry(context.results);
+    const bugbotTelemetry = telemetryProjection.status === 'valid' ? telemetryProjection.telemetry : undefined;
     if (!isEligibleEvidenceSource(isReviewEvent, bugbotTelemetry, headSha)) return undefined;
     const failures = context.results.filter(result => !result.success && result.executed).length;
     const findingStateProjection = projectBugbotResultFindingStates(context.results);

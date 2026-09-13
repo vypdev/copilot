@@ -402,6 +402,34 @@ describe('finishGithubAction', () => {
 
         expect(core.setFailed).toHaveBeenCalledWith('Bugbot finding-state evidence is malformed.');
     });
+
+    it('fails closed when valid review state coexists with malformed telemetry', async () => {
+        const valid = new Result({
+            id: 'valid',
+            success: true,
+            executed: true,
+            payload: {
+                bugbotTelemetry: {
+                    schemaVersion: 1,
+                    outcome: 'completed',
+                    elapsedMs: 10,
+                    configuredEffort: 'smart',
+                    headSha: 'abc1234',
+                },
+                findingStates: completeFindingStates(),
+            },
+        });
+        const malformed = new Result({
+            id: 'malformed',
+            success: true,
+            executed: true,
+            payload: { bugbotTelemetry: { schemaVersion: 2, outcome: 'completed', elapsedMs: 10 } },
+        });
+
+        await finishGithubAction(execution(), [valid, malformed], {} as never, {} as never);
+
+        expect(core.setFailed).toHaveBeenCalledWith('Bugbot finding-state evidence is malformed.');
+    });
 });
 
 function completeFindingStates(overrides: Record<string, number> = {}): Record<string, number> {

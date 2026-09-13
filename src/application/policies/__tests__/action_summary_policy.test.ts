@@ -136,6 +136,29 @@ describe('action summary policy', () => {
         expect(summary).toContain('| Finding states | invalid |');
     });
 
+    it('fails closed when valid state counts coexist with malformed telemetry', () => {
+        const summary = buildActionSummary({
+            owner: 'owner', repository: 'repo', eventName: 'pull_request', issueNumber: -1, pullRequestNumber: 12,
+            results: [
+                new Result({
+                    id: 'valid', success: true, executed: true,
+                    payload: {
+                        bugbotTelemetry: { schemaVersion: 1, outcome: 'completed', elapsedMs: 11, configuredEffort: 'smart', headSha: 'abc' },
+                        findingStates: findingStates(),
+                    },
+                }),
+                new Result({
+                    id: 'malformed', success: true, executed: true,
+                    payload: { bugbotTelemetry: { schemaVersion: 2, outcome: 'completed', elapsedMs: 11 } },
+                }),
+            ],
+        });
+
+        expect(summary).toContain('| Status | ❌ Failure |');
+        expect(summary).toContain('| Finding states | invalid |');
+        expect(summary).toContain('| Bugbot review | invalid |');
+    });
+
     it.each([
         ['partial', '⚠️ Partial'],
         ['superseded', '⏭️ Superseded'],

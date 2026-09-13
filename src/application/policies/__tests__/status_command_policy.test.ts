@@ -97,6 +97,24 @@ describe('status command policy', () => {
         expect(snapshot.findingStateEvidence).toBe('invalid');
     });
 
+    it('surfaces malformed sibling telemetry as invalid despite valid zero counts', () => {
+        const snapshot = buildCopilotStatusSnapshot(execution({
+            currentConfiguration: { results: [
+                { payload: {
+                    bugbotTelemetry: { schemaVersion: 1, outcome: 'completed', elapsedMs: 10, configuredEffort: 'smart', headSha: 'sha-123' },
+                    findingStates: {
+                        open: 0, reopened: 0, fixed: 0, obsolete: 0, dismissed: 0,
+                        'verification-required': 0, unknown: 0,
+                    },
+                } },
+                { payload: { bugbotTelemetry: { schemaVersion: 2, outcome: 'completed', elapsedMs: 10 } } },
+            ] },
+        }) as never);
+
+        expect(snapshot.findingStates).toBeUndefined();
+        expect(snapshot.findingStateEvidence).toBe('invalid');
+    });
+
     it('renders every non-clean finding state explicitly', () => {
         const snapshot = buildCopilotStatusSnapshot(execution({
             currentConfiguration: { results: [{ payload: { findingStates: {

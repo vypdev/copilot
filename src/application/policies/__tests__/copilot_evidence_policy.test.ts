@@ -124,6 +124,24 @@ describe('buildCopilotEvidence', () => {
         })).toBeUndefined();
     });
 
+    it('publishes no Review Check when valid telemetry has a malformed owned sibling', () => {
+        expect(buildCopilotEvidence({
+            eventName: 'pull_request',
+            headSha: 'sha-123',
+            summary: 'summary',
+            results: [
+                new Result({
+                    id: 'valid', success: true, executed: true,
+                    payload: { ...telemetry('completed'), findingStates: findingStates() },
+                }),
+                new Result({
+                    id: 'malformed', success: true, executed: true,
+                    payload: { bugbotTelemetry: { schemaVersion: 2, outcome: 'completed', elapsedMs: 10 } },
+                }),
+            ],
+        })).toBeUndefined();
+    });
+
     it.each([
         ['partial', 'Copilot review has partial coverage', findingStates()],
         ['superseded', 'Copilot review was superseded', undefined],

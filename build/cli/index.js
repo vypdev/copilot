@@ -53830,11 +53830,13 @@ const OUTCOMES_REQUIRING_FINDING_STATES = new Set([
 /** Validates and aggregates the one canonical finding-state payload shape used by result presentation. */
 function projectBugbotResultFindingStates(results) {
     const aggregate = (0, review_state_1.countBugbotFindingStates)([]);
+    const telemetryProjection = (0, bugbot_telemetry_projection_policy_1.projectBugbotResultTelemetry)(results);
+    if (telemetryProjection.status === 'invalid')
+        return { status: 'invalid' };
     let found = false;
-    let required = false;
+    const required = telemetryProjection.status === 'valid'
+        && OUTCOMES_REQUIRING_FINDING_STATES.has(telemetryProjection.telemetry.outcome);
     for (const result of results) {
-        const telemetry = (0, bugbot_telemetry_projection_policy_1.projectBugbotTelemetry)(result.payload);
-        required || (required = telemetry !== undefined && OUTCOMES_REQUIRING_FINDING_STATES.has(telemetry.outcome));
         const projected = projectResultFindingStates(result.payload);
         if (projected.status === 'invalid')
             return projected;
@@ -54169,7 +54171,7 @@ function escapeRegExp(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectBugbotTelemetry = projectBugbotTelemetry;
-exports.selectBugbotTelemetry = selectBugbotTelemetry;
+exports.projectBugbotResultTelemetry = projectBugbotResultTelemetry;
 const result_1 = __nccwpck_require__(73817);
 const BUGBOT_REVIEW_OUTCOMES = [
     'completed',
@@ -54201,12 +54203,17 @@ function projectBugbotTelemetry(value) {
         ...(headSha ? { headSha } : {}),
     };
 }
-/** Accepts exactly one semantic review snapshot; ambiguous result sets fail closed. */
-function selectBugbotTelemetry(results) {
+/** Projects exact owned-snapshot cardinality without conflating absence and invalid evidence. */
+function projectBugbotResultTelemetry(results) {
     const telemetryResults = results.filter((result) => hasBugbotTelemetryField(result.payload));
+    if (telemetryResults.length === 0)
+        return { status: 'absent' };
     if (telemetryResults.length !== 1)
-        return undefined;
-    return projectBugbotTelemetry(telemetryResults[0].payload);
+        return { status: 'invalid' };
+    const telemetry = projectBugbotTelemetry(telemetryResults[0].payload);
+    return telemetry
+        ? { status: 'valid', telemetry: Object.freeze(telemetry) }
+        : { status: 'invalid' };
 }
 function isBugbotReviewOutcome(value) {
     return typeof value === 'string' && BUGBOT_REVIEW_OUTCOMES.includes(value);

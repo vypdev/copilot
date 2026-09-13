@@ -264,9 +264,12 @@ event, target, lifecycle, result counts, and sanitized failures provide
 correlation. Queue polling logs count and next delay without leaking responses.
 Repeated unchanged state SHOULD not generate repeated discussion comments.
 The shared telemetry projection is the only parser used by Job Summary and
-native evidence. It first counts every result that owns the telemetry field and
-accepts the set only when that count is exactly one and the snapshot is valid;
-malformed siblings cannot be discarded before cardinality is checked.
+native evidence. Its set result is explicitly `absent`, `invalid`, or `valid`.
+It first counts every result that owns the telemetry field and accepts the set
+only when that count is exactly one and the snapshot is valid; malformed
+siblings cannot be discarded before cardinality is checked. The finding-state
+projection consumes the same set decision before counts, so Action exit,
+lifecycle, status, Summary, and Check ownership cannot disagree.
 Missing/mismatched/ambiguous telemetry is observable as absence of a Review
 Check, never as `Bugbot review: —` in a newer same-name Check. A second shared
 pure projection validates and aggregates complete canonical finding-state
@@ -295,7 +298,7 @@ inspectable provider facts.
 | Setup/state/idempotency/races | 12 | restored state, no issue, queue timeout |
 | Adapters/error mapping | 8 | pagination, provider errors, timers |
 | Workflow/setup contracts | 8 | queue gate, permissions, timeouts |
-| Publication/UX/sanitization | 20 | targets, dry run, summary, errors, links, exact-head review eligibility, metadata-only Check/comment omission, malformed-sibling telemetry, required finding-state evidence, canonical projection, invalid status and incomplete neutral matrix |
+| Publication/UX/sanitization | 20 | targets, dry run, summary, errors, links, exact-head review eligibility, metadata-only Check/comment omission, discriminated malformed-sibling telemetry, required finding-state evidence, canonical projection, invalid status and incomplete neutral matrix |
 | Integration/security/cutover | 8 | end-to-end routes, secrets, removed-shape rejection |
 | **Total** | **70** | no double counting |
 
@@ -340,6 +343,10 @@ light/dark, and screen-reader order.
     aggregate, the shared projection is invalid across Action completion,
     lifecycle, status, Summary, and eligible Check evidence; metadata-only and
     skipped/superseded/failed results retain a deliberate absent state.
+15. Given valid zero finding-state counts plus malformed or duplicate owned
+    telemetry, the telemetry-set and finding-state projections are invalid; no
+    Review Check is published and every other current-state consumer fails or
+    blocks instead of reporting success.
 
 ## 17. Requirements traceability
 
@@ -350,7 +357,7 @@ light/dark, and screen-reader order.
 | one route | route policy/dispatcher | route tests | architecture |
 | safe publication | completion/presentation policies | completion tests | overview |
 | metadata noise bound | explicit generic-comment publication mode | metadata-edit context/use-case/completion negatives | workflow setup and troubleshooting |
-| semantic Check ownership | telemetry projection + evidence policy | outcome matrix + metadata-only and malformed-sibling negatives | Bugbot detection, workflow setup, troubleshooting |
+| semantic Check ownership | discriminated telemetry-set projection + evidence policy | outcome matrix + metadata-only and malformed/duplicate-sibling negatives | Bugbot detection, workflow setup, troubleshooting |
 | canonical finding-state evidence | result-state projection + completion/lifecycle/status/summary/Check policies | strict schema, required-outcome absence, aggregation, overflow, fail-closed, and rendering tests | Bugbot detection, observability, failure scenarios, comment commands |
 | dependency direction | architecture tests | boundary/cycle suites | architecture |
 

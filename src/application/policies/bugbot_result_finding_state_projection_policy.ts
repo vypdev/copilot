@@ -4,7 +4,7 @@ import {
     countBugbotFindingStates,
     type BugbotFindingStateCounts,
 } from '../../domain/bugbot/review_state';
-import { projectBugbotTelemetry } from './bugbot_telemetry_projection_policy';
+import { projectBugbotResultTelemetry } from './bugbot_telemetry_projection_policy';
 
 const BUGBOT_FINDING_STATE_SET = new Set<string>(BUGBOT_FINDING_STATES);
 const OUTCOMES_REQUIRING_FINDING_STATES = new Set([
@@ -28,11 +28,12 @@ export function projectBugbotResultFindingStates(
     results: readonly ResultPayloadSource[],
 ): BugbotResultFindingStateProjection {
     const aggregate = countBugbotFindingStates([]);
+    const telemetryProjection = projectBugbotResultTelemetry(results);
+    if (telemetryProjection.status === 'invalid') return { status: 'invalid' };
     let found = false;
-    let required = false;
+    const required = telemetryProjection.status === 'valid'
+        && OUTCOMES_REQUIRING_FINDING_STATES.has(telemetryProjection.telemetry.outcome);
     for (const result of results) {
-        const telemetry = projectBugbotTelemetry(result.payload);
-        required ||= telemetry !== undefined && OUTCOMES_REQUIRING_FINDING_STATES.has(telemetry.outcome);
         const projected = projectResultFindingStates(result.payload);
         if (projected.status === 'invalid') return projected;
         if (projected.status === 'absent') continue;

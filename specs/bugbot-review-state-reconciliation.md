@@ -200,6 +200,16 @@ as required for every outcome that evaluates findings (`completed`,
 metadata-only results and terminal outcomes that cannot claim a clean analysis
 (`skipped`, `superseded`, and `failed`).
 
+Review `5191003573` on head `1d3c155d` found that the finding-state projection
+still called the single-payload parser directly: valid zero counts could hide a
+second owned but malformed telemetry payload from Summary, lifecycle, status,
+and Action exit even though the Review Check selector rejected the pair. The
+final telemetry-set projection now returns explicit `absent`, `invalid`, or
+`valid` state after checking owned cardinality and schema exactly once. The
+finding-state projection consumes that set result before reading counts, so a
+malformed or duplicated telemetry sibling invalidates every current-state
+consumer consistently.
+
 The same PR conversation exposed two successful metadata-edit comments
 (`5653191018` and `5653243319`) containing only “Waiting state cleared,” a GIF,
 and debug logs. They added permanent noise after the metadata run had already
@@ -604,7 +614,8 @@ The orchestration is decomposed without creating a second pipeline:
   results keep their stable status/review surfaces; neither creates an
   independent “Automatic Actions” conversation comment.
 - A shared pure telemetry-projection policy validates the minimal review outcome
-  used by Job Summary and native evidence. It checks owned-snapshot cardinality
+  used by Job Summary and native evidence. Its set projection distinguishes
+  absent, invalid, and valid evidence after checking owned-snapshot cardinality
   before validation, so malformed siblings cannot disappear.
 - A shared pure finding-state projection validates and aggregates the complete
   canonical seven-state Result shape. Outcomes that evaluate findings
@@ -1072,7 +1083,7 @@ counted across rows.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain lifecycle, transition planning, and projection | 31 | every state, resolver precedence, fixed/obsolete/dismissed/reopened, per-destination projection, conservative cross-destination fold, canonical result shape, required-outcome absence, invalid numeric bounds, overflow, aggregate counts, deterministic digests |
+| Domain lifecycle, transition planning, and projection | 31 | every state, resolver precedence, fixed/obsolete/dismissed/reopened, per-destination projection, conservative cross-destination fold, canonical result shape, required-outcome absence, telemetry set validity, invalid numeric bounds, overflow, aggregate counts, deterministic digests |
 | Application ordering, idempotency, replay, cancellation, and races | 35 | active-before-resolution, mutation head guards, double snapshot head guard, read-after-write, per-surface completeness, missing durable evidence, resolved omission, duplicate same-head, newer-head supersession, partial mutations, retry convergence, PR close/reopen, metadata-during-review ordering |
 | Adapters and provider error mapping | 18 | pagination, parent review id/URL, resolver identity, create/update review, status-card upsert, 401/403/404/409/422, malformed response, rate limit |
 | Workflow, composition, public API, and schema contracts | 13 | shared concurrency key, conditional metadata non-preemption in active/setup copies, malformed-sibling telemetry cardinality, negative unconditional-cancel fixture, bot guard, permissions, trigger contract, strict finding/resolution schema, composition wiring, API declarations, package exports |
@@ -1284,6 +1295,10 @@ examples should reuse the same fixtures as presentation tests where practical.
     blocks, Action completion fails outside dry-run mode, and Summary/status
     identify invalid evidence. Metadata-only, `skipped`, `superseded`, and
     `failed` result sets may omit counts because none can claim a clean review.
+40. Given valid canonical zero counts beside malformed or duplicated owned
+    telemetry, then the telemetry-set and finding-state projections are invalid.
+    No Review Check is emitted; Action exit fails, lifecycle blocks, and
+    Summary/status identify invalid evidence instead of reporting clean.
 
 ## 17. Requirements traceability
 
@@ -1297,7 +1312,7 @@ examples should reuse the same fixtures as presentation tests where practical.
 | Freshness and concurrency | head guards + workflow contract | stale, duplicate, canceled, race cases | Workflow setup |
 | Metadata non-preemption | shared branch key + conditional cancellation | active/setup workflow parser, negative unconditional-cancel fixture, PR #363 live evidence | Workflow setup, Configuration, How it works |
 | Metadata/review publication ownership | result-publication mode + telemetry/evidence policies | metadata generic-comment negative, outcome matrix, completion integration, PR #363 latest-by-name/noise replay | Detection, Workflow setup, How it works, Troubleshooting |
-| Canonical Result evidence | finding-state projection + completion/lifecycle/status/summary/Check policies | complete aggregation, required-outcome absence, missing/extra key, numeric limits, overflow, cross-surface fail-closed cases | Detection, Observability, Comment commands, Failure scenarios |
+| Canonical Result evidence | discriminated telemetry-set and finding-state projections + completion/lifecycle/status/summary/Check policies | complete aggregation, malformed/duplicate telemetry siblings, required-outcome absence, missing/extra key, numeric limits, overflow, cross-surface fail-closed cases | Detection, Observability, Comment commands, Failure scenarios |
 | Coherent final snapshot | snapshot loader + explicit surface completeness | before/after head, head-change, missing-head, per-surface failure, shared issue/PR read cases | How it works, Failure scenarios |
 | No false clean partial state | final read + publication report | provider failure matrix | Troubleshooting |
 | Missing durable evidence | reconciliation policy + final projection | unresolved, verification-required, observed, and fully resolved omission cases | How it works, Failure scenarios |
@@ -1411,7 +1426,8 @@ evidence.
 - [x] Metadata-only PR edits publish through the native workflow and Job
       Summary only; repeated edits do not append generic discussion comments.
 - [x] Malformed sibling telemetry cannot hide behind a valid snapshot, and all
-      current-state Result consumers fail closed through one canonical parser.
+      current-state Result consumers fail closed through the same discriminated
+      telemetry-set projection.
 - [x] Finding-evaluating telemetry cannot claim zero findings by omitting the
       canonical state aggregate; metadata and non-clean terminal outcomes keep
       an explicit absence path.

@@ -142,6 +142,10 @@ misleading intermediate state.
   `5653191018` and `5653243319` containing only lifecycle/debug output. The
   explicit result-publication mode now keeps `pull_request: edited` completion
   in the workflow and Job Summary instead of accumulating conversation noise.
+- Review `5191003573` then proved the single-snapshot and finding-state readers
+  could disagree about a malformed telemetry sibling. One discriminated
+  telemetry-set projection now owns cardinality/schema validity for Review
+  evidence and every finding-state consumer.
 - GitHub documents that closing keywords create issue links only when a PR
   targets the default branch, and its REST update endpoint permits changing the
   PR `body` and `base` with Pull Requests write permission.
@@ -663,7 +667,7 @@ SDDs, catalog metadata, generated catalog, and bundles are updated together.
 | clean cut and ceiling | AST ratchet, typecheck, generated bundles | zero-leaf/old-symbol negative fixtures | semantic context SDD |
 | UX/operations | semantic result strings and common publisher | state/retained-action assertions + manual review | PR and troubleshooting pages |
 | review-preserving concurrency | shared branch group + conditional cancellation | workflow validator, negative fixture, PR #363 live sequence | workflow setup, Bugbot configuration/how-it-works |
-| review publication ownership | result-publication mode + Bugbot telemetry/evidence policies | metadata-only comment/Check negatives, partial/complete/skipped policy cases, action-completion integration, PR #363 latest-by-name/noise sequence | workflow setup, Bugbot detection/how-it-works, troubleshooting |
+| review publication ownership | result-publication mode + discriminated Bugbot telemetry/evidence policies | metadata-only comment/Check negatives, malformed-sibling cross-consumer cases, partial/complete/skipped policy cases, action-completion integration, PR #363 latest-by-name/noise sequence | workflow setup, Bugbot detection/how-it-works, troubleshooting |
 
 ## 18. Implementation sequence
 

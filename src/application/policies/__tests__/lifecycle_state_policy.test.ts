@@ -87,6 +87,22 @@ describe('lifecycle state policy', () => {
         })).toBe('blocked');
     });
 
+    it('blocks a PR when valid state counts coexist with malformed telemetry', () => {
+        expect(resolveLifecycleState({
+            eventName: 'pull_request', action: 'synchronize', isIssue: false, isPullRequest: true,
+            issueOpened: false, issueDescriptionEdited: false, pullRequestMerged: false, pullRequestClosed: false,
+            results: [
+                { ...result('valid'), payload: {
+                    bugbotTelemetry: { schemaVersion: 1, outcome: 'completed', elapsedMs: 10, configuredEffort: 'smart', headSha: 'sha-123' },
+                    findingStates: findingStates(),
+                } },
+                { ...result('malformed'), payload: {
+                    bugbotTelemetry: { schemaVersion: 2, outcome: 'completed', elapsedMs: 10 },
+                } },
+            ],
+        })).toBe('blocked');
+    });
+
     it('uses external review and check evidence without changing the safe fallback', () => {
         const base = {
             eventName: 'pull_request_review',

@@ -72,4 +72,22 @@ describe('Bugbot result finding-state projection policy', () => {
             new Result({ id: 'two', success: true, executed: true, payload: { findingStates: counts({ open: 1 }) } }),
         ])).toEqual({ status: 'invalid' });
     });
+
+    it('rejects valid state counts when any owned telemetry sibling is malformed or duplicated', () => {
+        const valid = new Result({
+            id: 'valid',
+            success: true,
+            executed: true,
+            payload: { ...telemetry('completed'), findingStates: counts() },
+        });
+        const malformed = new Result({
+            id: 'malformed',
+            success: true,
+            executed: true,
+            payload: { bugbotTelemetry: { schemaVersion: 2, outcome: 'completed', elapsedMs: 10 } },
+        });
+
+        expect(projectBugbotResultFindingStates([valid, malformed])).toEqual({ status: 'invalid' });
+        expect(projectBugbotResultFindingStates([valid, valid])).toEqual({ status: 'invalid' });
+    });
 });

@@ -1,4 +1,3 @@
-import type { Result } from '../../data/model/result';
 import { getResultPayload } from '../../data/model/result';
 import type { BugbotReviewOutcome } from '../ports/bugbot_telemetry_ports';
 
@@ -20,6 +19,15 @@ export interface BugbotTelemetryProjection {
     readonly headSha?: string;
 }
 
+export type BugbotResultTelemetryProjection =
+    | { readonly status: 'absent' }
+    | { readonly status: 'invalid' }
+    | { readonly status: 'valid'; readonly telemetry: Readonly<BugbotTelemetryProjection> };
+
+interface ResultPayloadSource {
+    readonly payload?: unknown;
+}
+
 /** Projects only the trusted, content-free telemetry facts used by result presentation. */
 export function projectBugbotTelemetry(value: unknown): BugbotTelemetryProjection | undefined {
     const telemetry = getResultPayload(getResultPayload(value)?.bugbotTelemetry);
@@ -38,11 +46,17 @@ export function projectBugbotTelemetry(value: unknown): BugbotTelemetryProjectio
     };
 }
 
-/** Accepts exactly one semantic review snapshot; ambiguous result sets fail closed. */
-export function selectBugbotTelemetry(results: readonly Result[]): BugbotTelemetryProjection | undefined {
+/** Projects exact owned-snapshot cardinality without conflating absence and invalid evidence. */
+export function projectBugbotResultTelemetry(
+    results: readonly ResultPayloadSource[],
+): BugbotResultTelemetryProjection {
     const telemetryResults = results.filter((result) => hasBugbotTelemetryField(result.payload));
-    if (telemetryResults.length !== 1) return undefined;
-    return projectBugbotTelemetry(telemetryResults[0].payload);
+    if (telemetryResults.length === 0) return { status: 'absent' };
+    if (telemetryResults.length !== 1) return { status: 'invalid' };
+    const telemetry = projectBugbotTelemetry(telemetryResults[0].payload);
+    return telemetry
+        ? { status: 'valid', telemetry: Object.freeze(telemetry) }
+        : { status: 'invalid' };
 }
 
 function isBugbotReviewOutcome(value: unknown): value is BugbotReviewOutcome {

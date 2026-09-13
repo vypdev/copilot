@@ -743,7 +743,7 @@ the same pull request.
 | P1-B setup/doctor | questionnaire/report policies, terminal and GitHub adapters | state, no-write, order, masking tests | setup/CLI/provisioning |
 | P1-C provider policy | exhaustive dispatcher and provider plans | cross-provider security matrix, controlled smoke | agent execution/failure |
 | P2 context closure | named contexts, bound lifecycle ports, route-owned branch patches, and exact-target PR-link compensation | issue/PR projection, binding, replay/compensation, description-mode, characterization, 47-file ratchet, and zero-leaf-import checks | architecture/dependency rules, P2-E SDD, issue/PR operations docs |
-| review evidence integrity | exact telemetry selector + canonical finding-state projection | malformed sibling, required-outcome absence, schema/numeric/overflow, cross-surface fail-closed, and 100% pure-policy coverage | Bugbot observability/failure docs and reconciliation/execution SDDs |
+| review evidence integrity | discriminated telemetry-set + canonical finding-state projections | malformed/duplicate sibling, required-outcome absence, schema/numeric/overflow, cross-surface fail-closed, and 100% pure-policy coverage | Bugbot observability/failure docs and reconciliation/execution SDDs |
 | GitHub notification ownership | explicit generic-comment publication mode | metadata-edit use-case and completion negatives plus PR #363 comment replay | workflow setup, troubleshooting, and reconciliation/execution SDDs |
 | program quality | composition roots, generated artifacts | full CI, coverage, metrics, Graphify, human evidence | catalog and this SDD |
 

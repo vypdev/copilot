@@ -1,7 +1,11 @@
 import type { Result } from '../../data/model/result';
 import { sanitizeAgentMarkdown, sanitizePublishedError } from './github_comment_publication_policy';
 import { buildApplicationErrorPresentation } from './application_error_presentation_policy';
-import { selectBugbotTelemetry, type BugbotTelemetryProjection } from './bugbot_telemetry_projection_policy';
+import {
+    projectBugbotResultTelemetry,
+    type BugbotResultTelemetryProjection,
+    type BugbotTelemetryProjection,
+} from './bugbot_telemetry_projection_policy';
 import {
     projectBugbotResultFindingStates,
     type BugbotResultFindingStateProjection,
@@ -25,7 +29,8 @@ export function buildActionSummary(context: ActionSummaryContext): string {
     const failures = context.results.filter(result => !result.success && result.executed);
     const findingStateProjection = projectBugbotResultFindingStates(context.results);
     const findingStates = findingStateProjection.status === 'valid' ? findingStateProjection.counts : undefined;
-    const bugbotTelemetry = selectBugbotTelemetry(context.results);
+    const telemetryProjection = projectBugbotResultTelemetry(context.results);
+    const bugbotTelemetry = telemetryProjection.status === 'valid' ? telemetryProjection.telemetry : undefined;
     const hasActionableFindings = findingStates ? countActionableBugbotFindings(findingStates) > 0 : false;
     const hasUnknownFindings = findingStateProjection.status === 'invalid' || (findingStates?.unknown ?? 0) > 0;
     const status = resolveActionSummaryStatus({
@@ -45,7 +50,7 @@ export function buildActionSummary(context: ActionSummaryContext): string {
         `| PR description policy | ${escapeTable(context.pullRequestDescriptionMode ?? '—')} |`,
         `| Results | ${context.results.length} |`,
         `| Finding states | ${formatFindingStates(findingStateProjection)} |`,
-        `| Bugbot review | ${formatBugbotTelemetry(bugbotTelemetry)} |`,
+        `| Bugbot review | ${formatBugbotTelemetry(telemetryProjection)} |`,
     ];
 
     return [
@@ -92,10 +97,10 @@ function resolveActionSummaryTarget(context: ActionSummaryContext): string {
     return 'Repository run';
 }
 
-function formatBugbotTelemetry(telemetry: BugbotTelemetryProjection | undefined): string {
-    return telemetry
-        ? `${escapeTable(telemetry.outcome)}, effort=${escapeTable(telemetry.configuredEffort)}, ${Math.max(0, Math.round(telemetry.elapsedMs))}ms`
-        : '—';
+function formatBugbotTelemetry(projection: BugbotResultTelemetryProjection): string {
+    if (projection.status === 'invalid') return 'invalid';
+    if (projection.status === 'absent') return '—';
+    return `${escapeTable(projection.telemetry.outcome)}, effort=${escapeTable(projection.telemetry.configuredEffort)}, ${Math.max(0, Math.round(projection.telemetry.elapsedMs))}ms`;
 }
 
 function formatFindingStates(projection: BugbotResultFindingStateProjection): string {
