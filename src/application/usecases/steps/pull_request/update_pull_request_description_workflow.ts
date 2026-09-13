@@ -14,6 +14,7 @@ import {
     shouldAutomaticallyUpdatePullRequestDescription,
 } from '../../../../domain/pull_request_description';
 import { ApplicationError } from '../../../errors/application_error';
+import { parsePositiveSafeInteger } from '../../../../domain/positive_integer_policy';
 import type {
     PullRequestDescriptionRequest,
     PullRequestDescriptionContext,
@@ -37,6 +38,9 @@ export async function runUpdatePullRequestDescriptionWorkflow(
     try {
         if (!shouldRun(request)) {
             return skipped(taskId, `PR description updates are not enabled for the "${context.mode}" mode and "${request.trigger}" trigger.`);
+        }
+        if (!parsePositiveSafeInteger(context.pullRequest.number)) {
+            return skipped(taskId, 'PR description updates require a positive pull-request number.');
         }
 
         const details = await loadPullRequestDetails(context, dependencies, request.trigger);
@@ -140,7 +144,6 @@ async function loadPullRequestDetails(
     dependencies: UpdatePullRequestDescriptionWorkflowDependencies,
     trigger: PullRequestDescriptionRequest['trigger'],
 ): Promise<{ body: string; headBranch: string; baseBranch: string } | undefined> {
-    if (context.pullRequest.number <= 0) return undefined;
     const needsRemoteDetails = context.eventName === 'issue_comment'
         || trigger === 'authorized-command'
         || !context.pullRequest.headBranch

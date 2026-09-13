@@ -264,6 +264,33 @@ describe("PrepareBranchesUseCase", () => {
     ).toBe(true);
   });
 
+  it('creates a hotfix without inventing an origin SHA when the tag query has no OID', async () => {
+    mockGetCommitTag.mockResolvedValue(undefined);
+    mockCreateLinkedBranch.mockResolvedValue([
+      { success: true, executed: true, payload: {} },
+    ]);
+    const param = baseParam({
+      hotfix: {
+        active: true,
+        baseVersion: '1.0.0',
+        version: '1.0.1',
+        branch: 'hotfix/1.0.1',
+        baseBranch: 'tags/v1.0.0',
+      },
+      currentConfiguration: {},
+    });
+
+    const outcome = await useCase.invoke(param);
+
+    expect(mockCreateLinkedBranch).toHaveBeenCalledWith('tags/v1.0.0', 'hotfix/1.0.1', 42, undefined);
+    expect(outcome.configurationPatch).toMatchObject({
+      parentBranch: 'tags/v1.0.0',
+      hotfixBranch: 'hotfix/1.0.1',
+      workingBranch: 'hotfix/1.0.1',
+    });
+    expect(outcome.configurationPatch).not.toHaveProperty('hotfixOriginSha');
+  });
+
   it("does not create a hotfix branch that already exists", async () => {
     mockGetListOfBranches.mockResolvedValue(["develop", "hotfix/1.0.1"]);
     const param = baseParam({
@@ -351,6 +378,28 @@ describe("PrepareBranchesUseCase", () => {
       42,
     );
     expect(results.some((result) => result.success)).toBe(true);
+  });
+
+  it.each([
+    ['records', 'base-sha-123', 'base-sha-123'],
+    ['omits', '', undefined],
+  ] as const)('%s the release origin only for a non-empty provider SHA', async (_label, baseSha, expected) => {
+    mockCreateLinkedBranch.mockResolvedValue([
+      {
+        success: true,
+        executed: true,
+        payload: { newBranchName: 'release/2.0.0', baseSha },
+      },
+    ]);
+    const param = baseParam({
+      release: { active: true, version: '2.0.0', branch: 'release/2.0.0' },
+      currentConfiguration: {},
+    });
+
+    const outcome = await useCase.invoke(param);
+
+    expect(outcome.configurationPatch.releaseOriginSha).toBe(expected);
+    expect(outcome.configurationPatch.releaseOriginBranch).toBe(expected ? 'develop' : undefined);
   });
 
   it("does not create a release branch that already exists", async () => {

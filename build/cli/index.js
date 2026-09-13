@@ -69660,6 +69660,7 @@ const task_emoji_1 = __nccwpck_require__(46103);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const pull_request_description_1 = __nccwpck_require__(45315);
 const application_error_1 = __nccwpck_require__(75999);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
 /** Generates and publishes a PR description from an immutable, capability-scoped request. */
 async function runUpdatePullRequestDescriptionWorkflow(request, taskId, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId} (AI PR description).`);
@@ -69667,6 +69668,9 @@ async function runUpdatePullRequestDescriptionWorkflow(request, taskId, dependen
     try {
         if (!shouldRun(request)) {
             return skipped(taskId, `PR description updates are not enabled for the "${context.mode}" mode and "${request.trigger}" trigger.`);
+        }
+        if (!(0, positive_integer_policy_1.parsePositiveSafeInteger)(context.pullRequest.number)) {
+            return skipped(taskId, 'PR description updates require a positive pull-request number.');
         }
         const details = await loadPullRequestDetails(context, dependencies, request.trigger);
         const branches = resolveBranches(context, details);
@@ -69747,8 +69751,6 @@ function resolveBranches(context, details) {
     return headBranch && baseBranch ? { headBranch, baseBranch } : undefined;
 }
 async function loadPullRequestDetails(context, dependencies, trigger) {
-    if (context.pullRequest.number <= 0)
-        return undefined;
     const needsRemoteDetails = context.eventName === 'issue_comment'
         || trigger === 'authorized-command'
         || !context.pullRequest.headBranch

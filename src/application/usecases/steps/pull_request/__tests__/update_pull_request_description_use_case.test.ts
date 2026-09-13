@@ -92,10 +92,53 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     expect(mockAskAgent).not.toHaveBeenCalled();
   });
 
+  it('reports the missing provider base without obscuring the available head branch', async () => {
+    mockGetDetails.mockResolvedValue({ body: '', headBranch: 'feature/42-x', baseBranch: '' });
+    const pullRequest = { ...context().pullRequest, baseBranch: '' };
+
+    const results = await useCase.invoke(request({ pullRequest, eventName: 'issue_comment' }, 'authorized-command'));
+
+    expect(results[0].steps[0]).toContain('head: feature/42-x, base: missing');
+    expect(mockAskAgent).not.toHaveBeenCalled();
+  });
+
+  it('uses authoritative provider details when the event omits the base branch', async () => {
+    const pullRequest = { ...context().pullRequest, baseBranch: '' };
+
+    const results = await useCase.invoke(request({ pullRequest }));
+
+    expect(mockGetDetails).toHaveBeenCalledWith(10);
+    expect(results[0]).toMatchObject({ success: true, executed: true });
+    expect(mockUpdateDescription).toHaveBeenCalledWith(10, expect.stringContaining('PR does X'));
+  });
+
+  it('rejects an invalid pull-request number before provider or agent I/O', async () => {
+    const pullRequest = { ...context().pullRequest, number: -1 };
+
+    const results = await useCase.invoke(request({ pullRequest }));
+
+    expect(results[0]).toMatchObject({ success: false, executed: false });
+    expect(results[0].steps[0]).toContain('positive pull-request number');
+    expect(mockGetDetails).not.toHaveBeenCalled();
+    expect(mockGetIssueDescription).not.toHaveBeenCalled();
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+
   it('does not query an issue for an unlinked PR', async () => {
     const results = await useCase.invoke(request({ issueNumber: -1 }));
     expect(results[0].success).toBe(true);
     expect(mockGetIssueDescription).not.toHaveBeenCalled();
+  });
+
+  it('skips when the linked issue has no authoritative description', async () => {
+    mockGetIssueDescription.mockResolvedValue(undefined);
+
+    const results = await useCase.invoke(request());
+
+    expect(results[0]).toMatchObject({ success: false, executed: false });
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
   });
 
   it('does not publish blank agent output', async () => {
