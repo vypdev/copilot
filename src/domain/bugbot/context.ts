@@ -113,7 +113,10 @@ function identityMismatch(
   candidate: BugbotPullRequestIdentity,
 ): string | undefined {
   if (candidate.state !== "open") return "The selected pull request is not open.";
-  if (!matchesEventPullRequestNumber(target, candidate)) {
+  const eventSelection = target.pullRequestSelection;
+  if (eventSelection.kind === "event"
+    && eventSelection.number !== undefined
+    && candidate.number !== eventSelection.number) {
     return "The selected pull request does not match the event target.";
   }
   if (!matchesBaseRepository(target, candidate)) {
@@ -126,20 +129,11 @@ function identityMismatch(
   if (!matchesConstrainedHead(target, candidate)) {
     return "The selected pull request head does not match the review target.";
   }
-  if (!matchesExpectedHeadRevision(target, candidate)) {
+  if (target.expectedHeadSha !== undefined
+    && candidate.headSha.toLowerCase() !== target.expectedHeadSha.toLowerCase()) {
     return "The selected pull request head revision is stale.";
   }
   return undefined;
-}
-
-function matchesEventPullRequestNumber(
-  target: BugbotReviewTarget,
-  candidate: BugbotPullRequestIdentity,
-): boolean {
-  const selection = target.pullRequestSelection;
-  return selection.kind !== "event"
-    || selection.number === undefined
-    || candidate.number === selection.number;
 }
 
 function matchesBaseRepository(
@@ -160,12 +154,4 @@ function matchesConstrainedHead(
   return target.headRef === ""
     || (candidate.headRepositoryOwner.toLowerCase() === target.headOwner.toLowerCase()
       && candidate.headRef === target.headRef);
-}
-
-function matchesExpectedHeadRevision(
-  target: BugbotReviewTarget,
-  candidate: BugbotPullRequestIdentity,
-): boolean {
-  return target.expectedHeadSha === undefined
-    || candidate.headSha.toLowerCase() === target.expectedHeadSha.toLowerCase();
 }

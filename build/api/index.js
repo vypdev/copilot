@@ -4134,7 +4134,10 @@ function completeBugbotSourceCoverage(source, items, pagesFetched = items > 0 ? 
 function identityMismatch(target, candidate) {
     if (candidate.state !== "open")
         return "The selected pull request is not open.";
-    if (!matchesEventPullRequestNumber(target, candidate)) {
+    const eventSelection = target.pullRequestSelection;
+    if (eventSelection.kind === "event"
+        && eventSelection.number !== undefined
+        && candidate.number !== eventSelection.number) {
         return "The selected pull request does not match the event target.";
     }
     if (!matchesBaseRepository(target, candidate)) {
@@ -4147,16 +4150,11 @@ function identityMismatch(target, candidate) {
     if (!matchesConstrainedHead(target, candidate)) {
         return "The selected pull request head does not match the review target.";
     }
-    if (!matchesExpectedHeadRevision(target, candidate)) {
+    if (target.expectedHeadSha !== undefined
+        && candidate.headSha.toLowerCase() !== target.expectedHeadSha.toLowerCase()) {
         return "The selected pull request head revision is stale.";
     }
     return undefined;
-}
-function matchesEventPullRequestNumber(target, candidate) {
-    const selection = target.pullRequestSelection;
-    return selection.kind !== "event"
-        || selection.number === undefined
-        || candidate.number === selection.number;
 }
 function matchesBaseRepository(target, candidate) {
     const targetRepository = target.repository;
@@ -4169,10 +4167,6 @@ function matchesConstrainedHead(target, candidate) {
     return target.headRef === ""
         || (candidate.headRepositoryOwner.toLowerCase() === target.headOwner.toLowerCase()
             && candidate.headRef === target.headRef);
-}
-function matchesExpectedHeadRevision(target, candidate) {
-    return target.expectedHeadSha === undefined
-        || candidate.headSha.toLowerCase() === target.expectedHeadSha.toLowerCase();
 }
 
 
