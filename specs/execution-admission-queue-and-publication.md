@@ -19,8 +19,10 @@ behind the workflow PAT is ignored unless it is an explicit valid single action.
 The native `Copilot / Review` name is reserved for results carrying exactly one
 current-schema Bugbot telemetry snapshot for the exact head. A valid snapshot
 does not hide a second malformed owned snapshot: the complete set is ambiguous
-and publishes no Review Check. Metadata-only or ambiguous PR runs retain their workflow
-result and Job Summary without impersonating or hiding review evidence.
+and publishes no Review Check. Metadata-only or ambiguous PR runs retain their
+workflow result and Job Summary without impersonating or hiding review
+evidence; successful metadata edits also omit redundant generic conversation
+comments.
 
 ```text
 GitHub event -> actor admission -> queue -> execution setup -> one route
@@ -53,7 +55,8 @@ create inconsistent authorization and failure behavior.
 6. Results reconcile lifecycle/activity labels and are published to the target,
    Job Summary, optional semantic Check Run, and configuration marker as
    applicable. A PR result without exact-head Bugbot telemetry publishes no
-   `Copilot / Review` Check.
+   `Copilot / Review` Check. A `pull_request: edited` result uses the native
+   workflow and Job Summary only, never a generic conversation comment.
 7. The first executed result error, malformed canonical finding-state evidence,
    an unknown Bugbot state, or configured unresolved findings marks the Action
    failed.
@@ -119,6 +122,8 @@ presentation adapters decide where that fact appears.
 6. Finding-state evidence MUST use the complete canonical seven-state schema
    with non-negative safe-integer counts and no additional state keys. Missing,
    malformed, or arithmetically overflowing owned evidence MUST fail closed.
+7. Metadata-only PR edits MUST NOT create generic result comments; their native
+   workflow conclusion and Job Summary are the bounded operator surfaces.
 
 ## 5. Current versus proposed product journey
 
@@ -127,7 +132,7 @@ presentation adapters decide where that fact appears.
 | Admission | implicit in entrypoint | explicit identity decision | bot loops stop early |
 | Queue | implementation detail | fail-closed workflow gate | mutations do not overlap |
 | Routing | spread across handlers | one route policy | predictable ownership |
-| Completion | comments only were assumed | comment + summary + optional check + state | evidence is inspectable |
+| Completion | comments only were assumed | route-owned comment when applicable + summary + optional check + state | evidence is inspectable without duplicate discussion noise |
 | Review evidence | every PR completion could reuse the Review name | exact-head telemetry owns Review; metadata keeps workflow/summary only | latest-by-name remains truthful |
 
 The baseline is retrospective except for the implemented semantic ownership
@@ -223,7 +228,9 @@ Review partial: **Bugbot reviewed bounded evidence but cannot declare the whole 
 Metadata only: **PR metadata normalization completed.** See this workflow summary; the analyzed Review Check is unchanged.
 ```
 
-There SHOULD be at most one generic result comment per invocation. Stable
+There SHOULD be at most one generic result comment per invocation. A
+metadata-only PR edit creates zero; its workflow and Job Summary already carry
+the result. Stable
 markers, bounded error text, descriptive links, and headings provide narrow and
 screen-reader-friendly output. English is the fallback for runtime/system text;
 feature renderers may use configured issue or PR locales.
@@ -288,7 +295,7 @@ inspectable provider facts.
 | Setup/state/idempotency/races | 12 | restored state, no issue, queue timeout |
 | Adapters/error mapping | 8 | pagination, provider errors, timers |
 | Workflow/setup contracts | 8 | queue gate, permissions, timeouts |
-| Publication/UX/sanitization | 20 | targets, dry run, summary, errors, links, exact-head review eligibility, metadata-only omission, malformed-sibling telemetry, required finding-state evidence, canonical projection, invalid status and incomplete neutral matrix |
+| Publication/UX/sanitization | 20 | targets, dry run, summary, errors, links, exact-head review eligibility, metadata-only Check/comment omission, malformed-sibling telemetry, required finding-state evidence, canonical projection, invalid status and incomplete neutral matrix |
 | Integration/security/cutover | 8 | end-to-end routes, secrets, removed-shape rejection |
 | **Total** | **70** | no double counting |
 
@@ -319,7 +326,7 @@ light/dark, and screen-reader order.
 7. Given untrusted output, published Markdown contains no executable/secret content.
 8. Given a catalog/spec change, CI validates registered evidence and this contract.
 9. Given a metadata-only PR result, the Job Summary is published and no
-   `Copilot / Review` evidence call occurs.
+   generic conversation comment or `Copilot / Review` evidence call occurs.
 10. Given exact-head Bugbot telemetry, complete/no-findings may succeed;
     partial/skipped/superseded are neutral; failed remains failure.
 11. Given one valid telemetry snapshot plus any second malformed owned snapshot,
@@ -342,6 +349,7 @@ light/dark, and screen-reader order.
 | serialization | queue policy/use case/adapters | queue + workflow tests | troubleshooting |
 | one route | route policy/dispatcher | route tests | architecture |
 | safe publication | completion/presentation policies | completion tests | overview |
+| metadata noise bound | explicit generic-comment publication mode | metadata-edit context/use-case/completion negatives | workflow setup and troubleshooting |
 | semantic Check ownership | telemetry projection + evidence policy | outcome matrix + metadata-only and malformed-sibling negatives | Bugbot detection, workflow setup, troubleshooting |
 | canonical finding-state evidence | result-state projection + completion/lifecycle/status/summary/Check policies | strict schema, required-outcome absence, aggregation, overflow, fail-closed, and rendering tests | Bugbot detection, observability, failure scenarios, comment commands |
 | dependency direction | architecture tests | boundary/cycle suites | architecture |
@@ -377,4 +385,7 @@ light/dark, and screen-reader order.
 - Decision: omit Review evidence for metadata-only PR runs; reject reading and
   merging a previous Check because it adds a stale provider race and preserves
   semantic impersonation.
+- Decision: omit generic comments for metadata-only PR edits; reject publishing
+  lifecycle/debug-only summaries into the durable conversation because the
+  native workflow and Job Summary already retain that evidence.
 - Follow-up outside scope: durable event storage beyond issue configuration markers.

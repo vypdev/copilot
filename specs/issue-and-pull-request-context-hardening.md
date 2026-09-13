@@ -34,9 +34,9 @@ preempting an active code review. A newer code-change or review event MAY cancel
 an obsolete review; `pull_request: edited` MUST wait and MUST NOT replace a real
 `synchronize` analysis with a green metadata-only run. After it waits, the
 metadata-only run MUST publish its own workflow outcome and Job Summary without
-creating a newer same-name `Copilot / Review` Check. That Check name is reserved
-for a result carrying exactly one current-schema Bugbot review telemetry
-snapshot for the exact head.
+creating a generic result comment or a newer same-name `Copilot / Review` Check.
+That Check name is reserved for a result carrying exactly one current-schema
+Bugbot review telemetry snapshot for the exact head.
 
 ```text
 validated issue/PR event
@@ -138,6 +138,10 @@ misleading intermediate state.
   latest-by-name PR view then hid the actual review evidence. The definitive
   correction reserves `Copilot / Review` for telemetry-bearing review results
   and maps bounded partial, skipped, or superseded review outcomes to neutral.
+- Metadata runs in that sequence also created generic discussion comments
+  `5653191018` and `5653243319` containing only lifecycle/debug output. The
+  explicit result-publication mode now keeps `pull_request: edited` completion
+  in the workflow and Job Summary instead of accumulating conversation noise.
 - GitHub documents that closing keywords create issue links only when a PR
   targets the default branch, and its REST update endpoint permits changing the
   PR `body` and `base` with Pull Requests write permission.
@@ -569,7 +573,7 @@ only after they are rewritten against the final requests and ports.
 | State/application/idempotency/races | 12 | issue/PR order, replay, branch patch apply-once, link recovery and compensation failures, metadata-during-review ordering, latest-by-name evidence ownership |
 | Adapters/provider contracts | 8 | bound credential forwarding, exact PR target, malformed provider facts, error mapping |
 | Workflows/composition/schema | 10 | issue/PR composition, removed signatures, zero-leaf import rule, no cycles, active/setup conditional concurrency, negative unconditional-cancel fixture, telemetry-bearing Check eligibility |
-| UI/UX/localization/sanitization | 6 | pending/action/blocked/partial/complete semantics, marker/body safety, neutral partial review and metadata-only non-impersonation |
+| UI/UX/localization/sanitization | 6 | pending/action/blocked/partial/complete semantics, marker/body safety, neutral partial review and metadata-only Check/comment omission |
 | Integration/security/migration | 6 | issue→branch, PR→issue→close, forged URL/marker, token absence, clean cut |
 | **Total** | **52** | No double counting |
 
@@ -640,8 +644,9 @@ SDDs, catalog metadata, generated catalog, and bundles are updated together.
     for the current head, and the newest metadata event runs afterward without
     invoking Bugbot analysis.
 18. Given the later metadata-only run completes, it publishes its own Job Summary
-    and workflow conclusion but no `Copilot / Review`, so the telemetry-bearing
-    review Check for the same head remains the latest authority by that name.
+    and workflow conclusion but no generic result comment or `Copilot / Review`,
+    so the telemetry-bearing review Check for the same head remains the latest
+    authority by that name without durable conversation noise.
 19. Given Bugbot reports bounded `partial`, `skipped`, or `superseded` telemetry,
     the Review Check is neutral and names that outcome; it never claims success
     or whole-PR cleanliness.
@@ -658,7 +663,7 @@ SDDs, catalog metadata, generated catalog, and bundles are updated together.
 | clean cut and ceiling | AST ratchet, typecheck, generated bundles | zero-leaf/old-symbol negative fixtures | semantic context SDD |
 | UX/operations | semantic result strings and common publisher | state/retained-action assertions + manual review | PR and troubleshooting pages |
 | review-preserving concurrency | shared branch group + conditional cancellation | workflow validator, negative fixture, PR #363 live sequence | workflow setup, Bugbot configuration/how-it-works |
-| review evidence ownership | Bugbot telemetry projection + Copilot evidence policy | metadata-only negative, partial/complete/skipped policy cases, action-completion integration, PR #363 latest-by-name sequence | workflow setup, Bugbot detection/how-it-works, troubleshooting |
+| review publication ownership | result-publication mode + Bugbot telemetry/evidence policies | metadata-only comment/Check negatives, partial/complete/skipped policy cases, action-completion integration, PR #363 latest-by-name/noise sequence | workflow setup, Bugbot detection/how-it-works, troubleshooting |
 
 ## 18. Implementation sequence
 
@@ -733,6 +738,9 @@ SDDs, catalog metadata, generated catalog, and bundles are updated together.
   and skip metadata-only evidence instead of reading/merging prior Checks;
   rejected a second metadata Check with the same name and a provider read/write
   merge because both retain latest-by-name ambiguity or introduce stale races.
+- Decision: represent generic comment publication as an explicit mode and omit
+  it for `pull_request: edited`; rejected a second durable notification because
+  its workflow conclusion and Job Summary already provide recovery evidence.
 - Provider reference: [GitHub Actions workflow concurrency](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#concurrency).
 - Follow-up outside P2-E: P2-F removes the remaining push/single-action leaf
   aggregate inputs; P2-G performs the final exact 16-file audit.

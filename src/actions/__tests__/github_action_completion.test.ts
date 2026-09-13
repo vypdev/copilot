@@ -261,6 +261,9 @@ describe('finishGithubAction', () => {
             owner: 'test-owner',
             repo: 'test-repo',
             eventName: 'pull_request',
+            isIssue: false,
+            isPullRequest: true,
+            pullRequest: { number: 12, action: 'edited' },
             inputs: { pull_request: { head: { sha: 'abc1234' } } },
         });
         const results = [new Result({
@@ -280,7 +283,40 @@ describe('finishGithubAction', () => {
         );
 
         expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('UpdateTitleUseCase'));
+        expect(mockPublishInvoke).toHaveBeenCalledWith(expect.objectContaining({
+            genericCommentMode: 'omit-metadata-only',
+        }));
         expect(mockEvidencePublish).not.toHaveBeenCalled();
+    });
+
+    it('keeps metadata-only failures visible without adding a generic PR comment', async () => {
+        const action = Object.assign(execution(), {
+            eventName: 'pull_request',
+            isIssue: false,
+            isPullRequest: true,
+            pullRequest: { number: 12, action: 'edited' },
+        });
+        const failure = new Result({
+            id: 'UpdateTitleUseCase',
+            success: false,
+            executed: true,
+            errors: [new ApplicationError('provider.unavailable', 'Title normalization failed.')],
+        });
+
+        await finishGithubAction(
+            action,
+            [failure],
+            {} as never,
+            {} as never,
+            undefined,
+            { publish: mockSummaryPublish },
+        );
+
+        expect(mockPublishInvoke).toHaveBeenCalledWith(expect.objectContaining({
+            genericCommentMode: 'omit-metadata-only',
+        }));
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('Title normalization failed.'));
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Title normalization failed.'));
     });
 
     it('fails the action for unresolved findings only when the generic policy is enabled', async () => {

@@ -200,6 +200,13 @@ as required for every outcome that evaluates findings (`completed`,
 metadata-only results and terminal outcomes that cannot claim a clean analysis
 (`skipped`, `superseded`, and `failed`).
 
+The same PR conversation exposed two successful metadata-edit comments
+(`5653191018` and `5653243319`) containing only “Waiting state cleared,” a GIF,
+and debug logs. They added permanent noise after the metadata run had already
+reported through its native workflow and Job Summary. Generic publication now
+uses one explicit mode: `pull_request: edited` is `omit-metadata-only`, a real
+Bugbot result is `omit-feature-owned`, and other routes remain `publish`.
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |
@@ -592,6 +599,10 @@ The orchestration is decomposed without creating a second pipeline:
 - `reconcileBugbotReviewState` is the small orchestration shell joining those
   collaborators; it performs no direct provider read or write.
 - The workflow produces the final `Result` and telemetry only from that report.
+- Generic result publication receives an explicit mode from the application
+  context. Metadata-only PR edits remain Job-Summary-only, while Bugbot-owned
+  results keep their stable status/review surfaces; neither creates an
+  independent “Automatic Actions” conversation comment.
 - A shared pure telemetry-projection policy validates the minimal review outcome
   used by Job Summary and native evidence. It checks owned-snapshot cardinality
   before validation, so malformed siblings cannot disappear.
@@ -1065,7 +1076,7 @@ counted across rows.
 | Application ordering, idempotency, replay, cancellation, and races | 35 | active-before-resolution, mutation head guards, double snapshot head guard, read-after-write, per-surface completeness, missing durable evidence, resolved omission, duplicate same-head, newer-head supersession, partial mutations, retry convergence, PR close/reopen, metadata-during-review ordering |
 | Adapters and provider error mapping | 18 | pagination, parent review id/URL, resolver identity, create/update review, status-card upsert, 401/403/404/409/422, malformed response, rate limit |
 | Workflow, composition, public API, and schema contracts | 13 | shared concurrency key, conditional metadata non-preemption in active/setup copies, malformed-sibling telemetry cardinality, negative unconditional-cancel fixture, bot guard, permissions, trigger contract, strict finding/resolution schema, composition wiring, API declarations, package exports |
-| UI/UX, localization, accessibility, links, and sanitization | 22 | pending, active, clean, failed, partial, skipped, superseded, metadata-only non-publication, missing/invalid summary and status output, every non-clean count, historical snapshot, en/es/fallback, narrow content, markers, mentions, unsafe Markdown |
+| UI/UX, localization, accessibility, links, and sanitization | 22 | pending, active, clean, failed, partial, skipped, superseded, metadata-only Check/generic-comment omission, missing/invalid summary and status output, every non-clean count, historical snapshot, en/es/fallback, narrow content, markers, mentions, unsafe Markdown |
 | Integration, security, migration, and live-shaped replay | 14 | PR #358 replay, new PR lifecycle, multiple reviews, overflow/unanchored, manual resolve/unresolve, identity rotation, duplicate card repair, dry-run/fork trust, missing-state completion fail-closed, latest-by-name PR #363 replay |
 | **Total** | **133** | No double counting |
 
@@ -1252,8 +1263,9 @@ examples should reuse the same fixtures as presentation tests where practical.
     every concurrently read surface is discarded, the run is superseded, and
     no review block or status card is created or updated from that snapshot.
 34. Given a metadata-only PR result set with no Bugbot telemetry, then its Job
-    Summary and workflow conclusion remain visible but no `Copilot / Review`
-    Check is created, preserving the analyzed same-head Check as latest by name.
+    Summary and workflow conclusion remain visible but neither a generic result
+    comment nor `Copilot / Review` Check is created, preserving the analyzed
+    same-head Check as latest by name without adding conversation noise.
 35. Given complete, partial, skipped, superseded, or failed Bugbot telemetry,
     then the evidence policy emits respectively successful, neutral, neutral,
     neutral, or failed review evidence, subject to stricter finding-state policy.
@@ -1284,7 +1296,7 @@ examples should reuse the same fixtures as presentation tests where practical.
 | Human dismissal precedence | lifecycle policy + resolver adapter | bot/human/unknown resolver matrix | Concepts, Detection |
 | Freshness and concurrency | head guards + workflow contract | stale, duplicate, canceled, race cases | Workflow setup |
 | Metadata non-preemption | shared branch key + conditional cancellation | active/setup workflow parser, negative unconditional-cancel fixture, PR #363 live evidence | Workflow setup, Configuration, How it works |
-| Review Check ownership | telemetry projection + evidence policy | metadata-only negative, outcome matrix, completion integration, PR #363 latest-by-name replay | Detection, Workflow setup, How it works, Troubleshooting |
+| Metadata/review publication ownership | result-publication mode + telemetry/evidence policies | metadata generic-comment negative, outcome matrix, completion integration, PR #363 latest-by-name/noise replay | Detection, Workflow setup, How it works, Troubleshooting |
 | Canonical Result evidence | finding-state projection + completion/lifecycle/status/summary/Check policies | complete aggregation, required-outcome absence, missing/extra key, numeric limits, overflow, cross-surface fail-closed cases | Detection, Observability, Comment commands, Failure scenarios |
 | Coherent final snapshot | snapshot loader + explicit surface completeness | before/after head, head-change, missing-head, per-surface failure, shared issue/PR read cases | How it works, Failure scenarios |
 | No false clean partial state | final read + publication report | provider failure matrix | Troubleshooting |
@@ -1396,6 +1408,8 @@ evidence.
       two shared result-projection policies are 100% covered in every metric.
 - [x] Metadata-only PR runs cannot overwrite the latest Review Check, and the
       incomplete-outcome conclusion matrix is enforced by pure tests.
+- [x] Metadata-only PR edits publish through the native workflow and Job
+      Summary only; repeated edits do not append generic discussion comments.
 - [x] Malformed sibling telemetry cannot hide behind a valid snapshot, and all
       current-state Result consumers fail closed through one canonical parser.
 - [x] Finding-evaluating telemetry cannot claim zero findings by omitting the

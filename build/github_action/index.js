@@ -67652,9 +67652,7 @@ const application_error_1 = __nccwpck_require__(75999);
 function projectPublishResultContext(source) {
     const results = Object.freeze(source.currentConfiguration.results.map(projectResult));
     return Object.freeze({
-        skipBugbotReviewSummary: source.isPullRequest
-            && !source.isSingleAction
-            && results.some((result) => result.id === 'DetectPotentialProblemsUseCase' && result.executed),
+        genericCommentMode: resolveGenericCommentMode(source, results),
         debug: source.debug,
         target: Object.freeze({
             isSingleAction: source.isSingleAction,
@@ -67683,8 +67681,10 @@ function projectPublishResultContext(source) {
 }
 async function runPublishResume(param, taskId, issueNotificationPort, logReport) {
     try {
-        if (param.skipBugbotReviewSummary)
+        if (param.genericCommentMode !== 'publish') {
+            (0, logging_ports_1.logInfo)(`Generic result comment omitted: ${param.genericCommentMode}.`);
             return undefined;
+        }
         const sections = (0, result_publication_policy_1.renderResultSections)(param.results);
         const debugLogSection = (0, result_publication_policy_1.buildDebugLogSection)(param.debug, logReport.getAccumulatedLogsAsText());
         if (!(0, result_publication_policy_1.hasPublishableContent)(sections, debugLogSection))
@@ -67706,6 +67706,15 @@ async function runPublishResume(param, taskId, issueNotificationPort, logReport)
             errors: [semanticError],
         });
     }
+}
+function resolveGenericCommentMode(source, results) {
+    if (!source.isPullRequest || source.isSingleAction)
+        return 'publish';
+    if (source.pullRequest.action === 'edited')
+        return 'omit-metadata-only';
+    return results.some((result) => result.id === 'DetectPotentialProblemsUseCase' && result.executed)
+        ? 'omit-feature-owned'
+        : 'publish';
 }
 function buildResumeComment(param, sections, debugLogSection) {
     const presentation = (0, result_publication_policy_1.resolveResultPublicationPresentation)(param.presentation, (images) => (0, list_utils_1.getRandomElement)([...images]));
