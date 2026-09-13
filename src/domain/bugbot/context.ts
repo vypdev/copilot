@@ -113,30 +113,59 @@ function identityMismatch(
   candidate: BugbotPullRequestIdentity,
 ): string | undefined {
   if (candidate.state !== "open") return "The selected pull request is not open.";
-  if (target.pullRequestSelection.kind === "event"
-    && target.pullRequestSelection.number !== undefined
-    && candidate.number !== target.pullRequestSelection.number) {
+  if (!matchesEventPullRequestNumber(target, candidate)) {
     return "The selected pull request does not match the event target.";
   }
-  if (target.repository.id !== undefined && candidate.baseRepository.id !== target.repository.id) {
-    return "The selected pull request belongs to a different base repository.";
-  }
-  if (candidate.baseRepository.owner.toLowerCase() !== target.repository.owner.toLowerCase()
-    || candidate.baseRepository.name.toLowerCase() !== target.repository.name.toLowerCase()) {
+  if (!matchesBaseRepository(target, candidate)) {
     return "The selected pull request belongs to a different base repository.";
   }
   // issue_comment identifies a PR by its provider marker and number but does not
   // include head repository/ref fields. Constrain the head only when the trigger
   // actually supplied a ref; the verified provider identity then becomes the
   // revision used by both freshness checks.
-  if (target.headRef !== ""
-    && (candidate.headRepositoryOwner.toLowerCase() !== target.headOwner.toLowerCase()
-      || candidate.headRef !== target.headRef)) {
+  if (!matchesConstrainedHead(target, candidate)) {
     return "The selected pull request head does not match the review target.";
   }
-  if (target.expectedHeadSha !== undefined
-    && candidate.headSha.toLowerCase() !== target.expectedHeadSha.toLowerCase()) {
+  if (!matchesExpectedHeadRevision(target, candidate)) {
     return "The selected pull request head revision is stale.";
   }
   return undefined;
+}
+
+function matchesEventPullRequestNumber(
+  target: BugbotReviewTarget,
+  candidate: BugbotPullRequestIdentity,
+): boolean {
+  const selection = target.pullRequestSelection;
+  return selection.kind !== "event"
+    || selection.number === undefined
+    || candidate.number === selection.number;
+}
+
+function matchesBaseRepository(
+  target: BugbotReviewTarget,
+  candidate: BugbotPullRequestIdentity,
+): boolean {
+  const targetRepository = target.repository;
+  const candidateRepository = candidate.baseRepository;
+  return (targetRepository.id === undefined || candidateRepository.id === targetRepository.id)
+    && candidateRepository.owner.toLowerCase() === targetRepository.owner.toLowerCase()
+    && candidateRepository.name.toLowerCase() === targetRepository.name.toLowerCase();
+}
+
+function matchesConstrainedHead(
+  target: BugbotReviewTarget,
+  candidate: BugbotPullRequestIdentity,
+): boolean {
+  return target.headRef === ""
+    || (candidate.headRepositoryOwner.toLowerCase() === target.headOwner.toLowerCase()
+      && candidate.headRef === target.headRef);
+}
+
+function matchesExpectedHeadRevision(
+  target: BugbotReviewTarget,
+  candidate: BugbotPullRequestIdentity,
+): boolean {
+  return target.expectedHeadSha === undefined
+    || candidate.headSha.toLowerCase() === target.expectedHeadSha.toLowerCase();
 }
