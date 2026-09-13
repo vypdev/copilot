@@ -157,12 +157,14 @@ describe('coverage budget validator', () => {
         )).toThrow('Coverage entry for src/empty.ts has no measurable metrics.');
     });
 
-    it('rejects malformed coverage metrics before threshold evaluation', () => {
-        const invalid: FileCoverage = {
-            ...coverage(100),
-            lines: { covered: 2, pct: 200, total: 1 },
-        };
-
+    it.each([
+        ['covered greater than total', { covered: 2, pct: 200, total: 1 }],
+        ['negative covered', { covered: -1, pct: -1, total: 100 }],
+        ['negative total', { covered: 0, pct: 0, total: -1 }],
+        ['non-finite percentage', { covered: 1, pct: Number.NaN, total: 1 }],
+        ['missing metric', undefined],
+    ])('rejects malformed coverage metrics before threshold evaluation: %s', (_case, lines) => {
+        const invalid = { ...coverage(100), lines } as unknown as FileCoverage;
         expect(() => coverageBudgetFailures(
             summary({ 'src/invalid.ts': invalid }),
             '/repo',

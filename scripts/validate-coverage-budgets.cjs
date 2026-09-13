@@ -126,19 +126,25 @@ function requireEntries(files, entries, missingEntryLabel) {
   }
 }
 
+function isFiniteNonNegative(value) {
+  return Number.isFinite(value) && value >= 0;
+}
+
+function isValidCoverageMetric(value) {
+  if (value === null || typeof value !== 'object') return false;
+  if (!isFiniteNonNegative(value.covered)) return false;
+  if (!isFiniteNonNegative(value.total)) return false;
+  if (!Number.isFinite(value.pct)) return false;
+  return value.covered <= value.total;
+}
+
 function requireMeasurableEntries(files, entries, metrics) {
   for (const file of files) {
     const coverage = entries.get(file);
     let measurable = false;
     for (const metric of metrics) {
       const value = coverage[metric];
-      if (!value
-        || !Number.isFinite(value.covered)
-        || !Number.isFinite(value.total)
-        || !Number.isFinite(value.pct)
-        || value.covered < 0
-        || value.total < 0
-        || value.covered > value.total) {
+      if (!isValidCoverageMetric(value)) {
         throw new Error(`Coverage entry for ${file} has an invalid ${metric} metric.`);
       }
       measurable ||= value.total > 0;
