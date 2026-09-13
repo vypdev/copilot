@@ -23,6 +23,14 @@ interface CoverageRule {
     readonly thresholds: Readonly<Record<string, number>>;
 }
 
+interface EachFileCoverageCase {
+    readonly caseName: string;
+    readonly expected: readonly string[];
+    readonly file: string;
+    readonly thresholds: Readonly<Record<string, number>>;
+    readonly value: FileCoverage;
+}
+
 function metric(covered: number, total = 100): CoverageMetric {
     return { covered, pct: total === 0 ? 100 : covered / total * 100, total };
 }
@@ -185,29 +193,29 @@ describe('coverage budget validator', () => {
         )).toThrow('Coverage entry for src/invalid.ts has an invalid lines metric.');
     });
 
-    it.each([
-        [
-            'uses authoritative counts instead of a forged per-file percentage',
-            'src/forged.ts',
-            { ...coverage(100), lines: { covered: 0, pct: 100, total: 1 } },
-            { lines: 95 },
-            ['src/forged.ts lines 0% < 95%'],
-        ],
-        [
-            'accepts valid alternate percentage precision while evaluating counts',
-            'src/thirds.ts',
-            { ...coverage(100), lines: { covered: 1, pct: 33.333, total: 3 } },
-            { lines: 30 },
-            [],
-        ],
-        [
-            'treats a denominator-free metric as vacuously covered on a measurable file',
-            'src/branchless.ts',
-            { ...coverage(100), branches: metric(0, 0) },
-            { branches: 100, lines: 95 },
-            [],
-        ],
-    ])('%s', (_case, file, value, thresholds, expected) => {
+    it.each<EachFileCoverageCase>([
+        {
+            caseName: 'uses authoritative counts instead of a forged per-file percentage',
+            expected: ['src/forged.ts lines 0% < 95%'],
+            file: 'src/forged.ts',
+            thresholds: { lines: 95 },
+            value: { ...coverage(100), lines: { covered: 0, pct: 100, total: 1 } },
+        },
+        {
+            caseName: 'accepts valid alternate percentage precision while evaluating counts',
+            expected: [],
+            file: 'src/thirds.ts',
+            thresholds: { lines: 30 },
+            value: { ...coverage(100), lines: { covered: 1, pct: 33.333, total: 3 } },
+        },
+        {
+            caseName: 'treats a denominator-free metric as vacuously covered on a measurable file',
+            expected: [],
+            file: 'src/branchless.ts',
+            thresholds: { branches: 100, lines: 95 },
+            value: { ...coverage(100), branches: metric(0, 0) },
+        },
+    ])('$caseName', ({ file, value, thresholds, expected }) => {
         expect(eachFileFailuresFor(file, value, thresholds)).toEqual(expected);
     });
 
