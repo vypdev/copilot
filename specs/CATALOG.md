@@ -13,8 +13,8 @@ debt or convert unknown historic intent into a design decision.
 | `release-orchestration` | Implemented | Release and hotfix promotion, publication, reconciliation, and durable recovery | [Configurable production-first release orchestration](./configurable-release-orchestration.md) + 2 companion | 41 paths · 2026-09-12 |
 | `merge-queue-readiness` | Implemented | Fail-closed validation of required checks and merge-group workflow support | [Merge queue readiness and effective target rules](./merge-queue-readiness.md) | 15 paths · 2026-09-11 |
 | `bugbot-review-state-reconciliation` | Implemented | Reconcile review snapshots, findings, threads, comments, and check conclusions | [Bugbot review-state reconciliation](./bugbot-review-state-reconciliation.md) | 39 paths · 2026-09-13 |
-| `execution-lifecycle` | Implemented | Shared GitHub Action lifecycle from event admission through durable user-facing results | [Execution admission, queueing, routing, and result publication](./execution-admission-queue-and-publication.md) + 3 companion | 81 paths · 2026-09-13 |
-| `architecture-quality-hardening` | Implemented | Close verified concurrency, error-contract, context-coupling, fan-out, setup/doctor, and provider-policy risks in dependency order | [Architecture quality and scalability hardening](./architecture-quality-and-scalability-hardening.md) + 1 companion | 70 paths · 2026-09-13 |
+| `execution-lifecycle` | Implemented | Shared GitHub Action lifecycle from event admission through durable user-facing results | [Execution admission, queueing, routing, and result publication](./execution-admission-queue-and-publication.md) + 3 companion | 81 paths · 2026-09-14 |
+| `architecture-quality-hardening` | Implemented | Close verified concurrency, error-contract, context-coupling, fan-out, setup/doctor, and provider-policy risks in dependency order | [Architecture quality and scalability hardening](./architecture-quality-and-scalability-hardening.md) + 1 companion | 70 paths · 2026-09-14 |
 | `setup-and-doctor` | Implemented | Plan, validate, provision, and audit a repository installation without exposing credentials | [Setup, configuration, credentials, and doctor](./setup-configuration-credentials-and-doctor.md) + 1 companion | 39 paths · 2026-09-12 |
 | `managed-issue-lifecycle` | As-built baseline | Convert typed issues into traceable work branches, project state, and lifecycle state | [Managed issue and branch lifecycle](./managed-issue-and-branch-lifecycle.md) | 21 paths · 2026-09-13 |
 | `comment-automation` | Implemented | Admit only explicit commands or exact mentions, then route them while protecting repository mutations | [Comment automation and authorization](./comment-automation-and-authorization.md) | 46 paths · 2026-09-13 |
@@ -62,7 +62,7 @@ debt or convert unknown historic intent into a design decision.
 ### `execution-lifecycle` — Execution admission, queueing, routing, and result publication
 
 - Owner: Copilot maintainers
-- Last verified: 2026-09-13
+- Last verified: 2026-09-14
 - Specifications: [`specs/execution-admission-queue-and-publication.md`](./execution-admission-queue-and-publication.md) · [`specs/execution-error-and-context-hardening.md`](./execution-error-and-context-hardening.md) · [`specs/execution-boundary-closure-audit.md`](./execution-boundary-closure-audit.md) · [`specs/push-and-single-action-context-hardening.md`](./push-and-single-action-context-hardening.md)
 - Workflows: [`.github/workflows/copilot_issue.yml`](../.github/workflows/copilot_issue.yml) · [`.github/workflows/copilot_issue_comment.yml`](../.github/workflows/copilot_issue_comment.yml) · [`.github/workflows/copilot_pull_request.yml`](../.github/workflows/copilot_pull_request.yml) · [`.github/workflows/copilot_pull_request_comment.yml`](../.github/workflows/copilot_pull_request_comment.yml) · [`.github/workflows/copilot_commit.yml`](../.github/workflows/copilot_commit.yml)
 - Entrypoints: [`src/actions/github_action.ts`](../src/actions/github_action.ts) · [`src/actions/common_action.ts`](../src/actions/common_action.ts)
@@ -73,7 +73,7 @@ debt or convert unknown historic intent into a design decision.
 ### `architecture-quality-hardening` — Architecture quality and scalability hardening
 
 - Owner: Copilot maintainers
-- Last verified: 2026-09-13
+- Last verified: 2026-09-14
 - Specifications: [`specs/architecture-quality-and-scalability-hardening.md`](./architecture-quality-and-scalability-hardening.md) · [`specs/issue-and-pull-request-context-hardening.md`](./issue-and-pull-request-context-hardening.md)
 - Workflows: [`.github/workflows/copilot_pull_request.yml`](../.github/workflows/copilot_pull_request.yml) · [`.github/workflows/release_workflow.yml`](../.github/workflows/release_workflow.yml) · [`.github/workflows/hotfix_workflow.yml`](../.github/workflows/hotfix_workflow.yml) · [`.github/workflows/copilot_deployment_orchestration.yml`](../.github/workflows/copilot_deployment_orchestration.yml)
 - Entrypoints: [`src/actions/github_action.ts`](../src/actions/github_action.ts) · [`src/cli/commands/setup.ts`](../src/cli/commands/setup.ts) · [`src/cli/commands/doctor.ts`](../src/cli/commands/doctor.ts)

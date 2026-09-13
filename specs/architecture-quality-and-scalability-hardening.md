@@ -2,9 +2,9 @@
 
 - Status: Implemented — all automated priorities complete; controlled rollout evidence remains external
 - Date: 2026-09-11
-- Last updated: 2026-09-13
+- Last updated: 2026-09-14
 - Catalog capability ID: `architecture-quality-hardening`
-- Last verified: 2026-09-13 on `develop` (P2-G implementation validation)
+- Last verified: 2026-09-14 on `develop` (P2-G local and pull-request validation)
 - Owners: Copilot maintainers
 - Scope: close the verified concurrency, error-contract, context-coupling,
   fan-out, setup/doctor, and provider-policy risks without changing unrelated

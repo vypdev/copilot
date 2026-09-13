@@ -2,9 +2,9 @@
 
 - Status: Implemented — P0-A and P2-A through P2-G complete
 - Date: 2026-09-11
-- Last updated: 2026-09-13
+- Last updated: 2026-09-14
 - Catalog capability ID: `execution-lifecycle`
-- Last verified: 2026-09-13 on `develop` (P2-G implementation validation)
+- Last verified: 2026-09-14 on `develop` (P2-G local and pull-request validation)
 - Owners: Copilot maintainers
 - Scope: make application failures typed and safe, stop growth of the shared
   `Execution` aggregate, and replace every leaf use-case input with a narrow immutable
@@ -321,7 +321,7 @@ the aggregate baseline to decrease in the same change.
 | P2-D | shared comment analysis: Think, permissions, translation, title, result publication, configuration, and project linking | complete; route-projected contexts, bound provider ports, issue/PR/comment parity, ceiling 75 | 8 |
 | P2-E | issue and pull-request workflow steps plus description handlers | complete; separate immutable issue/PR requests, credential-bound provider commands, route-owned branch patches, compensated exact-target linkage, zero leaf imports, ceiling 47 | 8 |
 | P2-F | push and single-action capabilities, including progress, release/tag, inactivity, branch sync, and remaining commit steps | complete; capability-specific frozen contexts, repository/token-bound semantic ports, explicit route outcomes, deployment credential removal, dispatch parity, ceiling 13 | 20 |
-| P2-G | final route/public boundary audit | complete; exact role/rationale-backed 13-consumer allowlist, alias/re-export/utility-type negative fixture, credential-free lifecycle synchronization context, bound label/head ports, explicit patch, derived-error taint guard, declarative coverage gates, and clean Graphify/RepoWise audit | 38 |
+| P2-G | final route/public boundary audit | complete; exact role/rationale-backed 13-consumer allowlist, alias/re-export/utility-type negative fixture, credential-free lifecycle synchronization context, bound label/head ports, explicit patch, derived-error taint guard, declarative coverage gates, and clean Graphify/RepoWise audit | 45 |
 
 P2-C through P2-F MUST delete the superseded signature in the same slice. They
 MUST NOT preserve it with overloads, union parameters, compatibility factories,
@@ -467,7 +467,7 @@ evidence policy no longer imports `ExecutionInputs`, and a verified PR
 conversation comment takes PR-target precedence over its `issue_comment` event
 name. Local caught-value taint now follows declarations and assignments, and
 adjacent setup/resource summaries no longer expose provider messages. The full
-contract and 38-case floor are in
+contract and 45-case floor are in
 [`execution-boundary-closure-audit.md`](./execution-boundary-closure-audit.md).
 
 ### 6.6 State machine
@@ -591,15 +591,15 @@ is permitted in production.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **123 distinct cases**: P0-A 22, P2-A through P2-F
-63, and P2-G 38.
+This SDD owns at least **130 distinct cases**: P0-A 22, P2-A through P2-F
+63, and P2-G 45.
 
 | Area | Minimum cases | Required risks |
 |---|---:|---|
 | P0-A semantic-error contract | 22 | taxonomy, mapping, public API, presentation and sanitization |
 | P2-A through P2-F context cuts | 63 | immutable projections, bound authority, outcomes, route parity and exact shrinking ratchets |
-| P2-G closure | 38 | lifecycle snapshot/outcome, replay, binding, exact justified allowlist, indirect-alias and derived-error proofs, shared coverage-gate boundaries |
-| **Total** | **123** | no double counting |
+| P2-G closure | 45 | lifecycle snapshot/outcome, replay, binding, exact justified allowlist, indirect-alias and derived-error proofs, shared coverage-gate boundaries |
+| **Total** | **130** | no double counting |
 
 The taxonomy, retry metadata, serializer, and import-classification policies
 require 100% enumerated branch coverage. Changed orchestration modules require
@@ -608,7 +608,7 @@ require 100% enumerated branch coverage. Changed orchestration modules require
 fixed UUID factories, mutation attempts, API compile fixtures, and AST fixtures;
 they never log or snapshot a real secret/raw exception.
 
-P2 uses this non-overlapping 101-case ledger. P2-A through P2-G supply their
+P2 uses this non-overlapping 108-case ledger. P2-A through P2-G supply their
 implemented evidence.
 
 | P2 evidence | Cases | Automated owner |
@@ -622,8 +622,8 @@ implemented evidence.
 | P2-D shared comment-analysis cut | 8 | `src/application/usecases/steps/common/__tests__/shared_capability_context_projection.test.ts` |
 | P2-E issue/pull-request cut | 8 | `src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts`, `src/infrastructure/composition/__tests__/lifecycle_capability_port_binding.test.ts`, and focused issue/PR workflow suites |
 | P2-F push/single-action cut | 20 | `src/application/usecases/__tests__/push_single_action_contexts.test.ts`, `src/infrastructure/composition/__tests__/push_single_action_capability_port_binding.test.ts`, and focused route/workflow suites |
-| P2-G lifecycle boundary and final audit | 38 | `src/application/usecases/actions/__tests__/lifecycle_synchronization_context.test.ts`, lifecycle policy/use-case/replay suites, binding/root/common-action suites, `execution_import_ratchet.test.ts`, `raw_error_logging_boundaries.test.ts`, and `coverage_budget_validator.test.ts` |
-| **Total** | **101** | no double counting |
+| P2-G lifecycle boundary and final audit | 45 | `src/application/usecases/actions/__tests__/lifecycle_synchronization_context.test.ts`, lifecycle policy/use-case/replay suites, binding/root/common-action suites, `execution_import_ratchet.test.ts`, `raw_error_logging_boundaries.test.ts`, and `coverage_budget_validator.test.ts` |
+| **Total** | **108** | no double counting |
 
 The ten P2-C cases are non-overlapping: two context projection and credential
 exclusion cases; two bound SCM read/publication/resolution cases; two final
@@ -714,7 +714,7 @@ failure contract instead of redefining it.
 - [x] The sole final API passes positive fixtures and every removed API fails negative fixtures.
 - [x] All leaf use cases use deeply readonly capability contexts without credentials.
 - [x] The final exact 13-consumer `Execution` allowlist passes and cannot grow.
-- [x] At least 117 distinct cases and all coverage/architecture gates pass.
+- [x] At least 130 distinct cases and all coverage/architecture gates pass.
 - [x] Documentation, API reference, change notice, catalog, and generated
       artifacts agree.
 - [x] No readiness-blocking decision, TODO, temporary waiver, or unowned
