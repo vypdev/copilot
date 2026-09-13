@@ -273,15 +273,16 @@ describe('CLI', () => {
     });
 
     it('exits when runLocalAction rejects in check-progress', async () => {
-      (runLocalAction as jest.Mock).mockRejectedValueOnce(new Error('API error'));
+      (runLocalAction as jest.Mock).mockRejectedValueOnce(new Error('check-progress-secret-marker'));
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
-      await program.parseAsync(['node', 'cli', 'check-progress', '-i', '1']);
+      await program.parseAsync(['node', 'cli', 'check-progress', '-i', '1', '--debug']);
 
       expect(process.exitCode).toBe(1);
       const messages = consoleSpy.mock.calls.flat().map(String);
       expect(messages.some((m) => m.includes('Unable to check progress.'))).toBe(true);
-      expect(messages.some((m) => m.includes('API error'))).toBe(false);
+      expect(messages.some((m) => m.includes('Reference:'))).toBe(true);
+      expect(messages.some((m) => m.includes('check-progress-secret-marker'))).toBe(false);
       consoleSpy.mockRestore();
     });
   });
@@ -321,6 +322,20 @@ describe('CLI', () => {
       expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('valid issue number'));
       expect(runLocalAction).not.toHaveBeenCalled();
       logSpy.mockRestore();
+    });
+
+    it('does not expose a raw recommend-steps failure, including in debug mode', async () => {
+      (runLocalAction as jest.Mock).mockRejectedValueOnce(new Error('recommend-secret-marker'));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      await program.parseAsync(['node', 'cli', 'recommend-steps', '-i', '1', '--debug']);
+
+      expect(process.exitCode).toBe(1);
+      const messages = consoleSpy.mock.calls.flat().map(String);
+      expect(messages.some((m) => m.includes('Unable to recommend steps.'))).toBe(true);
+      expect(messages.some((m) => m.includes('Reference:'))).toBe(true);
+      expect(messages.some((m) => m.includes('recommend-secret-marker'))).toBe(false);
+      consoleSpy.mockRestore();
     });
   });
 
@@ -467,15 +482,16 @@ describe('CLI', () => {
     });
 
     it('exits when runLocalAction rejects in detect-potential-problems', async () => {
-      (runLocalAction as jest.Mock).mockRejectedValueOnce(new Error('API error'));
+      (runLocalAction as jest.Mock).mockRejectedValueOnce(new Error('detect-secret-marker'));
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
-      await program.parseAsync(['node', 'cli', 'detect-potential-problems', '-i', '1']);
+      await program.parseAsync(['node', 'cli', 'detect-potential-problems', '-i', '1', '--debug']);
 
       expect(process.exitCode).toBe(1);
       const messages = consoleSpy.mock.calls.flat().map(String);
       expect(messages.some((m) => m.includes('Unable to run detect-potential-problems.'))).toBe(true);
-      expect(messages.some((m) => m.includes('API error'))).toBe(false);
+      expect(messages.some((m) => m.includes('Reference:'))).toBe(true);
+      expect(messages.some((m) => m.includes('detect-secret-marker'))).toBe(false);
       consoleSpy.mockRestore();
     });
   });

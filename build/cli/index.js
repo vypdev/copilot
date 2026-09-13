@@ -54544,6 +54544,7 @@ exports.buildReconciliationTarget = buildReconciliationTarget;
 exports.buildReconciliationBranchName = buildReconciliationBranchName;
 exports.validateInitialDeploymentInput = validateInitialDeploymentInput;
 const deployment_operation_1 = __nccwpck_require__(92730);
+const sensitive_text_1 = __nccwpck_require__(47122);
 function buildInitialDeploymentOperation(input) {
     const strategy = input.kind === "release"
         ? input.configuration.releaseReconciliationStrategy
@@ -54587,7 +54588,7 @@ function selectPullRequestMode(configured, capabilities) {
     if (capabilities.mergeQueueObservationProblems.length > 0) {
         return {
             kind: "unsupported",
-            reason: `The target merge policy could not be verified: ${capabilities.mergeQueueObservationProblems[0].message}`,
+            reason: `The target merge policy could not be verified: ${boundedDiagnostic(capabilities.mergeQueueObservationProblems[0].message)}`,
         };
     }
     if (capabilities.mergeQueueRequired) {
@@ -54638,7 +54639,11 @@ function mergeQueueReadinessFailureMessage(readiness, locale = "en-US") {
     return `Merge queue readiness is ${readiness.verdict} for ${readiness.targetRole} target ${boundedDiagnostic(readiness.targetBranch)}. ${details || "Required producer evidence is incomplete."} ${action}`;
 }
 function boundedDiagnostic(value) {
-    return value.replace(/[\r\n<>]/g, " ").replace(/::/g, "﹕﹕").replace(/@/g, "@\u200b").slice(0, 500);
+    return (0, sensitive_text_1.redactSensitiveText)(value)
+        .replace(/[\r\n<>]/g, " ")
+        .replace(/::/g, "﹕﹕")
+        .replace(/@/g, "@\u200b")
+        .slice(0, 500);
 }
 function selectBackmergeMode(configured, requiresStrictStatusChecks, directHeadIsUpToDate, directSourceIsExact = true) {
     const directIsUnsafe = !directSourceIsExact

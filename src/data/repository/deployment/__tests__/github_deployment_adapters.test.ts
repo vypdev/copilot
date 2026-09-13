@@ -589,6 +589,7 @@ describe("GitHub deployment repository", () => {
 
   it.each([
     [{ encoding: "base64", size: 4, content: "***=" }, "valid bounded base64"],
+    [{ encoding: "utf-8", size: 4, content: "test" }, "content is unavailable"],
     [{ encoding: "base64", content: Buffer.from("jobs: {}", "utf8").toString("base64") }, "size metadata is unavailable"],
     [{ encoding: "base64", size: 99, content: Buffer.from("jobs: {}", "utf8").toString("base64") }, "does not match"],
     [{ encoding: "base64", size: 2, content: "/+4=" }, "valid UTF-8"],

@@ -126,6 +126,27 @@ function requireEntries(files, entries, missingEntryLabel) {
   }
 }
 
+function requireMeasurableEntries(files, entries, metrics) {
+  for (const file of files) {
+    const coverage = entries.get(file);
+    let measurable = false;
+    for (const metric of metrics) {
+      const value = coverage[metric];
+      if (!value
+        || !Number.isFinite(value.covered)
+        || !Number.isFinite(value.total)
+        || !Number.isFinite(value.pct)
+        || value.covered < 0
+        || value.total < 0
+        || value.covered > value.total) {
+        throw new Error(`Coverage entry for ${file} has an invalid ${metric} metric.`);
+      }
+      measurable ||= value.total > 0;
+    }
+    if (!measurable) throw new Error(`Coverage entry for ${file} has no measurable metrics.`);
+  }
+}
+
 function percentage(metricEntries) {
   const total = metricEntries.reduce(
     (result, metric) => ({
@@ -134,7 +155,8 @@ function percentage(metricEntries) {
     }),
     { covered: 0, total: 0 },
   );
-  return total.total === 0 ? 100 : (total.covered / total.total) * 100;
+  if (total.total === 0) throw new Error('Aggregate coverage metric has no measurable total.');
+  return (total.covered / total.total) * 100;
 }
 
 function aggregateFailures(rule, files, entries) {
@@ -157,6 +179,7 @@ function coverageBudgetFailures(summary, repositoryRoot, configuration) {
   return configuration.rules.flatMap(rule => {
     const files = filesForRule(rule, entries);
     requireEntries(files, entries, configuration.missingEntryLabel);
+    requireMeasurableEntries(files, entries, Object.keys(rule.thresholds));
     return rule.mode === 'each'
       ? eachFileFailures(rule, files, entries)
       : aggregateFailures(rule, files, entries);

@@ -3,11 +3,11 @@
 - Status: Implemented — automated local evidence complete; pull-request verification pending
 - Date: 2026-09-13
 - Catalog capability ID: `execution-lifecycle`
-- Last verified: 2026-09-13 on `develop` (414 suites, 3,548 tests, and all local gates)
+- Last verified: 2026-09-13 on `develop` (414 suites, 3,557 tests, and all local gates)
 - Owners: Copilot maintainers
 - Scope: complete P2-G by proving and hardening the final `Execution` boundary,
   lifecycle synchronization contract, and raw-error logging ratchet
-- Related issues/PRs: none recorded
+- Related issues/PRs: [#365](https://github.com/vypdev/copilot/pull/365)
 - Required review gates: product UX, architecture, testing, documentation,
   security/operations, GitHub checks
 - Open decisions blocking readiness: none
@@ -93,6 +93,13 @@ message into a `message` variable and log it without failing the ratchet.
   synchronous JSON read in a CI CLI (`0` health impact) and a nine-line
   self-clone in its negative test (`0.15` health impact); neither is on a
   product request path or warrants another abstraction.
+- First pull-request verification at `889550e` found two actionable gaps:
+  Codecov patch coverage was `88.75740%`, and Bugbot found that an all-zero
+  coverage entry could satisfy a budget. The correction rejects empty or
+  malformed measurements before evaluation, adds negative coverage for the
+  affected provider/error paths, and also closes a provider-diagnostic leak
+  discovered by those regressions. Final remote evidence is recorded only
+  after the corrected head completes every gate.
 - Unknowns: production label-write latency is not recorded. P2-G changes no
   request count on the happy path and therefore defines deterministic call-count
   limits instead of inventing a latency target.
@@ -299,6 +306,9 @@ returned patch.
 7. Specialized coverage gates MUST declare budgets in
    `scripts/coverage-budgets.json` and use the sole shared validator; copied
    report parsing, percentage arithmetic, or drift logic is forbidden.
+8. Every configured coverage entry MUST contain valid measurable data; an
+   all-zero or malformed entry and an aggregate metric without a denominator
+   fail closed.
 
 ## 9. UI/UX and content contract
 
@@ -346,8 +356,10 @@ retry rereads it and becomes unchanged.
 2. The lifecycle context cannot select another repository or credential.
 3. Untrusted event values are copied only into bounded scalar evidence fields;
    they are never executed or rendered directly.
-4. Provider causes are private `ApplicationError` causes and absent from logs,
-   results, setup summaries, checked fixtures, and GitHub surfaces.
+4. Provider causes and provider-returned observation diagnostics are untrusted.
+   They are absent from logs, results, setup summaries, checked fixtures, and
+   GitHub surfaces unless secret patterns, workflow commands, markup, and
+   mentions have been neutralized at the presentation boundary.
 5. Exact head-SHA equality prevents stale review/check events from forging a
    current lifecycle transition.
 
@@ -387,8 +399,8 @@ P2-G owns at least **38 distinct cases**.
 | Binding and composition | 3 | labels, PR head, frozen identity/credential capture |
 | Route and replay integration | 6 | review/check/workflow replay, ambiguous event, patch application, idempotence |
 | Execution architecture | 5 | schema, exact inventory, roles/rationales, alias/re-export fixture, forbidden lifecycle fields/types |
-| Error/security regression | 4 | direct, interpolation, local declaration/assignment taint, sanitizer allowance |
-| Coverage-gate infrastructure | 6 | aggregate boundary, labelled failure, per-file failure, missing entry, discovered-count drift, zero-total metric |
+| Error/security regression | 4 | direct, interpolation, local declaration/assignment taint, sanitizer allowance, provider-observation presentation |
+| Coverage-gate infrastructure | 6 | aggregate boundary, labelled failure, per-file failure, missing entry, discovered-count drift, all-zero/malformed fail-closed input |
 | **Total** | **38** | no double counting |
 
 The repository thresholds remain 90% lines/statements, 88% functions, and 82%
@@ -438,6 +450,11 @@ Update:
     exact offending file.
 12. Given a local variable or assignment derived from a caught value and passed
     to logging, CI fails; a `toApplicationError` value passes.
+13. Given an all-zero, malformed, or denominator-free configured coverage
+    measurement, the shared validator fails before declaring the budget met.
+14. Given a provider-returned merge-policy reason containing a secret, workflow
+    command, markup, or mention, setup and deployment output expose none of the
+    unsafe source text.
 
 ## 17. Requirements traceability
 

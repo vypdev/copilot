@@ -125,9 +125,16 @@ describe("deployment plan policy", () => {
   });
 
   it("fails closed when the target policy cannot be observed", () => {
-    expect(selectPullRequestMode("auto", capabilities({
-      mergeQueueObservationProblems: [{ area: "effective-rules", message: "Forbidden" }],
-    }))).toEqual(expect.objectContaining({ kind: "unsupported", reason: expect.stringContaining("Forbidden") }));
+    const decision = selectPullRequestMode("auto", capabilities({
+      mergeQueueObservationProblems: [{
+        area: "effective-rules",
+        message: "Forbidden\n::error::@team github_pat_abcdefghijklmnopqrstuvwxyz123456",
+      }],
+    }));
+    expect(decision).toEqual(expect.objectContaining({ kind: "unsupported", reason: expect.stringContaining("Forbidden") }));
+    expect(decision.reason).not.toContain("github_pat_");
+    expect(decision.reason).not.toContain("::error::");
+    expect(decision.reason).not.toContain("@team");
   });
 
   it("rejects explicit auto-merge when the target requires its queue", () => {

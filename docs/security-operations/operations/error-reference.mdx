@@ -41,4 +41,6 @@ to another local variable; the architecture guard follows those derived values
 and rejects any attempt to log them. Setup resource summaries and lifecycle
 synchronization likewise use fixed semantic messages. Maintainers must call
 `toApplicationError` before logging a caught value and must never copy provider
-message text into that safe message.
+message text into that safe message. Provider-returned observation reasons are
+untrusted too: before setup or deployment renders them, secret patterns are
+redacted and GitHub workflow commands, markup and mentions are neutralized.

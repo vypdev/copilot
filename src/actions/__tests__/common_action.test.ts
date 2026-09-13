@@ -552,6 +552,27 @@ describe('mainRun', () => {
     expect(execution.labels.currentPullRequestLabels).toEqual(['state:reviewing']);
   });
 
+  it('leaves both label caches unchanged when lifecycle synchronization returns no patch', async () => {
+    const execution = mockExecution({
+      eventName: 'issues',
+      inputs: { action: 'edited' },
+      isIssue: true,
+      issue: { number: 42, isIssueComment: false, isIssue: true, opened: false, descriptionEdited: true },
+      labels: {
+        ...mockExecution().labels,
+        currentIssueLabels: ['state:planned'],
+        currentPullRequestLabels: ['state:reviewing'],
+      },
+    });
+    mockIssueInvoke.mockResolvedValue([new Result({ id: 'issue', success: true })]);
+    mockLifecycleStateInvoke.mockResolvedValue({ results: [] });
+
+    await runMainWithLifecycle(execution);
+
+    expect(execution.labels.currentIssueLabels).toEqual(['state:planned']);
+    expect(execution.labels.currentPullRequestLabels).toEqual(['state:reviewing']);
+  });
+
   it('runs PullRequestReviewCommentUseCase when isPullRequest and review comment', async () => {
     const execution = mockExecution({
       isPullRequest: true,

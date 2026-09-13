@@ -199,4 +199,18 @@ describe('setup resource provisioning policy', () => {
         expect(errors).toEqual(['Could not inspect existing GitHub Actions resource scopes.']);
         expect(JSON.stringify(errors)).not.toContain('remote-scope-marker');
     });
+
+    it('keeps a repository-scoped inspection failure advisory instead of blocking setup', async () => {
+        const errors: string[] = [];
+        await expect(resolveRemoteConfiguration(
+            context,
+            { setupRemoteConfigurationReadPort: {
+                inspect: jest.fn().mockRejectedValue(new Error('repository-scope-marker')),
+            } },
+            createDefaultSetupConfiguration(),
+            errors,
+        )).resolves.toBeUndefined();
+
+        expect(errors).toEqual([]);
+    });
 });

@@ -130,8 +130,8 @@ describe('coverage budget validator', () => {
         })).toThrow('Expected coverage for exactly 2 fixture files, received 1.');
     });
 
-    it('treats a zero-total aggregate metric as fully covered', () => {
-        expect(coverageBudgetFailures(
+    it('rejects an all-zero coverage entry instead of treating it as fully covered', () => {
+        expect(() => coverageBudgetFailures(
             summary({ 'src/empty.ts': coverage(0, 0) }),
             '/repo',
             fixtureConfiguration({
@@ -139,7 +139,56 @@ describe('coverage budget validator', () => {
                 mode: 'aggregate',
                 thresholds: { functions: 100 },
             }),
-        )).toEqual([]);
+        )).toThrow('Coverage entry for src/empty.ts has no measurable metrics.');
+    });
+
+    it('rejects an empty entry even when another aggregate entry has full coverage', () => {
+        expect(() => coverageBudgetFailures(
+            summary({
+                'src/empty.ts': coverage(0, 0),
+                'src/full.ts': coverage(100),
+            }),
+            '/repo',
+            fixtureConfiguration({
+                files: ['src/empty.ts', 'src/full.ts'],
+                mode: 'aggregate',
+                thresholds: DEFAULT_THRESHOLDS,
+            }),
+        )).toThrow('Coverage entry for src/empty.ts has no measurable metrics.');
+    });
+
+    it('rejects malformed coverage metrics before threshold evaluation', () => {
+        const invalid: FileCoverage = {
+            ...coverage(100),
+            lines: { covered: 2, pct: 200, total: 1 },
+        };
+
+        expect(() => coverageBudgetFailures(
+            summary({ 'src/invalid.ts': invalid }),
+            '/repo',
+            fixtureConfiguration({
+                files: ['src/invalid.ts'],
+                mode: 'each',
+                thresholds: { lines: 95 },
+            }),
+        )).toThrow('Coverage entry for src/invalid.ts has an invalid lines metric.');
+    });
+
+    it('rejects an aggregate metric with no denominator on otherwise measurable files', () => {
+        const branchless: FileCoverage = {
+            ...coverage(100),
+            branches: metric(0, 0),
+        };
+
+        expect(() => coverageBudgetFailures(
+            summary({ 'src/branchless.ts': branchless }),
+            '/repo',
+            fixtureConfiguration({
+                files: ['src/branchless.ts'],
+                mode: 'aggregate',
+                thresholds: { branches: 90, lines: 95 },
+            }),
+        )).toThrow('Aggregate coverage metric has no measurable total.');
     });
 
     it.each([
