@@ -3,7 +3,7 @@
 - Status: Implemented — automated local evidence complete; pull-request verification pending
 - Date: 2026-09-13
 - Catalog capability ID: `execution-lifecycle`
-- Last verified: 2026-09-13 on `develop` (414 suites, 3,557 tests, and all local gates)
+- Last verified: 2026-09-13 on `develop` (414 suites, 3,561 tests, and all local gates)
 - Owners: Copilot maintainers
 - Scope: complete P2-G by proving and hardening the final `Execution` boundary,
   lifecycle synchronization contract, and raw-error logging ratchet
@@ -85,14 +85,15 @@ message into a `message` variable and log it without failing the ratchet.
   RepoWise average health `7.92`, maintainability `9.34`, performance `9.97`,
   and hotspot score `5.96` at merge commit
   `7a42b62491715b6187449564d290a153a4b628ec`.
-- Closure audit: the clean P2-G audit at `2b786426` reported zero dead code,
-  RepoWise average health `7.91`, maintainability `9.35`, performance `9.97`,
-  and hotspot score `6.02`. Graphify indexed `8,378` nodes and `21,489`
-  edges. The scanner refactor has no RepoWise finding, and no new artifact has
-  a medium/high finding. The only two low signals are the intentional one-shot
-  synchronous JSON read in a CI CLI (`0` health impact) and a nine-line
-  self-clone in its negative test (`0.15` health impact); neither is on a
-  product request path or warrants another abstraction.
+- Closure audit: the final clean P2-G audit at `3958fed4` reported zero
+  safe-to-delete dead code, RepoWise average health `7.93`, maintainability
+  `9.35`, performance `9.97`, and hotspot scores `6.11`, `8.97`, and `9.93`
+  respectively. Graphify indexed `8,381` nodes and `21,499` edges. The shared
+  validator scores `10.0` and its test `9.85`, with no medium/high finding. The
+  only two low signals are the intentional one-shot synchronous JSON read in a
+  CI CLI (`0` health impact) and an eleven-line self-clone in its negative test
+  (`0.15` health impact); neither is on a product request path or warrants
+  another abstraction.
 - First pull-request verification at `889550e` found two actionable gaps:
   Codecov patch coverage was `88.75740%`, and Bugbot found that an all-zero
   coverage entry could satisfy a budget. The correction rejects empty or
