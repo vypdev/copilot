@@ -1,6 +1,7 @@
 import { getResultPayload, type Result } from '../../data/model/result';
 import { sanitizeAgentMarkdown, sanitizePublishedError } from './github_comment_publication_policy';
 import { buildApplicationErrorPresentation } from './application_error_presentation_policy';
+import { selectBugbotTelemetry, type BugbotTelemetryProjection } from './bugbot_telemetry_projection_policy';
 
 export interface ActionSummaryContext {
     readonly owner: string;
@@ -18,16 +19,25 @@ export interface ActionSummaryContext {
 export function buildActionSummary(context: ActionSummaryContext): string {
     const failures = context.results.filter(result => !result.success && result.executed);
     const findingStates = aggregateFindingStateCounts(context.results);
-    const bugbotTelemetry = context.results.map(result => getBugbotTelemetry(result.payload)).find(Boolean);
+    const bugbotTelemetry = selectBugbotTelemetry(context.results);
     const hasActionableFindings = (findingStates?.open ?? 0)
         + (findingStates?.reopened ?? 0)
         + (findingStates?.['verification-required'] ?? 0) > 0;
     const hasUnknownFindings = (findingStates?.unknown ?? 0) > 0;
-    const status = failures.length > 0 || hasUnknownFindings || (hasActionableFindings && context.failOnUnresolvedFindings)
+    const status = failures.length > 0 || hasUnknownFindings || bugbotTelemetry?.outcome === 'failed'
+        || (hasActionableFindings && context.failOnUnresolvedFindings)
         ? '❌ Failure'
         : hasActionableFindings
             ? '⚠️ Findings'
-            : '✅ Success';
+            : bugbotTelemetry?.outcome === 'partial'
+                ? '⚠️ Partial'
+                : bugbotTelemetry?.outcome === 'superseded'
+                    ? '⏭️ Superseded'
+                    : bugbotTelemetry?.outcome === 'skipped'
+                        ? '⏭️ Skipped'
+                        : bugbotTelemetry?.outcome === 'dry-run'
+                            ? '🧪 Dry run'
+                            : '✅ Success';
     const target = context.pullRequestNumber > 0
         ? `PR #${context.pullRequestNumber}`
         : context.issueNumber > 0
@@ -61,17 +71,7 @@ export function buildActionSummary(context: ActionSummaryContext): string {
     ].join('\n');
 }
 
-function getBugbotTelemetry(value: unknown): { outcome: string; elapsedMs: number; configuredEffort: string } | undefined {
-    const telemetry = getResultPayload(getResultPayload(value)?.bugbotTelemetry);
-    if (!telemetry || typeof telemetry.outcome !== 'string' || typeof telemetry.elapsedMs !== 'number') return undefined;
-    return {
-        outcome: telemetry.outcome,
-        elapsedMs: telemetry.elapsedMs,
-        configuredEffort: typeof telemetry.configuredEffort === 'string' ? telemetry.configuredEffort : 'default',
-    };
-}
-
-function formatBugbotTelemetry(telemetry: ReturnType<typeof getBugbotTelemetry>): string {
+function formatBugbotTelemetry(telemetry: BugbotTelemetryProjection | undefined): string {
     return telemetry
         ? `${escapeTable(telemetry.outcome)}, effort=${escapeTable(telemetry.configuredEffort)}, ${Math.max(0, Math.round(telemetry.elapsedMs))}ms`
         : '—';

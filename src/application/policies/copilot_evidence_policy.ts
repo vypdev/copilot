@@ -1,5 +1,6 @@
 import { getResultPayload, type Result } from '../../data/model/result';
 import type { CopilotEvidence } from '../ports/copilot_evidence_ports';
+import { selectBugbotTelemetry } from './bugbot_telemetry_projection_policy';
 
 export interface CopilotEvidenceContext {
     readonly eventName: string;
@@ -13,18 +14,36 @@ export interface CopilotEvidenceContext {
 export function buildCopilotEvidence(context: CopilotEvidenceContext): CopilotEvidence | undefined {
     const headSha = context.headSha?.trim();
     if (!headSha) return undefined;
+    const isReviewEvent = context.eventName.startsWith('pull_request');
+    const bugbotTelemetry = selectBugbotTelemetry(context.results);
+    if (isReviewEvent && (
+        !bugbotTelemetry
+        || bugbotTelemetry.headSha?.toLowerCase() !== headSha.toLowerCase()
+        || bugbotTelemetry.outcome === 'dry-run'
+    )) return undefined;
     const failures = context.results.filter(result => !result.success && result.executed).length;
     const activeFindings = aggregateFindingStateCounts(context.results);
     const hasActionableFindings = (activeFindings?.open ?? 0)
         + (activeFindings?.reopened ?? 0)
         + (activeFindings?.verificationRequired ?? 0) > 0;
     const hasUnknownFindings = (activeFindings?.unknown ?? 0) > 0;
-    const conclusion = failures > 0 || hasUnknownFindings || (hasActionableFindings && context.failOnUnresolvedFindings)
+    const incompleteReview = bugbotTelemetry?.outcome === 'partial'
+        || bugbotTelemetry?.outcome === 'superseded'
+        || bugbotTelemetry?.outcome === 'skipped';
+    const incompleteTitle = bugbotTelemetry?.outcome === 'partial'
+        ? 'Copilot review has partial coverage'
+        : bugbotTelemetry?.outcome === 'superseded'
+            ? 'Copilot review was superseded'
+            : bugbotTelemetry?.outcome === 'skipped'
+                ? 'Copilot review was skipped'
+                : undefined;
+    const conclusion = failures > 0 || hasUnknownFindings || bugbotTelemetry?.outcome === 'failed'
+        || (hasActionableFindings && context.failOnUnresolvedFindings)
         ? 'failure'
-        : context.results.length === 0 || hasActionableFindings
+        : context.results.length === 0 || hasActionableFindings || incompleteReview
             ? 'neutral'
             : 'success';
-    const name = context.eventName.startsWith('pull_request')
+    const name = isReviewEvent
         ? 'Copilot / Review'
         : ['issues', 'issue_comment', 'pull_request_review_comment'].includes(context.eventName)
             ? 'Copilot / Plan'
@@ -37,9 +56,11 @@ export function buildCopilotEvidence(context: CopilotEvidenceContext): CopilotEv
             ? 'Copilot found actionable findings'
             : conclusion === 'failure'
                 ? 'Copilot found actionable failures'
-                : conclusion === 'neutral'
-                    ? 'Copilot review produced no actionable result'
-                    : 'Copilot completed successfully',
+                : incompleteTitle ?? (
+                    conclusion === 'neutral'
+                        ? 'Copilot review produced no actionable result'
+                        : 'Copilot completed successfully'
+                ),
         summary: context.summary.slice(0, 20_000),
     };
 }

@@ -99,4 +99,29 @@ describe('action summary policy', () => {
             } })],
         })).toContain('❌ Failure');
     });
+
+    it.each([
+        ['partial', '⚠️ Partial'],
+        ['superseded', '⏭️ Superseded'],
+        ['skipped', '⏭️ Skipped'],
+        ['dry-run', '🧪 Dry run'],
+        ['failed', '❌ Failure'],
+    ])('renders the semantic %s Bugbot outcome without claiming generic success', (outcome, status) => {
+        const summary = buildActionSummary({
+            owner: 'owner',
+            repository: 'repo',
+            eventName: 'pull_request',
+            issueNumber: -1,
+            pullRequestNumber: 12,
+            results: [new Result({
+                id: 'Review',
+                success: true,
+                executed: true,
+                payload: { bugbotTelemetry: { schemaVersion: 1, outcome, elapsedMs: 11, configuredEffort: 'smart', headSha: 'abc' } },
+            })],
+        });
+
+        expect(summary).toContain(`| Status | ${status} |`);
+        expect(summary).toContain(`| Bugbot review | ${outcome}, effort=smart, 11ms |`);
+    });
 });

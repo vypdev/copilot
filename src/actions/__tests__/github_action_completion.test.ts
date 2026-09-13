@@ -228,6 +228,15 @@ describe('finishGithubAction', () => {
             success: true,
             executed: true,
             steps: ['Review completed'],
+            payload: {
+                bugbotTelemetry: {
+                    schemaVersion: 1,
+                    outcome: 'no-findings',
+                    elapsedMs: 12,
+                    configuredEffort: 'smart',
+                    headSha: 'abc1234',
+                },
+            },
         })];
 
         await finishGithubAction(
@@ -244,6 +253,33 @@ describe('finishGithubAction', () => {
             'test-repo',
             'github-actions-token',
         );
+    });
+
+    it('keeps metadata-only PR completion out of the stable Review Check', async () => {
+        const action = Object.assign(execution(), {
+            owner: 'test-owner',
+            repo: 'test-repo',
+            eventName: 'pull_request',
+            inputs: { pull_request: { head: { sha: 'abc1234' } } },
+        });
+        const results = [new Result({
+            id: 'UpdateTitleUseCase',
+            success: true,
+            executed: true,
+            steps: ['Title normalized'],
+        })];
+
+        await finishGithubAction(
+            action,
+            results,
+            {} as never,
+            {} as never,
+            { publish: mockEvidencePublish },
+            { publish: mockSummaryPublish },
+        );
+
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('UpdateTitleUseCase'));
+        expect(mockEvidencePublish).not.toHaveBeenCalled();
     });
 
     it('fails the action for unresolved findings only when the generic policy is enabled', async () => {

@@ -116,12 +116,16 @@
         ".github/workflows/copilot_pull_request_comment.yml"
       ],
       "entrypoints": [
-        "src/application/usecases/steps/commit/bugbot/reconcile_bugbot_review_state_use_case.ts"
+        "src/application/usecases/steps/commit/bugbot/reconcile_bugbot_review_state_use_case.ts",
+        "src/actions/github_action_completion.ts"
       ],
       "code": [
         "src/domain/bugbot/review_state.ts",
         "src/domain/bugbot/review_projection.ts",
         "src/application/policies/bugbot_reconciliation_policy.ts",
+        "src/application/policies/bugbot_telemetry_projection_policy.ts",
+        "src/application/policies/action_summary_policy.ts",
+        "src/application/policies/copilot_evidence_policy.ts",
         "src/application/usecases/steps/commit/bugbot/schema.ts",
         "src/application/usecases/steps/commit/bugbot/prepare_bugbot_findings_policy.ts",
         "src/application/usecases/steps/commit/bugbot/synchronize_bugbot_review_presentation_use_case.ts"
@@ -132,6 +136,10 @@
         "src/application/usecases/steps/commit/bugbot/__tests__/schema.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/prepare_bugbot_findings.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/reconcile_bugbot_review_state_integration.test.ts",
+        "src/application/policies/__tests__/bugbot_telemetry_projection_policy.test.ts",
+        "src/application/policies/__tests__/action_summary_policy.test.ts",
+        "src/application/policies/__tests__/copilot_evidence_policy.test.ts",
+        "src/actions/__tests__/github_action_completion.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts"
       ],
       "documentation": [
@@ -174,6 +182,9 @@
         "src/application/errors/application_error.ts",
         "src/application/errors/application_error_context.ts",
         "src/application/policies/application_error_presentation_policy.ts",
+        "src/application/policies/bugbot_telemetry_projection_policy.ts",
+        "src/application/policies/action_summary_policy.ts",
+        "src/application/policies/copilot_evidence_policy.ts",
         "src/application/policies/github_execution_admission_policy.ts",
         "src/application/policies/workflow_queue_policy.ts",
         "src/application/usecases/steps/commit/bugbot/bugbot_review_operation_context.ts",
@@ -197,6 +208,9 @@
         "src/actions/__tests__/github_action_completion.test.ts",
         "src/application/errors/__tests__/application_error.test.ts",
         "src/application/policies/__tests__/application_error_presentation_policy.test.ts",
+        "src/application/policies/__tests__/bugbot_telemetry_projection_policy.test.ts",
+        "src/application/policies/__tests__/action_summary_policy.test.ts",
+        "src/application/policies/__tests__/copilot_evidence_policy.test.ts",
         "src/architecture/__tests__/execution_import_ratchet.test.ts",
         "src/architecture/__tests__/raw_error_logging_boundaries.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_operation_context.test.ts",
@@ -241,6 +255,9 @@
         "src/application/errors/application_error.ts",
         "src/application/errors/application_error_context.ts",
         "src/application/policies/application_error_presentation_policy.ts",
+        "src/application/policies/bugbot_telemetry_projection_policy.ts",
+        "src/application/policies/action_summary_policy.ts",
+        "src/application/policies/copilot_evidence_policy.ts",
         "src/architecture/execution_import_baseline.json",
         "src/api.ts",
         "src/data/model/execution.ts",
@@ -263,6 +280,10 @@
         "src/__tests__/api.test.ts",
         "src/application/errors/__tests__/application_error.test.ts",
         "src/application/policies/__tests__/application_error_presentation_policy.test.ts",
+        "src/application/policies/__tests__/bugbot_telemetry_projection_policy.test.ts",
+        "src/application/policies/__tests__/action_summary_policy.test.ts",
+        "src/application/policies/__tests__/copilot_evidence_policy.test.ts",
+        "src/actions/__tests__/github_action_completion.test.ts",
         "src/architecture/__tests__/execution_import_ratchet.test.ts",
         "src/architecture/__tests__/raw_error_logging_boundaries.test.ts",
         "src/application/usecases/actions/__tests__/deployment_orchestration_use_case.test.ts",
@@ -480,6 +501,9 @@
         "src/domain/bugbot/review_configuration.ts",
         "src/application/policies/bounded_concurrency_policy.ts",
         "src/application/policies/bugbot_resolution_eligibility_policy.ts",
+        "src/application/policies/bugbot_telemetry_projection_policy.ts",
+        "src/application/policies/action_summary_policy.ts",
+        "src/application/policies/copilot_evidence_policy.ts",
         "src/application/ports/bugbot_git_ports.ts",
         "src/application/ports/bugbot_reconciliation_ports.ts",
         "src/application/ports/bugbot_scm_ports.ts",
@@ -512,6 +536,10 @@
         "src/infrastructure/composition/__tests__/bugbot_scm_port_factory.test.ts",
         "src/__tests__/api.test.ts",
         "src/domain/bugbot/__tests__/finding_identity.test.ts",
+        "src/application/policies/__tests__/bugbot_telemetry_projection_policy.test.ts",
+        "src/application/policies/__tests__/action_summary_policy.test.ts",
+        "src/application/policies/__tests__/copilot_evidence_policy.test.ts",
+        "src/actions/__tests__/github_action_completion.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts"
       ],
       "documentation": [

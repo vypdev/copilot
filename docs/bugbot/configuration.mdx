@@ -81,6 +81,13 @@ Commands are parsed without invoking a shell and unsafe shell operators are reje
 | `bugbot-fail-on-unresolved` | `false` | Makes the Action and its native Check fail for `open`, `reopened`, or `verification-required`. The default reports those actionable states neutrally; `unknown` and incomplete reconciliation always fail. |
 | `bugbot-organization-rules` | empty | Semicolon- or newline-separated organization rules applied before repository rules. Commas remain part of rule prose. |
 
+`Copilot / Review` is emitted only for a result carrying exactly one validated,
+current-schema Bugbot telemetry snapshot for the exact PR head. Complete no-finding reviews may succeed;
+bounded `partial`, `skipped`, and `superseded` outcomes are neutral. Metadata-only
+PR events retain their workflow check and Job Summary but cannot create a newer
+same-name Review Check. This evidence-ownership rule is a fixed correctness
+boundary, not a configurable setting.
+
 The same values are managed as Repository Variables by `copilot setup`. One review can override the safe subset without changing repository configuration:
 
 ```text

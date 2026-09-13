@@ -52765,20 +52765,30 @@ exports.buildActionSummary = buildActionSummary;
 const result_1 = __nccwpck_require__(73817);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const application_error_presentation_policy_1 = __nccwpck_require__(95067);
+const bugbot_telemetry_projection_policy_1 = __nccwpck_require__(43244);
 /** Builds a bounded, publication-safe GitHub Actions Job Summary. */
 function buildActionSummary(context) {
     const failures = context.results.filter(result => !result.success && result.executed);
     const findingStates = aggregateFindingStateCounts(context.results);
-    const bugbotTelemetry = context.results.map(result => getBugbotTelemetry(result.payload)).find(Boolean);
+    const bugbotTelemetry = (0, bugbot_telemetry_projection_policy_1.selectBugbotTelemetry)(context.results);
     const hasActionableFindings = (findingStates?.open ?? 0)
         + (findingStates?.reopened ?? 0)
         + (findingStates?.['verification-required'] ?? 0) > 0;
     const hasUnknownFindings = (findingStates?.unknown ?? 0) > 0;
-    const status = failures.length > 0 || hasUnknownFindings || (hasActionableFindings && context.failOnUnresolvedFindings)
+    const status = failures.length > 0 || hasUnknownFindings || bugbotTelemetry?.outcome === 'failed'
+        || (hasActionableFindings && context.failOnUnresolvedFindings)
         ? '❌ Failure'
         : hasActionableFindings
             ? '⚠️ Findings'
-            : '✅ Success';
+            : bugbotTelemetry?.outcome === 'partial'
+                ? '⚠️ Partial'
+                : bugbotTelemetry?.outcome === 'superseded'
+                    ? '⏭️ Superseded'
+                    : bugbotTelemetry?.outcome === 'skipped'
+                        ? '⏭️ Skipped'
+                        : bugbotTelemetry?.outcome === 'dry-run'
+                            ? '🧪 Dry run'
+                            : '✅ Success';
     const target = context.pullRequestNumber > 0
         ? `PR #${context.pullRequestNumber}`
         : context.issueNumber > 0
@@ -52809,16 +52819,6 @@ function buildActionSummary(context) {
         renderResults(context.results),
         '',
     ].join('\n');
-}
-function getBugbotTelemetry(value) {
-    const telemetry = (0, result_1.getResultPayload)((0, result_1.getResultPayload)(value)?.bugbotTelemetry);
-    if (!telemetry || typeof telemetry.outcome !== 'string' || typeof telemetry.elapsedMs !== 'number')
-        return undefined;
-    return {
-        outcome: telemetry.outcome,
-        elapsedMs: telemetry.elapsedMs,
-        configuredEffort: typeof telemetry.configuredEffort === 'string' ? telemetry.configuredEffort : 'default',
-    };
 }
 function formatBugbotTelemetry(telemetry) {
     return telemetry
@@ -54776,6 +54776,60 @@ function escapeRegExp(value) {
 
 /***/ }),
 
+/***/ 43244:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectBugbotTelemetry = projectBugbotTelemetry;
+exports.selectBugbotTelemetry = selectBugbotTelemetry;
+const result_1 = __nccwpck_require__(73817);
+const BUGBOT_REVIEW_OUTCOMES = [
+    'completed',
+    'no-findings',
+    'partial',
+    'dry-run',
+    'superseded',
+    'skipped',
+    'failed',
+];
+/** Projects only the trusted, content-free telemetry facts used by result presentation. */
+function projectBugbotTelemetry(value) {
+    const telemetry = (0, result_1.getResultPayload)((0, result_1.getResultPayload)(value)?.bugbotTelemetry);
+    if (!telemetry || telemetry.schemaVersion !== 1 || !isBugbotReviewOutcome(telemetry.outcome)
+        || typeof telemetry.elapsedMs !== 'number' || !Number.isFinite(telemetry.elapsedMs)) {
+        return undefined;
+    }
+    const configuredEffort = typeof telemetry.configuredEffort === 'string' && telemetry.configuredEffort.trim()
+        ? telemetry.configuredEffort.trim()
+        : 'default';
+    const headSha = typeof telemetry.headSha === 'string' && telemetry.headSha.trim()
+        ? telemetry.headSha.trim()
+        : undefined;
+    return {
+        schemaVersion: 1,
+        outcome: telemetry.outcome,
+        elapsedMs: Math.max(0, telemetry.elapsedMs),
+        configuredEffort,
+        ...(headSha ? { headSha } : {}),
+    };
+}
+/** Accepts exactly one semantic review snapshot; ambiguous result sets fail closed. */
+function selectBugbotTelemetry(results) {
+    const snapshots = results.flatMap((result) => {
+        const projected = projectBugbotTelemetry(result.payload);
+        return projected ? [projected] : [];
+    });
+    return snapshots.length === 1 ? snapshots[0] : undefined;
+}
+function isBugbotReviewOutcome(value) {
+    return typeof value === 'string' && BUGBOT_REVIEW_OUTCOMES.includes(value);
+}
+
+
+/***/ }),
+
 /***/ 27150:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -54865,10 +54919,17 @@ function shouldPersistConfiguration(execution) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildCopilotEvidence = buildCopilotEvidence;
 const result_1 = __nccwpck_require__(73817);
+const bugbot_telemetry_projection_policy_1 = __nccwpck_require__(43244);
 /** Creates a stable native Check Run projection without performing GitHub I/O. */
 function buildCopilotEvidence(context) {
     const headSha = context.headSha?.trim();
     if (!headSha)
+        return undefined;
+    const isReviewEvent = context.eventName.startsWith('pull_request');
+    const bugbotTelemetry = (0, bugbot_telemetry_projection_policy_1.selectBugbotTelemetry)(context.results);
+    if (isReviewEvent && (!bugbotTelemetry
+        || bugbotTelemetry.headSha?.toLowerCase() !== headSha.toLowerCase()
+        || bugbotTelemetry.outcome === 'dry-run'))
         return undefined;
     const failures = context.results.filter(result => !result.success && result.executed).length;
     const activeFindings = aggregateFindingStateCounts(context.results);
@@ -54876,12 +54937,23 @@ function buildCopilotEvidence(context) {
         + (activeFindings?.reopened ?? 0)
         + (activeFindings?.verificationRequired ?? 0) > 0;
     const hasUnknownFindings = (activeFindings?.unknown ?? 0) > 0;
-    const conclusion = failures > 0 || hasUnknownFindings || (hasActionableFindings && context.failOnUnresolvedFindings)
+    const incompleteReview = bugbotTelemetry?.outcome === 'partial'
+        || bugbotTelemetry?.outcome === 'superseded'
+        || bugbotTelemetry?.outcome === 'skipped';
+    const incompleteTitle = bugbotTelemetry?.outcome === 'partial'
+        ? 'Copilot review has partial coverage'
+        : bugbotTelemetry?.outcome === 'superseded'
+            ? 'Copilot review was superseded'
+            : bugbotTelemetry?.outcome === 'skipped'
+                ? 'Copilot review was skipped'
+                : undefined;
+    const conclusion = failures > 0 || hasUnknownFindings || bugbotTelemetry?.outcome === 'failed'
+        || (hasActionableFindings && context.failOnUnresolvedFindings)
         ? 'failure'
-        : context.results.length === 0 || hasActionableFindings
+        : context.results.length === 0 || hasActionableFindings || incompleteReview
             ? 'neutral'
             : 'success';
-    const name = context.eventName.startsWith('pull_request')
+    const name = isReviewEvent
         ? 'Copilot / Review'
         : ['issues', 'issue_comment', 'pull_request_review_comment'].includes(context.eventName)
             ? 'Copilot / Plan'
@@ -54894,9 +54966,9 @@ function buildCopilotEvidence(context) {
             ? 'Copilot found actionable findings'
             : conclusion === 'failure'
                 ? 'Copilot found actionable failures'
-                : conclusion === 'neutral'
+                : incompleteTitle ?? (conclusion === 'neutral'
                     ? 'Copilot review produced no actionable result'
-                    : 'Copilot completed successfully',
+                    : 'Copilot completed successfully'),
         summary: context.summary.slice(0, 20000),
     };
 }

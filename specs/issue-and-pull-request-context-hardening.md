@@ -1,6 +1,6 @@
 # Issue and Pull Request Capability Context Hardening
 
-- Status: Implemented
+- Status: Implemented; all local gates pass, final review-evidence correction pending controlled live verification
 - Date: 2026-09-13
 - Catalog capability ID: `architecture-quality-hardening`
 - Last verified: 2026-09-13 on `develop` (P2-E implementation validation)
@@ -32,7 +32,11 @@ URLs MUST never be fetched.
 PR metadata normalization MUST share the branch serialization boundary without
 preempting an active code review. A newer code-change or review event MAY cancel
 an obsolete review; `pull_request: edited` MUST wait and MUST NOT replace a real
-`synchronize` analysis with a green metadata-only run.
+`synchronize` analysis with a green metadata-only run. After it waits, the
+metadata-only run MUST publish its own workflow outcome and Job Summary without
+creating a newer same-name `Copilot / Review` Check. That Check name is reserved
+for a result carrying exactly one current-schema Bugbot review telemetry
+snapshot for the exact head.
 
 ```text
 validated issue/PR event
@@ -53,6 +57,7 @@ synchronize review starts
   -> edited event waits on the same branch key
   -> review finishes for the current head
   -> newest pending metadata event runs without agent analysis
+  -> metadata Job Summary updates; reviewed-head Check remains authoritative
 ```
 
 ## 2. Problem, current behavior, and evidence
@@ -126,6 +131,13 @@ misleading intermediate state.
   `34756384500`. The edit remained pending, the review completed successfully,
   and the edit ran afterward. Bot-authored follow-up events `34756389864` and
   `34756489001` were skipped by loop prevention as designed.
+- That live sequence exposed a second presentation defect on final head
+  `0e039ae9`: Bugbot run `34756692307` created review Check `103722773263` with
+  truthful `partial` telemetry, but later metadata-only run `34756981026`
+  created same-name Check `103722965203` with `Bugbot review: —`. GitHub's
+  latest-by-name PR view then hid the actual review evidence. The definitive
+  correction reserves `Copilot / Review` for telemetry-bearing review results
+  and maps bounded partial, skipped, or superseded review outcomes to neutral.
 - GitHub documents that closing keywords create issue links only when a PR
   targets the default branch, and its REST update endpoint permits changing the
   PR `body` and `base` with Pull Requests write permission.
@@ -177,6 +189,9 @@ Copilot-owned in-flight PR-link operation and never authorizes a command.
 8. A metadata-only PR edit MUST never cancel an active code-change review for
    the same head; the workflow contract and shipped setup template MUST enforce
    the same conditional concurrency rule.
+9. A PR lifecycle run without validated Bugbot telemetry MUST NOT publish a
+   `Copilot / Review` Check. Its workflow check and Job Summary remain the
+   evidence for metadata normalization.
 
 ### 4.2 Non-goals
 
@@ -210,6 +225,10 @@ Copilot-owned in-flight PR-link operation and never authorizes a command.
 8. Concurrency admission is fixed: code/review events cancel obsolete reviews,
    metadata edits serialize behind the active review, and only the newest
    pending edit needs to survive.
+9. `Copilot / Review` evidence is fixed: complete review/no-findings may be
+   successful; actionable findings and bounded partial/skipped/superseded review
+   outcomes are neutral unless a stricter existing policy fails; metadata-only
+   results publish no same-name Check.
 
 ## 5. Current versus proposed product journey
 
@@ -221,7 +240,8 @@ Copilot-owned in-flight PR-link operation and never authorizes a command.
 | PR linkage target | event URL is fetched | adapter derives exact GitHub target | no SSRF destination |
 | Link recovery | restore only on happy path | marker plus ordered compensation | rerunnable partial recovery |
 | PR description | aggregate plus separate explicit method | one `{ context, trigger }` request | one final contract |
-| PR event concurrency | every edit can cancel the active review | edits wait; code/review events cancel obsolete work | a green metadata run cannot hide a missed review |
+| PR event concurrency | every edit can cancel the active review | edits wait; code/review events cancel obsolete work | review work completes before metadata normalization |
+| PR review evidence | every PR result can create the same Check name | only telemetry-bearing review results create `Copilot / Review`; incomplete outcomes are neutral | metadata success cannot hide or impersonate reviewed-head evidence |
 | Evidence | global import ceiling only | exact zero-leaf rule plus P2-E coverage gate | erosion fails CI |
 
 ```mermaid
@@ -330,6 +350,15 @@ to the newest event. Application head guards remain mandatory.
 This rule is identical in the repository workflow and the shipped setup copy.
 It is not configurable because allowing metadata normalization to preempt code
 analysis creates a false-green review surface.
+
+Completion applies a second, independent guard. The pure evidence policy emits
+`Copilot / Review` only when the result set contains exactly one current-schema,
+structurally valid Bugbot telemetry snapshot. An edited/title-only or ambiguous
+run still writes its bounded Job Summary and
+normal workflow conclusion but does not create a newer Check with the review
+name. A bounded partial, skipped, or superseded review uses a neutral conclusion;
+only a complete reviewed outcome without blocking findings is successful. The
+policy does not read or merge an older Check, avoiding a stale read/write race.
 
 ## 7. User-facing configuration
 
@@ -531,18 +560,18 @@ raw provider diagnostics.
 
 ## 14. Testing strategy and numeric budget
 
-P2-E owns at least **48 distinct cases**. Existing characterization cases count
+P2-E owns at least **52 distinct cases**. Existing characterization cases count
 only after they are rewritten against the final requests and ports.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain/context/pure planning | 10 | issue/PR projections, deep copy/freeze, exact fields, branch patches, description trigger |
-| State/application/idempotency/races | 11 | issue/PR order, replay, branch patch apply-once, link recovery and compensation failures, metadata-during-review ordering |
+| State/application/idempotency/races | 12 | issue/PR order, replay, branch patch apply-once, link recovery and compensation failures, metadata-during-review ordering, latest-by-name evidence ownership |
 | Adapters/provider contracts | 8 | bound credential forwarding, exact PR target, malformed provider facts, error mapping |
-| Workflows/composition/schema | 9 | issue/PR composition, removed signatures, zero-leaf import rule, no cycles, active/setup conditional concurrency and negative unconditional-cancel fixture |
-| UI/UX/localization/sanitization | 4 | pending/action/blocked/partial/complete semantics, marker/body safety |
+| Workflows/composition/schema | 10 | issue/PR composition, removed signatures, zero-leaf import rule, no cycles, active/setup conditional concurrency, negative unconditional-cancel fixture, telemetry-bearing Check eligibility |
+| UI/UX/localization/sanitization | 6 | pending/action/blocked/partial/complete semantics, marker/body safety, neutral partial review and metadata-only non-impersonation |
 | Integration/security/migration | 6 | issue→branch, PR→issue→close, forged URL/marker, token absence, clean cut |
-| **Total** | **48** | No double counting |
+| **Total** | **52** | No double counting |
 
 Repository thresholds remain 90% lines/statements, 88% functions, and 82%
 branches. The combined changed P2-E context/workflow/binding path MUST reach at
@@ -566,7 +595,7 @@ not a substitute for deterministic tests.
 | PR author | `docs/pull-requests/capabilities.mdx` | exact linkage/recovery behavior and retained body/base | docs contract + examples |
 | Setup owner | `docs/pull-requests/configuration.mdx` | unchanged inputs; fixed non-configurable safety rules | input/default validator |
 | Operator | `docs/security-operations/operations/troubleshooting.mdx` | marker/base/body recovery decision tree | headings/link validation |
-| Workflow owner | `docs/pull-requests/workflow-setup.mdx`, `docs/bugbot/configuration.mdx` | branch key, conditional cancellation, expected queued/canceled states | workflow parser + docs contract |
+| Workflow owner | `docs/pull-requests/workflow-setup.mdx`, `docs/bugbot/configuration.mdx` | branch key, conditional cancellation, queued/canceled states, Review Check ownership | workflow/parser/evidence policy tests + docs contract |
 | Contributor | `docs/development/architecture.mdx`, `docs/dependency-rules.md` | contexts, bound ports, patch ownership, zero-leaf rule | architecture/Graphify gates |
 
 The parent architecture SDD, semantic error/context SDD, issue and PR lifecycle
@@ -610,6 +639,12 @@ SDDs, catalog metadata, generated catalog, and bundles are updated together.
     `synchronize` analysis is running, the edit waits, the analysis completes
     for the current head, and the newest metadata event runs afterward without
     invoking Bugbot analysis.
+18. Given the later metadata-only run completes, it publishes its own Job Summary
+    and workflow conclusion but no `Copilot / Review`, so the telemetry-bearing
+    review Check for the same head remains the latest authority by that name.
+19. Given Bugbot reports bounded `partial`, `skipped`, or `superseded` telemetry,
+    the Review Check is neutral and names that outcome; it never claims success
+    or whole-PR cleanliness.
 
 ## 17. Requirements traceability
 
@@ -623,6 +658,7 @@ SDDs, catalog metadata, generated catalog, and bundles are updated together.
 | clean cut and ceiling | AST ratchet, typecheck, generated bundles | zero-leaf/old-symbol negative fixtures | semantic context SDD |
 | UX/operations | semantic result strings and common publisher | state/retained-action assertions + manual review | PR and troubleshooting pages |
 | review-preserving concurrency | shared branch group + conditional cancellation | workflow validator, negative fixture, PR #363 live sequence | workflow setup, Bugbot configuration/how-it-works |
+| review evidence ownership | Bugbot telemetry projection + Copilot evidence policy | metadata-only negative, partial/complete/skipped policy cases, action-completion integration, PR #363 latest-by-name sequence | workflow setup, Bugbot detection/how-it-works, troubleshooting |
 
 ## 18. Implementation sequence
 
@@ -636,9 +672,11 @@ SDDs, catalog metadata, generated catalog, and bundles are updated together.
 6. Delete aggregate/token/dual-entry paths and shrink the exact import baseline.
 7. Protect code-review runs from metadata edit preemption in both PR workflow
    copies and the semantic workflow validator.
-8. Update public/architecture/operator docs, SDDs, catalog, coverage gate, and
+8. Reserve the native Review Check for telemetry-bearing analysis and map
+   incomplete review outcomes to neutral; prove metadata-only non-publication.
+9. Update public/architecture/operator docs, SDDs, catalog, coverage gate, and
    generated bundles.
-9. Run focused tests, typecheck, lint, full coverage, architecture/cycle,
+10. Run focused tests, typecheck, lint, full coverage, architecture/cycle,
    workflow, docs/spec, build/package, patch coverage, Graphify, and clean-tree
    metrics; then review generated diffs and GitHub UX.
 
@@ -656,10 +694,12 @@ SDDs, catalog metadata, generated catalog, and bundles are updated together.
       cleanup pass every failure-edge test.
 - [x] The single description request preserves all four modes and removed
       methods fail compilation/search.
-- [x] The 48-case budget, global coverage, P2-E 95/90 coverage, pure-policy
+- [x] The 52-case budget, global coverage, P2-E 95/90 coverage, pure-policy
       branch coverage, architecture, cycle, workflow, and security gates pass.
 - [x] Metadata edits cannot cancel an active branch review; repository/setup
       workflows and negative contract fixtures enforce the conditional rule.
+- [x] Metadata-only runs cannot publish `Copilot / Review`; bounded partial,
+      skipped, and superseded review evidence is neutral and remains visible.
 - [x] User/setup/operator/contributor docs, related SDDs, catalog, generated
       catalog, API/action bundles, and package validation agree.
 - [x] `graphify update .` and final clean-tree architecture metrics record no
@@ -689,6 +729,10 @@ SDDs, catalog metadata, generated catalog, and bundles are updated together.
   preemption for `pull_request: edited`; rejected unconditional cancellation
   because PR #363 proved it can hide a missed review, and rejected parallel
   metadata/review lanes because both can mutate the same PR surfaces.
+- Decision: reserve `Copilot / Review` for structurally valid Bugbot telemetry
+  and skip metadata-only evidence instead of reading/merging prior Checks;
+  rejected a second metadata Check with the same name and a provider read/write
+  merge because both retain latest-by-name ambiguity or introduce stale races.
 - Provider reference: [GitHub Actions workflow concurrency](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#concurrency).
 - Follow-up outside P2-E: P2-F removes the remaining push/single-action leaf
   aggregate inputs; P2-G performs the final exact 16-file audit.

@@ -164,6 +164,11 @@ default, while the Job Summary still contains the complete bounded state
 counts. Set `bugbot-fail-on-unresolved: true` only when the repository
 intentionally wants findings to fail both the Check and Action invocation as a
 branch-protection gate. `unknown`, incomplete synchronization, and analysis failures remain failures in either policy.
+Bounded `partial` context, skipped draft review, and superseded review use a
+neutral Check conclusion and never claim a complete clean result. A PR metadata
+run without validated Bugbot telemetry publishes no `Copilot / Review`; its
+workflow result and Job Summary remain visible without hiding the latest
+analysis Check for that head.
 
 At most 20 stale historical review blocks are repaired in one run. If more remain, the status card and Check show the exact pending count and `/copilot recheck` continues the idempotent repair. Duplicate trusted status cards are not deleted: the oldest becomes canonical and later copies are converted to redirects.
 
@@ -185,7 +190,8 @@ applicable bounded source finished without reaching a fixed cap. `partial`
 means the run retained a deterministic subset—for example the newest 200
 comments, newest 200 thread records, or first 1,000 diff files. Partial analysis
 may still report findings supported by retained evidence, but it never says the
-whole PR is clean and never resolves a prior finding omitted from the prompt.
+whole PR is clean, never resolves a prior finding omitted from the prompt, and
+never receives a successful Review Check conclusion.
 
 A GitHub read error is not partial context: the run fails before agent analysis
 or finding mutation. For a cap, inspect the named omitted source, split an

@@ -78,6 +78,10 @@ jobs:
   review event cancels an obsolete analysis, while a metadata-only `edited`
   event waits instead of canceling the active Bugbot review. If several edits
   arrive while it waits, GitHub retains only the newest pending edit.
+- The queued metadata run keeps its own workflow result and Job Summary but does
+  not publish `Copilot / Review`. Only a result with exactly one validated,
+  current-schema Bugbot telemetry snapshot for the exact head owns that Check name; partial, skipped, and superseded
+  reviews are neutral rather than successful.
 
 
 ## What runs when

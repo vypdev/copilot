@@ -1,11 +1,12 @@
 # Execution Admission, Queueing, Routing, and Result Publication
 
-- Status: As-built baseline
+- Status: As-built baseline with implemented review-evidence ownership hardening
 - Date: 2026-09-11
 - Owners: Copilot maintainers
 - Scope: the shared GitHub Action lifecycle from an incoming event to visible results and persisted execution state
 - Related issues/PRs: architecture quality and scalability hardening SDD;
-  historic motivation not recoverable from repository evidence
+  [PR #363](https://github.com/vypdev/copilot/pull/363); historic motivation
+  before that live evidence is not recoverable from repository evidence
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none for the baseline; see known debt and limitations
 
@@ -15,6 +16,10 @@ Copilot admits an event before expensive setup, serializes mutation-capable runs
 per workflow, resolves one application route, and publishes a bounded result to
 the relevant GitHub conversation and Job Summary. A run created by the account
 behind the workflow PAT is ignored unless it is an explicit valid single action.
+The native `Copilot / Review` name is reserved for results carrying exactly one
+current-schema Bugbot telemetry snapshot for the exact head. Metadata-only or
+ambiguous PR runs retain their workflow
+result and Job Summary without impersonating or hiding review evidence.
 
 ```text
 GitHub event -> actor admission -> queue -> execution setup -> one route
@@ -45,7 +50,9 @@ create inconsistent authorization and failure behavior.
    selects exactly one of issue, issue-comment, PR, review-comment, push, or
    single-action.
 6. Results reconcile lifecycle/activity labels and are published to the target,
-   Job Summary, optional Check Run, and configuration marker as applicable.
+   Job Summary, optional semantic Check Run, and configuration marker as
+   applicable. A PR result without exact-head Bugbot telemetry publishes no
+   `Copilot / Review` Check.
 7. The first executed result error, an unknown Bugbot state, or configured
    unresolved findings marks the Action failed.
 
@@ -91,6 +98,8 @@ presentation adapters decide where that fact appears.
 1. Every accepted event MUST resolve to at most one top-level route.
 2. Mutation-capable workflow runs MUST wait for older active runs or fail.
 3. Results MUST remain understandable without raw logs.
+4. A named native Check MUST represent only its semantic capability; a metadata
+   result MUST NOT supersede a same-head review in GitHub's latest-by-name view.
 
 ### 4.2 Non-goals
 
@@ -103,6 +112,8 @@ presentation adapters decide where that fact appears.
 2. Invalid or missing workflow identity MUST NOT bypass queueing.
 3. Provider diagnostics and secrets MUST NOT be copied verbatim to comments.
 4. A failed result MUST NOT be converted to a successful process exit.
+5. Bounded partial, skipped, and superseded Bugbot review outcomes MUST be
+   neutral; metadata-only PR completion MUST publish no Review Check.
 
 ## 5. Current versus proposed product journey
 
@@ -112,8 +123,12 @@ presentation adapters decide where that fact appears.
 | Queue | implementation detail | fail-closed workflow gate | mutations do not overlap |
 | Routing | spread across handlers | one route policy | predictable ownership |
 | Completion | comments only were assumed | comment + summary + optional check + state | evidence is inspectable |
+| Review evidence | every PR completion could reuse the Review name | exact-head telemetry owns Review; metadata keeps workflow/summary only | latest-by-name remains truthful |
 
-No runtime behavior change is proposed by this retrospective SDD.
+The baseline is retrospective except for the implemented semantic ownership
+hardening described here: Review Check publication now requires exactly one
+current-schema, exact-head Bugbot telemetry snapshot and incomplete outcomes are
+neutral.
 
 ## 6. Functional behavior and state model
 
@@ -130,6 +145,8 @@ No runtime behavior change is proposed by this retrospective SDD.
 - A valid single action can run when actor and PAT user match.
 - Events with no resolvable issue may run only issue-free single actions.
 - Dry-run Bugbot results skip comments, state persistence, and checks.
+- Metadata-only PR results publish their native workflow result and Job Summary
+  but no `Copilot / Review`; no previous Check read/merge is performed.
 
 ### 6.3 State machine
 
@@ -197,6 +214,8 @@ Action required: **Configuration could not be loaded.** Repair the PAT or inputs
 Blocked: **Queue identity is unavailable.** No repository mutation started.
 Partial: **Work completed; optional Check Run could not be published.** Inspect the Job Summary.
 Complete: **Copilot execution succeeded.** Results and lifecycle state are up to date.
+Review partial: **Bugbot reviewed bounded evidence but cannot declare the whole PR clean.** The Review Check is neutral.
+Metadata only: **PR metadata normalization completed.** See this workflow summary; the analyzed Review Check is unchanged.
 ```
 
 There SHOULD be at most one generic result comment per invocation. Stable
@@ -232,6 +251,9 @@ The Action emits bounded logs, application results, a Job Summary, the
 event, target, lifecycle, result counts, and sanitized failures provide
 correlation. Queue polling logs count and next delay without leaking responses.
 Repeated unchanged state SHOULD not generate repeated discussion comments.
+The shared telemetry projection is the only parser used by Job Summary and
+native evidence. Missing/mismatched telemetry is observable as absence of a
+Review Check, never as `Bugbot review: —` in a newer same-name Check.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
@@ -251,9 +273,9 @@ inspectable provider facts.
 | Setup/state/idempotency/races | 12 | restored state, no issue, queue timeout |
 | Adapters/error mapping | 8 | pagination, provider errors, timers |
 | Workflow/setup contracts | 8 | queue gate, permissions, timeouts |
-| Publication/UX/sanitization | 12 | targets, dry run, summary, errors, links |
+| Publication/UX/sanitization | 16 | targets, dry run, summary, errors, links, exact-head review eligibility, metadata-only omission, incomplete neutral matrix |
 | Integration/security/cutover | 8 | end-to-end routes, secrets, removed-shape rejection |
-| **Total** | **62** | no double counting |
+| **Total** | **66** | no double counting |
 
 Repository thresholds (90% lines/statements, 88% functions, 82% branches)
 remain mandatory; changed pure policies SHOULD reach 95% branch coverage.
@@ -281,6 +303,10 @@ light/dark, and screen-reader order.
    reports partial evidence without claiming core failure.
 7. Given untrusted output, published Markdown contains no executable/secret content.
 8. Given a catalog/spec change, CI validates registered evidence and this contract.
+9. Given a metadata-only PR result, the Job Summary is published and no
+   `Copilot / Review` evidence call occurs.
+10. Given exact-head Bugbot telemetry, complete/no-findings may succeed;
+    partial/skipped/superseded are neutral; failed remains failure.
 
 ## 17. Requirements traceability
 
@@ -290,6 +316,7 @@ light/dark, and screen-reader order.
 | serialization | queue policy/use case/adapters | queue + workflow tests | troubleshooting |
 | one route | route policy/dispatcher | route tests | architecture |
 | safe publication | completion/presentation policies | completion tests | overview |
+| semantic Check ownership | telemetry projection + evidence policy | outcome matrix + metadata-only integration | Bugbot detection, workflow setup, troubleshooting |
 | dependency direction | architecture tests | boundary/cycle suites | architecture |
 
 ## 18. Maintenance sequence
@@ -302,13 +329,13 @@ light/dark, and screen-reader order.
 
 ## 19. Definition of Done
 
-- [ ] Normative changes have acceptance and traceability.
-- [ ] Architecture, workflow, catalog, and cycle checks pass.
-- [ ] The 62-case risk budget and repository coverage gates pass.
-- [ ] Queue, retry, cancellation, partial success, and idempotency are covered.
-- [ ] UI states, sanitization, accessibility, localization, and noise are reviewed.
-- [ ] User/operator/contributor documentation and catalog dates are current.
-- [ ] No secret or raw provider diagnostic reaches a public surface.
+- [x] Normative changes have acceptance and traceability.
+- [x] Architecture, workflow, catalog, and cycle checks pass.
+- [x] The 66-case risk budget and repository coverage gates pass.
+- [x] Queue, retry, cancellation, partial success, and idempotency are covered.
+- [x] UI states, sanitization, accessibility, localization, and noise are reviewed.
+- [x] User/operator/contributor documentation and catalog dates are current.
+- [x] No secret or raw provider diagnostic reaches a public surface.
 
 ## 20. References and decisions
 
@@ -318,4 +345,7 @@ light/dark, and screen-reader order.
   error boundary and `Execution` context replacement; the architecture hardening
   SDD owns shared sequencing and verification gates.
 - Decision: retain one shared lifecycle and semantic ports; reject route logic in YAML.
+- Decision: omit Review evidence for metadata-only PR runs; reject reading and
+  merging a previous Check because it adds a stale provider race and preserves
+  semantic impersonation.
 - Follow-up outside scope: durable event storage beyond issue configuration markers.
