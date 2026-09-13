@@ -130,11 +130,6 @@ function isNonNegativeCount(value) {
   return Number.isSafeInteger(value) && value >= 0;
 }
 
-function expectedPercentage(covered, total) {
-  if (total === 0) return 100;
-  return Math.floor((covered / total) * 10_000) / 100;
-}
-
 function hasValidCoverageCounts(value) {
   return isNonNegativeCount(value.covered)
     && isNonNegativeCount(value.total)
@@ -144,8 +139,7 @@ function hasValidCoverageCounts(value) {
 function hasValidCoveragePercentage(value) {
   return Number.isFinite(value.pct)
     && value.pct >= 0
-    && value.pct <= 100
-    && value.pct === expectedPercentage(value.covered, value.total);
+    && value.pct <= 100;
 }
 
 function isValidCoverageMetric(value) {
@@ -177,7 +171,11 @@ function percentage(metricEntries) {
     { covered: 0, total: 0 },
   );
   if (total.total === 0) throw new Error('Aggregate coverage metric has no measurable total.');
-  return (total.covered / total.total) * 100;
+  return metricPercentage(total);
+}
+
+function metricPercentage(metric) {
+  return metric.total === 0 ? 100 : (metric.covered / metric.total) * 100;
 }
 
 function aggregateFailures(rule, files, entries) {
@@ -190,7 +188,7 @@ function aggregateFailures(rule, files, entries) {
 
 function eachFileFailures(rule, files, entries) {
   return files.flatMap(file => Object.entries(rule.thresholds).flatMap(([metric, minimum]) => {
-    const actual = entries.get(file)[metric].pct;
+    const actual = metricPercentage(entries.get(file)[metric]);
     return actual < minimum ? [`${file} ${metric} ${actual}% < ${minimum}%`] : [];
   }));
 }

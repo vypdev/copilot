@@ -166,7 +166,6 @@ describe('coverage budget validator', () => {
         ['non-finite percentage', { covered: 1, pct: Number.NaN, total: 1 }],
         ['negative percentage', { covered: 0, pct: -1, total: 1 }],
         ['percentage above 100', { covered: 1, pct: 101, total: 1 }],
-        ['percentage inconsistent with counts', { covered: 0, pct: 100, total: 1 }],
         ['missing metric', undefined],
     ])('rejects malformed coverage metrics before threshold evaluation: %s', (_case, lines) => {
         const invalid = { ...coverage(100), lines } as unknown as FileCoverage;
@@ -179,6 +178,57 @@ describe('coverage budget validator', () => {
                 thresholds: { lines: 95 },
             }),
         )).toThrow('Coverage entry for src/invalid.ts has an invalid lines metric.');
+    });
+
+    it('uses authoritative counts instead of a forged per-file percentage', () => {
+        const forged = {
+            ...coverage(100),
+            lines: { covered: 0, pct: 100, total: 1 },
+        };
+
+        expect(coverageBudgetFailures(
+            summary({ 'src/forged.ts': forged }),
+            '/repo',
+            fixtureConfiguration({
+                files: ['src/forged.ts'],
+                mode: 'each',
+                thresholds: { lines: 95 },
+            }),
+        )).toEqual(['src/forged.ts lines 0% < 95%']);
+    });
+
+    it('accepts valid alternate percentage precision while evaluating counts', () => {
+        const alternatePrecision = {
+            ...coverage(100),
+            lines: { covered: 1, pct: 33.333, total: 3 },
+        };
+
+        expect(coverageBudgetFailures(
+            summary({ 'src/thirds.ts': alternatePrecision }),
+            '/repo',
+            fixtureConfiguration({
+                files: ['src/thirds.ts'],
+                mode: 'each',
+                thresholds: { lines: 30 },
+            }),
+        )).toEqual([]);
+    });
+
+    it('treats one denominator-free per-file metric as vacuously covered on a measurable file', () => {
+        const branchless: FileCoverage = {
+            ...coverage(100),
+            branches: metric(0, 0),
+        };
+
+        expect(coverageBudgetFailures(
+            summary({ 'src/branchless.ts': branchless }),
+            '/repo',
+            fixtureConfiguration({
+                files: ['src/branchless.ts'],
+                mode: 'each',
+                thresholds: { branches: 100, lines: 95 },
+            }),
+        )).toEqual([]);
     });
 
     it('rejects an aggregate metric with no denominator on otherwise measurable files', () => {
