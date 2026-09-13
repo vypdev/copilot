@@ -123,6 +123,19 @@ describe('action summary policy', () => {
         expect(summary).toContain('| Finding states | invalid |');
     });
 
+    it('fails closed when a completed review omits required finding-state evidence', () => {
+        const summary = buildActionSummary({
+            owner: 'owner', repository: 'repo', eventName: 'pull_request', issueNumber: -1, pullRequestNumber: 12,
+            results: [new Result({
+                id: 'review', success: true, executed: true,
+                payload: { bugbotTelemetry: { schemaVersion: 1, outcome: 'completed', elapsedMs: 11, configuredEffort: 'smart', headSha: 'abc' } },
+            })],
+        });
+
+        expect(summary).toContain('| Status | ❌ Failure |');
+        expect(summary).toContain('| Finding states | invalid |');
+    });
+
     it.each([
         ['partial', '⚠️ Partial'],
         ['superseded', '⏭️ Superseded'],
@@ -130,6 +143,7 @@ describe('action summary policy', () => {
         ['dry-run', '🧪 Dry run'],
         ['failed', '❌ Failure'],
     ])('renders the semantic %s Bugbot outcome without claiming generic success', (outcome, status) => {
+        const requiresFindingStates = ['partial', 'dry-run'].includes(outcome);
         const summary = buildActionSummary({
             owner: 'owner',
             repository: 'repo',
@@ -140,7 +154,10 @@ describe('action summary policy', () => {
                 id: 'Review',
                 success: true,
                 executed: true,
-                payload: { bugbotTelemetry: { schemaVersion: 1, outcome, elapsedMs: 11, configuredEffort: 'smart', headSha: 'abc' } },
+                payload: {
+                    bugbotTelemetry: { schemaVersion: 1, outcome, elapsedMs: 11, configuredEffort: 'smart', headSha: 'abc' },
+                    ...(requiresFindingStates ? { findingStates: findingStates() } : {}),
+                },
             })],
         });
 

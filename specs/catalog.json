@@ -153,6 +153,7 @@
         "docs/bugbot/detection.mdx",
         "docs/bugbot/finding-publication.mdx",
         "docs/bugbot/quality-observability.mdx",
+        "docs/bugbot/failure-scenarios.mdx",
         "docs/bugbot/configuration.mdx",
         "docs/bugbot/how-it-works.mdx",
         "docs/pull-requests/workflow-setup.mdx"
@@ -240,6 +241,8 @@
         "docs/bugbot/programmatic-api.mdx",
         "docs/security-operations/operations/error-reference.mdx",
         "docs/security-operations/operations/troubleshooting.mdx",
+        "docs/bugbot/quality-observability.mdx",
+        "docs/bugbot/failure-scenarios.mdx",
         "docs/development/architecture.mdx"
       ]
     },

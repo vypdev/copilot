@@ -125,15 +125,20 @@ describe('buildCopilotEvidence', () => {
     });
 
     it.each([
-        ['partial', 'Copilot review has partial coverage'],
-        ['superseded', 'Copilot review was superseded'],
-        ['skipped', 'Copilot review was skipped'],
-    ])('publishes %s review evidence as neutral', (outcome, title) => {
+        ['partial', 'Copilot review has partial coverage', findingStates()],
+        ['superseded', 'Copilot review was superseded', undefined],
+        ['skipped', 'Copilot review was skipped', undefined],
+    ])('publishes %s review evidence as neutral', (outcome, title, states) => {
         expect(buildCopilotEvidence({
             eventName: 'pull_request',
             headSha: 'sha-123',
             summary: 'summary',
-            results: [new Result({ id: 'review', success: true, executed: true, payload: telemetry(outcome) })],
+            results: [new Result({
+                id: 'review',
+                success: true,
+                executed: true,
+                payload: { ...telemetry(outcome), ...(states ? { findingStates: states } : {}) },
+            })],
         })).toMatchObject({ name: 'Copilot / Review', conclusion: 'neutral', title });
     });
 
@@ -145,9 +150,29 @@ describe('buildCopilotEvidence', () => {
             eventName: 'pull_request',
             headSha: 'sha-123',
             summary: 'summary',
-            results: [new Result({ id: 'review', success: true, executed: true, payload: telemetry(outcome) })],
+            results: [new Result({
+                id: 'review',
+                success: true,
+                executed: true,
+                payload: {
+                    ...telemetry(outcome),
+                    ...(outcome === 'no-findings' ? { findingStates: findingStates() } : {}),
+                },
+            })],
         })).toMatchObject({ conclusion, title });
     });
+
+    it.each(['completed', 'no-findings', 'partial'])(
+        'fails closed when exact-head %s telemetry omits finding-state evidence',
+        (outcome) => {
+            expect(buildCopilotEvidence({
+                eventName: 'pull_request',
+                headSha: 'sha-123',
+                summary: 'summary',
+                results: [new Result({ id: 'review', success: true, executed: true, payload: telemetry(outcome) })],
+            })).toMatchObject({ conclusion: 'failure', title: 'Copilot found actionable failures' });
+        },
+    );
 
     it('keeps non-review evidence independent from Bugbot telemetry', () => {
         expect(buildCopilotEvidence({

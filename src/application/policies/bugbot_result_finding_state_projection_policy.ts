@@ -4,8 +4,15 @@ import {
     countBugbotFindingStates,
     type BugbotFindingStateCounts,
 } from '../../domain/bugbot/review_state';
+import { projectBugbotTelemetry } from './bugbot_telemetry_projection_policy';
 
 const BUGBOT_FINDING_STATE_SET = new Set<string>(BUGBOT_FINDING_STATES);
+const OUTCOMES_REQUIRING_FINDING_STATES = new Set([
+    'completed',
+    'no-findings',
+    'partial',
+    'dry-run',
+]);
 
 export type BugbotResultFindingStateProjection =
     | { readonly status: 'absent' }
@@ -22,7 +29,10 @@ export function projectBugbotResultFindingStates(
 ): BugbotResultFindingStateProjection {
     const aggregate = countBugbotFindingStates([]);
     let found = false;
+    let required = false;
     for (const result of results) {
+        const telemetry = projectBugbotTelemetry(result.payload);
+        required ||= telemetry !== undefined && OUTCOMES_REQUIRING_FINDING_STATES.has(telemetry.outcome);
         const projected = projectResultFindingStates(result.payload);
         if (projected.status === 'invalid') return projected;
         if (projected.status === 'absent') continue;
@@ -33,6 +43,7 @@ export function projectBugbotResultFindingStates(
             aggregate[state] = total;
         }
     }
+    if (required && !found) return { status: 'invalid' };
     return found ? { status: 'valid', counts: Object.freeze(aggregate) } : { status: 'absent' };
 }
 

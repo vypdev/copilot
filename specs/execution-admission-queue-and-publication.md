@@ -263,9 +263,12 @@ malformed siblings cannot be discarded before cardinality is checked.
 Missing/mismatched/ambiguous telemetry is observable as absence of a Review
 Check, never as `Bugbot review: —` in a newer same-name Check. A second shared
 pure projection validates and aggregates complete canonical finding-state
-counts for Action exit, lifecycle, status, Job Summary, and Check. Invalid
-evidence fails or blocks every current-state surface and is rendered as
-`invalid`, never as zero findings.
+counts for Action exit, lifecycle, status, Job Summary, and Check. Valid
+`completed`, `no-findings`, `partial`, and `dry-run` telemetry requires that
+aggregate; omitting it is invalid. Metadata-only, `skipped`, `superseded`, and
+`failed` results may keep it absent because they cannot claim a clean review.
+Invalid evidence fails or blocks every current-state surface and is rendered
+as `invalid`, never as zero findings.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
@@ -285,7 +288,7 @@ inspectable provider facts.
 | Setup/state/idempotency/races | 12 | restored state, no issue, queue timeout |
 | Adapters/error mapping | 8 | pagination, provider errors, timers |
 | Workflow/setup contracts | 8 | queue gate, permissions, timeouts |
-| Publication/UX/sanitization | 20 | targets, dry run, summary, errors, links, exact-head review eligibility, metadata-only omission, malformed-sibling telemetry, canonical finding-state projection, invalid status and incomplete neutral matrix |
+| Publication/UX/sanitization | 20 | targets, dry run, summary, errors, links, exact-head review eligibility, metadata-only omission, malformed-sibling telemetry, required finding-state evidence, canonical projection, invalid status and incomplete neutral matrix |
 | Integration/security/cutover | 8 | end-to-end routes, secrets, removed-shape rejection |
 | **Total** | **70** | no double counting |
 
@@ -326,6 +329,10 @@ light/dark, and screen-reader order.
 13. Given a missing state, extra state, invalid count, or aggregate overflow,
     the Action and eligible Check fail, lifecycle blocks, summaries say
     `invalid`, and no surface invents a clean state.
+14. Given a valid finding-evaluating review outcome with no `findingStates`
+    aggregate, the shared projection is invalid across Action completion,
+    lifecycle, status, Summary, and eligible Check evidence; metadata-only and
+    skipped/superseded/failed results retain a deliberate absent state.
 
 ## 17. Requirements traceability
 
@@ -336,7 +343,7 @@ light/dark, and screen-reader order.
 | one route | route policy/dispatcher | route tests | architecture |
 | safe publication | completion/presentation policies | completion tests | overview |
 | semantic Check ownership | telemetry projection + evidence policy | outcome matrix + metadata-only and malformed-sibling negatives | Bugbot detection, workflow setup, troubleshooting |
-| canonical finding-state evidence | result-state projection + completion/lifecycle/status/summary/Check policies | strict schema, aggregation, overflow, fail-closed, and rendering tests | Bugbot detection, observability, failure scenarios, comment commands |
+| canonical finding-state evidence | result-state projection + completion/lifecycle/status/summary/Check policies | strict schema, required-outcome absence, aggregation, overflow, fail-closed, and rendering tests | Bugbot detection, observability, failure scenarios, comment commands |
 | dependency direction | architecture tests | boundary/cycle suites | architecture |
 
 ## 18. Maintenance sequence

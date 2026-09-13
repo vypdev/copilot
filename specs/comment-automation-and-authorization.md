@@ -340,7 +340,8 @@ English/non-English requests.
     canonical PR diff; issue-only setup is not invoked.
 13. `/copilot status` renders open, reopened, verification-required, unknown,
     and resolved counts from the canonical result projection; malformed owned
-    evidence produces an `invalid` recovery message and never a clean count.
+    or required-but-absent review evidence produces an `invalid` recovery
+    message and never a clean count.
 
 ## 17. Requirements traceability
 

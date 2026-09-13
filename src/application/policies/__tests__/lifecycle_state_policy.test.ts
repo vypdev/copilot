@@ -77,6 +77,16 @@ describe('lifecycle state policy', () => {
         })).toBe('blocked');
     });
 
+    it('blocks a PR when completed review telemetry omits finding-state evidence', () => {
+        expect(resolveLifecycleState({
+            eventName: 'pull_request', action: 'synchronize', isIssue: false, isPullRequest: true,
+            issueOpened: false, issueDescriptionEdited: false, pullRequestMerged: false, pullRequestClosed: false,
+            results: [{ ...result('DetectPotentialProblemsUseCase'), payload: {
+                bugbotTelemetry: { schemaVersion: 1, outcome: 'completed', elapsedMs: 10, configuredEffort: 'smart', headSha: 'sha-123' },
+            } }],
+        })).toBe('blocked');
+    });
+
     it('uses external review and check evidence without changing the safe fallback', () => {
         const base = {
             eventName: 'pull_request_review',

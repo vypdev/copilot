@@ -236,6 +236,7 @@ describe('finishGithubAction', () => {
                     configuredEffort: 'smart',
                     headSha: 'abc1234',
                 },
+                findingStates: completeFindingStates(),
             },
         })];
 
@@ -341,6 +342,27 @@ describe('finishGithubAction', () => {
         });
 
         await finishGithubAction(execution(), [malformed], {} as never, {} as never);
+
+        expect(core.setFailed).toHaveBeenCalledWith('Bugbot finding-state evidence is malformed.');
+    });
+
+    it('fails closed when review telemetry requires but omits finding-state evidence', async () => {
+        const missing = new Result({
+            id: 'DetectPotentialProblemsUseCase',
+            success: true,
+            executed: true,
+            payload: {
+                bugbotTelemetry: {
+                    schemaVersion: 1,
+                    outcome: 'no-findings',
+                    elapsedMs: 10,
+                    configuredEffort: 'smart',
+                    headSha: 'abc1234',
+                },
+            },
+        });
+
+        await finishGithubAction(execution(), [missing], {} as never, {} as never);
 
         expect(core.setFailed).toHaveBeenCalledWith('Bugbot finding-state evidence is malformed.');
     });

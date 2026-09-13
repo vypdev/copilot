@@ -191,6 +191,15 @@ parsers for Result `findingStates`; they are replaced by one strict canonical
 projection shared by Action exit, lifecycle, `/copilot status`, Job Summary,
 and Check evidence.
 
+Follow-up review `5190965601` exposed a separate absence ambiguity: a valid
+current-head `completed`, `no-findings`, or `partial` snapshot could omit the
+entire `findingStates` field, leaving the Check policy free to interpret absent
+evidence as zero findings. The canonical projection now treats state evidence
+as required for every outcome that evaluates findings (`completed`,
+`no-findings`, `partial`, and `dry-run`). Absence remains valid only for
+metadata-only results and terminal outcomes that cannot claim a clean analysis
+(`skipped`, `superseded`, and `failed`).
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |
@@ -587,9 +596,11 @@ The orchestration is decomposed without creating a second pipeline:
   used by Job Summary and native evidence. It checks owned-snapshot cardinality
   before validation, so malformed siblings cannot disappear.
 - A shared pure finding-state projection validates and aggregates the complete
-  canonical seven-state Result shape. Action exit, lifecycle state, status
-  command, Job Summary, and native evidence consume only this projection;
-  none keeps a private compatibility parser.
+  canonical seven-state Result shape. Outcomes that evaluate findings
+  (`completed`, `no-findings`, `partial`, and `dry-run`) require that evidence;
+  omission is invalid, not an empty aggregate. Action exit, lifecycle state,
+  status command, Job Summary, and native evidence consume only this
+  projection; none keeps a private compatibility parser.
 - The native evidence policy returns no `Copilot / Review` for a PR result set
   without that telemetry. It maps `partial`, `skipped`, and `superseded` to
   neutral, while failures/unknown state and configured actionable findings keep
@@ -1050,12 +1061,12 @@ counted across rows.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain lifecycle, transition planning, and projection | 31 | every state, resolver precedence, fixed/obsolete/dismissed/reopened, per-destination projection, conservative cross-destination fold, canonical result shape, invalid numeric bounds, overflow, aggregate counts, deterministic digests |
+| Domain lifecycle, transition planning, and projection | 31 | every state, resolver precedence, fixed/obsolete/dismissed/reopened, per-destination projection, conservative cross-destination fold, canonical result shape, required-outcome absence, invalid numeric bounds, overflow, aggregate counts, deterministic digests |
 | Application ordering, idempotency, replay, cancellation, and races | 35 | active-before-resolution, mutation head guards, double snapshot head guard, read-after-write, per-surface completeness, missing durable evidence, resolved omission, duplicate same-head, newer-head supersession, partial mutations, retry convergence, PR close/reopen, metadata-during-review ordering |
 | Adapters and provider error mapping | 18 | pagination, parent review id/URL, resolver identity, create/update review, status-card upsert, 401/403/404/409/422, malformed response, rate limit |
 | Workflow, composition, public API, and schema contracts | 13 | shared concurrency key, conditional metadata non-preemption in active/setup copies, malformed-sibling telemetry cardinality, negative unconditional-cancel fixture, bot guard, permissions, trigger contract, strict finding/resolution schema, composition wiring, API declarations, package exports |
-| UI/UX, localization, accessibility, links, and sanitization | 22 | pending, active, clean, failed, partial, skipped, superseded, metadata-only non-publication, invalid summary/status output, every non-clean count, historical snapshot, en/es/fallback, narrow content, markers, mentions, unsafe Markdown |
-| Integration, security, migration, and live-shaped replay | 14 | PR #358 replay, new PR lifecycle, multiple reviews, overflow/unanchored, manual resolve/unresolve, identity rotation, duplicate card repair, dry-run/fork trust, completion fail-closed, latest-by-name PR #363 replay |
+| UI/UX, localization, accessibility, links, and sanitization | 22 | pending, active, clean, failed, partial, skipped, superseded, metadata-only non-publication, missing/invalid summary and status output, every non-clean count, historical snapshot, en/es/fallback, narrow content, markers, mentions, unsafe Markdown |
+| Integration, security, migration, and live-shaped replay | 14 | PR #358 replay, new PR lifecycle, multiple reviews, overflow/unanchored, manual resolve/unresolve, identity rotation, duplicate card repair, dry-run/fork trust, missing-state completion fail-closed, latest-by-name PR #363 replay |
 | **Total** | **133** | No double counting |
 
 Coverage requirements:
@@ -1255,6 +1266,12 @@ examples should reuse the same fixtures as presentation tests where practical.
 38. Given a missing or extra state, a negative/fractional/non-finite/unsafe
     count, or aggregate overflow, then the Action and eligible Check fail,
     lifecycle blocks, Summary/status say `invalid`, and no surface reports clean.
+39. Given valid `completed`, `no-findings`, `partial`, or `dry-run` telemetry but
+    no canonical finding-state Result anywhere in the result set, then the
+    shared projection is invalid. Eligible Review evidence fails, lifecycle
+    blocks, Action completion fails outside dry-run mode, and Summary/status
+    identify invalid evidence. Metadata-only, `skipped`, `superseded`, and
+    `failed` result sets may omit counts because none can claim a clean review.
 
 ## 17. Requirements traceability
 
@@ -1268,7 +1285,7 @@ examples should reuse the same fixtures as presentation tests where practical.
 | Freshness and concurrency | head guards + workflow contract | stale, duplicate, canceled, race cases | Workflow setup |
 | Metadata non-preemption | shared branch key + conditional cancellation | active/setup workflow parser, negative unconditional-cancel fixture, PR #363 live evidence | Workflow setup, Configuration, How it works |
 | Review Check ownership | telemetry projection + evidence policy | metadata-only negative, outcome matrix, completion integration, PR #363 latest-by-name replay | Detection, Workflow setup, How it works, Troubleshooting |
-| Canonical Result evidence | finding-state projection + completion/lifecycle/status/summary/Check policies | complete aggregation, missing/extra key, numeric limits, overflow, cross-surface fail-closed cases | Detection, Observability, Comment commands, Failure scenarios |
+| Canonical Result evidence | finding-state projection + completion/lifecycle/status/summary/Check policies | complete aggregation, required-outcome absence, missing/extra key, numeric limits, overflow, cross-surface fail-closed cases | Detection, Observability, Comment commands, Failure scenarios |
 | Coherent final snapshot | snapshot loader + explicit surface completeness | before/after head, head-change, missing-head, per-surface failure, shared issue/PR read cases | How it works, Failure scenarios |
 | No false clean partial state | final read + publication report | provider failure matrix | Troubleshooting |
 | Missing durable evidence | reconciliation policy + final projection | unresolved, verification-required, observed, and fully resolved omission cases | How it works, Failure scenarios |
@@ -1381,6 +1398,9 @@ evidence.
       incomplete-outcome conclusion matrix is enforced by pure tests.
 - [x] Malformed sibling telemetry cannot hide behind a valid snapshot, and all
       current-state Result consumers fail closed through one canonical parser.
+- [x] Finding-evaluating telemetry cannot claim zero findings by omitting the
+      canonical state aggregate; metadata and non-clean terminal outcomes keep
+      an explicit absence path.
 - [x] No new correctness toggle, legacy mode, parallel pipeline, or database was
       introduced.
 - [x] Status card, review block, thread body, labels, Job Summary, Check, and

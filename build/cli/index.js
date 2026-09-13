@@ -53819,12 +53819,22 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectBugbotResultFindingStates = projectBugbotResultFindingStates;
 const result_1 = __nccwpck_require__(73817);
 const review_state_1 = __nccwpck_require__(79200);
+const bugbot_telemetry_projection_policy_1 = __nccwpck_require__(43244);
 const BUGBOT_FINDING_STATE_SET = new Set(review_state_1.BUGBOT_FINDING_STATES);
+const OUTCOMES_REQUIRING_FINDING_STATES = new Set([
+    'completed',
+    'no-findings',
+    'partial',
+    'dry-run',
+]);
 /** Validates and aggregates the one canonical finding-state payload shape used by result presentation. */
 function projectBugbotResultFindingStates(results) {
     const aggregate = (0, review_state_1.countBugbotFindingStates)([]);
     let found = false;
+    let required = false;
     for (const result of results) {
+        const telemetry = (0, bugbot_telemetry_projection_policy_1.projectBugbotTelemetry)(result.payload);
+        required || (required = telemetry !== undefined && OUTCOMES_REQUIRING_FINDING_STATES.has(telemetry.outcome));
         const projected = projectResultFindingStates(result.payload);
         if (projected.status === 'invalid')
             return projected;
@@ -53838,6 +53848,8 @@ function projectBugbotResultFindingStates(results) {
             aggregate[state] = total;
         }
     }
+    if (required && !found)
+        return { status: 'invalid' };
     return found ? { status: 'valid', counts: Object.freeze(aggregate) } : { status: 'absent' };
 }
 function projectResultFindingStates(value) {
@@ -54145,6 +54157,71 @@ function stateLabel(state) {
 }
 function escapeRegExp(value) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+
+/***/ }),
+
+/***/ 43244:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectBugbotTelemetry = projectBugbotTelemetry;
+exports.selectBugbotTelemetry = selectBugbotTelemetry;
+const result_1 = __nccwpck_require__(73817);
+const BUGBOT_REVIEW_OUTCOMES = [
+    'completed',
+    'no-findings',
+    'partial',
+    'dry-run',
+    'superseded',
+    'skipped',
+    'failed',
+];
+/** Projects only the trusted, content-free telemetry facts used by result presentation. */
+function projectBugbotTelemetry(value) {
+    const telemetry = (0, result_1.getResultPayload)((0, result_1.getResultPayload)(value)?.bugbotTelemetry);
+    if (!telemetry)
+        return undefined;
+    if (telemetry.schemaVersion !== 1)
+        return undefined;
+    if (!isBugbotReviewOutcome(telemetry.outcome))
+        return undefined;
+    if (!isFiniteNumber(telemetry.elapsedMs))
+        return undefined;
+    const configuredEffort = normalizeNonEmptyString(telemetry.configuredEffort) ?? 'default';
+    const headSha = normalizeNonEmptyString(telemetry.headSha);
+    return {
+        schemaVersion: 1,
+        outcome: telemetry.outcome,
+        elapsedMs: Math.max(0, telemetry.elapsedMs),
+        configuredEffort,
+        ...(headSha ? { headSha } : {}),
+    };
+}
+/** Accepts exactly one semantic review snapshot; ambiguous result sets fail closed. */
+function selectBugbotTelemetry(results) {
+    const telemetryResults = results.filter((result) => hasBugbotTelemetryField(result.payload));
+    if (telemetryResults.length !== 1)
+        return undefined;
+    return projectBugbotTelemetry(telemetryResults[0].payload);
+}
+function isBugbotReviewOutcome(value) {
+    return typeof value === 'string' && BUGBOT_REVIEW_OUTCOMES.includes(value);
+}
+function isFiniteNumber(value) {
+    return typeof value === 'number' && Number.isFinite(value);
+}
+function normalizeNonEmptyString(value) {
+    if (typeof value !== 'string')
+        return undefined;
+    return value.trim() || undefined;
+}
+function hasBugbotTelemetryField(value) {
+    const payload = (0, result_1.getResultPayload)(value);
+    return payload !== undefined && Object.prototype.hasOwnProperty.call(payload, 'bugbotTelemetry');
 }
 
 

@@ -54476,12 +54476,22 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectBugbotResultFindingStates = projectBugbotResultFindingStates;
 const result_1 = __nccwpck_require__(73817);
 const review_state_1 = __nccwpck_require__(79200);
+const bugbot_telemetry_projection_policy_1 = __nccwpck_require__(43244);
 const BUGBOT_FINDING_STATE_SET = new Set(review_state_1.BUGBOT_FINDING_STATES);
+const OUTCOMES_REQUIRING_FINDING_STATES = new Set([
+    'completed',
+    'no-findings',
+    'partial',
+    'dry-run',
+]);
 /** Validates and aggregates the one canonical finding-state payload shape used by result presentation. */
 function projectBugbotResultFindingStates(results) {
     const aggregate = (0, review_state_1.countBugbotFindingStates)([]);
     let found = false;
+    let required = false;
     for (const result of results) {
+        const telemetry = (0, bugbot_telemetry_projection_policy_1.projectBugbotTelemetry)(result.payload);
+        required || (required = telemetry !== undefined && OUTCOMES_REQUIRING_FINDING_STATES.has(telemetry.outcome));
         const projected = projectResultFindingStates(result.payload);
         if (projected.status === 'invalid')
             return projected;
@@ -54495,6 +54505,8 @@ function projectBugbotResultFindingStates(results) {
             aggregate[state] = total;
         }
     }
+    if (required && !found)
+        return { status: 'invalid' };
     return found ? { status: 'valid', counts: Object.freeze(aggregate) } : { status: 'absent' };
 }
 function projectResultFindingStates(value) {

@@ -86,6 +86,17 @@ describe('status command policy', () => {
         expect(formatCopilotStatus(snapshot)).toContain('invalid evidence; inspect the workflow result.');
     });
 
+    it('surfaces missing required review finding-state evidence as invalid', () => {
+        const snapshot = buildCopilotStatusSnapshot(execution({
+            currentConfiguration: { results: [{ payload: {
+                bugbotTelemetry: { schemaVersion: 1, outcome: 'no-findings', elapsedMs: 10, configuredEffort: 'smart', headSha: 'sha-123' },
+            } }] },
+        }) as never);
+
+        expect(snapshot.findingStates).toBeUndefined();
+        expect(snapshot.findingStateEvidence).toBe('invalid');
+    });
+
     it('renders every non-clean finding state explicitly', () => {
         const snapshot = buildCopilotStatusSnapshot(execution({
             currentConfiguration: { results: [{ payload: { findingStates: {

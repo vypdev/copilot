@@ -11,6 +11,9 @@ const counts = (overrides: Record<string, unknown> = {}) => ({
     unknown: 0,
     ...overrides,
 });
+const telemetry = (outcome: string) => ({
+    bugbotTelemetry: { schemaVersion: 1, outcome, elapsedMs: 10, configuredEffort: 'smart', headSha: 'sha-123' },
+});
 
 describe('Bugbot result finding-state projection policy', () => {
     it('distinguishes result sets without owned finding-state evidence', () => {
@@ -18,6 +21,24 @@ describe('Bugbot result finding-state projection policy', () => {
             new Result({ id: 'metadata', success: true, executed: true, payload: { other: true } }),
         ])).toEqual({ status: 'absent' });
     });
+
+    it.each(['completed', 'no-findings', 'partial', 'dry-run'])(
+        'fails closed when %s telemetry has no canonical finding-state evidence',
+        (outcome) => {
+            expect(projectBugbotResultFindingStates([
+                new Result({ id: 'review', success: true, executed: true, payload: telemetry(outcome) }),
+            ])).toEqual({ status: 'invalid' });
+        },
+    );
+
+    it.each(['skipped', 'superseded', 'failed'])(
+        'allows absent finding-state evidence for a %s outcome that cannot claim a clean review',
+        (outcome) => {
+            expect(projectBugbotResultFindingStates([
+                new Result({ id: 'review', success: outcome !== 'failed', executed: true, payload: telemetry(outcome) }),
+            ])).toEqual({ status: 'absent' });
+        },
+    );
 
     it('validates and aggregates complete canonical counts', () => {
         const projection = projectBugbotResultFindingStates([
