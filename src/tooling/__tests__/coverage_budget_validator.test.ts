@@ -185,34 +185,30 @@ describe('coverage budget validator', () => {
         )).toThrow('Coverage entry for src/invalid.ts has an invalid lines metric.');
     });
 
-    it('uses authoritative counts instead of a forged per-file percentage', () => {
-        const forged = {
-            ...coverage(100),
-            lines: { covered: 0, pct: 100, total: 1 },
-        };
-
-        expect(eachFileFailuresFor('src/forged.ts', forged, { lines: 95 }))
-            .toEqual(['src/forged.ts lines 0% < 95%']);
-    });
-
-    it('accepts valid alternate percentage precision while evaluating counts', () => {
-        const alternatePrecision = {
-            ...coverage(100),
-            lines: { covered: 1, pct: 33.333, total: 3 },
-        };
-
-        expect(eachFileFailuresFor('src/thirds.ts', alternatePrecision, { lines: 30 }))
-            .toEqual([]);
-    });
-
-    it('treats one denominator-free per-file metric as vacuously covered on a measurable file', () => {
-        const branchless: FileCoverage = {
-            ...coverage(100),
-            branches: metric(0, 0),
-        };
-
-        expect(eachFileFailuresFor('src/branchless.ts', branchless, { branches: 100, lines: 95 }))
-            .toEqual([]);
+    it.each([
+        [
+            'uses authoritative counts instead of a forged per-file percentage',
+            'src/forged.ts',
+            { ...coverage(100), lines: { covered: 0, pct: 100, total: 1 } },
+            { lines: 95 },
+            ['src/forged.ts lines 0% < 95%'],
+        ],
+        [
+            'accepts valid alternate percentage precision while evaluating counts',
+            'src/thirds.ts',
+            { ...coverage(100), lines: { covered: 1, pct: 33.333, total: 3 } },
+            { lines: 30 },
+            [],
+        ],
+        [
+            'treats a denominator-free metric as vacuously covered on a measurable file',
+            'src/branchless.ts',
+            { ...coverage(100), branches: metric(0, 0) },
+            { branches: 100, lines: 95 },
+            [],
+        ],
+    ])('%s', (_case, file, value, thresholds, expected) => {
+        expect(eachFileFailuresFor(file, value, thresholds)).toEqual(expected);
     });
 
     it('rejects an aggregate metric with no denominator on otherwise measurable files', () => {
