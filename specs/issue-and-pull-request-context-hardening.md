@@ -91,14 +91,14 @@ misleading intermediate state.
 - The clean architecture audit at `733e68bb` reports average health `7.95`,
   hotspot health `5.99`, `update_pull_request_description_workflow.ts` health
   `4.21`, and `pull_request_lifecycle_repository.ts` health `2.05`.
-- The clean implementation audit reports average health `7.94`, hotspot health
-  `5.96`, `update_pull_request_description_workflow.ts` health `4.42`, and
-  `pull_request_lifecycle_repository.ts` health `2.05`. The `0.01` average and
+- The final clean implementation audit reports average health `7.93`, hotspot
+  health `5.96`, `update_pull_request_description_workflow.ts` health `4.50`,
+  and `pull_request_lifecycle_repository.ts` health `2.05`. The `0.02` average and
   `0.03` hotspot changes are the measured cost of adding the explicit issue
   context projector (`5.85`) and uniform semantic leaf wrappers (`5.90`) to the
   measured set; both boundaries have full line coverage, the targeted
-  description hotspot improves by `0.21`, and no existing worst performer
-  regresses.
+  description hotspot improves by `0.29`, reaches `91.67%` branch coverage,
+  and no existing worst performer regresses.
 - GitHub documents that closing keywords create issue links only when a PR
   targets the default branch, and its REST update endpoint permits changing the
   PR `body` and `base` with Pull Requests write permission.
