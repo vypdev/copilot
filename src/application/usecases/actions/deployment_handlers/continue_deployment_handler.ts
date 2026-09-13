@@ -65,10 +65,7 @@ export class ContinueDeploymentHandler {
       throw new ApplicationError("workflow.invalid-event", "The continuation event has no pull request number.");
     }
     return await this.runtime.dependencies.pullRequests.getPullRequest(
-      context.owner,
-      context.repo,
       context.pullRequest.number,
-      context.tokens.token,
     );
   }
 

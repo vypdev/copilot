@@ -1,4 +1,4 @@
-import { Labels } from '../../data/model/labels';
+import type { InitialLabelConfiguration } from '../ports/issue_management_ports';
 import {
     PROGRESS_LABEL_PERCENTS,
     progressPercentToColor,
@@ -23,7 +23,7 @@ export interface InitialLabelProvisioningPlan {
 
 const normalizeLabelName = (name: string): string => name.trim().toLowerCase();
 
-function configuredLabelDefinitions(labels: Labels): InitialLabelDefinition[] {
+function configuredLabelDefinitions(labels: InitialLabelConfiguration): InitialLabelDefinition[] {
     const metadata = [
         ['branchManagementLauncherLabel', '0E8A16', 'Label to trigger branch management actions'],
         ['bug', 'D73A4A', 'Label to indicate a bug type'],
@@ -64,7 +64,7 @@ function progressLabelDefinitions(): InitialLabelDefinition[] {
     }));
 }
 
-function lifecycleLabelDefinitionsFor(labels: Labels): InitialLabelDefinition[] {
+function lifecycleLabelDefinitionsFor(labels: InitialLabelConfiguration): InitialLabelDefinition[] {
     return managedLifecycleLabelDefinitions(labels.lifecycle).map(definition => ({
         name: definition.name,
         color: definition.color,
@@ -73,7 +73,7 @@ function lifecycleLabelDefinitionsFor(labels: Labels): InitialLabelDefinition[] 
 }
 
 export function buildInitialLabelProvisioningPlan(
-    labels: Labels,
+    labels: InitialLabelConfiguration,
     existingLabelNames: readonly string[],
 ): InitialLabelProvisioningPlan {
     const existingNames = new Set(existingLabelNames.map(normalizeLabelName));

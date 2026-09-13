@@ -7,6 +7,7 @@
 import { CheckProgressUseCase } from '../check_progress_use_case';
 import { Ai } from '../../../../data/model/ai';
 import type { Execution } from '../../../../data/model/execution';
+import { projectProgressContext } from '../../push_single_action_contexts';
 
 jest.mock('../../../../utils/logger', () => ({
   logInfo: jest.fn(),
@@ -51,14 +52,18 @@ function baseParam(overrides: Record<string, unknown> = {}): Execution {
 
 describe('CheckProgressUseCase', () => {
   let useCase: CheckProgressUseCase;
+  let invoke: (param: Execution) => ReturnType<CheckProgressUseCase['invoke']>;
 
   beforeEach(() => {
     useCase = new CheckProgressUseCase(
-      { getDescription: mockGetDescription, setProgressLabel: mockSetProgressLabel, getLabels: mockGetLabels, setLabels: mockSetLabels },
+      { getDescription: mockGetDescription },
+      { getLabels: mockGetLabels, setLabels: mockSetLabels },
+      { setProgressLabel: mockSetProgressLabel },
       { getListOfBranches: mockGetListOfBranches },
       { getOpenPullRequestNumbersByHeadBranch: mockGetOpenPullRequestNumbersByHeadBranch },
       { query: (request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }) => mockAskAgent(request.configuration, request.agentId, request.prompt, request.options) },
     );
+    invoke = (param) => useCase.invoke(projectProgressContext(param));
     mockGetDescription.mockReset();
     mockSetProgressLabel.mockReset();
     mockGetLabels.mockReset();
@@ -72,7 +77,7 @@ describe('CheckProgressUseCase', () => {
     const param = baseParam({
       ai: new Ai('', 'opencode/model', false, [], false, 'low', 20),
     });
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
@@ -86,7 +91,7 @@ describe('CheckProgressUseCase', () => {
     const param = baseParam({
       ai: new Ai('http://localhost:4096', '', false, [], false, 'low', 20),
     });
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results[0].success).toBe(false);
     expect(results[0].errors.map((error) => error.message)).toContain(
@@ -97,7 +102,7 @@ describe('CheckProgressUseCase', () => {
 
   it('returns error when issue number is -1', async () => {
     const param = baseParam({ issueNumber: -1 });
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
@@ -111,7 +116,7 @@ describe('CheckProgressUseCase', () => {
     mockGetDescription.mockResolvedValue(null);
     const param = baseParam();
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
@@ -126,7 +131,7 @@ describe('CheckProgressUseCase', () => {
     mockGetListOfBranches.mockResolvedValue(['main', 'develop', 'other/456-foo']);
     const param = baseParam({ commit: { branch: undefined as unknown as string } });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
@@ -145,7 +150,7 @@ describe('CheckProgressUseCase', () => {
     mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([]);
     const param = baseParam({ commit: { branch: undefined as unknown as string } });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
@@ -162,7 +167,7 @@ describe('CheckProgressUseCase', () => {
     mockGetDescription.mockResolvedValue('Issue body');
     mockAskAgent.mockResolvedValue(undefined);
 
-    const results = await useCase.invoke(baseParam());
+    const results = await invoke(baseParam());
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
@@ -175,7 +180,7 @@ describe('CheckProgressUseCase', () => {
     mockAskAgent.mockResolvedValue({ progress: 0, summary: 'No progress yet' });
     mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([]);
 
-    const results = await useCase.invoke(baseParam());
+    const results = await invoke(baseParam());
 
     expect(results[0].success).toBe(false);
     expect(results[0].payload).toMatchObject({ progress: 0 });
@@ -189,7 +194,7 @@ describe('CheckProgressUseCase', () => {
     mockAskAgent.mockResolvedValue({ progress: -10, summary: 'Invalid' });
     mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([]);
 
-    const results = await useCase.invoke(baseParam());
+    const results = await invoke(baseParam());
 
     expect(results[0].success).toBe(false);
     expect(results[0].payload).toMatchObject({ progress: 0 });
@@ -201,16 +206,13 @@ describe('CheckProgressUseCase', () => {
     mockAskAgent.mockResolvedValue({ progress: 150, summary: 'Over' });
     mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([]);
 
-    const results = await useCase.invoke(baseParam());
+    const results = await invoke(baseParam());
 
     expect(results[0].success).toBe(true);
     expect(results[0].payload).toMatchObject({ progress: 100 });
     expect(mockSetProgressLabel).toHaveBeenCalledWith(
-      'owner',
-      'repo',
       123,
       100,
-      'token'
     );
   });
 
@@ -224,19 +226,16 @@ describe('CheckProgressUseCase', () => {
     mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([99]);
     mockGetLabels.mockResolvedValue(['feature', '50%']);
 
-    const results = await useCase.invoke(baseParam());
+    const results = await invoke(baseParam());
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
     expect(results[0].steps).toContain('Progress updated to: 75%');
-    expect(mockSetProgressLabel).toHaveBeenCalledWith('owner', 'repo', 123, 75, 'token');
-    expect(mockGetLabels).toHaveBeenCalledWith('owner', 'repo', 99, 'token');
+    expect(mockSetProgressLabel).toHaveBeenCalledWith(123, 75);
+    expect(mockGetLabels).toHaveBeenCalledWith(99);
     expect(mockSetLabels).toHaveBeenCalledWith(
-      'owner',
-      'repo',
       99,
       expect.arrayContaining(['feature', '75%']),
-      'token'
     );
   });
 
@@ -245,7 +244,7 @@ describe('CheckProgressUseCase', () => {
     mockAskAgent.mockResolvedValue({ progress: 30 });
     mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([]);
 
-    const results = await useCase.invoke(baseParam());
+    const results = await invoke(baseParam());
 
     expect(results[0].success).toBe(true);
     expect(results[0].payload).toMatchObject({

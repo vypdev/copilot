@@ -1,4 +1,4 @@
-import type { GitCommitPort } from '../../../ports/git_ports';
+import type { BugbotGitMutationPort } from '../../../ports/bugbot_git_ports';
 import { ApplicationError } from '../../../errors/application_error';
 import { checkoutBranch } from './git_branch_checkout';
 import {
@@ -16,8 +16,8 @@ export interface WorkspaceMutationPreflight {
 
 /** Establishes a clean and deterministic repository boundary before an agent may mutate files. */
 export async function prepareWorkspaceMutation(
-    gitCommitPort: GitCommitPort,
-    options: { operation: string; branch?: string; token?: string },
+    gitCommitPort: Pick<BugbotGitMutationPort, 'execute' | 'fetch'>,
+    options: { operation: string; branch?: string },
 ): Promise<WorkspaceMutationPreflight> {
     const workspacePathsBefore = await inspectWorkspace(gitCommitPort, `before ${options.operation}`);
     if (workspacePathsBefore.length > 0) {
@@ -31,7 +31,7 @@ export async function prepareWorkspaceMutation(
     if (options.branch?.trim()) {
         branchCheckedOut = await checkoutBranch(options.branch, {
             execute: gitCommitPort.execute.bind(gitCommitPort),
-            fetch: (branch) => gitCommitPort.fetch(branch, options.token),
+            fetch: (branch) => gitCommitPort.fetch(branch),
         });
         if (!branchCheckedOut) {
             throw new ApplicationError(
@@ -53,7 +53,7 @@ export async function prepareWorkspaceMutation(
 
 /** Restricts an automated mutation to new, non-sensitive and bounded repository paths. */
 export async function finalizeWorkspaceMutation(
-    gitCommitPort: GitCommitPort,
+    gitCommitPort: Pick<BugbotGitMutationPort, 'execute'>,
     before: readonly string[],
     operation: string,
 ): Promise<{ workspacePaths: string[] }> {
@@ -79,7 +79,7 @@ export async function finalizeWorkspaceMutation(
     return { workspacePaths };
 }
 
-async function inspectWorkspace(gitCommitPort: GitCommitPort, phase: string): Promise<string[]> {
+async function inspectWorkspace(gitCommitPort: Pick<BugbotGitMutationPort, 'execute'>, phase: string): Promise<string[]> {
     try {
         return await listWorkspacePaths(gitCommitPort);
     } catch (error) {

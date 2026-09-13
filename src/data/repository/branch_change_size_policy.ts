@@ -1,5 +1,4 @@
-import type { Labels } from '../model/labels';
-import type { SizeThresholds } from '../model/size_thresholds';
+import type { ChangeSizeLabels, ChangeSizeThresholds } from '../../application/ports/branch_change_ports';
 
 export interface SizeCategoryResult {
     size: string;
@@ -15,15 +14,15 @@ export interface ChangeSizeMetrics {
 
 export function classifyChangeSize(
     metrics: ChangeSizeMetrics,
-    sizeThresholds: SizeThresholds,
-    labels: Labels,
+    sizeThresholds: ChangeSizeThresholds,
+    labels: ChangeSizeLabels,
 ): SizeCategoryResult {
     const categories = [
-        { key: 'xxl' as const, label: labels.sizeXxl, githubSize: 'XL' },
-        { key: 'xl' as const, label: labels.sizeXl, githubSize: 'XL' },
-        { key: 'l' as const, label: labels.sizeL, githubSize: 'L' },
-        { key: 'm' as const, label: labels.sizeM, githubSize: 'M' },
-        { key: 's' as const, label: labels.sizeS, githubSize: 'S' },
+        { key: 'xxl' as const, label: labels.xxl, githubSize: 'XL' },
+        { key: 'xl' as const, label: labels.xl, githubSize: 'XL' },
+        { key: 'l' as const, label: labels.l, githubSize: 'L' },
+        { key: 'm' as const, label: labels.m, githubSize: 'M' },
+        { key: 's' as const, label: labels.s, githubSize: 'S' },
     ];
 
     for (const category of categories) {
@@ -52,7 +51,7 @@ export function classifyChangeSize(
     }
 
     return {
-        size: labels.sizeXs,
+        size: labels.xs,
         githubSize: 'XS',
         reason: `Small changes (${metrics.totalChanges} lines, ${metrics.totalFiles} files)`,
     };

@@ -2,6 +2,7 @@ import { CreateReleaseUseCase } from '../create_release_use_case';
 import { Result } from '../../../../data/model/result';
 import { INPUT_KEYS } from '../../../contracts/input_keys';
 import type { Execution } from '../../../../data/model/execution';
+import { projectDeploymentPublicationContext } from '../../push_single_action_contexts';
 
 jest.mock('../../../../utils/logger', () => ({
   logInfo: jest.fn(),
@@ -20,8 +21,8 @@ jest.mock('../../../../data/repository/release/repository_release_publication_re
   })),
 }));
 
-function baseParam(overrides: Record<string, unknown> = {}): Execution {
-  return {
+function baseParam(overrides: Record<string, unknown> = {}) {
+  return projectDeploymentPublicationContext({
     owner: 'owner',
     repo: 'repo',
     tokens: { token: 'token' },
@@ -40,7 +41,7 @@ function baseParam(overrides: Record<string, unknown> = {}): Execution {
       },
     },
     ...overrides,
-  } as unknown as Execution;
+  } as unknown as Execution);
 }
 
 describe('CreateReleaseUseCase', () => {
@@ -108,14 +109,11 @@ describe('CreateReleaseUseCase', () => {
     expect(results[0].success).toBe(true);
     expect(results[0].steps?.some((s) => s.includes('Created release'))).toBe(true);
     expect(mockCreateRelease).toHaveBeenCalledWith(
-      'owner',
-      'repo',
       'v1.0.0',
       'Release title',
       '- Fix bug',
       'operation-12345678',
       'a'.repeat(40),
-      'token'
     );
   });
 

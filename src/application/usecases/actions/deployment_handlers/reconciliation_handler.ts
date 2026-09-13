@@ -63,11 +63,8 @@ export class ReconciliationHandler {
       );
     }
     const sourceReachable = await this.runtime.dependencies.git.isCommitReachable(
-      context.owner,
-      context.repo,
       target.targetBranch,
       target.sourceSha,
-      context.tokens.token,
     );
     if (!sourceReachable) {
       return await this.runtime.block(
@@ -109,24 +106,15 @@ export class ReconciliationHandler {
     }
     const [targetSha, currentSourceSha] = await Promise.all([
       this.runtime.dependencies.git.getBranchSha(
-        context.owner,
-        context.repo,
         target.targetBranch,
-        context.tokens.token,
       ),
       this.runtime.dependencies.git.getBranchSha(
-        context.owner,
-        context.repo,
         target.sourceBranch,
-        context.tokens.token,
       ),
     ]);
     const directUpToDate = await this.runtime.dependencies.git.isCommitReachable(
-      context.owner,
-      context.repo,
       target.sourceBranch,
       targetSha,
-      context.tokens.token,
     ).catch(() => false);
     const mode = selectBackmergeMode(
       operation.backmergeMode,
@@ -186,10 +174,7 @@ export class ReconciliationHandler {
       await this.runtime.cleanup(context, operation);
       if (operation.issueCompletion === "close") {
         await this.runtime.dependencies.issues.closeIssue(
-          context.owner,
-          context.repo,
           context.singleAction.issue,
-          context.tokens.token,
         );
       }
     } catch (error) {
@@ -234,25 +219,16 @@ export class ReconciliationHandler {
     sourceSha: string,
   ): Promise<void> {
     await this.runtime.dependencies.git.createOrVerifyBranch(
-      context.owner,
-      context.repo,
       syncBranch,
       targetSha,
-      context.tokens.token,
     );
     await this.runtime.dependencies.git.mergeCommitIntoBranch(
-      context.owner,
-      context.repo,
       syncBranch,
       targetSha,
-      context.tokens.token,
     );
     await this.runtime.dependencies.git.mergeCommitIntoBranch(
-      context.owner,
-      context.repo,
       syncBranch,
       sourceSha,
-      context.tokens.token,
     );
   }
 
@@ -281,17 +257,11 @@ export class ReconciliationHandler {
     }
     const [syncHead, sourceIncluded] = await Promise.all([
       this.runtime.dependencies.git.getBranchSha(
-        context.owner,
-        context.repo,
         target.syncBranch,
-        context.tokens.token,
       ),
       this.runtime.dependencies.git.isCommitReachable(
-        context.owner,
-        context.repo,
         target.syncBranch,
         target.sourceSha,
-        context.tokens.token,
       ),
     ]);
     if (pullRequest.headSha === syncHead && sourceIncluded) {
@@ -316,11 +286,8 @@ export class ReconciliationHandler {
   ): Promise<boolean> {
     return Boolean(pullRequest.mergeCommitSha)
       && await this.runtime.dependencies.git.isCommitReachable(
-        context.owner,
-        context.repo,
         target.targetBranch,
         pullRequest.mergeCommitSha!,
-        context.tokens.token,
       );
   }
 }

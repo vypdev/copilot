@@ -1,4 +1,5 @@
 import type {
+    InitialLabelConfiguration,
     InitialLabelProvisioningPort,
     LabelProvisioningSummary,
 } from "../../../application/ports/issue_management_ports";
@@ -10,7 +11,6 @@ import {
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubIssueLabelProvisioningClient } from "../../../infrastructure/github/ports/github_issue_label_provisioning_protocol";
 import { logError } from "../../../utils/logger";
-import { Labels } from "../../model/labels";
 import { isGithubAlreadyExists } from "../github/github_error_policy";
 import { requireArrayPage } from "../github/github_pagination_policy";
 
@@ -37,7 +37,7 @@ export class IssueLabelProvisioningRepository implements InitialLabelProvisionin
     ensureInitialLabels = async (
         owner: string,
         repository: string,
-        labels: Labels,
+        labels: InitialLabelConfiguration,
         token: string,
     ): Promise<{
         configured: LabelProvisioningSummary;

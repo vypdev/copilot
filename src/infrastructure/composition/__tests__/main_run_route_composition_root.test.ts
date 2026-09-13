@@ -106,16 +106,17 @@ describe("main run route composition root", () => {
       mockFindings,
     );
 
-    const gitCommit = (
-      GitCommitAdapter as jest.MockedClass<typeof GitCommitAdapter>
-    ).mock.instances[0];
     expect(GitCommitAdapter).toHaveBeenCalledTimes(1);
     expect(BugbotAutofixUseCase).toHaveBeenCalledWith(
       mockFixer,
       mockContext,
       expect.anything(),
     );
-    expect(DoUserRequestUseCase).toHaveBeenCalledWith(mockFixer, gitCommit);
+    expect(DoUserRequestUseCase).toHaveBeenCalledWith(mockFixer, expect.objectContaining({
+      execute: expect.any(Function),
+      fetch: expect.any(Function),
+      getAuthenticatedUserDetails: expect.any(Function),
+    }));
     expect(RememberBugbotRuleUseCase).toHaveBeenCalledWith(mockRules);
     expect(IssueCommentUseCase).toHaveBeenCalledTimes(1);
     expect(IssueCommentUseCase).toHaveBeenCalledWith(
@@ -197,5 +198,19 @@ describe("main run route composition root", () => {
     const commit = (CommitUseCase as jest.MockedClass<typeof CommitUseCase>)
       .mock.instances[0];
     expect(commit.invoke).toHaveBeenCalledWith(execution);
+
+    await handlers["single-action"](execution);
+    await handlers["issue-comment"](execution);
+    await handlers.issue(execution);
+    await handlers["pull-request-review-comment"](execution);
+    await handlers["pull-request"](execution);
+    await handlers.push(execution);
+
+    expect(SingleActionUseCase).toHaveBeenCalledTimes(1);
+    expect(IssueCommentUseCase).toHaveBeenCalledTimes(1);
+    expect(PullRequestReviewCommentUseCase).toHaveBeenCalledTimes(1);
+    expect(CommitUseCase).toHaveBeenCalledTimes(1);
+    expect(mockIssueInvoke).toHaveBeenCalledTimes(2);
+    expect(mockPullRequestInvoke).toHaveBeenCalledTimes(2);
   });
 });

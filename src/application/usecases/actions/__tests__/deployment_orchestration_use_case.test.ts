@@ -137,7 +137,7 @@ function harness() {
   };
   const targetRules = { getTargetCapabilities: jest.fn().mockResolvedValue(capabilities()) };
   const git = {
-    getBranchSha: jest.fn().mockImplementation(async (_owner, _repo, branch) => {
+    getBranchSha: jest.fn().mockImplementation(async (branch) => {
       if (branch === "release/3.4.0") return sourceSha;
       if (branch === "master") return productionSha;
       if (String(branch).startsWith("sync/")) return "e".repeat(40);
@@ -252,7 +252,7 @@ describe("DeploymentOrchestrationUseCase", () => {
     const value = harness();
     value.targetRules.getTargetCapabilities.mockResolvedValue(capabilities({ immediatelyMergeable: true }));
     await value.useCase.invoke(execution("prepare"));
-    expect(value.pullRequests.mergePullRequest).toHaveBeenCalledWith("owner", "repo", 40, "pat");
+    expect(value.pullRequests.mergePullRequest).toHaveBeenCalledWith(40);
     expect(value.pullRequests.enableAutoMerge).not.toHaveBeenCalled();
   });
 
@@ -336,7 +336,7 @@ describe("DeploymentOrchestrationUseCase", () => {
     const result = await value.useCase.invoke(input);
     expect(result[0].success).toBe(true);
     expect(value.pullRequests.enqueuePullRequest).toHaveBeenCalledWith(
-      "owner", "repo", "PR_node", sourceSha, "pat",
+      "PR_node", sourceSha,
     );
   });
 
@@ -447,7 +447,7 @@ describe("DeploymentOrchestrationUseCase", () => {
     const value = harness();
     value.pullRequests.findManagedPullRequests.mockResolvedValue([pr({ state: "closed", merged: true, mergeCommitSha: productionSha })]);
     await value.useCase.invoke(execution("prepare", operation("preparing")));
-    expect(value.continuation.dispatch).toHaveBeenCalledWith("owner", "repo", "release_workflow.yml", "master", "operation-12345678", 355, "3.4.0", "pat");
+    expect(value.continuation.dispatch).toHaveBeenCalledWith("release_workflow.yml", "master", "operation-12345678", 355, "3.4.0");
   });
 
   it("verifies and dispatches publication for a merged promotion event", async () => {
@@ -496,7 +496,7 @@ describe("DeploymentOrchestrationUseCase", () => {
     const result = await value.useCase.invoke(input);
     expect(result[0].success).toBe(true);
     expect(value.labels.setLabels).toHaveBeenCalledWith(
-      "owner", "repo", 355, expect.arrayContaining(["release", "deployed", "state:in-progress"]), "pat",
+      355, expect.arrayContaining(["release", "deployed", "state:in-progress"]),
     );
     expect(input.currentConfiguration.deploymentOrchestration).toEqual(expect.objectContaining({ phase: "reconciliation_pending", publicationVerified: true }));
   });
@@ -641,7 +641,7 @@ describe("DeploymentOrchestrationUseCase", () => {
     value.git.isCommitReachable.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
     value.pullRequests.createManagedPullRequest.mockResolvedValue(pr({ number: 41, body: '<!-- copilot-deployment operation-id="operation-12345678" phase="reconciliation" issue="355" -->', headBranch: "sync/release-3.4.0-to-develop-operatio", headSha: "e".repeat(40), baseBranch: "develop" }));
     await value.useCase.invoke(execution("published", operation("publishing")));
-    expect(value.git.createOrVerifyBranch).toHaveBeenCalledWith("owner", "repo", "sync/release-3.4.0-to-develop-operatio", "d".repeat(40), "pat");
+    expect(value.git.createOrVerifyBranch).toHaveBeenCalledWith("sync/release-3.4.0-to-develop-operatio", "d".repeat(40));
     expect(value.git.mergeCommitIntoBranch).toHaveBeenCalled();
   });
 
@@ -676,7 +676,7 @@ describe("DeploymentOrchestrationUseCase", () => {
     input.pullRequest = { number: 41 } as never;
     await value.useCase.invoke(input);
     expect(input.currentConfiguration.deploymentOrchestration?.phase).toBe("completed");
-    expect(value.git.deleteBranch).toHaveBeenCalledWith("owner", "repo", "release/3.4.0", sourceSha, "pat");
+    expect(value.git.deleteBranch).toHaveBeenCalledWith("release/3.4.0", sourceSha);
     expect(value.issues.closeIssue).toHaveBeenCalled();
   });
 
@@ -745,7 +745,7 @@ describe("DeploymentOrchestrationUseCase", () => {
     }));
     input.pullRequest = { number: 41 } as never;
     await value.useCase.invoke(input);
-    expect(value.git.deleteBranch.mock.calls.map((call) => call[2])).toEqual(expectedBranches);
+    expect(value.git.deleteBranch.mock.calls.map((call) => call[0])).toEqual(expectedBranches);
   });
 
   it("keeps cleanup failures retryable after every reconciliation target merged", async () => {
@@ -796,7 +796,7 @@ describe("DeploymentOrchestrationUseCase", () => {
     expect(result[0].success).toBe(true);
     expect(input.currentConfiguration.deploymentOrchestration?.phase).toBe("completed");
     expect(value.pullRequests.createManagedPullRequest).not.toHaveBeenCalled();
-    expect(value.git.deleteBranch).toHaveBeenCalledWith("owner", "repo", "release/3.4.0", sourceSha, "pat");
+    expect(value.git.deleteBranch).toHaveBeenCalledWith("release/3.4.0", sourceSha);
   });
 
   it("publishes bounded milestone identities only in milestone mode", async () => {
@@ -804,7 +804,7 @@ describe("DeploymentOrchestrationUseCase", () => {
     value.pullRequests.getPullRequest.mockResolvedValue(pr({ state: "closed", merged: true, mergeCommitSha: productionSha }));
     await value.useCase.invoke(execution("continue", operation("promotion_pr_pending", { commentMode: "milestones" })));
     expect(value.presentation.publishMilestone).toHaveBeenCalledWith(
-      "owner", "repo", 355, expect.stringContaining('name="promotion-merged"'), expect.stringContaining("Publication is starting"), "pat",
+      355, expect.stringContaining('name="promotion-merged"'), expect.stringContaining("Publication is starting"),
     );
   });
 });

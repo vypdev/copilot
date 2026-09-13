@@ -17,6 +17,10 @@ import type { SynchronizeLifecycleStateUseCase } from '../application/usecases/a
 import type { SynchronizeAgentActivityUseCase } from '../application/usecases/actions/synchronize_agent_activity_use_case';
 import { shouldTrackAgentActivity, type AgentActivityRoute } from '../application/policies/agent_activity_policy';
 import {
+    projectAgentActivityContext,
+    type AgentActivityOutcome,
+} from '../application/usecases/push_single_action_contexts';
+import {
     logWelcomeMessage,
     runMainRoute,
     runNoIssueExecution,
@@ -96,13 +100,22 @@ async function runTrackedRoute(
     agentActivityUseCase: SynchronizeAgentActivityUseCase | undefined,
 ): Promise<Result[]> {
     const trackActivity = agentActivityUseCase !== undefined && shouldTrackAgentActivity(execution, route);
-    if (trackActivity) await agentActivityUseCase.start(execution);
+    if (trackActivity) applyAgentActivityOutcome(execution, await agentActivityUseCase.start(projectAgentActivityContext(execution)));
 
     try {
         const results = await run();
         if (!lifecycleStateUseCase) return results;
         return [...results, ...(await lifecycleStateUseCase.invoke({ execution, results }))];
     } finally {
-        if (trackActivity) await agentActivityUseCase.finish(execution);
+        if (trackActivity) applyAgentActivityOutcome(execution, await agentActivityUseCase.finish(projectAgentActivityContext(execution)));
+    }
+}
+
+function applyAgentActivityOutcome(execution: Execution, outcome: AgentActivityOutcome): void {
+    if (!outcome?.target || !outcome.labels) return;
+    if (outcome.target.kind === 'pull-request') {
+        execution.labels.currentPullRequestLabels = [...outcome.labels];
+    } else {
+        execution.labels.currentIssueLabels = [...outcome.labels];
     }
 }

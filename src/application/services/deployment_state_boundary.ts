@@ -1,9 +1,9 @@
 import type {
   DeploymentOrchestrationContext,
-  DeploymentStateStoreFactoryPort,
+  BoundDeploymentStateStoreFactoryPort,
   DeploymentStateStorePort,
 } from "../ports/deployment_orchestration_ports";
-import type { IssueLabelsPort } from "../ports/issue_management_ports";
+import type { BoundIssueLabelsPort } from "../ports/issue_management_ports";
 import {
   deploymentStateFence,
   nextDeploymentRevision,
@@ -18,17 +18,12 @@ export class DeploymentStateBoundary {
   private readonly stores = new WeakMap<DeploymentOrchestrationContext, DeploymentStateStorePort>();
 
   constructor(
-    private readonly state: DeploymentStateStoreFactoryPort,
-    private readonly labels: IssueLabelsPort,
+    private readonly state: BoundDeploymentStateStoreFactoryPort,
+    private readonly labels: BoundIssueLabelsPort,
   ) {}
 
   async initialize(execution: DeploymentOrchestrationContext): Promise<void> {
-    const store = this.state.bind({
-      owner: execution.owner,
-      repository: execution.repo,
-      issue: execution.singleAction.issue,
-      token: execution.tokens.token,
-    });
+    const store = this.state.bind(execution.singleAction.issue);
     this.stores.set(execution, store);
     const loaded = await store.load();
     if (loaded.kind === "absent") {
@@ -88,19 +83,13 @@ export class DeploymentStateBoundary {
     operation: DeploymentOperationSnapshot,
   ): Promise<void> {
     const labels = await this.labels.getLabels(
-      execution.owner,
-      execution.repo,
       execution.singleAction.issue,
-      execution.tokens.token,
     );
     const next = projectDeploymentLabels(labels, operation, execution.labels);
     if (next.join("\0") !== labels.join("\0")) {
       await this.labels.setLabels(
-        execution.owner,
-        execution.repo,
         execution.singleAction.issue,
         next,
-        execution.tokens.token,
       );
     }
   }

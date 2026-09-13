@@ -1,6 +1,7 @@
 import { CloseInactiveIssuesUseCase } from '../close_inactive_issues_use_case';
 import type { Execution } from '../../../../data/model/execution';
 import type { IssueActivitySnapshot } from '../../../../domain/issue_inactivity';
+import { projectInactivityContext } from '../../push_single_action_contexts';
 
 jest.mock('../../../../utils/logger', () => ({
     logInfo: jest.fn(),
@@ -8,8 +9,8 @@ jest.mock('../../../../utils/logger', () => ({
     logError: jest.fn(),
 }));
 
-function execution(overrides: Record<string, unknown> = {}): Execution {
-    return {
+function execution(overrides: Record<string, unknown> = {}) {
+    return projectInactivityContext({
         owner: 'owner',
         repo: 'repo',
         tokens: { token: 'token' },
@@ -22,7 +23,7 @@ function execution(overrides: Record<string, unknown> = {}): Execution {
             },
         },
         ...overrides,
-    } as unknown as Execution;
+    } as unknown as Execution);
 }
 
 function snapshot(overrides: Partial<IssueActivitySnapshot> = {}): IssueActivitySnapshot {
@@ -53,7 +54,7 @@ describe('CloseInactiveIssuesUseCase', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         listOpenIssuesByLabel.mockResolvedValue([]);
-        getOpenIssue.mockImplementation(async (_owner: string, _repo: string, issueNumber: number) => snapshot({ number: issueNumber }));
+        getOpenIssue.mockImplementation(async (issueNumber: number) => snapshot({ number: issueNumber }));
         closeIssue.mockResolvedValue(true);
         addComment.mockResolvedValue(undefined);
     });
@@ -66,14 +67,11 @@ describe('CloseInactiveIssuesUseCase', () => {
         const [result] = await createUseCase().invoke(execution());
 
         expect(listOpenIssuesByLabel).toHaveBeenCalledTimes(2);
-        expect(getOpenIssue).toHaveBeenCalledWith('owner', 'repo', 42, 'token');
-        expect(closeIssue).toHaveBeenCalledWith('owner', 'repo', 42, 'token');
+        expect(getOpenIssue).toHaveBeenCalledWith(42);
+        expect(closeIssue).toHaveBeenCalledWith(42);
         expect(addComment).toHaveBeenCalledWith(
-            'owner',
-            'repo',
             42,
             expect.stringContaining('automatically closed due to inactivity'),
-            'token',
         );
         expect(result).toMatchObject({
             id: 'CloseInactiveIssuesUseCase',

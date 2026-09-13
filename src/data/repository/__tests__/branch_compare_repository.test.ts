@@ -4,9 +4,7 @@
 
 import { OctokitBranchComparisonClientAdapter } from '../../../infrastructure/github/octokit_branch_adapters';
 import { BranchCompareRepository } from '../branch_compare_repository';
-import { Labels } from '../../model/labels';
-import { SizeThresholds } from '../../model/size_thresholds';
-import { SizeThreshold } from '../../model/size_threshold';
+import type { ChangeSizeLabels, ChangeSizeThresholds } from '../../../application/ports/branch_change_ports';
 
 jest.mock('../../../utils/logger', () => ({
     logDebugInfo: jest.fn(),
@@ -24,24 +22,19 @@ jest.mock('@actions/github', () => ({
     }),
 }));
 
-function makeSizeThresholds(): SizeThresholds {
-    return new SizeThresholds(
-        new SizeThreshold(10000, 500, 200),   // xxl
-        new SizeThreshold(2000, 100, 80),      // xl
-        new SizeThreshold(500, 50, 30),       // l
-        new SizeThreshold(200, 25, 15),      // m
-        new SizeThreshold(50, 10, 5),        // s
-        new SizeThreshold(0, 0, 0),          // xs
-    );
+function makeSizeThresholds(): ChangeSizeThresholds {
+    return {
+        xxl: { lines: 10000, files: 500, commits: 200 },
+        xl: { lines: 2000, files: 100, commits: 80 },
+        l: { lines: 500, files: 50, commits: 30 },
+        m: { lines: 200, files: 25, commits: 15 },
+        s: { lines: 50, files: 10, commits: 5 },
+        xs: { lines: 0, files: 0, commits: 0 },
+    };
 }
 
-function makeLabels(): Labels {
-    return new Labels(
-        'launch', 'bug', 'bugfix', 'hotfix', 'enhancement', 'feature', 'release',
-        'question', 'help', 'deploy', 'deployed', 'docs', 'documentation', 'chore', 'maintenance',
-        'high', 'medium', 'low', 'none',
-        'XXL', 'XL', 'L', 'M', 'S', 'XS',
-    );
+function makeLabels(): ChangeSizeLabels {
+    return { xxl: 'XXL', xl: 'XL', l: 'L', m: 'M', s: 'S', xs: 'XS' };
 }
 
 describe('BranchCompareRepository', () => {

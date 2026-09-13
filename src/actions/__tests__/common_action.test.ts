@@ -167,7 +167,8 @@ function mockExecution(overrides: Record<string, unknown> = {}): Execution {
     labels: {
       feature: 'feature', enhancement: 'enhancement', bugfix: 'bugfix', bug: 'bug',
       hotfix: 'hotfix', release: 'release', docs: 'docs', documentation: 'documentation',
-      chore: 'chore', maintenance: 'maintenance', currentPullRequestLabels: [],
+      chore: 'chore', maintenance: 'maintenance', currentPullRequestLabels: [], currentIssueLabels: [],
+      lifecycle: { aiProcessing: 'state:ai-processing' },
     },
     release: { active: false },
     hotfix: { active: false },

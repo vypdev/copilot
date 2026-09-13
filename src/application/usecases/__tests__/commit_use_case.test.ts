@@ -52,7 +52,46 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
     },
     issueNumber: 123,
     currentConfiguration: { parentBranch: 'develop' },
-    branches: { development: 'develop' },
+    branches: {
+      development: 'develop',
+      featureTree: 'feature',
+      bugfixTree: 'bugfix',
+      docsTree: 'docs',
+      choreTree: 'chore',
+      hotfixTree: 'hotfix',
+      releaseTree: 'release',
+    },
+    labels: {
+      currentIssueLabels: ['feature', 'size: M'],
+      currentPullRequestLabels: [],
+      sizeXxl: 'size: XXL',
+      sizeXl: 'size: XL',
+      sizeL: 'size: L',
+      sizeM: 'size: M',
+      sizeS: 'size: S',
+      sizeXs: 'size: XS',
+      sizedLabelOnIssue: 'size: M',
+    },
+    sizeThresholds: Object.fromEntries(['xxl', 'xl', 'l', 'm', 's', 'xs'].map(key => [key, { lines: 1, files: 1, commits: 1 }])),
+    project: { getProjects: () => [] },
+    issue: { number: 123, reopenOnPush: false },
+    release: { active: false },
+    hotfix: { active: false },
+    images: {
+      imagesOnCommit: false,
+      commitAutomaticActions: [],
+      commitFeatureGifs: [],
+      commitBugfixGifs: [],
+      commitReleaseGifs: [],
+      commitHotfixGifs: [],
+      commitDocsGifs: [],
+      commitChoreGifs: [],
+    },
+    isBugfix: false,
+    isFeature: true,
+    isDocs: false,
+    isChore: false,
+    commitPrefixBuilder: '',
     pullRequest: { number: -1, head: '', action: '' },
     ai: new Ai('', 'model', false, [], false, 'low', 20),
     ...overrides,
@@ -102,9 +141,9 @@ describe('CommitUseCase', () => {
     const param = minimalExecution();
     const results = await useCase.invoke(param);
 
-    expect(mockNotifyInvoke).toHaveBeenCalledWith(param);
-    expect(mockCheckChangesInvoke).toHaveBeenCalledWith(param);
-    expect(mockCheckProgressInvoke).toHaveBeenCalledWith(param);
+    expect(mockNotifyInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 123, branch: 'feature/123' }));
+    expect(mockCheckChangesInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 123, headBranch: 'feature/123' }));
+    expect(mockCheckProgressInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 123, pushedBranch: 'feature/123' }));
     expect(mockDetectProblemsInvoke).toHaveBeenCalledWith(expect.objectContaining({
       repository: { owner: 'org', name: 'repo' },
       target: expect.objectContaining({ issueNumber: 123, isPullRequest: false }),
@@ -152,8 +191,8 @@ describe('CommitUseCase', () => {
 
     await useCase.invoke(param);
 
-    expect(mockNotifyInvoke).toHaveBeenCalledWith(param);
-    expect(mockCheckChangesInvoke).toHaveBeenCalledWith(param);
+    expect(mockNotifyInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 123 }));
+    expect(mockCheckChangesInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 123 }));
     expect(mockCheckProgressInvoke).not.toHaveBeenCalled();
     expect(mockDetectProblemsInvoke).not.toHaveBeenCalled();
   });

@@ -1,5 +1,6 @@
-import type { IssueTypes } from '../../data/model/issue_types';
 import type { Labels } from '../../data/model/labels';
+import type { IssueTypes } from '../../data/model/issue_types';
+import type { CopilotLifecycleLabels } from '../../domain/copilot_lifecycle';
 
 export interface IssueAssigneePort {
     getCurrentAssignees(owner: string, repository: string, issueNumber: number, token: string): Promise<string[]>;
@@ -31,6 +32,10 @@ export interface IssueProgressPort {
     setProgressLabel(owner: string, repository: string, issueNumber: number, progress: number, token: string): Promise<void>;
 }
 
+export interface BoundIssueProgressPort {
+    setProgressLabel(issueNumber: number, progress: number): Promise<void>;
+}
+
 export interface LabelProvisioningSummary {
     created: number;
     existing: number;
@@ -41,7 +46,7 @@ export interface InitialLabelProvisioningPort {
     ensureInitialLabels(
         owner: string,
         repository: string,
-        labels: Labels,
+        labels: InitialLabelConfiguration,
         token: string,
     ): Promise<{
         configured: LabelProvisioningSummary;
@@ -50,8 +55,29 @@ export interface InitialLabelProvisioningPort {
 }
 
 export interface IssueTypeProvisioningPort {
-    ensureIssueTypes(owner: string, issueTypes: IssueTypes, token: string): Promise<{ created: number; existing: number; errors: string[] }>;
+    ensureIssueTypes(owner: string, issueTypes: InitialIssueTypeConfiguration, token: string): Promise<{ created: number; existing: number; errors: string[] }>;
 }
+
+export interface BoundInitialLabelProvisioningPort {
+    ensureInitialLabels(labels: InitialLabelConfiguration): Promise<{
+        configured: LabelProvisioningSummary;
+        progress: LabelProvisioningSummary;
+    }>;
+}
+
+export interface BoundIssueTypeProvisioningPort {
+    ensureIssueTypes(issueTypes: InitialIssueTypeConfiguration): Promise<{ created: number; existing: number; errors: string[] }>;
+}
+
+export type InitialLabelConfiguration = Readonly<Pick<Labels,
+    | 'branchManagementLauncherLabel'
+    | 'bug' | 'bugfix' | 'hotfix' | 'enhancement' | 'feature' | 'release'
+    | 'question' | 'help' | 'deploy' | 'deployed' | 'docs' | 'documentation'
+    | 'chore' | 'maintenance' | 'priorityHigh' | 'priorityMedium' | 'priorityLow'
+    | 'priorityNone' | 'sizeXxl' | 'sizeXl' | 'sizeL' | 'sizeM' | 'sizeS' | 'sizeXs'
+>> & { readonly lifecycle: Readonly<CopilotLifecycleLabels> };
+
+export type InitialIssueTypeConfiguration = Readonly<IssueTypes>;
 
 export interface SelectedIssueType {
     readonly name: string;

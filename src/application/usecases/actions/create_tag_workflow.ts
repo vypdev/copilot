@@ -1,27 +1,24 @@
-import type { Execution } from '../../../data/model/execution';
 import { Result } from '../../../data/model/result';
-import type { RepositoryTagPort } from '../../ports/repository_release_ports';
+import type { BoundRepositoryTagPort } from '../../ports/repository_release_ports';
+import type { DeploymentPublicationContext } from '../push_single_action_contexts';
 import { logError, logWarn } from '../../ports/logging_ports';
 import { validateDeploymentContinuation } from '../../policies/deployment_continuation_guard';
 import { ApplicationError, toApplicationError } from '../../errors/application_error';
 
 export async function runCreateTag(
-    param: Execution,
+    param: DeploymentPublicationContext,
     taskId: string,
-    repositoryTagPort: RepositoryTagPort,
+    repositoryTagPort: BoundRepositoryTagPort,
 ): Promise<Result[]> {
     const validationFailure = validateTagInput(param, taskId);
     if (validationFailure) return [validationFailure];
-    const operation = param.currentConfiguration.deploymentOrchestration!;
+    const operation = param.operation!;
     const version = operation.version;
     const tagName = `v${version}`;
     try {
         const sha1Tag = await repositoryTagPort.createOrVerifyTagAtSha(
-            param.owner,
-            param.repo,
             operation.productionSha!,
             tagName,
-            param.tokens.token,
         );
         return sha1Tag ? [new Result({ id: taskId, success: true, executed: true, steps: [`Tag ${tagName} is ready: ${sha1Tag}`] })]
             : noTagResult(taskId, tagName);
@@ -32,12 +29,12 @@ export async function runCreateTag(
     }
 }
 
-function validateTagInput(param: Execution, taskId: string): Result | undefined {
-    const operation = param.currentConfiguration.deploymentOrchestration;
+function validateTagInput(param: DeploymentPublicationContext, taskId: string): Result | undefined {
+    const operation = param.operation;
     if (!operation) {
         return new Result({ id: taskId, success: false, executed: true, errors: [new ApplicationError('workflow.invalid-event', 'create_tag requires a durable deployment operation.')] });
     }
-    const continuationError = validateDeploymentContinuation(operation, param.singleAction.operationId, ["publishing"], param.singleAction.version);
+    const continuationError = validateDeploymentContinuation(operation, param.requestedOperationId, ["publishing"], param.requestedVersion);
     if (continuationError) return new Result({ id: taskId, success: false, executed: true, errors: [new ApplicationError('workflow.stale', continuationError)] });
     if (!operation.productionSha) {
         return new Result({ id: taskId, success: false, executed: true, errors: [new ApplicationError('workflow.stale', 'The deployment operation has no accepted production SHA.')] });

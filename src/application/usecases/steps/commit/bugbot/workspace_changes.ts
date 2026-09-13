@@ -1,4 +1,4 @@
-import type { GitCommitPort } from '../../../../ports/git_ports';
+import type { BugbotGitMutationPort } from '../../../../ports/bugbot_git_ports';
 
 /**
  * Extracts repository-relative paths from `git status --porcelain` output.
@@ -48,7 +48,7 @@ export function selectWorkspacePathsToCommit(before: string[], after: string[]):
 }
 
 /** Reads the current working tree paths without executing a shell. */
-export async function listWorkspacePaths(gitCommitPort: GitCommitPort): Promise<string[]> {
+export async function listWorkspacePaths(gitCommitPort: Pick<BugbotGitMutationPort, 'execute'>): Promise<string[]> {
     let output = "";
     await gitCommitPort.execute("git", ["status", "--porcelain"], {
         stdout: (data: Buffer) => {
@@ -58,6 +58,6 @@ export async function listWorkspacePaths(gitCommitPort: GitCommitPort): Promise<
     return parsePorcelainWorkspacePaths(output);
 }
 
-export async function hasWorkspaceChanges(gitCommitPort: GitCommitPort): Promise<boolean> {
+export async function hasWorkspaceChanges(gitCommitPort: Pick<BugbotGitMutationPort, 'execute'>): Promise<boolean> {
     return (await listWorkspacePaths(gitCommitPort)).length > 0;
 }

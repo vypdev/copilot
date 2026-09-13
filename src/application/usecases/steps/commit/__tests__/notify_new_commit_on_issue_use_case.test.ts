@@ -1,4 +1,5 @@
 import { NotifyNewCommitOnIssueUseCase } from '../notify_new_commit_on_issue_use_case';
+import { projectCommitNotificationContext } from '../../../push_single_action_contexts';
 
 jest.mock('../../../../../utils/logger', () => ({
   logInfo: jest.fn(),
@@ -19,7 +20,7 @@ jest.mock('../../common/execute_script_use_case', () => ({
 }));
 
 function baseParam(overrides: Record<string, unknown> = {}) {
-  return {
+  return projectCommitNotificationContext({
     owner: 'o',
     repo: 'r',
     issueNumber: 42,
@@ -36,6 +37,7 @@ function baseParam(overrides: Record<string, unknown> = {}) {
     },
     commitPrefixBuilder: '',
     images: {
+      imagesOnCommit: true,
       commitReleaseGifs: ['url1'],
       commitHotfixGifs: ['url2'],
       commitBugfixGifs: ['url3'],
@@ -44,7 +46,6 @@ function baseParam(overrides: Record<string, unknown> = {}) {
       commitChoreGifs: ['url6'],
       commitAutomaticActions: ['url7'],
     },
-    imagesOnCommit: true,
     issue: { reopenOnPush: false },
     release: { active: false },
     hotfix: { active: false },
@@ -53,7 +54,7 @@ function baseParam(overrides: Record<string, unknown> = {}) {
     isDocs: false,
     isChore: false,
     ...overrides,
-  } as unknown as Parameters<NotifyNewCommitOnIssueUseCase['invoke']>[0];
+  } as never);
 }
 
 describe('NotifyNewCommitOnIssueUseCase', () => {
@@ -70,25 +71,16 @@ describe('NotifyNewCommitOnIssueUseCase', () => {
     const param = baseParam();
     const results = await useCase.invoke(param);
     expect(mockAddComment).toHaveBeenCalledWith(
-      'o',
-      'r',
       42,
       expect.stringContaining('Feature News'),
-      't'
     );
     expect(mockAddComment).toHaveBeenCalledWith(
-      'o',
-      'r',
       42,
       expect.stringContaining('feature/42-add-login'),
-      't'
     );
     expect(mockAddComment).toHaveBeenCalledWith(
-      'o',
-      'r',
       42,
       expect.stringContaining('alice'),
-      't'
     );
     expect(results).toEqual([]);
   });
@@ -102,7 +94,7 @@ describe('NotifyNewCommitOnIssueUseCase', () => {
   it('calls openIssue and addComment when reopenOnPush is true', async () => {
     const param = baseParam({ issue: { reopenOnPush: true } });
     await useCase.invoke(param);
-    expect(mockOpenIssue).toHaveBeenCalledWith('o', 'r', 42, 't');
+    expect(mockOpenIssue).toHaveBeenCalledWith(42);
     expect(mockAddComment).toHaveBeenCalled();
   });
 
@@ -136,11 +128,8 @@ describe('NotifyNewCommitOnIssueUseCase', () => {
       'replace-slash',
     );
     expect(mockAddComment).toHaveBeenCalledWith(
-      'o',
-      'r',
       42,
-      expect.stringContaining('add login screen'),
-      't'
+      expect.stringContaining('add login screen')
     );
   });
 
@@ -148,11 +137,8 @@ describe('NotifyNewCommitOnIssueUseCase', () => {
     const param = baseParam({ release: { active: true }, isFeature: false });
     await useCase.invoke(param);
     expect(mockAddComment).toHaveBeenCalledWith(
-      'o',
-      'r',
       42,
-      expect.stringContaining('Release News'),
-      't'
+      expect.stringContaining('Release News')
     );
   });
 
@@ -160,11 +146,8 @@ describe('NotifyNewCommitOnIssueUseCase', () => {
     const param = baseParam({ hotfix: { active: true }, isFeature: false });
     await useCase.invoke(param);
     expect(mockAddComment).toHaveBeenCalledWith(
-      'o',
-      'r',
       42,
-      expect.stringContaining('Hotfix News'),
-      't'
+      expect.stringContaining('Hotfix News')
     );
   });
 
@@ -172,21 +155,15 @@ describe('NotifyNewCommitOnIssueUseCase', () => {
     const paramBugfix = baseParam({ isBugfix: true, isFeature: false });
     await useCase.invoke(paramBugfix);
     expect(mockAddComment).toHaveBeenCalledWith(
-      'o',
-      'r',
       42,
-      expect.stringContaining('Bugfix News'),
-      't'
+      expect.stringContaining('Bugfix News')
     );
 
     const paramDocs = baseParam({ isDocs: true, isFeature: false });
     await useCase.invoke(paramDocs);
     expect(mockAddComment).toHaveBeenCalledWith(
-      'o',
-      'r',
       42,
-      expect.stringContaining('Documentation News'),
-      't'
+      expect.stringContaining('Documentation News')
     );
   });
 
@@ -194,11 +171,8 @@ describe('NotifyNewCommitOnIssueUseCase', () => {
     const paramChore = baseParam({ isChore: true, isFeature: false });
     await useCase.invoke(paramChore);
     expect(mockAddComment).toHaveBeenCalledWith(
-      'o',
-      'r',
       42,
-      expect.stringContaining('Chore News'),
-      't'
+      expect.stringContaining('Chore News')
     );
 
     const paramAuto = baseParam({
@@ -209,11 +183,8 @@ describe('NotifyNewCommitOnIssueUseCase', () => {
     });
     await useCase.invoke(paramAuto);
     expect(mockAddComment).toHaveBeenCalledWith(
-      'o',
-      'r',
       42,
-      expect.stringContaining('Automatic News'),
-      't'
+      expect.stringContaining('Automatic News')
     );
   });
 
@@ -234,18 +205,12 @@ describe('NotifyNewCommitOnIssueUseCase', () => {
     });
     await useCase.invoke(param);
     expect(mockAddComment).toHaveBeenCalledWith(
-      'o',
-      'r',
       42,
-      expect.stringContaining('Attention'),
-      't'
+      expect.stringContaining('Attention')
     );
     expect(mockAddComment).toHaveBeenCalledWith(
-      'o',
-      'r',
       42,
-      expect.stringMatching(/prefix \*\*feature-42\*\*/),
-      't'
+      expect.stringMatching(/prefix \*\*feature-42\*\*/)
     );
   });
 
@@ -254,11 +219,8 @@ describe('NotifyNewCommitOnIssueUseCase', () => {
     const param = baseParam({ issue: { reopenOnPush: true } });
     await useCase.invoke(param);
     expect(mockAddComment).toHaveBeenCalledWith(
-      'o',
-      'r',
       42,
-      expect.stringContaining('re-opened after pushing new commits'),
-      't'
+      expect.stringContaining('re-opened after pushing new commits')
     );
   });
 
@@ -268,7 +230,7 @@ describe('NotifyNewCommitOnIssueUseCase', () => {
     const param = baseParam({ issue: { reopenOnPush: true } });
     await useCase.invoke(param);
     const reOpenedCalls = mockAddComment.mock.calls.filter((c) =>
-      c[3].includes('re-opened after pushing')
+      c[1].includes('re-opened after pushing')
     );
     expect(reOpenedCalls).toHaveLength(0);
   });

@@ -58,9 +58,11 @@ There are no installed users or persisted setup state to migrate, so this is a
 greenfield contract: no legacy prompt facade, compatibility overload, dual
 reader/writer, deprecated result, or transitional state alias is retained.
 
-The runtime `Execution` aggregate is projected once at
-`initial_setup_request.ts`; the setup workflow consumes only the repository,
-credential, label, issue-type, and setup-configuration facts it needs.
+The runtime `Execution` aggregate is projected at the setup route into a fresh
+`InitialSetupContext`; the setup workflow consumes only label, issue-type,
+selected setup configuration, provisioning credential, remote-configuration,
+and workflow-update facts. Repository coordinates and the GitHub authentication
+token are captured by setup composition ports and never enter that context.
 Action input keys are defined in `src/application/contracts/input_keys.ts`,
 provider-independent action types remain in `src/data/model/action_types.ts`,
 and unrelated constants have explicit owners instead of a global constants
@@ -123,6 +125,18 @@ and base on success or failure, and names any retained partial state. Automatic
 and authorized-command PR descriptions now share one discriminated request.
 This clean cut removes all `Execution` imports from the issue/PR step directories
 and lowers the exact repository inventory from 75 to 47.
+
+P2-F extends the boundary across push and single-action capabilities. Routes
+project separate frozen records for release/tag publication, setup, progress,
+recommendations, inactivity, issue comments, branch observation and sync,
+commit notification and sizing, activity markers, and deployment. The
+`push_single_action_capability_port_binding.ts` composition boundary captures
+repository coordinates and credentials once; application methods accept only
+semantic operation facts and cannot retarget provider calls. Recommendation and
+activity changes return explicit outcomes for the owning route. Deployment owns
+an isolated invocation-state copy whose durable revisions cross only its fenced
+state port. Obsolete setup and commit-prefix mutation paths were deleted, and
+the exact production `Execution` consumer inventory fell from 47 to 13.
 
 Configuration embedded in issue or pull-request content is versioned. Readers
 accept only the current schema and fail closed on missing, malformed, or

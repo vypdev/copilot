@@ -587,6 +587,7 @@ describe("IssueCommentUseCase", () => {
       target: expect.objectContaining({
         isPullRequest: true,
         pullRequestNumber: 362,
+        headBranch: "",
       }),
       trigger: expect.objectContaining({ kind: "issue_comment" }),
     }));
@@ -641,7 +642,10 @@ describe("IssueCommentUseCase", () => {
     }));
     expect(mockSyncBranch).toHaveBeenCalledTimes(1);
     expect(mockSyncBranch).toHaveBeenCalledWith({
-      execution: syncExecution,
+      context: expect.objectContaining({
+        conversationNumber: syncExecution.issue.number,
+        repository: { owner: syncExecution.owner, name: syncExecution.repo },
+      }),
       options: { dryRun: false, useAgent: true, parentOverride: "develop" },
     });
   });

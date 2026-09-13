@@ -170,6 +170,14 @@ export function bindProjectBoardCommands(
       priorityLabel,
       binding.token,
     ),
+    setTaskSize: (project, contentNumber, sizeLabel) => port.setTaskSize(
+      toProjectDetail(project),
+      binding.owner,
+      binding.repository,
+      contentNumber,
+      sizeLabel,
+      binding.token,
+    ),
     moveIssueToColumn: (project, contentNumber, columnName) => port.moveIssueToColumn(
       toProjectDetail(project),
       binding.owner,

@@ -71,14 +71,11 @@ export class AcceptPromotionHandler {
       `✅ Promotion PR #${pullRequest.number} merged. Publication is starting from production SHA \`${productionSha}\`.`,
     );
     await this.runtime.dependencies.continuation.dispatch(
-      context.owner,
-      context.repo,
       operation.publicationWorkflow,
       operation.productionBranch,
       operation.operationId,
       context.singleAction.issue,
       operation.version,
-      context.tokens.token,
     );
     return deploymentSuccess(
       `Promotion PR #${pullRequest.number} was verified; publication continuation was dispatched from ${operation.productionBranch}.`,
@@ -92,18 +89,12 @@ export class AcceptPromotionHandler {
   ): Promise<boolean> {
     const [mergeReachable, sourceReachable] = await Promise.all([
       this.runtime.dependencies.git.isCommitReachable(
-        context.owner,
-        context.repo,
         operation.productionBranch,
         productionSha,
-        context.tokens.token,
       ),
       this.runtime.dependencies.git.isCommitReachable(
-        context.owner,
-        context.repo,
         operation.productionBranch,
         operation.sourceSha,
-        context.tokens.token,
       ),
     ]);
     return mergeReachable && sourceReachable;

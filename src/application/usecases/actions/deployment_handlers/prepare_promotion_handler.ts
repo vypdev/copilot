@@ -50,10 +50,7 @@ export class PreparePromotionHandler {
     const operation = await this.resumeBlockedPreparation(context, existing);
     if (operation.phase === "preparing" || operation.phase === "promotion_pr_pending") {
       const currentSourceSha = await this.runtime.dependencies.git.getBranchSha(
-        context.owner,
-        context.repo,
         operation.sourceBranch,
-        context.tokens.token,
       );
       if (currentSourceSha !== operation.sourceSha) {
         return await this.runtime.block(
@@ -94,21 +91,15 @@ export class PreparePromotionHandler {
       throw new ApplicationError("workflow.stale", `No prepared ${kind} branch is stored on the launcher issue.`);
     }
     const sourceSha = await this.runtime.dependencies.git.getBranchSha(
-      context.owner,
-      context.repo,
       sourceBranch,
-      context.tokens.token,
     );
     const originBranch = selectOriginBranch(context, kind);
     const persistedOrigin = kind === "release"
       ? context.currentConfiguration.releaseOriginSha
       : context.currentConfiguration.hotfixOriginSha;
     const originSha = persistedOrigin ?? await this.runtime.dependencies.git.getMergeBaseSha(
-      context.owner,
-      context.repo,
       originBranch,
       sourceBranch,
-      context.tokens.token,
     );
     const operation = buildInitialDeploymentOperation({
       operationId: this.runtime.dependencies.operationId(),

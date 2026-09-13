@@ -23,6 +23,13 @@ import {
     type BugbotReviewOperationContext,
     type BugbotReviewOperationSource,
 } from './steps/commit/bugbot/bugbot_review_operation_context';
+import {
+    projectBranchSyncContext,
+    projectUserRequestContext,
+    type BranchSyncContext,
+    type PushSingleActionContextSource,
+    type UserRequestContext,
+} from './push_single_action_contexts';
 
 export interface CommentAutomationContext {
     readonly actor: string;
@@ -32,6 +39,8 @@ export interface CommentAutomationContext {
     readonly language: CommentLanguageRequest;
     readonly think: ThinkContext;
     readonly status: CopilotStatusSnapshot;
+    readonly userRequest: UserRequestContext;
+    readonly branchSync: BranchSyncContext;
     readonly bugbot: {
         readonly fixIntent: BugbotFixIntentContext;
         readonly review: BugbotReviewOperationContext;
@@ -48,6 +57,7 @@ export type CommentAutomationContextSource =
     & BugbotReviewOperationSource
     & BugbotAutofixOperationSource
     & BugbotCommitSource
+    & PushSingleActionContextSource
     & {
         readonly actor: string;
         readonly tokenUser?: string;
@@ -83,6 +93,8 @@ export function projectCommentAutomationContext(
         }),
         think: projectThinkContext(source),
         status: buildCopilotStatusSnapshot(source),
+        userRequest: projectUserRequestContext(source),
+        branchSync: projectBranchSyncContext(source),
         bugbot: Object.freeze({
             fixIntent: projectBugbotFixIntentContext(source),
             review,

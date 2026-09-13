@@ -1,5 +1,5 @@
 import { logError } from "../../../utils/logger";
-import type { IssueTypes } from "../../model/issue_types";
+import type { InitialIssueTypeConfiguration } from '../../../application/ports/issue_management_ports';
 import type { GithubGraphqlTransportClient } from "../../../infrastructure/github/ports/github_graphql_transport_port";
 import { configuredIssueTypes, type ConfiguredIssueType } from "./issue_type_configuration";
 import { createIssueType, listIssueTypes } from "./issue_type_queries";
@@ -39,7 +39,7 @@ export async function ensureIssueType(
 export async function ensureIssueTypes(
   client: GithubGraphqlTransportClient,
   owner: string,
-  issueTypes: IssueTypes,
+  issueTypes: InitialIssueTypeConfiguration,
 ): Promise<IssueTypeEnsureSummary> {
   let created = 0;
   let existing = 0;

@@ -5,7 +5,6 @@
  */
 
 import { isAgentConfigurationReady } from "../../../../data/model/agent";
-import type { Execution } from "../../../../data/model/execution";
 import type { FixerQueryPort } from "../../../ports/agent_fixer_ports";
 import { getUserRequestPrompt } from "../../../../prompts";
 import { logDebugInfo, logError, logInfo } from "../../../ports/logging_ports";
@@ -14,14 +13,15 @@ import { ParamUseCase } from "../../base/param_usecase";
 import { Result } from "../../../../data/model/result";
 import { PROJECT_CONTEXT_INSTRUCTION } from "../../../../utils/project_context_instruction";
 import { sanitizeUserCommentForPrompt } from "./bugbot/sanitize_user_comment_for_prompt";
-import type { GitCommitPort } from '../../../ports/git_ports';
+import type { BugbotGitMutationPort } from '../../../ports/bugbot_git_ports';
+import type { UserRequestContext } from '../../push_single_action_contexts';
 import { finalizeWorkspaceMutation, prepareWorkspaceMutation } from './workspace_mutation_guard';
 import { ApplicationError, toApplicationError } from '../../../errors/application_error';
 
 const TASK_ID = "DoUserRequestUseCase";
 
 export interface DoUserRequestParam {
-    execution: Execution;
+    context: UserRequestContext;
     userComment: string;
     branchOverride?: string;
 }
@@ -31,16 +31,16 @@ export class DoUserRequestUseCase implements ParamUseCase<DoUserRequestParam, Re
 
     constructor(
         private readonly aiRepository: FixerQueryPort,
-        private readonly gitCommitPort: GitCommitPort,
+        private readonly gitCommitPort: BugbotGitMutationPort,
     ) {}
 
     async invoke(param: DoUserRequestParam): Promise<Result[]> {
         logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`);
 
         const results: Result[] = [];
-        const { execution, userComment } = param;
+        const { context, userComment } = param;
 
-        if (!isAgentConfigurationReady(execution.ai.getAgentConfiguration('fixer'))) {
+        if (!isAgentConfigurationReady(context.agentConfiguration)) {
             logInfo("Agent not configured; skipping user request.");
             return results;
         }
@@ -51,34 +51,31 @@ export class DoUserRequestUseCase implements ParamUseCase<DoUserRequestParam, Re
             return results;
         }
 
-        const targetBranch = param.branchOverride ?? execution.commit.branch;
+        const targetBranch = param.branchOverride ?? context.headBranch;
         let mutation;
         try {
             mutation = await prepareWorkspaceMutation(this.gitCommitPort, {
                 operation: 'User-request implementation',
                 branch: targetBranch,
-                token: execution.tokens.token,
             });
         } catch (error) {
             return [failure(error)];
         }
 
-        const baseBranch =
-            execution.currentConfiguration.parentBranch ?? execution.branches.development ?? "develop";
         const prompt = getUserRequestPrompt({
             projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
-            owner: execution.owner,
-            repo: execution.repo,
-            headBranch: execution.commit.branch,
-            baseBranch,
-            issueNumber: String(execution.issueNumber),
+            owner: context.repository.owner,
+            repo: context.repository.name,
+            headBranch: context.headBranch,
+            baseBranch: context.baseBranch,
+            issueNumber: String(context.issueNumber),
             userComment: sanitizeUserCommentForPrompt(userComment),
         });
 
         logDebugInfo(`DoUserRequest: prompt length=${prompt.length}, user comment length=${commentTrimmed.length}.`);
         logInfo("Running configured build agent to perform user request (changes applied in workspace).");
         const response = await this.aiRepository.fix({
-            configuration: execution.ai.getAgentConfiguration('fixer'),
+            configuration: context.agentConfiguration,
             prompt,
         });
 

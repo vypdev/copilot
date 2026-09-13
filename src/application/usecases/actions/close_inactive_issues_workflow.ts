@@ -1,15 +1,15 @@
-import type { Execution } from '../../../data/model/execution';
 import { Result } from '../../../data/model/result';
 import { evaluateIssueInactivity, type IssueActivitySnapshot } from '../../../domain/issue_inactivity';
-import type { IssueClosurePort } from '../../ports/issue_lifecycle_ports';
-import type { IssueInactivityClockPort, IssueInactivityQueryPort } from '../../ports/issue_inactivity_ports';
+import type { BoundIssueClosurePort } from '../../ports/issue_lifecycle_ports';
+import type { BoundIssueInactivityQueryPort, IssueInactivityClockPort } from '../../ports/issue_inactivity_ports';
+import type { InactivityContext } from '../push_single_action_contexts';
 import { sanitizePublishedError } from '../../policies/github_comment_publication_policy';
 import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
 import { ApplicationError, toApplicationError } from '../../errors/application_error';
 
 export interface CloseInactiveIssuesWorkflowDependencies {
-    readonly issueQueryPort: IssueInactivityQueryPort;
-    readonly issueClosurePort: IssueClosurePort;
+    readonly issueQueryPort: BoundIssueInactivityQueryPort;
+    readonly issueClosurePort: BoundIssueClosurePort;
     readonly clock: IssueInactivityClockPort;
 }
 
@@ -19,16 +19,15 @@ const INACTIVITY_COMMENT = (thresholdHours: number): string =>
 
 /** Scans waiting issues and closes only candidates that remain inactive. */
 export async function runCloseInactiveIssuesWorkflow(
-    param: Execution,
+    param: InactivityContext,
     dependencies: CloseInactiveIssuesWorkflowDependencies,
 ): Promise<Result[]> {
     const waitingLabels = unique([
-        param.labels.lifecycle.awaitingMaintainer,
-        param.labels.lifecycle.awaitingIssueAuthor,
+        ...param.waitingLabels,
     ]);
-    const activityLabel = param.labels.lifecycle.aiProcessing;
+    const activityLabel = param.activityLabel;
     const nowMilliseconds = dependencies.clock.nowMilliseconds();
-    const thresholdHours = param.inactivityThresholdHours;
+    const thresholdHours = param.thresholdHours;
 
     try {
         const candidates = await listCandidates(param, waitingLabels, dependencies.issueQueryPort);
@@ -56,10 +55,7 @@ export async function runCloseInactiveIssuesWorkflow(
                 // mutation so a comment or state transition during the scan
                 // invalidates the stale list snapshot.
                 const current = await dependencies.issueQueryPort.getOpenIssue(
-                    param.owner,
-                    param.repo,
                     candidate.number,
-                    param.tokens.token,
                 );
                 if (!current || evaluateIssueInactivity({
                     issue: current,
@@ -73,10 +69,7 @@ export async function runCloseInactiveIssuesWorkflow(
                 }
 
                 const closed = await dependencies.issueClosurePort.closeIssue(
-                    param.owner,
-                    param.repo,
                     candidate.number,
-                    param.tokens.token,
                 );
                 if (!closed) {
                     skippedCount++;
@@ -84,11 +77,8 @@ export async function runCloseInactiveIssuesWorkflow(
                 }
                 closedCount++;
                 await dependencies.issueClosurePort.addComment(
-                    param.owner,
-                    param.repo,
                     candidate.number,
                     INACTIVITY_COMMENT(thresholdHours),
-                    param.tokens.token,
                 );
                 logInfo(`Issue #${candidate.number} closed after inactivity.`);
             } catch (error) {
@@ -128,18 +118,13 @@ export async function runCloseInactiveIssuesWorkflow(
 }
 
 async function listCandidates(
-    param: Execution,
+    _param: InactivityContext,
     waitingLabels: readonly string[],
-    queryPort: IssueInactivityQueryPort,
+    queryPort: BoundIssueInactivityQueryPort,
 ): Promise<IssueActivitySnapshot[]> {
     const candidates: IssueActivitySnapshot[] = [];
     for (const label of waitingLabels) {
-        candidates.push(...await queryPort.listOpenIssuesByLabel(
-            param.owner,
-            param.repo,
-            label,
-            param.tokens.token,
-        ));
+        candidates.push(...await queryPort.listOpenIssuesByLabel(label));
     }
 
     const uniqueCandidates = new Map<number, IssueActivitySnapshot>();

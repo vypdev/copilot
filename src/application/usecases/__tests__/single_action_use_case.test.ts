@@ -61,16 +61,52 @@ function minimalExecution(singleAction: {
   isCloseInactiveIssuesAction?: boolean;
   isPublishIssueCommentAction?: boolean;
   isCheckBranchSyncAction?: boolean;
+  isDeploymentOrchestrationAction?: boolean;
 }): Execution {
   return {
+    owner: 'org',
+    repo: 'repo',
+    actor: 'alice',
+    eventName: 'workflow_dispatch',
+    tokens: { token: 'token' },
     ai: new Ai('', 'model', false, [], false, 'low', 20),
     issueNumber: 12,
     tokenUser: 'bot',
     issue: { commentBody: '@bot what next', isIssueComment: true, number: 12 },
     pullRequest: { commentBody: '', isPullRequestReviewComment: false, number: -1 },
+    commit: { branch: 'feature/12-contexts', commits: [] },
+    inputs: { action: 'opened', after: 'a'.repeat(40) },
+    currentConfiguration: {},
+    previousConfiguration: undefined,
+    branches: {
+      defaultBranch: 'master', development: 'develop', featureTree: 'feature', bugfixTree: 'bugfix',
+      docsTree: 'docs', choreTree: 'chore', hotfixTree: 'hotfix', releaseTree: 'release',
+    },
+    labels: {
+      lifecycle: {
+        aiProcessing: 'state:ai-processing', planned: 'state:planned', inProgress: 'state:in-progress',
+        reviewing: 'state:reviewing', changesRequested: 'state:changes-requested', verified: 'state:verified',
+        ready: 'state:ready', blocked: 'state:blocked', awaitingMaintainer: 'state:awaiting-maintainer',
+        awaitingIssueAuthor: 'state:awaiting-issue-author',
+      },
+      currentIssueLabels: [], currentPullRequestLabels: [], sizeXxl: 'size: XXL', sizeXl: 'size: XL',
+      sizeL: 'size: L', sizeM: 'size: M', sizeS: 'size: S', sizeXs: 'size: XS',
+      isRelease: false, isHotfix: false,
+    },
+    inactivityThresholdHours: 48,
+    sizeThresholds: Object.fromEntries(['xxl', 'xl', 'l', 'm', 's', 'xs'].map(key => [key, { lines: 1, files: 1, commits: 1 }])),
+    project: { getProjects: () => [] },
+    release: { active: false }, hotfix: { active: false },
+    images: {
+      imagesOnCommit: false, commitAutomaticActions: [], commitFeatureGifs: [], commitBugfixGifs: [],
+      commitReleaseGifs: [], commitHotfixGifs: [], commitDocsGifs: [], commitChoreGifs: [],
+    },
+    isBugfix: false, isFeature: true, isDocs: false, isChore: false,
+    commitPrefixBuilder: '', issueTypes: {},
     singleAction: {
       validSingleAction: singleAction.validSingleAction,
       currentSingleAction: singleAction.currentSingleAction,
+      operationId: '', version: '', issue: 12, message: '@bot what next', commentId: 0, commentIdInput: '', commentMode: 'create',
       get isPublishGithubAction() {
         return singleAction.isPublishGithubAction ?? this.currentSingleAction === ACTIONS.PUBLISH_GITHUB_ACTION;
       },
@@ -104,8 +140,12 @@ function minimalExecution(singleAction: {
       get isCheckBranchSyncAction() {
         return singleAction.isCheckBranchSyncAction ?? this.currentSingleAction === ACTIONS.CHECK_BRANCH_SYNC;
       },
+      get isDeploymentOrchestrationAction() {
+        return singleAction.isDeploymentOrchestrationAction
+          ?? this.currentSingleAction === ACTIONS.PREPARE_DEPLOYMENT;
+      },
     } as Execution['singleAction'],
-  } as Execution;
+  } as unknown as Execution;
 }
 
 describe('SingleActionUseCase', () => {
@@ -113,7 +153,7 @@ describe('SingleActionUseCase', () => {
     jest.clearAllMocks();
     mockThinkInvoke.mockResolvedValue([]);
     mockCheckProgressInvoke.mockResolvedValue([]);
-    mockRecommendStepsInvoke.mockResolvedValue([]);
+    mockRecommendStepsInvoke.mockResolvedValue({ results: [] });
   });
 
   it('returns empty results when not a valid single action', async () => {
@@ -168,7 +208,7 @@ describe('SingleActionUseCase', () => {
 
     await useCase.invoke(param);
 
-    expect(closeInactiveInvoke).toHaveBeenCalledWith(param);
+    expect(closeInactiveInvoke).toHaveBeenCalledWith(expect.objectContaining({ thresholdHours: 48 }));
   });
 
   it('dispatches to PublishIssueCommentUseCase when action is publish_issue_comment', async () => {
@@ -193,7 +233,7 @@ describe('SingleActionUseCase', () => {
 
     await useCase.invoke(param);
 
-    expect(publishIssueCommentInvoke).toHaveBeenCalledWith(param);
+    expect(publishIssueCommentInvoke).toHaveBeenCalledWith(expect.objectContaining({ kind: 'ready', issueNumber: 12 }));
   });
 
   it('dispatches to CheckProgressUseCase when action is check_progress', async () => {
@@ -209,7 +249,7 @@ describe('SingleActionUseCase', () => {
 
     const results = await useCase.invoke(param);
 
-    expect(mockCheckProgressInvoke).toHaveBeenCalledWith(param);
+    expect(mockCheckProgressInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 12, pushedBranch: 'feature/12-contexts' }));
     expect(results).toHaveLength(1);
   });
 
@@ -267,13 +307,13 @@ describe('SingleActionUseCase', () => {
 
     await useCase.invoke(param);
 
-    expect(observe.invoke).toHaveBeenCalledWith(param);
+    expect(observe.invoke).toHaveBeenCalledWith(expect.objectContaining({ pushedBranch: 'feature/12-contexts' }));
   });
 
   it('dispatches to RecommendStepsUseCase when action is recommend_steps', async () => {
-    mockRecommendStepsInvoke.mockResolvedValue([
-      new Result({ id: 'rec', success: true, executed: true, steps: [] }),
-    ]);
+    mockRecommendStepsInvoke.mockResolvedValue({
+      results: [new Result({ id: 'rec', success: true, executed: true, steps: [] })],
+    });
 
     const useCase = new SingleActionUseCase({} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, { invoke: mockRecommendStepsInvoke } as any);
     const param = minimalExecution({
@@ -283,8 +323,69 @@ describe('SingleActionUseCase', () => {
 
     const results = await useCase.invoke(param);
 
-    expect(mockRecommendStepsInvoke).toHaveBeenCalledWith(param);
+    expect(mockRecommendStepsInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 12 }));
     expect(results).toHaveLength(1);
+  });
+
+  it('applies only the explicit recommendation patch returned by the workflow', async () => {
+    mockRecommendStepsInvoke.mockResolvedValue({
+      results: [],
+      configurationPatch: {
+        recommendationState: {
+          issueDescriptionFingerprint: 'description',
+          recommendationFingerprint: 'recommendation',
+          recommendation: 'Do this',
+        },
+      },
+    });
+    const useCase = new SingleActionUseCase(
+      {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+      { invoke: mockRecommendStepsInvoke } as any,
+    );
+    const param = minimalExecution({ validSingleAction: true, currentSingleAction: ACTIONS.RECOMMEND_STEPS });
+
+    await useCase.invoke(param);
+
+    expect(param.currentConfiguration.recommendationState).toEqual({
+      issueDescriptionFingerprint: 'description',
+      recommendationFingerprint: 'recommendation',
+      recommendation: 'Do this',
+    });
+  });
+
+  it.each([
+    [ACTIONS.PUBLISH_GITHUB_ACTION, 0],
+    [ACTIONS.CREATE_RELEASE, 1],
+    [ACTIONS.CREATE_TAG, 2],
+    [ACTIONS.INITIAL_SETUP, 4],
+    [ACTIONS.PREPARE_DEPLOYMENT, 12],
+  ] as const)('projects and dispatches %s through its dedicated capability port', async (action, portIndex) => {
+    const invoke = jest.fn().mockResolvedValue([]);
+    const ports = Array.from({ length: 13 }, (_, index) => ({
+      taskId: `port-${index}`,
+      invoke: index === portIndex ? invoke : jest.fn().mockResolvedValue([]),
+    }));
+    const useCase = new SingleActionUseCase(
+      ports[0] as never,
+      ports[1] as never,
+      ports[2] as never,
+      ports[3] as never,
+      ports[4] as never,
+      ports[5] as never,
+      ports[6] as never,
+      ports[7] as never,
+      ports[8] as never,
+      undefined,
+      ports[10] as never,
+      ports[11] as never,
+      ports[12] as never,
+    );
+    const param = minimalExecution({ validSingleAction: true, currentSingleAction: action });
+
+    await useCase.invoke(param);
+
+    expect(invoke).toHaveBeenCalledTimes(1);
+    expect(invoke).not.toHaveBeenCalledWith(param);
   });
 
   it('on error pushes failure result with action name', async () => {

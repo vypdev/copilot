@@ -3,13 +3,14 @@ import { ACTIONS } from '../../../../data/model/action_types';
 import { SingleAction } from '../../../../data/model/single_action';
 import { getCommentWatermark } from '../../../../utils/comment_watermark';
 import { PublishIssueCommentUseCase } from '../publish_issue_comment_use_case';
+import { projectIssueCommentActionContext } from '../../push_single_action_contexts';
 
 const addComment = jest.fn();
 const updateComment = jest.fn();
 const listIssueComments = jest.fn();
 
-function execution(message: string, commentId = '', mode = ''): Execution {
-    return {
+function execution(message: string, commentId = '', mode = '') {
+    return projectIssueCommentActionContext({
         owner: 'owner',
         repo: 'repo',
         tokens: { token: 'token' },
@@ -23,7 +24,7 @@ function execution(message: string, commentId = '', mode = ''): Execution {
             commentId,
             mode,
         ),
-    } as unknown as Execution;
+    } as unknown as Execution);
 }
 
 describe('PublishIssueCommentUseCase', () => {
@@ -40,7 +41,7 @@ describe('PublishIssueCommentUseCase', () => {
         const results = await useCase.invoke(execution('Deployment failed.'));
 
         expect(results[0]).toMatchObject({ success: true, executed: true, steps: [] });
-        expect(addComment).toHaveBeenCalledWith('owner', 'repo', 42, 'Deployment failed.', 'token');
+        expect(addComment).toHaveBeenCalledWith(42, 'Deployment failed.');
         expect(listIssueComments).not.toHaveBeenCalled();
     });
 
@@ -50,7 +51,7 @@ describe('PublishIssueCommentUseCase', () => {
         const results = await useCase.invoke(execution('Deployment failed.', '101'));
 
         expect(results[0].success).toBe(true);
-        expect(updateComment).toHaveBeenCalledWith('owner', 'repo', 42, 101, 'Deployment failed.', 'token');
+        expect(updateComment).toHaveBeenCalledWith(42, 101, 'Deployment failed.');
     });
 
     it('appends after existing content without duplicating its Copilot watermark', async () => {
@@ -63,12 +64,9 @@ describe('PublishIssueCommentUseCase', () => {
 
         expect(results[0].success).toBe(true);
         expect(updateComment).toHaveBeenCalledWith(
-            'owner',
-            'repo',
             42,
             101,
             'Deployment started.\n\nDeployment failed.',
-            'token',
         );
     });
 
@@ -79,12 +77,9 @@ describe('PublishIssueCommentUseCase', () => {
 
         expect(results[0].success).toBe(true);
         expect(updateComment).toHaveBeenCalledWith(
-            'owner',
-            'repo',
             42,
             101,
             'Deployment failed.',
-            'token',
         );
     });
 

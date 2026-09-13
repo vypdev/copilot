@@ -1,5 +1,5 @@
 import { isAgentConfigurationReady } from "../../../data/model/agent";
-import type { Execution } from "../../../data/model/execution";
+import type { AgentConfiguration } from '../../../domain/agent';
 import { Result } from "../../../data/model/result";
 import type { BranchMergePreparation } from "../../ports/branch_sync_ports";
 import { isSensitiveWorkspacePath } from "../steps/commit/bugbot/workspace_changes";
@@ -18,10 +18,10 @@ export type BranchSyncOutcome =
 export function branchSyncConflictEligibilityError(
   preparation: Extract<BranchMergePreparation, { kind: "conflicted" }>,
   useAgent: boolean,
-  execution: Execution,
+  agentConfiguration: Readonly<AgentConfiguration>,
 ): string | undefined {
   if (!useAgent) return "The merge has conflicts and agent resolution was disabled with --no-agent.";
-  if (!isAgentConfigurationReady(execution.ai.getAgentConfiguration("fixer"))) {
+  if (!isAgentConfigurationReady(agentConfiguration)) {
     return "The merge has conflicts, but no fixer agent is configured.";
   }
   if (preparation.conflictPaths.length > MAX_AGENT_CONFLICT_PATHS) {

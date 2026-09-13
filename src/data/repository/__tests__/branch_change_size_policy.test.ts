@@ -1,22 +1,15 @@
-import { Labels } from '../../model/labels';
-import { SizeThreshold } from '../../model/size_threshold';
-import { SizeThresholds } from '../../model/size_thresholds';
 import { classifyChangeSize } from '../branch_change_size_policy';
 
-const labels = new Labels(
-    'launch', 'bug', 'bugfix', 'hotfix', 'enhancement', 'feature', 'release',
-    'question', 'help', 'deploy', 'deployed', 'docs', 'documentation', 'chore', 'maintenance',
-    'high', 'medium', 'low', 'none', 'XXL', 'XL', 'L', 'M', 'S', 'XS',
-);
+const labels = { xxl: 'XXL', xl: 'XL', l: 'L', m: 'M', s: 'S', xs: 'XS' };
 
-const thresholds = new SizeThresholds(
-    new SizeThreshold(1000, 100, 50),
-    new SizeThreshold(500, 50, 25),
-    new SizeThreshold(200, 25, 15),
-    new SizeThreshold(100, 10, 10),
-    new SizeThreshold(50, 5, 5),
-    new SizeThreshold(0, 0, 0),
-);
+const thresholds = {
+    xxl: { lines: 1000, files: 100, commits: 50 },
+    xl: { lines: 500, files: 50, commits: 25 },
+    l: { lines: 200, files: 25, commits: 15 },
+    m: { lines: 100, files: 10, commits: 10 },
+    s: { lines: 50, files: 5, commits: 5 },
+    xs: { lines: 0, files: 0, commits: 0 },
+};
 
 describe('branch change size policy', () => {
     it('selects the first threshold exceeded in priority order', () => {

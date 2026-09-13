@@ -1,4 +1,4 @@
-import type { IssueTypes } from "../../model/issue_types";
+import type { InitialIssueTypeConfiguration } from '../../../application/ports/issue_management_ports';
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubGraphqlTransportClient } from "../../../infrastructure/github/ports/github_graphql_transport_port";
 import {
@@ -42,7 +42,7 @@ export class IssueTypeRepository {
 
   ensureIssueTypes = async (
     owner: string,
-    issueTypes: IssueTypes,
+    issueTypes: InitialIssueTypeConfiguration,
     token: string,
   ): Promise<IssueTypeEnsureSummary> =>
     ensureIssueTypes(this.graphqlClient.getClient(token), owner, issueTypes);

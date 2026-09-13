@@ -26,7 +26,11 @@ describe('MoveIssueToInProgressUseCase', () => {
   let useCase: MoveIssueToInProgressUseCase;
 
   beforeEach(() => {
-    useCase = new MoveIssueToInProgressUseCase({ moveIssueToColumn: mockMoveIssueToColumn, setTaskPriority: jest.fn() });
+    useCase = new MoveIssueToInProgressUseCase({
+      moveIssueToColumn: mockMoveIssueToColumn,
+      setTaskPriority: jest.fn(),
+      setTaskSize: jest.fn(),
+    });
     mockMoveIssueToColumn.mockResolvedValue(true);
   });
 

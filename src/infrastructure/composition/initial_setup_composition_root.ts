@@ -18,23 +18,35 @@ import {
     SetupRemoteConfigurationQueryRepository,
 } from '../../data/repository/repository_variables_repository';
 import { createRepositoryVariablesClient } from './github_identity_client_factory';
+import type { RepositoryCredentialBinding } from './shared_capability_port_binding';
+import {
+    bindAuthenticatedUser,
+    bindInitialLabels,
+    bindIssueTypes,
+    bindRepositoryDefaultBranch,
+    bindRepositoryTag,
+    bindSetupRemoteConfiguration,
+    bindSetupSecrets,
+    bindSetupVariables,
+    bindSetupWorkspace,
+} from './push_single_action_capability_port_binding';
 
-export function createInitialSetupCompositionRoot(): InitialSetupUseCase {
+export function createInitialSetupCompositionRoot(binding: RepositoryCredentialBinding): InitialSetupUseCase {
     const labelProvisioning = new IssueLabelProvisioningRepository(
         createIssueLabelProvisioningClient(),
     );
 
     const githubResourceClient = createRepositoryVariablesClient();
     return composeInitialSetupUseCase(
-        new AuthenticatedUserRepository(createAuthenticatedUserClient()),
-        labelProvisioning,
-        new IssueTypeRepository(createGraphqlTransportClient()),
+        bindAuthenticatedUser(new AuthenticatedUserRepository(createAuthenticatedUserClient()), binding),
+        bindInitialLabels(labelProvisioning, binding),
+        bindIssueTypes(new IssueTypeRepository(createGraphqlTransportClient()), binding),
         new GitCliRepository(),
-        new RepositoryDefaultBranchRepository(createReleaseClient()),
-        new RepositoryTagRepository(createReleaseClient()),
-        new SetupWorkspaceMutationAdapter(),
-        new RepositoryVariablesCommandRepository(githubResourceClient),
-        new RepositorySecretsCommandRepository(githubResourceClient),
-        new SetupRemoteConfigurationQueryRepository(githubResourceClient),
+        bindRepositoryDefaultBranch(new RepositoryDefaultBranchRepository(createReleaseClient()), binding),
+        bindRepositoryTag(new RepositoryTagRepository(createReleaseClient()), binding),
+        bindSetupWorkspace(new SetupWorkspaceMutationAdapter(), binding),
+        bindSetupVariables(new RepositoryVariablesCommandRepository(githubResourceClient), binding),
+        bindSetupSecrets(new RepositorySecretsCommandRepository(githubResourceClient), binding),
+        bindSetupRemoteConfiguration(new SetupRemoteConfigurationQueryRepository(githubResourceClient), binding),
     );
 }

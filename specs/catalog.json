@@ -170,7 +170,8 @@
       "lastVerified": "2026-09-13",
       "specs": [
         "specs/execution-admission-queue-and-publication.md",
-        "specs/execution-error-and-context-hardening.md"
+        "specs/execution-error-and-context-hardening.md",
+        "specs/push-and-single-action-context-hardening.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -205,6 +206,7 @@
         "src/application/usecases/comment_automation_context.ts",
         "src/application/usecases/issue_workflow_context.ts",
         "src/application/usecases/pull_request_workflow_context.ts",
+        "src/application/usecases/push_single_action_contexts.ts",
         "src/application/usecases/steps/common/check_permissions_workflow.ts",
         "src/application/usecases/steps/common/comment_language_translation_workflow.ts",
         "src/application/usecases/steps/common/think_workflow.ts",
@@ -213,7 +215,9 @@
         "src/application/usecases/steps/common/publish_resume_workflow.ts",
         "src/application/usecases/steps/common/store_configuration_use_case.ts",
         "src/infrastructure/composition/shared_capability_port_binding.ts",
-        "src/infrastructure/composition/lifecycle_capability_port_binding.ts"
+        "src/infrastructure/composition/lifecycle_capability_port_binding.ts",
+        "src/infrastructure/composition/push_single_action_capability_port_binding.ts",
+        "src/infrastructure/composition/main_run_route_composition_root.ts"
       ],
       "tests": [
         "src/__tests__/api.test.ts",
@@ -236,6 +240,9 @@
         "src/infrastructure/composition/__tests__/shared_capability_port_binding.test.ts",
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
         "src/infrastructure/composition/__tests__/lifecycle_capability_port_binding.test.ts",
+        "src/application/usecases/__tests__/push_single_action_contexts.test.ts",
+        "src/application/usecases/__tests__/single_action_workflow.test.ts",
+        "src/infrastructure/composition/__tests__/push_single_action_capability_port_binding.test.ts",
         "src/application/usecases/execution/__tests__/resolve_github_execution_admission_use_case.test.ts",
         "src/application/usecases/workflow/__tests__/wait_for_previous_workflow_runs_use_case.test.ts"
       ],

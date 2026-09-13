@@ -4134,15 +4134,20 @@ function completeBugbotSourceCoverage(source, items, pagesFetched = items > 0 ? 
 function identityMismatch(target, candidate) {
     if (candidate.state !== "open")
         return "The selected pull request is not open.";
-    if (target.repository.id !== undefined && candidate.baseRepository.id !== target.repository.id) {
+    const eventSelection = target.pullRequestSelection;
+    if (eventSelection.kind === "event"
+        && eventSelection.number !== undefined
+        && candidate.number !== eventSelection.number) {
+        return "The selected pull request does not match the event target.";
+    }
+    if (!matchesBaseRepository(target, candidate)) {
         return "The selected pull request belongs to a different base repository.";
     }
-    if (candidate.baseRepository.owner.toLowerCase() !== target.repository.owner.toLowerCase()
-        || candidate.baseRepository.name.toLowerCase() !== target.repository.name.toLowerCase()) {
-        return "The selected pull request belongs to a different base repository.";
-    }
-    if (candidate.headRepositoryOwner.toLowerCase() !== target.headOwner.toLowerCase()
-        || candidate.headRef !== target.headRef) {
+    // issue_comment identifies a PR by its provider marker and number but does not
+    // include head repository/ref fields. Constrain the head only when the trigger
+    // actually supplied a ref; the verified provider identity then becomes the
+    // revision used by both freshness checks.
+    if (!matchesConstrainedHead(target, candidate)) {
         return "The selected pull request head does not match the review target.";
     }
     if (target.expectedHeadSha !== undefined
@@ -4150,6 +4155,18 @@ function identityMismatch(target, candidate) {
         return "The selected pull request head revision is stale.";
     }
     return undefined;
+}
+function matchesBaseRepository(target, candidate) {
+    const targetRepository = target.repository;
+    const candidateRepository = candidate.baseRepository;
+    return (targetRepository.id === undefined || candidateRepository.id === targetRepository.id)
+        && candidateRepository.owner.toLowerCase() === targetRepository.owner.toLowerCase()
+        && candidateRepository.name.toLowerCase() === targetRepository.name.toLowerCase();
+}
+function matchesConstrainedHead(target, candidate) {
+    return target.headRef === ""
+        || (candidate.headRepositoryOwner.toLowerCase() === target.headOwner.toLowerCase()
+            && candidate.headRef === target.headRef);
 }
 
 

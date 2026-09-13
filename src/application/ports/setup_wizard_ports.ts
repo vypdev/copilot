@@ -92,3 +92,23 @@ export interface SetupRepositoryVariablesCommandPort {
         variables: readonly { name: string; value: string }[],
     ): Promise<{ created: number; updated: number; errors: string[] }>;
 }
+
+export interface BoundSetupRemoteConfigurationReadPort {
+    inspect(): Promise<SetupRemoteConfiguration>;
+}
+
+export interface BoundSetupRepositorySecretsCommandPort {
+    upsertSecrets(credentials: readonly SetupCredentialValue[]): Promise<{ created: number; updated: number; skipped: number; errors: string[] }>;
+    upsertScopedSecrets?(
+        target: SetupResourceTarget,
+        credentials: readonly SetupCredentialValue[],
+    ): Promise<{ created: number; updated: number; skipped: number; errors: string[] }>;
+}
+
+export interface BoundSetupRepositoryVariablesCommandPort {
+    upsert(variables: readonly { name: string; value: string }[]): Promise<{ created: number; updated: number; errors: string[] }>;
+    upsertScopedVariables?(
+        target: SetupResourceTarget,
+        variables: readonly { name: string; value: string }[],
+    ): Promise<{ created: number; updated: number; errors: string[] }>;
+}

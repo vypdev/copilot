@@ -1,41 +1,34 @@
-import type { Execution } from '../../../data/model/execution';
 import { Result } from '../../../data/model/result';
 import { stripTrailingCommentWatermarks } from '../../../utils/comment_watermark';
-import { resolveIssueCommentPublicationRequest } from '../../policies/issue_comment_publication_policy';
-import type { IssueCommentPublicationPort } from '../../ports/issue_lifecycle_ports';
+import type { BoundIssueCommentPublicationPort } from '../../ports/issue_lifecycle_ports';
+import type { IssueCommentActionContext } from '../push_single_action_contexts';
 import { logError } from '../../ports/logging_ports';
 import { ApplicationError, toApplicationError } from '../../errors/application_error';
 
 export async function runPublishIssueComment(
-    param: Execution,
+    param: IssueCommentActionContext,
     taskId: string,
-    issueCommentPort: IssueCommentPublicationPort,
+    issueCommentPort: BoundIssueCommentPublicationPort,
 ): Promise<Result[]> {
-    const request = resolveIssueCommentPublicationRequest(param.singleAction);
-    if (request instanceof Error) {
+    if (param.kind === 'invalid') {
         return [new Result({
             id: taskId,
             success: false,
             executed: true,
-            errors: [new ApplicationError('validation.invalid-input', request.message, { cause: request })],
+            errors: [new ApplicationError('validation.invalid-input', param.message)],
         })];
     }
+    const { request, issueNumber } = param;
 
     try {
         if (request.mode === 'create') {
             await issueCommentPort.addComment(
-                param.owner,
-                param.repo,
-                param.singleAction.issue,
+                issueNumber,
                 request.message,
-                param.tokens.token,
             );
         } else {
             const comments = await issueCommentPort.listIssueComments(
-                param.owner,
-                param.repo,
-                param.singleAction.issue,
-                param.tokens.token,
+                issueNumber,
             );
             const target = comments.find(({ id }) => id === request.commentId);
             if (!target) {
@@ -43,19 +36,16 @@ export async function runPublishIssueComment(
                     id: taskId,
                     success: false,
                     executed: true,
-                    errors: [new ApplicationError('provider.not-found', `Comment ${request.commentId} does not belong to issue ${param.singleAction.issue}.`)],
+                    errors: [new ApplicationError('provider.not-found', `Comment ${request.commentId} does not belong to issue ${issueNumber}.`)],
                 })];
             }
             const message = request.mode === 'append'
                 ? appendCommentContent(target.body, request.message)
                 : request.message;
             await issueCommentPort.updateComment(
-                param.owner,
-                param.repo,
-                param.singleAction.issue,
+                issueNumber,
                 request.commentId,
                 message,
-                param.tokens.token,
             );
         }
         // This single action publishes its own comment. An empty step list keeps

@@ -11,22 +11,19 @@ import {
     usesOrganizationStorage,
 } from '../../policies/setup_configuration_policy';
 import type {
-    SetupRemoteConfigurationReadPort,
-    SetupRepositorySecretsCommandPort,
-    SetupRepositoryVariablesCommandPort,
+    BoundSetupRemoteConfigurationReadPort,
+    BoundSetupRepositorySecretsCommandPort,
+    BoundSetupRepositoryVariablesCommandPort,
 } from '../../ports/setup_wizard_ports';
 import { logError } from '../../ports/logging_ports';
 
 export interface SetupResourceProvisioningDependencies {
-    setupRepositoryVariablesPort?: SetupRepositoryVariablesCommandPort;
-    setupRepositorySecretsPort?: SetupRepositorySecretsCommandPort;
-    setupRemoteConfigurationReadPort?: SetupRemoteConfigurationReadPort;
+    setupRepositoryVariablesPort?: BoundSetupRepositoryVariablesCommandPort;
+    setupRepositorySecretsPort?: BoundSetupRepositorySecretsCommandPort;
+    setupRemoteConfigurationReadPort?: BoundSetupRemoteConfigurationReadPort;
 }
 
 export interface SetupRepositoryContext {
-    owner: string;
-    repo: string;
-    token: string;
     setupCredentials?: SetupCredentialCollection;
     setupRemoteConfiguration?: SetupRemoteConfiguration;
 }
@@ -101,7 +98,7 @@ export async function resolveRemoteConfiguration(
     if (context.setupRemoteConfiguration) return context.setupRemoteConfiguration;
     if (!dependencies.setupRemoteConfigurationReadPort || !setupConfiguration) return undefined;
     try {
-        return await dependencies.setupRemoteConfigurationReadPort.inspect(context.owner, context.repo, context.token);
+        return await dependencies.setupRemoteConfigurationReadPort.inspect();
     } catch (error) {
         const message = `Could not inspect existing GitHub Actions resource scopes: ${error instanceof Error ? error.message : String(error)}`;
         logError(message);
@@ -134,7 +131,7 @@ export function groupSetupResources(
 
 async function upsertVariableGroups(
     context: SetupRepositoryContext,
-    port: SetupRepositoryVariablesCommandPort,
+    port: BoundSetupRepositoryVariablesCommandPort,
     groups: readonly SetupResourceGroup[],
 ): Promise<{ created: number; updated: number; errors: string[] }> {
     let created = 0;
@@ -146,8 +143,8 @@ async function upsertVariableGroups(
             continue;
         }
         const result = group.target.scope === 'organization'
-            ? await port.upsertScopedVariables!(context.owner, context.repo, context.token, group.target, group.resources)
-            : await port.upsert(context.owner, context.repo, context.token, group.resources);
+            ? await port.upsertScopedVariables!(group.target, group.resources)
+            : await port.upsert(group.resources);
         created += result.created;
         updated += result.updated;
         errors.push(...result.errors);
@@ -157,7 +154,7 @@ async function upsertVariableGroups(
 
 async function upsertSecretGroups(
     context: SetupRepositoryContext,
-    port: SetupRepositorySecretsCommandPort,
+    port: BoundSetupRepositorySecretsCommandPort,
     groups: readonly SetupResourceGroup[],
 ): Promise<{ created: number; updated: number; skipped: number; errors: string[] }> {
     let created = 0;
@@ -170,8 +167,8 @@ async function upsertSecretGroups(
             continue;
         }
         const result = group.target.scope === 'organization'
-            ? await port.upsertScopedSecrets!(context.owner, context.repo, context.token, group.target, group.resources)
-            : await port.upsertSecrets(context.owner, context.repo, context.token, group.resources);
+            ? await port.upsertScopedSecrets!(group.target, group.resources)
+            : await port.upsertSecrets(group.resources);
         created += result.created;
         updated += result.updated;
         skipped += result.skipped;

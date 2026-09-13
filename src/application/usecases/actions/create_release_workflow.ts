@@ -1,18 +1,18 @@
-import type { Execution } from '../../../data/model/execution';
 import { Result } from '../../../data/model/result';
-import type { RepositoryReleasePublicationPort } from '../../ports/repository_release_ports';
+import type { BoundRepositoryReleasePublicationPort } from '../../ports/repository_release_ports';
+import type { DeploymentPublicationContext } from '../push_single_action_contexts';
 import { logError, logWarn } from '../../ports/logging_ports';
 import { validateReleaseInput, versionForRelease } from './create_release_policy';
 import { validateDeploymentContinuation } from '../../policies/deployment_continuation_guard';
 import { ApplicationError, toApplicationError } from '../../errors/application_error';
 
 export async function runCreateRelease(
-    param: Execution,
+    param: DeploymentPublicationContext,
     taskId: string,
-    repositoryReleasePort: RepositoryReleasePublicationPort,
+    repositoryReleasePort: BoundRepositoryReleasePublicationPort,
 ): Promise<Result[]> {
-    const operation = param.currentConfiguration.deploymentOrchestration;
-    const continuationError = validateDeploymentContinuation(operation, param.singleAction.operationId, ["publishing"], param.singleAction.version);
+    const operation = param.operation;
+    const continuationError = validateDeploymentContinuation(operation, param.requestedOperationId, ["publishing"], param.requestedVersion);
     if (continuationError) return [failureResult(taskId, continuationError, 'workflow.stale')];
     if (!operation?.productionSha) return [failureResult(taskId, 'The deployment operation has no accepted production SHA.', 'workflow.stale')];
     const input = {
@@ -29,14 +29,11 @@ export async function runCreateRelease(
     const releaseVersion = versionForRelease(input.version);
     try {
         const releaseUrl = await repositoryReleasePort.createRelease(
-            param.owner,
-            param.repo,
             releaseVersion,
             input.title,
             input.changelog,
             operation.operationId,
             operation.productionSha,
-            param.tokens.token,
         );
         if (!releaseUrl) {
             logWarn(`CreateRelease: createRelease returned no URL for version ${releaseVersion}.`);

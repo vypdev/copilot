@@ -2,6 +2,7 @@ import { InitialSetupUseCase } from '../initial_setup_use_case';
 import { Result } from '../../../../data/model/result';
 import type { Execution } from '../../../../data/model/execution';
 import { createDefaultSetupConfiguration } from '../../../policies/setup_configuration_policy';
+import { projectInitialSetupContext } from '../../push_single_action_contexts';
 
 jest.mock('../../../../utils/logger', () => ({
   logDebugInfo: jest.fn(),
@@ -46,8 +47,8 @@ const mockSetupPrepare = jest.fn();
 const mockSetupHasValidToken = jest.fn();
 const mockSetupVariablesUpsert = jest.fn();
 
-function baseParam(overrides: Record<string, unknown> = {}): Execution {
-  return {
+function baseParam(overrides: Record<string, unknown> = {}) {
+  const source = {
     owner: 'owner',
     repo: 'repo',
     tokens: { token: 'token' },
@@ -69,8 +70,10 @@ function baseParam(overrides: Record<string, unknown> = {}): Execution {
     ai: {},
     locale: {},
     sizeThresholds: {},
+    inputs: {},
     ...overrides,
   } as unknown as Execution;
+  return projectInitialSetupContext(source);
 }
 
 describe('InitialSetupUseCase', () => {
@@ -80,7 +83,7 @@ describe('InitialSetupUseCase', () => {
     mockSetupPrepare.mockClear();
     mockSetupHasValidToken.mockClear();
     useCase = new InitialSetupUseCase(
-      { getUserFromToken: mockGetUserFromToken, getTokenUserDetails: jest.fn() },
+      { getUser: mockGetUserFromToken, getUserDetails: jest.fn() },
       { ensureInitialLabels: mockEnsureInitialLabels },
       { ensureIssueTypes: mockEnsureIssueTypes },
       { getLatestTag: mockGetLatestTag },
@@ -147,10 +150,7 @@ describe('InitialSetupUseCase', () => {
     expect(results[0].steps?.some((s) => s.includes('Progress labels'))).toBe(true);
     expect(mockEnsureInitialLabels).toHaveBeenCalledTimes(1);
     expect(mockEnsureInitialLabels).toHaveBeenCalledWith(
-      'owner',
-      'repo',
       param.labels,
-      'token',
     );
     expect(results[0].steps?.some((s) => s.includes('Issue types'))).toBe(true);
   });
@@ -161,8 +161,8 @@ describe('InitialSetupUseCase', () => {
     const results = await useCase.invoke(param);
     expect(results[0].success).toBe(true);
     expect(results[0].steps?.some((s) => s.includes('Default version tag v1.0.0 created'))).toBe(true);
-    expect(mockGetDefaultBranch).toHaveBeenCalledWith('owner', 'repo', 'token');
-    expect(mockCreateTag).toHaveBeenCalledWith('owner', 'repo', 'main', 'v1.0.0', 'token');
+    expect(mockGetDefaultBranch).toHaveBeenCalledWith();
+    expect(mockCreateTag).toHaveBeenCalledWith('main', 'v1.0.0');
   });
 
   it('applies the selected setup files and repository Variables from the wizard configuration', async () => {
@@ -174,9 +174,6 @@ describe('InitialSetupUseCase', () => {
     expect(results[0].success).toBe(true);
     expect(mockSetupPrepare).toHaveBeenCalledWith({ features: setupConfiguration.features });
     expect(mockSetupVariablesUpsert).toHaveBeenCalledWith(
-      'owner',
-      'repo',
-      'token',
       expect.arrayContaining([{ name: 'AGENT_PROVIDER', value: 'codex' }]),
     );
     expect(results[0].steps).toContain('⏭️  Initial version tag creation disabled by setup configuration.');
@@ -198,7 +195,7 @@ describe('InitialSetupUseCase', () => {
       organizationVariablesAccess: 'available' as const,
     };
     const scopedUseCase = new InitialSetupUseCase(
-      { getUserFromToken: mockGetUserFromToken, getTokenUserDetails: jest.fn() },
+      { getUser: mockGetUserFromToken, getUserDetails: jest.fn() },
       { ensureInitialLabels: mockEnsureInitialLabels },
       { ensureIssueTypes: mockEnsureIssueTypes },
       { getLatestTag: mockGetLatestTag },
@@ -214,7 +211,6 @@ describe('InitialSetupUseCase', () => {
 
     expect(results[0].success).toBe(true);
     expect(scopedUpsert).toHaveBeenCalledWith(
-      'owner', 'repo', 'token',
       expect.objectContaining({ scope: 'organization', repositoryId: 42 }),
       expect.arrayContaining([{ name: 'AGENT_PROVIDER', value: 'codex' }]),
     );

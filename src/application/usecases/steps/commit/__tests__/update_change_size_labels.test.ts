@@ -2,8 +2,8 @@ import {
   replaceSizeLabel,
   updateIssueAndRelatedPullRequests,
 } from '../update_change_size_labels';
-import type { ProjectDetail } from '../../../../../data/model/project_detail';
-import type { ProjectBoardCommandPort } from '../../../../ports/project_board_command_ports';
+import type { ProjectReference } from '../../../../ports/project_board_link_ports';
+import type { BoundProjectBoardCommandPort } from '../../../../ports/project_board_command_ports';
 
 describe('change size label workflow', () => {
   it('replaces existing size labels while preserving unrelated labels', () => {
@@ -18,25 +18,22 @@ describe('change size label workflow', () => {
     const getOpenPullRequestNumbersByHeadBranch = jest.fn().mockResolvedValue([99]);
 
     const result = await updateIssueAndRelatedPullRequests({
-      owner: 'o',
-      repository: 'r',
       issueNumber: 42,
       headBranch: 'feature/42',
       size: 'size: L',
       githubSize: 'L',
       currentIssueLabels: ['feature', 'size: S'],
       sizeLabels: ['size: S', 'size: L'],
-      projects: [{ id: 'project' } as unknown as ProjectDetail],
-      token: 'token',
+      projects: [{ id: 'project' } as ProjectReference],
     }, {
       issueLabelsPort: { setLabels, getLabels },
-      projectBoardCommandPort: { setTaskSize } as unknown as ProjectBoardCommandPort,
+      projectBoardCommandPort: { setTaskSize } as unknown as BoundProjectBoardCommandPort,
       pullRequestBranchQueryPort: { getOpenPullRequestNumbersByHeadBranch },
     });
 
     expect(result).toEqual({ issueLabelNames: ['feature', 'size: L'], openPullRequestNumbers: [99] });
-    expect(setLabels).toHaveBeenNthCalledWith(1, 'o', 'r', 42, ['feature', 'size: L'], 'token');
-    expect(setLabels).toHaveBeenNthCalledWith(2, 'o', 'r', 99, ['bug', 'size: L'], 'token');
+    expect(setLabels).toHaveBeenNthCalledWith(1, 42, ['feature', 'size: L']);
+    expect(setLabels).toHaveBeenNthCalledWith(2, 99, ['bug', 'size: L']);
     expect(setTaskSize).toHaveBeenCalledTimes(2);
   });
 });

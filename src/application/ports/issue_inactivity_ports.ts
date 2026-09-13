@@ -18,3 +18,8 @@ export interface IssueInactivityQueryPort {
 export interface IssueInactivityClockPort {
     nowMilliseconds(): number;
 }
+
+export interface BoundIssueInactivityQueryPort {
+    listOpenIssuesByLabel(label: string): Promise<readonly IssueActivitySnapshot[]>;
+    getOpenIssue(issueNumber: number): Promise<IssueActivitySnapshot | undefined>;
+}

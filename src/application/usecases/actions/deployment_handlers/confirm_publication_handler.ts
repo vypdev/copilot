@@ -35,12 +35,9 @@ export class ConfirmPublicationHandler {
     assertPublicationPhase(operation);
     const productionSha = requireProductionSha(operation);
     const publication = await this.runtime.dependencies.publication.inspect({
-      owner: context.owner,
-      repository: context.repo,
       tag: operation.tag,
       productionSha,
       operationId: operation.operationId,
-      token: context.tokens.token,
     });
     if (publication.kind === "absent") {
       return await this.runtime.block(
@@ -55,11 +52,8 @@ export class ConfirmPublicationHandler {
       return await this.runtime.block(context, operation, "publication", publication.reason, false);
     }
     const reachable = await this.runtime.dependencies.git.isCommitReachable(
-      context.owner,
-      context.repo,
       operation.productionBranch,
       productionSha,
-      context.tokens.token,
     );
     if (!reachable) {
       return await this.runtime.block(
@@ -104,10 +98,7 @@ export class ConfirmPublicationHandler {
   ): Promise<Result> {
     const activeReleases = published.kind === "hotfix"
       ? (await this.runtime.dependencies.git.listBranches(
-          context.owner,
-          context.repo,
           context.branches.releaseTree,
-          context.tokens.token,
         )).filter((branch) => branch !== published.sourceBranch)
       : [];
     const decision = selectReconciliationTargetBranches(published, activeReleases);

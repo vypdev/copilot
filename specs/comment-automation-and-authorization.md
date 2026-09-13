@@ -64,6 +64,9 @@ modify the wrong branch.
     target as that exact PR. It remains on the comment coordinator, skips
     issue-only setup, uses PR labels/locale/specialists, and supplies the PR
     number to read-only review commands without scanning for a candidate PR.
+    Because this event omits head owner/ref/SHA, the review verifies that exact
+    open PR and base repository through the provider, then uses its returned head
+    identity under the ordinary pre- and post-publication freshness checks.
 
 ### 2.3 Evidence and contract classification
 
