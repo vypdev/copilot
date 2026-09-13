@@ -107,7 +107,7 @@
       "status": "implemented",
       "scope": "Reconcile review snapshots, findings, threads, comments, and check conclusions",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-11",
+      "lastVerified": "2026-09-13",
       "specs": [
         "specs/bugbot-review-state-reconciliation.md"
       ],
@@ -131,12 +131,16 @@
         "src/domain/bugbot/__tests__/review_projection.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/schema.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/prepare_bugbot_findings.test.ts",
-        "src/application/usecases/steps/commit/bugbot/__tests__/reconcile_bugbot_review_state_integration.test.ts"
+        "src/application/usecases/steps/commit/bugbot/__tests__/reconcile_bugbot_review_state_integration.test.ts",
+        "src/tooling/__tests__/validate_workflow_contract.test.ts"
       ],
       "documentation": [
         "docs/bugbot/detection.mdx",
         "docs/bugbot/finding-publication.mdx",
-        "docs/bugbot/quality-observability.mdx"
+        "docs/bugbot/quality-observability.mdx",
+        "docs/bugbot/configuration.mdx",
+        "docs/bugbot/how-it-works.mdx",
+        "docs/pull-requests/workflow-setup.mdx"
       ]
     },
     {
@@ -223,6 +227,7 @@
         "specs/issue-and-pull-request-context-hardening.md"
       ],
       "workflows": [
+        ".github/workflows/copilot_pull_request.yml",
         ".github/workflows/release_workflow.yml",
         ".github/workflows/hotfix_workflow.yml",
         ".github/workflows/copilot_deployment_orchestration.yml"
@@ -269,14 +274,17 @@
         "src/infrastructure/composition/__tests__/lifecycle_capability_port_binding.test.ts",
         "src/application/usecases/setup/__tests__/doctor_use_case.test.ts",
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
-        "src/application/policies/__tests__/agent_execution_plan_policy.test.ts"
+        "src/application/policies/__tests__/agent_execution_plan_policy.test.ts",
+        "src/tooling/__tests__/validate_workflow_contract.test.ts"
       ],
       "documentation": [
         "docs/dependency-rules.md",
         "docs/development/architecture.mdx",
         "docs/bugbot/programmatic-api.mdx",
         "docs/security-operations/operations/error-reference.mdx",
-        "docs/security-operations/operations/troubleshooting.mdx"
+        "docs/security-operations/operations/troubleshooting.mdx",
+        "docs/pull-requests/workflow-setup.mdx",
+        "docs/bugbot/how-it-works.mdx"
       ]
     },
     {
@@ -451,7 +459,7 @@
       "status": "implemented",
       "scope": "Select one canonical PR, analyze bounded evidence, publish stable findings, and apply authorized verified fixes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-12",
+      "lastVerified": "2026-09-13",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md"
@@ -503,7 +511,8 @@
         "src/application/ports/__tests__/bugbot_port_boundaries.test.ts",
         "src/infrastructure/composition/__tests__/bugbot_scm_port_factory.test.ts",
         "src/__tests__/api.test.ts",
-        "src/domain/bugbot/__tests__/finding_identity.test.ts"
+        "src/domain/bugbot/__tests__/finding_identity.test.ts",
+        "src/tooling/__tests__/validate_workflow_contract.test.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
@@ -513,7 +522,9 @@
         "docs/bugbot/failure-scenarios.mdx",
         "docs/bugbot/quality-observability.mdx",
         "docs/bugbot/permissions.mdx",
-        "docs/bugbot/programmatic-api.mdx"
+        "docs/bugbot/programmatic-api.mdx",
+        "docs/bugbot/configuration.mdx",
+        "docs/pull-requests/workflow-setup.mdx"
       ]
     },
     {

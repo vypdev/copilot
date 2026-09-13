@@ -9,7 +9,7 @@
   shared `Execution` aggregate and repository credentials with immutable
   capability requests and bound semantic ports
 - Related issues/PRs: parent architecture program, the managed issue and
-  pull-request lifecycle SDDs, and the P2-E delivery PR from `develop` to `master`
+  pull-request lifecycle SDDs, and [PR #363](https://github.com/vypdev/copilot/pull/363)
 - Required review gates: product UX, architecture, testing, documentation,
   security/operations, patch coverage, generated bundles
 - Open decisions blocking readiness: none
@@ -29,6 +29,11 @@ requests. That operation MUST use a repository-owned URL/query, a durable hidden
 marker, ordered compensation, and truthful partial-state results. Event-provided
 URLs MUST never be fetched.
 
+PR metadata normalization MUST share the branch serialization boundary without
+preempting an active code review. A newer code-change or review event MAY cancel
+an obsolete review; `pull_request: edited` MUST wait and MUST NOT replace a real
+`synchronize` analysis with a green metadata-only run.
+
 ```text
 validated issue/PR event
   -> route projects immutable step requests
@@ -42,6 +47,12 @@ PR link request
   -> switch to default branch and wait for GitHub linkage
   -> restore body and base in bounded compensation
   -> report complete or exact retained partial state
+
+synchronize review starts
+  -> branch synchronization edits PR metadata
+  -> edited event waits on the same branch key
+  -> review finishes for the current head
+  -> newest pending metadata event runs without agent analysis
 ```
 
 ## 2. Problem, current behavior, and evidence
@@ -99,6 +110,16 @@ misleading intermediate state.
   measured set; both boundaries have full line coverage, the targeted
   description hotspot improves by `0.29`, reaches `91.67%` branch coverage,
   and no existing worst performer regresses.
+- Live PR #363 evidence exposed a concurrency regression on three consecutive
+  heads: `synchronize` runs `34728370424`, `34729137152`, and `34730134528`
+  were canceled after Branch Sync caused `pull_request: edited`; their successor
+  metadata runs completed without a Bugbot review. The workflow used one branch
+  group with unconditional `cancel-in-progress: true` for both event classes.
+- The correction passes 407 suites and 3,364 tests with 96.45% line, 95.11%
+  statement, 88.50% branch, and 95.53% function coverage. The workflow parser's
+  90 cases include both active/setup negative fixtures; all 24 workflow
+  contracts, documentation, catalog, package, build, and Bugbot benchmark gates
+  pass locally before controlled live verification.
 - GitHub documents that closing keywords create issue links only when a PR
   targets the default branch, and its REST update endpoint permits changing the
   PR `body` and `base` with Pull Requests write permission.
@@ -147,6 +168,9 @@ Copilot-owned in-flight PR-link operation and never authorizes a command.
 7. Existing issue/PR sequencing, project/label/assignment behavior, one-welcome
    rule, description ownership, review freshness, and merge closure MUST remain
    observable-equivalent except for the specified security/recovery changes.
+8. A metadata-only PR edit MUST never cancel an active code-change review for
+   the same head; the workflow contract and shipped setup template MUST enforce
+   the same conditional concurrency rule.
 
 ### 4.2 Non-goals
 
@@ -177,6 +201,9 @@ Copilot-owned in-flight PR-link operation and never authorizes a command.
 7. Removed aggregate signatures, raw-token methods at leaf boundaries, and
    `invokeExplicit` MUST fail compilation. No overload, union fallback, alias,
    adapter, feature flag, or deprecation path is permitted.
+8. Concurrency admission is fixed: code/review events cancel obsolete reviews,
+   metadata edits serialize behind the active review, and only the newest
+   pending edit needs to survive.
 
 ## 5. Current versus proposed product journey
 
@@ -188,6 +215,7 @@ Copilot-owned in-flight PR-link operation and never authorizes a command.
 | PR linkage target | event URL is fetched | adapter derives exact GitHub target | no SSRF destination |
 | Link recovery | restore only on happy path | marker plus ordered compensation | rerunnable partial recovery |
 | PR description | aggregate plus separate explicit method | one `{ context, trigger }` request | one final contract |
+| PR event concurrency | every edit can cancel the active review | edits wait; code/review events cancel obsolete work | a green metadata run cannot hide a missed review |
 | Evidence | global import ceiling only | exact zero-leaf rule plus P2-E coverage gate | erosion fails CI |
 
 ```mermaid
@@ -270,6 +298,7 @@ their documented ownership semantics.
 |---|---|---|---|---|
 | projected | route copied validated facts | enrichment is ready | executing | route |
 | executing | leaf has begun I/O | operation pending | complete/skipped/failed/compensating | leaf |
+| metadata-pending | an edit arrives during branch review | latest edit waits; review remains active | executing/skipped | GitHub concurrency boundary |
 | patch-ready | branch decision and I/O completed | branch facts await route application | complete | route applies once |
 | compensating | temporary PR link mutation exists | original PR state is being restored | complete/partial | link workflow |
 | partial | one or more temporary facts remain | manual action or rerun required | compensating/complete | maintainer/workflow |
@@ -281,6 +310,20 @@ Duplicate events use current provider facts and deterministic upserts. A stale
 context is discarded at the route and reprojected on the next event; leaves do
 not reach back into `Execution`. Cancellation after a temporary PR mutation is
 treated as compensation-required, not ordinary failure.
+
+### 6.5 Workflow concurrency and event ordering
+
+The Commit and Pull Request workflows use the same normalized repository/branch
+group. Commit pushes plus PR `opened`, `reopened`, `synchronize`, `closed`, and
+review events use cancel-in-progress behavior so newer review evidence replaces
+obsolete work. A `pull_request: edited` job evaluates cancellation to false. It
+therefore waits behind an active review instead of canceling it. GitHub's
+single-pending behavior intentionally collapses multiple waiting metadata edits
+to the newest event. Application head guards remain mandatory.
+
+This rule is identical in the repository workflow and the shipped setup copy.
+It is not configurable because allowing metadata normalization to preempt code
+analysis creates a false-green review surface.
 
 ## 7. User-facing configuration
 
@@ -325,8 +368,9 @@ values keep their owning validation behavior; P2-E adds no migration parser.
 - Durable state: GitHub owns PR/base/body/link facts; the configuration marker
   owns applied branch patches; the hidden link marker exists only while cleanup
   is outstanding and is removed after successful compensation.
-- Concurrency/idempotency: workflow concurrency remains the outer admission
-  boundary; provider re-reads and owned markers make replay deterministic.
+- Concurrency/idempotency: one branch group remains the outer admission
+  boundary; conditional cancellation protects active reviews from metadata
+  edits, while provider re-reads and owned markers make replay deterministic.
 - Untrusted inputs: event URLs, bodies, titles, labels, branch names, author
   names, provider responses, and agent output.
 - Provider errors: adapters/application boundaries map them to semantic errors;
@@ -423,6 +467,7 @@ network target or executable command and are escaped/sanitized where displayed.
 | base restore fails | PR targets default branch | original body may be restored | recovery-first rerun | restore named original base | do not claim completion |
 | description agent/provider fails | existing body retained | earlier enrichment | safe rerun | repair agent/access | never blank body |
 | merged issue closure fails | code remains merged; issue open | merge fact | safe rerun/manual | close issue | never undo merge |
+| metadata edit arrives during review | edit waits; review continues | current review head and newest pending edit | automatic | none | obsolete pending edits collapse |
 
 Errors follow `impact -> cause category -> action -> retained state`. Cleanup
 errors are combined without discarding the primary failure and without exposing
@@ -449,6 +494,8 @@ raw provider diagnostics.
 
 - User-facing state: ordered semantic results identify skipped, executed,
   partial, and completed steps plus retained body/base/branch facts.
+- Check evidence: a successful code-change run MUST expose Bugbot review state;
+  a metadata-only success is not evidence that the head was reviewed.
 - Job Summary: existing result publication remains the single summary; P2-E
   creates no additional issue or PR comments.
 - Logs: capability name, positive issue/PR number, safe branch name, effect
@@ -478,18 +525,18 @@ raw provider diagnostics.
 
 ## 14. Testing strategy and numeric budget
 
-P2-E owns at least **44 distinct cases**. Existing characterization cases count
+P2-E owns at least **48 distinct cases**. Existing characterization cases count
 only after they are rewritten against the final requests and ports.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain/context/pure planning | 10 | issue/PR projections, deep copy/freeze, exact fields, branch patches, description trigger |
-| State/application/idempotency/races | 10 | issue/PR order, replay, branch patch apply-once, link recovery and compensation failures |
+| State/application/idempotency/races | 11 | issue/PR order, replay, branch patch apply-once, link recovery and compensation failures, metadata-during-review ordering |
 | Adapters/provider contracts | 8 | bound credential forwarding, exact PR target, malformed provider facts, error mapping |
-| Workflows/composition/schema | 6 | issue/PR composition, removed signatures, zero-leaf import rule, no cycles |
+| Workflows/composition/schema | 9 | issue/PR composition, removed signatures, zero-leaf import rule, no cycles, active/setup conditional concurrency and negative unconditional-cancel fixture |
 | UI/UX/localization/sanitization | 4 | pending/action/blocked/partial/complete semantics, marker/body safety |
 | Integration/security/migration | 6 | issue→branch, PR→issue→close, forged URL/marker, token absence, clean cut |
-| **Total** | **44** | No double counting |
+| **Total** | **48** | No double counting |
 
 Repository thresholds remain 90% lines/statements, 88% functions, and 82%
 branches. The combined changed P2-E context/workflow/binding path MUST reach at
@@ -513,6 +560,7 @@ not a substitute for deterministic tests.
 | PR author | `docs/pull-requests/capabilities.mdx` | exact linkage/recovery behavior and retained body/base | docs contract + examples |
 | Setup owner | `docs/pull-requests/configuration.mdx` | unchanged inputs; fixed non-configurable safety rules | input/default validator |
 | Operator | `docs/security-operations/operations/troubleshooting.mdx` | marker/base/body recovery decision tree | headings/link validation |
+| Workflow owner | `docs/pull-requests/workflow-setup.mdx`, `docs/bugbot/configuration.mdx` | branch key, conditional cancellation, expected queued/canceled states | workflow parser + docs contract |
 | Contributor | `docs/development/architecture.mdx`, `docs/dependency-rules.md` | contexts, bound ports, patch ownership, zero-leaf rule | architecture/Graphify gates |
 
 The parent architecture SDD, semantic error/context SDD, issue and PR lifecycle
@@ -552,6 +600,9 @@ SDDs, catalog metadata, generated catalog, and bundles are updated together.
     and `invokeExplicit`; no compatibility symbol remains in source or bundle.
 16. Given full validation, specs, catalog, public docs, workflows, package,
     bundles, coverage, architecture metrics, and Graphify agree.
+17. Given Branch Sync edits PR metadata while a `synchronize` analysis is
+    running, the edit waits, the analysis completes for the current head, and
+    the newest metadata event runs afterward without invoking the agent.
 
 ## 17. Requirements traceability
 
@@ -564,6 +615,7 @@ SDDs, catalog metadata, generated catalog, and bundles are updated together.
 | safe PR link | exact-target adapter and compensation workflow | forged URL, replay, marker, every failure edge | PR capabilities, troubleshooting |
 | clean cut and ceiling | AST ratchet, typecheck, generated bundles | zero-leaf/old-symbol negative fixtures | semantic context SDD |
 | UX/operations | semantic result strings and common publisher | state/retained-action assertions + manual review | PR and troubleshooting pages |
+| review-preserving concurrency | shared branch group + conditional cancellation | workflow validator, negative fixture, PR #363 live sequence | workflow setup, Bugbot configuration/how-it-works |
 
 ## 18. Implementation sequence
 
@@ -575,9 +627,11 @@ SDDs, catalog metadata, generated catalog, and bundles are updated together.
 5. Replace event-URL linkage with exact-target inspection, marker ownership,
    recovery-first replay, and bounded compensation.
 6. Delete aggregate/token/dual-entry paths and shrink the exact import baseline.
-7. Update public/architecture/operator docs, SDDs, catalog, coverage gate, and
+7. Protect code-review runs from metadata edit preemption in both PR workflow
+   copies and the semantic workflow validator.
+8. Update public/architecture/operator docs, SDDs, catalog, coverage gate, and
    generated bundles.
-8. Run focused tests, typecheck, lint, full coverage, architecture/cycle,
+9. Run focused tests, typecheck, lint, full coverage, architecture/cycle,
    workflow, docs/spec, build/package, patch coverage, Graphify, and clean-tree
    metrics; then review generated diffs and GitHub UX.
 
@@ -595,8 +649,10 @@ SDDs, catalog metadata, generated catalog, and bundles are updated together.
       cleanup pass every failure-edge test.
 - [x] The single description request preserves all four modes and removed
       methods fail compilation/search.
-- [x] The 44-case budget, global coverage, P2-E 95/90 coverage, pure-policy
+- [x] The 48-case budget, global coverage, P2-E 95/90 coverage, pure-policy
       branch coverage, architecture, cycle, workflow, and security gates pass.
+- [x] Metadata edits cannot cancel an active branch review; repository/setup
+      workflows and negative contract fixtures enforce the conditional rule.
 - [x] User/setup/operator/contributor docs, related SDDs, catalog, generated
       catalog, API/action bundles, and package validation agree.
 - [x] `graphify update .` and final clean-tree architecture metrics record no
@@ -622,5 +678,10 @@ SDDs, catalog metadata, generated catalog, and bundles are updated together.
   best-effort cleanup.
 - Decision: one description request with an explicit trigger replaces two entry
   methods; rejected overloads and deprecated aliases.
+- Decision: retain one shared branch concurrency key but conditionally disable
+  preemption for `pull_request: edited`; rejected unconditional cancellation
+  because PR #363 proved it can hide a missed review, and rejected parallel
+  metadata/review lanes because both can mutate the same PR surfaces.
+- Provider reference: [GitHub Actions workflow concurrency](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#concurrency).
 - Follow-up outside P2-E: P2-F removes the remaining push/single-action leaf
   aggregate inputs; P2-G performs the final exact 16-file audit.

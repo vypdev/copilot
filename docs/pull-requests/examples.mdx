@@ -22,6 +22,9 @@ jobs:
   copilot-pull-requests:
     name: Copilot - Pull Request
     runs-on: ubuntu-latest
+    concurrency:
+      group: copilot-bugbot-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+      cancel-in-progress: ${{ github.event_name != 'pull_request' || github.event.action != 'edited' }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5
