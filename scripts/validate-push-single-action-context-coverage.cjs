@@ -12,6 +12,9 @@ const entryByPath = new Map(
 
 const changedPath = [
   'src/application/usecases/push_single_action_contexts.ts',
+  'src/application/usecases/single_action_use_case.ts',
+  'src/application/usecases/single_action_workflow.ts',
+  'src/infrastructure/composition/main_run_route_composition_root.ts',
   'src/infrastructure/composition/push_single_action_capability_port_binding.ts',
 ];
 

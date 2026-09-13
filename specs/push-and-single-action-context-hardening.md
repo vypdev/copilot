@@ -351,9 +351,10 @@ idempotency keys and recovery behavior.
 
 P2-F owns at least **20 distinct cases**, exceeding the parent floor of 8 because
 the risk inventory spans credentials, state ownership, races, and nine dispatch
-families. The implemented P2-F ledger contains **50 focused cases**: 36 context
-projection/policy cases and 14 authority-binding cases, plus five architecture
-ratchet cases in the shared suite.
+families. The implemented P2-F ledger contains **66 dedicated cases**: 36
+context projection/policy cases, 14 authority-binding cases, and 16 direct
+single-action dispatch/outcome cases, plus strengthened route/coordinator tests
+and five architecture ratchet cases in the shared suite.
 
 | Area | Minimum cases | Behaviors/risks covered |
 |---|---:|---|
@@ -441,7 +442,7 @@ credential-shaped application requests.
 - [x] All P2-F leaves have zero direct or indirect `Execution` dependency.
 - [x] No P2-F context contains repository credentials or mutable route-owned model objects.
 - [x] Every former leaf mutation is an explicit outcome applied by a route.
-- [x] At least 20 distinct budget cases are implemented; the focused ledger contains 50.
+- [x] At least 20 distinct budget cases are implemented; the dedicated ledger contains 66.
 - [x] Push, single-action, comment-command, issue, and PR dispatch parity is covered.
 - [x] Setup, inactivity, branch-sync, release/tag, and provider failure edges are covered.
 - [x] Public docs, catalog, generated bundles, and architecture baseline agree.

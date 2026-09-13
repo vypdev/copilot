@@ -241,6 +241,7 @@
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
         "src/infrastructure/composition/__tests__/lifecycle_capability_port_binding.test.ts",
         "src/application/usecases/__tests__/push_single_action_contexts.test.ts",
+        "src/application/usecases/__tests__/single_action_workflow.test.ts",
         "src/infrastructure/composition/__tests__/push_single_action_capability_port_binding.test.ts",
         "src/application/usecases/execution/__tests__/resolve_github_execution_admission_use_case.test.ts",
         "src/application/usecases/workflow/__tests__/wait_for_previous_workflow_runs_use_case.test.ts"

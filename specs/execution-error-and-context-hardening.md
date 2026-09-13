@@ -673,7 +673,7 @@ failure contract instead of redefining it.
 | P2-C bound Bugbot I/O | route context projectors, bound SCM/Git composition, Bugbot workflows | P2-C projection, binding, freshness, publication, replay, API and AST cases | Bugbot architecture, programmatic API, permissions |
 | P2-D shared comment analysis | comment route projectors, shared semantic ports, configuration/publication boundaries | eight-case immutable projection ledger, route parity suites, exact 75-file ratchet, cycle test | architecture, dependency rules, comment automation |
 | P2-E issue/PR workflows | issue/PR context projectors, bound lifecycle ports, branch outcome, link compensation, unified description request | projection/binding, issue/PR sequencing, every linkage recovery edge, four description modes, exact 47-file ratchet, zero-leaf AST test | P2-E SDD, architecture, branch management, PR capabilities/troubleshooting |
-| P2-F push/single-action capabilities | capability projectors, bound publication/setup/branch/deployment ports, route-owned recommendation/activity outcomes | 50 focused projection/binding cases, route and workflow parity, exact 13-consumer ratchet, credential-contract AST test | P2-F SDD, architecture, dependency rules |
+| P2-F push/single-action capabilities | capability projectors, bound publication/setup/branch/deployment ports, route-owned recommendation/activity outcomes | 66 dedicated projection/binding/dispatch cases, strengthened route parity, exact 13-consumer ratchet, credential-contract AST test | P2-F SDD, architecture, dependency rules |
 | shrinking allowlist | AST architecture check | fixture plus final inventory | dependency rules |
 
 ## 18. Implementation sequence

@@ -61,6 +61,7 @@ function minimalExecution(singleAction: {
   isCloseInactiveIssuesAction?: boolean;
   isPublishIssueCommentAction?: boolean;
   isCheckBranchSyncAction?: boolean;
+  isDeploymentOrchestrationAction?: boolean;
 }): Execution {
   return {
     owner: 'org',
@@ -138,6 +139,10 @@ function minimalExecution(singleAction: {
       },
       get isCheckBranchSyncAction() {
         return singleAction.isCheckBranchSyncAction ?? this.currentSingleAction === ACTIONS.CHECK_BRANCH_SYNC;
+      },
+      get isDeploymentOrchestrationAction() {
+        return singleAction.isDeploymentOrchestrationAction
+          ?? this.currentSingleAction === ACTIONS.PREPARE_DEPLOYMENT;
       },
     } as Execution['singleAction'],
   } as unknown as Execution;
@@ -320,6 +325,67 @@ describe('SingleActionUseCase', () => {
 
     expect(mockRecommendStepsInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 12 }));
     expect(results).toHaveLength(1);
+  });
+
+  it('applies only the explicit recommendation patch returned by the workflow', async () => {
+    mockRecommendStepsInvoke.mockResolvedValue({
+      results: [],
+      configurationPatch: {
+        recommendationState: {
+          issueDescriptionFingerprint: 'description',
+          recommendationFingerprint: 'recommendation',
+          recommendation: 'Do this',
+        },
+      },
+    });
+    const useCase = new SingleActionUseCase(
+      {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+      { invoke: mockRecommendStepsInvoke } as any,
+    );
+    const param = minimalExecution({ validSingleAction: true, currentSingleAction: ACTIONS.RECOMMEND_STEPS });
+
+    await useCase.invoke(param);
+
+    expect(param.currentConfiguration.recommendationState).toEqual({
+      issueDescriptionFingerprint: 'description',
+      recommendationFingerprint: 'recommendation',
+      recommendation: 'Do this',
+    });
+  });
+
+  it.each([
+    [ACTIONS.PUBLISH_GITHUB_ACTION, 0],
+    [ACTIONS.CREATE_RELEASE, 1],
+    [ACTIONS.CREATE_TAG, 2],
+    [ACTIONS.INITIAL_SETUP, 4],
+    [ACTIONS.PREPARE_DEPLOYMENT, 12],
+  ] as const)('projects and dispatches %s through its dedicated capability port', async (action, portIndex) => {
+    const invoke = jest.fn().mockResolvedValue([]);
+    const ports = Array.from({ length: 13 }, (_, index) => ({
+      taskId: `port-${index}`,
+      invoke: index === portIndex ? invoke : jest.fn().mockResolvedValue([]),
+    }));
+    const useCase = new SingleActionUseCase(
+      ports[0] as never,
+      ports[1] as never,
+      ports[2] as never,
+      ports[3] as never,
+      ports[4] as never,
+      ports[5] as never,
+      ports[6] as never,
+      ports[7] as never,
+      ports[8] as never,
+      undefined,
+      ports[10] as never,
+      ports[11] as never,
+      ports[12] as never,
+    );
+    const param = minimalExecution({ validSingleAction: true, currentSingleAction: action });
+
+    await useCase.invoke(param);
+
+    expect(invoke).toHaveBeenCalledTimes(1);
+    expect(invoke).not.toHaveBeenCalledWith(param);
   });
 
   it('on error pushes failure result with action name', async () => {
