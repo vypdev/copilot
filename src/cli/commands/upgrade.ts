@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { createUpgradeCliUseCase } from '../../infrastructure/composition/cli_upgrade_composition_root';
+import { toApplicationError } from '../../application/errors/application_error';
 
 export interface UpgradeCommandRunner {
     execute(): Promise<void>;
@@ -13,8 +14,8 @@ export async function runUpgradeCommand(
         await runner.execute();
         console.log('✅ Copilot was upgraded successfully. Run "copilot --version" to verify.');
     } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : String(error);
-        console.error(`❌ Unable to upgrade Copilot: ${message}`);
+        const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to upgrade Copilot.');
+        console.error(`❌ ${semanticError.message} Reference: ${semanticError.correlationId}`);
         process.exitCode = 1;
     }
 }

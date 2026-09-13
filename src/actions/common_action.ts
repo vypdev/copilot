@@ -14,6 +14,10 @@ import { requireRepositoryCoordinates } from './repository_context';
 import { configureApplicationLogger, setGlobalLoggerDebug } from '../application/ports/logging_ports';
 import { createLoggerAdapter } from '../infrastructure/logging/logger_adapter';
 import type { SynchronizeLifecycleStateUseCase } from '../application/usecases/actions/synchronize_lifecycle_state_use_case';
+import {
+    projectLifecycleSynchronizationContext,
+    type LifecycleSynchronizationOutcome,
+} from '../application/usecases/actions/lifecycle_synchronization_context';
 import type { SynchronizeAgentActivityUseCase } from '../application/usecases/actions/synchronize_agent_activity_use_case';
 import { shouldTrackAgentActivity, type AgentActivityRoute } from '../application/policies/agent_activity_policy';
 import {
@@ -105,9 +109,27 @@ async function runTrackedRoute(
     try {
         const results = await run();
         if (!lifecycleStateUseCase) return results;
-        return [...results, ...(await lifecycleStateUseCase.invoke({ execution, results }))];
+        const lifecycleOutcome = await lifecycleStateUseCase.invoke({
+            context: projectLifecycleSynchronizationContext(execution),
+            results,
+        });
+        applyLifecycleSynchronizationOutcome(execution, lifecycleOutcome);
+        return [...results, ...lifecycleOutcome.results];
     } finally {
         if (trackActivity) applyAgentActivityOutcome(execution, await agentActivityUseCase.finish(projectAgentActivityContext(execution)));
+    }
+}
+
+function applyLifecycleSynchronizationOutcome(
+    execution: Execution,
+    outcome: LifecycleSynchronizationOutcome,
+): void {
+    const patch = outcome.labelPatch;
+    if (!patch) return;
+    if (patch.target.kind === 'pull-request') {
+        execution.labels.currentPullRequestLabels = [...patch.labels];
+    } else {
+        execution.labels.currentIssueLabels = [...patch.labels];
     }
 }
 

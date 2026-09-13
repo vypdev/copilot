@@ -154,7 +154,10 @@ describe('application architecture boundaries', () => {
             'utf8',
         );
         expect(source).not.toContain("data/model/execution'");
-        expect(source).toContain('LifecycleSynchronizationExecution');
+        expect(source).toContain('LifecycleSynchronizationContext');
+        expect(source).toContain('BoundIssueLabelsPort');
+        expect(source).toContain('BoundPullRequestHeadShaPort');
+        expect(source).not.toContain('ExecutionInputs');
     });
 
     it('keeps deployment orchestration dependent on its narrow application context', () => {

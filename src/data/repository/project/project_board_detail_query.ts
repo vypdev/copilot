@@ -3,16 +3,13 @@ import type { GithubGraphqlTransportClient } from "../../../infrastructure/githu
 import type { GithubOwnerTypeClient } from "../../../infrastructure/github/ports/github_identity_provider_ports";
 import { logDebugInfo, logError } from "../../../utils/logger";
 import { ProjectDetail } from "../../model/project_detail";
-import { toApplicationError } from '../../../application/errors/application_error';
+import { ApplicationError, toApplicationError } from '../../../application/errors/application_error';
 
 interface ProjectNode {
   id: string;
   title: string;
   url: string;
 }
-
-const errorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
 
 /** Reads a ProjectV2 without leaking GitHub's owner-specific GraphQL shape. */
 export async function getProjectBoardDetail(
@@ -33,10 +30,11 @@ export async function getProjectBoardDetail(
     const { data: ownerData } = await ownerTypeProvider.rest.users
       .getByUsername({ username: ownerName })
       .catch((error: unknown) => {
-        throw new Error(`Failed to get owner information: ${errorMessage(error)}`);
+        throw toApplicationError(error, 'provider.unavailable', 'Unable to read the GitHub owner type.');
       });
     if (ownerData.type !== "Organization" && ownerData.type !== "User") {
-      throw new Error(
+      throw new ApplicationError(
+        'provider.contract-invalid',
         `Unsupported GitHub owner type '${String(ownerData.type)}' for owner ${ownerName}.`,
       );
     }
@@ -57,10 +55,10 @@ export async function getProjectBoardDetail(
         { ownerName, projectNumber },
       )
       .catch((error: unknown) => {
-        throw new Error(`Failed to fetch project data: ${errorMessage(error)}`);
+        throw toApplicationError(error, 'provider.unavailable', 'Unable to read the GitHub project.');
       });
     const project = result[ownerQueryField]?.projectV2;
-    if (!project) throw new Error(`Project not found: ${projectUrl}`);
+    if (!project) throw new ApplicationError('provider.not-found', `Project not found: ${projectUrl}`);
 
     logDebugInfo(`Project ID: ${project.id}`);
     logDebugInfo(`Project Title: ${project.title}`);
@@ -74,13 +72,17 @@ export async function getProjectBoardDetail(
       number: projectNumber,
     });
   } catch (error: unknown) {
-    logError(toApplicationError(error, 'provider.unavailable', 'Unable to load the project details.'));
-    throw error;
+    const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to load the project details.');
+    logError(semanticError);
+    throw semanticError;
   }
 }
 
 function validateProjectId(projectId: string): void {
   if (!/^[1-9]\d*$/.test(projectId)) {
-    throw new Error(`Invalid project ID: ${projectId}. Must be a positive integer.`);
+    throw new ApplicationError(
+      'validation.invalid-input',
+      `Invalid project ID: ${projectId}. Must be a positive integer.`,
+    );
   }
 }

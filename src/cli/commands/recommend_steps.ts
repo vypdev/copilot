@@ -5,6 +5,7 @@ import { logError } from '../../utils/logger';
 import { getGitInfo } from '../../cli_context';
 import { cleanCliArgument } from '../command_input_policy';
 import { buildRecommendStepsParams, parseIssueNumber } from './issue_command_policy';
+import { toApplicationError } from '../../application/errors/application_error';
 
 export function registerRecommendStepsCommand(program: Command): void {
   program
@@ -31,8 +32,9 @@ export function registerRecommendStepsCommand(program: Command): void {
       try {
         await runLocalAction(params);
       } catch (error: unknown) {
-        console.error('❌ Error recommending steps:', error instanceof Error ? error.message : String(error));
-        if (options.debug) console.error(error);
+        const semanticError = toApplicationError(error, 'workflow.failed', 'Unable to recommend steps.');
+        console.error(`❌ ${semanticError.message}`);
+        if (options.debug) console.error(`Reference: ${semanticError.correlationId}`);
         process.exitCode = 1;
       }
     });

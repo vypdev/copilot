@@ -154,4 +154,49 @@ describe('setup resource provisioning policy', () => {
 
         expect(inspect).not.toHaveBeenCalled();
     });
+
+    it('does not expose a raw variable-provider failure', async () => {
+        const configuration = createDefaultSetupConfiguration();
+        const result = await ensureRepositoryVariables(
+            context,
+            { setupRepositoryVariablesPort: {
+                upsert: jest.fn().mockRejectedValue(new Error('variable-secret-marker')),
+            } },
+            configuration,
+        );
+        expect(result.errors).toEqual(['Unable to configure GitHub Actions Variables.']);
+        expect(JSON.stringify(result)).not.toContain('variable-secret-marker');
+    });
+
+    it('does not expose a raw secret-provider failure', async () => {
+        const configuration = createDefaultSetupConfiguration();
+        const result = await ensureRepositorySecrets(
+            { setupCredentials: {
+                workflowPat: { name: 'PAT', value: 'workflow-token' },
+                apiKeys: [],
+            } },
+            { setupRepositorySecretsPort: {
+                upsertSecrets: jest.fn().mockRejectedValue(new Error('secret-provider-marker')),
+            } },
+            configuration,
+        );
+        expect(result.errors).toEqual(['Unable to configure GitHub Actions Secrets.']);
+        expect(JSON.stringify(result)).not.toContain('secret-provider-marker');
+    });
+
+    it('does not expose a raw remote-scope inspection failure', async () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.storage.variables.defaultScope = 'organization';
+        const errors: string[] = [];
+        await expect(resolveRemoteConfiguration(
+            context,
+            { setupRemoteConfigurationReadPort: {
+                inspect: jest.fn().mockRejectedValue(new Error('remote-scope-marker')),
+            } },
+            configuration,
+            errors,
+        )).resolves.toBeUndefined();
+        expect(errors).toEqual(['Could not inspect existing GitHub Actions resource scopes.']);
+        expect(JSON.stringify(errors)).not.toContain('remote-scope-marker');
+    });
 });

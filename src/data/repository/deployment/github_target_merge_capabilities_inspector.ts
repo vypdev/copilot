@@ -9,7 +9,6 @@ import type {
   MergeQueueProducerEvidence,
   MergeQueueProducerSupport,
 } from "../../../domain/merge_queue_readiness";
-import { redactSensitiveText } from "../../../domain/security/sensitive_text";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubDeploymentClient } from "../../../infrastructure/github/ports/github_deployment_provider_port";
 
@@ -140,6 +139,9 @@ interface GithubWorkflowTreeEntry {
   readonly object?: { readonly text?: string | null; readonly byteSize?: number; readonly isBinary?: boolean };
 }
 
+/** Marks diagnostics produced by our bounded inspection policy, never by the provider client. */
+class SafeInspectionError extends Error {}
+
 async function observeClassicProtection(
   client: GithubDeploymentClient,
   owner: string,
@@ -149,7 +151,7 @@ async function observeClassicProtection(
   try {
     const { data } = await client.rest.repos.getBranchProtection({ owner, repo: repository, branch });
     if (!data || typeof data !== "object" || Array.isArray(data)) {
-      throw new Error("GitHub returned an invalid classic branch-protection response.");
+      throw new SafeInspectionError("GitHub returned an invalid classic branch-protection response.");
     }
     return { value: data };
   } catch (error) {
@@ -175,8 +177,8 @@ async function observeEffectiveRules(
       "GET /repos/{owner}/{repo}/rules/branches/{branch}",
       { owner, repo: repository, branch },
     );
-    if (!Array.isArray(data)) throw new Error("GitHub returned a non-array effective-rules response.");
-    if (data.length > 1_000) throw new Error("GitHub returned more than 1000 effective rules.");
+    if (!Array.isArray(data)) throw new SafeInspectionError("GitHub returned a non-array effective-rules response.");
+    if (data.length > 1_000) throw new SafeInspectionError("GitHub returned more than 1000 effective rules.");
     return { value: data };
   } catch (error) {
     return {
@@ -207,12 +209,12 @@ async function observeClassicMergeQueue(
       { owner, repository, qualifiedName: `refs/heads/${branch}` },
     );
     const ref = response.repository?.ref;
-    if (!ref) throw new Error("GitHub returned no target ref while reading the classic merge-queue rule.");
+    if (!ref) throw new SafeInspectionError("GitHub returned no target ref while reading the classic merge-queue rule.");
     const rule = ref.branchProtectionRule;
     if (rule === null) return { value: false };
-    if (rule === undefined) throw new Error("GitHub omitted the classic merge-queue rule from its response.");
+    if (rule === undefined) throw new SafeInspectionError("GitHub omitted the classic merge-queue rule from its response.");
     if (typeof rule.requiresMergeQueue !== "boolean") {
-      throw new Error("GitHub returned an invalid classic merge-queue rule.");
+      throw new SafeInspectionError("GitHub returned an invalid classic merge-queue rule.");
     }
     return { value: rule.requiresMergeQueue };
   } catch (error) {
@@ -540,8 +542,8 @@ async function readRepositoryWorkflowSnapshot(
     { owner, repository, expression },
   );
   const entries = response.repository?.object?.entries;
-  if (!Array.isArray(entries)) throw new Error("GitHub returned no valid .github/workflows tree.");
-  if (entries.length > 500) throw new Error("GitHub returned more than 500 workflow entries.");
+  if (!Array.isArray(entries)) throw new SafeInspectionError("GitHub returned no valid .github/workflows tree.");
+  if (entries.length > 500) throw new SafeInspectionError("GitHub returned more than 500 workflow entries.");
   const contracts: WorkflowContract[] = [];
   const parseFailures: string[] = [];
   for (const entry of entries) {
@@ -601,7 +603,7 @@ async function inspectRequiredWorkflow(
 ): Promise<MergeQueueProducerEvidence> {
   const name = `${workflow.path} (repository ${workflow.repositoryId})`;
   try {
-    if (!isSafeWorkflowPath(workflow.path)) throw new Error("Required workflow path is unsafe or unsupported.");
+    if (!isSafeWorkflowPath(workflow.path)) throw new SafeInspectionError("Required workflow path is unsafe or unsupported.");
     let workflowOwner = owner;
     let workflowRepository = repository;
     if (workflow.repositoryId !== repositoryId) {
@@ -610,7 +612,9 @@ async function inspectRequiredWorkflow(
         { repository_id: workflow.repositoryId },
       );
       const [resolvedOwner, resolvedRepository, extra] = String(data.full_name ?? "").split("/");
-      if (!resolvedOwner || !resolvedRepository || extra) throw new Error("Required workflow repository identity is unavailable.");
+      if (!resolvedOwner || !resolvedRepository || extra) {
+        throw new SafeInspectionError("Required workflow repository identity is unavailable.");
+      }
       workflowOwner = resolvedOwner;
       workflowRepository = resolvedRepository;
     }
@@ -645,24 +649,24 @@ async function inspectRequiredWorkflow(
 
 function decodeWorkflowContent(data: unknown): string {
   const file = requireEncodedWorkflowFile(data);
-  if (file.size > 1_000_000) throw new Error("Workflow file exceeds the 1 MB inspection limit.");
+  if (file.size > 1_000_000) throw new SafeInspectionError("Workflow file exceeds the 1 MB inspection limit.");
   const encoded = file.content.replace(/\s/g, "");
   if (!isBoundedBase64(encoded)) {
-    throw new Error("Workflow content is not valid bounded base64.");
+    throw new SafeInspectionError("Workflow content is not valid bounded base64.");
   }
   const decoded = Buffer.from(encoded, "base64");
-  if (decoded.byteLength > 1_000_000) throw new Error("Workflow file exceeds the 1 MB inspection limit.");
-  if (decoded.byteLength !== file.size) throw new Error("Workflow size metadata does not match its content.");
+  if (decoded.byteLength > 1_000_000) throw new SafeInspectionError("Workflow file exceeds the 1 MB inspection limit.");
+  if (decoded.byteLength !== file.size) throw new SafeInspectionError("Workflow size metadata does not match its content.");
   return decodeUtf8(decoded);
 }
 
 function requireEncodedWorkflowFile(data: unknown): { readonly content: string; readonly size: number } {
-  if (!isRecord(data)) throw new Error("GitHub did not return one workflow file.");
+  if (!isRecord(data)) throw new SafeInspectionError("GitHub did not return one workflow file.");
   if (data.encoding !== "base64" || typeof data.content !== "string") {
-    throw new Error("Workflow content is unavailable.");
+    throw new SafeInspectionError("Workflow content is unavailable.");
   }
   if (typeof data.size !== "number" || !Number.isSafeInteger(data.size) || data.size < 0) {
-    throw new Error("Workflow size metadata is unavailable.");
+    throw new SafeInspectionError("Workflow size metadata is unavailable.");
   }
   return { content: data.content, size: data.size };
 }
@@ -677,13 +681,18 @@ function decodeUtf8(value: Uint8Array): string {
   try {
     return new TextDecoder("utf-8", { fatal: true }).decode(value);
   } catch {
-    throw new Error("Workflow content is not valid UTF-8.");
+    throw new SafeInspectionError("Workflow content is not valid UTF-8.");
   }
 }
 
 function parseWorkflowContract(path: string, content: string): WorkflowContract {
-  const parsed = yaml.load(content, { schema: yaml.JSON_SCHEMA });
-  if (!isRecord(parsed)) throw new Error("Workflow YAML must be an object.");
+  let parsed: unknown;
+  try {
+    parsed = yaml.load(content, { schema: yaml.JSON_SCHEMA });
+  } catch {
+    throw new SafeInspectionError("Workflow YAML is invalid.");
+  }
+  if (!isRecord(parsed)) throw new SafeInspectionError("Workflow YAML must be an object.");
   const jobs = isRecord(parsed.jobs) ? parsed.jobs : {};
   const jobNames = Object.entries(jobs)
     .map(([jobId, value]) => staticWorkflowJobName(jobId, value))
@@ -724,16 +733,9 @@ function isSafeWorkflowPath(value: string): boolean {
 }
 
 function safeProviderError(error: unknown): string {
-  const message = error instanceof Error
+  return error instanceof SafeInspectionError
     ? error.message
-    : typeof error === "object" && error !== null && "message" in error
-      ? String((error as { message?: unknown }).message)
-      : String(error);
-  return redactSensitiveText(message)
-    .replace(/[\r\n<>]/g, " ")
-    .replace(/::/g, "﹕﹕")
-    .replace(/@/g, "@\u200b")
-    .slice(0, 240);
+    : "GitHub provider request failed.";
 }
 
 function isNotFound(error: unknown): boolean {

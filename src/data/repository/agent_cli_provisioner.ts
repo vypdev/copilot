@@ -120,7 +120,7 @@ export class AgentCliProvisioner {
             assertInstalledAgentRuntimeVersion(provider, this.system.readVersion(executable, environment));
         } catch (error) {
             throw Object.assign(
-                new Error(`The Copilot-installed ${provider} CLI failed pinned-version verification: ${error instanceof Error ? error.message : String(error)}`),
+                new Error(`The Copilot-installed ${provider} CLI failed pinned-version verification.`),
                 { cause: error },
             );
         }

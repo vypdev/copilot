@@ -1,95 +1,117 @@
+import { DEFAULT_COPILOT_LIFECYCLE_LABELS } from '../../../../domain/copilot_lifecycle';
+import { configureApplicationLogger, resetApplicationLogger } from '../../../ports/logging_ports';
+import type { LifecycleSynchronizationContext } from '../lifecycle_synchronization_context';
 import { SynchronizeLifecycleStateUseCase } from '../synchronize_lifecycle_state_use_case';
-import type { Execution } from '../../../../data/model/execution';
 
-function execution(overrides: Record<string, unknown> = {}): Execution {
+function context(overrides: Partial<LifecycleSynchronizationContext> = {}): LifecycleSynchronizationContext {
     return {
-        owner: 'owner',
-        repo: 'repo',
         eventName: 'issues',
-        inputs: { action: 'opened' },
-        issue: { number: 7, opened: true, descriptionEdited: false },
-        pullRequest: { number: 0, isMerged: false, isClosed: false },
-        labels: {
-            currentIssueLabels: ['bug', 'state:ready'],
-            currentPullRequestLabels: [],
-            lifecycle: {
-                aiProcessing: 'state:ai-processing', planned: 'state:planned', inProgress: 'state:in-progress',
-                reviewing: 'state:reviewing', changesRequested: 'state:changes-requested', verified: 'state:verified', ready: 'state:ready', blocked: 'state:blocked',
-                awaitingMaintainer: 'state:awaiting-maintainer', awaitingIssueAuthor: 'state:awaiting-issue-author',
-            },
+        action: 'opened',
+        target: {
+            kind: 'issue',
+            number: 7,
+            labels: ['bug', 'state:ready'],
+            opened: true,
+            descriptionEdited: false,
         },
-        tokens: { token: 'token' },
+        lifecycleLabels: DEFAULT_COPILOT_LIFECYCLE_LABELS,
+        evidence: { kind: 'none' },
         ...overrides,
-    } as unknown as Execution;
+    };
+}
+
+function ports(labels?: readonly string[]) {
+    return {
+        labels: {
+            getLabels: jest.fn().mockResolvedValue(labels),
+            setLabels: jest.fn().mockResolvedValue(undefined),
+        },
+        head: { getPullRequestHeadSha: jest.fn().mockResolvedValue('sha-1') },
+    };
 }
 
 describe('SynchronizeLifecycleStateUseCase', () => {
-    it('replaces only the managed lifecycle label', async () => {
-        const setLabels = jest.fn().mockResolvedValue(undefined);
-        const useCase = new SynchronizeLifecycleStateUseCase({ setLabels, getLabels: jest.fn() });
-        const param = execution();
+    afterEach(() => resetApplicationLogger());
 
-        const results = await useCase.invoke({
-            execution: param,
+    it('replaces only managed labels and returns an explicit frozen patch', async () => {
+        const dependencies = ports();
+        const useCase = new SynchronizeLifecycleStateUseCase(dependencies.labels, dependencies.head);
+
+        const outcome = await useCase.invoke({
+            context: context(),
             results: [{ id: 'RecommendStepsUseCase', success: true, executed: true, steps: [], errors: [] } as never],
         });
 
-        expect(setLabels).toHaveBeenCalledWith('owner', 'repo', 7, ['bug', 'state:planned', 'state:awaiting-maintainer'], 'token');
-        expect(results[0]).toMatchObject({ success: true, executed: true });
-    });
-
-    it('does not write when the state is already current', async () => {
-        const setLabels = jest.fn();
-        const useCase = new SynchronizeLifecycleStateUseCase({ setLabels, getLabels: jest.fn() });
-        const param = execution({ labels: { ...execution().labels, currentIssueLabels: ['bug', 'state:ai-processing'] } });
-
-        expect(await useCase.invoke({ execution: param, results: [] })).toEqual([]);
-        expect(setLabels).not.toHaveBeenCalled();
-    });
-
-    it('preserves agent activity while synchronizing the stable state', async () => {
-        const setLabels = jest.fn().mockResolvedValue(undefined);
-        const getLabels = jest.fn().mockResolvedValue(['bug', 'state:ai-processing', 'state:ready', 'size: M']);
-        const useCase = new SynchronizeLifecycleStateUseCase({ setLabels, getLabels });
-        const param = execution({
-            labels: {
-                ...execution().labels,
-                currentIssueLabels: ['bug', 'state:ai-processing', 'state:ready'],
-            },
-            issue: { number: 7, opened: false, descriptionEdited: true },
-            inputs: { action: 'edited' },
+        expect(dependencies.labels.setLabels).toHaveBeenCalledWith(
+            7,
+            ['bug', 'state:planned', 'state:awaiting-maintainer'],
+        );
+        expect(outcome.results[0]).toMatchObject({ success: true, executed: true });
+        expect(outcome.labelPatch).toEqual({
+            target: { kind: 'issue', number: 7 },
+            labels: ['bug', 'state:planned', 'state:awaiting-maintainer'],
         });
+        expect(Object.isFrozen(outcome.labelPatch)).toBe(true);
+    });
 
+    it('does not write or patch when labels are already current', async () => {
+        const dependencies = ports(['bug', 'state:ai-processing']);
+        const useCase = new SynchronizeLifecycleStateUseCase(dependencies.labels, dependencies.head);
+        const outcome = await useCase.invoke({ context: context(), results: [] });
+        expect(outcome).toEqual({ results: [] });
+        expect(dependencies.labels.setLabels).not.toHaveBeenCalled();
+    });
+
+    it('uses event-time labels only as the missing-provider-inventory fallback', async () => {
+        const dependencies = ports(undefined);
+        const useCase = new SynchronizeLifecycleStateUseCase(dependencies.labels, dependencies.head);
+        const lifecycleContext = context({
+            action: 'edited',
+            target: {
+                kind: 'issue',
+                number: 7,
+                labels: ['bug', 'state:ready'],
+                opened: false,
+                descriptionEdited: true,
+            },
+        });
         await useCase.invoke({
-            execution: param,
+            context: lifecycleContext,
             results: [{ id: 'PrepareBranchesUseCase', success: true, executed: true, steps: [], errors: [] } as never],
         });
-
-        expect(setLabels).toHaveBeenCalledWith(
-            'owner',
-            'repo',
+        expect(dependencies.labels.setLabels).toHaveBeenCalledWith(
             7,
-            ['bug', 'state:ai-processing', 'size: M', 'state:in-progress'],
-            'token',
+            ['bug', 'state:in-progress'],
         );
     });
 
-    it('maps active findings to the issue-author waiting label', async () => {
-        const setLabels = jest.fn().mockResolvedValue(undefined);
-        const useCase = new SynchronizeLifecycleStateUseCase({ setLabels, getLabels: jest.fn() });
-        const param = execution({
-            eventName: 'pull_request',
-            inputs: { action: 'synchronize' },
-            pullRequest: { number: 11, isMerged: false, isClosed: false },
-            labels: {
-                ...execution().labels,
-                currentIssueLabels: [],
-                currentPullRequestLabels: ['state:ai-processing', 'state:reviewing'],
-            },
-        });
-
+    it('preserves fresh non-managed and agent-activity labels', async () => {
+        const dependencies = ports(['bug', 'state:ai-processing', 'state:ready', 'size: M']);
+        const useCase = new SynchronizeLifecycleStateUseCase(dependencies.labels, dependencies.head);
         await useCase.invoke({
-            execution: param,
+            context: context({
+                action: 'edited',
+                target: {
+                    kind: 'issue', number: 7, labels: ['stale'], opened: false, descriptionEdited: true,
+                },
+            }),
+            results: [{ id: 'PrepareBranchesUseCase', success: true, executed: true, steps: [], errors: [] } as never],
+        });
+        expect(dependencies.labels.setLabels).toHaveBeenCalledWith(
+            7,
+            ['bug', 'state:ai-processing', 'size: M', 'state:in-progress'],
+        );
+    });
+
+    it('maps active findings to pull-request and issue-author waiting labels', async () => {
+        const dependencies = ports(['state:ai-processing', 'state:reviewing']);
+        const useCase = new SynchronizeLifecycleStateUseCase(dependencies.labels, dependencies.head);
+        await useCase.invoke({
+            context: context({
+                eventName: 'pull_request',
+                action: 'synchronize',
+                target: { kind: 'pull-request', number: 11, labels: [], merged: false, closed: false },
+            }),
             results: [{
                 id: 'DetectPotentialProblemsUseCase',
                 success: true,
@@ -97,81 +119,114 @@ describe('SynchronizeLifecycleStateUseCase', () => {
                 steps: [],
                 errors: [],
                 payload: { findingStates: {
-                    open: 1,
-                    reopened: 0,
-                    fixed: 0,
-                    obsolete: 0,
-                    dismissed: 0,
-                    'verification-required': 0,
-                    unknown: 0,
+                    open: 1, reopened: 0, fixed: 0, obsolete: 0, dismissed: 0,
+                    'verification-required': 0, unknown: 0,
                 } },
             } as never],
         });
-
-        expect(setLabels).toHaveBeenCalledWith(
-            'owner',
-            'repo',
+        expect(dependencies.labels.setLabels).toHaveBeenCalledWith(
             11,
             ['state:ai-processing', 'state:changes-requested', 'state:awaiting-issue-author'],
-            'token',
         );
     });
 
-    it('clears a waiting label when a pull request review comment arrives', async () => {
-        const setLabels = jest.fn().mockResolvedValue(undefined);
-        const useCase = new SynchronizeLifecycleStateUseCase({ setLabels, getLabels: jest.fn() });
-        const param = execution({
-            eventName: 'pull_request_review_comment',
-            inputs: { action: 'created' },
-            issue: { number: -1, opened: false, descriptionEdited: false },
-            pullRequest: { number: 11, isMerged: false, isClosed: false },
-            labels: {
-                ...execution().labels,
-                currentIssueLabels: [],
-                currentPullRequestLabels: ['state:changes-requested', 'state:awaiting-issue-author'],
-            },
+    it('clears waiting state for a pull-request conversation comment', async () => {
+        const dependencies = ports(['state:changes-requested', 'state:awaiting-issue-author']);
+        const useCase = new SynchronizeLifecycleStateUseCase(dependencies.labels, dependencies.head);
+        const outcome = await useCase.invoke({
+            context: context({
+                eventName: 'issue_comment',
+                action: 'created',
+                target: { kind: 'pull-request', number: 11, labels: [], merged: false, closed: false },
+            }),
+            results: [],
         });
-
-        await useCase.invoke({ execution: param, results: [] });
-
-        expect(setLabels).toHaveBeenCalledWith(
-            'owner',
-            'repo',
-            11,
-            ['state:changes-requested'],
-            'token',
-        );
+        expect(dependencies.labels.setLabels).toHaveBeenCalledWith(11, ['state:changes-requested']);
+        expect(outcome.labelPatch?.target.kind).toBe('pull-request');
     });
 
-    it('synchronizes check-suite evidence for a PR without invoking the agent route', async () => {
-        const setLabels = jest.fn().mockResolvedValue(undefined);
-        const useCase = new SynchronizeLifecycleStateUseCase(
-            { setLabels, getLabels: jest.fn() },
-            { getPullRequestHeadSha: jest.fn().mockResolvedValue('sha-1') },
-        );
-        const param = execution({
-            eventName: 'check_suite',
-            inputs: {
+    it('uses current-head evidence through the bound head capability', async () => {
+        const dependencies = ports(['state:reviewing']);
+        const useCase = new SynchronizeLifecycleStateUseCase(dependencies.labels, dependencies.head);
+        await useCase.invoke({
+            context: context({
                 eventName: 'check_suite',
                 action: 'completed',
-                check_suite: {
-                    head_sha: 'sha-1',
-                    status: 'completed',
-                    conclusion: 'failure',
-                    pull_requests: [{ number: 11 }],
-                },
-            },
-            issue: { number: -1, opened: false, descriptionEdited: false },
-            pullRequest: { number: 11, isMerged: false, isClosed: false },
-            labels: {
-                ...execution().labels,
-                currentIssueLabels: [],
-                currentPullRequestLabels: ['state:reviewing'],
-            },
+                target: { kind: 'pull-request', number: 11, labels: [], merged: false, closed: false },
+                evidence: { kind: 'check-suite', headSha: 'sha-1', status: 'completed', conclusion: 'failure' },
+            }),
+            results: [],
         });
+        expect(dependencies.head.getPullRequestHeadSha).toHaveBeenCalledWith(11);
+        expect(dependencies.labels.setLabels).toHaveBeenCalledWith(
+            11,
+            ['state:blocked', 'state:awaiting-maintainer'],
+        );
+    });
 
-        await useCase.invoke({ execution: param, results: [] });
+    it('verifies review evidence against the bound current-head capability', async () => {
+        const dependencies = ports(['state:reviewing']);
+        const useCase = new SynchronizeLifecycleStateUseCase(dependencies.labels, dependencies.head);
+        await useCase.invoke({
+            context: context({
+                eventName: 'pull_request_review',
+                action: 'submitted',
+                target: { kind: 'pull-request', number: 11, labels: [], merged: false, closed: false },
+                evidence: { kind: 'pull-request-review', headSha: 'sha-1', state: 'approved' },
+            }),
+            results: [],
+        });
+        expect(dependencies.head.getPullRequestHeadSha).toHaveBeenCalledWith(11);
+        expect(dependencies.labels.setLabels).toHaveBeenCalledWith(
+            11,
+            ['state:ready', 'state:awaiting-maintainer'],
+        );
+    });
 
-        expect(setLabels).toHaveBeenCalledWith('owner', 'repo', 11, ['state:blocked', 'state:awaiting-maintainer'], 'token');
+    it('degrades safely when current-head lookup fails', async () => {
+        const dependencies = ports(['state:reviewing']);
+        dependencies.head.getPullRequestHeadSha.mockRejectedValue(new Error('secret-head-marker'));
+        const useCase = new SynchronizeLifecycleStateUseCase(dependencies.labels, dependencies.head);
+        const outcome = await useCase.invoke({
+            context: context({
+                eventName: 'pull_request_review',
+                action: 'submitted',
+                target: { kind: 'pull-request', number: 11, labels: [], merged: false, closed: false },
+                evidence: { kind: 'pull-request-review', headSha: 'sha-1', state: 'approved' },
+            }),
+            results: [],
+        });
+        expect(outcome).toEqual({ results: [] });
+        expect(dependencies.labels.setLabels).not.toHaveBeenCalled();
+    });
+
+    it('performs no provider I/O without a target', async () => {
+        const dependencies = ports();
+        const useCase = new SynchronizeLifecycleStateUseCase(dependencies.labels, dependencies.head);
+        expect(await useCase.invoke({
+            context: context({ target: undefined }),
+            results: [],
+        })).toEqual({ results: [] });
+        expect(dependencies.labels.getLabels).not.toHaveBeenCalled();
+        expect(dependencies.head.getPullRequestHeadSha).not.toHaveBeenCalled();
+    });
+
+    it('returns and logs only a semantic error when label I/O fails', async () => {
+        const marker = 'provider-secret-marker';
+        const dependencies = ports();
+        dependencies.labels.getLabels.mockRejectedValue(new Error(marker));
+        const logError = jest.fn();
+        configureApplicationLogger({
+            logInfo: jest.fn(), logWarn: jest.fn(), logWarning: jest.fn(), logError,
+            logDebugInfo: jest.fn(), logDebugWarning: jest.fn(), logDebugError: jest.fn(),
+            setGlobalLoggerDebug: jest.fn(),
+        });
+        const useCase = new SynchronizeLifecycleStateUseCase(dependencies.labels, dependencies.head);
+        const outcome = await useCase.invoke({ context: context(), results: [] });
+        const serialized = JSON.stringify({ outcome, logCalls: logError.mock.calls });
+        expect(outcome.results[0]).toMatchObject({ success: false, executed: true });
+        expect(outcome.labelPatch).toBeUndefined();
+        expect(outcome.results[0].errors[0].message).toBe('Unable to synchronize Copilot lifecycle state.');
+        expect(serialized).not.toContain(marker);
     });
 });

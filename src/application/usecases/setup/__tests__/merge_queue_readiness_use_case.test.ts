@@ -83,7 +83,10 @@ describe("SetupMergeQueueReadinessUseCase", () => {
       new Error("forbidden\n::error::@team github_pat_abcdefghijklmnopqrstuvwxyz123456"),
     ) };
     const checks = await new SetupMergeQueueReadinessUseCase(targets).inspect(request());
-    expect(checks[0]).toEqual(expect.objectContaining({ status: "fail", summary: expect.stringContaining("forbidden") }));
+    expect(checks[0]).toEqual(expect.objectContaining({
+      status: "fail",
+      summary: "Target policy could not be inspected because the provider request failed.",
+    }));
     expect(checks[0].summary).not.toContain("::error::");
     expect(checks[0].summary).not.toContain("@team");
     expect(checks[0].summary).not.toContain("github_pat_");

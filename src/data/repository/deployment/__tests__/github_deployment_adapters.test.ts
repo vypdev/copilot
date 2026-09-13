@@ -264,9 +264,10 @@ describe("GitHub deployment repository", () => {
     value.request.mockRejectedValue({ status: 403, message: "Forbidden github_pat_abcdefghijklmnopqrstuvwxyz123456" });
     const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueObservationProblems).toEqual([
-      expect.objectContaining({ area: "effective-rules", message: expect.stringContaining("Forbidden") }),
+      expect.objectContaining({ area: "effective-rules", message: expect.stringContaining("provider request failed") }),
     ]);
-    expect(result.mergeQueueObservationProblems[0].message).toContain("[REDACTED_SECRET]");
+    expect(result.mergeQueueObservationProblems[0].message).not.toContain("Forbidden");
+    expect(result.mergeQueueObservationProblems[0].message).not.toContain("github_pat_");
     expect(result.mergeQueueObservationProblems[0].message).not.toContain("github_pat_");
   });
 
@@ -391,8 +392,8 @@ describe("GitHub deployment repository", () => {
     value.graphql.mockRejectedValue({ status: 502, message: "GraphQL unavailable" });
     const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueObservationProblems).toEqual(expect.arrayContaining([
-      expect.objectContaining({ area: "classic-protection", message: expect.stringContaining("Protection forbidden") }),
-      expect.objectContaining({ area: "classic-protection", message: expect.stringContaining("GraphQL unavailable") }),
+      expect.objectContaining({ area: "classic-protection", message: expect.stringContaining("provider request failed") }),
+      expect.objectContaining({ area: "classic-protection", message: expect.stringContaining("provider request failed") }),
     ]));
   });
 
@@ -420,7 +421,7 @@ describe("GitHub deployment repository", () => {
     ] });
     const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueProducers).toEqual([
-      expect.objectContaining({ support: "unknown", reason: expect.stringContaining("app lookup unavailable") }),
+      expect.objectContaining({ support: "unknown", reason: expect.stringContaining("provider request failed") }),
     ]);
   });
 

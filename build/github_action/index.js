@@ -50595,6 +50595,7 @@ const main_run_route_composition_root_1 = __nccwpck_require__(4706);
 const repository_context_1 = __nccwpck_require__(78958);
 const logging_ports_1 = __nccwpck_require__(6152);
 const logger_adapter_1 = __nccwpck_require__(72762);
+const lifecycle_synchronization_context_1 = __nccwpck_require__(28121);
 const agent_activity_policy_1 = __nccwpck_require__(15375);
 const push_single_action_contexts_1 = __nccwpck_require__(47841);
 const main_run_lifecycle_1 = __nccwpck_require__(916);
@@ -50649,11 +50650,27 @@ async function runTrackedRoute(execution, route, run, lifecycleStateUseCase, age
         const results = await run();
         if (!lifecycleStateUseCase)
             return results;
-        return [...results, ...(await lifecycleStateUseCase.invoke({ execution, results }))];
+        const lifecycleOutcome = await lifecycleStateUseCase.invoke({
+            context: (0, lifecycle_synchronization_context_1.projectLifecycleSynchronizationContext)(execution),
+            results,
+        });
+        applyLifecycleSynchronizationOutcome(execution, lifecycleOutcome);
+        return [...results, ...lifecycleOutcome.results];
     }
     finally {
         if (trackActivity)
             applyAgentActivityOutcome(execution, await agentActivityUseCase.finish((0, push_single_action_contexts_1.projectAgentActivityContext)(execution)));
+    }
+}
+function applyLifecycleSynchronizationOutcome(execution, outcome) {
+    const patch = outcome.labelPatch;
+    if (!patch)
+        return;
+    if (patch.target.kind === 'pull-request') {
+        execution.labels.currentPullRequestLabels = [...patch.labels];
+    }
+    else {
+        execution.labels.currentIssueLabels = [...patch.labels];
     }
 }
 function applyAgentActivityOutcome(execution, outcome) {
@@ -51113,17 +51130,13 @@ async function runGitHubAction() {
     });
     (0, logger_1.logDebugInfo)(`Execution built. Event will be resolved in mainRun. Single action: ${execution.singleAction.currentSingleAction ?? 'none'}, ` +
         `AI PR description mode: ${execution.ai.getPullRequestDescriptionMode()}, bugbot min severity: ${execution.ai.getBugbotMinSeverity()}.`);
-    const results = await (0, common_action_1.mainRun)(execution, projectBoard.command, new git_cli_repository_1.GitCliRepository(token), 'github-workflow', (0, lifecycle_state_composition_root_1.createSynchronizeLifecycleStateUseCase)(), (0, agent_activity_composition_root_1.createSynchronizeAgentActivityUseCase)({
-        owner: execution.owner,
-        repository: execution.repo,
-        token: execution.tokens.token,
-    }));
-    const issueContentPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
     const repositoryBinding = {
         owner: execution.owner,
         repository: execution.repo,
         token: execution.tokens.token,
     };
+    const results = await (0, common_action_1.mainRun)(execution, projectBoard.command, new git_cli_repository_1.GitCliRepository(token), 'github-workflow', (0, lifecycle_state_composition_root_1.createSynchronizeLifecycleStateUseCase)(repositoryBinding), (0, agent_activity_composition_root_1.createSynchronizeAgentActivityUseCase)(repositoryBinding));
+    const issueContentPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
     const configurationHandler = new configuration_handler_1.ConfigurationHandler(issueContentPort);
     await (0, github_action_completion_1.finishGithubAction)(execution, results, (0, shared_capability_port_binding_1.bindIssueNotification)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), repositoryBinding), {
         update: (context) => configurationHandler.update({
@@ -56029,13 +56042,13 @@ function resolveLifecycleState(input) {
     return undefined;
 }
 /** Extracts only stable review/check facts from GitHub event payloads. */
-function readLifecycleExternalEvidence(inputs, currentPullRequestHeadSha) {
-    if (!inputs)
+function readLifecycleExternalEvidence(source, currentPullRequestHeadSha) {
+    if (source.kind === 'none')
         return undefined;
-    if (inputs.eventName === 'pull_request_review') {
-        if (!isCurrentValidationEvidence(inputs.review?.commit_id, currentPullRequestHeadSha))
+    if (source.kind === 'pull-request-review') {
+        if (!isCurrentValidationEvidence(source.headSha, currentPullRequestHeadSha))
             return undefined;
-        const reviewState = inputs.review?.state?.trim().toLowerCase();
+        const reviewState = source.state?.trim().toLowerCase();
         if (reviewState === 'approved')
             return { review: 'approved' };
         if (reviewState === 'changes_requested')
@@ -56046,17 +56059,9 @@ function readLifecycleExternalEvidence(inputs, currentPullRequestHeadSha) {
             return { review: 'commented' };
         return undefined;
     }
-    if (inputs.eventName === 'check_suite') {
-        if (!isCurrentValidationEvidence(inputs.check_suite?.head_sha, currentPullRequestHeadSha))
-            return undefined;
-        return { checks: readChecksEvidence(inputs.check_suite?.status, inputs.check_suite?.conclusion) };
-    }
-    if (inputs.eventName === 'workflow_run') {
-        if (!isCurrentValidationEvidence(inputs.workflow_run?.head_sha, currentPullRequestHeadSha))
-            return undefined;
-        return { checks: readChecksEvidence(inputs.workflow_run?.status, inputs.workflow_run?.conclusion) };
-    }
-    return undefined;
+    if (!isCurrentValidationEvidence(source.headSha, currentPullRequestHeadSha))
+        return undefined;
+    return { checks: readChecksEvidence(source.status, source.conclusion) };
 }
 function isCurrentValidationEvidence(evidenceHeadSha, currentPullRequestHeadSha) {
     if (!evidenceHeadSha || !currentPullRequestHeadSha)
@@ -57537,7 +57542,6 @@ const deployment_presentation_policy_1 = __nccwpck_require__(83221);
 const deployment_operation_1 = __nccwpck_require__(92730);
 const merge_queue_readiness_1 = __nccwpck_require__(12515);
 const result_1 = __nccwpck_require__(73817);
-const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 exports.DEPLOYMENT_ORCHESTRATION_TASK_ID = "DeploymentOrchestrationUseCase";
 class DeploymentOrchestrationRuntime {
     constructor(dependencies, stateBoundary) {
@@ -57649,11 +57653,11 @@ class DeploymentOrchestrationRuntime {
             await this.dependencies.git.deleteBranch(operation.sourceBranch, operation.sourceSha);
         }
     }
-    async recordUnexpectedFailure(context, error) {
+    async recordUnexpectedFailure(context, _error) {
         const operation = context.currentConfiguration.deploymentOrchestration;
         if (!operation || operation.phase === "completed" || operation.phase === "blocked")
             return;
-        const message = (0, github_comment_publication_policy_1.sanitizePublishedError)(error instanceof Error ? error.message : String(error));
+        const message = "Deployment orchestration failed unexpectedly.";
         const category = failureCategory(operation);
         const blocked = (0, deployment_operation_1.blockDeploymentOperation)(operation, category, message, true);
         context.currentConfiguration.deploymentOrchestration = blocked;
@@ -58051,7 +58055,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCloseInactiveIssuesWorkflow = runCloseInactiveIssuesWorkflow;
 const result_1 = __nccwpck_require__(73817);
 const issue_inactivity_1 = __nccwpck_require__(38572);
-const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
 const TASK_ID = 'CloseInactiveIssuesUseCase';
@@ -58163,9 +58166,8 @@ function buildSteps(scanned, closed, skipped) {
 function unique(values) {
     return [...new Set(values.map(value => value.trim()).filter(Boolean))];
 }
-function safeErrorMessage(error) {
-    const message = (0, github_comment_publication_policy_1.sanitizePublishedError)(error instanceof Error ? error.message : error);
-    return message || 'Unknown provider error.';
+function safeErrorMessage(_error) {
+    return 'The issue provider request failed.';
 }
 
 
@@ -59295,6 +59297,96 @@ function fromMessages(messages, code) {
 
 /***/ }),
 
+/***/ 28121:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectLifecycleSynchronizationContext = projectLifecycleSynchronizationContext;
+exports.lifecycleSynchronizationOutcome = lifecycleSynchronizationOutcome;
+const PULL_REQUEST_LIFECYCLE_EVENTS = new Set([
+    'pull_request',
+    'pull_request_review',
+    'pull_request_review_comment',
+    'check_suite',
+    'workflow_run',
+]);
+const ISSUE_LIFECYCLE_EVENTS = new Set(['issues', 'issue_comment', 'push']);
+function projectLifecycleSynchronizationContext(source) {
+    const target = projectTarget(source);
+    return Object.freeze({
+        eventName: source.eventName,
+        action: source.inputs?.action ?? '',
+        ...(target ? { target } : {}),
+        lifecycleLabels: Object.freeze({ ...source.labels.lifecycle }),
+        evidence: projectEvidence(source),
+    });
+}
+function lifecycleSynchronizationOutcome(results = [], labelPatch) {
+    return Object.freeze({
+        results: Object.freeze([...results]),
+        ...(labelPatch ? {
+            labelPatch: Object.freeze({
+                target: Object.freeze({ ...labelPatch.target }),
+                labels: Object.freeze([...labelPatch.labels]),
+            }),
+        } : {}),
+    });
+}
+function projectTarget(source) {
+    if ((source.isPullRequest || PULL_REQUEST_LIFECYCLE_EVENTS.has(source.eventName))
+        && source.pullRequest.number > 0) {
+        return Object.freeze({
+            kind: 'pull-request',
+            number: source.pullRequest.number,
+            labels: Object.freeze([...source.labels.currentPullRequestLabels]),
+            merged: source.pullRequest.isMerged,
+            closed: source.pullRequest.isClosed,
+        });
+    }
+    const issueNumber = source.issue.number > 0 ? source.issue.number : source.issueNumber;
+    if ((source.isIssue || ISSUE_LIFECYCLE_EVENTS.has(source.eventName)) && issueNumber > 0) {
+        return Object.freeze({
+            kind: 'issue',
+            number: issueNumber,
+            labels: Object.freeze([...source.labels.currentIssueLabels]),
+            opened: source.issue.opened,
+            descriptionEdited: source.issue.descriptionEdited,
+        });
+    }
+    return undefined;
+}
+function projectEvidence(source) {
+    if (source.eventName === 'pull_request_review') {
+        return Object.freeze({
+            kind: 'pull-request-review',
+            headSha: source.inputs?.review?.commit_id,
+            state: source.inputs?.review?.state,
+        });
+    }
+    if (source.eventName === 'check_suite') {
+        return Object.freeze({
+            kind: 'check-suite',
+            headSha: source.inputs?.check_suite?.head_sha,
+            status: source.inputs?.check_suite?.status,
+            conclusion: source.inputs?.check_suite?.conclusion,
+        });
+    }
+    if (source.eventName === 'workflow_run') {
+        return Object.freeze({
+            kind: 'workflow-run',
+            headSha: source.inputs?.workflow_run?.head_sha,
+            status: source.inputs?.workflow_run?.status,
+            conclusion: source.inputs?.workflow_run?.conclusion,
+        });
+    }
+    return Object.freeze({ kind: 'none' });
+}
+
+
+/***/ }),
+
 /***/ 84542:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -59945,6 +60037,7 @@ exports.resolveRemoteConfiguration = resolveRemoteConfiguration;
 exports.groupSetupResources = groupSetupResources;
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 async function ensureRepositoryVariables(context, dependencies, setupConfiguration, remoteConfiguration) {
     if (!setupConfiguration?.manageRepositoryVariables || !dependencies.setupRepositoryVariablesPort) {
         return { errors: [] };
@@ -59961,9 +60054,9 @@ async function ensureRepositoryVariables(context, dependencies, setupConfigurati
         };
     }
     catch (error) {
-        const message = `Error configuring repository Variables: ${error}`;
-        (0, logging_ports_1.logError)(message);
-        return { errors: [message] };
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to configure GitHub Actions Variables.');
+        (0, logging_ports_1.logError)(semanticError);
+        return { errors: [semanticError.message] };
     }
 }
 async function ensureRepositorySecrets(context, dependencies, setupConfiguration, remoteConfiguration) {
@@ -59991,9 +60084,9 @@ async function ensureRepositorySecrets(context, dependencies, setupConfiguration
         };
     }
     catch (error) {
-        const message = `Error configuring repository Secrets: ${error}`;
-        (0, logging_ports_1.logError)(message);
-        return { errors: [message] };
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to configure GitHub Actions Secrets.');
+        (0, logging_ports_1.logError)(semanticError);
+        return { errors: [semanticError.message] };
     }
 }
 async function resolveRemoteConfiguration(context, dependencies, setupConfiguration, errors) {
@@ -60005,10 +60098,10 @@ async function resolveRemoteConfiguration(context, dependencies, setupConfigurat
         return await dependencies.setupRemoteConfigurationReadPort.inspect();
     }
     catch (error) {
-        const message = `Could not inspect existing GitHub Actions resource scopes: ${error instanceof Error ? error.message : String(error)}`;
-        (0, logging_ports_1.logError)(message);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Could not inspect existing GitHub Actions resource scopes.');
+        (0, logging_ports_1.logError)(semanticError);
         if ((0, setup_configuration_policy_1.usesOrganizationStorage)(setupConfiguration))
-            errors.push(message);
+            errors.push(semanticError.message);
         return undefined;
     }
 }
@@ -60175,17 +60268,8 @@ const lifecycle_state_policy_1 = __nccwpck_require__(34026);
 const lifecycle_waiting_state_policy_1 = __nccwpck_require__(61736);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
-const PULL_REQUEST_LIFECYCLE_EVENTS = [
-    'pull_request',
-    'pull_request_review',
-    'pull_request_review_comment',
-    'check_suite',
-    'workflow_run',
-];
-/**
- * Reconciles one state label after a route completes. The existing business
- * labels remain untouched, and repeated events are idempotent.
- */
+const lifecycle_synchronization_context_1 = __nccwpck_require__(28121);
+/** Reconciles one state label from immutable facts and bound provider authority. */
 class SynchronizeLifecycleStateUseCase {
     constructor(issueLabelsPort, pullRequestHeadShaPort) {
         this.issueLabelsPort = issueLabelsPort;
@@ -60193,66 +60277,72 @@ class SynchronizeLifecycleStateUseCase {
         this.taskId = 'SynchronizeCopilotLifecycleStateUseCase';
     }
     async invoke(param) {
-        const externalEvidence = await this.readExternalEvidence(param.execution);
+        const target = param.context.target;
+        if (!target) {
+            (0, logging_ports_1.logDebugInfo)('Lifecycle state synchronization skipped: no issue or pull request number.');
+            return (0, lifecycle_synchronization_context_1.lifecycleSynchronizationOutcome)();
+        }
+        const externalEvidence = await this.readExternalEvidence(param.context);
         const state = (0, lifecycle_state_policy_1.resolveLifecycleState)({
-            eventName: param.execution.eventName,
-            action: param.execution.inputs?.action ?? '',
-            isIssue: ['issues', 'issue_comment'].includes(param.execution.eventName),
-            isPullRequest: param.execution.isPullRequest || PULL_REQUEST_LIFECYCLE_EVENTS.includes(param.execution.eventName),
-            issueOpened: param.execution.issue.opened,
-            issueDescriptionEdited: param.execution.issue.descriptionEdited,
-            pullRequestMerged: param.execution.pullRequest.isMerged,
-            pullRequestClosed: param.execution.pullRequest.isClosed,
+            eventName: param.context.eventName,
+            action: param.context.action,
+            isIssue: target.kind === 'issue',
+            isPullRequest: target.kind === 'pull-request',
+            issueOpened: target.kind === 'issue' && target.opened,
+            issueDescriptionEdited: target.kind === 'issue' && target.descriptionEdited,
+            pullRequestMerged: target.kind === 'pull-request' && target.merged,
+            pullRequestClosed: target.kind === 'pull-request' && target.closed,
             externalEvidence,
             results: param.results,
         });
         const waitingDecision = (0, lifecycle_waiting_state_policy_1.resolveLifecycleWaitingState)({
-            eventName: param.execution.eventName,
+            eventName: param.context.eventName,
             lifecycleState: state,
         });
-        const issueNumber = targetNumber(param.execution);
-        if (issueNumber <= 0) {
-            (0, logging_ports_1.logDebugInfo)('Lifecycle state synchronization skipped: no issue or pull request number.');
-            return [];
-        }
         try {
-            // Route steps may have changed labels through their own ports. Use
-            // the latest server inventory before reconciliation so this
-            // use case cannot overwrite those changes with setup-time data.
-            const currentLabels = await this.issueLabelsPort.getLabels(param.execution.owner, param.execution.repo, issueNumber, param.execution.tokens.token) ?? targetLabels(param.execution);
-            const nextLabels = replaceLifecycleLabels(currentLabels, state, param.execution.labels.lifecycle);
-            const nextLabelsWithWaiting = replaceWaitingLabels(nextLabels, waitingDecision, param.execution.labels.lifecycle);
+            // Route steps may have changed labels. Re-read immediately before
+            // replacement so reconciliation cannot overwrite fresher state.
+            const currentLabels = await this.issueLabelsPort.getLabels(target.number) ?? target.labels;
+            const nextLabels = replaceLifecycleLabels(currentLabels, state, param.context.lifecycleLabels);
+            const nextLabelsWithWaiting = replaceWaitingLabels(nextLabels, waitingDecision, param.context.lifecycleLabels);
             if (sameLabels(currentLabels, nextLabelsWithWaiting))
-                return [];
-            await this.issueLabelsPort.setLabels(param.execution.owner, param.execution.repo, issueNumber, nextLabelsWithWaiting, param.execution.tokens.token);
-            setTargetLabels(param.execution, nextLabelsWithWaiting);
-            return [new result_1.Result({
+                return (0, lifecycle_synchronization_context_1.lifecycleSynchronizationOutcome)();
+            await this.issueLabelsPort.setLabels(target.number, nextLabelsWithWaiting);
+            return (0, lifecycle_synchronization_context_1.lifecycleSynchronizationOutcome)([
+                new result_1.Result({
                     id: this.taskId,
                     success: true,
                     executed: true,
                     steps: lifecycleSynchronizationSteps(state, waitingDecision),
-                })];
+                }),
+            ], {
+                target: { kind: target.kind, number: target.number },
+                labels: nextLabelsWithWaiting,
+            });
         }
         catch (error) {
-            const message = `Unable to synchronize Copilot lifecycle state: ${error instanceof Error ? error.message : String(error)}`;
-            (0, logging_ports_1.logError)(message);
-            return [new result_1.Result({ id: this.taskId, success: false, executed: true, errors: [new application_error_1.ApplicationError('provider.unavailable', message, { cause: error })] })];
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to synchronize Copilot lifecycle state.');
+            (0, logging_ports_1.logError)(semanticError);
+            return (0, lifecycle_synchronization_context_1.lifecycleSynchronizationOutcome)([
+                new result_1.Result({
+                    id: this.taskId,
+                    success: false,
+                    executed: true,
+                    errors: [semanticError],
+                }),
+            ]);
         }
     }
-    async readExternalEvidence(execution) {
-        const eventName = execution.inputs?.eventName;
-        if (!['check_suite', 'workflow_run', 'pull_request_review'].includes(eventName ?? '')) {
-            return (0, lifecycle_state_policy_1.readLifecycleExternalEvidence)(execution.inputs);
-        }
-        const pullRequestHeadSha = execution.inputs?.pull_request?.head?.sha
-            ?? await this.readCurrentPullRequestHeadSha(execution);
-        return (0, lifecycle_state_policy_1.readLifecycleExternalEvidence)(execution.inputs, pullRequestHeadSha);
-    }
-    async readCurrentPullRequestHeadSha(execution) {
-        if (!this.pullRequestHeadShaPort || execution.pullRequest.number <= 0)
+    async readExternalEvidence(context) {
+        if (context.evidence.kind === 'none' || context.target?.kind !== 'pull-request') {
             return undefined;
+        }
+        const currentHeadSha = await this.readCurrentPullRequestHeadSha(context.target.number);
+        return (0, lifecycle_state_policy_1.readLifecycleExternalEvidence)(context.evidence, currentHeadSha);
+    }
+    async readCurrentPullRequestHeadSha(pullRequestNumber) {
         try {
-            return await this.pullRequestHeadShaPort.getPullRequestHeadSha(execution.owner, execution.repo, execution.pullRequest.number, execution.tokens.token);
+            return await this.pullRequestHeadShaPort.getPullRequestHeadSha(pullRequestNumber);
         }
         catch {
             (0, logging_ports_1.logDebugInfo)('Lifecycle external evidence skipped because the current pull-request head could not be read.');
@@ -60261,33 +60351,12 @@ class SynchronizeLifecycleStateUseCase {
     }
 }
 exports.SynchronizeLifecycleStateUseCase = SynchronizeLifecycleStateUseCase;
-function targetNumber(execution) {
-    if (['issues', 'issue_comment', 'push'].includes(execution.eventName)) {
-        return execution.issue.number > 0 ? execution.issue.number : execution.issueNumber;
-    }
-    if (PULL_REQUEST_LIFECYCLE_EVENTS.includes(execution.eventName))
-        return execution.pullRequest.number;
-    return -1;
-}
-function targetLabels(execution) {
-    return PULL_REQUEST_LIFECYCLE_EVENTS.includes(execution.eventName)
-        ? execution.labels.currentPullRequestLabels
-        : execution.labels.currentIssueLabels;
-}
-function setTargetLabels(execution, labels) {
-    if (PULL_REQUEST_LIFECYCLE_EVENTS.includes(execution.eventName)) {
-        execution.labels.currentPullRequestLabels = labels;
-    }
-    else
-        execution.labels.currentIssueLabels = labels;
-}
 function replaceLifecycleLabels(currentLabels, state, lifecycleLabels) {
     if (!state)
         return [...currentLabels];
     const managedLabels = new Set((0, copilot_lifecycle_1.lifecycleLabelNames)(lifecycleLabels).map(label => label.toLowerCase()));
     const retained = currentLabels.filter(label => !managedLabels.has(label.trim().toLowerCase()));
-    const next = (0, copilot_lifecycle_1.lifecycleStateLabel)(state, lifecycleLabels);
-    return [...retained, next];
+    return [...retained, (0, copilot_lifecycle_1.lifecycleStateLabel)(state, lifecycleLabels)];
 }
 function replaceWaitingLabels(currentLabels, decision, lifecycleLabels) {
     if (decision.kind === 'preserve')
@@ -64578,13 +64647,13 @@ class DismissBugbotFindingsUseCase {
                 })];
         }
         catch (error) {
-            const message = `Unable to dismiss Bugbot findings: ${error instanceof Error ? error.message : String(error)}`;
-            (0, logging_ports_1.logError)(message);
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to dismiss Bugbot findings.');
+            (0, logging_ports_1.logError)(semanticError);
             return [new result_1.Result({
                     id: this.taskId,
                     success: false,
                     executed: true,
-                    errors: [(0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to dismiss Bugbot findings.')],
+                    errors: [semanticError],
                 })];
         }
     }
@@ -66656,8 +66725,8 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
                 : hasChanges ? 'completed' : 'no-findings');
     }
     catch (error) {
-        const resultError = toBugbotApplicationError(error, `Error in ${TASK_ID}: Unable to detect potential problems.`);
-        (0, logging_ports_1.logError)(resultError.message);
+        const resultError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Error in ${TASK_ID}: Unable to detect potential problems.`);
+        (0, logging_ports_1.logError)(resultError);
         const result = new result_1.Result({
             id: TASK_ID,
             success: false,
@@ -68032,7 +68101,7 @@ class StoreConfigurationUseCase {
             await this.configurationStorePort.update(param);
         }
         catch (error) {
-            const semanticError = new application_error_1.ApplicationError('provider.unavailable', 'Configuration persistence failed.', { cause: error });
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Configuration persistence failed.');
             (0, logging_ports_1.logError)(semanticError);
             throw semanticError;
         }
@@ -73028,7 +73097,7 @@ class AgentCliProvisioner {
             (0, agent_runtime_manifest_1.assertInstalledAgentRuntimeVersion)(provider, this.system.readVersion(executable, environment));
         }
         catch (error) {
-            throw Object.assign(new Error(`The Copilot-installed ${provider} CLI failed pinned-version verification: ${error instanceof Error ? error.message : String(error)}`), { cause: error });
+            throw Object.assign(new Error(`The Copilot-installed ${provider} CLI failed pinned-version verification.`), { cause: error });
         }
     }
 }
@@ -74807,7 +74876,6 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GithubTargetMergeCapabilitiesInspector = void 0;
 const yaml = __importStar(__nccwpck_require__(783));
-const sensitive_text_1 = __nccwpck_require__(47122);
 class GithubTargetMergeCapabilitiesInspector {
     constructor(clientProvider) {
         this.clientProvider = clientProvider;
@@ -74857,11 +74925,14 @@ class GithubTargetMergeCapabilitiesInspector {
     }
 }
 exports.GithubTargetMergeCapabilitiesInspector = GithubTargetMergeCapabilitiesInspector;
+/** Marks diagnostics produced by our bounded inspection policy, never by the provider client. */
+class SafeInspectionError extends Error {
+}
 async function observeClassicProtection(client, owner, repository, branch) {
     try {
         const { data } = await client.rest.repos.getBranchProtection({ owner, repo: repository, branch });
         if (!data || typeof data !== "object" || Array.isArray(data)) {
-            throw new Error("GitHub returned an invalid classic branch-protection response.");
+            throw new SafeInspectionError("GitHub returned an invalid classic branch-protection response.");
         }
         return { value: data };
     }
@@ -74881,9 +74952,9 @@ async function observeEffectiveRules(client, owner, repository, branch) {
     try {
         const { data } = await client.request("GET /repos/{owner}/{repo}/rules/branches/{branch}", { owner, repo: repository, branch });
         if (!Array.isArray(data))
-            throw new Error("GitHub returned a non-array effective-rules response.");
+            throw new SafeInspectionError("GitHub returned a non-array effective-rules response.");
         if (data.length > 1000)
-            throw new Error("GitHub returned more than 1000 effective rules.");
+            throw new SafeInspectionError("GitHub returned more than 1000 effective rules.");
         return { value: data };
     }
     catch (error) {
@@ -74905,14 +74976,14 @@ async function observeClassicMergeQueue(client, owner, repository, branch) {
       }`, { owner, repository, qualifiedName: `refs/heads/${branch}` });
         const ref = response.repository?.ref;
         if (!ref)
-            throw new Error("GitHub returned no target ref while reading the classic merge-queue rule.");
+            throw new SafeInspectionError("GitHub returned no target ref while reading the classic merge-queue rule.");
         const rule = ref.branchProtectionRule;
         if (rule === null)
             return { value: false };
         if (rule === undefined)
-            throw new Error("GitHub omitted the classic merge-queue rule from its response.");
+            throw new SafeInspectionError("GitHub omitted the classic merge-queue rule from its response.");
         if (typeof rule.requiresMergeQueue !== "boolean") {
-            throw new Error("GitHub returned an invalid classic merge-queue rule.");
+            throw new SafeInspectionError("GitHub returned an invalid classic merge-queue rule.");
         }
         return { value: rule.requiresMergeQueue };
     }
@@ -75189,9 +75260,9 @@ async function readRepositoryWorkflowSnapshot(client, owner, repository, ref) {
     }`, { owner, repository, expression });
     const entries = response.repository?.object?.entries;
     if (!Array.isArray(entries))
-        throw new Error("GitHub returned no valid .github/workflows tree.");
+        throw new SafeInspectionError("GitHub returned no valid .github/workflows tree.");
     if (entries.length > 500)
-        throw new Error("GitHub returned more than 500 workflow entries.");
+        throw new SafeInspectionError("GitHub returned more than 500 workflow entries.");
     const contracts = [];
     const parseFailures = [];
     for (const entry of entries) {
@@ -75238,14 +75309,15 @@ async function inspectRequiredWorkflow(client, owner, repository, repositoryId, 
     const name = `${workflow.path} (repository ${workflow.repositoryId})`;
     try {
         if (!isSafeWorkflowPath(workflow.path))
-            throw new Error("Required workflow path is unsafe or unsupported.");
+            throw new SafeInspectionError("Required workflow path is unsafe or unsupported.");
         let workflowOwner = owner;
         let workflowRepository = repository;
         if (workflow.repositoryId !== repositoryId) {
             const { data } = await client.request("GET /repositories/{repository_id}", { repository_id: workflow.repositoryId });
             const [resolvedOwner, resolvedRepository, extra] = String(data.full_name ?? "").split("/");
-            if (!resolvedOwner || !resolvedRepository || extra)
-                throw new Error("Required workflow repository identity is unavailable.");
+            if (!resolvedOwner || !resolvedRepository || extra) {
+                throw new SafeInspectionError("Required workflow repository identity is unavailable.");
+            }
             workflowOwner = resolvedOwner;
             workflowRepository = resolvedRepository;
         }
@@ -75281,26 +75353,26 @@ async function inspectRequiredWorkflow(client, owner, repository, repositoryId, 
 function decodeWorkflowContent(data) {
     const file = requireEncodedWorkflowFile(data);
     if (file.size > 1000000)
-        throw new Error("Workflow file exceeds the 1 MB inspection limit.");
+        throw new SafeInspectionError("Workflow file exceeds the 1 MB inspection limit.");
     const encoded = file.content.replace(/\s/g, "");
     if (!isBoundedBase64(encoded)) {
-        throw new Error("Workflow content is not valid bounded base64.");
+        throw new SafeInspectionError("Workflow content is not valid bounded base64.");
     }
     const decoded = Buffer.from(encoded, "base64");
     if (decoded.byteLength > 1000000)
-        throw new Error("Workflow file exceeds the 1 MB inspection limit.");
+        throw new SafeInspectionError("Workflow file exceeds the 1 MB inspection limit.");
     if (decoded.byteLength !== file.size)
-        throw new Error("Workflow size metadata does not match its content.");
+        throw new SafeInspectionError("Workflow size metadata does not match its content.");
     return decodeUtf8(decoded);
 }
 function requireEncodedWorkflowFile(data) {
     if (!isRecord(data))
-        throw new Error("GitHub did not return one workflow file.");
+        throw new SafeInspectionError("GitHub did not return one workflow file.");
     if (data.encoding !== "base64" || typeof data.content !== "string") {
-        throw new Error("Workflow content is unavailable.");
+        throw new SafeInspectionError("Workflow content is unavailable.");
     }
     if (typeof data.size !== "number" || !Number.isSafeInteger(data.size) || data.size < 0) {
-        throw new Error("Workflow size metadata is unavailable.");
+        throw new SafeInspectionError("Workflow size metadata is unavailable.");
     }
     return { content: data.content, size: data.size };
 }
@@ -75314,13 +75386,19 @@ function decodeUtf8(value) {
         return new TextDecoder("utf-8", { fatal: true }).decode(value);
     }
     catch {
-        throw new Error("Workflow content is not valid UTF-8.");
+        throw new SafeInspectionError("Workflow content is not valid UTF-8.");
     }
 }
 function parseWorkflowContract(path, content) {
-    const parsed = yaml.load(content, { schema: yaml.JSON_SCHEMA });
+    let parsed;
+    try {
+        parsed = yaml.load(content, { schema: yaml.JSON_SCHEMA });
+    }
+    catch {
+        throw new SafeInspectionError("Workflow YAML is invalid.");
+    }
     if (!isRecord(parsed))
-        throw new Error("Workflow YAML must be an object.");
+        throw new SafeInspectionError("Workflow YAML must be an object.");
     const jobs = isRecord(parsed.jobs) ? parsed.jobs : {};
     const jobNames = Object.entries(jobs)
         .map(([jobId, value]) => staticWorkflowJobName(jobId, value))
@@ -75366,16 +75444,9 @@ function isSafeWorkflowPath(value) {
         && !value.includes("..");
 }
 function safeProviderError(error) {
-    const message = error instanceof Error
+    return error instanceof SafeInspectionError
         ? error.message
-        : typeof error === "object" && error !== null && "message" in error
-            ? String(error.message)
-            : String(error);
-    return (0, sensitive_text_1.redactSensitiveText)(message)
-        .replace(/[\r\n<>]/g, " ")
-        .replace(/::/g, "﹕﹕")
-        .replace(/@/g, "@\u200b")
-        .slice(0, 240);
+        : "GitHub provider request failed.";
 }
 function isNotFound(error) {
     return typeof error === "object" && error !== null && "status" in error && error.status === 404;
@@ -76029,6 +76100,7 @@ const initial_label_provisioning_policy_1 = __nccwpck_require__(73160);
 const logger_1 = __nccwpck_require__(91151);
 const github_error_policy_1 = __nccwpck_require__(58791);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
+const application_error_1 = __nccwpck_require__(75999);
 class IssueLabelProvisioningRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -76086,14 +76158,9 @@ exports.IssueLabelProvisioningRepository = IssueLabelProvisioningRepository;
 function mapLabelMutationError(name, error) {
     if ((0, github_error_policy_1.isGithubAlreadyExists)(error))
         return { kind: 'existing' };
-    const summaryError = `Error creating label "${name}": ${providerErrorMessage(error)}`;
-    (0, logger_1.logError)(summaryError);
-    return { kind: 'failed', error: summaryError };
-}
-function providerErrorMessage(error) {
-    if (error instanceof Error)
-        return error.message;
-    return String(error);
+    const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to create label "${name}".`);
+    (0, logger_1.logError)(semanticError);
+    return { kind: 'failed', error: semanticError.message };
 }
 
 
@@ -76850,7 +76917,7 @@ exports.ActorAuthorizationRepository = ActorAuthorizationRepository;
 function logUnlessNotFound(error, operation) {
     if (error?.status === 404)
         return;
-    (0, logger_1.logDebugInfo)(`${operation}: ${error instanceof Error ? error.message : String(error)}`);
+    (0, logger_1.logDebugInfo)(`${operation}: GitHub authorization verification failed.`);
 }
 
 
@@ -77029,7 +77096,6 @@ exports.getProjectBoardDetail = getProjectBoardDetail;
 const logger_1 = __nccwpck_require__(91151);
 const project_detail_1 = __nccwpck_require__(33428);
 const application_error_1 = __nccwpck_require__(75999);
-const errorMessage = (error) => error instanceof Error ? error.message : String(error);
 /** Reads a ProjectV2 without leaking GitHub's owner-specific GraphQL shape. */
 async function getProjectBoardDetail(ownerTypeClient, graphqlClient, projectId, owner, token) {
     try {
@@ -77043,10 +77109,10 @@ async function getProjectBoardDetail(ownerTypeClient, graphqlClient, projectId, 
         const { data: ownerData } = await ownerTypeProvider.rest.users
             .getByUsername({ username: ownerName })
             .catch((error) => {
-            throw new Error(`Failed to get owner information: ${errorMessage(error)}`);
+            throw (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to read the GitHub owner type.');
         });
         if (ownerData.type !== "Organization" && ownerData.type !== "User") {
-            throw new Error(`Unsupported GitHub owner type '${String(ownerData.type)}' for owner ${ownerName}.`);
+            throw new application_error_1.ApplicationError('provider.contract-invalid', `Unsupported GitHub owner type '${String(ownerData.type)}' for owner ${ownerName}.`);
         }
         const ownerPath = ownerData.type === "Organization" ? "orgs" : "users";
         const ownerQueryField = ownerPath === "orgs" ? "organization" : "user";
@@ -77061,11 +77127,11 @@ async function getProjectBoardDetail(ownerTypeClient, graphqlClient, projectId, 
         const result = await graphql
             .graphql(projectQuery, { ownerName, projectNumber })
             .catch((error) => {
-            throw new Error(`Failed to fetch project data: ${errorMessage(error)}`);
+            throw (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to read the GitHub project.');
         });
         const project = result[ownerQueryField]?.projectV2;
         if (!project)
-            throw new Error(`Project not found: ${projectUrl}`);
+            throw new application_error_1.ApplicationError('provider.not-found', `Project not found: ${projectUrl}`);
         (0, logger_1.logDebugInfo)(`Project ID: ${project.id}`);
         (0, logger_1.logDebugInfo)(`Project Title: ${project.title}`);
         (0, logger_1.logDebugInfo)(`Project URL: ${project.url}`);
@@ -77079,13 +77145,14 @@ async function getProjectBoardDetail(ownerTypeClient, graphqlClient, projectId, 
         });
     }
     catch (error) {
-        (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to load the project details.'));
-        throw error;
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to load the project details.');
+        (0, logger_1.logError)(semanticError);
+        throw semanticError;
     }
 }
 function validateProjectId(projectId) {
     if (!/^[1-9]\d*$/.test(projectId)) {
-        throw new Error(`Invalid project ID: ${projectId}. Must be a positive integer.`);
+        throw new application_error_1.ApplicationError('validation.invalid-input', `Invalid project ID: ${projectId}. Must be a positive integer.`);
     }
 }
 
@@ -78978,8 +79045,8 @@ class GithubActionsResourceTransport {
                 else
                     created += 1;
             }
-            catch (error) {
-                errors.push(`Error configuring repository Secret ${credential.name}: ${error instanceof Error ? error.message : String(error)}`);
+            catch {
+                errors.push(`Unable to configure repository Secret ${credential.name}.`);
             }
         }
         return { created, updated, skipped, errors };
@@ -79023,8 +79090,8 @@ class GithubActionsResourceTransport {
                 else
                     created += 1;
             }
-            catch (error) {
-                errors.push(`Error configuring organization Secret ${credential.name}: ${error instanceof Error ? error.message : String(error)}`);
+            catch {
+                errors.push(`Unable to configure organization Secret ${credential.name}.`);
             }
         }
         return { created, updated, skipped: 0, errors };
@@ -79049,8 +79116,8 @@ class GithubActionsResourceTransport {
                     created += 1;
                 }
             }
-            catch (error) {
-                errors.push(`Error configuring repository Variable ${variable.name}: ${error instanceof Error ? error.message : String(error)}`);
+            catch {
+                errors.push(`Unable to configure repository Variable ${variable.name}.`);
             }
         }
         return { created, updated, errors };
@@ -79092,8 +79159,8 @@ class GithubActionsResourceTransport {
                 else
                     created += 1;
             }
-            catch (error) {
-                errors.push(`Error configuring organization Variable ${variable.name}: ${error instanceof Error ? error.message : String(error)}`);
+            catch {
+                errors.push(`Unable to configure organization Variable ${variable.name}.`);
             }
         }
         return { created, updated, errors };
@@ -81316,7 +81383,7 @@ const DEFAULT_SYSTEM = {
             timeout: 15000,
         }).trim());
         if (requested !== root)
-            throw new Error('Agent cwd must be the canonical repository root.');
+            throw new agent_cli_contracts_1.AgentCliError('Agent cwd must be the canonical repository root.', 'configuration');
         return root;
     },
 };
@@ -81393,7 +81460,7 @@ class AgentExecutionPlanner {
                 (0, node_fs_1.rmSync)(runtimeDirectory, { recursive: true, force: true });
             if (error instanceof agent_cli_contracts_1.AgentCliError)
                 throw error;
-            throw new agent_cli_contracts_1.AgentCliError(`Agent execution plan rejected: ${error instanceof Error ? error.message : String(error)}`, 'configuration');
+            throw new agent_cli_contracts_1.AgentCliError('Agent execution plan rejected because its local runtime contract could not be validated.', 'configuration');
         }
     }
 }
@@ -81433,19 +81500,27 @@ function resolveExecutablePath(selected, environment) {
             }
         }
     }
-    throw new Error(`Agent executable "${selected}" was not found on PATH.`);
+    throw new agent_cli_contracts_1.AgentCliError(`Agent executable "${selected}" was not found on PATH.`, 'configuration');
 }
 function validateExecutableFile(path) {
-    const stats = (0, node_fs_1.statSync)(path);
+    let stats;
+    try {
+        stats = (0, node_fs_1.statSync)(path);
+        (0, node_fs_1.accessSync)(path, node_fs_1.constants.X_OK);
+    }
+    catch {
+        throw new agent_cli_contracts_1.AgentCliError('Agent executable must be an accessible executable file.', 'configuration');
+    }
     if (!stats.isFile())
-        throw new Error('Agent executable must resolve to a regular file.');
-    (0, node_fs_1.accessSync)(path, node_fs_1.constants.X_OK);
-    if ((stats.mode & 0o022) !== 0)
-        throw new Error('Agent executable must not be group- or world-writable.');
+        throw new agent_cli_contracts_1.AgentCliError('Agent executable must resolve to a regular file.', 'configuration');
+    if ((stats.mode & 0o022) !== 0) {
+        throw new agent_cli_contracts_1.AgentCliError('Agent executable must not be group- or world-writable.', 'configuration');
+    }
     if (typeof process.getuid === 'function') {
         const uid = process.getuid();
-        if (stats.uid !== uid && stats.uid !== 0)
-            throw new Error('Agent executable must be owned by the runner user or root.');
+        if (stats.uid !== uid && stats.uid !== 0) {
+            throw new agent_cli_contracts_1.AgentCliError('Agent executable must be owned by the runner user or root.', 'configuration');
+        }
     }
 }
 function materializeArtifacts(templates) {
@@ -81466,8 +81541,9 @@ function rejectAmbientProviderConfiguration(provider, workspace) {
             ? ['.cursor/cli.json', '.cursor/sandbox.json', '.cursor/mcp.json', '.cursor/hooks.json']
             : [];
     const match = forbidden.find(path => (0, node_fs_1.existsSync)((0, node_path_1.join)(workspace, path)));
-    if (match)
-        throw new Error(`${provider} project configuration "${match}" is not allowed for managed execution.`);
+    if (match) {
+        throw new agent_cli_contracts_1.AgentCliError(`${provider} project configuration "${match}" is not allowed for managed execution.`, 'configuration');
+    }
 }
 function definedEnvironment(environment) {
     return Object.fromEntries(Object.entries(environment).filter((entry) => entry[1] !== undefined));
@@ -82459,6 +82535,7 @@ exports.bindLinkedBranchCommand = bindLinkedBranchCommand;
 exports.bindBranchWorkflow = bindBranchWorkflow;
 exports.bindPullRequestIssueLink = bindPullRequestIssueLink;
 exports.bindIssueLabels = bindIssueLabels;
+exports.bindPullRequestHeadSha = bindPullRequestHeadSha;
 exports.bindPullRequestDescription = bindPullRequestDescription;
 const project_detail_1 = __nccwpck_require__(33428);
 function bindActorAuthorization(port, binding) {
@@ -82527,9 +82604,16 @@ function bindPullRequestIssueLink(port, binding) {
     });
 }
 function bindIssueLabels(port, binding) {
+    const { owner, repository, token } = binding;
     return Object.freeze({
-        getLabels: (issueNumber) => port.getLabels(binding.owner, binding.repository, issueNumber, binding.token),
-        setLabels: (issueNumber, labels) => port.setLabels(binding.owner, binding.repository, issueNumber, [...labels], binding.token),
+        getLabels: (issueNumber) => port.getLabels(owner, repository, issueNumber, token),
+        setLabels: (issueNumber, labels) => port.setLabels(owner, repository, issueNumber, [...labels], token),
+    });
+}
+function bindPullRequestHeadSha(port, binding) {
+    const { owner, repository, token } = binding;
+    return Object.freeze({
+        getPullRequestHeadSha: (pullRequestNumber) => port.getPullRequestHeadSha(owner, repository, pullRequestNumber, token),
     });
 }
 function bindPullRequestDescription(port, binding) {
@@ -82560,8 +82644,9 @@ const synchronize_lifecycle_state_use_case_1 = __nccwpck_require__(18032);
 const issue_labels_composition_root_1 = __nccwpck_require__(34780);
 const github_pull_request_client_factory_1 = __nccwpck_require__(9068);
 const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
-function createSynchronizeLifecycleStateUseCase() {
-    return new synchronize_lifecycle_state_use_case_1.SynchronizeLifecycleStateUseCase((0, issue_labels_composition_root_1.createIssueLabelRepository)(), new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()));
+const lifecycle_capability_port_binding_1 = __nccwpck_require__(85785);
+function createSynchronizeLifecycleStateUseCase(binding) {
+    return new synchronize_lifecycle_state_use_case_1.SynchronizeLifecycleStateUseCase((0, lifecycle_capability_port_binding_1.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding), (0, lifecycle_capability_port_binding_1.bindPullRequestHeadSha)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding));
 }
 
 

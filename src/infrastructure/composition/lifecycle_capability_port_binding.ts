@@ -21,9 +21,11 @@ import type {
 import type {
   BoundIssueAssigneePort,
   BoundIssueLabelsPort,
+  BoundPullRequestHeadShaPort,
   BoundIssueTypeAssignmentPort,
   IssueAssigneePort,
   IssueLabelsPort,
+  PullRequestHeadShaPort,
   IssueTypeAssignmentPort,
 } from '../../application/ports/issue_management_ports';
 import type {
@@ -279,21 +281,37 @@ export function bindIssueLabels(
   port: IssueLabelsPort,
   binding: RepositoryCredentialBinding,
 ): BoundIssueLabelsPort {
+  const { owner, repository, token } = binding;
   return Object.freeze({
     getLabels: (issueNumber) => port.getLabels(
-      binding.owner,
-      binding.repository,
+      owner,
+      repository,
       issueNumber,
-      binding.token,
+      token,
     ),
     setLabels: (issueNumber, labels) => port.setLabels(
-      binding.owner,
-      binding.repository,
+      owner,
+      repository,
       issueNumber,
       [...labels],
-      binding.token,
+      token,
     ),
   } satisfies BoundIssueLabelsPort);
+}
+
+export function bindPullRequestHeadSha(
+  port: PullRequestHeadShaPort,
+  binding: RepositoryCredentialBinding,
+): BoundPullRequestHeadShaPort {
+  const { owner, repository, token } = binding;
+  return Object.freeze({
+    getPullRequestHeadSha: (pullRequestNumber) => port.getPullRequestHeadSha(
+      owner,
+      repository,
+      pullRequestNumber,
+      token,
+    ),
+  } satisfies BoundPullRequestHeadShaPort);
 }
 
 export function bindPullRequestDescription(

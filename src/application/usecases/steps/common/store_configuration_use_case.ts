@@ -1,4 +1,4 @@
-import { ApplicationError } from '../../../errors/application_error';
+import { toApplicationError } from '../../../errors/application_error';
 import type {
     ConfigurationPersistenceContext,
     ConfigurationStorePort,
@@ -55,7 +55,7 @@ export class StoreConfigurationUseCase implements ParamUseCase<ConfigurationPers
         try {
             await this.configurationStorePort.update(param)
         } catch (error) {
-            const semanticError = new ApplicationError('provider.unavailable', 'Configuration persistence failed.', { cause: error });
+            const semanticError = toApplicationError(error, 'provider.unavailable', 'Configuration persistence failed.');
             logError(semanticError);
             throw semanticError;
         }

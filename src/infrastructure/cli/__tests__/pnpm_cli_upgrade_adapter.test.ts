@@ -49,13 +49,13 @@ describe('PnpmCliUpgradeAdapter', () => {
         await expect(upgrade).rejects.toThrow('exit code 1');
     });
 
-    it('reports a pnpm process startup failure', async () => {
+    it('bounds a pnpm process startup failure behind a stable message', async () => {
         const child = new EventEmitter();
         spawnMock.mockReturnValue(child as ReturnType<typeof spawn>);
 
         const upgrade = new PnpmCliUpgradeAdapter().upgrade();
         child.emit('error', new Error('pnpm not found'));
 
-        await expect(upgrade).rejects.toThrow('pnpm not found');
+        await expect(upgrade).rejects.toThrow('Unable to start the pnpm upgrade process.');
     });
 });

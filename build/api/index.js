@@ -3652,8 +3652,8 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
                 : hasChanges ? 'completed' : 'no-findings');
     }
     catch (error) {
-        const resultError = toBugbotApplicationError(error, `Error in ${TASK_ID}: Unable to detect potential problems.`);
-        (0, logging_ports_1.logError)(resultError.message);
+        const resultError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Error in ${TASK_ID}: Unable to detect potential problems.`);
+        (0, logging_ports_1.logError)(resultError);
         const result = new result_1.Result({
             id: TASK_ID,
             success: false,

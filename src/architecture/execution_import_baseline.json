@@ -1,18 +1,70 @@
 {
   "maximum": 13,
-  "files": [
-    "src/actions/common_action.ts",
-    "src/actions/execution_builder.ts",
-    "src/actions/github_action_completion.ts",
-    "src/actions/github_action_execution.ts",
-    "src/actions/main_run_dispatcher.ts",
-    "src/actions/main_run_lifecycle.ts",
-    "src/application/ports/main_run_route_ports.ts",
-    "src/application/usecases/commit_use_case.ts",
-    "src/application/usecases/issue_comment_use_case.ts",
-    "src/application/usecases/issue_use_case.ts",
-    "src/application/usecases/pull_request_review_comment_use_case.ts",
-    "src/application/usecases/pull_request_use_case.ts",
-    "src/application/usecases/single_action_use_case.ts"
+  "consumers": [
+    {
+      "file": "src/actions/common_action.ts",
+      "role": "entrypoint",
+      "justification": "Owns the aggregate lifecycle, projects capability contexts, and applies explicit outcomes."
+    },
+    {
+      "file": "src/actions/execution_builder.ts",
+      "role": "aggregate-construction",
+      "justification": "Provides the single typed constructor boundary for the internal aggregate."
+    },
+    {
+      "file": "src/actions/github_action_completion.ts",
+      "role": "entrypoint",
+      "justification": "Publishes final results and commits approved aggregate-owned completion state."
+    },
+    {
+      "file": "src/actions/github_action_execution.ts",
+      "role": "aggregate-construction",
+      "justification": "Builds the aggregate once from validated GitHub Action inputs and composition facts."
+    },
+    {
+      "file": "src/actions/main_run_dispatcher.ts",
+      "role": "entrypoint",
+      "justification": "Dispatches the aggregate only to the selected top-level route handler."
+    },
+    {
+      "file": "src/actions/main_run_lifecycle.ts",
+      "role": "entrypoint",
+      "justification": "Owns outer lifecycle logging, queue failure handling, and top-level route completion."
+    },
+    {
+      "file": "src/application/ports/main_run_route_ports.ts",
+      "role": "route-contract",
+      "justification": "Defines the closed top-level route-handler boundary used by the entrypoint dispatcher."
+    },
+    {
+      "file": "src/application/usecases/commit_use_case.ts",
+      "role": "route-coordinator",
+      "justification": "Coordinates the push route and projects every leaf capability request."
+    },
+    {
+      "file": "src/application/usecases/issue_comment_use_case.ts",
+      "role": "route-coordinator",
+      "justification": "Coordinates issue and pull-request conversation comments and projects leaf requests."
+    },
+    {
+      "file": "src/application/usecases/issue_use_case.ts",
+      "role": "route-coordinator",
+      "justification": "Coordinates the issue route and applies explicit branch-configuration outcomes."
+    },
+    {
+      "file": "src/application/usecases/pull_request_review_comment_use_case.ts",
+      "role": "route-coordinator",
+      "justification": "Coordinates review-comment commands and projects bounded Bugbot operations."
+    },
+    {
+      "file": "src/application/usecases/pull_request_use_case.ts",
+      "role": "route-coordinator",
+      "justification": "Coordinates the pull-request route and projects its workflow context."
+    },
+    {
+      "file": "src/application/usecases/single_action_use_case.ts",
+      "role": "route-coordinator",
+      "justification": "Dispatches the closed single-action command union to credential-free capability contexts."
+    }
   ]
 }

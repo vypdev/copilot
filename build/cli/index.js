@@ -50596,6 +50596,7 @@ const main_run_route_composition_root_1 = __nccwpck_require__(4706);
 const repository_context_1 = __nccwpck_require__(78958);
 const logging_ports_1 = __nccwpck_require__(6152);
 const logger_adapter_1 = __nccwpck_require__(72762);
+const lifecycle_synchronization_context_1 = __nccwpck_require__(28121);
 const agent_activity_policy_1 = __nccwpck_require__(15375);
 const push_single_action_contexts_1 = __nccwpck_require__(47841);
 const main_run_lifecycle_1 = __nccwpck_require__(916);
@@ -50650,11 +50651,27 @@ async function runTrackedRoute(execution, route, run, lifecycleStateUseCase, age
         const results = await run();
         if (!lifecycleStateUseCase)
             return results;
-        return [...results, ...(await lifecycleStateUseCase.invoke({ execution, results }))];
+        const lifecycleOutcome = await lifecycleStateUseCase.invoke({
+            context: (0, lifecycle_synchronization_context_1.projectLifecycleSynchronizationContext)(execution),
+            results,
+        });
+        applyLifecycleSynchronizationOutcome(execution, lifecycleOutcome);
+        return [...results, ...lifecycleOutcome.results];
     }
     finally {
         if (trackActivity)
             applyAgentActivityOutcome(execution, await agentActivityUseCase.finish((0, push_single_action_contexts_1.projectAgentActivityContext)(execution)));
+    }
+}
+function applyLifecycleSynchronizationOutcome(execution, outcome) {
+    const patch = outcome.labelPatch;
+    if (!patch)
+        return;
+    if (patch.target.kind === 'pull-request') {
+        execution.labels.currentPullRequestLabels = [...patch.labels];
+    }
+    else {
+        execution.labels.currentIssueLabels = [...patch.labels];
     }
 }
 function applyAgentActivityOutcome(execution, outcome) {
@@ -56858,7 +56875,6 @@ const deployment_presentation_policy_1 = __nccwpck_require__(83221);
 const deployment_operation_1 = __nccwpck_require__(92730);
 const merge_queue_readiness_1 = __nccwpck_require__(12515);
 const result_1 = __nccwpck_require__(73817);
-const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 exports.DEPLOYMENT_ORCHESTRATION_TASK_ID = "DeploymentOrchestrationUseCase";
 class DeploymentOrchestrationRuntime {
     constructor(dependencies, stateBoundary) {
@@ -56970,11 +56986,11 @@ class DeploymentOrchestrationRuntime {
             await this.dependencies.git.deleteBranch(operation.sourceBranch, operation.sourceSha);
         }
     }
-    async recordUnexpectedFailure(context, error) {
+    async recordUnexpectedFailure(context, _error) {
         const operation = context.currentConfiguration.deploymentOrchestration;
         if (!operation || operation.phase === "completed" || operation.phase === "blocked")
             return;
-        const message = (0, github_comment_publication_policy_1.sanitizePublishedError)(error instanceof Error ? error.message : String(error));
+        const message = "Deployment orchestration failed unexpectedly.";
         const category = failureCategory(operation);
         const blocked = (0, deployment_operation_1.blockDeploymentOperation)(operation, category, message, true);
         context.currentConfiguration.deploymentOrchestration = blocked;
@@ -57372,7 +57388,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCloseInactiveIssuesWorkflow = runCloseInactiveIssuesWorkflow;
 const result_1 = __nccwpck_require__(73817);
 const issue_inactivity_1 = __nccwpck_require__(38572);
-const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
 const TASK_ID = 'CloseInactiveIssuesUseCase';
@@ -57484,9 +57499,8 @@ function buildSteps(scanned, closed, skipped) {
 function unique(values) {
     return [...new Set(values.map(value => value.trim()).filter(Boolean))];
 }
-function safeErrorMessage(error) {
-    const message = (0, github_comment_publication_policy_1.sanitizePublishedError)(error instanceof Error ? error.message : error);
-    return message || 'Unknown provider error.';
+function safeErrorMessage(_error) {
+    return 'The issue provider request failed.';
 }
 
 
@@ -58616,6 +58630,96 @@ function fromMessages(messages, code) {
 
 /***/ }),
 
+/***/ 28121:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectLifecycleSynchronizationContext = projectLifecycleSynchronizationContext;
+exports.lifecycleSynchronizationOutcome = lifecycleSynchronizationOutcome;
+const PULL_REQUEST_LIFECYCLE_EVENTS = new Set([
+    'pull_request',
+    'pull_request_review',
+    'pull_request_review_comment',
+    'check_suite',
+    'workflow_run',
+]);
+const ISSUE_LIFECYCLE_EVENTS = new Set(['issues', 'issue_comment', 'push']);
+function projectLifecycleSynchronizationContext(source) {
+    const target = projectTarget(source);
+    return Object.freeze({
+        eventName: source.eventName,
+        action: source.inputs?.action ?? '',
+        ...(target ? { target } : {}),
+        lifecycleLabels: Object.freeze({ ...source.labels.lifecycle }),
+        evidence: projectEvidence(source),
+    });
+}
+function lifecycleSynchronizationOutcome(results = [], labelPatch) {
+    return Object.freeze({
+        results: Object.freeze([...results]),
+        ...(labelPatch ? {
+            labelPatch: Object.freeze({
+                target: Object.freeze({ ...labelPatch.target }),
+                labels: Object.freeze([...labelPatch.labels]),
+            }),
+        } : {}),
+    });
+}
+function projectTarget(source) {
+    if ((source.isPullRequest || PULL_REQUEST_LIFECYCLE_EVENTS.has(source.eventName))
+        && source.pullRequest.number > 0) {
+        return Object.freeze({
+            kind: 'pull-request',
+            number: source.pullRequest.number,
+            labels: Object.freeze([...source.labels.currentPullRequestLabels]),
+            merged: source.pullRequest.isMerged,
+            closed: source.pullRequest.isClosed,
+        });
+    }
+    const issueNumber = source.issue.number > 0 ? source.issue.number : source.issueNumber;
+    if ((source.isIssue || ISSUE_LIFECYCLE_EVENTS.has(source.eventName)) && issueNumber > 0) {
+        return Object.freeze({
+            kind: 'issue',
+            number: issueNumber,
+            labels: Object.freeze([...source.labels.currentIssueLabels]),
+            opened: source.issue.opened,
+            descriptionEdited: source.issue.descriptionEdited,
+        });
+    }
+    return undefined;
+}
+function projectEvidence(source) {
+    if (source.eventName === 'pull_request_review') {
+        return Object.freeze({
+            kind: 'pull-request-review',
+            headSha: source.inputs?.review?.commit_id,
+            state: source.inputs?.review?.state,
+        });
+    }
+    if (source.eventName === 'check_suite') {
+        return Object.freeze({
+            kind: 'check-suite',
+            headSha: source.inputs?.check_suite?.head_sha,
+            status: source.inputs?.check_suite?.status,
+            conclusion: source.inputs?.check_suite?.conclusion,
+        });
+    }
+    if (source.eventName === 'workflow_run') {
+        return Object.freeze({
+            kind: 'workflow-run',
+            headSha: source.inputs?.workflow_run?.head_sha,
+            status: source.inputs?.workflow_run?.status,
+            conclusion: source.inputs?.workflow_run?.conclusion,
+        });
+    }
+    return Object.freeze({ kind: 'none' });
+}
+
+
+/***/ }),
+
 /***/ 84542:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -59266,6 +59370,7 @@ exports.resolveRemoteConfiguration = resolveRemoteConfiguration;
 exports.groupSetupResources = groupSetupResources;
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 async function ensureRepositoryVariables(context, dependencies, setupConfiguration, remoteConfiguration) {
     if (!setupConfiguration?.manageRepositoryVariables || !dependencies.setupRepositoryVariablesPort) {
         return { errors: [] };
@@ -59282,9 +59387,9 @@ async function ensureRepositoryVariables(context, dependencies, setupConfigurati
         };
     }
     catch (error) {
-        const message = `Error configuring repository Variables: ${error}`;
-        (0, logging_ports_1.logError)(message);
-        return { errors: [message] };
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to configure GitHub Actions Variables.');
+        (0, logging_ports_1.logError)(semanticError);
+        return { errors: [semanticError.message] };
     }
 }
 async function ensureRepositorySecrets(context, dependencies, setupConfiguration, remoteConfiguration) {
@@ -59312,9 +59417,9 @@ async function ensureRepositorySecrets(context, dependencies, setupConfiguration
         };
     }
     catch (error) {
-        const message = `Error configuring repository Secrets: ${error}`;
-        (0, logging_ports_1.logError)(message);
-        return { errors: [message] };
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to configure GitHub Actions Secrets.');
+        (0, logging_ports_1.logError)(semanticError);
+        return { errors: [semanticError.message] };
     }
 }
 async function resolveRemoteConfiguration(context, dependencies, setupConfiguration, errors) {
@@ -59326,10 +59431,10 @@ async function resolveRemoteConfiguration(context, dependencies, setupConfigurat
         return await dependencies.setupRemoteConfigurationReadPort.inspect();
     }
     catch (error) {
-        const message = `Could not inspect existing GitHub Actions resource scopes: ${error instanceof Error ? error.message : String(error)}`;
-        (0, logging_ports_1.logError)(message);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Could not inspect existing GitHub Actions resource scopes.');
+        (0, logging_ports_1.logError)(semanticError);
         if ((0, setup_configuration_policy_1.usesOrganizationStorage)(setupConfiguration))
-            errors.push(message);
+            errors.push(semanticError.message);
         return undefined;
     }
 }
@@ -62059,11 +62164,11 @@ class SetupMergeQueueReadinessUseCase {
                         evidence: { targetRole: target.role, targetBranch: target.branch, verified, attested },
                     }), ...producerChecks(readiness.producers, target.role, spanish)];
             }
-            catch (error) {
+            catch {
                 return [(0, setup_doctor_report_policy_1.doctorCheck)({
                         id,
                         status: "fail",
-                        summary: `Target policy could not be inspected: ${safeError(error)}`,
+                        summary: "Target policy could not be inspected because the provider request failed.",
                         action: "Check the setup PAT permissions and target branch policy, then retry.",
                         evidence: { targetRole: target.role, targetBranch: target.branch },
                     })];
@@ -62101,7 +62206,7 @@ function producerChecks(producers, role, spanish) {
     return producers.map((producer) => (0, setup_doctor_report_policy_1.doctorCheck)({
         id: `github.merge-queue.${role}.producer.${(0, setup_doctor_report_policy_1.normalizedDoctorPathId)(`${producer.name}-${producer.integrationId ?? 'workflow'}`)}`,
         status: producer.verdict === "verified" || producer.verdict === "attested" ? "pass" : "fail",
-        summary: `${producer.verdict}: ${safeError(producer.reason)}${spanish && producer.verdict === "attested" ? " (atestación exacta revisada)" : ""}`,
+        summary: `${producer.verdict}: ${safeDiagnostic(producer.reason)}${spanish && producer.verdict === "attested" ? " (atestación exacta revisada)" : ""}`,
         ...(producer.verdict === "verified" || producer.verdict === "attested"
             ? {}
             : { action: "Configure or exactly attest this required producer." }),
@@ -62118,8 +62223,7 @@ function uniqueTargets(targets) {
         return true;
     });
 }
-function safeError(error) {
-    const message = error instanceof Error ? error.message : String(error);
+function safeDiagnostic(message) {
     return (0, sensitive_text_1.redactSensitiveText)(message)
         .replace(/[\r\n<>]/g, " ")
         .replace(/::/g, "﹕﹕")
@@ -64517,13 +64621,13 @@ class DismissBugbotFindingsUseCase {
                 })];
         }
         catch (error) {
-            const message = `Unable to dismiss Bugbot findings: ${error instanceof Error ? error.message : String(error)}`;
-            (0, logging_ports_1.logError)(message);
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to dismiss Bugbot findings.');
+            (0, logging_ports_1.logError)(semanticError);
             return [new result_1.Result({
                     id: this.taskId,
                     success: false,
                     executed: true,
-                    errors: [(0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to dismiss Bugbot findings.')],
+                    errors: [semanticError],
                 })];
         }
     }
@@ -66595,8 +66699,8 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
                 : hasChanges ? 'completed' : 'no-findings');
     }
     catch (error) {
-        const resultError = toBugbotApplicationError(error, `Error in ${TASK_ID}: Unable to detect potential problems.`);
-        (0, logging_ports_1.logError)(resultError.message);
+        const resultError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Error in ${TASK_ID}: Unable to detect potential problems.`);
+        (0, logging_ports_1.logError)(resultError);
         const result = new result_1.Result({
             id: TASK_ID,
             success: false,
@@ -70562,6 +70666,7 @@ const logger_1 = __nccwpck_require__(91151);
 const cli_context_1 = __nccwpck_require__(21307);
 const command_input_policy_1 = __nccwpck_require__(95212);
 const issue_command_policy_1 = __nccwpck_require__(66915);
+const application_error_1 = __nccwpck_require__(75999);
 function registerCheckProgressCommand(program) {
     program
         .command('check-progress')
@@ -70596,10 +70701,10 @@ function registerCheckProgressCommand(program) {
             process.exitCode = 0;
         }
         catch (err) {
-            const error = err instanceof Error ? err : new Error(String(err));
-            console.error('❌ Error checking progress:', error.message);
+            const error = (0, application_error_1.toApplicationError)(err, 'workflow.failed', 'Unable to check progress.');
+            console.error(`❌ ${error.message}`);
             if (options.debug)
-                console.error(err);
+                console.error(`Reference: ${error.correlationId}`);
             process.exitCode = 1;
         }
     });
@@ -70621,6 +70726,7 @@ const logger_1 = __nccwpck_require__(91151);
 const cli_context_1 = __nccwpck_require__(21307);
 const command_input_policy_1 = __nccwpck_require__(95212);
 const detect_potential_problems_policy_1 = __nccwpck_require__(87980);
+const application_error_1 = __nccwpck_require__(75999);
 function registerDetectPotentialProblemsCommand(program) {
     program
         .command('detect-potential-problems')
@@ -70681,10 +70787,10 @@ function registerDetectPotentialProblemsCommand(program) {
             process.exitCode = results.every((result) => result.success) ? 0 : 1;
         }
         catch (err) {
-            const error = err instanceof Error ? err : new Error(String(err));
-            console.error('❌ Error running detect-potential-problems:', error.message);
+            const error = (0, application_error_1.toApplicationError)(err, 'workflow.failed', 'Unable to run detect-potential-problems.');
+            console.error(`❌ ${error.message}`);
             if (options.debug)
-                console.error(err);
+                console.error(`Reference: ${error.correlationId}`);
             process.exitCode = 1;
         }
     });
@@ -70833,6 +70939,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runDoCommand = runDoCommand;
 const agent_authentication_preflight_1 = __nccwpck_require__(67766);
 const agent_capability_composition_root_1 = __nccwpck_require__(85079);
+const application_error_1 = __nccwpck_require__(75999);
 const prompts_1 = __nccwpck_require__(69518);
 const do_policy_1 = __nccwpck_require__(78838);
 const logger_1 = __nccwpck_require__(91151);
@@ -70887,10 +70994,10 @@ async function runDoCommand(options) {
         console.log((0, do_policy_1.formatDoResponse)(result.text, result.sessionId, outputFormat));
     }
     catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        console.error('❌ Error executing do:', err.message || error);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'agent.failed', 'Unable to execute the request.');
+        console.error(`❌ ${semanticError.message}`);
         if (options.debug)
-            console.error(error);
+            console.error(`Reference: ${semanticError.correlationId}`);
         process.exitCode = 1;
     }
 }
@@ -71106,6 +71213,7 @@ const logger_1 = __nccwpck_require__(91151);
 const cli_context_1 = __nccwpck_require__(21307);
 const command_input_policy_1 = __nccwpck_require__(95212);
 const issue_command_policy_1 = __nccwpck_require__(66915);
+const application_error_1 = __nccwpck_require__(75999);
 function registerRecommendStepsCommand(program) {
     program
         .command('recommend-steps')
@@ -71133,9 +71241,10 @@ function registerRecommendStepsCommand(program) {
             await (0, local_action_1.runLocalAction)(params);
         }
         catch (error) {
-            console.error('❌ Error recommending steps:', error instanceof Error ? error.message : String(error));
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Unable to recommend steps.');
+            console.error(`❌ ${semanticError.message}`);
             if (options.debug)
-                console.error(error);
+                console.error(`Reference: ${semanticError.correlationId}`);
             process.exitCode = 1;
         }
     });
@@ -71618,6 +71727,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runUpgradeCommand = runUpgradeCommand;
 exports.registerUpgradeCommand = registerUpgradeCommand;
 const cli_upgrade_composition_root_1 = __nccwpck_require__(74142);
+const application_error_1 = __nccwpck_require__(75999);
 async function runUpgradeCommand(runner = (0, cli_upgrade_composition_root_1.createUpgradeCliUseCase)()) {
     console.log('⬆️ Updating the global @vypdev/copilot installation...');
     try {
@@ -71625,8 +71735,8 @@ async function runUpgradeCommand(runner = (0, cli_upgrade_composition_root_1.cre
         console.log('✅ Copilot was upgraded successfully. Run "copilot --version" to verify.');
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        console.error(`❌ Unable to upgrade Copilot: ${message}`);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to upgrade Copilot.');
+        console.error(`❌ ${semanticError.message} Reference: ${semanticError.correlationId}`);
         process.exitCode = 1;
     }
 }
@@ -76548,7 +76658,6 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GithubTargetMergeCapabilitiesInspector = void 0;
 const yaml = __importStar(__nccwpck_require__(783));
-const sensitive_text_1 = __nccwpck_require__(47122);
 class GithubTargetMergeCapabilitiesInspector {
     constructor(clientProvider) {
         this.clientProvider = clientProvider;
@@ -76598,11 +76707,14 @@ class GithubTargetMergeCapabilitiesInspector {
     }
 }
 exports.GithubTargetMergeCapabilitiesInspector = GithubTargetMergeCapabilitiesInspector;
+/** Marks diagnostics produced by our bounded inspection policy, never by the provider client. */
+class SafeInspectionError extends Error {
+}
 async function observeClassicProtection(client, owner, repository, branch) {
     try {
         const { data } = await client.rest.repos.getBranchProtection({ owner, repo: repository, branch });
         if (!data || typeof data !== "object" || Array.isArray(data)) {
-            throw new Error("GitHub returned an invalid classic branch-protection response.");
+            throw new SafeInspectionError("GitHub returned an invalid classic branch-protection response.");
         }
         return { value: data };
     }
@@ -76622,9 +76734,9 @@ async function observeEffectiveRules(client, owner, repository, branch) {
     try {
         const { data } = await client.request("GET /repos/{owner}/{repo}/rules/branches/{branch}", { owner, repo: repository, branch });
         if (!Array.isArray(data))
-            throw new Error("GitHub returned a non-array effective-rules response.");
+            throw new SafeInspectionError("GitHub returned a non-array effective-rules response.");
         if (data.length > 1000)
-            throw new Error("GitHub returned more than 1000 effective rules.");
+            throw new SafeInspectionError("GitHub returned more than 1000 effective rules.");
         return { value: data };
     }
     catch (error) {
@@ -76646,14 +76758,14 @@ async function observeClassicMergeQueue(client, owner, repository, branch) {
       }`, { owner, repository, qualifiedName: `refs/heads/${branch}` });
         const ref = response.repository?.ref;
         if (!ref)
-            throw new Error("GitHub returned no target ref while reading the classic merge-queue rule.");
+            throw new SafeInspectionError("GitHub returned no target ref while reading the classic merge-queue rule.");
         const rule = ref.branchProtectionRule;
         if (rule === null)
             return { value: false };
         if (rule === undefined)
-            throw new Error("GitHub omitted the classic merge-queue rule from its response.");
+            throw new SafeInspectionError("GitHub omitted the classic merge-queue rule from its response.");
         if (typeof rule.requiresMergeQueue !== "boolean") {
-            throw new Error("GitHub returned an invalid classic merge-queue rule.");
+            throw new SafeInspectionError("GitHub returned an invalid classic merge-queue rule.");
         }
         return { value: rule.requiresMergeQueue };
     }
@@ -76930,9 +77042,9 @@ async function readRepositoryWorkflowSnapshot(client, owner, repository, ref) {
     }`, { owner, repository, expression });
     const entries = response.repository?.object?.entries;
     if (!Array.isArray(entries))
-        throw new Error("GitHub returned no valid .github/workflows tree.");
+        throw new SafeInspectionError("GitHub returned no valid .github/workflows tree.");
     if (entries.length > 500)
-        throw new Error("GitHub returned more than 500 workflow entries.");
+        throw new SafeInspectionError("GitHub returned more than 500 workflow entries.");
     const contracts = [];
     const parseFailures = [];
     for (const entry of entries) {
@@ -76979,14 +77091,15 @@ async function inspectRequiredWorkflow(client, owner, repository, repositoryId, 
     const name = `${workflow.path} (repository ${workflow.repositoryId})`;
     try {
         if (!isSafeWorkflowPath(workflow.path))
-            throw new Error("Required workflow path is unsafe or unsupported.");
+            throw new SafeInspectionError("Required workflow path is unsafe or unsupported.");
         let workflowOwner = owner;
         let workflowRepository = repository;
         if (workflow.repositoryId !== repositoryId) {
             const { data } = await client.request("GET /repositories/{repository_id}", { repository_id: workflow.repositoryId });
             const [resolvedOwner, resolvedRepository, extra] = String(data.full_name ?? "").split("/");
-            if (!resolvedOwner || !resolvedRepository || extra)
-                throw new Error("Required workflow repository identity is unavailable.");
+            if (!resolvedOwner || !resolvedRepository || extra) {
+                throw new SafeInspectionError("Required workflow repository identity is unavailable.");
+            }
             workflowOwner = resolvedOwner;
             workflowRepository = resolvedRepository;
         }
@@ -77022,26 +77135,26 @@ async function inspectRequiredWorkflow(client, owner, repository, repositoryId, 
 function decodeWorkflowContent(data) {
     const file = requireEncodedWorkflowFile(data);
     if (file.size > 1000000)
-        throw new Error("Workflow file exceeds the 1 MB inspection limit.");
+        throw new SafeInspectionError("Workflow file exceeds the 1 MB inspection limit.");
     const encoded = file.content.replace(/\s/g, "");
     if (!isBoundedBase64(encoded)) {
-        throw new Error("Workflow content is not valid bounded base64.");
+        throw new SafeInspectionError("Workflow content is not valid bounded base64.");
     }
     const decoded = Buffer.from(encoded, "base64");
     if (decoded.byteLength > 1000000)
-        throw new Error("Workflow file exceeds the 1 MB inspection limit.");
+        throw new SafeInspectionError("Workflow file exceeds the 1 MB inspection limit.");
     if (decoded.byteLength !== file.size)
-        throw new Error("Workflow size metadata does not match its content.");
+        throw new SafeInspectionError("Workflow size metadata does not match its content.");
     return decodeUtf8(decoded);
 }
 function requireEncodedWorkflowFile(data) {
     if (!isRecord(data))
-        throw new Error("GitHub did not return one workflow file.");
+        throw new SafeInspectionError("GitHub did not return one workflow file.");
     if (data.encoding !== "base64" || typeof data.content !== "string") {
-        throw new Error("Workflow content is unavailable.");
+        throw new SafeInspectionError("Workflow content is unavailable.");
     }
     if (typeof data.size !== "number" || !Number.isSafeInteger(data.size) || data.size < 0) {
-        throw new Error("Workflow size metadata is unavailable.");
+        throw new SafeInspectionError("Workflow size metadata is unavailable.");
     }
     return { content: data.content, size: data.size };
 }
@@ -77055,13 +77168,19 @@ function decodeUtf8(value) {
         return new TextDecoder("utf-8", { fatal: true }).decode(value);
     }
     catch {
-        throw new Error("Workflow content is not valid UTF-8.");
+        throw new SafeInspectionError("Workflow content is not valid UTF-8.");
     }
 }
 function parseWorkflowContract(path, content) {
-    const parsed = yaml.load(content, { schema: yaml.JSON_SCHEMA });
+    let parsed;
+    try {
+        parsed = yaml.load(content, { schema: yaml.JSON_SCHEMA });
+    }
+    catch {
+        throw new SafeInspectionError("Workflow YAML is invalid.");
+    }
     if (!isRecord(parsed))
-        throw new Error("Workflow YAML must be an object.");
+        throw new SafeInspectionError("Workflow YAML must be an object.");
     const jobs = isRecord(parsed.jobs) ? parsed.jobs : {};
     const jobNames = Object.entries(jobs)
         .map(([jobId, value]) => staticWorkflowJobName(jobId, value))
@@ -77107,16 +77226,9 @@ function isSafeWorkflowPath(value) {
         && !value.includes("..");
 }
 function safeProviderError(error) {
-    const message = error instanceof Error
+    return error instanceof SafeInspectionError
         ? error.message
-        : typeof error === "object" && error !== null && "message" in error
-            ? String(error.message)
-            : String(error);
-    return (0, sensitive_text_1.redactSensitiveText)(message)
-        .replace(/[\r\n<>]/g, " ")
-        .replace(/::/g, "﹕﹕")
-        .replace(/@/g, "@\u200b")
-        .slice(0, 240);
+        : "GitHub provider request failed.";
 }
 function isNotFound(error) {
     return typeof error === "object" && error !== null && "status" in error && error.status === 404;
@@ -77770,6 +77882,7 @@ const initial_label_provisioning_policy_1 = __nccwpck_require__(73160);
 const logger_1 = __nccwpck_require__(91151);
 const github_error_policy_1 = __nccwpck_require__(58791);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
+const application_error_1 = __nccwpck_require__(75999);
 class IssueLabelProvisioningRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -77827,14 +77940,9 @@ exports.IssueLabelProvisioningRepository = IssueLabelProvisioningRepository;
 function mapLabelMutationError(name, error) {
     if ((0, github_error_policy_1.isGithubAlreadyExists)(error))
         return { kind: 'existing' };
-    const summaryError = `Error creating label "${name}": ${providerErrorMessage(error)}`;
-    (0, logger_1.logError)(summaryError);
-    return { kind: 'failed', error: summaryError };
-}
-function providerErrorMessage(error) {
-    if (error instanceof Error)
-        return error.message;
-    return String(error);
+    const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to create label "${name}".`);
+    (0, logger_1.logError)(semanticError);
+    return { kind: 'failed', error: semanticError.message };
 }
 
 
@@ -78591,7 +78699,7 @@ exports.ActorAuthorizationRepository = ActorAuthorizationRepository;
 function logUnlessNotFound(error, operation) {
     if (error?.status === 404)
         return;
-    (0, logger_1.logDebugInfo)(`${operation}: ${error instanceof Error ? error.message : String(error)}`);
+    (0, logger_1.logDebugInfo)(`${operation}: GitHub authorization verification failed.`);
 }
 
 
@@ -78770,7 +78878,6 @@ exports.getProjectBoardDetail = getProjectBoardDetail;
 const logger_1 = __nccwpck_require__(91151);
 const project_detail_1 = __nccwpck_require__(33428);
 const application_error_1 = __nccwpck_require__(75999);
-const errorMessage = (error) => error instanceof Error ? error.message : String(error);
 /** Reads a ProjectV2 without leaking GitHub's owner-specific GraphQL shape. */
 async function getProjectBoardDetail(ownerTypeClient, graphqlClient, projectId, owner, token) {
     try {
@@ -78784,10 +78891,10 @@ async function getProjectBoardDetail(ownerTypeClient, graphqlClient, projectId, 
         const { data: ownerData } = await ownerTypeProvider.rest.users
             .getByUsername({ username: ownerName })
             .catch((error) => {
-            throw new Error(`Failed to get owner information: ${errorMessage(error)}`);
+            throw (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to read the GitHub owner type.');
         });
         if (ownerData.type !== "Organization" && ownerData.type !== "User") {
-            throw new Error(`Unsupported GitHub owner type '${String(ownerData.type)}' for owner ${ownerName}.`);
+            throw new application_error_1.ApplicationError('provider.contract-invalid', `Unsupported GitHub owner type '${String(ownerData.type)}' for owner ${ownerName}.`);
         }
         const ownerPath = ownerData.type === "Organization" ? "orgs" : "users";
         const ownerQueryField = ownerPath === "orgs" ? "organization" : "user";
@@ -78802,11 +78909,11 @@ async function getProjectBoardDetail(ownerTypeClient, graphqlClient, projectId, 
         const result = await graphql
             .graphql(projectQuery, { ownerName, projectNumber })
             .catch((error) => {
-            throw new Error(`Failed to fetch project data: ${errorMessage(error)}`);
+            throw (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to read the GitHub project.');
         });
         const project = result[ownerQueryField]?.projectV2;
         if (!project)
-            throw new Error(`Project not found: ${projectUrl}`);
+            throw new application_error_1.ApplicationError('provider.not-found', `Project not found: ${projectUrl}`);
         (0, logger_1.logDebugInfo)(`Project ID: ${project.id}`);
         (0, logger_1.logDebugInfo)(`Project Title: ${project.title}`);
         (0, logger_1.logDebugInfo)(`Project URL: ${project.url}`);
@@ -78820,13 +78927,14 @@ async function getProjectBoardDetail(ownerTypeClient, graphqlClient, projectId, 
         });
     }
     catch (error) {
-        (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to load the project details.'));
-        throw error;
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to load the project details.');
+        (0, logger_1.logError)(semanticError);
+        throw semanticError;
     }
 }
 function validateProjectId(projectId) {
     if (!/^[1-9]\d*$/.test(projectId)) {
-        throw new Error(`Invalid project ID: ${projectId}. Must be a positive integer.`);
+        throw new application_error_1.ApplicationError('validation.invalid-input', `Invalid project ID: ${projectId}. Must be a positive integer.`);
     }
 }
 
@@ -80719,8 +80827,8 @@ class GithubActionsResourceTransport {
                 else
                     created += 1;
             }
-            catch (error) {
-                errors.push(`Error configuring repository Secret ${credential.name}: ${error instanceof Error ? error.message : String(error)}`);
+            catch {
+                errors.push(`Unable to configure repository Secret ${credential.name}.`);
             }
         }
         return { created, updated, skipped, errors };
@@ -80764,8 +80872,8 @@ class GithubActionsResourceTransport {
                 else
                     created += 1;
             }
-            catch (error) {
-                errors.push(`Error configuring organization Secret ${credential.name}: ${error instanceof Error ? error.message : String(error)}`);
+            catch {
+                errors.push(`Unable to configure organization Secret ${credential.name}.`);
             }
         }
         return { created, updated, skipped: 0, errors };
@@ -80790,8 +80898,8 @@ class GithubActionsResourceTransport {
                     created += 1;
                 }
             }
-            catch (error) {
-                errors.push(`Error configuring repository Variable ${variable.name}: ${error instanceof Error ? error.message : String(error)}`);
+            catch {
+                errors.push(`Unable to configure repository Variable ${variable.name}.`);
             }
         }
         return { created, updated, errors };
@@ -80833,8 +80941,8 @@ class GithubActionsResourceTransport {
                 else
                     created += 1;
             }
-            catch (error) {
-                errors.push(`Error configuring organization Variable ${variable.name}: ${error instanceof Error ? error.message : String(error)}`);
+            catch {
+                errors.push(`Unable to configure organization Variable ${variable.name}.`);
             }
         }
         return { created, updated, errors };
@@ -83125,7 +83233,7 @@ const DEFAULT_SYSTEM = {
             timeout: 15000,
         }).trim());
         if (requested !== root)
-            throw new Error('Agent cwd must be the canonical repository root.');
+            throw new agent_cli_contracts_1.AgentCliError('Agent cwd must be the canonical repository root.', 'configuration');
         return root;
     },
 };
@@ -83202,7 +83310,7 @@ class AgentExecutionPlanner {
                 (0, node_fs_1.rmSync)(runtimeDirectory, { recursive: true, force: true });
             if (error instanceof agent_cli_contracts_1.AgentCliError)
                 throw error;
-            throw new agent_cli_contracts_1.AgentCliError(`Agent execution plan rejected: ${error instanceof Error ? error.message : String(error)}`, 'configuration');
+            throw new agent_cli_contracts_1.AgentCliError('Agent execution plan rejected because its local runtime contract could not be validated.', 'configuration');
         }
     }
 }
@@ -83242,19 +83350,27 @@ function resolveExecutablePath(selected, environment) {
             }
         }
     }
-    throw new Error(`Agent executable "${selected}" was not found on PATH.`);
+    throw new agent_cli_contracts_1.AgentCliError(`Agent executable "${selected}" was not found on PATH.`, 'configuration');
 }
 function validateExecutableFile(path) {
-    const stats = (0, node_fs_1.statSync)(path);
+    let stats;
+    try {
+        stats = (0, node_fs_1.statSync)(path);
+        (0, node_fs_1.accessSync)(path, node_fs_1.constants.X_OK);
+    }
+    catch {
+        throw new agent_cli_contracts_1.AgentCliError('Agent executable must be an accessible executable file.', 'configuration');
+    }
     if (!stats.isFile())
-        throw new Error('Agent executable must resolve to a regular file.');
-    (0, node_fs_1.accessSync)(path, node_fs_1.constants.X_OK);
-    if ((stats.mode & 0o022) !== 0)
-        throw new Error('Agent executable must not be group- or world-writable.');
+        throw new agent_cli_contracts_1.AgentCliError('Agent executable must resolve to a regular file.', 'configuration');
+    if ((stats.mode & 0o022) !== 0) {
+        throw new agent_cli_contracts_1.AgentCliError('Agent executable must not be group- or world-writable.', 'configuration');
+    }
     if (typeof process.getuid === 'function') {
         const uid = process.getuid();
-        if (stats.uid !== uid && stats.uid !== 0)
-            throw new Error('Agent executable must be owned by the runner user or root.');
+        if (stats.uid !== uid && stats.uid !== 0) {
+            throw new agent_cli_contracts_1.AgentCliError('Agent executable must be owned by the runner user or root.', 'configuration');
+        }
     }
 }
 function materializeArtifacts(templates) {
@@ -83275,8 +83391,9 @@ function rejectAmbientProviderConfiguration(provider, workspace) {
             ? ['.cursor/cli.json', '.cursor/sandbox.json', '.cursor/mcp.json', '.cursor/hooks.json']
             : [];
     const match = forbidden.find(path => (0, node_fs_1.existsSync)((0, node_path_1.join)(workspace, path)));
-    if (match)
-        throw new Error(`${provider} project configuration "${match}" is not allowed for managed execution.`);
+    if (match) {
+        throw new agent_cli_contracts_1.AgentCliError(`${provider} project configuration "${match}" is not allowed for managed execution.`, 'configuration');
+    }
 }
 function definedEnvironment(environment) {
     return Object.fromEntries(Object.entries(environment).filter((entry) => entry[1] !== undefined));
@@ -83691,7 +83808,7 @@ class PnpmCliUpgradeAdapter {
                 reject(error);
             };
             child.once('error', (error) => {
-                fail(new Error(`Unable to start pnpm upgrade: ${error.message}`));
+                fail(Object.assign(new Error('Unable to start the pnpm upgrade process.'), { cause: error }));
             });
             child.once('close', (code, signal) => {
                 if (settled)
@@ -84448,6 +84565,7 @@ exports.bindLinkedBranchCommand = bindLinkedBranchCommand;
 exports.bindBranchWorkflow = bindBranchWorkflow;
 exports.bindPullRequestIssueLink = bindPullRequestIssueLink;
 exports.bindIssueLabels = bindIssueLabels;
+exports.bindPullRequestHeadSha = bindPullRequestHeadSha;
 exports.bindPullRequestDescription = bindPullRequestDescription;
 const project_detail_1 = __nccwpck_require__(33428);
 function bindActorAuthorization(port, binding) {
@@ -84516,9 +84634,16 @@ function bindPullRequestIssueLink(port, binding) {
     });
 }
 function bindIssueLabels(port, binding) {
+    const { owner, repository, token } = binding;
     return Object.freeze({
-        getLabels: (issueNumber) => port.getLabels(binding.owner, binding.repository, issueNumber, binding.token),
-        setLabels: (issueNumber, labels) => port.setLabels(binding.owner, binding.repository, issueNumber, [...labels], binding.token),
+        getLabels: (issueNumber) => port.getLabels(owner, repository, issueNumber, token),
+        setLabels: (issueNumber, labels) => port.setLabels(owner, repository, issueNumber, [...labels], token),
+    });
+}
+function bindPullRequestHeadSha(port, binding) {
+    const { owner, repository, token } = binding;
+    return Object.freeze({
+        getPullRequestHeadSha: (pullRequestNumber) => port.getPullRequestHeadSha(owner, repository, pullRequestNumber, token),
     });
 }
 function bindPullRequestDescription(port, binding) {

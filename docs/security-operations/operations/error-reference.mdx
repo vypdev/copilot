@@ -34,3 +34,11 @@ request. Do not include credentials or private provider output.
 Retryability is determined by the code. A specific operation can make a
 normally retryable failure terminal, but presentation never turns a terminal
 code into a retry recommendation.
+
+Provider exceptions are not diagnostics for public surfaces. They remain a
+private in-memory cause even if a catch block interpolates or assigns the value
+to another local variable; the architecture guard follows those derived values
+and rejects any attempt to log them. Setup resource summaries and lifecycle
+synchronization likewise use fixed semantic messages. Maintainers must call
+`toApplicationError` before logging a caught value and must never copy provider
+message text into that safe message.

@@ -5,6 +5,7 @@ import { logError } from '../../utils/logger';
 import { getGitInfo } from '../../cli_context';
 import { cleanCliArgument } from '../command_input_policy';
 import { buildCheckProgressParams, parseIssueNumber } from './issue_command_policy';
+import { toApplicationError } from '../../application/errors/application_error';
 
 export function registerCheckProgressCommand(program: Command): void {
   program
@@ -38,9 +39,9 @@ export function registerCheckProgressCommand(program: Command): void {
         await runLocalAction(params);
         process.exitCode = 0;
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        console.error('❌ Error checking progress:', error.message);
-        if (options.debug) console.error(err);
+        const error = toApplicationError(err, 'workflow.failed', 'Unable to check progress.');
+        console.error(`❌ ${error.message}`);
+        if (options.debug) console.error(`Reference: ${error.correlationId}`);
         process.exitCode = 1;
       }
     });

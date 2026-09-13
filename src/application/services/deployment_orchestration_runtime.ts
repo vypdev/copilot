@@ -26,7 +26,6 @@ import {
   type MergeQueueTargetRole,
 } from "../../domain/merge_queue_readiness";
 import { Result } from "../../data/model/result";
-import { sanitizePublishedError } from "../policies/github_comment_publication_policy";
 import type { DeploymentOrchestrationDependencies } from "./deployment_orchestration_dependencies";
 import { DeploymentStateBoundary } from "./deployment_state_boundary";
 
@@ -232,10 +231,10 @@ export class DeploymentOrchestrationRuntime {
     }
   }
 
-  async recordUnexpectedFailure(context: DeploymentOrchestrationContext, error: unknown): Promise<void> {
+  async recordUnexpectedFailure(context: DeploymentOrchestrationContext, _error: unknown): Promise<void> {
     const operation = context.currentConfiguration.deploymentOrchestration;
     if (!operation || operation.phase === "completed" || operation.phase === "blocked") return;
-    const message = sanitizePublishedError(error instanceof Error ? error.message : String(error));
+    const message = "Deployment orchestration failed unexpectedly.";
     const category = failureCategory(operation);
     const blocked = blockDeploymentOperation(operation, category, message, true);
     context.currentConfiguration.deploymentOrchestration = blocked;

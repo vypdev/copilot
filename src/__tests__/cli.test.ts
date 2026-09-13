@@ -173,9 +173,9 @@ describe('CLI', () => {
       await program.parseAsync(['node', 'cli', 'do', '-p', 'hello']);
 
       expect(process.exitCode).toBe(1);
-      expect(consoleSpy).toHaveBeenCalled();
       const errMsg = consoleSpy.mock.calls.flat().join(' ');
-      expect(errMsg).toMatch(/error|Error/i);
+      expect(errMsg).toContain('Unable to execute the request.');
+      expect(errMsg).not.toContain('OpenCode down');
       consoleSpy.mockRestore();
     });
 
@@ -204,7 +204,7 @@ describe('CLI', () => {
       consoleSpy.mockRestore();
     });
 
-    it('logs error and exits with debug when do throws and --debug', async () => {
+    it('logs a safe correlation reference and exits with debug when do throws', async () => {
       const err = new Error('OpenCode down');
       mockFix.mockRejectedValue(err);
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
@@ -213,8 +213,9 @@ describe('CLI', () => {
 
       expect(process.exitCode).toBe(1);
       const messages = consoleSpy.mock.calls.flat().map(String);
-      expect(messages.some((m) => m.includes('Error executing do'))).toBe(true);
-      expect(consoleSpy).toHaveBeenCalledWith(err);
+      expect(messages.some((m) => m.includes('Unable to execute the request.'))).toBe(true);
+      expect(messages.some((m) => m.includes('Reference:'))).toBe(true);
+      expect(messages).not.toContain(err.message);
       consoleSpy.mockRestore();
     });
   });
@@ -279,7 +280,8 @@ describe('CLI', () => {
 
       expect(process.exitCode).toBe(1);
       const messages = consoleSpy.mock.calls.flat().map(String);
-      expect(messages.some((m) => m.includes('Error checking progress'))).toBe(true);
+      expect(messages.some((m) => m.includes('Unable to check progress.'))).toBe(true);
+      expect(messages.some((m) => m.includes('API error'))).toBe(false);
       consoleSpy.mockRestore();
     });
   });
@@ -472,7 +474,8 @@ describe('CLI', () => {
 
       expect(process.exitCode).toBe(1);
       const messages = consoleSpy.mock.calls.flat().map(String);
-      expect(messages.some((m) => m.includes('Error running detect-potential-problems'))).toBe(true);
+      expect(messages.some((m) => m.includes('Unable to run detect-potential-problems.'))).toBe(true);
+      expect(messages.some((m) => m.includes('API error'))).toBe(false);
       consoleSpy.mockRestore();
     });
   });

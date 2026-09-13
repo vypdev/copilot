@@ -64,7 +64,7 @@ const DEFAULT_SYSTEM: AgentExecutionPlanningSystem = {
             stdio: ['ignore', 'pipe', 'ignore'],
             timeout: 15_000,
         }).trim());
-        if (requested !== root) throw new Error('Agent cwd must be the canonical repository root.');
+        if (requested !== root) throw new AgentCliError('Agent cwd must be the canonical repository root.', 'configuration');
         return root;
     },
 };
@@ -146,7 +146,7 @@ export class AgentExecutionPlanner {
             if (runtimeDirectory) rmSync(runtimeDirectory, { recursive: true, force: true });
             if (error instanceof AgentCliError) throw error;
             throw new AgentCliError(
-                `Agent execution plan rejected: ${error instanceof Error ? error.message : String(error)}`,
+                'Agent execution plan rejected because its local runtime contract could not be validated.',
                 'configuration',
             );
         }
@@ -188,17 +188,26 @@ function resolveExecutablePath(selected: string, environment: NodeJS.ProcessEnv)
             }
         }
     }
-    throw new Error(`Agent executable "${selected}" was not found on PATH.`);
+    throw new AgentCliError(`Agent executable "${selected}" was not found on PATH.`, 'configuration');
 }
 
 function validateExecutableFile(path: string): void {
-    const stats = statSync(path);
-    if (!stats.isFile()) throw new Error('Agent executable must resolve to a regular file.');
-    accessSync(path, constants.X_OK);
-    if ((stats.mode & 0o022) !== 0) throw new Error('Agent executable must not be group- or world-writable.');
+    let stats;
+    try {
+        stats = statSync(path);
+        accessSync(path, constants.X_OK);
+    } catch {
+        throw new AgentCliError('Agent executable must be an accessible executable file.', 'configuration');
+    }
+    if (!stats.isFile()) throw new AgentCliError('Agent executable must resolve to a regular file.', 'configuration');
+    if ((stats.mode & 0o022) !== 0) {
+        throw new AgentCliError('Agent executable must not be group- or world-writable.', 'configuration');
+    }
     if (typeof process.getuid === 'function') {
         const uid = process.getuid();
-        if (stats.uid !== uid && stats.uid !== 0) throw new Error('Agent executable must be owned by the runner user or root.');
+        if (stats.uid !== uid && stats.uid !== 0) {
+            throw new AgentCliError('Agent executable must be owned by the runner user or root.', 'configuration');
+        }
     }
 }
 
@@ -221,7 +230,12 @@ function rejectAmbientProviderConfiguration(provider: AgentConfiguration['provid
             ? ['.cursor/cli.json', '.cursor/sandbox.json', '.cursor/mcp.json', '.cursor/hooks.json']
             : [];
     const match = forbidden.find(path => existsSync(join(workspace, path)));
-    if (match) throw new Error(`${provider} project configuration "${match}" is not allowed for managed execution.`);
+    if (match) {
+        throw new AgentCliError(
+            `${provider} project configuration "${match}" is not allowed for managed execution.`,
+            'configuration',
+        );
+    }
 }
 
 function definedEnvironment(environment: NodeJS.ProcessEnv): Readonly<Record<string, string>> {

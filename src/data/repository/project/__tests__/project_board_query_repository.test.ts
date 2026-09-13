@@ -162,20 +162,20 @@ describe("ProjectBoardQueryRepository", () => {
     },
   );
 
-  it("preserves owner lookup failure context", async () => {
+  it("sanitizes owner lookup failure context", async () => {
     const harness = createHarness({ ownerError: new Error("forbidden") });
 
     await expect(
       harness.repository.getProjectDetail("1", "owner", "token"),
-    ).rejects.toThrow("Failed to get owner information: forbidden");
+    ).rejects.toThrow("Unable to read the GitHub owner type.");
   });
 
-  it("normalizes non-Error owner lookup failures", async () => {
+  it("sanitizes non-Error owner lookup failures", async () => {
     const harness = createHarness({ ownerError: "forbidden" });
 
     await expect(
       harness.repository.getProjectDetail("1", "owner", "token"),
-    ).rejects.toThrow("Failed to get owner information: forbidden");
+    ).rejects.toThrow("Unable to read the GitHub owner type.");
   });
 
   it("rejects an unsupported owner type before querying a project", async () => {
@@ -189,14 +189,14 @@ describe("ProjectBoardQueryRepository", () => {
     expect(harness.graphql).not.toHaveBeenCalled();
   });
 
-  it("preserves project query failure context", async () => {
+  it("sanitizes project query failure context", async () => {
     const harness = createHarness({
       projectError: new Error("network unavailable"),
     });
 
     await expect(
       harness.repository.getProjectDetail("1", "owner", "token"),
-    ).rejects.toThrow("Failed to fetch project data: network unavailable");
+    ).rejects.toThrow("Unable to read the GitHub project.");
   });
 
   it("rejects a project absent from the resolved owner", async () => {

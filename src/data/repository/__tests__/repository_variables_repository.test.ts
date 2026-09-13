@@ -38,7 +38,8 @@ describe('narrow GitHub Actions resource repositories', () => {
         ]);
 
         expect(result.created).toBe(1);
-        expect(result.errors).toEqual(['Error configuring repository Variable FIRST: forbidden']);
+        expect(result.errors).toEqual(['Unable to configure repository Variable FIRST.']);
+        expect(result.errors.join(' ')).not.toContain('forbidden');
     });
 
     it('lists repository secret names without requesting their values', async () => {

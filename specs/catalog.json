@@ -164,13 +164,14 @@
     {
       "id": "execution-lifecycle",
       "title": "Execution admission, queueing, routing, and result publication",
-      "status": "as-built-baseline",
+      "status": "implemented",
       "scope": "Shared GitHub Action lifecycle from event admission through durable user-facing results",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-09-13",
       "specs": [
         "specs/execution-admission-queue-and-publication.md",
         "specs/execution-error-and-context-hardening.md",
+        "specs/execution-boundary-closure-audit.md",
         "specs/push-and-single-action-context-hardening.md"
       ],
       "workflows": [
@@ -185,6 +186,8 @@
         "src/actions/common_action.ts"
       ],
       "code": [
+        "scripts/coverage-budgets.json",
+        "scripts/validate-coverage-budgets.cjs",
         "src/actions/main_run_lifecycle.ts",
         "src/actions/main_run_route.ts",
         "src/actions/github_action_completion.ts",
@@ -201,6 +204,8 @@
         "src/application/policies/status_command_policy.ts",
         "src/application/policies/github_execution_admission_policy.ts",
         "src/application/policies/workflow_queue_policy.ts",
+        "src/application/usecases/actions/lifecycle_synchronization_context.ts",
+        "src/application/usecases/actions/synchronize_lifecycle_state_use_case.ts",
         "src/application/usecases/steps/commit/bugbot/bugbot_review_operation_context.ts",
         "src/application/policies/result_publication_policy.ts",
         "src/application/usecases/comment_automation_context.ts",
@@ -216,10 +221,12 @@
         "src/application/usecases/steps/common/store_configuration_use_case.ts",
         "src/infrastructure/composition/shared_capability_port_binding.ts",
         "src/infrastructure/composition/lifecycle_capability_port_binding.ts",
+        "src/infrastructure/composition/lifecycle_state_composition_root.ts",
         "src/infrastructure/composition/push_single_action_capability_port_binding.ts",
         "src/infrastructure/composition/main_run_route_composition_root.ts"
       ],
       "tests": [
+        "src/tooling/__tests__/coverage_budget_validator.test.ts",
         "src/__tests__/api.test.ts",
         "src/actions/__tests__/github_action.test.ts",
         "src/actions/__tests__/github_action_completion.test.ts",
@@ -231,7 +238,9 @@
         "src/application/policies/__tests__/copilot_evidence_policy.test.ts",
         "src/application/policies/__tests__/lifecycle_state_policy.test.ts",
         "src/application/policies/__tests__/status_command_policy.test.ts",
+        "src/application/usecases/actions/__tests__/lifecycle_synchronization_context.test.ts",
         "src/application/usecases/actions/__tests__/synchronize_lifecycle_state_use_case.test.ts",
+        "src/application/usecases/actions/__tests__/lifecycle_event_replay.integration.test.ts",
         "src/architecture/__tests__/execution_import_ratchet.test.ts",
         "src/architecture/__tests__/raw_error_logging_boundaries.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_operation_context.test.ts",
@@ -240,6 +249,7 @@
         "src/infrastructure/composition/__tests__/shared_capability_port_binding.test.ts",
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
         "src/infrastructure/composition/__tests__/lifecycle_capability_port_binding.test.ts",
+        "src/infrastructure/composition/__tests__/lifecycle_state_composition_root.test.ts",
         "src/application/usecases/__tests__/push_single_action_contexts.test.ts",
         "src/application/usecases/__tests__/single_action_workflow.test.ts",
         "src/infrastructure/composition/__tests__/push_single_action_capability_port_binding.test.ts",
@@ -259,7 +269,7 @@
     {
       "id": "architecture-quality-hardening",
       "title": "Architecture quality and scalability hardening",
-      "status": "proposed",
+      "status": "implemented",
       "scope": "Close verified concurrency, error-contract, context-coupling, fan-out, setup/doctor, and provider-policy risks in dependency order",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-09-13",
@@ -279,6 +289,8 @@
         "src/cli/commands/doctor.ts"
       ],
       "code": [
+        "scripts/coverage-budgets.json",
+        "scripts/validate-coverage-budgets.cjs",
         "src/application/errors/application_error.ts",
         "src/application/errors/application_error_context.ts",
         "src/application/policies/application_error_presentation_policy.ts",
@@ -286,7 +298,6 @@
         "src/application/policies/bugbot_telemetry_projection_policy.ts",
         "src/application/policies/action_summary_policy.ts",
         "src/application/policies/copilot_evidence_policy.ts",
-        "scripts/validate-bugbot-context-coverage.cjs",
         "src/architecture/execution_import_baseline.json",
         "src/api.ts",
         "src/data/model/execution.ts",
@@ -294,18 +305,22 @@
         "src/application/usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts",
         "src/application/usecases/steps/commit/bugbot/bugbot_review_operation_context.ts",
         "src/application/usecases/comment_automation_context.ts",
+        "src/application/usecases/actions/lifecycle_synchronization_context.ts",
+        "src/application/usecases/actions/synchronize_lifecycle_state_use_case.ts",
         "src/application/usecases/issue_workflow_context.ts",
         "src/application/usecases/pull_request_workflow_context.ts",
         "src/application/usecases/steps/common/publish_resume_workflow.ts",
         "src/application/usecases/steps/common/store_configuration_use_case.ts",
         "src/infrastructure/composition/shared_capability_port_binding.ts",
         "src/infrastructure/composition/lifecycle_capability_port_binding.ts",
+        "src/infrastructure/composition/lifecycle_state_composition_root.ts",
         "src/application/usecases/setup/doctor_use_case.ts",
         "src/application/policies/setup_questionnaire_policy.ts",
         "src/cli/setup_terminal_driver.ts",
         "src/application/policies/agent_execution/agent_execution_policy_dispatcher.ts"
       ],
       "tests": [
+        "src/tooling/__tests__/coverage_budget_validator.test.ts",
         "src/__tests__/api.test.ts",
         "src/application/errors/__tests__/application_error.test.ts",
         "src/application/policies/__tests__/application_error_presentation_policy.test.ts",
@@ -313,6 +328,9 @@
         "src/application/policies/__tests__/bugbot_telemetry_projection_policy.test.ts",
         "src/application/policies/__tests__/action_summary_policy.test.ts",
         "src/application/policies/__tests__/copilot_evidence_policy.test.ts",
+        "src/application/usecases/actions/__tests__/lifecycle_synchronization_context.test.ts",
+        "src/application/usecases/actions/__tests__/synchronize_lifecycle_state_use_case.test.ts",
+        "src/application/usecases/actions/__tests__/lifecycle_event_replay.integration.test.ts",
         "src/actions/__tests__/github_action_completion.test.ts",
         "src/architecture/__tests__/execution_import_ratchet.test.ts",
         "src/architecture/__tests__/raw_error_logging_boundaries.test.ts",
@@ -324,6 +342,7 @@
         "src/infrastructure/composition/__tests__/shared_capability_port_binding.test.ts",
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
         "src/infrastructure/composition/__tests__/lifecycle_capability_port_binding.test.ts",
+        "src/infrastructure/composition/__tests__/lifecycle_state_composition_root.test.ts",
         "src/application/usecases/setup/__tests__/doctor_use_case.test.ts",
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
         "src/application/policies/__tests__/agent_execution_plan_policy.test.ts",
@@ -555,7 +574,8 @@
         "src/infrastructure/bound_bugbot_git_mutation_adapter.ts",
         "src/infrastructure/composition/bugbot_scm_port_factory.ts",
         "src/infrastructure/composition/bugbot_composition_root.ts",
-        "scripts/validate-bugbot-context-coverage.cjs"
+        "scripts/coverage-budgets.json",
+        "scripts/validate-coverage-budgets.cjs"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",

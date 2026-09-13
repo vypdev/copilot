@@ -94,24 +94,20 @@ export async function runGitHubAction(): Promise<void> {
         `AI PR description mode: ${execution.ai.getPullRequestDescriptionMode()}, bugbot min severity: ${execution.ai.getBugbotMinSeverity()}.`,
     );
 
-    const results = await mainRun(
-        execution,
-        projectBoard.command,
-        new GitCliRepository(token),
-        'github-workflow',
-        createSynchronizeLifecycleStateUseCase(),
-        createSynchronizeAgentActivityUseCase({
-            owner: execution.owner,
-            repository: execution.repo,
-            token: execution.tokens.token,
-        }),
-    );
-    const issueContentPort = createIssueContentCompositionRoot();
     const repositoryBinding = {
         owner: execution.owner,
         repository: execution.repo,
         token: execution.tokens.token,
     };
+    const results = await mainRun(
+        execution,
+        projectBoard.command,
+        new GitCliRepository(token),
+        'github-workflow',
+        createSynchronizeLifecycleStateUseCase(repositoryBinding),
+        createSynchronizeAgentActivityUseCase(repositoryBinding),
+    );
+    const issueContentPort = createIssueContentCompositionRoot();
     const configurationHandler = new ConfigurationHandler(issueContentPort);
     await finishGithubAction(
         execution,

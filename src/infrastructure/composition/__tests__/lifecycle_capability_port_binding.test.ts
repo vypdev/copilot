@@ -10,6 +10,7 @@ import {
   bindOrganizationMemberSelection,
   bindProjectBoardCommands,
   bindPullRequestDescription,
+  bindPullRequestHeadSha,
   bindPullRequestIssueLink,
   bindPullRequestReviewer,
 } from '../lifecycle_capability_port_binding';
@@ -46,12 +47,13 @@ describe('lifecycle capability repository bindings', () => {
     expect(addReviewers).toHaveBeenCalledWith('acme', 'demo', 8, ['bob'], 'secret');
   });
 
-  it('binds issue closure, type and labels without exposing credentials to leaves', async () => {
+  it('binds issue closure, type, labels and pull-request head without exposing credentials to leaves', async () => {
     const closeIssue = jest.fn().mockResolvedValue(true);
     const addComment = jest.fn().mockResolvedValue(undefined);
     const setIssueType = jest.fn().mockResolvedValue(undefined);
     const getLabels = jest.fn().mockResolvedValue(['size: S']);
     const setLabels = jest.fn().mockResolvedValue(undefined);
+    const getPullRequestHeadSha = jest.fn().mockResolvedValue('sha-1');
     const closure = bindIssueClosure({ closeIssue, addComment }, binding);
     await closure.closeIssue(7);
     await closure.addComment(7, 'done');
@@ -60,10 +62,14 @@ describe('lifecycle capability repository bindings', () => {
     const labels = bindIssueLabels({ getLabels, setLabels }, binding);
     await labels.getLabels(7);
     await labels.setLabels(8, ['size: S']);
+    const head = bindPullRequestHeadSha({ getPullRequestHeadSha }, binding);
+    await expect(head.getPullRequestHeadSha(9)).resolves.toBe('sha-1');
     expect(closeIssue).toHaveBeenCalledWith('acme', 'demo', 7, 'secret');
     expect(addComment).toHaveBeenCalledWith('acme', 'demo', 7, 'done', 'secret');
     expect(setIssueType).toHaveBeenCalledWith('acme', 'demo', 7, selected, 'secret');
     expect(setLabels).toHaveBeenCalledWith('acme', 'demo', 8, ['size: S'], 'secret');
+    expect(getPullRequestHeadSha).toHaveBeenCalledWith('acme', 'demo', 9, 'secret');
+    expect(Object.isFrozen(head)).toBe(true);
   });
 
   it('rehydrates project commands and binds branch commands and workflow dispatch', async () => {
@@ -119,5 +125,23 @@ describe('lifecycle capability repository bindings', () => {
   it('fails explicitly when the raw PR description adapter lacks read capability', async () => {
     const description = bindPullRequestDescription({ updateDescription: jest.fn() }, binding);
     await expect(description.getDetails(9)).rejects.toThrow('details query is not available');
+  });
+
+  it('snapshots lifecycle label and head identity against caller mutation', async () => {
+    const mutableBinding = { owner: 'acme', repository: 'demo', token: 'secret' };
+    const getLabels = jest.fn().mockResolvedValue([]);
+    const setLabels = jest.fn().mockResolvedValue(undefined);
+    const getPullRequestHeadSha = jest.fn().mockResolvedValue('sha-1');
+    const labels = bindIssueLabels({ getLabels, setLabels }, mutableBinding);
+    const head = bindPullRequestHeadSha({ getPullRequestHeadSha }, mutableBinding);
+    mutableBinding.owner = 'attacker';
+    mutableBinding.repository = 'other';
+    mutableBinding.token = 'replacement';
+
+    await labels.getLabels(7);
+    await head.getPullRequestHeadSha(8);
+
+    expect(getLabels).toHaveBeenCalledWith('acme', 'demo', 7, 'secret');
+    expect(getPullRequestHeadSha).toHaveBeenCalledWith('acme', 'demo', 8, 'secret');
   });
 });

@@ -28,6 +28,11 @@ export interface PullRequestHeadShaPort {
     getPullRequestHeadSha(owner: string, repository: string, pullRequestNumber: number, token: string): Promise<string | undefined>;
 }
 
+/** Repository-credential-bound pull-request head query authority. */
+export interface BoundPullRequestHeadShaPort {
+    getPullRequestHeadSha(pullRequestNumber: number): Promise<string | undefined>;
+}
+
 export interface IssueProgressPort {
     setProgressLabel(owner: string, repository: string, issueNumber: number, progress: number, token: string): Promise<void>;
 }
