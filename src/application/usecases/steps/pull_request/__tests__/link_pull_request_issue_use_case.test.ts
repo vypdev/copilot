@@ -108,6 +108,34 @@ describe('LinkPullRequestIssueUseCase', () => {
     expect(mockUpdateDescription).toHaveBeenNthCalledWith(2, 10, 'Current PR body');
   });
 
+  it('reports a pre-mutation provider read failure without claiming retained state', async () => {
+    mockGetDetails.mockRejectedValue(new Error('details unavailable'));
+
+    const results = await useCase.invoke(context());
+
+    expect(results[0]).toMatchObject({
+      success: false,
+      executed: true,
+      steps: ['Unable to link the pull request to its issue. Inspect the PR base and description before rerunning the workflow.'],
+    });
+    expect(mockIsLinked).not.toHaveBeenCalled();
+    expect(mockUpdateBaseBranch).not.toHaveBeenCalled();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+
+  it('reports restored state when the first temporary description write fails', async () => {
+    mockUpdateDescription.mockRejectedValueOnce(new Error('description failed'));
+
+    const results = await useCase.invoke(context());
+
+    expect(results.at(-1)?.steps).toEqual([
+      'Pull-request issue linkage failed, but the original base and description were restored. Re-run the workflow.',
+    ]);
+    expect(mockUpdateDescription).toHaveBeenCalledTimes(1);
+    expect(mockUpdateBaseBranch).not.toHaveBeenCalled();
+    expect(mockWait).not.toHaveBeenCalled();
+  });
+
   it('restores base and body when the observation delay fails', async () => {
     mockWait.mockRejectedValue(new Error('delay failed'));
     const results = await useCase.invoke(context());
@@ -143,6 +171,22 @@ describe('LinkPullRequestIssueUseCase', () => {
     await useCase.invoke(context());
     expect(mockUpdateDescription).toHaveBeenCalledTimes(1);
     expect(mockUpdateDescription).toHaveBeenCalledWith(10, 'Current PR body');
+  });
+
+  it('blocks recovery when an owned pending operation has an unexpected current base', async () => {
+    const pending = '<!-- copilot:pr-issue-link:v1;pr=10;issue=42;base=develop;state=pending -->';
+    mockGetDetails.mockResolvedValue({
+      body: `Current PR body\n\nResolves #42\n\n${pending}`,
+      baseBranch: 'release/2.0',
+    });
+
+    const results = await useCase.invoke(context());
+
+    expect(results[0]).toMatchObject({ success: false, executed: true });
+    expect(results[0].steps[0]).toContain('pending linkage operation no longer matches');
+    expect(mockIsLinked).not.toHaveBeenCalled();
+    expect(mockUpdateBaseBranch).not.toHaveBeenCalled();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
   });
 
   it('preserves the authoritative body byte-for-byte across temporary linkage', async () => {

@@ -103,11 +103,12 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
   return base as unknown as Execution;
 }
 
-function createUseCase(): IssueUseCase {
+function createUseCase(actorAuthorizationPort?: ConstructorParameters<typeof IssueUseCase>[3]): IssueUseCase {
   return new IssueUseCase(
     { taskId: "RecommendStepsUseCase", invoke: mockRecommendStepsInvoke },
     { taskId: "AnswerIssueHelpUseCase", invoke: mockAnswerIssueHelpInvoke },
     workflowSteps,
+    actorAuthorizationPort,
   );
 }
 
@@ -246,6 +247,35 @@ describe("IssueUseCase", () => {
 
     expect(mockRecommendStepsInvoke).toHaveBeenCalledWith(param);
     expect(results.some((result) => result.id === "rec")).toBe(true);
+  });
+
+  it('authorizes the projected actor before member-only issue recommendations', async () => {
+    const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) };
+    const param = minimalExecution({
+      actor: 'alice',
+      issue: { opened: true },
+      ai: new Ai('', 'model', true, [], false, 'low', 20),
+    });
+
+    await createUseCase(authorization).invoke(param);
+
+    expect(authorization.isActorAllowedToModifyFiles).toHaveBeenCalledWith('alice');
+    expect(mockRecommendStepsInvoke).toHaveBeenCalledWith(param);
+  });
+
+  it('suppresses member-only issue recommendations when authorization is denied', async () => {
+    const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(false) };
+    const param = minimalExecution({
+      actor: 'outsider',
+      issue: { opened: true },
+      ai: new Ai('', 'model', true, [], false, 'low', 20),
+    });
+
+    await createUseCase(authorization).invoke(param);
+
+    expect(authorization.isActorAllowedToModifyFiles).toHaveBeenCalledWith('outsider');
+    expect(mockRecommendStepsInvoke).not.toHaveBeenCalled();
+    expect(mockAnswerIssueHelpInvoke).not.toHaveBeenCalled();
   });
 
   it("does not recommend steps for an unrelated issue edit", async () => {

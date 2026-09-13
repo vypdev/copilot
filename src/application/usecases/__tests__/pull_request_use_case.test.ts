@@ -172,6 +172,25 @@ describe("PullRequestUseCase", () => {
     expect(mockReviewPotentialProblemsInvoke).toHaveBeenCalledTimes(1);
   });
 
+  it('authorizes the projected actor before member-only PR review', async () => {
+    const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) };
+    const useCase = new PullRequestUseCase(
+      { taskId: 'UpdatePullRequestDescriptionUseCase', invoke: mockUpdateDescriptionInvoke },
+      workflowSteps,
+      { taskId: 'DetectPotentialProblemsUseCase', invoke: mockReviewPotentialProblemsInvoke },
+      authorization,
+    );
+    const param = minimalExecution({
+      actor: 'alice',
+      ai: new Ai('', 'model', true, [], false, 'low', 20),
+    });
+
+    await useCase.invoke(param);
+
+    expect(authorization.isActorAllowedToModifyFiles).toHaveBeenCalledWith('alice');
+    expect(mockReviewPotentialProblemsInvoke).toHaveBeenCalledTimes(1);
+  });
+
   it("when PR metadata is edited, normalizes only the title", async () => {
     const useCase = new PullRequestUseCase(
       { taskId: "UpdatePullRequestDescriptionUseCase", invoke: mockUpdateDescriptionInvoke },

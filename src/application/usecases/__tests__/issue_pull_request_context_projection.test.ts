@@ -107,6 +107,20 @@ describe('P2-E issue and pull-request context projections', () => {
     agentConfiguration.model = 'gpt-5.6-luna';
   });
 
+  it('normalizes absent optional issue text and falls back to the canonical project URL', () => {
+    const source = issueSource();
+    Object.assign(source.issue, { title: undefined, body: undefined });
+    source.projects[0].publicUrl = '';
+    source.projects[0].url = 'https://github.com/orgs/acme/projects/1';
+
+    const contexts = projectIssueWorkflowStepContexts(source as never);
+
+    expect(contexts.prepareBranches.issueTitle).toBe('');
+    expect(contexts.removeObsoleteBranches.issueTitle).toBe('');
+    expect(contexts.answerHelp.description).toBe('');
+    expect(contexts.priority.projects[0].url).toBe('https://github.com/orgs/acme/projects/1');
+  });
+
   it.each([
     ['hotfix', { isHotfix: true }],
     ['release', { isRelease: true }],
