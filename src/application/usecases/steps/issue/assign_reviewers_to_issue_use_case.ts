@@ -1,22 +1,22 @@
-import { Execution } from '../../../../data/model/execution';
 import { Result } from '../../../../data/model/result';
-import type { IssueAssigneePort } from '../../../../application/ports/issue_management_ports';
-import type { OrganizationMembersPort } from '../../../../application/ports/organization_members_ports';
-import type { PullRequestReviewerPort } from '../../../../application/ports/pull_request_reviewer_ports';
+import type { BoundIssueAssigneePort } from '../../../../application/ports/issue_management_ports';
+import type { BoundOrganizationMemberSelectionPort } from '../../../../application/ports/organization_members_ports';
+import type { BoundPullRequestReviewerPort } from '../../../../application/ports/pull_request_reviewer_ports';
 import { ParamUseCase } from '../../base/param_usecase';
 import { runAssignReviewersWorkflow } from './assign_reviewers_workflow';
+import type { AssignReviewersContext } from '../../pull_request_workflow_context';
 
 /** Application boundary for requesting the configured number of reviewers. */
-export class AssignReviewersToIssueUseCase implements ParamUseCase<Execution, Result[]> {
+export class AssignReviewersToIssueUseCase implements ParamUseCase<AssignReviewersContext, Result[]> {
     taskId = 'AssignReviewersToIssueUseCase';
 
     constructor(
-        private readonly issueRepository: IssueAssigneePort,
-        private readonly pullRequestRepository: PullRequestReviewerPort,
-        private readonly projectRepository: OrganizationMembersPort,
+        private readonly issueRepository: BoundIssueAssigneePort,
+        private readonly pullRequestRepository: BoundPullRequestReviewerPort,
+        private readonly projectRepository: BoundOrganizationMemberSelectionPort,
     ) {}
 
-    async invoke(param: Execution): Promise<Result[]> {
+    async invoke(param: AssignReviewersContext): Promise<Result[]> {
         return await runAssignReviewersWorkflow(param, {
             issueRepository: this.issueRepository,
             pullRequestRepository: this.pullRequestRepository,

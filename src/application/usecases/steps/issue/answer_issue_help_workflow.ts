@@ -1,11 +1,10 @@
 import { isAgentConfigurationReady } from '../../../../data/model/agent';
 import type { AgentConfiguration } from '../../../../data/model/agent';
-import type { Execution } from '../../../../data/model/execution';
 import { Result } from '../../../../data/model/result';
 import { AGENT_PLAN } from '../../../../application/policies/agent_task_policy';
 import { THINK_RESPONSE_SCHEMA } from '../../../../application/policies/agent_response_schemas';
 import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
-import type { IssueNotificationPort } from '../../../ports/issue_lifecycle_ports';
+import type { BoundIssueNotificationPort } from '../../../ports/issue_lifecycle_ports';
 import { getAnswerIssueHelpPrompt } from '../../../../prompts';
 import { logDebugInfo, logError, logInfo } from '../../../ports/logging_ports';
 import { PROJECT_CONTEXT_INSTRUCTION } from '../../../../utils/project_context_instruction';
@@ -14,9 +13,10 @@ import { extractStructuredAnswer } from '../common/agent_answer_policy';
 import { sanitizeAgentMarkdown } from '../../../../application/policies/github_comment_publication_policy';
 import { buildCopilotWelcomeMessage } from '../../../../application/policies/copilot_interaction_policy';
 import { ApplicationError, toApplicationError } from '../../../errors/application_error';
+import type { AnswerIssueHelpContext } from '../../issue_workflow_context';
 
 export interface AnswerIssueHelpWorkflowDependencies {
-    issueNotificationPort: IssueNotificationPort;
+    issueNotificationPort: BoundIssueNotificationPort;
     aiRepository: FindingsQueryPort;
 }
 
@@ -24,7 +24,7 @@ const TASK_ID = 'AnswerIssueHelpUseCase';
 
 /** Posts one contextual answer for a newly opened question/help issue. */
 export async function runAnswerIssueHelpWorkflow(
-    param: Execution,
+    param: AnswerIssueHelpContext,
     dependencies: AnswerIssueHelpWorkflowDependencies,
 ): Promise<Result[]> {
     logInfo('AnswerIssueHelp: checking if initial help reply is needed (AI).');
@@ -57,23 +57,20 @@ export async function runAnswerIssueHelpWorkflow(
             return [noAnswerResult()];
         }
 
-        const publishedAnswer = isNewIssue(param)
+        const publishedAnswer = param.newIssue
             ? `${buildCopilotWelcomeMessage(param.tokenUser)}\n\n${answer}`
             : answer;
 
         await dependencies.issueNotificationPort.addComment(
-            param.owner,
-            param.repo,
             issueNumber,
             publishedAnswer,
-            param.tokens.token,
         );
         logInfo(`Initial help reply posted to issue #${issueNumber}.`);
         return [new Result({
             id: TASK_ID,
             success: true,
             executed: true,
-            payload: { welcomePublished: isNewIssue(param) },
+            payload: { welcomePublished: param.newIssue },
         })];
     } catch (error) {
         const semanticError = toApplicationError(error, 'workflow.failed', `Error in ${TASK_ID}: unable to answer the help issue.`);
@@ -87,30 +84,26 @@ export async function runAnswerIssueHelpWorkflow(
     }
 }
 
-function isNewIssue(param: Execution): boolean {
-    return param.eventName === 'issues' && param.inputs?.action === 'opened';
-}
-
 interface HelpRequest {
     issueNumber: number;
     description: string;
     configuration: AgentConfiguration;
 }
 
-function resolveHelpRequest(param: Execution): HelpRequest | undefined {
-    if (!param.issue.opened || (!param.labels.isQuestion && !param.labels.isHelp)) return undefined;
-    const configuration = param.ai.getAgentConfiguration('planner');
+function resolveHelpRequest(param: AnswerIssueHelpContext): HelpRequest | undefined {
+    if (!param.opened || !param.questionOrHelp) return undefined;
+    const configuration = param.agentConfiguration;
     if (!isAgentConfigurationReady(configuration)) {
         logInfo('Agent not configured; skipping initial help reply.');
         return undefined;
     }
-    if (param.issue.number <= 0) return undefined;
-    const description = (param.issue.body ?? '').trim();
+    if (param.issueNumber <= 0) return undefined;
+    const description = param.description.trim();
     if (!description) {
         logInfo('Issue has no body; skipping initial help reply.');
         return undefined;
     }
-    return { issueNumber: param.issue.number, description, configuration };
+    return { issueNumber: param.issueNumber, description, configuration };
 }
 
 function noAnswerResult(): Result {

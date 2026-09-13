@@ -12,24 +12,19 @@ const mockExecuteWorkflow = jest.fn();
 
 function baseParam(overrides: Record<string, unknown> = {}) {
   return {
-    owner: 'o',
-    repo: 'r',
-    issueNumber: 42,
-    tokens: { token: 't' },
     issue: {
       labeled: true,
       labelAdded: 'deploy',
+      number: 42,
       title: 'Add feature',
       body: '## Changelog\n- Item',
     },
-    labels: { deploy: 'deploy' },
+    deployLabel: 'deploy',
     release: { active: true, branch: 'release/1.0', version: '1.0.0' },
     hotfix: { active: false },
-    workflows: { release: 'release.yml' },
-    project: {
-      getProjects: () => [],
-      getProjectColumnIssueInProgress: () => 'In Progress',
-    },
+    workflows: { release: 'release.yml', hotfix: 'hotfix.yml' },
+    repositoryWebUrl: 'https://github.com/o/r',
+    moveToInProgress: { issueNumber: 42, columnName: 'In Progress', projects: [] },
     ...overrides,
   } as unknown as Parameters<DeployAddedUseCase['invoke']>[0];
 }
@@ -58,12 +53,9 @@ describe('DeployAddedUseCase (label_deploy_added)', () => {
     const param = baseParam();
     const results = await useCase.invoke(param);
     expect(mockExecuteWorkflow).toHaveBeenCalledWith(
-      'o',
-      'r',
       'release/1.0',
       'release.yml',
       expect.any(Object),
-      't'
     );
     expect(results.some((r) => r.success && r.steps?.some((s) => s.includes('release')))).toBe(true);
   });
@@ -78,12 +70,9 @@ describe('DeployAddedUseCase (label_deploy_added)', () => {
     });
     const results = await useCase.invoke(param);
     expect(mockExecuteWorkflow).toHaveBeenLastCalledWith(
-      'o',
-      'r',
       'hotfix/1.0.1',
       'hotfix.yml',
       expect.objectContaining({ version: '1.0.1', issue: 42 }),
-      't'
     );
     expect(results.some((r) => r.steps?.some((s) => s.includes('hotfix')))).toBe(true);
   });

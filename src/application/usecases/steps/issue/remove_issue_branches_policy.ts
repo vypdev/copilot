@@ -1,7 +1,7 @@
 export function selectIssueBranchesToRemove(
-    branches: string[],
+    branches: readonly string[],
     issueNumber: number,
-    branchTypes: string[],
+    branchTypes: readonly string[],
 ): string[] {
     return branchTypes.flatMap((type) => {
         const prefix = `${type}/${issueNumber}-`;

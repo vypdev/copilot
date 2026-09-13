@@ -16,18 +16,15 @@ jest.mock('../../../../../data/repository/project/project_board_query_repository
 
 function baseParam(overrides: Record<string, unknown> = {}) {
   return {
-    owner: 'o',
-    repo: 'r',
-    issueNumber: 1,
-    tokens: { token: 't' },
-    labels: {
-      priorityLabelOnIssue: 'P0',
-      priorityLabelOnIssueProcessable: true,
-      priorityHigh: 'P0',
-      priorityMedium: 'P1',
-      priorityLow: 'P2',
+    contentNumber: 1,
+    priority: {
+      currentLabel: 'P0',
+      processable: true,
+      high: 'P0',
+      medium: 'P1',
+      low: 'P2',
     },
-    project: { getProjects: () => [{ id: 'p1', title: 'Board' }] },
+    projects: [{ id: 'p1', title: 'Board', type: 'organization', owner: 'org', url: 'https://github.com/orgs/org/projects/1', number: 1 }],
     ...overrides,
   } as unknown as Parameters<CheckPriorityIssueSizeUseCase['invoke']>[0];
 }
@@ -42,12 +39,12 @@ describe('CheckPriorityIssueSizeUseCase', () => {
 
   it('returns success executed false when priorityLabelOnIssueProcessable is false', async () => {
     const param = baseParam({
-      labels: {
-        priorityLabelOnIssue: 'P0',
-        priorityLabelOnIssueProcessable: false,
-        priorityHigh: 'P0',
-        priorityMedium: 'P1',
-        priorityLow: 'P2',
+      priority: {
+        currentLabel: 'P0',
+        processable: false,
+        high: 'P0',
+        medium: 'P1',
+        low: 'P2',
       },
     });
 
@@ -59,7 +56,7 @@ describe('CheckPriorityIssueSizeUseCase', () => {
   });
 
   it('returns success executed false when project has no projects', async () => {
-    const param = baseParam({ project: { getProjects: () => [] } });
+    const param = baseParam({ projects: [] });
 
     const results = await useCase.invoke(param);
 
@@ -70,12 +67,12 @@ describe('CheckPriorityIssueSizeUseCase', () => {
 
   it('returns success executed false when priority is not high/medium/low', async () => {
     const param = baseParam({
-      labels: {
-        priorityLabelOnIssue: 'other',
-        priorityLabelOnIssueProcessable: true,
-        priorityHigh: 'P0',
-        priorityMedium: 'P1',
-        priorityLow: 'P2',
+      priority: {
+        currentLabel: 'other',
+        processable: true,
+        high: 'P0',
+        medium: 'P1',
+        low: 'P2',
       },
     });
 
@@ -111,12 +108,12 @@ describe('CheckPriorityIssueSizeUseCase', () => {
   it('sets P1 when priority is priorityMedium', async () => {
     mockSetTaskPriority.mockResolvedValue(true);
     const param = baseParam({
-      labels: {
-        priorityLabelOnIssue: 'P1',
-        priorityLabelOnIssueProcessable: true,
-        priorityHigh: 'P0',
-        priorityMedium: 'P1',
-        priorityLow: 'P2',
+      priority: {
+        currentLabel: 'P1',
+        processable: true,
+        high: 'P0',
+        medium: 'P1',
+        low: 'P2',
       },
     });
 
@@ -130,12 +127,12 @@ describe('CheckPriorityIssueSizeUseCase', () => {
   it('sets P2 when priority is priorityLow', async () => {
     mockSetTaskPriority.mockResolvedValue(true);
     const param = baseParam({
-      labels: {
-        priorityLabelOnIssue: 'P2',
-        priorityLabelOnIssueProcessable: true,
-        priorityHigh: 'P0',
-        priorityMedium: 'P1',
-        priorityLow: 'P2',
+      priority: {
+        currentLabel: 'P2',
+        processable: true,
+        high: 'P0',
+        medium: 'P1',
+        low: 'P2',
       },
     });
 
@@ -157,7 +154,7 @@ describe('CheckPriorityIssueSizeUseCase', () => {
       number: 2,
     });
     const param = baseParam({
-      project: { getProjects: () => [projectNoUrl] },
+      projects: [{ ...projectNoUrl, url: projectNoUrl.publicUrl }],
     });
 
     const results = await useCase.invoke(param);

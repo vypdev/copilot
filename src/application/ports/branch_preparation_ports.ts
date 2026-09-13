@@ -20,6 +20,16 @@ export interface LinkedBranchCommandPort {
   ): Promise<Result[]>;
 }
 
+/** Repository-credential-bound linked-branch creation authority. */
+export interface BoundLinkedBranchCommandPort {
+  createLinkedBranch(
+    baseBranch: string,
+    newBranch: string,
+    issueNumber: number,
+    oid?: string,
+  ): Promise<readonly Result[]>;
+}
+
 export interface BranchPropagationDelayPort {
   waitForLinkedBranch(): Promise<void>;
 }

@@ -1,7 +1,8 @@
 # Pull Request Lifecycle and Enrichment
 
 - Status: As-built baseline
-- Date: 2026-09-11
+- Date: 2026-09-13
+- Last verified: 2026-09-13 on `develop` (P2-E implementation validation)
 - Owners: Copilot maintainers
 - Scope: PR-to-issue/project linkage, assignments, metadata, size/progress, description ownership, review integration, and merge closure
 - Related issues/PRs: managed issue lifecycle and Bugbot SDDs
@@ -36,8 +37,10 @@ descriptions can also overwrite human content unless ownership is explicit.
 ### 2.2 Current behavior
 
 1. The route resolves PR state and branch-linked issue context.
-2. On open/reopen, the sequential workflow updates title, assigns assignee and
-   reviewers, links projects/issue, syncs size/progress labels, and checks priority size.
+2. On open/reopen, the route snapshots separate immutable step requests; the
+   sequential workflow updates title, assigns assignee and reviewers, links
+   projects/issue, syncs size/progress labels, and checks priority size through
+   repository- and credential-bound ports.
 3. `replace` or `append` automatically generates a sanitized description from
    PR branches/workspace diff and optional linked issue context.
 4. `replace` owns the body; `append` upserts a marker-bounded Copilot section;
@@ -101,7 +104,9 @@ body ownership. “Enrichment” is metadata mutation that does not merge code.
 | Review | unrelated event timing | open/reopen/sync route | current evidence |
 | Closure | manual issue close | merged linked PR | aligned lifecycle |
 
-No behavior change is proposed.
+P2-E preserves the normal enrichment journey while hardening its authority and
+failure behavior: event URLs can no longer select linkage targets, temporary
+link mutations are compensated on every edge, and partial cleanup is explicit.
 
 ## 6. Functional behavior and state model
 
@@ -121,6 +126,11 @@ No behavior change is proposed.
 - `disabled` skips both automatic and explicit body generation.
 - Non-member creators are skipped for AI description when `ai-members-only=true`.
 - Missing optional review composition does not prevent deterministic enrichment.
+- PR-to-issue linkage reads the current body for the exact bound PR, temporarily
+  adds an owned closing reference and default base, waits through the injected
+  observation boundary, then restores the exact original body and base.
+- An interrupted owned marker is recovered before another link attempt. Foreign
+  markers are body text, and event-provided URLs are never network targets.
 
 ### 6.3 State model
 
@@ -177,6 +187,11 @@ flowchart LR
 Architecture tests MUST keep use cases provider-neutral; workflow validators
 MUST enforce same-repository/fork safety and direct event contracts.
 
+P2-E makes this boundary executable: issue/PR leaves import no `Execution`
+aggregate, application requests contain facts rather than credentials, and
+composition exposes operation-only bound ports. Automatic and explicit PR
+description generation share one discriminated request instead of dual methods.
+
 ## 9. UI/UX and content contract
 
 ```markdown
@@ -198,6 +213,8 @@ Untrusted body/title/template/agent output and mentions are sanitized.
 | Failure | Impact | Retained facts | Retry | Action | Cleanup |
 |---|---|---|---|---|---|
 | linkage absent | issue automation unavailable | PR unchanged otherwise | yes | link/rename | none |
+| linkage propagation fails, compensation succeeds | link may be incomplete | exact original body/base restored | yes | rerun | none |
+| linkage compensation is partial | PR may retain default base and/or temporary reference | result names each retained mutation | recovery-first rerun/manual | restore named state, rerun | never claim full restoration |
 | metadata provider fail | partial enrichment | successful fields | yes | rerun | idempotent upsert |
 | description failure | body retained per mode | metadata/review may exist | yes | fix agent/context | no blank overwrite |
 | stale review/head | no stale findings | new head | automatic/retry | wait | discard stale result |
@@ -207,7 +224,8 @@ Untrusted body/title/template/agent output and mentions are sanitized.
 
 Workflow event guards prevent privileged execution on foreign fork heads. Actor
 and creator membership gates apply where configured. PR/issue/template content
-and agent output are untrusted and bounded. The token stays in provider adapters;
+and agent output are untrusted and bounded. The token and repository identity
+stay bound in provider adapters;
 agent processes do not receive it. Body markers cannot authorize commands or
 escape their owned section. Project/member queries use least required access.
 
@@ -240,7 +258,8 @@ closure is reversible by reopening, while merged code is not altered.
 | **Total** | **90** | no double counting |
 
 Global thresholds remain; description/marker policy SHOULD reach 100% branch
-coverage. Tests use fake provider/agent results and semantic Markdown assertions.
+coverage. The P2-E context/orchestration path enforces 95% lines/statements and
+90% branches/functions. Tests use fake provider/agent results and semantic Markdown assertions.
 Manual evidence covers open/sync/merge on desktop/mobile, light/dark, screen
 reader, all four body modes, and fork-visible messaging.
 
@@ -265,6 +284,10 @@ reader, all four body modes, and fork-visible messaging.
 7. A stale head publishes no stale review evidence.
 8. Merging a linked PR closes its issue; closure failure never misstates merge.
 9. Untrusted template/body/output cannot inject commands, secrets, or markers.
+10. A forged event URL is ignored; exact bound repository identity and a
+    positive safe PR number determine every linkage read/write.
+11. Linkage compensation reports whether the temporary base, description
+    reference, both, or neither remain, and replay never layers another marker.
 
 ## 17. Requirements traceability
 
@@ -275,6 +298,8 @@ reader, all four body modes, and fork-visible messaging.
 | enrichment ports | PR/project/reviewer adapters | repository tests | configuration |
 | review integration | Bugbot contracts | Bugbot E2E | Bugbot docs |
 | fork safety | workflow guards | workflow tests | workflow setup/security |
+| safe/recoverable linkage | exact-target adapter and compensation workflow | URL, identifier, marker, replay, and restoration-edge tests | capabilities/troubleshooting |
+| immutable authority boundary | PR contexts and lifecycle port binding | projection, mutation-isolation, binding, and zero-leaf AST tests | architecture/dependency rules |
 
 ## 18. Maintenance sequence
 
@@ -296,7 +321,8 @@ reader, all four body modes, and fork-visible messaging.
 ## 20. References and decisions
 
 - Primary sources: catalogued PR code, workflow, tests, and docs.
-- Related SDDs: issue lifecycle; Bugbot analysis/reconciliation; comment automation.
+- Related SDDs: issue lifecycle; Bugbot analysis/reconciliation; comment
+  automation; issue and pull-request context hardening.
 - Decision: body ownership is explicit and marker-bounded outside replace mode.
 - Rejected: hidden fallback modes and unsafe fork execution.
 - Follow-up: changing the recommended description default needs product evidence.

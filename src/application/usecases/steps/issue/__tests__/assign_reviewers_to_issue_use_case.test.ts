@@ -22,14 +22,9 @@ jest.mock(
 
 function baseParam(overrides: Record<string, unknown> = {}) {
   return {
-    owner: "o",
-    repo: "r",
-    tokens: { token: "t" },
-    pullRequest: {
-      number: 42,
-      desiredReviewersCount: 1,
-      creator: "author",
-    },
+    pullRequestNumber: 42,
+    desiredReviewersCount: 1,
+    creator: "author",
     ...overrides,
   } as unknown as Parameters<AssignReviewersToIssueUseCase["invoke"]>[0];
 }
@@ -59,7 +54,7 @@ describe("AssignReviewersToIssueUseCase", () => {
   it("returns an isolated no-op when reviewer assignment is disabled", async () => {
     mockGetCurrentReviewers.mockRejectedValue(new Error("must not be called"));
     const param = baseParam({
-      pullRequest: { number: 42, desiredReviewersCount: 0, creator: "author" },
+      desiredReviewersCount: 0,
     });
 
     const results = await useCase.invoke(param);
@@ -79,7 +74,7 @@ describe("AssignReviewersToIssueUseCase", () => {
   it("returns success with no steps when current reviewers already meet desired count", async () => {
     mockGetCurrentReviewers.mockResolvedValue(["elisalopez"]);
     const param = baseParam({
-      pullRequest: { number: 42, desiredReviewersCount: 1, creator: "author" },
+      desiredReviewersCount: 1,
     });
 
     const results = await useCase.invoke(param);
@@ -95,7 +90,7 @@ describe("AssignReviewersToIssueUseCase", () => {
   it("returns success with no steps when reviewer already submitted (counted in currentReviewers)", async () => {
     mockGetCurrentReviewers.mockResolvedValue(["elisalopez"]);
     const param = baseParam({
-      pullRequest: { number: 42, desiredReviewersCount: 1, creator: "author" },
+      desiredReviewersCount: 1,
     });
 
     const results = await useCase.invoke(param);
@@ -113,26 +108,17 @@ describe("AssignReviewersToIssueUseCase", () => {
 
     const results = await useCase.invoke(
       baseParam({
-        pullRequest: {
-          number: 42,
-          desiredReviewersCount: 2,
-          creator: "author",
-        },
+        desiredReviewersCount: 2,
       }),
     );
 
     expect(mockGetRandomMembers).toHaveBeenCalledWith(
-      "o",
       1,
       expect.arrayContaining(["author", "Alice"]),
-      "t",
     );
     expect(mockAddReviewersToPullRequest).toHaveBeenCalledWith(
-      "o",
-      "r",
       42,
       ["Bob"],
-      "t",
     );
     expect(results.at(-1)?.success).toBe(true);
   });
@@ -142,7 +128,7 @@ describe("AssignReviewersToIssueUseCase", () => {
     mockGetRandomMembers.mockResolvedValue(["newreviewer"]);
     mockAddReviewersToPullRequest.mockResolvedValue(["newreviewer"]);
     const param = baseParam({
-      pullRequest: { number: 42, desiredReviewersCount: 1, creator: "author" },
+      desiredReviewersCount: 1,
     });
 
     const results = await useCase.invoke(param);
@@ -154,11 +140,8 @@ describe("AssignReviewersToIssueUseCase", () => {
       "@newreviewer was requested to review the pull request.",
     );
     expect(mockAddReviewersToPullRequest).toHaveBeenCalledWith(
-      "o",
-      "r",
       42,
       ["newreviewer"],
-      "t",
     );
   });
 
@@ -167,17 +150,15 @@ describe("AssignReviewersToIssueUseCase", () => {
     mockGetRandomMembers.mockResolvedValue(["reviewer2"]);
     mockAddReviewersToPullRequest.mockResolvedValue(["reviewer2"]);
     const param = baseParam({
-      pullRequest: { number: 42, desiredReviewersCount: 2, creator: "author" },
+      desiredReviewersCount: 2,
     });
     mockGetCurrentAssignees.mockResolvedValue(["assignee1"]);
 
     await useCase.invoke(param);
 
     expect(mockGetRandomMembers).toHaveBeenCalledWith(
-      "o",
       1,
       expect.arrayContaining(["author", "reviewer1", "assignee1"]),
-      "t",
     );
   });
 
@@ -221,7 +202,7 @@ describe("AssignReviewersToIssueUseCase", () => {
     mockGetRandomMembers.mockResolvedValue(["requested"]);
     mockAddReviewersToPullRequest.mockResolvedValue(["requested", "other"]);
     const param = baseParam({
-      pullRequest: { number: 42, desiredReviewersCount: 1, creator: "author" },
+      desiredReviewersCount: 1,
     });
 
     const results = await useCase.invoke(param);
@@ -270,7 +251,7 @@ describe("AssignReviewersToIssueUseCase", () => {
     mockGetRandomMembers.mockResolvedValue(["alice", "bob"]);
     mockAddReviewersToPullRequest.mockResolvedValue(["ALICE"]);
     const param = baseParam({
-      pullRequest: { number: 42, desiredReviewersCount: 2, creator: "author" },
+      desiredReviewersCount: 2,
     });
 
     const results = await useCase.invoke(param);
@@ -291,7 +272,7 @@ describe("AssignReviewersToIssueUseCase", () => {
     mockGetRandomMembers.mockResolvedValue(["alice", "bob"]);
     mockAddReviewersToPullRequest.mockResolvedValue(["ALICE", "alice"]);
     const param = baseParam({
-      pullRequest: { number: 42, desiredReviewersCount: 2, creator: "author" },
+      desiredReviewersCount: 2,
     });
 
     const results = await useCase.invoke(param);
@@ -309,7 +290,7 @@ describe("AssignReviewersToIssueUseCase", () => {
     mockGetRandomMembers.mockResolvedValue(["alice"]);
     mockAddReviewersToPullRequest.mockResolvedValue(["alice"]);
     const param = baseParam({
-      pullRequest: { number: 42, desiredReviewersCount: 3, creator: "author" },
+      desiredReviewersCount: 3,
     });
 
     const results = await useCase.invoke(param);

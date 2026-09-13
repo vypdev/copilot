@@ -255,8 +255,19 @@ P2-C bound Bugbot SCM/Git authority and reduced the ceiling to 104. P2-D then
 moved comment orchestration, permissions, translation, Think, title, result
 publication, configuration persistence, and project linking to immutable
 capability records backed by repository-bound semantic ports, reducing the
-ceiling to 75. Every merged P2 slice must lower the checked-in maximum by the
-imports it removes.
+ceiling to 75. P2-E moves all issue and pull-request step leaves plus their step
+interfaces to immutable capability requests, binds lifecycle authority in
+composition, and reduces the ceiling to 47. The issue and pull-request step
+directories have an additional exact zero-import rule; aliases, token-bearing
+requests, `Pick<Execution>`, and compatibility overloads do not satisfy it.
+Every merged P2 slice must lower the checked-in maximum by the imports it removes.
+
+Route-owned mutable state must not leak back into these leaves. Branch
+preparation returns a frozen, field-bounded patch and only the issue coordinator
+applies it after the step returns. A bound port owns repository coordinates and
+credentials; its application-facing method accepts only the facts required for
+one operation. PR-link adapters derive their network target from that bound
+identity and a validated positive PR number, never from an event URL.
 
 The package subpath `@vypdev/copilot/bugbot` exposes one review operation,
 `review(BugbotReviewRequest)`. It does not export the internal `Execution` or

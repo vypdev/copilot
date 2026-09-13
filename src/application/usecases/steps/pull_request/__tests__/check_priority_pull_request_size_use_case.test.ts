@@ -16,18 +16,15 @@ jest.mock('../../../../../data/repository/project/project_board_query_repository
 
 function baseParam(overrides: Record<string, unknown> = {}) {
   return {
-    owner: 'o',
-    repo: 'r',
-    pullRequest: { number: 2 },
-    tokens: { token: 't' },
-    labels: {
-      priorityLabelOnIssue: 'P1',
-      priorityLabelOnIssueProcessable: true,
-      priorityHigh: 'P0',
-      priorityMedium: 'P1',
-      priorityLow: 'P2',
+    contentNumber: 2,
+    priority: {
+      currentLabel: 'P1',
+      processable: true,
+      high: 'P0',
+      medium: 'P1',
+      low: 'P2',
     },
-    project: { getProjects: () => [{ id: 'p1', title: 'Board' }] },
+    projects: [{ id: 'p1', title: 'Board', type: 'organization', owner: 'org', url: 'https://github.com/orgs/org/projects/1', number: 1 }],
     ...overrides,
   } as unknown as Parameters<CheckPriorityPullRequestSizeUseCase['invoke']>[0];
 }
@@ -41,7 +38,7 @@ describe('CheckPriorityPullRequestSizeUseCase', () => {
   });
 
   it('returns success executed false when no projects', async () => {
-    const param = baseParam({ project: { getProjects: () => [] } });
+    const param = baseParam({ projects: [] });
 
     const results = await useCase.invoke(param);
 
@@ -52,12 +49,12 @@ describe('CheckPriorityPullRequestSizeUseCase', () => {
 
   it('returns success executed false when priority not high/medium/low', async () => {
     const param = baseParam({
-      labels: {
-        priorityLabelOnIssue: 'other',
-        priorityLabelOnIssueProcessable: true,
-        priorityHigh: 'P0',
-        priorityMedium: 'P1',
-        priorityLow: 'P2',
+      priority: {
+        currentLabel: 'other',
+        processable: true,
+        high: 'P0',
+        medium: 'P1',
+        low: 'P2',
       },
     });
 
@@ -69,12 +66,12 @@ describe('CheckPriorityPullRequestSizeUseCase', () => {
   it('calls setTaskPriority when priority is P0', async () => {
     mockSetTaskPriority.mockResolvedValue(true);
     const param = baseParam({
-      labels: {
-        priorityLabelOnIssue: 'P0',
-        priorityLabelOnIssueProcessable: true,
-        priorityHigh: 'P0',
-        priorityMedium: 'P1',
-        priorityLow: 'P2',
+      priority: {
+        currentLabel: 'P0',
+        processable: true,
+        high: 'P0',
+        medium: 'P1',
+        low: 'P2',
       },
     });
 
@@ -85,23 +82,20 @@ describe('CheckPriorityPullRequestSizeUseCase', () => {
     expect(results[0].steps?.some((s) => s.includes('P0'))).toBe(true);
     expect(mockSetTaskPriority).toHaveBeenCalledWith(
       expect.any(Object),
-      'o',
-      'r',
       2,
       'P0',
-      't'
     );
   });
 
   it('calls setTaskPriority when priority is P2', async () => {
     mockSetTaskPriority.mockResolvedValue(true);
     const param = baseParam({
-      labels: {
-        priorityLabelOnIssue: 'P2',
-        priorityLabelOnIssueProcessable: true,
-        priorityHigh: 'P0',
-        priorityMedium: 'P1',
-        priorityLow: 'P2',
+      priority: {
+        currentLabel: 'P2',
+        processable: true,
+        high: 'P0',
+        medium: 'P1',
+        low: 'P2',
       },
     });
 
@@ -112,11 +106,8 @@ describe('CheckPriorityPullRequestSizeUseCase', () => {
     expect(results[0].steps?.some((s) => s.includes('P2'))).toBe(true);
     expect(mockSetTaskPriority).toHaveBeenCalledWith(
       expect.any(Object),
-      'o',
-      'r',
       2,
       'P2',
-      't'
     );
   });
 
@@ -133,12 +124,12 @@ describe('CheckPriorityPullRequestSizeUseCase', () => {
 
   it('returns failure when priorityLabelOnIssueProcessable is false', async () => {
     const param = baseParam({
-      labels: {
-        priorityLabelOnIssue: 'P1',
-        priorityLabelOnIssueProcessable: false,
-        priorityHigh: 'P0',
-        priorityMedium: 'P1',
-        priorityLow: 'P2',
+      priority: {
+        currentLabel: 'P1',
+        processable: false,
+        high: 'P0',
+        medium: 'P1',
+        low: 'P2',
       },
     });
 
@@ -171,7 +162,7 @@ describe('CheckPriorityPullRequestSizeUseCase', () => {
       number: 5,
     });
     const param = baseParam({
-      project: { getProjects: () => [projectNoUrl] },
+      projects: [{ ...projectNoUrl, url: projectNoUrl.publicUrl }],
     });
 
     const results = await useCase.invoke(param);

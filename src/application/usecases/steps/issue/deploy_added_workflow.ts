@@ -1,23 +1,23 @@
-import type { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
-import type { BranchWorkflowPort } from "../../../ports/branch_workflow_ports";
+import type { BoundBranchWorkflowPort } from "../../../ports/branch_workflow_ports";
 import { injectJsonAsMarkdownBlock } from "../../../../utils/content_utils";
 import { logError } from "../../../ports/logging_ports";
 import type { ParamUseCase } from "../../base/param_usecase";
 import { resolveDeployWorkflowPlan } from "../../../policies/deploy_workflow_policy";
 import { toApplicationError } from "../../../errors/application_error";
+import type { DeployAddedContext, MoveIssueToInProgressContext } from '../../issue_workflow_context';
 
 export async function runDeployAddedWorkflow(
-  param: Execution,
+  param: DeployAddedContext,
   taskId: string,
-  branchWorkflowPort: BranchWorkflowPort,
-  moveIssueToInProgressUseCase: ParamUseCase<Execution, Result[]>,
+  branchWorkflowPort: BoundBranchWorkflowPort,
+  moveIssueToInProgressUseCase: ParamUseCase<MoveIssueToInProgressContext, Result[]>,
 ): Promise<Result[]> {
   const plan = resolveDeployWorkflowPlan(param);
   if (!plan) return [new Result({ id: taskId, success: true, executed: false })];
 
   try {
-    const result = await moveIssueToInProgressUseCase.invoke(param);
+    const result = await moveIssueToInProgressUseCase.invoke(param.moveToInProgress);
     const parameters = {
       version: plan.version,
       title: plan.title,
@@ -25,22 +25,19 @@ export async function runDeployAddedWorkflow(
       issue: plan.kind === "release" ? `${plan.issue}` : plan.issue,
     };
     await branchWorkflowPort.executeWorkflow(
-      param.owner,
-      param.repo,
       plan.branch,
       plan.workflow,
       parameters,
-      param.tokens.token,
     );
 
-    const branchUrl = `https://github.com/${param.owner}/${param.repo}/tree/${plan.branch}`;
+    const branchUrl = `${param.repositoryWebUrl}/tree/${encodeURIComponent(plan.branch)}`;
     result.push(
       new Result({
         id: taskId,
         success: true,
         executed: true,
         steps: [
-          `Executed ${plan.kind} workflow [**${plan.workflow}**](https://github.com/${param.owner}/${param.repo}/actions/workflows/${plan.workflow}) on [**${plan.branch}**](${branchUrl}).\n\n${injectJsonAsMarkdownBlock("Workflow Parameters", parameters)}`,
+          `Executed ${plan.kind} workflow [**${plan.workflow}**](${param.repositoryWebUrl}/actions/workflows/${encodeURIComponent(plan.workflow)}) on [**${plan.branch}**](${branchUrl}).\n\n${injectJsonAsMarkdownBlock("Workflow Parameters", parameters)}`,
         ],
       }),
     );

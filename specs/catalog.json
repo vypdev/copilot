@@ -145,7 +145,7 @@
       "status": "as-built-baseline",
       "scope": "Shared GitHub Action lifecycle from event admission through durable user-facing results",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-12",
+      "lastVerified": "2026-09-13",
       "specs": [
         "specs/execution-admission-queue-and-publication.md",
         "specs/execution-error-and-context-hardening.md"
@@ -175,6 +175,8 @@
         "src/application/usecases/steps/commit/bugbot/bugbot_review_operation_context.ts",
         "src/application/policies/result_publication_policy.ts",
         "src/application/usecases/comment_automation_context.ts",
+        "src/application/usecases/issue_workflow_context.ts",
+        "src/application/usecases/pull_request_workflow_context.ts",
         "src/application/usecases/steps/common/check_permissions_workflow.ts",
         "src/application/usecases/steps/common/comment_language_translation_workflow.ts",
         "src/application/usecases/steps/common/think_workflow.ts",
@@ -182,7 +184,8 @@
         "src/application/usecases/steps/common/project_content_link_workflow.ts",
         "src/application/usecases/steps/common/publish_resume_workflow.ts",
         "src/application/usecases/steps/common/store_configuration_use_case.ts",
-        "src/infrastructure/composition/shared_capability_port_binding.ts"
+        "src/infrastructure/composition/shared_capability_port_binding.ts",
+        "src/infrastructure/composition/lifecycle_capability_port_binding.ts"
       ],
       "tests": [
         "src/__tests__/api.test.ts",
@@ -195,6 +198,8 @@
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_operation_context.test.ts",
         "src/application/usecases/steps/common/__tests__/shared_capability_context_projection.test.ts",
         "src/infrastructure/composition/__tests__/shared_capability_port_binding.test.ts",
+        "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
+        "src/infrastructure/composition/__tests__/lifecycle_capability_port_binding.test.ts",
         "src/application/usecases/execution/__tests__/resolve_github_execution_admission_use_case.test.ts",
         "src/application/usecases/workflow/__tests__/wait_for_previous_workflow_runs_use_case.test.ts"
       ],
@@ -212,9 +217,10 @@
       "status": "proposed",
       "scope": "Close verified concurrency, error-contract, context-coupling, fan-out, setup/doctor, and provider-policy risks in dependency order",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-12",
+      "lastVerified": "2026-09-13",
       "specs": [
-        "specs/architecture-quality-and-scalability-hardening.md"
+        "specs/architecture-quality-and-scalability-hardening.md",
+        "specs/issue-and-pull-request-context-hardening.md"
       ],
       "workflows": [
         ".github/workflows/release_workflow.yml",
@@ -237,9 +243,12 @@
         "src/application/usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts",
         "src/application/usecases/steps/commit/bugbot/bugbot_review_operation_context.ts",
         "src/application/usecases/comment_automation_context.ts",
+        "src/application/usecases/issue_workflow_context.ts",
+        "src/application/usecases/pull_request_workflow_context.ts",
         "src/application/usecases/steps/common/publish_resume_workflow.ts",
         "src/application/usecases/steps/common/store_configuration_use_case.ts",
         "src/infrastructure/composition/shared_capability_port_binding.ts",
+        "src/infrastructure/composition/lifecycle_capability_port_binding.ts",
         "src/application/usecases/setup/doctor_use_case.ts",
         "src/application/policies/setup_questionnaire_policy.ts",
         "src/cli/setup_terminal_driver.ts",
@@ -256,6 +265,8 @@
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_operation_context.test.ts",
         "src/application/usecases/steps/common/__tests__/shared_capability_context_projection.test.ts",
         "src/infrastructure/composition/__tests__/shared_capability_port_binding.test.ts",
+        "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
+        "src/infrastructure/composition/__tests__/lifecycle_capability_port_binding.test.ts",
         "src/application/usecases/setup/__tests__/doctor_use_case.test.ts",
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
         "src/application/policies/__tests__/agent_execution_plan_policy.test.ts"
@@ -335,7 +346,7 @@
       "status": "as-built-baseline",
       "scope": "Convert typed issues into traceable work branches, project state, and lifecycle state",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-11",
+      "lastVerified": "2026-09-13",
       "specs": [
         "specs/managed-issue-and-branch-lifecycle.md"
       ],
@@ -348,15 +359,19 @@
         "src/application/usecases/commit_use_case.ts"
       ],
       "code": [
+        "src/application/usecases/issue_workflow_context.ts",
         "src/application/usecases/issue_workflow.ts",
         "src/application/usecases/steps/issue/branch_preparation_strategy.ts",
         "src/application/usecases/steps/issue/prepare_branches_use_case.ts",
+        "src/infrastructure/composition/lifecycle_capability_port_binding.ts",
         "src/data/repository/branch_lifecycle_repository.ts",
         "src/domain/copilot_lifecycle.ts"
       ],
       "tests": [
+        "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
         "src/application/usecases/__tests__/issue_use_case.test.ts",
         "src/application/usecases/steps/issue/__tests__/prepare_branches_use_case.test.ts",
+        "src/infrastructure/composition/__tests__/lifecycle_capability_port_binding.test.ts",
         "src/data/repository/__tests__/branch_lifecycle_repository.test.ts",
         "src/domain/__tests__/copilot_lifecycle.test.ts"
       ],
@@ -543,7 +558,7 @@
       "status": "as-built-baseline",
       "scope": "Link pull requests to issues and projects, synchronize metadata, reviewers, size, and descriptions",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-11",
+      "lastVerified": "2026-09-13",
       "specs": [
         "specs/pull-request-lifecycle-and-enrichment.md"
       ],
@@ -554,15 +569,21 @@
         "src/application/usecases/pull_request_use_case.ts"
       ],
       "code": [
+        "src/application/usecases/pull_request_workflow_context.ts",
         "src/application/usecases/pull_request_workflow.ts",
         "src/application/usecases/pull_request_workflow_steps.ts",
+        "src/application/usecases/steps/pull_request/link_pull_request_issue_workflow.ts",
         "src/application/usecases/steps/pull_request/update_pull_request_description_use_case.ts",
+        "src/infrastructure/composition/lifecycle_capability_port_binding.ts",
         "src/domain/pull_request_description.ts",
         "src/data/repository/pull_request/pull_request_lifecycle_repository.ts"
       ],
       "tests": [
+        "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
         "src/application/usecases/__tests__/pull_request_use_case.test.ts",
+        "src/application/usecases/steps/pull_request/__tests__/link_pull_request_issue_use_case.test.ts",
         "src/application/usecases/steps/pull_request/__tests__/update_pull_request_description_use_case.test.ts",
+        "src/infrastructure/composition/__tests__/lifecycle_capability_port_binding.test.ts",
         "src/data/repository/__tests__/pull_request_lifecycle_repository.test.ts"
       ],
       "documentation": [

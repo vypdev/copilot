@@ -1,8 +1,6 @@
 import { logDebugInfo, logError } from "../../../utils/logger";
-import type { Labels } from "../../model/labels";
-import type { IssueTypes } from "../../model/issue_types";
+import type { SelectedIssueType } from '../../../application/ports/issue_management_ports';
 import type { GithubGraphqlTransportClient } from "../../../infrastructure/github/ports/github_graphql_transport_port";
-import { selectIssueType } from "./issue_type_assignment_policy";
 import { toApplicationError } from '../../../application/errors/application_error';
 
 type GetIssueId = (owner: string, repository: string, issueNumber: number, token: string) => Promise<string>;
@@ -13,11 +11,9 @@ export async function assignIssueType(
   owner: string,
   repository: string,
   issueNumber: number,
-  labels: Labels,
-  issueTypes: IssueTypes,
+  selected: SelectedIssueType,
   token: string,
 ): Promise<void> {
-  const selected = selectIssueType(labels, issueTypes);
   logDebugInfo(`Setting issue type for issue ${issueNumber} to ${selected.name}`);
   const issueId = await getIssueId(owner, repository, issueNumber, token);
   const { organization } = await loadOrganizationIssueTypes(client, owner);

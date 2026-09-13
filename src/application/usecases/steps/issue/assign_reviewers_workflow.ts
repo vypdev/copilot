@@ -1,8 +1,7 @@
-import type { Execution } from '../../../../data/model/execution';
 import { Result } from '../../../../data/model/result';
-import type { IssueAssigneePort } from '../../../../application/ports/issue_management_ports';
-import type { OrganizationMembersPort } from '../../../../application/ports/organization_members_ports';
-import type { PullRequestReviewerPort } from '../../../../application/ports/pull_request_reviewer_ports';
+import type { BoundIssueAssigneePort } from '../../../../application/ports/issue_management_ports';
+import type { BoundOrganizationMemberSelectionPort } from '../../../../application/ports/organization_members_ports';
+import type { BoundPullRequestReviewerPort } from '../../../../application/ports/pull_request_reviewer_ports';
 import { toPullRequestReviewOperationError } from '../../../../application/ports/pull_request_review_errors';
 import { logDebugInfo, logError, logInfo } from '../../../ports/logging_ports';
 import { getTaskEmoji } from '../../../../utils/task_emoji';
@@ -14,23 +13,24 @@ import {
     uniqueLogins,
 } from '../../../policies/reviewer_assignment_policy';
 import { toApplicationError } from '../../../errors/application_error';
+import type { AssignReviewersContext } from '../../pull_request_workflow_context';
 
 export interface AssignReviewersWorkflowDependencies {
-    issueRepository: IssueAssigneePort;
-    pullRequestRepository: PullRequestReviewerPort;
-    projectRepository: OrganizationMembersPort;
+    issueRepository: BoundIssueAssigneePort;
+    pullRequestRepository: BoundPullRequestReviewerPort;
+    projectRepository: BoundOrganizationMemberSelectionPort;
 }
 
 const TASK_ID = 'AssignReviewersToIssueUseCase';
 
 /** Selects and requests reviewers without coupling the use-case boundary to GitHub. */
 export async function runAssignReviewersWorkflow(
-    param: Execution,
+    param: AssignReviewersContext,
     dependencies: AssignReviewersWorkflowDependencies,
 ): Promise<Result[]> {
     logInfo(`${getTaskEmoji(TASK_ID)} Executing ${TASK_ID}.`);
-    const desiredReviewersCount = param.pullRequest.desiredReviewersCount;
-    const number = param.pullRequest.number;
+    const desiredReviewersCount = param.desiredReviewersCount;
+    const number = param.pullRequestNumber;
 
     try {
         return await executeReviewerAssignment(param, dependencies, desiredReviewersCount, number);
@@ -51,7 +51,7 @@ export async function runAssignReviewersWorkflow(
 }
 
 async function executeReviewerAssignment(
-    param: Execution,
+    param: AssignReviewersContext,
     dependencies: AssignReviewersWorkflowDependencies,
     desiredReviewersCount: number,
     number: number,
@@ -111,50 +111,35 @@ function buildReviewerResults(
 }
 
 async function loadCurrentReviewers(
-    param: Execution,
+    param: AssignReviewersContext,
     dependencies: AssignReviewersWorkflowDependencies,
 ): Promise<string[]> {
-    return uniqueLogins(await dependencies.pullRequestRepository.getCurrentReviewers(
-        param.owner,
-        param.repo,
-        param.pullRequest.number,
-        param.tokens.token,
-    ));
+    return uniqueLogins(await dependencies.pullRequestRepository.getCurrentReviewers(param.pullRequestNumber));
 }
 
 async function selectReviewerCandidates(
-    param: Execution,
+    param: AssignReviewersContext,
     dependencies: AssignReviewersWorkflowDependencies,
     currentReviewers: string[],
     missingReviewers: number,
 ): Promise<string[]> {
-    const currentAssignees = uniqueLogins(await dependencies.issueRepository.getCurrentAssignees(
-        param.owner,
-        param.repo,
-        param.pullRequest.number,
-        param.tokens.token,
-    ));
-    const excluded = buildReviewerExclusions(param.pullRequest.creator, currentReviewers, currentAssignees);
+    const currentAssignees = uniqueLogins(await dependencies.issueRepository.getCurrentAssignees(param.pullRequestNumber));
+    const excluded = buildReviewerExclusions(param.creator, currentReviewers, currentAssignees);
     const members = await dependencies.projectRepository.getRandomMembers(
-        param.owner,
         missingReviewers,
         excluded,
-        param.tokens.token,
     );
     return selectEligibleReviewers(members, excluded, missingReviewers);
 }
 
 async function requestAndConfirmReviewers(
-    param: Execution,
+    param: AssignReviewersContext,
     dependencies: AssignReviewersWorkflowDependencies,
     members: string[],
 ): Promise<string[]> {
     const reviewersAdded = await dependencies.pullRequestRepository.addReviewersToPullRequest(
-        param.owner,
-        param.repo,
-        param.pullRequest.number,
+        param.pullRequestNumber,
         members,
-        param.tokens.token,
     );
     return selectConfirmedReviewers(members, reviewersAdded);
 }

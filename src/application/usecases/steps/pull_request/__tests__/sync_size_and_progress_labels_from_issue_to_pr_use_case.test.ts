@@ -14,12 +14,9 @@ const defaultSizeLabels = ['size: XS', 'size: S', 'size: M', 'size: L', 'size: X
 
 function baseParam(overrides: Record<string, unknown> = {}) {
   return {
-    owner: 'o',
-    repo: 'r',
-    tokens: { token: 't' },
     issueNumber: 287,
-    pullRequest: { number: 100 },
-    labels: { sizeLabels: defaultSizeLabels },
+    pullRequestNumber: 100,
+    sizeLabels: defaultSizeLabels,
     ...overrides,
   } as unknown as Parameters<SyncSizeAndProgressLabelsFromIssueToPrUseCase['invoke']>[0];
 }
@@ -63,7 +60,7 @@ describe('SyncSizeAndProgressLabelsFromIssueToPrUseCase', () => {
       .mockResolvedValueOnce(['bug', '50%'])
       .mockResolvedValueOnce(['bug']);
     mockSetLabels.mockResolvedValue(undefined);
-    const param = baseParam({ issueNumber: 287, pullRequest: { number: 100 } });
+    const param = baseParam({ issueNumber: 287, pullRequestNumber: 100 });
 
     const results = await useCase.invoke(param);
 
@@ -72,11 +69,8 @@ describe('SyncSizeAndProgressLabelsFromIssueToPrUseCase', () => {
     expect(results[0].executed).toBe(true);
     expect(results[0].steps).toEqual([]);
     expect(mockSetLabels).toHaveBeenCalledWith(
-      'o',
-      'r',
       100,
       expect.arrayContaining(['bug', '50%']),
-      't'
     );
   });
 
@@ -94,11 +88,8 @@ describe('SyncSizeAndProgressLabelsFromIssueToPrUseCase', () => {
     expect(results[0].executed).toBe(true);
     expect(results[0].steps).toEqual([]);
     expect(mockSetLabels).toHaveBeenCalledWith(
-      'o',
-      'r',
       100,
       expect.arrayContaining(['bug', 'size: M']),
-      't'
     );
   });
 
@@ -116,11 +107,8 @@ describe('SyncSizeAndProgressLabelsFromIssueToPrUseCase', () => {
     expect(results[0].executed).toBe(true);
     expect(results[0].steps).toEqual([]);
     expect(mockSetLabels).toHaveBeenCalledWith(
-      'o',
-      'r',
       100,
       expect.arrayContaining(['bug', 'size: M', '50%']),
-      't'
     );
   });
 

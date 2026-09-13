@@ -5,19 +5,23 @@ import { getTaskEmoji } from "../../utils/task_emoji";
 import type { ParamUseCase } from "./base/param_usecase";
 import type { PullRequestWorkflowSteps } from "./pull_request_workflow_steps";
 import { runPullRequestWorkflow } from "./pull_request_workflow";
-import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
+import type { BoundActorAuthorizationPort } from '../ports/actor_authorization_ports';
 import type { BugbotReviewOperationContext } from './steps/commit/bugbot/bugbot_review_operation_context';
 import { projectUpdateTitleContext } from './steps/common/update_title_workflow';
 import { projectPullRequestContentLinkContext } from './steps/common/project_content_link_workflow';
+import {
+  projectPullRequestWorkflowStepContexts,
+  type PullRequestDescriptionRequest,
+} from './pull_request_workflow_context';
 
 export class PullRequestUseCase implements ParamUseCase<Execution, Result[]> {
   taskId: string = "PullRequestUseCase";
 
   constructor(
-    private readonly updatePullRequestDescriptionUseCase: ParamUseCase<Execution, Result[]>,
+    private readonly updatePullRequestDescriptionUseCase: ParamUseCase<PullRequestDescriptionRequest, Result[]>,
     private readonly workflowSteps: PullRequestWorkflowSteps,
     private readonly reviewPotentialProblemsUseCase?: ParamUseCase<BugbotReviewOperationContext, Result[]>,
-    private readonly actorAuthorizationPort?: ActorAuthorizationPort,
+    private readonly actorAuthorizationPort?: BoundActorAuthorizationPort,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -30,6 +34,7 @@ export class PullRequestUseCase implements ParamUseCase<Execution, Result[]> {
       sharedContexts: {
         title: projectUpdateTitleContext(param),
         projectLink: projectPullRequestContentLinkContext(param),
+        steps: projectPullRequestWorkflowStepContexts(param),
       },
     });
   }

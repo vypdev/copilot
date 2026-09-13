@@ -89,6 +89,19 @@ For **hotfix** and **release**:
 
 Adding the **`deploy`** label to a release or hotfix issue **triggers** the workflow named in `release-workflow` or `hotfix-workflow`. Ensure those workflow **filenames** match exactly (e.g. `release_workflow.yml`, `hotfix_workflow.yml`). See [Labels and branch types](/issues/labels-and-branch-types).
 
+## State and partial recovery
+
+Copilot records branch configuration only after branch preparation returns a
+validated result. The issue route applies the returned parent, working, release,
+or hotfix facts as one bounded patch; a lower-level branch helper cannot change
+the run's configuration while GitHub operations are still pending.
+
+If the branch is created but a later project or status update fails, the result
+names the retained branch. Do not delete that valid branch or relaunch under a
+different name. Continue work if appropriate, fix the reported permission or
+project problem, and rerun the same issue workflow; it will inspect and reuse
+the existing branch before applying its configuration facts.
+
 ## Emoji in issue title
 
 When **`emoji-labeled-title`** is `true` (default), the action can update the issue title to include an emoji based on labels (e.g. 🧑‍💻 when branched). The **`branch-management-emoji`** input (default: 🧑‍💻) is the emoji used for branched issues. See [Configuration](/issues/configuration).

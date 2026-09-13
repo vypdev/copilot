@@ -11,12 +11,9 @@ const mockRemoveBranch = jest.fn();
 
 function baseParam(overrides: Record<string, unknown> = {}) {
   return {
-    owner: 'o',
-    repo: 'r',
     issueNumber: 42,
-    tokens: { token: 't' },
-    branches: { featureTree: 'feature', bugfixTree: 'bugfix', hotfixTree: 'hotfix' },
-    previousConfiguration: undefined,
+    managedBranchTypes: ['feature', 'bugfix'],
+    hotfixBranchType: 'hotfix',
     ...overrides,
   } as unknown as Parameters<RemoveIssueBranchesUseCase['invoke']>[0];
 }
@@ -34,8 +31,8 @@ describe('RemoveIssueBranchesUseCase', () => {
   it('removes matching branch for issue and returns success', async () => {
     const param = baseParam();
     const results = await useCase.invoke(param);
-    expect(mockGetListOfBranches).toHaveBeenCalledWith('o', 'r', 't');
-    expect(mockRemoveBranch).toHaveBeenCalledWith('o', 'r', 'feature/42-old-name', 't');
+    expect(mockGetListOfBranches).toHaveBeenCalledWith();
+    expect(mockRemoveBranch).toHaveBeenCalledWith('feature/42-old-name');
     expect(results.some((r) => r.success && r.steps?.some((s) => s.includes('feature/42-old-name')))).toBe(true);
   });
 
@@ -58,8 +55,7 @@ describe('RemoveIssueBranchesUseCase', () => {
     mockGetListOfBranches.mockResolvedValue(['feature/42-foo', 'develop', 'main']);
     mockRemoveBranch.mockResolvedValue(true);
     const param = baseParam({
-      previousConfiguration: { branchType: 'hotfix' },
-      branches: { featureTree: 'feature', bugfixTree: 'bugfix', hotfixTree: 'hotfix' },
+      previousBranchType: 'hotfix',
     });
 
     const results = await useCase.invoke(param);

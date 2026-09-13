@@ -17,6 +17,11 @@ export interface BoundIssueNotificationPort {
     addComment(issueNumber: number, comment: string): Promise<void>;
 }
 
+/** Repository-credential-bound issue closure and notification authority. */
+export interface BoundIssueClosurePort extends BoundIssueNotificationPort {
+    closeIssue(issueNumber: number): Promise<boolean>;
+}
+
 /** Repository-credential-bound comment update authority. */
 export interface BoundIssueCommentUpdatePort {
     updateComment(issueNumber: number, commentId: number, comment: string): Promise<void>;

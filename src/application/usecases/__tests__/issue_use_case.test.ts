@@ -34,8 +34,8 @@ const workflowSteps = {
 };
 
 function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
-  const defaultIssue = { number: 8, opened: false, creator: 'alice', title: 'Issue', branchManagementAlways: false };
-  const defaultPullRequest = { number: -1, opened: false, creator: '', title: '', id: '' };
+  const defaultIssue = { number: 8, opened: false, creator: 'alice', title: 'Issue', body: '', labeled: false, labelAdded: '', desiredAssigneesCount: 1, branchManagementAlways: false };
+  const defaultPullRequest = { number: -1, opened: false, creator: '', title: '', id: '', desiredAssigneesCount: 0 };
   const defaultLabels = {
     isRelease: false,
     isQuestion: false,
@@ -52,6 +52,14 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
     isChore: false,
     isMaintenance: false,
     containsBranchedLabel: false,
+    priorityLabelOnIssue: undefined,
+    priorityLabelOnIssueProcessable: false,
+    priorityHigh: 'priority: high',
+    priorityMedium: 'priority: medium',
+    priorityLow: 'priority: low',
+    feature: 'feature',
+    bugfix: 'bugfix',
+    deploy: 'deploy',
   };
   const base = {
     cleanIssueBranches: false,
@@ -59,6 +67,8 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
     isIssue: true,
     isPullRequest: false,
     issueNumber: 8,
+    owner: 'org',
+    repo: 'repo',
     issue: defaultIssue,
     pullRequest: defaultPullRequest,
     labels: defaultLabels,
@@ -69,7 +79,21 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
       getProjects: () => [],
       getProjectColumnIssueCreated: () => 'Todo',
       getProjectColumnPullRequestCreated: () => 'Review',
+      getProjectColumnIssueInProgress: () => 'In Progress',
     },
+    branches: {
+      main: 'main', defaultBranch: 'main', development: 'develop',
+      featureTree: 'feature', bugfixTree: 'bugfix', docsTree: 'docs', choreTree: 'chore', hotfixTree: 'hotfix',
+    },
+    issueTypes: Object.fromEntries([
+      'task', 'bug', 'feature', 'documentation', 'maintenance', 'hotfix', 'release', 'question', 'help',
+    ].flatMap((name) => [[name, name], [`${name}Description`, `${name} description`], [`${name}Color`, 'BLUE']])),
+    managementBranch: 'feature',
+    previousConfiguration: undefined,
+    currentConfiguration: {},
+    commitPrefixBuilder: '',
+    workflows: { release: 'release.yml', hotfix: 'hotfix.yml' },
+    eventName: '',
     ai: new Ai("", "model", false, [], false, "low", 20),
     ...overrides,
   } as Record<string, unknown>;
@@ -100,7 +124,7 @@ describe("IssueUseCase", () => {
     mockUpdateIssueTypeInvoke.mockResolvedValue([]);
     mockLinkIssueProjectInvoke.mockResolvedValue([]);
     mockCheckPriorityInvoke.mockResolvedValue([]);
-    mockPrepareBranchesInvoke.mockResolvedValue([]);
+    mockPrepareBranchesInvoke.mockResolvedValue({ results: [], configurationPatch: {} });
     mockRemoveNotNeededInvoke.mockResolvedValue([]);
     mockDeployAddedInvoke.mockResolvedValue([]);
     mockRecommendStepsInvoke.mockResolvedValue([]);
@@ -118,7 +142,7 @@ describe("IssueUseCase", () => {
 
     const results = await createUseCase().invoke(param);
 
-    expect(mockCloseNotAllowedInvoke).toHaveBeenCalledWith(param);
+    expect(mockCloseNotAllowedInvoke).toHaveBeenCalledWith({ issueNumber: 8 });
     expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
     expect(results).toHaveLength(2);
   });
@@ -145,7 +169,7 @@ describe("IssueUseCase", () => {
 
     await createUseCase().invoke(param);
 
-    expect(mockRemoveIssueBranchesInvoke).toHaveBeenCalledWith(param);
+    expect(mockRemoveIssueBranchesInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8 }));
   });
 
   it("prepares branches when branching is enabled", async () => {
@@ -153,7 +177,37 @@ describe("IssueUseCase", () => {
 
     await createUseCase().invoke(param);
 
-    expect(mockPrepareBranchesInvoke).toHaveBeenCalledWith(param);
+    expect(mockPrepareBranchesInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8, issueTitle: 'Issue' }));
+  });
+
+  it('applies only the explicit successful branch configuration patch at the route boundary', async () => {
+    mockPrepareBranchesInvoke.mockResolvedValue({
+      results: [new Result({ id: 'branch', success: true, executed: true })],
+      configurationPatch: {
+        parentBranch: 'develop',
+        workingBranch: 'feature/8-issue',
+        releaseBranch: 'release/2.0.0',
+        releaseOriginBranch: 'develop',
+        releaseOriginSha: 'abc',
+        hotfixBranch: 'hotfix/2.0.1',
+        hotfixOriginSha: 'def',
+      },
+    });
+    const param = minimalExecution({ isBranched: true, currentConfiguration: { branchType: 'feature' } });
+
+    const results = await createUseCase().invoke(param);
+
+    expect(param.currentConfiguration).toMatchObject({
+      branchType: 'feature',
+      parentBranch: 'develop',
+      workingBranch: 'feature/8-issue',
+      releaseBranch: 'release/2.0.0',
+      releaseOriginBranch: 'develop',
+      releaseOriginSha: 'abc',
+      hotfixBranch: 'hotfix/2.0.1',
+      hotfixOriginSha: 'def',
+    });
+    expect(results.some((result) => result.id === 'branch')).toBe(true);
   });
 
   it("removes issue branches instead when branching is disabled", async () => {
@@ -161,7 +215,7 @@ describe("IssueUseCase", () => {
 
     await createUseCase().invoke(param);
 
-    expect(mockRemoveIssueBranchesInvoke).toHaveBeenCalledWith(param);
+    expect(mockRemoveIssueBranchesInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8 }));
   });
 
   it("recommends steps for a newly opened non-release issue", async () => {
@@ -233,7 +287,7 @@ describe("IssueUseCase", () => {
 
     const results = await createUseCase().invoke(param);
 
-    expect(mockAnswerIssueHelpInvoke).toHaveBeenCalledWith(param);
+    expect(mockAnswerIssueHelpInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8, questionOrHelp: true }));
     expect(results.some((result) => result.id === "CopilotWelcomeUseCase")).toBe(true);
   });
 
@@ -248,7 +302,7 @@ describe("IssueUseCase", () => {
 
     const results = await createUseCase().invoke(param);
 
-    expect(mockAnswerIssueHelpInvoke).toHaveBeenCalledWith(param);
+    expect(mockAnswerIssueHelpInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8, questionOrHelp: true }));
     expect(results.some((result) => result.id === "help")).toBe(true);
   });
 });

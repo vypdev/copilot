@@ -1,10 +1,10 @@
 # Architecture Quality and Scalability Hardening
 
-- Status: In implementation — P0-A complete; P0-B and P1-A through P1-C automated scope complete
+- Status: In implementation — P0-A and P2-A through P2-E complete; P0-B and P1-A through P1-C automated scope complete
 - Date: 2026-09-11
-- Last updated: 2026-09-12
+- Last updated: 2026-09-13
 - Catalog capability ID: `architecture-quality-hardening`
-- Last verified: 2026-09-11 at `2fec5c24a80135dd0611d3bc37e7dc3a8ab1b41a`
+- Last verified: 2026-09-13 on `develop` (P2-E implementation validation)
 - Owners: Copilot maintainers
 - Scope: close the verified concurrency, error-contract, context-coupling,
   fan-out, setup/doctor, and provider-policy risks without changing unrelated
@@ -44,7 +44,8 @@ clean cutovers, provider contracts, and acceptance evidence:
 
 | Priority | Owning implementation contract |
 |---|---|
-| P0-A and P2 | [`execution-error-and-context-hardening.md`](./execution-error-and-context-hardening.md) |
+| P0-A and P2 program | [`execution-error-and-context-hardening.md`](./execution-error-and-context-hardening.md) |
+| P2-E | [`issue-and-pull-request-context-hardening.md`](./issue-and-pull-request-context-hardening.md) |
 | P0-B | [`deployment-concurrency-and-state-fencing.md`](./deployment-concurrency-and-state-fencing.md) |
 | P1-A | [`bugbot-context-selection-and-budgeting.md`](./bugbot-context-selection-and-budgeting.md) |
 | P1-B | [`setup-doctor-architecture-hardening.md`](./setup-doctor-architecture-hardening.md) |
@@ -59,7 +60,7 @@ Implementation ledger:
 | P1-A | implemented | canonical-selection, bounded-read, partial-coverage, eligibility, adapter, UX, documentation, and coverage evidence catalogued in `bugbot-context-selection-and-budgeting.md` | controlled GitHub UX evidence before first rollout |
 | P1-B | implemented | immutable questionnaire, raw terminal split, stable/skipped doctor report, query-only composition, narrow remote adapters, docs, and coverage gates | controlled GitHub permission-path evidence before first rollout |
 | P1-C | implemented | exhaustive provider plans, operator-owned runtime admission, pinned-install verification, admitted-only process adapter, clean command-text removal, workflows/docs/catalog, and automated contract evidence | controlled provider sandbox smoke before first rollout |
-| P2 | implementing | P2-A through P2-D clean cuts implemented; shared comment analysis/publication uses immutable fact contexts and bound ports; exact aggregate inventory reduced from 140 to 75 | implement P2-E through P2-G and final 16-file audit evidence |
+| P2 | implementing | P2-A through P2-E clean cuts implemented; issue/PR steps use immutable requests, bound authority, route-owned branch patches, and exact-target recoverable linkage; aggregate inventory reduced from 140 to 47 | implement P2-F and P2-G, then record final 16-file audit evidence |
 
 The fixed safety rule is that a refactor MUST preserve observable product
 behavior unless this SDD and the capability-owning SDD explicitly define the
@@ -434,7 +435,7 @@ aggregate rewrite:
 | P2-B | Bugbot read-only selection and analysis facts | complete; five leaf imports removed, nested immutable credential-free contexts, ceiling 125 |
 | P2-C | Bugbot provider I/O and authorized mutations | complete; five immutable fact contexts, repository-bound SCM/Git ports, direct-context public API, zero Bugbot leaf imports, ceiling 104 |
 | P2-D | shared comment analysis and publication | complete; Think/permissions/translation/title/publication/configuration/project contexts, bound ports, and ceiling 75 |
-| P2-E | issue and pull-request steps | zero aggregate imports below the two approved route coordinators |
+| P2-E | issue and pull-request steps | complete; zero aggregate imports below both step directories, bound provider authority, explicit branch patches, exact-target compensated PR linkage, ceiling 47 |
 | P2-F | push and single-action steps | zero aggregate imports below the two approved route coordinators |
 | P2-G | closure audit | exact justified 16-file allowlist and clean topology/quality evidence |
 
@@ -658,7 +659,9 @@ Repository thresholds remain 90% lines/statements, 88% functions, and 82%
 branches. Changed pure error, state, selection, report, and provider security
 policies require 100% enumerated branch coverage. Changed orchestration modules
 require at least 95% lines/statements and 90% branches/functions; P2-D enforces
-that aggregate path with `scripts/validate-shared-capability-context-coverage.cjs`.
+that aggregate path with `scripts/validate-shared-capability-context-coverage.cjs`
+and P2-E enforces its issue/PR path with
+`scripts/validate-issue-pull-request-context-coverage.cjs`.
 Refactored terminal adapters require at least 90% lines and 85% branches.
 
 Tests use deterministic barriers, clocks, IDs, pagination, provider fakes, and
@@ -730,7 +733,7 @@ the same pull request.
 | P1-A bounded context | canonical PR policy, exact query adapter, context loader | 10,000-candidate, request-budget, ambiguity tests | Bugbot detection/failure |
 | P1-B setup/doctor | questionnaire/report policies, terminal and GitHub adapters | state, no-write, order, masking tests | setup/CLI/provisioning |
 | P1-C provider policy | exhaustive dispatcher and provider plans | cross-provider security matrix, controlled smoke | agent execution/failure |
-| P2 context closure | named contexts and boundary projectors | characterization and zero-leaf-import checks | architecture/dependency rules |
+| P2 context closure | named contexts, bound lifecycle ports, route-owned branch patches, and exact-target PR-link compensation | issue/PR projection, binding, replay/compensation, description-mode, characterization, 47-file ratchet, and zero-leaf-import checks | architecture/dependency rules, P2-E SDD, issue/PR operations docs |
 | program quality | composition roots, generated artifacts | full CI, coverage, metrics, Graphify, human evidence | catalog and this SDD |
 
 Each implementation priority MUST replace these planned evidence descriptions
@@ -782,9 +785,9 @@ Follow `deployment-concurrency-and-state-fencing.md` for every slice:
 Follow `execution-error-and-context-hardening.md` for the final allowlist and API
 closure:
 
-1. P2-A setup, P2-B Bugbot analysis, P2-C Bugbot I/O/mutation, and P2-D shared
-   comment analysis are complete clean cuts.
-2. Complete P2-E issue/PR and P2-F push/single-action in that order.
+1. P2-A setup, P2-B Bugbot analysis, P2-C Bugbot I/O/mutation, P2-D shared
+   comment analysis, and P2-E issue/PR workflows are complete clean cuts.
+2. Complete P2-F push/single-action next.
 3. Remove leaf imports and obsolete aggregate methods only after parity tests;
    lower the exact checked-in ceiling in every slice.
 4. Run P2-G as a final clean-clone architecture audit and review every remaining allowlist entry.

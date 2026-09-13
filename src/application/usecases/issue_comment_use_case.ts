@@ -18,6 +18,7 @@ import type { CommentLanguageRequest } from './steps/common/comment_language_tra
 import type { ThinkContext } from './steps/common/think_workflow';
 import { projectIssueCommentLanguageRequest } from './steps/issue_comment/check_issue_comment_language_use_case';
 import { projectCommentAutomationContext } from './comment_automation_context';
+import { projectPullRequestDescriptionContext } from './pull_request_workflow_context';
 
 export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
   taskId = "IssueCommentUseCase";
@@ -61,7 +62,10 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
         dismissBugbotFindingsUseCase: this.dismissBugbotFindingsUseCase,
         reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
         updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase
-          ? { invoke: () => this.updatePullRequestDescriptionUseCase!.invokeExplicit(param) }
+          ? { invoke: () => this.updatePullRequestDescriptionUseCase!.invoke({
+              context: projectPullRequestDescriptionContext(param),
+              trigger: 'authorized-command',
+            }) }
           : undefined,
         rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
         syncBranchUseCase: this.syncBranchUseCase

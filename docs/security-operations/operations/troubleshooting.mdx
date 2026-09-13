@@ -45,6 +45,26 @@ This guide helps you resolve common issues you might encounter while using Copil
     3. **Visibility:** Check project visibility settings and ensure the bot has access.
   </Accordion>
 
+  <Accordion title="PR-to-issue linking is partial or interrupted" icon="code-pull-request">
+    Copilot may briefly add a closing reference and target the default branch so
+    GitHub can register the issue link. It normally restores the exact original
+    description and base before the run finishes.
+
+    1. If the result says both originals were restored, rerun the failed GitHub
+       Actions run so it uses the original event snapshot.
+    2. If it names a retained temporary default base, change the PR base back to
+       the original branch shown by the result.
+    3. If it names a retained temporary issue reference, remove only the trailing
+       Copilot pending marker and its adjacent temporary `Resolves #…` line.
+       Preserve all other author content.
+    4. Rerun the failed run after the manual repair. Copilot recognizes its exact pending marker
+       first and will not layer another temporary reference.
+
+    Never paste a token or raw provider response into an issue. If inspection
+    itself failed, verify Pull Requests read/write permission and that the PR
+    number belongs to the configured repository.
+  </Accordion>
+
   <Accordion title="Workflow timeouts or execution issues" icon="clock">
     **Symptoms:**
     - Workflows timing out

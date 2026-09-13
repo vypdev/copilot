@@ -21,38 +21,31 @@ jest.mock("../../common/execute_script_use_case", () => ({
 
 function baseParam(overrides: Record<string, unknown> = {}) {
   return {
-    owner: "o",
-    repo: "r",
     issueNumber: 42,
-    tokens: { token: "t" },
-    issue: { title: "Add login feature" },
-    labels: { isMandatoryBranchedLabel: true },
+    issueTitle: "Add login feature",
+    mandatoryBranchRequired: true,
     managementBranch: "feature",
+    repositoryWebUrl: "https://github.com/o/r",
     branches: {
       development: "develop",
       defaultBranch: "main",
-      featureTree: "feature",
-      bugfixTree: "bugfix",
-      docsTree: "docs",
-      choreTree: "chore",
-      hotfixTree: "hotfix",
       main: "main",
+      managedTypes: ["feature", "bugfix", "docs", "chore"],
     },
     release: { active: false },
     hotfix: { active: false },
     commitPrefixBuilder: "",
+    deployLabel: "deploy",
+    releaseWorkflow: "release-wf",
     currentConfiguration: {},
-    project: {
-      getProjects: () => [],
-      getProjectColumnIssueInProgress: () => "",
-    },
+    moveToInProgress: { issueNumber: 42, columnName: "", projects: [] },
     ...overrides,
   } as unknown as Parameters<PrepareBranchesUseCase["invoke"]>[0];
 }
 
 function createUseCase(): PrepareBranchesUseCase {
   return new PrepareBranchesUseCase(
-    { getListOfBranches: mockGetListOfBranches },
+    { getListOfBranches: mockGetListOfBranches, removeBranch: jest.fn() },
     { formatBranchName: mockFormatBranchName },
     { fetchRemoteBranches: mockFetchRemoteBranches },
     { getCommitTag: mockGetCommitTag },
@@ -92,10 +85,10 @@ describe("PrepareBranchesUseCase", () => {
   });
 
   it("returns failure before touching collaborators when issue title is empty and branching is optional", async () => {
-    const results = await useCase.invoke(
+    const { results } = await useCase.invoke(
       baseParam({
-        issue: { title: "" },
-        labels: { isMandatoryBranchedLabel: false },
+        issueTitle: "",
+        mandatoryBranchRequired: false,
       }),
     );
 
@@ -104,7 +97,7 @@ describe("PrepareBranchesUseCase", () => {
   });
 
   it("normalizes an absent mandatory issue title before applying the naming policy", async () => {
-    await useCase.invoke(baseParam({ issue: { title: undefined } }));
+    await useCase.invoke(baseParam({ issueTitle: undefined }));
 
     expect(mockFormatBranchName).toHaveBeenCalledWith("", 42);
   });
@@ -114,27 +107,25 @@ describe("PrepareBranchesUseCase", () => {
 
     expect(mockFetchRemoteBranches).toHaveBeenCalledTimes(1);
     expect(mockGetListOfBranches).toHaveBeenCalledTimes(1);
-    expect(mockGetListOfBranches).toHaveBeenCalledWith("o", "r", "t");
+    expect(mockGetListOfBranches).toHaveBeenCalledWith();
   });
 
   it("prepares a managed branch through semantic naming, decision, command and delay capabilities", async () => {
     const param = baseParam();
-    const results = await useCase.invoke(param);
+    const outcome = await useCase.invoke(param);
+    const { results } = outcome;
 
     expect(mockFormatBranchName).toHaveBeenCalledWith("Add login feature", 42);
     expect(mockCreateLinkedBranch).toHaveBeenCalledWith(
-      "o",
-      "r",
       "develop",
       "feature/42-add-login-feature",
       42,
-      undefined,
-      "t",
     );
-    expect(param.currentConfiguration).toMatchObject({
+    expect(outcome.configurationPatch).toMatchObject({
       parentBranch: "develop",
       workingBranch: "feature/42-add-login-feature",
     });
+    expect(param.currentConfiguration).toEqual({});
     expect(mockWaitForLinkedBranch).toHaveBeenCalledTimes(1);
     expect(results.some((result) => result.success === true)).toBe(true);
   });
@@ -158,18 +149,15 @@ describe("PrepareBranchesUseCase", () => {
       currentConfiguration: { parentBranch: "release/1.0.0" },
     });
 
-    const results = await useCase.invoke(param);
+    const { results, configurationPatch } = await useCase.invoke(param);
 
     expect(mockCreateLinkedBranch).toHaveBeenCalledWith(
-      "o",
-      "r",
       "docs/42-old-title",
       "feature/42-add-login-feature",
       42,
-      undefined,
-      "t",
     );
     expect(param.currentConfiguration.parentBranch).toBe("release/1.0.0");
+    expect(configurationPatch.parentBranch).toBe("release/1.0.0");
     expect(
       results.some((result) =>
         result.steps.some((step) => step.includes("was renamed")),
@@ -180,7 +168,7 @@ describe("PrepareBranchesUseCase", () => {
   it("does not execute a command or delay when the managed target already exists", async () => {
     mockGetListOfBranches.mockResolvedValue(["feature/42-add-login-feature"]);
 
-    const results = await useCase.invoke(baseParam());
+    const { results } = await useCase.invoke(baseParam());
 
     expect(mockCreateLinkedBranch).not.toHaveBeenCalled();
     expect(mockWaitForLinkedBranch).not.toHaveBeenCalled();
@@ -198,7 +186,7 @@ describe("PrepareBranchesUseCase", () => {
       { success: false, executed: true, steps: ["failed"] },
     ]);
 
-    const results = await useCase.invoke(baseParam());
+    const { results } = await useCase.invoke(baseParam());
 
     expect(results.at(-1)).toMatchObject({ success: false, steps: ["failed"] });
     expect(mockWaitForLinkedBranch).not.toHaveBeenCalled();
@@ -219,7 +207,7 @@ describe("PrepareBranchesUseCase", () => {
   it("includes a generated commit prefix for a managed branch", async () => {
     mockBuildCommitPrefix.mockReturnValue("feat(scope):");
 
-    const results = await useCase.invoke(
+    const { results } = await useCase.invoke(
       baseParam({ commitPrefixBuilder: "prefix-script" }),
     );
 
@@ -231,7 +219,7 @@ describe("PrepareBranchesUseCase", () => {
   });
 
   it("continues managed preparation when the commit-prefix script returns no result", async () => {
-    const results = await useCase.invoke(
+    const { results } = await useCase.invoke(
       baseParam({ commitPrefixBuilder: "prefix-script" }),
     );
 
@@ -260,17 +248,14 @@ describe("PrepareBranchesUseCase", () => {
       currentConfiguration: {},
     });
 
-    const results = await useCase.invoke(param);
+    const { results } = await useCase.invoke(param);
 
     expect(mockGetCommitTag).toHaveBeenCalledWith("1.0.0");
     expect(mockCreateLinkedBranch).toHaveBeenCalledWith(
-      "o",
-      "r",
       "tags/v1.0.0",
       "hotfix/1.0.1",
       42,
       "abc123",
-      "t",
     );
     expect(
       results.some((result) =>
@@ -292,7 +277,7 @@ describe("PrepareBranchesUseCase", () => {
       currentConfiguration: {},
     });
 
-    const results = await useCase.invoke(param);
+    const { results } = await useCase.invoke(param);
 
     expect(mockCreateLinkedBranch).not.toHaveBeenCalled();
     expect(
@@ -317,7 +302,7 @@ describe("PrepareBranchesUseCase", () => {
       currentConfiguration: {},
     });
 
-    const results = await useCase.invoke(param);
+    const { results } = await useCase.invoke(param);
 
     expect(results.at(-1)).toMatchObject({
       success: false,
@@ -326,7 +311,7 @@ describe("PrepareBranchesUseCase", () => {
   });
 
   it("fails hotfix preparation when version metadata is absent", async () => {
-    const results = await useCase.invoke(
+    const { results } = await useCase.invoke(
       baseParam({
         hotfix: { active: true },
         currentConfiguration: {},
@@ -355,21 +340,15 @@ describe("PrepareBranchesUseCase", () => {
     ]);
     const param = baseParam({
       release: { active: true, version: "2.0.0", branch: "release/2.0.0" },
-      labels: { deploy: "deploy" },
-      workflows: { release: "release-wf" },
       currentConfiguration: {},
     });
 
-    const results = await useCase.invoke(param);
+    const { results } = await useCase.invoke(param);
 
     expect(mockCreateLinkedBranch).toHaveBeenCalledWith(
-      "o",
-      "r",
       "develop",
       "release/2.0.0",
       42,
-      undefined,
-      "t",
     );
     expect(results.some((result) => result.success)).toBe(true);
   });
@@ -381,7 +360,7 @@ describe("PrepareBranchesUseCase", () => {
       currentConfiguration: {},
     });
 
-    const results = await useCase.invoke(param);
+    const { results } = await useCase.invoke(param);
 
     expect(mockCreateLinkedBranch).not.toHaveBeenCalled();
     expect(results.some((result) => result.reminders.length > 0)).toBe(true);
@@ -396,7 +375,7 @@ describe("PrepareBranchesUseCase", () => {
       currentConfiguration: {},
     });
 
-    const results = await useCase.invoke(param);
+    const { results } = await useCase.invoke(param);
 
     expect(results.at(-1)).toMatchObject({
       success: false,
@@ -413,7 +392,7 @@ describe("PrepareBranchesUseCase", () => {
       currentConfiguration: {},
     });
 
-    const results = await useCase.invoke(param);
+    const { results } = await useCase.invoke(param);
 
     expect(results.at(-1)).toMatchObject({
       success: false,
@@ -432,13 +411,11 @@ describe("PrepareBranchesUseCase", () => {
     mockBuildCommitPrefix.mockReturnValue("chore(release):");
     const param = baseParam({
       release: { active: true, version: "2.0.0", branch: "release/2.0.0" },
-      labels: { deploy: "deploy" },
-      workflows: { release: "release-wf" },
       commitPrefixBuilder: "prefix-script",
       currentConfiguration: {},
     });
 
-    const results = await useCase.invoke(param);
+    const { results } = await useCase.invoke(param);
 
     expect(
       results.some((result) =>
@@ -459,13 +436,11 @@ describe("PrepareBranchesUseCase", () => {
     ]);
     const param = baseParam({
       release: { active: true, version: "2.0.0", branch: "release/2.0.0" },
-      labels: { deploy: "deploy" },
-      workflows: { release: "release-wf" },
       commitPrefixBuilder: "prefix-script",
       currentConfiguration: {},
     });
 
-    const results = await useCase.invoke(param);
+    const { results } = await useCase.invoke(param);
 
     expect(results.some((result) => result.success)).toBe(true);
     expect(
@@ -478,7 +453,7 @@ describe("PrepareBranchesUseCase", () => {
   });
 
   it("fails release preparation when version metadata is absent", async () => {
-    const results = await useCase.invoke(
+    const { results } = await useCase.invoke(
       baseParam({ release: { active: true }, currentConfiguration: {} }),
     );
 
@@ -497,16 +472,36 @@ describe("PrepareBranchesUseCase", () => {
     await useCase.invoke(param);
 
     expect(mockWaitForLinkedBranch).toHaveBeenCalledTimes(1);
-    expect(mockMoveIssueInvoke).toHaveBeenCalledWith(param);
+    expect(mockMoveIssueInvoke).toHaveBeenCalledWith(param.moveToInProgress);
     expect(mockWaitForLinkedBranch.mock.invocationCallOrder[0]).toBeLessThan(
       mockMoveIssueInvoke.mock.invocationCallOrder[0],
     );
   });
 
+  it("retains the created branch patch when propagation fails", async () => {
+    mockWaitForLinkedBranch.mockRejectedValue(new Error('propagation failed'));
+
+    const outcome = await useCase.invoke(baseParam());
+
+    expect(outcome.configurationPatch).toEqual({
+      parentBranch: 'develop',
+      workingBranch: 'feature/42-add-login-feature',
+    });
+    expect(outcome.results.at(-1)).toMatchObject({
+      success: false,
+      executed: true,
+      errors: [expect.objectContaining({
+        code: 'provider.unavailable',
+        retainedState: 'The branch feature/42-add-login-feature and its configuration patch were preserved.',
+      })],
+    });
+    expect(mockMoveIssueInvoke).not.toHaveBeenCalled();
+  });
+
   it("maps non-Error collaborator failures without publishing the cause", async () => {
     mockGetListOfBranches.mockRejectedValue("inventory failed");
 
-    const results = await useCase.invoke(baseParam());
+    const { results } = await useCase.invoke(baseParam());
 
     expect(results.at(-1)).toMatchObject({
       success: false,
@@ -522,7 +517,7 @@ describe("PrepareBranchesUseCase", () => {
   it("keeps Error collaborator failures private", async () => {
     mockFetchRemoteBranches.mockRejectedValue(new Error("sync failed"));
 
-    const results = await useCase.invoke(baseParam());
+    const { results } = await useCase.invoke(baseParam());
 
     expect(results.at(-1)?.errors[0]).toMatchObject({
       code: 'provider.unavailable',

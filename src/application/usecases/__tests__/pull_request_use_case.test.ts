@@ -22,7 +22,7 @@ const mockCloseIssueInvoke = jest.fn();
 const mockReviewPotentialProblemsInvoke = jest.fn();
 
 function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
-  const defaultIssue = { number: -1, title: '', branchManagementAlways: false };
+  const defaultIssue = { number: -1, title: '', creator: '', desiredAssigneesCount: 0, branchManagementAlways: false };
   const defaultPullRequest = {
     number: 7,
     id: 'PR_node_7',
@@ -33,6 +33,11 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
     isMerged: false,
     isClosed: false,
     isSynchronize: false,
+    body: '',
+    base: 'develop',
+    creator: 'alice',
+    desiredAssigneesCount: 1,
+    desiredReviewersCount: 1,
   };
   const defaultLabels = {
     isHotfix: false,
@@ -48,6 +53,12 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
     isHelp: false,
     isQuestion: false,
     containsBranchedLabel: false,
+    sizeLabels: [],
+    priorityLabelOnIssue: undefined,
+    priorityLabelOnIssueProcessable: false,
+    priorityHigh: 'priority: high',
+    priorityMedium: 'priority: medium',
+    priorityLow: 'priority: low',
   };
   const base = {
     owner: 'org',
@@ -59,7 +70,7 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
     tokenUser: 'bot',
     commit: { branch: 'feature/review' },
     currentConfiguration: { parentBranch: 'develop' },
-    branches: { development: 'develop' },
+    branches: { development: 'develop', defaultBranch: 'main' },
     isIssue: false,
     issue: defaultIssue,
     pullRequest: defaultPullRequest,
@@ -127,15 +138,17 @@ describe("PullRequestUseCase", () => {
       kind: 'pull-request',
       pullRequestNumber: 7,
     }));
-    expect(mockAssignMemberInvoke).toHaveBeenCalledWith(param);
-    expect(mockAssignReviewersInvoke).toHaveBeenCalledWith(param);
+    expect(mockAssignMemberInvoke).toHaveBeenCalledWith(expect.objectContaining({
+      target: 'pull request', number: 7,
+    }));
+    expect(mockAssignReviewersInvoke).toHaveBeenCalledWith(expect.objectContaining({ pullRequestNumber: 7 }));
     expect(mockLinkProjectInvoke).toHaveBeenCalledWith(expect.objectContaining({
       contentType: 'pull request',
       contentNumber: 7,
     }));
-    expect(mockLinkIssueInvoke).toHaveBeenCalledWith(param);
-    expect(mockSyncLabelsInvoke).toHaveBeenCalledWith(param);
-    expect(mockCheckPriorityInvoke).toHaveBeenCalledWith(param);
+    expect(mockLinkIssueInvoke).toHaveBeenCalledWith(expect.objectContaining({ pullRequestNumber: 7 }));
+    expect(mockSyncLabelsInvoke).toHaveBeenCalledWith(expect.objectContaining({ pullRequestNumber: 7 }));
+    expect(mockCheckPriorityInvoke).toHaveBeenCalledWith(expect.objectContaining({ contentNumber: 7 }));
   });
 
   it("reviews opened and synchronized PRs, but not label-only events", async () => {
@@ -173,7 +186,7 @@ describe("PullRequestUseCase", () => {
         isMerged: false,
         action: "edited",
       },
-      ai: { getAiMembersOnly: () => false, getPullRequestDescriptionMode: () => 'replace' },
+      ai: new Ai('', 'model', false, [], false, 'low', 20),
     });
 
     await useCase.invoke(param);
@@ -204,11 +217,14 @@ describe("PullRequestUseCase", () => {
         isMerged: false,
         action: "opened",
       },
-      ai: { getAiMembersOnly: () => false, getPullRequestDescriptionMode: () => 'replace' },
+      ai: new Ai('', 'model', false, [], false, 'low', 20),
     });
     const results = await useCase.invoke(param);
 
-    expect(mockUpdateDescriptionInvoke).toHaveBeenCalledWith(param);
+    expect(mockUpdateDescriptionInvoke).toHaveBeenCalledWith(expect.objectContaining({
+      trigger: 'automatic',
+      context: expect.objectContaining({ issueNumber: -1 }),
+    }));
     expect(results.some((r) => r.id === "desc")).toBe(true);
   });
 
@@ -225,11 +241,11 @@ describe("PullRequestUseCase", () => {
         isMerged: false,
         action: "synchronize",
       },
-      ai: { getAiMembersOnly: () => false, getPullRequestDescriptionMode: () => 'replace' },
+      ai: new Ai('', 'model', false, [], false, 'low', 20),
     });
     await useCase.invoke(param);
 
-    expect(mockUpdateDescriptionInvoke).toHaveBeenCalledWith(param);
+    expect(mockUpdateDescriptionInvoke).toHaveBeenCalledWith(expect.objectContaining({ trigger: 'automatic' }));
   });
 
   it("when PR is closed and merged, calls CloseIssueAfterMergingUseCase", async () => {
@@ -252,7 +268,7 @@ describe("PullRequestUseCase", () => {
     });
     const results = await useCase.invoke(param);
 
-    expect(mockCloseIssueInvoke).toHaveBeenCalledWith(param);
+    expect(mockCloseIssueInvoke).toHaveBeenCalledWith({ issueNumber: -1, pullRequestNumber: 7 });
     expect(results.some((r) => r.id === "close")).toBe(true);
   });
 

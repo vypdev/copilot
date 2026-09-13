@@ -46,9 +46,21 @@ import { createActorAuthorizationRepository } from './actor_authorization_compos
 import {
   bindIssueTitle,
   bindOrganizationMembers,
+  bindIssueNotification,
   bindProjectContent,
   type RepositoryCredentialBinding,
 } from './shared_capability_port_binding';
+import {
+  bindActorAuthorization,
+  bindBranchLifecycle,
+  bindBranchWorkflow,
+  bindIssueAssignee,
+  bindIssueClosure,
+  bindIssueTypeAssignment,
+  bindLinkedBranchCommand,
+  bindOrganizationMemberSelection,
+  bindProjectBoardCommands,
+} from './lifecycle_capability_port_binding';
 
 export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialBinding): IssueUseCase {
   const issueMetadata = new IssueMetadataRepository(
@@ -80,7 +92,6 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
       issueMetadata.getId(owner, repository, issueNumber, token),
     createGraphqlTransportClient(),
   );
-  const moveIssueToInProgress = new MoveIssueToInProgressUseCase(projectBoard.command);
   const issueTitle = new IssueTitleRepository(createIssueTitleClient(), issueMetadata);
   const projectContent = bindProjectContent(
     issueMetadata,
@@ -88,45 +99,52 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
     projectBoard.link,
     binding,
   );
+  const boundProjectBoard = bindProjectBoardCommands(projectBoard.command, binding);
+  const boundBranchLifecycle = bindBranchLifecycle(branchLifecycle, binding);
+  const boundIssueClosure = bindIssueClosure(issueClosure, binding);
+  const boundIssueAssignee = bindIssueAssignee(issueAssignee, binding);
+  const boundOrganizationMembers = bindOrganizationMemberSelection(organizationMembers, binding);
+  const boundLinkedBranch = bindLinkedBranchCommand(linkedBranch, binding);
+  const moveIssueToInProgress = new MoveIssueToInProgressUseCase(boundProjectBoard);
 
   const workflowSteps = {
     checkPermissions: new CheckPermissionsUseCase(bindOrganizationMembers(organizationMembers, binding)),
-    closeNotAllowedIssue: new CloseNotAllowedIssueUseCase(issueClosure),
-    removeIssueBranches: new RemoveIssueBranchesUseCase(branchLifecycle),
+    closeNotAllowedIssue: new CloseNotAllowedIssueUseCase(boundIssueClosure),
+    removeIssueBranches: new RemoveIssueBranchesUseCase(boundBranchLifecycle),
     assignMemberToIssue: new AssignMemberToIssueUseCase(
-      issueAssignee,
-      organizationMembers,
+      boundIssueAssignee,
+      boundOrganizationMembers,
     ),
     updateTitle: new UpdateTitleUseCase(bindIssueTitle(issueTitle, binding)),
-    updateIssueType: new UpdateIssueTypeUseCase(issueTypeAssignment),
+    updateIssueType: new UpdateIssueTypeUseCase(bindIssueTypeAssignment(issueTypeAssignment, binding)),
     linkIssueProject: new LinkIssueProjectUseCase(
       projectContent,
       eventualConsistencyDelay,
     ),
-    checkPriorityIssueSize: new CheckPriorityIssueSizeUseCase(projectBoard.command),
+    checkPriorityIssueSize: new CheckPriorityIssueSizeUseCase(boundProjectBoard),
     prepareBranches: new PrepareBranchesUseCase(
-      branchLifecycle,
+      boundBranchLifecycle,
       branchName,
       gitCli,
       gitCli,
-      linkedBranch,
+      boundLinkedBranch,
       branchPropagationDelay,
       moveIssueToInProgress,
     ),
     removeNotNeededBranches: new RemoveNotNeededBranchesUseCase(
-      branchLifecycle,
+      boundBranchLifecycle,
       branchName,
     ),
     deployAdded: new DeployAddedUseCase(
-      new WorkflowDispatchRepository(createWorkflowDispatchClient()),
+      bindBranchWorkflow(new WorkflowDispatchRepository(createWorkflowDispatchClient()), binding),
       moveIssueToInProgress,
     ),
   };
 
   return composeIssueUseCase(
     new RecommendStepsUseCase(issueContent, createFindingsQueryPort()),
-    new AnswerIssueHelpUseCase(issueNotification, createFindingsQueryPort()),
+    new AnswerIssueHelpUseCase(bindIssueNotification(issueNotification, binding), createFindingsQueryPort()),
     workflowSteps,
-    createActorAuthorizationRepository(),
+    bindActorAuthorization(createActorAuthorizationRepository(), binding),
   );
 }

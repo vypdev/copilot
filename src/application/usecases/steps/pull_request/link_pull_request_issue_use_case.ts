@@ -1,24 +1,26 @@
-import type { Execution } from "../../../../data/model/execution";
-import { Result } from "../../../../data/model/result";
-import type { PullRequestIssueLinkPort } from "../../../ports/pull_request_issue_link_ports";
-import type { EventualConsistencyDelayPort } from "../../../ports/eventual_consistency_ports";
-import { logError, logInfo } from "../../../ports/logging_ports";
-import { getTaskEmoji } from "../../../../utils/task_emoji";
-import { ParamUseCase } from "../../base/param_usecase";
-import { runLinkPullRequestIssue } from './link_pull_request_issue_workflow';
+import { Result } from '../../../../data/model/result';
+import type { EventualConsistencyDelayPort } from '../../../ports/eventual_consistency_ports';
+import type { BoundPullRequestIssueLinkPort } from '../../../ports/pull_request_issue_link_ports';
+import { logError, logInfo } from '../../../ports/logging_ports';
+import { getTaskEmoji } from '../../../../utils/task_emoji';
+import type { ParamUseCase } from '../../base/param_usecase';
+import type { LinkPullRequestIssueContext } from '../../pull_request_workflow_context';
+import {
+    PullRequestIssueLinkOperationError,
+    runLinkPullRequestIssue,
+} from './link_pull_request_issue_workflow';
 import { toApplicationError } from '../../../errors/application_error';
 
-export class LinkPullRequestIssueUseCase implements ParamUseCase<Execution, Result[]> {
-    taskId: string = 'LinkPullRequestIssueUseCase';
-    
+export class LinkPullRequestIssueUseCase implements ParamUseCase<LinkPullRequestIssueContext, Result[]> {
+    taskId = 'LinkPullRequestIssueUseCase';
+
     constructor(
-        private readonly pullRequestIssueLinkPort: PullRequestIssueLinkPort,
+        private readonly pullRequestIssueLinkPort: BoundPullRequestIssueLinkPort,
         private readonly eventualConsistencyDelayPort: EventualConsistencyDelayPort,
     ) {}
 
-    async invoke(param: Execution): Promise<Result[]> {
-        logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`)
-
+    async invoke(param: LinkPullRequestIssueContext): Promise<Result[]> {
+        logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`);
         try {
             return await runLinkPullRequestIssue(
                 param,
@@ -27,19 +29,49 @@ export class LinkPullRequestIssueUseCase implements ParamUseCase<Execution, Resu
                 this.eventualConsistencyDelayPort,
             );
         } catch (error) {
-            const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to link the pull request to its issue.');
+            const semanticError = toApplicationError(
+                error,
+                'provider.unavailable',
+                'Unable to link the pull request to its issue.',
+                error instanceof PullRequestIssueLinkOperationError
+                    ? {
+                        action: 'Restore any named temporary PR state, then rerun the workflow.',
+                        retainedState: describeRetainedState(error),
+                    }
+                    : {},
+            );
             logError(semanticError);
-            return [
-                new Result({
-                    id: this.taskId,
-                    success: false,
-                    executed: true,
-                    steps: [
-                        `Tried to link pull request to project, but there was a problem.`,
-                    ],
-                    errors: [semanticError],
-                }),
-            ];
+            const recoveryStep = error instanceof PullRequestIssueLinkOperationError
+                ? describeRecovery(error)
+                : 'Unable to link the pull request to its issue. Inspect the PR base and description before rerunning the workflow.';
+            return [new Result({
+                id: this.taskId,
+                success: false,
+                executed: true,
+                steps: [recoveryStep],
+                errors: [semanticError],
+            })];
         }
     }
+}
+
+function describeRetainedState(error: PullRequestIssueLinkOperationError): string {
+    if (!error.retainedBaseBranch && !error.retainedIssueReference) {
+        return 'The original pull-request base and description were restored.';
+    }
+    return [
+        error.retainedBaseBranch ? 'The temporary default base branch remains.' : 'The original base branch was restored.',
+        error.retainedIssueReference ? 'The temporary issue reference remains in the description.' : 'The original description was restored.',
+    ].join(' ');
+}
+
+function describeRecovery(error: PullRequestIssueLinkOperationError): string {
+    const retainedState = [
+        error.retainedBaseBranch ? 'the temporary default base branch' : undefined,
+        error.retainedIssueReference ? 'the temporary issue reference in the description' : undefined,
+    ].filter((state): state is string => state !== undefined);
+    if (retainedState.length === 0) {
+        return 'Pull-request issue linkage failed, but the original base and description were restored. Re-run the workflow.';
+    }
+    return `Pull-request issue linkage failed and retained ${retainedState.join(' and ')}. Restore that PR state, then re-run the workflow.`;
 }

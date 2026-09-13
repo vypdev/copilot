@@ -168,11 +168,13 @@ describe("createPullRequestUseCaseCompositionRoot", () => {
     );
     expect(mockUpdatePullRequestDescriptionUseCase).toHaveBeenCalledTimes(1);
     expect(mockUpdatePullRequestDescriptionUseCase).toHaveBeenCalledWith(
-      mockPullRequestLifecycle,
-      mockIssueContent,
-      mockOrganizationMembers,
+      expect.objectContaining({ updateDescription: expect.any(Function), getDetails: expect.any(Function) }),
+      expect.objectContaining({ getDescription: expect.any(Function) }),
+      expect.objectContaining({ getAllMembers: expect.any(Function) }),
       mockFindingsQuery,
     );
+    const descriptionArguments = mockUpdatePullRequestDescriptionUseCase.mock.calls[0] as unknown[];
+    expect(Object.isFrozen(descriptionArguments[0])).toBe(true);
     expect(mockComposePullRequestUseCase).toHaveBeenCalledTimes(1);
     const argumentsPassed = mockComposePullRequestUseCase.mock.calls[0];
     expect(argumentsPassed[0]).toBe(mockDescriptionUseCase);

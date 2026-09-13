@@ -19,3 +19,12 @@ export interface PullRequestReviewerCommandPort {
 
 export interface PullRequestReviewerPort
   extends PullRequestReviewerQueryPort, PullRequestReviewerCommandPort {}
+
+/** Repository-credential-bound reviewer query and mutation authority. */
+export interface BoundPullRequestReviewerPort {
+  getCurrentReviewers(pullRequestNumber: number): Promise<readonly string[]>;
+  addReviewersToPullRequest(
+    pullRequestNumber: number,
+    reviewers: readonly string[],
+  ): Promise<readonly string[]>;
+}

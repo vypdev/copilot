@@ -36,7 +36,23 @@ import { DetectPotentialProblemsUseCase } from "../../application/usecases/steps
 import { createBugbotCompositionRoot } from "./bugbot_composition_root";
 import { createActorAuthorizationRepository } from './actor_authorization_composition_root';
 import type { BugbotScmBinding } from './bugbot_scm_port_factory';
-import { bindIssueTitle, bindProjectContent } from './shared_capability_port_binding';
+import {
+  bindIssueDescriptionQuery,
+  bindIssueTitle,
+  bindOrganizationMembers,
+  bindProjectContent,
+} from './shared_capability_port_binding';
+import {
+  bindActorAuthorization,
+  bindIssueAssignee,
+  bindIssueClosure,
+  bindIssueLabels,
+  bindOrganizationMemberSelection,
+  bindProjectBoardCommands,
+  bindPullRequestDescription,
+  bindPullRequestIssueLink,
+  bindPullRequestReviewer,
+} from './lifecycle_capability_port_binding';
 
 export function createPullRequestUseCaseCompositionRoot(binding: BugbotScmBinding): PullRequestUseCase {
   const issueLifecycle = new IssueLifecycleRepository(
@@ -66,40 +82,44 @@ export function createPullRequestUseCaseCompositionRoot(binding: BugbotScmBindin
   const pullRequestLabels = new IssueLabelRepository(createIssueLabelsClient());
   const pullRequestReviewer = createPullRequestReviewerCompositionRoot();
   const eventualConsistencyDelay = new TimerDelayAdapter();
+  const boundIssueAssignee = bindIssueAssignee(issueAssignee, binding);
+  const boundOrganizationSelection = bindOrganizationMemberSelection(organizationMembers, binding);
+  const boundPullRequestLifecycle = bindPullRequestIssueLink(pullRequestLifecycle, binding);
+  const boundProjectBoard = bindProjectBoardCommands(projectBoard.command, binding);
 
   const workflowSteps = {
     updateTitle: new UpdateTitleUseCase(bindIssueTitle(issueTitle, binding)),
     assignMemberToIssue: new AssignMemberToIssueUseCase(
-      issueAssignee,
-      organizationMembers,
+      boundIssueAssignee,
+      boundOrganizationSelection,
     ),
     assignReviewersToIssue: new AssignReviewersToIssueUseCase(
-      issueAssignee,
-      pullRequestReviewer,
-      organizationMembers,
+      boundIssueAssignee,
+      bindPullRequestReviewer(pullRequestReviewer, binding),
+      boundOrganizationSelection,
     ),
     linkPullRequestProject: new LinkPullRequestProjectUseCase(
       projectContent,
       eventualConsistencyDelay,
     ),
     linkPullRequestIssue: new LinkPullRequestIssueUseCase(
-      pullRequestLifecycle,
+      boundPullRequestLifecycle,
       eventualConsistencyDelay,
     ),
     syncSizeAndProgressLabels: new SyncSizeAndProgressLabelsFromIssueToPrUseCase(
-      pullRequestLabels,
+      bindIssueLabels(pullRequestLabels, binding),
     ),
     checkPriorityPullRequestSize: new CheckPriorityPullRequestSizeUseCase(
-      projectBoard.command,
+      boundProjectBoard,
     ),
-    closeIssueAfterMerging: new CloseIssueAfterMergingUseCase(issueClosure),
+    closeIssueAfterMerging: new CloseIssueAfterMergingUseCase(bindIssueClosure(issueClosure, binding)),
   };
 
   return composePullRequestUseCase(
     new UpdatePullRequestDescriptionUseCase(
-      pullRequestLifecycle,
-      issueContent,
-      organizationMembers,
+      bindPullRequestDescription(pullRequestLifecycle, binding),
+      bindIssueDescriptionQuery(issueContent, binding),
+      bindOrganizationMembers(organizationMembers, binding),
       createFindingsQueryPort(),
     ),
     workflowSteps,
@@ -108,6 +128,6 @@ export function createPullRequestUseCaseCompositionRoot(binding: BugbotScmBindin
       bugbot.scm,
       bugbot.telemetry,
     ),
-    createActorAuthorizationRepository(),
+    bindActorAuthorization(createActorAuthorizationRepository(), binding),
   );
 }

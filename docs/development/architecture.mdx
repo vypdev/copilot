@@ -112,6 +112,18 @@ content. Publication and persistence snapshot mutable inputs before I/O, and
 publication failures return a semantic result instead of mutating the context.
 The exact `Execution` inventory is 75 after this cut, down from 104 after P2-C.
 
+P2-E projects separate frozen issue and pull-request step requests at the two
+route coordinators. `lifecycle_capability_port_binding.ts` captures repository
+identity and credentials once, while leaf methods accept only operation facts.
+Branch preparation returns an immutable configuration patch that the issue
+route applies after the step completes; nested helpers cannot mutate route-owned
+state during provider I/O. PR linkage reads and updates only the exact bound PR,
+uses a temporary owned recovery marker, restores the authoritative original body
+and base on success or failure, and names any retained partial state. Automatic
+and authorized-command PR descriptions now share one discriminated request.
+This clean cut removes all `Execution` imports from the issue/PR step directories
+and lowers the exact repository inventory from 75 to 47.
+
 Configuration embedded in issue or pull-request content is versioned. Readers
 accept only the current schema and fail closed on missing, malformed, or
 different-version payloads. Writers emit only current, known fields, so stale

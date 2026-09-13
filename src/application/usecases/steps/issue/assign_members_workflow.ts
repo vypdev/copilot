@@ -1,7 +1,6 @@
-import type { Execution } from '../../../../data/model/execution';
 import { Result } from '../../../../data/model/result';
-import type { IssueAssigneePort } from '../../../../application/ports/issue_management_ports';
-import type { OrganizationMembersPort } from '../../../../application/ports/organization_members_ports';
+import type { BoundIssueAssigneePort } from '../../../../application/ports/issue_management_ports';
+import type { BoundOrganizationMemberSelectionPort } from '../../../../application/ports/organization_members_ports';
 import { logDebugInfo, logError, logInfo } from '../../../ports/logging_ports';
 import { getTaskEmoji } from '../../../../utils/task_emoji';
 import {
@@ -11,17 +10,18 @@ import {
     selectConfirmedAssignees,
 } from '../../../policies/assignee_assignment_policy';
 import { toApplicationError } from '../../../errors/application_error';
+import type { AssignmentContext } from '../../issue_workflow_context';
 
 export interface AssignMembersWorkflowDependencies {
-    issueRepository: IssueAssigneePort;
-    projectRepository: OrganizationMembersPort;
+    issueRepository: BoundIssueAssigneePort;
+    projectRepository: BoundOrganizationMemberSelectionPort;
 }
 
 const TASK_ID = 'AssignMemberToIssueUseCase';
 
 /** Assigns the creator and remaining project members according to the pure assignment policy. */
 export async function runAssignMembersWorkflow(
-    param: Execution,
+    param: AssignmentContext,
     dependencies: AssignMembersWorkflowDependencies,
 ): Promise<Result[]> {
     logInfo(`${getTaskEmoji(TASK_ID)} Executing ${TASK_ID}.`);
@@ -33,24 +33,13 @@ export async function runAssignMembersWorkflow(
         if (target.number <= 0) return [assignmentResult(false, 'Issue or pull request number is not available.')];
 
         const [currentProjectMembers, currentMembers] = await Promise.all([
-            dependencies.projectRepository.getAllMembers(param.owner, param.tokens.token),
-            dependencies.issueRepository.getCurrentAssignees(
-                param.owner,
-                param.repo,
-                target.number,
-                param.tokens.token,
-            ),
+            dependencies.projectRepository.getAllMembers(),
+            dependencies.issueRepository.getCurrentAssignees(target.number),
         ]);
         const creatorAssignment = resolveCreatorAssignment(param, currentProjectMembers, currentMembers);
         if (creatorAssignment) {
             const { login: creator, source } = creatorAssignment;
-            await dependencies.issueRepository.assignMembersToIssue(
-                param.owner,
-                param.repo,
-                target.number,
-                [creator],
-                param.tokens.token,
-            );
+            await dependencies.issueRepository.assignMembersToIssue(target.number, [creator]);
             logDebugInfo(`Assigned ${source} creator @${creator} to #${target.number}.`);
             results.push(assignmentResult(true, `The ${source} was assigned to @${creator} (creator).`));
         }
@@ -65,28 +54,17 @@ export async function runAssignMembersWorkflow(
             return results;
         }
 
-        const members = await dependencies.projectRepository.getRandomMembers(
-            param.owner,
-            remainingAssignees,
-            currentMembers,
-            param.tokens.token,
-        );
+        const members = await dependencies.projectRepository.getRandomMembers(remainingAssignees, currentMembers);
         if (members.length === 0) {
             results.push(assignmentResult(false, 'Tried to assign members to issue, but no one was found.'));
             return results;
         }
 
-        const membersAdded = await dependencies.issueRepository.assignMembersToIssue(
-            param.owner,
-            param.repo,
-            target.number,
-            members,
-            param.tokens.token,
-        );
+        const membersAdded = await dependencies.issueRepository.assignMembersToIssue(target.number, members);
         results.push(
             ...selectConfirmedAssignees(members, membersAdded).map((member) => assignmentResult(
                 true,
-                `${param.isIssue ? 'The issue' : 'The pull request'} was assigned to @${member}.`,
+              `The ${param.target} was assigned to @${member}.`,
             )),
         );
         return results;

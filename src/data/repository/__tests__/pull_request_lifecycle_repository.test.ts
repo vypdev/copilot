@@ -152,14 +152,24 @@ describe("PullRequestLifecycleRepository", () => {
         expect(mockGet).toHaveBeenCalledWith({ owner: 'owner', repo: 'repo', pull_number: 12 });
     });
 
-    it("returns false for non-success responses and network failures when checking linkage", async () => {
+    it("fails closed with a semantic error for non-success responses and network failures", async () => {
         const fetchMock = jest.spyOn(global, "fetch")
             .mockResolvedValueOnce(new Response("not linked", { status: 404 }))
             .mockRejectedValueOnce(new Error("network unavailable"));
         const repository = new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter());
 
-        await expect(repository.isLinked("https://github.com/owner/repo/pull/12")).resolves.toBe(false);
-        await expect(repository.isLinked("https://github.com/owner/repo/pull/12")).resolves.toBe(false);
+        await expect(repository.isLinked('owner', 'repo', 12, 'token')).rejects.toMatchObject({
+            code: 'provider.unavailable',
+            message: 'Unable to inspect issue linkage for pull request #12.',
+        });
+        await expect(repository.isLinked('owner', 'repo', 12, 'token')).rejects.toMatchObject({
+            code: 'provider.unavailable',
+            message: 'Unable to inspect issue linkage for pull request #12.',
+        });
+        expect(fetchMock).toHaveBeenCalledWith(
+            'https://github.com/owner/repo/pull/12',
+            expect.objectContaining({ signal: expect.any(AbortSignal) }),
+        );
         fetchMock.mockRestore();
     });
 
@@ -169,8 +179,8 @@ describe("PullRequestLifecycleRepository", () => {
             .mockResolvedValueOnce(new Response("has_github_issues=false", { status: 200 }));
         const repository = new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter());
 
-        await expect(repository.isLinked("https://github.com/owner/repo/pull/12")).resolves.toBe(true);
-        await expect(repository.isLinked("https://github.com/owner/repo/pull/12")).resolves.toBe(false);
+        await expect(repository.isLinked('owner', 'repo', 12, 'token')).resolves.toBe(true);
+        await expect(repository.isLinked('owner', 'repo', 12, 'token')).resolves.toBe(false);
         fetchMock.mockRestore();
     });
 });

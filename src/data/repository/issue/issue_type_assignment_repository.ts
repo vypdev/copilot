@@ -1,6 +1,5 @@
 import { logError, logDebugInfo } from "../../../utils/logger";
-import type { Labels } from "../../model/labels";
-import type { IssueTypes } from "../../model/issue_types";
+import type { SelectedIssueType } from '../../../application/ports/issue_management_ports';
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubGraphqlTransportClient } from "../../../infrastructure/github/ports/github_graphql_transport_port";
 import { assignIssueType } from "./issue_type_assignment_workflow";
@@ -18,8 +17,7 @@ export class IssueTypeAssignmentRepository {
     owner: string,
     repository: string,
     issueNumber: number,
-    labels: Labels,
-    issueTypes: IssueTypes,
+    issueType: SelectedIssueType,
     token: string,
   ): Promise<void> => {
     try {
@@ -29,8 +27,7 @@ export class IssueTypeAssignmentRepository {
         owner,
         repository,
         issueNumber,
-        labels,
-        issueTypes,
+        issueType,
         token,
       );
     } catch (error) {

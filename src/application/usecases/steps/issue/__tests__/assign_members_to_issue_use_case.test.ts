@@ -20,13 +20,10 @@ const mockAssignMembersToIssue = jest.fn();
 
 function baseParam(overrides: Record<string, unknown> = {}) {
   return {
-    owner: 'o',
-    repo: 'r',
-    tokens: { token: 't' },
-    issue: { number: 42, desiredAssigneesCount: 1, creator: 'alice' },
-    pullRequest: { number: 42, creator: '' },
-    isIssue: true,
-    isPullRequest: false,
+    target: 'issue',
+    number: 42,
+    desiredAssigneesCount: 1,
+    creator: 'alice',
     ...overrides,
   } as unknown as Parameters<AssignMemberToIssueUseCase['invoke']>[0];
 }
@@ -43,14 +40,14 @@ describe('AssignMemberToIssueUseCase', () => {
   });
 
   it('assigns issue creator when creator is team member and not yet assigned', async () => {
-    const param = baseParam({ issue: { number: 42, desiredAssigneesCount: 1, creator: 'alice' } });
+    const param = baseParam();
     const results = await useCase.invoke(param);
-    expect(mockAssignMembersToIssue).toHaveBeenCalledWith('o', 'r', 42, ['alice'], 't');
+    expect(mockAssignMembersToIssue).toHaveBeenCalledWith(42, ['alice']);
     expect(results.some((r) => r.success && r.steps?.some((s) => s.includes('alice')))).toBe(true);
   });
 
   it('returns success executed true when no more assignees needed after assigning creator', async () => {
-    const param = baseParam({ issue: { number: 42, desiredAssigneesCount: 1, creator: 'alice' } });
+    const param = baseParam();
     mockGetCurrentAssignees.mockResolvedValue([]);
     const results = await useCase.invoke(param);
     expect(results.length).toBeGreaterThanOrEqual(1);
@@ -61,11 +58,12 @@ describe('AssignMemberToIssueUseCase', () => {
     mockGetCurrentAssignees.mockResolvedValue([]);
     mockGetAllMembers.mockResolvedValue(['alice', 'bob']);
     const param = baseParam({
-      issue: { number: 42, desiredAssigneesCount: 2, creator: '' },
+      desiredAssigneesCount: 2,
+      creator: '',
     });
     mockAssignMembersToIssue.mockResolvedValue(['bob']);
     const results = await useCase.invoke(param);
-    expect(mockGetRandomMembers).toHaveBeenCalledWith('o', 2, [], 't');
+    expect(mockGetRandomMembers).toHaveBeenCalledWith(2, []);
     expect(mockAssignMembersToIssue).toHaveBeenCalled();
   });
 
@@ -73,7 +71,7 @@ describe('AssignMemberToIssueUseCase', () => {
     mockGetRandomMembers.mockResolvedValue([]);
     mockGetCurrentAssignees.mockResolvedValue([]);
     const param = baseParam({
-      issue: { number: 42, desiredAssigneesCount: 1, creator: '' },
+      creator: '',
     });
     const results = await useCase.invoke(param);
     expect(results.some((r) => !r.success && r.steps?.some((s) => s.includes('no one was found')))).toBe(true);
@@ -91,15 +89,14 @@ describe('AssignMemberToIssueUseCase', () => {
     mockGetCurrentAssignees.mockResolvedValue([]);
     mockAssignMembersToIssue.mockResolvedValue(['bob']);
     const param = baseParam({
-      isIssue: false,
-      isPullRequest: true,
-      issue: { number: 99, desiredAssigneesCount: 1, creator: '' },
-      pullRequest: { number: 99, desiredAssigneesCount: 1, creator: 'bob' },
+      target: 'pull request',
+      number: 99,
+      creator: 'bob',
     });
 
     const results = await useCase.invoke(param);
 
-    expect(mockAssignMembersToIssue).toHaveBeenCalledWith('o', 'r', 99, ['bob'], 't');
+    expect(mockAssignMembersToIssue).toHaveBeenCalledWith(99, ['bob']);
     expect(results.some((r) => r.success && r.steps?.some((s) => s.includes('bob') && s.includes('creator')))).toBe(
       true
     );
