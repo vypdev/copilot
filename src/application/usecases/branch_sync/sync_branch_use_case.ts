@@ -1,16 +1,16 @@
-import type { Execution } from "../../../data/model/execution";
 import { Result } from "../../../data/model/result";
 import type { BranchSyncCommandOptions } from "../../../domain/branch_sync_command";
 import { getBranchSyncConflictsPrompt } from "../../../prompts/branch_sync_conflicts";
 import type { FixerQueryPort } from "../../ports/agent_fixer_ports";
-import type { AuthenticatedUserPort } from "../../ports/authenticated_user_ports";
+import type { BoundAuthenticatedUserPort } from "../../ports/authenticated_user_ports";
 import type {
-  BranchDependencyQueryPort,
+  BoundBranchDependencyQueryPort,
   BranchMergePreparation,
   BranchSyncTarget,
-  BranchSyncWorkspacePort,
+  BoundBranchSyncWorkspacePort,
 } from "../../ports/branch_sync_ports";
-import type { GitCommitPort } from "../../ports/git_ports";
+import type { BugbotGitMutationPort } from '../../ports/bugbot_git_ports';
+import type { BranchSyncContext } from '../push_single_action_contexts';
 import { logError, logInfo } from "../../ports/logging_ports";
 import { MAX_VERIFY_COMMANDS, limitVerifyCommands } from "../steps/commit/bugbot/verify_command_policy";
 import { runVerifyCommands } from "../steps/commit/bugbot/verify_command_runner";
@@ -24,7 +24,7 @@ import {
 } from "./branch_sync_execution_policy";
 
 export interface SyncBranchRequest {
-  readonly execution: Execution;
+  readonly context: BranchSyncContext;
   readonly options: BranchSyncCommandOptions;
 }
 
@@ -33,30 +33,24 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
   readonly taskId = BRANCH_SYNC_TASK_ID;
 
   constructor(
-    private readonly dependencies: BranchDependencyQueryPort,
-    private readonly workspace: BranchSyncWorkspacePort,
+    private readonly dependencies: BoundBranchDependencyQueryPort,
+    private readonly workspace: BoundBranchSyncWorkspacePort,
     private readonly fixer: FixerQueryPort,
-    private readonly authenticatedUser: AuthenticatedUserPort,
-    private readonly git: GitCommitPort,
+    private readonly authenticatedUser: BoundAuthenticatedUserPort,
+    private readonly git: Pick<BugbotGitMutationPort, 'execute'>,
   ) {}
 
   async invoke(request: SyncBranchRequest): Promise<Result[]> {
-    const { execution, options } = request;
+    const { context, options } = request;
     try {
-      const conversationNumber = resolveConversationNumber(execution);
-      const target = await this.dependencies.resolveTarget(
-        execution.owner,
-        execution.repo,
-        conversationNumber,
-        execution.tokens.token,
-      );
+      const target = await this.dependencies.resolveTarget(context.conversationNumber);
       if (!target) return [unavailableBranchSyncResult("No linked working branch with an identifiable parent was found for this issue or pull request.")];
 
       const parentBranch = options.parentOverride ?? target.parentBranch;
       if (parentBranch === target.workingBranch) {
         return [unavailableBranchSyncResult("The parent and working branch must be different.")];
       }
-      return await this.synchronize(execution, options, target, parentBranch);
+      return await this.synchronize(context, options, target, parentBranch);
     } catch (cause) {
       await this.safeAbort();
       logError("Branch synchronization failed.");
@@ -65,12 +59,12 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
   }
 
   private async synchronize(
-    execution: Execution,
+    context: BranchSyncContext,
     options: BranchSyncCommandOptions,
     target: BranchSyncTarget,
     parentBranch: string,
   ): Promise<Result[]> {
-    const preparation = await this.workspace.prepare(parentBranch, target.workingBranch, execution.tokens.token);
+    const preparation = await this.workspace.prepare(parentBranch, target.workingBranch);
     if (preparation.kind === "aligned") {
       return [this.completed(preparation, parentBranch, target, "already-aligned", 0)];
     }
@@ -80,19 +74,18 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
       return [this.completed(preparation, parentBranch, target, outcome, 0)];
     }
 
-    const conflictResolution = await this.resolveConflicts(execution, preparation, parentBranch, target, options.useAgent);
+    const conflictResolution = await this.resolveConflicts(context, preparation, parentBranch, target, options.useAgent);
     if (conflictResolution.failure) return [await this.abortFailure(conflictResolution.failure)];
 
-    const verification = await this.verifyPreparedMerge(execution, preparation);
+    const verification = await this.verifyPreparedMerge(context, preparation);
     if (verification.failure) return [await this.abortFailure(verification.failure)];
 
-    const author = await this.authenticatedUser.getTokenUserDetails(execution.tokens.token);
+    const author = await this.authenticatedUser.getUserDetails();
     const remoteValidation = await this.workspace.assertRemoteHeadsUnchanged(
       parentBranch,
       preparation.parentSha,
       target.workingBranch,
       preparation.childSha,
-      execution.tokens.token,
     );
     if (!remoteValidation.valid) {
       return [await this.abortFailure(remoteValidation.reason ?? "A branch changed while synchronization was running; retry from the latest heads.")];
@@ -102,29 +95,28 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
       target.workingBranch,
       `Merge ${parentBranch} into ${target.workingBranch}`,
       author,
-      execution.tokens.token,
     );
     const outcome = conflictResolution.agentUsed ? "merged-with-agent" : "merged-cleanly";
     return [this.completed(preparation, parentBranch, target, outcome, verification.commandCount, commitSha)];
   }
 
   private async resolveConflicts(
-    execution: Execution,
+    context: BranchSyncContext,
     preparation: BranchMergePreparation,
     parentBranch: string,
     target: BranchSyncTarget,
     useAgent: boolean,
   ): Promise<{ readonly agentUsed: boolean; readonly failure?: string }> {
     if (preparation.kind !== "conflicted") return { agentUsed: false };
-    const failure = branchSyncConflictEligibilityError(preparation, useAgent, execution);
+    const failure = branchSyncConflictEligibilityError(preparation, useAgent, context.agentConfiguration);
     if (failure) return { agentUsed: false, failure };
 
     logInfo(`Invoking the fixer agent for ${preparation.conflictPaths.length} merge conflict(s).`);
     const response = await this.fixer.fix({
-      configuration: execution.ai.getAgentConfiguration("fixer"),
+      configuration: context.agentConfiguration,
       prompt: getBranchSyncConflictsPrompt({
-        owner: execution.owner,
-        repo: execution.repo,
+        owner: context.repository.owner,
+        repo: context.repository.name,
         parentBranch,
         workingBranch: target.workingBranch,
         conflictPaths: preparation.conflictPaths.map((path) => `- ${path}`).join("\n"),
@@ -140,10 +132,10 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
   }
 
   private async verifyPreparedMerge(
-    execution: Execution,
+    context: BranchSyncContext,
     preparation: BranchMergePreparation,
   ): Promise<{ readonly commandCount: number; readonly failure?: string }> {
-    const commands = limitVerifyCommands(execution.ai.getBugbotFixVerifyCommands());
+    const commands = limitVerifyCommands([...context.verifyCommands]);
     if (commands.length === MAX_VERIFY_COMMANDS) logInfo(`Branch sync verification is capped at ${MAX_VERIFY_COMMANDS} commands.`);
     const verification = await runVerifyCommands(
       commands,
@@ -192,13 +184,4 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
       logError("Unable to abort the in-progress branch merge cleanly.");
     }
   }
-}
-
-function resolveConversationNumber(execution: Execution): number {
-  const candidates = [
-    execution.pullRequest.number,
-    execution.issue.number,
-    execution.issueNumber,
-  ];
-  return candidates.find((candidate) => candidate > 0) ?? -1;
 }

@@ -40,7 +40,11 @@ export async function runLocalAction(
             composition.latestTagQuery,
             'local',
             undefined,
-            createSynchronizeAgentActivityUseCase(),
+            createSynchronizeAgentActivityUseCase({
+                owner: execution.owner,
+                repository: execution.repo,
+                token: execution.tokens.token,
+            }),
         );
 
         if (options.render !== false) renderLocalActionResults(results);

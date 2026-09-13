@@ -1,4 +1,3 @@
-import type { Execution } from "../../data/model/execution";
 import { getResultPayload, Result } from "../../data/model/result";
 import { logError } from "../ports/logging_ports";
 import type { ParamUseCase } from "./base/param_usecase";
@@ -14,6 +13,28 @@ import type {
   BranchConfigurationPatch,
   IssueWorkflowStepContexts,
 } from './issue_workflow_context';
+import type {
+  RecommendStepsContext,
+  RecommendStepsOutcome,
+  RecommendationStatePatch,
+} from './push_single_action_contexts';
+
+export interface IssueWorkflowRouteContext {
+  readonly cleanIssueBranches: boolean;
+  readonly branched: boolean;
+  readonly membersOnly: boolean;
+  readonly actor: string;
+  readonly newIssue: boolean;
+  readonly tokenUser?: string;
+  readonly recommendation?: 'answer-help' | 'recommend';
+  readonly recommendSteps: RecommendStepsContext;
+}
+
+export interface IssueWorkflowOutcome {
+  readonly results: readonly Result[];
+  readonly branchConfigurationPatch?: BranchConfigurationPatch;
+  readonly recommendationStatePatch?: RecommendationStatePatch;
+}
 
 export interface IssueSharedStepContexts {
   readonly permissions: CheckPermissionsContext;
@@ -23,7 +44,7 @@ export interface IssueSharedStepContexts {
 }
 
 export interface IssueWorkflowPorts {
-  recommendStepsUseCase: ParamUseCase<Execution, Result[]>;
+  recommendStepsUseCase: ParamUseCase<RecommendStepsContext, RecommendStepsOutcome>;
   answerIssueHelpUseCase: ParamUseCase<AnswerIssueHelpContext, Result[]>;
   workflowSteps: IssueWorkflowSteps;
   actorAuthorizationPort?: BoundActorAuthorizationPort;
@@ -32,17 +53,19 @@ export interface IssueWorkflowPorts {
 
 /** Coordinates issue lifecycle steps in their required sequential order. */
 export async function runIssueWorkflow(
-  param: Execution,
+  context: IssueWorkflowRouteContext,
   taskId: string,
   ports: IssueWorkflowPorts,
-): Promise<Result[]> {
+): Promise<IssueWorkflowOutcome> {
   const results: Result[] = [];
+  let branchConfigurationPatch: BranchConfigurationPatch | undefined;
+  let recommendationStatePatch: RecommendationStatePatch | undefined;
   const permissionResult = await ports.workflowSteps.checkPermissions.invoke(ports.sharedContexts.permissions);
   const lastAction = permissionResult[permissionResult.length - 1];
   if (!lastAction) {
     const permissionError = new ApplicationError('provider.contract-invalid', "Permission check returned no result.");
     logError(`Unable to continue ${taskId}: ${permissionError.message}`);
-    return [
+    return issueWorkflowOutcome([
       new Result({
         id: taskId,
         success: false,
@@ -50,16 +73,16 @@ export async function runIssueWorkflow(
         steps: ["Unable to verify whether the issue action is authorized."],
         errors: [permissionError],
       }),
-    ];
+    ]);
   }
 
   if (!lastAction.success && lastAction.executed) {
     results.push(...permissionResult);
     results.push(...(await ports.workflowSteps.closeNotAllowedIssue.invoke(ports.sharedContexts.steps.closeNotAllowed)));
-    return results;
+    return issueWorkflowOutcome(results);
   }
 
-  if (param.cleanIssueBranches) {
+  if (context.cleanIssueBranches) {
     results.push(...(await ports.workflowSteps.removeIssueBranches.invoke(ports.sharedContexts.steps.removeIssueBranches)));
   }
 
@@ -68,9 +91,9 @@ export async function runIssueWorkflow(
   results.push(...(await ports.workflowSteps.updateIssueType.invoke(ports.sharedContexts.steps.issueType)));
   results.push(...(await ports.workflowSteps.linkIssueProject.invoke(ports.sharedContexts.projectLink)));
   results.push(...(await ports.workflowSteps.checkPriorityIssueSize.invoke(ports.sharedContexts.steps.priority)));
-  if (param.isBranched) {
+  if (context.branched) {
     const outcome = await ports.workflowSteps.prepareBranches.invoke(ports.sharedContexts.steps.prepareBranches);
-    applyBranchConfigurationPatch(param, outcome.configurationPatch);
+    branchConfigurationPatch = outcome.configurationPatch;
     results.push(...outcome.results);
   } else {
     results.push(...(await ports.workflowSteps.removeIssueBranches.invoke(ports.sharedContexts.steps.removeIssueBranches)));
@@ -78,24 +101,27 @@ export async function runIssueWorkflow(
   results.push(...(await ports.workflowSteps.removeNotNeededBranches.invoke(ports.sharedContexts.steps.removeObsoleteBranches)));
   results.push(...(await ports.workflowSteps.deployAdded.invoke(ports.sharedContexts.steps.deployAdded)));
 
-  const membersOnly = param.ai.getAiMembersOnly();
-  const agentAllowed = !membersOnly || Boolean(
+  const agentAllowed = !context.membersOnly || Boolean(
     ports.actorAuthorizationPort
-    && await ports.actorAuthorizationPort.isActorAllowedToModifyFiles(param.actor),
+    && await ports.actorAuthorizationPort.isActorAllowedToModifyFiles(context.actor),
   );
-  const recommendation = agentAllowed ? resolveIssueRecommendation(param) : undefined;
+  const recommendation = agentAllowed ? context.recommendation : undefined;
   if (recommendation) {
-    const recommendationResults = recommendation === 'answer-help'
-      ? await ports.answerIssueHelpUseCase.invoke(ports.sharedContexts.steps.answerHelp)
-      : await ports.recommendStepsUseCase.invoke(param);
+    const recommendationOutcome = recommendation === 'answer-help'
+      ? { results: await ports.answerIssueHelpUseCase.invoke(ports.sharedContexts.steps.answerHelp) }
+      : await ports.recommendStepsUseCase.invoke(context.recommendSteps);
+    const recommendationResults = recommendationOutcome.results;
+    recommendationStatePatch = 'configurationPatch' in recommendationOutcome
+      ? recommendationOutcome.configurationPatch
+      : undefined;
     results.push(...recommendationResults);
-    if (isNewIssue(param) && !containsWelcome(recommendationResults)) {
-      results.push(buildCopilotWelcomeResult(param.tokenUser));
+    if (context.newIssue && !containsWelcome(recommendationResults)) {
+      results.push(buildCopilotWelcomeResult(context.tokenUser));
     }
-  } else if (isNewIssue(param)) {
-    results.push(buildCopilotWelcomeResult(param.tokenUser));
+  } else if (context.newIssue) {
+    results.push(buildCopilotWelcomeResult(context.tokenUser));
   }
-  return results;
+  return issueWorkflowOutcome(results, branchConfigurationPatch, recommendationStatePatch);
 }
 
 function containsWelcome(results: readonly Result[]): boolean {
@@ -105,28 +131,14 @@ function containsWelcome(results: readonly Result[]): boolean {
   );
 }
 
-function isNewIssue(param: Execution): boolean {
-  return param.eventName === 'issues' && param.inputs?.action === 'opened';
-}
-
-function resolveIssueRecommendation(
-  param: Execution,
-): 'answer-help' | 'recommend' | undefined {
-  if (!param.issue.opened && !param.issue.descriptionEdited) return undefined;
-  if (param.labels.isQuestion || param.labels.isHelp) return 'answer-help';
-  if (param.labels.isRelease) return undefined;
-  return 'recommend';
-}
-
-function applyBranchConfigurationPatch(
-  param: Execution,
-  patch: BranchConfigurationPatch,
-): void {
-  if (patch.parentBranch !== undefined) param.currentConfiguration.parentBranch = patch.parentBranch;
-  if (patch.workingBranch !== undefined) param.currentConfiguration.workingBranch = patch.workingBranch;
-  if (patch.releaseBranch !== undefined) param.currentConfiguration.releaseBranch = patch.releaseBranch;
-  if (patch.releaseOriginBranch !== undefined) param.currentConfiguration.releaseOriginBranch = patch.releaseOriginBranch;
-  if (patch.releaseOriginSha !== undefined) param.currentConfiguration.releaseOriginSha = patch.releaseOriginSha;
-  if (patch.hotfixBranch !== undefined) param.currentConfiguration.hotfixBranch = patch.hotfixBranch;
-  if (patch.hotfixOriginSha !== undefined) param.currentConfiguration.hotfixOriginSha = patch.hotfixOriginSha;
+function issueWorkflowOutcome(
+  results: readonly Result[],
+  branchConfigurationPatch?: BranchConfigurationPatch,
+  recommendationStatePatch?: RecommendationStatePatch,
+): IssueWorkflowOutcome {
+  return Object.freeze({
+    results: Object.freeze([...results]),
+    ...(branchConfigurationPatch ? { branchConfigurationPatch: Object.freeze({ ...branchConfigurationPatch }) } : {}),
+    ...(recommendationStatePatch ? { recommendationStatePatch: Object.freeze({ ...recommendationStatePatch }) } : {}),
+  });
 }

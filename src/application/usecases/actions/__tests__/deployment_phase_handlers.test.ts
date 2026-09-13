@@ -75,7 +75,6 @@ function context(
   return {
     owner: "owner",
     repo: "repo",
-    tokens: { token: "token" },
     branches: {
       defaultBranch: "master",
       development: "develop",

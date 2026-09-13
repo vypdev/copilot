@@ -1,21 +1,21 @@
-import type { Execution } from '../../../data/model/execution';
 import type { Result } from '../../../data/model/result';
 import { ParamUseCase } from '../base/param_usecase';
-import type { IssueClosurePort } from '../../ports/issue_lifecycle_ports';
-import type { IssueInactivityClockPort, IssueInactivityQueryPort } from '../../ports/issue_inactivity_ports';
+import type { BoundIssueClosurePort } from '../../ports/issue_lifecycle_ports';
+import type { BoundIssueInactivityQueryPort, IssueInactivityClockPort } from '../../ports/issue_inactivity_ports';
+import type { InactivityContext } from '../push_single_action_contexts';
 import { runCloseInactiveIssuesWorkflow } from './close_inactive_issues_workflow';
 
 /** Application boundary for the scheduled inactivity-maintenance action. */
-export class CloseInactiveIssuesUseCase implements ParamUseCase<Execution, Result[]> {
+export class CloseInactiveIssuesUseCase implements ParamUseCase<InactivityContext, Result[]> {
     taskId = 'CloseInactiveIssuesUseCase';
 
     constructor(
-        private readonly issueQueryPort: IssueInactivityQueryPort,
-        private readonly issueClosurePort: IssueClosurePort,
+        private readonly issueQueryPort: BoundIssueInactivityQueryPort,
+        private readonly issueClosurePort: BoundIssueClosurePort,
         private readonly clock: IssueInactivityClockPort,
     ) {}
 
-    async invoke(param: Execution): Promise<Result[]> {
+    async invoke(param: InactivityContext): Promise<Result[]> {
         return runCloseInactiveIssuesWorkflow(param, {
             issueQueryPort: this.issueQueryPort,
             issueClosurePort: this.issueClosurePort,

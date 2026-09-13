@@ -1,6 +1,7 @@
 import type { Execution } from "../../../../data/model/execution";
 import type { BranchMergePreparation } from "../../../ports/branch_sync_ports";
 import { SyncBranchUseCase } from "../sync_branch_use_case";
+import { projectBranchSyncContext } from '../../push_single_action_contexts';
 
 const target = {
   issueNumber: 42,
@@ -9,8 +10,8 @@ const target = {
   workingBranch: "feature/42",
 };
 
-function execution(overrides: Record<string, unknown> = {}): Execution {
-  return {
+function execution(overrides: Record<string, unknown> = {}) {
+  return projectBranchSyncContext({
     owner: "org",
     repo: "repo",
     tokens: { token: "token" },
@@ -22,7 +23,7 @@ function execution(overrides: Record<string, unknown> = {}): Execution {
       getBugbotFixVerifyCommands: () => ["pnpm test"],
     },
     ...overrides,
-  } as unknown as Execution;
+  } as unknown as Execution);
 }
 
 function setup(preparation: BranchMergePreparation) {
@@ -38,7 +39,7 @@ function setup(preparation: BranchMergePreparation) {
     abort: jest.fn().mockResolvedValue(undefined),
   };
   const fixer = { fix: jest.fn().mockResolvedValue({ text: "resolved", sessionId: "s" }) };
-  const authenticatedUser = { getTokenUserDetails: jest.fn().mockResolvedValue({ name: "Bot", email: "bot@example.com" }) };
+  const authenticatedUser = { getUserDetails: jest.fn().mockResolvedValue({ name: "Bot", email: "bot@example.com" }) };
   const git = { execute: jest.fn().mockResolvedValue(0) };
   return {
     dependencies,
@@ -55,15 +56,15 @@ const options = { dryRun: false, useAgent: true };
 describe("SyncBranchUseCase", () => {
   it("merges a clean parent update, verifies it, checks for races, and pushes", async () => {
     const context = setup({ kind: "clean", parentSha: "parent", childSha: "child" });
-    const results = await context.useCase.invoke({ execution: execution(), options });
+    const results = await context.useCase.invoke({ context: execution(), options });
 
     expect(context.fixer.fix).not.toHaveBeenCalled();
     expect(context.git.execute).toHaveBeenCalledWith("pnpm", ["test"], { untrusted: true });
     expect(context.workspace.assertRemoteHeadsUnchanged).toHaveBeenCalledWith(
-      "develop", "parent", "feature/42", "child", "token",
+      "develop", "parent", "feature/42", "child",
     );
     expect(context.workspace.commitAndPush).toHaveBeenCalledWith(
-      "feature/42", "Merge develop into feature/42", { name: "Bot", email: "bot@example.com" }, "token",
+      "feature/42", "Merge develop into feature/42", { name: "Bot", email: "bot@example.com" },
     );
     expect(results[0]).toMatchObject({
       success: true,
@@ -75,7 +76,7 @@ describe("SyncBranchUseCase", () => {
   it("delegates eligible conflicts only, then validates and reports agent use", async () => {
     const preparation = { kind: "conflicted", parentSha: "parent", childSha: "child", conflictPaths: ["src/a.ts"] } as const;
     const context = setup(preparation);
-    const results = await context.useCase.invoke({ execution: execution(), options });
+    const results = await context.useCase.invoke({ context: execution(), options });
 
     expect(context.fixer.fix).toHaveBeenCalledWith(expect.objectContaining({
       configuration: expect.objectContaining({ model: "model" }),
@@ -89,7 +90,7 @@ describe("SyncBranchUseCase", () => {
   it("performs a dry run without invoking the agent or pushing", async () => {
     const context = setup({ kind: "conflicted", parentSha: "parent", childSha: "child", conflictPaths: ["src/a.ts"] });
     const results = await context.useCase.invoke({
-      execution: execution(),
+      context: execution(),
       options: { dryRun: true, useAgent: true },
     });
 
@@ -102,7 +103,7 @@ describe("SyncBranchUseCase", () => {
   it("reports a clean dry run without invoking verification or pushing", async () => {
     const context = setup({ kind: "clean", parentSha: "parent", childSha: "child" });
     const results = await context.useCase.invoke({
-      execution: execution(),
+      context: execution(),
       options: { dryRun: true, useAgent: true },
     });
 
@@ -118,7 +119,7 @@ describe("SyncBranchUseCase", () => {
     ["too many paths", options, Array.from({ length: 21 }, (_, index) => `src/${index}.ts`)],
   ])("aborts conflicted synchronization when %s", async (_name, commandOptions, conflictPaths) => {
     const context = setup({ kind: "conflicted", parentSha: "parent", childSha: "child", conflictPaths });
-    const results = await context.useCase.invoke({ execution: execution(), options: commandOptions });
+    const results = await context.useCase.invoke({ context: execution(), options: commandOptions });
 
     expect(context.workspace.abort).toHaveBeenCalled();
     expect(context.fixer.fix).not.toHaveBeenCalled();
@@ -129,13 +130,13 @@ describe("SyncBranchUseCase", () => {
   it("aborts when verification or the remote-head race check fails", async () => {
     const verification = setup({ kind: "clean", parentSha: "parent", childSha: "child" });
     verification.git.execute.mockResolvedValue(1);
-    const verifyResults = await verification.useCase.invoke({ execution: execution(), options });
+    const verifyResults = await verification.useCase.invoke({ context: execution(), options });
     expect(verification.workspace.abort).toHaveBeenCalled();
     expect(verifyResults[0]).toMatchObject({ success: false });
 
     const raced = setup({ kind: "clean", parentSha: "parent", childSha: "child" });
     raced.workspace.assertRemoteHeadsUnchanged.mockResolvedValue({ valid: false, reason: "parent changed" });
-    const raceResults = await raced.useCase.invoke({ execution: execution(), options });
+    const raceResults = await raced.useCase.invoke({ context: execution(), options });
     expect(raced.workspace.abort).toHaveBeenCalled();
     expect(raced.workspace.commitAndPush).not.toHaveBeenCalled();
     expect(raceResults[0].errors[0].message).toBe("parent changed");
@@ -145,7 +146,7 @@ describe("SyncBranchUseCase", () => {
     const context = setup({ kind: "clean", parentSha: "parent", childSha: "child" });
     context.git.execute.mockRejectedValue(new Error("private verification detail"));
 
-    const results = await context.useCase.invoke({ execution: execution(), options });
+    const results = await context.useCase.invoke({ context: execution(), options });
 
     expect(context.workspace.abort).toHaveBeenCalledTimes(1);
     expect(results[0]).toMatchObject({ success: false });
@@ -156,7 +157,7 @@ describe("SyncBranchUseCase", () => {
     const context = setup({ kind: "clean", parentSha: "parent", childSha: "child" });
     const commands = Array.from({ length: 25 }, (_, index) => `pnpm test:${index}`);
     const results = await context.useCase.invoke({
-      execution: execution({
+      context: execution({
         ai: {
           getAgentConfiguration: () => ({ provider: "codex", model: "model" }),
           getBugbotFixVerifyCommands: () => commands,
@@ -174,17 +175,17 @@ describe("SyncBranchUseCase", () => {
       kind: "conflicted", parentSha: "parent", childSha: "child", conflictPaths: ["src/a.ts"],
     });
     invalidResolution.workspace.validatePreparedMerge.mockResolvedValue({ valid: false });
-    const resolutionResults = await invalidResolution.useCase.invoke({ execution: execution(), options });
+    const resolutionResults = await invalidResolution.useCase.invoke({ context: execution(), options });
     expect(resolutionResults[0].errors[0].message).toBe("The agent resolution did not pass workspace safety validation.");
 
     const invalidVerification = setup({ kind: "clean", parentSha: "parent", childSha: "child" });
     invalidVerification.workspace.validatePreparedMerge.mockResolvedValue({ valid: false });
-    const verificationResults = await invalidVerification.useCase.invoke({ execution: execution(), options });
+    const verificationResults = await invalidVerification.useCase.invoke({ context: execution(), options });
     expect(verificationResults[0].errors[0].message).toBe("Verification commands changed the prepared merge unexpectedly.");
 
     const raced = setup({ kind: "clean", parentSha: "parent", childSha: "child" });
     raced.workspace.assertRemoteHeadsUnchanged.mockResolvedValue({ valid: false });
-    const raceResults = await raced.useCase.invoke({ execution: execution(), options });
+    const raceResults = await raced.useCase.invoke({ context: execution(), options });
     expect(raceResults[0].errors[0].message).toBe(
       "A branch changed while synchronization was running; retry from the latest heads.",
     );
@@ -196,7 +197,7 @@ describe("SyncBranchUseCase", () => {
     });
     context.fixer.fix.mockResolvedValue({ text: "   " });
 
-    const results = await context.useCase.invoke({ execution: execution(), options });
+    const results = await context.useCase.invoke({ context: execution(), options });
 
     expect(context.workspace.abort).toHaveBeenCalledTimes(1);
     expect(context.workspace.validatePreparedMerge).not.toHaveBeenCalled();
@@ -206,23 +207,23 @@ describe("SyncBranchUseCase", () => {
   it("returns an idempotent result for aligned branches and supports an explicit parent", async () => {
     const context = setup({ kind: "aligned", parentSha: "parent", childSha: "child" });
     const results = await context.useCase.invoke({
-      execution: execution({ pullRequest: { number: 91 }, issue: { number: 42 } }),
+      context: execution({ pullRequest: { number: 91 }, issue: { number: 42 } }),
       options: { dryRun: false, useAgent: true, parentOverride: "release/3" },
     });
 
-    expect(context.dependencies.resolveTarget).toHaveBeenCalledWith("org", "repo", 91, "token");
-    expect(context.workspace.prepare).toHaveBeenCalledWith("release/3", "feature/42", "token");
+    expect(context.dependencies.resolveTarget).toHaveBeenCalledWith(91);
+    expect(context.workspace.prepare).toHaveBeenCalledWith("release/3", "feature/42");
     expect(results[0]).toMatchObject({ success: true, executed: false });
   });
 
   it("rejects a parent override that names the working branch", async () => {
     const context = setup({ kind: "aligned", parentSha: "parent", childSha: "child" });
     const results = await context.useCase.invoke({
-      execution: execution({ pullRequest: { number: -1 }, issue: { number: -1 }, issueNumber: 7 }),
+      context: execution({ pullRequest: { number: -1 }, issue: { number: -1 }, issueNumber: 7 }),
       options: { ...options, parentOverride: "feature/42" },
     });
 
-    expect(context.dependencies.resolveTarget).toHaveBeenCalledWith("org", "repo", 7, "token");
+    expect(context.dependencies.resolveTarget).toHaveBeenCalledWith(7);
     expect(context.workspace.prepare).not.toHaveBeenCalled();
     expect(results[0]).toMatchObject({ success: false, executed: false });
   });
@@ -231,16 +232,16 @@ describe("SyncBranchUseCase", () => {
     const missing = setup({ kind: "aligned", parentSha: "parent", childSha: "child" });
     missing.dependencies.resolveTarget.mockResolvedValue(undefined);
     const missingResults = await missing.useCase.invoke({
-      execution: execution({ pullRequest: { number: -1 }, issue: { number: -1 }, issueNumber: -1 }),
+      context: execution({ pullRequest: { number: -1 }, issue: { number: -1 }, issueNumber: -1 }),
       options,
     });
-    expect(missing.dependencies.resolveTarget).toHaveBeenCalledWith("org", "repo", -1, "token");
+    expect(missing.dependencies.resolveTarget).toHaveBeenCalledWith(-1);
     expect(missingResults[0]).toMatchObject({ success: false, executed: false });
 
     const failed = setup({ kind: "clean", parentSha: "parent", childSha: "child" });
     failed.workspace.prepare.mockRejectedValue(new Error("secret provider detail"));
     failed.workspace.abort.mockRejectedValue(new Error("abort detail"));
-    const failedResults = await failed.useCase.invoke({ execution: execution(), options });
+    const failedResults = await failed.useCase.invoke({ context: execution(), options });
     expect(failedResults[0]).toMatchObject({ success: false, executed: true });
     expect(JSON.stringify(failedResults)).not.toContain("secret provider detail");
   });

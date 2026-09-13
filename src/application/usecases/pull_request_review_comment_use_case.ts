@@ -59,7 +59,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
         thinkUseCase: this.thinkUseCase,
         autofixUseCase: this.autofixUseCase,
         doUserRequestUseCase: {
-          invoke: (request) => this.doUserRequestUseCase.invoke({ execution: param, ...request }),
+          invoke: (request) => this.doUserRequestUseCase.invoke({ context: context.userRequest, ...request }),
         },
         bugbotGitMutationPort: this.bugbotGitMutationPort,
         dismissBugbotFindingsUseCase: this.dismissBugbotFindingsUseCase,
@@ -72,7 +72,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
           : undefined,
         rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
         syncBranchUseCase: this.syncBranchUseCase
-          ? { invoke: (options) => this.syncBranchUseCase!.invoke({ execution: param, options }) }
+          ? { invoke: (options) => this.syncBranchUseCase!.invoke({ context: context.branchSync, options }) }
           : undefined,
       },
       {

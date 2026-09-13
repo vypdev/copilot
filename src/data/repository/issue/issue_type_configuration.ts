@@ -1,4 +1,4 @@
-import type { IssueTypes } from '../../model/issue_types';
+import type { InitialIssueTypeConfiguration } from '../../../application/ports/issue_management_ports';
 
 export interface ConfiguredIssueType {
     readonly name: string;
@@ -7,7 +7,7 @@ export interface ConfiguredIssueType {
 }
 
 /** Maps the domain issue-type catalog to the provider-neutral provisioning input. */
-export function configuredIssueTypes(issueTypes: IssueTypes): readonly ConfiguredIssueType[] {
+export function configuredIssueTypes(issueTypes: InitialIssueTypeConfiguration): readonly ConfiguredIssueType[] {
     return [
         { name: issueTypes.task, description: issueTypes.taskDescription, color: issueTypes.taskColor },
         { name: issueTypes.bug, description: issueTypes.bugDescription, color: issueTypes.bugColor },

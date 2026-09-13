@@ -1,51 +1,41 @@
-import type { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
-import type { IssueNotificationPort } from "../../../../application/ports/issue_lifecycle_ports";
+import type { BoundIssuePushNotificationPort } from "../../../../application/ports/issue_lifecycle_ports";
+import type { CommitNotificationContext } from '../../push_single_action_contexts';
 import { logDebugInfo, logError } from "../../../ports/logging_ports";
 import { buildCommitPrefix } from "../common/execute_script_use_case";
 import { buildCommitNotificationContent } from "./commit_notification_content_policy";
 import { toApplicationError } from "../../../errors/application_error";
 
 export async function runNotifyNewCommitOnIssueWorkflow(
-  param: Execution,
+  param: CommitNotificationContext,
   taskId: string,
-  issueRepository: IssueNotificationPort,
+  issueRepository: BoundIssuePushNotificationPort,
 ): Promise<Result[]> {
   const result: Result[] = [];
   try {
-    const branchName = param.commit.branch;
+    const branchName = param.branch;
     let commitPrefix = "";
     if (param.commitPrefixBuilder.length > 0) {
-      param.commitPrefixBuilderParams = { branchName };
       commitPrefix = buildCommitPrefix(branchName, param.commitPrefixBuilder);
       logDebugInfo(`Commit prefix: ${commitPrefix}`);
     }
 
     const { body } = buildCommitNotificationContent(param, commitPrefix);
-    if (param.issue.reopenOnPush) {
+    if (param.reopenOnPush) {
       const opened = await issueRepository.openIssue(
-        param.owner,
-        param.repo,
         param.issueNumber,
-        param.tokens.token,
       );
       if (opened) {
         await issueRepository.addComment(
-          param.owner,
-          param.repo,
           param.issueNumber,
           `This issue was re-opened after pushing new commits to the branch \`${branchName}\`.`,
-          param.tokens.token,
         );
       }
     }
 
     await issueRepository.addComment(
-      param.owner,
-      param.repo,
       param.issueNumber,
       body,
-      param.tokens.token,
     );
   } catch (error) {
     const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to notify the issue about the new commit.');

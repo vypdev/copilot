@@ -1,4 +1,5 @@
 import { SynchronizeAgentActivityUseCase } from '../synchronize_agent_activity_use_case';
+import { projectAgentActivityContext } from '../../push_single_action_contexts';
 
 function execution(overrides: Record<string, unknown> = {}): any {
     return {
@@ -42,26 +43,21 @@ describe('SynchronizeAgentActivityUseCase', () => {
         const param = execution();
         const useCase = new SynchronizeAgentActivityUseCase({ setLabels, getLabels });
 
-        await useCase.start(param);
-        await useCase.finish(param);
+        const context = projectAgentActivityContext(param);
+        await useCase.start(context);
+        await useCase.finish(context);
 
         expect(setLabels).toHaveBeenNthCalledWith(
             1,
-            'owner',
-            'repo',
             7,
             ['feature', 'state:in-progress', 'state:awaiting-maintainer', 'state:ai-processing'],
-            'token',
         );
         expect(setLabels).toHaveBeenNthCalledWith(
             2,
-            'owner',
-            'repo',
             7,
             ['feature', 'state:in-progress', 'state:awaiting-maintainer', 'size: M'],
-            'token',
         );
-        expect(getLabels).toHaveBeenCalledWith('owner', 'repo', 7, 'token');
+        expect(getLabels).toHaveBeenCalledWith(7);
     });
 
     it('keeps route execution best-effort when label synchronization fails', async () => {
@@ -69,8 +65,8 @@ describe('SynchronizeAgentActivityUseCase', () => {
         const getLabels = jest.fn().mockRejectedValue(new Error('labels unavailable'));
         const useCase = new SynchronizeAgentActivityUseCase({ setLabels, getLabels });
 
-        await expect(useCase.start(execution())).resolves.toBeUndefined();
-        await expect(useCase.finish(execution())).resolves.toBeUndefined();
+        await expect(useCase.start(projectAgentActivityContext(execution()))).resolves.toEqual({});
+        await expect(useCase.finish(projectAgentActivityContext(execution()))).resolves.toEqual({});
     });
 
     it('targets pull request labels for pull request review comments', async () => {
@@ -88,14 +84,11 @@ describe('SynchronizeAgentActivityUseCase', () => {
         });
         const useCase = new SynchronizeAgentActivityUseCase({ setLabels, getLabels: jest.fn() });
 
-        await useCase.start(param);
+        await useCase.start(projectAgentActivityContext(param));
 
         expect(setLabels).toHaveBeenCalledWith(
-            'owner',
-            'repo',
             11,
             ['state:reviewing', 'state:ai-processing'],
-            'token',
         );
     });
 });

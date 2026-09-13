@@ -16,6 +16,11 @@ export interface SetupWorkspacePort {
     hasValidToken(tokenOverride?: string): boolean;
 }
 
+export interface BoundSetupWorkspacePort {
+    prepare(selection?: SetupWorkspaceSelection): SetupWorkspaceResult;
+    hasValidToken(): boolean;
+}
+
 /** Read-only local facts used by doctor; it exposes no workspace mutation. */
 export interface SetupDoctorWorkspaceQueryPort {
     isRepositoryRoot(): boolean;

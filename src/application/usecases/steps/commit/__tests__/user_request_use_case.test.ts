@@ -3,7 +3,7 @@
  */
 
 import { DoUserRequestUseCase } from "../user_request_use_case";
-import type { GitCommitPort } from '../../../../ports/git_ports';
+import type { BugbotGitMutationPort } from '../../../../ports/bugbot_git_ports';
 
 jest.mock("../../../../../utils/logger", () => ({
     logInfo: jest.fn(),
@@ -16,23 +16,15 @@ const mockGitExecute = jest.fn();
 const mockGitFetch = jest.fn();
 
 
-function baseExecution(overrides: Record<string, unknown> = {}) {
+function baseContext(overrides: Record<string, unknown> = {}) {
     return {
-        owner: "o",
-        repo: "r",
         issueNumber: 42,
-        tokens: { token: "t" },
-        commit: { branch: "feature/42-foo" },
-        currentConfiguration: { parentBranch: "develop" },
-        branches: { development: "develop" },
-        ai: {
-            getAgentConfiguration: (task: 'findings' | 'fixer') => ({
-                provider: 'opencode',
-                model: 'model',
-            }),
-        },
+        headBranch: "feature/42-foo",
+        baseBranch: "develop",
+        repository: { owner: 'o', name: 'r' },
+        agentConfiguration: { provider: 'opencode', model: 'model' },
         ...overrides,
-    } as unknown as Parameters<DoUserRequestUseCase["invoke"]>[0]["execution"];
+    } as Parameters<DoUserRequestUseCase["invoke"]>[0]["context"];
 }
 
 describe("DoUserRequestUseCase", () => {
@@ -49,8 +41,9 @@ describe("DoUserRequestUseCase", () => {
             }
             return 0;
         });
-        const gitCommitPort: GitCommitPort = {
+        const gitCommitPort: BugbotGitMutationPort = {
             execute: mockGitExecute,
+            getAuthenticatedUserDetails: jest.fn(),
             configureAuthor: jest.fn(),
             fetch: mockGitFetch,
             stageAll: jest.fn(),
@@ -66,13 +59,10 @@ describe("DoUserRequestUseCase", () => {
     });
 
     it("returns empty results when OpenCode not configured", async () => {
-        const exec = baseExecution();
-        (exec as { ai?: { getAgentConfiguration: (task: 'findings' | 'fixer') => { provider: 'opencode'; model: string } } }).ai = {
-            getAgentConfiguration: () => ({ provider: 'opencode', model: '' }),
-        };
+        const context = baseContext({ agentConfiguration: { provider: 'opencode', model: '' } });
 
         const results = await useCase.invoke({
-            execution: exec,
+            context,
             userComment: "add a test for login",
         });
 
@@ -82,7 +72,7 @@ describe("DoUserRequestUseCase", () => {
 
     it("returns empty results when user comment is empty", async () => {
         const results = await useCase.invoke({
-            execution: baseExecution(),
+            context: baseContext(),
             userComment: "   ",
         });
 
@@ -94,7 +84,7 @@ describe("DoUserRequestUseCase", () => {
         mockCopilotMessage.mockResolvedValue({ text: undefined });
 
         const results = await useCase.invoke({
-            execution: baseExecution(),
+            context: baseContext(),
             userComment: "add a unit test for foo",
         });
 
@@ -109,7 +99,7 @@ describe("DoUserRequestUseCase", () => {
         mockCopilotMessage.mockResolvedValue({ text: "Added unit test for foo." });
 
         const results = await useCase.invoke({
-            execution: baseExecution(),
+            context: baseContext(),
             userComment: "add a unit test for foo",
             branchOverride: "feature/42-from-pr",
         });
@@ -127,7 +117,7 @@ describe("DoUserRequestUseCase", () => {
         expect(prompt).toContain("add a unit test for foo");
         expect(prompt).toContain("Owner: o");
         expect(prompt).toContain("Repository: r");
-        expect(mockGitFetch).toHaveBeenCalledWith('feature/42-from-pr', 't');
+        expect(mockGitFetch).toHaveBeenCalledWith('feature/42-from-pr');
         expect(mockGitExecute).toHaveBeenCalledWith('git', ['checkout', 'feature/42-from-pr']);
     });
 
@@ -138,7 +128,7 @@ describe("DoUserRequestUseCase", () => {
         });
 
         const results = await useCase.invoke({
-            execution: baseExecution(),
+            context: baseContext(),
             userComment: 'change the implementation',
         });
 
@@ -159,7 +149,7 @@ describe("DoUserRequestUseCase", () => {
         mockCopilotMessage.mockResolvedValue({ text: 'Done.' });
 
         const results = await useCase.invoke({
-            execution: baseExecution(),
+            context: baseContext(),
             userComment: 'change configuration',
         });
 
@@ -169,13 +159,10 @@ describe("DoUserRequestUseCase", () => {
 
     it("uses branches.development as base branch when parentBranch is undefined", async () => {
         mockCopilotMessage.mockResolvedValue({ text: "Done." });
-        const exec = baseExecution({
-            currentConfiguration: { parentBranch: undefined },
-            branches: { development: "main" },
-        });
+        const context = baseContext({ baseBranch: 'main' });
 
         await useCase.invoke({
-            execution: exec,
+            context,
             userComment: "add a readme",
         });
 
@@ -185,13 +172,10 @@ describe("DoUserRequestUseCase", () => {
 
     it("uses develop as base branch when parentBranch and branches.development are missing", async () => {
         mockCopilotMessage.mockResolvedValue({ text: "Done." });
-        const exec = baseExecution({
-            currentConfiguration: {},
-            branches: {},
-        });
+        const context = baseContext({ baseBranch: 'develop' });
 
         await useCase.invoke({
-            execution: exec,
+            context,
             userComment: "add a readme",
         });
 

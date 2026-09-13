@@ -128,7 +128,7 @@ describe("IssueUseCase", () => {
     mockPrepareBranchesInvoke.mockResolvedValue({ results: [], configurationPatch: {} });
     mockRemoveNotNeededInvoke.mockResolvedValue([]);
     mockDeployAddedInvoke.mockResolvedValue([]);
-    mockRecommendStepsInvoke.mockResolvedValue([]);
+    mockRecommendStepsInvoke.mockResolvedValue({ results: [] });
     mockAnswerIssueHelpInvoke.mockResolvedValue([]);
   });
 
@@ -220,9 +220,9 @@ describe("IssueUseCase", () => {
   });
 
   it("recommends steps for a newly opened non-release issue", async () => {
-    mockRecommendStepsInvoke.mockResolvedValue([
-      new Result({ id: "rec", success: true, executed: true, steps: [] }),
-    ]);
+    mockRecommendStepsInvoke.mockResolvedValue({
+      results: [new Result({ id: "rec", success: true, executed: true, steps: [] })],
+    });
     const param = minimalExecution({
       issue: { opened: true },
       labels: { isRelease: false, isQuestion: false, isHelp: false },
@@ -230,14 +230,14 @@ describe("IssueUseCase", () => {
 
     const results = await createUseCase().invoke(param);
 
-    expect(mockRecommendStepsInvoke).toHaveBeenCalledWith(param);
+    expect(mockRecommendStepsInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8 }));
     expect(results.some((result) => result.id === "rec")).toBe(true);
   });
 
   it("recommends steps when the issue description is edited", async () => {
-    mockRecommendStepsInvoke.mockResolvedValue([
-      new Result({ id: "rec", success: true, executed: true, steps: [] }),
-    ]);
+    mockRecommendStepsInvoke.mockResolvedValue({
+      results: [new Result({ id: "rec", success: true, executed: true, steps: [] })],
+    });
     const param = minimalExecution({
       issue: { opened: false, descriptionEdited: true },
       labels: { isRelease: false, isQuestion: false, isHelp: false },
@@ -245,7 +245,7 @@ describe("IssueUseCase", () => {
 
     const results = await createUseCase().invoke(param);
 
-    expect(mockRecommendStepsInvoke).toHaveBeenCalledWith(param);
+    expect(mockRecommendStepsInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8 }));
     expect(results.some((result) => result.id === "rec")).toBe(true);
   });
 
@@ -260,7 +260,7 @@ describe("IssueUseCase", () => {
     await createUseCase(authorization).invoke(param);
 
     expect(authorization.isActorAllowedToModifyFiles).toHaveBeenCalledWith('alice');
-    expect(mockRecommendStepsInvoke).toHaveBeenCalledWith(param);
+    expect(mockRecommendStepsInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8 }));
   });
 
   it('suppresses member-only issue recommendations when authorization is denied', async () => {

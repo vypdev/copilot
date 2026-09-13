@@ -50597,6 +50597,7 @@ const repository_context_1 = __nccwpck_require__(78958);
 const logging_ports_1 = __nccwpck_require__(6152);
 const logger_adapter_1 = __nccwpck_require__(72762);
 const agent_activity_policy_1 = __nccwpck_require__(15375);
+const push_single_action_contexts_1 = __nccwpck_require__(47841);
 const main_run_lifecycle_1 = __nccwpck_require__(916);
 async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, compositionSurface, lifecycleStateUseCase, agentActivityUseCase) {
     (0, logging_ports_1.configureApplicationLogger)((0, logger_adapter_1.createLoggerAdapter)());
@@ -50644,7 +50645,7 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, c
 async function runTrackedRoute(execution, route, run, lifecycleStateUseCase, agentActivityUseCase) {
     const trackActivity = agentActivityUseCase !== undefined && (0, agent_activity_policy_1.shouldTrackAgentActivity)(execution, route);
     if (trackActivity)
-        await agentActivityUseCase.start(execution);
+        applyAgentActivityOutcome(execution, await agentActivityUseCase.start((0, push_single_action_contexts_1.projectAgentActivityContext)(execution)));
     try {
         const results = await run();
         if (!lifecycleStateUseCase)
@@ -50653,7 +50654,17 @@ async function runTrackedRoute(execution, route, run, lifecycleStateUseCase, age
     }
     finally {
         if (trackActivity)
-            await agentActivityUseCase.finish(execution);
+            applyAgentActivityOutcome(execution, await agentActivityUseCase.finish((0, push_single_action_contexts_1.projectAgentActivityContext)(execution)));
+    }
+}
+function applyAgentActivityOutcome(execution, outcome) {
+    if (!outcome?.target || !outcome.labels)
+        return;
+    if (outcome.target.kind === 'pull-request') {
+        execution.labels.currentPullRequestLabels = [...outcome.labels];
+    }
+    else {
+        execution.labels.currentIssueLabels = [...outcome.labels];
     }
 }
 
@@ -51142,7 +51153,11 @@ async function runLocalAction(additionalParams, options = {}) {
         const composition = (0, local_action_composition_root_1.createLocalActionCompositionRoot)();
         const configuration = await (0, local_action_configuration_1.buildLocalActionConfiguration)(normalizedParams, composition.projectBoard.query);
         const execution = (0, local_action_execution_1.buildLocalActionExecution)(configuration, normalizedParams);
-        const results = await (0, common_action_1.mainRun)(execution, composition.projectBoard.command, composition.latestTagQuery, 'local', undefined, (0, agent_activity_composition_root_1.createSynchronizeAgentActivityUseCase)());
+        const results = await (0, common_action_1.mainRun)(execution, composition.projectBoard.command, composition.latestTagQuery, 'local', undefined, (0, agent_activity_composition_root_1.createSynchronizeAgentActivityUseCase)({
+            owner: execution.owner,
+            repository: execution.repo,
+            token: execution.tokens.token,
+        }));
         if (options.render !== false)
             (0, local_action_output_1.renderLocalActionResults)(results);
         return results;
@@ -56870,31 +56885,28 @@ class DeploymentOrchestrationRuntime {
     async publishDashboard(context, operation) {
         const marker = (0, deployment_presentation_policy_1.deploymentDashboardMarker)(operation.operationId, context.singleAction.issue);
         const body = (0, deployment_presentation_policy_1.renderDeploymentDashboard)(operation, presentationContext(context));
-        const current = await this.dependencies.presentation.findDashboard(context.owner, context.repo, context.singleAction.issue, marker, context.tokens.token);
+        const current = await this.dependencies.presentation.findDashboard(context.singleAction.issue, marker);
         if (current) {
-            await this.dependencies.presentation.updateDashboard(context.owner, context.repo, context.singleAction.issue, current.id, body, context.tokens.token);
+            await this.dependencies.presentation.updateDashboard(context.singleAction.issue, current.id, body);
             return;
         }
-        await this.dependencies.presentation.createDashboard(context.owner, context.repo, context.singleAction.issue, body, context.tokens.token);
+        await this.dependencies.presentation.createDashboard(context.singleAction.issue, body);
     }
     async publishMilestone(context, operation, name, body) {
         if (operation.commentMode !== "milestones")
             return;
         const marker = `<!-- copilot-deployment-milestone operation-id="${operation.operationId}" name="${name}" -->`;
-        await this.dependencies.presentation.publishMilestone(context.owner, context.repo, context.singleAction.issue, marker, body, context.tokens.token);
+        await this.dependencies.presentation.publishMilestone(context.singleAction.issue, marker, body);
     }
     async createOrReusePullRequest(context, operation, phase, target) {
         const headBranch = target?.syncBranch ?? target?.sourceBranch ?? operation.sourceBranch;
         const baseBranch = target?.targetBranch ?? operation.productionBranch;
         const query = {
-            owner: context.owner,
-            repository: context.repo,
             operationId: operation.operationId,
             phase,
             issue: context.singleAction.issue,
             headBranch,
             baseBranch,
-            token: context.tokens.token,
         };
         const existing = await this.dependencies.pullRequests.findManagedPullRequests(query);
         if (existing.length > 1) {
@@ -56926,7 +56938,7 @@ class DeploymentOrchestrationRuntime {
         return { kind: "configured", operation: managed };
     }
     async inspectMergeBehavior(context, operation, targetBranch, targetRole, candidateHeadSha, pullRequest) {
-        const capabilities = await this.dependencies.targetRules.getTargetCapabilities(context.owner, context.repo, targetBranch, context.tokens.token, { candidateHeadSha, ...(pullRequest === undefined ? {} : { pullRequest }) });
+        const capabilities = await this.dependencies.targetRules.getTargetCapabilities(targetBranch, { candidateHeadSha, ...(pullRequest === undefined ? {} : { pullRequest }) });
         const decision = (0, deployment_plan_policy_1.selectPullRequestMode)(operation.prMode, capabilities);
         if (decision.kind === "unsupported") {
             return this.unsupportedMergeBehavior(context, targetRole, targetBranch, capabilities, decision);
@@ -56955,7 +56967,7 @@ class DeploymentOrchestrationRuntime {
         if (deleteSync)
             await this.cleanupSyncBranches(context, operation);
         if (deleteSource) {
-            await this.dependencies.git.deleteBranch(context.owner, context.repo, operation.sourceBranch, operation.sourceSha, context.tokens.token);
+            await this.dependencies.git.deleteBranch(operation.sourceBranch, operation.sourceSha);
         }
     }
     async recordUnexpectedFailure(context, error) {
@@ -56980,19 +56992,19 @@ class DeploymentOrchestrationRuntime {
             return;
         }
         if (inspection.decision.mode === "merge-queue") {
-            const queued = await this.dependencies.pullRequests.isPullRequestQueued(context.owner, context.repo, pullRequest.nodeId, context.tokens.token);
+            const queued = await this.dependencies.pullRequests.isPullRequestQueued(pullRequest.nodeId);
             if (!queued) {
-                await this.dependencies.pullRequests.enqueuePullRequest(context.owner, context.repo, pullRequest.nodeId, pullRequest.headSha, context.tokens.token);
+                await this.dependencies.pullRequests.enqueuePullRequest(pullRequest.nodeId, pullRequest.headSha);
             }
         }
     }
     async applyAutoMerge(context, operation, pullRequest, capabilities) {
         if (operation.prMode === "auto" && capabilities.immediatelyMergeable) {
-            await this.dependencies.pullRequests.mergePullRequest(context.owner, context.repo, pullRequest.number, context.tokens.token);
+            await this.dependencies.pullRequests.mergePullRequest(pullRequest.number);
             return;
         }
         if (!pullRequest.autoMergeEnabled) {
-            await this.dependencies.pullRequests.enableAutoMerge(context.owner, context.repo, pullRequest.nodeId, context.tokens.token);
+            await this.dependencies.pullRequests.enableAutoMerge(pullRequest.nodeId);
         }
     }
     unsupportedMergeBehavior(context, targetRole, targetBranch, capabilities, decision) {
@@ -57019,7 +57031,7 @@ class DeploymentOrchestrationRuntime {
             if (!target.syncSha) {
                 throw new application_error_1.ApplicationError("workflow.stale", `Sync branch ${target.syncBranch} has no verified cleanup SHA.`);
             }
-            await this.dependencies.git.deleteBranch(context.owner, context.repo, target.syncBranch, target.syncSha, context.tokens.token);
+            await this.dependencies.git.deleteBranch(target.syncBranch, target.syncSha);
         }
     }
 }
@@ -57124,12 +57136,7 @@ class DeploymentStateBoundary {
         this.stores = new WeakMap();
     }
     async initialize(execution) {
-        const store = this.state.bind({
-            owner: execution.owner,
-            repository: execution.repo,
-            issue: execution.singleAction.issue,
-            token: execution.tokens.token,
-        });
+        const store = this.state.bind(execution.singleAction.issue);
         this.stores.set(execution, store);
         const loaded = await store.load();
         if (loaded.kind === "absent") {
@@ -57181,10 +57188,10 @@ class DeploymentStateBoundary {
         throw new application_error_1.ApplicationError("configuration.invalid", outcome.reason);
     }
     async projectLabels(execution, operation) {
-        const labels = await this.labels.getLabels(execution.owner, execution.repo, execution.singleAction.issue, execution.tokens.token);
+        const labels = await this.labels.getLabels(execution.singleAction.issue);
         const next = (0, deployment_lifecycle_policy_1.projectDeploymentLabels)(labels, operation, execution.labels);
         if (next.join("\0") !== labels.join("\0")) {
-            await this.labels.setLabels(execution.owner, execution.repo, execution.singleAction.issue, next, execution.tokens.token);
+            await this.labels.setLabels(execution.singleAction.issue, next);
         }
     }
 }
@@ -57210,8 +57217,10 @@ exports.CheckProgressUseCase = void 0;
 const check_progress_workflow_1 = __nccwpck_require__(94343);
 /** Application boundary for assessing and publishing issue progress. */
 class CheckProgressUseCase {
-    constructor(issueRepository, branchRepository, pullRequestRepository, aiRepository) {
-        this.issueRepository = issueRepository;
+    constructor(issueDescriptionQueryPort, issueLabelsPort, issueProgressPort, branchRepository, pullRequestRepository, aiRepository) {
+        this.issueDescriptionQueryPort = issueDescriptionQueryPort;
+        this.issueLabelsPort = issueLabelsPort;
+        this.issueProgressPort = issueProgressPort;
         this.branchRepository = branchRepository;
         this.pullRequestRepository = pullRequestRepository;
         this.aiRepository = aiRepository;
@@ -57219,10 +57228,11 @@ class CheckProgressUseCase {
     }
     async invoke(param) {
         return await (0, check_progress_workflow_1.runCheckProgressWorkflow)(param, this.taskId, {
-            issueDescriptionQueryPort: this.issueRepository,
+            issueDescriptionQueryPort: this.issueDescriptionQueryPort,
             branchRepository: this.branchRepository,
             pullRequestRepository: this.pullRequestRepository,
-            issueRepository: this.issueRepository,
+            issueLabelsPort: this.issueLabelsPort,
+            issueProgressPort: this.issueProgressPort,
             aiRepository: this.aiRepository,
         });
     }
@@ -57288,8 +57298,8 @@ function buildZeroProgressResult(taskId, issueNumber, branch, developmentBranch,
     });
 }
 async function persistProgress(param, issueNumber, branch, progress, dependencies) {
-    await dependencies.issueRepository.setProgressLabel(param.owner, param.repo, issueNumber, progress, param.tokens.token);
-    await (0, sync_progress_labels_to_open_pull_requests_1.syncProgressLabelsToOpenPullRequests)(param.owner, param.repo, branch, progress, param.tokens.token, dependencies.issueRepository, dependencies.pullRequestRepository);
+    await dependencies.issueProgressPort.setProgressLabel(issueNumber, progress);
+    await (0, sync_progress_labels_to_open_pull_requests_1.syncProgressLabelsToOpenPullRequests)(branch, progress, dependencies.issueLabelsPort, dependencies.pullRequestRepository);
 }
 function buildProgressResult(taskId, issueNumber, branch, developmentBranch, progress, summary, reasoning, remaining) {
     return new result_1.Result({
@@ -57370,12 +57380,11 @@ const INACTIVITY_COMMENT = (thresholdHours) => `This issue was automatically clo
 /** Scans waiting issues and closes only candidates that remain inactive. */
 async function runCloseInactiveIssuesWorkflow(param, dependencies) {
     const waitingLabels = unique([
-        param.labels.lifecycle.awaitingMaintainer,
-        param.labels.lifecycle.awaitingIssueAuthor,
+        ...param.waitingLabels,
     ]);
-    const activityLabel = param.labels.lifecycle.aiProcessing;
+    const activityLabel = param.activityLabel;
     const nowMilliseconds = dependencies.clock.nowMilliseconds();
-    const thresholdHours = param.inactivityThresholdHours;
+    const thresholdHours = param.thresholdHours;
     try {
         const candidates = await listCandidates(param, waitingLabels, dependencies.issueQueryPort);
         let eligibleCount = 0;
@@ -57399,7 +57408,7 @@ async function runCloseInactiveIssuesWorkflow(param, dependencies) {
                 // Re-read both labels and updated_at immediately before the
                 // mutation so a comment or state transition during the scan
                 // invalidates the stale list snapshot.
-                const current = await dependencies.issueQueryPort.getOpenIssue(param.owner, param.repo, candidate.number, param.tokens.token);
+                const current = await dependencies.issueQueryPort.getOpenIssue(candidate.number);
                 if (!current || (0, issue_inactivity_1.evaluateIssueInactivity)({
                     issue: current,
                     waitingLabels,
@@ -57410,13 +57419,13 @@ async function runCloseInactiveIssuesWorkflow(param, dependencies) {
                     skippedCount++;
                     continue;
                 }
-                const closed = await dependencies.issueClosurePort.closeIssue(param.owner, param.repo, candidate.number, param.tokens.token);
+                const closed = await dependencies.issueClosurePort.closeIssue(candidate.number);
                 if (!closed) {
                     skippedCount++;
                     continue;
                 }
                 closedCount++;
-                await dependencies.issueClosurePort.addComment(param.owner, param.repo, candidate.number, INACTIVITY_COMMENT(thresholdHours), param.tokens.token);
+                await dependencies.issueClosurePort.addComment(candidate.number, INACTIVITY_COMMENT(thresholdHours));
                 (0, logging_ports_1.logInfo)(`Issue #${candidate.number} closed after inactivity.`);
             }
             catch (error) {
@@ -57452,10 +57461,10 @@ async function runCloseInactiveIssuesWorkflow(param, dependencies) {
             })];
     }
 }
-async function listCandidates(param, waitingLabels, queryPort) {
+async function listCandidates(_param, waitingLabels, queryPort) {
     const candidates = [];
     for (const label of waitingLabels) {
-        candidates.push(...await queryPort.listOpenIssuesByLabel(param.owner, param.repo, label, param.tokens.token));
+        candidates.push(...await queryPort.listOpenIssuesByLabel(label));
     }
     const uniqueCandidates = new Map();
     for (const candidate of candidates)
@@ -57559,8 +57568,8 @@ const create_release_policy_1 = __nccwpck_require__(76549);
 const deployment_continuation_guard_1 = __nccwpck_require__(1779);
 const application_error_1 = __nccwpck_require__(75999);
 async function runCreateRelease(param, taskId, repositoryReleasePort) {
-    const operation = param.currentConfiguration.deploymentOrchestration;
-    const continuationError = (0, deployment_continuation_guard_1.validateDeploymentContinuation)(operation, param.singleAction.operationId, ["publishing"], param.singleAction.version);
+    const operation = param.operation;
+    const continuationError = (0, deployment_continuation_guard_1.validateDeploymentContinuation)(operation, param.requestedOperationId, ["publishing"], param.requestedVersion);
     if (continuationError)
         return [failureResult(taskId, continuationError, 'workflow.stale')];
     if (!operation?.productionSha)
@@ -57577,7 +57586,7 @@ async function runCreateRelease(param, taskId, repositoryReleasePort) {
     }
     const releaseVersion = (0, create_release_policy_1.versionForRelease)(input.version);
     try {
-        const releaseUrl = await repositoryReleasePort.createRelease(param.owner, param.repo, releaseVersion, input.title, input.changelog, operation.operationId, operation.productionSha, param.tokens.token);
+        const releaseUrl = await repositoryReleasePort.createRelease(releaseVersion, input.title, input.changelog, operation.operationId, operation.productionSha);
         if (!releaseUrl) {
             (0, logging_ports_1.logWarn)(`CreateRelease: createRelease returned no URL for version ${releaseVersion}.`);
             return [failureResult(taskId, 'Failed to create release.', 'provider.contract-invalid')];
@@ -57648,11 +57657,11 @@ async function runCreateTag(param, taskId, repositoryTagPort) {
     const validationFailure = validateTagInput(param, taskId);
     if (validationFailure)
         return [validationFailure];
-    const operation = param.currentConfiguration.deploymentOrchestration;
+    const operation = param.operation;
     const version = operation.version;
     const tagName = `v${version}`;
     try {
-        const sha1Tag = await repositoryTagPort.createOrVerifyTagAtSha(param.owner, param.repo, operation.productionSha, tagName, param.tokens.token);
+        const sha1Tag = await repositoryTagPort.createOrVerifyTagAtSha(operation.productionSha, tagName);
         return sha1Tag ? [new result_1.Result({ id: taskId, success: true, executed: true, steps: [`Tag ${tagName} is ready: ${sha1Tag}`] })]
             : noTagResult(taskId, tagName);
     }
@@ -57663,11 +57672,11 @@ async function runCreateTag(param, taskId, repositoryTagPort) {
     }
 }
 function validateTagInput(param, taskId) {
-    const operation = param.currentConfiguration.deploymentOrchestration;
+    const operation = param.operation;
     if (!operation) {
         return new result_1.Result({ id: taskId, success: false, executed: true, errors: [new application_error_1.ApplicationError('workflow.invalid-event', 'create_tag requires a durable deployment operation.')] });
     }
-    const continuationError = (0, deployment_continuation_guard_1.validateDeploymentContinuation)(operation, param.singleAction.operationId, ["publishing"], param.singleAction.version);
+    const continuationError = (0, deployment_continuation_guard_1.validateDeploymentContinuation)(operation, param.requestedOperationId, ["publishing"], param.requestedVersion);
     if (continuationError)
         return new result_1.Result({ id: taskId, success: false, executed: true, errors: [new application_error_1.ApplicationError('workflow.stale', continuationError)] });
     if (!operation.productionSha) {
@@ -57724,13 +57733,13 @@ class AcceptPromotionHandler {
         await this.runtime.persist(context, publishing);
         await this.runtime.publishDashboard(context, publishing);
         await this.runtime.publishMilestone(context, publishing, "promotion-merged", `✅ Promotion PR #${pullRequest.number} merged. Publication is starting from production SHA \`${productionSha}\`.`);
-        await this.runtime.dependencies.continuation.dispatch(context.owner, context.repo, operation.publicationWorkflow, operation.productionBranch, operation.operationId, context.singleAction.issue, operation.version, context.tokens.token);
+        await this.runtime.dependencies.continuation.dispatch(operation.publicationWorkflow, operation.productionBranch, operation.operationId, context.singleAction.issue, operation.version);
         return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Promotion PR #${pullRequest.number} was verified; publication continuation was dispatched from ${operation.productionBranch}.`);
     }
     async isAcceptedProductionReachable(context, operation, productionSha) {
         const [mergeReachable, sourceReachable] = await Promise.all([
-            this.runtime.dependencies.git.isCommitReachable(context.owner, context.repo, operation.productionBranch, productionSha, context.tokens.token),
-            this.runtime.dependencies.git.isCommitReachable(context.owner, context.repo, operation.productionBranch, operation.sourceSha, context.tokens.token),
+            this.runtime.dependencies.git.isCommitReachable(operation.productionBranch, productionSha),
+            this.runtime.dependencies.git.isCommitReachable(operation.productionBranch, operation.sourceSha),
         ]);
         return mergeReachable && sourceReachable;
     }
@@ -57774,12 +57783,9 @@ class ConfirmPublicationHandler {
         assertPublicationPhase(operation);
         const productionSha = requireProductionSha(operation);
         const publication = await this.runtime.dependencies.publication.inspect({
-            owner: context.owner,
-            repository: context.repo,
             tag: operation.tag,
             productionSha,
             operationId: operation.operationId,
-            token: context.tokens.token,
         });
         if (publication.kind === "absent") {
             return await this.runtime.block(context, operation, "publication", `The ${publication.effect} publication receipt is absent; rerun the serialized publication phase.`, true);
@@ -57787,7 +57793,7 @@ class ConfirmPublicationHandler {
         if (publication.kind === "conflict") {
             return await this.runtime.block(context, operation, "publication", publication.reason, false);
         }
-        const reachable = await this.runtime.dependencies.git.isCommitReachable(context.owner, context.repo, operation.productionBranch, productionSha, context.tokens.token);
+        const reachable = await this.runtime.dependencies.git.isCommitReachable(operation.productionBranch, productionSha);
         if (!reachable) {
             return await this.runtime.block(context, operation, "publication", "Published SHA is not reachable from the stored production branch.", false);
         }
@@ -57813,7 +57819,7 @@ class ConfirmPublicationHandler {
     }
     async beginReconciliation(context, published) {
         const activeReleases = published.kind === "hotfix"
-            ? (await this.runtime.dependencies.git.listBranches(context.owner, context.repo, context.branches.releaseTree, context.tokens.token)).filter((branch) => branch !== published.sourceBranch)
+            ? (await this.runtime.dependencies.git.listBranches(context.branches.releaseTree)).filter((branch) => branch !== published.sourceBranch)
             : [];
         const decision = (0, deployment_plan_policy_1.selectReconciliationTargetBranches)(published, activeReleases);
         if (decision.kind === "blocked") {
@@ -57894,7 +57900,7 @@ class ContinueDeploymentHandler {
         if (context.pullRequest.number < 1) {
             throw new application_error_1.ApplicationError("workflow.invalid-event", "The continuation event has no pull request number.");
         }
-        return await this.runtime.dependencies.pullRequests.getPullRequest(context.owner, context.repo, context.pullRequest.number, context.tokens.token);
+        return await this.runtime.dependencies.pullRequests.getPullRequest(context.pullRequest.number);
     }
     async resumeBlockedEvent(context, operation, pullRequest, phase) {
         if (operation.phase !== "blocked")
@@ -57966,7 +57972,7 @@ class PreparePromotionHandler {
         }
         const operation = await this.resumeBlockedPreparation(context, existing);
         if (operation.phase === "preparing" || operation.phase === "promotion_pr_pending") {
-            const currentSourceSha = await this.runtime.dependencies.git.getBranchSha(context.owner, context.repo, operation.sourceBranch, context.tokens.token);
+            const currentSourceSha = await this.runtime.dependencies.git.getBranchSha(operation.sourceBranch);
             if (currentSourceSha !== operation.sourceSha) {
                 return await this.runtime.block(context, operation, "promotion", "The prepared source branch changed after its immutable SHA was stored.", false);
             }
@@ -57992,12 +57998,12 @@ class PreparePromotionHandler {
         if (!sourceBranch) {
             throw new application_error_1.ApplicationError("workflow.stale", `No prepared ${kind} branch is stored on the launcher issue.`);
         }
-        const sourceSha = await this.runtime.dependencies.git.getBranchSha(context.owner, context.repo, sourceBranch, context.tokens.token);
+        const sourceSha = await this.runtime.dependencies.git.getBranchSha(sourceBranch);
         const originBranch = selectOriginBranch(context, kind);
         const persistedOrigin = kind === "release"
             ? context.currentConfiguration.releaseOriginSha
             : context.currentConfiguration.hotfixOriginSha;
-        const originSha = persistedOrigin ?? await this.runtime.dependencies.git.getMergeBaseSha(context.owner, context.repo, originBranch, sourceBranch, context.tokens.token);
+        const originSha = persistedOrigin ?? await this.runtime.dependencies.git.getMergeBaseSha(originBranch, sourceBranch);
         const operation = (0, deployment_plan_policy_1.buildInitialDeploymentOperation)({
             operationId: this.runtime.dependencies.operationId(),
             kind,
@@ -58127,7 +58133,7 @@ class ReconciliationHandler {
         if (!(await this.isReconciliationReachable(context, target, pullRequest))) {
             return await this.runtime.block(context, operation, "reconciliation", "The reconciliation merge is not reachable from its target branch.", true);
         }
-        const sourceReachable = await this.runtime.dependencies.git.isCommitReachable(context.owner, context.repo, target.targetBranch, target.sourceSha, context.tokens.token);
+        const sourceReachable = await this.runtime.dependencies.git.isCommitReachable(target.targetBranch, target.sourceSha);
         if (!sourceReachable) {
             return await this.runtime.block(context, operation, "reconciliation", "The reconciliation target does not contain the stored release SHA.", false);
         }
@@ -58150,10 +58156,10 @@ class ReconciliationHandler {
             return await this.runtime.block(context, operation, "reconciliation", preflight.reason, true);
         }
         const [targetSha, currentSourceSha] = await Promise.all([
-            this.runtime.dependencies.git.getBranchSha(context.owner, context.repo, target.targetBranch, context.tokens.token),
-            this.runtime.dependencies.git.getBranchSha(context.owner, context.repo, target.sourceBranch, context.tokens.token),
+            this.runtime.dependencies.git.getBranchSha(target.targetBranch),
+            this.runtime.dependencies.git.getBranchSha(target.sourceBranch),
         ]);
-        const directUpToDate = await this.runtime.dependencies.git.isCommitReachable(context.owner, context.repo, target.sourceBranch, targetSha, context.tokens.token).catch(() => false);
+        const directUpToDate = await this.runtime.dependencies.git.isCommitReachable(target.sourceBranch, targetSha).catch(() => false);
         const mode = (0, deployment_plan_policy_1.selectBackmergeMode)(operation.backmergeMode, preflight.capabilities.requiresStrictStatusChecks, directUpToDate, currentSourceSha === target.sourceSha);
         if (mode.kind === "unsupported") {
             return await this.runtime.block(context, operation, "reconciliation", mode.reason, false);
@@ -58187,7 +58193,7 @@ class ReconciliationHandler {
         try {
             await this.runtime.cleanup(context, operation);
             if (operation.issueCompletion === "close") {
-                await this.runtime.dependencies.issues.closeIssue(context.owner, context.repo, context.singleAction.issue, context.tokens.token);
+                await this.runtime.dependencies.issues.closeIssue(context.singleAction.issue);
             }
         }
         catch (error) {
@@ -58209,9 +58215,9 @@ class ReconciliationHandler {
         return undefined;
     }
     async prepareSyncBranch(context, syncBranch, targetSha, sourceSha) {
-        await this.runtime.dependencies.git.createOrVerifyBranch(context.owner, context.repo, syncBranch, targetSha, context.tokens.token);
-        await this.runtime.dependencies.git.mergeCommitIntoBranch(context.owner, context.repo, syncBranch, targetSha, context.tokens.token);
-        await this.runtime.dependencies.git.mergeCommitIntoBranch(context.owner, context.repo, syncBranch, sourceSha, context.tokens.token);
+        await this.runtime.dependencies.git.createOrVerifyBranch(syncBranch, targetSha);
+        await this.runtime.dependencies.git.mergeCommitIntoBranch(syncBranch, targetSha);
+        await this.runtime.dependencies.git.mergeCommitIntoBranch(syncBranch, sourceSha);
     }
     async verifyPullRequestHead(context, operation, target, pullRequest) {
         if (!target.syncBranch) {
@@ -58223,8 +58229,8 @@ class ReconciliationHandler {
                 };
         }
         const [syncHead, sourceIncluded] = await Promise.all([
-            this.runtime.dependencies.git.getBranchSha(context.owner, context.repo, target.syncBranch, context.tokens.token),
-            this.runtime.dependencies.git.isCommitReachable(context.owner, context.repo, target.syncBranch, target.sourceSha, context.tokens.token),
+            this.runtime.dependencies.git.getBranchSha(target.syncBranch),
+            this.runtime.dependencies.git.isCommitReachable(target.syncBranch, target.sourceSha),
         ]);
         if (pullRequest.headSha === syncHead && sourceIncluded) {
             return { kind: "verified", syncSha: syncHead };
@@ -58236,7 +58242,7 @@ class ReconciliationHandler {
     }
     async isReconciliationReachable(context, target, pullRequest) {
         return Boolean(pullRequest.mergeCommitSha)
-            && await this.runtime.dependencies.git.isCommitReachable(context.owner, context.repo, target.targetBranch, pullRequest.mergeCommitSha, context.tokens.token);
+            && await this.runtime.dependencies.git.isCommitReachable(target.targetBranch, pullRequest.mergeCommitSha);
     }
 }
 exports.ReconciliationHandler = ReconciliationHandler;
@@ -58373,56 +58379,17 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.findIssueBranch = findIssueBranch;
 const logging_ports_1 = __nccwpck_require__(6152);
 async function findIssueBranch(param, repository) {
-    if (param.commit.branch)
-        return param.commit.branch;
+    if (param.pushedBranch)
+        return param.pushedBranch;
     (0, logging_ports_1.logInfo)(`📦 Searching for branch related to issue #${param.issueNumber}...`);
-    const branchTypes = [
-        param.branches.featureTree,
-        param.branches.bugfixTree,
-        param.branches.docsTree,
-        param.branches.choreTree,
-        param.branches.hotfixTree,
-        param.branches.releaseTree,
-    ];
-    const branches = await repository.getListOfBranches(param.owner, param.repo, param.tokens.token);
-    const branch = branchTypes
+    const branches = await repository.getListOfBranches();
+    const branch = param.branchTypes
         .map((type) => `${type}/${param.issueNumber}-`)
         .flatMap((prefix) => branches.filter((candidate) => candidate.includes(prefix)))
         .at(0);
     if (branch)
         (0, logging_ports_1.logInfo)(`✅ Found branch: ${branch}`);
     return branch;
-}
-
-
-/***/ }),
-
-/***/ 57389:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.createInitialSetupRequest = createInitialSetupRequest;
-/** Converts the runtime execution aggregate into the setup use case's explicit request. */
-function createInitialSetupRequest(execution) {
-    return {
-        owner: execution.owner,
-        repo: execution.repo,
-        token: execution.tokens.token,
-        labels: execution.labels,
-        issueTypes: execution.issueTypes,
-        setupConfiguration: asObject(execution.inputs?.setupConfiguration),
-        setupCredentials: asObject(execution.inputs?.setupCredentials),
-        setupRemoteConfiguration: asObject(execution.inputs?.setupRemoteConfiguration),
-        workflowUpdates: asStringArray(execution.inputs?.setupWorkflowUpdates),
-    };
-}
-function asObject(value) {
-    return value && typeof value === 'object' ? value : undefined;
-}
-function asStringArray(value) {
-    return Array.isArray(value) ? value.filter((item) => typeof item === 'string') : [];
 }
 
 
@@ -58436,7 +58403,6 @@ function asStringArray(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InitialSetupUseCase = void 0;
 const initial_setup_workflow_1 = __nccwpck_require__(18079);
-const initial_setup_request_1 = __nccwpck_require__(57389);
 /** Application boundary for provisioning a repository for Copilot automation. */
 class InitialSetupUseCase {
     constructor(authenticatedUserPort, initialLabelProvisioningPort, issueTypeProvisioningPort, latestTagQueryPort, repositoryDefaultBranchPort, repositoryTagPort, setupWorkspacePort, setupRepositoryVariablesPort, setupRepositorySecretsPort, setupRemoteConfigurationReadPort) {
@@ -58453,7 +58419,7 @@ class InitialSetupUseCase {
         this.taskId = 'InitialSetupUseCase';
     }
     async invoke(param) {
-        return await (0, initial_setup_workflow_1.runInitialSetupWorkflow)((0, initial_setup_request_1.createInitialSetupRequest)(param), {
+        return await (0, initial_setup_workflow_1.runInitialSetupWorkflow)(param, {
             authenticatedUserPort: this.authenticatedUserPort,
             initialLabelProvisioningPort: this.initialLabelProvisioningPort,
             issueTypeProvisioningPort: this.issueTypeProvisioningPort,
@@ -58493,7 +58459,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
     const errors = [];
     try {
         const setupConfiguration = request.setupConfiguration;
-        if (!dependencies.setupWorkspacePort.hasValidToken(request.token)) {
+        if (!dependencies.setupWorkspacePort.hasValidToken()) {
             (0, logging_ports_1.logInfo)('  🛑 Setup requires the setup PAT provided for this command with a valid token.');
             errors.push(new application_error_1.ApplicationError('authorization.credential-invalid', 'A valid setup PAT must be provided to run setup. It is separate from the workflow PAT Secret.'));
             return [buildResult(errors, steps)];
@@ -58559,9 +58525,9 @@ async function runInitialSetupWorkflow(request, dependencies) {
         return [buildResult(errors, steps)];
     }
 }
-async function verifyGitHubAccess(request, repository) {
+async function verifyGitHubAccess(_request, repository) {
     try {
-        const user = await repository.getUserFromToken(request.token);
+        const user = await repository.getUser();
         return { success: true, user, errors: [] };
     }
     catch (error) {
@@ -58572,7 +58538,7 @@ async function verifyGitHubAccess(request, repository) {
 }
 async function ensureInitialLabels(request, repository) {
     try {
-        const summary = await repository.ensureInitialLabels(request.owner, request.repo, request.labels, request.token);
+        const summary = await repository.ensureInitialLabels(request.labels);
         return { completed: true, ...summary };
     }
     catch (error) {
@@ -58583,7 +58549,7 @@ async function ensureInitialLabels(request, repository) {
 }
 async function ensureIssueTypes(request, repository) {
     try {
-        const result = await repository.ensureIssueTypes(request.owner, request.issueTypes, request.token);
+        const result = await repository.ensureIssueTypes(request.issueTypes);
         return {
             success: result.errors.length === 0,
             created: result.created,
@@ -58597,7 +58563,7 @@ async function ensureIssueTypes(request, repository) {
         return { success: false, created: 0, existing: 0, errors: [semanticError.message] };
     }
 }
-async function ensureDefaultVersion(request, dependencies, setupConfiguration) {
+async function ensureDefaultVersion(_request, dependencies, setupConfiguration) {
     if (setupConfiguration?.createInitialTag === false) {
         return { step: '⏭️  Initial version tag creation disabled by setup configuration.' };
     }
@@ -58608,13 +58574,13 @@ async function ensureDefaultVersion(request, dependencies, setupConfiguration) {
             return {};
         }
         (0, logging_ports_1.logInfo)(`🏷️  No version tags found. Creating default tag ${version_policy_1.DEFAULT_INITIAL_TAG}...`);
-        const defaultBranch = await dependencies.repositoryDefaultBranchPort.getDefaultBranch(request.owner, request.repo, request.token);
+        const defaultBranch = await dependencies.repositoryDefaultBranchPort.getDefaultBranch();
         if (!defaultBranch) {
             const message = 'Could not get default branch to create initial version tag.';
             (0, logging_ports_1.logError)(message);
             return { error: new application_error_1.ApplicationError('provider.contract-invalid', message) };
         }
-        const sha = await dependencies.repositoryTagPort.createTag(request.owner, request.repo, defaultBranch, version_policy_1.DEFAULT_INITIAL_TAG, request.token);
+        const sha = await dependencies.repositoryTagPort.createTag(defaultBranch, version_policy_1.DEFAULT_INITIAL_TAG);
         return sha
             ? { step: `✅ Default version tag ${version_policy_1.DEFAULT_INITIAL_TAG} created on branch ${defaultBranch}. Run \`git fetch --tags\` to update local refs.` }
             : { error: new application_error_1.ApplicationError('provider.contract-invalid', `Failed to create tag ${version_policy_1.DEFAULT_INITIAL_TAG}.`) };
@@ -58673,19 +58639,19 @@ class ObserveBranchSyncUseCase {
         this.notifications = notifications;
         this.taskId = TASK_ID;
     }
-    async invoke(execution) {
-        const pushedBranch = execution.commit.branch.trim();
-        if (!pushedBranch || isDeletedPush(execution))
+    async invoke(context) {
+        const pushedBranch = context.pushedBranch;
+        if (!pushedBranch || context.deletedPush)
             return [];
         try {
-            const dependencies = (0, branch_sync_notification_policy_1.selectBranchDependenciesForPush)(await this.dependencies.listOpenDependencies(execution.owner, execution.repo, execution.tokens.token), pushedBranch);
+            const dependencies = (0, branch_sync_notification_policy_1.selectBranchDependenciesForPush)(await this.dependencies.listOpenDependencies(), pushedBranch);
             if (dependencies.length === 0) {
                 (0, logging_ports_1.logInfo)(`No open branch dependencies are affected by ${pushedBranch}.`);
                 return [];
             }
             const results = [];
             for (const dependency of dependencies) {
-                results.push(await this.reconcileDependency(execution, dependency));
+                results.push(await this.reconcileDependency(context, dependency));
             }
             return results;
         }
@@ -58694,28 +58660,28 @@ class ObserveBranchSyncUseCase {
             return [failure("Unable to inspect branch synchronization safely.", cause)];
         }
     }
-    async reconcileDependency(execution, dependency) {
+    async reconcileDependency(context, dependency) {
         try {
-            const comparison = await this.comparisons.compare(execution.owner, execution.repo, dependency.parentBranch, dependency.workingBranch, execution.tokens.token);
-            const comments = await this.notifications.listIssueComments(execution.owner, execution.repo, dependency.issueNumber, execution.tokens.token);
-            const latest = (0, branch_sync_notification_policy_1.findLatestBranchSyncComment)(comments, execution.tokenUser, dependency);
+            const comparison = await this.comparisons.compare(dependency.parentBranch, dependency.workingBranch);
+            const comments = await this.notifications.listIssueComments(dependency.issueNumber);
+            const latest = (0, branch_sync_notification_policy_1.findLatestBranchSyncComment)(comments, context.trustedBotLogin, dependency);
             if (comparison.behindBy > 0) {
                 const comment = (0, branch_sync_notification_policy_1.buildStaleBranchSyncComment)({
-                    owner: execution.owner,
-                    repository: execution.repo,
+                    owner: context.repository.owner,
+                    repository: context.repository.name,
                     dependency,
                     comparison,
                 });
                 if (latest && (0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body)) {
-                    await this.notifications.updateComment(execution.owner, execution.repo, dependency.issueNumber, latest.id, comment, execution.tokens.token);
+                    await this.notifications.updateComment(dependency.issueNumber, latest.id, comment);
                 }
                 else {
-                    await this.notifications.addComment(execution.owner, execution.repo, dependency.issueNumber, comment, execution.tokens.token);
+                    await this.notifications.addComment(dependency.issueNumber, comment);
                 }
                 return success(dependency, comparison.behindBy, "stale");
             }
             if (latest && (0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body)) {
-                await this.notifications.updateComment(execution.owner, execution.repo, dependency.issueNumber, latest.id, (0, branch_sync_notification_policy_1.buildAlignedBranchSyncComment)(dependency), execution.tokens.token);
+                await this.notifications.updateComment(dependency.issueNumber, latest.id, (0, branch_sync_notification_policy_1.buildAlignedBranchSyncComment)(dependency));
             }
             return success(dependency, 0, "aligned");
         }
@@ -58728,10 +58694,6 @@ class ObserveBranchSyncUseCase {
     }
 }
 exports.ObserveBranchSyncUseCase = ObserveBranchSyncUseCase;
-function isDeletedPush(execution) {
-    const after = execution.inputs?.after;
-    return typeof after === "string" && /^0+$/u.test(after);
-}
 function success(dependency, behindBy, state) {
     return new result_1.Result({
         id: TASK_ID,
@@ -58778,7 +58740,7 @@ const application_error_1 = __nccwpck_require__(75999);
 /** Loads progress context and asks the configured agent for an assessment. */
 async function analyzeProgress(param, taskId, dependencies) {
     const issueNumber = param.issueNumber;
-    const agentReady = (0, agent_1.isAgentConfigurationReady)(param.ai.getAgentConfiguration('findings'));
+    const agentReady = (0, agent_1.isAgentConfigurationReady)(param.agentConfiguration);
     if (!agentReady) {
         const message = 'Missing required agent configuration. Provide a model and a valid executable.';
         (0, logging_ports_1.logError)(message);
@@ -58790,7 +58752,7 @@ async function analyzeProgress(param, taskId, dependencies) {
         return { kind: 'failure', result: failure(taskId, message, 'validation.invalid-input') };
     }
     (0, logging_ports_1.logInfo)(`📋 Checking progress for issue #${issueNumber}`);
-    const issueDescription = await dependencies.issueDescriptionQueryPort.getDescription(param.owner, param.repo, issueNumber, param.tokens.token);
+    const issueDescription = await dependencies.issueDescriptionQueryPort.getDescription(issueNumber);
     if (!issueDescription) {
         const message = `Could not retrieve issue description for issue #${issueNumber}`;
         (0, logging_ports_1.logError)(message);
@@ -58813,7 +58775,7 @@ async function analyzeProgress(param, taskId, dependencies) {
         };
     }
     const resolvedBranch = branch;
-    const developmentBranch = param.branches.development || 'develop';
+    const developmentBranch = param.developmentBranch;
     (0, logging_ports_1.logInfo)(`📦 Progress will be assessed from workspace diff: base branch "${developmentBranch}", current branch "${resolvedBranch}" (configured agent will run git diff).`);
     const prompt = (0, prompts_1.getCheckProgressPrompt)({
         projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
@@ -58825,14 +58787,14 @@ async function analyzeProgress(param, taskId, dependencies) {
     (0, logging_ports_1.logDebugInfo)(`CheckProgress: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`);
     (0, logging_ports_1.logInfo)('🤖 Analyzing progress using the configured agent...');
     const attemptResult = (0, progress_response_1.parseProgressResponse)(await dependencies.aiRepository.query({
-        configuration: param.ai.getAgentConfiguration('findings'),
+        configuration: param.agentConfiguration,
         agentId: agent_task_policy_1.AGENT_PLAN,
         prompt,
         options: {
             expectJson: true,
             schema: progress_response_1.PROGRESS_RESPONSE_SCHEMA,
             schemaName: 'progress_response',
-            includeReasoning: param.ai.getAiIncludeReasoning(),
+            includeReasoning: param.includeReasoning,
         },
     }));
     return {
@@ -58987,12 +58949,12 @@ async function runPublishGithubAction(param, taskId, repositoryTagPort, reposito
     const validationFailure = validateVersion(param, taskId);
     if (validationFailure)
         return [validationFailure];
-    const version = param.singleAction.version || param.currentConfiguration?.deploymentOrchestration?.version || '';
+    const version = param.requestedVersion || param.operation?.version || '';
     const sourceTag = `v${version}`;
     const targetTag = sourceTag.split('.')[0];
     try {
-        await repositoryTagPort.updateTag(param.owner, param.repo, sourceTag, targetTag, param.tokens.token);
-        const releaseId = await repositoryReleasePort.updateRelease(param.owner, param.repo, sourceTag, targetTag, param.tokens.token);
+        await repositoryTagPort.updateTag(sourceTag, targetTag);
+        const releaseId = await repositoryReleasePort.updateRelease(sourceTag, targetTag);
         return releaseId ? successResult(taskId, sourceTag, targetTag, releaseId) : failureResult(taskId, sourceTag, targetTag);
     }
     catch (error) {
@@ -59008,10 +58970,10 @@ async function runPublishGithubAction(param, taskId, repositoryTagPort, reposito
     }
 }
 function validateVersion(param, taskId) {
-    const continuationError = (0, deployment_continuation_guard_1.validateDeploymentContinuation)(param.currentConfiguration?.deploymentOrchestration, param.singleAction.operationId, ["publishing"], param.singleAction.version);
+    const continuationError = (0, deployment_continuation_guard_1.validateDeploymentContinuation)(param.operation, param.requestedOperationId, ["publishing"], param.requestedVersion);
     if (continuationError)
         return new result_1.Result({ id: taskId, success: false, executed: true, errors: [new application_error_1.ApplicationError('workflow.stale', continuationError)] });
-    if (param.singleAction.version.length > 0 || param.currentConfiguration?.deploymentOrchestration?.version)
+    if (param.requestedVersion.length > 0 || param.operation?.version)
         return undefined;
     (0, logging_ports_1.logError)('Version is not set.');
     return new result_1.Result({ id: taskId, success: false, executed: true, errors: [new application_error_1.ApplicationError('validation.invalid-input', `${input_keys_1.INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`)] });
@@ -59062,38 +59024,37 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runPublishIssueComment = runPublishIssueComment;
 const result_1 = __nccwpck_require__(73817);
 const comment_watermark_1 = __nccwpck_require__(23623);
-const issue_comment_publication_policy_1 = __nccwpck_require__(61899);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
 async function runPublishIssueComment(param, taskId, issueCommentPort) {
-    const request = (0, issue_comment_publication_policy_1.resolveIssueCommentPublicationRequest)(param.singleAction);
-    if (request instanceof Error) {
+    if (param.kind === 'invalid') {
         return [new result_1.Result({
                 id: taskId,
                 success: false,
                 executed: true,
-                errors: [new application_error_1.ApplicationError('validation.invalid-input', request.message, { cause: request })],
+                errors: [new application_error_1.ApplicationError('validation.invalid-input', param.message)],
             })];
     }
+    const { request, issueNumber } = param;
     try {
         if (request.mode === 'create') {
-            await issueCommentPort.addComment(param.owner, param.repo, param.singleAction.issue, request.message, param.tokens.token);
+            await issueCommentPort.addComment(issueNumber, request.message);
         }
         else {
-            const comments = await issueCommentPort.listIssueComments(param.owner, param.repo, param.singleAction.issue, param.tokens.token);
+            const comments = await issueCommentPort.listIssueComments(issueNumber);
             const target = comments.find(({ id }) => id === request.commentId);
             if (!target) {
                 return [new result_1.Result({
                         id: taskId,
                         success: false,
                         executed: true,
-                        errors: [new application_error_1.ApplicationError('provider.not-found', `Comment ${request.commentId} does not belong to issue ${param.singleAction.issue}.`)],
+                        errors: [new application_error_1.ApplicationError('provider.not-found', `Comment ${request.commentId} does not belong to issue ${issueNumber}.`)],
                     })];
             }
             const message = request.mode === 'append'
                 ? appendCommentContent(target.body, request.message)
                 : request.message;
-            await issueCommentPort.updateComment(param.owner, param.repo, param.singleAction.issue, request.commentId, message, param.tokens.token);
+            await issueCommentPort.updateComment(issueNumber, request.commentId, message);
         }
         // This single action publishes its own comment. An empty step list keeps
         // the common completion phase from emitting a second issue comment.
@@ -59130,7 +59091,7 @@ function buildRecommendationResult(param, taskId, response, issueDescriptionFing
     if (!steps) {
         const semanticError = new application_error_1.ApplicationError('agent.failed', 'The configured agent returned no recommendation.');
         (0, logging_ports_1.logError)(semanticError);
-        return [new result_1.Result({ id: taskId, success: false, executed: true, errors: [semanticError] })];
+        return recommendationOutcome([new result_1.Result({ id: taskId, success: false, executed: true, errors: [semanticError] })]);
     }
     (0, logging_ports_1.logDebugInfo)(`RecommendSteps: agent response received. Steps length=${steps.length}.`);
     if (previousRecommendation && (0, recommendation_policy_1.isNoNewRecommendation)(steps))
@@ -59146,22 +59107,29 @@ function buildRecommendationResult(param, taskId, response, issueDescriptionFing
     const stepsWithWelcome = isNewIssue(param)
         ? [(0, copilot_interaction_policy_1.buildCopilotWelcomeMessage)(param.tokenUser), '## Recommended implementation steps', steps]
         : ['## Recommended implementation steps', steps];
-    return [new result_1.Result({
+    return recommendationOutcome([new result_1.Result({
             id: taskId,
             success: true,
             executed: true,
             stepFormat: 'markdown',
             steps: stepsWithWelcome,
             payload: { issueNumber, recommendedSteps: steps, recommendationState },
-        })];
+        })]);
 }
 function isNewIssue(param) {
-    return param.eventName === 'issues' && param.inputs?.action === 'opened';
+    return param.eventName === 'issues' && param.eventAction === 'opened';
 }
-function skipUnchangedRecommendation(param, previous, fingerprint, reason) {
-    param.currentConfiguration.recommendationState = { ...previous, issueDescriptionFingerprint: fingerprint };
+function skipUnchangedRecommendation(_param, previous, fingerprint, reason) {
     (0, logging_ports_1.logInfo)(`RecommendSteps: ${reason}; skipping recommendation comment.`);
-    return [];
+    return recommendationOutcome([], { ...previous, issueDescriptionFingerprint: fingerprint });
+}
+function recommendationOutcome(results, recommendationState) {
+    return Object.freeze({
+        results: Object.freeze([...results]),
+        ...(recommendationState ? {
+            configurationPatch: Object.freeze({ recommendationState: Object.freeze({ ...recommendationState }) }),
+        } : {}),
+    });
 }
 function extractRecommendationText(response) {
     if (typeof response === 'string')
@@ -59222,26 +59190,26 @@ const application_error_1 = __nccwpck_require__(75999);
 async function runRecommendStepsWorkflow(param, taskId, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId}.`);
     try {
-        const configuration = param.ai.getAgentConfiguration('planner');
+        const configuration = param.agentConfiguration;
         if (!(0, agent_1.isAgentConfigurationReady)(configuration)) {
-            return [failure(taskId, 'Missing agent model or executable.', 'configuration.invalid')];
+            return outcome([failure(taskId, 'Missing agent model or executable.', 'configuration.invalid')]);
         }
         const issueNumber = param.issueNumber;
         if (issueNumber === -1) {
-            return [failure(taskId, 'Issue number not found.', 'validation.invalid-input')];
+            return outcome([failure(taskId, 'Issue number not found.', 'validation.invalid-input')]);
         }
-        const rawIssueDescription = await dependencies.issueDescriptionQueryPort.getDescription(param.owner, param.repo, issueNumber, param.tokens.token);
+        const rawIssueDescription = await dependencies.issueDescriptionQueryPort.getDescription(issueNumber);
         const issueDescription = rawIssueDescription === undefined
             ? undefined
             : (0, recommendation_policy_1.getVisibleIssueDescription)(rawIssueDescription);
         if (!issueDescription?.trim()) {
-            return [failure(taskId, `No description found for issue #${issueNumber}.`, 'provider.not-found')];
+            return outcome([failure(taskId, `No description found for issue #${issueNumber}.`, 'provider.not-found')]);
         }
-        const previousRecommendation = param.previousConfiguration?.recommendationState;
+        const previousRecommendation = param.previousRecommendation;
         const issueDescriptionFingerprint = (0, recommendation_policy_1.createIssueDescriptionFingerprint)(issueDescription);
         if (previousRecommendation?.issueDescriptionFingerprint === issueDescriptionFingerprint) {
             (0, logging_ports_1.logInfo)('RecommendSteps: issue description is unchanged; skipping recommendation.');
-            return [];
+            return outcome([]);
         }
         const prompt = (0, prompts_1.getRecommendStepsPrompt)({
             projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
@@ -59261,15 +59229,18 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
     catch (error) {
         const semanticError = (0, application_error_1.toApplicationError)(error, 'agent.failed', `Unable to complete ${taskId}.`);
         (0, logging_ports_1.logError)(semanticError);
-        return [
+        return outcome([
             new result_1.Result({
                 id: taskId,
                 success: false,
                 executed: true,
                 errors: [semanticError],
             }),
-        ];
+        ]);
     }
+}
+function outcome(results) {
+    return Object.freeze({ results: Object.freeze([...results]) });
 }
 function failure(taskId, message, code) {
     return new result_1.Result({
@@ -59352,7 +59323,7 @@ async function resolveRemoteConfiguration(context, dependencies, setupConfigurat
     if (!dependencies.setupRemoteConfigurationReadPort || !setupConfiguration)
         return undefined;
     try {
-        return await dependencies.setupRemoteConfigurationReadPort.inspect(context.owner, context.repo, context.token);
+        return await dependencies.setupRemoteConfigurationReadPort.inspect();
     }
     catch (error) {
         const message = `Could not inspect existing GitHub Actions resource scopes: ${error instanceof Error ? error.message : String(error)}`;
@@ -59389,8 +59360,8 @@ async function upsertVariableGroups(context, port, groups) {
             continue;
         }
         const result = group.target.scope === 'organization'
-            ? await port.upsertScopedVariables(context.owner, context.repo, context.token, group.target, group.resources)
-            : await port.upsert(context.owner, context.repo, context.token, group.resources);
+            ? await port.upsertScopedVariables(group.target, group.resources)
+            : await port.upsert(group.resources);
         created += result.created;
         updated += result.updated;
         errors.push(...result.errors);
@@ -59408,8 +59379,8 @@ async function upsertSecretGroups(context, port, groups) {
             continue;
         }
         const result = group.target.scope === 'organization'
-            ? await port.upsertScopedSecrets(context.owner, context.repo, context.token, group.target, group.resources)
-            : await port.upsertSecrets(context.owner, context.repo, context.token, group.resources);
+            ? await port.upsertScopedSecrets(group.target, group.resources)
+            : await port.upsertSecrets(group.resources);
         created += result.created;
         updated += result.updated;
         skipped += result.skipped;
@@ -59430,17 +59401,17 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.syncProgressLabelsToOpenPullRequests = syncProgressLabelsToOpenPullRequests;
 const progress_labels_1 = __nccwpck_require__(97890);
 const logging_ports_1 = __nccwpck_require__(6152);
-async function syncProgressLabelsToOpenPullRequests(owner, repo, branch, progress, token, issueRepository, pullRequestRepository) {
+async function syncProgressLabelsToOpenPullRequests(branch, progress, issueRepository, pullRequestRepository) {
     const roundedProgress = Math.min(100, Math.max(0, Math.round(progress / 5) * 5));
     const newProgressLabel = `${roundedProgress}%`;
-    const pullRequestNumbers = await pullRequestRepository.getOpenPullRequestNumbersByHeadBranch(owner, repo, branch, token);
+    const pullRequestNumbers = await pullRequestRepository.getOpenPullRequestNumbersByHeadBranch(branch);
     for (const prNumber of pullRequestNumbers) {
-        const prLabels = await issueRepository.getLabels(owner, repo, prNumber, token);
+        const prLabels = await issueRepository.getLabels(prNumber);
         const withoutProgress = prLabels.filter((name) => !progress_labels_1.PROGRESS_LABEL_PATTERN.test(name));
         const nextLabels = withoutProgress.includes(newProgressLabel)
             ? withoutProgress
             : [...withoutProgress, newProgressLabel];
-        await issueRepository.setLabels(owner, repo, prNumber, nextLabels, token);
+        await issueRepository.setLabels(prNumber, nextLabels);
         (0, logging_ports_1.logInfo)(`Progress label set to ${newProgressLabel} on PR #${prNumber}.`);
     }
 }
@@ -59455,7 +59426,6 @@ async function syncProgressLabelsToOpenPullRequests(owner, repo, branch, progres
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SynchronizeAgentActivityUseCase = void 0;
-const copilot_lifecycle_1 = __nccwpck_require__(72418);
 const agent_activity_label_policy_1 = __nccwpck_require__(79966);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
@@ -59470,17 +59440,17 @@ class SynchronizeAgentActivityUseCase {
         this.issueLabelsPort = issueLabelsPort;
         this.taskId = 'SynchronizeAgentActivityUseCase';
     }
-    async start(execution) {
-        await this.synchronize(execution, true);
+    async start(context) {
+        return this.synchronize(context, true);
     }
-    async finish(execution) {
-        await this.synchronize(execution, false);
+    async finish(context) {
+        return this.synchronize(context, false);
     }
-    async synchronize(execution, active) {
-        const target = resolveTarget(execution);
+    async synchronize(context, active) {
+        const target = context.target;
         if (!target) {
             (0, logging_ports_1.logDebugInfo)(`${this.taskId}: no issue or pull request target; skipping activity label.`);
-            return;
+            return Object.freeze({});
         }
         try {
             // Route steps may have changed labels through their own ports. Read
@@ -59488,42 +59458,24 @@ class SynchronizeAgentActivityUseCase {
             // transient marker cannot overwrite those changes.
             const currentLabels = active
                 ? target.labels
-                : await this.issueLabelsPort.getLabels(execution.owner, execution.repo, target.number, execution.tokens.token);
-            const configuredLabel = (0, copilot_lifecycle_1.activityLabel)(execution.labels.lifecycle);
+                : await this.issueLabelsPort.getLabels(target.number);
+            const configuredLabel = context.activityLabel;
             const nextLabels = (0, agent_activity_label_policy_1.replaceAgentActivityLabel)(currentLabels, configuredLabel, active);
             if (sameLabels(currentLabels, nextLabels))
-                return;
-            await this.issueLabelsPort.setLabels(execution.owner, execution.repo, target.number, nextLabels, execution.tokens.token);
-            target.setLabels(nextLabels);
+                return Object.freeze({ target, labels: Object.freeze([...currentLabels]) });
+            await this.issueLabelsPort.setLabels(target.number, nextLabels);
             (0, logging_ports_1.logInfo)(`${active ? 'Added' : 'Removed'} Copilot agent activity label on target #${target.number}.`);
+            return Object.freeze({ target, labels: Object.freeze([...nextLabels]) });
         }
         catch (error) {
             const message = `${this.taskId}: unable to ${active ? 'add' : 'remove'} agent activity label.`;
             const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', message);
             (0, logging_ports_1.logError)(semanticError);
+            return Object.freeze({});
         }
     }
 }
 exports.SynchronizeAgentActivityUseCase = SynchronizeAgentActivityUseCase;
-function resolveTarget(execution) {
-    if (execution.eventName === 'pull_request' || execution.eventName === 'pull_request_review_comment') {
-        if (execution.pullRequest.number <= 0)
-            return undefined;
-        return {
-            number: execution.pullRequest.number,
-            labels: execution.labels.currentPullRequestLabels,
-            setLabels: labels => { execution.labels.currentPullRequestLabels = labels; },
-        };
-    }
-    const number = execution.issue.number > 0 ? execution.issue.number : execution.issueNumber;
-    if (number <= 0)
-        return undefined;
-    return {
-        number,
-        labels: execution.labels.currentIssueLabels,
-        setLabels: labels => { execution.labels.currentIssueLabels = labels; },
-    };
-}
 function sameLabels(left, right) {
     return left.length === right.length && left.every((label, index) => label === right[index]);
 }
@@ -59593,10 +59545,10 @@ const workspace_changes_1 = __nccwpck_require__(93370);
 const application_error_1 = __nccwpck_require__(75999);
 exports.BRANCH_SYNC_TASK_ID = "SyncBranchUseCase";
 const MAX_AGENT_CONFLICT_PATHS = 20;
-function branchSyncConflictEligibilityError(preparation, useAgent, execution) {
+function branchSyncConflictEligibilityError(preparation, useAgent, agentConfiguration) {
     if (!useAgent)
         return "The merge has conflicts and agent resolution was disabled with --no-agent.";
-    if (!(0, agent_1.isAgentConfigurationReady)(execution.ai.getAgentConfiguration("fixer"))) {
+    if (!(0, agent_1.isAgentConfigurationReady)(agentConfiguration)) {
         return "The merge has conflicts, but no fixer agent is configured.";
     }
     if (preparation.conflictPaths.length > MAX_AGENT_CONFLICT_PATHS) {
@@ -59675,17 +59627,16 @@ class SyncBranchUseCase {
         this.taskId = branch_sync_execution_policy_1.BRANCH_SYNC_TASK_ID;
     }
     async invoke(request) {
-        const { execution, options } = request;
+        const { context, options } = request;
         try {
-            const conversationNumber = resolveConversationNumber(execution);
-            const target = await this.dependencies.resolveTarget(execution.owner, execution.repo, conversationNumber, execution.tokens.token);
+            const target = await this.dependencies.resolveTarget(context.conversationNumber);
             if (!target)
                 return [(0, branch_sync_execution_policy_1.unavailableBranchSyncResult)("No linked working branch with an identifiable parent was found for this issue or pull request.")];
             const parentBranch = options.parentOverride ?? target.parentBranch;
             if (parentBranch === target.workingBranch) {
                 return [(0, branch_sync_execution_policy_1.unavailableBranchSyncResult)("The parent and working branch must be different.")];
             }
-            return await this.synchronize(execution, options, target, parentBranch);
+            return await this.synchronize(context, options, target, parentBranch);
         }
         catch (cause) {
             await this.safeAbort();
@@ -59693,8 +59644,8 @@ class SyncBranchUseCase {
             return [(0, branch_sync_execution_policy_1.failedBranchSyncResult)("Branch synchronization failed safely; no push was completed.", cause)];
         }
     }
-    async synchronize(execution, options, target, parentBranch) {
-        const preparation = await this.workspace.prepare(parentBranch, target.workingBranch, execution.tokens.token);
+    async synchronize(context, options, target, parentBranch) {
+        const preparation = await this.workspace.prepare(parentBranch, target.workingBranch);
         if (preparation.kind === "aligned") {
             return [this.completed(preparation, parentBranch, target, "already-aligned", 0)];
         }
@@ -59703,33 +59654,33 @@ class SyncBranchUseCase {
             const outcome = preparation.kind === "clean" ? "dry-run-clean" : "dry-run-conflicted";
             return [this.completed(preparation, parentBranch, target, outcome, 0)];
         }
-        const conflictResolution = await this.resolveConflicts(execution, preparation, parentBranch, target, options.useAgent);
+        const conflictResolution = await this.resolveConflicts(context, preparation, parentBranch, target, options.useAgent);
         if (conflictResolution.failure)
             return [await this.abortFailure(conflictResolution.failure)];
-        const verification = await this.verifyPreparedMerge(execution, preparation);
+        const verification = await this.verifyPreparedMerge(context, preparation);
         if (verification.failure)
             return [await this.abortFailure(verification.failure)];
-        const author = await this.authenticatedUser.getTokenUserDetails(execution.tokens.token);
-        const remoteValidation = await this.workspace.assertRemoteHeadsUnchanged(parentBranch, preparation.parentSha, target.workingBranch, preparation.childSha, execution.tokens.token);
+        const author = await this.authenticatedUser.getUserDetails();
+        const remoteValidation = await this.workspace.assertRemoteHeadsUnchanged(parentBranch, preparation.parentSha, target.workingBranch, preparation.childSha);
         if (!remoteValidation.valid) {
             return [await this.abortFailure(remoteValidation.reason ?? "A branch changed while synchronization was running; retry from the latest heads.")];
         }
-        const commitSha = await this.workspace.commitAndPush(target.workingBranch, `Merge ${parentBranch} into ${target.workingBranch}`, author, execution.tokens.token);
+        const commitSha = await this.workspace.commitAndPush(target.workingBranch, `Merge ${parentBranch} into ${target.workingBranch}`, author);
         const outcome = conflictResolution.agentUsed ? "merged-with-agent" : "merged-cleanly";
         return [this.completed(preparation, parentBranch, target, outcome, verification.commandCount, commitSha)];
     }
-    async resolveConflicts(execution, preparation, parentBranch, target, useAgent) {
+    async resolveConflicts(context, preparation, parentBranch, target, useAgent) {
         if (preparation.kind !== "conflicted")
             return { agentUsed: false };
-        const failure = (0, branch_sync_execution_policy_1.branchSyncConflictEligibilityError)(preparation, useAgent, execution);
+        const failure = (0, branch_sync_execution_policy_1.branchSyncConflictEligibilityError)(preparation, useAgent, context.agentConfiguration);
         if (failure)
             return { agentUsed: false, failure };
         (0, logging_ports_1.logInfo)(`Invoking the fixer agent for ${preparation.conflictPaths.length} merge conflict(s).`);
         const response = await this.fixer.fix({
-            configuration: execution.ai.getAgentConfiguration("fixer"),
+            configuration: context.agentConfiguration,
             prompt: (0, branch_sync_conflicts_1.getBranchSyncConflictsPrompt)({
-                owner: execution.owner,
-                repo: execution.repo,
+                owner: context.repository.owner,
+                repo: context.repository.name,
                 parentBranch,
                 workingBranch: target.workingBranch,
                 conflictPaths: preparation.conflictPaths.map((path) => `- ${path}`).join("\n"),
@@ -59743,8 +59694,8 @@ class SyncBranchUseCase {
             ? { agentUsed: true }
             : { agentUsed: false, failure: validation.reason ?? "The agent resolution did not pass workspace safety validation." };
     }
-    async verifyPreparedMerge(execution, preparation) {
-        const commands = (0, verify_command_policy_1.limitVerifyCommands)(execution.ai.getBugbotFixVerifyCommands());
+    async verifyPreparedMerge(context, preparation) {
+        const commands = (0, verify_command_policy_1.limitVerifyCommands)([...context.verifyCommands]);
         if (commands.length === verify_command_policy_1.MAX_VERIFY_COMMANDS)
             (0, logging_ports_1.logInfo)(`Branch sync verification is capped at ${verify_command_policy_1.MAX_VERIFY_COMMANDS} commands.`);
         const verification = await (0, verify_command_runner_1.runVerifyCommands)(commands, (program, args) => this.git.execute(program, args, { untrusted: true }));
@@ -59784,14 +59735,6 @@ class SyncBranchUseCase {
     }
 }
 exports.SyncBranchUseCase = SyncBranchUseCase;
-function resolveConversationNumber(execution) {
-    const candidates = [
-        execution.pullRequest.number,
-        execution.issue.number,
-        execution.issueNumber,
-    ];
-    return candidates.find((candidate) => candidate > 0) ?? -1;
-}
 
 
 /***/ }),
@@ -60126,6 +60069,7 @@ const status_command_policy_1 = __nccwpck_require__(3449);
 const comment_language_translation_workflow_1 = __nccwpck_require__(72770);
 const think_workflow_1 = __nccwpck_require__(36450);
 const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
+const push_single_action_contexts_1 = __nccwpck_require__(47841);
 function projectCommentAutomationContext(source, language, userComment) {
     const review = (0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(source);
     return Object.freeze({
@@ -60144,6 +60088,8 @@ function projectCommentAutomationContext(source, language, userComment) {
         }),
         think: (0, think_workflow_1.projectThinkContext)(source),
         status: (0, status_command_policy_1.buildCopilotStatusSnapshot)(source),
+        userRequest: (0, push_single_action_contexts_1.projectUserRequestContext)(source),
+        branchSync: (0, push_single_action_contexts_1.projectBranchSyncContext)(source),
         bugbot: Object.freeze({
             fixIntent: (0, bugbot_review_operation_context_1.projectBugbotFixIntentContext)(source),
             review,
@@ -60315,6 +60261,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const application_error_1 = __nccwpck_require__(75999);
 const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
+const push_single_action_contexts_1 = __nccwpck_require__(47841);
 class CommitUseCase {
     constructor(notifyNewCommitUseCase, checkChangesIssueSizeUseCase, detectPotentialProblemsUseCase, checkProgressUseCase, actorAuthorizationPort) {
         this.notifyNewCommitUseCase = notifyNewCommitUseCase;
@@ -60335,12 +60282,12 @@ class CommitUseCase {
             (0, logging_ports_1.logDebugInfo)(`Branch: ${param.commit.branch}`);
             (0, logging_ports_1.logDebugInfo)(`Commits detected: ${param.commit.commits.length}`);
             (0, logging_ports_1.logDebugInfo)(`Issue number: ${param.issueNumber}`);
-            results.push(...(await this.notifyNewCommitUseCase.invoke(param)));
-            results.push(...(await this.checkChangesIssueSizeUseCase.invoke(param)));
+            results.push(...(await this.notifyNewCommitUseCase.invoke((0, push_single_action_contexts_1.projectCommitNotificationContext)(param))));
+            results.push(...(await this.checkChangesIssueSizeUseCase.invoke((0, push_single_action_contexts_1.projectChangeSizeContext)(param))));
             const agentAllowed = !param.ai.getAiMembersOnly()
                 || Boolean(this.actorAuthorizationPort && await this.actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token));
             if (agentAllowed) {
-                results.push(...(await this.checkProgressUseCase.invoke(param)));
+                results.push(...(await this.checkProgressUseCase.invoke((0, push_single_action_contexts_1.projectProgressContext)(param))));
                 results.push(...(await this.detectPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param))));
             }
             else {
@@ -60812,7 +60759,7 @@ class IssueCommentUseCase {
             thinkUseCase: this.thinkUseCase,
             autofixUseCase: this.autofixUseCase,
             doUserRequestUseCase: {
-                invoke: (request) => this.doUserRequestUseCase.invoke({ execution: param, ...request }),
+                invoke: (request) => this.doUserRequestUseCase.invoke({ context: context.userRequest, ...request }),
             },
             bugbotGitMutationPort: this.bugbotGitMutationPort,
             dismissBugbotFindingsUseCase: this.dismissBugbotFindingsUseCase,
@@ -60825,7 +60772,7 @@ class IssueCommentUseCase {
                 : undefined,
             rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
             syncBranchUseCase: this.syncBranchUseCase
-                ? { invoke: (options) => this.syncBranchUseCase.invoke({ execution: param, options }) }
+                ? { invoke: (options) => this.syncBranchUseCase.invoke({ context: context.branchSync, options }) }
                 : undefined,
         }, {
             isActorAllowedToModifyFiles: (actor) => this.actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, actor, param.tokens.token),
@@ -60851,6 +60798,7 @@ const check_permissions_workflow_1 = __nccwpck_require__(17102);
 const update_title_workflow_1 = __nccwpck_require__(50029);
 const project_content_link_workflow_1 = __nccwpck_require__(89064);
 const issue_workflow_context_1 = __nccwpck_require__(98005);
+const push_single_action_contexts_1 = __nccwpck_require__(47841);
 class IssueUseCase {
     constructor(recommendStepsUseCase, answerIssueHelpUseCase, workflowSteps, actorAuthorizationPort) {
         this.recommendStepsUseCase = recommendStepsUseCase;
@@ -60861,7 +60809,7 @@ class IssueUseCase {
     }
     async invoke(param) {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
-        return (0, issue_workflow_1.runIssueWorkflow)(param, this.taskId, {
+        const outcome = await (0, issue_workflow_1.runIssueWorkflow)(projectIssueWorkflowRouteContext(param), this.taskId, {
             recommendStepsUseCase: this.recommendStepsUseCase,
             answerIssueHelpUseCase: this.answerIssueHelpUseCase,
             workflowSteps: this.workflowSteps,
@@ -60873,9 +60821,51 @@ class IssueUseCase {
                 steps: (0, issue_workflow_context_1.projectIssueWorkflowStepContexts)(param),
             },
         });
+        applyBranchConfigurationPatch(param, outcome.branchConfigurationPatch);
+        if (outcome.recommendationStatePatch) {
+            param.currentConfiguration.recommendationState = { ...outcome.recommendationStatePatch.recommendationState };
+        }
+        return [...outcome.results];
     }
 }
 exports.IssueUseCase = IssueUseCase;
+function projectIssueWorkflowRouteContext(param) {
+    const recommendation = !param.issue.opened && !param.issue.descriptionEdited
+        ? undefined
+        : param.labels.isQuestion || param.labels.isHelp
+            ? 'answer-help'
+            : param.labels.isRelease
+                ? undefined
+                : 'recommend';
+    return Object.freeze({
+        cleanIssueBranches: param.cleanIssueBranches,
+        branched: param.isBranched,
+        membersOnly: param.ai.getAiMembersOnly(),
+        actor: param.actor,
+        newIssue: param.eventName === 'issues' && param.inputs?.action === 'opened',
+        ...(param.tokenUser ? { tokenUser: param.tokenUser } : {}),
+        ...(recommendation ? { recommendation } : {}),
+        recommendSteps: (0, push_single_action_contexts_1.projectRecommendStepsContext)(param),
+    });
+}
+function applyBranchConfigurationPatch(param, patch) {
+    if (!patch)
+        return;
+    if (patch.parentBranch !== undefined)
+        param.currentConfiguration.parentBranch = patch.parentBranch;
+    if (patch.workingBranch !== undefined)
+        param.currentConfiguration.workingBranch = patch.workingBranch;
+    if (patch.releaseBranch !== undefined)
+        param.currentConfiguration.releaseBranch = patch.releaseBranch;
+    if (patch.releaseOriginBranch !== undefined)
+        param.currentConfiguration.releaseOriginBranch = patch.releaseOriginBranch;
+    if (patch.releaseOriginSha !== undefined)
+        param.currentConfiguration.releaseOriginSha = patch.releaseOriginSha;
+    if (patch.hotfixBranch !== undefined)
+        param.currentConfiguration.hotfixBranch = patch.hotfixBranch;
+    if (patch.hotfixOriginSha !== undefined)
+        param.currentConfiguration.hotfixOriginSha = patch.hotfixOriginSha;
+}
 
 
 /***/ }),
@@ -60892,14 +60882,16 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const copilot_interaction_policy_1 = __nccwpck_require__(90108);
 const application_error_1 = __nccwpck_require__(75999);
 /** Coordinates issue lifecycle steps in their required sequential order. */
-async function runIssueWorkflow(param, taskId, ports) {
+async function runIssueWorkflow(context, taskId, ports) {
     const results = [];
+    let branchConfigurationPatch;
+    let recommendationStatePatch;
     const permissionResult = await ports.workflowSteps.checkPermissions.invoke(ports.sharedContexts.permissions);
     const lastAction = permissionResult[permissionResult.length - 1];
     if (!lastAction) {
         const permissionError = new application_error_1.ApplicationError('provider.contract-invalid', "Permission check returned no result.");
         (0, logging_ports_1.logError)(`Unable to continue ${taskId}: ${permissionError.message}`);
-        return [
+        return issueWorkflowOutcome([
             new result_1.Result({
                 id: taskId,
                 success: false,
@@ -60907,14 +60899,14 @@ async function runIssueWorkflow(param, taskId, ports) {
                 steps: ["Unable to verify whether the issue action is authorized."],
                 errors: [permissionError],
             }),
-        ];
+        ]);
     }
     if (!lastAction.success && lastAction.executed) {
         results.push(...permissionResult);
         results.push(...(await ports.workflowSteps.closeNotAllowedIssue.invoke(ports.sharedContexts.steps.closeNotAllowed)));
-        return results;
+        return issueWorkflowOutcome(results);
     }
-    if (param.cleanIssueBranches) {
+    if (context.cleanIssueBranches) {
         results.push(...(await ports.workflowSteps.removeIssueBranches.invoke(ports.sharedContexts.steps.removeIssueBranches)));
     }
     results.push(...(await ports.workflowSteps.assignMemberToIssue.invoke(ports.sharedContexts.steps.assignment)));
@@ -60922,9 +60914,9 @@ async function runIssueWorkflow(param, taskId, ports) {
     results.push(...(await ports.workflowSteps.updateIssueType.invoke(ports.sharedContexts.steps.issueType)));
     results.push(...(await ports.workflowSteps.linkIssueProject.invoke(ports.sharedContexts.projectLink)));
     results.push(...(await ports.workflowSteps.checkPriorityIssueSize.invoke(ports.sharedContexts.steps.priority)));
-    if (param.isBranched) {
+    if (context.branched) {
         const outcome = await ports.workflowSteps.prepareBranches.invoke(ports.sharedContexts.steps.prepareBranches);
-        applyBranchConfigurationPatch(param, outcome.configurationPatch);
+        branchConfigurationPatch = outcome.configurationPatch;
         results.push(...outcome.results);
     }
     else {
@@ -60932,55 +60924,37 @@ async function runIssueWorkflow(param, taskId, ports) {
     }
     results.push(...(await ports.workflowSteps.removeNotNeededBranches.invoke(ports.sharedContexts.steps.removeObsoleteBranches)));
     results.push(...(await ports.workflowSteps.deployAdded.invoke(ports.sharedContexts.steps.deployAdded)));
-    const membersOnly = param.ai.getAiMembersOnly();
-    const agentAllowed = !membersOnly || Boolean(ports.actorAuthorizationPort
-        && await ports.actorAuthorizationPort.isActorAllowedToModifyFiles(param.actor));
-    const recommendation = agentAllowed ? resolveIssueRecommendation(param) : undefined;
+    const agentAllowed = !context.membersOnly || Boolean(ports.actorAuthorizationPort
+        && await ports.actorAuthorizationPort.isActorAllowedToModifyFiles(context.actor));
+    const recommendation = agentAllowed ? context.recommendation : undefined;
     if (recommendation) {
-        const recommendationResults = recommendation === 'answer-help'
-            ? await ports.answerIssueHelpUseCase.invoke(ports.sharedContexts.steps.answerHelp)
-            : await ports.recommendStepsUseCase.invoke(param);
+        const recommendationOutcome = recommendation === 'answer-help'
+            ? { results: await ports.answerIssueHelpUseCase.invoke(ports.sharedContexts.steps.answerHelp) }
+            : await ports.recommendStepsUseCase.invoke(context.recommendSteps);
+        const recommendationResults = recommendationOutcome.results;
+        recommendationStatePatch = 'configurationPatch' in recommendationOutcome
+            ? recommendationOutcome.configurationPatch
+            : undefined;
         results.push(...recommendationResults);
-        if (isNewIssue(param) && !containsWelcome(recommendationResults)) {
-            results.push((0, copilot_interaction_policy_1.buildCopilotWelcomeResult)(param.tokenUser));
+        if (context.newIssue && !containsWelcome(recommendationResults)) {
+            results.push((0, copilot_interaction_policy_1.buildCopilotWelcomeResult)(context.tokenUser));
         }
     }
-    else if (isNewIssue(param)) {
-        results.push((0, copilot_interaction_policy_1.buildCopilotWelcomeResult)(param.tokenUser));
+    else if (context.newIssue) {
+        results.push((0, copilot_interaction_policy_1.buildCopilotWelcomeResult)(context.tokenUser));
     }
-    return results;
+    return issueWorkflowOutcome(results, branchConfigurationPatch, recommendationStatePatch);
 }
 function containsWelcome(results) {
     return results.some((result) => result.steps.some((step) => step.includes(copilot_interaction_policy_1.COPILOT_WELCOME_MARKER))
         || (0, result_1.getResultPayload)(result.payload)?.welcomePublished === true);
 }
-function isNewIssue(param) {
-    return param.eventName === 'issues' && param.inputs?.action === 'opened';
-}
-function resolveIssueRecommendation(param) {
-    if (!param.issue.opened && !param.issue.descriptionEdited)
-        return undefined;
-    if (param.labels.isQuestion || param.labels.isHelp)
-        return 'answer-help';
-    if (param.labels.isRelease)
-        return undefined;
-    return 'recommend';
-}
-function applyBranchConfigurationPatch(param, patch) {
-    if (patch.parentBranch !== undefined)
-        param.currentConfiguration.parentBranch = patch.parentBranch;
-    if (patch.workingBranch !== undefined)
-        param.currentConfiguration.workingBranch = patch.workingBranch;
-    if (patch.releaseBranch !== undefined)
-        param.currentConfiguration.releaseBranch = patch.releaseBranch;
-    if (patch.releaseOriginBranch !== undefined)
-        param.currentConfiguration.releaseOriginBranch = patch.releaseOriginBranch;
-    if (patch.releaseOriginSha !== undefined)
-        param.currentConfiguration.releaseOriginSha = patch.releaseOriginSha;
-    if (patch.hotfixBranch !== undefined)
-        param.currentConfiguration.hotfixBranch = patch.hotfixBranch;
-    if (patch.hotfixOriginSha !== undefined)
-        param.currentConfiguration.hotfixOriginSha = patch.hotfixOriginSha;
+function issueWorkflowOutcome(results, branchConfigurationPatch, recommendationStatePatch) {
+    return Object.freeze({
+        results: Object.freeze([...results]),
+        ...(branchConfigurationPatch ? { branchConfigurationPatch: Object.freeze({ ...branchConfigurationPatch }) } : {}),
+        ...(recommendationStatePatch ? { recommendationStatePatch: Object.freeze({ ...recommendationStatePatch }) } : {}),
+    });
 }
 
 
@@ -61177,7 +61151,7 @@ class PullRequestReviewCommentUseCase {
             thinkUseCase: this.thinkUseCase,
             autofixUseCase: this.autofixUseCase,
             doUserRequestUseCase: {
-                invoke: (request) => this.doUserRequestUseCase.invoke({ execution: param, ...request }),
+                invoke: (request) => this.doUserRequestUseCase.invoke({ context: context.userRequest, ...request }),
             },
             bugbotGitMutationPort: this.bugbotGitMutationPort,
             dismissBugbotFindingsUseCase: this.dismissBugbotFindingsUseCase,
@@ -61190,7 +61164,7 @@ class PullRequestReviewCommentUseCase {
                 : undefined,
             rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
             syncBranchUseCase: this.syncBranchUseCase
-                ? { invoke: (options) => this.syncBranchUseCase.invoke({ execution: param, options }) }
+                ? { invoke: (options) => this.syncBranchUseCase.invoke({ context: context.branchSync, options }) }
                 : undefined,
         }, {
             isActorAllowedToModifyFiles: (actor) => this.actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, actor, param.tokens.token),
@@ -61215,6 +61189,7 @@ const pull_request_workflow_1 = __nccwpck_require__(95238);
 const update_title_workflow_1 = __nccwpck_require__(50029);
 const project_content_link_workflow_1 = __nccwpck_require__(89064);
 const pull_request_workflow_context_1 = __nccwpck_require__(73447);
+const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
 class PullRequestUseCase {
     constructor(updatePullRequestDescriptionUseCase, workflowSteps, reviewPotentialProblemsUseCase, actorAuthorizationPort) {
         this.updatePullRequestDescriptionUseCase = updatePullRequestDescriptionUseCase;
@@ -61225,7 +61200,7 @@ class PullRequestUseCase {
     }
     async invoke(param) {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
-        return (0, pull_request_workflow_1.runPullRequestWorkflow)(param, this.taskId, {
+        return (0, pull_request_workflow_1.runPullRequestWorkflow)(projectPullRequestWorkflowRouteContext(param), this.taskId, {
             updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase,
             reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
             workflowSteps: this.workflowSteps,
@@ -61239,6 +61214,21 @@ class PullRequestUseCase {
     }
 }
 exports.PullRequestUseCase = PullRequestUseCase;
+function projectPullRequestWorkflowRouteContext(param) {
+    const mode = param.ai.getPullRequestDescriptionMode();
+    return Object.freeze({
+        actor: param.actor,
+        membersOnly: param.ai.getAiMembersOnly(),
+        action: param.pullRequest.action,
+        opened: param.pullRequest.isOpened,
+        synchronize: param.pullRequest.isSynchronize,
+        closed: param.pullRequest.isClosed,
+        merged: param.pullRequest.isMerged,
+        automaticDescription: mode === 'replace' || mode === 'append',
+        reviewable: ['opened', 'reopened', 'synchronize'].includes(param.pullRequest.action),
+        review: (0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param),
+    });
+}
 
 
 /***/ }),
@@ -61253,13 +61243,12 @@ exports.runPullRequestWorkflow = runPullRequestWorkflow;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
-const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
 /** Coordinates pull-request lifecycle actions while preserving their sequential order. */
-async function runPullRequestWorkflow(param, taskId, ports) {
+async function runPullRequestWorkflow(context, taskId, ports) {
     try {
-        logPullRequestState(param);
-        const agentAllowed = await canUseAgent(param, ports.actorAuthorizationPort);
-        if (param.pullRequest.isOpened) {
+        logPullRequestState(context);
+        const agentAllowed = await canUseAgent(context, ports.actorAuthorizationPort);
+        if (context.opened) {
             const results = await ports.workflowSteps.updateTitle.invoke(ports.sharedContexts.title);
             results.push(...(await ports.workflowSteps.assignMemberToIssue.invoke(ports.sharedContexts.steps.assignment)));
             results.push(...(await ports.workflowSteps.assignReviewersToIssue.invoke(ports.sharedContexts.steps.reviewers)));
@@ -61267,31 +61256,31 @@ async function runPullRequestWorkflow(param, taskId, ports) {
             results.push(...(await ports.workflowSteps.linkPullRequestIssue.invoke(ports.sharedContexts.steps.linkIssue)));
             results.push(...(await ports.workflowSteps.syncSizeAndProgressLabels.invoke(ports.sharedContexts.steps.syncLabels)));
             results.push(...(await ports.workflowSteps.checkPriorityPullRequestSize.invoke(ports.sharedContexts.steps.priority)));
-            if (agentAllowed && shouldUpdatePullRequestDescriptionAutomatically(param)) {
+            if (agentAllowed && context.automaticDescription) {
                 results.push(...(await ports.updatePullRequestDescriptionUseCase.invoke({
                     context: ports.sharedContexts.steps.description,
                     trigger: 'automatic',
                 })));
             }
             if (agentAllowed)
-                results.push(...(await runPullRequestReview(param, ports)));
+                results.push(...(await runPullRequestReview(context, ports)));
             return results;
         }
-        if (param.pullRequest.isSynchronize) {
-            const results = agentAllowed && shouldUpdatePullRequestDescriptionAutomatically(param)
+        if (context.synchronize) {
+            const results = agentAllowed && context.automaticDescription
                 ? await ports.updatePullRequestDescriptionUseCase.invoke({
                     context: ports.sharedContexts.steps.description,
                     trigger: 'automatic',
                 })
                 : [];
             if (agentAllowed)
-                results.push(...(await runPullRequestReview(param, ports)));
+                results.push(...(await runPullRequestReview(context, ports)));
             return results;
         }
-        if (param.pullRequest.action === 'edited') {
+        if (context.action === 'edited') {
             return ports.workflowSteps.updateTitle.invoke(ports.sharedContexts.title);
         }
-        if (param.pullRequest.isClosed && param.pullRequest.isMerged) {
+        if (context.closed && context.merged) {
             return ports.workflowSteps.closeIssueAfterMerging.invoke(ports.sharedContexts.steps.closeIssue);
         }
     }
@@ -61310,30 +61299,23 @@ async function runPullRequestWorkflow(param, taskId, ports) {
     }
     return [];
 }
-async function canUseAgent(param, authorization) {
-    if (!param.ai.getAiMembersOnly())
+async function canUseAgent(context, authorization) {
+    if (!context.membersOnly)
         return true;
     if (!authorization)
         return false;
-    return authorization.isActorAllowedToModifyFiles(param.actor);
+    return authorization.isActorAllowedToModifyFiles(context.actor);
 }
-function shouldUpdatePullRequestDescriptionAutomatically(param) {
-    const mode = param.ai.getPullRequestDescriptionMode();
-    return mode === 'replace' || mode === 'append';
-}
-async function runPullRequestReview(param, ports) {
-    if (!ports.reviewPotentialProblemsUseCase || !shouldReviewPullRequest(param))
+async function runPullRequestReview(context, ports) {
+    if (!ports.reviewPotentialProblemsUseCase || !context.reviewable)
         return [];
-    return ports.reviewPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param));
+    return ports.reviewPotentialProblemsUseCase.invoke(context.review);
 }
-function shouldReviewPullRequest(param) {
-    return ['opened', 'reopened', 'synchronize'].includes(param.pullRequest.action);
-}
-function logPullRequestState(param) {
-    (0, logging_ports_1.logDebugInfo)(`PR action ${param.pullRequest.action}`);
-    (0, logging_ports_1.logDebugInfo)(`PR isOpened ${param.pullRequest.isOpened}`);
-    (0, logging_ports_1.logDebugInfo)(`PR isMerged ${param.pullRequest.isMerged}`);
-    (0, logging_ports_1.logDebugInfo)(`PR isClosed ${param.pullRequest.isClosed}`);
+function logPullRequestState(context) {
+    (0, logging_ports_1.logDebugInfo)(`PR action ${context.action}`);
+    (0, logging_ports_1.logDebugInfo)(`PR isOpened ${context.opened}`);
+    (0, logging_ports_1.logDebugInfo)(`PR isMerged ${context.merged}`);
+    (0, logging_ports_1.logDebugInfo)(`PR isClosed ${context.closed}`);
 }
 
 
@@ -61401,6 +61383,249 @@ function projectPullRequestDescriptionContext(source) {
         membersOnly: source.ai.getAiMembersOnly(),
         agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
     });
+}
+
+
+/***/ }),
+
+/***/ 47841:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectDeploymentPublicationContext = projectDeploymentPublicationContext;
+exports.projectDeploymentOrchestrationContext = projectDeploymentOrchestrationContext;
+exports.projectProgressContext = projectProgressContext;
+exports.projectRecommendStepsContext = projectRecommendStepsContext;
+exports.projectInactivityContext = projectInactivityContext;
+exports.projectBranchObservationContext = projectBranchObservationContext;
+exports.projectUserRequestContext = projectUserRequestContext;
+exports.projectBranchSyncContext = projectBranchSyncContext;
+exports.projectCommitNotificationContext = projectCommitNotificationContext;
+exports.projectChangeSizeContext = projectChangeSizeContext;
+exports.projectInitialSetupContext = projectInitialSetupContext;
+exports.projectIssueCommentActionContext = projectIssueCommentActionContext;
+exports.projectAgentActivityContext = projectAgentActivityContext;
+const issue_comment_publication_policy_1 = __nccwpck_require__(61899);
+function projectDeploymentPublicationContext(source) {
+    return Object.freeze({
+        requestedOperationId: source.singleAction.operationId,
+        requestedVersion: source.singleAction.version,
+        ...(source.currentConfiguration.deploymentOrchestration
+            ? { operation: copyDeploymentOperation(source.currentConfiguration.deploymentOrchestration) }
+            : {}),
+    });
+}
+function projectDeploymentOrchestrationContext(source) {
+    return {
+        owner: source.owner,
+        repo: source.repo,
+        branches: Object.freeze({ ...source.branches }),
+        workflows: Object.freeze({ ...source.workflows }),
+        locale: Object.freeze({ ...source.locale }),
+        labels: Object.freeze({
+            ...source.labels,
+            lifecycle: Object.freeze({ ...source.labels.lifecycle }),
+        }),
+        deployment: deepFreezeCopy(source.deployment),
+        singleAction: Object.freeze({ ...source.singleAction }),
+        pullRequest: Object.freeze({ ...source.pullRequest }),
+        currentConfiguration: {
+            ...source.currentConfiguration,
+            ...(source.currentConfiguration.deploymentOrchestration
+                ? { deploymentOrchestration: copyDeploymentOperation(source.currentConfiguration.deploymentOrchestration) }
+                : {}),
+        },
+    };
+}
+function projectProgressContext(source) {
+    return Object.freeze({
+        issueNumber: source.issueNumber,
+        pushedBranch: source.commit.branch,
+        developmentBranch: source.branches.development || 'develop',
+        branchTypes: Object.freeze([
+            source.branches.featureTree,
+            source.branches.bugfixTree,
+            source.branches.docsTree,
+            source.branches.choreTree,
+            source.branches.hotfixTree,
+            source.branches.releaseTree,
+        ]),
+        agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('findings') }),
+        includeReasoning: source.ai.getAiIncludeReasoning(),
+    });
+}
+function projectRecommendStepsContext(source) {
+    const previous = source.previousConfiguration?.recommendationState;
+    return Object.freeze({
+        issueNumber: source.issueNumber,
+        eventName: source.eventName,
+        eventAction: source.inputs?.action ?? '',
+        ...(source.tokenUser ? { tokenUser: source.tokenUser } : {}),
+        ...(previous ? { previousRecommendation: Object.freeze({ ...previous }) } : {}),
+        agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
+    });
+}
+function projectInactivityContext(source) {
+    return Object.freeze({
+        waitingLabels: Object.freeze([
+            source.labels.lifecycle.awaitingMaintainer,
+            source.labels.lifecycle.awaitingIssueAuthor,
+        ]),
+        activityLabel: source.labels.lifecycle.aiProcessing,
+        thresholdHours: source.inactivityThresholdHours,
+    });
+}
+function projectBranchObservationContext(source) {
+    return Object.freeze({
+        pushedBranch: source.commit.branch.trim(),
+        deletedPush: typeof source.inputs?.after === 'string' && /^0+$/u.test(source.inputs.after),
+        ...(source.tokenUser ? { trustedBotLogin: source.tokenUser } : {}),
+        repository: Object.freeze({ owner: source.owner, name: source.repo }),
+    });
+}
+function projectUserRequestContext(source) {
+    return Object.freeze({
+        issueNumber: source.issueNumber,
+        headBranch: source.commit.branch,
+        baseBranch: source.currentConfiguration.parentBranch ?? source.branches.development ?? 'develop',
+        repository: Object.freeze({ owner: source.owner, name: source.repo }),
+        agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('fixer') }),
+    });
+}
+function projectBranchSyncContext(source) {
+    return Object.freeze({
+        conversationNumber: [source.pullRequest.number, source.issue.number, source.issueNumber]
+            .find(candidate => candidate > 0) ?? -1,
+        repository: Object.freeze({ owner: source.owner, name: source.repo }),
+        agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('fixer') }),
+        verifyCommands: Object.freeze([...source.ai.getBugbotFixVerifyCommands()]),
+    });
+}
+function projectCommitNotificationContext(source) {
+    const theme = commitTheme(source);
+    return Object.freeze({
+        issueNumber: source.issueNumber,
+        branch: source.commit.branch,
+        commits: Object.freeze(source.commit.commits.map(commit => Object.freeze({
+            ...commit,
+            ...(commit.author ? { author: Object.freeze({ ...commit.author }) } : {}),
+        }))),
+        commitPrefixBuilder: source.commitPrefixBuilder,
+        reopenOnPush: source.issue.reopenOnPush,
+        theme: theme.kind,
+        imagesOnCommit: source.images.imagesOnCommit,
+        themeImages: Object.freeze([...theme.images]),
+    });
+}
+function projectChangeSizeContext(source) {
+    const keys = ['xxl', 'xl', 'l', 'm', 's', 'xs'];
+    const thresholdEntries = keys.map(key => [key, Object.freeze({ ...source.sizeThresholds[key] })]);
+    return Object.freeze({
+        issueNumber: source.issueNumber,
+        headBranch: source.commit.branch,
+        baseBranch: source.currentConfiguration.parentBranch ?? source.branches.development ?? 'develop',
+        thresholds: Object.freeze(Object.fromEntries(thresholdEntries)),
+        labels: Object.freeze({
+            xxl: source.labels.sizeXxl,
+            xl: source.labels.sizeXl,
+            l: source.labels.sizeL,
+            m: source.labels.sizeM,
+            s: source.labels.sizeS,
+            xs: source.labels.sizeXs,
+        }),
+        ...(source.labels.sizedLabelOnIssue ? { currentSize: source.labels.sizedLabelOnIssue } : {}),
+        currentIssueLabels: Object.freeze([...source.labels.currentIssueLabels]),
+        projects: Object.freeze(source.project.getProjects().map(project => Object.freeze({ ...project }))),
+    });
+}
+function projectInitialSetupContext(source) {
+    const configuration = asObject(source.inputs?.setupConfiguration);
+    const credentials = asObject(source.inputs?.setupCredentials);
+    const remote = asObject(source.inputs?.setupRemoteConfiguration);
+    return Object.freeze({
+        labels: copyInitialLabels(source.labels),
+        issueTypes: Object.freeze({ ...source.issueTypes }),
+        ...(configuration ? { setupConfiguration: deepFreezeCopy(configuration) } : {}),
+        ...(credentials ? { setupCredentials: deepFreezeCopy(credentials) } : {}),
+        ...(remote ? { setupRemoteConfiguration: deepFreezeCopy(remote) } : {}),
+        workflowUpdates: Object.freeze(asStringArray(source.inputs?.setupWorkflowUpdates)),
+    });
+}
+function projectIssueCommentActionContext(source) {
+    const request = (0, issue_comment_publication_policy_1.resolveIssueCommentPublicationRequest)(source.singleAction);
+    return request instanceof Error
+        ? Object.freeze({ kind: 'invalid', message: request.message })
+        : Object.freeze({ kind: 'ready', issueNumber: source.singleAction.issue, request: Object.freeze({ ...request }) });
+}
+function projectAgentActivityContext(source) {
+    const pullRequest = source.eventName === 'pull_request' || source.eventName === 'pull_request_review_comment';
+    const number = pullRequest
+        ? source.pullRequest.number
+        : source.issue.number > 0 ? source.issue.number : source.issueNumber;
+    return Object.freeze({
+        ...(number > 0 ? {
+            target: Object.freeze({
+                kind: pullRequest ? 'pull-request' : 'issue',
+                number,
+                labels: Object.freeze([...(pullRequest
+                        ? source.labels.currentPullRequestLabels ?? []
+                        : source.labels.currentIssueLabels ?? [])]),
+            }),
+        } : {}),
+        activityLabel: source.labels.lifecycle.aiProcessing,
+    });
+}
+function commitTheme(source) {
+    if (source.release.active)
+        return { kind: 'release', images: source.images.commitReleaseGifs };
+    if (source.hotfix.active)
+        return { kind: 'hotfix', images: source.images.commitHotfixGifs };
+    if (source.isBugfix)
+        return { kind: 'bugfix', images: source.images.commitBugfixGifs };
+    if (source.isFeature)
+        return { kind: 'feature', images: source.images.commitFeatureGifs };
+    if (source.isDocs)
+        return { kind: 'docs', images: source.images.commitDocsGifs };
+    if (source.isChore)
+        return { kind: 'chore', images: source.images.commitChoreGifs };
+    return { kind: 'automatic', images: source.images.commitAutomaticActions };
+}
+function copyInitialLabels(source) {
+    const keys = [
+        'branchManagementLauncherLabel',
+        'bug', 'bugfix', 'hotfix', 'enhancement', 'feature', 'release',
+        'question', 'help', 'deploy', 'deployed', 'docs', 'documentation',
+        'chore', 'maintenance', 'priorityHigh', 'priorityMedium', 'priorityLow',
+        'priorityNone', 'sizeXxl', 'sizeXl', 'sizeL', 'sizeM', 'sizeS', 'sizeXs',
+    ];
+    return Object.freeze({
+        ...Object.fromEntries(keys.map(key => [key, source[key]])),
+        lifecycle: Object.freeze({ ...source.lifecycle }),
+    });
+}
+function copyDeploymentOperation(operation) {
+    return Object.freeze({
+        ...operation,
+        reconciliationTargets: Object.freeze((operation.reconciliationTargets ?? []).map(target => Object.freeze({ ...target }))),
+        ...(operation.publicationReceipt ? { publicationReceipt: Object.freeze({ ...operation.publicationReceipt }) } : {}),
+        ...(operation.lastFailure ? { lastFailure: Object.freeze({ ...operation.lastFailure }) } : {}),
+    });
+}
+function asObject(value) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
+}
+function asStringArray(value) {
+    return Array.isArray(value) ? value.filter((item) => typeof item === 'string') : [];
+}
+function deepFreezeCopy(value) {
+    if (Array.isArray(value))
+        return Object.freeze(value.map(item => deepFreezeCopy(item)));
+    if (value && typeof value === 'object') {
+        return Object.freeze(Object.fromEntries(Object.entries(value).map(([key, nested]) => [key, deepFreezeCopy(nested)])));
+    }
+    return value;
 }
 
 
@@ -62199,6 +62424,9 @@ exports.SingleActionUseCase = void 0;
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const single_action_workflow_1 = __nccwpck_require__(6130);
+const think_workflow_1 = __nccwpck_require__(36450);
+const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
+const push_single_action_contexts_1 = __nccwpck_require__(47841);
 class SingleActionUseCase {
     constructor(publishGithubActionUseCase, createReleaseUseCase, createTagUseCase, thinkUseCase, initialSetupUseCase, checkProgressUseCase, detectPotentialProblemsUseCase, recommendStepsUseCase, closeInactiveIssuesUseCase, actorAuthorizationPort, publishIssueCommentUseCase, observeBranchSyncUseCase, deploymentOrchestrationUseCase) {
         this.publishGithubActionUseCase = publishGithubActionUseCase;
@@ -62229,7 +62457,7 @@ class SingleActionUseCase {
                 return [];
             }
         }
-        return (0, single_action_workflow_1.runSingleActionWorkflow)(param, this.taskId, {
+        const outcome = await (0, single_action_workflow_1.runSingleActionWorkflow)(projectSingleActionDispatch(param), this.taskId, {
             publishGithubActionUseCase: this.publishGithubActionUseCase,
             createReleaseUseCase: this.createReleaseUseCase,
             createTagUseCase: this.createTagUseCase,
@@ -62243,9 +62471,44 @@ class SingleActionUseCase {
             observeBranchSyncUseCase: this.observeBranchSyncUseCase,
             deploymentOrchestrationUseCase: this.deploymentOrchestrationUseCase,
         });
+        if (outcome.configurationPatch) {
+            param.currentConfiguration.recommendationState = { ...outcome.configurationPatch.recommendationState };
+        }
+        return [...outcome.results];
     }
 }
 exports.SingleActionUseCase = SingleActionUseCase;
+function projectSingleActionDispatch(param) {
+    const action = param.singleAction.currentSingleAction;
+    if (!param.singleAction.validSingleAction)
+        return Object.freeze({ kind: 'invalid', action });
+    if (param.singleAction.isPublishGithubAction)
+        return Object.freeze({ kind: 'publish-github-action', action, input: (0, push_single_action_contexts_1.projectDeploymentPublicationContext)(param) });
+    if (param.singleAction.isCreateReleaseAction)
+        return Object.freeze({ kind: 'create-release', action, input: (0, push_single_action_contexts_1.projectDeploymentPublicationContext)(param) });
+    if (param.singleAction.isCreateTagAction)
+        return Object.freeze({ kind: 'create-tag', action, input: (0, push_single_action_contexts_1.projectDeploymentPublicationContext)(param) });
+    if (param.singleAction.isThinkAction)
+        return Object.freeze({ kind: 'think', action, input: (0, think_workflow_1.projectThinkContext)(param) });
+    if (param.singleAction.isInitialSetupAction)
+        return Object.freeze({ kind: 'initial-setup', action, input: (0, push_single_action_contexts_1.projectInitialSetupContext)(param) });
+    if (param.singleAction.isCheckProgressAction)
+        return Object.freeze({ kind: 'check-progress', action, input: (0, push_single_action_contexts_1.projectProgressContext)(param) });
+    if (param.singleAction.isDetectPotentialProblemsAction)
+        return Object.freeze({ kind: 'detect-potential-problems', action, input: (0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param) });
+    if (param.singleAction.isRecommendStepsAction)
+        return Object.freeze({ kind: 'recommend-steps', action, input: (0, push_single_action_contexts_1.projectRecommendStepsContext)(param) });
+    if (param.singleAction.isCloseInactiveIssuesAction)
+        return Object.freeze({ kind: 'close-inactive-issues', action, input: (0, push_single_action_contexts_1.projectInactivityContext)(param) });
+    if (param.singleAction.isPublishIssueCommentAction)
+        return Object.freeze({ kind: 'publish-issue-comment', action, input: (0, push_single_action_contexts_1.projectIssueCommentActionContext)(param) });
+    if (param.singleAction.isCheckBranchSyncAction)
+        return Object.freeze({ kind: 'observe-branch-sync', action, input: (0, push_single_action_contexts_1.projectBranchObservationContext)(param) });
+    if (param.singleAction.isDeploymentOrchestrationAction) {
+        return Object.freeze({ kind: 'deployment-orchestration', action, input: (0, push_single_action_contexts_1.projectDeploymentOrchestrationContext)(param) });
+    }
+    return Object.freeze({ kind: 'invalid', action });
+}
 function isAgentBackedSingleAction(param) {
     return param.singleAction.isThinkAction
         || param.singleAction.isCheckProgressAction
@@ -62266,59 +62529,52 @@ exports.runSingleActionWorkflow = runSingleActionWorkflow;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
-const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
-const think_workflow_1 = __nccwpck_require__(36450);
-async function runSingleActionWorkflow(param, taskId, ports) {
-    if (!param.singleAction.validSingleAction) {
-        (0, logging_ports_1.logDebugInfo)(`Single action is not valid: ${param.singleAction.currentSingleAction}. Skipping.`);
-        return [];
+async function runSingleActionWorkflow(dispatch, taskId, ports) {
+    if (dispatch.kind === 'invalid') {
+        (0, logging_ports_1.logDebugInfo)(`Single action is not valid: ${dispatch.action}. Skipping.`);
+        return workflowOutcome([]);
     }
-    (0, logging_ports_1.logDebugInfo)(`SingleAction: dispatching to handler for action: ${param.singleAction.currentSingleAction}.`);
-    if (param.singleAction.isDetectPotentialProblemsAction) {
-        try {
-            return await ports.detectPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param));
-        }
-        catch (error) {
-            return singleActionFailure(param, taskId, error);
-        }
-    }
-    if (param.singleAction.isThinkAction) {
-        try {
-            return await ports.thinkUseCase.invoke((0, think_workflow_1.projectThinkContext)(param));
-        }
-        catch (error) {
-            return singleActionFailure(param, taskId, error);
-        }
-    }
-    const action = [
-        { active: param.singleAction.isPublishGithubAction, useCase: ports.publishGithubActionUseCase },
-        { active: param.singleAction.isCreateReleaseAction, useCase: ports.createReleaseUseCase },
-        { active: param.singleAction.isCreateTagAction, useCase: ports.createTagUseCase },
-        { active: param.singleAction.isInitialSetupAction, useCase: ports.initialSetupUseCase },
-        { active: param.singleAction.isCheckProgressAction, useCase: ports.checkProgressUseCase },
-        { active: param.singleAction.isRecommendStepsAction, useCase: ports.recommendStepsUseCase },
-        { active: param.singleAction.isCloseInactiveIssuesAction, useCase: ports.closeInactiveIssuesUseCase },
-        { active: param.singleAction.isPublishIssueCommentAction, useCase: ports.publishIssueCommentUseCase },
-        { active: param.singleAction.isCheckBranchSyncAction, useCase: ports.observeBranchSyncUseCase },
-        { active: param.singleAction.isDeploymentOrchestrationAction, useCase: ports.deploymentOrchestrationUseCase },
-    ].find(({ active, useCase }) => active && useCase !== undefined);
-    if (!action || !action.useCase)
-        return [];
+    (0, logging_ports_1.logDebugInfo)(`SingleAction: dispatching to handler for action: ${dispatch.action}.`);
     try {
-        return await action.useCase.invoke(param);
+        switch (dispatch.kind) {
+            case 'publish-github-action': return workflowOutcome(await invokeOptional(ports.publishGithubActionUseCase, dispatch.input));
+            case 'create-release': return workflowOutcome(await invokeOptional(ports.createReleaseUseCase, dispatch.input));
+            case 'create-tag': return workflowOutcome(await invokeOptional(ports.createTagUseCase, dispatch.input));
+            case 'think': return workflowOutcome(await ports.thinkUseCase.invoke(dispatch.input));
+            case 'initial-setup': return workflowOutcome(await ports.initialSetupUseCase.invoke(dispatch.input));
+            case 'check-progress': return workflowOutcome(await ports.checkProgressUseCase.invoke(dispatch.input));
+            case 'detect-potential-problems': return workflowOutcome(await ports.detectPotentialProblemsUseCase.invoke(dispatch.input));
+            case 'recommend-steps': {
+                const outcome = await ports.recommendStepsUseCase.invoke(dispatch.input);
+                return workflowOutcome(outcome.results, outcome.configurationPatch);
+            }
+            case 'close-inactive-issues': return workflowOutcome(await invokeOptional(ports.closeInactiveIssuesUseCase, dispatch.input));
+            case 'publish-issue-comment': return workflowOutcome(await invokeOptional(ports.publishIssueCommentUseCase, dispatch.input));
+            case 'observe-branch-sync': return workflowOutcome(await invokeOptional(ports.observeBranchSyncUseCase, dispatch.input));
+            case 'deployment-orchestration': return workflowOutcome(await invokeOptional(ports.deploymentOrchestrationUseCase, dispatch.input));
+        }
     }
     catch (error) {
-        return singleActionFailure(param, taskId, error);
+        return workflowOutcome(singleActionFailure(dispatch.action, taskId, error));
     }
 }
-function singleActionFailure(param, taskId, error) {
-    const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', `Single action ${param.singleAction.currentSingleAction} failed.`);
+async function invokeOptional(port, input) {
+    return port ? port.invoke(input) : [];
+}
+function workflowOutcome(results, configurationPatch) {
+    return Object.freeze({
+        results: Object.freeze([...results]),
+        ...(configurationPatch ? { configurationPatch: Object.freeze({ ...configurationPatch }) } : {}),
+    });
+}
+function singleActionFailure(action, taskId, error) {
+    const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', `Single action ${action} failed.`);
     (0, logging_ports_1.logError)(semanticError);
     return [new result_1.Result({
             id: taskId,
             success: false,
             executed: true,
-            steps: [`Error executing single action: ${param.singleAction.currentSingleAction}.`],
+            steps: [`Error executing single action: ${action}.`],
             errors: [semanticError],
         })];
 }
@@ -66064,29 +66320,26 @@ const update_change_size_labels_1 = __nccwpck_require__(51200);
 const application_error_1 = __nccwpck_require__(75999);
 async function runCheckChangesIssueSize(param, taskId, dependencies) {
     try {
-        const baseBranch = param.currentConfiguration.parentBranch ?? param.branches.development ?? 'develop';
+        const baseBranch = param.baseBranch;
         if (!baseBranch) {
             (0, logging_ports_1.logDebugInfo)('Parent branch could not be determined.');
             return [];
         }
-        const headBranch = param.commit.branch;
-        const size = await dependencies.branchChangeSizePort.getSizeCategoryAndReason(param.owner, param.repo, headBranch, baseBranch, param.sizeThresholds, param.labels, param.tokens.token);
-        logSize(size.size, size.githubSize, size.reason, param.labels.sizedLabelOnIssue);
-        if (param.labels.sizedLabelOnIssue === size.size) {
+        const headBranch = param.headBranch;
+        const size = await dependencies.branchChangeSizePort.getSizeCategoryAndReason(headBranch, baseBranch, param.thresholds, param.labels);
+        logSize(size.size, size.githubSize, size.reason, param.currentSize);
+        if (param.currentSize === size.size) {
             (0, logging_ports_1.logDebugInfo)('The issue is already at the correct size.');
             return [new result_1.Result({ id: taskId, success: true, executed: true })];
         }
         const update = await (0, update_change_size_labels_1.updateIssueAndRelatedPullRequests)({
-            owner: param.owner,
-            repository: param.repo,
             issueNumber: param.issueNumber,
             headBranch,
             size: size.size,
             githubSize: size.githubSize,
-            currentIssueLabels: param.labels.currentIssueLabels,
-            sizeLabels: param.labels.sizeLabels,
-            projects: param.project.getProjects(),
-            token: param.tokens.token,
+            currentIssueLabels: param.currentIssueLabels,
+            sizeLabels: Object.values(param.labels),
+            projects: param.projects,
         }, {
             issueLabelsPort: dependencies.issueRepository,
             projectBoardCommandPort: dependencies.projectBoardCommandPort,
@@ -66137,11 +66390,11 @@ function buildCommitNotificationContent(param, commitPrefix) {
     let body = `
 # ${theme.title}
 
-**Changes on branch \`${param.commit.branch}\`:**
+**Changes on branch \`${param.branch}\`:**
 
 `;
     let shouldWarn = false;
-    for (const commit of param.commit.commits) {
+    for (const commit of param.commits) {
         const commitMessage = commit.message ?? "";
         body += `
 ${SEPARATOR}
@@ -66167,7 +66420,7 @@ ${commitPrefix}: created hello-world app
 \`\`\`
 `;
     }
-    if (theme.image && param.images.imagesOnCommit) {
+    if (theme.image && param.imagesOnCommit) {
         body += `
 ${SEPARATOR}
 
@@ -66177,19 +66430,16 @@ ${SEPARATOR}
     return { body, shouldWarn };
 }
 function resolveTheme(param) {
-    if (param.release.active)
-        return { title: "🚀 Release News", image: (0, list_utils_1.getRandomElement)(param.images.commitReleaseGifs) };
-    if (param.hotfix.active)
-        return { title: "🔥🐛 Hotfix News", image: (0, list_utils_1.getRandomElement)(param.images.commitHotfixGifs) };
-    if (param.isBugfix)
-        return { title: "🐛 Bugfix News", image: (0, list_utils_1.getRandomElement)(param.images.commitBugfixGifs) };
-    if (param.isFeature)
-        return { title: "✨ Feature News", image: (0, list_utils_1.getRandomElement)(param.images.commitFeatureGifs) };
-    if (param.isDocs)
-        return { title: "📝 Documentation News", image: (0, list_utils_1.getRandomElement)(param.images.commitDocsGifs) };
-    if (param.isChore)
-        return { title: "🔧 Chore News", image: (0, list_utils_1.getRandomElement)(param.images.commitChoreGifs) };
-    return { title: "🪄 Automatic News", image: (0, list_utils_1.getRandomElement)(param.images.commitAutomaticActions) };
+    const titles = {
+        release: '🚀 Release News',
+        hotfix: '🔥🐛 Hotfix News',
+        bugfix: '🐛 Bugfix News',
+        feature: '✨ Feature News',
+        docs: '📝 Documentation News',
+        chore: '🔧 Chore News',
+        automatic: '🪄 Automatic News',
+    };
+    return { title: titles[param.theme], image: (0, list_utils_1.getRandomElement)([...param.themeImages]) };
 }
 function hasUnexpectedPrefix(commitMessage, commitPrefix) {
     return commitPrefix.length > 0
@@ -66645,21 +66895,20 @@ const application_error_1 = __nccwpck_require__(75999);
 async function runNotifyNewCommitOnIssueWorkflow(param, taskId, issueRepository) {
     const result = [];
     try {
-        const branchName = param.commit.branch;
+        const branchName = param.branch;
         let commitPrefix = "";
         if (param.commitPrefixBuilder.length > 0) {
-            param.commitPrefixBuilderParams = { branchName };
             commitPrefix = (0, execute_script_use_case_1.buildCommitPrefix)(branchName, param.commitPrefixBuilder);
             (0, logging_ports_1.logDebugInfo)(`Commit prefix: ${commitPrefix}`);
         }
         const { body } = (0, commit_notification_content_policy_1.buildCommitNotificationContent)(param, commitPrefix);
-        if (param.issue.reopenOnPush) {
-            const opened = await issueRepository.openIssue(param.owner, param.repo, param.issueNumber, param.tokens.token);
+        if (param.reopenOnPush) {
+            const opened = await issueRepository.openIssue(param.issueNumber);
             if (opened) {
-                await issueRepository.addComment(param.owner, param.repo, param.issueNumber, `This issue was re-opened after pushing new commits to the branch \`${branchName}\`.`, param.tokens.token);
+                await issueRepository.addComment(param.issueNumber, `This issue was re-opened after pushing new commits to the branch \`${branchName}\`.`);
             }
         }
-        await issueRepository.addComment(param.owner, param.repo, param.issueNumber, body, param.tokens.token);
+        await issueRepository.addComment(param.issueNumber, body);
     }
     catch (error) {
         const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to notify the issue about the new commit.');
@@ -66689,22 +66938,22 @@ exports.updateIssueAndRelatedPullRequests = updateIssueAndRelatedPullRequests;
 function replaceSizeLabel(currentLabels, sizeLabels, nextSize) {
     return [...currentLabels.filter((name) => !sizeLabels.includes(name)), nextSize];
 }
-async function updateProjectSize(projects, owner, repository, issueOrPullRequestNumber, githubSize, token, projectBoardCommandPort) {
+async function updateProjectSize(projects, issueOrPullRequestNumber, githubSize, projectBoardCommandPort) {
     for (const project of projects) {
-        await projectBoardCommandPort.setTaskSize(project, owner, repository, issueOrPullRequestNumber, githubSize, token);
+        await projectBoardCommandPort.setTaskSize(project, issueOrPullRequestNumber, githubSize);
     }
 }
 async function updateOpenPullRequestSize(request, pullRequestNumber, ports) {
-    const pullRequestLabels = await ports.issueLabelsPort.getLabels(request.owner, request.repository, pullRequestNumber, request.token);
+    const pullRequestLabels = await ports.issueLabelsPort.getLabels(pullRequestNumber);
     const pullRequestLabelNames = replaceSizeLabel(pullRequestLabels, request.sizeLabels, request.size);
-    await ports.issueLabelsPort.setLabels(request.owner, request.repository, pullRequestNumber, pullRequestLabelNames, request.token);
-    await updateProjectSize(request.projects, request.owner, request.repository, pullRequestNumber, request.githubSize, request.token, ports.projectBoardCommandPort);
+    await ports.issueLabelsPort.setLabels(pullRequestNumber, pullRequestLabelNames);
+    await updateProjectSize(request.projects, pullRequestNumber, request.githubSize, ports.projectBoardCommandPort);
 }
 async function updateIssueAndRelatedPullRequests(request, ports) {
     const issueLabelNames = replaceSizeLabel(request.currentIssueLabels, request.sizeLabels, request.size);
-    await ports.issueLabelsPort.setLabels(request.owner, request.repository, request.issueNumber, issueLabelNames, request.token);
-    await updateProjectSize(request.projects, request.owner, request.repository, request.issueNumber, request.githubSize, request.token, ports.projectBoardCommandPort);
-    const openPullRequestNumbers = await ports.pullRequestBranchQueryPort.getOpenPullRequestNumbersByHeadBranch(request.owner, request.repository, request.headBranch, request.token);
+    await ports.issueLabelsPort.setLabels(request.issueNumber, issueLabelNames);
+    await updateProjectSize(request.projects, request.issueNumber, request.githubSize, ports.projectBoardCommandPort);
+    const openPullRequestNumbers = await ports.pullRequestBranchQueryPort.getOpenPullRequestNumbersByHeadBranch(request.headBranch);
     for (const pullRequestNumber of openPullRequestNumbers) {
         await updateOpenPullRequestSize(request, pullRequestNumber, ports);
     }
@@ -66745,8 +66994,8 @@ class DoUserRequestUseCase {
     async invoke(param) {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const results = [];
-        const { execution, userComment } = param;
-        if (!(0, agent_1.isAgentConfigurationReady)(execution.ai.getAgentConfiguration('fixer'))) {
+        const { context, userComment } = param;
+        if (!(0, agent_1.isAgentConfigurationReady)(context.agentConfiguration)) {
             (0, logging_ports_1.logInfo)("Agent not configured; skipping user request.");
             return results;
         }
@@ -66755,32 +67004,30 @@ class DoUserRequestUseCase {
             (0, logging_ports_1.logInfo)("No user comment; skipping user request.");
             return results;
         }
-        const targetBranch = param.branchOverride ?? execution.commit.branch;
+        const targetBranch = param.branchOverride ?? context.headBranch;
         let mutation;
         try {
             mutation = await (0, workspace_mutation_guard_1.prepareWorkspaceMutation)(this.gitCommitPort, {
                 operation: 'User-request implementation',
                 branch: targetBranch,
-                token: execution.tokens.token,
             });
         }
         catch (error) {
             return [failure(error)];
         }
-        const baseBranch = execution.currentConfiguration.parentBranch ?? execution.branches.development ?? "develop";
         const prompt = (0, prompts_1.getUserRequestPrompt)({
             projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
-            owner: execution.owner,
-            repo: execution.repo,
-            headBranch: execution.commit.branch,
-            baseBranch,
-            issueNumber: String(execution.issueNumber),
+            owner: context.repository.owner,
+            repo: context.repository.name,
+            headBranch: context.headBranch,
+            baseBranch: context.baseBranch,
+            issueNumber: String(context.issueNumber),
             userComment: (0, sanitize_user_comment_for_prompt_1.sanitizeUserCommentForPrompt)(userComment),
         });
         (0, logging_ports_1.logDebugInfo)(`DoUserRequest: prompt length=${prompt.length}, user comment length=${commentTrimmed.length}.`);
         (0, logging_ports_1.logInfo)("Running configured build agent to perform user request (changes applied in workspace).");
         const response = await this.aiRepository.fix({
-            configuration: execution.ai.getAgentConfiguration('fixer'),
+            configuration: context.agentConfiguration,
             prompt,
         });
         (0, logging_ports_1.logDebugInfo)(`DoUserRequest: build agent response length=${response?.text?.length ?? 0}.`);
@@ -66853,7 +67100,7 @@ async function prepareWorkspaceMutation(gitCommitPort, options) {
     if (options.branch?.trim()) {
         branchCheckedOut = await (0, git_branch_checkout_1.checkoutBranch)(options.branch, {
             execute: gitCommitPort.execute.bind(gitCommitPort),
-            fetch: (branch) => gitCommitPort.fetch(branch, options.token),
+            fetch: (branch) => gitCommitPort.fetch(branch),
         });
         if (!branchCheckedOut) {
             throw new application_error_1.ApplicationError('provider.unavailable', `${options.operation} refused: failed to checkout target branch ${options.branch}.`);
@@ -67148,52 +67395,8 @@ function toCamelCase(input) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CommitPrefixBuilderUseCase = void 0;
 exports.buildCommitPrefix = buildCommitPrefix;
-const result_1 = __nccwpck_require__(73817);
-const logging_ports_1 = __nccwpck_require__(6152);
-const task_emoji_1 = __nccwpck_require__(46103);
 const commit_prefix_transform_policy_1 = __nccwpck_require__(56334);
-const application_error_1 = __nccwpck_require__(75999);
-class CommitPrefixBuilderUseCase {
-    constructor() {
-        this.taskId = 'CommitPrefixBuilderUseCase';
-    }
-    async invoke(param) {
-        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
-        const result = [];
-        try {
-            const branchName = param.commitPrefixBuilderParams.branchName;
-            const transforms = param.commitPrefixBuilder; // Now it's a list of transforms
-            const commitPrefix = buildCommitPrefix(branchName, transforms, (transform) => {
-                (0, logging_ports_1.logDebugInfo)(`Unknown transform: ${transform}, skipping...`);
-            });
-            (0, logging_ports_1.logDebugInfo)(`Commit prefix generated: ${commitPrefix}`);
-            result.push(new result_1.Result({
-                id: this.taskId,
-                success: true,
-                executed: true,
-                steps: [],
-                payload: {
-                    scriptResult: commitPrefix
-                }
-            }));
-        }
-        catch (error) {
-            const semanticError = (0, application_error_1.toApplicationError)(error, 'unexpected', 'Unable to build the commit prefix.');
-            (0, logging_ports_1.logError)(semanticError);
-            result.push(new result_1.Result({
-                id: this.taskId,
-                success: false,
-                executed: true,
-                steps: [],
-                errors: [semanticError],
-            }));
-        }
-        return result;
-    }
-}
-exports.CommitPrefixBuilderUseCase = CommitPrefixBuilderUseCase;
 function buildCommitPrefix(branchName, transforms, onUnknownTransform) {
     return transforms
         .split(',')
@@ -72842,7 +73045,6 @@ class Execution {
          * master <- develop
          */
         this.issueNumber = -1;
-        this.commitPrefixBuilderParams = {};
         this.debug = components.debug;
         this.singleAction = components.singleAction;
         this.commitPrefixBuilder = components.commitPrefixBuilder;
@@ -75514,11 +75716,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.classifyChangeSize = classifyChangeSize;
 function classifyChangeSize(metrics, sizeThresholds, labels) {
     const categories = [
-        { key: 'xxl', label: labels.sizeXxl, githubSize: 'XL' },
-        { key: 'xl', label: labels.sizeXl, githubSize: 'XL' },
-        { key: 'l', label: labels.sizeL, githubSize: 'L' },
-        { key: 'm', label: labels.sizeM, githubSize: 'M' },
-        { key: 's', label: labels.sizeS, githubSize: 'S' },
+        { key: 'xxl', label: labels.xxl, githubSize: 'XL' },
+        { key: 'xl', label: labels.xl, githubSize: 'XL' },
+        { key: 'l', label: labels.l, githubSize: 'L' },
+        { key: 'm', label: labels.m, githubSize: 'M' },
+        { key: 's', label: labels.s, githubSize: 'S' },
     ];
     for (const category of categories) {
         const threshold = sizeThresholds[category.key];
@@ -75545,7 +75747,7 @@ function classifyChangeSize(metrics, sizeThresholds, labels) {
         }
     }
     return {
-        size: labels.sizeXs,
+        size: labels.xs,
         githubSize: 'XS',
         reason: `Small changes (${metrics.totalChanges} lines, ${metrics.totalFiles} files)`,
     };
@@ -83518,8 +83720,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createSynchronizeAgentActivityUseCase = createSynchronizeAgentActivityUseCase;
 const synchronize_agent_activity_use_case_1 = __nccwpck_require__(44880);
 const issue_labels_composition_root_1 = __nccwpck_require__(34780);
-function createSynchronizeAgentActivityUseCase() {
-    return new synchronize_agent_activity_use_case_1.SynchronizeAgentActivityUseCase((0, issue_labels_composition_root_1.createIssueLabelRepository)());
+const lifecycle_capability_port_binding_1 = __nccwpck_require__(85785);
+function createSynchronizeAgentActivityUseCase(binding) {
+    return new synchronize_agent_activity_use_case_1.SynchronizeAgentActivityUseCase((0, lifecycle_capability_port_binding_1.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding));
 }
 
 
@@ -83723,9 +83926,13 @@ const issue_progress_label_repository_1 = __nccwpck_require__(66610);
 const issue_progress_tracking_repository_1 = __nccwpck_require__(26674);
 const branch_lifecycle_repository_1 = __nccwpck_require__(19504);
 const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
-function createCheckProgressCompositionRoot() {
+const shared_capability_port_binding_1 = __nccwpck_require__(47399);
+const lifecycle_capability_port_binding_1 = __nccwpck_require__(85785);
+const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
+function createCheckProgressCompositionRoot(binding) {
     const labels = new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)());
-    return new check_progress_use_case_1.CheckProgressUseCase(new issue_progress_tracking_repository_1.IssueProgressTrackingRepository(new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)()), labels, new issue_progress_label_repository_1.IssueProgressLabelRepository(new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)()))), new branch_lifecycle_repository_1.BranchLifecycleRepository((0, github_branch_client_factory_1.createBranchClient)()), new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
+    const content = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
+    return new check_progress_use_case_1.CheckProgressUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(content, binding), (0, lifecycle_capability_port_binding_1.bindIssueLabels)(labels, binding), (0, push_single_action_capability_port_binding_1.bindIssueProgress)(new issue_progress_tracking_repository_1.IssueProgressTrackingRepository(content, labels, new issue_progress_label_repository_1.IssueProgressLabelRepository(new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)()))), binding), (0, push_single_action_capability_port_binding_1.bindBranchListQuery)(new branch_lifecycle_repository_1.BranchLifecycleRepository((0, github_branch_client_factory_1.createBranchClient)()), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
 }
 
 
@@ -83982,10 +84189,11 @@ const initial_setup_use_case_composition_1 = __nccwpck_require__(93141);
 const setup_workspace_adapter_1 = __nccwpck_require__(5729);
 const repository_variables_repository_1 = __nccwpck_require__(28493);
 const github_identity_client_factory_2 = __nccwpck_require__(93081);
-function createInitialSetupCompositionRoot() {
+const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
+function createInitialSetupCompositionRoot(binding) {
     const labelProvisioning = new issue_label_provisioning_repository_1.IssueLabelProvisioningRepository((0, github_issue_client_factory_1.createIssueLabelProvisioningClient)());
     const githubResourceClient = (0, github_identity_client_factory_2.createRepositoryVariablesClient)();
-    return (0, initial_setup_use_case_composition_1.composeInitialSetupUseCase)(new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)()), labelProvisioning, new issue_type_repository_1.IssueTypeRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new git_cli_repository_1.GitCliRepository(), new repository_default_branch_repository_1.RepositoryDefaultBranchRepository((0, github_release_client_factory_1.createReleaseClient)()), new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)()), new setup_workspace_adapter_1.SetupWorkspaceMutationAdapter(), new repository_variables_repository_1.RepositoryVariablesCommandRepository(githubResourceClient), new repository_variables_repository_1.RepositorySecretsCommandRepository(githubResourceClient), new repository_variables_repository_1.SetupRemoteConfigurationQueryRepository(githubResourceClient));
+    return (0, initial_setup_use_case_composition_1.composeInitialSetupUseCase)((0, push_single_action_capability_port_binding_1.bindAuthenticatedUser)(new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)()), binding), (0, push_single_action_capability_port_binding_1.bindInitialLabels)(labelProvisioning, binding), (0, push_single_action_capability_port_binding_1.bindIssueTypes)(new issue_type_repository_1.IssueTypeRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), new git_cli_repository_1.GitCliRepository(), (0, push_single_action_capability_port_binding_1.bindRepositoryDefaultBranch)(new repository_default_branch_repository_1.RepositoryDefaultBranchRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindRepositoryTag)(new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindSetupWorkspace)(new setup_workspace_adapter_1.SetupWorkspaceMutationAdapter(), binding), (0, push_single_action_capability_port_binding_1.bindSetupVariables)(new repository_variables_repository_1.RepositoryVariablesCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupSecrets)(new repository_variables_repository_1.RepositorySecretsCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupRemoteConfiguration)(new repository_variables_repository_1.SetupRemoteConfigurationQueryRepository(githubResourceClient), binding));
 }
 
 
@@ -84034,8 +84242,10 @@ const issue_inactivity_repository_1 = __nccwpck_require__(28868);
 const system_issue_inactivity_clock_adapter_1 = __nccwpck_require__(86457);
 const github_issue_client_factory_1 = __nccwpck_require__(95883);
 const issue_interaction_composition_root_1 = __nccwpck_require__(92503);
-function createCloseInactiveIssuesUseCase() {
-    return new close_inactive_issues_use_case_1.CloseInactiveIssuesUseCase(new issue_inactivity_repository_1.IssueInactivityRepository((0, github_issue_client_factory_1.createIssueInactivityClient)()), (0, issue_interaction_composition_root_1.createIssueClosureRepository)(), new system_issue_inactivity_clock_adapter_1.SystemIssueInactivityClockAdapter());
+const lifecycle_capability_port_binding_1 = __nccwpck_require__(85785);
+const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
+function createCloseInactiveIssuesUseCase(binding) {
+    return new close_inactive_issues_use_case_1.CloseInactiveIssuesUseCase((0, push_single_action_capability_port_binding_1.bindIssueInactivityQuery)(new issue_inactivity_repository_1.IssueInactivityRepository((0, github_issue_client_factory_1.createIssueInactivityClient)()), binding), (0, lifecycle_capability_port_binding_1.bindIssueClosure)((0, issue_interaction_composition_root_1.createIssueClosureRepository)(), binding), new system_issue_inactivity_clock_adapter_1.SystemIssueInactivityClockAdapter());
 }
 
 
@@ -84197,7 +84407,7 @@ function createIssueUseCaseCompositionRoot(binding) {
         removeNotNeededBranches: new remove_not_needed_branches_use_case_1.RemoveNotNeededBranchesUseCase(boundBranchLifecycle, branchName),
         deployAdded: new label_deploy_added_use_case_1.DeployAddedUseCase((0, lifecycle_capability_port_binding_1.bindBranchWorkflow)(new workflow_dispatch_repository_1.WorkflowDispatchRepository((0, github_workflow_client_factory_1.createWorkflowDispatchClient)()), binding), moveIssueToInProgress),
     };
-    return (0, issue_use_case_composition_1.composeIssueUseCase)(new recommend_steps_use_case_1.RecommendStepsUseCase(issueContent, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), new answer_issue_help_use_case_1.AnswerIssueHelpUseCase((0, shared_capability_port_binding_1.bindIssueNotification)(issueNotification, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding));
+    return (0, issue_use_case_composition_1.composeIssueUseCase)(new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueContent, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), new answer_issue_help_use_case_1.AnswerIssueHelpUseCase((0, shared_capability_port_binding_1.bindIssueNotification)(issueNotification, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding));
 }
 
 
@@ -84260,6 +84470,7 @@ function bindIssueTypeAssignment(port, binding) {
 function bindProjectBoardCommands(port, binding) {
     return Object.freeze({
         setTaskPriority: (project, contentNumber, priorityLabel) => port.setTaskPriority(toProjectDetail(project), binding.owner, binding.repository, contentNumber, priorityLabel, binding.token),
+        setTaskSize: (project, contentNumber, sizeLabel) => port.setTaskSize(toProjectDetail(project), binding.owner, binding.repository, contentNumber, sizeLabel, binding.token),
         moveIssueToColumn: (project, contentNumber, columnName) => port.moveIssueToColumn(toProjectDetail(project), binding.owner, binding.repository, contentNumber, columnName, binding.token),
     });
 }
@@ -84408,6 +84619,8 @@ const github_workflow_client_factory_1 = __nccwpck_require__(29839);
 const node_crypto_1 = __nccwpck_require__(6005);
 const shared_capability_port_binding_1 = __nccwpck_require__(47399);
 const lifecycle_capability_port_binding_1 = __nccwpck_require__(85785);
+const lifecycle_capability_port_binding_2 = __nccwpck_require__(85785);
+const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
 function createDetectPotentialProblemsUseCase(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.scm, bugbot.telemetry);
@@ -84421,24 +84634,24 @@ function createSingleActionUseCaseCompositionRoot(surface, binding) {
         ? new repository_release_publication_repository_1.RepositoryReleasePublicationRepository((0, github_release_client_factory_1.createReleaseClient)())
         : undefined;
     const deploymentOrchestration = surface === "github-workflow"
-        ? createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, repositoryReleasePort)
+        ? createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, repositoryReleasePort, binding)
         : undefined;
     return new single_action_use_case_1.SingleActionUseCase(repositoryTagPort && repositoryReleasePort
-        ? new publish_github_action_use_case_1.PublishGithubActionUseCase(repositoryTagPort, repositoryReleasePort)
-        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase(repositoryReleasePort) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase(repositoryTagPort) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, shared_capability_port_binding_1.bindIssueNotification)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase(issueDescriptionQueryPort, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase(issueDescriptionQueryPort), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), issueDescriptionQueryPort), deploymentOrchestration);
+        ? new publish_github_action_use_case_1.PublishGithubActionUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding), (0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding))
+        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, shared_capability_port_binding_1.bindIssueNotification)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncNotification)(issueDescriptionQueryPort, binding)), deploymentOrchestration);
 }
-function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publication) {
+function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publication, binding) {
     const deploymentClient = new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter();
     return new deployment_orchestration_use_case_1.DeploymentOrchestrationUseCase({
-        pullRequests: new github_managed_pull_request_repository_1.GithubManagedPullRequestRepository(deploymentClient),
-        targetRules: new github_target_merge_capabilities_inspector_1.GithubTargetMergeCapabilitiesInspector(deploymentClient),
-        git: new github_deployment_git_repository_1.GithubDeploymentGitRepository(deploymentClient),
-        continuation: new deployment_continuation_repository_1.DeploymentContinuationRepository(new workflow_dispatch_repository_1.WorkflowDispatchRepository((0, github_workflow_client_factory_1.createWorkflowDispatchClient)())),
-        presentation: new deployment_presentation_repository_1.DeploymentPresentationRepository(issueDescriptionQueryPort),
-        publication,
-        state: new deployment_state_repository_1.DeploymentStateRepositoryFactory(issueDescriptionQueryPort),
-        labels: (0, issue_labels_composition_root_1.createIssueLabelRepository)(),
-        issues: (0, issue_interaction_composition_root_1.createIssueClosureRepository)(),
+        pullRequests: (0, push_single_action_capability_port_binding_1.bindManagedPullRequests)(new github_managed_pull_request_repository_1.GithubManagedPullRequestRepository(deploymentClient), binding),
+        targetRules: (0, push_single_action_capability_port_binding_1.bindDeploymentTargetRules)(new github_target_merge_capabilities_inspector_1.GithubTargetMergeCapabilitiesInspector(deploymentClient), binding),
+        git: (0, push_single_action_capability_port_binding_1.bindDeploymentGit)(new github_deployment_git_repository_1.GithubDeploymentGitRepository(deploymentClient), binding),
+        continuation: (0, push_single_action_capability_port_binding_1.bindDeploymentContinuation)(new deployment_continuation_repository_1.DeploymentContinuationRepository(new workflow_dispatch_repository_1.WorkflowDispatchRepository((0, github_workflow_client_factory_1.createWorkflowDispatchClient)())), binding),
+        presentation: (0, push_single_action_capability_port_binding_1.bindDeploymentPresentation)(new deployment_presentation_repository_1.DeploymentPresentationRepository(issueDescriptionQueryPort), binding),
+        publication: (0, push_single_action_capability_port_binding_1.bindDeploymentPublicationReceipt)(publication, binding),
+        state: (0, push_single_action_capability_port_binding_1.bindDeploymentState)(new deployment_state_repository_1.DeploymentStateRepositoryFactory(issueDescriptionQueryPort), binding),
+        labels: (0, push_single_action_capability_port_binding_1.bindDeploymentLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding),
+        issues: (0, push_single_action_capability_port_binding_1.bindDeploymentIssues)((0, issue_interaction_composition_root_1.createIssueClosureRepository)(), binding),
         operationId: node_crypto_1.randomUUID,
     });
 }
@@ -84451,8 +84664,8 @@ function createIssueCommentUseCaseCompositionRoot(binding) {
     const authenticatedUser = (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)();
     const bugbotGit = new bound_bugbot_git_mutation_adapter_1.BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
     const pullRequestDescription = new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestDescription)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding), (0, shared_capability_port_binding_1.bindOrganizationMembers)((0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
-    const branchSync = new sync_branch_use_case_1.SyncBranchUseCase(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new branch_sync_workspace_adapter_1.BranchSyncWorkspaceAdapter(gitCommit), fixer, (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), gitCommit);
-    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.scm.publication.issueComments, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(findings, bugbot.scm.context), new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding), (0, shared_capability_port_binding_1.bindIssueNotification)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit), new user_request_use_case_1.DoUserRequestUseCase(fixer, gitCommit), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), bugbotGit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.scm.context, resolutionPorts: bugbot.scm.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync);
+    const branchSync = new sync_branch_use_case_1.SyncBranchUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncWorkspace)(new branch_sync_workspace_adapter_1.BranchSyncWorkspaceAdapter(gitCommit), binding), fixer, (0, push_single_action_capability_port_binding_1.bindAuthenticatedUser)(authenticatedUser, binding), bugbotGit);
+    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.scm.publication.issueComments, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(findings, bugbot.scm.context), new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding), (0, shared_capability_port_binding_1.bindIssueNotification)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit), new user_request_use_case_1.DoUserRequestUseCase(fixer, bugbotGit), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), bugbotGit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.scm.context, resolutionPorts: bugbot.scm.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync);
 }
 function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
@@ -84463,33 +84676,45 @@ function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
     const authenticatedUser = (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)();
     const bugbotGit = new bound_bugbot_git_mutation_adapter_1.BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
     const pullRequestDescription = new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestDescription)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding), (0, shared_capability_port_binding_1.bindOrganizationMembers)((0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
-    const branchSync = new sync_branch_use_case_1.SyncBranchUseCase(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new branch_sync_workspace_adapter_1.BranchSyncWorkspaceAdapter(gitCommit), fixer, (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), gitCommit);
-    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.scm.publication.issueComments, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(findings, bugbot.scm.context), new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding), (0, shared_capability_port_binding_1.bindIssueNotification)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit), new user_request_use_case_1.DoUserRequestUseCase(fixer, gitCommit), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), bugbotGit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.scm.context, resolutionPorts: bugbot.scm.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync);
+    const branchSync = new sync_branch_use_case_1.SyncBranchUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncWorkspace)(new branch_sync_workspace_adapter_1.BranchSyncWorkspaceAdapter(gitCommit), binding), fixer, (0, push_single_action_capability_port_binding_1.bindAuthenticatedUser)(authenticatedUser, binding), bugbotGit);
+    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.scm.publication.issueComments, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(findings, bugbot.scm.context), new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding), (0, shared_capability_port_binding_1.bindIssueNotification)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit), new user_request_use_case_1.DoUserRequestUseCase(fixer, bugbotGit), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), bugbotGit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.scm.context, resolutionPorts: bugbot.scm.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync);
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
-    return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, issue_interaction_composition_root_1.createIssueNotificationRepository)()), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase(projectBoardCommandPort, (0, issue_labels_composition_root_1.createIssueLabelRepository)(), new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)())), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
+    return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, push_single_action_capability_port_binding_1.bindIssuePushNotification)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding)), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase((0, lifecycle_capability_port_binding_2.bindProjectBoardCommands)(projectBoardCommandPort, binding), (0, lifecycle_capability_port_binding_2.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchChangeSize)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding)), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
 }
 function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface) {
-    // Composition is scoped to one main run. Each route is built only when it is
-    // actually selected, while repeated calls in the same run reuse its graph.
-    const singleAction = lazyWith((execution) => createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution)));
-    const issueComment = lazyWith((execution) => createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution)));
-    const issue = lazyWith((execution) => (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(bugbotBinding(execution)));
-    const pullRequestReviewComment = lazyWith((execution) => createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution)));
-    const pullRequest = lazyWith((execution) => (0, pull_request_use_case_composition_root_1.createPullRequestUseCaseCompositionRoot)(bugbotBinding(execution)));
-    const push = lazyWith((execution) => createCommitUseCaseCompositionRoot(projectBoardCommandPort, bugbotBinding(execution)));
+    let singleAction;
+    let issueComment;
+    let issue;
+    let pullRequestReviewComment;
+    let pullRequest;
+    let push;
     return {
-        "single-action": async (execution) => singleAction(execution).invoke(execution),
-        "issue-comment": async (execution) => issueComment(execution).invoke(execution),
-        issue: async (execution) => issue(execution).invoke(execution),
-        "pull-request-review-comment": async (execution) => pullRequestReviewComment(execution).invoke(execution),
-        "pull-request": async (execution) => pullRequest(execution).invoke(execution),
-        push: async (execution) => push(execution).invoke(execution),
+        "single-action": async (execution) => {
+            singleAction ?? (singleAction = createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution)));
+            return singleAction.invoke(execution);
+        },
+        "issue-comment": async (execution) => {
+            issueComment ?? (issueComment = createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution)));
+            return issueComment.invoke(execution);
+        },
+        issue: async (execution) => {
+            issue ?? (issue = (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(bugbotBinding(execution)));
+            return issue.invoke(execution);
+        },
+        "pull-request-review-comment": async (execution) => {
+            pullRequestReviewComment ?? (pullRequestReviewComment = createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution)));
+            return pullRequestReviewComment.invoke(execution);
+        },
+        "pull-request": async (execution) => {
+            pullRequest ?? (pullRequest = (0, pull_request_use_case_composition_root_1.createPullRequestUseCaseCompositionRoot)(bugbotBinding(execution)));
+            return pullRequest.invoke(execution);
+        },
+        push: async (execution) => {
+            push ?? (push = createCommitUseCaseCompositionRoot(projectBoardCommandPort, bugbotBinding(execution)));
+            return push.invoke(execution);
+        },
     };
-}
-function lazyWith(factory) {
-    let value;
-    return (arg) => value ?? (value = factory(arg));
 }
 function bugbotBinding(execution) {
     return {
@@ -84640,6 +84865,238 @@ function createPullRequestUseCaseCompositionRoot(binding) {
         closeIssueAfterMerging: new close_issue_after_merging_use_case_1.CloseIssueAfterMergingUseCase((0, lifecycle_capability_port_binding_1.bindIssueClosure)(issueClosure, binding)),
     };
     return (0, pull_request_use_case_composition_1.composePullRequestUseCase)(new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestDescription)(pullRequestLifecycle, binding), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueContent, binding), (0, shared_capability_port_binding_1.bindOrganizationMembers)(organizationMembers, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.scm, bugbot.telemetry), (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding));
+}
+
+
+/***/ }),
+
+/***/ 49417:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.bindManagedPullRequests = bindManagedPullRequests;
+exports.bindDeploymentTargetRules = bindDeploymentTargetRules;
+exports.bindDeploymentGit = bindDeploymentGit;
+exports.bindDeploymentContinuation = bindDeploymentContinuation;
+exports.bindDeploymentPresentation = bindDeploymentPresentation;
+exports.bindDeploymentPublicationReceipt = bindDeploymentPublicationReceipt;
+exports.bindDeploymentState = bindDeploymentState;
+exports.bindDeploymentLabels = bindDeploymentLabels;
+exports.bindDeploymentIssues = bindDeploymentIssues;
+exports.bindRepositoryTag = bindRepositoryTag;
+exports.bindRepositoryRelease = bindRepositoryRelease;
+exports.bindRepositoryDefaultBranch = bindRepositoryDefaultBranch;
+exports.bindIssueCommentPublication = bindIssueCommentPublication;
+exports.bindIssuePushNotification = bindIssuePushNotification;
+exports.bindBranchListQuery = bindBranchListQuery;
+exports.bindPullRequestBranchQuery = bindPullRequestBranchQuery;
+exports.bindIssueProgress = bindIssueProgress;
+exports.bindIssueInactivityQuery = bindIssueInactivityQuery;
+exports.bindBranchChangeSize = bindBranchChangeSize;
+exports.bindBranchDependencies = bindBranchDependencies;
+exports.bindBranchComparison = bindBranchComparison;
+exports.bindBranchSyncNotification = bindBranchSyncNotification;
+exports.bindBranchSyncWorkspace = bindBranchSyncWorkspace;
+exports.bindAuthenticatedUser = bindAuthenticatedUser;
+exports.bindSetupWorkspace = bindSetupWorkspace;
+exports.bindInitialLabels = bindInitialLabels;
+exports.bindIssueTypes = bindIssueTypes;
+exports.bindSetupVariables = bindSetupVariables;
+exports.bindSetupSecrets = bindSetupSecrets;
+exports.bindSetupRemoteConfiguration = bindSetupRemoteConfiguration;
+function bindManagedPullRequests(port, binding) {
+    return Object.freeze({
+        findManagedPullRequests: (query) => port.findManagedPullRequests({ ...query, owner: binding.owner, repository: binding.repository, token: binding.token }),
+        createManagedPullRequest: (command) => port.createManagedPullRequest({ ...command, owner: binding.owner, repository: binding.repository, token: binding.token }),
+        getPullRequest: (pullRequest) => port.getPullRequest(binding.owner, binding.repository, pullRequest, binding.token),
+        enableAutoMerge: (pullRequestNodeId) => port.enableAutoMerge(binding.owner, binding.repository, pullRequestNodeId, binding.token),
+        isPullRequestQueued: (pullRequestNodeId) => port.isPullRequestQueued(binding.owner, binding.repository, pullRequestNodeId, binding.token),
+        enqueuePullRequest: (pullRequestNodeId, expectedHeadSha) => port.enqueuePullRequest(binding.owner, binding.repository, pullRequestNodeId, expectedHeadSha, binding.token),
+        mergePullRequest: (pullRequest) => port.mergePullRequest(binding.owner, binding.repository, pullRequest, binding.token),
+    });
+}
+function bindDeploymentTargetRules(port, binding) {
+    return Object.freeze({
+        getTargetCapabilities: (targetBranch, options) => port.getTargetCapabilities(binding.owner, binding.repository, targetBranch, binding.token, options),
+    });
+}
+function bindDeploymentGit(port, binding) {
+    return Object.freeze({
+        getBranchSha: (branch) => port.getBranchSha(binding.owner, binding.repository, branch, binding.token),
+        getMergeBaseSha: (base, head) => port.getMergeBaseSha(binding.owner, binding.repository, base, head, binding.token),
+        isCommitReachable: (branch, sha) => port.isCommitReachable(binding.owner, binding.repository, branch, sha, binding.token),
+        createOrVerifyBranch: (branch, sha) => port.createOrVerifyBranch(binding.owner, binding.repository, branch, sha, binding.token),
+        mergeCommitIntoBranch: (branch, sourceSha) => port.mergeCommitIntoBranch(binding.owner, binding.repository, branch, sourceSha, binding.token),
+        deleteBranch: (branch, expectedSha) => port.deleteBranch(binding.owner, binding.repository, branch, expectedSha, binding.token),
+        listBranches: (prefix) => port.listBranches(binding.owner, binding.repository, prefix, binding.token),
+    });
+}
+function bindDeploymentContinuation(port, binding) {
+    return Object.freeze({
+        dispatch: (workflow, ref, operationId, issue, version) => port.dispatch(binding.owner, binding.repository, workflow, ref, operationId, issue, version, binding.token),
+    });
+}
+function bindDeploymentPresentation(port, binding) {
+    return Object.freeze({
+        findDashboard: (issue, marker) => port.findDashboard(binding.owner, binding.repository, issue, marker, binding.token),
+        createDashboard: (issue, body) => port.createDashboard(binding.owner, binding.repository, issue, body, binding.token),
+        updateDashboard: (issue, commentId, body) => port.updateDashboard(binding.owner, binding.repository, issue, commentId, body, binding.token),
+        publishMilestone: (issue, marker, body) => port.publishMilestone(binding.owner, binding.repository, issue, marker, body, binding.token),
+    });
+}
+function bindDeploymentPublicationReceipt(port, binding) {
+    return Object.freeze({
+        inspect: (command) => port.inspect({
+            ...command,
+            owner: binding.owner,
+            repository: binding.repository,
+            token: binding.token,
+        }),
+    });
+}
+function bindDeploymentState(port, binding) {
+    return Object.freeze({
+        bind: (issue) => port.bind({ ...binding, issue }),
+    });
+}
+function bindDeploymentLabels(port, binding) {
+    return Object.freeze({
+        getLabels: (issue) => port.getLabels(binding.owner, binding.repository, issue, binding.token),
+        setLabels: (issue, labels) => port.setLabels(binding.owner, binding.repository, issue, [...labels], binding.token),
+    });
+}
+function bindDeploymentIssues(port, binding) {
+    return Object.freeze({
+        closeIssue: (issue) => port.closeIssue(binding.owner, binding.repository, issue, binding.token),
+        addComment: (issue, comment) => port.addComment(binding.owner, binding.repository, issue, comment, binding.token),
+    });
+}
+function bindRepositoryTag(port, binding) {
+    return Object.freeze({
+        updateTag: (sourceTag, targetTag) => port.updateTag(binding.owner, binding.repository, sourceTag, targetTag, binding.token),
+        createTag: (branch, tag) => port.createTag(binding.owner, binding.repository, branch, tag, binding.token),
+        createOrVerifyTagAtSha: (sha, tag) => port.createOrVerifyTagAtSha(binding.owner, binding.repository, sha, tag, binding.token),
+    });
+}
+function bindRepositoryRelease(port, binding) {
+    return Object.freeze({
+        updateRelease: (sourceTag, targetTag) => port.updateRelease(binding.owner, binding.repository, sourceTag, targetTag, binding.token),
+        createRelease: (version, title, changelog, operationId, productionSha) => port.createRelease(binding.owner, binding.repository, version, title, changelog, operationId, productionSha, binding.token),
+    });
+}
+function bindRepositoryDefaultBranch(port, binding) {
+    return Object.freeze({
+        getDefaultBranch: () => port.getDefaultBranch(binding.owner, binding.repository, binding.token),
+    });
+}
+function bindIssueCommentPublication(port, binding) {
+    return Object.freeze({
+        addComment: (issueNumber, comment) => port.addComment(binding.owner, binding.repository, issueNumber, comment, binding.token),
+        updateComment: (issueNumber, commentId, comment) => port.updateComment(binding.owner, binding.repository, issueNumber, commentId, comment, binding.token),
+        listIssueComments: (issueNumber) => port.listIssueComments(binding.owner, binding.repository, issueNumber, binding.token),
+    });
+}
+function bindIssuePushNotification(port, binding) {
+    return Object.freeze({
+        openIssue: (issueNumber) => port.openIssue(binding.owner, binding.repository, issueNumber, binding.token),
+        addComment: (issueNumber, comment) => port.addComment(binding.owner, binding.repository, issueNumber, comment, binding.token),
+    });
+}
+function bindBranchListQuery(port, binding) {
+    return Object.freeze({
+        getListOfBranches: () => port.getListOfBranches(binding.owner, binding.repository, binding.token),
+    });
+}
+function bindPullRequestBranchQuery(port, binding) {
+    return Object.freeze({
+        getOpenPullRequestNumbersByHeadBranch: (branch) => port.getOpenPullRequestNumbersByHeadBranch(binding.owner, binding.repository, branch, binding.token),
+    });
+}
+function bindIssueProgress(port, binding) {
+    return Object.freeze({
+        setProgressLabel: (issueNumber, progress) => port.setProgressLabel(binding.owner, binding.repository, issueNumber, progress, binding.token),
+    });
+}
+function bindIssueInactivityQuery(port, binding) {
+    return Object.freeze({
+        listOpenIssuesByLabel: (label) => port.listOpenIssuesByLabel(binding.owner, binding.repository, label, binding.token),
+        getOpenIssue: (issueNumber) => port.getOpenIssue(binding.owner, binding.repository, issueNumber, binding.token),
+    });
+}
+function bindBranchChangeSize(port, binding) {
+    return Object.freeze({
+        getSizeCategoryAndReason: (head, base, thresholds, labels) => port.getSizeCategoryAndReason(binding.owner, binding.repository, head, base, thresholds, labels, binding.token),
+    });
+}
+function bindBranchDependencies(port, binding) {
+    return Object.freeze({
+        listOpenDependencies: () => port.listOpenDependencies(binding.owner, binding.repository, binding.token),
+        resolveTarget: (conversationNumber) => port.resolveTarget(binding.owner, binding.repository, conversationNumber, binding.token),
+    });
+}
+function bindBranchComparison(port, binding) {
+    return Object.freeze({
+        compare: (parentBranch, workingBranch) => port.compare(binding.owner, binding.repository, parentBranch, workingBranch, binding.token),
+    });
+}
+function bindBranchSyncNotification(port, binding) {
+    return Object.freeze({
+        listIssueComments: (issueNumber) => port.listIssueComments(binding.owner, binding.repository, issueNumber, binding.token),
+        addComment: (issueNumber, comment) => port.addComment(binding.owner, binding.repository, issueNumber, comment, binding.token),
+        updateComment: (issueNumber, commentId, comment) => port.updateComment(binding.owner, binding.repository, issueNumber, commentId, comment, binding.token),
+    });
+}
+function bindBranchSyncWorkspace(port, binding) {
+    return Object.freeze({
+        prepare: (parentBranch, workingBranch) => port.prepare(parentBranch, workingBranch, binding.token),
+        validatePreparedMerge: (paths) => port.validatePreparedMerge(paths),
+        assertRemoteHeadsUnchanged: (parentBranch, parentSha, workingBranch, childSha) => port.assertRemoteHeadsUnchanged(parentBranch, parentSha, workingBranch, childSha, binding.token),
+        commitAndPush: (workingBranch, message, author) => port.commitAndPush(workingBranch, message, author, binding.token),
+        abort: () => port.abort(),
+    });
+}
+function bindAuthenticatedUser(port, binding) {
+    return Object.freeze({
+        getUser: () => port.getUserFromToken(binding.token),
+        getUserDetails: () => port.getTokenUserDetails(binding.token),
+    });
+}
+function bindSetupWorkspace(port, binding) {
+    return Object.freeze({
+        prepare: (selection) => port.prepare(selection),
+        hasValidToken: () => port.hasValidToken(binding.token),
+    });
+}
+function bindInitialLabels(port, binding) {
+    return Object.freeze({
+        ensureInitialLabels: (labels) => port.ensureInitialLabels(binding.owner, binding.repository, labels, binding.token),
+    });
+}
+function bindIssueTypes(port, binding) {
+    return Object.freeze({
+        ensureIssueTypes: (types) => port.ensureIssueTypes(binding.owner, types, binding.token),
+    });
+}
+function bindSetupVariables(port, binding) {
+    return Object.freeze({
+        upsert: (variables) => port.upsert(binding.owner, binding.repository, binding.token, variables),
+        ...(port.upsertScopedVariables ? {
+            upsertScopedVariables: (target, variables) => port.upsertScopedVariables(binding.owner, binding.repository, binding.token, target, variables),
+        } : {}),
+    });
+}
+function bindSetupSecrets(port, binding) {
+    return Object.freeze({
+        upsertSecrets: (credentials) => port.upsertSecrets(binding.owner, binding.repository, binding.token, credentials),
+        ...(port.upsertScopedSecrets ? {
+            upsertScopedSecrets: (target, credentials) => port.upsertScopedSecrets(binding.owner, binding.repository, binding.token, target, credentials),
+        } : {}),
+    });
+}
+function bindSetupRemoteConfiguration(port, binding) {
+    return Object.freeze({ inspect: () => port.inspect(binding.owner, binding.repository, binding.token) });
 }
 
 

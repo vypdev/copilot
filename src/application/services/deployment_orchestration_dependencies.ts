@@ -1,24 +1,24 @@
 import type {
-  DeploymentContinuationPort,
-  DeploymentGitPort,
-  DeploymentPresentationPort,
-  DeploymentPublicationReceiptPort,
-  DeploymentStateStoreFactoryPort,
-  ManagedPullRequestPort,
-  TargetMergePolicyInspectionPort,
+  BoundDeploymentContinuationPort,
+  BoundDeploymentGitPort,
+  BoundDeploymentPresentationPort,
+  BoundDeploymentPublicationReceiptPort,
+  BoundDeploymentStateStoreFactoryPort,
+  BoundManagedPullRequestPort,
+  BoundTargetMergePolicyInspectionPort,
 } from "../ports/deployment_orchestration_ports";
-import type { IssueClosurePort } from "../ports/issue_lifecycle_ports";
-import type { IssueLabelsPort } from "../ports/issue_management_ports";
+import type { BoundIssueClosurePort } from "../ports/issue_lifecycle_ports";
+import type { BoundIssueLabelsPort } from "../ports/issue_management_ports";
 
 export interface DeploymentOrchestrationDependencies {
-  readonly pullRequests: ManagedPullRequestPort;
-  readonly targetRules: TargetMergePolicyInspectionPort;
-  readonly git: DeploymentGitPort;
-  readonly continuation: DeploymentContinuationPort;
-  readonly presentation: DeploymentPresentationPort;
-  readonly publication: DeploymentPublicationReceiptPort;
-  readonly state: DeploymentStateStoreFactoryPort;
-  readonly labels: IssueLabelsPort;
-  readonly issues: IssueClosurePort;
+  readonly pullRequests: BoundManagedPullRequestPort;
+  readonly targetRules: BoundTargetMergePolicyInspectionPort;
+  readonly git: BoundDeploymentGitPort;
+  readonly continuation: BoundDeploymentContinuationPort;
+  readonly presentation: BoundDeploymentPresentationPort;
+  readonly publication: BoundDeploymentPublicationReceiptPort;
+  readonly state: BoundDeploymentStateStoreFactoryPort;
+  readonly labels: BoundIssueLabelsPort;
+  readonly issues: BoundIssueClosurePort;
   readonly operationId: () => string;
 }

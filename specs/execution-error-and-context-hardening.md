@@ -1,10 +1,10 @@
 # Semantic Errors and Capability Contexts
 
-- Status: In implementation — P0-A and P2-A through P2-E complete; P2-F and P2-G queued
+- Status: In implementation — P0-A and P2-A through P2-F complete; P2-G queued
 - Date: 2026-09-11
 - Last updated: 2026-09-13
 - Catalog capability ID: `execution-lifecycle`
-- Last verified: 2026-09-13 on `develop` (P2-E implementation validation)
+- Last verified: 2026-09-13 on `develop` (P2-F implementation validation)
 - Owners: Copilot maintainers
 - Scope: make application failures typed and safe, stop growth of the shared
   `Execution` aggregate, and replace every leaf use-case input with a narrow immutable
@@ -226,15 +226,15 @@ It never returns references to mutable aggregate subobjects. Development/test
 builders deep-freeze projections. Production builders construct fresh records;
 mutation tests prove that later changes to `Execution` cannot alter a context.
 
-The final production import allowlist contains only these 16 files:
+P2-F reduced the current production consumer allowlist to these 13 files. The
+aggregate definition itself is intentionally excluded from the consumer count;
+P2-G must justify every entry and may shrink this list, but cannot add one:
 
 ```text
 src/actions/common_action.ts
-src/actions/configuration_builders.ts
 src/actions/execution_builder.ts
 src/actions/github_action_completion.ts
 src/actions/github_action_execution.ts
-src/actions/github_event_inputs.ts
 src/actions/main_run_dispatcher.ts
 src/actions/main_run_lifecycle.ts
 src/application/ports/main_run_route_ports.ts
@@ -244,7 +244,6 @@ src/application/usecases/issue_use_case.ts
 src/application/usecases/pull_request_review_comment_use_case.ts
 src/application/usecases/pull_request_use_case.ts
 src/application/usecases/single_action_use_case.ts
-src/data/model/execution.ts
 ```
 
 `setup_execution_use_case.ts` and `setup_execution_workflow.ts` MUST move to a
@@ -319,13 +318,13 @@ context contract and the aggregate baseline decreases in the same change.
 | P2-C | Bugbot context I/O, freshness, publication, resolution, autofix, and learned-rule mutation | credentials bound in SCM/Git ports; zero Bugbot leaf imports; race/replay/publication parity | 10 |
 | P2-D | shared comment analysis: Think, permissions, translation, title, result publication, configuration, and project linking | complete; route-projected contexts, bound provider ports, issue/PR/comment parity, ceiling 75 | 8 |
 | P2-E | issue and pull-request workflow steps plus description handlers | complete; separate immutable issue/PR requests, credential-bound provider commands, route-owned branch patches, compensated exact-target linkage, zero leaf imports, ceiling 47 | 8 |
-| P2-F | push and single-action capabilities, including progress, release/tag, inactivity, branch sync, and remaining commit steps | capability-specific commands/queries; no leaf aggregate input; dispatch parity | 8 |
-| P2-G | final route/public boundary audit | exact justified 16-file allowlist, alias-bypass negative fixture, clean Graphify/RepoWise audit | 1 |
+| P2-F | push and single-action capabilities, including progress, release/tag, inactivity, branch sync, and remaining commit steps | complete; capability-specific frozen contexts, repository/token-bound semantic ports, explicit route outcomes, deployment credential removal, dispatch parity, ceiling 13 | 20 |
+| P2-G | final route/public boundary audit | exact justified 13-consumer allowlist or smaller, alias-bypass negative fixture, clean Graphify/RepoWise audit | 1 |
 
 P2-C through P2-F MUST delete the superseded signature in the same slice. They
 MUST NOT preserve it with overloads, union parameters, compatibility factories,
 dual readers/writers, feature flags, or deprecated exports. P2-G may reduce the
-16-file boundary list further, but it may not add an entry.
+13-consumer boundary list further, but it may not add an entry.
 
 #### 6.5.4 P2-C Bugbot bound-I/O and mutation cut
 
@@ -427,6 +426,25 @@ its owned pending marker, authoritative body read, ordered compensation, and
 partial-state result make interruption and restoration failure safely
 recoverable. The complete contract and evidence live in
 `issue-and-pull-request-context-hardening.md`.
+
+#### 6.5.7 P2-F push and single-action capability cut
+
+P2-F projects one deeply readonly context per push or single-action capability
+and removes 34 production `Execution` consumers, reducing the exact inventory
+from 47 to 13. Release/tag publication, setup, progress, recommendations,
+inactivity, issue comments, branch observation/synchronization, commit
+notification and sizing, activity markers, and deployment now receive only
+their operation facts. `push_single_action_contexts.ts` owns the projections;
+the old setup request shim and aggregate commit-prefix mutation path are deleted.
+
+`push_single_action_capability_port_binding.ts` captures repository coordinates
+and the GitHub credential once. Application-facing methods cannot accept a new
+repository or token. Deployment receives an isolated invocation-state copy and
+the same bound-authority treatment, so its phase machine can persist fenced
+revisions without retaining the route aggregate or credential. Recommendation
+and activity changes return explicit readonly outcomes for the owning route to
+apply. The full contract and evidence live in
+`push-and-single-action-context-hardening.md`.
 
 ### 6.6 State machine
 
@@ -568,8 +586,8 @@ require 100% enumerated branch coverage. Changed orchestration modules require
 fixed UUID factories, mutation attempts, API compile fixtures, and AST fixtures;
 they never log or snapshot a real secret/raw exception.
 
-P2 uses this non-overlapping 52-case ledger. P2-A and P2-B supply 17 cases now;
-the remaining rows are mandatory floors for their clean-cut slices.
+P2 uses this non-overlapping 64-case ledger. P2-A through P2-F supply their
+implemented evidence; the P2-G row remains the mandatory closure floor.
 
 | P2 evidence | Cases | Automated owner |
 |---|---:|---|
@@ -581,9 +599,9 @@ the remaining rows are mandatory floors for their clean-cut slices.
 | P2-C Bugbot bound-I/O and mutation cut | 10 | reserved for P2-C |
 | P2-D shared comment-analysis cut | 8 | `src/application/usecases/steps/common/__tests__/shared_capability_context_projection.test.ts` |
 | P2-E issue/pull-request cut | 8 | `src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts`, `src/infrastructure/composition/__tests__/lifecycle_capability_port_binding.test.ts`, and focused issue/PR workflow suites |
-| P2-F push/single-action cut | 8 | reserved for P2-F |
-| final exact 16-file allowlist and indirect-alias audit | 1 | reserved for P2-G closure |
-| **Total** | **52** | no double counting |
+| P2-F push/single-action cut | 20 | `src/application/usecases/__tests__/push_single_action_contexts.test.ts`, `src/infrastructure/composition/__tests__/push_single_action_capability_port_binding.test.ts`, and focused route/workflow suites |
+| final exact 13-consumer allowlist and indirect-alias audit | 1 | reserved for P2-G closure |
+| **Total** | **64** | no double counting |
 
 The ten P2-C cases are non-overlapping: two context projection and credential
 exclusion cases; two bound SCM read/publication/resolution cases; two final
@@ -655,6 +673,7 @@ failure contract instead of redefining it.
 | P2-C bound Bugbot I/O | route context projectors, bound SCM/Git composition, Bugbot workflows | P2-C projection, binding, freshness, publication, replay, API and AST cases | Bugbot architecture, programmatic API, permissions |
 | P2-D shared comment analysis | comment route projectors, shared semantic ports, configuration/publication boundaries | eight-case immutable projection ledger, route parity suites, exact 75-file ratchet, cycle test | architecture, dependency rules, comment automation |
 | P2-E issue/PR workflows | issue/PR context projectors, bound lifecycle ports, branch outcome, link compensation, unified description request | projection/binding, issue/PR sequencing, every linkage recovery edge, four description modes, exact 47-file ratchet, zero-leaf AST test | P2-E SDD, architecture, branch management, PR capabilities/troubleshooting |
+| P2-F push/single-action capabilities | capability projectors, bound publication/setup/branch/deployment ports, route-owned recommendation/activity outcomes | 50 focused projection/binding cases, route and workflow parity, exact 13-consumer ratchet, credential-contract AST test | P2-F SDD, architecture, dependency rules |
 | shrinking allowlist | AST architecture check | fixture plus final inventory | dependency rules |
 
 ## 18. Implementation sequence
@@ -665,9 +684,9 @@ failure contract instead of redefining it.
    capability; install the no-growth AST baseline immediately.
 3. Replace the public Bugbot API and remove broad exports in the same slice.
 4. Replace P0-B/P1 capability inputs through P2-A setup and P2-B Bugbot analysis.
-5. Complete P2-C Bugbot bound I/O, P2-D shared comment analysis, and P2-E
-   issue/PR as direct capability cuts; complete P2-F push/single-action next.
-6. Run P2-G, enforce the final 16-file allowlist, and publish the final API
+5. Complete P2-C Bugbot bound I/O, P2-D shared comment analysis, P2-E issue/PR,
+   and P2-F push/single-action as direct capability cuts.
+6. Run P2-G, justify the exact 13-consumer-or-smaller allowlist, and publish the final API
    reference/change notice.
 
 ## 19. Definition of Done
@@ -677,7 +696,7 @@ failure contract instead of redefining it.
 - [ ] No raw cause or secret appears in result, JSON, log, state, CLI, or GitHub fixtures.
 - [ ] The sole final API passes positive fixtures and every removed API fails negative fixtures.
 - [ ] All leaf use cases use deeply readonly capability contexts without credentials.
-- [ ] The final exact 16-file `Execution` allowlist passes and cannot grow.
+- [ ] The final exact 13-consumer-or-smaller `Execution` allowlist passes and cannot grow.
 - [ ] At least 34 distinct cases and all coverage/architecture gates pass.
 - [ ] Documentation, API reference, change notice, catalog, and generated
       artifacts agree.

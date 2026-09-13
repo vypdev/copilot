@@ -12,6 +12,10 @@ export interface BoundBranchLifecyclePort {
     removeBranch(branch: string): Promise<boolean>;
 }
 
+export interface BoundBranchListQueryPort {
+    getListOfBranches(): Promise<readonly string[]>;
+}
+
 export interface BranchNamePort {
     formatBranchName(issueTitle: string, issueNumber: number): string;
 }

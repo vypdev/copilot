@@ -1,38 +1,37 @@
-import { Execution } from '../../../data/model/execution';
 import { Result } from '../../../data/model/result';
 import type { LatestTagQueryPort } from '../../ports/branch_tag_ports';
-import type { AuthenticatedUserPort } from '../../ports/authenticated_user_ports';
-import type { RepositoryTagPort, RepositoryDefaultBranchPort } from '../../ports/repository_release_ports';
-import type { InitialLabelProvisioningPort, IssueTypeProvisioningPort } from '../../ports/issue_management_ports';
-import type { SetupWorkspacePort } from '../../ports/setup_workspace_ports';
+import type { BoundAuthenticatedUserPort } from '../../ports/authenticated_user_ports';
+import type { BoundRepositoryTagPort, BoundRepositoryDefaultBranchPort } from '../../ports/repository_release_ports';
+import type { BoundInitialLabelProvisioningPort, BoundIssueTypeProvisioningPort } from '../../ports/issue_management_ports';
+import type { BoundSetupWorkspacePort } from '../../ports/setup_workspace_ports';
 import { ParamUseCase } from '../base/param_usecase';
 import { runInitialSetupWorkflow } from './initial_setup_workflow';
-import { createInitialSetupRequest } from './initial_setup_request';
+import type { InitialSetupContext } from '../push_single_action_contexts';
 import type {
-    SetupRemoteConfigurationReadPort,
-    SetupRepositorySecretsCommandPort,
-    SetupRepositoryVariablesCommandPort,
+    BoundSetupRemoteConfigurationReadPort,
+    BoundSetupRepositorySecretsCommandPort,
+    BoundSetupRepositoryVariablesCommandPort,
 } from '../../ports/setup_wizard_ports';
 
 /** Application boundary for provisioning a repository for Copilot automation. */
-export class InitialSetupUseCase implements ParamUseCase<Execution, Result[]> {
+export class InitialSetupUseCase implements ParamUseCase<InitialSetupContext, Result[]> {
     taskId = 'InitialSetupUseCase';
 
     constructor(
-        private readonly authenticatedUserPort: AuthenticatedUserPort,
-        private readonly initialLabelProvisioningPort: InitialLabelProvisioningPort,
-        private readonly issueTypeProvisioningPort: IssueTypeProvisioningPort,
+        private readonly authenticatedUserPort: BoundAuthenticatedUserPort,
+        private readonly initialLabelProvisioningPort: BoundInitialLabelProvisioningPort,
+        private readonly issueTypeProvisioningPort: BoundIssueTypeProvisioningPort,
         private readonly latestTagQueryPort: LatestTagQueryPort,
-        private readonly repositoryDefaultBranchPort: RepositoryDefaultBranchPort,
-        private readonly repositoryTagPort: RepositoryTagPort,
-        private readonly setupWorkspacePort: SetupWorkspacePort,
-        private readonly setupRepositoryVariablesPort?: SetupRepositoryVariablesCommandPort,
-        private readonly setupRepositorySecretsPort?: SetupRepositorySecretsCommandPort,
-        private readonly setupRemoteConfigurationReadPort?: SetupRemoteConfigurationReadPort,
+        private readonly repositoryDefaultBranchPort: BoundRepositoryDefaultBranchPort,
+        private readonly repositoryTagPort: BoundRepositoryTagPort,
+        private readonly setupWorkspacePort: BoundSetupWorkspacePort,
+        private readonly setupRepositoryVariablesPort?: BoundSetupRepositoryVariablesCommandPort,
+        private readonly setupRepositorySecretsPort?: BoundSetupRepositorySecretsCommandPort,
+        private readonly setupRemoteConfigurationReadPort?: BoundSetupRemoteConfigurationReadPort,
     ) {}
 
-    async invoke(param: Execution): Promise<Result[]> {
-        return await runInitialSetupWorkflow(createInitialSetupRequest(param), {
+    async invoke(param: InitialSetupContext): Promise<Result[]> {
+        return await runInitialSetupWorkflow(param, {
             authenticatedUserPort: this.authenticatedUserPort,
             initialLabelProvisioningPort: this.initialLabelProvisioningPort,
             issueTypeProvisioningPort: this.issueTypeProvisioningPort,

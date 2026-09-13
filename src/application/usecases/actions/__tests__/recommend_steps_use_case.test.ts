@@ -3,6 +3,7 @@ import { Ai } from '../../../../data/model/ai';
 import { Config } from '../../../../data/model/config';
 import { getResultPayload } from '../../../../data/model/result';
 import type { Execution } from '../../../../data/model/execution';
+import { projectRecommendStepsContext, type RecommendStepsOutcome } from '../../push_single_action_contexts';
 
 jest.mock('../../../../utils/logger', () => ({
   logInfo: jest.fn(),
@@ -30,16 +31,22 @@ function baseParam(overrides: Record<string, unknown> = {}): Execution {
 }
 describe('RecommendStepsUseCase', () => {
   let useCase: RecommendStepsUseCase;
+  let lastOutcome: RecommendStepsOutcome | undefined;
+  let invoke: (param: Execution) => Promise<readonly import('../../../../data/model/result').Result[]>;
 
   beforeEach(() => {
     useCase = new RecommendStepsUseCase({ getDescription: mockGetDescription }, { query: (request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }) => mockAskAgent(request.configuration, request.agentId, request.prompt, request.options) });
+    invoke = async (param) => {
+      lastOutcome = await useCase.invoke(projectRecommendStepsContext(param));
+      return lastOutcome.results;
+    };
     mockGetDescription.mockReset();
     mockAskAgent.mockReset();
   });
 
   it('returns failure when ai has no opencode model or server URL', async () => {
     const param = baseParam({ ai: new Ai('', '', false, [], false, 'low', 20) });
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
     expect(results[0].errors.map((error) => error.message)).toContain('Missing agent model or executable.');
@@ -47,7 +54,7 @@ describe('RecommendStepsUseCase', () => {
 
   it('returns failure when issueNumber is -1', async () => {
     const param = baseParam({ issueNumber: -1 });
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
     expect(results[0].errors.map((error) => error.message)).toContain('Issue number not found.');
@@ -56,7 +63,7 @@ describe('RecommendStepsUseCase', () => {
   it('returns failure when issue description is empty or missing', async () => {
     mockGetDescription.mockResolvedValue('');
     const param = baseParam();
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
     expect(results[0].errors?.some((e) => String(e).includes('No description found'))).toBe(true);
@@ -66,7 +73,7 @@ describe('RecommendStepsUseCase', () => {
     mockGetDescription.mockResolvedValue('Implement login feature.');
     mockAskAgent.mockResolvedValue('1. Add auth module\n2. Add tests');
     const param = baseParam();
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
     expect(results[0].steps).toBeDefined();
@@ -82,7 +89,7 @@ describe('RecommendStepsUseCase', () => {
     mockGetDescription.mockResolvedValue('Fix bug.');
     mockAskAgent.mockResolvedValue({ steps: '1. Reproduce\n2. Fix' });
     const param = baseParam();
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
     expect(results[0].success).toBe(true);
     expect(getResultPayload(results[0].payload)?.recommendedSteps).toContain('1. Reproduce');
   });
@@ -97,7 +104,7 @@ describe('RecommendStepsUseCase', () => {
       inputs: { eventName: 'issues', action: 'opened' },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results[0].steps[0]).toContain('<!-- copilot:welcome -->');
     expect(results[0].steps[0]).toContain('Hi! I’m **@vypbot**');
@@ -108,7 +115,7 @@ describe('RecommendStepsUseCase', () => {
     mockGetDescription.mockResolvedValue('Implement login feature.\n\n<!-- copilot-configuration-start\n{"recommendationState":{"ignored":"metadata"}}\ncopilot-configuration-end -->');
     mockAskAgent.mockResolvedValue('1. Add auth module');
 
-    const results = await useCase.invoke(baseParam());
+    const results = await invoke(baseParam());
 
     expect(results[0].success).toBe(true);
     const prompt = mockAskAgent.mock.calls[0][2];
@@ -120,7 +127,7 @@ describe('RecommendStepsUseCase', () => {
     mockGetDescription.mockResolvedValue('Visible request.\n\n<!-- copilot-configuration-start\nleak\ncopilot-recommendation-end -->');
     mockAskAgent.mockResolvedValue('1. Keep the visible request unchanged');
 
-    const results = await useCase.invoke(baseParam());
+    const results = await invoke(baseParam());
 
     expect(results[0].success).toBe(true);
     const prompt = mockAskAgent.mock.calls[0][2];
@@ -138,7 +145,7 @@ describe('RecommendStepsUseCase', () => {
       },
     });
     const firstParam = baseParam({ previousConfiguration });
-    const firstResult = await useCase.invoke(firstParam);
+    const firstResult = await invoke(firstParam);
     const fingerprint = firstResult.length === 0
       ? undefined
       : (getResultPayload(firstResult[0].payload)?.recommendationState as { issueDescriptionFingerprint?: string } | undefined)?.issueDescriptionFingerprint;
@@ -153,7 +160,7 @@ describe('RecommendStepsUseCase', () => {
         },
       }),
     });
-    await useCase.invoke(matchingParam);
+    await invoke(matchingParam);
 
     expect(mockAskAgent).not.toHaveBeenCalled();
   });
@@ -170,11 +177,11 @@ describe('RecommendStepsUseCase', () => {
     });
     const param = baseParam({ previousConfiguration: previous });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results).toEqual([]);
-    expect(param.currentConfiguration.recommendationState?.recommendation).toBe('1. Add auth module');
-    expect(param.currentConfiguration.recommendationState?.issueDescriptionFingerprint).not.toBe('old-description');
+    expect(lastOutcome?.configurationPatch?.recommendationState.recommendation).toBe('1. Add auth module');
+    expect(lastOutcome?.configurationPatch?.recommendationState.issueDescriptionFingerprint).not.toBe('old-description');
   });
 
   it('does not publish a duplicate recommendation when the normalized response is unchanged', async () => {
@@ -191,14 +198,14 @@ describe('RecommendStepsUseCase', () => {
       },
     });
     const param = baseParam({ previousConfiguration: previous });
-    const first = await useCase.invoke(param);
+    const first = await invoke(param);
     const recommendationState = getResultPayload(first[0].payload)?.recommendationState;
 
     mockAskAgent.mockClear();
     const secondParam = baseParam({
       previousConfiguration: new Config({ recommendationState }),
     });
-    const second = await useCase.invoke(secondParam);
+    const second = await invoke(secondParam);
 
     expect(second).toEqual([]);
     expect(mockAskAgent).toHaveBeenCalledTimes(1);
@@ -208,7 +215,7 @@ describe('RecommendStepsUseCase', () => {
     mockGetDescription.mockResolvedValue('Do something');
     mockAskAgent.mockRejectedValue(new Error('AI error'));
     const param = baseParam();
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
     expect(results[0].success).toBe(false);
     expect(results[0].errors?.length).toBeGreaterThan(0);
   });
@@ -217,7 +224,7 @@ describe('RecommendStepsUseCase', () => {
     mockGetDescription.mockResolvedValue('Do something');
     mockAskAgent.mockResolvedValue(undefined);
 
-    const results = await useCase.invoke(baseParam());
+    const results = await invoke(baseParam());
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
@@ -229,7 +236,7 @@ describe('RecommendStepsUseCase', () => {
     mockGetDescription.mockResolvedValue('Do something');
     mockAskAgent.mockResolvedValue({ answer: 'not the recommendation contract' });
 
-    const results = await useCase.invoke(baseParam());
+    const results = await invoke(baseParam());
 
     expect(results[0].success).toBe(false);
     expect(results[0].errors[0].message).toBe('The configured agent returned no recommendation.');

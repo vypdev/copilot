@@ -1,7 +1,7 @@
-import type { Execution } from '../../../data/model/execution';
 import { Result } from '../../../data/model/result';
-import type { IssueLabelsPort, IssueProgressPort } from '../../ports/issue_management_ports';
-import type { PullRequestBranchQueryPort } from '../../ports/pull_request_branch_ports';
+import type { BoundIssueLabelsPort, BoundIssueProgressPort } from '../../ports/issue_management_ports';
+import type { BoundPullRequestBranchQueryPort } from '../../ports/pull_request_branch_ports';
+import type { ProgressContext } from '../push_single_action_contexts';
 import { logDebugInfo, logError, logInfo, logWarn } from '../../ports/logging_ports';
 import { getTaskEmoji } from '../../../utils/task_emoji';
 import { syncProgressLabelsToOpenPullRequests } from './sync_progress_labels_to_open_pull_requests';
@@ -10,13 +10,14 @@ import { analyzeProgress, type ProgressAnalysisDependencies } from './progress_a
 import { ApplicationError, toApplicationError } from '../../errors/application_error';
 
 export interface CheckProgressWorkflowDependencies extends ProgressAnalysisDependencies {
-    issueRepository: IssueLabelsPort & IssueProgressPort;
-    pullRequestRepository: PullRequestBranchQueryPort;
+    issueLabelsPort: BoundIssueLabelsPort;
+    issueProgressPort: BoundIssueProgressPort;
+    pullRequestRepository: BoundPullRequestBranchQueryPort;
 }
 
 /** Publishes a completed progress assessment after the analysis workflow succeeds. */
 export async function runCheckProgressWorkflow(
-    param: Execution,
+    param: ProgressContext,
     taskId: string,
     dependencies: CheckProgressWorkflowDependencies,
 ): Promise<Result[]> {
@@ -71,20 +72,17 @@ function buildZeroProgressResult(
 }
 
 async function persistProgress(
-    param: Execution,
+    param: ProgressContext,
     issueNumber: number,
     branch: string,
     progress: number,
     dependencies: CheckProgressWorkflowDependencies,
 ): Promise<void> {
-    await dependencies.issueRepository.setProgressLabel(param.owner, param.repo, issueNumber, progress, param.tokens.token);
+    await dependencies.issueProgressPort.setProgressLabel(issueNumber, progress);
     await syncProgressLabelsToOpenPullRequests(
-        param.owner,
-        param.repo,
         branch,
         progress,
-        param.tokens.token,
-        dependencies.issueRepository,
+        dependencies.issueLabelsPort,
         dependencies.pullRequestRepository,
     );
 }

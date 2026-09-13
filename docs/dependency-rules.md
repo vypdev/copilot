@@ -262,6 +262,18 @@ directories have an additional exact zero-import rule; aliases, token-bearing
 requests, `Pick<Execution>`, and compatibility overloads do not satisfy it.
 Every merged P2 slice must lower the checked-in maximum by the imports it removes.
 
+P2-F applies the same rule to push and single-action behavior. Release/tag,
+setup, progress, recommendations, inactivity, issue-comment publication, branch
+observation/synchronization, commit notification and sizing, activity markers,
+and deployment leaves receive capability-specific readonly records, never the
+aggregate. `push_single_action_capability_port_binding.ts` owns repository and
+credential scope; its application-facing methods cannot accept replacement
+coordinates or a token. Deployment receives a private invocation-state copy and
+persists only through its fenced bound state port. Recommendation and activity
+mutations return explicit outcomes for route application. The exact production
+consumer ceiling is now 13; aliases, aggregate-shaped generics, overloads,
+delegating shims, and token-bearing contexts remain forbidden.
+
 Route-owned mutable state must not leak back into these leaves. Branch
 preparation returns a frozen, field-bounded patch and only the issue coordinator
 applies it after the step returns. A bound port owns repository coordinates and

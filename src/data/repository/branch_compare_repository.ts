@@ -1,8 +1,7 @@
 import type { GithubBranchComparisonClient } from '../../infrastructure/github/ports/github_branch_provider_ports';
 import type { GithubClientPort } from '../../infrastructure/github/ports/github_client_provider_port';
 import { logDebugInfo, logError } from '../../utils/logger';
-import { Labels } from '../model/labels';
-import { SizeThresholds } from '../model/size_thresholds';
+import type { ChangeSizeLabels, ChangeSizeThresholds } from '../../application/ports/branch_change_ports';
 import { classifyChangeSize } from './branch_change_size_policy';
 import type { SizeCategoryResult } from './branch_change_size_policy';
 import type { BranchSyncComparisonPort } from '../../application/ports/branch_sync_ports';
@@ -111,8 +110,8 @@ export class BranchCompareRepository implements BranchSyncComparisonPort {
         repository: string,
         head: string,
         base: string,
-        sizeThresholds: SizeThresholds,
-        labels: Labels,
+        sizeThresholds: ChangeSizeThresholds,
+        labels: ChangeSizeLabels,
         token: string,
     ): Promise<SizeCategoryResult> => {
         try {

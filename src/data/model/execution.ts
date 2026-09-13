@@ -38,7 +38,6 @@ export class Execution {
     issueNumber: number = -1
     singleAction: SingleAction;
     commitPrefixBuilder: string;
-    commitPrefixBuilderParams: Record<string, unknown> = {};
     emoji: Emoji;
     images: Images;
     tokens: Tokens;

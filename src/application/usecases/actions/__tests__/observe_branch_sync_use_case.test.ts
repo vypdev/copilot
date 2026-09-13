@@ -1,11 +1,12 @@
 import type { Execution } from "../../../../data/model/execution";
 import { BRANCH_SYNC_ALIGNED_MARKER, BRANCH_SYNC_STALE_MARKER } from "../../../policies/branch_sync_notification_policy";
 import { ObserveBranchSyncUseCase } from "../observe_branch_sync_use_case";
+import { projectBranchObservationContext } from '../../push_single_action_contexts';
 
 const dependency = { issueNumber: 42, parentBranch: "develop", workingBranch: "feature/42" };
 
-function execution(overrides: Record<string, unknown> = {}): Execution {
-  return {
+function execution(overrides: Record<string, unknown> = {}) {
+  return projectBranchObservationContext({
     owner: "org",
     repo: "repo",
     tokenUser: "vypbot",
@@ -13,7 +14,7 @@ function execution(overrides: Record<string, unknown> = {}): Execution {
     commit: { branch: "develop" },
     inputs: { after: "abc" },
     ...overrides,
-  } as unknown as Execution;
+  } as unknown as Execution);
 }
 
 function setup(input: { behindBy?: number; comments?: unknown[] } = {}) {
@@ -35,9 +36,9 @@ describe("ObserveBranchSyncUseCase", () => {
     const context = setup();
     const results = await context.useCase.invoke(execution());
 
-    expect(context.comparisons.compare).toHaveBeenCalledWith("org", "repo", "develop", "feature/42", "token");
+    expect(context.comparisons.compare).toHaveBeenCalledWith("develop", "feature/42");
     expect(context.notifications.addComment).toHaveBeenCalledWith(
-      "org", "repo", 42, expect.stringContaining(BRANCH_SYNC_STALE_MARKER), "token",
+      42, expect.stringContaining(BRANCH_SYNC_STALE_MARKER),
     );
     expect(context.notifications.updateComment).not.toHaveBeenCalled();
     expect(results[0]).toMatchObject({ success: true, payload: { state: "stale", behindBy: 2 } });
@@ -48,7 +49,7 @@ describe("ObserveBranchSyncUseCase", () => {
     await context.useCase.invoke(execution());
 
     expect(context.notifications.updateComment).toHaveBeenCalledWith(
-      "org", "repo", 42, 8, expect.stringContaining(BRANCH_SYNC_STALE_MARKER), "token",
+      42, 8, expect.stringContaining(BRANCH_SYNC_STALE_MARKER),
     );
     expect(context.notifications.addComment).not.toHaveBeenCalled();
   });
@@ -61,7 +62,7 @@ describe("ObserveBranchSyncUseCase", () => {
     const results = await context.useCase.invoke(execution({ commit: { branch: "feature/42" } }));
 
     expect(context.notifications.updateComment).toHaveBeenCalledWith(
-      "org", "repo", 42, 8, expect.stringContaining(BRANCH_SYNC_ALIGNED_MARKER), "token",
+      42, 8, expect.stringContaining(BRANCH_SYNC_ALIGNED_MARKER),
     );
     expect(results[0]).toMatchObject({ payload: { state: "aligned" } });
   });

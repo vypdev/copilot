@@ -7,9 +7,7 @@ import {
 } from '../setup_resource_provisioning';
 
 const context = {
-    owner: 'owner',
-    repo: 'repo',
-    token: 'token',
+    setupCredentials: undefined,
 };
 
 describe('setup resource provisioning policy', () => {
@@ -88,7 +86,7 @@ describe('setup resource provisioning policy', () => {
 
         expect(result.errors).toEqual([]);
         expect(result.step).toContain('1 created, 1 updated');
-        expect(upsertSecrets).toHaveBeenCalledWith('owner', 'repo', 'token', [
+        expect(upsertSecrets).toHaveBeenCalledWith([
             { name: 'PAT', value: 'workflow-token' },
             { name: 'OPENAI_API_KEY', value: 'api-key' },
         ]);

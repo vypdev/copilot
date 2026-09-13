@@ -1,10 +1,10 @@
 import { isAgentConfigurationReady } from '../../../data/model/agent';
-import type { Execution } from '../../../data/model/execution';
 import { Result } from '../../../data/model/result';
 import { AGENT_PLAN } from '../../../application/policies/agent_task_policy';
 import type { FindingsQueryPort } from '../../ports/agent_findings_ports';
-import type { IssueDescriptionQueryPort } from '../../ports/issue_description_ports';
-import type { BranchListQueryPort } from '../../ports/branch_lifecycle_ports';
+import type { BoundIssueDescriptionQueryPort } from '../../ports/issue_description_ports';
+import type { BoundBranchListQueryPort } from '../../ports/branch_lifecycle_ports';
+import type { ProgressContext } from '../push_single_action_contexts';
 import { getCheckProgressPrompt } from '../../../prompts';
 import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
 import { PROJECT_CONTEXT_INSTRUCTION } from '../../../utils/project_context_instruction';
@@ -18,8 +18,8 @@ import {
 import { ApplicationError, type ApplicationErrorCode } from '../../errors/application_error';
 
 export interface ProgressAnalysisDependencies {
-    issueDescriptionQueryPort: IssueDescriptionQueryPort;
-    branchRepository: BranchListQueryPort;
+    issueDescriptionQueryPort: BoundIssueDescriptionQueryPort;
+    branchRepository: BoundBranchListQueryPort;
     aiRepository: FindingsQueryPort;
 }
 
@@ -35,13 +35,13 @@ export type ProgressAnalysis =
 
 /** Loads progress context and asks the configured agent for an assessment. */
 export async function analyzeProgress(
-    param: Execution,
+    param: ProgressContext,
     taskId: string,
     dependencies: ProgressAnalysisDependencies,
 ): Promise<ProgressAnalysis> {
     const issueNumber = param.issueNumber;
     const agentReady = isAgentConfigurationReady(
-        param.ai.getAgentConfiguration('findings'),
+        param.agentConfiguration,
     );
     if (!agentReady) {
         const message = 'Missing required agent configuration. Provide a model and a valid executable.';
@@ -56,10 +56,7 @@ export async function analyzeProgress(
 
     logInfo(`📋 Checking progress for issue #${issueNumber}`);
     const issueDescription = await dependencies.issueDescriptionQueryPort.getDescription(
-        param.owner,
-        param.repo,
         issueNumber,
-        param.tokens.token,
     );
     if (!issueDescription) {
         const message = `Could not retrieve issue description for issue #${issueNumber}`;
@@ -89,7 +86,7 @@ export async function analyzeProgress(
     }
 
     const resolvedBranch = branch as string;
-    const developmentBranch = param.branches.development || 'develop';
+    const developmentBranch = param.developmentBranch;
     logInfo(
         `📦 Progress will be assessed from workspace diff: base branch "${developmentBranch}", current branch "${resolvedBranch}" (configured agent will run git diff).`,
     );
@@ -107,14 +104,14 @@ export async function analyzeProgress(
     logInfo('🤖 Analyzing progress using the configured agent...');
     const attemptResult = parseProgressResponse(
         await dependencies.aiRepository.query({
-            configuration: param.ai.getAgentConfiguration('findings'),
+            configuration: param.agentConfiguration,
             agentId: AGENT_PLAN,
             prompt,
             options: {
                 expectJson: true,
                 schema: PROGRESS_RESPONSE_SCHEMA as unknown as Record<string, unknown>,
                 schemaName: 'progress_response',
-                includeReasoning: param.ai.getAiIncludeReasoning(),
+                includeReasoning: param.includeReasoning,
             },
         }),
     );

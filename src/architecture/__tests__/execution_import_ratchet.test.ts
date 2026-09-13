@@ -131,4 +131,54 @@ describe('Execution import ratchet', () => {
         }
         expect(violations).toEqual([]);
     });
+
+    it('keeps push, single-action, and deployment contexts free of repository credentials', () => {
+        const contextPaths = new Set([
+            'src/application/usecases/push_single_action_contexts.ts',
+            'src/application/ports/deployment_orchestration_ports.ts',
+        ]);
+        const inspectedInterfaces = new Set([
+            'DeploymentPublicationContext',
+            'ProgressContext',
+            'RecommendStepsContext',
+            'InactivityContext',
+            'BranchObservationContext',
+            'UserRequestContext',
+            'BranchSyncContext',
+            'CommitNotificationContext',
+            'ChangeSizeContext',
+            'AgentActivityContext',
+            'InitialSetupContext',
+            'DeploymentOrchestrationContext',
+        ]);
+        const forbiddenFields = new Set(['token', 'tokens', 'credential', 'credentials']);
+        const allowedSensitiveFacts = new Set(['InitialSetupContext.setupCredentials']);
+        const visited = new Set<string>();
+        const violations: string[] = [];
+
+        for (const source of program.getSourceFiles()) {
+            const path = repositoryPath(repositoryRoot, source.fileName);
+            if (!contextPaths.has(path)) continue;
+            for (const statement of source.statements) {
+                if (!ts.isInterfaceDeclaration(statement) || !inspectedInterfaces.has(statement.name.text)) continue;
+                visited.add(statement.name.text);
+                const visit = (node: ts.Node): void => {
+                    if (ts.isPropertySignature(node)) {
+                        const name = ts.isIdentifier(node.name) || ts.isStringLiteral(node.name)
+                            ? node.name.text
+                            : undefined;
+                        const key = name ? `${statement.name.text}.${name}` : undefined;
+                        if (name && forbiddenFields.has(name) && key && !allowedSensitiveFacts.has(key)) {
+                            violations.push(`${path}:${key}`);
+                        }
+                    }
+                    ts.forEachChild(node, visit);
+                };
+                visit(statement);
+            }
+        }
+
+        expect([...visited].sort()).toEqual([...inspectedInterfaces].sort());
+        expect(violations).toEqual([]);
+    });
 });

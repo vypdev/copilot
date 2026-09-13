@@ -115,3 +115,35 @@ export interface BranchSyncWorkspacePort {
   ): Promise<string>;
   abort(): Promise<void>;
 }
+
+export interface BoundBranchDependencyQueryPort {
+  listOpenDependencies(): Promise<readonly BranchDependency[]>;
+  resolveTarget(conversationNumber: number): Promise<BranchSyncTarget | undefined>;
+}
+
+export interface BoundBranchSyncComparisonPort {
+  compare(parentBranch: string, workingBranch: string): Promise<BranchSyncComparison>;
+}
+
+export interface BoundBranchSyncNotificationPort {
+  listIssueComments(issueNumber: number): Promise<readonly BranchSyncNotificationComment[]>;
+  addComment(issueNumber: number, comment: string): Promise<void>;
+  updateComment(issueNumber: number, commentId: number, comment: string): Promise<void>;
+}
+
+export interface BoundBranchSyncWorkspacePort {
+  prepare(parentBranch: string, workingBranch: string): Promise<BranchMergePreparation>;
+  validatePreparedMerge(conflictPaths: readonly string[]): Promise<BranchSyncResolutionValidation>;
+  assertRemoteHeadsUnchanged(
+    parentBranch: string,
+    parentSha: string,
+    workingBranch: string,
+    childSha: string,
+  ): Promise<BranchSyncResolutionValidation>;
+  commitAndPush(
+    workingBranch: string,
+    message: string,
+    author: { readonly name: string; readonly email: string },
+  ): Promise<string>;
+  abort(): Promise<void>;
+}

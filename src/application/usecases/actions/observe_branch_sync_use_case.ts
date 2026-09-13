@@ -1,4 +1,3 @@
-import type { Execution } from "../../../data/model/execution";
 import { Result } from "../../../data/model/result";
 import {
   buildAlignedBranchSyncComment,
@@ -9,10 +8,11 @@ import {
 } from "../../policies/branch_sync_notification_policy";
 import type {
   BranchDependency,
-  BranchDependencyQueryPort,
-  BranchSyncComparisonPort,
-  BranchSyncNotificationPort,
+  BoundBranchDependencyQueryPort,
+  BoundBranchSyncComparisonPort,
+  BoundBranchSyncNotificationPort,
 } from "../../ports/branch_sync_ports";
+import type { BranchObservationContext } from '../push_single_action_contexts';
 import { logError, logInfo } from "../../ports/logging_ports";
 import type { ParamUseCase } from "../base/param_usecase";
 import { toApplicationError } from "../../errors/application_error";
@@ -23,26 +23,22 @@ const TASK_ID = "ObserveBranchSyncUseCase";
  * Cheap push-time observer. It only queries branch relationships/comparisons
  * and maintains one stateful notification per issue; no agent is reachable.
  */
-export class ObserveBranchSyncUseCase implements ParamUseCase<Execution, Result[]> {
+export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationContext, Result[]> {
   readonly taskId = TASK_ID;
 
   constructor(
-    private readonly dependencies: BranchDependencyQueryPort,
-    private readonly comparisons: BranchSyncComparisonPort,
-    private readonly notifications: BranchSyncNotificationPort,
+    private readonly dependencies: BoundBranchDependencyQueryPort,
+    private readonly comparisons: BoundBranchSyncComparisonPort,
+    private readonly notifications: BoundBranchSyncNotificationPort,
   ) {}
 
-  async invoke(execution: Execution): Promise<Result[]> {
-    const pushedBranch = execution.commit.branch.trim();
-    if (!pushedBranch || isDeletedPush(execution)) return [];
+  async invoke(context: BranchObservationContext): Promise<Result[]> {
+    const pushedBranch = context.pushedBranch;
+    if (!pushedBranch || context.deletedPush) return [];
 
     try {
       const dependencies = selectBranchDependenciesForPush(
-        await this.dependencies.listOpenDependencies(
-          execution.owner,
-          execution.repo,
-          execution.tokens.token,
-        ),
+        await this.dependencies.listOpenDependencies(),
         pushedBranch,
       );
       if (dependencies.length === 0) {
@@ -52,7 +48,7 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<Execution, Result[
 
       const results: Result[] = [];
       for (const dependency of dependencies) {
-        results.push(await this.reconcileDependency(execution, dependency));
+        results.push(await this.reconcileDependency(context, dependency));
       }
       return results;
     } catch (cause) {
@@ -62,48 +58,36 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<Execution, Result[
   }
 
   private async reconcileDependency(
-    execution: Execution,
+    context: BranchObservationContext,
     dependency: BranchDependency,
   ): Promise<Result> {
     try {
       const comparison = await this.comparisons.compare(
-        execution.owner,
-        execution.repo,
         dependency.parentBranch,
         dependency.workingBranch,
-        execution.tokens.token,
       );
       const comments = await this.notifications.listIssueComments(
-        execution.owner,
-        execution.repo,
         dependency.issueNumber,
-        execution.tokens.token,
       );
-      const latest = findLatestBranchSyncComment(comments, execution.tokenUser, dependency);
+      const latest = findLatestBranchSyncComment(comments, context.trustedBotLogin, dependency);
 
       if (comparison.behindBy > 0) {
         const comment = buildStaleBranchSyncComment({
-          owner: execution.owner,
-          repository: execution.repo,
+          owner: context.repository.owner,
+          repository: context.repository.name,
           dependency,
           comparison,
         });
         if (latest && isStaleBranchSyncComment(latest.body)) {
           await this.notifications.updateComment(
-            execution.owner,
-            execution.repo,
             dependency.issueNumber,
             latest.id,
             comment,
-            execution.tokens.token,
           );
         } else {
           await this.notifications.addComment(
-            execution.owner,
-            execution.repo,
             dependency.issueNumber,
             comment,
-            execution.tokens.token,
           );
         }
         return success(dependency, comparison.behindBy, "stale");
@@ -111,12 +95,9 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<Execution, Result[
 
       if (latest && isStaleBranchSyncComment(latest.body)) {
         await this.notifications.updateComment(
-          execution.owner,
-          execution.repo,
           dependency.issueNumber,
           latest.id,
           buildAlignedBranchSyncComment(dependency),
-          execution.tokens.token,
         );
       }
       return success(dependency, 0, "aligned");
@@ -130,11 +111,6 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<Execution, Result[
       );
     }
   }
-}
-
-function isDeletedPush(execution: Execution): boolean {
-  const after = execution.inputs?.after;
-  return typeof after === "string" && /^0+$/u.test(after);
 }
 
 function success(

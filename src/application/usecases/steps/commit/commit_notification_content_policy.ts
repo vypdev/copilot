@@ -1,4 +1,4 @@
-import type { Execution } from "../../../../data/model/execution";
+import type { CommitNotificationContext } from '../../push_single_action_contexts';
 import { getRandomElement } from "../../../../utils/list_utils";
 
 const SEPARATOR = "------------------------------------------------------";
@@ -14,19 +14,19 @@ export interface CommitNotificationContent {
 }
 
 export function buildCommitNotificationContent(
-  param: Execution,
+  param: CommitNotificationContext,
   commitPrefix: string,
 ): CommitNotificationContent {
   const theme = resolveTheme(param);
   let body = `
 # ${theme.title}
 
-**Changes on branch \`${param.commit.branch}\`:**
+**Changes on branch \`${param.branch}\`:**
 
 `;
   let shouldWarn = false;
 
-  for (const commit of param.commit.commits) {
+  for (const commit of param.commits) {
     const commitMessage = commit.message ?? "";
     body += `
 ${SEPARATOR}
@@ -53,7 +53,7 @@ ${commitPrefix}: created hello-world app
 `;
   }
 
-  if (theme.image && param.images.imagesOnCommit) {
+  if (theme.image && param.imagesOnCommit) {
     body += `
 ${SEPARATOR}
 
@@ -63,14 +63,17 @@ ${SEPARATOR}
   return { body, shouldWarn };
 }
 
-function resolveTheme(param: Execution): CommitNotificationTheme {
-  if (param.release.active) return { title: "🚀 Release News", image: getRandomElement(param.images.commitReleaseGifs) };
-  if (param.hotfix.active) return { title: "🔥🐛 Hotfix News", image: getRandomElement(param.images.commitHotfixGifs) };
-  if (param.isBugfix) return { title: "🐛 Bugfix News", image: getRandomElement(param.images.commitBugfixGifs) };
-  if (param.isFeature) return { title: "✨ Feature News", image: getRandomElement(param.images.commitFeatureGifs) };
-  if (param.isDocs) return { title: "📝 Documentation News", image: getRandomElement(param.images.commitDocsGifs) };
-  if (param.isChore) return { title: "🔧 Chore News", image: getRandomElement(param.images.commitChoreGifs) };
-  return { title: "🪄 Automatic News", image: getRandomElement(param.images.commitAutomaticActions) };
+function resolveTheme(param: CommitNotificationContext): CommitNotificationTheme {
+  const titles: Record<CommitNotificationContext['theme'], string> = {
+    release: '🚀 Release News',
+    hotfix: '🔥🐛 Hotfix News',
+    bugfix: '🐛 Bugfix News',
+    feature: '✨ Feature News',
+    docs: '📝 Documentation News',
+    chore: '🔧 Chore News',
+    automatic: '🪄 Automatic News',
+  };
+  return { title: titles[param.theme], image: getRandomElement([...param.themeImages]) };
 }
 
 function hasUnexpectedPrefix(commitMessage: string, commitPrefix: string): boolean {

@@ -39,3 +39,14 @@ export interface IssueCommentPublicationPort {
     updateComment(owner: string, repository: string, issueNumber: number, commentId: number, comment: string, token: string): Promise<void>;
     listIssueComments(owner: string, repository: string, issueNumber: number, token: string): Promise<IssueCommentPublicationTarget[]>;
 }
+
+export interface BoundIssueCommentPublicationPort {
+    addComment(issueNumber: number, comment: string): Promise<void>;
+    updateComment(issueNumber: number, commentId: number, comment: string): Promise<void>;
+    listIssueComments(issueNumber: number): Promise<readonly IssueCommentPublicationTarget[]>;
+}
+
+/** Bound push notification authority, including the optional reopen transition. */
+export interface BoundIssuePushNotificationPort extends BoundIssueNotificationPort {
+    openIssue(issueNumber: number): Promise<boolean>;
+}

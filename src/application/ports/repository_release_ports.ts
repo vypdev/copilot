@@ -21,3 +21,26 @@ export interface RepositoryReleasePublicationPort {
 export interface RepositoryDefaultBranchPort {
     getDefaultBranch(owner: string, repository: string, token: string): Promise<string | undefined>;
 }
+
+/** Repository-credential-bound tag authority for release/setup capabilities. */
+export interface BoundRepositoryTagPort {
+    updateTag(sourceTag: string, targetTag: string): Promise<void>;
+    createTag(branch: string, tag: string): Promise<string | undefined>;
+    createOrVerifyTagAtSha(sha: string, tag: string): Promise<string>;
+}
+
+/** Repository-credential-bound release publication authority. */
+export interface BoundRepositoryReleasePublicationPort {
+    updateRelease(sourceTag: string, targetTag: string): Promise<string | undefined>;
+    createRelease(
+        version: string,
+        title: string,
+        changelog: string,
+        operationId: string,
+        productionSha: string,
+    ): Promise<string | undefined>;
+}
+
+export interface BoundRepositoryDefaultBranchPort {
+    getDefaultBranch(): Promise<string | undefined>;
+}

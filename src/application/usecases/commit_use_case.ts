@@ -3,20 +3,27 @@ import { Result } from "../../data/model/result";
 import { logDebugInfo, logError, logInfo } from "../ports/logging_ports";
 import { getTaskEmoji } from "../../utils/task_emoji";
 import { ParamUseCase } from "./base/param_usecase";
-import { CheckProgressUseCase } from "./actions/check_progress_use_case";
 import type { ActorAuthorizationPort } from "../ports/actor_authorization_ports";
 import { toApplicationError } from "../errors/application_error";
 import type { BugbotReviewOperationContext } from './steps/commit/bugbot/bugbot_review_operation_context';
 import { projectBugbotReviewOperationContext } from './steps/commit/bugbot/bugbot_review_operation_context';
+import {
+    projectChangeSizeContext,
+    projectCommitNotificationContext,
+    projectProgressContext,
+    type ChangeSizeContext,
+    type CommitNotificationContext,
+    type ProgressContext,
+} from './push_single_action_contexts';
 
 export class CommitUseCase implements ParamUseCase<Execution, Result[]> {
     taskId: string = 'CommitUseCase';
 
     constructor(
-        private readonly notifyNewCommitUseCase: ParamUseCase<Execution, Result[]>,
-        private readonly checkChangesIssueSizeUseCase: ParamUseCase<Execution, Result[]>,
+        private readonly notifyNewCommitUseCase: ParamUseCase<CommitNotificationContext, Result[]>,
+        private readonly checkChangesIssueSizeUseCase: ParamUseCase<ChangeSizeContext, Result[]>,
         private readonly detectPotentialProblemsUseCase: ParamUseCase<BugbotReviewOperationContext, Result[]>,
-        private readonly checkProgressUseCase: CheckProgressUseCase,
+        private readonly checkProgressUseCase: ParamUseCase<ProgressContext, Result[]>,
         private readonly actorAuthorizationPort?: ActorAuthorizationPort,
     ) {}
 
@@ -34,8 +41,8 @@ export class CommitUseCase implements ParamUseCase<Execution, Result[]> {
             logDebugInfo(`Commits detected: ${param.commit.commits.length}`);
             logDebugInfo(`Issue number: ${param.issueNumber}`);
 
-            results.push(...(await this.notifyNewCommitUseCase.invoke(param)));
-            results.push(...(await this.checkChangesIssueSizeUseCase.invoke(param)));
+            results.push(...(await this.notifyNewCommitUseCase.invoke(projectCommitNotificationContext(param))));
+            results.push(...(await this.checkChangesIssueSizeUseCase.invoke(projectChangeSizeContext(param))));
             const agentAllowed = !param.ai.getAiMembersOnly()
                 || Boolean(this.actorAuthorizationPort && await this.actorAuthorizationPort.isActorAllowedToModifyFiles(
                     param.owner,
@@ -44,7 +51,7 @@ export class CommitUseCase implements ParamUseCase<Execution, Result[]> {
                     param.tokens.token,
                 ));
             if (agentAllowed) {
-                results.push(...(await this.checkProgressUseCase.invoke(param)));
+                results.push(...(await this.checkProgressUseCase.invoke(projectProgressContext(param))));
                 results.push(...(await this.detectPotentialProblemsUseCase.invoke(
                     projectBugbotReviewOperationContext(param),
                 )));

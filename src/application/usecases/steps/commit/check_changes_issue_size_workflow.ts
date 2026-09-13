@@ -1,47 +1,44 @@
-import type { Execution } from '../../../../data/model/execution';
 import { Result } from '../../../../data/model/result';
-import type { BranchChangeSizePort } from '../../../ports/branch_change_ports';
-import type { ProjectBoardCommandPort } from '../../../ports/project_board_command_ports';
-import type { IssueLabelsPort } from '../../../ports/issue_management_ports';
-import type { PullRequestBranchQueryPort } from '../../../ports/pull_request_branch_ports';
+import type { BoundBranchChangeSizePort } from '../../../ports/branch_change_ports';
+import type { BoundProjectBoardCommandPort } from '../../../ports/project_board_command_ports';
+import type { BoundIssueLabelsPort } from '../../../ports/issue_management_ports';
+import type { BoundPullRequestBranchQueryPort } from '../../../ports/pull_request_branch_ports';
+import type { ChangeSizeContext } from '../../push_single_action_contexts';
 import { logDebugInfo, logError } from '../../../ports/logging_ports';
 import { updateIssueAndRelatedPullRequests } from './update_change_size_labels';
 import { toApplicationError } from '../../../errors/application_error';
 
 export interface CheckChangesIssueSizeDependencies {
-    projectBoardCommandPort: ProjectBoardCommandPort;
-    issueRepository: IssueLabelsPort;
-    pullRequestRepository: PullRequestBranchQueryPort;
-    branchChangeSizePort: BranchChangeSizePort;
+    projectBoardCommandPort: BoundProjectBoardCommandPort;
+    issueRepository: BoundIssueLabelsPort;
+    pullRequestRepository: BoundPullRequestBranchQueryPort;
+    branchChangeSizePort: BoundBranchChangeSizePort;
 }
 
-export async function runCheckChangesIssueSize(param: Execution, taskId: string, dependencies: CheckChangesIssueSizeDependencies): Promise<Result[]> {
+export async function runCheckChangesIssueSize(param: ChangeSizeContext, taskId: string, dependencies: CheckChangesIssueSizeDependencies): Promise<Result[]> {
     try {
-        const baseBranch = param.currentConfiguration.parentBranch ?? param.branches.development ?? 'develop';
+        const baseBranch = param.baseBranch;
         if (!baseBranch) {
             logDebugInfo('Parent branch could not be determined.');
             return [];
         }
-        const headBranch = param.commit.branch;
+        const headBranch = param.headBranch;
         const size = await dependencies.branchChangeSizePort.getSizeCategoryAndReason(
-            param.owner, param.repo, headBranch, baseBranch, param.sizeThresholds, param.labels, param.tokens.token,
+            headBranch, baseBranch, param.thresholds, param.labels,
         );
-        logSize(size.size, size.githubSize, size.reason, param.labels.sizedLabelOnIssue);
-        if (param.labels.sizedLabelOnIssue === size.size) {
+        logSize(size.size, size.githubSize, size.reason, param.currentSize);
+        if (param.currentSize === size.size) {
             logDebugInfo('The issue is already at the correct size.');
             return [new Result({ id: taskId, success: true, executed: true })];
         }
         const update = await updateIssueAndRelatedPullRequests({
-            owner: param.owner,
-            repository: param.repo,
             issueNumber: param.issueNumber,
             headBranch,
             size: size.size,
             githubSize: size.githubSize,
-            currentIssueLabels: param.labels.currentIssueLabels,
-            sizeLabels: param.labels.sizeLabels,
-            projects: param.project.getProjects(),
-            token: param.tokens.token,
+            currentIssueLabels: param.currentIssueLabels,
+            sizeLabels: Object.values(param.labels),
+            projects: param.projects,
         }, {
             issueLabelsPort: dependencies.issueRepository,
             projectBoardCommandPort: dependencies.projectBoardCommandPort,

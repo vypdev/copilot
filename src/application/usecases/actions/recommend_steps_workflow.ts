@@ -1,5 +1,4 @@
 import { isAgentConfigurationReady } from '../../../data/model/agent';
-import type { Execution } from '../../../data/model/execution';
 import { Result } from '../../../data/model/result';
 import { AGENT_PLAN } from '../../../application/policies/agent_task_policy';
 import {
@@ -7,7 +6,8 @@ import {
     getVisibleIssueDescription,
 } from '../../../application/policies/recommendation_policy';
 import type { FindingsQueryPort } from '../../ports/agent_findings_ports';
-import type { IssueDescriptionQueryPort } from '../../ports/issue_description_ports';
+import type { BoundIssueDescriptionQueryPort } from '../../ports/issue_description_ports';
+import type { RecommendStepsContext, RecommendStepsOutcome } from '../push_single_action_contexts';
 import { getRecommendStepsPrompt } from '../../../prompts';
 import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
 import { PROJECT_CONTEXT_INSTRUCTION } from '../../../utils/project_context_instruction';
@@ -16,48 +16,45 @@ import { buildRecommendationResult } from './recommend_steps_result_policy';
 import { ApplicationError, toApplicationError } from '../../errors/application_error';
 
 export interface RecommendStepsWorkflowDependencies {
-    issueDescriptionQueryPort: IssueDescriptionQueryPort;
+    issueDescriptionQueryPort: BoundIssueDescriptionQueryPort;
     aiRepository: FindingsQueryPort;
 }
 
 /** Runs the recommendation policy and agent interaction for an issue. */
 export async function runRecommendStepsWorkflow(
-    param: Execution,
+    param: RecommendStepsContext,
     taskId: string,
     dependencies: RecommendStepsWorkflowDependencies,
-): Promise<Result[]> {
+): Promise<RecommendStepsOutcome> {
     logInfo(`${getTaskEmoji(taskId)} Executing ${taskId}.`);
 
     try {
-        const configuration = param.ai.getAgentConfiguration('planner');
+        const configuration = param.agentConfiguration;
         if (!isAgentConfigurationReady(configuration)) {
-            return [failure(taskId, 'Missing agent model or executable.', 'configuration.invalid')];
+            return outcome([failure(taskId, 'Missing agent model or executable.', 'configuration.invalid')]);
         }
 
         const issueNumber = param.issueNumber;
         if (issueNumber === -1) {
-            return [failure(taskId, 'Issue number not found.', 'validation.invalid-input')];
+            return outcome([failure(taskId, 'Issue number not found.', 'validation.invalid-input')]);
         }
 
         const rawIssueDescription = await dependencies.issueDescriptionQueryPort.getDescription(
-            param.owner,
-            param.repo,
             issueNumber,
-            param.tokens.token,
         );
         const issueDescription = rawIssueDescription === undefined
             ? undefined
             : getVisibleIssueDescription(rawIssueDescription);
 
         if (!issueDescription?.trim()) {
-            return [failure(taskId, `No description found for issue #${issueNumber}.`, 'provider.not-found')];
+            return outcome([failure(taskId, `No description found for issue #${issueNumber}.`, 'provider.not-found')]);
         }
 
-        const previousRecommendation = param.previousConfiguration?.recommendationState;
+        const previousRecommendation = param.previousRecommendation;
         const issueDescriptionFingerprint = createIssueDescriptionFingerprint(issueDescription);
         if (previousRecommendation?.issueDescriptionFingerprint === issueDescriptionFingerprint) {
             logInfo('RecommendSteps: issue description is unchanged; skipping recommendation.');
-            return [];
+            return outcome([]);
         }
 
         const prompt = getRecommendStepsPrompt({
@@ -80,15 +77,19 @@ export async function runRecommendStepsWorkflow(
     } catch (error) {
         const semanticError = toApplicationError(error, 'agent.failed', `Unable to complete ${taskId}.`);
         logError(semanticError);
-        return [
+        return outcome([
             new Result({
                 id: taskId,
                 success: false,
                 executed: true,
                 errors: [semanticError],
             }),
-        ];
+        ]);
     }
+}
+
+function outcome(results: readonly Result[]): RecommendStepsOutcome {
+    return Object.freeze({ results: Object.freeze([...results]) });
 }
 
 function failure(taskId: string, message: string, code: ConstructorParameters<typeof ApplicationError>[0]): Result {

@@ -39,6 +39,9 @@ export interface ManagedPullRequestCreate extends ManagedPullRequestQuery {
   readonly body: string;
 }
 
+export type BoundManagedPullRequestQuery = Omit<ManagedPullRequestQuery, "owner" | "repository" | "token">;
+export type BoundManagedPullRequestCreate = Omit<ManagedPullRequestCreate, "owner" | "repository" | "token">;
+
 export interface TargetMergeInspectionOptions {
   readonly pullRequest?: number;
   readonly candidateHeadSha?: string;
@@ -50,6 +53,13 @@ export interface TargetMergePolicyInspectionPort {
     repository: string,
     targetBranch: string,
     token: string,
+    options?: TargetMergeInspectionOptions,
+  ): Promise<TargetMergeCapabilities>;
+}
+
+export interface BoundTargetMergePolicyInspectionPort {
+  getTargetCapabilities(
+    targetBranch: string,
     options?: TargetMergeInspectionOptions,
   ): Promise<TargetMergeCapabilities>;
 }
@@ -70,6 +80,17 @@ export interface ManagedPullRequestPort {
   mergePullRequest(owner: string, repository: string, pullRequest: number, token: string): Promise<string>;
 }
 
+/** Repository-credential-bound managed pull-request authority. */
+export interface BoundManagedPullRequestPort {
+  findManagedPullRequests(query: BoundManagedPullRequestQuery): Promise<readonly ManagedPullRequestRecord[]>;
+  createManagedPullRequest(command: BoundManagedPullRequestCreate): Promise<ManagedPullRequestRecord>;
+  getPullRequest(pullRequest: number): Promise<ManagedPullRequestRecord>;
+  enableAutoMerge(pullRequestNodeId: string): Promise<void>;
+  isPullRequestQueued(pullRequestNodeId: string): Promise<boolean>;
+  enqueuePullRequest(pullRequestNodeId: string, expectedHeadSha: string): Promise<void>;
+  mergePullRequest(pullRequest: number): Promise<string>;
+}
+
 export interface DeploymentGitPort {
   getBranchSha(owner: string, repository: string, branch: string, token: string): Promise<string>;
   getMergeBaseSha(owner: string, repository: string, base: string, head: string, token: string): Promise<string>;
@@ -78,6 +99,17 @@ export interface DeploymentGitPort {
   mergeCommitIntoBranch(owner: string, repository: string, branch: string, sourceSha: string, token: string): Promise<string>;
   deleteBranch(owner: string, repository: string, branch: string, expectedSha: string, token: string): Promise<void>;
   listBranches(owner: string, repository: string, prefix: string, token: string): Promise<readonly string[]>;
+}
+
+/** Repository-credential-bound deployment Git authority. */
+export interface BoundDeploymentGitPort {
+  getBranchSha(branch: string): Promise<string>;
+  getMergeBaseSha(base: string, head: string): Promise<string>;
+  isCommitReachable(branch: string, sha: string): Promise<boolean>;
+  createOrVerifyBranch(branch: string, sha: string): Promise<void>;
+  mergeCommitIntoBranch(branch: string, sourceSha: string): Promise<string>;
+  deleteBranch(branch: string, expectedSha: string): Promise<void>;
+  listBranches(prefix: string): Promise<readonly string[]>;
 }
 
 export interface DeploymentContinuationPort {
@@ -93,6 +125,10 @@ export interface DeploymentContinuationPort {
   ): Promise<void>;
 }
 
+export interface BoundDeploymentContinuationPort {
+  dispatch(workflow: string, ref: string, operationId: string, issue: number, version: string): Promise<void>;
+}
+
 export interface DeploymentDashboardComment {
   readonly id: number;
   readonly body: string;
@@ -103,6 +139,13 @@ export interface DeploymentPresentationPort {
   createDashboard(owner: string, repository: string, issue: number, body: string, token: string): Promise<void>;
   updateDashboard(owner: string, repository: string, issue: number, commentId: number, body: string, token: string): Promise<void>;
   publishMilestone(owner: string, repository: string, issue: number, marker: string, body: string, token: string): Promise<void>;
+}
+
+export interface BoundDeploymentPresentationPort {
+  findDashboard(issue: number, marker: string): Promise<DeploymentDashboardComment | undefined>;
+  createDashboard(issue: number, body: string): Promise<void>;
+  updateDashboard(issue: number, commentId: number, body: string): Promise<void>;
+  publishMilestone(issue: number, marker: string, body: string): Promise<void>;
 }
 
 export type DeploymentPublicationInspection =
@@ -118,6 +161,14 @@ export interface DeploymentPublicationReceiptPort {
     readonly productionSha: string;
     readonly operationId: string;
     readonly token: string;
+  }): Promise<DeploymentPublicationInspection>;
+}
+
+export interface BoundDeploymentPublicationReceiptPort {
+  inspect(command: {
+    readonly tag: string;
+    readonly productionSha: string;
+    readonly operationId: string;
   }): Promise<DeploymentPublicationInspection>;
 }
 
@@ -155,11 +206,14 @@ export interface DeploymentStateStoreFactoryPort {
   bind(binding: DeploymentStateBinding): DeploymentStateStorePort;
 }
 
+export interface BoundDeploymentStateStoreFactoryPort {
+  bind(issue: number): DeploymentStateStorePort;
+}
+
 /** Narrow runtime view adapted structurally at the single-action boundary. */
 export interface DeploymentOrchestrationContext {
   readonly owner: string;
   readonly repo: string;
-  readonly tokens: { readonly token: string };
   readonly branches: {
     readonly defaultBranch: string;
     readonly development: string;

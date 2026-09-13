@@ -39,8 +39,8 @@ describe('initial setup composition root', () => {
     mockIssueLabelProvisioningRepository.mockClear();
   });
 
-    it('injects one initial-label provisioning capability and repository-variable provisioning', () => {
-    const composed = createInitialSetupCompositionRoot();
+  it('injects one credential-bound initial-label capability and repository-variable provisioning', async () => {
+    const composed = createInitialSetupCompositionRoot({ owner: 'owner', repository: 'repo', token: 'token' });
 
     expect(composed).toEqual({ taskId: 'composed' });
     expect(mockCreateIssueLabelProvisioningClient).toHaveBeenCalledTimes(1);
@@ -51,6 +51,10 @@ describe('initial setup composition root', () => {
     expect(mockComposeInitialSetupUseCase).toHaveBeenCalledTimes(1);
     const dependencies = mockComposeInitialSetupUseCase.mock.calls[0];
     expect(dependencies).toHaveLength(10);
-    expect(dependencies[1]).toBe(mockLabelProvisioning);
+    const labels = dependencies[1] as { ensureInitialLabels(value: unknown): Promise<unknown> };
+    await labels.ensureInitialLabels({ lifecycle: {} });
+    expect(mockLabelProvisioning.ensureInitialLabels).toHaveBeenCalledWith(
+      'owner', 'repo', { lifecycle: {} }, 'token',
+    );
   });
 });

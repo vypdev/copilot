@@ -10,5 +10,6 @@ export interface ProjectBoardCommandPort {
 /** Repository-credential-bound project mutations for lifecycle steps. */
 export interface BoundProjectBoardCommandPort {
     setTaskPriority(project: ProjectReference, issueOrPullRequestNumber: number, priorityLabel: string): Promise<boolean>;
+    setTaskSize(project: ProjectReference, issueOrPullRequestNumber: number, sizeLabel: string): Promise<boolean>;
     moveIssueToColumn(project: ProjectReference, issueOrPullRequestNumber: number, columnName: string): Promise<boolean>;
 }

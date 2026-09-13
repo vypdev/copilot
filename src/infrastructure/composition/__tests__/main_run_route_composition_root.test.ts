@@ -106,16 +106,17 @@ describe("main run route composition root", () => {
       mockFindings,
     );
 
-    const gitCommit = (
-      GitCommitAdapter as jest.MockedClass<typeof GitCommitAdapter>
-    ).mock.instances[0];
     expect(GitCommitAdapter).toHaveBeenCalledTimes(1);
     expect(BugbotAutofixUseCase).toHaveBeenCalledWith(
       mockFixer,
       mockContext,
       expect.anything(),
     );
-    expect(DoUserRequestUseCase).toHaveBeenCalledWith(mockFixer, gitCommit);
+    expect(DoUserRequestUseCase).toHaveBeenCalledWith(mockFixer, expect.objectContaining({
+      execute: expect.any(Function),
+      fetch: expect.any(Function),
+      getAuthenticatedUserDetails: expect.any(Function),
+    }));
     expect(RememberBugbotRuleUseCase).toHaveBeenCalledWith(mockRules);
     expect(IssueCommentUseCase).toHaveBeenCalledTimes(1);
     expect(IssueCommentUseCase).toHaveBeenCalledWith(

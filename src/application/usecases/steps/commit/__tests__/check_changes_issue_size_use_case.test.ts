@@ -1,4 +1,5 @@
 import { CheckChangesIssueSizeUseCase } from '../check_changes_issue_size_use_case';
+import { projectChangeSizeContext } from '../../../push_single_action_contexts';
 
 jest.mock('../../../../../utils/logger', () => ({
   logInfo: jest.fn(),
@@ -14,7 +15,7 @@ const mockGetOpenPullRequestNumbersByHeadBranch = jest.fn();
 
 
 function baseParam(overrides: Record<string, unknown> = {}) {
-  return {
+  return projectChangeSizeContext({
     owner: 'o',
     repo: 'r',
     issueNumber: 42,
@@ -25,11 +26,16 @@ function baseParam(overrides: Record<string, unknown> = {}) {
     labels: {
       sizedLabelOnIssue: 'size: M',
       currentIssueLabels: ['feature', 'size: M'],
-      sizeLabels: ['size: XS', 'size: S', 'size: M', 'size: L', 'size: XL', 'size: XXL'],
+      sizeXxl: 'size: XXL',
+      sizeXl: 'size: XL',
+      sizeL: 'size: L',
+      sizeM: 'size: M',
+      sizeS: 'size: S',
+      sizeXs: 'size: XS',
     },
     project: { getProjects: () => [] },
     ...overrides,
-  } as unknown as Parameters<CheckChangesIssueSizeUseCase['invoke']>[0];
+  } as never);
 }
 
 describe('CheckChangesIssueSizeUseCase', () => {
@@ -61,13 +67,10 @@ describe('CheckChangesIssueSizeUseCase', () => {
     const results = await useCase.invoke(param);
 
     expect(mockGetSizeCategoryAndReason).toHaveBeenCalledWith(
-      'o',
-      'r',
       'feature/42-foo',
       'develop',
       expect.anything(),
       expect.anything(),
-      't'
     );
     expect(results.length).toBeGreaterThan(0);
   });
@@ -105,11 +108,8 @@ describe('CheckChangesIssueSizeUseCase', () => {
     expect(results[0].executed).toBe(true);
     expect(results[0].steps?.some((s) => s.includes('size: L') && s.includes('resized'))).toBe(true);
     expect(mockSetLabels).toHaveBeenCalledWith(
-      'o',
-      'r',
       42,
       expect.arrayContaining(['feature', 'size: L']),
-      't'
     );
   });
 
@@ -157,21 +157,15 @@ describe('CheckChangesIssueSizeUseCase', () => {
 
     expect(results[0].success).toBe(true);
     expect(results[0].steps?.some((s) => s.includes('1 open PR(s)'))).toBe(true);
-    expect(mockGetLabels).toHaveBeenCalledWith('o', 'r', 99, 't');
+    expect(mockGetLabels).toHaveBeenCalledWith(99);
     expect(mockSetLabels).toHaveBeenCalledWith(
-      'o',
-      'r',
       99,
       expect.arrayContaining(['feature', 'size: L']),
-      't'
     );
     expect(mockSetTaskSize).toHaveBeenCalledWith(
       { id: 'proj1' },
-      'o',
-      'r',
       99,
       'L',
-      't'
     );
   });
 });

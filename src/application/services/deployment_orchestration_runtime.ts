@@ -79,29 +79,20 @@ export class DeploymentOrchestrationRuntime {
     const marker = deploymentDashboardMarker(operation.operationId, context.singleAction.issue);
     const body = renderDeploymentDashboard(operation, presentationContext(context));
     const current = await this.dependencies.presentation.findDashboard(
-      context.owner,
-      context.repo,
       context.singleAction.issue,
       marker,
-      context.tokens.token,
     );
     if (current) {
       await this.dependencies.presentation.updateDashboard(
-        context.owner,
-        context.repo,
         context.singleAction.issue,
         current.id,
         body,
-        context.tokens.token,
       );
       return;
     }
     await this.dependencies.presentation.createDashboard(
-      context.owner,
-      context.repo,
       context.singleAction.issue,
       body,
-      context.tokens.token,
     );
   }
 
@@ -114,12 +105,9 @@ export class DeploymentOrchestrationRuntime {
     if (operation.commentMode !== "milestones") return;
     const marker = `<!-- copilot-deployment-milestone operation-id="${operation.operationId}" name="${name}" -->`;
     await this.dependencies.presentation.publishMilestone(
-      context.owner,
-      context.repo,
       context.singleAction.issue,
       marker,
       body,
-      context.tokens.token,
     );
   }
 
@@ -132,14 +120,11 @@ export class DeploymentOrchestrationRuntime {
     const headBranch = target?.syncBranch ?? target?.sourceBranch ?? operation.sourceBranch;
     const baseBranch = target?.targetBranch ?? operation.productionBranch;
     const query = {
-      owner: context.owner,
-      repository: context.repo,
       operationId: operation.operationId,
       phase,
       issue: context.singleAction.issue,
       headBranch,
       baseBranch,
-      token: context.tokens.token,
     } as const;
     const existing = await this.dependencies.pullRequests.findManagedPullRequests(query);
     if (existing.length > 1) {
@@ -206,10 +191,7 @@ export class DeploymentOrchestrationRuntime {
     | { readonly kind: "blocked"; readonly reason: string }
   > {
     const capabilities = await this.dependencies.targetRules.getTargetCapabilities(
-      context.owner,
-      context.repo,
       targetBranch,
-      context.tokens.token,
       { candidateHeadSha, ...(pullRequest === undefined ? {} : { pullRequest }) },
     );
     const decision = selectPullRequestMode(operation.prMode, capabilities);
@@ -244,11 +226,8 @@ export class DeploymentOrchestrationRuntime {
     if (deleteSync) await this.cleanupSyncBranches(context, operation);
     if (deleteSource) {
       await this.dependencies.git.deleteBranch(
-        context.owner,
-        context.repo,
         operation.sourceBranch,
         operation.sourceSha,
-        context.tokens.token,
       );
     }
   }
@@ -283,18 +262,12 @@ export class DeploymentOrchestrationRuntime {
     }
     if (inspection.decision.mode === "merge-queue") {
       const queued = await this.dependencies.pullRequests.isPullRequestQueued(
-        context.owner,
-        context.repo,
         pullRequest.nodeId,
-        context.tokens.token,
       );
       if (!queued) {
         await this.dependencies.pullRequests.enqueuePullRequest(
-          context.owner,
-          context.repo,
           pullRequest.nodeId,
           pullRequest.headSha,
-          context.tokens.token,
         );
       }
     }
@@ -308,19 +281,13 @@ export class DeploymentOrchestrationRuntime {
   ): Promise<void> {
     if (operation.prMode === "auto" && capabilities.immediatelyMergeable) {
       await this.dependencies.pullRequests.mergePullRequest(
-        context.owner,
-        context.repo,
         pullRequest.number,
-        context.tokens.token,
       );
       return;
     }
     if (!pullRequest.autoMergeEnabled) {
       await this.dependencies.pullRequests.enableAutoMerge(
-        context.owner,
-        context.repo,
         pullRequest.nodeId,
-        context.tokens.token,
       );
     }
   }
@@ -362,11 +329,8 @@ export class DeploymentOrchestrationRuntime {
         );
       }
       await this.dependencies.git.deleteBranch(
-        context.owner,
-        context.repo,
         target.syncBranch,
         target.syncSha,
-        context.tokens.token,
       );
     }
   }

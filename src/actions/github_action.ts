@@ -100,7 +100,11 @@ export async function runGitHubAction(): Promise<void> {
         new GitCliRepository(token),
         'github-workflow',
         createSynchronizeLifecycleStateUseCase(),
-        createSynchronizeAgentActivityUseCase(),
+        createSynchronizeAgentActivityUseCase({
+            owner: execution.owner,
+            repository: execution.repo,
+            token: execution.tokens.token,
+        }),
     );
     const issueContentPort = createIssueContentCompositionRoot();
     const repositoryBinding = {

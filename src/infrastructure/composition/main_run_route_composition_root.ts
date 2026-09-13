@@ -70,13 +70,35 @@ import { WorkflowDispatchRepository } from "../../data/repository/workflow/workf
 import { createWorkflowDispatchClient } from "./github_workflow_client_factory";
 import { randomUUID } from "node:crypto";
 import type { BugbotScmBinding } from './bugbot_scm_port_factory';
-import type { Execution } from '../../data/model/execution';
 import {
   bindIssueDescriptionQuery,
   bindIssueNotification,
   bindOrganizationMembers,
 } from './shared_capability_port_binding';
 import { bindPullRequestDescription } from './lifecycle_capability_port_binding';
+import { bindIssueLabels, bindProjectBoardCommands } from './lifecycle_capability_port_binding';
+import {
+  bindAuthenticatedUser,
+  bindBranchChangeSize,
+  bindBranchComparison,
+  bindBranchDependencies,
+  bindBranchSyncNotification,
+  bindBranchSyncWorkspace,
+  bindDeploymentContinuation,
+  bindDeploymentGit,
+  bindDeploymentIssues,
+  bindDeploymentLabels,
+  bindDeploymentPresentation,
+  bindDeploymentPublicationReceipt,
+  bindDeploymentState,
+  bindDeploymentTargetRules,
+  bindIssueCommentPublication,
+  bindIssuePushNotification,
+  bindManagedPullRequests,
+  bindPullRequestBranchQuery,
+  bindRepositoryRelease,
+  bindRepositoryTag,
+} from './push_single_action_capability_port_binding';
 
 function createDetectPotentialProblemsUseCase(binding: BugbotScmBinding): DetectPotentialProblemsUseCase {
   const bugbot = createBugbotCompositionRoot(binding);
@@ -101,33 +123,33 @@ export function createSingleActionUseCaseCompositionRoot(
     ? new RepositoryReleasePublicationRepository(createReleaseClient())
     : undefined;
   const deploymentOrchestration = surface === "github-workflow"
-    ? createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, repositoryReleasePort!)
+    ? createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, repositoryReleasePort!, binding)
     : undefined;
   return new SingleActionUseCase(
     repositoryTagPort && repositoryReleasePort
-      ? new PublishGithubActionUseCase(repositoryTagPort, repositoryReleasePort)
+      ? new PublishGithubActionUseCase(bindRepositoryTag(repositoryTagPort, binding), bindRepositoryRelease(repositoryReleasePort, binding))
       : undefined,
-    repositoryReleasePort ? new CreateReleaseUseCase(repositoryReleasePort) : undefined,
-    repositoryTagPort ? new CreateTagUseCase(repositoryTagPort) : undefined,
+    repositoryReleasePort ? new CreateReleaseUseCase(bindRepositoryRelease(repositoryReleasePort, binding)) : undefined,
+    repositoryTagPort ? new CreateTagUseCase(bindRepositoryTag(repositoryTagPort, binding)) : undefined,
     new ThinkUseCase(
       bindIssueDescriptionQuery(issueDescriptionQueryPort, binding),
       bindIssueNotification(createIssueNotificationRepository(), binding),
       createFindingsQueryPort(),
     ),
-    createInitialSetupCompositionRoot(),
-    createCheckProgressCompositionRoot(),
+    createInitialSetupCompositionRoot(binding),
+    createCheckProgressCompositionRoot(binding),
     createDetectPotentialProblemsUseCase(binding),
     new RecommendStepsUseCase(
-      issueDescriptionQueryPort,
+      bindIssueDescriptionQuery(issueDescriptionQueryPort, binding),
       createFindingsQueryPort(),
     ),
-    createCloseInactiveIssuesUseCase(),
+    createCloseInactiveIssuesUseCase(binding),
     createActorAuthorizationRepository(),
-    new PublishIssueCommentUseCase(issueDescriptionQueryPort),
+    new PublishIssueCommentUseCase(bindIssueCommentPublication(issueDescriptionQueryPort, binding)),
     new ObserveBranchSyncUseCase(
-      new BranchDependencyRepository(createGraphqlTransportClient()),
-      new BranchCompareRepository(createBranchComparisonClient()),
-      issueDescriptionQueryPort,
+      bindBranchDependencies(new BranchDependencyRepository(createGraphqlTransportClient()), binding),
+      bindBranchComparison(new BranchCompareRepository(createBranchComparisonClient()), binding),
+      bindBranchSyncNotification(issueDescriptionQueryPort, binding),
     ),
     deploymentOrchestration,
   );
@@ -136,20 +158,21 @@ export function createSingleActionUseCaseCompositionRoot(
 function createDeploymentOrchestrationUseCase(
   issueDescriptionQueryPort: ReturnType<typeof createIssueContentCompositionRoot>,
   publication: RepositoryReleasePublicationRepository,
+  binding: BugbotScmBinding,
 ): DeploymentOrchestrationUseCase {
   const deploymentClient = new OctokitDeploymentClientAdapter();
   return new DeploymentOrchestrationUseCase({
-    pullRequests: new GithubManagedPullRequestRepository(deploymentClient),
-    targetRules: new GithubTargetMergeCapabilitiesInspector(deploymentClient),
-    git: new GithubDeploymentGitRepository(deploymentClient),
-    continuation: new DeploymentContinuationRepository(
+    pullRequests: bindManagedPullRequests(new GithubManagedPullRequestRepository(deploymentClient), binding),
+    targetRules: bindDeploymentTargetRules(new GithubTargetMergeCapabilitiesInspector(deploymentClient), binding),
+    git: bindDeploymentGit(new GithubDeploymentGitRepository(deploymentClient), binding),
+    continuation: bindDeploymentContinuation(new DeploymentContinuationRepository(
       new WorkflowDispatchRepository(createWorkflowDispatchClient()),
-    ),
-    presentation: new DeploymentPresentationRepository(issueDescriptionQueryPort),
-    publication,
-    state: new DeploymentStateRepositoryFactory(issueDescriptionQueryPort),
-    labels: createIssueLabelRepository(),
-    issues: createIssueClosureRepository(),
+    ), binding),
+    presentation: bindDeploymentPresentation(new DeploymentPresentationRepository(issueDescriptionQueryPort), binding),
+    publication: bindDeploymentPublicationReceipt(publication, binding),
+    state: bindDeploymentState(new DeploymentStateRepositoryFactory(issueDescriptionQueryPort), binding),
+    labels: bindDeploymentLabels(createIssueLabelRepository(), binding),
+    issues: bindDeploymentIssues(createIssueClosureRepository(), binding),
     operationId: randomUUID,
   });
 }
@@ -169,11 +192,11 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
     createFindingsQueryPort(),
   );
   const branchSync = new SyncBranchUseCase(
-    new BranchDependencyRepository(createGraphqlTransportClient()),
-    new BranchSyncWorkspaceAdapter(gitCommit),
+    bindBranchDependencies(new BranchDependencyRepository(createGraphqlTransportClient()), binding),
+    bindBranchSyncWorkspace(new BranchSyncWorkspaceAdapter(gitCommit), binding),
     fixer,
-    createAuthenticatedUserCompositionRoot(),
-    gitCommit,
+    bindAuthenticatedUser(authenticatedUser, binding),
+    bugbotGit,
   );
 
   return new IssueCommentUseCase(
@@ -190,7 +213,7 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
       findings,
     ),
     new BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit),
-    new DoUserRequestUseCase(fixer, gitCommit),
+    new DoUserRequestUseCase(fixer, bugbotGit),
     createActorAuthorizationRepository(),
     bugbotGit,
     new DismissBugbotFindingsUseCase({ contextPorts: bugbot.scm.context, resolutionPorts: bugbot.scm.resolution }),
@@ -216,11 +239,11 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
     createFindingsQueryPort(),
   );
   const branchSync = new SyncBranchUseCase(
-    new BranchDependencyRepository(createGraphqlTransportClient()),
-    new BranchSyncWorkspaceAdapter(gitCommit),
+    bindBranchDependencies(new BranchDependencyRepository(createGraphqlTransportClient()), binding),
+    bindBranchSyncWorkspace(new BranchSyncWorkspaceAdapter(gitCommit), binding),
     fixer,
-    createAuthenticatedUserCompositionRoot(),
-    gitCommit,
+    bindAuthenticatedUser(authenticatedUser, binding),
+    bugbotGit,
   );
 
   return new PullRequestReviewCommentUseCase(
@@ -237,7 +260,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
       findings,
     ),
     new BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit),
-    new DoUserRequestUseCase(fixer, gitCommit),
+    new DoUserRequestUseCase(fixer, bugbotGit),
     createActorAuthorizationRepository(),
     bugbotGit,
     new DismissBugbotFindingsUseCase({ contextPorts: bugbot.scm.context, resolutionPorts: bugbot.scm.resolution }),
@@ -253,15 +276,15 @@ export function createCommitUseCaseCompositionRoot(
   binding: BugbotScmBinding,
 ): CommitUseCase {
   return new CommitUseCase(
-    new NotifyNewCommitOnIssueUseCase(createIssueNotificationRepository()),
+    new NotifyNewCommitOnIssueUseCase(bindIssuePushNotification(createIssueNotificationRepository(), binding)),
     new CheckChangesIssueSizeUseCase(
-      projectBoardCommandPort,
-      createIssueLabelRepository(),
-      new PullRequestLifecycleRepository(createPullRequestLifecycleClient()),
-      new BranchCompareRepository(createBranchComparisonClient()),
+      bindProjectBoardCommands(projectBoardCommandPort, binding),
+      bindIssueLabels(createIssueLabelRepository(), binding),
+      bindPullRequestBranchQuery(new PullRequestLifecycleRepository(createPullRequestLifecycleClient()), binding),
+      bindBranchChangeSize(new BranchCompareRepository(createBranchComparisonClient()), binding),
     ),
     createDetectPotentialProblemsUseCase(binding),
-    createCheckProgressCompositionRoot(),
+    createCheckProgressCompositionRoot(binding),
     createActorAuthorizationRepository(),
   );
 }
@@ -270,43 +293,45 @@ export function createMainRunRouteCompositionRoot(
   projectBoardCommandPort: ProjectBoardCommandPort,
   surface: MainRunCompositionSurface,
 ): MainRunRouteHandlers {
-  // Composition is scoped to one main run. Each route is built only when it is
-  // actually selected, while repeated calls in the same run reuse its graph.
-  const singleAction = lazyWith((execution: Execution) =>
-    createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution)));
-  const issueComment = lazyWith((execution: Execution) =>
-    createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution)));
-  const issue = lazyWith((execution: Execution) =>
-    createIssueUseCaseCompositionRoot(bugbotBinding(execution)));
-  const pullRequestReviewComment = lazyWith((execution: Execution) =>
-    createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution)));
-  const pullRequest = lazyWith((execution: Execution) =>
-    createPullRequestUseCaseCompositionRoot(bugbotBinding(execution)));
-  const push = lazyWith((execution: Execution) =>
-    createCommitUseCaseCompositionRoot(projectBoardCommandPort, bugbotBinding(execution)));
-
+  let singleAction: SingleActionUseCase | undefined;
+  let issueComment: IssueCommentUseCase | undefined;
+  let issue: ReturnType<typeof createIssueUseCaseCompositionRoot> | undefined;
+  let pullRequestReviewComment: PullRequestReviewCommentUseCase | undefined;
+  let pullRequest: ReturnType<typeof createPullRequestUseCaseCompositionRoot> | undefined;
+  let push: CommitUseCase | undefined;
   return {
-    "single-action": async (execution) =>
-      singleAction(execution).invoke(execution),
-    "issue-comment": async (execution) =>
-      issueComment(execution).invoke(execution),
-    issue: async (execution) =>
-      issue(execution).invoke(execution),
-    "pull-request-review-comment": async (execution) =>
-      pullRequestReviewComment(execution).invoke(execution),
-    "pull-request": async (execution) =>
-      pullRequest(execution).invoke(execution),
-    push: async (execution) =>
-      push(execution).invoke(execution),
+    "single-action": async (execution) => {
+      singleAction ??= createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution));
+      return singleAction.invoke(execution);
+    },
+    "issue-comment": async (execution) => {
+      issueComment ??= createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution));
+      return issueComment.invoke(execution);
+    },
+    issue: async (execution) => {
+      issue ??= createIssueUseCaseCompositionRoot(bugbotBinding(execution));
+      return issue.invoke(execution);
+    },
+    "pull-request-review-comment": async (execution) => {
+      pullRequestReviewComment ??= createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution));
+      return pullRequestReviewComment.invoke(execution);
+    },
+    "pull-request": async (execution) => {
+      pullRequest ??= createPullRequestUseCaseCompositionRoot(bugbotBinding(execution));
+      return pullRequest.invoke(execution);
+    },
+    push: async (execution) => {
+      push ??= createCommitUseCaseCompositionRoot(projectBoardCommandPort, bugbotBinding(execution));
+      return push.invoke(execution);
+    },
   };
 }
 
-function lazyWith<T, TArg>(factory: (arg: TArg) => T): (arg: TArg) => T {
-  let value: T | undefined;
-  return (arg) => value ?? (value = factory(arg));
-}
-
-function bugbotBinding(execution: Execution): BugbotScmBinding {
+function bugbotBinding(execution: {
+  readonly owner: string;
+  readonly repo: string;
+  readonly tokens: { readonly token: string };
+}): BugbotScmBinding {
   return {
     owner: execution.owner,
     repository: execution.repo,

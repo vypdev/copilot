@@ -1,143 +1,38 @@
-import { CommitPrefixBuilderUseCase } from '../execute_script_use_case';
-import { getResultPayload } from '../../../../../data/model/result';
+import { buildCommitPrefix } from '../execute_script_use_case';
 
-jest.mock('../../../../ports/logging_ports', () => ({
-  logInfo: jest.fn(),
-  logError: jest.fn(),
-  logDebugInfo: jest.fn(),
-}));
-
-describe('CommitPrefixBuilderUseCase (execute_script)', () => {
-  let useCase: CommitPrefixBuilderUseCase;
-
-  beforeEach(() => {
-    useCase = new CommitPrefixBuilderUseCase();
+describe('buildCommitPrefix', () => {
+  it.each([
+    ['feature/123-add-login', 'replace-slash', 'feature-123-add-login'],
+    ['Feature/Branch_Name', 'replace-slash,kebab-case', 'feature-branch-name'],
+    ['FEATURE/ABC', 'replace-slash,lowercase', 'feature-abc'],
+    ['feature/abc', 'replace-slash,uppercase', 'FEATURE-ABC'],
+    ['Feature Branch Name', 'kebab-case', 'feature-branch-name'],
+    ['Feature Branch', 'snake-case', 'feature_branch'],
+    ['  branch  ', 'trim', 'branch'],
+    ['feature/branch_name', 'replace-all', 'feature-branch-name'],
+    ['feature-branch-name', 'camel-case', 'featureBranchName'],
+    ['feature123', 'remove-numbers', 'feature'],
+    ['feat@ure!', 'remove-special', 'feature'],
+    ['f e a t', 'remove-spaces', 'feat'],
+    ['a-b-c', 'remove-dashes', 'abc'],
+    ['a_b_c', 'remove-underscores', 'abc'],
+    ['--a--b--', 'clean-dashes', 'a-b'],
+    ['__a__b__', 'clean-underscores', 'a_b'],
+    ['branch', 'prefix', 'prefix-branch'],
+    ['branch', 'suffix', 'branch-suffix'],
+    ['single', 'camel-case', 'single'],
+  ])('transforms %s with %s', (branch, transforms, expected) => {
+    expect(buildCommitPrefix(branch, transforms)).toBe(expected);
   });
 
-  const param = (branchName: string, commitPrefixBuilder: string) =>
-    ({
-      commitPrefixBuilderParams: { branchName },
-      commitPrefixBuilder,
-    } as unknown as Parameters<CommitPrefixBuilderUseCase['invoke']>[0]);
+  it('keeps the current value and reports an unknown transform', () => {
+    const onUnknown = jest.fn();
 
-  it('returns success with scriptResult when transforms are applied', async () => {
-    const results = await useCase.invoke(param('feature/123-add-login', 'replace-slash'));
-
-    expect(results).toHaveLength(1);
-    expect(results[0].success).toBe(true);
-    expect(getResultPayload(results[0].payload)?.scriptResult).toBe('feature-123-add-login');
+    expect(buildCommitPrefix('branch', 'unknown-transform', onUnknown)).toBe('branch');
+    expect(onUnknown).toHaveBeenCalledWith('unknown-transform');
   });
 
-  it('applies multiple transforms in order', async () => {
-    const results = await useCase.invoke(param('Feature/Branch_Name', 'replace-slash,kebab-case'));
-
-    expect(getResultPayload(results[0].payload)?.scriptResult).toBe('feature-branch-name');
-  });
-
-  it('applies lowercase transform', async () => {
-    const results = await useCase.invoke(param('FEATURE/ABC', 'replace-slash,lowercase'));
-
-    expect(getResultPayload(results[0].payload)?.scriptResult).toBe('feature-abc');
-  });
-
-  it('applies uppercase transform', async () => {
-    const results = await useCase.invoke(param('feature/abc', 'replace-slash,uppercase'));
-
-    expect(getResultPayload(results[0].payload)?.scriptResult).toBe('FEATURE-ABC');
-  });
-
-  it('applies kebab-case transform', async () => {
-    const results = await useCase.invoke(param('Feature Branch Name', 'kebab-case'));
-
-    expect(getResultPayload(results[0].payload)?.scriptResult).toBe('feature-branch-name');
-  });
-
-  it('applies snake_case transform', async () => {
-    const results = await useCase.invoke(param('Feature Branch', 'snake-case'));
-
-    expect(getResultPayload(results[0].payload)?.scriptResult).toBe('feature_branch');
-  });
-
-  it('applies trim transform', async () => {
-    const results = await useCase.invoke(param('  branch  ', 'trim'));
-
-    expect(getResultPayload(results[0].payload)?.scriptResult).toBe('branch');
-  });
-
-  it('applies replace-all transform', async () => {
-    const results = await useCase.invoke(param('feature/branch_name', 'replace-all'));
-
-    expect(getResultPayload(results[0].payload)?.scriptResult).toBe('feature-branch-name');
-  });
-
-  it('returns failure when branchName is missing and throws', async () => {
-    const results = await useCase.invoke(
-      param(undefined as unknown as string, 'lowercase')
-    );
-
-    expect(results[0].success).toBe(false);
-    expect(results[0].executed).toBe(true);
-  });
-
-  it('applies camel-case transform', async () => {
-    const results = await useCase.invoke(param('feature-branch-name', 'camel-case'));
-
-    expect(getResultPayload(results[0].payload)?.scriptResult).toBe('featureBranchName');
-  });
-
-  it('applies remove-numbers transform', async () => {
-    const results = await useCase.invoke(param('feature123', 'remove-numbers'));
-
-    expect(getResultPayload(results[0].payload)?.scriptResult).toBe('feature');
-  });
-
-  it('applies remove-special transform', async () => {
-    const results = await useCase.invoke(param('feat@ure!', 'remove-special'));
-
-    expect(getResultPayload(results[0].payload)?.scriptResult).toBe('feature');
-  });
-
-  it('applies remove-spaces transform', async () => {
-    const results = await useCase.invoke(param('f e a t', 'remove-spaces'));
-
-    expect(getResultPayload(results[0].payload)?.scriptResult).toBe('feat');
-  });
-
-  it('applies remove-dashes and remove-underscores transforms', async () => {
-    const results = await useCase.invoke(param('a-b-c', 'remove-dashes'));
-    expect(getResultPayload(results[0].payload)?.scriptResult).toBe('abc');
-
-    const results2 = await useCase.invoke(param('a_b_c', 'remove-underscores'));
-    expect(getResultPayload(results2[0].payload)?.scriptResult).toBe('abc');
-  });
-
-  it('applies clean-dashes and clean-underscores transforms', async () => {
-    const results = await useCase.invoke(param('--a--b--', 'clean-dashes'));
-    expect(getResultPayload(results[0].payload)?.scriptResult).toBe('a-b');
-
-    const results2 = await useCase.invoke(param('__a__b__', 'clean-underscores'));
-    expect(getResultPayload(results2[0].payload)?.scriptResult).toBe('a_b');
-  });
-
-  it('applies prefix and suffix transforms', async () => {
-    const results = await useCase.invoke(param('branch', 'prefix'));
-    expect(getResultPayload(results[0].payload)?.scriptResult).toBe('prefix-branch');
-
-    const results2 = await useCase.invoke(param('branch', 'suffix'));
-    expect(getResultPayload(results2[0].payload)?.scriptResult).toBe('branch-suffix');
-  });
-
-  it('returns input unchanged for unknown transform', async () => {
-    const { logDebugInfo } = require('../../../../ports/logging_ports');
-    const results = await useCase.invoke(param('branch', 'unknown-transform'));
-
-    expect(getResultPayload(results[0].payload)?.scriptResult).toBe('branch');
-    expect(logDebugInfo).toHaveBeenCalledWith(expect.stringContaining('Unknown transform'));
-  });
-
-  it('applies camel-case with single word (index 0 only)', async () => {
-    const results = await useCase.invoke(param('single', 'camel-case'));
-
-    expect(getResultPayload(results[0].payload)?.scriptResult).toBe('single');
+  it('throws when the branch is absent instead of manufacturing a prefix', () => {
+    expect(() => buildCommitPrefix(undefined as unknown as string, 'lowercase')).toThrow();
   });
 });

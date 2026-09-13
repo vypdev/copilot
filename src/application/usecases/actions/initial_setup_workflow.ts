@@ -1,19 +1,19 @@
 import { Result } from '../../../data/model/result';
 import type { LatestTagQueryPort } from '../../ports/branch_tag_ports';
-import type { AuthenticatedUserPort } from '../../ports/authenticated_user_ports';
-import type { RepositoryTagPort, RepositoryDefaultBranchPort } from '../../ports/repository_release_ports';
+import type { BoundAuthenticatedUserPort } from '../../ports/authenticated_user_ports';
+import type { BoundRepositoryTagPort, BoundRepositoryDefaultBranchPort } from '../../ports/repository_release_ports';
 import type {
-    InitialLabelProvisioningPort,
-    IssueTypeProvisioningPort,
+    BoundInitialLabelProvisioningPort,
+    BoundIssueTypeProvisioningPort,
     LabelProvisioningSummary,
 } from '../../ports/issue_management_ports';
-import type { SetupWorkspacePort } from '../../ports/setup_workspace_ports';
+import type { BoundSetupWorkspacePort } from '../../ports/setup_workspace_ports';
 import { DEFAULT_INITIAL_TAG } from '../../../data/model/version_policy';
 import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
 import { getTaskEmoji } from '../../../utils/task_emoji';
 import type { SetupConfiguration } from '../../../domain/setup';
 import type { SetupResourceProvisioningDependencies } from './setup_resource_provisioning';
-import type { InitialSetupRequest } from './initial_setup_request';
+import type { InitialSetupContext } from '../push_single_action_contexts';
 import {
     ensureRepositorySecrets,
     ensureRepositoryVariables,
@@ -22,13 +22,13 @@ import {
 import { ApplicationError, type ApplicationErrorCode, toApplicationError } from '../../errors/application_error';
 
 export interface InitialSetupWorkflowDependencies extends SetupResourceProvisioningDependencies {
-    authenticatedUserPort: AuthenticatedUserPort;
-    initialLabelProvisioningPort: InitialLabelProvisioningPort;
-    issueTypeProvisioningPort: IssueTypeProvisioningPort;
+    authenticatedUserPort: BoundAuthenticatedUserPort;
+    initialLabelProvisioningPort: BoundInitialLabelProvisioningPort;
+    issueTypeProvisioningPort: BoundIssueTypeProvisioningPort;
     latestTagQueryPort: LatestTagQueryPort;
-    repositoryDefaultBranchPort: RepositoryDefaultBranchPort;
-    repositoryTagPort: RepositoryTagPort;
-    setupWorkspacePort: SetupWorkspacePort;
+    repositoryDefaultBranchPort: BoundRepositoryDefaultBranchPort;
+    repositoryTagPort: BoundRepositoryTagPort;
+    setupWorkspacePort: BoundSetupWorkspacePort;
 }
 
 type InitialLabelProvisioningOutcome =
@@ -39,7 +39,7 @@ const TASK_ID = 'InitialSetupUseCase';
 
 /** Runs repository setup as an ordered application workflow with explicit port dependencies. */
 export async function runInitialSetupWorkflow(
-    request: InitialSetupRequest,
+    request: InitialSetupContext,
     dependencies: InitialSetupWorkflowDependencies,
 ): Promise<Result[]> {
     logInfo(`${getTaskEmoji(TASK_ID)} Executing ${TASK_ID}.`);
@@ -48,7 +48,7 @@ export async function runInitialSetupWorkflow(
 
     try {
         const setupConfiguration = request.setupConfiguration;
-        if (!dependencies.setupWorkspacePort.hasValidToken(request.token)) {
+        if (!dependencies.setupWorkspacePort.hasValidToken()) {
             logInfo('  🛑 Setup requires the setup PAT provided for this command with a valid token.');
             errors.push(new ApplicationError('authorization.credential-invalid', 'A valid setup PAT must be provided to run setup. It is separate from the workflow PAT Secret.'));
             return [buildResult(errors, steps)];
@@ -118,11 +118,11 @@ export async function runInitialSetupWorkflow(
 }
 
 async function verifyGitHubAccess(
-    request: InitialSetupRequest,
-    repository: AuthenticatedUserPort,
+    _request: InitialSetupContext,
+    repository: BoundAuthenticatedUserPort,
 ): Promise<{ success: boolean; user?: string; errors: ApplicationError[] }> {
     try {
-        const user = await repository.getUserFromToken(request.token);
+        const user = await repository.getUser();
         return { success: true, user, errors: [] };
     } catch (error) {
         const semanticError = toApplicationError(error, 'authorization.credential-invalid', 'Could not verify GitHub access.');
@@ -132,15 +132,12 @@ async function verifyGitHubAccess(
 }
 
 async function ensureInitialLabels(
-    request: InitialSetupRequest,
-    repository: InitialLabelProvisioningPort,
+    request: InitialSetupContext,
+    repository: BoundInitialLabelProvisioningPort,
 ): Promise<InitialLabelProvisioningOutcome> {
     try {
         const summary = await repository.ensureInitialLabels(
-            request.owner,
-            request.repo,
             request.labels,
-            request.token,
         );
         return { completed: true, ...summary };
     } catch (error) {
@@ -151,14 +148,12 @@ async function ensureInitialLabels(
 }
 
 async function ensureIssueTypes(
-    request: InitialSetupRequest,
-    repository: IssueTypeProvisioningPort,
+    request: InitialSetupContext,
+    repository: BoundIssueTypeProvisioningPort,
 ): Promise<{ success: boolean; created: number; existing: number; errors: string[] }> {
     try {
         const result = await repository.ensureIssueTypes(
-            request.owner,
             request.issueTypes,
-            request.token,
         );
         return {
             success: result.errors.length === 0,
@@ -174,7 +169,7 @@ async function ensureIssueTypes(
 }
 
 async function ensureDefaultVersion(
-    request: InitialSetupRequest,
+    _request: InitialSetupContext,
     dependencies: InitialSetupWorkflowDependencies,
     setupConfiguration?: SetupConfiguration,
 ): Promise<{ step?: string; error?: ApplicationError }> {
@@ -189,11 +184,7 @@ async function ensureDefaultVersion(
         }
 
         logInfo(`🏷️  No version tags found. Creating default tag ${DEFAULT_INITIAL_TAG}...`);
-        const defaultBranch = await dependencies.repositoryDefaultBranchPort.getDefaultBranch(
-            request.owner,
-            request.repo,
-            request.token,
-        );
+        const defaultBranch = await dependencies.repositoryDefaultBranchPort.getDefaultBranch();
         if (!defaultBranch) {
             const message = 'Could not get default branch to create initial version tag.';
             logError(message);
@@ -201,11 +192,8 @@ async function ensureDefaultVersion(
         }
 
         const sha = await dependencies.repositoryTagPort.createTag(
-            request.owner,
-            request.repo,
             defaultBranch,
             DEFAULT_INITIAL_TAG,
-            request.token,
         );
         return sha
             ? { step: `✅ Default version tag ${DEFAULT_INITIAL_TAG} created on branch ${defaultBranch}. Run \`git fetch --tags\` to update local refs.` }

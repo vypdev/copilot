@@ -1,30 +1,27 @@
-import type { Execution } from '../../../data/model/execution';
 import { Result } from '../../../data/model/result';
-import type { RepositoryReleasePublicationPort, RepositoryTagPort } from '../../ports/repository_release_ports';
+import type { BoundRepositoryReleasePublicationPort, BoundRepositoryTagPort } from '../../ports/repository_release_ports';
+import type { DeploymentPublicationContext } from '../push_single_action_contexts';
 import { INPUT_KEYS } from '../../contracts/input_keys';
 import { logError, logInfo } from '../../ports/logging_ports';
 import { validateDeploymentContinuation } from '../../policies/deployment_continuation_guard';
 import { ApplicationError, toApplicationError } from '../../errors/application_error';
 
 export async function runPublishGithubAction(
-    param: Execution,
+    param: DeploymentPublicationContext,
     taskId: string,
-    repositoryTagPort: RepositoryTagPort,
-    repositoryReleasePort: RepositoryReleasePublicationPort,
+    repositoryTagPort: BoundRepositoryTagPort,
+    repositoryReleasePort: BoundRepositoryReleasePublicationPort,
 ): Promise<Result[]> {
     const validationFailure = validateVersion(param, taskId);
     if (validationFailure) return [validationFailure];
-    const version = param.singleAction.version || param.currentConfiguration?.deploymentOrchestration?.version || '';
+    const version = param.requestedVersion || param.operation?.version || '';
     const sourceTag = `v${version}`;
     const targetTag = sourceTag.split('.')[0];
     try {
-        await repositoryTagPort.updateTag(param.owner, param.repo, sourceTag, targetTag, param.tokens.token);
+        await repositoryTagPort.updateTag(sourceTag, targetTag);
         const releaseId = await repositoryReleasePort.updateRelease(
-            param.owner,
-            param.repo,
             sourceTag,
             targetTag,
-            param.tokens.token,
         );
         return releaseId ? successResult(taskId, sourceTag, targetTag, releaseId) : failureResult(taskId, sourceTag, targetTag);
     } catch (error) {
@@ -40,15 +37,15 @@ export async function runPublishGithubAction(
     }
 }
 
-function validateVersion(param: Execution, taskId: string): Result | undefined {
+function validateVersion(param: DeploymentPublicationContext, taskId: string): Result | undefined {
     const continuationError = validateDeploymentContinuation(
-        param.currentConfiguration?.deploymentOrchestration,
-        param.singleAction.operationId,
+        param.operation,
+        param.requestedOperationId,
         ["publishing"],
-        param.singleAction.version,
+        param.requestedVersion,
     );
     if (continuationError) return new Result({ id: taskId, success: false, executed: true, errors: [new ApplicationError('workflow.stale', continuationError)] });
-    if (param.singleAction.version.length > 0 || param.currentConfiguration?.deploymentOrchestration?.version) return undefined;
+    if (param.requestedVersion.length > 0 || param.operation?.version) return undefined;
     logError('Version is not set.');
     return new Result({ id: taskId, success: false, executed: true, errors: [new ApplicationError('validation.invalid-input', `${INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`)] });
 }

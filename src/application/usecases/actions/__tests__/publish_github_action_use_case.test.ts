@@ -2,6 +2,7 @@ import { PublishGithubActionUseCase } from '../publish_github_action_use_case';
 import { Result } from '../../../../data/model/result';
 import { INPUT_KEYS } from '../../../contracts/input_keys';
 import type { Execution } from '../../../../data/model/execution';
+import { projectDeploymentPublicationContext } from '../../push_single_action_contexts';
 
 jest.mock('../../../../utils/logger', () => ({
   logInfo: jest.fn(),
@@ -21,8 +22,8 @@ jest.mock('../../../../data/repository/release/repository_release_publication_re
   })),
 }));
 
-function baseParam(overrides: Record<string, unknown> = {}): Execution {
-  return {
+function baseParam(overrides: Record<string, unknown> = {}) {
+  return projectDeploymentPublicationContext({
     owner: 'owner',
     repo: 'repo',
     tokens: { token: 'token' },
@@ -36,7 +37,7 @@ function baseParam(overrides: Record<string, unknown> = {}): Execution {
       },
     },
     ...overrides,
-  } as unknown as Execution;
+  } as unknown as Execution);
 }
 
 describe('PublishGithubActionUseCase', () => {
@@ -60,8 +61,8 @@ describe('PublishGithubActionUseCase', () => {
     mockUpdateRelease.mockResolvedValue(12345);
     const param = baseParam({ singleAction: { version: '1.2.3', operationId: 'operation-12345678' } });
     await useCase.invoke(param);
-    expect(mockUpdateTag).toHaveBeenCalledWith('owner', 'repo', 'v1.2.3', 'v1', 'token');
-    expect(mockUpdateRelease).toHaveBeenCalledWith('owner', 'repo', 'v1.2.3', 'v1', 'token');
+    expect(mockUpdateTag).toHaveBeenCalledWith('v1.2.3', 'v1');
+    expect(mockUpdateRelease).toHaveBeenCalledWith('v1.2.3', 'v1');
   });
 
   it('returns success when updateRelease returns truthy', async () => {

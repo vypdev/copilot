@@ -1,7 +1,6 @@
-import type { Execution } from '../../../data/model/execution';
-import { activityLabel } from '../../../domain/copilot_lifecycle';
 import { replaceAgentActivityLabel } from '../../policies/agent_activity_label_policy';
-import type { IssueLabelsPort } from '../../ports/issue_management_ports';
+import type { BoundIssueLabelsPort } from '../../ports/issue_management_ports';
+import type { AgentActivityContext, AgentActivityOutcome } from '../push_single_action_contexts';
 import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
 import { toApplicationError } from '../../errors/application_error';
 
@@ -14,21 +13,21 @@ import { toApplicationError } from '../../errors/application_error';
 export class SynchronizeAgentActivityUseCase {
     readonly taskId = 'SynchronizeAgentActivityUseCase';
 
-    constructor(private readonly issueLabelsPort: IssueLabelsPort) {}
+    constructor(private readonly issueLabelsPort: BoundIssueLabelsPort) {}
 
-    async start(execution: Execution): Promise<void> {
-        await this.synchronize(execution, true);
+    async start(context: AgentActivityContext): Promise<AgentActivityOutcome> {
+        return this.synchronize(context, true);
     }
 
-    async finish(execution: Execution): Promise<void> {
-        await this.synchronize(execution, false);
+    async finish(context: AgentActivityContext): Promise<AgentActivityOutcome> {
+        return this.synchronize(context, false);
     }
 
-    private async synchronize(execution: Execution, active: boolean): Promise<void> {
-        const target = resolveTarget(execution);
+    private async synchronize(context: AgentActivityContext, active: boolean): Promise<AgentActivityOutcome> {
+        const target = context.target;
         if (!target) {
             logDebugInfo(`${this.taskId}: no issue or pull request target; skipping activity label.`);
-            return;
+            return Object.freeze({});
         }
 
         try {
@@ -37,56 +36,24 @@ export class SynchronizeAgentActivityUseCase {
             // transient marker cannot overwrite those changes.
             const currentLabels = active
                 ? target.labels
-                : await this.issueLabelsPort.getLabels(
-                    execution.owner,
-                    execution.repo,
-                    target.number,
-                    execution.tokens.token,
-                );
-            const configuredLabel = activityLabel(execution.labels.lifecycle);
+                : await this.issueLabelsPort.getLabels(target.number);
+            const configuredLabel = context.activityLabel;
             const nextLabels = replaceAgentActivityLabel(currentLabels, configuredLabel, active);
-            if (sameLabels(currentLabels, nextLabels)) return;
+            if (sameLabels(currentLabels, nextLabels)) return Object.freeze({ target, labels: Object.freeze([...currentLabels]) });
 
             await this.issueLabelsPort.setLabels(
-                execution.owner,
-                execution.repo,
                 target.number,
                 nextLabels,
-                execution.tokens.token,
             );
-            target.setLabels(nextLabels);
             logInfo(`${active ? 'Added' : 'Removed'} Copilot agent activity label on target #${target.number}.`);
+            return Object.freeze({ target, labels: Object.freeze([...nextLabels]) });
         } catch (error) {
             const message = `${this.taskId}: unable to ${active ? 'add' : 'remove'} agent activity label.`;
             const semanticError = toApplicationError(error, 'provider.unavailable', message);
             logError(semanticError);
+            return Object.freeze({});
         }
     }
-}
-
-interface LabelTarget {
-    number: number;
-    labels: string[];
-    setLabels: (labels: string[]) => void;
-}
-
-function resolveTarget(execution: Execution): LabelTarget | undefined {
-    if (execution.eventName === 'pull_request' || execution.eventName === 'pull_request_review_comment') {
-        if (execution.pullRequest.number <= 0) return undefined;
-        return {
-            number: execution.pullRequest.number,
-            labels: execution.labels.currentPullRequestLabels,
-            setLabels: labels => { execution.labels.currentPullRequestLabels = labels; },
-        };
-    }
-
-    const number = execution.issue.number > 0 ? execution.issue.number : execution.issueNumber;
-    if (number <= 0) return undefined;
-    return {
-        number,
-        labels: execution.labels.currentIssueLabels,
-        setLabels: labels => { execution.labels.currentIssueLabels = labels; },
-    };
 }
 
 function sameLabels(left: readonly string[], right: readonly string[]): boolean {

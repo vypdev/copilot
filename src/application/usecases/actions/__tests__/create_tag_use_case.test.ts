@@ -1,6 +1,7 @@
 import { CreateTagUseCase } from '../create_tag_use_case';
 import { Result } from '../../../../data/model/result';
 import type { Execution } from '../../../../data/model/execution';
+import { projectDeploymentPublicationContext } from '../../push_single_action_contexts';
 
 jest.mock('../../../../utils/logger', () => ({
   logInfo: jest.fn(),
@@ -19,8 +20,8 @@ jest.mock('../../../../data/repository/release/repository_tag_repository', () =>
   })),
 }));
 
-function baseParam(overrides: Record<string, unknown> = {}): Execution {
-  return {
+function baseParam(overrides: Record<string, unknown> = {}) {
+  return projectDeploymentPublicationContext({
     owner: 'owner',
     repo: 'repo',
     tokens: { token: 'token' },
@@ -34,7 +35,7 @@ function baseParam(overrides: Record<string, unknown> = {}): Execution {
       },
     },
     ...overrides,
-  } as unknown as Execution;
+  } as unknown as Execution);
 }
 
 describe('CreateTagUseCase', () => {
@@ -74,11 +75,8 @@ describe('CreateTagUseCase', () => {
     expect(results[0].success).toBe(true);
     expect(results[0].steps?.some((s) => s.includes('v1.0.0') && s.includes('abc123'))).toBe(true);
     expect(mockCreateOrVerifyTagAtSha).toHaveBeenCalledWith(
-      'owner',
-      'repo',
       'a'.repeat(40),
       'v1.0.0',
-      'token'
     );
   });
 
