@@ -1,14 +1,14 @@
 # Push and Single-Action Capability Context Hardening
 
-- Status: Implemented — local validation passed; remote review pending
+- Status: Implemented
 - Date: 2026-09-13
 - Catalog capability ID: `execution-lifecycle`
-- Last verified: 2026-09-13 on `develop` after the P2-F implementation
+- Last verified: 2026-09-13 on `develop` and PR #364
 - Owners: Copilot maintainers
 - Scope: complete the P2-F clean cut so push, single-action, comment-command,
   issue, and pull-request leaves receive only immutable capability facts and
   repository-bound authority
-- Related issues/PRs: none recorded
+- Related issues/PRs: PR #364
 - Required review gates: product UX, architecture, testing, documentation,
   security/operations, GitHub Actions and package build
 - Open decisions blocking readiness: none
@@ -449,8 +449,11 @@ credential-shaped application requests.
 - [x] Full tests, coverage, typecheck, lint, specification/documentation/workflow,
       build/package validation, and `graphify update .` pass locally; the clean-tree
       architecture metric gate runs immediately after commit.
-- [ ] PR checks, Codecov, Bugbot, RepoWise, and automated comments are resolved.
-- [ ] No readiness blocker, compatibility path, TODO, waiver, or unrelated local
+- [x] PR checks, Codecov, Bugbot, RepoWise, and automated comments are resolved;
+      CI and RepoWise passed, Codecov recorded 95.12% patch coverage against an
+      80% repository target with project coverage increasing by 0.10 points,
+      and Bugbot recorded zero findings before the requested recheck.
+- [x] No readiness blocker, compatibility path, TODO, waiver, or unrelated local
       file is included.
 
 ## 20. References and decisions
