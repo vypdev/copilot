@@ -4134,6 +4134,11 @@ function completeBugbotSourceCoverage(source, items, pagesFetched = items > 0 ? 
 function identityMismatch(target, candidate) {
     if (candidate.state !== "open")
         return "The selected pull request is not open.";
+    if (target.pullRequestSelection.kind === "event"
+        && target.pullRequestSelection.number !== undefined
+        && candidate.number !== target.pullRequestSelection.number) {
+        return "The selected pull request does not match the event target.";
+    }
     if (target.repository.id !== undefined && candidate.baseRepository.id !== target.repository.id) {
         return "The selected pull request belongs to a different base repository.";
     }
@@ -4141,8 +4146,13 @@ function identityMismatch(target, candidate) {
         || candidate.baseRepository.name.toLowerCase() !== target.repository.name.toLowerCase()) {
         return "The selected pull request belongs to a different base repository.";
     }
-    if (candidate.headRepositoryOwner.toLowerCase() !== target.headOwner.toLowerCase()
-        || candidate.headRef !== target.headRef) {
+    // issue_comment identifies a PR by its provider marker and number but does not
+    // include head repository/ref fields. Constrain the head only when the trigger
+    // actually supplied a ref; the verified provider identity then becomes the
+    // revision used by both freshness checks.
+    if (target.headRef !== ""
+        && (candidate.headRepositoryOwner.toLowerCase() !== target.headOwner.toLowerCase()
+            || candidate.headRef !== target.headRef)) {
         return "The selected pull request head does not match the review target.";
     }
     if (target.expectedHeadSha !== undefined

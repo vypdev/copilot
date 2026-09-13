@@ -2,7 +2,7 @@
 
 - Status: Implemented
 - Date: 2026-09-11
-- Last updated: 2026-09-12
+- Last updated: 2026-09-13
 - Catalog capability ID: `bugbot-analysis-and-autofix`
 - Last verified: 2026-09-12 against `develop` at `9fc07632ca39fce585b762b1cc08bde1e797f76a`
 - Owners: Copilot and Bugbot maintainers
@@ -78,7 +78,11 @@ Not applicable. This prospective SDD refines the catalogued as-built Bugbot SDD.
 | Bugbot | never infer clean/resolved from omitted evidence | analysis pipeline | review projection |
 
 A `canonical PR` is a provider-verified open PR in the target repository whose
-head owner, ref, and SHA match the review target. `Coverage` is `complete` or
+event number always matches and whose head owner, ref, and SHA match every value
+the trigger can authoritatively supply. GitHub `issue_comment` identifies a PR
+by its PR marker and number but supplies no head fields; in that case the verified
+provider head becomes the reviewed revision and the pre-/post-publication
+freshness checks guard it. `Coverage` is `complete` or
 `partial`; `unavailable` is a failure, not partial success. A `logical read` is
 one semantic port operation even if its bounded adapter uses more than one HTTP
 page.
@@ -167,8 +171,11 @@ sole initial contract; there is no first-matching-PR fallback.
    missing, abort before any event or exact-head provider lookup. Otherwise call
    `getPullRequest(number)` once. Accept only
    an open PR whose base repository owner/name and, when available, numeric ID
-   equal the target, whose head repository owner and ref exactly match the target,
-   and whose current head SHA equals the expected SHA.
+   equal the target, and whose number equals the event selection. Head repository
+   owner/ref and current SHA MUST equal the target when those authoritative fields
+   are present. An `issue_comment` PR target has no head constraint because the
+   event omits it; the provider-verified identity supplies the head SHA used by
+   analysis and both freshness checks.
    Closed, cross-repository, fork-owner mismatch, or stale SHA is `stale/invalid`,
    not a fallback to branch search.
 2. Only `exact-head` mode may call `findOpenPullRequestsByExactHead` with encoded
@@ -392,7 +399,10 @@ and catalog evidence in the implementation slice.
 
 1. Ten thousand unrelated open PRs cause no per-candidate detail read and do not
    change the fixed call count.
-2. A verified event PR wins only when repository, owner/ref, state, and SHA match.
+2. A verified event PR wins only when event number, repository, state, and every
+   authoritative owner/ref/SHA field present in the trigger match. A PR
+   `issue_comment` with absent head fields reviews that exact numbered PR at the
+   provider-verified head and retains both freshness checks.
 3. A missing or mismatched event identity aborts without an exact-head lookup.
 4. Exact head zero/one/two results yield none/canonical/ambiguous deterministically.
 5. Only the canonical PR is used for comments, threads, diff, publication,

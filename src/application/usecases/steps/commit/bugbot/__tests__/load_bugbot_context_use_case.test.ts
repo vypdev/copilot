@@ -112,6 +112,31 @@ describe('loadBugbotContext', () => {
     expect(reader.getReviewDiffSnapshot).toHaveBeenCalledWith(50);
   });
 
+  it('loads the exact issue_comment PR using its verified provider head identity', async () => {
+    const providerIdentity = {
+      ...identity,
+      headRepositoryOwner: 'fork-owner',
+      headRef: 'feature/current',
+      headSha: 'f'.repeat(40),
+    };
+    const reader = ports({
+      getPullRequest: jest.fn().mockResolvedValue(providerIdentity),
+    });
+
+    const context = await loadBugbotContext(request({
+      triggerKind: 'issue_comment',
+      headOwner: 'acme',
+      headRef: '',
+      expectedHeadSha: undefined,
+    }), reader);
+
+    expect(context.canonicalPullRequest).toEqual(providerIdentity);
+    expect(context.prContext?.prHeadSha).toBe('f'.repeat(40));
+    expect(reader.getPullRequest).toHaveBeenCalledWith(50);
+    expect(reader.findOpenPullRequestsByExactHead).not.toHaveBeenCalled();
+    expect(reader.getReviewDiffSnapshot).toHaveBeenCalledWith(50);
+  });
+
   it('selects one exact-head PR when no event candidate exists', async () => {
     const reader = ports();
     const context = await loadBugbotContext(

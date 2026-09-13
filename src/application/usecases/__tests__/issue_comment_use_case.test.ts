@@ -587,6 +587,7 @@ describe("IssueCommentUseCase", () => {
       target: expect.objectContaining({
         isPullRequest: true,
         pullRequestNumber: 362,
+        headBranch: "",
       }),
       trigger: expect.objectContaining({ kind: "issue_comment" }),
     }));

@@ -32,6 +32,24 @@ describe("Bugbot canonical context policy", () => {
       .toEqual({ kind: "canonical", pullRequest: candidate(), reason: "event" });
   });
 
+  it("accepts an exact numbered issue_comment PR when the event cannot assert head fields", () => {
+    const issueCommentTarget: BugbotReviewTarget = {
+      ...target,
+      triggerKind: "issue_comment",
+      headOwner: "acme",
+      headRef: "",
+      expectedHeadSha: undefined,
+    };
+    const providerIdentity = candidate({
+      headRepositoryOwner: "fork-owner",
+      headRef: "feature/current",
+      headSha: "f".repeat(40),
+    });
+
+    expect(selectCanonicalBugbotPullRequest(issueCommentTarget, [providerIdentity], "event"))
+      .toEqual({ kind: "canonical", pullRequest: providerIdentity, reason: "event" });
+  });
+
   it('rejects a missing event candidate without searching by head', () => {
     expect(selectCanonicalBugbotPullRequest(target, [], 'event')).toEqual({
       kind: 'stale',
@@ -48,6 +66,7 @@ describe("Bugbot canonical context policy", () => {
 
   it.each([
     ["closed", candidate({ state: "closed" })],
+    ["event number", candidate({ number: 13 })],
     ["base repository", candidate({ baseRepository: { owner: "acme", name: "other", id: 8 } })],
     ["fork owner", candidate({ headRepositoryOwner: "attacker" })],
     ["head ref", candidate({ headRef: "feature/other" })],

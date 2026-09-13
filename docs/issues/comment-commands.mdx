@@ -58,7 +58,10 @@ GitHub delivers a comment in the main PR conversation as an `issue_comment`
 event. Copilot uses GitHub's PR marker and exact PR number to keep that transport
 detail from changing the target: read-only commands such as `/copilot recheck`
 use the PR locale, reviewer role, and canonical PR diff. They do not run
-issue-only setup or search for a candidate PR.
+issue-only setup or search for a candidate PR. GitHub does not include the PR
+head fields in this event, so Copilot verifies the exact numbered open PR and
+base repository through GitHub, reviews the returned head revision, and checks
+that revision again before and after publication.
 
 ## Natural-language requests
 
