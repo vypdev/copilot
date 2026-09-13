@@ -135,13 +135,22 @@ function expectedPercentage(covered, total) {
   return Math.floor((covered / total) * 10_000) / 100;
 }
 
+function hasValidCoverageCounts(value) {
+  return isNonNegativeCount(value.covered)
+    && isNonNegativeCount(value.total)
+    && value.covered <= value.total;
+}
+
+function hasValidCoveragePercentage(value) {
+  return Number.isFinite(value.pct)
+    && value.pct >= 0
+    && value.pct <= 100
+    && value.pct === expectedPercentage(value.covered, value.total);
+}
+
 function isValidCoverageMetric(value) {
   if (value === null || typeof value !== 'object') return false;
-  if (!isNonNegativeCount(value.covered)) return false;
-  if (!isNonNegativeCount(value.total)) return false;
-  if (!Number.isFinite(value.pct) || value.pct < 0 || value.pct > 100) return false;
-  return value.covered <= value.total
-    && value.pct === expectedPercentage(value.covered, value.total);
+  return hasValidCoverageCounts(value) && hasValidCoveragePercentage(value);
 }
 
 function requireMeasurableEntries(files, entries, metrics) {
