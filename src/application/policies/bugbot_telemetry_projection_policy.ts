@@ -23,16 +23,12 @@ export interface BugbotTelemetryProjection {
 /** Projects only the trusted, content-free telemetry facts used by result presentation. */
 export function projectBugbotTelemetry(value: unknown): BugbotTelemetryProjection | undefined {
     const telemetry = getResultPayload(getResultPayload(value)?.bugbotTelemetry);
-    if (!telemetry || telemetry.schemaVersion !== 1 || !isBugbotReviewOutcome(telemetry.outcome)
-        || typeof telemetry.elapsedMs !== 'number' || !Number.isFinite(telemetry.elapsedMs)) {
-        return undefined;
-    }
-    const configuredEffort = typeof telemetry.configuredEffort === 'string' && telemetry.configuredEffort.trim()
-        ? telemetry.configuredEffort.trim()
-        : 'default';
-    const headSha = typeof telemetry.headSha === 'string' && telemetry.headSha.trim()
-        ? telemetry.headSha.trim()
-        : undefined;
+    if (!telemetry) return undefined;
+    if (telemetry.schemaVersion !== 1) return undefined;
+    if (!isBugbotReviewOutcome(telemetry.outcome)) return undefined;
+    if (!isFiniteNumber(telemetry.elapsedMs)) return undefined;
+    const configuredEffort = normalizeNonEmptyString(telemetry.configuredEffort) ?? 'default';
+    const headSha = normalizeNonEmptyString(telemetry.headSha);
     return {
         schemaVersion: 1,
         outcome: telemetry.outcome,
@@ -53,4 +49,13 @@ export function selectBugbotTelemetry(results: readonly Result[]): BugbotTelemet
 
 function isBugbotReviewOutcome(value: unknown): value is BugbotReviewOutcome {
     return typeof value === 'string' && BUGBOT_REVIEW_OUTCOMES.includes(value as BugbotReviewOutcome);
+}
+
+function isFiniteNumber(value: unknown): value is number {
+    return typeof value === 'number' && Number.isFinite(value);
+}
+
+function normalizeNonEmptyString(value: unknown): string | undefined {
+    if (typeof value !== 'string') return undefined;
+    return value.trim() || undefined;
 }

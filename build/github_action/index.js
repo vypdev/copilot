@@ -52775,25 +52775,14 @@ function buildActionSummary(context) {
         + (findingStates?.reopened ?? 0)
         + (findingStates?.['verification-required'] ?? 0) > 0;
     const hasUnknownFindings = (findingStates?.unknown ?? 0) > 0;
-    const status = failures.length > 0 || hasUnknownFindings || bugbotTelemetry?.outcome === 'failed'
-        || (hasActionableFindings && context.failOnUnresolvedFindings)
-        ? '❌ Failure'
-        : hasActionableFindings
-            ? '⚠️ Findings'
-            : bugbotTelemetry?.outcome === 'partial'
-                ? '⚠️ Partial'
-                : bugbotTelemetry?.outcome === 'superseded'
-                    ? '⏭️ Superseded'
-                    : bugbotTelemetry?.outcome === 'skipped'
-                        ? '⏭️ Skipped'
-                        : bugbotTelemetry?.outcome === 'dry-run'
-                            ? '🧪 Dry run'
-                            : '✅ Success';
-    const target = context.pullRequestNumber > 0
-        ? `PR #${context.pullRequestNumber}`
-        : context.issueNumber > 0
-            ? `Issue #${context.issueNumber}`
-            : 'Repository run';
+    const status = resolveActionSummaryStatus({
+        failureCount: failures.length,
+        hasUnknownFindings,
+        hasActionableFindings,
+        failOnUnresolvedFindings: context.failOnUnresolvedFindings === true,
+        bugbotTelemetry,
+    });
+    const target = resolveActionSummaryTarget(context);
     const lifecycle = context.lifecycleState ? `\`${(0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(context.lifecycleState, 100)}\`` : '—';
     const rows = [
         `| Status | ${status} |`,
@@ -52819,6 +52808,30 @@ function buildActionSummary(context) {
         renderResults(context.results),
         '',
     ].join('\n');
+}
+function resolveActionSummaryStatus(input) {
+    if (input.failureCount > 0 || input.hasUnknownFindings)
+        return '❌ Failure';
+    if (input.bugbotTelemetry?.outcome === 'failed')
+        return '❌ Failure';
+    if (input.hasActionableFindings && input.failOnUnresolvedFindings)
+        return '❌ Failure';
+    if (input.hasActionableFindings)
+        return '⚠️ Findings';
+    switch (input.bugbotTelemetry?.outcome) {
+        case 'partial': return '⚠️ Partial';
+        case 'superseded': return '⏭️ Superseded';
+        case 'skipped': return '⏭️ Skipped';
+        case 'dry-run': return '🧪 Dry run';
+        default: return '✅ Success';
+    }
+}
+function resolveActionSummaryTarget(context) {
+    if (context.pullRequestNumber > 0)
+        return `PR #${context.pullRequestNumber}`;
+    if (context.issueNumber > 0)
+        return `Issue #${context.issueNumber}`;
+    return 'Repository run';
 }
 function formatBugbotTelemetry(telemetry) {
     return telemetry
@@ -54797,16 +54810,16 @@ const BUGBOT_REVIEW_OUTCOMES = [
 /** Projects only the trusted, content-free telemetry facts used by result presentation. */
 function projectBugbotTelemetry(value) {
     const telemetry = (0, result_1.getResultPayload)((0, result_1.getResultPayload)(value)?.bugbotTelemetry);
-    if (!telemetry || telemetry.schemaVersion !== 1 || !isBugbotReviewOutcome(telemetry.outcome)
-        || typeof telemetry.elapsedMs !== 'number' || !Number.isFinite(telemetry.elapsedMs)) {
+    if (!telemetry)
         return undefined;
-    }
-    const configuredEffort = typeof telemetry.configuredEffort === 'string' && telemetry.configuredEffort.trim()
-        ? telemetry.configuredEffort.trim()
-        : 'default';
-    const headSha = typeof telemetry.headSha === 'string' && telemetry.headSha.trim()
-        ? telemetry.headSha.trim()
-        : undefined;
+    if (telemetry.schemaVersion !== 1)
+        return undefined;
+    if (!isBugbotReviewOutcome(telemetry.outcome))
+        return undefined;
+    if (!isFiniteNumber(telemetry.elapsedMs))
+        return undefined;
+    const configuredEffort = normalizeNonEmptyString(telemetry.configuredEffort) ?? 'default';
+    const headSha = normalizeNonEmptyString(telemetry.headSha);
     return {
         schemaVersion: 1,
         outcome: telemetry.outcome,
@@ -54825,6 +54838,14 @@ function selectBugbotTelemetry(results) {
 }
 function isBugbotReviewOutcome(value) {
     return typeof value === 'string' && BUGBOT_REVIEW_OUTCOMES.includes(value);
+}
+function isFiniteNumber(value) {
+    return typeof value === 'number' && Number.isFinite(value);
+}
+function normalizeNonEmptyString(value) {
+    if (typeof value !== 'string')
+        return undefined;
+    return value.trim() || undefined;
 }
 
 
@@ -54927,9 +54948,7 @@ function buildCopilotEvidence(context) {
         return undefined;
     const isReviewEvent = context.eventName.startsWith('pull_request');
     const bugbotTelemetry = (0, bugbot_telemetry_projection_policy_1.selectBugbotTelemetry)(context.results);
-    if (isReviewEvent && (!bugbotTelemetry
-        || bugbotTelemetry.headSha?.toLowerCase() !== headSha.toLowerCase()
-        || bugbotTelemetry.outcome === 'dry-run'))
+    if (!isEligibleEvidenceSource(isReviewEvent, bugbotTelemetry, headSha))
         return undefined;
     const failures = context.results.filter(result => !result.success && result.executed).length;
     const activeFindings = aggregateFindingStateCounts(context.results);
@@ -54937,40 +54956,77 @@ function buildCopilotEvidence(context) {
         + (activeFindings?.reopened ?? 0)
         + (activeFindings?.verificationRequired ?? 0) > 0;
     const hasUnknownFindings = (activeFindings?.unknown ?? 0) > 0;
-    const incompleteReview = bugbotTelemetry?.outcome === 'partial'
-        || bugbotTelemetry?.outcome === 'superseded'
-        || bugbotTelemetry?.outcome === 'skipped';
-    const incompleteTitle = bugbotTelemetry?.outcome === 'partial'
-        ? 'Copilot review has partial coverage'
-        : bugbotTelemetry?.outcome === 'superseded'
-            ? 'Copilot review was superseded'
-            : bugbotTelemetry?.outcome === 'skipped'
-                ? 'Copilot review was skipped'
-                : undefined;
-    const conclusion = failures > 0 || hasUnknownFindings || bugbotTelemetry?.outcome === 'failed'
-        || (hasActionableFindings && context.failOnUnresolvedFindings)
-        ? 'failure'
-        : context.results.length === 0 || hasActionableFindings || incompleteReview
-            ? 'neutral'
-            : 'success';
-    const name = isReviewEvent
-        ? 'Copilot / Review'
-        : ['issues', 'issue_comment', 'pull_request_review_comment'].includes(context.eventName)
-            ? 'Copilot / Plan'
-            : 'Copilot / Verification';
+    const conclusion = resolveEvidenceConclusion({
+        failureCount: failures,
+        hasUnknownFindings,
+        hasActionableFindings,
+        failOnUnresolvedFindings: context.failOnUnresolvedFindings === true,
+        hasResults: context.results.length > 0,
+        bugbotTelemetry,
+    });
     return {
-        name,
+        name: resolveEvidenceName(context.eventName, isReviewEvent),
         headSha,
         conclusion,
-        title: hasActionableFindings && failures === 0
-            ? 'Copilot found actionable findings'
-            : conclusion === 'failure'
-                ? 'Copilot found actionable failures'
-                : incompleteTitle ?? (conclusion === 'neutral'
-                    ? 'Copilot review produced no actionable result'
-                    : 'Copilot completed successfully'),
+        title: resolveEvidenceTitle(conclusion, failures, hasActionableFindings, bugbotTelemetry),
         summary: context.summary.slice(0, 20000),
     };
+}
+function isEligibleEvidenceSource(isReviewEvent, telemetry, headSha) {
+    if (!isReviewEvent)
+        return true;
+    if (!telemetry?.headSha)
+        return false;
+    if (telemetry.outcome === 'dry-run')
+        return false;
+    return telemetry.headSha.toLowerCase() === headSha.toLowerCase();
+}
+function resolveEvidenceConclusion(input) {
+    if (isFailedEvidence(input))
+        return 'failure';
+    if (!input.hasResults)
+        return 'neutral';
+    if (input.hasActionableFindings)
+        return 'neutral';
+    if (incompleteReviewTitle(input.bugbotTelemetry))
+        return 'neutral';
+    return 'success';
+}
+function isFailedEvidence(input) {
+    if (input.failureCount > 0)
+        return true;
+    if (input.hasUnknownFindings)
+        return true;
+    if (input.bugbotTelemetry?.outcome === 'failed')
+        return true;
+    return input.hasActionableFindings && input.failOnUnresolvedFindings;
+}
+function resolveEvidenceName(eventName, isReviewEvent) {
+    if (isReviewEvent)
+        return 'Copilot / Review';
+    if (['issues', 'issue_comment', 'pull_request_review_comment'].includes(eventName))
+        return 'Copilot / Plan';
+    return 'Copilot / Verification';
+}
+function resolveEvidenceTitle(conclusion, failureCount, hasActionableFindings, telemetry) {
+    if (hasActionableFindings && failureCount === 0)
+        return 'Copilot found actionable findings';
+    if (conclusion === 'failure')
+        return 'Copilot found actionable failures';
+    const incompleteTitle = incompleteReviewTitle(telemetry);
+    if (incompleteTitle)
+        return incompleteTitle;
+    if (conclusion === 'neutral')
+        return 'Copilot review produced no actionable result';
+    return 'Copilot completed successfully';
+}
+function incompleteReviewTitle(telemetry) {
+    switch (telemetry?.outcome) {
+        case 'partial': return 'Copilot review has partial coverage';
+        case 'superseded': return 'Copilot review was superseded';
+        case 'skipped': return 'Copilot review was skipped';
+        default: return undefined;
+    }
 }
 function aggregateFindingStateCounts(results) {
     const counts = results.map(result => getFindingStateCounts(result.payload)).filter((value) => value !== undefined);

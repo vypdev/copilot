@@ -24,25 +24,14 @@ export function buildActionSummary(context: ActionSummaryContext): string {
         + (findingStates?.reopened ?? 0)
         + (findingStates?.['verification-required'] ?? 0) > 0;
     const hasUnknownFindings = (findingStates?.unknown ?? 0) > 0;
-    const status = failures.length > 0 || hasUnknownFindings || bugbotTelemetry?.outcome === 'failed'
-        || (hasActionableFindings && context.failOnUnresolvedFindings)
-        ? '❌ Failure'
-        : hasActionableFindings
-            ? '⚠️ Findings'
-            : bugbotTelemetry?.outcome === 'partial'
-                ? '⚠️ Partial'
-                : bugbotTelemetry?.outcome === 'superseded'
-                    ? '⏭️ Superseded'
-                    : bugbotTelemetry?.outcome === 'skipped'
-                        ? '⏭️ Skipped'
-                        : bugbotTelemetry?.outcome === 'dry-run'
-                            ? '🧪 Dry run'
-                            : '✅ Success';
-    const target = context.pullRequestNumber > 0
-        ? `PR #${context.pullRequestNumber}`
-        : context.issueNumber > 0
-            ? `Issue #${context.issueNumber}`
-            : 'Repository run';
+    const status = resolveActionSummaryStatus({
+        failureCount: failures.length,
+        hasUnknownFindings,
+        hasActionableFindings,
+        failOnUnresolvedFindings: context.failOnUnresolvedFindings === true,
+        bugbotTelemetry,
+    });
+    const target = resolveActionSummaryTarget(context);
     const lifecycle = context.lifecycleState ? `\`${sanitizeAgentMarkdown(context.lifecycleState, 100)}\`` : '—';
     const rows = [
         `| Status | ${status} |`,
@@ -69,6 +58,34 @@ export function buildActionSummary(context: ActionSummaryContext): string {
         renderResults(context.results),
         '',
     ].join('\n');
+}
+
+interface ActionSummaryStatusInput {
+    readonly failureCount: number;
+    readonly hasUnknownFindings: boolean;
+    readonly hasActionableFindings: boolean;
+    readonly failOnUnresolvedFindings: boolean;
+    readonly bugbotTelemetry?: BugbotTelemetryProjection;
+}
+
+function resolveActionSummaryStatus(input: ActionSummaryStatusInput): string {
+    if (input.failureCount > 0 || input.hasUnknownFindings) return '❌ Failure';
+    if (input.bugbotTelemetry?.outcome === 'failed') return '❌ Failure';
+    if (input.hasActionableFindings && input.failOnUnresolvedFindings) return '❌ Failure';
+    if (input.hasActionableFindings) return '⚠️ Findings';
+    switch (input.bugbotTelemetry?.outcome) {
+        case 'partial': return '⚠️ Partial';
+        case 'superseded': return '⏭️ Superseded';
+        case 'skipped': return '⏭️ Skipped';
+        case 'dry-run': return '🧪 Dry run';
+        default: return '✅ Success';
+    }
+}
+
+function resolveActionSummaryTarget(context: ActionSummaryContext): string {
+    if (context.pullRequestNumber > 0) return `PR #${context.pullRequestNumber}`;
+    if (context.issueNumber > 0) return `Issue #${context.issueNumber}`;
+    return 'Repository run';
 }
 
 function formatBugbotTelemetry(telemetry: BugbotTelemetryProjection | undefined): string {

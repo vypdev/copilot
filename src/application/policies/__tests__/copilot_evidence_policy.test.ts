@@ -133,5 +133,11 @@ describe('buildCopilotEvidence', () => {
             summary: 'summary',
             results: [new Result({ id: 'metadata', success: true, executed: true })],
         })).toMatchObject({ name: 'Copilot / Plan', conclusion: 'success' });
+        expect(buildCopilotEvidence({
+            eventName: 'push',
+            headSha: 'sha-123',
+            summary: 'summary',
+            results: [new Result({ id: 'verification', success: true, executed: true })],
+        })).toMatchObject({ name: 'Copilot / Verification', conclusion: 'success' });
     });
 });

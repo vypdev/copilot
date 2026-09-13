@@ -27,8 +27,8 @@ describe('Bugbot telemetry projection policy', () => {
     it.each([
         undefined,
         {},
-        { bugbotTelemetry: { outcome: 'unknown', elapsedMs: 10 } },
-        { bugbotTelemetry: { outcome: 'completed', elapsedMs: Number.NaN } },
+        { bugbotTelemetry: { schemaVersion: 1, outcome: 'unknown', elapsedMs: 10 } },
+        { bugbotTelemetry: { schemaVersion: 1, outcome: 'completed', elapsedMs: Number.NaN } },
     ])('rejects malformed telemetry without inferring review evidence', (payload) => {
         expect(projectBugbotTelemetry(payload)).toBeUndefined();
     });
