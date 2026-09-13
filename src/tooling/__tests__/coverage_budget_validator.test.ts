@@ -65,6 +65,18 @@ function rawConfiguration(ruleOverrides: Readonly<Record<string, unknown>> = {})
     };
 }
 
+function eachFileFailuresFor(
+    file: string,
+    value: FileCoverage,
+    thresholds: Readonly<Record<string, number>>,
+): readonly string[] {
+    return coverageBudgetFailures(
+        summary({ [file]: value }),
+        '/repo',
+        fixtureConfiguration({ files: [file], mode: 'each', thresholds }),
+    );
+}
+
 describe('coverage budget validator', () => {
     it('accepts an aggregate exactly on every threshold', () => {
         const report = summary({
@@ -98,15 +110,8 @@ describe('coverage budget validator', () => {
     });
 
     it('reports each file independently when configured in each mode', () => {
-        expect(coverageBudgetFailures(
-            summary({ 'src/low.ts': coverage(89) }),
-            '/repo',
-            fixtureConfiguration({
-                files: ['src/low.ts'],
-                mode: 'each',
-                thresholds: { functions: 90 },
-            }),
-        )).toEqual(['src/low.ts functions 89% < 90%']);
+        expect(eachFileFailuresFor('src/low.ts', coverage(89), { functions: 90 }))
+            .toEqual(['src/low.ts functions 89% < 90%']);
     });
 
     it('rejects a missing explicit coverage entry', () => {
@@ -186,15 +191,8 @@ describe('coverage budget validator', () => {
             lines: { covered: 0, pct: 100, total: 1 },
         };
 
-        expect(coverageBudgetFailures(
-            summary({ 'src/forged.ts': forged }),
-            '/repo',
-            fixtureConfiguration({
-                files: ['src/forged.ts'],
-                mode: 'each',
-                thresholds: { lines: 95 },
-            }),
-        )).toEqual(['src/forged.ts lines 0% < 95%']);
+        expect(eachFileFailuresFor('src/forged.ts', forged, { lines: 95 }))
+            .toEqual(['src/forged.ts lines 0% < 95%']);
     });
 
     it('accepts valid alternate percentage precision while evaluating counts', () => {
@@ -203,15 +201,8 @@ describe('coverage budget validator', () => {
             lines: { covered: 1, pct: 33.333, total: 3 },
         };
 
-        expect(coverageBudgetFailures(
-            summary({ 'src/thirds.ts': alternatePrecision }),
-            '/repo',
-            fixtureConfiguration({
-                files: ['src/thirds.ts'],
-                mode: 'each',
-                thresholds: { lines: 30 },
-            }),
-        )).toEqual([]);
+        expect(eachFileFailuresFor('src/thirds.ts', alternatePrecision, { lines: 30 }))
+            .toEqual([]);
     });
 
     it('treats one denominator-free per-file metric as vacuously covered on a measurable file', () => {
@@ -220,15 +211,8 @@ describe('coverage budget validator', () => {
             branches: metric(0, 0),
         };
 
-        expect(coverageBudgetFailures(
-            summary({ 'src/branchless.ts': branchless }),
-            '/repo',
-            fixtureConfiguration({
-                files: ['src/branchless.ts'],
-                mode: 'each',
-                thresholds: { branches: 100, lines: 95 },
-            }),
-        )).toEqual([]);
+        expect(eachFileFailuresFor('src/branchless.ts', branchless, { branches: 100, lines: 95 }))
+            .toEqual([]);
     });
 
     it('rejects an aggregate metric with no denominator on otherwise measurable files', () => {
