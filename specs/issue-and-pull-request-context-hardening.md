@@ -49,7 +49,7 @@ PR link request
   -> report complete or exact retained partial state
 
 synchronize review starts
-  -> branch synchronization edits PR metadata
+  -> maintainer or external automation edits PR metadata
   -> edited event waits on the same branch key
   -> review finishes for the current head
   -> newest pending metadata event runs without agent analysis
@@ -112,14 +112,20 @@ misleading intermediate state.
   and no existing worst performer regresses.
 - Live PR #363 evidence exposed a concurrency regression on three consecutive
   heads: `synchronize` runs `34728370424`, `34729137152`, and `34730134528`
-  were canceled after Branch Sync caused `pull_request: edited`; their successor
-  metadata runs completed without a Bugbot review. The workflow used one branch
-  group with unconditional `cancel-in-progress: true` for both event classes.
+  were canceled after an `efraespada`-authenticated PR metadata update caused
+  `pull_request: edited`; their successor metadata runs completed without a
+  Bugbot review. Branch Sync did not edit the PR in those runs, and bot-authored
+  metadata events were correctly filtered. The workflow used one branch group
+  with unconditional `cancel-in-progress: true` for both event classes.
 - The correction passes 407 suites and 3,364 tests with 96.45% line, 95.11%
   statement, 88.50% branch, and 95.53% function coverage. The workflow parser's
   90 cases include both active/setup negative fixtures; all 24 workflow
   contracts, documentation, catalog, package, build, and Bugbot benchmark gates
-  pass locally before controlled live verification.
+  pass locally. Controlled live verification on head `70585d9e` started review
+  run `34756303262`; a maintainer-authored update then generated edit run
+  `34756384500`. The edit remained pending, the review completed successfully,
+  and the edit ran afterward. Bot-authored follow-up events `34756389864` and
+  `34756489001` were skipped by loop prevention as designed.
 - GitHub documents that closing keywords create issue links only when a PR
   targets the default branch, and its REST update endpoint permits changing the
   PR `body` and `base` with Pull Requests write permission.
@@ -600,9 +606,10 @@ SDDs, catalog metadata, generated catalog, and bundles are updated together.
     and `invokeExplicit`; no compatibility symbol remains in source or bundle.
 16. Given full validation, specs, catalog, public docs, workflows, package,
     bundles, coverage, architecture metrics, and Graphify agree.
-17. Given Branch Sync edits PR metadata while a `synchronize` analysis is
-    running, the edit waits, the analysis completes for the current head, and
-    the newest metadata event runs afterward without invoking the agent.
+17. Given a maintainer or external automation edits PR metadata while a
+    `synchronize` analysis is running, the edit waits, the analysis completes
+    for the current head, and the newest metadata event runs afterward without
+    invoking Bugbot analysis.
 
 ## 17. Requirements traceability
 

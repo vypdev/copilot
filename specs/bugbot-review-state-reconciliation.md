@@ -1,6 +1,6 @@
 # Bugbot Pull-Request Review State Reconciliation
 
-- Status: Implemented; PR #363 concurrency correction pending controlled live verification
+- Status: Implemented; PR #363 concurrency correction verified live
 - Date: 2026-09-11
 - Catalog capability ID: `bugbot-review-state-reconciliation`
 - Last verified: 2026-09-13 on `develop`
@@ -152,20 +152,24 @@ review summary does not implement.
 
 ### 2.6 Verified concurrency regression on PR #363
 
-On three successive PR heads, the branch-sync workflow updated PR metadata
-while the `synchronize` review was starting. Because `pull_request: edited`
-used the same branch group with unconditional cancellation, it canceled the
-real review runs `34728370424`, `34729137152`, and `34730134528`. Successor
-metadata runs completed successfully without agent analysis. The final Check
-summary exposed `Bugbot review: —`, proving that a green job was not evidence
-that the head had been reviewed.
+On three successive PR heads, an `efraespada`-authenticated metadata update
+emitted `pull_request: edited` while the `synchronize` review was starting.
+Because the edit used the same branch group with unconditional cancellation, it
+canceled real review runs `34728370424`, `34729137152`, and `34730134528`.
+Successor metadata runs completed successfully without agent analysis. Branch
+Sync did not edit the PR in those runs, and bot-authored edits were already
+filtered. The final Check summary exposed `Bugbot review: —`, proving that a
+green job was not evidence that the head had been reviewed.
 
 The correction keeps the shared branch group but makes cancellation
 conditional. Code-change and review events cancel obsolete analysis;
 `pull_request: edited` waits behind the active review. GitHub's bounded pending
 slot may replace an older waiting metadata event with the newest one, which is
 safe because metadata normalization is idempotent and only the newest event is
-current.
+current. Controlled verification on head `70585d9e` started review run
+`34756303262` and then edit run `34756384500`. The edit stayed pending until the
+review completed successfully, then completed itself. Bot-authored follow-ups
+`34756389864` and `34756489001` were skipped by the existing loop guard.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -1046,7 +1050,11 @@ tests pass; global coverage is 95.11% statements, 88.50% branches, 95.53%
 functions, and 96.45% lines. The workflow validator's 90 cases include active
 and setup-copy negatives for unconditional PR-edit cancellation. All 24
 workflow contracts, documentation, catalog, build/package, and Bugbot benchmark
-gates pass locally. Controlled post-push ordering remains the live exit gate.
+gates pass locally. Controlled post-push ordering passed on head `70585d9e`:
+review run `34756303262` completed before queued edit run `34756384500`, with
+no cancellation. Bugbot
+truthfully reported partial context coverage for the large 116-file PR; this is
+the pre-existing bounded-context contract rather than a concurrency failure.
 
 ## 15. Documentation and discoverability
 
@@ -1119,9 +1127,10 @@ examples should reuse the same fixtures as presentation tests where practical.
     remains truthful and the next run repairs the discovered drift.
 17. Given duplicate same-head workflows, then shared workflow concurrency and
     application idempotency prevent duplicate reviews/comments.
-18. Given Branch Sync emits `pull_request: edited` while a `synchronize` review
-    is active, then the edit waits on the same branch group and the review
-    completes for the current head before metadata normalization continues.
+18. Given a maintainer or external automation emits `pull_request: edited`
+    while a `synchronize` review is active, then the edit waits on the same
+    branch group and the review completes for the current head before metadata
+    normalization continues.
 19. Given a response that omits a required nullable finding property or uses a
     removed resolution field, then strict native/local validation rejects the
     whole response and no finding lifecycle mutation runs.
@@ -1325,9 +1334,10 @@ evidence.
    product documents native immediate feedback plus bounded convergence on the
    next supported event.
 9. **Use unconditional cancellation for PR metadata edits — rejected.** PR #363
-   demonstrated that title normalization can cancel the current-head review and
-   leave a successful metadata-only run. Conditional cancellation preserves one
-   branch mutex without allowing that false-green sequence.
+   demonstrated that a maintainer-authored title/body update can cancel the
+   current-head review and leave a successful metadata-only run. Conditional
+   cancellation preserves one branch mutex without allowing that false-green
+   sequence.
 
 ### 20.3 Follow-up work outside this specification
 
