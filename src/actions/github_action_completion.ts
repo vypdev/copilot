@@ -19,6 +19,8 @@ import type { ActionSummaryPort } from '../application/ports/action_summary_port
 import { toApplicationError } from '../application/errors/application_error';
 import { shouldPersistConfiguration } from '../application/policies/configuration_persistence_policy';
 import { renderDeploymentJobSummary } from '../application/policies/deployment_presentation_policy';
+import { projectBugbotResultFindingStates } from '../application/policies/bugbot_result_finding_state_projection_policy';
+import { countActionableBugbotFindings } from '../domain/bugbot/review_state';
 
 export async function finishGithubAction(
     execution: Execution,
@@ -143,26 +145,19 @@ function failActionForUnresolvedFindingsIfConfigured(
     dryRun: boolean,
 ): void {
     if (dryRun) return;
-    const aggregate = results.reduce((counts, result) => {
-        const states = getResultPayload(getResultPayload(result.payload)?.findingStates);
-        return {
-            unresolved: counts.unresolved
-                + (typeof states?.open === 'number' ? states.open : 0)
-                + (typeof states?.reopened === 'number' ? states.reopened : 0)
-                + (typeof states?.['verification-required'] === 'number'
-                    ? states['verification-required']
-                    : 0),
-            unknown: counts.unknown
-                + (typeof states?.unknown === 'number' ? states.unknown : 0),
-        };
-    }, { unresolved: 0, unknown: 0 });
-    if (aggregate.unknown > 0) {
-        core.setFailed(`Bugbot could not verify ${aggregate.unknown} finding state(s).`);
+    const projection = projectBugbotResultFindingStates(results);
+    if (projection.status === 'invalid') {
+        core.setFailed('Bugbot finding-state evidence is malformed.');
+        return;
+    }
+    if (projection.status === 'absent') return;
+    if (projection.counts.unknown > 0) {
+        core.setFailed(`Bugbot could not verify ${projection.counts.unknown} finding state(s).`);
     } else if (
         execution.ai.getBugbotReviewConfiguration().failOnUnresolved
-        && aggregate.unresolved > 0
+        && countActionableBugbotFindings(projection.counts) > 0
     ) {
-        core.setFailed(`Bugbot found ${aggregate.unresolved} unresolved actionable finding(s).`);
+        core.setFailed(`Bugbot found ${countActionableBugbotFindings(projection.counts)} unresolved actionable finding(s).`);
     }
 }
 

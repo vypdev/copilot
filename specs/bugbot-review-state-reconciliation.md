@@ -182,6 +182,15 @@ metadata-only or ambiguous runs retain their native
 workflow outcome and Job Summary but publish no Review Check. Partial, skipped,
 and superseded review outcomes are neutral, never successful.
 
+Bugbot review `5190848886` then found a second fail-open edge in that selector:
+it discarded malformed telemetry before counting snapshots, so a valid snapshot
+could conceal a malformed owned sibling. The corrected contract counts every
+result owning `bugbotTelemetry` first and accepts only exact cardinality one,
+then validates that sole snapshot. The same audit found independent lenient
+parsers for Result `findingStates`; they are replaced by one strict canonical
+projection shared by Action exit, lifecycle, `/copilot status`, Job Summary,
+and Check evidence.
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |
@@ -239,6 +248,9 @@ Terms:
     exactly one valid Bugbot telemetry snapshot for the exact head. Metadata-only
     or ambiguous runs MUST NOT create a newer same-name Check, and bounded
     partial/skipped/superseded outcomes MUST be neutral rather than successful.
+11. All result consumers MUST use one complete seven-state finding-count
+    projection. Missing or extra keys, non-safe/non-integer/negative counts, and
+    aggregate overflow MUST fail or block every current-state surface.
 
 ### 4.2 Non-goals
 
@@ -572,7 +584,12 @@ The orchestration is decomposed without creating a second pipeline:
   collaborators; it performs no direct provider read or write.
 - The workflow produces the final `Result` and telemetry only from that report.
 - A shared pure telemetry-projection policy validates the minimal review outcome
-  used by Job Summary and native evidence, avoiding divergent payload parsing.
+  used by Job Summary and native evidence. It checks owned-snapshot cardinality
+  before validation, so malformed siblings cannot disappear.
+- A shared pure finding-state projection validates and aggregates the complete
+  canonical seven-state Result shape. Action exit, lifecycle state, status
+  command, Job Summary, and native evidence consume only this projection;
+  none keeps a private compatibility parser.
 - The native evidence policy returns no `Copilot / Review` for a PR result set
   without that telemetry. It maps `partial`, `skipped`, and `superseded` to
   neutral, while failures/unknown state and configured actionable findings keep
@@ -688,6 +705,9 @@ presentation pattern:
 6. Pure evidence-policy tests must reject metadata-only Review publication and
    enumerate complete, partial, skipped, superseded, failure, and configured
    actionable conclusions without provider I/O.
+7. Coverage validation must keep both shared result-projection policies at 100%
+   statements, branches, functions, and lines, including malformed siblings,
+   unknown keys, invalid numeric bounds, and aggregate overflow.
 
 ## 9. UI/UX and content contract
 
@@ -849,7 +869,27 @@ and reported 1 active finding.
   bounded and sanitized. Untrusted text cannot mention users, inject headings,
   close markers, add HTML, or alter product commands.
 
-### 9.9 Noise and notification budget
+### 9.9 Read-only status command
+
+The status command consumes the same projection and never a reduced legacy
+shape:
+
+```markdown
+## Copilot status
+- **Lifecycle:** blocked
+- **Bugbot findings:** 1 open, 2 reopened, 3 verification required, 0 unknown, 4 resolved
+```
+
+If owned evidence is malformed, the last line is instead:
+
+```markdown
+- **Bugbot findings:** invalid evidence; inspect the workflow result.
+```
+
+Text equivalent: every non-clean category is visible. Invalid evidence has no
+numeric fallback and instructs the operator to inspect the producing run.
+
+### 9.10 Noise and notification budget
 
 - At most one Bugbot status conversation comment exists per PR.
 - A normal later run creates zero generic comments and edits only changed
@@ -1010,13 +1050,13 @@ counted across rows.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain lifecycle, transition planning, and projection | 26 | every state, resolver precedence, fixed/obsolete/dismissed/reopened, per-destination projection, conservative cross-destination fold, mismatches, aggregate counts, deterministic digests |
+| Domain lifecycle, transition planning, and projection | 31 | every state, resolver precedence, fixed/obsolete/dismissed/reopened, per-destination projection, conservative cross-destination fold, canonical result shape, invalid numeric bounds, overflow, aggregate counts, deterministic digests |
 | Application ordering, idempotency, replay, cancellation, and races | 35 | active-before-resolution, mutation head guards, double snapshot head guard, read-after-write, per-surface completeness, missing durable evidence, resolved omission, duplicate same-head, newer-head supersession, partial mutations, retry convergence, PR close/reopen, metadata-during-review ordering |
 | Adapters and provider error mapping | 18 | pagination, parent review id/URL, resolver identity, create/update review, status-card upsert, 401/403/404/409/422, malformed response, rate limit |
-| Workflow, composition, public API, and schema contracts | 12 | shared concurrency key, conditional metadata non-preemption in active/setup copies, negative unconditional-cancel fixture, bot guard, permissions, trigger contract, strict finding/resolution schema, composition wiring, API declarations, package exports |
-| UI/UX, localization, accessibility, links, and sanitization | 19 | pending, active, clean, failed, partial, skipped, superseded, metadata-only non-publication, historical snapshot, en/es/fallback, narrow content, markers, mentions, unsafe Markdown |
-| Integration, security, migration, and live-shaped replay | 13 | PR #358 replay, new PR lifecycle, multiple reviews, overflow/unanchored, manual resolve/unresolve, identity rotation, duplicate card repair, dry-run/fork trust, latest-by-name PR #363 replay |
-| **Total** | **123** | No double counting |
+| Workflow, composition, public API, and schema contracts | 13 | shared concurrency key, conditional metadata non-preemption in active/setup copies, malformed-sibling telemetry cardinality, negative unconditional-cancel fixture, bot guard, permissions, trigger contract, strict finding/resolution schema, composition wiring, API declarations, package exports |
+| UI/UX, localization, accessibility, links, and sanitization | 22 | pending, active, clean, failed, partial, skipped, superseded, metadata-only non-publication, invalid summary/status output, every non-clean count, historical snapshot, en/es/fallback, narrow content, markers, mentions, unsafe Markdown |
+| Integration, security, migration, and live-shaped replay | 14 | PR #358 replay, new PR lifecycle, multiple reviews, overflow/unanchored, manual resolve/unresolve, identity rotation, duplicate card repair, dry-run/fork trust, completion fail-closed, latest-by-name PR #363 replay |
+| **Total** | **133** | No double counting |
 
 Coverage requirements:
 
@@ -1206,6 +1246,15 @@ examples should reuse the same fixtures as presentation tests where practical.
 35. Given complete, partial, skipped, superseded, or failed Bugbot telemetry,
     then the evidence policy emits respectively successful, neutral, neutral,
     neutral, or failed review evidence, subject to stricter finding-state policy.
+36. Given one valid Bugbot telemetry snapshot plus any second owned malformed
+    snapshot, then the complete set is rejected as ambiguous and no Review Check
+    is emitted.
+37. Given one or more complete canonical finding-state Results, then their
+    counts are safely aggregated once and Action exit, lifecycle, status,
+    Summary, and Check show the same non-clean decision.
+38. Given a missing or extra state, a negative/fractional/non-finite/unsafe
+    count, or aggregate overflow, then the Action and eligible Check fail,
+    lifecycle blocks, Summary/status say `invalid`, and no surface reports clean.
 
 ## 17. Requirements traceability
 
@@ -1219,6 +1268,7 @@ examples should reuse the same fixtures as presentation tests where practical.
 | Freshness and concurrency | head guards + workflow contract | stale, duplicate, canceled, race cases | Workflow setup |
 | Metadata non-preemption | shared branch key + conditional cancellation | active/setup workflow parser, negative unconditional-cancel fixture, PR #363 live evidence | Workflow setup, Configuration, How it works |
 | Review Check ownership | telemetry projection + evidence policy | metadata-only negative, outcome matrix, completion integration, PR #363 latest-by-name replay | Detection, Workflow setup, How it works, Troubleshooting |
+| Canonical Result evidence | finding-state projection + completion/lifecycle/status/summary/Check policies | complete aggregation, missing/extra key, numeric limits, overflow, cross-surface fail-closed cases | Detection, Observability, Comment commands, Failure scenarios |
 | Coherent final snapshot | snapshot loader + explicit surface completeness | before/after head, head-change, missing-head, per-surface failure, shared issue/PR read cases | How it works, Failure scenarios |
 | No false clean partial state | final read + publication report | provider failure matrix | Troubleshooting |
 | Missing durable evidence | reconciliation policy + final projection | unresolved, verification-required, observed, and fully resolved omission cases | How it works, Failure scenarios |
@@ -1294,10 +1344,12 @@ goldens pass in both locales.
 2. Reserve `Copilot / Review` for valid Bugbot telemetry and make incomplete
    review outcomes neutral; metadata-only completion keeps only workflow/summary
    evidence.
-3. Preserve bot-author guards for review/comment update events.
-4. Validate permissions and workflow structure semantically.
-5. Upgrade the in-memory E2E provider and public API gateway.
-6. Regenerate build and declaration artifacts.
+3. Validate exact owned-telemetry cardinality and replace all private Result
+   finding-state readers with the canonical fail-closed projection.
+4. Preserve bot-author guards for review/comment update events.
+5. Validate permissions and workflow structure semantically.
+6. Upgrade the in-memory E2E provider and public API gateway.
+7. Regenerate build and declaration artifacts.
 
 Exit gate: workflow, architecture, API, package, and build validators pass.
 
@@ -1323,9 +1375,12 @@ evidence.
 - [x] Human resolve/unresolve, bot repair, missing resolver, stale head,
       cancellation, duplicate events, and PR close/reopen are covered.
 - [x] Architecture boundaries and workflow contracts are executable and pass.
-- [x] The 123-case minimum and changed-module coverage requirements pass.
+- [x] The 133-case minimum and changed-module coverage requirements pass; the
+      two shared result-projection policies are 100% covered in every metric.
 - [x] Metadata-only PR runs cannot overwrite the latest Review Check, and the
       incomplete-outcome conclusion matrix is enforced by pure tests.
+- [x] Malformed sibling telemetry cannot hide behind a valid snapshot, and all
+      current-state Result consumers fail closed through one canonical parser.
 - [x] No new correctness toggle, legacy mode, parallel pipeline, or database was
       introduced.
 - [x] Status card, review block, thread body, labels, Job Summary, Check, and

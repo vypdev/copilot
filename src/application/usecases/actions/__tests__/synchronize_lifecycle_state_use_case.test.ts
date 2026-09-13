@@ -90,7 +90,22 @@ describe('SynchronizeLifecycleStateUseCase', () => {
 
         await useCase.invoke({
             execution: param,
-            results: [{ id: 'DetectPotentialProblemsUseCase', success: true, executed: true, steps: [], errors: [], payload: { findingStates: { open: 1, reopened: 0 } } } as never],
+            results: [{
+                id: 'DetectPotentialProblemsUseCase',
+                success: true,
+                executed: true,
+                steps: [],
+                errors: [],
+                payload: { findingStates: {
+                    open: 1,
+                    reopened: 0,
+                    fixed: 0,
+                    obsolete: 0,
+                    dismissed: 0,
+                    'verification-required': 0,
+                    unknown: 0,
+                } },
+            } as never],
         });
 
         expect(setLabels).toHaveBeenCalledWith(

@@ -166,9 +166,14 @@ intentionally wants findings to fail both the Check and Action invocation as a
 branch-protection gate. `unknown`, incomplete synchronization, and analysis failures remain failures in either policy.
 Bounded `partial` context, skipped draft review, and superseded review use a
 neutral Check conclusion and never claim a complete clean result. A PR metadata
-run without validated Bugbot telemetry publishes no `Copilot / Review`; its
-workflow result and Job Summary remain visible without hiding the latest
-analysis Check for that head.
+run without exactly one validated Bugbot telemetry snapshot for the current
+head publishes no `Copilot / Review`; this also covers duplicate snapshots and
+a valid snapshot accompanied by malformed telemetry. Its workflow result and
+Job Summary remain visible without hiding the latest analysis Check for that
+head. Finding-state evidence uses one complete seven-state count schema. A
+missing state, unexpected state, invalid count, or aggregate overflow fails the
+Action and Check closed; `/copilot status` reports the evidence as invalid
+instead of inventing clean counts.
 
 At most 20 stale historical review blocks are repaired in one run. If more remain, the status card and Check show the exact pending count and `/copilot recheck` continues the idempotent repair. Duplicate trusted status cards are not deleted: the oldest becomes canonical and later copies are converted to redirects.
 

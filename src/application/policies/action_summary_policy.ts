@@ -1,7 +1,12 @@
-import { getResultPayload, type Result } from '../../data/model/result';
+import type { Result } from '../../data/model/result';
 import { sanitizeAgentMarkdown, sanitizePublishedError } from './github_comment_publication_policy';
 import { buildApplicationErrorPresentation } from './application_error_presentation_policy';
 import { selectBugbotTelemetry, type BugbotTelemetryProjection } from './bugbot_telemetry_projection_policy';
+import {
+    projectBugbotResultFindingStates,
+    type BugbotResultFindingStateProjection,
+} from './bugbot_result_finding_state_projection_policy';
+import { countActionableBugbotFindings } from '../../domain/bugbot/review_state';
 
 export interface ActionSummaryContext {
     readonly owner: string;
@@ -18,12 +23,11 @@ export interface ActionSummaryContext {
 /** Builds a bounded, publication-safe GitHub Actions Job Summary. */
 export function buildActionSummary(context: ActionSummaryContext): string {
     const failures = context.results.filter(result => !result.success && result.executed);
-    const findingStates = aggregateFindingStateCounts(context.results);
+    const findingStateProjection = projectBugbotResultFindingStates(context.results);
+    const findingStates = findingStateProjection.status === 'valid' ? findingStateProjection.counts : undefined;
     const bugbotTelemetry = selectBugbotTelemetry(context.results);
-    const hasActionableFindings = (findingStates?.open ?? 0)
-        + (findingStates?.reopened ?? 0)
-        + (findingStates?.['verification-required'] ?? 0) > 0;
-    const hasUnknownFindings = (findingStates?.unknown ?? 0) > 0;
+    const hasActionableFindings = findingStates ? countActionableBugbotFindings(findingStates) > 0 : false;
+    const hasUnknownFindings = findingStateProjection.status === 'invalid' || (findingStates?.unknown ?? 0) > 0;
     const status = resolveActionSummaryStatus({
         failureCount: failures.length,
         hasUnknownFindings,
@@ -40,7 +44,7 @@ export function buildActionSummary(context: ActionSummaryContext): string {
         `| Lifecycle | ${lifecycle} |`,
         `| PR description policy | ${escapeTable(context.pullRequestDescriptionMode ?? '—')} |`,
         `| Results | ${context.results.length} |`,
-        `| Finding states | ${formatFindingStates(findingStates)} |`,
+        `| Finding states | ${formatFindingStates(findingStateProjection)} |`,
         `| Bugbot review | ${formatBugbotTelemetry(bugbotTelemetry)} |`,
     ];
 
@@ -94,56 +98,10 @@ function formatBugbotTelemetry(telemetry: BugbotTelemetryProjection | undefined)
         : '—';
 }
 
-type FindingStateCounts = {
-    open: number;
-    reopened: number;
-    fixed: number;
-    obsolete: number;
-    dismissed: number;
-    'verification-required': number;
-    unknown: number;
-};
-
-function getFindingStateCounts(value: unknown): FindingStateCounts | undefined {
-    const payload = getResultPayload(value);
-    const stateCounts = getResultPayload(payload?.findingStates) as Partial<Record<keyof FindingStateCounts, unknown>> | undefined;
-    if (!stateCounts) return undefined;
-    const establishedStates = ['open', 'reopened', 'fixed', 'obsolete', 'dismissed'] as const;
-    if (!establishedStates.every(state => typeof stateCounts[state] === 'number')) return undefined;
-    return {
-        ...Object.fromEntries(establishedStates.map(state => [state, stateCounts[state]])),
-        'verification-required': typeof stateCounts['verification-required'] === 'number'
-            ? stateCounts['verification-required']
-            : 0,
-        unknown: typeof stateCounts.unknown === 'number' ? stateCounts.unknown : 0,
-    } as FindingStateCounts;
-}
-
-function aggregateFindingStateCounts(results: readonly Result[]): ReturnType<typeof getFindingStateCounts> {
-    const counts = results.map(result => getFindingStateCounts(result.payload)).filter((value): value is NonNullable<ReturnType<typeof getFindingStateCounts>> => value !== undefined);
-    if (counts.length === 0) return undefined;
-    return counts.reduce((total, current) => ({
-        open: total.open + current.open,
-        reopened: total.reopened + current.reopened,
-        fixed: total.fixed + current.fixed,
-        obsolete: total.obsolete + current.obsolete,
-        dismissed: total.dismissed + current.dismissed,
-        'verification-required': total['verification-required'] + current['verification-required'],
-        unknown: total.unknown + current.unknown,
-    }), {
-        open: 0,
-        reopened: 0,
-        fixed: 0,
-        obsolete: 0,
-        dismissed: 0,
-        'verification-required': 0,
-        unknown: 0,
-    });
-}
-
-function formatFindingStates(counts: ReturnType<typeof getFindingStateCounts>): string {
-    if (!counts) return '—';
-    return Object.entries(counts)
+function formatFindingStates(projection: BugbotResultFindingStateProjection): string {
+    if (projection.status === 'invalid') return 'invalid';
+    if (projection.status === 'absent') return '—';
+    return Object.entries(projection.counts)
         .filter(([, value]) => value > 0)
         .map(([state, value]) => `${state}=${value}`)
         .join(', ') || 'none';

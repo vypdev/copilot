@@ -1,6 +1,16 @@
 import { readLifecycleExternalEvidence, resolveLifecycleState } from '../lifecycle_state_policy';
 
 const result = (id: string, success = true) => ({ id, success, executed: true, steps: [], errors: [] });
+const findingStates = (overrides: Record<string, number> = {}) => ({
+    open: 0,
+    reopened: 0,
+    fixed: 0,
+    obsolete: 0,
+    dismissed: 0,
+    'verification-required': 0,
+    unknown: 0,
+    ...overrides,
+});
 
 describe('lifecycle state policy', () => {
     it('moves an issue to planned and in-progress while agent activity remains separate', () => {
@@ -26,7 +36,7 @@ describe('lifecycle state policy', () => {
             issueDescriptionEdited: false,
             pullRequestMerged: false,
             pullRequestClosed: false,
-            results: [{ ...result('DetectPotentialProblemsUseCase'), payload: { findingStates: { open: 1, reopened: 0 } } }],
+            results: [{ ...result('DetectPotentialProblemsUseCase'), payload: { findingStates: findingStates({ open: 1 }) } }],
         })).toBe('changes-requested');
     });
 
@@ -40,7 +50,7 @@ describe('lifecycle state policy', () => {
             issueDescriptionEdited: false,
             pullRequestMerged: false,
             pullRequestClosed: false,
-            results: [{ ...result('DetectPotentialProblemsUseCase'), payload: { findingStates: { open: 0, reopened: 0 } } }],
+            results: [{ ...result('DetectPotentialProblemsUseCase'), payload: { findingStates: findingStates() } }],
         })).toBe('ready');
     });
 
@@ -51,11 +61,19 @@ describe('lifecycle state policy', () => {
         };
         expect(resolveLifecycleState({
             ...base,
-            results: [{ ...result('DetectPotentialProblemsUseCase'), payload: { findingStates: { open: 0, reopened: 0, 'verification-required': 1, unknown: 0 } } }],
+            results: [{ ...result('DetectPotentialProblemsUseCase'), payload: { findingStates: findingStates({ 'verification-required': 1 }) } }],
         })).toBe('changes-requested');
         expect(resolveLifecycleState({
             ...base,
-            results: [{ ...result('DetectPotentialProblemsUseCase'), payload: { findingStates: { open: 0, reopened: 0, 'verification-required': 0, unknown: 1 } } }],
+            results: [{ ...result('DetectPotentialProblemsUseCase'), payload: { findingStates: findingStates({ unknown: 1 }) } }],
+        })).toBe('blocked');
+    });
+
+    it('blocks a PR when owned finding-state evidence is malformed', () => {
+        expect(resolveLifecycleState({
+            eventName: 'pull_request', action: 'synchronize', isIssue: false, isPullRequest: true,
+            issueOpened: false, issueDescriptionEdited: false, pullRequestMerged: false, pullRequestClosed: false,
+            results: [{ ...result('DetectPotentialProblemsUseCase'), payload: { findingStates: { open: 0 } } }],
         })).toBe('blocked');
     });
 

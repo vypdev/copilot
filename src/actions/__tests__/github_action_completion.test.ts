@@ -287,7 +287,7 @@ describe('finishGithubAction', () => {
             id: 'DetectPotentialProblemsUseCase',
             success: true,
             executed: true,
-            payload: { findingStates: { open: 2, reopened: 1, fixed: 0, obsolete: 0, dismissed: 0 } },
+            payload: { findingStates: completeFindingStates({ open: 2, reopened: 1 }) },
         });
         const nonBlocking = Object.assign(execution(), {
             ai: new Ai('', 'model', false, [], false, 'low', 20, [], undefined, undefined, { failOnUnresolved: false }),
@@ -321,14 +321,40 @@ describe('finishGithubAction', () => {
         const resultWith = (findingStates: Record<string, number>) => new Result({
             id: 'DetectPotentialProblemsUseCase', success: true, executed: true, payload: { findingStates },
         });
-        await finishGithubAction(execution(), [resultWith({ open: 0, reopened: 0, unknown: 1 })], {} as never, {} as never);
+        await finishGithubAction(execution(), [resultWith(completeFindingStates({ unknown: 1 }))], {} as never, {} as never);
         expect(core.setFailed).toHaveBeenCalledWith('Bugbot could not verify 1 finding state(s).');
 
         jest.mocked(core.setFailed).mockClear();
         const blocking = Object.assign(execution(), {
             ai: new Ai('', 'model', false, [], false, 'low', 20, [], undefined, undefined, { failOnUnresolved: true }),
         });
-        await finishGithubAction(blocking, [resultWith({ open: 0, reopened: 0, 'verification-required': 2, unknown: 0 })], {} as never, {} as never);
+        await finishGithubAction(blocking, [resultWith(completeFindingStates({ 'verification-required': 2 }))], {} as never, {} as never);
         expect(core.setFailed).toHaveBeenCalledWith('Bugbot found 2 unresolved actionable finding(s).');
     });
+
+    it('fails closed when owned finding-state evidence is malformed', async () => {
+        const malformed = new Result({
+            id: 'DetectPotentialProblemsUseCase',
+            success: true,
+            executed: true,
+            payload: { findingStates: { open: 0 } },
+        });
+
+        await finishGithubAction(execution(), [malformed], {} as never, {} as never);
+
+        expect(core.setFailed).toHaveBeenCalledWith('Bugbot finding-state evidence is malformed.');
+    });
 });
+
+function completeFindingStates(overrides: Record<string, number> = {}): Record<string, number> {
+    return {
+        open: 0,
+        reopened: 0,
+        fixed: 0,
+        obsolete: 0,
+        dismissed: 0,
+        'verification-required': 0,
+        unknown: 0,
+        ...overrides,
+    };
+}

@@ -622,23 +622,23 @@ write as though it never occurred.
 
 ## 14. Testing strategy and numeric budget
 
-The program MUST add or materially strengthen at least **168 distinct cases**.
+The program MUST add or materially strengthen at least **174 distinct cases**.
 Cases assigned to an existing capability SDD may satisfy both requirement maps,
 but each test counts once in this program ledger.
 
 | Area | Minimum distinct cases | Behaviors and risks covered |
 |---|---:|---|
-| Domain/configuration/pure planning | 29 | error codes, transition/rule normalization, PR selection, questionnaire/report/provider plans, context projection |
+| Domain/configuration/pure planning | 31 | error codes, transition/rule normalization, PR selection, strict result-evidence projection, questionnaire/report/provider plans, context projection |
 | State/application/idempotency/races | 29 | simultaneous deployment, stale revision, replay, cancellation, ordered doctor results, projected-state races |
 | Application use cases | 31 | mapping, phase handlers, bounded context, setup/doctor coordination, capability cuts |
 | Adapters/provider contracts | 25 | GitHub exact queries, error mapping, variables/secrets, argv/environment, credential binding |
-| Workflows/setup/schema | 14 | shared groups, permissions, queueing, sole-state validation, active/template and route parity |
-| UI/UX/localization/sanitization | 16 | five states, semantic errors, terminal width, masking, stable order, unchanged context-cut UX |
-| Integration/security/cutover | 24 | cross-workflow races, large repositories, injection, removed-shape rejection, per-slice and final ratchets |
-| **Total** | **168** | No double counting |
+| Workflows/setup/schema | 15 | shared groups, permissions, queueing, exact telemetry ownership, sole-state validation, active/template and route parity |
+| UI/UX/localization/sanitization | 17 | five states, semantic errors, invalid result evidence, terminal width, masking, stable order, unchanged context-cut UX |
+| Integration/security/cutover | 26 | cross-workflow races, large repositories, malformed-sibling replay, injection, removed-shape rejection, per-slice and final ratchets |
+| **Total** | **174** | No double counting |
 
 Priority allocation is also fixed: P0-A 22, P0-B 28, P1-A 18, P1-B 24,
-P1-C 18, P2 52, and cross-priority integration 6. This allocation totals 168
+P1-C 18, P2 56, and cross-priority integration 8. This allocation totals 174
 and prevents a large low-risk unit suite from masking a missing race or security case.
 
 The two dimensions reconcile exactly; each row and column is a non-overlapping
@@ -651,9 +651,9 @@ case ledger:
 | P1-A | 4 | 3 | 3 | 4 | 0 | 2 | 2 | 18 |
 | P1-B | 4 | 4 | 4 | 3 | 2 | 4 | 3 | 24 |
 | P1-C | 4 | 2 | 3 | 4 | 2 | 1 | 2 | 18 |
-| P2 | 6 | 8 | 12 | 6 | 4 | 4 | 12 | 52 |
-| Cross-priority | 1 | 2 | 0 | 0 | 2 | 1 | 0 | 6 |
-| **Total** | **29** | **29** | **31** | **25** | **14** | **16** | **24** | **168** |
+| P2 | 8 | 8 | 12 | 6 | 5 | 5 | 12 | 56 |
+| Cross-priority | 1 | 2 | 0 | 0 | 2 | 1 | 2 | 8 |
+| **Total** | **31** | **29** | **31** | **25** | **15** | **17** | **26** | **174** |
 
 Repository thresholds remain 90% lines/statements, 88% functions, and 82%
 branches. Changed pure error, state, selection, report, and provider security
@@ -721,6 +721,9 @@ the same pull request.
     compatibility reader, adapter, warning path, or translator.
 17. Given each priority exit, specifications, traceability, tests, docs, catalog,
     bundles, Graphify, metrics, and CI report one consistent contract.
+18. Given duplicate or malformed owned review telemetry, or malformed canonical
+    finding-state results, no evidence consumer may discard the bad input and
+    report a clean/success state from the remainder.
 
 ## 17. Requirements traceability
 
@@ -734,6 +737,7 @@ the same pull request.
 | P1-B setup/doctor | questionnaire/report policies, terminal and GitHub adapters | state, no-write, order, masking tests | setup/CLI/provisioning |
 | P1-C provider policy | exhaustive dispatcher and provider plans | cross-provider security matrix, controlled smoke | agent execution/failure |
 | P2 context closure | named contexts, bound lifecycle ports, route-owned branch patches, and exact-target PR-link compensation | issue/PR projection, binding, replay/compensation, description-mode, characterization, 47-file ratchet, and zero-leaf-import checks | architecture/dependency rules, P2-E SDD, issue/PR operations docs |
+| review evidence integrity | exact telemetry selector + canonical finding-state projection | malformed sibling, schema/numeric/overflow, cross-surface fail-closed, and 100% pure-policy coverage | Bugbot observability/failure docs and reconciliation/execution SDDs |
 | program quality | composition roots, generated artifacts | full CI, coverage, metrics, Graphify, human evidence | catalog and this SDD |
 
 Each implementation priority MUST replace these planned evidence descriptions
@@ -816,7 +820,7 @@ package validation when bundles change, and `graphify update .` after code chang
       entries are justified and protected by a non-growing allowlist.
 - [ ] No legacy/deprecated API, compatibility adapter, dual schema reader/writer,
       migration handler, removed command parser, or transitional feature flag ships.
-- [ ] At least 128 non-double-counted cases and all repository/changed-module
+- [ ] At least 174 non-double-counted cases and all repository/changed-module
       coverage thresholds pass.
 - [ ] Active workflows, setup templates, generated bundles, schemas, docs,
       fixtures, SDDs, traceability, catalog, and implementation agree.

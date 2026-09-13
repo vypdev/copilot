@@ -1,6 +1,8 @@
 import type { CopilotLifecycleState } from '../../domain/copilot_lifecycle';
 import { getResultPayload } from '../../data/model/result';
 import type { ExecutionInputs } from '../../data/model/execution_inputs';
+import { projectBugbotResultFindingStates } from './bugbot_result_finding_state_projection_policy';
+import { countActionableBugbotFindings } from '../../domain/bugbot/review_state';
 
 export type LifecycleChecksEvidence = 'pending' | 'success' | 'failure';
 export type LifecycleReviewEvidence = 'approved' | 'changes-requested' | 'commented' | 'dismissed';
@@ -43,13 +45,11 @@ export function resolveLifecycleState(
         if (input.pullRequestClosed && input.pullRequestMerged) return 'verified';
         if (input.externalEvidence?.checks === 'failure') return 'blocked';
         if (input.externalEvidence?.review === 'changes-requested') return 'changes-requested';
-        const findingState = input.results
-            .map(result => getResultPayload(result.payload)?.findingStates)
-            .find(isFindingStateCounts);
-        if (findingState?.unknown && findingState.unknown > 0) return 'blocked';
-        const verificationRequired = findingState?.['verification-required'] ?? 0;
-        if (findingState && (findingState.open > 0 || findingState.reopened > 0 || verificationRequired > 0)) return 'changes-requested';
-        if (findingState && findingState.open === 0 && findingState.reopened === 0 && verificationRequired === 0) return 'ready';
+        const findingState = projectBugbotResultFindingStates(input.results);
+        if (findingState.status === 'invalid') return 'blocked';
+        if (findingState.status === 'valid' && findingState.counts.unknown > 0) return 'blocked';
+        if (findingState.status === 'valid' && countActionableBugbotFindings(findingState.counts) > 0) return 'changes-requested';
+        if (findingState.status === 'valid') return 'ready';
         if (input.externalEvidence?.checks === 'pending') return 'reviewing';
         if (input.externalEvidence?.review === 'approved') return 'ready';
         if (input.externalEvidence?.checks === 'success') return 'reviewing';
@@ -101,26 +101,6 @@ function isCurrentValidationEvidence(
 function readChecksEvidence(status: string | undefined, conclusion: string | null | undefined): LifecycleChecksEvidence {
     if (status?.trim().toLowerCase() !== 'completed') return 'pending';
     return conclusion?.trim().toLowerCase() === 'success' ? 'success' : 'failure';
-}
-
-function isFindingStateCounts(value: unknown): value is {
-    open: number;
-    reopened: number;
-    'verification-required'?: number;
-    unknown?: number;
-} {
-    return typeof value === 'object'
-        && value !== null
-        && typeof (value as { open?: unknown }).open === 'number'
-        && typeof (value as { reopened?: unknown }).reopened === 'number'
-        && (
-            (value as { 'verification-required'?: unknown })['verification-required'] === undefined
-            || typeof (value as { 'verification-required'?: unknown })['verification-required'] === 'number'
-        )
-        && (
-            (value as { unknown?: unknown }).unknown === undefined
-            || typeof (value as { unknown?: unknown }).unknown === 'number'
-        );
 }
 
 function hasExplicitPlanningCommand(results: readonly LifecycleStatePolicyResult[]): boolean {

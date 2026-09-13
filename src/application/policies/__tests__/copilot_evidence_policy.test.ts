@@ -4,6 +4,16 @@ import { Result } from '../../../data/model/result';
 const telemetry = (outcome: string, headSha = 'sha-123') => ({
     bugbotTelemetry: { schemaVersion: 1, outcome, elapsedMs: 10, configuredEffort: 'smart', headSha },
 });
+const findingStates = (overrides: Record<string, number> = {}) => ({
+    open: 0,
+    reopened: 0,
+    fixed: 0,
+    obsolete: 0,
+    dismissed: 0,
+    'verification-required': 0,
+    unknown: 0,
+    ...overrides,
+});
 
 describe('buildCopilotEvidence', () => {
     it('selects stable review name and failure conclusion for PRs', () => {
@@ -26,6 +36,19 @@ describe('buildCopilotEvidence', () => {
         expect(buildCopilotEvidence({ eventName: 'issues', summary: 'summary', results: [] })).toBeUndefined();
     });
 
+    it('publishes an explicitly neutral non-review check when no result was produced', () => {
+        expect(buildCopilotEvidence({
+            eventName: 'issues',
+            headSha: 'sha-123',
+            summary: 'summary',
+            results: [],
+        })).toMatchObject({
+            name: 'Copilot / Plan',
+            conclusion: 'neutral',
+            title: 'Copilot review produced no actionable result',
+        });
+    });
+
     it('uses neutral findings by default and fails only when configured', () => {
         const evidence = buildCopilotEvidence({
             eventName: 'pull_request',
@@ -37,7 +60,7 @@ describe('buildCopilotEvidence', () => {
                 executed: true,
                 payload: {
                     ...telemetry('completed'),
-                    findingStates: { open: 1, reopened: 0, fixed: 0, obsolete: 0, dismissed: 0 },
+                    findingStates: findingStates({ open: 1 }),
                 },
             })],
         });
@@ -54,7 +77,7 @@ describe('buildCopilotEvidence', () => {
             failOnUnresolvedFindings: true,
             results: [new Result({
                 id: 'review', success: true, executed: true,
-                payload: { ...telemetry('completed'), findingStates: { open: 1, reopened: 0 } },
+                payload: { ...telemetry('completed'), findingStates: findingStates({ open: 1 }) },
             })],
         })).toMatchObject({ conclusion: 'failure', title: 'Copilot found actionable findings' });
     });
@@ -65,8 +88,8 @@ describe('buildCopilotEvidence', () => {
             headSha: 'sha-123',
             summary: 'summary',
             results: [
-                new Result({ id: 'first', success: true, executed: true, payload: { ...telemetry('completed'), findingStates: { open: 0, reopened: 0 } } }),
-                new Result({ id: 'second', success: true, executed: true, payload: { findingStates: { open: 0, reopened: 1 } } }),
+                new Result({ id: 'first', success: true, executed: true, payload: { ...telemetry('completed'), findingStates: findingStates() } }),
+                new Result({ id: 'second', success: true, executed: true, payload: { findingStates: findingStates({ reopened: 1 }) } }),
             ],
         });
 
@@ -74,16 +97,16 @@ describe('buildCopilotEvidence', () => {
     });
 
     it('treats verification-required as actionable and unknown as an unconditional failure', () => {
-        const findingStates = { open: 0, reopened: 0, 'verification-required': 1, unknown: 0 };
+        const verificationRequired = findingStates({ 'verification-required': 1 });
         expect(buildCopilotEvidence({
             eventName: 'pull_request', headSha: 'sha', summary: 'summary',
-            results: [new Result({ id: 'review', success: true, executed: true, payload: { ...telemetry('completed', 'sha'), findingStates } })],
+            results: [new Result({ id: 'review', success: true, executed: true, payload: { ...telemetry('completed', 'sha'), findingStates: verificationRequired } })],
         })).toMatchObject({ conclusion: 'neutral', title: 'Copilot found actionable findings' });
         expect(buildCopilotEvidence({
             eventName: 'pull_request', headSha: 'sha', summary: 'summary',
             results: [new Result({ id: 'review', success: true, executed: true, payload: {
                 ...telemetry('completed', 'sha'),
-                findingStates: { ...findingStates, 'verification-required': 0, unknown: 1 },
+                findingStates: findingStates({ unknown: 1 }),
             } })],
         })).toMatchObject({ conclusion: 'failure' });
     });
@@ -139,5 +162,22 @@ describe('buildCopilotEvidence', () => {
             summary: 'summary',
             results: [new Result({ id: 'verification', success: true, executed: true })],
         })).toMatchObject({ name: 'Copilot / Verification', conclusion: 'success' });
+    });
+
+    it.each([
+        { open: '1', reopened: 0 },
+        { open: 0, reopened: '1' },
+    ])('fails closed for malformed finding-state aggregates', (malformedFindingStates) => {
+        expect(buildCopilotEvidence({
+            eventName: 'pull_request',
+            headSha: 'sha-123',
+            summary: 'summary',
+            results: [new Result({
+                id: 'review',
+                success: true,
+                executed: true,
+                payload: { ...telemetry('no-findings'), findingStates: malformedFindingStates },
+            })],
+        })).toMatchObject({ conclusion: 'failure', title: 'Copilot found actionable failures' });
     });
 });

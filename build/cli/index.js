@@ -53810,6 +53810,64 @@ function filterEligibleBugbotResolutionIds(claimedIds, eligibleIds, existingByFi
 
 /***/ }),
 
+/***/ 98117:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectBugbotResultFindingStates = projectBugbotResultFindingStates;
+const result_1 = __nccwpck_require__(73817);
+const review_state_1 = __nccwpck_require__(79200);
+const BUGBOT_FINDING_STATE_SET = new Set(review_state_1.BUGBOT_FINDING_STATES);
+/** Validates and aggregates the one canonical finding-state payload shape used by result presentation. */
+function projectBugbotResultFindingStates(results) {
+    const aggregate = (0, review_state_1.countBugbotFindingStates)([]);
+    let found = false;
+    for (const result of results) {
+        const projected = projectResultFindingStates(result.payload);
+        if (projected.status === 'invalid')
+            return projected;
+        if (projected.status === 'absent')
+            continue;
+        found = true;
+        for (const state of review_state_1.BUGBOT_FINDING_STATES) {
+            const total = aggregate[state] + projected.counts[state];
+            if (!Number.isSafeInteger(total))
+                return { status: 'invalid' };
+            aggregate[state] = total;
+        }
+    }
+    return found ? { status: 'valid', counts: Object.freeze(aggregate) } : { status: 'absent' };
+}
+function projectResultFindingStates(value) {
+    const payload = (0, result_1.getResultPayload)(value);
+    if (!payload || !Object.prototype.hasOwnProperty.call(payload, 'findingStates'))
+        return { status: 'absent' };
+    const rawCounts = (0, result_1.getResultPayload)(payload.findingStates);
+    if (!rawCounts)
+        return { status: 'invalid' };
+    if (Object.keys(rawCounts).some(key => !BUGBOT_FINDING_STATE_SET.has(key))) {
+        return { status: 'invalid' };
+    }
+    const counts = (0, review_state_1.countBugbotFindingStates)([]);
+    for (const state of review_state_1.BUGBOT_FINDING_STATES) {
+        if (!Object.prototype.hasOwnProperty.call(rawCounts, state))
+            return { status: 'invalid' };
+        const count = rawCounts[state];
+        if (!isNonNegativeSafeInteger(count))
+            return { status: 'invalid' };
+        counts[state] = count;
+    }
+    return { status: 'valid', counts: Object.freeze(counts) };
+}
+function isNonNegativeSafeInteger(value) {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+}
+
+
+/***/ }),
+
 /***/ 83288:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -56449,6 +56507,7 @@ exports.buildCopilotStatusSnapshot = buildCopilotStatusSnapshot;
 exports.buildCopilotStatusResult = buildCopilotStatusResult;
 exports.formatCopilotStatus = formatCopilotStatus;
 const result_1 = __nccwpck_require__(73817);
+const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
 /** Builds a read-only status snapshot from the facts already loaded by setup. */
 function buildCopilotStatusSnapshot(execution) {
     const issueLabels = [...(execution.labels?.currentIssueLabels ?? [])];
@@ -56469,9 +56528,8 @@ function buildCopilotStatusSnapshot(execution) {
         maintainer: lifecycleLabels.awaitingMaintainer,
         'issue-author': lifecycleLabels.awaitingIssueAuthor,
     }).find(([, label]) => label && targetLabels.includes(label))?.[0];
-    const findingStates = execution.currentConfiguration?.results
-        ?.map(result => (0, result_1.getResultPayload)(result.payload)?.findingStates)
-        .find(isFindingStateCounts);
+    const findingStateProjection = (0, bugbot_result_finding_state_projection_policy_1.projectBugbotResultFindingStates)(execution.currentConfiguration?.results ?? []);
+    const findingStates = findingStateProjection.status === 'valid' ? findingStateProjection.counts : undefined;
     return Object.freeze({
         owner: execution.owner,
         repository: execution.repo,
@@ -56491,7 +56549,14 @@ function buildCopilotStatusSnapshot(execution) {
         ...(waitingFor ? { waitingFor } : {}),
         issueLabels: Object.freeze(issueLabels),
         pullRequestLabels: Object.freeze(pullRequestLabels),
-        ...(findingStates ? { activeFindings: Object.freeze({ ...findingStates }) } : {}),
+        ...(findingStates ? { findingStates: Object.freeze({
+                open: findingStates.open,
+                reopened: findingStates.reopened,
+                verificationRequired: findingStates['verification-required'],
+                unknown: findingStates.unknown,
+                resolved: findingStates.fixed + findingStates.obsolete + findingStates.dismissed,
+            }) } : {}),
+        ...(findingStateProjection.status === 'invalid' ? { findingStateEvidence: 'invalid' } : {}),
         pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode(),
     });
 }
@@ -56518,17 +56583,13 @@ function formatCopilotStatus(snapshot) {
         `- **Issue labels:** ${snapshot.issueLabels.length > 0 ? snapshot.issueLabels.join(', ') : 'none'}`,
         `- **PR labels:** ${snapshot.pullRequestLabels.length > 0 ? snapshot.pullRequestLabels.join(', ') : 'none'}`,
     ];
-    if (snapshot.activeFindings) {
-        lines.push(`- **Bugbot findings:** ${snapshot.activeFindings.open} open, ${snapshot.activeFindings.reopened} reopened, ${snapshot.activeFindings.resolved} resolved`);
+    if (snapshot.findingStateEvidence === 'invalid') {
+        lines.push('- **Bugbot findings:** invalid evidence; inspect the workflow result.');
+    }
+    else if (snapshot.findingStates) {
+        lines.push(`- **Bugbot findings:** ${snapshot.findingStates.open} open, ${snapshot.findingStates.reopened} reopened, ${snapshot.findingStates.verificationRequired} verification required, ${snapshot.findingStates.unknown} unknown, ${snapshot.findingStates.resolved} resolved`);
     }
     return lines.join('\n');
-}
-function isFindingStateCounts(value) {
-    return typeof value === 'object'
-        && value !== null
-        && typeof value.open === 'number'
-        && typeof value.reopened === 'number'
-        && typeof value.resolved === 'number';
 }
 
 
@@ -66248,7 +66309,6 @@ function supersededResult(loadedHeadSha, expectedHeadSha) {
         executed: true,
         steps: ['Potential problems detection superseded by a newer pull-request revision; no findings were published or resolved.'],
         payload: {
-            findingStates: {},
             superseded: true,
             ...(loadedHeadSha ? { analyzedHeadSha: loadedHeadSha } : {}),
             ...(expectedHeadSha ? { expectedHeadSha } : {}),

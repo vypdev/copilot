@@ -224,6 +224,12 @@ provider client, `Ai` instance, or configuration getter. Command-specific review
 overrides create a new frozen context and cannot mutate the run-wide AI model.
 There is no legacy aggregate overload or compatibility route.
 
+The read-only status path projects stored Bugbot result evidence through the
+same strict seven-state application policy used by Action completion,
+lifecycle, Job Summary, and Check evidence. The status renderer receives only a
+canonical aggregate or an explicit `invalid` state; it cannot parse an older
+reduced `{open,reopened,resolved}` shape or infer absent counts.
+
 Target classification is independent from GitHub's event name: the
 `issue_comment` transport continues to select the comment coordinator, while the
 payload's PR marker selects PR setup and read-only PR capabilities. This avoids
@@ -237,6 +243,8 @@ Action required: **`/copilot fix` needs at least one finding ID.** Copy an ID fr
 Blocked: **This account cannot modify repository files.** Ask an authorized maintainer; nothing changed.
 Partial: **The requested edit was prepared, but verification failed.** No commit was pushed; inspect the command result.
 Complete: **Request applied and pushed as `abc1234`.** A fresh review will verify the result.
+Status: **1 open, 2 reopened, 3 verification required, 0 unknown, 4 resolved.**
+Invalid status evidence: **Bugbot finding evidence is invalid.** Inspect the workflow result; no clean state was inferred.
 ```
 
 Help MUST enumerate exact commands and side effects. Mutation responses state
@@ -255,6 +263,7 @@ untrusted mentions, Markdown, markers, and URLs are sanitized.
 | agent/verification | no commit | workspace aborted | yes | repair config/tests | abort changes |
 | push race | no stale push | remote heads | yes | rerun latest | abort local operation |
 | publication | work may be pushed | commit/result | yes | inspect run/commit | do not undo commit |
+| malformed stored finding evidence | status cannot report safe counts | original workflow result | yes | inspect producer, then `/copilot recheck` | no guessed state |
 
 ## 11. Security, permissions, and privacy
 
@@ -273,7 +282,8 @@ and review overrides. GitHub comments, commit SHA, finding/status links, Job
 Summary, and lifecycle/activity labels are correlated. Unauthorized no-ops are
 visible without being reported as workflow failures. Unaddressed comments emit
 only a bounded internal log and exit successfully before result publication or
-provider/runtime reads.
+provider/runtime reads. `/copilot status` reports every non-clean Bugbot state;
+malformed owned evidence is explicitly `invalid` and lifecycle remains blocked.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
@@ -292,9 +302,9 @@ branch. Finding dismissal and learned rules require explicit follow-up commands.
 | Workflow/idempotency/races | 18 | fallback, duplicate, branch/push race |
 | Authorization/adapters | 14 | org/personal permissions, API errors |
 | Workflow/config contracts | 8 | events, permissions, active roles, inert passive comments |
-| UX/localization/sanitization | 15 | help/errors/links/mentions/Markdown, target locale |
+| UX/localization/sanitization | 17 | help/errors/links/mentions/Markdown, target locale, complete finding-state status, invalid-evidence recovery |
 | Integration/security/migration | 16 | comment→commit/review, exact PR diff, prompt injection |
-| **Total** | **97** | no double counting |
+| **Total** | **99** | no double counting |
 
 Global coverage remains mandatory; command and route policies SHOULD have 100%
 branch coverage. Use fake authorization/agents/git; no live models or waits.
@@ -328,6 +338,9 @@ English/non-English requests.
 12. `/copilot recheck` in a general PR conversation routes through the comment
     coordinator but projects the exact PR number, PR locale, reviewer role, and
     canonical PR diff; issue-only setup is not invoked.
+13. `/copilot status` renders open, reopened, verification-required, unknown,
+    and resolved counts from the canonical result projection; malformed owned
+    evidence produces an `invalid` recovery message and never a clean count.
 
 ## 17. Requirements traceability
 
@@ -338,6 +351,7 @@ English/non-English requests.
 | authorization | authorization port/adapter | repository tests | permissions |
 | guarded mutation | workspace/git workflows | mutation tests | autofix/do request |
 | safe output | result policies | publication tests | failure scenarios |
+| truthful status evidence | canonical finding-state projection + status renderer | complete/non-clean and malformed status tests | comment commands, Bugbot observability |
 | narrow comment context | issue/PR route projectors and bound ports | P2-D eight-case projection ledger plus route parity suites | architecture and dependency rules |
 
 ## 18. Maintenance sequence
@@ -351,7 +365,7 @@ English/non-English requests.
 ## 19. Definition of Done
 
 - [ ] Commands, mentions, authorization, fallback, replay, and races are covered.
-- [ ] The 92-case budget, coverage, and architecture checks pass.
+- [x] The 99-case budget, coverage, and architecture checks pass.
 - [ ] No model output or comment can expand authorization or git authority.
 - [ ] All five UI states and help content are reviewed and accessible.
 - [ ] Workflows, documentation, and catalog agree.

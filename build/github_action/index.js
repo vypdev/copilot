@@ -51277,6 +51277,8 @@ const copilot_evidence_policy_1 = __nccwpck_require__(47632);
 const application_error_1 = __nccwpck_require__(75999);
 const configuration_persistence_policy_1 = __nccwpck_require__(65388);
 const deployment_presentation_policy_1 = __nccwpck_require__(83221);
+const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
+const review_state_1 = __nccwpck_require__(79200);
 async function finishGithubAction(execution, results, issueNotificationPort, configurationStorePort, evidencePort, summaryPort) {
     const stepCount = results.reduce((acc, result) => acc + (result.steps?.length ?? 0), 0);
     const errorCount = results.reduce((acc, result) => acc + (result.errors?.length ?? 0), 0);
@@ -51385,25 +51387,19 @@ async function publishCopilotEvidence(execution, results, summary, evidencePort)
 function failActionForUnresolvedFindingsIfConfigured(execution, results, dryRun) {
     if (dryRun)
         return;
-    const aggregate = results.reduce((counts, result) => {
-        const states = (0, result_1.getResultPayload)((0, result_1.getResultPayload)(result.payload)?.findingStates);
-        return {
-            unresolved: counts.unresolved
-                + (typeof states?.open === 'number' ? states.open : 0)
-                + (typeof states?.reopened === 'number' ? states.reopened : 0)
-                + (typeof states?.['verification-required'] === 'number'
-                    ? states['verification-required']
-                    : 0),
-            unknown: counts.unknown
-                + (typeof states?.unknown === 'number' ? states.unknown : 0),
-        };
-    }, { unresolved: 0, unknown: 0 });
-    if (aggregate.unknown > 0) {
-        core.setFailed(`Bugbot could not verify ${aggregate.unknown} finding state(s).`);
+    const projection = (0, bugbot_result_finding_state_projection_policy_1.projectBugbotResultFindingStates)(results);
+    if (projection.status === 'invalid') {
+        core.setFailed('Bugbot finding-state evidence is malformed.');
+        return;
+    }
+    if (projection.status === 'absent')
+        return;
+    if (projection.counts.unknown > 0) {
+        core.setFailed(`Bugbot could not verify ${projection.counts.unknown} finding state(s).`);
     }
     else if (execution.ai.getBugbotReviewConfiguration().failOnUnresolved
-        && aggregate.unresolved > 0) {
-        core.setFailed(`Bugbot found ${aggregate.unresolved} unresolved actionable finding(s).`);
+        && (0, review_state_1.countActionableBugbotFindings)(projection.counts) > 0) {
+        core.setFailed(`Bugbot found ${(0, review_state_1.countActionableBugbotFindings)(projection.counts)} unresolved actionable finding(s).`);
     }
 }
 function commitPublishedRecommendationState(execution, results) {
@@ -52762,19 +52758,19 @@ function runAtApplicationErrorBoundary(operation) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildActionSummary = buildActionSummary;
-const result_1 = __nccwpck_require__(73817);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const application_error_presentation_policy_1 = __nccwpck_require__(95067);
 const bugbot_telemetry_projection_policy_1 = __nccwpck_require__(43244);
+const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
+const review_state_1 = __nccwpck_require__(79200);
 /** Builds a bounded, publication-safe GitHub Actions Job Summary. */
 function buildActionSummary(context) {
     const failures = context.results.filter(result => !result.success && result.executed);
-    const findingStates = aggregateFindingStateCounts(context.results);
+    const findingStateProjection = (0, bugbot_result_finding_state_projection_policy_1.projectBugbotResultFindingStates)(context.results);
+    const findingStates = findingStateProjection.status === 'valid' ? findingStateProjection.counts : undefined;
     const bugbotTelemetry = (0, bugbot_telemetry_projection_policy_1.selectBugbotTelemetry)(context.results);
-    const hasActionableFindings = (findingStates?.open ?? 0)
-        + (findingStates?.reopened ?? 0)
-        + (findingStates?.['verification-required'] ?? 0) > 0;
-    const hasUnknownFindings = (findingStates?.unknown ?? 0) > 0;
+    const hasActionableFindings = findingStates ? (0, review_state_1.countActionableBugbotFindings)(findingStates) > 0 : false;
+    const hasUnknownFindings = findingStateProjection.status === 'invalid' || (findingStates?.unknown ?? 0) > 0;
     const status = resolveActionSummaryStatus({
         failureCount: failures.length,
         hasUnknownFindings,
@@ -52791,7 +52787,7 @@ function buildActionSummary(context) {
         `| Lifecycle | ${lifecycle} |`,
         `| PR description policy | ${escapeTable(context.pullRequestDescriptionMode ?? '—')} |`,
         `| Results | ${context.results.length} |`,
-        `| Finding states | ${formatFindingStates(findingStates)} |`,
+        `| Finding states | ${formatFindingStates(findingStateProjection)} |`,
         `| Bugbot review | ${formatBugbotTelemetry(bugbotTelemetry)} |`,
     ];
     return [
@@ -52838,48 +52834,12 @@ function formatBugbotTelemetry(telemetry) {
         ? `${escapeTable(telemetry.outcome)}, effort=${escapeTable(telemetry.configuredEffort)}, ${Math.max(0, Math.round(telemetry.elapsedMs))}ms`
         : '—';
 }
-function getFindingStateCounts(value) {
-    const payload = (0, result_1.getResultPayload)(value);
-    const stateCounts = (0, result_1.getResultPayload)(payload?.findingStates);
-    if (!stateCounts)
-        return undefined;
-    const establishedStates = ['open', 'reopened', 'fixed', 'obsolete', 'dismissed'];
-    if (!establishedStates.every(state => typeof stateCounts[state] === 'number'))
-        return undefined;
-    return {
-        ...Object.fromEntries(establishedStates.map(state => [state, stateCounts[state]])),
-        'verification-required': typeof stateCounts['verification-required'] === 'number'
-            ? stateCounts['verification-required']
-            : 0,
-        unknown: typeof stateCounts.unknown === 'number' ? stateCounts.unknown : 0,
-    };
-}
-function aggregateFindingStateCounts(results) {
-    const counts = results.map(result => getFindingStateCounts(result.payload)).filter((value) => value !== undefined);
-    if (counts.length === 0)
-        return undefined;
-    return counts.reduce((total, current) => ({
-        open: total.open + current.open,
-        reopened: total.reopened + current.reopened,
-        fixed: total.fixed + current.fixed,
-        obsolete: total.obsolete + current.obsolete,
-        dismissed: total.dismissed + current.dismissed,
-        'verification-required': total['verification-required'] + current['verification-required'],
-        unknown: total.unknown + current.unknown,
-    }), {
-        open: 0,
-        reopened: 0,
-        fixed: 0,
-        obsolete: 0,
-        dismissed: 0,
-        'verification-required': 0,
-        unknown: 0,
-    });
-}
-function formatFindingStates(counts) {
-    if (!counts)
+function formatFindingStates(projection) {
+    if (projection.status === 'invalid')
+        return 'invalid';
+    if (projection.status === 'absent')
         return '—';
-    return Object.entries(counts)
+    return Object.entries(projection.counts)
         .filter(([, value]) => value > 0)
         .map(([state, value]) => `${state}=${value}`)
         .join(', ') || 'none';
@@ -54507,6 +54467,64 @@ function filterEligibleBugbotResolutionIds(claimedIds, eligibleIds, existingByFi
 
 /***/ }),
 
+/***/ 98117:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectBugbotResultFindingStates = projectBugbotResultFindingStates;
+const result_1 = __nccwpck_require__(73817);
+const review_state_1 = __nccwpck_require__(79200);
+const BUGBOT_FINDING_STATE_SET = new Set(review_state_1.BUGBOT_FINDING_STATES);
+/** Validates and aggregates the one canonical finding-state payload shape used by result presentation. */
+function projectBugbotResultFindingStates(results) {
+    const aggregate = (0, review_state_1.countBugbotFindingStates)([]);
+    let found = false;
+    for (const result of results) {
+        const projected = projectResultFindingStates(result.payload);
+        if (projected.status === 'invalid')
+            return projected;
+        if (projected.status === 'absent')
+            continue;
+        found = true;
+        for (const state of review_state_1.BUGBOT_FINDING_STATES) {
+            const total = aggregate[state] + projected.counts[state];
+            if (!Number.isSafeInteger(total))
+                return { status: 'invalid' };
+            aggregate[state] = total;
+        }
+    }
+    return found ? { status: 'valid', counts: Object.freeze(aggregate) } : { status: 'absent' };
+}
+function projectResultFindingStates(value) {
+    const payload = (0, result_1.getResultPayload)(value);
+    if (!payload || !Object.prototype.hasOwnProperty.call(payload, 'findingStates'))
+        return { status: 'absent' };
+    const rawCounts = (0, result_1.getResultPayload)(payload.findingStates);
+    if (!rawCounts)
+        return { status: 'invalid' };
+    if (Object.keys(rawCounts).some(key => !BUGBOT_FINDING_STATE_SET.has(key))) {
+        return { status: 'invalid' };
+    }
+    const counts = (0, review_state_1.countBugbotFindingStates)([]);
+    for (const state of review_state_1.BUGBOT_FINDING_STATES) {
+        if (!Object.prototype.hasOwnProperty.call(rawCounts, state))
+            return { status: 'invalid' };
+        const count = rawCounts[state];
+        if (!isNonNegativeSafeInteger(count))
+            return { status: 'invalid' };
+        counts[state] = count;
+    }
+    return { status: 'valid', counts: Object.freeze(counts) };
+}
+function isNonNegativeSafeInteger(value) {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+}
+
+
+/***/ }),
+
 /***/ 83288:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -54830,11 +54848,10 @@ function projectBugbotTelemetry(value) {
 }
 /** Accepts exactly one semantic review snapshot; ambiguous result sets fail closed. */
 function selectBugbotTelemetry(results) {
-    const snapshots = results.flatMap((result) => {
-        const projected = projectBugbotTelemetry(result.payload);
-        return projected ? [projected] : [];
-    });
-    return snapshots.length === 1 ? snapshots[0] : undefined;
+    const telemetryResults = results.filter((result) => hasBugbotTelemetryField(result.payload));
+    if (telemetryResults.length !== 1)
+        return undefined;
+    return projectBugbotTelemetry(telemetryResults[0].payload);
 }
 function isBugbotReviewOutcome(value) {
     return typeof value === 'string' && BUGBOT_REVIEW_OUTCOMES.includes(value);
@@ -54846,6 +54863,10 @@ function normalizeNonEmptyString(value) {
     if (typeof value !== 'string')
         return undefined;
     return value.trim() || undefined;
+}
+function hasBugbotTelemetryField(value) {
+    const payload = (0, result_1.getResultPayload)(value);
+    return payload !== undefined && Object.prototype.hasOwnProperty.call(payload, 'bugbotTelemetry');
 }
 
 
@@ -54939,8 +54960,9 @@ function shouldPersistConfiguration(execution) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildCopilotEvidence = buildCopilotEvidence;
-const result_1 = __nccwpck_require__(73817);
 const bugbot_telemetry_projection_policy_1 = __nccwpck_require__(43244);
+const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
+const review_state_1 = __nccwpck_require__(79200);
 /** Creates a stable native Check Run projection without performing GitHub I/O. */
 function buildCopilotEvidence(context) {
     const headSha = context.headSha?.trim();
@@ -54951,11 +54973,10 @@ function buildCopilotEvidence(context) {
     if (!isEligibleEvidenceSource(isReviewEvent, bugbotTelemetry, headSha))
         return undefined;
     const failures = context.results.filter(result => !result.success && result.executed).length;
-    const activeFindings = aggregateFindingStateCounts(context.results);
-    const hasActionableFindings = (activeFindings?.open ?? 0)
-        + (activeFindings?.reopened ?? 0)
-        + (activeFindings?.verificationRequired ?? 0) > 0;
-    const hasUnknownFindings = (activeFindings?.unknown ?? 0) > 0;
+    const findingStateProjection = (0, bugbot_result_finding_state_projection_policy_1.projectBugbotResultFindingStates)(context.results);
+    const findingStates = findingStateProjection.status === 'valid' ? findingStateProjection.counts : undefined;
+    const hasActionableFindings = findingStates ? (0, review_state_1.countActionableBugbotFindings)(findingStates) > 0 : false;
+    const hasUnknownFindings = findingStateProjection.status === 'invalid' || (findingStates?.unknown ?? 0) > 0;
     const conclusion = resolveEvidenceConclusion({
         failureCount: failures,
         hasUnknownFindings,
@@ -55027,33 +55048,6 @@ function incompleteReviewTitle(telemetry) {
         case 'skipped': return 'Copilot review was skipped';
         default: return undefined;
     }
-}
-function aggregateFindingStateCounts(results) {
-    const counts = results.map(result => getFindingStateCounts(result.payload)).filter((value) => value !== undefined);
-    if (counts.length === 0)
-        return undefined;
-    return counts.reduce((total, current) => ({
-        open: total.open + current.open,
-        reopened: total.reopened + current.reopened,
-        verificationRequired: total.verificationRequired + current.verificationRequired,
-        unknown: total.unknown + current.unknown,
-    }), { open: 0, reopened: 0, verificationRequired: 0, unknown: 0 });
-}
-function getFindingStateCounts(value) {
-    const payload = (0, result_1.getResultPayload)(value);
-    const counts = (0, result_1.getResultPayload)(payload?.findingStates);
-    if (!counts)
-        return undefined;
-    return typeof counts.open === 'number' && typeof counts.reopened === 'number'
-        ? {
-            open: counts.open,
-            reopened: counts.reopened,
-            verificationRequired: typeof counts['verification-required'] === 'number'
-                ? counts['verification-required']
-                : 0,
-            unknown: typeof counts.unknown === 'number' ? counts.unknown : 0,
-        }
-        : undefined;
 }
 
 
@@ -55952,6 +55946,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveLifecycleState = resolveLifecycleState;
 exports.readLifecycleExternalEvidence = readLifecycleExternalEvidence;
 const result_1 = __nccwpck_require__(73817);
+const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
+const review_state_1 = __nccwpck_require__(79200);
 /** Resolves the next lifecycle state from application facts, never from labels or API responses. */
 function resolveLifecycleState(input) {
     if (!input.isIssue && !input.isPullRequest)
@@ -55965,15 +55961,14 @@ function resolveLifecycleState(input) {
             return 'blocked';
         if (input.externalEvidence?.review === 'changes-requested')
             return 'changes-requested';
-        const findingState = input.results
-            .map(result => (0, result_1.getResultPayload)(result.payload)?.findingStates)
-            .find(isFindingStateCounts);
-        if (findingState?.unknown && findingState.unknown > 0)
+        const findingState = (0, bugbot_result_finding_state_projection_policy_1.projectBugbotResultFindingStates)(input.results);
+        if (findingState.status === 'invalid')
             return 'blocked';
-        const verificationRequired = findingState?.['verification-required'] ?? 0;
-        if (findingState && (findingState.open > 0 || findingState.reopened > 0 || verificationRequired > 0))
+        if (findingState.status === 'valid' && findingState.counts.unknown > 0)
+            return 'blocked';
+        if (findingState.status === 'valid' && (0, review_state_1.countActionableBugbotFindings)(findingState.counts) > 0)
             return 'changes-requested';
-        if (findingState && findingState.open === 0 && findingState.reopened === 0 && verificationRequired === 0)
+        if (findingState.status === 'valid')
             return 'ready';
         if (input.externalEvidence?.checks === 'pending')
             return 'reviewing';
@@ -56034,16 +56029,6 @@ function readChecksEvidence(status, conclusion) {
     if (status?.trim().toLowerCase() !== 'completed')
         return 'pending';
     return conclusion?.trim().toLowerCase() === 'success' ? 'success' : 'failure';
-}
-function isFindingStateCounts(value) {
-    return typeof value === 'object'
-        && value !== null
-        && typeof value.open === 'number'
-        && typeof value.reopened === 'number'
-        && (value['verification-required'] === undefined
-            || typeof value['verification-required'] === 'number')
-        && (value.unknown === undefined
-            || typeof value.unknown === 'number');
 }
 function hasExplicitPlanningCommand(results) {
     return results.some(result => {
@@ -57262,6 +57247,7 @@ exports.buildCopilotStatusSnapshot = buildCopilotStatusSnapshot;
 exports.buildCopilotStatusResult = buildCopilotStatusResult;
 exports.formatCopilotStatus = formatCopilotStatus;
 const result_1 = __nccwpck_require__(73817);
+const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
 /** Builds a read-only status snapshot from the facts already loaded by setup. */
 function buildCopilotStatusSnapshot(execution) {
     const issueLabels = [...(execution.labels?.currentIssueLabels ?? [])];
@@ -57282,9 +57268,8 @@ function buildCopilotStatusSnapshot(execution) {
         maintainer: lifecycleLabels.awaitingMaintainer,
         'issue-author': lifecycleLabels.awaitingIssueAuthor,
     }).find(([, label]) => label && targetLabels.includes(label))?.[0];
-    const findingStates = execution.currentConfiguration?.results
-        ?.map(result => (0, result_1.getResultPayload)(result.payload)?.findingStates)
-        .find(isFindingStateCounts);
+    const findingStateProjection = (0, bugbot_result_finding_state_projection_policy_1.projectBugbotResultFindingStates)(execution.currentConfiguration?.results ?? []);
+    const findingStates = findingStateProjection.status === 'valid' ? findingStateProjection.counts : undefined;
     return Object.freeze({
         owner: execution.owner,
         repository: execution.repo,
@@ -57304,7 +57289,14 @@ function buildCopilotStatusSnapshot(execution) {
         ...(waitingFor ? { waitingFor } : {}),
         issueLabels: Object.freeze(issueLabels),
         pullRequestLabels: Object.freeze(pullRequestLabels),
-        ...(findingStates ? { activeFindings: Object.freeze({ ...findingStates }) } : {}),
+        ...(findingStates ? { findingStates: Object.freeze({
+                open: findingStates.open,
+                reopened: findingStates.reopened,
+                verificationRequired: findingStates['verification-required'],
+                unknown: findingStates.unknown,
+                resolved: findingStates.fixed + findingStates.obsolete + findingStates.dismissed,
+            }) } : {}),
+        ...(findingStateProjection.status === 'invalid' ? { findingStateEvidence: 'invalid' } : {}),
         pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode(),
     });
 }
@@ -57331,17 +57323,13 @@ function formatCopilotStatus(snapshot) {
         `- **Issue labels:** ${snapshot.issueLabels.length > 0 ? snapshot.issueLabels.join(', ') : 'none'}`,
         `- **PR labels:** ${snapshot.pullRequestLabels.length > 0 ? snapshot.pullRequestLabels.join(', ') : 'none'}`,
     ];
-    if (snapshot.activeFindings) {
-        lines.push(`- **Bugbot findings:** ${snapshot.activeFindings.open} open, ${snapshot.activeFindings.reopened} reopened, ${snapshot.activeFindings.resolved} resolved`);
+    if (snapshot.findingStateEvidence === 'invalid') {
+        lines.push('- **Bugbot findings:** invalid evidence; inspect the workflow result.');
+    }
+    else if (snapshot.findingStates) {
+        lines.push(`- **Bugbot findings:** ${snapshot.findingStates.open} open, ${snapshot.findingStates.reopened} reopened, ${snapshot.findingStates.verificationRequired} verification required, ${snapshot.findingStates.unknown} unknown, ${snapshot.findingStates.resolved} resolved`);
     }
     return lines.join('\n');
-}
-function isFindingStateCounts(value) {
-    return typeof value === 'object'
-        && value !== null
-        && typeof value.open === 'number'
-        && typeof value.reopened === 'number'
-        && typeof value.resolved === 'number';
 }
 
 
@@ -66443,7 +66431,6 @@ function supersededResult(loadedHeadSha, expectedHeadSha) {
         executed: true,
         steps: ['Potential problems detection superseded by a newer pull-request revision; no findings were published or resolved.'],
         payload: {
-            findingStates: {},
             superseded: true,
             ...(loadedHeadSha ? { analyzedHeadSha: loadedHeadSha } : {}),
             ...(expectedHeadSha ? { expectedHeadSha } : {}),

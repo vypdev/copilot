@@ -17,8 +17,9 @@ per workflow, resolves one application route, and publishes a bounded result to
 the relevant GitHub conversation and Job Summary. A run created by the account
 behind the workflow PAT is ignored unless it is an explicit valid single action.
 The native `Copilot / Review` name is reserved for results carrying exactly one
-current-schema Bugbot telemetry snapshot for the exact head. Metadata-only or
-ambiguous PR runs retain their workflow
+current-schema Bugbot telemetry snapshot for the exact head. A valid snapshot
+does not hide a second malformed owned snapshot: the complete set is ambiguous
+and publishes no Review Check. Metadata-only or ambiguous PR runs retain their workflow
 result and Job Summary without impersonating or hiding review evidence.
 
 ```text
@@ -53,8 +54,9 @@ create inconsistent authorization and failure behavior.
    Job Summary, optional semantic Check Run, and configuration marker as
    applicable. A PR result without exact-head Bugbot telemetry publishes no
    `Copilot / Review` Check.
-7. The first executed result error, an unknown Bugbot state, or configured
-   unresolved findings marks the Action failed.
+7. The first executed result error, malformed canonical finding-state evidence,
+   an unknown Bugbot state, or configured unresolved findings marks the Action
+   failed.
 
 ### 2.3 Evidence and contract classification
 
@@ -114,6 +116,9 @@ presentation adapters decide where that fact appears.
 4. A failed result MUST NOT be converted to a successful process exit.
 5. Bounded partial, skipped, and superseded Bugbot review outcomes MUST be
    neutral; metadata-only PR completion MUST publish no Review Check.
+6. Finding-state evidence MUST use the complete canonical seven-state schema
+   with non-negative safe-integer counts and no additional state keys. Missing,
+   malformed, or arithmetically overflowing owned evidence MUST fail closed.
 
 ## 5. Current versus proposed product journey
 
@@ -186,7 +191,7 @@ operation facts but never secrets.
 | Adapters | GitHub queries, comments, checks, timers | route policy |
 | Composition | concrete wiring | product decisions |
 | Entrypoints | event/input/output adaptation | duplicated use cases |
-| Presentation | sanitized comment and summary rendering | mutations |
+| Presentation | sanitized comment, status, summary, and Check rendering | mutations |
 
 ```mermaid
 flowchart LR
@@ -252,8 +257,15 @@ event, target, lifecycle, result counts, and sanitized failures provide
 correlation. Queue polling logs count and next delay without leaking responses.
 Repeated unchanged state SHOULD not generate repeated discussion comments.
 The shared telemetry projection is the only parser used by Job Summary and
-native evidence. Missing/mismatched telemetry is observable as absence of a
-Review Check, never as `Bugbot review: —` in a newer same-name Check.
+native evidence. It first counts every result that owns the telemetry field and
+accepts the set only when that count is exactly one and the snapshot is valid;
+malformed siblings cannot be discarded before cardinality is checked.
+Missing/mismatched/ambiguous telemetry is observable as absence of a Review
+Check, never as `Bugbot review: —` in a newer same-name Check. A second shared
+pure projection validates and aggregates complete canonical finding-state
+counts for Action exit, lifecycle, status, Job Summary, and Check. Invalid
+evidence fails or blocks every current-state surface and is rendered as
+`invalid`, never as zero findings.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
@@ -273,9 +285,9 @@ inspectable provider facts.
 | Setup/state/idempotency/races | 12 | restored state, no issue, queue timeout |
 | Adapters/error mapping | 8 | pagination, provider errors, timers |
 | Workflow/setup contracts | 8 | queue gate, permissions, timeouts |
-| Publication/UX/sanitization | 16 | targets, dry run, summary, errors, links, exact-head review eligibility, metadata-only omission, incomplete neutral matrix |
+| Publication/UX/sanitization | 20 | targets, dry run, summary, errors, links, exact-head review eligibility, metadata-only omission, malformed-sibling telemetry, canonical finding-state projection, invalid status and incomplete neutral matrix |
 | Integration/security/cutover | 8 | end-to-end routes, secrets, removed-shape rejection |
-| **Total** | **66** | no double counting |
+| **Total** | **70** | no double counting |
 
 Repository thresholds (90% lines/statements, 88% functions, 82% branches)
 remain mandatory; changed pure policies SHOULD reach 95% branch coverage.
@@ -307,6 +319,13 @@ light/dark, and screen-reader order.
    `Copilot / Review` evidence call occurs.
 10. Given exact-head Bugbot telemetry, complete/no-findings may succeed;
     partial/skipped/superseded are neutral; failed remains failure.
+11. Given one valid telemetry snapshot plus any second malformed owned snapshot,
+    no `Copilot / Review` Check is published.
+12. Given complete canonical finding-state results, Action exit, lifecycle,
+    `/copilot status`, Job Summary, and Check consume the same aggregate counts.
+13. Given a missing state, extra state, invalid count, or aggregate overflow,
+    the Action and eligible Check fail, lifecycle blocks, summaries say
+    `invalid`, and no surface invents a clean state.
 
 ## 17. Requirements traceability
 
@@ -316,7 +335,8 @@ light/dark, and screen-reader order.
 | serialization | queue policy/use case/adapters | queue + workflow tests | troubleshooting |
 | one route | route policy/dispatcher | route tests | architecture |
 | safe publication | completion/presentation policies | completion tests | overview |
-| semantic Check ownership | telemetry projection + evidence policy | outcome matrix + metadata-only integration | Bugbot detection, workflow setup, troubleshooting |
+| semantic Check ownership | telemetry projection + evidence policy | outcome matrix + metadata-only and malformed-sibling negatives | Bugbot detection, workflow setup, troubleshooting |
+| canonical finding-state evidence | result-state projection + completion/lifecycle/status/summary/Check policies | strict schema, aggregation, overflow, fail-closed, and rendering tests | Bugbot detection, observability, failure scenarios, comment commands |
 | dependency direction | architecture tests | boundary/cycle suites | architecture |
 
 ## 18. Maintenance sequence
@@ -331,7 +351,9 @@ light/dark, and screen-reader order.
 
 - [x] Normative changes have acceptance and traceability.
 - [x] Architecture, workflow, catalog, and cycle checks pass.
-- [x] The 66-case risk budget and repository coverage gates pass.
+- [x] The 70-case risk budget and repository coverage gates pass; both shared
+      evidence projections maintain 100% line, statement, branch, and function
+      coverage.
 - [x] Queue, retry, cancellation, partial success, and idempotency are covered.
 - [x] UI states, sanitization, accessibility, localization, and noise are reviewed.
 - [x] User/operator/contributor documentation and catalog dates are current.

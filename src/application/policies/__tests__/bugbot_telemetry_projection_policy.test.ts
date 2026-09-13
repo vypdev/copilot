@@ -65,4 +65,24 @@ describe('Bugbot telemetry projection policy', () => {
         expect(selectBugbotTelemetry([])).toBeUndefined();
         expect(selectBugbotTelemetry(results)).toBeUndefined();
     });
+
+    it('rejects a valid snapshot when any second owned snapshot is malformed', () => {
+        const results = [
+            new Result({
+                id: 'valid',
+                success: true,
+                executed: true,
+                payload: { bugbotTelemetry: { schemaVersion: 1, outcome: 'completed', elapsedMs: 10 } },
+            }),
+            new Result({
+                id: 'malformed',
+                success: true,
+                executed: true,
+                payload: { bugbotTelemetry: { schemaVersion: 2, outcome: 'completed', elapsedMs: 10 } },
+            }),
+        ];
+
+        expect(selectBugbotTelemetry(results)).toBeUndefined();
+        expect(selectBugbotTelemetry([results[1]])).toBeUndefined();
+    });
 });

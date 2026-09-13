@@ -1,5 +1,6 @@
-import { getResultPayload, Result } from '../../data/model/result';
+import { Result } from '../../data/model/result';
 import type { CopilotLifecycleLabels } from '../../domain/copilot_lifecycle';
+import { projectBugbotResultFindingStates } from './bugbot_result_finding_state_projection_policy';
 
 export interface CopilotStatusExecutionContext {
     readonly owner: string;
@@ -40,7 +41,14 @@ export interface CopilotStatusSnapshot {
     readonly waitingFor?: string;
     readonly issueLabels: readonly string[];
     readonly pullRequestLabels: readonly string[];
-    readonly activeFindings?: { open: number; reopened: number; resolved: number };
+    readonly findingStates?: {
+        open: number;
+        reopened: number;
+        verificationRequired: number;
+        unknown: number;
+        resolved: number;
+    };
+    readonly findingStateEvidence?: 'invalid';
     readonly pullRequestDescriptionMode: string;
 }
 
@@ -64,9 +72,8 @@ export function buildCopilotStatusSnapshot(execution: CopilotStatusExecutionCont
         maintainer: lifecycleLabels.awaitingMaintainer,
         'issue-author': lifecycleLabels.awaitingIssueAuthor,
     }).find(([, label]) => label && targetLabels.includes(label))?.[0];
-    const findingStates = execution.currentConfiguration?.results
-        ?.map(result => getResultPayload(result.payload)?.findingStates)
-        .find(isFindingStateCounts);
+    const findingStateProjection = projectBugbotResultFindingStates(execution.currentConfiguration?.results ?? []);
+    const findingStates = findingStateProjection.status === 'valid' ? findingStateProjection.counts : undefined;
 
     return Object.freeze({
         owner: execution.owner,
@@ -87,7 +94,14 @@ export function buildCopilotStatusSnapshot(execution: CopilotStatusExecutionCont
         ...(waitingFor ? { waitingFor } : {}),
         issueLabels: Object.freeze(issueLabels),
         pullRequestLabels: Object.freeze(pullRequestLabels),
-        ...(findingStates ? { activeFindings: Object.freeze({ ...findingStates }) } : {}),
+        ...(findingStates ? { findingStates: Object.freeze({
+            open: findingStates.open,
+            reopened: findingStates.reopened,
+            verificationRequired: findingStates['verification-required'],
+            unknown: findingStates.unknown,
+            resolved: findingStates.fixed + findingStates.obsolete + findingStates.dismissed,
+        }) } : {}),
+        ...(findingStateProjection.status === 'invalid' ? { findingStateEvidence: 'invalid' as const } : {}),
         pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode(),
     });
 }
@@ -116,16 +130,10 @@ export function formatCopilotStatus(snapshot: CopilotStatusSnapshot): string {
         `- **Issue labels:** ${snapshot.issueLabels.length > 0 ? snapshot.issueLabels.join(', ') : 'none'}`,
         `- **PR labels:** ${snapshot.pullRequestLabels.length > 0 ? snapshot.pullRequestLabels.join(', ') : 'none'}`,
     ];
-    if (snapshot.activeFindings) {
-        lines.push(`- **Bugbot findings:** ${snapshot.activeFindings.open} open, ${snapshot.activeFindings.reopened} reopened, ${snapshot.activeFindings.resolved} resolved`);
+    if (snapshot.findingStateEvidence === 'invalid') {
+        lines.push('- **Bugbot findings:** invalid evidence; inspect the workflow result.');
+    } else if (snapshot.findingStates) {
+        lines.push(`- **Bugbot findings:** ${snapshot.findingStates.open} open, ${snapshot.findingStates.reopened} reopened, ${snapshot.findingStates.verificationRequired} verification required, ${snapshot.findingStates.unknown} unknown, ${snapshot.findingStates.resolved} resolved`);
     }
     return lines.join('\n');
-}
-
-function isFindingStateCounts(value: unknown): value is { open: number; reopened: number; resolved: number } {
-    return typeof value === 'object'
-        && value !== null
-        && typeof (value as { open?: unknown }).open === 'number'
-        && typeof (value as { reopened?: unknown }).reopened === 'number'
-        && typeof (value as { resolved?: unknown }).resolved === 'number';
 }

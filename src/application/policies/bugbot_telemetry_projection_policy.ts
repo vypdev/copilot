@@ -40,11 +40,9 @@ export function projectBugbotTelemetry(value: unknown): BugbotTelemetryProjectio
 
 /** Accepts exactly one semantic review snapshot; ambiguous result sets fail closed. */
 export function selectBugbotTelemetry(results: readonly Result[]): BugbotTelemetryProjection | undefined {
-    const snapshots = results.flatMap((result) => {
-        const projected = projectBugbotTelemetry(result.payload);
-        return projected ? [projected] : [];
-    });
-    return snapshots.length === 1 ? snapshots[0] : undefined;
+    const telemetryResults = results.filter((result) => hasBugbotTelemetryField(result.payload));
+    if (telemetryResults.length !== 1) return undefined;
+    return projectBugbotTelemetry(telemetryResults[0].payload);
 }
 
 function isBugbotReviewOutcome(value: unknown): value is BugbotReviewOutcome {
@@ -58,4 +56,9 @@ function isFiniteNumber(value: unknown): value is number {
 function normalizeNonEmptyString(value: unknown): string | undefined {
     if (typeof value !== 'string') return undefined;
     return value.trim() || undefined;
+}
+
+function hasBugbotTelemetryField(value: unknown): boolean {
+    const payload = getResultPayload(value);
+    return payload !== undefined && Object.prototype.hasOwnProperty.call(payload, 'bugbotTelemetry');
 }
