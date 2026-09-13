@@ -3,7 +3,7 @@
 - Status: Implemented — automated local evidence complete; pull-request verification pending
 - Date: 2026-09-13
 - Catalog capability ID: `execution-lifecycle`
-- Last verified: 2026-09-13 on `develop` (414 suites, 3,561 tests, and all local gates)
+- Last verified: 2026-09-13 on `develop` (414 suites, 3,578 tests, and all local gates)
 - Owners: Copilot maintainers
 - Scope: complete P2-G by proving and hardening the final `Execution` boundary,
   lifecycle synchronization contract, and raw-error logging ratchet
@@ -94,13 +94,16 @@ message into a `message` variable and log it without failing the ratchet.
   CI CLI (`0` health impact) and an eleven-line self-clone in its negative test
   (`0.15` health impact); neither is on a product request path or warrants
   another abstraction.
-- First pull-request verification at `889550e` found two actionable gaps:
-  Codecov patch coverage was `88.75740%`, and Bugbot found that an all-zero
-  coverage entry could satisfy a budget. The correction rejects empty or
-  malformed measurements before evaluation, adds negative coverage for the
-  affected provider/error paths, and also closes a provider-diagnostic leak
-  discovered by those regressions. Final remote evidence is recorded only
-  after the corrected head completes every gate.
+- Pull-request verification found actionable gaps in two successive snapshots.
+  At `889550e`, Codecov patch coverage was `88.75740%` and Bugbot found that an
+  all-zero coverage entry could satisfy a budget. At `0e9bd74`, Codecov reached
+  `95.90643%`, the first Bugbot finding was fixed, and Bugbot found that a
+  finite but out-of-range or count-inconsistent reported percentage could
+  satisfy an `each` budget. The corrections reject empty, malformed, fractional,
+  out-of-range, and internally inconsistent measurements; cover every changed
+  branch reported by Codecov; and close a provider-diagnostic leak discovered
+  by those regressions. Final remote evidence is recorded only after the
+  corrected head completes every gate.
 - Unknowns: production label-write latency is not recorded. P2-G changes no
   request count on the happy path and therefore defines deterministic call-count
   limits instead of inventing a latency target.
@@ -307,9 +310,11 @@ returned patch.
 7. Specialized coverage gates MUST declare budgets in
    `scripts/coverage-budgets.json` and use the sole shared validator; copied
    report parsing, percentage arithmetic, or drift logic is forbidden.
-8. Every configured coverage entry MUST contain valid measurable data; an
-   all-zero or malformed entry and an aggregate metric without a denominator
-   fail closed.
+8. Every configured coverage entry MUST contain valid measurable data. Counts
+   MUST be non-negative safe integers with `covered <= total`; the percentage
+   MUST be within 0–100 and equal Istanbul's two-decimal percentage derived
+   from those counts. All-zero or malformed entries, inconsistent percentages,
+   and aggregate metrics without a denominator fail closed.
 
 ## 9. UI/UX and content contract
 
@@ -391,7 +396,7 @@ revert and MUST NOT weaken the ratchets.
 
 ## 14. Testing strategy and numeric budget
 
-P2-G owns at least **38 distinct cases**.
+P2-G owns at least **43 distinct cases**.
 
 | Area | Minimum cases | Required risks |
 |---|---:|---|
@@ -401,8 +406,8 @@ P2-G owns at least **38 distinct cases**.
 | Route and replay integration | 6 | review/check/workflow replay, ambiguous event, patch application, idempotence |
 | Execution architecture | 5 | schema, exact inventory, roles/rationales, alias/re-export fixture, forbidden lifecycle fields/types |
 | Error/security regression | 4 | direct, interpolation, local declaration/assignment taint, sanitizer allowance, provider-observation presentation |
-| Coverage-gate infrastructure | 6 | aggregate boundary, labelled failure, per-file failure, missing entry, discovered-count drift, all-zero/malformed fail-closed input |
-| **Total** | **38** | no double counting |
+| Coverage-gate infrastructure | 11 | aggregate boundary, labelled failure, per-file failure, missing entry, discovered-count drift, all-zero input, fractional counts, percentage bounds, count mismatch, denominator-free aggregate, malformed metric |
+| **Total** | **43** | no double counting |
 
 The repository thresholds remain 90% lines/statements, 88% functions, and 82%
 branches. The new pure projector requires 100% statement and enumerated-branch
@@ -451,8 +456,9 @@ Update:
     exact offending file.
 12. Given a local variable or assignment derived from a caught value and passed
     to logging, CI fails; a `toApplicationError` value passes.
-13. Given an all-zero, malformed, or denominator-free configured coverage
-    measurement, the shared validator fails before declaring the budget met.
+13. Given an all-zero, malformed, fractional, out-of-range, count-inconsistent,
+    or denominator-free configured coverage measurement, the shared validator
+    fails before declaring the budget met.
 14. Given a provider-returned merge-policy reason containing a secret, workflow
     command, markup, or mention, setup and deployment output expose none of the
     unsafe source text.
@@ -498,7 +504,7 @@ Update:
 - [x] The exact 13-consumer allowlist contains a valid role and rationale for
   every entry and cannot grow or drift silently.
 - [x] The indirect alias/re-export/utility-type negative fixture passes.
-- [x] At least 38 distinct P2-G cases and all changed-module/repository coverage
+- [x] At least 43 distinct P2-G cases and all changed-module/repository coverage
   thresholds pass.
 - [x] Public documentation, parent SDDs, catalog, and generated bundles agree.
 - [x] Typecheck, lint, complete tests/coverage, specification, documentation,

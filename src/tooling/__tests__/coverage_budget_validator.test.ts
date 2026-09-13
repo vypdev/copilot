@@ -161,7 +161,12 @@ describe('coverage budget validator', () => {
         ['covered greater than total', { covered: 2, pct: 200, total: 1 }],
         ['negative covered', { covered: -1, pct: -1, total: 100 }],
         ['negative total', { covered: 0, pct: 0, total: -1 }],
+        ['fractional covered count', { covered: 0.5, pct: 50, total: 1 }],
+        ['fractional total count', { covered: 1, pct: 50, total: 1.5 }],
         ['non-finite percentage', { covered: 1, pct: Number.NaN, total: 1 }],
+        ['negative percentage', { covered: 0, pct: -1, total: 1 }],
+        ['percentage above 100', { covered: 1, pct: 101, total: 1 }],
+        ['percentage inconsistent with counts', { covered: 0, pct: 100, total: 1 }],
         ['missing metric', undefined],
     ])('rejects malformed coverage metrics before threshold evaluation: %s', (_case, lines) => {
         const invalid = { ...coverage(100), lines } as unknown as FileCoverage;

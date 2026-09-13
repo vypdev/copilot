@@ -272,6 +272,19 @@ describe('CLI', () => {
       expect(params.commits?.ref).toBe('refs/heads/feature/foo');
     });
 
+    it('omits the correlation reference outside debug mode for check-progress failures', async () => {
+      (runLocalAction as jest.Mock).mockRejectedValueOnce(new Error('check-progress-secret-marker'));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      await program.parseAsync(['node', 'cli', 'check-progress', '-i', '1']);
+
+      const messages = consoleSpy.mock.calls.flat().map(String);
+      expect(messages).toContain('❌ Unable to check progress.');
+      expect(messages.some((m) => m.includes('Reference:'))).toBe(false);
+      expect(messages.some((m) => m.includes('check-progress-secret-marker'))).toBe(false);
+      consoleSpy.mockRestore();
+    });
+
     it('exits when runLocalAction rejects in check-progress', async () => {
       (runLocalAction as jest.Mock).mockRejectedValueOnce(new Error('check-progress-secret-marker'));
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
@@ -322,6 +335,19 @@ describe('CLI', () => {
       expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('valid issue number'));
       expect(runLocalAction).not.toHaveBeenCalled();
       logSpy.mockRestore();
+    });
+
+    it('omits the correlation reference outside debug mode for recommend-steps failures', async () => {
+      (runLocalAction as jest.Mock).mockRejectedValueOnce(new Error('recommend-secret-marker'));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      await program.parseAsync(['node', 'cli', 'recommend-steps', '-i', '1']);
+
+      const messages = consoleSpy.mock.calls.flat().map(String);
+      expect(messages).toContain('❌ Unable to recommend steps.');
+      expect(messages.some((m) => m.includes('Reference:'))).toBe(false);
+      expect(messages.some((m) => m.includes('recommend-secret-marker'))).toBe(false);
+      consoleSpy.mockRestore();
     });
 
     it('does not expose a raw recommend-steps failure, including in debug mode', async () => {

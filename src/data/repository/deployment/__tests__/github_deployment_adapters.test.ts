@@ -339,6 +339,18 @@ describe("GitHub deployment repository", () => {
       expect.objectContaining({ area: "classic-protection", message: expect.stringContaining("invalid classic") }),
     ]));
 
+    const missingTargetRef = harness();
+    missingTargetRef.graphql.mockResolvedValue({ repository: {} });
+    const missingTargetResult = await missingTargetRef.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
+    expect(missingTargetResult.mergeQueueObservationProblems).toEqual(expect.arrayContaining([
+      expect.objectContaining({ area: "classic-protection", message: expect.stringContaining("no target ref") }),
+    ]));
+
+    const unprotectedQueue = harness();
+    unprotectedQueue.graphql.mockResolvedValue({ repository: { ref: { branchProtectionRule: null } } });
+    await expect(unprotectedQueue.targetRules.getTargetCapabilities("owner", "repo", "master", "token"))
+      .resolves.toEqual(expect.objectContaining({ mergeQueueRequired: false }));
+
     const missingQueueRule = harness();
     missingQueueRule.graphql.mockResolvedValue({ repository: { ref: {} } });
     const queueResult = await missingQueueRule.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
@@ -408,6 +420,21 @@ describe("GitHub deployment repository", () => {
       expect.objectContaining({ name: "Legacy CI", integrationId: "any", support: "unknown" }),
     ]);
     expect(value.apps.getBySlug).not.toHaveBeenCalled();
+  });
+
+  it("deduplicates a classic context already represented by an exact check", async () => {
+    const value = harness();
+    value.repos.getBranchProtection.mockResolvedValue({ data: {
+      required_status_checks: {
+        checks: [{ context: "Legacy CI", app_id: null }],
+        contexts: ["Legacy CI"],
+      },
+    } });
+    value.request.mockResolvedValue({ data: [{ type: "merge_queue" }] });
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
+    expect(result.mergeQueueProducers).toEqual([
+      expect.objectContaining({ name: "Legacy CI", integrationId: "any", support: "unknown" }),
+    ]);
   });
 
   it("fails producer identity closed when the GitHub Actions app cannot be resolved", async () => {
@@ -520,6 +547,25 @@ describe("GitHub deployment repository", () => {
     expect(result.mergeQueueProducers[0]).toEqual(expect.objectContaining({ support: "supported" }));
   });
 
+  it.each([
+    ["a missing merge_group trigger", "on:\n  pull_request:\njobs:\n  check:\n    name: CI Check\n", "unsupported"],
+    ["an invalid merge_group trigger", "on:\n  merge_group: false\njobs:\n  check:\n    name: CI Check\n", "unsupported"],
+    ["a non-object jobs value", "on: merge_group\njobs: []\n", "unknown"],
+  ])("handles %s without claiming support", async (_case, content, support) => {
+    const value = harness();
+    value.request.mockResolvedValue({ data: [
+      { type: "merge_queue" },
+      { type: "required_status_checks", parameters: {
+        required_status_checks: [{ context: "CI Check", integration_id: 15368 }],
+      } },
+    ] });
+    value.graphql.mockImplementation((graphqlQuery: string) => graphqlQuery.includes("DeploymentWorkflowContracts")
+      ? { repository: { object: { entries: [workflowEntry(content)] } } }
+      : { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } });
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
+    expect(result.mergeQueueProducers[0]).toEqual(expect.objectContaining({ support }));
+  });
+
   it("keeps matrix job check names unknown instead of claiming a static match", async () => {
     const value = harness();
     value.request.mockResolvedValue({ data: [
@@ -587,12 +633,35 @@ describe("GitHub deployment repository", () => {
       }));
   });
 
+  it("reports an exact required workflow without merge-group support as unsupported", async () => {
+    const value = harness();
+    value.request.mockResolvedValue({ data: [
+      { type: "merge_queue" },
+      { type: "workflows", parameters: { workflows: [
+        { path: ".github/workflows/required.yml", repository_id: 100 },
+      ] } },
+    ] });
+    value.repos.getContent.mockResolvedValue({ data: workflowContent("on: pull_request\njobs: {}\n") });
+    await expect(value.targetRules.getTargetCapabilities("owner", "repo", "master", "token"))
+      .resolves.toEqual(expect.objectContaining({
+        mergeQueueProducers: [expect.objectContaining({
+          kind: "workflow",
+          support: "unsupported",
+          reason: expect.stringContaining("does not handle merge_group"),
+        })],
+      }));
+  });
+
   it.each([
+    [null, "one workflow file"],
     [{ encoding: "base64", size: 4, content: "***=" }, "valid bounded base64"],
     [{ encoding: "utf-8", size: 4, content: "test" }, "content is unavailable"],
     [{ encoding: "base64", content: Buffer.from("jobs: {}", "utf8").toString("base64") }, "size metadata is unavailable"],
+    [{ encoding: "base64", size: 1_000_001, content: "" }, "1 MB inspection limit"],
+    [{ encoding: "base64", size: 1_000_000, content: Buffer.alloc(1_000_001).toString("base64") }, "1 MB inspection limit"],
     [{ encoding: "base64", size: 99, content: Buffer.from("jobs: {}", "utf8").toString("base64") }, "does not match"],
     [{ encoding: "base64", size: 2, content: "/+4=" }, "valid UTF-8"],
+    [workflowContent("[]\n"), "YAML must be an object"],
   ])("keeps invalid required-workflow content unknown: %s", async (content, reason) => {
     const value = harness();
     value.request.mockResolvedValue({ data: [
@@ -658,6 +727,23 @@ describe("GitHub deployment repository", () => {
     expect(result.mergeQueueProducers[0]).toEqual(expect.objectContaining({ support: "supported" }));
     expect(value.repos.getContent).toHaveBeenCalledWith(expect.objectContaining({
       owner: "shared", repo: "policies", ref: "b".repeat(40),
+    }));
+  });
+
+  it("keeps a required workflow unknown when an external repository has no identity", async () => {
+    const value = harness();
+    value.request.mockImplementation((route: string) => route.includes("/rules/branches/")
+      ? { data: [
+        { type: "merge_queue" },
+        { type: "workflows", parameters: { workflows: [
+          { path: ".github/workflows/required.yml", repository_id: 200 },
+        ] } },
+      ] }
+      : { data: {} });
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
+    expect(result.mergeQueueProducers[0]).toEqual(expect.objectContaining({
+      support: "unknown",
+      reason: expect.stringContaining("repository identity is unavailable"),
     }));
   });
 

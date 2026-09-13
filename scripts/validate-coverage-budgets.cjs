@@ -126,16 +126,22 @@ function requireEntries(files, entries, missingEntryLabel) {
   }
 }
 
-function isFiniteNonNegative(value) {
-  return Number.isFinite(value) && value >= 0;
+function isNonNegativeCount(value) {
+  return Number.isSafeInteger(value) && value >= 0;
+}
+
+function expectedPercentage(covered, total) {
+  if (total === 0) return 100;
+  return Math.floor((covered / total) * 10_000) / 100;
 }
 
 function isValidCoverageMetric(value) {
   if (value === null || typeof value !== 'object') return false;
-  if (!isFiniteNonNegative(value.covered)) return false;
-  if (!isFiniteNonNegative(value.total)) return false;
-  if (!Number.isFinite(value.pct)) return false;
-  return value.covered <= value.total;
+  if (!isNonNegativeCount(value.covered)) return false;
+  if (!isNonNegativeCount(value.total)) return false;
+  if (!Number.isFinite(value.pct) || value.pct < 0 || value.pct > 100) return false;
+  return value.covered <= value.total
+    && value.pct === expectedPercentage(value.covered, value.total);
 }
 
 function requireMeasurableEntries(files, entries, metrics) {
