@@ -157,6 +157,18 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     expect(mockUpdateDescription).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['null response', null],
+    ['missing description', { outputLocale: 'en-US' }],
+  ])('does not publish a %s from the agent', async (_label, response) => {
+    mockAskAgent.mockResolvedValue(response);
+
+    const results = await useCase.invoke(request());
+
+    expect(results[0]).toMatchObject({ success: false, executed: true });
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+
   it('enforces members-only before invoking the agent', async () => {
     mockGetAllMembers.mockResolvedValue(['bob']);
     const results = await useCase.invoke(request({ membersOnly: true }));

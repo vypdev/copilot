@@ -139,6 +139,29 @@ describe('ThinkUseCase', () => {
     expect(mockAskAgent).not.toHaveBeenCalled();
   });
 
+  it('defaults a legacy ready context without targetLocale to canonical English', async () => {
+    mockAskAgent.mockResolvedValue({ answer: 'Plan ready.' });
+    mockAddComment.mockResolvedValue(undefined);
+    const ai = new Ai('https://opencode.example.com', 'model-x', false, [], false, 'low', 20);
+
+    const results = await useCase.invoke({
+      request: {
+        kind: 'ready',
+        commentBody: '/copilot plan rollout',
+        question: 'Plan rollout',
+        issueNumberForContext: 1,
+        destinationNumber: 1,
+        destinationType: 'issue',
+      },
+      agentTask: 'planner',
+      agentConfiguration: ai.getAgentConfiguration('planner'),
+    });
+
+    expect(mockAskAgent.mock.calls[0][2]).toContain('outputLocale` set exactly to `en-US');
+    expect(mockAddComment).toHaveBeenCalledWith(1, 'Plan ready.');
+    expect(results[0]).toMatchObject({ success: true, executed: true });
+  });
+
   it('returns success executed false when comment does not mention @user', async () => {
     const param = baseParam({
       issue: { ...baseParam().issue, commentBody: 'hello world' },
