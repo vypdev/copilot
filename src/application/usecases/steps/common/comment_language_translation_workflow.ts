@@ -71,24 +71,30 @@ export class CommentLanguageTranslationWorkflow {
             });
             const status = this.stringProperty(response, 'status');
             const responseTarget = this.stringProperty(response, 'targetLocale');
+            const reasonCode = this.validReasonCode(this.stringProperty(response, 'reasonCode'));
             logDebugInfo(`${context.taskId}: language adaptation status=${status}.`);
             if (responseTarget !== targetLocale) {
                 return [failedAdaptation(context, targetLocale, 'The language adapter returned a mismatched target locale.')];
             }
-            if (status === 'matches') {
+            if (status === 'matches' || status === 'ambiguous') {
                 return [adaptationResult(
                     context,
                     targetLocale,
-                    'matches',
+                    status,
                     context.commentBody,
                     this.optionalStringProperty(response, 'sourceLocale'),
+                    reasonCode,
                 )];
             }
             if (status !== 'translated') {
                 return [failedAdaptation(context, targetLocale, `Language adaptation ended with ${status || 'an invalid status'}.`)];
             }
             const adaptedText = this.stringProperty(response, 'adaptedText');
-            const publication = composeTranslatedComment(adaptedText, context.commentBody);
+            const sourceLocale = this.optionalStringProperty(response, 'sourceLocale');
+            const publication = composeTranslatedComment(adaptedText, context.commentBody, {
+                sourceLocale,
+                targetLocale,
+            });
             if (!publication) {
                 return [failedAdaptation(context, targetLocale, 'The language adapter returned unsafe or empty text.')];
             }
@@ -97,7 +103,8 @@ export class CommentLanguageTranslationWorkflow {
                 targetLocale,
                 'translated',
                 rebuildAdaptedComment(input, publication.translatedText),
-                this.optionalStringProperty(response, 'sourceLocale'),
+                sourceLocale,
+                reasonCode,
                 publication,
             )];
         } catch (error) {
@@ -107,7 +114,7 @@ export class CommentLanguageTranslationWorkflow {
                 success: false,
                 executed: true,
                 errors: [toApplicationError(error, 'locale.translation-failed', 'I could not safely interpret this request, so no repository change was made. Please rephrase it or try again.')],
-                payload: languageAdaptationPayload('failed', targetLocale, context.commentBody),
+                payload: languageAdaptationPayload('failed', targetLocale, context.commentBody, undefined, 'provider-failure'),
             })];
         }
     }
@@ -128,14 +135,21 @@ export class CommentLanguageTranslationWorkflow {
             return undefined;
         }
     }
+
+    private validReasonCode(value: string): CommentLanguageAdaptationPayload['reasonCode'] {
+        return ['none', 'mixed-language', 'code-only', 'too-short', 'unsafe-input', 'provider-failure', 'unknown'].includes(value)
+            ? value as CommentLanguageAdaptationPayload['reasonCode']
+            : 'unknown';
+    }
 }
 
 export type CommentLanguageAdaptationPayload = {
     readonly kind: 'comment-language-adaptation';
-    readonly status: 'matches' | 'translated' | 'failed';
+    readonly status: 'matches' | 'translated' | 'ambiguous' | 'failed';
     readonly targetLocale: string;
     readonly interpretedComment: string;
     readonly sourceLocale?: string;
+    readonly reasonCode: 'none' | 'mixed-language' | 'code-only' | 'too-short' | 'unsafe-input' | 'provider-failure' | 'unknown';
     readonly publication?: TranslationPublication;
 };
 
@@ -150,16 +164,17 @@ export function getCommentLanguageAdaptationPayload(result: Result): CommentLang
 function adaptationResult(
     context: CommentLanguageContext,
     targetLocale: string,
-    status: 'matches' | 'translated',
+    status: 'matches' | 'translated' | 'ambiguous',
     interpretedComment: string,
     sourceLocale?: string,
+    reasonCode: CommentLanguageAdaptationPayload['reasonCode'] = 'none',
     publication?: TranslationPublication,
 ): Result {
     return new Result({
         id: context.taskId,
         success: true,
         executed: true,
-        payload: languageAdaptationPayload(status, targetLocale, interpretedComment, sourceLocale, publication),
+        payload: languageAdaptationPayload(status, targetLocale, interpretedComment, sourceLocale, reasonCode, publication),
     });
 }
 
@@ -173,7 +188,7 @@ function failedAdaptation(context: CommentLanguageContext, targetLocale: string,
             'I could not safely interpret this request, so no repository change was made. Please rephrase it or try again.',
             { cause: reason },
         )],
-        payload: languageAdaptationPayload('failed', targetLocale, context.commentBody),
+        payload: languageAdaptationPayload('failed', targetLocale, context.commentBody, undefined, 'unknown'),
     });
 }
 
@@ -182,6 +197,7 @@ function languageAdaptationPayload(
     targetLocale: string,
     interpretedComment: string,
     sourceLocale?: string,
+    reasonCode: CommentLanguageAdaptationPayload['reasonCode'] = 'none',
     publication?: TranslationPublication,
 ): CommentLanguageAdaptationPayload {
     return Object.freeze({
@@ -189,6 +205,7 @@ function languageAdaptationPayload(
         status,
         targetLocale,
         interpretedComment,
+        reasonCode,
         ...(sourceLocale ? { sourceLocale } : {}),
         ...(publication ? { publication: Object.freeze({ ...publication }) } : {}),
     });

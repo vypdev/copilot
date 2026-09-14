@@ -41,12 +41,16 @@ export interface GithubActionExecutionInput {
     readonly aiInputs?: ReturnType<typeof readGithubActionAiInputs>;
     readonly activeAgentTasks?: ReturnType<typeof activeAgentTasks>;
     readonly agentRuntimeAuthorized?: boolean;
+    readonly localeInputs?: ReturnType<typeof readGithubActionLocaleInputs>;
 }
 
 export async function buildGithubActionExecution(
     input: GithubActionExecutionInput,
 ): Promise<Execution> {
     const { getInput, eventInputs, projectQuery, debug, singleAction, token } = input;
+    // Locale is trusted configuration. Validate it before agent provisioning or
+    // any provider/domain mutation can begin.
+    const localeInputs = input.localeInputs ?? readGithubActionLocaleInputs(getInput);
     const aiInputs = input.aiInputs ?? readGithubActionAiInputs(getInput);
     const agentTasks = input.agentRuntimeAuthorized === false
         ? disableAgentTasks(aiInputs.requestedAgentTasks)
@@ -75,7 +79,6 @@ export async function buildGithubActionExecution(
     const workflowInputs = readGithubActionWorkflowInputs(getInput);
     const labelInputs = readGithubActionLabelInputs(getInput);
     const issueTypeInputs = readGithubActionIssueTypeInputs(getInput);
-    const localeInputs = readGithubActionLocaleInputs(getInput);
     const sizeThresholdInputs = readGithubActionThresholdInputs(getInput);
     const branchInputs = readGithubActionBranchInputs(getInput);
     const deployment = readDeploymentConfiguration(getInput, {

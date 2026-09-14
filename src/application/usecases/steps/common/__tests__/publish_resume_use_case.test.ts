@@ -2,6 +2,7 @@ import { Result } from '../../../../../data/model/result';
 import { PublishResultUseCase } from '../publish_resume_use_case';
 import { projectPublishResultContext, type PublishResultContextSource } from '../publish_resume_workflow';
 import type { IssueCommentPublicationTarget } from '../../../../ports/issue_lifecycle_ports';
+import type { MessageCatalogResolutionPort } from '../../../../ports/message_catalog_ports';
 
 function recommendation(steps = '1. Add the policy\n2. Add tests', fingerprint = 'a'.repeat(16)): Result {
   return new Result({
@@ -207,6 +208,63 @@ describe('PublishResultUseCase semantic compatibility boundary', () => {
 
     expect(comments.values[0].body).toContain('## Progreso: 100% — completado');
     expect(comments.values[0].body).toContain('No se requiere ninguna acción.');
+  });
+
+  it('renders one atomic dynamically localized plan for any configured BCP-47 locale', async () => {
+    const comments = inMemoryComments();
+    const resolve = jest.fn(async (request: { sourceCatalog: { messages: Record<string, string> } }) => ({
+      requestedLocale: 'fr-FR',
+      resolvedLocale: 'fr-FR',
+      source: 'dynamic' as const,
+      messages: Object.freeze({
+        ...request.sourceCatalog.messages,
+        'publication.implementationPlan': 'Plan de mise en œuvre',
+        'publication.planReady': 'Prêt à commencer. Aucune action de maintenance n’est requise.',
+        'publication.planAcceptance': 'Acceptation',
+        'publication.commandsHint': 'Besoin d’autre chose ? Utilisez {helpCommand}.',
+        'publication.currentStatus': 'État actuel',
+        'publication.noActionRequired': 'Aucune action requise.',
+      }),
+    }));
+    const context = projectPublishResultContext(source([recommendation()], {
+      locale: { issue: 'fr-FR', pullRequest: 'fr-FR' },
+      ai: { getAgentConfiguration: () => ({ provider: 'codex', model: 'model' }) },
+    }));
+
+    await new PublishResultUseCase(comments, { resolve } as unknown as MessageCatalogResolutionPort).invoke(context);
+
+    expect(resolve).toHaveBeenCalledTimes(1);
+    expect(comments.values[0].body).toContain('## Plan de mise en œuvre');
+    expect(comments.values[0].body).toContain('**Acceptation:** Aucune action requise.');
+    expect(comments.values[0].body).not.toContain('## Implementation plan');
+    expect(context.languageConfiguration).toEqual({ provider: 'codex', model: 'model' });
+    expect(Object.isFrozen(context.languageConfiguration)).toBe(true);
+  });
+
+  it('localizes help prose dynamically while preserving every command token', async () => {
+    const comments = inMemoryComments();
+    const result = new Result({
+      id: 'Comment.Help', success: true, executed: true,
+      payload: { publication: { kind: 'help', botLogin: 'vypbot' } },
+    });
+    const resolve = jest.fn(async (request: { sourceCatalog: { messages: Record<string, string> } }) => ({
+      requestedLocale: 'fr-FR', resolvedLocale: 'fr-FR', source: 'dynamic' as const,
+      messages: Object.freeze(Object.fromEntries(
+        Object.entries(request.sourceCatalog.messages).map(([id, message]) => [id, `FR ${message}`]),
+      )),
+    }));
+    const context = projectPublishResultContext(source([result], {
+      eventName: 'issue_comment', inputs: { action: 'created', comment: { id: 105 } },
+      locale: { issue: 'fr-FR', pullRequest: 'fr-FR' },
+      ai: { getAgentConfiguration: () => ({ provider: 'codex', model: 'model' }) },
+    }));
+
+    await new PublishResultUseCase(comments, { resolve } as unknown as MessageCatalogResolutionPort).invoke(context);
+
+    expect(comments.values[0].body).toContain('## FR Copilot commands');
+    expect(comments.values[0].body).toContain('`/copilot implement <request>`');
+    expect(comments.values[0].body).toContain('`/copilot sync-branch [--dry-run] [--no-agent] [--from <branch>]`');
+    expect(comments.values[0].body).not.toContain('## Copilot commands');
   });
 
   it('omits semantic publication when the trusted bot identity is unavailable', async () => {

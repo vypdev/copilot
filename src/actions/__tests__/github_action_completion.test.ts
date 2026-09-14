@@ -47,6 +47,7 @@ function execution(): Execution {
         issueNotBranched: false,
         issue: { number: 11 },
         pullRequest: { number: -1 },
+        locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
         singleAction: { issue: -1, throwError: false },
         release: { active: false },
         hotfix: { active: false },

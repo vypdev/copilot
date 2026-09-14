@@ -23,7 +23,8 @@ describe('Copilot interaction policy', () => {
 
     it('renders the supported command reference and welcome copy in Spanish', () => {
         expect(buildCopilotHelpMessage('vypbot', 'es-MX')).toContain('## Comandos de Copilot');
-        expect(buildCopilotHelpMessage('vypbot', 'es-MX')).toContain('/copilot implement <petición>');
+        expect(buildCopilotHelpMessage('vypbot', 'es-MX')).toContain('/copilot implement <request>');
+        expect(buildCopilotHelpMessage('vypbot', 'es-MX')).toContain('/copilot explain <path or symbol>');
         expect(buildCopilotWelcomeMessage('vypbot', 'es-ES')).toContain('Hola, soy **@vypbot**');
     });
 

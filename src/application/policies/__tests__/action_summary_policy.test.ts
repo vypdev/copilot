@@ -1,5 +1,5 @@
 import { Result } from '../../../data/model/result';
-import { buildActionSummary } from '../action_summary_policy';
+import { buildActionSummary, renderLocalizationSummarySection } from '../action_summary_policy';
 import { ApplicationError } from '../../errors/application_error';
 
 const findingStates = (overrides: Record<string, number> = {}) => ({
@@ -14,6 +14,20 @@ const findingStates = (overrides: Record<string, number> = {}) => ({
 });
 
 describe('action summary policy', () => {
+    it('renders reusable content-free locale evidence for specialized summaries', () => {
+        expect(renderLocalizationSummarySection({
+            repository: 'fr-FR',
+            issue: 'fr-FR',
+            pullRequest: 'es-ES',
+        }, [{
+            requestedLocale: 'fr-FR',
+            resolvedLocale: 'en-US',
+            source: 'fallback',
+            descriptorCount: 63,
+            fallbackReason: 'dynamic-response-invalid',
+        }])).toContain('fr-FR -> en-US (fallback, descriptors=63, reason=dynamic-response-invalid)');
+    });
+
     it('renders bounded result details and lifecycle metadata', () => {
         const summary = buildActionSummary({
             owner: 'owner',
@@ -29,6 +43,22 @@ describe('action summary policy', () => {
         expect(summary).toContain('`planned`');
         expect(summary).toContain('safe | text');
         expect(summary).not.toContain('{{');
+    });
+
+    it('records effective locales and content-free catalog resolution evidence', () => {
+        const summary = buildActionSummary({
+            owner: 'owner', repository: 'repo', eventName: 'issues', issueNumber: 7, pullRequestNumber: -1,
+            locale: { repository: 'fr-FR', issue: 'es-ES', pullRequest: 'fr-FR' },
+            catalogResolutions: [{
+                requestedLocale: 'fr-FR', resolvedLocale: 'en-US', source: 'fallback', descriptorCount: 63,
+                fallbackReason: 'dynamic-response-invalid',
+            }],
+            results: [],
+        });
+
+        expect(summary).toContain('| Repository locale | `fr-FR` |');
+        expect(summary).toContain('| Issue locale | `es-ES` |');
+        expect(summary).toContain('fr-FR -> en-US (fallback, descriptors=63, reason=dynamic-response-invalid)');
     });
 
     it('reports executed failures without exposing raw stack traces', () => {

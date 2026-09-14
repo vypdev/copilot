@@ -11,6 +11,7 @@ import {
     type BugbotResultFindingStateProjection,
 } from './bugbot_result_finding_state_projection_policy';
 import { countActionableBugbotFindings } from '../../domain/bugbot/review_state';
+import type { CatalogResolutionObservation } from '../../domain/message_catalog';
 
 export interface ActionSummaryContext {
     readonly owner: string;
@@ -22,6 +23,8 @@ export interface ActionSummaryContext {
     readonly pullRequestDescriptionMode?: string;
     readonly failOnUnresolvedFindings?: boolean;
     readonly results: readonly Result[];
+    readonly locale?: Readonly<{ repository: string; issue: string; pullRequest: string }>;
+    readonly catalogResolutions?: readonly CatalogResolutionObservation[];
 }
 
 /** Builds a bounded, publication-safe GitHub Actions Job Summary. */
@@ -51,6 +54,7 @@ export function buildActionSummary(context: ActionSummaryContext): string {
         `| Results | ${context.results.length} |`,
         `| Finding states | ${formatFindingStates(findingStateProjection)} |`,
         `| Bugbot review | ${formatBugbotTelemetry(telemetryProjection)} |`,
+        ...localizationSummaryRows(context.locale, context.catalogResolutions),
     ];
 
     return [
@@ -67,6 +71,46 @@ export function buildActionSummary(context: ActionSummaryContext): string {
         renderResults(context.results),
         '',
     ].join('\n');
+}
+
+/** Renders the same content-free locale evidence for summaries owned by specialized workflows. */
+export function renderLocalizationSummarySection(
+    locale: ActionSummaryContext['locale'],
+    catalogResolutions: ActionSummaryContext['catalogResolutions'] = [],
+): string {
+    const rows = localizationSummaryRows(locale, catalogResolutions);
+    if (rows.length === 0) return '';
+    return [
+        '## Localization',
+        '',
+        '| Property | Value |',
+        '| --- | --- |',
+        ...rows,
+        '',
+    ].join('\n');
+}
+
+function localizationSummaryRows(
+    locale: ActionSummaryContext['locale'],
+    catalogResolutions: ActionSummaryContext['catalogResolutions'] = [],
+): string[] {
+    return [
+        ...(locale ? [
+            `| Repository locale | \`${escapeTable(locale.repository)}\` |`,
+            `| Issue locale | \`${escapeTable(locale.issue)}\` |`,
+            `| Pull-request locale | \`${escapeTable(locale.pullRequest)}\` |`,
+        ] : []),
+        ...(catalogResolutions.length ? [
+            `| Catalog resolution | ${formatCatalogResolutions(catalogResolutions)} |`,
+        ] : []),
+    ];
+}
+
+function formatCatalogResolutions(observations: readonly CatalogResolutionObservation[]): string {
+    return observations.map(observation => {
+        const fallback = observation.fallbackReason ? `, reason=${observation.fallbackReason}` : '';
+        return `\`${escapeTable(observation.requestedLocale)} -> ${escapeTable(observation.resolvedLocale)} (${observation.source}, descriptors=${observation.descriptorCount}${fallback})\``;
+    }).join('<br>');
 }
 
 interface ActionSummaryStatusInput {

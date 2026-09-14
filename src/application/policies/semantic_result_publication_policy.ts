@@ -3,7 +3,7 @@ import type { Result } from '../../data/model/result';
 import { getResultPayload } from '../../data/model/result';
 import { sanitizeAgentMarkdown } from './github_comment_publication_policy';
 import { buildPublicationMarker, buildPublicationReplyMarker, createSemanticDigest } from './publication_identity_policy';
-import { resolveStaticPublicationCatalog } from './publication_message_catalog';
+import { resolveStaticPublicationCatalog, type PublicationMessageCatalog } from './publication_message_catalog';
 import { buildCopilotHelpMessage, buildCopilotWelcomeMessage } from './copilot_interaction_policy';
 import { formatCopilotStatus, type CopilotStatusSnapshot } from './status_command_policy';
 
@@ -82,7 +82,10 @@ export function selectSemanticReplyIntents(context: SemanticPublicationContext):
     }));
 }
 
-export function renderSemanticReply(intent: SemanticReplyIntent): string {
+export function renderSemanticReply(
+    intent: SemanticReplyIntent,
+    catalog: PublicationMessageCatalog = resolveStaticPublicationCatalog(intent.locale).catalog,
+): string {
     const marker = buildPublicationReplyMarker({
         target: publicationTargetToken(intent.target),
         correlationId: intent.correlationId,
@@ -90,36 +93,29 @@ export function renderSemanticReply(intent: SemanticReplyIntent): string {
         digest: intent.digest,
     });
     const body = intent.projection.kind === 'help'
-        ? buildCopilotHelpMessage(intent.projection.botLogin, intent.locale)
+        ? buildCopilotHelpMessage(intent.projection.botLogin, intent.locale, catalog)
         : intent.projection.kind === 'welcome'
-            ? buildCopilotWelcomeMessage(intent.projection.botLogin, intent.locale)
+            ? buildCopilotWelcomeMessage(intent.projection.botLogin, intent.locale, catalog)
             : intent.projection.kind === 'access-policy'
-                ? renderAccessPolicyReply(intent.locale)
-                : formatCopilotStatus(intent.projection.snapshot, intent.locale);
+                ? renderAccessPolicyReply(catalog)
+                : formatCopilotStatus(intent.projection.snapshot, intent.locale, catalog);
     return `${marker}\n\n${body}`;
 }
 
-function renderAccessPolicyReply(locale: string): string {
-    if (resolveStaticPublicationCatalog(locale).catalog.locale === 'es-ES') {
-        return [
-            '## Issue cerrada: se requiere acceso de colaborador',
-            '',
-            'Este repositorio solo permite el procesamiento automatizado de issues creadas por colaboradores autorizados.',
-            '',
-            'Si crees que se trata de un error, contacta con un mantenedor o consulta la política de contribución del repositorio.',
-        ].join('\n');
-    }
+function renderAccessPolicyReply(messages: PublicationMessageCatalog): string {
     return [
-        '## Issue closed: contributor access required',
+        `## ${messages.access.heading}`,
         '',
-        'This repository accepts automated issue processing only from eligible contributors.',
+        messages.access.explanation,
         '',
-        'If you believe this is incorrect, contact a maintainer or follow the repository contribution policy.',
+        messages.access.recovery,
     ].join('\n');
 }
 
-export function renderSemanticStatus(intent: SemanticStatusIntent): string {
-    const messages = resolveStaticPublicationCatalog(intent.locale).catalog;
+export function renderSemanticStatus(
+    intent: SemanticStatusIntent,
+    messages: PublicationMessageCatalog = resolveStaticPublicationCatalog(intent.locale).catalog,
+): string {
     const marker = buildPublicationMarker(intent);
     if (intent.projection.kind === 'plan') {
         const plan = sanitizeAgentMarkdown(intent.projection.recommendation, 8_000).trim();

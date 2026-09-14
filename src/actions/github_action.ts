@@ -24,6 +24,10 @@ import { runAtApplicationErrorBoundary } from '../application/errors/application
 import { toApplicationError } from '../application/errors/application_error';
 import { renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
 import { bindIssueCommentPublication } from '../infrastructure/composition/push_single_action_capability_port_binding';
+import { createLanguageQueryPort } from '../infrastructure/composition/agent_capability_composition_root';
+import { ResolveMessageCatalogUseCase } from '../application/usecases/localization/resolve_message_catalog_use_case';
+import { readGithubActionLocaleInputs } from './github_action_locale_inputs';
+import { publicationLocaleNeedsDynamicCatalog } from '../application/policies/publication_message_catalog';
 
 export async function runGitHubAction(): Promise<void> {
     const eventInputs = buildGithubActionEventInputs({
@@ -55,13 +59,18 @@ export async function runGitHubAction(): Promise<void> {
         return;
     }
 
+    const localeInputs = readGithubActionLocaleInputs(getGithubActionInput);
     const aiInputs = readGithubActionAiInputs(getGithubActionInput);
-    const requestedActiveAgentTasks = activeAgentTasks(
-        eventInputs,
-        singleAction,
-        admission.tokenUser,
-        aiInputs.pullRequestDescriptionMode !== 'disabled',
-    );
+    const requestedActiveAgentTasks = [...new Set([
+        ...activeAgentTasks(
+            eventInputs,
+            singleAction,
+            admission.tokenUser,
+            aiInputs.pullRequestDescriptionMode !== 'disabled',
+        ),
+        ...([localeInputs.repository, localeInputs.issue, localeInputs.pullRequest]
+            .some(publicationLocaleNeedsDynamicCatalog) ? ['planner' as const] : []),
+    ])];
     const agentRuntimeAuthorized = !aiInputs.membersOnly
         || requestedActiveAgentTasks.length === 0
         || await createActorAuthorizationRepository().isActorAllowedToModifyFiles(
@@ -87,6 +96,7 @@ export async function runGitHubAction(): Promise<void> {
         aiInputs,
         activeAgentTasks: agentRuntimeAuthorized ? requestedActiveAgentTasks : [],
         agentRuntimeAuthorized,
+        localeInputs,
     });
     logDebugInfo(
         `Execution built. Event will be resolved in mainRun. Single action: ${execution.singleAction.currentSingleAction ?? 'none'}, ` +
@@ -120,6 +130,7 @@ export async function runGitHubAction(): Promise<void> {
         },
         createCopilotEvidenceCompositionRoot(),
         createGithubActionSummaryCompositionRoot(),
+        new ResolveMessageCatalogUseCase(createLanguageQueryPort()),
     );
 }
 

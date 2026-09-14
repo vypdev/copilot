@@ -21,13 +21,28 @@ export class InvalidLocaleTagError extends Error {
     }
 }
 
+export interface LocaleTagNormalization {
+    readonly canonical: string;
+    readonly usedLegacySeparator: boolean;
+}
+
 /**
  * Canonicalizes one BCP-47 locale. Underscores are accepted for the documented
  * migration window, but every value leaving this boundary uses hyphens.
  */
 export function canonicalizeLocaleTag(value: unknown): string {
+    return normalizeLocaleTag(value).canonical;
+}
+
+export function normalizeLocaleTag(value: unknown): LocaleTagNormalization {
     if (typeof value !== 'string') throw new InvalidLocaleTagError(String(value));
-    const normalized = value.trim().replace(/_/gu, '-');
+    const trimmed = value.trim();
+    if (Array.from(trimmed).some(character => {
+        const codePoint = character.charCodeAt(0);
+        return codePoint <= 31 || codePoint === 127;
+    })) throw new InvalidLocaleTagError(value);
+    const usedLegacySeparator = trimmed.includes('_');
+    const normalized = trimmed.replace(/_/gu, '-');
     if (!normalized || normalized.length > MAX_LOCALE_TAG_LENGTH) {
         throw new InvalidLocaleTagError(value);
     }
@@ -37,7 +52,7 @@ export function canonicalizeLocaleTag(value: unknown): string {
     try {
         const [canonical] = Intl.getCanonicalLocales(normalized);
         if (!canonical) throw new InvalidLocaleTagError(value);
-        return canonical;
+        return Object.freeze({ canonical, usedLegacySeparator });
     } catch (error) {
         if (error instanceof InvalidLocaleTagError) throw error;
         throw new InvalidLocaleTagError(value);

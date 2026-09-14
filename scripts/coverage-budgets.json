@@ -193,6 +193,52 @@
         }
       ],
       "successMessage": "execution-boundary closure coverage: PASS (changed path 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Repository localization",
+      "missingEntryLabel": "repository localization",
+      "rules": [
+        {
+          "files": [
+            "src/domain/locale.ts",
+            "src/domain/message_catalog.ts",
+            "src/application/policies/comment_translation_policy.ts",
+            "src/application/policies/publication_message_catalog.ts",
+            "src/application/usecases/localization/resolve_message_catalog_use_case.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/actions/github_action.ts",
+            "src/actions/github_action_completion.ts",
+            "src/actions/github_action_execution.ts",
+            "src/application/policies/action_summary_policy.ts",
+            "src/application/policies/comment_translation_policy.ts",
+            "src/application/policies/copilot_interaction_policy.ts",
+            "src/application/policies/publication_message_catalog.ts",
+            "src/application/policies/semantic_result_publication_policy.ts",
+            "src/application/policies/setup_configuration_defaults.ts",
+            "src/application/policies/setup_configuration_plan.ts",
+            "src/application/policies/setup_doctor_report_policy.ts",
+            "src/application/policies/status_command_policy.ts",
+            "src/application/usecases/localization/resolve_message_catalog_use_case.ts",
+            "src/application/usecases/setup/doctor_use_case.ts",
+            "src/application/usecases/setup/setup_wizard_use_case.ts",
+            "src/application/usecases/steps/common/comment_language_translation_workflow.ts",
+            "src/application/usecases/steps/common/publish_resume_use_case.ts",
+            "src/application/usecases/steps/common/publish_resume_workflow.ts",
+            "src/application/usecases/steps/common/reply_publication_workflow.ts",
+            "src/application/usecases/steps/common/status_card_publication_workflow.ts",
+            "src/domain/locale.ts",
+            "src/domain/message_catalog.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "repository localization coverage: PASS (pure policies 100%; changed path 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

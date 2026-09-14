@@ -26,8 +26,12 @@
         "src/cli.ts"
       ],
       "code": [
+        "src/domain/locale.ts",
+        "src/domain/message_catalog.ts",
         "src/data/model/locale.ts",
         "src/actions/github_action_locale_inputs.ts",
+        "src/application/ports/message_catalog_ports.ts",
+        "src/application/usecases/localization/resolve_message_catalog_use_case.ts",
         "src/application/usecases/steps/common/comment_language_translation_workflow.ts",
         "src/application/policies/comment_translation_policy.ts",
         "src/application/usecases/comment_automation_use_case.ts",
@@ -48,9 +52,13 @@
         "src/data/repository/issue/issue_content_repository.ts"
       ],
       "tests": [
+        "src/domain/__tests__/locale.test.ts",
+        "src/domain/__tests__/message_catalog.test.ts",
         "src/actions/__tests__/configuration_builders.test.ts",
         "src/actions/__tests__/github_action_completion.test.ts",
         "src/application/policies/__tests__/comment_translation_policy.test.ts",
+        "src/application/usecases/localization/__tests__/resolve_message_catalog_use_case.test.ts",
+        "src/prompts/__tests__/localize_message_catalog.test.ts",
         "src/domain/__tests__/github_publication.test.ts",
         "src/application/policies/__tests__/publication_identity_policy.test.ts",
         "src/application/policies/__tests__/publication_message_catalog.test.ts",

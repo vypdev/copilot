@@ -240,6 +240,35 @@ describe('runGitHubAction', () => {
     expect(finishActionSpy).not.toHaveBeenCalled();
   });
 
+  it('rejects an invalid repository locale before project or agent preparation', async () => {
+    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
+      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'fake-token';
+      if (key === INPUT_KEYS.REPOSITORY_LOCALE) return 'und';
+      return '';
+    });
+
+    await expect(runGitHubAction()).rejects.toThrow('Invalid locale tag');
+    expect(projectCompositionSpy).not.toHaveBeenCalled();
+    expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(mockMainRun).not.toHaveBeenCalled();
+  });
+
+  it('prepares the planner capability when a valid locale needs dynamic product copy', async () => {
+    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
+      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'fake-token';
+      if (key === INPUT_KEYS.REPOSITORY_LOCALE) return 'fr-FR';
+      return '';
+    });
+
+    await runGitHubAction();
+
+    expect(agentProvisioningSpy).toHaveBeenCalledWith(expect.anything(), expect.arrayContaining(['planner']));
+    expect(executionBuilderSpy).toHaveBeenCalledWith(expect.objectContaining({
+      localeInputs: expect.objectContaining({ repository: 'fr-FR', issue: 'fr-FR', pullRequest: 'fr-FR' }),
+      activeAgentTasks: expect.arrayContaining(['planner']),
+    }));
+  });
+
   it('publishes results but skips configuration persistence when no issue target exists', async () => {
     await runGitHubAction();
 

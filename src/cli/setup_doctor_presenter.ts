@@ -32,6 +32,10 @@ export function doctorCheckLabel(id: string): string {
   if (id === 'github.secret-names') return 'Repository Secrets';
   if (id === 'github.variables') return 'Repository Variables';
   if (id === 'github.merge-queue') return 'Merge queue';
+  if (id === 'locale.profile') return 'Locale profile';
+  if (id === 'locale.repository') return 'Repository locale';
+  if (id === 'locale.issue') return 'Issue locale';
+  if (id === 'locale.pull-request') return 'Pull-request locale';
   if (id.startsWith('workflow.')) return `Workflow ${id.slice('workflow.'.length)}`;
   if (id.startsWith('github.variables.')) return `Variable ${id.slice('github.variables.'.length).toUpperCase().replace(/-/g, '_')}`;
   if (id.startsWith('credential.')) return `Credential ${id.slice('credential.'.length).toUpperCase().replace(/-/g, '_')}`;

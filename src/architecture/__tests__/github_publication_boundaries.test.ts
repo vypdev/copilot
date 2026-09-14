@@ -65,4 +65,30 @@ describe('GitHub conversation publication boundaries', () => {
     });
     expect(violations).toEqual([]);
   });
+
+  it('keeps addressed-language adaptation unable to update human comments', () => {
+    const files = [
+      'src/application/policies/comment_translation_policy.ts',
+      'src/application/ports/agent_language_ports.ts',
+      'src/application/usecases/steps/common/comment_language_translation_workflow.ts',
+    ];
+    const violations = files.flatMap(file => {
+      const source = readFileSync(join(root, file), 'utf8');
+      return /updateComment|updatePullRequestReview|CommentUpdatePort/u.test(source) ? [file] : [];
+    });
+    expect(violations).toEqual([]);
+  });
+
+  it('keeps common presentation locale decisions inside the message catalog', () => {
+    const files = [
+      'src/application/policies/copilot_interaction_policy.ts',
+      'src/application/policies/semantic_result_publication_policy.ts',
+      'src/application/policies/status_command_policy.ts',
+      'src/application/usecases/steps/common/reply_publication_workflow.ts',
+      'src/application/usecases/steps/common/status_card_publication_workflow.ts',
+    ];
+    const featureLocalLocaleBranch = /baseLanguage|startsWith\(['"](?:en|es)|===?\s*['"](?:en|es|en-US|es-ES)['"]/u;
+    const violations = files.filter(file => featureLocalLocaleBranch.test(readFileSync(join(root, file), 'utf8')));
+    expect(violations).toEqual([]);
+  });
 });

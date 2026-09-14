@@ -11,6 +11,18 @@ The following parameters can be configured in the workflow:
 
 ### Optional Parameters
 
+#### Language
+
+- `repository-locale`: Repository-wide BCP-47 target locale (default: `en-US`).
+- `issues-locale`: Optional issue-surface override; empty inherits `repository-locale`.
+
+Setup canonicalizes legacy underscore values such as `pt_BR` to `pt-BR` with a
+one-time migration warning. English and Spanish are reviewed bundled catalogs;
+other valid locales use one schema-constrained dynamic catalog when the language
+agent is available, otherwise the complete artifact falls back to English. The
+Job Summary records the requested locale, resolved locale, resolution path, and
+stable fallback reason without storing message bodies.
+
 #### Action Control
 - `single-action`: Launch single actions
 - `single-action-issue`: Issue target for executing single action
