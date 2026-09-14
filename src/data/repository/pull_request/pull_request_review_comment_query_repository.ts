@@ -27,6 +27,7 @@ function toReviewComment(
     path: comment.path,
     line: comment.line ?? undefined,
     authorLogin: comment.user?.login ?? undefined,
+    ...(comment.user?.type === 'Bot' ? { isAutomatedAuthor: true } : {}),
     ...(comment.created_at ? { createdAt: comment.created_at } : {}),
     ...(comment.pull_request_review_id != null
       ? { parentReviewIdentity: String(comment.pull_request_review_id) }

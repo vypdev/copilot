@@ -93,7 +93,7 @@ export function buildReviewConversationContext(
 ): BuiltBugbotPromptContext {
   const entries: ConversationEntry[] = [];
   for (const comment of issueComments) {
-    if (isBot(comment.user?.login, botLogin)) continue;
+    if (comment.isAutomatedAuthor || isBot(comment.user?.login, botLogin)) continue;
     appendConversationEntry(
       entries,
       comment.user?.login,
@@ -105,7 +105,7 @@ export function buildReviewConversationContext(
   }
   for (const comments of commentsByPullRequest.values()) {
     for (const comment of comments) {
-      if (isBot(comment.authorLogin, botLogin)) continue;
+      if (comment.isAutomatedAuthor || isBot(comment.authorLogin, botLogin)) continue;
       const location = comment.path
         ? `inline review comment at ${comment.path}${comment.line ? `:${comment.line}` : ''}`
         : 'inline review comment';

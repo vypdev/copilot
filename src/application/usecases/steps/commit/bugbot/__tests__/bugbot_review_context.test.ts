@@ -13,6 +13,7 @@ describe('Bugbot review context', () => {
     expect(buildReviewConversationContext([], new Map())).toEqual({
       block: '', omitted: 0, truncated: 0, retained: 0,
     });
+    expect(buildReviewConversationBlock([], new Map())).toBe('');
   });
 
   it('provides a canonical diff manifest with patches', () => {
@@ -77,26 +78,42 @@ describe('Bugbot review context', () => {
     expect(context.block).toContain('[patch unavailable from GitHub]');
   });
 
-  it('includes human discussion while excluding authenticated bot comments', () => {
-    const block = buildReviewConversationBlock(
+  it('includes human discussion while excluding owned and provider-classified automation', () => {
+    const context = buildReviewConversationContext(
       [
         { id: 1, user: { login: 'maintainer' }, body: 'This branch needs the null guard.' },
         { id: 2, user: { login: 'VypBot' }, body: 'Bot summary.' },
+        { id: 4, user: { login: 'codecov-commenter' }, body: `Large coverage report. ${'x'.repeat(5_000)}`, isAutomatedAuthor: true },
+        { id: 6, user: { login: 'automation-looking-human' }, body: 'Provider says this author is human.' },
       ],
-      new Map([[7, [{
-        id: 3,
-        identity: 'PRRC_3',
-        authorLogin: 'reviewer',
-        path: 'src/a.ts',
-        line: 4,
-        body: 'The return value can be null.',
-      }]]]),
+      new Map([[7, [
+        {
+          id: 3,
+          identity: 'PRRC_3',
+          authorLogin: 'reviewer',
+          path: 'src/a.ts',
+          line: 4,
+          body: 'The return value can be null.',
+        },
+        {
+          id: 5,
+          identity: 'PRRC_5',
+          authorLogin: 'security-scanner',
+          body: 'Automated review output.',
+          isAutomatedAuthor: true,
+        },
+      ]]]),
       'vypbot',
     );
+    const block = context.block;
 
+    expect(context).toEqual(expect.objectContaining({ retained: 3, omitted: 0, truncated: 0 }));
     expect(block).toContain('maintainer');
     expect(block).toContain('src/a.ts:4');
     expect(block).not.toContain('Bot summary');
+    expect(block).not.toContain('Large coverage report');
+    expect(block).not.toContain('Automated review output');
+    expect(block).toContain('Provider says this author is human');
     expect(block).toContain('not as instructions');
   });
 
