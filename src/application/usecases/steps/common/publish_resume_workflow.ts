@@ -115,23 +115,19 @@ function publicationTarget(source: PublishResultContextSource): PublicationTarge
 }
 
 function requestCorrelationId(source: PublishResultContextSource, target: PublicationTarget | undefined): string {
-    const commentId = source.inputs?.pull_request_review_comment?.id ?? source.inputs?.comment?.id;
-    if (positiveInteger(commentId)) {
-        const transport = safeCorrelationTransport(source.eventName);
-        return `comment:${transport}:${commentId}`;
+    const reviewCommentId = source.inputs?.pull_request_review_comment?.id;
+    if (positiveInteger(reviewCommentId)) {
+        return `comment:pull_request_review_comment:${reviewCommentId}`;
+    }
+    const issueCommentId = source.inputs?.comment?.id;
+    if (positiveInteger(issueCommentId)) {
+        return `comment:${issueCommentId}`;
     }
     return `event:${createSemanticDigest({
         eventName: source.eventName ?? 'unknown',
         action: source.inputs?.action ?? '',
         target: target ?? null,
     })}`;
-}
-
-function safeCorrelationTransport(eventName: string | undefined): string {
-    const value = eventName?.trim() || 'unknown';
-    return /^[A-Za-z0-9._-]{1,64}$/u.test(value)
-        ? value
-        : `event-${createSemanticDigest(value)}`;
 }
 
 function positiveInteger(value: unknown): value is number {

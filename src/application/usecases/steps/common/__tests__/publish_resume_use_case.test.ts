@@ -93,9 +93,29 @@ describe('PublishResultUseCase semantic compatibility boundary', () => {
     await new PublishResultUseCase(comments).invoke(value);
 
     expect(comments.addComment).toHaveBeenCalledTimes(1);
-    expect(comments.values[0].body).toContain('correlation="comment:issue_comment:99"');
+    expect(comments.values[0].body).toContain('correlation="comment:99"');
     expect(comments.values[0].body).toContain('## Copilot commands');
     expect(comments.values[0].body).not.toContain('legacy wrapper');
+  });
+
+  it('recognizes a reply marker written before review-comment correlation was namespaced', async () => {
+    const comments = inMemoryComments([{
+      id: 7,
+      user: { login: 'vypbot' },
+      body: '<!-- copilot:reply schema="1" target="issue:42" correlation="comment:99" key="copilot-help" digest="0123abcd" -->\n\nExisting response.',
+    }]);
+    const result = new Result({
+      id: 'Comment.Help', success: true, executed: true,
+      payload: { publication: { kind: 'help', botLogin: 'vypbot' } },
+    });
+
+    await new PublishResultUseCase(comments).invoke(projectPublishResultContext(source([result], {
+      eventName: 'issue_comment', inputs: { action: 'created', comment: { id: 99 } },
+    })));
+
+    expect(comments.addComment).not.toHaveBeenCalled();
+    expect(comments.updateComment).not.toHaveBeenCalled();
+    expect(comments.values).toHaveLength(1);
   });
 
   it('namespaces equal numeric comment ids by GitHub transport', () => {
@@ -106,7 +126,7 @@ describe('PublishResultUseCase semantic compatibility boundary', () => {
       eventName: 'pull_request_review_comment', inputs: { action: 'created', pull_request_review_comment: { id: 99 } },
     }));
 
-    expect(issueComment.requestCorrelationId).toBe('comment:issue_comment:99');
+    expect(issueComment.requestCorrelationId).toBe('comment:99');
     expect(reviewComment.requestCorrelationId).toBe('comment:pull_request_review_comment:99');
     expect(issueComment.requestCorrelationId).not.toBe(reviewComment.requestCorrelationId);
   });
@@ -126,13 +146,13 @@ describe('PublishResultUseCase semantic compatibility boundary', () => {
     expect(first.requestCorrelationId).not.toBe(second.requestCorrelationId);
   });
 
-  it('bounds an unexpected transport value before embedding it in a marker', () => {
+  it('keeps legacy issue-comment correlation stable regardless of event metadata', () => {
     const context = projectPublishResultContext(source([], {
       eventName: 'unsafe transport\n<!-- marker -->',
       inputs: { action: 'created', comment: { id: 99 } },
     }));
 
-    expect(context.requestCorrelationId).toMatch(/^comment:event-[a-f0-9]{16}:99$/u);
+    expect(context.requestCorrelationId).toBe('comment:99');
   });
 
   it('does not mutate an unchanged plan card on replay', async () => {

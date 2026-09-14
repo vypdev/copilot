@@ -373,6 +373,10 @@ The shared marker format is:
   `[A-Za-z0-9._:-]`, and bounded to 128 characters per value.
 - Feature-specific existing markers remain readable. New writes converge on the
   shared envelope without changing durable feature identity.
+- Reply correlation preserves the established `comment:<issue-comment-id>`
+  identity for `issue_comment` replay compatibility. Review comments use the
+  distinct `comment:pull_request_review_comment:<review-comment-id>` identity;
+  transports MUST NOT share a fallback correlation.
 - Commit-derived cards MUST revalidate the expected head SHA before update.
 - Revisioned operations MUST reject any revision lower than the stored revision.
 - Events without an orderable revision may update only after the shared workflow
