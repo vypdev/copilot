@@ -44,6 +44,9 @@ jobs:
 
       - uses: ./
         with:
+          repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
+          issues-locale: ${{ vars.ISSUES_LOCALE || '' }}
+          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || '' }}
           debug: ${{ vars.DEBUG }}
           bugbot-severity: ${{ vars.BUGBOT_SEVERITY || 'low' }}
           bugbot-comment-limit: ${{ vars.BUGBOT_COMMENT_LIMIT || '20' }}

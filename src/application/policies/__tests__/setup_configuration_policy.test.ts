@@ -5,10 +5,12 @@ import {
     buildSetupRepositoryVariables,
     createDefaultSetupConfiguration,
     mergeSetupConfiguration,
+    normalizeSetupConfigurationLocales,
     resolveSetupResourceTarget,
     shouldUpsertSetupResource,
     validateSetupStorageAgainstRemote,
     validateSetupConfiguration,
+    setupLocaleMigrationWarnings,
 } from '../setup_configuration_policy';
 import type { SetupConfigurationOverrides } from '../setup_configuration_policy';
 
@@ -42,6 +44,33 @@ describe('setup configuration policy', () => {
         expect(plan.mergeQueueReadiness).toEqual([
             { id: 'github.merge-queue.production', status: 'pass', summary: 'Ready.', evidence: {}, blockedBy: [] },
         ]);
+    });
+
+    it('canonicalizes legacy locale separators while preserving empty override inheritance', () => {
+        const configuration = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
+            repository: { repositoryLocale: 'pt_BR', issueLocale: '', pullRequestLocale: 'zh_hant_tw' },
+        });
+        const normalized = normalizeSetupConfigurationLocales(configuration);
+
+        expect(normalized.repository).toMatchObject({
+            repositoryLocale: 'pt-BR', issueLocale: '', pullRequestLocale: 'zh-Hant-TW',
+        });
+        expect(setupLocaleMigrationWarnings(configuration)).toEqual([
+            expect.stringContaining('underscore locale separators'),
+        ]);
+        expect(buildSetupRepositoryVariables(configuration)).toEqual(expect.arrayContaining([
+            { name: 'REPOSITORY_LOCALE', value: 'pt-BR' },
+            { name: 'PULL_REQUESTS_LOCALE', value: 'zh-Hant-TW' },
+        ]));
+        expect(buildSetupRepositoryVariables(configuration).some(variable => variable.name === 'ISSUES_LOCALE')).toBe(false);
+        expect(buildSetupActionInputs(configuration)).toMatchObject({
+            'repository-locale': 'pt-BR', 'issues-locale': '', 'pull-requests-locale': 'zh-Hant-TW',
+        });
+    });
+
+    it('adds locale migration warnings ahead of operational setup warnings', () => {
+        const plan = buildSetupPlan(createDefaultSetupConfiguration(), [], ['Canonicalized legacy locale.']);
+        expect(plan.warnings[0]).toBe('Canonicalized legacy locale.');
     });
 
     it('removes optional files while retaining core setup resources', () => {

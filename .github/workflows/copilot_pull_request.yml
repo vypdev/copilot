@@ -58,6 +58,9 @@ jobs:
       # Exercise the Action implementation from this PR so regressions are caught before merge.
       - uses: ./
         with:
+          repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
+          issues-locale: ${{ vars.ISSUES_LOCALE || '' }}
+          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || '' }}
           ai-ignore-files: build/*
           bugbot-severity: ${{ vars.BUGBOT_SEVERITY || 'low' }}
           bugbot-comment-limit: ${{ vars.BUGBOT_COMMENT_LIMIT || '20' }}

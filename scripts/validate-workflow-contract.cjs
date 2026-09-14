@@ -94,6 +94,11 @@ const WORKFLOW_AGENT_ROLES = Object.freeze({
   'copilot_issue_comment.yml': ['findings', 'fixer', 'planner', 'reviewer', 'tester'],
   'copilot_pull_request_comment.yml': ['findings', 'fixer', 'planner', 'reviewer', 'tester'],
 });
+const REPOSITORY_LOCALE_INPUTS = Object.freeze({
+  'repository-locale': "${{ vars.REPOSITORY_LOCALE || 'en-US' }}",
+  'issues-locale': "${{ vars.ISSUES_LOCALE || '' }}",
+  'pull-requests-locale': "${{ vars.PULL_REQUESTS_LOCALE || '' }}",
+});
 
 function workflowFiles(directory) {
   return readdirSync(directory)
@@ -202,6 +207,22 @@ function assertAgentInputs(file, workflow) {
       const missing = requiredAgentInputs.filter(input => !(input in (step.with ?? {})));
       if (missing.length > 0) {
         throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} is missing agent inputs: ${missing.join(', ')}.`);
+      }
+    }
+  }
+}
+
+function assertRepositoryLocaleInputs(file, workflow) {
+  const relativeFile = relativeWorkflow(file);
+  if (!WORKFLOW_AGENT_ROLES[path.basename(file)]) return;
+  for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    for (const [stepIndex, step] of (job.steps ?? []).entries()) {
+      if (!isCopilotAction(step)) continue;
+      const invalid = Object.entries(REPOSITORY_LOCALE_INPUTS)
+        .filter(([input, value]) => step.with?.[input] !== value)
+        .map(([input]) => input);
+      if (invalid.length > 0) {
+        throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} must pass the repository locale and inheriting empty scope overrides exactly; invalid: ${invalid.join(', ')}.`);
       }
     }
   }
@@ -837,6 +858,7 @@ function validateWorkflow(file, workflow) {
   assertRunner(file, workflow);
   assertSequentialMutationWorkflow(file, workflow);
   assertAgentInputs(file, workflow);
+  assertRepositoryLocaleInputs(file, workflow);
   assertAgentInstallationPrerequisites(file, workflow);
   assertNoJobLevelSecrets(file, workflow);
   assertAgentWorkflowPermissions(file, workflow);
@@ -887,6 +909,7 @@ module.exports = {
   assertMajorActionReferences,
   assertCopilotActionInputs,
   assertAgentInputs,
+  assertRepositoryLocaleInputs,
   assertAgentInstallationPrerequisites,
   assertNoJobLevelSecrets,
   assertAgentWorkflowPermissions,

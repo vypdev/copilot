@@ -55,6 +55,26 @@ describe('SetupWizardUseCase', () => {
     expect(result.status === 'completed' && result.configuration.manageRepositorySecrets).toBe(false);
   });
 
+  it('persists only canonical locale tags and presents one migration warning', async () => {
+    const deps = dependencies();
+    const result = await new SetupWizardUseCase(deps).execute({
+      mode: 'non-interactive',
+      overrides: { repository: { repositoryLocale: 'pt_BR', issueLocale: 'es_MX', pullRequestLocale: '' } },
+    });
+
+    expect(result.status).toBe('completed');
+    if (result.status === 'completed') {
+      expect(result.configuration.repository).toMatchObject({
+        repositoryLocale: 'pt-BR', issueLocale: 'es-MX', pullRequestLocale: '',
+      });
+      expect(result.plan.warnings.filter(warning => warning.includes('underscore locale separators'))).toHaveLength(1);
+      expect(result.plan.variables).toEqual(expect.arrayContaining([
+        { name: 'REPOSITORY_LOCALE', value: 'pt-BR' },
+        { name: 'ISSUES_LOCALE', value: 'es-MX' },
+      ]));
+    }
+  });
+
   it('returns exit zero and no configuration when confirmation is declined', async () => {
     const result = await new SetupWizardUseCase(dependencies({
       confirmation: { confirm: jest.fn().mockResolvedValue({ kind: 'declined' }) },

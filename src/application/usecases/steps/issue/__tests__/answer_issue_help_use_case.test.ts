@@ -28,6 +28,7 @@ function baseParam(overrides: Partial<AnswerIssueHelpContext> = {}): AnswerIssue
     questionOrHelp: true,
     description: 'How do I configure the webhook for this project?',
     agentConfiguration: configuredAgent(),
+    locale: 'en-US',
     newIssue: false,
     ...overrides,
   };
@@ -159,6 +160,18 @@ describe('AnswerIssueHelpUseCase', () => {
     expect(publishedComment).toContain('<!-- copilot:welcome -->');
     expect(publishedComment).toContain('Hi! I’m **@vypbot**');
     expect(publishedComment).toContain('Here is some help.');
+  });
+
+  it('targets the configured issue locale and localizes the first welcome', async () => {
+    mockAskAgent.mockResolvedValue({ answer: 'Aquí tienes ayuda.' });
+    mockAddComment.mockResolvedValue(undefined);
+
+    await useCase.invoke(baseParam({ tokenUser: 'vypbot', newIssue: true, locale: 'es-ES' }));
+
+    expect(mockAskAgent.mock.calls[0][2]).toContain('human-readable sentence in es-ES');
+    const publishedComment = mockAddComment.mock.calls[0][1] as string;
+    expect(publishedComment).toContain('Hola, soy **@vypbot**');
+    expect(publishedComment).toContain('Aquí tienes ayuda.');
   });
 
   it('returns failure when OpenCode returns no answer', async () => {

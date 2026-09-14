@@ -5,6 +5,7 @@ import {
   canonicalizeLocaleTag,
   localeForScope,
   localeLanguagesMatch,
+  normalizeLocaleTag,
   resolveLocaleProfile,
 } from '../locale';
 
@@ -24,6 +25,26 @@ describe('locale policy', () => {
     (input) => expect(() => canonicalizeLocaleTag(input)).toThrow(InvalidLocaleTagError),
   );
 
+  it.each(['en-US\u0000', 'en-\nUS', 'en\u007f-US'])(
+    'rejects control characters in %p before Intl processing',
+    (input) => expect(() => canonicalizeLocaleTag(input)).toThrow(InvalidLocaleTagError),
+  );
+
+  it('reports legacy underscore normalization without leaking it downstream', () => {
+    expect(normalizeLocaleTag('pt_BR')).toEqual({ canonical: 'pt-BR', usedLegacySeparator: true });
+    expect(normalizeLocaleTag('pt-BR')).toEqual({ canonical: 'pt-BR', usedLegacySeparator: false });
+    expect(Object.isFrozen(normalizeLocaleTag('pt_BR'))).toBe(true);
+  });
+
+  it('fails closed if the platform canonicalizer yields no locale', () => {
+    const canonicalizer = jest.spyOn(Intl, 'getCanonicalLocales').mockReturnValue([]);
+    try {
+      expect(() => canonicalizeLocaleTag('en-US')).toThrow(InvalidLocaleTagError);
+    } finally {
+      canonicalizer.mockRestore();
+    }
+  });
+
   it('rejects non-string repository and override values at the domain boundary', () => {
     expect(() => canonicalizeLocaleTag(42)).toThrow(InvalidLocaleTagError);
     expect(() => resolveLocaleProfile('en-US', {})).toThrow(InvalidLocaleTagError);
@@ -34,6 +55,14 @@ describe('locale policy', () => {
       repository: DEFAULT_REPOSITORY_LOCALE,
       issue: DEFAULT_REPOSITORY_LOCALE,
       pullRequest: DEFAULT_REPOSITORY_LOCALE,
+    });
+  });
+
+  it('uses inherited defaults when surface arguments are omitted', () => {
+    expect(resolveLocaleProfile('en-US')).toEqual({
+      repository: 'en-US',
+      issue: 'en-US',
+      pullRequest: 'en-US',
     });
   });
 

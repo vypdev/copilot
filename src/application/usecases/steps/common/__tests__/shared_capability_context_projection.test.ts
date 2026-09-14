@@ -219,8 +219,11 @@ describe('P2-D shared capability context projections', () => {
     }, source.issue.commentBody);
     const adapted = withCommentLanguageAdaptation(context, {
       kind: 'comment-language-adaptation', status: 'translated', targetLocale: 'en-US',
-      sourceLocale: 'es', interpretedComment: '@copilot-bot inspect this',
-      publication: { translatedText: 'inspect this', commentBody: '<details>translation</details>' },
+      sourceLocale: 'es', reasonCode: 'none', interpretedComment: '@copilot-bot inspect this',
+      publication: {
+        translatedText: 'inspect this', commentBody: '<details>translation</details>',
+        sourceLocale: 'es', targetLocale: 'en-US',
+      },
     });
 
     expect(adapted).not.toBe(context);
@@ -251,7 +254,10 @@ describe('P2-D shared capability context projections', () => {
       commentBody: source.issue.commentBody, locale: 'en-US', issueNumber: 9,
       commentId: 90, configuration,
     }, source.issue.commentBody);
-    const matching = { kind: 'comment-language-adaptation', status: 'matches', targetLocale: 'en-US', interpretedComment: source.issue.commentBody } as const;
+    const matching = {
+      kind: 'comment-language-adaptation', status: 'matches', targetLocale: 'en-US',
+      interpretedComment: source.issue.commentBody, reasonCode: 'none',
+    } as const;
     expect(withCommentLanguageAdaptation(context, matching)).toBe(context);
 
     const adapted = withCommentLanguageAdaptation(context, {

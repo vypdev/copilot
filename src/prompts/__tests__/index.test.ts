@@ -11,6 +11,7 @@ describe('getPrompt', () => {
         const params = {
             description: 'How to install?',
             projectContextInstruction: '**Use context.**',
+            targetLocale: 'en-US',
         };
         const viaRegistry = getPrompt(PROMPT_NAMES.ANSWER_ISSUE_HELP, params);
         const viaGetter = getAnswerIssueHelpPrompt(params);
@@ -46,7 +47,7 @@ describe('getPrompt', () => {
 
     it('throws for unknown prompt name', () => {
         expect(() =>
-            getPrompt('unknown' as PromptName, { description: 'x', projectContextInstruction: 'y' })
+            getPrompt('unknown' as PromptName, { description: 'x', projectContextInstruction: 'y', targetLocale: 'en-US' })
         ).toThrow('Unknown prompt');
     });
 });

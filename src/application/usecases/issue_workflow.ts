@@ -116,10 +116,10 @@ export async function runIssueWorkflow(
       : undefined;
     results.push(...recommendationResults);
     if (context.newIssue && !containsWelcome(recommendationResults)) {
-      results.push(buildCopilotWelcomeResult(context.tokenUser));
+      results.push(buildCopilotWelcomeResult(context.tokenUser, ports.sharedContexts.steps.answerHelp.locale));
     }
   } else if (context.newIssue) {
-    results.push(buildCopilotWelcomeResult(context.tokenUser));
+    results.push(buildCopilotWelcomeResult(context.tokenUser, ports.sharedContexts.steps.answerHelp.locale));
   }
   return issueWorkflowOutcome(results, branchConfigurationPatch, recommendationStatePatch);
 }

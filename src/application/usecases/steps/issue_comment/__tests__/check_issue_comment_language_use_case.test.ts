@@ -48,7 +48,7 @@ describe('CheckIssueCommentLanguageUseCase', () => {
   it('returns one non-mutating language adaptation result', async () => {
     query.mockResolvedValue({
       status: 'translated', sourceLocale: 'en', targetLocale: 'es-ES',
-      adaptedText: 'Revisa esto', reason: null,
+      adaptedText: 'Revisa esto', reasonCode: 'none',
     });
     const results = await useCase.invoke(projectIssueCommentLanguageRequest(source()));
 

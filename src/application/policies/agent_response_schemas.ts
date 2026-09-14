@@ -24,13 +24,13 @@ export const LANGUAGE_ADAPTATION_RESPONSE_SCHEMA = {
             maxLength: 12_000,
             description: 'Target-locale interpretation, or null when no translation was needed or possible.',
         },
-        reason: {
-            type: ['string', 'null'],
-            maxLength: 2_000,
-            description: 'Bounded reason for ambiguous or failed adaptation, otherwise null.',
+        reasonCode: {
+            type: 'string',
+            enum: ['none', 'mixed-language', 'code-only', 'too-short', 'unsafe-input', 'provider-failure', 'unknown'],
+            description: 'Stable reason code; none for matches or translated.',
         },
     },
-    required: ['status', 'sourceLocale', 'targetLocale', 'adaptedText', 'reason'],
+    required: ['status', 'sourceLocale', 'targetLocale', 'adaptedText', 'reasonCode'],
     additionalProperties: false,
 } as const;
 

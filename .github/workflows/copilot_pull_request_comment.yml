@@ -26,6 +26,9 @@ jobs:
 
       - uses: ./
         with:
+          repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
+          issues-locale: ${{ vars.ISSUES_LOCALE || '' }}
+          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || '' }}
           ai-ignore-files: build/*
           debug: ${{ vars.DEBUG }}
           agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}

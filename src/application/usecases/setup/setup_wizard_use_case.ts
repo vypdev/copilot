@@ -15,6 +15,8 @@ import {
   buildSetupPlan,
   createDefaultSetupConfiguration,
   mergeSetupConfiguration,
+  normalizeSetupConfigurationLocales,
+  setupLocaleMigrationWarnings,
   validateSetupStorageAgainstRemote,
   validateSetupConfiguration,
   type SetupConfigurationOverrides,
@@ -98,8 +100,12 @@ export class SetupWizardUseCase {
       };
     }
 
-    const configuration = cloneSetupConfiguration(questionnaire.draft);
-    const validationErrors = validateSetupConfiguration(configuration);
+    const collectedConfiguration = cloneSetupConfiguration(questionnaire.draft);
+    const migrationWarnings = setupLocaleMigrationWarnings(collectedConfiguration);
+    const validationErrors = validateSetupConfiguration(collectedConfiguration);
+    const configuration = validationErrors.length === 0
+      ? normalizeSetupConfigurationLocales(collectedConfiguration)
+      : collectedConfiguration;
     if (remoteConfiguration) {
       validationErrors.push(...validateSetupStorageAgainstRemote(configuration, remoteConfiguration));
     }
@@ -118,7 +124,7 @@ export class SetupWizardUseCase {
           configuration,
         })
       : [];
-    const plan = buildSetupPlan(configuration, readiness);
+    const plan = buildSetupPlan(configuration, readiness, migrationWarnings);
     this.dependencies.planPresenter.present(plan);
     const confirmation = enterSetupConfirmation(questionnaire);
     const decision = await this.dependencies.confirmation.confirm(plan);
@@ -134,7 +140,7 @@ export class SetupWizardUseCase {
     return {
       status: 'completed',
       exitCode: 0,
-      configuration: cloneSetupConfiguration(completed.draft),
+      configuration: cloneSetupConfiguration(configuration),
       plan,
       ...(remoteConfiguration ? { remoteConfiguration } : {}),
     };

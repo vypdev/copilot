@@ -10,7 +10,7 @@ import { projectPublishResultContext } from '../application/usecases/steps/commo
 import { projectConfigurationPersistenceContext } from '../application/usecases/steps/common/store_configuration_use_case';
 
 import { logInfo } from '../utils/logger';
-import { buildActionSummary } from '../application/policies/action_summary_policy';
+import { buildActionSummary, renderLocalizationSummarySection } from '../application/policies/action_summary_policy';
 import { lifecycleStateFromLabels } from '../domain/copilot_lifecycle';
 import type { CopilotEvidencePort } from '../application/ports/copilot_evidence_ports';
 import { buildCopilotEvidence } from '../application/policies/copilot_evidence_policy';
@@ -20,6 +20,7 @@ import { shouldPersistConfiguration } from '../application/policies/configuratio
 import { renderDeploymentJobSummary } from '../application/policies/deployment_presentation_policy';
 import { projectBugbotResultFindingStates } from '../application/policies/bugbot_result_finding_state_projection_policy';
 import { countActionableBugbotFindings } from '../domain/bugbot/review_state';
+import type { MessageCatalogResolutionPort } from '../application/ports/message_catalog_ports';
 
 export async function finishGithubAction(
     execution: Execution,
@@ -28,6 +29,7 @@ export async function finishGithubAction(
     configurationStorePort: ConfigurationStorePort,
     evidencePort?: CopilotEvidencePort,
     summaryPort?: ActionSummaryPort,
+    catalogResolver?: MessageCatalogResolutionPort,
 ): Promise<void> {
     const stepCount = results.reduce((acc, result) => acc + (result.steps?.length ?? 0), 0);
     const errorCount = results.reduce((acc, result) => acc + (result.errors?.length ?? 0), 0);
@@ -40,6 +42,7 @@ export async function finishGithubAction(
     if (!dryRun && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
         const publicationFailure = await new PublishResultUseCase(
             issueNotificationPort,
+            catalogResolver,
         ).invoke(projectPublishResultContext(execution));
         if (publicationFailure) results.push(publicationFailure);
     } else if (execution.singleAction.isPublishIssueCommentAction || ownsDeploymentPresentation) {
@@ -59,7 +62,7 @@ export async function finishGithubAction(
     } else {
         logInfo('Configuration persistence skipped: this single action does not modify execution configuration.');
     }
-    const summary = await writeActionSummary(execution, summaryPort);
+    const summary = await writeActionSummary(execution, summaryPort, catalogResolver);
     if (!dryRun) await publishCopilotEvidence(execution, results, summary, evidencePort);
     failActionForUnresolvedFindingsIfConfigured(execution, results, dryRun);
     setFirstErrorIfExists(results);
@@ -72,35 +75,53 @@ function extractBugbotTelemetry(results: readonly Result[]): unknown[] {
     });
 }
 
-async function writeActionSummary(execution: Execution, summaryPort?: ActionSummaryPort): Promise<string> {
+async function writeActionSummary(
+    execution: Execution,
+    summaryPort?: ActionSummaryPort,
+    catalogResolver?: MessageCatalogResolutionPort,
+): Promise<string> {
     const operation = execution.currentConfiguration.deploymentOrchestration;
+    const locale = execution.locale ?? { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' };
+    const localizationEvidence = renderLocalizationSummarySection({
+        repository: locale.repository,
+        issue: locale.issue,
+        pullRequest: locale.pullRequest,
+    }, catalogResolver?.observations?.() ?? []);
     const summaryText = execution.singleAction.isDeploymentOrchestrationAction && operation
-        ? renderDeploymentJobSummary(operation, {
+        ? [renderDeploymentJobSummary(operation, {
             owner: execution.owner,
             repository: execution.repo,
             issue: execution.singleAction.issue,
-            issueLocale: execution.locale.issue,
-            pullRequestLocale: execution.locale.pullRequest,
+            issueLocale: locale.issue,
+            pullRequestLocale: locale.pullRequest,
             packageName: execution.owner === 'vypdev' && execution.repo === 'copilot' ? '@vypdev/copilot' : undefined,
             workflowRunUrl: process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
                 ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
                 : undefined,
-        }, operation.lastFailure?.previousPhase, execution.currentConfiguration.results.flatMap((result) => result.steps ?? []))
+        }, operation.lastFailure?.previousPhase, execution.currentConfiguration.results.flatMap((result) => result.steps ?? [])), localizationEvidence]
+            .filter(Boolean)
+            .join('\n\n')
         : buildActionSummary({
-        owner: execution.owner,
-        repository: execution.repo,
-        eventName: execution.eventName,
-        issueNumber: execution.issue?.number ?? -1,
-        pullRequestNumber: execution.pullRequest?.number ?? -1,
-        lifecycleState: lifecycleStateFromLabels(
-            execution.isPullRequest
-                ? execution.labels?.currentPullRequestLabels ?? []
-                : execution.labels?.currentIssueLabels ?? [],
-            execution.labels?.lifecycle,
-        ),
-        pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode(),
-        failOnUnresolvedFindings: execution.ai.getBugbotReviewConfiguration().failOnUnresolved,
-        results: execution.currentConfiguration.results,
+            owner: execution.owner,
+            repository: execution.repo,
+            eventName: execution.eventName,
+            issueNumber: execution.issue?.number ?? -1,
+            pullRequestNumber: execution.pullRequest?.number ?? -1,
+            lifecycleState: lifecycleStateFromLabels(
+                execution.isPullRequest
+                    ? execution.labels?.currentPullRequestLabels ?? []
+                    : execution.labels?.currentIssueLabels ?? [],
+                execution.labels?.lifecycle,
+            ),
+            pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode(),
+            failOnUnresolvedFindings: execution.ai.getBugbotReviewConfiguration().failOnUnresolved,
+            locale: {
+                repository: locale.repository,
+                issue: locale.issue,
+                pullRequest: locale.pullRequest,
+            },
+            catalogResolutions: catalogResolver?.observations?.() ?? [],
+            results: execution.currentConfiguration.results,
         });
     if (!summaryPort) return summaryText;
     try {

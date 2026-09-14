@@ -3,7 +3,7 @@ import { publicationIdentityEquals } from '../../../../domain/github_publication
 import { githubUsersMatch } from '../../../../domain/github_user_policy';
 import type { BoundIssueCommentPublicationPort, IssueCommentPublicationTarget } from '../../../ports/issue_lifecycle_ports';
 import { buildDuplicateMarker, parsePublicationMarker } from '../../../policies/publication_identity_policy';
-import { resolveStaticPublicationCatalog } from '../../../policies/publication_message_catalog';
+import { resolveStaticPublicationCatalog, type PublicationMessageCatalog } from '../../../policies/publication_message_catalog';
 import { renderSemanticStatus, type SemanticStatusIntent } from '../../../policies/semantic_result_publication_policy';
 
 export interface StatusCardPublicationContext {
@@ -11,6 +11,7 @@ export interface StatusCardPublicationContext {
     readonly repository: string;
     readonly botLogin: string;
     readonly intent: SemanticStatusIntent;
+    readonly catalog?: PublicationMessageCatalog;
 }
 
 export interface StatusCardPublicationOutcome {
@@ -25,7 +26,7 @@ export async function reconcileStatusCard(
 ): Promise<StatusCardPublicationOutcome> {
     if (!context.botLogin.trim()) return Object.freeze({ effect: 'unchanged', duplicatesCompacted: 0 });
     const target = context.intent.identity.target;
-    const rendered = renderSemanticStatus(context.intent);
+    const rendered = renderSemanticStatus(context.intent, context.catalog);
     let owned = ownedCards(await comments.listIssueComments(target.number), context.intent.identity, context.botLogin);
     let effect: StatusCardPublicationOutcome['effect'] = 'unchanged';
     if (owned.length === 0) {
@@ -65,7 +66,7 @@ function ownedCards(
 }
 
 function duplicatePointer(context: StatusCardPublicationContext, canonicalCommentId: number): string {
-    const messages = resolveStaticPublicationCatalog(context.intent.locale).catalog;
+    const messages = context.catalog ?? resolveStaticPublicationCatalog(context.intent.locale).catalog;
     const targetPath = context.intent.identity.target.kind === 'pull-request' ? 'pull' : 'issues';
     const url = `https://github.com/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)}/${targetPath}/${context.intent.identity.target.number}#issuecomment-${canonicalCommentId}`;
     return [

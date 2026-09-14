@@ -71,11 +71,12 @@ describe('SetupDoctorUseCase', () => {
     const report = await new SetupDoctorUseCase(dependencies(configuration)).execute(request(configuration));
 
     expect(report.healthy).toBe(true);
-    expect(report.checks.slice(0, 4).map((check) => check.id)).toEqual([
+    expect(report.checks.slice(0, 5).map((check) => check.id)).toEqual([
       'configuration.valid',
+      'locale.repository',
+      'locale.issue',
+      'locale.pull-request',
       'workspace.repository-root',
-      'credentials.setup-pat',
-      'github.resource-scopes',
     ]);
     expect(report.totals.fail).toBe(0);
   });

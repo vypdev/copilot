@@ -6,7 +6,7 @@ import {
     parsePublicationReplyMarker,
     readablePublicationReplyCorrelationIds,
 } from '../../../policies/publication_identity_policy';
-import { resolveStaticPublicationCatalog } from '../../../policies/publication_message_catalog';
+import { resolveStaticPublicationCatalog, type PublicationMessageCatalog } from '../../../policies/publication_message_catalog';
 import { renderSemanticReply, type SemanticReplyIntent } from '../../../policies/semantic_result_publication_policy';
 
 export interface ReplyPublicationContext {
@@ -14,6 +14,7 @@ export interface ReplyPublicationContext {
     readonly repository: string;
     readonly botLogin: string;
     readonly intent: SemanticReplyIntent;
+    readonly catalog?: PublicationMessageCatalog;
 }
 
 export interface ReplyPublicationOutcome {
@@ -32,7 +33,7 @@ export async function reconcileReply(
     let owned = matchingReplies(await comments.listIssueComments(target.number), context);
     let effect: ReplyPublicationOutcome['effect'] = 'unchanged';
     if (owned.length === 0) {
-        await comments.addComment(target.number, renderSemanticReply(context.intent));
+        await comments.addComment(target.number, renderSemanticReply(context.intent, context.catalog));
         effect = 'created';
         owned = matchingReplies(await comments.listIssueComments(target.number), context);
     }
@@ -63,7 +64,7 @@ function matchingReplies(
 }
 
 function duplicatePointer(context: ReplyPublicationContext, canonicalCommentId: number): string {
-    const messages = resolveStaticPublicationCatalog(context.intent.locale).catalog;
+    const messages = context.catalog ?? resolveStaticPublicationCatalog(context.intent.locale).catalog;
     const targetPath = context.intent.target.kind === 'pull-request' ? 'pull' : 'issues';
     const url = `https://github.com/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)}/${targetPath}/${context.intent.target.number}#issuecomment-${canonicalCommentId}`;
     return [

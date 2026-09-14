@@ -7,6 +7,9 @@ import { toApplicationError } from '../../../errors/application_error';
 import { createSemanticDigest } from '../../../policies/publication_identity_policy';
 import { reconcileReply } from './reply_publication_workflow';
 import { reconcileStatusCard } from './status_card_publication_workflow';
+import type { AgentConfiguration } from '../../../../domain/agent';
+import type { MessageCatalogResolutionPort } from '../../../ports/message_catalog_ports';
+import { resolvePublicationCatalog } from '../../../policies/publication_message_catalog';
 
 export interface PublishResultContext {
     readonly owner: string;
@@ -16,6 +19,7 @@ export interface PublishResultContext {
     readonly target?: PublicationTarget;
     readonly requestCorrelationId: string;
     readonly results: readonly Result[];
+    readonly languageConfiguration?: Readonly<AgentConfiguration>;
 }
 
 export interface PublishResultContextSource {
@@ -34,6 +38,7 @@ export interface PublishResultContextSource {
     };
     readonly locale?: { readonly issue: string; readonly pullRequest: string };
     readonly currentConfiguration: { readonly results: readonly Result[] };
+    readonly ai?: { getAgentConfiguration(task: 'planner'): AgentConfiguration };
 }
 
 export function projectPublishResultContext(source: PublishResultContextSource): PublishResultContext {
@@ -48,6 +53,7 @@ export function projectPublishResultContext(source: PublishResultContextSource):
         ...(target ? { target } : {}),
         requestCorrelationId: requestCorrelationId(source, target),
         results: Object.freeze(source.currentConfiguration.results.map(copyResult)),
+        ...(source.ai ? { languageConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }) } : {}),
     });
 }
 
@@ -60,6 +66,7 @@ export async function runPublishResume(
     param: PublishResultContext,
     taskId: string,
     comments: BoundIssueCommentPublicationPort,
+    catalogResolver?: MessageCatalogResolutionPort,
 ): Promise<Result | undefined> {
     try {
         const semanticContext = {
@@ -79,12 +86,18 @@ export async function runPublishResume(
             logInfo('Conversation publication omitted: the configured bot identity is unavailable.');
             return undefined;
         }
+        const catalog = await resolvePublicationCatalog(
+            param.locale,
+            param.languageConfiguration,
+            catalogResolver,
+        );
         for (const intent of replies) {
             const outcome = await reconcileReply({
                 owner: param.owner,
                 repository: param.repository,
                 botLogin: param.botLogin,
                 intent,
+                catalog,
             }, comments);
             logInfo(`Semantic ${intent.messageKey} reply ${outcome.effect}; duplicates compacted=${outcome.duplicatesCompacted}.`);
         }
@@ -94,6 +107,7 @@ export async function runPublishResume(
                 repository: param.repository,
                 botLogin: param.botLogin,
                 intent,
+                catalog,
             }, comments);
             logInfo(`Semantic ${intent.identity.topic} publication ${outcome.effect}; duplicates compacted=${outcome.duplicatesCompacted}.`);
         }

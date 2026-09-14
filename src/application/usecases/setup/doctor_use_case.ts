@@ -20,6 +20,7 @@ import {
   doctorCheck,
   normalizedDoctorPathId,
   skippedDoctorCheck,
+  buildLocaleDoctorChecks,
 } from '../../policies/setup_doctor_report_policy';
 import { runWithConcurrencyLimit } from '../../policies/bounded_concurrency_policy';
 import type {
@@ -58,6 +59,7 @@ export class SetupDoctorUseCase {
     const configurationErrors = validateSetupConfiguration(request.configuration);
     const checks: DoctorCheck[] = [
       configurationCheck(configurationErrors),
+      ...buildLocaleDoctorChecks(request.configuration),
       repositoryRootCheck(this.dependencies.workspace),
       ...workflowChecks(request.configuration, configurationErrors, this.dependencies.workspace),
     ];

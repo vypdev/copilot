@@ -14,6 +14,7 @@ import type {
 } from '../../domain/setup';
 import { DEFAULT_INACTIVITY_THRESHOLD_HOURS } from '../../domain/issue_inactivity';
 import { DEFAULT_DEPLOYMENT_CONFIGURATION } from '../../domain/deployment_configuration';
+import { resolveLocaleProfile } from '../../domain/locale';
 
 export const SETUP_AGENT_TASKS: readonly AgentTask[] = [
     'planner',
@@ -193,4 +194,35 @@ export function mergeSetupConfiguration(
             },
         },
     };
+}
+
+/** Returns a copy with only canonical BCP-47 locale values. */
+export function normalizeSetupConfigurationLocales(configuration: SetupConfiguration): SetupConfiguration {
+    const profile = resolveLocaleProfile(
+        configuration.repository.repositoryLocale,
+        configuration.repository.issueLocale,
+        configuration.repository.pullRequestLocale,
+    );
+    return {
+        ...configuration,
+        repository: {
+            ...configuration.repository,
+            repositoryLocale: profile.repository,
+            issueLocale: profile.issueOverride ?? '',
+            pullRequestLocale: profile.pullRequestOverride ?? '',
+        },
+    };
+}
+
+export function setupLocaleMigrationWarnings(configuration: SetupConfiguration): readonly string[] {
+    const values = [
+        configuration.repository.repositoryLocale,
+        configuration.repository.issueLocale,
+        configuration.repository.pullRequestLocale,
+    ];
+    return values.some(value => value.includes('_'))
+        ? Object.freeze([
+            'Legacy underscore locale separators were canonicalized to BCP-47 hyphens. Update saved configuration before the next major version.',
+        ])
+        : Object.freeze([]);
 }

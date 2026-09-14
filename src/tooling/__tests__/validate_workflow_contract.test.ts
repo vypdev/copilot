@@ -12,6 +12,7 @@ interface ContractModule {
   assertNoJobLevelSecrets(file: string, workflow: Record<string, unknown>): void;
   assertAgentWorkflowPermissions(file: string, workflow: Record<string, unknown>): void;
   assertAgentInstallationPrerequisites(file: string, workflow: Record<string, unknown>): void;
+  assertRepositoryLocaleInputs(file: string, workflow: Record<string, unknown>): void;
   assertLightweightBranchSyncWorkflow(file: string, workflow: Record<string, unknown>): void;
   MIN_QUEUE_JOB_TIMEOUT_MINUTES: number;
   DEPLOYMENT_VALIDATION_TIMEOUT_MINUTES: number;
@@ -35,6 +36,7 @@ const {
   assertNoJobLevelSecrets,
   assertAgentWorkflowPermissions,
   assertAgentInstallationPrerequisites,
+  assertRepositoryLocaleInputs,
   assertLightweightBranchSyncWorkflow,
   MIN_QUEUE_JOB_TIMEOUT_MINUTES,
   DEPLOYMENT_VALIDATION_TIMEOUT_MINUTES,
@@ -638,6 +640,35 @@ describe('workflow contract validator', () => {
     delete action.with['planner-provider'];
 
     expect(() => validateWorkflow(file, workflow)).toThrow('missing agent inputs: planner-provider');
+  });
+
+  it('passes the repository locale and inheriting empty scope overrides in every agent workflow', () => {
+    for (const directory of ['.github/workflows', 'setup/workflows']) {
+      for (const fileName of [
+        'copilot_commit.yml',
+        'copilot_issue.yml',
+        'copilot_issue_comment.yml',
+        'copilot_pull_request.yml',
+        'copilot_pull_request_comment.yml',
+      ]) {
+        const file = path.join(process.cwd(), directory, fileName);
+        const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+        expect(() => assertRepositoryLocaleInputs(file, workflow)).not.toThrow();
+      }
+    }
+  });
+
+  it('rejects a workflow that replaces scope inheritance with an English override', () => {
+    const file = path.join(process.cwd(), 'setup/workflows/copilot_issue.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const action = workflow.jobs['copilot-issues'].steps.find(
+      (step: { uses?: string }) => step.uses?.startsWith('vypdev/copilot@'),
+    );
+    action.with['issues-locale'] = "${{ vars.ISSUES_LOCALE || 'en-US' }}";
+
+    expect(() => validateWorkflow(file, workflow)).toThrow(
+      'must pass the repository locale and inheriting empty scope overrides exactly',
+    );
   });
 
   it('requires Node.js 24 before every workflow path that may install a pinned agent CLI', () => {
