@@ -13,6 +13,7 @@ interface ContractModule {
   assertAgentWorkflowPermissions(file: string, workflow: Record<string, unknown>): void;
   assertAgentInstallationPrerequisites(file: string, workflow: Record<string, unknown>): void;
   assertRepositoryLocaleInputs(file: string, workflow: Record<string, unknown>): void;
+  assertRepositoryBugbotContextExclusions(file: string, workflow: Record<string, unknown>): void;
   assertLightweightBranchSyncWorkflow(file: string, workflow: Record<string, unknown>): void;
   MIN_QUEUE_JOB_TIMEOUT_MINUTES: number;
   DEPLOYMENT_VALIDATION_TIMEOUT_MINUTES: number;
@@ -37,6 +38,7 @@ const {
   assertAgentWorkflowPermissions,
   assertAgentInstallationPrerequisites,
   assertRepositoryLocaleInputs,
+  assertRepositoryBugbotContextExclusions,
   assertLightweightBranchSyncWorkflow,
   MIN_QUEUE_JOB_TIMEOUT_MINUTES,
   DEPLOYMENT_VALIDATION_TIMEOUT_MINUTES,
@@ -668,6 +670,32 @@ describe('workflow contract validator', () => {
 
     expect(() => validateWorkflow(file, workflow)).toThrow(
       'must pass the repository locale and inheriting empty scope overrides exactly',
+    );
+  });
+
+  it('keeps generated artifacts out of this repository Bugbot context', () => {
+    for (const fileName of [
+      'copilot_issue.yml',
+      'copilot_issue_comment.yml',
+      'copilot_pull_request.yml',
+      'copilot_pull_request_comment.yml',
+    ]) {
+      const file = path.join(process.cwd(), '.github/workflows', fileName);
+      const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+      expect(() => assertRepositoryBugbotContextExclusions(file, workflow)).not.toThrow();
+    }
+  });
+
+  it('rejects repository workflows that restore generated catalog noise', () => {
+    const file = path.join(process.cwd(), '.github/workflows', 'copilot_pull_request.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const action = workflow.jobs['copilot-pull-requests'].steps.find(
+      (step: { uses?: string }) => step.uses === './',
+    );
+    action.with['ai-ignore-files'] = 'build/*';
+
+    expect(() => validateWorkflow(file, workflow)).toThrow(
+      'must exclude generated build and specification catalog artifacts',
     );
   });
 
