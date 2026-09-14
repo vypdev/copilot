@@ -14,6 +14,16 @@ and reply workflows validate exact bot ownership, stable correlation or topic
 identity, and semantic digests before creating or updating a comment. The
 checked-in publication mutation inventory fails CI if a new application use
 case writes a comment or review without an explicit architectural decision.
+Initial issue help follows that rule: the agent step returns an immutable
+`direct-answer` projection and never receives a GitHub mutation port. The shared
+reply reconciler sanitizes and publishes that answer once for the event
+correlation. Issue routing emits a welcome only when an eligible normal issue
+produces neither a publishable plan nor a direct answer; release and hotfix
+issues leave conversation ownership to their durable dashboard. Before the
+optional fallback is emitted, a read-only comment port checks exact-target,
+bot-owned plan, direct-answer, and current or legacy welcome markers. An unavailable history read fails
+closed by omitting the welcome. An unchanged stored recommendation is projected
+again so the status reconciler can adopt, preserve, or recreate its plan card.
 
 Repository-facing language follows the same boundary. Entrypoints build one
 canonical, frozen locale profile: `repository-locale` defaults to `en-US`, and

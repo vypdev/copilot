@@ -1,4 +1,5 @@
 import {
+  bindIssueCommentQuery,
   bindIssueCommentUpdate,
   bindIssueDescriptionQuery,
   bindIssueNotification,
@@ -10,11 +11,12 @@ import {
 const binding = { owner: 'acme', repository: 'demo', token: 'secret' };
 
 describe('shared capability repository bindings', () => {
-  it('binds organization, description, notification, and comment-update credentials once', async () => {
+  it('binds organization, description, notification, and comment credentials once', async () => {
     const getAllMembers = jest.fn().mockResolvedValue(['alice']);
     const getDescription = jest.fn().mockResolvedValue('body');
     const addComment = jest.fn().mockResolvedValue(undefined);
     const updateComment = jest.fn().mockResolvedValue(undefined);
+    const listIssueComments = jest.fn().mockResolvedValue([{ id: 1, body: 'answer' }]);
 
     await expect(bindOrganizationMembers({ getAllMembers } as never, binding).getAllMembers())
       .resolves.toEqual(['alice']);
@@ -22,11 +24,14 @@ describe('shared capability repository bindings', () => {
       .resolves.toBe('body');
     await bindIssueNotification({ addComment } as never, binding).addComment(7, 'done');
     await bindIssueCommentUpdate({ updateComment } as never, binding).updateComment(7, 70, 'translated');
+    await expect(bindIssueCommentQuery({ listIssueComments }, binding).listIssueComments(7))
+      .resolves.toEqual([{ id: 1, body: 'answer' }]);
 
     expect(getAllMembers).toHaveBeenCalledWith('acme', 'secret');
     expect(getDescription).toHaveBeenCalledWith('acme', 'demo', 7, 'secret');
     expect(addComment).toHaveBeenCalledWith('acme', 'demo', 7, 'done', 'secret');
     expect(updateComment).toHaveBeenCalledWith('acme', 'demo', 7, 70, 'translated', 'secret');
+    expect(listIssueComments).toHaveBeenCalledWith('acme', 'demo', 7, 'secret');
   });
 
   it('binds every issue-title operation without exposing credentials to the use case', async () => {

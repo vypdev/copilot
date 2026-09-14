@@ -1,7 +1,9 @@
 import type { BoundIssueDescriptionQueryPort } from '../../application/ports/issue_description_ports';
 import type {
+  BoundIssueCommentQueryPort,
   BoundIssueCommentUpdatePort,
   BoundIssueNotificationPort,
+  IssueCommentQueryPort,
   IssueCommentUpdatePort,
   IssueNotificationPort,
 } from '../../application/ports/issue_lifecycle_ports';
@@ -59,6 +61,20 @@ export function bindIssueNotification(
       binding.repository,
       issueNumber,
       comment,
+      binding.token,
+    ),
+  };
+}
+
+export function bindIssueCommentQuery(
+  port: IssueCommentQueryPort,
+  binding: RepositoryCredentialBinding,
+): BoundIssueCommentQueryPort {
+  return {
+    listIssueComments: (issueNumber) => port.listIssueComments(
+      binding.owner,
+      binding.repository,
+      issueNumber,
       binding.token,
     ),
   };

@@ -43,15 +43,22 @@ export interface IssueCommentPublicationTarget {
     user?: { login?: string };
 }
 
-/** Read/write boundary used by the generic issue-comment single action. */
-export interface IssueCommentPublicationPort {
-    addComment(owner: string, repository: string, issueNumber: number, comment: string, token: string): Promise<void>;
-    updateComment(owner: string, repository: string, issueNumber: number, commentId: number, comment: string, token: string): Promise<void>;
+export interface IssueCommentQueryPort {
     listIssueComments(owner: string, repository: string, issueNumber: number, token: string): Promise<IssueCommentPublicationTarget[]>;
 }
 
-export interface BoundIssueCommentPublicationPort {
+/** Repository-credential-bound read-only issue comment access. */
+export interface BoundIssueCommentQueryPort {
+    listIssueComments(issueNumber: number): Promise<readonly IssueCommentPublicationTarget[]>;
+}
+
+/** Read/write boundary used by the generic issue-comment single action. */
+export interface IssueCommentPublicationPort extends IssueCommentQueryPort {
+    addComment(owner: string, repository: string, issueNumber: number, comment: string, token: string): Promise<void>;
+    updateComment(owner: string, repository: string, issueNumber: number, commentId: number, comment: string, token: string): Promise<void>;
+}
+
+export interface BoundIssueCommentPublicationPort extends BoundIssueCommentQueryPort {
     addComment(issueNumber: number, comment: string): Promise<void>;
     updateComment(issueNumber: number, commentId: number, comment: string): Promise<void>;
-    listIssueComments(issueNumber: number): Promise<readonly IssueCommentPublicationTarget[]>;
 }

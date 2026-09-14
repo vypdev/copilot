@@ -32,7 +32,9 @@ export async function runRecommendStepsWorkflow(
 
     try {
         const configuration = param.agentConfiguration;
-        if (!isAgentConfigurationReady(configuration)) {
+        const previousRecommendation = param.previousRecommendation;
+        const agentReady = isAgentConfigurationReady(configuration);
+        if (!agentReady && !previousRecommendation) {
             return outcome([failure(taskId, 'Missing agent model or executable.', 'configuration.invalid')]);
         }
 
@@ -52,11 +54,13 @@ export async function runRecommendStepsWorkflow(
             return outcome([failure(taskId, `No description found for issue #${issueNumber}.`, 'provider.not-found')]);
         }
 
-        const previousRecommendation = param.previousRecommendation;
         const issueDescriptionFingerprint = createIssueDescriptionFingerprint(issueDescription);
         if (previousRecommendation?.issueDescriptionFingerprint === issueDescriptionFingerprint) {
-            logInfo('RecommendSteps: issue description is unchanged; skipping recommendation.');
-            return outcome([]);
+            logInfo('RecommendSteps: issue description is unchanged; reconciling the existing plan.');
+            return replayExistingPlan(taskId, issueNumber, previousRecommendation);
+        }
+        if (!agentReady) {
+            return outcome([failure(taskId, 'Missing agent model or executable.', 'configuration.invalid')]);
         }
 
         const prompt = getRecommendStepsPrompt({
@@ -90,6 +94,23 @@ export async function runRecommendStepsWorkflow(
             }),
         ]);
     }
+}
+
+function replayExistingPlan(
+    taskId: string,
+    issueNumber: number,
+    recommendationState: Readonly<NonNullable<RecommendStepsContext['previousRecommendation']>>,
+): RecommendStepsOutcome {
+    return outcome([new Result({
+        id: taskId,
+        success: true,
+        executed: true,
+        payload: Object.freeze({
+            issueNumber,
+            recommendedSteps: recommendationState.recommendation,
+            recommendationState: Object.freeze({ ...recommendationState }),
+        }),
+    })]);
 }
 
 function outcome(results: readonly Result[]): RecommendStepsOutcome {

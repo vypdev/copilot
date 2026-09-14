@@ -1,10 +1,21 @@
 import { publicationTargetToken, type PublicationTarget, type ReplyPublicationIntent, type StatusPublicationIntent } from '../../domain/github_publication';
+import { githubUsersMatch } from '../../domain/github_user_policy';
 import type { Result } from '../../data/model/result';
 import { getResultPayload } from '../../data/model/result';
 import { sanitizeAgentMarkdown } from './github_comment_publication_policy';
-import { buildPublicationMarker, buildPublicationReplyMarker, createSemanticDigest } from './publication_identity_policy';
+import {
+    buildPublicationMarker,
+    buildPublicationReplyMarker,
+    createSemanticDigest,
+    parsePublicationMarker,
+    parsePublicationReplyMarker,
+} from './publication_identity_policy';
 import { resolveStaticPublicationCatalog, type PublicationMessageCatalog } from './publication_message_catalog';
-import { buildCopilotHelpMessage, buildCopilotWelcomeMessage } from './copilot_interaction_policy';
+import {
+    buildCopilotHelpMessage,
+    buildCopilotWelcomeMessage,
+    COPILOT_WELCOME_MARKER,
+} from './copilot_interaction_policy';
 import { formatCopilotStatus, type CopilotStatusSnapshot } from './status_command_policy';
 
 export interface PlanPublicationProjection {
@@ -27,6 +38,7 @@ export type SemanticStatusIntent = StatusPublicationIntent<SemanticStatusProject
 export type SemanticReplyProjection =
     | { readonly kind: 'help'; readonly botLogin: string }
     | { readonly kind: 'welcome'; readonly botLogin: string }
+    | { readonly kind: 'direct-answer'; readonly answer: string }
     | { readonly kind: 'access-policy' }
     | { readonly kind: 'status-command'; readonly snapshot: CopilotStatusSnapshot };
 export type SemanticReplyIntent = ReplyPublicationIntent<SemanticReplyProjection>;
@@ -37,6 +49,11 @@ export interface SemanticPublicationContext {
     readonly target?: PublicationTarget;
     readonly correlationId?: string;
     readonly botLogin?: string;
+}
+
+export interface SemanticPublicationComment {
+    readonly body: string | null;
+    readonly user?: { readonly login?: string };
 }
 
 export function selectSemanticStatusIntents(context: SemanticPublicationContext): readonly SemanticStatusIntent[] {
@@ -51,6 +68,38 @@ export function selectSemanticStatusIntents(context: SemanticPublicationContext)
     }));
 }
 
+/** True only when an issue result can become the route's single primary response. */
+export function hasPrimaryIssuePublication(results: readonly Result[]): boolean {
+    return results.some(result => {
+        if (!result.executed || !result.success) return false;
+        const payload = getResultPayload(result.payload);
+        return Boolean(payload && (
+            isPlanPayload(result.id, payload)
+            || directAnswerProjection(payload)
+        ));
+    });
+}
+
+/** Recognizes only bot-owned primary-response markers on the exact issue comment list. */
+export function hasOwnedPrimaryIssuePublication(
+    comments: readonly SemanticPublicationComment[],
+    issueNumber: number,
+    botLogin: string,
+): boolean {
+    if (!positiveInteger(issueNumber) || !botLogin.trim()) return false;
+    const expectedTarget = `issue:${issueNumber}`;
+    return comments.some(comment => {
+        if (!githubUsersMatch(comment.user?.login ?? '', botLogin)) return false;
+        const status = parsePublicationMarker(comment.body);
+        if (status?.identity.topic === 'plan'
+            && publicationTargetToken(status.identity.target) === expectedTarget) return true;
+        const reply = parsePublicationReplyMarker(comment.body);
+        if (reply?.target === expectedTarget
+            && (reply.messageKey === 'direct-answer' || reply.messageKey === 'copilot-welcome')) return true;
+        return comment.body?.includes(COPILOT_WELCOME_MARKER) === true;
+    });
+}
+
 export function selectSemanticReplyIntents(context: SemanticPublicationContext): readonly SemanticReplyIntent[] {
     if (!context.target || !positiveInteger(context.target.number) || !context.correlationId?.trim()) return [];
     const correlationId = safeMarkerToken(context.correlationId);
@@ -58,6 +107,8 @@ export function selectSemanticReplyIntents(context: SemanticPublicationContext):
         if (!result.executed || !result.success) return [];
         const payload = getResultPayload(result.payload);
         if (!payload) return [];
+        const directAnswer = directAnswerProjection(payload);
+        if (directAnswer) return [replyIntent(context, correlationId, 'direct-answer', directAnswer)];
         const publication = getResultPayload(payload.publication);
         const kind = publication?.kind;
         if (kind === 'help' || kind === 'welcome') {
@@ -92,13 +143,15 @@ export function renderSemanticReply(
         messageKey: intent.messageKey,
         digest: intent.digest,
     });
-    const body = intent.projection.kind === 'help'
-        ? buildCopilotHelpMessage(intent.projection.botLogin, intent.locale, catalog)
-        : intent.projection.kind === 'welcome'
-            ? buildCopilotWelcomeMessage(intent.projection.botLogin, intent.locale, catalog)
-            : intent.projection.kind === 'access-policy'
-                ? renderAccessPolicyReply(catalog)
-                : formatCopilotStatus(intent.projection.snapshot, intent.locale, catalog);
+    const body = intent.projection.kind === 'direct-answer'
+        ? sanitizeAgentMarkdown(intent.projection.answer).trim()
+        : intent.projection.kind === 'help'
+            ? buildCopilotHelpMessage(intent.projection.botLogin, intent.locale, catalog)
+            : intent.projection.kind === 'welcome'
+                ? buildCopilotWelcomeMessage(intent.projection.botLogin, intent.locale, catalog)
+                : intent.projection.kind === 'access-policy'
+                    ? renderAccessPolicyReply(catalog)
+                    : formatCopilotStatus(intent.projection.snapshot, intent.locale, catalog);
     return `${marker}\n\n${body}`;
 }
 
@@ -151,10 +204,7 @@ export function renderSemanticStatus(
 }
 
 function planIntent(id: string, payload: Record<string, unknown>, locale: string): SemanticStatusIntent | undefined {
-    if (id !== 'RecommendStepsUseCase'
-        || !positiveInteger(payload.issueNumber)
-        || typeof payload.recommendedSteps !== 'string'
-        || !payload.recommendedSteps.trim()) return undefined;
+    if (!isPlanPayload(id, payload)) return undefined;
     const state = getResultPayload(payload.recommendationState);
     const issueFingerprint = typeof state?.issueDescriptionFingerprint === 'string'
         ? state.issueDescriptionFingerprint
@@ -164,6 +214,27 @@ function planIntent(id: string, payload: Record<string, unknown>, locale: string
         recommendation: payload.recommendedSteps.trim(),
     });
     return statusIntent('plan', payload.issueNumber, 'implementation', `issue-body:${safeDigest(issueFingerprint)}`, locale, projection);
+}
+
+function isPlanPayload(
+    id: string,
+    payload: Record<string, unknown>,
+): payload is Record<string, unknown> & { readonly issueNumber: number; readonly recommendedSteps: string } {
+    return id === 'RecommendStepsUseCase'
+        && positiveInteger(payload.issueNumber)
+        && typeof payload.recommendedSteps === 'string'
+        && Boolean(payload.recommendedSteps.trim());
+}
+
+function directAnswerProjection(payload: Record<string, unknown>): SemanticReplyProjection | undefined {
+    const publication = getResultPayload(payload.publication);
+    if (publication?.kind !== 'direct-answer'
+        || typeof publication.answer !== 'string'
+        || !publication.answer.trim()) return undefined;
+    return Object.freeze({
+        kind: 'direct-answer' as const,
+        answer: publication.answer.trim(),
+    });
 }
 
 function progressIntent(id: string, payload: Record<string, unknown>, locale: string): SemanticStatusIntent | undefined {

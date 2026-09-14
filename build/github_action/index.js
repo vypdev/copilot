@@ -46482,10 +46482,13 @@ function calculateReviewersStillNeeded(desiredCount, currentCount, confirmedCoun
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.selectSemanticStatusIntents = selectSemanticStatusIntents;
+exports.hasPrimaryIssuePublication = hasPrimaryIssuePublication;
+exports.hasOwnedPrimaryIssuePublication = hasOwnedPrimaryIssuePublication;
 exports.selectSemanticReplyIntents = selectSemanticReplyIntents;
 exports.renderSemanticReply = renderSemanticReply;
 exports.renderSemanticStatus = renderSemanticStatus;
 const github_publication_1 = __nccwpck_require__(35793);
+const github_user_policy_1 = __nccwpck_require__(84403);
 const result_1 = __nccwpck_require__(73817);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
@@ -46506,6 +46509,35 @@ function selectSemanticStatusIntents(context) {
         return progress ? [progress] : [];
     }));
 }
+/** True only when an issue result can become the route's single primary response. */
+function hasPrimaryIssuePublication(results) {
+    return results.some(result => {
+        if (!result.executed || !result.success)
+            return false;
+        const payload = (0, result_1.getResultPayload)(result.payload);
+        return Boolean(payload && (isPlanPayload(result.id, payload)
+            || directAnswerProjection(payload)));
+    });
+}
+/** Recognizes only bot-owned primary-response markers on the exact issue comment list. */
+function hasOwnedPrimaryIssuePublication(comments, issueNumber, botLogin) {
+    if (!positiveInteger(issueNumber) || !botLogin.trim())
+        return false;
+    const expectedTarget = `issue:${issueNumber}`;
+    return comments.some(comment => {
+        if (!(0, github_user_policy_1.githubUsersMatch)(comment.user?.login ?? '', botLogin))
+            return false;
+        const status = (0, publication_identity_policy_1.parsePublicationMarker)(comment.body);
+        if (status?.identity.topic === 'plan'
+            && (0, github_publication_1.publicationTargetToken)(status.identity.target) === expectedTarget)
+            return true;
+        const reply = (0, publication_identity_policy_1.parsePublicationReplyMarker)(comment.body);
+        if (reply?.target === expectedTarget
+            && (reply.messageKey === 'direct-answer' || reply.messageKey === 'copilot-welcome'))
+            return true;
+        return comment.body?.includes(copilot_interaction_policy_1.COPILOT_WELCOME_MARKER) === true;
+    });
+}
 function selectSemanticReplyIntents(context) {
     if (!context.target || !positiveInteger(context.target.number) || !context.correlationId?.trim())
         return [];
@@ -46516,6 +46548,9 @@ function selectSemanticReplyIntents(context) {
         const payload = (0, result_1.getResultPayload)(result.payload);
         if (!payload)
             return [];
+        const directAnswer = directAnswerProjection(payload);
+        if (directAnswer)
+            return [replyIntent(context, correlationId, 'direct-answer', directAnswer)];
         const publication = (0, result_1.getResultPayload)(payload.publication);
         const kind = publication?.kind;
         if (kind === 'help' || kind === 'welcome') {
@@ -46546,13 +46581,15 @@ function renderSemanticReply(intent, catalog = (0, publication_message_catalog_1
         messageKey: intent.messageKey,
         digest: intent.digest,
     });
-    const body = intent.projection.kind === 'help'
-        ? (0, copilot_interaction_policy_1.buildCopilotHelpMessage)(intent.projection.botLogin, intent.locale, catalog)
-        : intent.projection.kind === 'welcome'
-            ? (0, copilot_interaction_policy_1.buildCopilotWelcomeMessage)(intent.projection.botLogin, intent.locale, catalog)
-            : intent.projection.kind === 'access-policy'
-                ? renderAccessPolicyReply(catalog)
-                : (0, status_command_policy_1.formatCopilotStatus)(intent.projection.snapshot, intent.locale, catalog);
+    const body = intent.projection.kind === 'direct-answer'
+        ? (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(intent.projection.answer).trim()
+        : intent.projection.kind === 'help'
+            ? (0, copilot_interaction_policy_1.buildCopilotHelpMessage)(intent.projection.botLogin, intent.locale, catalog)
+            : intent.projection.kind === 'welcome'
+                ? (0, copilot_interaction_policy_1.buildCopilotWelcomeMessage)(intent.projection.botLogin, intent.locale, catalog)
+                : intent.projection.kind === 'access-policy'
+                    ? renderAccessPolicyReply(catalog)
+                    : (0, status_command_policy_1.formatCopilotStatus)(intent.projection.snapshot, intent.locale, catalog);
     return `${marker}\n\n${body}`;
 }
 function renderAccessPolicyReply(messages) {
@@ -46600,10 +46637,7 @@ function renderSemanticStatus(intent, messages = (0, publication_message_catalog
     return lines.join('\n').trim();
 }
 function planIntent(id, payload, locale) {
-    if (id !== 'RecommendStepsUseCase'
-        || !positiveInteger(payload.issueNumber)
-        || typeof payload.recommendedSteps !== 'string'
-        || !payload.recommendedSteps.trim())
+    if (!isPlanPayload(id, payload))
         return undefined;
     const state = (0, result_1.getResultPayload)(payload.recommendationState);
     const issueFingerprint = typeof state?.issueDescriptionFingerprint === 'string'
@@ -46614,6 +46648,23 @@ function planIntent(id, payload, locale) {
         recommendation: payload.recommendedSteps.trim(),
     });
     return statusIntent('plan', payload.issueNumber, 'implementation', `issue-body:${safeDigest(issueFingerprint)}`, locale, projection);
+}
+function isPlanPayload(id, payload) {
+    return id === 'RecommendStepsUseCase'
+        && positiveInteger(payload.issueNumber)
+        && typeof payload.recommendedSteps === 'string'
+        && Boolean(payload.recommendedSteps.trim());
+}
+function directAnswerProjection(payload) {
+    const publication = (0, result_1.getResultPayload)(payload.publication);
+    if (publication?.kind !== 'direct-answer'
+        || typeof publication.answer !== 'string'
+        || !publication.answer.trim())
+        return undefined;
+    return Object.freeze({
+        kind: 'direct-answer',
+        answer: publication.answer.trim(),
+    });
 }
 function progressIntent(id, payload, locale) {
     if (id !== 'CheckProgressUseCase'
@@ -50271,7 +50322,9 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId}.`);
     try {
         const configuration = param.agentConfiguration;
-        if (!(0, agent_1.isAgentConfigurationReady)(configuration)) {
+        const previousRecommendation = param.previousRecommendation;
+        const agentReady = (0, agent_1.isAgentConfigurationReady)(configuration);
+        if (!agentReady && !previousRecommendation) {
             return outcome([failure(taskId, 'Missing agent model or executable.', 'configuration.invalid')]);
         }
         const issueNumber = param.issueNumber;
@@ -50285,11 +50338,13 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
         if (!issueDescription?.trim()) {
             return outcome([failure(taskId, `No description found for issue #${issueNumber}.`, 'provider.not-found')]);
         }
-        const previousRecommendation = param.previousRecommendation;
         const issueDescriptionFingerprint = (0, recommendation_policy_1.createIssueDescriptionFingerprint)(issueDescription);
         if (previousRecommendation?.issueDescriptionFingerprint === issueDescriptionFingerprint) {
-            (0, logging_ports_1.logInfo)('RecommendSteps: issue description is unchanged; skipping recommendation.');
-            return outcome([]);
+            (0, logging_ports_1.logInfo)('RecommendSteps: issue description is unchanged; reconciling the existing plan.');
+            return replayExistingPlan(taskId, issueNumber, previousRecommendation);
+        }
+        if (!agentReady) {
+            return outcome([failure(taskId, 'Missing agent model or executable.', 'configuration.invalid')]);
         }
         const prompt = (0, prompts_1.getRecommendStepsPrompt)({
             projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
@@ -50320,6 +50375,18 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
             }),
         ]);
     }
+}
+function replayExistingPlan(taskId, issueNumber, recommendationState) {
+    return outcome([new result_1.Result({
+            id: taskId,
+            success: true,
+            executed: true,
+            payload: Object.freeze({
+                issueNumber,
+                recommendedSteps: recommendationState.recommendation,
+                recommendationState: Object.freeze({ ...recommendationState }),
+            }),
+        })]);
 }
 function outcome(results) {
     return Object.freeze({ results: Object.freeze([...results]) });
@@ -52082,10 +52149,11 @@ const project_content_link_workflow_1 = __nccwpck_require__(89064);
 const issue_workflow_context_1 = __nccwpck_require__(98005);
 const push_single_action_contexts_1 = __nccwpck_require__(47841);
 class IssueUseCase {
-    constructor(recommendStepsUseCase, answerIssueHelpUseCase, workflowSteps, actorAuthorizationPort) {
+    constructor(recommendStepsUseCase, answerIssueHelpUseCase, workflowSteps, issueCommentQueryPort, actorAuthorizationPort) {
         this.recommendStepsUseCase = recommendStepsUseCase;
         this.answerIssueHelpUseCase = answerIssueHelpUseCase;
         this.workflowSteps = workflowSteps;
+        this.issueCommentQueryPort = issueCommentQueryPort;
         this.actorAuthorizationPort = actorAuthorizationPort;
         this.taskId = "IssueUseCase";
     }
@@ -52096,6 +52164,7 @@ class IssueUseCase {
             answerIssueHelpUseCase: this.answerIssueHelpUseCase,
             workflowSteps: this.workflowSteps,
             actorAuthorizationPort: this.actorAuthorizationPort,
+            issueCommentQueryPort: this.issueCommentQueryPort,
             sharedContexts: {
                 permissions: (0, check_permissions_workflow_1.projectCheckPermissionsContext)(param),
                 title: (0, update_title_workflow_1.projectUpdateTitleContext)(param),
@@ -52114,10 +52183,10 @@ exports.IssueUseCase = IssueUseCase;
 function projectIssueWorkflowRouteContext(param) {
     const recommendation = !param.issue.opened && !param.issue.descriptionEdited
         ? undefined
-        : param.labels.isQuestion || param.labels.isHelp
-            ? 'answer-help'
-            : param.labels.isRelease
-                ? undefined
+        : param.labels.isRelease || param.labels.isHotfix
+            ? undefined
+            : param.labels.isQuestion || param.labels.isHelp
+                ? 'answer-help'
                 : 'recommend';
     return Object.freeze({
         cleanIssueBranches: param.cleanIssueBranches,
@@ -52125,6 +52194,7 @@ function projectIssueWorkflowRouteContext(param) {
         membersOnly: param.ai.getAiMembersOnly(),
         actor: param.actor,
         newIssue: param.eventName === 'issues' && param.inputs?.action === 'opened',
+        onboardingEligible: !param.labels.isRelease && !param.labels.isHotfix,
         ...(param.tokenUser ? { tokenUser: param.tokenUser } : {}),
         ...(recommendation ? { recommendation } : {}),
         recommendSteps: (0, push_single_action_contexts_1.projectRecommendStepsContext)(param),
@@ -52162,6 +52232,7 @@ exports.runIssueWorkflow = runIssueWorkflow;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const copilot_interaction_policy_1 = __nccwpck_require__(90108);
+const semantic_result_publication_policy_1 = __nccwpck_require__(81985);
 const application_error_1 = __nccwpck_require__(75999);
 /** Coordinates issue lifecycle steps in their required sequential order. */
 async function runIssueWorkflow(context, taskId, ports) {
@@ -52218,18 +52289,28 @@ async function runIssueWorkflow(context, taskId, ports) {
             ? recommendationOutcome.configurationPatch
             : undefined;
         results.push(...recommendationResults);
-        if (context.newIssue && !containsWelcome(recommendationResults)) {
-            results.push((0, copilot_interaction_policy_1.buildCopilotWelcomeResult)(context.tokenUser, ports.sharedContexts.steps.answerHelp.locale));
-        }
+        await appendWelcomeFallback(results, recommendationResults, context, ports);
     }
-    else if (context.newIssue) {
-        results.push((0, copilot_interaction_policy_1.buildCopilotWelcomeResult)(context.tokenUser, ports.sharedContexts.steps.answerHelp.locale));
+    else if (context.newIssue && context.onboardingEligible) {
+        await appendWelcomeFallback(results, [], context, ports);
     }
     return issueWorkflowOutcome(results, branchConfigurationPatch, recommendationStatePatch);
 }
-function containsWelcome(results) {
-    return results.some((result) => result.steps.some((step) => step.includes(copilot_interaction_policy_1.COPILOT_WELCOME_MARKER))
-        || (0, result_1.getResultPayload)(result.payload)?.welcomePublished === true);
+async function appendWelcomeFallback(results, recommendationResults, context, ports) {
+    if (!context.newIssue || !context.onboardingEligible || (0, semantic_result_publication_policy_1.hasPrimaryIssuePublication)(recommendationResults))
+        return;
+    if (context.tokenUser?.trim()) {
+        try {
+            const comments = await ports.issueCommentQueryPort.listIssueComments(context.recommendSteps.issueNumber);
+            if ((0, semantic_result_publication_policy_1.hasOwnedPrimaryIssuePublication)(comments, context.recommendSteps.issueNumber, context.tokenUser))
+                return;
+        }
+        catch (error) {
+            (0, logging_ports_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to verify whether the issue already has a primary response; welcome publication was omitted.'));
+            return;
+        }
+    }
+    results.push((0, copilot_interaction_policy_1.buildCopilotWelcomeResult)(context.tokenUser, ports.sharedContexts.steps.answerHelp.locale));
 }
 function issueWorkflowOutcome(results, branchConfigurationPatch, recommendationStatePatch) {
     return Object.freeze({
@@ -52354,8 +52435,6 @@ function projectIssueWorkflowStepContexts(source) {
             description: (source.issue.body ?? '').trim(),
             agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
             locale: source.locale?.issue ?? 'en-US',
-            newIssue: source.eventName === 'issues' && source.inputs?.action === 'opened',
-            ...(source.tokenUser?.trim() ? { tokenUser: source.tokenUser.trim() } : {}),
         }),
     });
 }
@@ -59311,14 +59390,12 @@ exports.AnswerIssueHelpUseCase = void 0;
 const answer_issue_help_workflow_1 = __nccwpck_require__(86428);
 /** Application boundary for the initial response to question/help issues. */
 class AnswerIssueHelpUseCase {
-    constructor(issueNotificationPort, aiRepository) {
-        this.issueNotificationPort = issueNotificationPort;
+    constructor(aiRepository) {
         this.aiRepository = aiRepository;
         this.taskId = 'AnswerIssueHelpUseCase';
     }
     async invoke(param) {
         return await (0, answer_issue_help_workflow_1.runAnswerIssueHelpWorkflow)(param, {
-            issueNotificationPort: this.issueNotificationPort,
             aiRepository: this.aiRepository,
         });
     }
@@ -59345,7 +59422,6 @@ const project_context_instruction_1 = __nccwpck_require__(63907);
 const task_emoji_1 = __nccwpck_require__(46103);
 const agent_answer_policy_1 = __nccwpck_require__(72063);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
-const copilot_interaction_policy_1 = __nccwpck_require__(90108);
 const application_error_1 = __nccwpck_require__(75999);
 const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 const TASK_ID = 'AnswerIssueHelpUseCase';
@@ -59375,16 +59451,17 @@ async function runAnswerIssueHelpWorkflow(param, dependencies) {
         if (!answer) {
             return [noAnswerResult()];
         }
-        const publishedAnswer = param.newIssue
-            ? `${(0, copilot_interaction_policy_1.buildCopilotWelcomeMessage)(param.tokenUser, param.locale)}\n\n${answer}`
-            : answer;
-        await dependencies.issueNotificationPort.addComment(issueNumber, publishedAnswer);
-        (0, logging_ports_1.logInfo)(`Initial help reply posted to issue #${issueNumber}.`);
+        (0, logging_ports_1.logInfo)(`Initial help reply prepared for semantic publication on issue #${issueNumber}.`);
         return [new result_1.Result({
                 id: TASK_ID,
                 success: true,
                 executed: true,
-                payload: { welcomePublished: param.newIssue },
+                payload: Object.freeze({
+                    publication: Object.freeze({
+                        kind: 'direct-answer',
+                        answer,
+                    }),
+                }),
             })];
     }
     catch (error) {
@@ -73539,7 +73616,6 @@ const issue_closure_repository_1 = __nccwpck_require__(23231);
 const issue_content_repository_1 = __nccwpck_require__(2313);
 const issue_lifecycle_repository_1 = __nccwpck_require__(8346);
 const issue_metadata_repository_1 = __nccwpck_require__(11333);
-const issue_notification_repository_1 = __nccwpck_require__(907);
 const issue_title_repository_1 = __nccwpck_require__(10121);
 const issue_type_assignment_repository_1 = __nccwpck_require__(19118);
 const workflow_dispatch_repository_1 = __nccwpck_require__(29509);
@@ -73556,7 +73632,6 @@ function createIssueUseCaseCompositionRoot(binding) {
     const issueMetadata = new issue_metadata_repository_1.IssueMetadataRepository((0, github_issue_client_factory_1.createIssueMetadataClient)(), (0, github_project_client_factory_1.createGraphqlTransportClient)());
     const issueContent = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
     const issueLifecycle = new issue_lifecycle_repository_1.IssueLifecycleRepository((0, github_issue_client_factory_1.createIssueLifecycleClient)());
-    const issueNotification = new issue_notification_repository_1.IssueNotificationRepository(issueLifecycle, issueContent);
     const organizationMembers = (0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)();
     const branchLifecycle = new branch_lifecycle_repository_1.BranchLifecycleRepository((0, github_branch_client_factory_1.createBranchClient)());
     const branchName = new branch_name_repository_1.BranchNameRepository();
@@ -73589,7 +73664,7 @@ function createIssueUseCaseCompositionRoot(binding) {
         removeNotNeededBranches: new remove_not_needed_branches_use_case_1.RemoveNotNeededBranchesUseCase(boundBranchLifecycle, branchName),
         deployAdded: new label_deploy_added_use_case_1.DeployAddedUseCase((0, lifecycle_capability_port_binding_1.bindBranchWorkflow)(new workflow_dispatch_repository_1.WorkflowDispatchRepository((0, github_workflow_client_factory_1.createWorkflowDispatchClient)()), binding), moveIssueToInProgress),
     };
-    return (0, issue_use_case_composition_1.composeIssueUseCase)(new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueContent, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), new answer_issue_help_use_case_1.AnswerIssueHelpUseCase((0, shared_capability_port_binding_1.bindIssueNotification)(issueNotification, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding));
+    return (0, issue_use_case_composition_1.composeIssueUseCase)(new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueContent, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), new answer_issue_help_use_case_1.AnswerIssueHelpUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, (0, shared_capability_port_binding_1.bindIssueCommentQuery)(issueContent, binding), (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding));
 }
 
 
@@ -74312,6 +74387,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.bindOrganizationMembers = bindOrganizationMembers;
 exports.bindIssueDescriptionQuery = bindIssueDescriptionQuery;
 exports.bindIssueNotification = bindIssueNotification;
+exports.bindIssueCommentQuery = bindIssueCommentQuery;
 exports.bindIssueCommentUpdate = bindIssueCommentUpdate;
 exports.bindIssueTitle = bindIssueTitle;
 exports.bindProjectContent = bindProjectContent;
@@ -74329,6 +74405,11 @@ function bindIssueDescriptionQuery(port, binding) {
 function bindIssueNotification(port, binding) {
     return {
         addComment: (issueNumber, comment) => port.addComment(binding.owner, binding.repository, issueNumber, comment, binding.token),
+    };
+}
+function bindIssueCommentQuery(port, binding) {
+    return {
+        listIssueComments: (issueNumber) => port.listIssueComments(binding.owner, binding.repository, issueNumber, binding.token),
     };
 }
 function bindIssueCommentUpdate(port, binding) {

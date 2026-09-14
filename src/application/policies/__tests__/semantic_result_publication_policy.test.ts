@@ -1,5 +1,7 @@
 import { Result } from '../../../data/model/result';
 import {
+  hasOwnedPrimaryIssuePublication,
+  hasPrimaryIssuePublication,
   renderSemanticReply,
   renderSemanticStatus,
   selectSemanticReplyIntents,
@@ -7,6 +9,44 @@ import {
 } from '../semantic_result_publication_policy';
 
 describe('semantic result publication policy', () => {
+  it('recognizes only bot-owned primary markers for the exact issue', () => {
+    const plan = '<!-- copilot:publication schema="1" topic="plan" target="issue:7" key="implementation" source="issue-body:abcdef12" digest="abcdef12" -->';
+    const answer = '<!-- copilot:reply schema="1" target="issue:7" correlation="event:abcdef12" key="direct-answer" digest="abcdef12" -->';
+    const welcome = '<!-- copilot:reply schema="1" target="issue:7" correlation="event:abcdef12" key="copilot-welcome" digest="abcdef12" -->';
+    const legacyWelcome = '<!-- copilot:welcome -->';
+
+    expect(hasOwnedPrimaryIssuePublication([{ body: plan, user: { login: 'VypBot' } }], 7, 'vypbot')).toBe(true);
+    expect(hasOwnedPrimaryIssuePublication([{ body: answer, user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(true);
+    expect(hasOwnedPrimaryIssuePublication([{ body: welcome, user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(true);
+    expect(hasOwnedPrimaryIssuePublication([{ body: legacyWelcome, user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(true);
+    expect(hasOwnedPrimaryIssuePublication([{ body: plan, user: { login: 'human' } }], 7, 'vypbot')).toBe(false);
+    expect(hasOwnedPrimaryIssuePublication([{ body: legacyWelcome, user: { login: 'human' } }], 7, 'vypbot')).toBe(false);
+    expect(hasOwnedPrimaryIssuePublication([{ body: plan.replace('issue:7', 'issue:8'), user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(false);
+    expect(hasOwnedPrimaryIssuePublication([{ body: welcome.replace('issue:7', 'issue:8'), user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(false);
+    expect(hasOwnedPrimaryIssuePublication([{ body: answer.replace('direct-answer', 'copilot-help'), user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(false);
+    expect(hasOwnedPrimaryIssuePublication([], 0, 'vypbot')).toBe(false);
+    expect(hasOwnedPrimaryIssuePublication([], 7, ' ')).toBe(false);
+  });
+
+  it('recognizes only publishable plan or direct-answer results as a primary issue response', () => {
+    const plan = new Result({
+      id: 'RecommendStepsUseCase', success: true, executed: true,
+      payload: { issueNumber: 7, recommendedSteps: '1. Build' },
+    });
+    const answer = new Result({
+      id: 'AnswerIssueHelpUseCase', success: true, executed: true,
+      payload: { publication: { kind: 'direct-answer', answer: 'Use this configuration.' } },
+    });
+
+    expect(hasPrimaryIssuePublication([plan])).toBe(true);
+    expect(hasPrimaryIssuePublication([answer])).toBe(true);
+    expect(hasPrimaryIssuePublication([
+      new Result({ id: 'RecommendStepsUseCase', success: false, executed: true, payload: plan.payload }),
+      new Result({ id: 'AnswerIssueHelpUseCase', success: true, executed: false, payload: answer.payload }),
+      new Result({ id: 'AnswerIssueHelpUseCase', success: true, executed: true, payload: null }),
+    ])).toBe(false);
+  });
+
   it('selects only successful, executed, validated plan and progress payloads', () => {
     const results = [
       new Result({ id: 'RecommendStepsUseCase', success: true, executed: true, payload: { issueNumber: 7, recommendedSteps: '1. Build', recommendationState: { issueDescriptionFingerprint: 'abc' } } }),
@@ -83,6 +123,40 @@ describe('semantic result publication policy', () => {
     expect(intent).toMatchObject({ kind: 'reply', correlationId: 'comment:12', messageKey: `copilot-${kind}` });
     expect(renderSemanticReply(intent)).toContain(expected);
     expect(renderSemanticReply(intent)).not.toContain('legacy text');
+  });
+
+  it('selects a bounded direct answer and neutralizes GitHub control syntax', () => {
+    const [intent] = selectSemanticReplyIntents({
+      locale: 'fr-FR',
+      target: { kind: 'issue', number: 7 },
+      correlationId: 'event:abc12345',
+      results: [new Result({
+        id: 'AnswerIssueHelpUseCase',
+        success: true,
+        executed: true,
+        payload: {
+          publication: {
+            kind: 'direct-answer',
+            answer: `Réponse utile.\n@attacker\n/fix\n::notice title=unsafe::value\n<!-- unsafe -->\n${'x'.repeat(20_000)}`,
+          },
+        },
+      })],
+    });
+
+    expect(intent).toMatchObject({
+      kind: 'reply',
+      correlationId: 'event:abc12345',
+      messageKey: 'direct-answer',
+      projection: { kind: 'direct-answer' },
+    });
+    const body = renderSemanticReply(intent);
+    expect(body).toContain('Réponse utile.');
+    expect(body).toContain('@\u200battacker');
+    expect(body).toContain('\u200b/fix');
+    expect(body).toContain(':\u200b:notice');
+    expect(body).toContain('&lt;!-- unsafe --&gt;');
+    expect(body).not.toContain('Copilot commands');
+    expect(body.length).toBeLessThan(12_500);
   });
 
   it('renders a typed status-command projection in the configured locale', () => {
@@ -168,6 +242,20 @@ describe('semantic result publication policy', () => {
     expect(selectSemanticReplyIntents({
       locale: 'en-US', target: { kind: 'issue', number: 1 }, correlationId: 'comment:1',
       results: [new Result({ id: 'Comment.Help', success: false, executed: true, payload: { publication: { kind: 'help' } } })],
+    })).toEqual([]);
+    expect(selectSemanticReplyIntents({
+      locale: 'en-US', target: { kind: 'issue', number: 1 }, correlationId: 'comment:1',
+      results: [new Result({
+        id: 'AnswerIssueHelpUseCase', success: true, executed: true,
+        payload: { publication: { kind: 'direct-answer', answer: ' ' } },
+      })],
+    })).toEqual([]);
+    expect(selectSemanticReplyIntents({
+      locale: 'en-US', target: { kind: 'issue', number: 1 }, correlationId: 'comment:1',
+      results: [new Result({
+        id: 'AnswerIssueHelpUseCase', success: true, executed: true,
+        payload: { publication: { kind: 'direct-answer', answer: 42 } },
+      })],
     })).toEqual([]);
   });
 });

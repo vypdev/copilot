@@ -32,7 +32,6 @@ import { IssueClosureRepository } from "../../data/repository/issue/issue_closur
 import { IssueContentRepository } from "../../data/repository/issue/issue_content_repository";
 import { IssueLifecycleRepository } from "../../data/repository/issue/issue_lifecycle_repository";
 import { IssueMetadataRepository } from "../../data/repository/issue/issue_metadata_repository";
-import { IssueNotificationRepository } from "../../data/repository/issue/issue_notification_repository";
 import { IssueTitleRepository } from "../../data/repository/issue/issue_title_repository";
 import { IssueTypeAssignmentRepository } from "../../data/repository/issue/issue_type_assignment_repository";
 import { WorkflowDispatchRepository } from "../../data/repository/workflow/workflow_dispatch_repository";
@@ -45,9 +44,9 @@ import { createProjectBoardCompositionRoot } from "./project_board_composition_r
 import { createActorAuthorizationRepository } from './actor_authorization_composition_root';
 import {
   bindIssueTitle,
+  bindIssueCommentQuery,
   bindIssueDescriptionQuery,
   bindOrganizationMembers,
-  bindIssueNotification,
   bindProjectContent,
   type RepositoryCredentialBinding,
 } from './shared_capability_port_binding';
@@ -71,10 +70,6 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
   const issueContent = new IssueContentRepository(createIssueContentClient());
   const issueLifecycle = new IssueLifecycleRepository(
     createIssueLifecycleClient(),
-  );
-  const issueNotification = new IssueNotificationRepository(
-    issueLifecycle,
-    issueContent,
   );
   const organizationMembers = createOrganizationMembersCompositionRoot();
   const branchLifecycle = new BranchLifecycleRepository(createBranchClient());
@@ -143,8 +138,9 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
 
   return composeIssueUseCase(
     new RecommendStepsUseCase(bindIssueDescriptionQuery(issueContent, binding), createFindingsQueryPort()),
-    new AnswerIssueHelpUseCase(bindIssueNotification(issueNotification, binding), createFindingsQueryPort()),
+    new AnswerIssueHelpUseCase(createFindingsQueryPort()),
     workflowSteps,
+    bindIssueCommentQuery(issueContent, binding),
     bindActorAuthorization(createActorAuthorizationRepository(), binding),
   );
 }

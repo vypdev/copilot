@@ -88,7 +88,9 @@ describe('P2-E issue and pull-request context projections', () => {
     });
     expect(contexts.prepareBranches.repositoryWebUrl).toBe('https://github.com/acme/demo');
     expect(contexts.issueType.issueType).toEqual({ name: 'Feature', description: 'Feature issue', color: 'GREEN' });
-    expect(contexts.answerHelp).toMatchObject({ newIssue: true, issueNumber: 42, locale: 'en-US' });
+    expect(contexts.answerHelp).toMatchObject({ issueNumber: 42, locale: 'en-US' });
+    expect(contexts.answerHelp).not.toHaveProperty('newIssue');
+    expect(contexts.answerHelp).not.toHaveProperty('tokenUser');
     expectDataOnly(contexts);
     expect(Object.isFrozen(contexts)).toBe(true);
     expect(Object.isFrozen(contexts.prepareBranches.branches.managedTypes)).toBe(true);
