@@ -140,11 +140,12 @@ export async function runDetectPotentialProblemsWorkflow(
         if (reviewContext.analysis.reviewConfiguration.publicationMode === 'dry-run') {
             return await complete(dryRunResult(prepared, context), 'dry-run');
         }
-        const publishesToPullRequest = Boolean(context.prContext && context.canonicalPullRequest);
-        const hasIssuePublication = prepared.toPublish.length > 0
+        // A pull request still publishes its canonical status card when there are no finding mutations.
+        const presentsPullRequestStatus = Boolean(context.prContext && context.canonicalPullRequest);
+        const mutatesFindingComments = prepared.toPublish.length > 0
             || prepared.resolvedFindingIds.size > 0;
-        const catalog = publishesToPullRequest || hasIssuePublication
-            ? await resolvePublicationCatalog(reviewContext, dependencies, publishesToPullRequest)
+        const catalog = presentsPullRequestStatus || mutatesFindingComments
+            ? await resolvePublicationCatalog(reviewContext, dependencies, presentsPullRequestStatus)
             : undefined;
         const resolutionErrors = await telemetry.measure('publication', () => applyDetectedFindings(
             reviewContext,

@@ -522,7 +522,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(mockUnresolvePullRequestReviewThread).not.toHaveBeenCalled();
   });
 
-  it('returns success with "no new findings, no resolved" when findings and resolved_findings are empty', async () => {
+  it('does not resolve presentation copy for a branch review with no publication', async () => {
     mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
 
     const results = await invokeUseCase(useCase, baseParam());

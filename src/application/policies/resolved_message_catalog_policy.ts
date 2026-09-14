@@ -33,7 +33,7 @@ export function toResolvedMessageCatalogView<Id extends string>(
       id: Id,
       variables: Readonly<Record<string, string | number>> = {},
       count?: number,
-    ) => renderCatalogMessage(resolved.messages[id], variables, resolved.requestedLocale, count),
+    ) => renderCatalogMessage(resolved.messages[id], variables, resolved.resolvedLocale, count),
   });
 }
 

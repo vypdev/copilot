@@ -45736,7 +45736,7 @@ function toResolvedMessageCatalogView(resolved) {
         requestedLocale: resolved.requestedLocale,
         resolutionSource: resolved.source,
         ...(resolved.fallbackReason ? { fallbackReason: resolved.fallbackReason } : {}),
-        message: (id, variables = {}, count) => (0, message_catalog_1.renderCatalogMessage)(resolved.messages[id], variables, resolved.requestedLocale, count),
+        message: (id, variables = {}, count) => (0, message_catalog_1.renderCatalogMessage)(resolved.messages[id], variables, resolved.resolvedLocale, count),
     });
 }
 function resolveStaticMessageCatalogView(locale, sourceCatalog, bundledCatalogs) {
@@ -56542,11 +56542,12 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         if (reviewContext.analysis.reviewConfiguration.publicationMode === 'dry-run') {
             return await complete(dryRunResult(prepared, context), 'dry-run');
         }
-        const publishesToPullRequest = Boolean(context.prContext && context.canonicalPullRequest);
-        const hasIssuePublication = prepared.toPublish.length > 0
+        // A pull request still publishes its canonical status card when there are no finding mutations.
+        const presentsPullRequestStatus = Boolean(context.prContext && context.canonicalPullRequest);
+        const mutatesFindingComments = prepared.toPublish.length > 0
             || prepared.resolvedFindingIds.size > 0;
-        const catalog = publishesToPullRequest || hasIssuePublication
-            ? await resolvePublicationCatalog(reviewContext, dependencies, publishesToPullRequest)
+        const catalog = presentsPullRequestStatus || mutatesFindingComments
+            ? await resolvePublicationCatalog(reviewContext, dependencies, presentsPullRequestStatus)
             : undefined;
         const resolutionErrors = await telemetry.measure('publication', () => (0, apply_detected_findings_1.applyDetectedFindings)(reviewContext, context, prepared, dependencies.scm.publication, dependencies.scm.resolution, catalog));
         if (await telemetry.measure('post-publication-freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context))) {
