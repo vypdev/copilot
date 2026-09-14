@@ -126,7 +126,11 @@ export async function buildGithubActionExecution(
         ),
         labels: buildLabels(labelInputs),
         issueTypes: buildIssueTypes(issueTypeInputs),
-        locale: buildLocale(localeInputs.issue, localeInputs.pullRequest),
+        locale: buildLocale(
+            localeInputs.repository,
+            localeInputs.issueOverride,
+            localeInputs.pullRequestOverride,
+        ),
         sizeThresholds: buildSizeThresholds(sizeThresholdInputs),
         branches: buildBranches(branchInputs),
         release: new Release(),

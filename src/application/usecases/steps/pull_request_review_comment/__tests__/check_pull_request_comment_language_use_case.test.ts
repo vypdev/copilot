@@ -1,144 +1,47 @@
 import { CheckPullRequestCommentLanguageUseCase, projectPullRequestCommentLanguageRequest } from '../check_pull_request_comment_language_use_case';
-import { CommentLanguageTranslationWorkflow } from '../../common/comment_language_translation_workflow';
+import { CommentLanguageTranslationWorkflow, getCommentLanguageAdaptationPayload } from '../../common/comment_language_translation_workflow';
 
-jest.mock('../../../../../utils/logger', () => ({
-  logInfo: jest.fn(),
-  logDebugInfo: jest.fn(),
-}));
+const query = jest.fn();
 
-const translatedKey = '<!-- copilot:translated-comment:v2 -->';
-
-const mockAskAgent = jest.fn();
-const mockUpdateComment = jest.fn();
-
-function baseParam(overrides: Record<string, unknown> = {}) {
-  return projectPullRequestCommentLanguageRequest({
-    owner: 'o',
-    repo: 'r',
-    pullRequest: { number: 5, commentId: 10, commentBody: 'Hello' },
-    tokens: { token: 't' },
-    locale: { pullRequest: 'Spanish' },
+function source(commentBody = '@vypbot Hello') {
+  return {
+    tokenUser: 'vypbot',
+    pullRequest: { number: 5, commentId: 10, commentBody },
+    locale: { pullRequest: 'es-ES' },
     ai: { getAgentConfiguration: () => ({ provider: 'opencode', model: 'model' }) },
-    ...overrides,
-  } as never);
+  } as never;
 }
 
 describe('CheckPullRequestCommentLanguageUseCase', () => {
-  let useCase: CheckPullRequestCommentLanguageUseCase;
+  const useCase = new CheckPullRequestCommentLanguageUseCase(new CommentLanguageTranslationWorkflow({ query }));
 
-  beforeEach(() => {
-    useCase = new CheckPullRequestCommentLanguageUseCase(
-      new CommentLanguageTranslationWorkflow(
-        { updateComment: mockUpdateComment },
-        { query: (request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }) => mockAskAgent(request.configuration, request.agentId, request.prompt, request.options) },
-      ),
-    );
-    mockAskAgent.mockReset();
-    mockUpdateComment.mockReset();
-  });
+  beforeEach(() => query.mockReset());
 
-  it('returns success executed false when commentBody is empty', async () => {
-    const param = baseParam({ pullRequest: { number: 5, commentId: 0, commentBody: '' } });
-
-    const results = await useCase.invoke(param);
-
-    expect(results).toHaveLength(1);
-    expect(results[0].success).toBe(true);
-    expect(results[0].executed).toBe(false);
-    expect(mockAskAgent).not.toHaveBeenCalled();
-  });
-
-  it('returns success executed false when commentBody contains translatedKey', async () => {
-    const param = baseParam({
-      pullRequest: { number: 5, commentId: 0, commentBody: `Done\n${translatedKey}` },
+  it('projects the PR target, locale, and trusted bot', () => {
+    expect(projectPullRequestCommentLanguageRequest(source())).toMatchObject({
+      commentBody: '@vypbot Hello', locale: 'es-ES', issueNumber: 5,
+      commentId: 10, trustedBotLogin: 'vypbot',
     });
-
-    const results = await useCase.invoke(param);
-
-    expect(results[0].success).toBe(true);
-    expect(results[0].executed).toBe(false);
-    expect(mockAskAgent).not.toHaveBeenCalled();
   });
 
-  it('returns success executed true when AI responds done', async () => {
-    mockAskAgent.mockResolvedValue({ status: 'done' });
-    const param = baseParam();
-
-    const results = await useCase.invoke(param);
-
-    expect(results[0].success).toBe(true);
-    expect(results[0].executed).toBe(true);
-    expect(mockAskAgent).toHaveBeenCalledTimes(1);
-    const checkPrompt = mockAskAgent.mock.calls[0][2];
-    expect(checkPrompt).toContain('Spanish');
-    expect(checkPrompt).toContain('Hello');
+  it('is inert for empty and legacy-translated comments', async () => {
+    for (const body of ['', 'Done\n<!-- copilot:translated-comment:v2 -->']) {
+      const results = await useCase.invoke(projectPullRequestCommentLanguageRequest(source(body)));
+      expect(results[0]).toMatchObject({ success: true, executed: false });
+    }
+    expect(query).not.toHaveBeenCalled();
   });
 
-  it('calls updateComment when must_translate and askAgent returns schema with translatedText', async () => {
-    mockAskAgent
-      .mockResolvedValueOnce({ status: 'must_translate' })
-      .mockResolvedValueOnce({ translatedText: 'Hola traducido' });
-    mockUpdateComment.mockResolvedValue(undefined);
-    const param = baseParam();
+  it('returns one non-mutating language adaptation result', async () => {
+    query.mockResolvedValue({
+      status: 'translated', sourceLocale: 'en', targetLocale: 'es-ES',
+      adaptedText: 'Revisa esto', reason: null,
+    });
+    const results = await useCase.invoke(projectPullRequestCommentLanguageRequest(source()));
 
-    const results = await useCase.invoke(param);
-
-    expect(mockAskAgent).toHaveBeenCalledTimes(2);
-    const translatePrompt = mockAskAgent.mock.calls[1][2];
-    expect(translatePrompt).toContain('Spanish');
-    expect(translatePrompt).toContain('Hello');
-    expect(mockUpdateComment).toHaveBeenCalledWith(
-      5,
-      10,
-      expect.stringContaining('Hola traducido')
-    );
-  });
-
-  it('does not update comment when askAgent returns undefined for translation', async () => {
-    mockAskAgent
-      .mockResolvedValueOnce({ status: 'must_translate' })
-      .mockResolvedValueOnce(undefined);
-    const param = baseParam();
-
-    const results = await useCase.invoke(param);
-
-    expect(mockAskAgent).toHaveBeenCalledTimes(2);
-    expect(mockUpdateComment).not.toHaveBeenCalled();
-    expect(results).toHaveLength(1);
-    expect(results[0].success).toBe(true);
-    expect(results[0].executed).toBe(false);
-  });
-
-  it('does not update comment when askAgent returns empty translatedText', async () => {
-    mockAskAgent
-      .mockResolvedValueOnce({ status: 'must_translate' })
-      .mockResolvedValueOnce({ translatedText: '' });
-    const param = baseParam();
-
-    const results = await useCase.invoke(param);
-
-    expect(mockAskAgent).toHaveBeenCalledTimes(2);
-    expect(mockUpdateComment).not.toHaveBeenCalled();
-    expect(results).toHaveLength(1);
-    expect(results[0].success).toBe(true);
-    expect(results[0].executed).toBe(false);
-  });
-
-  it('calls translation and updateComment when language check returns null', async () => {
-    mockAskAgent
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ translatedText: 'Hola' });
-    mockUpdateComment.mockResolvedValue(undefined);
-    const param = baseParam();
-
-    const results = await useCase.invoke(param);
-
-    expect(mockAskAgent).toHaveBeenCalledTimes(2);
-    expect(mockUpdateComment).toHaveBeenCalledWith(
-      5,
-      10,
-      expect.stringContaining('Hola')
-    );
-    expect(results.length).toBeGreaterThanOrEqual(0);
+    expect(query).toHaveBeenCalledTimes(1);
+    expect(getCommentLanguageAdaptationPayload(results[0])).toMatchObject({
+      status: 'translated', targetLocale: 'es-ES',
+    });
   });
 });

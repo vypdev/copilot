@@ -12,6 +12,7 @@ import { resolveThinkAgentTask } from '../../../../application/policies/agent_ta
 import type { AgentTask } from '../../../../domain/agent';
 import { ApplicationError, toApplicationError } from '../../../errors/application_error';
 import type { ThinkRequestSource } from './think_request_policy';
+import type { TranslationPublication } from '../../../policies/comment_translation_policy';
 
 export interface ThinkWorkflowDependencies {
     issueDescriptionQueryPort: BoundIssueDescriptionQueryPort;
@@ -29,10 +30,13 @@ export type ThinkContext =
         readonly tokenUser?: string;
         readonly agentTask: AgentTask;
         readonly agentConfiguration: Readonly<AgentConfiguration>;
+        readonly translationPublication?: TranslationPublication;
+        readonly targetLocale?: string;
     };
 
 export interface ThinkContextSource extends ThinkRequestSource {
     readonly ai: { getAgentConfiguration(task: AgentTask): AgentConfiguration };
+    readonly locale?: { readonly issue?: string; readonly pullRequest?: string };
 }
 
 export function projectThinkContext(source: ThinkContextSource): ThinkContext {
@@ -53,6 +57,9 @@ export function projectThinkContext(source: ThinkContextSource): ThinkContext {
         ...(tokenUser ? { tokenUser } : {}),
         agentTask,
         agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration(agentTask) }),
+        targetLocale: request.destinationType === 'PR'
+            ? source.locale?.pullRequest ?? 'en-US'
+            : source.locale?.issue ?? 'en-US',
     });
 }
 

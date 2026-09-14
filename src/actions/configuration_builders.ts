@@ -69,8 +69,8 @@ export function buildWorkflows(release: string, hotfix: string): Workflows {
     return new Workflows(release, hotfix);
 }
 
-export function buildLocale(issue: string, pullRequest: string): Locale {
-    return new Locale(issue, pullRequest);
+export function buildLocale(repository: string, issue: string = '', pullRequest: string = ''): Locale {
+    return new Locale(repository, issue, pullRequest);
 }
 
 export function buildIssue(branchManagementAlways: boolean, reopenOnPush: boolean, desiredAssigneesCount: number, inputs?: ExecutionInputs): Issue {

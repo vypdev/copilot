@@ -15,7 +15,7 @@ import type { RecommendStepsParams } from './recommend_steps';
 import { getCheckProgressPrompt } from './check_progress';
 import type { CheckProgressParams } from './check_progress';
 import {
-    getCheckCommentLanguagePrompt,
+    getAdaptCommentLanguagePrompt,
     getTranslateCommentPrompt,
 } from './check_comment_language';
 import type { CheckCommentLanguageParams } from './check_comment_language';
@@ -42,7 +42,7 @@ export type { RecommendStepsParams } from './recommend_steps';
 export { getCheckProgressPrompt } from './check_progress';
 export type { CheckProgressParams } from './check_progress';
 export {
-    getCheckCommentLanguagePrompt,
+    getAdaptCommentLanguagePrompt,
     getTranslateCommentPrompt,
 } from './check_comment_language';
 export type { CheckCommentLanguageParams } from './check_comment_language';
@@ -97,7 +97,7 @@ const registry: Record<PromptName, (params: Record<string, string>) => string> =
     [PROMPT_NAMES.RECOMMEND_STEPS]: (p) => getRecommendStepsPrompt(p as RecommendStepsParams),
     [PROMPT_NAMES.CHECK_PROGRESS]: (p) => getCheckProgressPrompt(p as CheckProgressParams),
     [PROMPT_NAMES.CHECK_COMMENT_LANGUAGE]: (p) =>
-        getCheckCommentLanguagePrompt(p as CheckCommentLanguageParams),
+        getAdaptCommentLanguagePrompt(p as CheckCommentLanguageParams),
     [PROMPT_NAMES.TRANSLATE_COMMENT]: (p) =>
         getTranslateCommentPrompt(p as CheckCommentLanguageParams),
     [PROMPT_NAMES.CLI_DO]: (p) => getCliDoPrompt(p as CliDoParams),

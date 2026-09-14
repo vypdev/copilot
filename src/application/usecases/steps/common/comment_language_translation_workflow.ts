@@ -2,15 +2,19 @@ import { Result } from '../../../../data/model/result';
 import { AGENT_PLAN } from '../../../policies/agent_task_policy';
 import type { AgentConfiguration } from '../../../ports/agent_configuration_ports';
 import type { LanguageQueryPort } from '../../../ports/agent_language_ports';
-import { LANGUAGE_CHECK_RESPONSE_SCHEMA, TRANSLATION_RESPONSE_SCHEMA } from '../../../policies/agent_response_schemas';
-import type { BoundIssueCommentUpdatePort } from '../../../ports/issue_lifecycle_ports';
-import { getCheckCommentLanguagePrompt, getTranslateCommentPrompt } from '../../../../prompts';
+import { LANGUAGE_ADAPTATION_RESPONSE_SCHEMA } from '../../../policies/agent_response_schemas';
+import { getAdaptCommentLanguagePrompt } from '../../../../prompts';
 import { logDebugInfo, logInfo } from '../../../ports/logging_ports';
 import { getTaskEmoji } from '../../../../utils/task_emoji';
 import {
     composeTranslatedComment,
     hasTranslatedCommentMarker,
+    prepareLanguageAdaptationInput,
+    rebuildAdaptedComment,
+    type TranslationPublication,
 } from '../../../policies/comment_translation_policy';
+import { canonicalizeLocaleTag } from '../../../../domain/locale';
+import { ApplicationError, toApplicationError } from '../../../errors/application_error';
 
 export { TRANSLATED_COMMENT_MARKER } from '../../../policies/comment_translation_policy';
 
@@ -19,6 +23,7 @@ export interface CommentLanguageRequest {
     readonly locale: string;
     readonly issueNumber: number;
     readonly commentId: number;
+    readonly trustedBotLogin?: string;
     readonly configuration: Readonly<AgentConfiguration> | undefined;
 }
 
@@ -34,6 +39,7 @@ export function projectCommentLanguageRequest(
         locale: source.locale,
         issueNumber: source.issueNumber,
         commentId: source.commentId,
+        ...(source.trustedBotLogin?.trim() ? { trustedBotLogin: source.trustedBotLogin.trim() } : {}),
         configuration: source.configuration === undefined
             ? undefined
             : Object.freeze({ ...source.configuration }),
@@ -41,56 +47,69 @@ export function projectCommentLanguageRequest(
 }
 
 export class CommentLanguageTranslationWorkflow {
-    constructor(
-        private readonly commentRepository: BoundIssueCommentUpdatePort,
-        private readonly languageQueryPort: LanguageQueryPort,
-    ) {}
+    constructor(private readonly languageQueryPort: LanguageQueryPort) {}
 
     async invoke(context: CommentLanguageContext): Promise<Result[]> {
         logInfo(`${getTaskEmoji(context.taskId)} Executing ${context.taskId}.`);
+        const targetLocale = canonicalizeLocaleTag(context.locale);
         if (!context.commentBody || hasTranslatedCommentMarker(context.commentBody)) {
             return [new Result({ id: context.taskId, success: true, executed: false })];
         }
 
-        const configuration = context.configuration;
-        const checkResponse = await this.languageQueryPort.query({
-            configuration,
-            agentId: AGENT_PLAN,
-            prompt: getCheckCommentLanguagePrompt({ locale: context.locale, commentBody: context.commentBody }),
-            options: {
-                expectJson: true,
-                schema: LANGUAGE_CHECK_RESPONSE_SCHEMA as unknown as Record<string, unknown>,
-                schemaName: 'language_check_response',
-            },
-        });
-        const status = this.stringProperty(checkResponse, 'status');
-        logDebugInfo(`${context.taskId}: language check status=${status}.`);
-        if (status === 'done') return [new Result({ id: context.taskId, success: true, executed: true })];
-
-        const translationResponse = await this.languageQueryPort.query({
-            configuration,
-            agentId: AGENT_PLAN,
-            prompt: getTranslateCommentPrompt({ locale: context.locale, commentBody: context.commentBody }),
-            options: {
-                expectJson: true,
-                schema: TRANSLATION_RESPONSE_SCHEMA as unknown as Record<string, unknown>,
-                schemaName: 'translation_response',
-            },
-        });
-        const translatedText = this.stringProperty(translationResponse, 'translatedText');
-        const publication = composeTranslatedComment(translatedText, context.commentBody);
-        if (!publication) {
-            const reason = this.stringProperty(translationResponse, 'reason');
-            logInfo(`Translation output was rejected; skipping comment update.${reason ? ` Reason: ${reason}` : ' The configured agent may have failed or returned an invalid response.'}`);
-            return [new Result({ id: context.taskId, success: true, executed: false })];
+        const input = prepareLanguageAdaptationInput(context.commentBody, context.trustedBotLogin ?? '');
+        if (!input.prose) return [adaptationResult(context, targetLocale, 'matches', context.commentBody)];
+        try {
+            const response = await this.languageQueryPort.query({
+                configuration: context.configuration,
+                agentId: AGENT_PLAN,
+                prompt: getAdaptCommentLanguagePrompt({ locale: targetLocale, commentBody: input.prose }),
+                options: {
+                    expectJson: true,
+                    schema: LANGUAGE_ADAPTATION_RESPONSE_SCHEMA as unknown as Record<string, unknown>,
+                    schemaName: 'language_adaptation_response',
+                },
+            });
+            const status = this.stringProperty(response, 'status');
+            const responseTarget = this.stringProperty(response, 'targetLocale');
+            logDebugInfo(`${context.taskId}: language adaptation status=${status}.`);
+            if (responseTarget !== targetLocale) {
+                return [failedAdaptation(context, targetLocale, 'The language adapter returned a mismatched target locale.')];
+            }
+            if (status === 'matches') {
+                return [adaptationResult(
+                    context,
+                    targetLocale,
+                    'matches',
+                    context.commentBody,
+                    this.optionalStringProperty(response, 'sourceLocale'),
+                )];
+            }
+            if (status !== 'translated') {
+                return [failedAdaptation(context, targetLocale, `Language adaptation ended with ${status || 'an invalid status'}.`)];
+            }
+            const adaptedText = this.stringProperty(response, 'adaptedText');
+            const publication = composeTranslatedComment(adaptedText, context.commentBody);
+            if (!publication) {
+                return [failedAdaptation(context, targetLocale, 'The language adapter returned unsafe or empty text.')];
+            }
+            return [adaptationResult(
+                context,
+                targetLocale,
+                'translated',
+                rebuildAdaptedComment(input, publication.translatedText),
+                this.optionalStringProperty(response, 'sourceLocale'),
+                publication,
+            )];
+        } catch (error) {
+            logInfo('Language adaptation failed; the source comment was preserved and no requested mutation ran.');
+            return [new Result({
+                id: context.taskId,
+                success: false,
+                executed: true,
+                errors: [toApplicationError(error, 'locale.translation-failed', 'I could not safely interpret this request, so no repository change was made. Please rephrase it or try again.')],
+                payload: languageAdaptationPayload('failed', targetLocale, context.commentBody),
+            })];
         }
-
-        await this.commentRepository.updateComment(
-            context.issueNumber,
-            context.commentId,
-            publication.commentBody,
-        );
-        return [];
     }
 
     private stringProperty(value: unknown, property: string): string {
@@ -99,4 +118,78 @@ export class CommentLanguageTranslationWorkflow {
         }
         return '';
     }
+
+    private optionalStringProperty(value: unknown, property: string): string | undefined {
+        const text = this.stringProperty(value, property).trim();
+        if (!text) return undefined;
+        try {
+            return canonicalizeLocaleTag(text);
+        } catch {
+            return undefined;
+        }
+    }
+}
+
+export type CommentLanguageAdaptationPayload = {
+    readonly kind: 'comment-language-adaptation';
+    readonly status: 'matches' | 'translated' | 'failed';
+    readonly targetLocale: string;
+    readonly interpretedComment: string;
+    readonly sourceLocale?: string;
+    readonly publication?: TranslationPublication;
+};
+
+export function getCommentLanguageAdaptationPayload(result: Result): CommentLanguageAdaptationPayload | undefined {
+    const payload = result.payload;
+    return payload && typeof payload === 'object'
+        && (payload as { kind?: unknown }).kind === 'comment-language-adaptation'
+        ? payload as CommentLanguageAdaptationPayload
+        : undefined;
+}
+
+function adaptationResult(
+    context: CommentLanguageContext,
+    targetLocale: string,
+    status: 'matches' | 'translated',
+    interpretedComment: string,
+    sourceLocale?: string,
+    publication?: TranslationPublication,
+): Result {
+    return new Result({
+        id: context.taskId,
+        success: true,
+        executed: true,
+        payload: languageAdaptationPayload(status, targetLocale, interpretedComment, sourceLocale, publication),
+    });
+}
+
+function failedAdaptation(context: CommentLanguageContext, targetLocale: string, reason: string): Result {
+    return new Result({
+        id: context.taskId,
+        success: false,
+        executed: true,
+        errors: [new ApplicationError(
+            'locale.translation-failed',
+            'I could not safely interpret this request, so no repository change was made. Please rephrase it or try again.',
+            { cause: reason },
+        )],
+        payload: languageAdaptationPayload('failed', targetLocale, context.commentBody),
+    });
+}
+
+function languageAdaptationPayload(
+    status: CommentLanguageAdaptationPayload['status'],
+    targetLocale: string,
+    interpretedComment: string,
+    sourceLocale?: string,
+    publication?: TranslationPublication,
+): CommentLanguageAdaptationPayload {
+    return Object.freeze({
+        kind: 'comment-language-adaptation',
+        status,
+        targetLocale,
+        interpretedComment,
+        ...(sourceLocale ? { sourceLocale } : {}),
+        ...(publication ? { publication: Object.freeze({ ...publication }) } : {}),
+    });
 }

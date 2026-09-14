@@ -10,6 +10,7 @@ export interface PullRequestCommentLanguageSource {
     readonly pullRequest: { readonly commentBody: string; readonly number: number; readonly commentId: number };
     readonly locale: { readonly pullRequest: string };
     readonly ai: { getAgentConfiguration(task: 'findings'): CommentLanguageRequest['configuration'] };
+    readonly tokenUser?: string;
 }
 
 export function projectPullRequestCommentLanguageRequest(source: PullRequestCommentLanguageSource): CommentLanguageRequest {
@@ -18,6 +19,7 @@ export function projectPullRequestCommentLanguageRequest(source: PullRequestComm
         locale: source.locale.pullRequest,
         issueNumber: source.pullRequest.number,
         commentId: source.pullRequest.commentId,
+        trustedBotLogin: source.tokenUser,
         configuration: source.ai.getAgentConfiguration('findings'),
     });
 }

@@ -55,6 +55,7 @@ export interface SetupRepositoryConfiguration {
     desiredAssigneesCount: number;
     desiredReviewersCount: number;
     inactivityThresholdHours: number;
+    repositoryLocale: string;
     issueLocale: string;
     pullRequestLocale: string;
     commitPrefixTransforms: string;

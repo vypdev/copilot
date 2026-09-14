@@ -415,7 +415,7 @@ describe("DeploymentOrchestrationUseCase", () => {
       }],
     }));
     const input = execution("prepare");
-    input.locale = { issue: "es-ES", pullRequest: "es-ES" };
+    input.locale = { repository: "es-ES", issue: "es-ES", pullRequest: "es-ES" } as never;
     await value.useCase.invoke(input);
     expect(input.currentConfiguration.deploymentOrchestration?.lastFailure?.message)
       .toContain("Añade merge_group: checks_requested");
@@ -427,7 +427,7 @@ describe("DeploymentOrchestrationUseCase", () => {
       mergeQueueObservationProblems: [{ area: "effective-rules", message: "GitHub returned 403." }],
     }));
     const input = execution("prepare");
-    input.locale = { issue: "es-ES", pullRequest: "es-ES" };
+    input.locale = { repository: "es-ES", issue: "es-ES", pullRequest: "es-ES" } as never;
     const result = await value.useCase.invoke(input);
     expect(result[0].success).toBe(false);
     expect(value.pullRequests.createManagedPullRequest).not.toHaveBeenCalled();

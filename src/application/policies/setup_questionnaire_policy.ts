@@ -181,8 +181,9 @@ function repositoryQuestions(): QuestionDefinition[] {
     ['desiredAssigneesCount', 'Desired issue assignees (0 disables automatic assignment)', 'number'],
     ['desiredReviewersCount', 'Desired pull-request reviewers (0 disables automatic assignment)', 'number'],
     ['inactivityThresholdHours', 'Hours without activity before closing a waiting issue', 'number'],
-    ['issueLocale', 'Issue comment locale', 'text'],
-    ['pullRequestLocale', 'Pull-request comment locale', 'text'],
+    ['repositoryLocale', 'Repository message locale (BCP-47)', 'text'],
+    ['issueLocale', 'Issue message locale override (empty inherits)', 'text'],
+    ['pullRequestLocale', 'Pull-request message locale override (empty inherits)', 'text'],
     ['commitPrefixTransforms', 'Commit prefix transforms', 'text'],
   ].map(([field, label, kind]) => ({ stateId: 'repository', id: `repository.${field}`, label, kind })) as QuestionDefinition[];
 }

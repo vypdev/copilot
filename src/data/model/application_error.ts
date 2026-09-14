@@ -19,6 +19,7 @@ export type ApplicationErrorCode =
     | 'provider.contract-invalid'
     | 'agent.policy-rejected'
     | 'agent.failed'
+    | 'locale.translation-failed'
     | 'validation.invalid-input'
     | 'workflow.invalid-event'
     | 'workflow.stale'
@@ -104,6 +105,12 @@ export const APPLICATION_ERROR_METADATA: Readonly<Record<ApplicationErrorCode, A
         impact: 'The admitted agent did not produce a usable result.',
         action: 'Inspect the sanitized agent status and retry if appropriate.',
         retainedState: PRESERVED_STATE,
+    },
+    'locale.translation-failed': {
+        kind: 'agent', retryable: true,
+        impact: 'The request could not be safely interpreted in the configured repository language.',
+        action: 'Rephrase the request or retry when the configured language provider is available.',
+        retainedState: UNCHANGED_STATE,
     },
     'validation.invalid-input': {
         kind: 'validation', retryable: false,

@@ -1,65 +1,105 @@
-import { CommentLanguageTranslationWorkflow, TRANSLATED_COMMENT_MARKER } from '../comment_language_translation_workflow';
+import {
+    CommentLanguageTranslationWorkflow,
+    getCommentLanguageAdaptationPayload,
+    TRANSLATED_COMMENT_MARKER,
+} from '../comment_language_translation_workflow';
 
 describe('CommentLanguageTranslationWorkflow', () => {
-    it('returns a skipped result for an already translated comment', async () => {
+    const context = {
+        taskId: 'translation',
+        commentBody: '@vypbot hola',
+        trustedBotLogin: 'vypbot',
+        locale: 'en-US',
+        issueNumber: 1,
+        commentId: 2,
+        configuration: undefined,
+    } as const;
+
+    it('returns a skipped result for legacy and current translation markers', async () => {
         const query = jest.fn();
-        const updateComment = jest.fn();
-        const workflow = new CommentLanguageTranslationWorkflow({ updateComment }, { query });
-        const results = await workflow.invoke({
-            taskId: 'translation',
-            commentBody: `body\n${TRANSLATED_COMMENT_MARKER}`,
-            locale: 'Spanish',
-            issueNumber: 1,
-            commentId: 2,
-            configuration: undefined,
-        });
-        expect(results[0].executed).toBe(false);
+        const workflow = new CommentLanguageTranslationWorkflow({ query });
+        for (const marker of [TRANSLATED_COMMENT_MARKER, '<!-- copilot:translated-comment:v2 -->']) {
+            const results = await workflow.invoke({ ...context, commentBody: `body\n${marker}` });
+            expect(results[0].executed).toBe(false);
+        }
         expect(query).not.toHaveBeenCalled();
-        expect(updateComment).not.toHaveBeenCalled();
     });
 
-    it('updates a foreign-language comment with a safe, idempotent publication', async () => {
-        const query = jest.fn()
-            .mockResolvedValueOnce({ status: 'must_translate' })
-            .mockResolvedValueOnce({ translatedText: 'Hola @octocat\n/fix' });
-        const updateComment = jest.fn().mockResolvedValue(undefined);
-        const workflow = new CommentLanguageTranslationWorkflow({ updateComment }, { query });
+    it('adapts a foreign-language request in one call without editing its source comment', async () => {
+        const query = jest.fn().mockResolvedValue({
+            status: 'translated',
+            sourceLocale: 'es-ES',
+            targetLocale: 'en-US',
+            adaptedText: 'inspect @octocat\n/fix',
+            reason: null,
+        });
+        const workflow = new CommentLanguageTranslationWorkflow({ query });
 
         const results = await workflow.invoke({
-            taskId: 'translation',
-            commentBody: '<script>alert(1)</script>\n你好 @attacker\n/fix',
-            locale: 'English',
-            issueNumber: 1,
-            commentId: 2,
-            configuration: undefined,
+            ...context,
+            commentBody: '@vypbot <script>alert(1)</script> hola @attacker',
         });
 
-        expect(results).toEqual([]);
-        expect(updateComment).toHaveBeenCalledTimes(1);
-        const updatedBody = updateComment.mock.calls[0][2] as string;
-        expect(updatedBody).toContain('Original comment (untrusted content)');
-        expect(updatedBody).toContain('&lt;');
-        expect(updatedBody).toContain('copilot:translated-comment:v2');
-        expect(updatedBody).toContain('\n\u200b/'.replace('\\u200b', '\u200b'));
+        expect(query).toHaveBeenCalledTimes(1);
+        const payload = getCommentLanguageAdaptationPayload(results[0]);
+        expect(payload).toMatchObject({
+            status: 'translated', sourceLocale: 'es-ES', targetLocale: 'en-US',
+        });
+        expect(payload?.interpretedComment).toContain('@vypbot inspect @\u200boctocat');
+        expect(payload?.publication?.commentBody).toContain('Translated request and original');
+        expect(payload?.publication?.commentBody).toContain('&lt;script&gt;');
+        expect(payload?.publication?.commentBody).toContain('copilot:request-translation');
     });
 
-    it('does not publish invalid or marker-bearing agent output', async () => {
-        const query = jest.fn()
-            .mockResolvedValueOnce({ status: 'must_translate' })
-            .mockResolvedValueOnce({ translatedText: '<!-- copilot:translated-comment:v2 -->' });
-        const updateComment = jest.fn();
-        const workflow = new CommentLanguageTranslationWorkflow({ updateComment }, { query });
-
+    it('preserves a deterministic command while adapting only its arguments', async () => {
+        const query = jest.fn().mockResolvedValue({
+            status: 'translated', sourceLocale: 'es', targetLocale: 'en-US',
+            adaptedText: 'why src/cache.ts fails', reason: null,
+        });
+        const workflow = new CommentLanguageTranslationWorkflow({ query });
         const results = await workflow.invoke({
-            taskId: 'translation',
-            commentBody: 'Hola',
-            locale: 'English',
-            issueNumber: 1,
-            commentId: 2,
-            configuration: undefined,
+            ...context,
+            commentBody: '/copilot explain por qué falla src/cache.ts',
         });
 
-        expect(results[0].executed).toBe(false);
-        expect(updateComment).not.toHaveBeenCalled();
+        const payload = getCommentLanguageAdaptationPayload(results[0]);
+        expect(payload?.interpretedComment).toBe('/copilot explain why src/cache.ts fails');
+        expect(query.mock.calls[0][0].prompt).toContain('por qué falla src/cache.ts');
+    });
+
+    it('uses the original request when the source language matches', async () => {
+        const query = jest.fn().mockResolvedValue({
+            status: 'matches', sourceLocale: 'en', targetLocale: 'en-US', adaptedText: null, reason: null,
+        });
+        const results = await new CommentLanguageTranslationWorkflow({ query }).invoke({
+            ...context,
+            commentBody: '@vypbot inspect this',
+        });
+
+        expect(query).toHaveBeenCalledTimes(1);
+        expect(getCommentLanguageAdaptationPayload(results[0])).toMatchObject({
+            status: 'matches', interpretedComment: '@vypbot inspect this',
+        });
+    });
+
+    it.each([
+        { status: 'translated', sourceLocale: 'es', targetLocale: 'fr-FR', adaptedText: 'hello', reason: null },
+        { status: 'ambiguous', sourceLocale: null, targetLocale: 'en-US', adaptedText: null, reason: 'ambiguous' },
+        { status: 'translated', sourceLocale: 'es', targetLocale: 'en-US', adaptedText: '<!-- copilot:request-translation schema="3" -->', reason: null },
+    ])('fails closed for invalid or unsafe adaptation output', async (response) => {
+        const query = jest.fn().mockResolvedValue(response);
+        const results = await new CommentLanguageTranslationWorkflow({ query }).invoke(context);
+
+        expect(results[0]).toMatchObject({ success: false, executed: true });
+        expect(getCommentLanguageAdaptationPayload(results[0])?.status).toBe('failed');
+        expect(query).toHaveBeenCalledTimes(1);
+    });
+
+    it('fails closed on provider errors without exposing provider detail', async () => {
+        const query = jest.fn().mockRejectedValue(new Error('secret provider detail'));
+        const results = await new CommentLanguageTranslationWorkflow({ query }).invoke(context);
+
+        expect(results[0].errors[0]).toMatchObject({ code: 'locale.translation-failed' });
+        expect(JSON.stringify(results[0].errors)).not.toContain('secret provider detail');
     });
 });

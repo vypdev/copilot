@@ -94,6 +94,7 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
     if (configuration.features.inactiveIssueClosure !== false) {
         add('INACTIVITY_THRESHOLD_HOURS', repository.inactivityThresholdHours);
     }
+    add('REPOSITORY_LOCALE', repository.repositoryLocale);
     add('ISSUES_LOCALE', repository.issueLocale);
     add('PULL_REQUESTS_LOCALE', repository.pullRequestLocale);
     add('COMMIT_PREFIX_TRANSFORMS', repository.commitPrefixTransforms);
@@ -150,6 +151,7 @@ export function buildSetupActionInputs(configuration: SetupConfiguration): Recor
         'desired-assignees-count': String(repository.desiredAssigneesCount),
         'desired-reviewers-count': String(repository.desiredReviewersCount),
         'inactivity-threshold-hours': String(repository.inactivityThresholdHours),
+        'repository-locale': repository.repositoryLocale,
         'issues-locale': repository.issueLocale,
         'pull-requests-locale': repository.pullRequestLocale,
         'commit-prefix-transforms': repository.commitPrefixTransforms,

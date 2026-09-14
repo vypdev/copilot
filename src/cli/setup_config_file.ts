@@ -29,6 +29,7 @@ const REPOSITORY_STRING_KEYS = new Set([
     'releaseTree',
     'docsTree',
     'choreTree',
+    'repositoryLocale',
     'issueLocale',
     'pullRequestLocale',
     'commitPrefixTransforms',
