@@ -1,12 +1,12 @@
 import { buildGithubActionEventInputs } from '../../../../actions/github_event_inputs';
 import { Issue } from '../../../../data/model/issue';
 import { PullRequest } from '../../../../data/model/pull_request';
-import { Tokens } from '../../../../data/model/tokens';
 import { DEFAULT_COPILOT_LIFECYCLE_LABELS } from '../../../../domain/copilot_lifecycle';
 import {
-    SynchronizeLifecycleStateUseCase,
-    type LifecycleSynchronizationExecution,
-} from '../synchronize_lifecycle_state_use_case';
+    projectLifecycleSynchronizationContext,
+    type LifecycleSynchronizationContextSource,
+} from '../lifecycle_synchronization_context';
+import { SynchronizeLifecycleStateUseCase } from '../synchronize_lifecycle_state_use_case';
 
 interface ReplayCase {
     name: string;
@@ -40,9 +40,7 @@ const REPLAY_CASES: readonly ReplayCase[] = [
         action: 'requested',
         payload: {
             check_suite: {
-                head_sha: 'sha-1',
-                status: 'queued',
-                conclusion: null,
+                head_sha: 'sha-1', status: 'queued', conclusion: null,
                 pull_requests: [{ number: 42 }],
             },
         },
@@ -55,9 +53,7 @@ const REPLAY_CASES: readonly ReplayCase[] = [
         action: 'completed',
         payload: {
             workflow_run: {
-                head_sha: 'sha-1',
-                status: 'completed',
-                conclusion: 'failure',
+                head_sha: 'sha-1', status: 'completed', conclusion: 'failure',
                 pull_requests: [{ number: 42 }],
             },
         },
@@ -70,9 +66,7 @@ const REPLAY_CASES: readonly ReplayCase[] = [
         action: 'completed',
         payload: {
             workflow_run: {
-                head_sha: 'sha-1',
-                status: 'completed',
-                conclusion: 'success',
+                head_sha: 'sha-1', status: 'completed', conclusion: 'success',
                 pull_requests: [{ number: 42 }],
             },
         },
@@ -82,25 +76,31 @@ const REPLAY_CASES: readonly ReplayCase[] = [
 ];
 
 describe('lifecycle event replay integration', () => {
-    it.each(REPLAY_CASES)('replays $name deterministically', async (replay) => {
-        const execution = executionFromReplay(replay);
-        const setLabels = jest.fn(async (_owner: string, _repo: string, _number: number, labels: string[]) => {
-            execution.labels.currentPullRequestLabels = labels;
+    it.each(REPLAY_CASES)('replays $name deterministically and becomes idempotent', async (replay) => {
+        let providerLabels = [...replay.initialLabels];
+        const source = sourceFromReplay(replay);
+        const originalLabels = [...source.labels.currentPullRequestLabels];
+        const setLabels = jest.fn(async (_number: number, labels: readonly string[]) => {
+            providerLabels = [...labels];
         });
         const useCase = new SynchronizeLifecycleStateUseCase({
-            getLabels: async () => [...execution.labels.currentPullRequestLabels],
+            getLabels: async () => [...providerLabels],
             setLabels,
         }, { getPullRequestHeadSha: jest.fn().mockResolvedValue('sha-1') });
+        const context = projectLifecycleSynchronizationContext(source);
 
-        const results = await useCase.invoke({ execution, results: [] });
+        const outcome = await useCase.invoke({ context, results: [] });
+        const replayOutcome = await useCase.invoke({ context, results: [] });
 
-        expect(setLabels).toHaveBeenCalledWith('owner', 'repo', 42, replay.expectedLabels, 'token');
-        expect(execution.labels.currentPullRequestLabels).toEqual(replay.expectedLabels);
-        expect(results[0]).toMatchObject({
-            id: 'SynchronizeCopilotLifecycleStateUseCase',
-            success: true,
-            executed: true,
+        expect(setLabels).toHaveBeenCalledTimes(1);
+        expect(setLabels).toHaveBeenCalledWith(42, replay.expectedLabels);
+        expect(providerLabels).toEqual(replay.expectedLabels);
+        expect(source.labels.currentPullRequestLabels).toEqual(originalLabels);
+        expect(outcome.labelPatch?.labels).toEqual(replay.expectedLabels);
+        expect(outcome.results[0]).toMatchObject({
+            id: 'SynchronizeCopilotLifecycleStateUseCase', success: true, executed: true,
         });
+        expect(replayOutcome).toEqual({ results: [] });
     });
 
     it('skips ambiguous check-suite events instead of writing to an arbitrary pull request', async () => {
@@ -111,54 +111,63 @@ describe('lifecycle event replay integration', () => {
             payload: {
                 action: 'completed',
                 check_suite: {
-                    head_sha: 'sha-1',
-                    status: 'completed',
-                    conclusion: 'failure',
+                    head_sha: 'sha-1', status: 'completed', conclusion: 'failure',
                     pull_requests: [{ number: 41 }, { number: 42 }],
                 },
             },
         });
-        const execution = executionFromInputs(inputs, ['state:reviewing']);
+        const context = projectLifecycleSynchronizationContext(sourceFromInputs(inputs, ['state:reviewing']));
+        const getLabels = jest.fn();
         const setLabels = jest.fn();
-        const useCase = new SynchronizeLifecycleStateUseCase({
-            getLabels: jest.fn(),
-            setLabels,
-        });
+        const getPullRequestHeadSha = jest.fn();
+        const useCase = new SynchronizeLifecycleStateUseCase(
+            { getLabels, setLabels },
+            { getPullRequestHeadSha },
+        );
 
-        expect(await useCase.invoke({ execution, results: [] })).toEqual([]);
+        expect(await useCase.invoke({ context, results: [] })).toEqual({ results: [] });
+        expect(getLabels).not.toHaveBeenCalled();
         expect(setLabels).not.toHaveBeenCalled();
+        expect(getPullRequestHeadSha).not.toHaveBeenCalled();
     });
 });
 
-function executionFromReplay(replay: ReplayCase): LifecycleSynchronizationExecution {
+function sourceFromReplay(replay: ReplayCase): LifecycleSynchronizationContextSource {
     const inputs = buildGithubActionEventInputs({
         eventName: replay.eventName,
         actor: 'octocat',
         repo: { owner: 'owner', repo: 'repo' },
         payload: { ...replay.payload, action: replay.action },
     });
-    return executionFromInputs(inputs, replay.initialLabels);
+    return sourceFromInputs(inputs, replay.initialLabels);
 }
 
-function executionFromInputs(
+function sourceFromInputs(
     inputs: ReturnType<typeof buildGithubActionEventInputs>,
     currentPullRequestLabels: string[],
-): LifecycleSynchronizationExecution {
+): LifecycleSynchronizationContextSource {
+    const issue = new Issue(false, false, 0, inputs);
+    const pullRequest = new PullRequest(0, 0, inputs);
     return {
-        owner: 'owner',
-        repo: 'repo',
-        eventName: inputs.eventName,
+        eventName: inputs.eventName ?? '',
         inputs,
         issueNumber: -1,
         isIssue: false,
-        isPullRequest: true,
-        issue: new Issue(false, false, 0, inputs),
-        pullRequest: new PullRequest(0, 0, inputs),
+        isPullRequest: pullRequest.isPullRequest,
+        issue: {
+            number: issue.number,
+            opened: issue.opened,
+            descriptionEdited: issue.descriptionEdited,
+        },
+        pullRequest: {
+            number: pullRequest.number,
+            isMerged: pullRequest.isMerged,
+            isClosed: pullRequest.isClosed,
+        },
         labels: {
             currentIssueLabels: [],
             currentPullRequestLabels,
             lifecycle: DEFAULT_COPILOT_LIFECYCLE_LABELS,
         },
-        tokens: new Tokens('token'),
     };
 }

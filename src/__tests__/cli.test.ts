@@ -173,9 +173,9 @@ describe('CLI', () => {
       await program.parseAsync(['node', 'cli', 'do', '-p', 'hello']);
 
       expect(process.exitCode).toBe(1);
-      expect(consoleSpy).toHaveBeenCalled();
       const errMsg = consoleSpy.mock.calls.flat().join(' ');
-      expect(errMsg).toMatch(/error|Error/i);
+      expect(errMsg).toContain('Unable to execute the request.');
+      expect(errMsg).not.toContain('OpenCode down');
       consoleSpy.mockRestore();
     });
 
@@ -204,7 +204,7 @@ describe('CLI', () => {
       consoleSpy.mockRestore();
     });
 
-    it('logs error and exits with debug when do throws and --debug', async () => {
+    it('logs a safe correlation reference and exits with debug when do throws', async () => {
       const err = new Error('OpenCode down');
       mockFix.mockRejectedValue(err);
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
@@ -213,8 +213,9 @@ describe('CLI', () => {
 
       expect(process.exitCode).toBe(1);
       const messages = consoleSpy.mock.calls.flat().map(String);
-      expect(messages.some((m) => m.includes('Error executing do'))).toBe(true);
-      expect(consoleSpy).toHaveBeenCalledWith(err);
+      expect(messages.some((m) => m.includes('Unable to execute the request.'))).toBe(true);
+      expect(messages.some((m) => m.includes('Reference:'))).toBe(true);
+      expect(messages).not.toContain(err.message);
       consoleSpy.mockRestore();
     });
   });
@@ -271,15 +272,30 @@ describe('CLI', () => {
       expect(params.commits?.ref).toBe('refs/heads/feature/foo');
     });
 
-    it('exits when runLocalAction rejects in check-progress', async () => {
-      (runLocalAction as jest.Mock).mockRejectedValueOnce(new Error('API error'));
+    it('omits the correlation reference outside debug mode for check-progress failures', async () => {
+      (runLocalAction as jest.Mock).mockRejectedValueOnce(new Error('check-progress-secret-marker'));
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
       await program.parseAsync(['node', 'cli', 'check-progress', '-i', '1']);
 
+      const messages = consoleSpy.mock.calls.flat().map(String);
+      expect(messages).toContain('❌ Unable to check progress.');
+      expect(messages.some((m) => m.includes('Reference:'))).toBe(false);
+      expect(messages.some((m) => m.includes('check-progress-secret-marker'))).toBe(false);
+      consoleSpy.mockRestore();
+    });
+
+    it('exits when runLocalAction rejects in check-progress', async () => {
+      (runLocalAction as jest.Mock).mockRejectedValueOnce(new Error('check-progress-secret-marker'));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      await program.parseAsync(['node', 'cli', 'check-progress', '-i', '1', '--debug']);
+
       expect(process.exitCode).toBe(1);
       const messages = consoleSpy.mock.calls.flat().map(String);
-      expect(messages.some((m) => m.includes('Error checking progress'))).toBe(true);
+      expect(messages.some((m) => m.includes('Unable to check progress.'))).toBe(true);
+      expect(messages.some((m) => m.includes('Reference:'))).toBe(true);
+      expect(messages.some((m) => m.includes('check-progress-secret-marker'))).toBe(false);
       consoleSpy.mockRestore();
     });
   });
@@ -319,6 +335,33 @@ describe('CLI', () => {
       expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('valid issue number'));
       expect(runLocalAction).not.toHaveBeenCalled();
       logSpy.mockRestore();
+    });
+
+    it('omits the correlation reference outside debug mode for recommend-steps failures', async () => {
+      (runLocalAction as jest.Mock).mockRejectedValueOnce(new Error('recommend-secret-marker'));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      await program.parseAsync(['node', 'cli', 'recommend-steps', '-i', '1']);
+
+      const messages = consoleSpy.mock.calls.flat().map(String);
+      expect(messages).toContain('❌ Unable to recommend steps.');
+      expect(messages.some((m) => m.includes('Reference:'))).toBe(false);
+      expect(messages.some((m) => m.includes('recommend-secret-marker'))).toBe(false);
+      consoleSpy.mockRestore();
+    });
+
+    it('does not expose a raw recommend-steps failure, including in debug mode', async () => {
+      (runLocalAction as jest.Mock).mockRejectedValueOnce(new Error('recommend-secret-marker'));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      await program.parseAsync(['node', 'cli', 'recommend-steps', '-i', '1', '--debug']);
+
+      expect(process.exitCode).toBe(1);
+      const messages = consoleSpy.mock.calls.flat().map(String);
+      expect(messages.some((m) => m.includes('Unable to recommend steps.'))).toBe(true);
+      expect(messages.some((m) => m.includes('Reference:'))).toBe(true);
+      expect(messages.some((m) => m.includes('recommend-secret-marker'))).toBe(false);
+      consoleSpy.mockRestore();
     });
   });
 
@@ -465,14 +508,16 @@ describe('CLI', () => {
     });
 
     it('exits when runLocalAction rejects in detect-potential-problems', async () => {
-      (runLocalAction as jest.Mock).mockRejectedValueOnce(new Error('API error'));
+      (runLocalAction as jest.Mock).mockRejectedValueOnce(new Error('detect-secret-marker'));
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
-      await program.parseAsync(['node', 'cli', 'detect-potential-problems', '-i', '1']);
+      await program.parseAsync(['node', 'cli', 'detect-potential-problems', '-i', '1', '--debug']);
 
       expect(process.exitCode).toBe(1);
       const messages = consoleSpy.mock.calls.flat().map(String);
-      expect(messages.some((m) => m.includes('Error running detect-potential-problems'))).toBe(true);
+      expect(messages.some((m) => m.includes('Unable to run detect-potential-problems.'))).toBe(true);
+      expect(messages.some((m) => m.includes('Reference:'))).toBe(true);
+      expect(messages.some((m) => m.includes('detect-secret-marker'))).toBe(false);
       consoleSpy.mockRestore();
     });
   });

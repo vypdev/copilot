@@ -1,6 +1,6 @@
 import type { CopilotLifecycleState } from '../../domain/copilot_lifecycle';
 import { getResultPayload } from '../../data/model/result';
-import type { ExecutionInputs } from '../../data/model/execution_inputs';
+import type { ApplicationError } from '../../data/model/application_error';
 import { projectBugbotResultFindingStates } from './bugbot_result_finding_state_projection_policy';
 import { countActionableBugbotFindings } from '../../domain/bugbot/review_state';
 
@@ -12,12 +12,26 @@ export interface LifecycleExternalEvidence {
     readonly review?: LifecycleReviewEvidence;
 }
 
+export type LifecycleExternalEvidenceSource =
+    | { readonly kind: 'none' }
+    | {
+        readonly kind: 'pull-request-review';
+        readonly headSha?: string;
+        readonly state?: string;
+    }
+    | {
+        readonly kind: 'check-suite' | 'workflow-run';
+        readonly headSha?: string;
+        readonly status?: string;
+        readonly conclusion?: string | null;
+    };
+
 export interface LifecycleStatePolicyResult {
     readonly id: string;
     readonly success: boolean;
     readonly executed: boolean;
     readonly steps: readonly string[];
-    readonly errors: readonly unknown[];
+    readonly errors: readonly ApplicationError[];
     readonly payload?: unknown;
 }
 
@@ -66,28 +80,21 @@ export function resolveLifecycleState(
 
 /** Extracts only stable review/check facts from GitHub event payloads. */
 export function readLifecycleExternalEvidence(
-    inputs: ExecutionInputs | undefined,
+    source: LifecycleExternalEvidenceSource,
     currentPullRequestHeadSha?: string,
 ): LifecycleExternalEvidence | undefined {
-    if (!inputs) return undefined;
-    if (inputs.eventName === 'pull_request_review') {
-        if (!isCurrentValidationEvidence(inputs.review?.commit_id, currentPullRequestHeadSha)) return undefined;
-        const reviewState = inputs.review?.state?.trim().toLowerCase();
+    if (source.kind === 'none') return undefined;
+    if (source.kind === 'pull-request-review') {
+        if (!isCurrentValidationEvidence(source.headSha, currentPullRequestHeadSha)) return undefined;
+        const reviewState = source.state?.trim().toLowerCase();
         if (reviewState === 'approved') return { review: 'approved' };
         if (reviewState === 'changes_requested') return { review: 'changes-requested' };
         if (reviewState === 'dismissed') return { review: 'dismissed' };
         if (reviewState === 'commented') return { review: 'commented' };
         return undefined;
     }
-    if (inputs.eventName === 'check_suite') {
-        if (!isCurrentValidationEvidence(inputs.check_suite?.head_sha, currentPullRequestHeadSha)) return undefined;
-        return { checks: readChecksEvidence(inputs.check_suite?.status, inputs.check_suite?.conclusion) };
-    }
-    if (inputs.eventName === 'workflow_run') {
-        if (!isCurrentValidationEvidence(inputs.workflow_run?.head_sha, currentPullRequestHeadSha)) return undefined;
-        return { checks: readChecksEvidence(inputs.workflow_run?.status, inputs.workflow_run?.conclusion) };
-    }
-    return undefined;
+    if (!isCurrentValidationEvidence(source.headSha, currentPullRequestHeadSha)) return undefined;
+    return { checks: readChecksEvidence(source.status, source.conclusion) };
 }
 
 function isCurrentValidationEvidence(

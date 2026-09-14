@@ -125,7 +125,7 @@ describe('AgentExecutionPlanner', () => {
         planningSystem.readVersion = jest.fn(() => '  \n');
         expect(() => new AgentExecutionPlanner(planningSystem).prepare({
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'prompt', timeoutMs: 1_000,
-        })).toThrow('empty version output');
+        })).toThrow('local runtime contract could not be validated');
     });
 
     it('rejects ambient project configuration that could broaden provider authority', () => {
@@ -205,7 +205,7 @@ describe('AgentExecutionPlanner', () => {
         nonErrorSystem.resolveWorkspace = jest.fn(() => { throw 'opaque rejection'; });
         expect(() => new AgentExecutionPlanner(nonErrorSystem).prepare({
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'prompt', timeoutMs: 1_000,
-        })).toThrow('opaque rejection');
+        })).toThrow('local runtime contract could not be validated');
     });
 
     it('cleans a created runtime directory when policy artifact serialization fails', () => {
@@ -222,7 +222,7 @@ describe('AgentExecutionPlanner', () => {
         planningSystem.resolveExecutable = jest.fn(() => '/missing/codex');
         expect(() => new AgentExecutionPlanner(planningSystem).prepare({
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'prompt', timeoutMs: 1_000,
-        })).toThrow('execution plan rejected');
+        })).toThrow('accessible executable file');
         expect(existsSync('/missing/codex')).toBe(false);
     });
 });

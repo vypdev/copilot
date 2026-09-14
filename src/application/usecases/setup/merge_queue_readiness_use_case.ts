@@ -96,11 +96,11 @@ export class SetupMergeQueueReadinessUseCase implements SetupMergeQueueReadiness
             : `Ready. ${verified} required producer(s) verified automatically and ${attested} covered by exact attestation.`,
           evidence: { targetRole: target.role, targetBranch: target.branch, verified, attested },
         }), ...producerChecks(readiness.producers, target.role, spanish)];
-      } catch (error) {
+      } catch {
         return [doctorCheck({
           id,
           status: "fail",
-          summary: `Target policy could not be inspected: ${safeError(error)}`,
+          summary: "Target policy could not be inspected because the provider request failed.",
           action: "Check the setup PAT permissions and target branch policy, then retry.",
           evidence: { targetRole: target.role, targetBranch: target.branch },
         })];
@@ -142,7 +142,7 @@ function producerChecks(
   return producers.map((producer) => doctorCheck({
     id: `github.merge-queue.${role}.producer.${normalizedDoctorPathId(`${producer.name}-${producer.integrationId ?? 'workflow'}`)}`,
     status: producer.verdict === "verified" || producer.verdict === "attested" ? "pass" : "fail",
-    summary: `${producer.verdict}: ${safeError(producer.reason)}${spanish && producer.verdict === "attested" ? " (atestación exacta revisada)" : ""}`,
+    summary: `${producer.verdict}: ${safeDiagnostic(producer.reason)}${spanish && producer.verdict === "attested" ? " (atestación exacta revisada)" : ""}`,
     ...(producer.verdict === "verified" || producer.verdict === "attested"
       ? {}
       : { action: "Configure or exactly attest this required producer." }),
@@ -160,8 +160,7 @@ function uniqueTargets(targets: readonly { role: MergeQueueTargetRole; branch: s
   });
 }
 
-function safeError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
+function safeDiagnostic(message: string): string {
   return redactSensitiveText(message)
     .replace(/[\r\n<>]/g, " ")
     .replace(/::/g, "﹕﹕")

@@ -13,6 +13,7 @@ import type { GithubIssueLabelProvisioningClient } from "../../../infrastructure
 import { logError } from "../../../utils/logger";
 import { isGithubAlreadyExists } from "../github/github_error_policy";
 import { requireArrayPage } from "../github/github_pagination_policy";
+import { toApplicationError } from '../../../application/errors/application_error';
 
 interface RepositoryLabel {
     name: string;
@@ -114,12 +115,11 @@ export class IssueLabelProvisioningRepository implements InitialLabelProvisionin
 
 function mapLabelMutationError(name: string, error: unknown): LabelMutationOutcome {
     if (isGithubAlreadyExists(error)) return { kind: 'existing' };
-    const summaryError = `Error creating label "${name}": ${providerErrorMessage(error)}`;
-    logError(summaryError);
-    return { kind: 'failed', error: summaryError };
-}
-
-function providerErrorMessage(error: unknown): string {
-    if (error instanceof Error) return error.message;
-    return String(error);
+    const semanticError = toApplicationError(
+        error,
+        'provider.unavailable',
+        `Unable to create label "${name}".`,
+    );
+    logError(semanticError);
+    return { kind: 'failed', error: semanticError.message };
 }

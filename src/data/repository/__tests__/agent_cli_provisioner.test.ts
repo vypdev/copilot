@@ -185,14 +185,16 @@ describe('AgentCliProvisioner', () => {
         })).toThrow('not available on PATH');
     });
 
-    it('normalizes non-Error post-install version failures without hiding their cause', () => {
+    it('bounds non-Error post-install version failures behind a stable message', () => {
         const system = provisioningSystem([false, true]);
         system.readVersion.mockImplementation(() => { throw 'unparseable'; });
-        expect(() => new AgentCliProvisioner(system).provision('codex', {})).toThrow('unparseable');
+        expect(() => new AgentCliProvisioner(system).provision('codex', {}))
+            .toThrow('failed pinned-version verification');
     });
 
     it('rejects a pinned package when its installed CLI reports another version', () => {
         const system = provisioningSystem([false, true], 'codex-cli 0.154.0');
-        expect(() => new AgentCliProvisioner(system).provision('codex', {})).toThrow('installed CLI version mismatch');
+        expect(() => new AgentCliProvisioner(system).provision('codex', {}))
+            .toThrow('failed pinned-version verification');
     });
 });

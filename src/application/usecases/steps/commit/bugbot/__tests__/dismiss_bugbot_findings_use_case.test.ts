@@ -123,4 +123,18 @@ describe('DismissBugbotFindingsUseCase', () => {
         expect(mockMarkFindingsResolved).not.toHaveBeenCalled();
         expect(results[0].success).toBe(true);
     });
+
+    it('returns a bounded semantic error when context loading fails', async () => {
+        mockLoadBugbotContext.mockRejectedValueOnce(new Error('dismiss-secret-marker'));
+        const useCase = new DismissBugbotFindingsUseCase({
+            contextPorts: {} as never,
+            resolutionPorts: {} as never,
+        });
+
+        const results = await useCase.invoke({ operation: operation(), findingIds: ['finding-1'] });
+
+        expect(results[0]).toMatchObject({ success: false, executed: true });
+        expect(results[0].errors[0].message).toBe('Unable to dismiss Bugbot findings.');
+        expect(JSON.stringify(results)).not.toContain('dismiss-secret-marker');
+    });
 });

@@ -54,11 +54,15 @@ describe("SetupMergeQueueReadinessUseCase", () => {
     const targets = { getTargetCapabilities: jest.fn().mockResolvedValue(capabilities({
       mergeQueueRequired: true,
       mergeQueueProducers: [{
-        kind: "check", name: "External CI", integrationId: 999, support: "unknown", reason: "External producer.",
+        kind: "check", name: "External CI", integrationId: 999, support: "unknown",
+        reason: "External <producer>\n::error::@team github_pat_abcdefghijklmnopqrstuvwxyz123456",
       }],
     })) };
     const checks = await new SetupMergeQueueReadinessUseCase(targets).inspect(request());
     expect(checks[0]).toEqual(expect.objectContaining({ status: "fail", summary: expect.stringContaining("External CI [unknown]") }));
+    expect(JSON.stringify(checks)).not.toContain("github_pat_");
+    expect(JSON.stringify(checks)).not.toContain("::error::");
+    expect(JSON.stringify(checks)).not.toContain("@team");
   });
 
   it("applies attestations only to their configured logical target", async () => {
@@ -72,8 +76,11 @@ describe("SetupMergeQueueReadinessUseCase", () => {
     value.configuration.repository.mergeQueueCheckAttestations = [
       { context: "External CI", integrationId: 999, targets: ["production"] },
     ];
+    value.configuration.repository.issueLocale = "es-ES";
     const checks = await new SetupMergeQueueReadinessUseCase(targets).inspect(value);
-    expect(checks[0]).toEqual(expect.objectContaining({ status: "pass", summary: expect.stringContaining("1 covered by exact attestation") }));
+    expect(checks[0]).toEqual(expect.objectContaining({ status: "pass", summary: expect.stringContaining("1 cubiertos por atestación exacta") }));
+    expect(checks.find((check) => check.id.includes("producer.external-ci-999")))
+      .toEqual(expect.objectContaining({ summary: expect.stringContaining("atestación exacta revisada") }));
     expect(checks.find((check) => check.id === "github.merge-queue.development"))
       .toEqual(expect.objectContaining({ status: "fail" }));
   });
@@ -83,7 +90,10 @@ describe("SetupMergeQueueReadinessUseCase", () => {
       new Error("forbidden\n::error::@team github_pat_abcdefghijklmnopqrstuvwxyz123456"),
     ) };
     const checks = await new SetupMergeQueueReadinessUseCase(targets).inspect(request());
-    expect(checks[0]).toEqual(expect.objectContaining({ status: "fail", summary: expect.stringContaining("forbidden") }));
+    expect(checks[0]).toEqual(expect.objectContaining({
+      status: "fail",
+      summary: "Target policy could not be inspected because the provider request failed.",
+    }));
     expect(checks[0].summary).not.toContain("::error::");
     expect(checks[0].summary).not.toContain("@team");
     expect(checks[0].summary).not.toContain("github_pat_");

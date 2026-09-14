@@ -1,5 +1,6 @@
 import { runAgentAuthenticationPreflight } from '../../data/repository/agent_authentication_preflight';
 import { createFixerQueryPort } from '../../infrastructure/composition/agent_capability_composition_root';
+import { toApplicationError } from '../../application/errors/application_error';
 import { getCliDoPrompt } from '../../prompts';
 import {
     buildDoAgentTasks,
@@ -75,9 +76,9 @@ export async function runDoCommand(options: DoCommandOptions): Promise<void> {
 
         console.log(formatDoResponse(result.text, result.sessionId, outputFormat));
     } catch (error: unknown) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        console.error('❌ Error executing do:', err.message || error);
-        if (options.debug) console.error(error);
+        const semanticError = toApplicationError(error, 'agent.failed', 'Unable to execute the request.');
+        console.error(`❌ ${semanticError.message}`);
+        if (options.debug) console.error(`Reference: ${semanticError.correlationId}`);
         process.exitCode = 1;
     }
 }

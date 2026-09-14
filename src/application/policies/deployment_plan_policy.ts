@@ -10,6 +10,7 @@ import type {
   MergeQueueProducerEvidence,
   MergeQueueReadiness,
 } from "../../domain/merge_queue_readiness";
+import { redactSensitiveText } from "../../domain/security/sensitive_text";
 
 export interface InitialDeploymentOperationInput {
   readonly operationId: string;
@@ -89,7 +90,7 @@ export function selectPullRequestMode(
   if (capabilities.mergeQueueObservationProblems.length > 0) {
     return {
       kind: "unsupported",
-      reason: `The target merge policy could not be verified: ${capabilities.mergeQueueObservationProblems[0].message}`,
+      reason: `The target merge policy could not be verified: ${boundedDiagnostic(capabilities.mergeQueueObservationProblems[0].message)}`,
     };
   }
   if (capabilities.mergeQueueRequired) {
@@ -143,7 +144,11 @@ export function mergeQueueReadinessFailureMessage(readiness: MergeQueueReadiness
 }
 
 function boundedDiagnostic(value: string): string {
-  return value.replace(/[\r\n<>]/g, " ").replace(/::/g, "﹕﹕").replace(/@/g, "@\u200b").slice(0, 500);
+  return redactSensitiveText(value)
+    .replace(/[\r\n<>]/g, " ")
+    .replace(/::/g, "﹕﹕")
+    .replace(/@/g, "@\u200b")
+    .slice(0, 500);
 }
 
 export type BackmergeModeDecision =

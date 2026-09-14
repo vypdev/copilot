@@ -5,6 +5,7 @@ import { logError } from '../../utils/logger';
 import { getGitInfo, getCurrentBranch } from '../../cli_context';
 import { cleanCliArgument } from '../command_input_policy';
 import { buildDetectPotentialProblemsParams, resolveDetectIssueNumber } from './detect_potential_problems_policy';
+import { toApplicationError } from '../../application/errors/application_error';
 
 export function registerDetectPotentialProblemsCommand(program: Command): void {
   program
@@ -64,9 +65,13 @@ export function registerDetectPotentialProblemsCommand(program: Command): void {
         }
         process.exitCode = results.every((result) => result.success) ? 0 : 1;
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        console.error('❌ Error running detect-potential-problems:', error.message);
-        if (options.debug) console.error(err);
+        const error = toApplicationError(
+          err,
+          'workflow.failed',
+          'Unable to run detect-potential-problems.',
+        );
+        console.error(`❌ ${error.message}`);
+        if (options.debug) console.error(`Reference: ${error.correlationId}`);
         process.exitCode = 1;
       }
     });

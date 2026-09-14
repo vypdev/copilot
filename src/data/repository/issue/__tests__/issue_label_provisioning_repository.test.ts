@@ -159,25 +159,25 @@ describe('IssueLabelProvisioningRepository', () => {
       })),
     } as never);
 
-    await expect(
-      repository.ensureInitialLabels(
-        'owner',
-        'repo',
-        createLabels({ bug: 'bug', feature: 'feature' }),
-        'token',
-      ),
-    ).resolves.toEqual({
+    const result = await repository.ensureInitialLabels(
+      'owner',
+      'repo',
+      createLabels({ bug: 'bug', feature: 'feature' }),
+      'token',
+    );
+    expect(result).toEqual({
       configured: {
         created: 11,
         existing: 0,
-        errors: ['Error creating label "bug": bug unavailable'],
+        errors: ['Unable to create label "bug".'],
       },
       progress: {
         created: 20,
         existing: 0,
-        errors: ['Error creating label "10%": progress unavailable'],
+        errors: ['Unable to create label "10%".'],
       },
     });
+    expect(JSON.stringify(result)).not.toContain('unavailable');
     expect(createLabel).toHaveBeenCalledTimes(33);
   });
 });

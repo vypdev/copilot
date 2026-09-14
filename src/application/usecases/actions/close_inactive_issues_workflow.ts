@@ -3,7 +3,6 @@ import { evaluateIssueInactivity, type IssueActivitySnapshot } from '../../../do
 import type { BoundIssueClosurePort } from '../../ports/issue_lifecycle_ports';
 import type { BoundIssueInactivityQueryPort, IssueInactivityClockPort } from '../../ports/issue_inactivity_ports';
 import type { InactivityContext } from '../push_single_action_contexts';
-import { sanitizePublishedError } from '../../policies/github_comment_publication_policy';
 import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
 import { ApplicationError, toApplicationError } from '../../errors/application_error';
 
@@ -144,7 +143,6 @@ function unique(values: readonly string[]): string[] {
     return [...new Set(values.map(value => value.trim()).filter(Boolean))];
 }
 
-function safeErrorMessage(error: unknown): string {
-    const message = sanitizePublishedError(error instanceof Error ? error.message : error);
-    return message || 'Unknown provider error.';
+function safeErrorMessage(_error: unknown): string {
+    return 'The issue provider request failed.';
 }

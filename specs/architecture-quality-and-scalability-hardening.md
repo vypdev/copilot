@@ -1,10 +1,10 @@
 # Architecture Quality and Scalability Hardening
 
-- Status: In implementation — P0-A and P2-A through P2-E complete; P0-B and P1-A through P1-C automated scope complete
+- Status: Implemented — all automated priorities complete; controlled rollout evidence remains external
 - Date: 2026-09-11
-- Last updated: 2026-09-13
+- Last updated: 2026-09-14
 - Catalog capability ID: `architecture-quality-hardening`
-- Last verified: 2026-09-13 on `develop` (P2-E implementation validation)
+- Last verified: 2026-09-14 on `develop` (P2-G local and pull-request validation)
 - Owners: Copilot maintainers
 - Scope: close the verified concurrency, error-contract, context-coupling,
   fan-out, setup/doctor, and provider-policy risks without changing unrelated
@@ -47,6 +47,7 @@ clean cutovers, provider contracts, and acceptance evidence:
 | P0-A and P2 program | [`execution-error-and-context-hardening.md`](./execution-error-and-context-hardening.md) |
 | P2-E | [`issue-and-pull-request-context-hardening.md`](./issue-and-pull-request-context-hardening.md) |
 | P2-F | [`push-and-single-action-context-hardening.md`](./push-and-single-action-context-hardening.md) |
+| P2-G | [`execution-boundary-closure-audit.md`](./execution-boundary-closure-audit.md) |
 | P0-B | [`deployment-concurrency-and-state-fencing.md`](./deployment-concurrency-and-state-fencing.md) |
 | P1-A | [`bugbot-context-selection-and-budgeting.md`](./bugbot-context-selection-and-budgeting.md) |
 | P1-B | [`setup-doctor-architecture-hardening.md`](./setup-doctor-architecture-hardening.md) |
@@ -61,7 +62,7 @@ Implementation ledger:
 | P1-A | implemented | canonical-selection, bounded-read, partial-coverage, eligibility, adapter, UX, documentation, and coverage evidence catalogued in `bugbot-context-selection-and-budgeting.md` | controlled GitHub UX evidence before first rollout |
 | P1-B | implemented | immutable questionnaire, raw terminal split, stable/skipped doctor report, query-only composition, narrow remote adapters, docs, and coverage gates | controlled GitHub permission-path evidence before first rollout |
 | P1-C | implemented | exhaustive provider plans, operator-owned runtime admission, pinned-install verification, admitted-only process adapter, clean command-text removal, workflows/docs/catalog, and automated contract evidence | controlled provider sandbox smoke before first rollout |
-| P2 | implementing | P2-A through P2-F clean cuts implemented; push/single-action leaves use immutable capability facts, bound authority, explicit outcomes, and isolated deployment state; aggregate inventory reduced from 140 to 13 | complete P2-G and record the exact justified boundary audit |
+| P2 | complete | P2-A through P2-G are clean cuts; the exact 13 remaining consumers carry machine-checked roles/rationales, lifecycle synchronization is credential-free and bound, alias bypasses fail, and derived caught values cannot reach logging | none |
 
 The fixed safety rule is that a refactor MUST preserve observable product
 behavior unless this SDD and the capability-owning SDD explicitly define the
@@ -438,7 +439,7 @@ aggregate rewrite:
 | P2-D | shared comment analysis and publication | complete; Think/permissions/translation/title/publication/configuration/project contexts, bound ports, and ceiling 75 |
 | P2-E | issue and pull-request steps | complete; zero aggregate imports below both step directories, bound provider authority, explicit branch patches, exact-target compensated PR linkage, ceiling 47 |
 | P2-F | push and single-action steps | complete; zero leaf aggregate inputs, frozen capability facts, bound authority, explicit outcomes, isolated deployment state, ceiling 13 |
-| P2-G | closure audit | exact justified 13-consumer allowlist or smaller and clean topology/quality evidence |
+| P2-G | closure audit | complete; exact justified 13-consumer allowlist, credential-free lifecycle context, bound label/head ports, explicit patch, indirect-alias negative fixture, derived-error taint guard, and clean topology/quality evidence |
 
 Every slice is a clean cut. Superseded signatures, union inputs, aliases,
 overloads, compatibility adapters, deprecated exports, dual readers/writers,
@@ -623,23 +624,23 @@ write as though it never occurred.
 
 ## 14. Testing strategy and numeric budget
 
-The program MUST add or materially strengthen at least **174 distinct cases**.
+The program MUST add or materially strengthen at least **219 distinct cases**.
 Cases assigned to an existing capability SDD may satisfy both requirement maps,
 but each test counts once in this program ledger.
 
 | Area | Minimum distinct cases | Behaviors and risks covered |
 |---|---:|---|
-| Domain/configuration/pure planning | 31 | error codes, transition/rule normalization, PR selection, strict result-evidence projection, questionnaire/report/provider plans, context projection |
-| State/application/idempotency/races | 29 | simultaneous deployment, stale revision, replay, cancellation, ordered doctor results, projected-state races |
-| Application use cases | 31 | mapping, phase handlers, bounded context, setup/doctor coordination, capability cuts |
-| Adapters/provider contracts | 25 | GitHub exact queries, error mapping, variables/secrets, argv/environment, credential binding |
-| Workflows/setup/schema | 15 | shared groups, permissions, queueing, exact telemetry ownership, sole-state validation, active/template and route parity |
-| UI/UX/localization/sanitization | 17 | five states, semantic errors, invalid result evidence, terminal width, masking, stable order, unchanged context-cut UX |
-| Integration/security/cutover | 26 | cross-workflow races, large repositories, malformed-sibling replay, injection, removed-shape rejection, per-slice and final ratchets |
-| **Total** | **174** | No double counting |
+| Domain/configuration/pure planning | 40 | error codes, transition/rule normalization, PR selection, strict result-evidence projection, questionnaire/report/provider plans, context projection |
+| State/application/idempotency/races | 35 | simultaneous deployment, stale revision, replay, cancellation, ordered doctor results, projected-state races |
+| Application use cases | 39 | mapping, phase handlers, bounded context, setup/doctor coordination, capability cuts |
+| Adapters/provider contracts | 29 | GitHub exact queries, error mapping, variables/secrets, argv/environment, credential binding |
+| Workflows/setup/schema | 23 | shared groups, permissions, queueing, exact telemetry ownership, sole-state validation, active/template and route parity, coverage-budget boundaries |
+| UI/UX/localization/sanitization | 21 | five states, semantic errors, invalid result evidence, terminal width, masking, stable order, unchanged context-cut UX |
+| Integration/security/cutover | 32 | cross-workflow races, large repositories, malformed-sibling replay, injection, removed-shape rejection, per-slice and final ratchets |
+| **Total** | **219** | No double counting |
 
 Priority allocation is also fixed: P0-A 22, P0-B 28, P1-A 18, P1-B 24,
-P1-C 18, P2 56, and cross-priority integration 8. This allocation totals 174
+P1-C 18, P2 101, and cross-priority integration 8. This allocation totals 219
 and prevents a large low-risk unit suite from masking a missing race or security case.
 
 The two dimensions reconcile exactly; each row and column is a non-overlapping
@@ -652,17 +653,19 @@ case ledger:
 | P1-A | 4 | 3 | 3 | 4 | 0 | 2 | 2 | 18 |
 | P1-B | 4 | 4 | 4 | 3 | 2 | 4 | 3 | 24 |
 | P1-C | 4 | 2 | 3 | 4 | 2 | 1 | 2 | 18 |
-| P2 | 8 | 8 | 12 | 6 | 5 | 5 | 12 | 56 |
+| P2 | 17 | 14 | 20 | 10 | 13 | 9 | 18 | 101 |
 | Cross-priority | 1 | 2 | 0 | 0 | 2 | 1 | 2 | 8 |
-| **Total** | **31** | **29** | **31** | **25** | **15** | **17** | **26** | **174** |
+| **Total** | **40** | **35** | **39** | **29** | **23** | **21** | **32** | **219** |
 
 Repository thresholds remain 90% lines/statements, 88% functions, and 82%
 branches. Changed pure error, state, selection, report, and provider security
 policies require 100% enumerated branch coverage. Changed orchestration modules
-require at least 95% lines/statements and 90% branches/functions; P2-D enforces
-that aggregate path with `scripts/validate-shared-capability-context-coverage.cjs`
-and P2-E enforces its issue/PR path with
-`scripts/validate-issue-pull-request-context-coverage.cjs`.
+require at least 95% lines/statements and 90% branches/functions. P2-D through
+P2-G declare their shared-capability, issue/PR, push/single-action, and final
+execution-boundary budgets in `scripts/coverage-budgets.json`.
+All specialized gates declare their file inventory, evaluation mode, and
+bounded threshold profile there; `scripts/validate-coverage-budgets.cjs` owns
+shared parsing, arithmetic, missing-entry, zero-total, and inventory-drift rules.
 Refactored terminal adapters require at least 90% lines and 85% branches.
 
 Tests use deterministic barriers, clocks, IDs, pagination, provider fakes, and
@@ -743,7 +746,7 @@ the same pull request.
 | P1-A bounded context | canonical PR policy, exact query adapter, context loader | 10,000-candidate, request-budget, ambiguity tests | Bugbot detection/failure |
 | P1-B setup/doctor | questionnaire/report policies, terminal and GitHub adapters | state, no-write, order, masking tests | setup/CLI/provisioning |
 | P1-C provider policy | exhaustive dispatcher and provider plans | cross-provider security matrix, controlled smoke | agent execution/failure |
-| P2 context closure | named contexts, bound lifecycle/push/single-action/deployment ports, route-owned patches, and exact-target PR-link compensation | issue/PR and push/single-action projection/binding, replay/compensation, description modes, 13-consumer ratchet, credential AST checks, and zero-leaf-import checks | architecture/dependency rules, P2-E and P2-F SDDs, issue/PR operations docs |
+| P2 context closure | named contexts, bound lifecycle/push/single-action/deployment ports, route-owned patches, and exact-target PR-link compensation | issue/PR, push/single-action, and lifecycle projection/binding; replay/compensation; exact 13-consumer role/rationale ratchet; indirect-alias and derived-error negative proofs | architecture/dependency rules, P2-E/P2-F/P2-G SDDs, issue/PR operations docs |
 | review evidence integrity | discriminated telemetry-set + canonical finding-state projections | malformed/duplicate sibling, required-outcome absence, schema/numeric/overflow, cross-surface fail-closed, and 100% pure-policy coverage | Bugbot observability/failure docs and reconciliation/execution SDDs |
 | GitHub notification ownership | explicit generic-comment publication mode | metadata-edit use-case and completion negatives plus PR #363 comment replay | workflow setup, troubleshooting, and reconciliation/execution SDDs |
 | program quality | composition roots, generated artifacts | full CI, coverage, metrics, Graphify, human evidence | catalog and this SDD |
@@ -800,12 +803,14 @@ closure:
 1. P2-A setup, P2-B Bugbot analysis, P2-C Bugbot I/O/mutation, P2-D shared
    comment analysis, P2-E issue/PR workflows, and P2-F push/single-action are
    complete clean cuts.
-2. Keep the checked-in 13-consumer ceiling exact while auditing the remaining boundaries.
-3. Remove leaf imports and obsolete aggregate methods only after parity tests;
-   lower the exact checked-in ceiling in every slice.
-4. Run P2-G as a final clean-clone architecture audit and review every remaining allowlist entry.
-5. Update all affected SDDs from proposed debt to implemented evidence and mark
-   this catalog capability implemented only after every Definition of Done item passes.
+2. The checked-in 13-consumer inventory is exact and every entry has one closed
+   role plus a non-empty architectural justification.
+3. Leaf imports, obsolete aggregate signatures, and compatibility paths have
+   been removed after parity tests.
+4. P2-G supplies the final clean-clone architecture audit and reviews every
+   remaining allowlist entry.
+5. All affected SDDs and catalog evidence record the implemented automated
+   program; controlled provider and deployment smokes remain in their owning SDDs.
 
 For every code slice run, at minimum: focused tests, `pnpm run typecheck`,
 `pnpm run lint`, `pnpm run test:coverage`, `pnpm run validate:workflows`,
@@ -814,32 +819,32 @@ package validation when bundles change, and `graphify update .` after code chang
 
 ## 19. Definition of Done
 
-- [ ] All six priorities are accepted in dependency order; no priority is marked
+- [x] All six implementation priorities are accepted in dependency order; none is marked
       complete with deferred correctness, security, documentation, or test debt.
-- [ ] Every normative requirement maps to exact automated or human evidence.
-- [ ] All deployment mutation paths share the verified operation group; race,
+- [x] Every normative implementation requirement maps to exact automated or human evidence.
+- [x] All deployment mutation paths share the verified operation group; race,
       stale, cancellation, replay, initial-state, and unsupported-state scenarios converge.
-- [ ] `Result.errors` and logs contain no raw provider failure or secret, and the
+- [x] `Result.errors` and logs contain no raw provider failure or secret, and the
       semantic taxonomy is exhaustive and publicly safe.
 - [x] Bugbot provider-call count is constant with repository PR count and all
       ambiguity/partial states are explicit.
-- [ ] Provider policies meet their coverage, authority, and complexity bounds
+- [x] Provider policies meet their coverage, authority, and complexity bounds
       without registries or facade shims; setup/doctor is complete.
-- [ ] Leaf use cases have zero direct `Execution` imports; remaining boundary
+- [x] Leaf use cases have zero direct `Execution` imports; remaining boundary
       entries are justified and protected by a non-growing allowlist.
-- [ ] No legacy/deprecated API, compatibility adapter, dual schema reader/writer,
+- [x] No legacy/deprecated API, compatibility adapter, dual schema reader/writer,
       migration handler, removed command parser, or transitional feature flag ships.
-- [ ] At least 174 non-double-counted cases and all repository/changed-module
+- [x] At least 219 non-double-counted cases and all repository/changed-module
       coverage thresholds pass.
-- [ ] Active workflows, setup templates, generated bundles, schemas, docs,
+- [x] Active workflows, setup templates, generated bundles, schemas, docs,
       fixtures, SDDs, traceability, catalog, and implementation agree.
-- [ ] Type, lint, unit/integration, coverage, architecture, cycle, workflow,
+- [x] Type, lint, unit/integration, coverage, architecture, cycle, workflow,
       documentation, specification, build, package, and Graphify checks pass.
 - [ ] Manual terminal, GitHub UX, provider smoke, and deployment queue evidence
       is attached to the relevant implementation PRs.
-- [ ] A final clean-clone architecture audit shows no new dead code or cycle and
+- [x] A final clean-clone architecture audit shows no new dead code or cycle and
       no unexplained health, cohesion, complexity, duplication, or coverage regression.
-- [ ] No readiness-blocking decision, TODO, temporary waiver, or unowned follow-up remains.
+- [x] No implementation-readiness-blocking decision, TODO, temporary waiver, or unowned follow-up remains.
 
 ## 20. References and decisions
 

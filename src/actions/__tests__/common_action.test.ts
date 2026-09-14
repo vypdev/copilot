@@ -43,6 +43,7 @@ const mockSetupExecutionInvoke = jest.fn();
 const mockWaitForPreviousWorkflowRunsInvoke = jest.fn();
 const mockAgentActivityStart = jest.fn();
 const mockAgentActivityFinish = jest.fn();
+const mockLifecycleStateInvoke = jest.fn();
 
 function unresolvedSetupResult(context: {
   tokenUser?: string;
@@ -206,6 +207,14 @@ const runMainWithActivity = (execution: Execution) => productionMainRun(
   } as unknown as SynchronizeAgentActivityUseCase,
 );
 
+const runMainWithLifecycle = (execution: Execution) => productionMainRun(
+  execution,
+  projectBoardCommandPort,
+  latestTagQueryPort,
+  'github-workflow',
+  { invoke: mockLifecycleStateInvoke } as never,
+);
+
 const originalRunId = process.env.GITHUB_RUN_ID;
 const originalWorkflow = process.env.GITHUB_WORKFLOW;
 const originalWorkflowRef = process.env.GITHUB_WORKFLOW_REF;
@@ -232,6 +241,7 @@ describe('mainRun', () => {
     mockSetupExecutionInvoke.mockImplementation(async (context) => unresolvedSetupResult(context));
     mockAgentActivityStart.mockResolvedValue(undefined);
     mockAgentActivityFinish.mockResolvedValue(undefined);
+    mockLifecycleStateInvoke.mockResolvedValue({ results: [] });
   });
 
   afterEach(() => {
@@ -491,6 +501,78 @@ describe('mainRun', () => {
     expect(results).toEqual(expected);
   });
 
+  it('projects lifecycle facts and applies only the explicit label patch', async () => {
+    const execution = mockExecution({
+      eventName: 'issues',
+      inputs: { action: 'opened' },
+      isIssue: true,
+      issue: { number: 42, isIssueComment: false, isIssue: true, opened: true, descriptionEdited: false },
+      labels: {
+        ...mockExecution().labels,
+        currentIssueLabels: ['bug'],
+      },
+    });
+    mockIssueInvoke.mockResolvedValue([new Result({ id: 'issue', success: true })]);
+    mockLifecycleStateInvoke.mockResolvedValue({
+      results: [new Result({ id: 'lifecycle', success: true, executed: true })],
+      labelPatch: { target: { kind: 'issue', number: 42 }, labels: ['bug', 'state:planned'] },
+    });
+
+    const results = await runMainWithLifecycle(execution);
+
+    expect(mockLifecycleStateInvoke).toHaveBeenCalledWith({
+      context: expect.objectContaining({
+        eventName: 'issues',
+        action: 'opened',
+        target: expect.objectContaining({ kind: 'issue', number: 42, labels: ['bug'] }),
+      }),
+      results: [expect.objectContaining({ id: 'issue' })],
+    });
+    expect(execution.labels.currentIssueLabels).toEqual(['bug', 'state:planned']);
+    expect(results.map(result => result.id)).toEqual(['issue', 'lifecycle']);
+  });
+
+  it('applies an explicit pull-request lifecycle patch to the PR label cache', async () => {
+    const execution = mockExecution({
+      eventName: 'pull_request',
+      inputs: { action: 'synchronize' },
+      isPullRequest: true,
+      pullRequest: {
+        number: 42, isPullRequestReviewComment: false, isPullRequest: true,
+        isMerged: false, isClosed: false,
+      },
+    });
+    mockLifecycleStateInvoke.mockResolvedValue({
+      results: [],
+      labelPatch: { target: { kind: 'pull-request', number: 42 }, labels: ['state:reviewing'] },
+    });
+
+    await runMainWithLifecycle(execution);
+
+    expect(execution.labels.currentPullRequestLabels).toEqual(['state:reviewing']);
+  });
+
+  it('leaves both label caches unchanged when lifecycle synchronization returns no patch', async () => {
+    const execution = mockExecution({
+      eventName: 'issues',
+      inputs: { action: 'edited' },
+      isIssue: true,
+      issue: { number: 42, isIssueComment: false, isIssue: true, opened: false, descriptionEdited: true },
+      labels: {
+        ...mockExecution().labels,
+        currentIssueLabels: ['state:planned'],
+        currentPullRequestLabels: ['state:reviewing'],
+      },
+    });
+    mockIssueInvoke.mockResolvedValue([new Result({ id: 'issue', success: true })]);
+    mockLifecycleStateInvoke.mockResolvedValue({ results: [] });
+
+    await runMainWithLifecycle(execution);
+
+    expect(execution.labels.currentIssueLabels).toEqual(['state:planned']);
+    expect(execution.labels.currentPullRequestLabels).toEqual(['state:reviewing']);
+  });
+
   it('runs PullRequestReviewCommentUseCase when isPullRequest and review comment', async () => {
     const execution = mockExecution({
       isPullRequest: true,
@@ -532,9 +614,15 @@ describe('mainRun', () => {
 
   it('tracks agent activity around an agent-backed route', async () => {
     const order: string[] = [];
-    mockAgentActivityStart.mockImplementation(async () => { order.push('activity-start'); });
+    mockAgentActivityStart.mockImplementation(async () => {
+      order.push('activity-start');
+      return { target: { kind: 'pull-request', number: 42 }, labels: ['state:ai-processing'] };
+    });
     mockCommitInvoke.mockImplementation(async () => { order.push('route'); return []; });
-    mockAgentActivityFinish.mockImplementation(async () => { order.push('activity-finish'); });
+    mockAgentActivityFinish.mockImplementation(async () => {
+      order.push('activity-finish');
+      return { target: { kind: 'issue', number: 42 }, labels: ['state:ready'] };
+    });
     const execution = mockExecution({
       eventName: 'push',
       isPush: true,
@@ -548,6 +636,8 @@ describe('mainRun', () => {
     await runMainWithActivity(execution);
 
     expect(order).toEqual(['activity-start', 'route', 'activity-finish']);
+    expect(execution.labels.currentPullRequestLabels).toEqual(['state:ai-processing']);
+    expect(execution.labels.currentIssueLabels).toEqual(['state:ready']);
   });
 
   it('calls core.setFailed when action not handled', async () => {

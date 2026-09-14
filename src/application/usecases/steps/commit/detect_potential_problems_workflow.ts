@@ -23,7 +23,7 @@ import {
     type BugbotPresentationReport,
 } from './bugbot/reconcile_bugbot_review_state_use_case';
 import type { BugbotFinding } from '../../../../domain/bugbot/finding';
-import { ApplicationError } from '../../../errors/application_error';
+import { ApplicationError, toApplicationError } from '../../../errors/application_error';
 import {
     type BugbotReviewOperationContext,
 } from './bugbot/bugbot_review_operation_context';
@@ -142,11 +142,12 @@ export async function runDetectPotentialProblemsWorkflow(
                     : hasChanges ? 'completed' : 'no-findings',
         );
     } catch (error) {
-        const resultError = toBugbotApplicationError(
+        const resultError = toApplicationError(
             error,
+            'provider.unavailable',
             `Error in ${TASK_ID}: Unable to detect potential problems.`,
         );
-        logError(resultError.message);
+        logError(resultError);
         const result = new Result({
             id: TASK_ID,
             success: false,

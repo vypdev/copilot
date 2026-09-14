@@ -89,10 +89,12 @@ queries contain neither tokens nor provider clients. There is no aggregate
 overload or compatibility adapter for the removed setup signatures.
 
 An AST architecture ratchet resolves the real `Execution` class symbol through
-renamed imports and type aliases. Its checked-in baseline may shrink but cannot
-grow or move to new files. The final target keeps the aggregate only at route
-and entrypoint boundaries; leaf use cases receive freshly copied, readonly
-capability contexts.
+renamed imports, re-exports, type aliases, and utility types. Its checked-in
+allowlist may shrink but cannot grow or move to new files; every entry records a
+closed boundary role and rationale, and a synthetic negative fixture proves
+that indirect aliases remain detectable. The final inventory keeps the
+aggregate only at construction, route-contract, coordinator, and entrypoint
+boundaries; leaf use cases receive freshly copied, readonly capability contexts.
 
 The P2-B Bugbot boundary first copies repository, target, trigger, ignore, and
 organization-rule facts into a frozen `BugbotContextSelectionContext`. Only the
@@ -137,6 +139,26 @@ activity changes return explicit outcomes for the owning route. Deployment owns
 an isolated invocation-state copy whose durable revisions cross only its fenced
 state port. Obsolete setup and commit-prefix mutation paths were deleted, and
 the exact production `Execution` consumer inventory fell from 47 to 13.
+
+P2-G audits and locks that final 13-consumer boundary. Lifecycle synchronization,
+the last aggregate-shaped alias below it, now receives a frozen discriminated
+snapshot containing one issue/PR target, configured lifecycle labels, event
+action, and bounded review/check evidence. Repository identity and credentials
+are captured once by bound label and pull-request-head ports. The use case
+re-reads authoritative labels, ignores stale head evidence, performs at most one
+conditional write, and returns a readonly label patch. Only the entrypoint
+applies that patch to its aggregate after provider success; a failure retains
+both provider and local labels and exposes only a semantic error.
+
+```text
+Execution entrypoint -> frozen lifecycle snapshot -> pure state policies
+                     -> bound label/head ports -> Result + label patch
+                     -> entrypoint-owned aggregate update
+```
+
+The raw-error architecture guard also follows caught values through local
+declarations and assignments. A derived provider message cannot reach logging;
+`toApplicationError` is the explicit semantic boundary.
 
 Configuration embedded in issue or pull-request content is versioned. Readers
 accept only the current schema and fail closed on missing, malformed, or

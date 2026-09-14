@@ -86,8 +86,8 @@ class GithubActionsResourceTransport {
                 });
                 if (existing.has(credential.name)) updated += 1;
                 else created += 1;
-            } catch (error) {
-                errors.push(`Error configuring repository Secret ${credential.name}: ${error instanceof Error ? error.message : String(error)}`);
+            } catch {
+                errors.push(`Unable to configure repository Secret ${credential.name}.`);
             }
         }
         return { created, updated, skipped, errors };
@@ -134,8 +134,8 @@ class GithubActionsResourceTransport {
                 }
                 if (current) updated += 1;
                 else created += 1;
-            } catch (error) {
-                errors.push(`Error configuring organization Secret ${credential.name}: ${error instanceof Error ? error.message : String(error)}`);
+            } catch {
+                errors.push(`Unable to configure organization Secret ${credential.name}.`);
             }
         }
         return { created, updated, skipped: 0, errors };
@@ -164,8 +164,8 @@ class GithubActionsResourceTransport {
                     await client.rest.actions.createRepoVariable({ owner, repo: repository, name: variable.name, value: variable.value });
                     created += 1;
                 }
-            } catch (error) {
-                errors.push(`Error configuring repository Variable ${variable.name}: ${error instanceof Error ? error.message : String(error)}`);
+            } catch {
+                errors.push(`Unable to configure repository Variable ${variable.name}.`);
             }
         }
         return { created, updated, errors };
@@ -210,8 +210,8 @@ class GithubActionsResourceTransport {
                 }
                 if (current) updated += 1;
                 else created += 1;
-            } catch (error) {
-                errors.push(`Error configuring organization Variable ${variable.name}: ${error instanceof Error ? error.message : String(error)}`);
+            } catch {
+                errors.push(`Unable to configure organization Variable ${variable.name}.`);
             }
         }
         return { created, updated, errors };

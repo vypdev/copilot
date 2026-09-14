@@ -63,13 +63,17 @@ export class DismissBugbotFindingsUseCase {
                 )),
             })];
         } catch (error) {
-            const message = `Unable to dismiss Bugbot findings: ${error instanceof Error ? error.message : String(error)}`;
-            logError(message);
+            const semanticError = toApplicationError(
+                error,
+                'provider.unavailable',
+                'Unable to dismiss Bugbot findings.',
+            );
+            logError(semanticError);
             return [new Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
-                errors: [toApplicationError(error, 'provider.unavailable', 'Unable to dismiss Bugbot findings.')],
+                errors: [semanticError],
             })];
         }
     }

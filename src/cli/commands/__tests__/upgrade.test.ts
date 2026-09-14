@@ -32,7 +32,8 @@ describe('upgrade command adapter', () => {
         await runUpgradeCommand(runner);
 
         expect(process.exitCode).toBe(1);
-        expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('pnpm failed'));
+        expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Unable to upgrade Copilot. Reference:'));
+        expect(errorSpy.mock.calls.flat().join(' ')).not.toContain('pnpm failed');
         process.exitCode = previousExitCode;
         errorSpy.mockRestore();
     });

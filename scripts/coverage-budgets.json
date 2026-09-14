@@ -1,0 +1,198 @@
+{
+  "budgets": [
+    {
+      "name": "Deployment handler",
+      "missingEntryLabel": "deployment handler",
+      "rules": [
+        {
+          "expectedFileCount": 6,
+          "fileKind": "deployment handler files",
+          "mode": "aggregate",
+          "pathIncludes": "src/application/usecases/actions/deployment_handlers/",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "deployment handler coverage: PASS (95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Bugbot context",
+      "missingEntryLabel": "Bugbot context",
+      "rules": [
+        {
+          "files": [
+            "src/domain/bugbot/context.ts",
+            "src/application/policies/bounded_concurrency_policy.ts",
+            "src/application/policies/bugbot_result_finding_state_projection_policy.ts",
+            "src/application/policies/bugbot_resolution_eligibility_policy.ts",
+            "src/application/policies/bugbot_telemetry_projection_policy.ts",
+            "src/application/usecases/steps/commit/bugbot/bugbot_previous_findings_context.ts",
+            "src/application/usecases/steps/commit/bugbot/bugbot_review_context.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "failureLabel": "changed path",
+          "files": [
+            "src/domain/bugbot/context.ts",
+            "src/application/policies/bounded_concurrency_policy.ts",
+            "src/application/policies/bugbot_result_finding_state_projection_policy.ts",
+            "src/application/policies/bugbot_resolution_eligibility_policy.ts",
+            "src/application/policies/bugbot_telemetry_projection_policy.ts",
+            "src/application/usecases/steps/commit/bugbot/bugbot_previous_findings_context.ts",
+            "src/application/usecases/steps/commit/bugbot/bugbot_review_context.ts",
+            "src/application/usecases/steps/commit/bugbot/bugbot_review_operation_context.ts",
+            "src/application/usecases/steps/commit/bugbot/bugbot_context_request.ts",
+            "src/application/usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts",
+            "src/application/usecases/steps/commit/bugbot/bugbot_review_telemetry.ts",
+            "src/data/repository/issue/bugbot_issue_comment_query_repository.ts",
+            "src/infrastructure/composition/bugbot_scm_port_factory.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "bugbot context coverage: PASS (pure policies 100%; changed path 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Agent execution",
+      "missingEntryLabel": "agent execution",
+      "rules": [
+        {
+          "files": [
+            "src/domain/agent_execution_plan.ts",
+            "src/application/policies/agent_executable_policy.ts",
+            "src/application/policies/agent_execution/provider_execution_policy.ts",
+            "src/application/policies/agent_execution/agent_execution_policy_dispatcher.ts",
+            "src/application/policies/agent_execution/codex_execution_plan_policy.ts",
+            "src/application/policies/agent_execution/opencode_execution_plan_policy.ts",
+            "src/application/policies/agent_execution/cursor_execution_plan_policy.ts",
+            "src/infrastructure/agents/agent_runtime_manifest.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/data/repository/agent_cli_execution.ts",
+            "src/data/repository/agent_cli_provisioner.ts",
+            "src/infrastructure/agents/agent_execution_planner.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "agent execution coverage: PASS (exhaustive policies 100%; each runtime module 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Setup execution",
+      "missingEntryLabel": "setup execution",
+      "rules": [
+        {
+          "files": [
+            "src/actions/setup_execution_boundary.ts",
+            "src/application/usecases/execution/execution_issue_number_policy.ts",
+            "src/application/usecases/execution/resolve_execution_issue_number.ts",
+            "src/application/usecases/execution/setup_execution_use_case.ts",
+            "src/application/usecases/execution/setup_execution_workflow.ts",
+            "src/application/usecases/execution/execution_branch_version_resolver.ts",
+            "src/application/usecases/steps/common/get_release_version_use_case.ts",
+            "src/application/usecases/steps/common/get_release_type_use_case.ts",
+            "src/application/usecases/steps/common/get_hotfix_version_use_case.ts",
+            "src/infrastructure/composition/execution_setup_composition_root.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "setup execution coverage: PASS (each context-path module 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Shared capability context",
+      "missingEntryLabel": "shared capability context",
+      "rules": [
+        {
+          "files": [
+            "src/application/usecases/comment_automation_action_workflow.ts",
+            "src/application/usecases/comment_automation_command_workflow.ts",
+            "src/application/usecases/comment_automation_completion_workflow.ts",
+            "src/application/usecases/comment_automation_context.ts",
+            "src/application/usecases/comment_automation_decision_workflow.ts",
+            "src/application/usecases/comment_automation_natural_language_workflow.ts",
+            "src/application/usecases/comment_automation_use_case.ts",
+            "src/application/usecases/steps/common/check_permissions_workflow.ts",
+            "src/application/usecases/steps/common/comment_language_translation_workflow.ts",
+            "src/application/usecases/steps/common/project_content_link_workflow.ts",
+            "src/application/usecases/steps/common/publish_resume_workflow.ts",
+            "src/application/usecases/steps/common/store_configuration_use_case.ts",
+            "src/application/usecases/steps/common/think_workflow.ts",
+            "src/application/usecases/steps/common/update_title_workflow.ts",
+            "src/infrastructure/composition/shared_capability_port_binding.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "shared capability context coverage: PASS (changed path 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Issue/PR context",
+      "missingEntryLabel": "issue/PR context",
+      "rules": [
+        {
+          "files": [
+            "src/application/usecases/issue_workflow_context.ts",
+            "src/application/usecases/pull_request_workflow_context.ts",
+            "src/application/usecases/steps/issue/prepare_branches_use_case.ts",
+            "src/application/usecases/steps/issue/prepare_hotfix_branch.ts",
+            "src/application/usecases/steps/issue/prepare_managed_branch.ts",
+            "src/application/usecases/steps/issue/prepare_release_branch.ts",
+            "src/application/usecases/steps/pull_request/link_pull_request_issue_workflow.ts",
+            "src/application/usecases/steps/pull_request/update_pull_request_description_workflow.ts",
+            "src/infrastructure/composition/lifecycle_capability_port_binding.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "issue/PR context coverage: PASS (changed path 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Push/single-action context",
+      "missingEntryLabel": "push/single-action context",
+      "rules": [
+        {
+          "files": [
+            "src/application/usecases/push_single_action_contexts.ts",
+            "src/application/usecases/single_action_use_case.ts",
+            "src/application/usecases/single_action_workflow.ts",
+            "src/infrastructure/composition/main_run_route_composition_root.ts",
+            "src/infrastructure/composition/push_single_action_capability_port_binding.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "push/single-action context coverage: PASS (changed path 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Execution-boundary closure",
+      "missingEntryLabel": "execution-boundary closure",
+      "rules": [
+        {
+          "files": [
+            "src/actions/common_action.ts",
+            "src/application/policies/lifecycle_state_policy.ts",
+            "src/application/usecases/actions/lifecycle_synchronization_context.ts",
+            "src/application/usecases/actions/synchronize_lifecycle_state_use_case.ts",
+            "src/infrastructure/composition/lifecycle_capability_port_binding.ts",
+            "src/infrastructure/composition/lifecycle_state_composition_root.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "execution-boundary closure coverage: PASS (changed path 95% lines/statements, 90% branches/functions)"
+    }
+  ]
+}

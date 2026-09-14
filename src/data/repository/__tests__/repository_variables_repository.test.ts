@@ -38,7 +38,58 @@ describe('narrow GitHub Actions resource repositories', () => {
         ]);
 
         expect(result.created).toBe(1);
-        expect(result.errors).toEqual(['Error configuring repository Variable FIRST: forbidden']);
+        expect(result.errors).toEqual(['Unable to configure repository Variable FIRST.']);
+        expect(result.errors.join(' ')).not.toContain('forbidden');
+    });
+
+    it('bounds individual repository and organization resource write failures', async () => {
+        const marker = 'resource-provider-secret-marker';
+        const client = {
+            rest: {
+                actions: {
+                    listRepoVariables: jest.fn().mockResolvedValue({ data: { variables: [] } }),
+                    createRepoVariable: jest.fn(),
+                    updateRepoVariable: jest.fn(),
+                    listOrgVariables: jest.fn().mockResolvedValue({ data: { variables: [] } }),
+                    createOrUpdateOrgVariable: jest.fn().mockRejectedValue(new Error(marker)),
+                },
+                secrets: {
+                    listRepoSecrets: jest.fn().mockResolvedValue({ data: { secrets: [] } }),
+                    getRepoPublicKey: jest.fn().mockResolvedValue({
+                        data: { key_id: 'repo-key', key: randomBytes(32).toString('base64') },
+                    }),
+                    createOrUpdateRepoSecret: jest.fn().mockRejectedValue(new Error(marker)),
+                    listOrgSecrets: jest.fn().mockResolvedValue({ data: { secrets: [] } }),
+                    getOrgPublicKey: jest.fn().mockResolvedValue({
+                        data: { key_id: 'org-key', key: randomBytes(32).toString('base64') },
+                    }),
+                    createOrUpdateOrgSecret: jest.fn().mockRejectedValue(new Error(marker)),
+                },
+            },
+        };
+        const provider = { getClient: jest.fn(() => client) };
+        const secrets = new RepositorySecretsCommandRepository(provider);
+        const variables = new RepositoryVariablesCommandRepository(provider);
+        const organizationTarget = {
+            scope: 'organization' as const,
+            organizationVisibility: 'all' as const,
+            repositoryId: 42,
+        };
+
+        const repositorySecret = await secrets.upsertSecrets(
+            'owner', 'repo', 'token', [{ name: 'REPO_SECRET', value: 'value' }],
+        );
+        const organizationSecret = await secrets.upsertScopedSecrets(
+            'owner', 'repo', 'token', organizationTarget, [{ name: 'ORG_SECRET', value: 'value' }],
+        );
+        const organizationVariable = await variables.upsertScopedVariables(
+            'owner', 'repo', 'token', organizationTarget, [{ name: 'ORG_VARIABLE', value: 'value' }],
+        );
+
+        expect(repositorySecret.errors).toEqual(['Unable to configure repository Secret REPO_SECRET.']);
+        expect(organizationSecret.errors).toEqual(['Unable to configure organization Secret ORG_SECRET.']);
+        expect(organizationVariable.errors).toEqual(['Unable to configure organization Variable ORG_VARIABLE.']);
+        expect(JSON.stringify([repositorySecret, organizationSecret, organizationVariable])).not.toContain(marker);
     });
 
     it('lists repository secret names without requesting their values', async () => {

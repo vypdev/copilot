@@ -19,11 +19,27 @@ describe('lifecycle event replay', () => {
         ['check_suite', { action: 'completed', check_suite: { head_sha: 'sha-1', status: 'queued', conclusion: null, pull_requests: [{ number: 8 }] } }, 'reviewing'],
         ['workflow_run', { action: 'completed', workflow_run: { head_sha: 'sha-1', status: 'completed', conclusion: 'success', pull_requests: [{ number: 8 }] } }, 'reviewing'],
     ])('replays %s into the expected lifecycle state', (eventName, payload, expectedState) => {
+        const eventPayload = payload as {
+            review?: { state?: string; commit_id?: string };
+            check_suite?: { status?: string; conclusion?: string | null; head_sha?: string };
+            workflow_run?: { status?: string; conclusion?: string | null; head_sha?: string };
+        };
         const pullRequest = new PullRequest(1, 1, {
             eventName,
             ...payload,
         });
-        const evidence = readLifecycleExternalEvidence({ eventName, ...payload }, 'sha-1');
+        const evidence = readLifecycleExternalEvidence(eventName === 'pull_request_review'
+            ? {
+                kind: 'pull-request-review',
+                state: eventPayload.review?.state,
+                headSha: eventPayload.review?.commit_id,
+            }
+            : {
+                kind: eventName === 'check_suite' ? 'check-suite' : 'workflow-run',
+                status: eventPayload.check_suite?.status ?? eventPayload.workflow_run?.status,
+                conclusion: eventPayload.check_suite?.conclusion ?? eventPayload.workflow_run?.conclusion,
+                headSha: eventPayload.check_suite?.head_sha ?? eventPayload.workflow_run?.head_sha,
+            }, 'sha-1');
 
         expect(pullRequest.isPullRequest).toBe(true);
         expect(pullRequest.number).toBe(8);

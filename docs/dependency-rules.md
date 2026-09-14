@@ -237,15 +237,18 @@ its category and default retryability; a caller may narrow a retryable error but
 cannot broaden a terminal one. Raw causes are private and disposable. The
 logging contract accepts only text already known to be safe or the allowlisted
 public error record, and an AST check rejects caught values passed to any
-production logger unless they first cross `toApplicationError`.
+production logger unless they first cross `toApplicationError`. The check
+propagates taint through local declarations and assignments, so interpolating a
+provider error into an intermediate `message` variable is not a bypass.
 
 The checked-in `src/architecture/execution_import_baseline.json` is the exact,
-shrinking migration inventory. The compiler-based test resolves the `Execution`
-symbol, so type-only imports, renamed imports, `Pick<Execution>`, and local type
-aliases count as dependencies. Every removal must shrink the checked-in list and
-maximum in the same change; adding, moving, or silently omitting a consumer
-fails CI. Once context projection is complete, this baseline is
-replaced by the exact route-boundary allowlist documented in the governing SDD.
+non-growing boundary inventory. Every entry has a closed role and a substantive
+justification. The compiler-based test resolves the canonical `Execution`
+symbol, so type-only imports, renamed imports, re-exports,
+`Pick<ExecutionAlias, ...>`, and local type aliases count as dependencies. A
+synthetic negative fixture exercises those indirect forms. Any addition,
+removal, move, duplicate, unknown role, blank rationale, or inventory mismatch
+fails CI; an intentional reduction updates the file and its maximum together.
 The P2-A setup cut and exact-inventory correction reduced that ratchet from 140
 to 130 consumers: six setup imports were removed and four already-stale entries
 were deleted. P2-B then moved five Bugbot analysis leaves to nested immutable,
@@ -273,6 +276,26 @@ persists only through its fenced bound state port. Recommendation and activity
 mutations return explicit outcomes for route application. The exact production
 consumer ceiling is now 13; aliases, aggregate-shaped generics, overloads,
 delegating shims, and token-bearing contexts remain forbidden.
+
+P2-G closes the boundary without manufacturing a smaller number for its own
+sake. The 13 remaining consumers are exactly aggregate constructors,
+entrypoint-owned lifecycle/publication modules, the top-level route contract,
+or route coordinators. Lifecycle synchronization no longer uses the structural
+`LifecycleSynchronizationExecution` alias: the entrypoint projects a frozen,
+credential-free, provider-independent target/evidence snapshot. The use case
+receives bound label and pull-request-head capabilities and returns a frozen
+label patch; only `common_action.ts` applies that patch after provider success.
+A verified pull-request conversation comment therefore targets PR labels even
+though its GitHub event name is `issue_comment`.
+
+Specialized coverage budgets are data-only declarations in
+`coverage-budgets.json`, interpreted by the sole
+`validate-coverage-budgets.cjs` executable. A gate declares exact files (or an
+exact discovered count), aggregate versus per-file evaluation, and a bounded
+threshold profile.
+Do not copy coverage parsing or percentage arithmetic into another validator;
+missing entries, boundary percentages, zero-total metrics, and inventory drift
+are enforced once and covered by negative tests.
 
 Route-owned mutable state must not leak back into these leaves. Branch
 preparation returns a frozen, field-bounded patch and only the issue coordinator
@@ -335,6 +358,10 @@ Executable tests currently verify at least:
 9. application ports do not import technical GraphQL/provider details;
 10. `main_run_dispatcher.ts` does not construct concrete use cases, repositories,
     or adapters and does not import provider details.
+11. the exact `Execution` allowlist has only approved roles and justified entries,
+    and an alias/re-export fixture proves symbol-level detection;
+12. lifecycle contexts are credential/DTO-free, lifecycle ports are bound, and
+    locally derived caught values cannot reach logging.
 
 Primary tests:
 
@@ -346,8 +373,7 @@ Primary tests:
 
 ## Known review targets
 
-- keep `Execution` as the runtime-boundary aggregate while preventing new use cases
-  from taking it when a narrower context contract is sufficient;
+- keep the final justified `Execution` boundary at 13 consumers or fewer;
 - keep provider-specific release/tag contracts behind application ports;
 - extend the executable boundary tests when a new layer or composition root is
   introduced.

@@ -16,6 +16,7 @@ import type {
     BoundSetupRepositoryVariablesCommandPort,
 } from '../../ports/setup_wizard_ports';
 import { logError } from '../../ports/logging_ports';
+import { toApplicationError } from '../../errors/application_error';
 
 export interface SetupResourceProvisioningDependencies {
     setupRepositoryVariablesPort?: BoundSetupRepositoryVariablesCommandPort;
@@ -50,9 +51,13 @@ export async function ensureRepositoryVariables(
             errors: [],
         };
     } catch (error) {
-        const message = `Error configuring repository Variables: ${error}`;
-        logError(message);
-        return { errors: [message] };
+        const semanticError = toApplicationError(
+            error,
+            'provider.unavailable',
+            'Unable to configure GitHub Actions Variables.',
+        );
+        logError(semanticError);
+        return { errors: [semanticError.message] };
     }
 }
 
@@ -83,9 +88,13 @@ export async function ensureRepositorySecrets(
             errors: [],
         };
     } catch (error) {
-        const message = `Error configuring repository Secrets: ${error}`;
-        logError(message);
-        return { errors: [message] };
+        const semanticError = toApplicationError(
+            error,
+            'provider.unavailable',
+            'Unable to configure GitHub Actions Secrets.',
+        );
+        logError(semanticError);
+        return { errors: [semanticError.message] };
     }
 }
 
@@ -100,9 +109,13 @@ export async function resolveRemoteConfiguration(
     try {
         return await dependencies.setupRemoteConfigurationReadPort.inspect();
     } catch (error) {
-        const message = `Could not inspect existing GitHub Actions resource scopes: ${error instanceof Error ? error.message : String(error)}`;
-        logError(message);
-        if (usesOrganizationStorage(setupConfiguration)) errors.push(message);
+        const semanticError = toApplicationError(
+            error,
+            'provider.unavailable',
+            'Could not inspect existing GitHub Actions resource scopes.',
+        );
+        logError(semanticError);
+        if (usesOrganizationStorage(setupConfiguration)) errors.push(semanticError.message);
         return undefined;
     }
 }

@@ -1,174 +1,113 @@
 import { Result } from '../../../data/model/result';
-import type { ExecutionInputs } from '../../../data/model/execution_inputs';
-import type { CopilotLifecycleLabels } from '../../../domain/copilot_lifecycle';
 import { lifecycleLabelNames, lifecycleStateLabel, waitingLabelNames, waitingStateLabel } from '../../../domain/copilot_lifecycle';
 import { readLifecycleExternalEvidence, resolveLifecycleState } from '../../policies/lifecycle_state_policy';
 import { resolveLifecycleWaitingState, type LifecycleWaitingStateDecision } from '../../policies/lifecycle_waiting_state_policy';
-import type { IssueLabelsPort, PullRequestHeadShaPort } from '../../ports/issue_management_ports';
+import type { BoundIssueLabelsPort, BoundPullRequestHeadShaPort } from '../../ports/issue_management_ports';
 import { logDebugInfo, logError } from '../../ports/logging_ports';
-import { ApplicationError } from '../../errors/application_error';
+import { toApplicationError } from '../../errors/application_error';
+import {
+    lifecycleSynchronizationOutcome,
+    type LifecycleSynchronizationContext,
+    type LifecycleSynchronizationOutcome,
+} from './lifecycle_synchronization_context';
 
 export interface SynchronizeLifecycleStateParam {
-    execution: LifecycleSynchronizationExecution;
-    results: readonly Result[];
+    readonly context: LifecycleSynchronizationContext;
+    readonly results: readonly Result[];
 }
 
-/** Narrow runtime context required by lifecycle reconciliation. */
-export interface LifecycleSynchronizationExecution {
-    readonly owner: string;
-    readonly repo: string;
-    readonly eventName: string;
-    readonly inputs: ExecutionInputs | undefined;
-    readonly issueNumber: number;
-    readonly isIssue: boolean;
-    readonly isPullRequest: boolean;
-    readonly issue: {
-        readonly number: number;
-        readonly opened: boolean;
-        readonly descriptionEdited: boolean;
-    };
-    readonly pullRequest: {
-        readonly number: number;
-        readonly isMerged: boolean;
-        readonly isClosed: boolean;
-    };
-    readonly labels: {
-        currentIssueLabels: string[];
-        currentPullRequestLabels: string[];
-        readonly lifecycle: CopilotLifecycleLabels;
-    };
-    readonly tokens: { readonly token: string };
-}
-
-const PULL_REQUEST_LIFECYCLE_EVENTS = [
-    'pull_request',
-    'pull_request_review',
-    'pull_request_review_comment',
-    'check_suite',
-    'workflow_run',
-];
-
-/**
- * Reconciles one state label after a route completes. The existing business
- * labels remain untouched, and repeated events are idempotent.
- */
+/** Reconciles one state label from immutable facts and bound provider authority. */
 export class SynchronizeLifecycleStateUseCase {
     readonly taskId = 'SynchronizeCopilotLifecycleStateUseCase';
 
     constructor(
-        private readonly issueLabelsPort: IssueLabelsPort,
-        private readonly pullRequestHeadShaPort?: PullRequestHeadShaPort,
+        private readonly issueLabelsPort: BoundIssueLabelsPort,
+        private readonly pullRequestHeadShaPort: BoundPullRequestHeadShaPort,
     ) {}
 
-    async invoke(param: SynchronizeLifecycleStateParam): Promise<Result[]> {
-        const externalEvidence = await this.readExternalEvidence(param.execution);
+    async invoke(param: SynchronizeLifecycleStateParam): Promise<LifecycleSynchronizationOutcome> {
+        const target = param.context.target;
+        if (!target) {
+            logDebugInfo('Lifecycle state synchronization skipped: no issue or pull request number.');
+            return lifecycleSynchronizationOutcome();
+        }
+
+        const externalEvidence = await this.readExternalEvidence(param.context);
         const state = resolveLifecycleState({
-            eventName: param.execution.eventName,
-            action: param.execution.inputs?.action ?? '',
-            isIssue: ['issues', 'issue_comment'].includes(param.execution.eventName),
-            isPullRequest: param.execution.isPullRequest || PULL_REQUEST_LIFECYCLE_EVENTS.includes(param.execution.eventName),
-            issueOpened: param.execution.issue.opened,
-            issueDescriptionEdited: param.execution.issue.descriptionEdited,
-            pullRequestMerged: param.execution.pullRequest.isMerged,
-            pullRequestClosed: param.execution.pullRequest.isClosed,
+            eventName: param.context.eventName,
+            action: param.context.action,
+            isIssue: target.kind === 'issue',
+            isPullRequest: target.kind === 'pull-request',
+            issueOpened: target.kind === 'issue' && target.opened,
+            issueDescriptionEdited: target.kind === 'issue' && target.descriptionEdited,
+            pullRequestMerged: target.kind === 'pull-request' && target.merged,
+            pullRequestClosed: target.kind === 'pull-request' && target.closed,
             externalEvidence,
             results: param.results,
         });
         const waitingDecision = resolveLifecycleWaitingState({
-            eventName: param.execution.eventName,
+            eventName: param.context.eventName,
             lifecycleState: state,
         });
 
-        const issueNumber = targetNumber(param.execution);
-        if (issueNumber <= 0) {
-            logDebugInfo('Lifecycle state synchronization skipped: no issue or pull request number.');
-            return [];
-        }
-
         try {
-            // Route steps may have changed labels through their own ports. Use
-            // the latest server inventory before reconciliation so this
-            // use case cannot overwrite those changes with setup-time data.
-            const currentLabels = await this.issueLabelsPort.getLabels(
-                param.execution.owner,
-                param.execution.repo,
-                issueNumber,
-                param.execution.tokens.token,
-            ) ?? targetLabels(param.execution);
-            const nextLabels = replaceLifecycleLabels(currentLabels, state, param.execution.labels.lifecycle);
+            // Route steps may have changed labels. Re-read immediately before
+            // replacement so reconciliation cannot overwrite fresher state.
+            const currentLabels = await this.issueLabelsPort.getLabels(target.number) ?? target.labels;
+            const nextLabels = replaceLifecycleLabels(currentLabels, state, param.context.lifecycleLabels);
             const nextLabelsWithWaiting = replaceWaitingLabels(
                 nextLabels,
                 waitingDecision,
-                param.execution.labels.lifecycle,
+                param.context.lifecycleLabels,
             );
-            if (sameLabels(currentLabels, nextLabelsWithWaiting)) return [];
+            if (sameLabels(currentLabels, nextLabelsWithWaiting)) return lifecycleSynchronizationOutcome();
 
-            await this.issueLabelsPort.setLabels(
-                param.execution.owner,
-                param.execution.repo,
-                issueNumber,
-                nextLabelsWithWaiting,
-                param.execution.tokens.token,
-            );
-            setTargetLabels(param.execution, nextLabelsWithWaiting);
-            return [new Result({
-                id: this.taskId,
-                success: true,
-                executed: true,
-                steps: lifecycleSynchronizationSteps(state, waitingDecision),
-            })];
+            await this.issueLabelsPort.setLabels(target.number, nextLabelsWithWaiting);
+            return lifecycleSynchronizationOutcome([
+                new Result({
+                    id: this.taskId,
+                    success: true,
+                    executed: true,
+                    steps: lifecycleSynchronizationSteps(state, waitingDecision),
+                }),
+            ], {
+                target: { kind: target.kind, number: target.number },
+                labels: nextLabelsWithWaiting,
+            });
         } catch (error) {
-            const message = `Unable to synchronize Copilot lifecycle state: ${error instanceof Error ? error.message : String(error)}`;
-            logError(message);
-            return [new Result({ id: this.taskId, success: false, executed: true, errors: [new ApplicationError('provider.unavailable', message, { cause: error })] })];
-        }
-    }
-
-    private async readExternalEvidence(execution: LifecycleSynchronizationExecution) {
-        const eventName = execution.inputs?.eventName;
-        if (!['check_suite', 'workflow_run', 'pull_request_review'].includes(eventName ?? '')) {
-            return readLifecycleExternalEvidence(execution.inputs);
-        }
-        const pullRequestHeadSha = execution.inputs?.pull_request?.head?.sha
-            ?? await this.readCurrentPullRequestHeadSha(execution);
-        return readLifecycleExternalEvidence(execution.inputs, pullRequestHeadSha);
-    }
-
-    private async readCurrentPullRequestHeadSha(execution: LifecycleSynchronizationExecution): Promise<string | undefined> {
-        if (!this.pullRequestHeadShaPort || execution.pullRequest.number <= 0) return undefined;
-        try {
-            return await this.pullRequestHeadShaPort.getPullRequestHeadSha(
-                execution.owner,
-                execution.repo,
-                execution.pullRequest.number,
-                execution.tokens.token,
+            const semanticError = toApplicationError(
+                error,
+                'provider.unavailable',
+                'Unable to synchronize Copilot lifecycle state.',
             );
+            logError(semanticError);
+            return lifecycleSynchronizationOutcome([
+                new Result({
+                    id: this.taskId,
+                    success: false,
+                    executed: true,
+                    errors: [semanticError],
+                }),
+            ]);
+        }
+    }
+
+    private async readExternalEvidence(context: LifecycleSynchronizationContext) {
+        if (context.evidence.kind === 'none' || context.target?.kind !== 'pull-request') {
+            return undefined;
+        }
+        const currentHeadSha = await this.readCurrentPullRequestHeadSha(context.target.number);
+        return readLifecycleExternalEvidence(context.evidence, currentHeadSha);
+    }
+
+    private async readCurrentPullRequestHeadSha(pullRequestNumber: number): Promise<string | undefined> {
+        try {
+            return await this.pullRequestHeadShaPort.getPullRequestHeadSha(pullRequestNumber);
         } catch {
             logDebugInfo('Lifecycle external evidence skipped because the current pull-request head could not be read.');
             return undefined;
         }
     }
-}
-
-function targetNumber(execution: LifecycleSynchronizationExecution): number {
-    if (['issues', 'issue_comment', 'push'].includes(execution.eventName)) {
-        return execution.issue.number > 0 ? execution.issue.number : execution.issueNumber;
-    }
-    if (PULL_REQUEST_LIFECYCLE_EVENTS.includes(execution.eventName)) return execution.pullRequest.number;
-    return -1;
-}
-
-function targetLabels(execution: LifecycleSynchronizationExecution): string[] {
-    return PULL_REQUEST_LIFECYCLE_EVENTS.includes(execution.eventName)
-        ? execution.labels.currentPullRequestLabels
-        : execution.labels.currentIssueLabels;
-}
-
-function setTargetLabels(execution: LifecycleSynchronizationExecution, labels: string[]): void {
-    if (PULL_REQUEST_LIFECYCLE_EVENTS.includes(execution.eventName)) {
-        execution.labels.currentPullRequestLabels = labels;
-    }
-    else execution.labels.currentIssueLabels = labels;
 }
 
 function replaceLifecycleLabels(
@@ -179,8 +118,7 @@ function replaceLifecycleLabels(
     if (!state) return [...currentLabels];
     const managedLabels = new Set(lifecycleLabelNames(lifecycleLabels).map(label => label.toLowerCase()));
     const retained = currentLabels.filter(label => !managedLabels.has(label.trim().toLowerCase()));
-    const next = lifecycleStateLabel(state, lifecycleLabels);
-    return [...retained, next];
+    return [...retained, lifecycleStateLabel(state, lifecycleLabels)];
 }
 
 function replaceWaitingLabels(

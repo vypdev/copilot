@@ -1,0 +1,4 @@
+import type { ForwardedExecution as RuntimeExecution } from '__ALIAS_MODULE__';
+
+export type IndirectExecution = RuntimeExecution;
+export type NarrowLookingContext = Pick<IndirectExecution, 'owner'>;

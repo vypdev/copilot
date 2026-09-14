@@ -25,7 +25,7 @@ export class PnpmCliUpgradeAdapter implements CliUpgradePort {
             };
 
             child.once('error', (error) => {
-                fail(new Error(`Unable to start pnpm upgrade: ${error.message}`));
+                fail(Object.assign(new Error('Unable to start the pnpm upgrade process.'), { cause: error }));
             });
             child.once('close', (code, signal) => {
                 if (settled) return;

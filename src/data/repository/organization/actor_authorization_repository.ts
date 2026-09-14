@@ -67,5 +67,5 @@ export class ActorAuthorizationRepository implements ActorAuthorizationPort {
 
 function logUnlessNotFound(error: unknown, operation: string): void {
     if ((error as { status?: number })?.status === 404) return;
-    logDebugInfo(`${operation}: ${error instanceof Error ? error.message : String(error)}`);
+    logDebugInfo(`${operation}: GitHub authorization verification failed.`);
 }
