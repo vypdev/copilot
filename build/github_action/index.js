@@ -47451,16 +47451,17 @@ class DeploymentOrchestrationRuntime {
         await this.stateBoundary.persist(context);
     }
     async block(context, operation, category, message, retryable, semanticError) {
-        const blocked = (0, deployment_operation_1.blockDeploymentOperation)(operation, category, message, retryable);
+        const sanitizedMessage = (0, deployment_operation_1.sanitizeDeploymentMessage)(message);
+        const blocked = (0, deployment_operation_1.blockDeploymentOperation)(operation, category, sanitizedMessage, retryable);
         await this.persist(context, blocked);
         await this.publishDashboard(context, blocked);
-        await this.publishMilestone(context, blocked, { kind: "reconciliation-blocked", reason: message });
+        await this.publishMilestone(context, blocked, { kind: "reconciliation-blocked", reason: sanitizedMessage });
         return new result_1.Result({
             id: exports.DEPLOYMENT_ORCHESTRATION_TASK_ID,
             success: false,
             executed: true,
-            steps: [message],
-            errors: [semanticError ?? new application_error_1.ApplicationError("workflow.failed", message, { retryable })],
+            steps: [sanitizedMessage],
+            errors: [semanticError ?? new application_error_1.ApplicationError("workflow.failed", sanitizedMessage, { retryable })],
         });
     }
     async publishDashboard(context, operation) {
