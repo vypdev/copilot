@@ -236,7 +236,9 @@ export function projectDeploymentPublicationContext(source: PushSingleActionCont
 }
 
 export function projectDeploymentOrchestrationContext(
-  source: DeploymentOrchestrationContext,
+  source: DeploymentOrchestrationContext & {
+    readonly ai?: { getAgentConfiguration(task: 'planner'): AgentConfiguration };
+  },
 ): DeploymentOrchestrationContext {
   return {
     owner: source.owner,
@@ -244,6 +246,11 @@ export function projectDeploymentOrchestrationContext(
     branches: Object.freeze({ ...source.branches }),
     workflows: Object.freeze({ ...source.workflows }),
     locale: Object.freeze({ ...source.locale }),
+    ...(source.agentConfiguration
+      ? { agentConfiguration: Object.freeze({ ...source.agentConfiguration }) }
+      : source.ai
+        ? { agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }) }
+        : {}),
     labels: Object.freeze({
       ...source.labels,
       lifecycle: Object.freeze({ ...source.labels.lifecycle }),
@@ -441,6 +448,7 @@ function copyInitialLabels(source: PushSingleActionContextSource['labels']): Ini
 function copyDeploymentOperation(operation: DeploymentOperationSnapshot): DeploymentOperationSnapshot {
   return Object.freeze({
     ...operation,
+    ...(operation.locale ? { locale: Object.freeze({ ...operation.locale }) } : {}),
     reconciliationTargets: Object.freeze((operation.reconciliationTargets ?? []).map(target => Object.freeze({ ...target }))),
     ...(operation.publicationReceipt ? { publicationReceipt: Object.freeze({ ...operation.publicationReceipt }) } : {}),
     ...(operation.lastFailure ? { lastFailure: Object.freeze({ ...operation.lastFailure }) } : {}),

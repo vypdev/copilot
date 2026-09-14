@@ -3,6 +3,7 @@ import {
   InvalidLocaleTagError,
   baseLanguage,
   canonicalizeLocaleTag,
+  isLocaleProfile,
   localeForScope,
   localeLanguagesMatch,
   normalizeLocaleTag,
@@ -93,5 +94,14 @@ describe('locale policy', () => {
     expect(localeLanguagesMatch('en-US', 'en-GB')).toBe(true);
     expect(localeLanguagesMatch('es', 'en')).toBe(false);
     expect(baseLanguage('zh-Hant-TW')).toBe('zh');
+  });
+
+  it('accepts only canonical, internally consistent locale profiles', () => {
+    expect(isLocaleProfile(resolveLocaleProfile('fr-fr', 'es_mx', 'zh-Hant-TW'))).toBe(true);
+    expect(isLocaleProfile({ repository: 'en-US', issue: 'es-ES', pullRequest: 'en-US' })).toBe(false);
+    expect(isLocaleProfile({ repository: 'en-us', issue: 'en-US', pullRequest: 'en-US' })).toBe(false);
+    expect(isLocaleProfile({ repository: 'en-US', issue: 'en-US', pullRequest: 'en-US', issueOverride: '' })).toBe(false);
+    expect(isLocaleProfile({ repository: 'not a locale', issue: 'en-US', pullRequest: 'en-US' })).toBe(false);
+    expect(isLocaleProfile(null)).toBe(false);
   });
 });

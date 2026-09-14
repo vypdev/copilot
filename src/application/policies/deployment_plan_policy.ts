@@ -11,9 +11,11 @@ import type {
   MergeQueueReadiness,
 } from "../../domain/merge_queue_readiness";
 import { redactSensitiveText } from "../../domain/security/sensitive_text";
+import type { LocaleProfile } from '../../domain/locale';
 
 export interface InitialDeploymentOperationInput {
   readonly operationId: string;
+  readonly locale: LocaleProfile;
   readonly kind: DeploymentKind;
   readonly version: string;
   readonly title: string;
@@ -28,9 +30,13 @@ export interface InitialDeploymentOperationInput {
   readonly publicationWorkflow: string;
 }
 
+export type InitialDeploymentOperation = DeploymentOperationSnapshot & {
+  readonly locale: LocaleProfile;
+};
+
 export function buildInitialDeploymentOperation(
   input: InitialDeploymentOperationInput,
-): DeploymentOperationSnapshot {
+): InitialDeploymentOperation {
   const strategy = input.kind === "release"
     ? input.configuration.releaseReconciliationStrategy
     : input.configuration.hotfixReconciliationStrategy;
@@ -38,6 +44,7 @@ export function buildInitialDeploymentOperation(
     stateVersion: DEPLOYMENT_STATE_VERSION,
     revision: 0,
     operationId: input.operationId,
+    locale: Object.freeze({ ...input.locale }),
     kind: input.kind,
     version: input.version,
     title: input.title,

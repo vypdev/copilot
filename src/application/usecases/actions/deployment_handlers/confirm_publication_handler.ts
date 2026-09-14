@@ -75,8 +75,7 @@ export class ConfirmPublicationHandler {
     await this.runtime.publishMilestone(
       context,
       published,
-      "publication-complete",
-      `📦 ${published.tag} is published from accepted production SHA \`${published.productionSha}\`.`,
+      { kind: "publication-complete", tag: published.tag, productionSha },
     );
     return await this.beginReconciliation(context, published);
   }

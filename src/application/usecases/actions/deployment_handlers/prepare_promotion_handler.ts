@@ -3,6 +3,7 @@ import type { DeploymentOrchestrationContext } from "../../../ports/deployment_o
 import {
   buildInitialDeploymentOperation,
   validateInitialDeploymentInput,
+  type InitialDeploymentOperation,
 } from "../../../policies/deployment_plan_policy";
 import {
   resumeBlockedDeployment,
@@ -103,6 +104,7 @@ export class PreparePromotionHandler {
     );
     const operation = buildInitialDeploymentOperation({
       operationId: this.runtime.dependencies.operationId(),
+      locale: context.locale,
       kind,
       version: context.singleAction.version,
       title: context.singleAction.title,
@@ -190,10 +192,11 @@ function selectOriginBranch(
 
 function validateOperation(
   context: DeploymentOrchestrationContext,
-  operation: DeploymentOperationSnapshot,
+  operation: InitialDeploymentOperation,
 ): void {
   const errors = validateInitialDeploymentInput({
     operationId: operation.operationId,
+    locale: operation.locale,
     kind: operation.kind,
     version: operation.version,
     title: operation.title,

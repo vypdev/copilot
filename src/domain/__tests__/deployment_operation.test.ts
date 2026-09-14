@@ -132,6 +132,25 @@ describe("deployment operation state machine", () => {
     expect(isDeploymentOperationSnapshot(operation())).toBe(true);
   });
 
+  it("accepts legacy state without a locale and validates canonical locale snapshots", () => {
+    expect(isDeploymentOperationSnapshot(operation())).toBe(true);
+    expect(isDeploymentOperationSnapshot(operation("preparing", {
+      locale: {
+        repository: "fr-FR",
+        issue: "es-ES",
+        pullRequest: "de-DE",
+        issueOverride: "es-ES",
+        pullRequestOverride: "de-DE",
+      },
+    }))).toBe(true);
+    expect(isDeploymentOperationSnapshot(operation("preparing", {
+      locale: { repository: "en-us", issue: "en-US", pullRequest: "en-US" },
+    }))).toBe(false);
+    expect(isDeploymentOperationSnapshot(operation("preparing", {
+      locale: { repository: "en-US", issue: "es-ES", pullRequest: "en-US" },
+    }))).toBe(false);
+  });
+
   it("requires an exact provider receipt when publication is verified", () => {
     expect(isDeploymentOperationSnapshot(operation("published", {
       productionSha: "c".repeat(40),

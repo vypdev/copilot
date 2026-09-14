@@ -87,6 +87,7 @@ describe('GitHub conversation publication boundaries', () => {
       'src/application/policies/bugbot_review_presentation_policy.ts',
       'src/application/policies/semantic_result_publication_policy.ts',
       'src/application/policies/status_command_policy.ts',
+      'src/application/policies/deployment_presentation_policy.ts',
       'src/application/usecases/steps/common/reply_publication_workflow.ts',
       'src/application/usecases/steps/common/status_card_publication_workflow.ts',
       'src/application/usecases/steps/commit/bugbot/publish_overflow_comment.ts',
@@ -97,6 +98,14 @@ describe('GitHub conversation publication boundaries', () => {
     const featureLocalLocaleBranch = /baseLanguage|startsWith\(['"](?:en|es)|===?\s*['"](?:en|es|en-US|es-ES)['"]/u;
     const violations = files.filter(file => featureLocalLocaleBranch.test(readFileSync(join(root, file), 'utf8')));
     expect(violations).toEqual([]);
+  });
+
+  it('keeps deployment presentation semantic instead of replaying internal Result steps', () => {
+    const completion = readFileSync(join(root, 'src/actions/github_action_completion.ts'), 'utf8');
+    const presentation = readFileSync(join(root, 'src/application/policies/deployment_presentation_policy.ts'), 'utf8');
+
+    expect(completion).not.toMatch(/renderDeploymentJobSummary[\s\S]{0,500}result\.steps/u);
+    expect(presentation).not.toMatch(/operations|Automatic Actions|Feature Actions/u);
   });
 
   it('keeps Bugbot public presentation free of pseudo-plural copy', () => {

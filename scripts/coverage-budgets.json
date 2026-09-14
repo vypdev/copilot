@@ -15,6 +15,28 @@
       "successMessage": "deployment handler coverage: PASS (95% lines/statements, 90% branches/functions)"
     },
     {
+      "name": "Deployment presentation",
+      "missingEntryLabel": "deployment presentation",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/deployment_message_catalog.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/policies/deployment_presentation_policy.ts",
+            "src/application/services/deployment_orchestration_runtime.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "deployment presentation coverage: PASS (catalog 100%; rendered path 95% lines/statements, 90% branches/functions)"
+    },
+    {
       "name": "Bugbot context",
       "missingEntryLabel": "Bugbot context",
       "rules": [
