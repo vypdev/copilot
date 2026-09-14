@@ -31,7 +31,7 @@ export function buildLocalActionExecution(
         issueTypeDocumentationColor, issueTypeMaintenance, issueTypeMaintenanceDescription, issueTypeMaintenanceColor,
         issueTypeHotfix, issueTypeHotfixDescription, issueTypeHotfixColor, issueTypeRelease, issueTypeReleaseDescription,
         issueTypeReleaseColor, issueTypeQuestion, issueTypeQuestionDescription, issueTypeQuestionColor, issueTypeHelp,
-        issueTypeHelpDescription, issueTypeHelpColor, issueLocale, pullRequestLocale, sizeXxlThresholdLines,
+        issueTypeHelpDescription, issueTypeHelpColor, repositoryLocale, issueLocale, pullRequestLocale, sizeXxlThresholdLines,
         sizeXxlThresholdFiles, sizeXxlThresholdCommits, sizeXlThresholdLines, sizeXlThresholdFiles,
         sizeXlThresholdCommits, sizeLThresholdLines, sizeLThresholdFiles, sizeLThresholdCommits, sizeMThresholdLines,
         sizeMThresholdFiles, sizeMThresholdCommits, sizeSThresholdLines, sizeSThresholdFiles, sizeSThresholdCommits,
@@ -99,7 +99,7 @@ export function buildLocalActionExecution(
             question: { name: issueTypeQuestion, description: issueTypeQuestionDescription, color: issueTypeQuestionColor },
             help: { name: issueTypeHelp, description: issueTypeHelpDescription, color: issueTypeHelpColor },
         }),
-        locale: buildLocale(issueLocale, pullRequestLocale),
+        locale: buildLocale(repositoryLocale, issueLocale, pullRequestLocale),
         sizeThresholds: buildSizeThresholds({
             xxl: { lines: sizeXxlThresholdLines, files: sizeXxlThresholdFiles, commits: sizeXxlThresholdCommits },
             xl: { lines: sizeXlThresholdLines, files: sizeXlThresholdFiles, commits: sizeXlThresholdCommits },

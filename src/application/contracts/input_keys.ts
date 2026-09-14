@@ -204,6 +204,7 @@ export const INPUT_KEYS = {
     ISSUE_TYPE_TASK_COLOR: 'issue-type-task-color',
 
     // Locale
+    REPOSITORY_LOCALE: 'repository-locale',
     ISSUES_LOCALE: 'issues-locale',
     PULL_REQUESTS_LOCALE: 'pull-requests-locale',
 

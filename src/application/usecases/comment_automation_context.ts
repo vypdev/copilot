@@ -30,6 +30,10 @@ import {
     type PushSingleActionContextSource,
     type UserRequestContext,
 } from './push_single_action_contexts';
+import type { CommentLanguageAdaptationPayload } from './steps/common/comment_language_translation_workflow';
+import { buildExplicitCommandQuestion } from './steps/common/think_request_policy';
+import { extractMentionQuestion } from './steps/common/think_input_policy';
+import { parseCopilotCommand } from '../../domain/copilot_command';
 
 export interface CommentAutomationContext {
     readonly actor: string;
@@ -101,6 +105,45 @@ export function projectCommentAutomationContext(
             autofix: projectBugbotAutofixOperationContext(source),
             commit: projectBugbotCommitContext(source),
             publicationMode: review.analysis.reviewConfiguration.publicationMode,
+        }),
+    });
+}
+
+/** Applies model-produced interpretation only to prose-bearing context copies. */
+export function withCommentLanguageAdaptation(
+    context: CommentAutomationContext,
+    adaptation: CommentLanguageAdaptationPayload,
+): CommentAutomationContext {
+    if (adaptation.status !== 'translated') return context;
+    const userComment = adaptation.interpretedComment;
+    const parsed = parseCopilotCommand(userComment);
+    const think: ThinkContext = context.think.request.kind === 'ready' && 'agentTask' in context.think
+        ? Object.freeze({
+            request: Object.freeze({
+                ...context.think.request,
+                commentBody: userComment,
+                question: parsed.kind === 'command'
+                    ? buildExplicitCommandQuestion(parsed.command)
+                    : extractMentionQuestion(userComment, context.trustedBotLogin),
+                ...(parsed.kind === 'command' ? { command: parsed.command } : {}),
+            }),
+            ...(context.think.tokenUser ? { tokenUser: context.think.tokenUser } : {}),
+            agentTask: context.think.agentTask,
+            agentConfiguration: context.think.agentConfiguration,
+            targetLocale: context.think.targetLocale,
+            ...(adaptation.publication ? { translationPublication: adaptation.publication } : {}),
+        })
+        : context.think;
+    return Object.freeze({
+        ...context,
+        userComment,
+        think,
+        bugbot: Object.freeze({
+            ...context.bugbot,
+            fixIntent: Object.freeze({
+                ...context.bugbot.fixIntent,
+                comment: Object.freeze({ ...context.bugbot.fixIntent.comment, body: userComment }),
+            }),
         }),
     });
 }

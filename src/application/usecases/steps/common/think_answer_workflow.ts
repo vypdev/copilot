@@ -13,6 +13,8 @@ import { sanitizeAgentMarkdown } from '../../../../application/policies/github_c
 import { ApplicationError } from '../../../errors/application_error';
 import type { AgentConfiguration } from '../../../../data/model/agent';
 import type { AgentTask } from '../../../../domain/agent';
+import { appendTranslationContext } from '../../../policies/comment_translation_policy';
+import type { TranslationPublication } from '../../../policies/comment_translation_policy';
 
 export interface ThinkAnswerDependencies {
     issueDescriptionQueryPort: BoundIssueDescriptionQueryPort;
@@ -27,6 +29,8 @@ export interface ThinkAnswerContext {
     readonly tokenUser?: string;
     readonly agentTask: AgentTask;
     readonly agentConfiguration: Readonly<AgentConfiguration>;
+    readonly translationPublication?: TranslationPublication;
+    readonly targetLocale?: string;
 }
 
 export async function runThinkAnswerWorkflow(
@@ -48,6 +52,7 @@ export async function runThinkAnswerWorkflow(
         projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
         contextBlock,
         question: request.question,
+        targetLocale: param.targetLocale ?? 'en-US',
     });
     const answer = sanitizeAgentMarkdown(await queryThinkAnswer(param, prompt, dependencies.aiRepository));
     if (!answer) {
@@ -75,7 +80,7 @@ export async function runThinkAnswerWorkflow(
 
     await dependencies.issueNotificationPort.addComment(
         request.destinationNumber,
-        answer,
+        appendTranslationContext(answer, param.translationPublication),
     );
     logInfo(
         `Think response posted to ${request.destinationType} #${request.destinationNumber}.`,

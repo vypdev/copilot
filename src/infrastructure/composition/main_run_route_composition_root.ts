@@ -201,7 +201,7 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
 
   return new IssueCommentUseCase(
     new CheckIssueCommentLanguageUseCase(
-      new CommentLanguageTranslationWorkflow(bugbot.scm.publication.issueComments, language),
+      new CommentLanguageTranslationWorkflow(language),
     ),
     new DetectBugbotFixIntentUseCase(
       findings,
@@ -248,7 +248,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
 
   return new PullRequestReviewCommentUseCase(
     new CheckPullRequestCommentLanguageUseCase(
-      new CommentLanguageTranslationWorkflow(bugbot.scm.publication.issueComments, language),
+      new CommentLanguageTranslationWorkflow(language),
     ),
     new DetectBugbotFixIntentUseCase(
       findings,

@@ -309,12 +309,15 @@ inputs:
     description: "Color of the issue type for help."
     default: "purple"
 
+  repository-locale:
+    description: "BCP-47 locale for repository-facing messages. Issue and pull-request locales inherit it."
+    default: "en-US"
   issues-locale:
-    description: "Locale of the issues."
-    default: "en-US"
+    description: "Optional BCP-47 locale override for issue-facing messages. Empty inherits repository-locale."
+    default: ""
   pull-requests-locale:
-    description: "Locale of the pull requests."
-    default: "en-US"
+    description: "Optional BCP-47 locale override for pull-request-facing messages. Empty inherits repository-locale."
+    default: ""
   main-branch:
     description: "Name of the main branch (e.g., master)."
     default: "master"

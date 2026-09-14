@@ -29,6 +29,21 @@ describe('getPrompt', () => {
         expect(viaRegistry).toBe(viaGetter);
     });
 
+    it.each([
+        PROMPT_NAMES.UPDATE_PULL_REQUEST_DESCRIPTION,
+        PROMPT_NAMES.USER_REQUEST,
+        PROMPT_NAMES.RECOMMEND_STEPS,
+        PROMPT_NAMES.CHECK_PROGRESS,
+        PROMPT_NAMES.CHECK_COMMENT_LANGUAGE,
+        PROMPT_NAMES.TRANSLATE_COMMENT,
+        PROMPT_NAMES.CLI_DO,
+        PROMPT_NAMES.BUGBOT,
+        PROMPT_NAMES.BUGBOT_FIX,
+        PROMPT_NAMES.BUGBOT_FIX_INTENT,
+    ])('renders registered prompt %s', (name) => {
+        expect(getPrompt(name, new Proxy({}, { get: () => 'fixture' }) as never)).toEqual(expect.any(String));
+    });
+
     it('throws for unknown prompt name', () => {
         expect(() =>
             getPrompt('unknown' as PromptName, { description: 'x', projectContextInstruction: 'y' })

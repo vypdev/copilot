@@ -2,7 +2,9 @@ import { buildEmoji, buildImages, buildIssue, buildIssueTypes, buildLabels, buil
 
 describe('configuration builders', () => {
     it('builds locale and workflows', () => {
-        expect(buildLocale('es', 'fr')).toMatchObject({ issue: 'es', pullRequest: 'fr' });
+        expect(buildLocale('en-US', 'es', 'fr')).toMatchObject({
+            repository: 'en-US', issue: 'es', pullRequest: 'fr',
+        });
         expect(buildWorkflows('release.yml', 'hotfix.yml')).toMatchObject({ release: 'release.yml', hotfix: 'hotfix.yml' });
     });
 

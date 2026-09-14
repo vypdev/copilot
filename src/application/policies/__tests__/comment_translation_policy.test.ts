@@ -1,6 +1,9 @@
 import {
+    appendTranslationContext,
     composeTranslatedComment,
     hasTranslatedCommentMarker,
+    prepareLanguageAdaptationInput,
+    rebuildAdaptedComment,
     TRANSLATED_COMMENT_MARKER,
 } from '../comment_translation_policy';
 
@@ -37,5 +40,25 @@ describe('comment translation policy', () => {
         expect(result).toBeDefined();
         expect(result!.commentBody.length).toBeLessThan(65_536);
         expect(result!.commentBody).toContain('[untrusted content truncated]');
+    });
+
+    it('separates plain, mention, and command prose and reconstructs only trusted control syntax', () => {
+        const plain = prepareLanguageAdaptationInput('  plain request  ', '');
+        const mention = prepareLanguageAdaptationInput('@vypbot hola', '@vypbot');
+        const command = prepareLanguageAdaptationInput('/copilot explain por que', 'vypbot');
+
+        expect(plain).toEqual({ kind: 'plain', prose: 'plain request' });
+        expect(mention).toEqual({ kind: 'mention', prose: 'hola', trustedBotLogin: 'vypbot' });
+        expect(command).toEqual({ kind: 'command', prose: 'por que', commandName: 'explain' });
+        expect(rebuildAdaptedComment(plain, ' translated ')).toBe('translated');
+        expect(rebuildAdaptedComment(mention, '')).toBe('@vypbot');
+        expect(rebuildAdaptedComment(command, '')).toBe('/copilot explain');
+    });
+
+    it('appends translation evidence only when an adaptation was published', () => {
+        const publication = composeTranslatedComment('translated', 'original');
+
+        expect(appendTranslationContext('answer', undefined)).toBe('answer');
+        expect(appendTranslationContext(' answer ', publication)).toContain('answer\n\ntranslated');
     });
 });

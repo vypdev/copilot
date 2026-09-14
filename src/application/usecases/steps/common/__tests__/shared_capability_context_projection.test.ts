@@ -1,6 +1,6 @@
 import { Result } from '../../../../../data/model/result';
 import { Ai } from '../../../../../data/model/ai';
-import { projectCommentAutomationContext } from '../../../comment_automation_context';
+import { projectCommentAutomationContext, withCommentLanguageAdaptation } from '../../../comment_automation_context';
 import { projectCheckPermissionsContext } from '../check_permissions_workflow';
 import { projectIssueCommentLanguageRequest } from '../../issue_comment/check_issue_comment_language_use_case';
 import { projectPullRequestCommentLanguageRequest } from '../../pull_request_review_comment/check_pull_request_comment_language_use_case';
@@ -199,6 +199,78 @@ describe('P2-D shared capability context projections', () => {
     expect(Object.isFrozen(context)).toBe(true);
     expect(contextWithoutAgentSelection.language.configuration).toBeUndefined();
     expectDataOnly(context);
+  });
+
+  it('projects a translated mention into Think and intent contexts without mutating the source', () => {
+    const source = {
+      owner: 'acme', repo: 'demo', actor: 'alice', issueNumber: 9,
+      isIssue: true, isPullRequest: false, eventName: 'issue_comment', tokenUser: 'copilot-bot',
+      issue: { number: 9, commentBody: '@copilot-bot revisa esto', isIssueComment: true },
+      pullRequest: { number: -1, head: '', action: '', commentBody: '', isPullRequestReviewComment: false },
+      commit: { branch: 'feature/9' }, currentConfiguration: { parentBranch: 'develop', results: [] },
+      branches: { development: 'develop' }, inputs: { action: 'created' },
+      labels: { currentIssueLabels: ['feature'], currentPullRequestLabels: [] },
+      locale: { issue: 'en-US', pullRequest: 'en-US' },
+      ai: new Ai('', 'gpt-5.6-luna', false, [], false, 'low', 20, []),
+    };
+    const context = projectCommentAutomationContext(source as never, {
+      commentBody: source.issue.commentBody, locale: 'en-US', issueNumber: 9,
+      commentId: 90, configuration,
+    }, source.issue.commentBody);
+    const adapted = withCommentLanguageAdaptation(context, {
+      kind: 'comment-language-adaptation', status: 'translated', targetLocale: 'en-US',
+      sourceLocale: 'es', interpretedComment: '@copilot-bot inspect this',
+      publication: { translatedText: 'inspect this', commentBody: '<details>translation</details>' },
+    });
+
+    expect(adapted).not.toBe(context);
+    expect(adapted.userComment).toBe('@copilot-bot inspect this');
+    expect(adapted.bugbot.fixIntent.comment.body).toBe('@copilot-bot inspect this');
+    expect(adapted.think).toMatchObject({
+      request: { question: 'inspect this' },
+      targetLocale: 'en-US',
+      translationPublication: { translatedText: 'inspect this' },
+    });
+    expect(context.userComment).toBe('@copilot-bot revisa esto');
+    expectDataOnly(adapted);
+  });
+
+  it('rebuilds translated explicit-command Think context and leaves matching input unchanged', () => {
+    const ai = new Ai('', 'gpt-5.6-luna', false, [], false, 'low', 20, []);
+    const source = {
+      owner: 'acme', repo: 'demo', actor: 'alice', issueNumber: 9,
+      isIssue: true, isPullRequest: false, eventName: 'issue_comment',
+      issue: { number: 9, commentBody: '/copilot explain por qué', isIssueComment: true },
+      pullRequest: { number: -1, head: '', action: '', commentBody: '', isPullRequestReviewComment: false },
+      commit: { branch: 'feature/9' }, currentConfiguration: { parentBranch: 'develop', results: [] },
+      branches: { development: 'develop' }, inputs: { action: 'created' },
+      labels: { currentIssueLabels: ['feature'], currentPullRequestLabels: [] },
+      locale: { issue: 'en-US', pullRequest: 'en-US' }, ai,
+    };
+    const context = projectCommentAutomationContext(source as never, {
+      commentBody: source.issue.commentBody, locale: 'en-US', issueNumber: 9,
+      commentId: 90, configuration,
+    }, source.issue.commentBody);
+    const matching = { kind: 'comment-language-adaptation', status: 'matches', targetLocale: 'en-US', interpretedComment: source.issue.commentBody } as const;
+    expect(withCommentLanguageAdaptation(context, matching)).toBe(context);
+
+    const adapted = withCommentLanguageAdaptation(context, {
+      ...matching, status: 'translated', interpretedComment: '/copilot explain why',
+    });
+    expect(adapted.think.request).toMatchObject({
+      command: { name: 'explain', arguments: ['why'] },
+      question: expect.stringContaining('User-provided command arguments'),
+    });
+
+    const skipped = projectCommentAutomationContext({
+      ...source,
+      issue: { ...source.issue, commentBody: '' },
+    } as never, {
+      commentBody: '', locale: 'en-US', issueNumber: 9, commentId: 90, configuration,
+    }, '');
+    expect(withCommentLanguageAdaptation(skipped, {
+      ...matching, status: 'translated', interpretedComment: 'translated but not addressed',
+    }).think.request.kind).toBe('skip');
   });
 
   it('projects equivalent issue and pull-request title facts as discriminated records', () => {

@@ -409,9 +409,11 @@ routine detail.
 
 Promotion PRs state that publication occurs only after merge. Reconciliation
 PRs state prominently that the package is already public and that merging or
-closing the PR cannot publish it again. Issue text follows `issues-locale`; PR
-text follows `pull-requests-locale`; Spanish and English are built in, with a
-safe English fallback.
+closing the PR cannot publish it again. Issue text follows the effective issue
+locale and PR text follows the effective pull-request locale. Both inherit
+`repository-locale` (`en-US` by default) unless their optional scope override is
+configured. Spanish and English deployment copy is built in, with a safe English
+fallback while the generic catalog resolver is rolled out to further locales.
 
 A pending control center leads with meaning rather than internal identifiers:
 
