@@ -5,6 +5,7 @@ import {
   createSemanticDigest,
   parsePublicationMarker,
   parsePublicationReplyMarker,
+  readablePublicationReplyCorrelationIds,
 } from '../publication_identity_policy';
 
 const marker = {
@@ -79,5 +80,18 @@ describe('publication identity policy', () => {
       target: 'issue:42', correlationId: 'comment:99', messageKey: 'copilot-help', digest: 'invalid',
     })).toThrow('invalid digest');
     expect(parsePublicationReplyMarker(null)).toBeUndefined();
+  });
+
+  it('reads the transient issue-comment namespace without widening review correlations', () => {
+    expect(readablePublicationReplyCorrelationIds('comment:99')).toEqual([
+      'comment:99',
+      'comment:issue_comment:99',
+    ]);
+    expect(readablePublicationReplyCorrelationIds(
+      'comment:pull_request_review_comment:99',
+    )).toEqual(['comment:pull_request_review_comment:99']);
+    expect(readablePublicationReplyCorrelationIds('event:0123abcd')).toEqual([
+      'event:0123abcd',
+    ]);
   });
 });

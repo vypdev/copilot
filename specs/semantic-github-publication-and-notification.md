@@ -376,7 +376,10 @@ The shared marker format is:
 - Reply correlation preserves the established `comment:<issue-comment-id>`
   identity for `issue_comment` replay compatibility. Review comments use the
   distinct `comment:pull_request_review_comment:<review-comment-id>` identity;
-  transports MUST NOT share a fallback correlation.
+  transports MUST NOT share a fallback correlation. Readers MUST also adopt the
+  transient `comment:issue_comment:<issue-comment-id>` form emitted during
+  migration and compact it with the stable identity; new writes MUST NOT use
+  that transient form.
 - Commit-derived cards MUST revalidate the expected head SHA before update.
 - Revisioned operations MUST reject any revision lower than the stored revision.
 - Events without an orderable revision may update only after the shared workflow

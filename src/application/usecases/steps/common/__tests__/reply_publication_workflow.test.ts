@@ -59,6 +59,27 @@ describe('reply publication workflow', () => {
     expect(repository.comments.find(comment => comment.id === 9)?.body).toContain('/issues/7#issuecomment-3');
   });
 
+  it('adopts and compacts the transient issue-comment correlation namespace', async () => {
+    const seeded = ports();
+    await reconcileReply(context(), seeded);
+    const currentBody = seeded.comments[0].body as string;
+    const namespacedBody = currentBody.replace(
+      'correlation="comment:41"',
+      'correlation="comment:issue_comment:41"',
+    );
+    const repository = ports([
+      { id: 8, body: currentBody, user: { login: 'vypbot' } },
+      { id: 3, body: namespacedBody, user: { login: 'vypbot' } },
+    ]);
+
+    await expect(reconcileReply(context(), repository)).resolves.toEqual({
+      effect: 'unchanged', canonicalCommentId: 3, duplicatesCompacted: 1,
+    });
+    expect(repository.addComment).not.toHaveBeenCalled();
+    expect(repository.comments.find(comment => comment.id === 8)?.body)
+      .toContain('/issues/7#issuecomment-3');
+  });
+
   it('does no provider work without a trusted bot identity', async () => {
     const repository = ports();
     await expect(reconcileReply({ ...context(), botLogin: '' }, repository)).resolves.toEqual({

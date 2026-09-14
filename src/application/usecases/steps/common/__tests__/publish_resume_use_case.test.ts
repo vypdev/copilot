@@ -98,11 +98,11 @@ describe('PublishResultUseCase semantic compatibility boundary', () => {
     expect(comments.values[0].body).not.toContain('legacy wrapper');
   });
 
-  it('recognizes a reply marker written before review-comment correlation was namespaced', async () => {
+  it('recognizes the transient namespaced issue-comment marker without creating a duplicate', async () => {
     const comments = inMemoryComments([{
       id: 7,
       user: { login: 'vypbot' },
-      body: '<!-- copilot:reply schema="1" target="issue:42" correlation="comment:99" key="copilot-help" digest="0123abcd" -->\n\nExisting response.',
+      body: '<!-- copilot:reply schema="1" target="issue:42" correlation="comment:issue_comment:99" key="copilot-help" digest="0123abcd" -->\n\nExisting response.',
     }]);
     const result = new Result({
       id: 'Comment.Help', success: true, executed: true,

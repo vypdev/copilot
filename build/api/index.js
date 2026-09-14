@@ -1044,6 +1044,7 @@ exports.buildPublicationMarker = buildPublicationMarker;
 exports.parsePublicationMarker = parsePublicationMarker;
 exports.buildPublicationReplyMarker = buildPublicationReplyMarker;
 exports.parsePublicationReplyMarker = parsePublicationReplyMarker;
+exports.readablePublicationReplyCorrelationIds = readablePublicationReplyCorrelationIds;
 exports.buildDuplicateMarker = buildDuplicateMarker;
 const node_crypto_1 = __nccwpck_require__(6005);
 const github_publication_1 = __nccwpck_require__(5793);
@@ -1104,6 +1105,16 @@ function parsePublicationReplyMarker(body) {
     if (!match)
         return undefined;
     return Object.freeze({ target: match[1], correlationId: match[2], messageKey: match[3], digest: match[4] });
+}
+/**
+ * Reads the stable issue-comment identity plus the short-lived namespaced form
+ * emitted during migration. Review-comment identities remain transport-scoped.
+ */
+function readablePublicationReplyCorrelationIds(correlationId) {
+    const issueComment = correlationId.match(/^comment:([1-9]\d*)$/u);
+    return Object.freeze(issueComment
+        ? [correlationId, `comment:issue_comment:${issueComment[1]}`]
+        : [correlationId]);
 }
 function buildDuplicateMarker(canonicalCommentId) {
     if (!Number.isSafeInteger(canonicalCommentId) || canonicalCommentId < 1) {
