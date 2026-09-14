@@ -379,6 +379,21 @@ The shared marker format is:
   queue confirms no newer conflicting run; otherwise they resolve to `none` with
   reason `stale-source`.
 
+### 6.5.1 Push and pull-request review ownership
+
+The Commit and Pull Request workflows MUST use distinct native concurrency
+groups keyed by repository and branch. A paired `push` and
+`pull_request:synchronize` event MUST NOT cancel one another. Each group MAY
+cancel only an older replaceable run from the same workflow; PR metadata-only
+`edited` events MUST continue to queue without preempting an active PR review.
+
+After the Commit route discovers an open same-repository PR for its branch, it
+MUST retain native issue state, size, and progress work but MUST omit Bugbot.
+The PR `synchronize` route then exclusively owns Bugbot review for that head.
+An issue-linked branch without an open PR retains push-time Bugbot. Fork PR
+workflows remain outside this contract and MUST stay excluded by the existing
+same-repository admission gate.
+
 ### 6.6 State machine
 
 | State | Entered when | User-visible meaning | Allowed next states | Recovery/owner |
@@ -1018,6 +1033,10 @@ removed.
 18. Given the implementation change, then catalog, action/setup schemas,
     generated bundles, documentation, architecture checks, 128-case budget, and
     repository validations agree.
+19. Given one push creates both `push` and `pull_request:synchronize` runs, then
+    neither workflow cancels the other, Commit retains progress without running
+    Bugbot, and the PR event publishes exactly one review projection for the
+    head.
 
 ## 17. Requirements traceability
 
@@ -1028,6 +1047,7 @@ removed.
 | §6.2 capability behavior | capability outcome adapters/coordinator | route and end-to-end cases | issue/PR/release/Bugbot pages |
 | §6.4 one canonical card | owned query/mutation ports and reconciler | duplicate/race/pagination tests | operator recovery guide |
 | §6.5 freshness | source guard and feature revisions | stale/out-of-order/replay tests | observability guide |
+| §6.5.1 event ownership | distinct push/PR groups + open-PR Bugbot omission | workflow contract, route unit test, PR #367 paired-event evidence | workflow setup and Bugbot guides |
 | §7 quiet/image defaults | action/setup configuration policies | action schema, setup, doctor, migration tests | configuration and upgrade pages |
 | §8 clean boundaries | architecture and source-inventory checks | executable boundary tests | contributor architecture |
 | §9 message hierarchy/examples | localized feature renderers | semantic golden fixtures and manual UX matrix | user journeys |

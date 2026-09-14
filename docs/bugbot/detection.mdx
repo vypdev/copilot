@@ -27,12 +27,13 @@ its findings as line comments on the current diff.
 
 ### 2. On every push (commit workflow)
 
-When you push to a branch that is **linked to an issue** (e.g. a feature or bugfix branch created by Copilot), the **Commit** workflow runs. If an agent CLI is configured, the action runs **DetectPotentialProblemsUseCase**: it fetches and reviews the exact event `before..after` range, loads existing finding context, and then publishes new findings and updates or marks as resolved any previous findings that no longer apply. The bounded fetch includes `after` and its parent. New-branch pushes, whose `before` value is GitHub's all-zero sentinel, and force-pushes whose previous object is no longer reachable can therefore fall back to the current commit parent without aborting the workflow or downloading full history.
+When you push to a branch that is **linked to an issue** (e.g. a feature or bugfix branch created by Copilot), the **Commit** workflow runs. If an agent CLI is configured and there is no open PR, the action runs **DetectPotentialProblemsUseCase**: it fetches and reviews the exact event `before..after` range, loads existing finding context, and then publishes new findings and updates or marks as resolved any previous findings that no longer apply. The bounded fetch includes `after` and its parent. New-branch pushes, whose `before` value is GitHub's all-zero sentinel, and force-pushes whose previous object is no longer reachable can therefore fall back to the current commit parent without aborting the workflow or downloading full history. When an open same-repository PR exists, Commit keeps issue progress current but skips Bugbot because the paired PR `synchronize` event owns review for that head.
 
 **Requirements:**
 
 - The push must be to a branch that has an associated issue (the action resolves the issue number from the branch name or from project/linking).
 - The Commit workflow must include the Copilot step (see [Examples → Push workflow](/bugbot/examples#push-workflow-with-bugbot)).
+- No open PR may own review for the branch; otherwise the PR synchronization workflow runs Bugbot.
 
 If the branch is not linked to an issue (e.g. `issueNumber === -1`), detection is skipped.
 

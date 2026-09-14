@@ -49080,7 +49080,12 @@ class CommitUseCase {
                 || Boolean(this.actorAuthorizationPort && await this.actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token));
             if (agentAllowed) {
                 results.push(...(await this.checkProgressUseCase.invoke((0, push_single_action_contexts_1.projectProgressContext)(param))));
-                results.push(...(await this.detectPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param))));
+                if (param.pullRequest.number > 0) {
+                    (0, logging_ports_1.logInfo)(`Skipping push Bugbot analysis because pull request #${param.pullRequest.number} owns review for this head.`);
+                }
+                else {
+                    results.push(...(await this.detectPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param))));
+                }
             }
             else {
                 (0, logging_ports_1.logInfo)('Skipping push agent analysis because ai-members-only is enabled and the actor is not authorized.');

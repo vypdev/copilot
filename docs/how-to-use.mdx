@@ -319,7 +319,7 @@ and roles:
 |------|--------|
 | `copilot_issue.yml` | Runs on issue events (opened, edited, labeled, unlabeled, etc.): creates branches, links to projects, assignees, deploy trigger. |
 | `copilot_pull_request.yml` | Runs on PR events: links PR to issue/project, reviewers, AI description, etc. |
-| `copilot_commit.yml` | Runs the issue-centric push pipeline (all branches except main/develop by default): commit notice, size/progress, and Bugbot. |
+| `copilot_commit.yml` | Runs the issue-centric push pipeline (all branches except main/develop by default): native issue state and size/progress. It also runs Bugbot when the branch has no open PR; otherwise the PR synchronization event owns review. |
 | `copilot_branch_sync.yml` | Lightweight push observer on all branches: detects parent/working drift and maintains a synchronization notice without loading Bugbot or an agent. |
 | `copilot_issue_comment.yml` | Runs on explicitly addressed issue comments: e.g. Think action (answer questions). |
 | `copilot_pull_request_comment.yml` | Runs on explicitly addressed PR review comments, including translation checks. |

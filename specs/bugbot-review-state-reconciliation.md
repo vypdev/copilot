@@ -150,7 +150,7 @@ review summary does not implement.
   reusable Action therefore cannot promise an immediate run when a person only
   resolves or reopens a native thread.
 
-### 2.6 Verified concurrency regression on PR #363
+### 2.6 Verified concurrency regressions and ownership correction
 
 On three successive PR heads, an `efraespada`-authenticated metadata update
 emitted `pull_request: edited` while the `synchronize` review was starting.
@@ -161,15 +161,26 @@ Sync did not edit the PR in those runs, and bot-authored edits were already
 filtered. The final Check summary exposed `Bugbot review: —`, proving that a
 green job was not evidence that the head had been reviewed.
 
-The correction keeps the shared branch group but makes cancellation
-conditional. Code-change and review events cancel obsolete analysis;
-`pull_request: edited` waits behind the active review. GitHub's bounded pending
+The first correction kept the shared branch group but made cancellation
+conditional. Code-change and review events canceled obsolete analysis;
+`pull_request: edited` waited behind the active review. GitHub's bounded pending
 slot may replace an older waiting metadata event with the newest one, which is
 safe because metadata normalization is idempotent and only the newest event is
 current. Controlled verification on head `70585d9e` started review run
 `34756303262` and then edit run `34756384500`. The edit stayed pending until the
 review completed successfully, then completed itself. Bot-authored follow-ups
 `34756389864` and `34756489001` were skipped by the existing loop guard.
+
+PR #367 exposed the remaining flaw: a paired `pull_request:synchronize` run
+canceled Commit run `34846885692` through the same native group after every job
+step had succeeded, leaving a misleading canceled conclusion. Running Bugbot
+from both event routes also made cancellation necessary only because ownership
+was duplicated. The final contract therefore uses distinct `copilot-push-…`
+and `copilot-pr-…` branch groups. When Commit discovers an open same-repository
+PR, it retains issue progress work but skips Bugbot; the PR synchronization
+event exclusively owns review for that head. PR metadata retains conditional
+non-preemption within the PR-specific group, and fork PR execution remains
+excluded by the same-repository workflow gate.
 
 The next head `0e039ae9` proved that ordering alone was insufficient. Review run
 `34756692307` published Check `103722773263` with truthful `partial` Bugbot
@@ -458,13 +469,14 @@ readiness. `unknown` is a system failure and fails the review regardless of
   updated again.
 - A run whose analyzed head is no longer the PR head MUST return superseded and
   MUST NOT mutate findings or current-state projections.
-- Shipped code-change workflows MUST share a branch-scoped concurrency group.
-  Push, PR code-change, and review events use cancel-in-progress semantics so
-  newer evidence supersedes older analysis. `pull_request: edited` uses the
-  same group with cancellation disabled, so it waits and cannot preempt an
-  active review. Application freshness checks remain mandatory because API
-  consumers and comment-triggered flows are not fully serialized by workflow
-  YAML.
+- Shipped Commit and Pull Request workflows MUST use distinct branch-scoped
+  concurrency groups. Each uses cancel-in-progress semantics only for its own
+  replaceable revisions. After Commit discovers an open same-repository PR, it
+  skips Bugbot and the PR code-change event exclusively owns review for that
+  head. `pull_request: edited` uses the PR group with cancellation disabled, so
+  it waits and cannot preempt an active review. Application freshness checks
+  remain mandatory because API consumers and comment-triggered flows are not
+  fully serialized by workflow YAML.
 - If cancellation happens after a durable mutation, the next run discovers the
   marker/thread mismatch and converges. The status card still names the last
   completely verified head, so it never turns a canceled attempt into success.
@@ -1310,7 +1322,7 @@ examples should reuse the same fixtures as presentation tests where practical.
 | Safe resolution/reopen order | reconciliation plan/apply use case | every partial mutation boundary | How it works, Failure scenarios |
 | Human dismissal precedence | lifecycle policy + resolver adapter | bot/human/unknown resolver matrix | Concepts, Detection |
 | Freshness and concurrency | head guards + workflow contract | stale, duplicate, canceled, race cases | Workflow setup |
-| Metadata non-preemption | shared branch key + conditional cancellation | active/setup workflow parser, negative unconditional-cancel fixture, PR #363 live evidence | Workflow setup, Configuration, How it works |
+| Review ownership and metadata non-preemption | distinct push/PR branch groups + open-PR Bugbot omission + conditional PR cancellation | active/setup workflow parser, cross-group negative fixtures, Commit route test, PR #363/#367 live evidence | Workflow setup, Configuration, How it works |
 | Metadata/review publication ownership | result-publication mode + telemetry/evidence policies | metadata generic-comment negative, outcome matrix, completion integration, PR #363 latest-by-name/noise replay | Detection, Workflow setup, How it works, Troubleshooting |
 | Canonical Result evidence | discriminated telemetry-set and finding-state projections + completion/lifecycle/status/summary/Check policies | complete aggregation, malformed/duplicate telemetry siblings, required-outcome absence, missing/extra key, numeric limits, overflow, cross-surface fail-closed cases | Detection, Observability, Comment commands, Failure scenarios |
 | Coherent final snapshot | snapshot loader + explicit surface completeness | before/after head, head-change, missing-head, per-surface failure, shared issue/PR read cases | How it works, Failure scenarios |
@@ -1383,8 +1395,9 @@ goldens pass in both locales.
 
 ### Phase 6 — Workflow and integration hardening
 
-1. Add shared branch concurrency to shipped PR/commit workflows and setup copies;
-   keep code/review cancellation while queueing PR metadata edits.
+1. Add distinct branch concurrency to shipped PR/commit workflows and setup
+   copies; cancel only superseded same-owner runs, queue PR metadata edits, and
+   make PR synchronization the sole Bugbot owner once an open PR exists.
 2. Reserve `Copilot / Review` for valid Bugbot telemetry and make incomplete
    review outcomes neutral; metadata-only completion keeps only workflow/summary
    evidence.

@@ -11,7 +11,7 @@ This page provides **concrete examples**: workflows that enable Bugbot detection
 
 ## Push workflow (with Bugbot)
 
-The **Commit** workflow runs on **push** to branches (typically excluding `main` and `develop`). If an agent CLI is configured, Bugbot detection runs automatically for branches linked to an issue.
+The **Commit** workflow runs on **push** to branches (typically excluding `main` and `develop`). If an agent CLI is configured, Bugbot detection runs automatically for issue-linked branches without an open PR. After a PR opens, Commit retains issue progress work and the PR `synchronize` workflow exclusively owns Bugbot review for each new head.
 
 ```yaml
 name: Copilot - Commit

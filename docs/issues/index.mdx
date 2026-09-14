@@ -44,7 +44,7 @@ Copilot automates **issue tracking** so that labels, branch creation, project li
 | Merge the branch (e.g. into develop) | Automatically close the issue when the branch is merged. |
 | Leave an issue waiting for 7 days (with cleanup enabled) | Automatically close it with an explanation; reopen it with a new comment if needed. |
 
-**Bugbot** (potential problems) runs on **push** (or single action) and posts findings on the issue and on open PRs; you can ask the bot to fix findings from a comment. See [Bugbot](/bugbot) for full details.
+**Bugbot** (potential problems) runs on **push** when the issue-linked branch has no open PR, or on a single action. Once a PR is open, its synchronization event owns Bugbot review and the push run keeps issue progress current without duplicating findings. You can ask the bot to fix findings from a comment. See [Bugbot](/bugbot) for full details.
 
 ## Lifecycle state labels
 

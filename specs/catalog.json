@@ -204,15 +204,17 @@
       "status": "implemented",
       "scope": "Reconcile review snapshots, findings, threads, comments, and check conclusions",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-13",
+      "lastVerified": "2026-09-14",
       "specs": [
         "specs/bugbot-review-state-reconciliation.md"
       ],
       "workflows": [
+        ".github/workflows/copilot_commit.yml",
         ".github/workflows/copilot_pull_request.yml",
         ".github/workflows/copilot_pull_request_comment.yml"
       ],
       "entrypoints": [
+        "src/application/usecases/commit_use_case.ts",
         "src/application/usecases/steps/commit/bugbot/reconcile_bugbot_review_state_use_case.ts",
         "src/actions/github_action_completion.ts"
       ],
@@ -232,6 +234,7 @@
         "src/application/usecases/steps/commit/bugbot/synchronize_bugbot_review_presentation_use_case.ts"
       ],
       "tests": [
+        "src/application/usecases/__tests__/commit_use_case.test.ts",
         "src/domain/bugbot/__tests__/review_state.test.ts",
         "src/domain/bugbot/__tests__/review_projection.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/schema.test.ts",
@@ -376,6 +379,7 @@
         "specs/issue-and-pull-request-context-hardening.md"
       ],
       "workflows": [
+        ".github/workflows/copilot_commit.yml",
         ".github/workflows/copilot_pull_request.yml",
         ".github/workflows/release_workflow.yml",
         ".github/workflows/hotfix_workflow.yml",
