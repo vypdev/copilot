@@ -2,6 +2,7 @@ import { Result } from '../../../data/model/result';
 import { buildActionSummary, renderLocalizationSummarySection } from '../action_summary_policy';
 import { ApplicationError } from '../../errors/application_error';
 import { resolveStaticActionSummaryCatalog } from '../action_summary_message_catalog';
+import type { ActionSummaryMessageCatalog, ActionSummaryMessageId } from '../action_summary_message_catalog';
 
 const findingStates = (overrides: Record<string, number> = {}) => ({
     open: 0,
@@ -35,6 +36,57 @@ describe('action summary policy', () => {
             descriptorCount: 63,
             fallbackReason: 'dynamic-response-invalid',
         }])).toContain('fr-FR -> en-US (fallback, descriptors=63, reason=dynamic-response-invalid)');
+    });
+
+    it('keeps Markdown structure code-owned even if an injected catalog bypasses validation', () => {
+        const injected: Partial<Record<ActionSummaryMessageId, string>> = {
+            'summary.heading': 'Summary\n# Forged heading',
+            'summary.repository': '[Forged link](https://example.com)',
+            'summary.status': 'Status | forged cell',
+            'summary.noResult': '<details>forged block</details>',
+        };
+        const catalog: ActionSummaryMessageCatalog = {
+            locale: 'fr-FR',
+            requestedLocale: 'fr-FR',
+            resolutionSource: 'dynamic',
+            message: id => injected[id] ?? 'Safe',
+        };
+
+        const summary = buildActionSummary({
+            owner: 'owner', repository: 'repo', eventName: 'issues',
+            issueNumber: 7, pullRequestNumber: -1, results: [],
+        }, catalog);
+
+        expect(summary).toContain('# Summary # Forged heading');
+        expect(summary).toContain('\\[Forged link\\](https:\u200b//example.com)');
+        expect(summary).toContain('| Status \\| forged cell |');
+        expect(summary).toContain('_\\<details\\>forged block\\</details\\>_');
+        expect(summary).not.toContain('\n# Forged heading');
+        expect(summary).not.toContain('[Forged link](https://example.com)');
+        expect(summary).not.toContain('https://example.com');
+        expect(summary).not.toContain('<details>forged block</details>');
+    });
+
+    it('sanitizes labels supplied to a specialized localization section', () => {
+        const summary = renderLocalizationSummarySection({
+            repository: 'en-US', issue: 'en-US', pullRequest: 'en-US',
+        }, [], {
+            heading: 'Locale\n# Forged',
+            property: 'Property | forged',
+            value: '[Value](https://example.com)',
+            repositoryLocale: '<details>Repository</details>',
+            issueLocale: 'Issue',
+            pullRequestLocale: 'Pull request',
+            catalogResolution: 'Resolution',
+            descriptors: 'descriptors',
+            reason: 'reason',
+        });
+
+        expect(summary).toContain('## Locale # Forged');
+        expect(summary).toContain('| Property \\| forged | \\[Value\\](https:\u200b//example.com) |');
+        expect(summary).toContain('\\<details\\>Repository\\</details\\>');
+        expect(summary).not.toContain('\n# Forged');
+        expect(summary).not.toContain('<details>Repository</details>');
     });
 
     it('renders bounded result details and lifecycle metadata', () => {
