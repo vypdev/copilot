@@ -2,12 +2,14 @@ import type {
   BranchDependency,
   BranchSyncComparison,
   BranchSyncNotificationComment,
-} from "../ports/branch_sync_ports";
-import { githubUsersMatch } from "../../domain/github_user_policy";
+} from '../ports/branch_sync_ports';
+import { githubUsersMatch } from '../../domain/github_user_policy';
+import { baseLanguage } from '../../domain/locale';
+import { buildPublicationMarker, createSemanticDigest } from './publication_identity_policy';
 
-export const BRANCH_SYNC_STALE_MARKER = "<!-- copilot-branch-sync:stale -->";
-export const BRANCH_SYNC_ALIGNED_MARKER = "<!-- copilot-branch-sync:aligned -->";
-const BRANCH_SYNC_KEY_MARKER = "<!-- copilot-branch-sync-key:";
+export const BRANCH_SYNC_STALE_MARKER = '<!-- copilot-branch-sync:stale -->';
+export const BRANCH_SYNC_ALIGNED_MARKER = '<!-- copilot-branch-sync:aligned -->';
+const BRANCH_SYNC_KEY_MARKER = '<!-- copilot-branch-sync-key:';
 
 export function selectBranchDependenciesForPush(
   dependencies: readonly BranchDependency[],
@@ -15,8 +17,8 @@ export function selectBranchDependenciesForPush(
 ): BranchDependency[] {
   const selected = dependencies.filter(
     (dependency) =>
-      dependency.parentBranch === pushedBranch ||
-      dependency.workingBranch === pushedBranch,
+      dependency.parentBranch === pushedBranch
+      || dependency.workingBranch === pushedBranch,
   );
   const unique = new Map<string, BranchDependency>();
   for (const dependency of selected) {
@@ -49,8 +51,10 @@ export function buildStaleBranchSyncComment(input: {
   repository: string;
   dependency: BranchDependency;
   comparison: BranchSyncComparison;
+  locale?: string;
 }): string {
   const { dependency, comparison } = input;
+  const spanish = baseLanguage(input.locale ?? 'en-US') === 'es';
   const compareUrl = buildCompareUrl(
     input.owner,
     input.repository,
@@ -58,31 +62,53 @@ export function buildStaleBranchSyncComment(input: {
     dependency.workingBranch,
   );
   const divergence = comparison.aheadBy > 0
-    ? ` It also contains ${comparison.aheadBy} commit(s) not present in the parent branch.`
-    : "";
-  return `${BRANCH_SYNC_STALE_MARKER}
+    ? spanish
+      ? ` También contiene ${comparison.aheadBy} commit(s) que no están en la rama padre.`
+      : ` It also contains ${comparison.aheadBy} commit(s) not present in the parent branch.`
+    : '';
+  return `${buildSharedBranchSyncMarker(dependency, `comparison:${createSemanticDigest(comparison)}`, createSemanticDigest({ state: 'stale', comparison }))}
+${BRANCH_SYNC_STALE_MARKER}
 ${buildDependencyMarker(dependency)}
 
-## ⚠️ Branch synchronization recommended
+## ${spanish ? 'Acción necesaria: sincroniza la rama' : 'Action required: synchronize the branch'}
 
-\`${dependency.workingBranch}\` is ${comparison.behindBy} commit(s) behind its parent branch \`${dependency.parentBranch}\`.${divergence}
+\`${dependency.workingBranch}\` ${spanish ? `está ${comparison.behindBy} commit(s) por detrás de su rama padre` : `is ${comparison.behindBy} commit(s) behind its parent branch`} \`${dependency.parentBranch}\`.${divergence}
 
-Run \`/copilot sync-branch\` in this conversation to merge the parent changes safely. If Git reports conflicts, the configured fixer agent can resolve eligible files before the verification commands run.
+${spanish ? 'Ejecuta' : 'Run'} \`/copilot sync-branch\` ${spanish ? 'en esta conversación para integrar de forma segura los cambios de la rama padre. Si Git detecta conflictos, el agente corrector configurado puede resolver los archivos permitidos antes de ejecutar las verificaciones.' : 'in this conversation to merge the parent changes safely. If Git reports conflicts, the configured fixer agent can resolve eligible files before the verification commands run.'}
 
-[Compare parent and working branch](${compareUrl})`;
+[${spanish ? 'Comparar la rama padre y la rama de trabajo' : 'Compare parent and working branch'}](${compareUrl})`;
 }
 
 export function buildAlignedBranchSyncComment(
   dependency: BranchDependency,
+  locale = 'en-US',
 ): string {
-  return `${BRANCH_SYNC_ALIGNED_MARKER}
+  const spanish = baseLanguage(locale) === 'es';
+  return `${buildSharedBranchSyncMarker(dependency, `aligned:${createSemanticDigest(dependency)}`, createSemanticDigest({ state: 'aligned', dependency }))}
+${BRANCH_SYNC_ALIGNED_MARKER}
 ${buildDependencyMarker(dependency)}
 
-## ✅ Branch synchronized
+## ${spanish ? 'Rama sincronizada' : 'Branch synchronized'}
 
-\`${dependency.workingBranch}\` now contains the current history of its parent branch \`${dependency.parentBranch}\`.
+\`${dependency.workingBranch}\` ${spanish ? 'ya contiene el historial actual de su rama padre' : 'now contains the current history of its parent branch'} \`${dependency.parentBranch}\`.
 
-The previous synchronization recommendation has been resolved.`;
+${spanish ? 'La recomendación de sincronización anterior está resuelta.' : 'The previous synchronization recommendation has been resolved.'}`;
+}
+
+function buildSharedBranchSyncMarker(
+  dependency: BranchDependency,
+  sourceVersion: string,
+  digest: string,
+): string {
+  return buildPublicationMarker({
+    identity: {
+      topic: 'branch-sync',
+      target: { kind: 'issue', number: dependency.issueNumber },
+      key: `dependency:${createSemanticDigest({ parent: dependency.parentBranch, working: dependency.workingBranch })}`,
+    },
+    sourceVersion,
+    digest,
+  });
 }
 
 function isBranchSyncComment(body: string | null): boolean {

@@ -13,7 +13,7 @@ import type {
 } from '../../application/ports/branch_sync_ports';
 import type {
   BoundIssueCommentPublicationPort,
-  BoundIssuePushNotificationPort,
+  BoundIssueReopenPort,
   IssueCommentPublicationPort,
   IssueNotificationPort,
 } from '../../application/ports/issue_lifecycle_ports';
@@ -232,13 +232,12 @@ export function bindIssueCommentPublication(
   });
 }
 
-export function bindIssuePushNotification(
-  port: IssueNotificationPort,
+export function bindIssueReopen(
+  port: Pick<IssueNotificationPort, 'openIssue'>,
   binding: RepositoryCredentialBinding,
-): BoundIssuePushNotificationPort {
-  return Object.freeze<BoundIssuePushNotificationPort>({
+): BoundIssueReopenPort {
+  return Object.freeze<BoundIssueReopenPort>({
     openIssue: (issueNumber) => port.openIssue(binding.owner, binding.repository, issueNumber, binding.token),
-    addComment: (issueNumber, comment) => port.addComment(binding.owner, binding.repository, issueNumber, comment, binding.token),
   });
 }
 

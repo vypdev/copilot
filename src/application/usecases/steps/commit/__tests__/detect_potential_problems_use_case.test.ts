@@ -1075,7 +1075,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       'owner',
       'repo',
       200,
-      expect.stringContaining('Bugbot status'),
+      expect.stringContaining('Bugbot: review needs verification'),
       'token',
       { commitSha: 'sha1' },
     );

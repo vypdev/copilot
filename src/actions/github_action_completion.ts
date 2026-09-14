@@ -10,7 +10,6 @@ import { projectPublishResultContext } from '../application/usecases/steps/commo
 import { projectConfigurationPersistenceContext } from '../application/usecases/steps/common/store_configuration_use_case';
 
 import { logInfo } from '../utils/logger';
-import { createLogReportAdapter } from '../infrastructure/logging/logger_adapter';
 import { buildActionSummary } from '../application/policies/action_summary_policy';
 import { lifecycleStateFromLabels } from '../domain/copilot_lifecycle';
 import type { CopilotEvidencePort } from '../application/ports/copilot_evidence_ports';
@@ -41,7 +40,6 @@ export async function finishGithubAction(
     if (!dryRun && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
         const publicationFailure = await new PublishResultUseCase(
             issueNotificationPort,
-            createLogReportAdapter(),
         ).invoke(projectPublishResultContext(execution));
         if (publicationFailure) results.push(publicationFailure);
     } else if (execution.singleAction.isPublishIssueCommentAction || ownsDeploymentPresentation) {

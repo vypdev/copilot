@@ -260,20 +260,17 @@ review with work remaining looks conceptually like this:
 
 > **Current status:** 2 findings require attention on `e6089b9`.
 >
-> **Action required:** Review the linked threads or comment `/copilot fix all`.
+> **Action:** Review the linked threads or comment `/copilot fix all`.
 
-| State | Count |
-| --- | ---: |
-| Open / reopened | 1 |
-| Verification required | 1 |
-| Fixed | 2 |
-| Obsolete | 1 |
-| Dismissed | 1 |
-| Unknown | 0 |
+- [ ] open — [SQL query interpolates untrusted input](#discussion_r100)
+- [ ] verification-required — [Retry behavior changed](#discussion_r101)
 
 `fixed`, `obsolete`, and `dismissed` are clean. `open`, `reopened`, and
 `verification-required` need attention. `unknown` and a partial/failed
-projection replace the action text with `/copilot recheck` and fail closed.
+projection fail closed and expose bounded recovery details. A provider or state
+error can recommend one `/copilot recheck` after its cause is corrected. Fixed
+coverage limits instead tell the reader to change scope, limits, or access;
+repeating the same command against unchanged capped evidence is not useful.
 A superseded run does not edit this card; the newer head owns the next update.
 
 ---

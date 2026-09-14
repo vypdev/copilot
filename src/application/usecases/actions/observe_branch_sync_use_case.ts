@@ -77,6 +77,7 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
           repository: context.repository.name,
           dependency,
           comparison,
+          locale: context.locale,
         });
         if (latest && isStaleBranchSyncComment(latest.body)) {
           await this.notifications.updateComment(
@@ -97,7 +98,7 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
         await this.notifications.updateComment(
           dependency.issueNumber,
           latest.id,
-          buildAlignedBranchSyncComment(dependency),
+          buildAlignedBranchSyncComment(dependency, context.locale),
         );
       }
       return success(dependency, 0, "aligned");

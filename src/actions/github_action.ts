@@ -3,7 +3,6 @@ import * as github from '@actions/github';
 import { ConfigurationHandler } from '../manager/description/configuration_handler';
 import { GitCliRepository } from '../data/repository/git_cli_repository';
 import { createIssueContentCompositionRoot } from '../infrastructure/composition/issue_content_composition_root';
-import { createIssueNotificationRepository } from '../infrastructure/composition/issue_interaction_composition_root';
 import { createProjectBoardCompositionRoot } from '../infrastructure/composition/project_board_composition_root';
 import { finishGithubAction } from './github_action_completion';
 import { getGithubActionInput } from './github_action_input';
@@ -24,7 +23,7 @@ import { createActorAuthorizationRepository } from '../infrastructure/compositio
 import { runAtApplicationErrorBoundary } from '../application/errors/application_error_context';
 import { toApplicationError } from '../application/errors/application_error';
 import { renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
-import { bindIssueNotification } from '../infrastructure/composition/shared_capability_port_binding';
+import { bindIssueCommentPublication } from '../infrastructure/composition/push_single_action_capability_port_binding';
 
 export async function runGitHubAction(): Promise<void> {
     const eventInputs = buildGithubActionEventInputs({
@@ -112,7 +111,7 @@ export async function runGitHubAction(): Promise<void> {
     await finishGithubAction(
         execution,
         results,
-        bindIssueNotification(createIssueNotificationRepository(), repositoryBinding),
+        bindIssueCommentPublication(issueContentPort, repositoryBinding),
         {
             update: (context) => configurationHandler.update({
                 ...repositoryBinding,

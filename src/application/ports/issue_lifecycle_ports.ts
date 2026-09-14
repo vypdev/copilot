@@ -17,6 +17,16 @@ export interface BoundIssueNotificationPort {
     addComment(issueNumber: number, comment: string): Promise<void>;
 }
 
+/** Native issue-state authority without conversation publication capability. */
+export interface BoundIssueReopenPort {
+    openIssue(issueNumber: number): Promise<boolean>;
+}
+
+/** Native issue-state authority without conversation publication capability. */
+export interface BoundIssueStatePort {
+    closeIssue(issueNumber: number): Promise<boolean>;
+}
+
 /** Repository-credential-bound issue closure and notification authority. */
 export interface BoundIssueClosurePort extends BoundIssueNotificationPort {
     closeIssue(issueNumber: number): Promise<boolean>;
@@ -44,9 +54,4 @@ export interface BoundIssueCommentPublicationPort {
     addComment(issueNumber: number, comment: string): Promise<void>;
     updateComment(issueNumber: number, commentId: number, comment: string): Promise<void>;
     listIssueComments(issueNumber: number): Promise<readonly IssueCommentPublicationTarget[]>;
-}
-
-/** Bound push notification authority, including the optional reopen transition. */
-export interface BoundIssuePushNotificationPort extends BoundIssueNotificationPort {
-    openIssue(issueNumber: number): Promise<boolean>;
 }

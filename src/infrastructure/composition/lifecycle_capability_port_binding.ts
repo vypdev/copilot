@@ -16,6 +16,7 @@ import type {
 } from '../../application/ports/branch_workflow_ports';
 import type {
   BoundIssueClosurePort,
+  BoundIssueStatePort,
   IssueClosurePort,
 } from '../../application/ports/issue_lifecycle_ports';
 import type {
@@ -142,6 +143,20 @@ export function bindIssueClosure(
       binding.token,
     ),
   } satisfies BoundIssueClosurePort);
+}
+
+export function bindIssueState(
+  port: Pick<IssueClosurePort, 'closeIssue'>,
+  binding: RepositoryCredentialBinding,
+): BoundIssueStatePort {
+  return Object.freeze({
+    closeIssue: (issueNumber) => port.closeIssue(
+      binding.owner,
+      binding.repository,
+      issueNumber,
+      binding.token,
+    ),
+  } satisfies BoundIssueStatePort);
 }
 
 export function bindIssueTypeAssignment(

@@ -201,6 +201,7 @@ describe('push and single-action context projection', () => {
       waitingLabels: ['state:awaiting-maintainer', 'state:awaiting-issue-author'],
       activityLabel: 'state:ai-processing',
       thresholdHours: 168,
+      locale: 'en-US',
     });
   });
 
@@ -226,6 +227,7 @@ describe('push and single-action context projection', () => {
       pushedBranch: 'feature/42-contexts',
       deletedPush: false,
       repository: { owner: 'owner', name: 'repo' },
+      locale: 'en-US',
     });
   });
 

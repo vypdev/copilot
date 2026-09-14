@@ -17,7 +17,7 @@ import {
   bindIssueCommentPublication,
   bindIssueInactivityQuery,
   bindIssueProgress,
-  bindIssuePushNotification,
+  bindIssueReopen,
   bindIssueTypes,
   bindInitialLabels,
   bindManagedPullRequests,
@@ -268,12 +268,12 @@ describe('push and single-action capability binding', () => {
   });
 
   it('forwards every remaining issue, branch-query, and synchronization operation', async () => {
-    const issuePushPort = { openIssue: jest.fn(), addComment: jest.fn() };
+    const issuePushPort = { openIssue: jest.fn() };
     const inactivityPort = { listOpenIssuesByLabel: jest.fn(), getOpenIssue: jest.fn() };
     const dependencyPort = { listOpenDependencies: jest.fn(), resolveTarget: jest.fn() };
     const notificationPort = { listIssueComments: jest.fn(), addComment: jest.fn(), updateComment: jest.fn() };
     const defaultBranch = bindRepositoryDefaultBranch({ getDefaultBranch: jest.fn() } as never, binding);
-    const issuePush = bindIssuePushNotification(issuePushPort as never, binding);
+    const issuePush = bindIssueReopen(issuePushPort as never, binding);
     const branches = bindBranchListQuery({ getListOfBranches: jest.fn() } as never, binding);
     const pullRequests = bindPullRequestBranchQuery({ getOpenPullRequestNumbersByHeadBranch: jest.fn() } as never, binding);
     const progress = bindIssueProgress({ setProgressLabel: jest.fn() } as never, binding);
@@ -285,7 +285,6 @@ describe('push and single-action capability binding', () => {
 
     await defaultBranch.getDefaultBranch();
     await issuePush.openIssue(42);
-    await issuePush.addComment(42, 'body');
     await branches.getListOfBranches();
     await pullRequests.getOpenPullRequestNumbersByHeadBranch('feature/42');
     await progress.setProgressLabel(42, 75);

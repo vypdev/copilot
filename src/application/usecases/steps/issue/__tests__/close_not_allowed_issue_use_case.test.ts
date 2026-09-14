@@ -7,7 +7,6 @@ jest.mock('../../../../../utils/logger', () => ({
 }));
 
 const mockCloseIssue = jest.fn();
-const mockAddComment = jest.fn();
 
 function baseParam() {
   return {
@@ -19,14 +18,12 @@ describe('CloseNotAllowedIssueUseCase', () => {
   let useCase: CloseNotAllowedIssueUseCase;
 
   beforeEach(() => {
-    useCase = new CloseNotAllowedIssueUseCase({ closeIssue: mockCloseIssue, addComment: mockAddComment });
+    useCase = new CloseNotAllowedIssueUseCase({ closeIssue: mockCloseIssue });
     mockCloseIssue.mockReset();
-    mockAddComment.mockReset();
   });
 
-  it('returns success executed true and calls addComment when closeIssue returns true', async () => {
+  it('returns a semantic terminal explanation when closeIssue returns true', async () => {
     mockCloseIssue.mockResolvedValue(true);
-    mockAddComment.mockResolvedValue(undefined);
     const param = baseParam();
 
     const results = await useCase.invoke(param);
@@ -36,10 +33,7 @@ describe('CloseNotAllowedIssueUseCase', () => {
     expect(results[0].executed).toBe(true);
     expect(results[0].steps?.some((s) => s.includes('42') && s.includes('closed'))).toBe(true);
     expect(mockCloseIssue).toHaveBeenCalledWith(42);
-    expect(mockAddComment).toHaveBeenCalledWith(
-      42,
-      expect.stringContaining('closed because the author is not a member'),
-    );
+    expect(results[0].payload).toEqual({ publication: { kind: 'access-policy' } });
   });
 
   it('returns success executed false when closeIssue returns false', async () => {
@@ -50,7 +44,6 @@ describe('CloseNotAllowedIssueUseCase', () => {
 
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(false);
-    expect(mockAddComment).not.toHaveBeenCalled();
   });
 
   it('returns failure when closeIssue throws', async () => {

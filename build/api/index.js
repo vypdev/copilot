@@ -770,6 +770,7 @@ exports.renderBugbotReviewSnapshot = renderBugbotReviewSnapshot;
 exports.buildNewBugbotReviewSnapshotHeader = buildNewBugbotReviewSnapshotHeader;
 const review_state_1 = __nccwpck_require__(9200);
 const github_comment_publication_policy_1 = __nccwpck_require__(2712);
+const publication_identity_policy_1 = __nccwpck_require__(5403);
 exports.BUGBOT_STATUS_MARKER_PREFIX = 'copilot-bugbot-status';
 exports.BUGBOT_REVIEW_MARKER_PREFIX = 'copilot-bugbot-review';
 exports.BUGBOT_REVIEW_STATUS_START = '<!-- copilot-bugbot-review-status:start';
@@ -791,7 +792,15 @@ function renderBugbotStatusCard(projection, locale, links) {
     const unknown = projection.counts.unknown;
     const partialCoverage = projection.coverage.status === 'partial';
     const shortHead = projection.verifiedHeadSha.slice(0, 7);
-    const heading = language === 'es-ES' ? '## 🤖 Estado de Bugbot' : '## 🤖 Bugbot status';
+    const heading = partialCoverage
+        ? language === 'es-ES' ? '## Bugbot: revisión incompleta' : '## Bugbot: review incomplete'
+        : projection.outcome === 'partial' || projection.outcome === 'failed' || unknown > 0
+            ? language === 'es-ES' ? '## Bugbot: la revisión necesita verificación' : '## Bugbot: review needs verification'
+            : actionable.length === 0
+                ? language === 'es-ES' ? '## Bugbot: revisión completada' : '## Bugbot: review complete'
+                : language === 'es-ES'
+                    ? `## Bugbot: ${actionable.length} hallazgo(s) requieren atención`
+                    : `## Bugbot: ${actionable.length} finding(s) need attention`;
     const status = partialCoverage
         ? language === 'es-ES'
             ? `La revisión de \`${shortHead}\` tiene cobertura parcial; no puede declarar limpio el pull request completo.`
@@ -811,35 +820,26 @@ function renderBugbotStatusCard(projection, locale, links) {
                     : language === 'es-ES'
                         ? `${actionable.length} hallazgo(s) requieren atención en \`${shortHead}\`.`
                         : `${actionable.length} finding(s) require attention on \`${shortHead}\`.`;
-    const action = projection.outcome === 'partial' || projection.outcome === 'failed' || unknown > 0
+    const action = partialCoverage
         ? language === 'es-ES'
-            ? 'Ejecuta `/copilot recheck`; los detalles técnicos indican qué quedó pendiente.'
-            : 'Run `/copilot recheck`; the technical details identify what remains pending.'
-        : actionable.length === 0
-            ? language === 'es-ES' ? 'No se requiere ninguna acción.' : 'No action required.'
-            : language === 'es-ES'
-                ? 'Revisa los threads enlazados o comenta `/copilot fix all`.'
-                : 'Review the linked threads or comment `/copilot fix all`.';
-    const stateHeading = language === 'es-ES' ? '### Estado actual' : '### Current state';
+            ? 'Revisa los elementos omitidos o reduce el alcance del PR. Repite la revisión solo después de cambiar el alcance, los límites o el acceso.'
+            : 'Inspect the omitted items or reduce the PR scope. Rerun the review only after changing the scope, limits, or access.'
+        : projection.outcome === 'partial' || projection.outcome === 'failed' || unknown > 0
+            ? language === 'es-ES'
+                ? 'Corrige la causa indicada y ejecuta `/copilot recheck` una vez.'
+                : 'Correct the reported cause, then run `/copilot recheck` once.'
+            : actionable.length > 0
+                ? language === 'es-ES'
+                    ? 'Revisa los threads enlazados o comenta `/copilot fix all`.'
+                    : 'Review the linked threads or comment `/copilot fix all`.'
+                : undefined;
     const findingsHeading = language === 'es-ES' ? '### Hallazgos' : '### Findings';
-    const coverageHeading = language === 'es-ES' ? '### Cobertura' : '### Coverage';
-    const stateColumn = language === 'es-ES' ? 'Estado' : 'State';
-    const countColumn = language === 'es-ES' ? 'Cantidad' : 'Count';
-    const rows = [
-        ['Open / reopened', projection.counts.open + projection.counts.reopened],
-        ['Verification required', projection.counts['verification-required']],
-        ['Fixed', projection.counts.fixed],
-        ['Obsolete', projection.counts.obsolete],
-        ['Dismissed', projection.counts.dismissed],
-        ['Unknown', projection.counts.unknown],
-    ].map(([state, count]) => `| ${state} | ${count} |`);
-    const findingRows = projection.findings.length === 0
-        ? [language === 'es-ES' ? '- No hay hallazgos registrados.' : '- No findings recorded.']
-        : projection.findings.slice(0, 20).map((finding) => renderFindingRow(finding));
-    if (projection.findings.length > 20) {
+    const visibleFindings = projection.findings.filter((finding) => (0, review_state_1.isBugbotActionableState)(finding.state) || finding.state === 'unknown');
+    const findingRows = visibleFindings.slice(0, 20).map((finding) => renderFindingRow(finding));
+    if (visibleFindings.length > 20) {
         findingRows.push(language === 'es-ES'
-            ? `- …y ${projection.findings.length - 20} más.`
-            : `- …and ${projection.findings.length - 20} more.`);
+            ? `- …y ${visibleFindings.length - 20} más.`
+            : `- …and ${visibleFindings.length - 20} more.`);
     }
     const navigation = [
         `[Pull request](${links.pullRequestUrl})`,
@@ -854,47 +854,29 @@ function renderBugbotStatusCard(projection, locale, links) {
         const capped = source.providerLimitReached ? ', provider page limit reached; additional older records are uncounted' : '';
         return `- ${source.source}: ${source.status}; retained=${source.itemsRetained}${omitted}${truncated}${capped}`;
     });
-    const details = projection.errors.length === 0
-        ? (language === 'es-ES' ? 'Ninguna operación pendiente.' : 'No pending operations.')
-        : projection.errors
-            .slice(0, 10)
-            .map((error) => `- ${(0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(error, 500)}`)
-            .join('\n');
-    return [
+    const lines = [
+        (0, publication_identity_policy_1.buildPublicationMarker)({
+            identity: { topic: 'bugbot', target: { kind: 'pull-request', number: projection.pullRequestNumber }, key: 'aggregate' },
+            sourceVersion: `head:${projection.verifiedHeadSha}`,
+            digest: projection.digest,
+        }),
         buildBugbotStatusMarker(projection),
         heading,
         '',
         `> **${language === 'es-ES' ? 'Estado actual' : 'Current status'}:** ${status}`,
-        '>',
-        `> **${language === 'es-ES' ? 'Acción requerida' : 'Action required'}:** ${action}`,
-        '',
-        stateHeading,
-        '',
-        `| ${stateColumn} | ${countColumn} |`,
-        '| --- | ---: |',
-        ...rows,
-        '',
-        findingsHeading,
-        '',
-        ...findingRows,
-        '',
-        coverageHeading,
-        '',
-        ...(coverageRows.length > 0
-            ? coverageRows
-            : [language === 'es-ES' ? '- Cobertura completa; ningún límite alcanzado.' : '- Complete coverage; no limit reached.']),
-        '',
-        navigation,
-        '',
-        '<details>',
-        `<summary>${language === 'es-ES' ? 'Detalles técnicos' : 'Technical details'}</summary>`,
-        '',
-        `Projection: ${projection.outcome} · Analyzed head: ${projection.analyzedHeadSha} · Digest: ${projection.digest}`,
-        '',
-        details,
-        '',
-        '</details>',
-    ].join('\n');
+    ];
+    if (action)
+        lines.push('>', `> **${language === 'es-ES' ? 'Acción' : 'Action'}:** ${action}`);
+    if (findingRows.length > 0)
+        lines.push('', findingsHeading, '', ...findingRows);
+    if (partialCoverage) {
+        lines.push('', '<details>', `<summary>${language === 'es-ES' ? 'Cobertura incompleta' : 'Incomplete coverage'}</summary>`, '', ...coverageRows, '', '</details>');
+    }
+    if (projection.errors.length > 0) {
+        lines.push('', '<details>', `<summary>${language === 'es-ES' ? 'Recuperación' : 'Recovery details'}</summary>`, '', ...projection.errors.slice(0, 10).map((error) => `- ${(0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(error, 500)}`), '', '</details>');
+    }
+    lines.push('', navigation);
+    return lines.join('\n');
 }
 function renderBugbotReviewSnapshot(originalBody, input) {
     const language = normalizeBugbotPresentationLocale(input.locale);
@@ -1028,6 +1010,153 @@ function neutralizeGithubControls(value) {
         .replace(/(^|\n)([ \t]*)\/(?!\/)/g, '$1$2\u200b/')
         .replace(/@(?=[a-zA-Z0-9][a-zA-Z0-9-])/g, '@\u200b');
 }
+
+
+/***/ }),
+
+/***/ 5403:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PUBLICATION_REPLY_MARKER_PREFIX = exports.PUBLICATION_DUPLICATE_MARKER_PREFIX = exports.PUBLICATION_MARKER_PREFIX = exports.PUBLICATION_SCHEMA = void 0;
+exports.createSemanticDigest = createSemanticDigest;
+exports.buildPublicationMarker = buildPublicationMarker;
+exports.parsePublicationMarker = parsePublicationMarker;
+exports.buildPublicationReplyMarker = buildPublicationReplyMarker;
+exports.parsePublicationReplyMarker = parsePublicationReplyMarker;
+exports.buildDuplicateMarker = buildDuplicateMarker;
+const node_crypto_1 = __nccwpck_require__(6005);
+const github_publication_1 = __nccwpck_require__(5793);
+exports.PUBLICATION_SCHEMA = '1';
+exports.PUBLICATION_MARKER_PREFIX = 'copilot:publication';
+exports.PUBLICATION_DUPLICATE_MARKER_PREFIX = 'copilot:publication-duplicate';
+exports.PUBLICATION_REPLY_MARKER_PREFIX = 'copilot:reply';
+const SAFE_VALUE = /^[A-Za-z0-9._:-]{1,128}$/u;
+const DIGEST = /^[a-f0-9]{8,64}$/u;
+function createSemanticDigest(value) {
+    return (0, node_crypto_1.createHash)('sha256').update(stableSerialize(value), 'utf8').digest('hex').slice(0, 16);
+}
+function buildPublicationMarker(marker) {
+    const target = (0, github_publication_1.publicationTargetToken)(marker.identity.target);
+    for (const value of [marker.identity.topic, target, marker.identity.key, marker.sourceVersion]) {
+        if (!SAFE_VALUE.test(value))
+            throw new Error('Publication marker contains an unsafe identity value.');
+    }
+    if (!DIGEST.test(marker.digest))
+        throw new Error('Publication marker contains an invalid digest.');
+    return `<!-- ${exports.PUBLICATION_MARKER_PREFIX} schema="${exports.PUBLICATION_SCHEMA}" topic="${marker.identity.topic}" target="${target}" key="${marker.identity.key}" source="${marker.sourceVersion}" digest="${marker.digest}" -->`;
+}
+function parsePublicationMarker(body) {
+    if (typeof body !== 'string')
+        return undefined;
+    const match = body.match(/<!-- copilot:publication schema="1" topic="([A-Za-z0-9._:-]{1,128})" target="(issue|pr):(\d+)" key="([A-Za-z0-9._:-]{1,128})" source="([A-Za-z0-9._:-]{1,128})" digest="([a-f0-9]{8,64})" -->/u);
+    if (!match)
+        return undefined;
+    const topic = match[1];
+    if (!github_publication_1.PUBLICATION_TOPICS.includes(topic))
+        return undefined;
+    const number = Number(match[3]);
+    if (!Number.isSafeInteger(number) || number < 1)
+        return undefined;
+    return Object.freeze({
+        identity: Object.freeze({
+            topic,
+            target: Object.freeze({ kind: match[2] === 'pr' ? 'pull-request' : 'issue', number }),
+            key: match[4],
+        }),
+        sourceVersion: match[5],
+        digest: match[6],
+    });
+}
+function buildPublicationReplyMarker(marker) {
+    for (const value of [marker.target, marker.correlationId, marker.messageKey]) {
+        if (!SAFE_VALUE.test(value))
+            throw new Error('Publication reply marker contains an unsafe identity value.');
+    }
+    if (!DIGEST.test(marker.digest))
+        throw new Error('Publication reply marker contains an invalid digest.');
+    return `<!-- ${exports.PUBLICATION_REPLY_MARKER_PREFIX} schema="${exports.PUBLICATION_SCHEMA}" target="${marker.target}" correlation="${marker.correlationId}" key="${marker.messageKey}" digest="${marker.digest}" -->`;
+}
+function parsePublicationReplyMarker(body) {
+    if (typeof body !== 'string')
+        return undefined;
+    const match = body.match(/<!-- copilot:reply schema="1" target="((?:issue|pr):\d+)" correlation="([A-Za-z0-9._:-]{1,128})" key="([A-Za-z0-9._:-]{1,128})" digest="([a-f0-9]{8,64})" -->/u);
+    if (!match)
+        return undefined;
+    return Object.freeze({ target: match[1], correlationId: match[2], messageKey: match[3], digest: match[4] });
+}
+function buildDuplicateMarker(canonicalCommentId) {
+    if (!Number.isSafeInteger(canonicalCommentId) || canonicalCommentId < 1) {
+        throw new Error('Canonical comment id must be a positive integer.');
+    }
+    return `<!-- ${exports.PUBLICATION_DUPLICATE_MARKER_PREFIX} schema="${exports.PUBLICATION_SCHEMA}" canonical="${canonicalCommentId}" -->`;
+}
+function stableSerialize(value) {
+    if (Array.isArray(value))
+        return `[${value.map(stableSerialize).join(',')}]`;
+    if (value && typeof value === 'object') {
+        const record = value;
+        return `{${Object.keys(record).sort().map(key => `${JSON.stringify(key)}:${stableSerialize(record[key])}`).join(',')}}`;
+    }
+    return JSON.stringify(value) ?? 'null';
+}
+
+
+/***/ }),
+
+/***/ 4223:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SPANISH_PUBLICATION_CATALOG = exports.ENGLISH_PUBLICATION_CATALOG = void 0;
+exports.resolveStaticPublicationCatalog = resolveStaticPublicationCatalog;
+const locale_1 = __nccwpck_require__(5386);
+const ENGLISH = Object.freeze({
+    locale: 'en-US',
+    implementationPlan: 'Implementation plan',
+    planReady: 'Ready to start. No action is required from maintainers before implementation.',
+    planAcceptance: 'Acceptance',
+    commandsHint: 'Need something else? Mention the bot with a question or use `/copilot help`.',
+    progress: 'Progress',
+    progressState: Object.freeze({ 'not-started': 'not started', 'in-progress': 'in progress', complete: 'complete' }),
+    currentStatus: 'Current status',
+    next: 'Next',
+    noActionRequired: 'No action required.',
+    supersededStatus: 'This status was superseded by the canonical card.',
+    viewCurrentStatus: 'View current status',
+    duplicateReply: 'This duplicate response was suppressed.',
+    viewOriginalResponse: 'View the original response',
+});
+const SPANISH = Object.freeze({
+    locale: 'es-ES',
+    implementationPlan: 'Plan de implementación',
+    planReady: 'Listo para comenzar. No se requiere ninguna acción de mantenimiento antes de la implementación.',
+    planAcceptance: 'Aceptación',
+    commandsHint: '¿Necesitas algo más? Menciona al bot con una pregunta o usa `/copilot help`.',
+    progress: 'Progreso',
+    progressState: Object.freeze({ 'not-started': 'sin iniciar', 'in-progress': 'en curso', complete: 'completado' }),
+    currentStatus: 'Estado actual',
+    next: 'Siguiente paso',
+    noActionRequired: 'No se requiere ninguna acción.',
+    supersededStatus: 'Este estado fue sustituido por la tarjeta canónica.',
+    viewCurrentStatus: 'Ver estado actual',
+    duplicateReply: 'Esta respuesta duplicada se ha omitido.',
+    viewOriginalResponse: 'Ver la respuesta original',
+});
+function resolveStaticPublicationCatalog(locale) {
+    const requestedLocale = (0, locale_1.canonicalizeLocaleTag)(locale || locale_1.DEFAULT_REPOSITORY_LOCALE);
+    if ((0, locale_1.baseLanguage)(requestedLocale) === 'es') {
+        return Object.freeze({ requestedLocale, catalog: SPANISH, fallback: false });
+    }
+    if ((0, locale_1.baseLanguage)(requestedLocale) === 'en') {
+        return Object.freeze({ requestedLocale, catalog: ENGLISH, fallback: false });
+    }
+    return Object.freeze({ requestedLocale, catalog: ENGLISH, fallback: true });
+}
+exports.ENGLISH_PUBLICATION_CATALOG = ENGLISH;
+exports.SPANISH_PUBLICATION_CATALOG = SPANISH;
 
 
 /***/ }),
@@ -2753,7 +2882,6 @@ function isRecord(value) {
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.publishFindings = publishFindings;
-const comment_watermark_1 = __nccwpck_require__(3623);
 const finding_1 = __nccwpck_require__(1011);
 const publish_issue_finding_comment_1 = __nccwpck_require__(4950);
 const publish_pr_review_comments_1 = __nccwpck_require__(352);
@@ -2761,16 +2889,12 @@ const publish_overflow_comment_1 = __nccwpck_require__(974);
 async function publishFindings(param) {
     const { operation, context, findings, commitSha, overflowCount = 0, overflowTitles = [], ports } = param;
     const { existingByFindingId, canonicalPullRequest, prContext } = context;
-    const watermark = commitSha
-        ? (0, comment_watermark_1.getCommentWatermark)({ commitSha, owner: operation.repository.owner, repo: operation.repository.name })
-        : (0, comment_watermark_1.getCommentWatermark)();
     const reviewPublisher = prContext && canonicalPullRequest
         ? new publish_pr_review_comments_1.PullRequestReviewCommentPublisher({
             repository: ports.pullRequestComments,
             operation,
             openPrNumber: canonicalPullRequest.number,
             prContext,
-            watermark,
             ruleSources: context.reviewRuleSources,
             omittedRuleCount: context.omittedReviewRules,
         })
@@ -2869,7 +2993,7 @@ class PullRequestReviewCommentPublisher {
             }
             // Existing comments do not carry enough anchor metadata to prove that a
             // GitHub suggestion is still attached to a RIGHT-side changed line.
-            const body = `${(0, bugbot_finding_marker_policy_1.buildCommentBody)(finding, false, undefined, { includeSuggestedChange: false })}\n\n${this.options.watermark}`;
+            const body = (0, bugbot_finding_marker_policy_1.buildCommentBody)(finding, false, undefined, { includeSuggestedChange: false });
             await this.options.repository.updatePullRequestReviewComment(existing.pullRequest.commentIdentity, body);
             if (existing.pullRequest.resolved || existing.pullRequest.threadResolved === true) {
                 // Persist the open marker before reopening the native thread. This
@@ -2883,7 +3007,7 @@ class PullRequestReviewCommentPublisher {
         const findingBody = (0, bugbot_finding_marker_policy_1.buildCommentBody)(finding, false, undefined, {
             includeSuggestedChange: allowSuggestedChanges && anchor?.subjectType === 'line' && anchor.side === 'RIGHT',
         });
-        const body = `${findingBody}\n\n${this.options.watermark}`;
+        const body = findingBody;
         this.findingsToCreate.push(finding);
         if (!anchor) {
             this.unanchoredBodies.push(findingBody);
@@ -2910,7 +3034,7 @@ class PullRequestReviewCommentPublisher {
         if (this.findingsToCreate.length === 0 && overflowCount === 0)
             return;
         const { repository, operation, openPrNumber, prContext } = this.options;
-        await repository.createReviewWithComments(openPrNumber, prContext.prHeadSha, buildReviewSummary(this.findingsToCreate, this.commentsToCreate.length, this.unanchoredBodies, overflowCount, overflowTitles, this.options.watermark, operation.analysis.reviewConfiguration.traceRules
+        await repository.createReviewWithComments(openPrNumber, prContext.prHeadSha, buildReviewSummary(this.findingsToCreate, this.commentsToCreate.length, this.unanchoredBodies, overflowCount, overflowTitles, operation.analysis.reviewConfiguration.traceRules
             ? this.options.ruleSources ?? []
             : [], operation.analysis.reviewConfiguration.traceRules
             ? this.options.omittedRuleCount ?? 0
@@ -2949,7 +3073,7 @@ function resolveReviewAnchor(reportedLine, reportedEndLine, reportedPath, contex
     const fallback = context.prFiles.find((file) => file.status !== 'removed') ?? context.prFiles[0];
     return fallback ? { path: fallback.filename, subjectType: 'file' } : undefined;
 }
-function buildReviewSummary(findings, inlineCount, unanchoredBodies, overflowCount, overflowTitles, watermark, ruleSources = [], omittedRuleCount = 0, analyzedHeadSha = 'unknown', locale = 'en-US') {
+function buildReviewSummary(findings, inlineCount, unanchoredBodies, overflowCount, overflowTitles, ruleSources = [], omittedRuleCount = 0, analyzedHeadSha = 'unknown', locale = 'en-US') {
     const findingLines = findings.map((finding) => {
         const severity = sanitizeSummaryText(finding.severity, 32) || "unspecified";
         const title = sanitizeSummaryText(finding.title, 500) || 'Potential problem';
@@ -2985,7 +3109,6 @@ function buildReviewSummary(findings, inlineCount, unanchoredBodies, overflowCou
             rows.push(`| — | ${omittedRuleCount} omitted by duplicate, empty, or combined-budget policy |`);
         sections.push(`### Review configuration\n\nRules in effective precedence order:\n\n| Source | Status |\n| --- | --- |\n${rows.join('\n')}`);
     }
-    sections.push(watermark);
     return sections.join("\n\n");
 }
 function sanitizeSummaryText(value, maximum) {
@@ -3368,6 +3491,8 @@ exports.synchronizeBugbotReviewPresentation = synchronizeBugbotReviewPresentatio
 const bugbot_review_presentation_policy_1 = __nccwpck_require__(3799);
 const bugbot_review_ownership_policy_1 = __nccwpck_require__(3288);
 const review_projection_1 = __nccwpck_require__(859);
+const publication_identity_policy_1 = __nccwpck_require__(5403);
+const publication_message_catalog_1 = __nccwpck_require__(4223);
 const MAX_REVIEW_UPDATES_PER_RUN = 20;
 const REVIEW_UPDATE_CONCURRENCY = 4;
 /**
@@ -3450,10 +3575,13 @@ async function synchronizeStatusCard(input, projection, navigation) {
         failed = true;
     }
     const duplicateResults = await mapWithConcurrency(trustedStatusComments.slice(1), REVIEW_UPDATE_CONCURRENCY, async (duplicate) => {
+        const messages = (0, publication_message_catalog_1.resolveStaticPublicationCatalog)(input.target.locale).catalog;
         await input.ports.comments.updateComment(input.target.pullRequestNumber, duplicate.id, [
-            '## 🤖 Bugbot status moved',
+            (0, publication_identity_policy_1.buildDuplicateMarker)(canonical?.id ?? duplicate.id),
             '',
-            `This duplicate status card is no longer current. [Use the canonical PR status](${navigation.pullRequestUrl}).`,
+            messages.supersededStatus,
+            '',
+            `[${messages.viewCurrentStatus}](${navigation.pullRequestUrl}).`,
         ].join('\n'), { commitSha: input.snapshot.verifiedHeadSha });
     });
     if (duplicateResults.includes('rejected'))
@@ -4509,6 +4637,36 @@ function countActionableBugbotFindings(counts) {
 
 /***/ }),
 
+/***/ 5793:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PUBLICATION_TOPICS = void 0;
+exports.publicationIdentityEquals = publicationIdentityEquals;
+exports.publicationTargetToken = publicationTargetToken;
+exports.PUBLICATION_TOPICS = [
+    'plan',
+    'progress',
+    'branch-sync',
+    'bugbot',
+    'release',
+    'inactivity',
+    'access-policy',
+];
+function publicationIdentityEquals(left, right) {
+    return left.topic === right.topic
+        && left.target.kind === right.target.kind
+        && left.target.number === right.target.number
+        && left.key === right.key;
+}
+function publicationTargetToken(target) {
+    return `${target.kind === 'pull-request' ? 'pr' : 'issue'}:${target.number}`;
+}
+
+
+/***/ }),
+
 /***/ 4403:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -4519,6 +4677,91 @@ function githubUsersMatch(left, right) {
     const normalizedLeft = left.trim().toLocaleLowerCase('en-US');
     const normalizedRight = right.trim().toLocaleLowerCase('en-US');
     return normalizedLeft.length > 0 && normalizedLeft === normalizedRight;
+}
+
+
+/***/ }),
+
+/***/ 5386:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.InvalidLocaleTagError = exports.MAX_LOCALE_TAG_LENGTH = exports.DEFAULT_REPOSITORY_LOCALE = void 0;
+exports.canonicalizeLocaleTag = canonicalizeLocaleTag;
+exports.resolveLocaleProfile = resolveLocaleProfile;
+exports.localeForScope = localeForScope;
+exports.localeLanguagesMatch = localeLanguagesMatch;
+exports.baseLanguage = baseLanguage;
+exports.DEFAULT_REPOSITORY_LOCALE = 'en-US';
+exports.MAX_LOCALE_TAG_LENGTH = 255;
+class InvalidLocaleTagError extends Error {
+    constructor(input) {
+        super(`Invalid locale tag: ${JSON.stringify(input)}.`);
+        this.name = 'InvalidLocaleTagError';
+        this.input = input;
+    }
+}
+exports.InvalidLocaleTagError = InvalidLocaleTagError;
+/**
+ * Canonicalizes one BCP-47 locale. Underscores are accepted for the documented
+ * migration window, but every value leaving this boundary uses hyphens.
+ */
+function canonicalizeLocaleTag(value) {
+    if (typeof value !== 'string')
+        throw new InvalidLocaleTagError(String(value));
+    const normalized = value.trim().replace(/_/gu, '-');
+    if (!normalized || normalized.length > exports.MAX_LOCALE_TAG_LENGTH) {
+        throw new InvalidLocaleTagError(value);
+    }
+    if (/^x(?:-|$)/iu.test(normalized) || /^und(?:-|$)/iu.test(normalized)) {
+        throw new InvalidLocaleTagError(value);
+    }
+    try {
+        const [canonical] = Intl.getCanonicalLocales(normalized);
+        if (!canonical)
+            throw new InvalidLocaleTagError(value);
+        return canonical;
+    }
+    catch (error) {
+        if (error instanceof InvalidLocaleTagError)
+            throw error;
+        throw new InvalidLocaleTagError(value);
+    }
+}
+function resolveLocaleProfile(repositoryLocale, issueLocale = '', pullRequestLocale = '') {
+    const repository = canonicalizeLocaleTag(typeof repositoryLocale === 'string' && repositoryLocale.trim()
+        ? repositoryLocale
+        : exports.DEFAULT_REPOSITORY_LOCALE);
+    const issueOverride = optionalLocale(issueLocale);
+    const pullRequestOverride = optionalLocale(pullRequestLocale);
+    return Object.freeze({
+        repository,
+        issue: issueOverride ?? repository,
+        pullRequest: pullRequestOverride ?? repository,
+        ...(issueOverride ? { issueOverride } : {}),
+        ...(pullRequestOverride ? { pullRequestOverride } : {}),
+    });
+}
+function localeForScope(profile, scope) {
+    if (scope === 'issue')
+        return profile.issue;
+    if (scope === 'pull-request')
+        return profile.pullRequest;
+    return profile.repository;
+}
+function localeLanguagesMatch(left, right) {
+    return baseLanguage(canonicalizeLocaleTag(left)) === baseLanguage(canonicalizeLocaleTag(right));
+}
+function baseLanguage(locale) {
+    return new Intl.Locale(canonicalizeLocaleTag(locale)).language.toLowerCase();
+}
+function optionalLocale(value) {
+    if (value == null || value === '')
+        return undefined;
+    if (typeof value !== 'string')
+        throw new InvalidLocaleTagError(String(value));
+    return value.trim() ? canonicalizeLocaleTag(value) : undefined;
 }
 
 
@@ -5656,28 +5899,10 @@ function format(value) {
 /***/ ((__unused_webpack_module, exports) => {
 
 
-/**
- * Watermark appended to comments (issues and PRs) to attribute Copilot.
- * Bugbot comments include commit link and note about auto-update on new commits.
- */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.COPILOT_MARKETPLACE_URL = void 0;
-exports.getCommentWatermark = getCommentWatermark;
 exports.stripTrailingCommentWatermarks = stripTrailingCommentWatermarks;
-exports.COPILOT_MARKETPLACE_URL = 'https://github.com/marketplace/actions/copilot-github-with-super-powers';
-const DEFAULT_WATERMARK = `<sup>Made with ❤️ by [vypdev/copilot](${exports.COPILOT_MARKETPLACE_URL})</sup>`;
-function commitUrl(owner, repo, sha) {
-    return `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commit/${sha}`;
-}
-function getCommentWatermark(options) {
-    if (options?.commitSha && options?.owner && options?.repo) {
-        const url = commitUrl(options.owner, options.repo, options.commitSha);
-        return `<sup>Written by [vypdev/copilot](${exports.COPILOT_MARKETPLACE_URL}) for commit [${options.commitSha}](${url}). This will update automatically on new commits.</sup>`;
-    }
-    return DEFAULT_WATERMARK;
-}
 const TRAILING_COMMENT_WATERMARK = /\s*<sup>(?:Made with ❤️ by|Written by) \[vypdev\/copilot\]\(https:\/\/github\.com\/marketplace\/actions\/copilot-github-with-super-powers\)[^<]*<\/sup>\s*$/u;
-/** Removes all trailing Copilot watermarks before a read-modify-write update. */
+/** Removes legacy trailing Copilot watermarks before a read-modify-write update. */
 function stripTrailingCommentWatermarks(comment) {
     let stripped = comment;
     while (TRAILING_COMMENT_WATERMARK.test(stripped)) {

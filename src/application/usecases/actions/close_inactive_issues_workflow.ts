@@ -5,6 +5,8 @@ import type { BoundIssueInactivityQueryPort, IssueInactivityClockPort } from '..
 import type { InactivityContext } from '../push_single_action_contexts';
 import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
 import { ApplicationError, toApplicationError } from '../../errors/application_error';
+import { baseLanguage } from '../../../domain/locale';
+import { buildPublicationMarker, createSemanticDigest } from '../../policies/publication_identity_policy';
 
 export interface CloseInactiveIssuesWorkflowDependencies {
     readonly issueQueryPort: BoundIssueInactivityQueryPort;
@@ -13,9 +15,6 @@ export interface CloseInactiveIssuesWorkflowDependencies {
 }
 
 const TASK_ID = 'CloseInactiveIssuesUseCase';
-const INACTIVITY_COMMENT = (thresholdHours: number): string =>
-    `This issue was automatically closed due to inactivity while waiting for a response. No activity was detected for at least **${thresholdHours} hours**. Reopen it and add a comment if it still needs attention.`;
-
 /** Scans waiting issues and closes only candidates that remain inactive. */
 export async function runCloseInactiveIssuesWorkflow(
     param: InactivityContext,
@@ -77,7 +76,7 @@ export async function runCloseInactiveIssuesWorkflow(
                 closedCount++;
                 await dependencies.issueClosurePort.addComment(
                     candidate.number,
-                    INACTIVITY_COMMENT(thresholdHours),
+                    buildInactivityExplanation(candidate, thresholdHours, param.locale),
                 );
                 logInfo(`Issue #${candidate.number} closed after inactivity.`);
             } catch (error) {
@@ -114,6 +113,39 @@ export async function runCloseInactiveIssuesWorkflow(
             errors: [toApplicationError(error, 'provider.unavailable', `${message} ${safeErrorMessage(error)}`)],
         })];
     }
+}
+
+function buildInactivityExplanation(
+    candidate: IssueActivitySnapshot,
+    thresholdHours: number,
+    locale: string,
+): string {
+    const digest = createSemanticDigest({ updatedAt: candidate.updatedAt, thresholdHours });
+    const marker = buildPublicationMarker({
+        identity: { topic: 'inactivity', target: { kind: 'issue', number: candidate.number }, key: 'closure' },
+        sourceVersion: `policy:${digest}`,
+        digest,
+    });
+    if (baseLanguage(locale) === 'es') {
+        return [
+            marker,
+            '',
+            '## Issue cerrada por inactividad',
+            '',
+            `No se detectó actividad durante al menos **${thresholdHours} horas** mientras esta issue esperaba una respuesta.`,
+            '',
+            'Si todavía necesita atención, vuelve a abrirla y añade un comentario con el contexto actualizado.',
+        ].join('\n');
+    }
+    return [
+        marker,
+        '',
+        '## Issue closed after inactivity',
+        '',
+        `No activity was detected for at least **${thresholdHours} hours** while this issue was waiting for a response.`,
+        '',
+        'If it still needs attention, reopen it and add a comment with the current context.',
+    ].join('\n');
 }
 
 async function listCandidates(

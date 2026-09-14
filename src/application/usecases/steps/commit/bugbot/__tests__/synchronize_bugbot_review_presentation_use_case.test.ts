@@ -100,7 +100,7 @@ describe('synchronizeBugbotReviewPresentation', () => {
     expect(result.projection.outcome).toBe('complete');
     expect(test.addComment).toHaveBeenCalledWith(
       10,
-      expect.stringContaining('No active findings'),
+      expect.stringContaining('Bugbot: review complete'),
       { commitSha: head },
     );
   });
@@ -232,7 +232,7 @@ describe('synchronizeBugbotReviewPresentation', () => {
     expect(test.updateComment).toHaveBeenCalledWith(
       10,
       3,
-      expect.stringContaining('no longer current'),
+      expect.stringContaining('superseded by the canonical card'),
       { commitSha: head },
     );
   });

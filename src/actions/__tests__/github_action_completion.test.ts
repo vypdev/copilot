@@ -283,9 +283,7 @@ describe('finishGithubAction', () => {
         );
 
         expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('UpdateTitleUseCase'));
-        expect(mockPublishInvoke).toHaveBeenCalledWith(expect.objectContaining({
-            genericCommentMode: 'omit-metadata-only',
-        }));
+        expect(mockPublishInvoke).toHaveBeenCalledWith(expect.objectContaining({ locale: 'en-US' }));
         expect(mockEvidencePublish).not.toHaveBeenCalled();
     });
 
@@ -312,9 +310,7 @@ describe('finishGithubAction', () => {
             { publish: mockSummaryPublish },
         );
 
-        expect(mockPublishInvoke).toHaveBeenCalledWith(expect.objectContaining({
-            genericCommentMode: 'omit-metadata-only',
-        }));
+        expect(mockPublishInvoke).toHaveBeenCalledWith(expect.objectContaining({ locale: 'en-US' }));
         expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('Title normalization failed.'));
         expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Title normalization failed.'));
     });

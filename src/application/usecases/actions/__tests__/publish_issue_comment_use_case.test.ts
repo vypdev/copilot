@@ -1,7 +1,6 @@
 import type { Execution } from '../../../../data/model/execution';
 import { ACTIONS } from '../../../../data/model/action_types';
 import { SingleAction } from '../../../../data/model/single_action';
-import { getCommentWatermark } from '../../../../utils/comment_watermark';
 import { PublishIssueCommentUseCase } from '../publish_issue_comment_use_case';
 import { projectIssueCommentActionContext } from '../../push_single_action_contexts';
 
@@ -57,7 +56,7 @@ describe('PublishIssueCommentUseCase', () => {
     it('appends after existing content without duplicating its Copilot watermark', async () => {
         listIssueComments.mockResolvedValue([{
             id: 101,
-            body: `Deployment started.\n\n${getCommentWatermark()}`,
+            body: 'Deployment started.\n\n<sup>Made with ❤️ by [vypdev/copilot](https://github.com/marketplace/actions/copilot-github-with-super-powers)</sup>',
         }]);
 
         const results = await useCase.invoke(execution('Deployment failed.', '101', 'append'));

@@ -349,9 +349,8 @@ describe('P2-D shared capability context projections', () => {
     } as never);
 
     results[0].steps[0] = 'Mutated';
-    publicationImages.issueAutomaticActions[0] = 'mutated.gif';
     expect(context.results[0].steps).toEqual(['Done']);
-    expect(context.presentation.images.issueAutomaticActions).toEqual(['issue.gif']);
+    expect(context).toMatchObject({ owner: undefined, repository: undefined, botLogin: '', locale: 'en-US' });
     expectDataOnly(context);
   });
 

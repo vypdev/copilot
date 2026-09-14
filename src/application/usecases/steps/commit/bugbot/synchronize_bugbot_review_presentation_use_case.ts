@@ -17,6 +17,8 @@ import {
   type OwnedBugbotReview,
 } from '../../../../policies/bugbot_review_ownership_policy';
 import { buildBugbotReviewProjection } from '../../../../../domain/bugbot/review_projection';
+import { buildDuplicateMarker } from '../../../../policies/publication_identity_policy';
+import { resolveStaticPublicationCatalog } from '../../../../policies/publication_message_catalog';
 
 const MAX_REVIEW_UPDATES_PER_RUN = 20;
 const REVIEW_UPDATE_CONCURRENCY = 4;
@@ -170,13 +172,16 @@ async function synchronizeStatusCard(
     trustedStatusComments.slice(1),
     REVIEW_UPDATE_CONCURRENCY,
     async (duplicate) => {
+      const messages = resolveStaticPublicationCatalog(input.target.locale).catalog;
       await input.ports.comments.updateComment(
         input.target.pullRequestNumber,
         duplicate.id,
         [
-          '## 🤖 Bugbot status moved',
+          buildDuplicateMarker(canonical?.id ?? duplicate.id),
           '',
-          `This duplicate status card is no longer current. [Use the canonical PR status](${navigation.pullRequestUrl}).`,
+          messages.supersededStatus,
+          '',
+          `[${messages.viewCurrentStatus}](${navigation.pullRequestUrl}).`,
         ].join('\n'),
         { commitSha: input.snapshot.verifiedHeadSha },
       );

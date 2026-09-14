@@ -4,6 +4,7 @@ import {
   bindBranchWorkflow,
   bindIssueAssignee,
   bindIssueClosure,
+  bindIssueState,
   bindIssueLabels,
   bindIssueTypeAssignment,
   bindLinkedBranchCommand,
@@ -55,8 +56,10 @@ describe('lifecycle capability repository bindings', () => {
     const setLabels = jest.fn().mockResolvedValue(undefined);
     const getPullRequestHeadSha = jest.fn().mockResolvedValue('sha-1');
     const closure = bindIssueClosure({ closeIssue, addComment }, binding);
+    const state = bindIssueState({ closeIssue }, binding);
     await closure.closeIssue(7);
     await closure.addComment(7, 'done');
+    await state.closeIssue(8);
     const selected = { name: 'Feature', description: 'Feature issue', color: 'GREEN' };
     await bindIssueTypeAssignment({ setIssueType }, binding).setIssueType(7, selected);
     const labels = bindIssueLabels({ getLabels, setLabels }, binding);
@@ -65,6 +68,7 @@ describe('lifecycle capability repository bindings', () => {
     const head = bindPullRequestHeadSha({ getPullRequestHeadSha }, binding);
     await expect(head.getPullRequestHeadSha(9)).resolves.toBe('sha-1');
     expect(closeIssue).toHaveBeenCalledWith('acme', 'demo', 7, 'secret');
+    expect(closeIssue).toHaveBeenCalledWith('acme', 'demo', 8, 'secret');
     expect(addComment).toHaveBeenCalledWith('acme', 'demo', 7, 'done', 'secret');
     expect(setIssueType).toHaveBeenCalledWith('acme', 'demo', 7, selected, 'secret');
     expect(setLabels).toHaveBeenCalledWith('acme', 'demo', 8, ['size: S'], 'secret');

@@ -103,6 +103,11 @@ Successful reports include the parent and working branches, verification count, 
 
 ## Why the normal commit workflow remains limited
 
-`copilot_commit.yml` is an issue-centric, agent-capable pipeline: it can publish commit summaries, calculate size/progress, and run Bugbot. Its default exclusion of `master` and `develop` avoids irrelevant issue lookup, agent provisioning, duplicate PR analysis, higher API/model usage, and bot feedback loops on integration branches.
+`copilot_commit.yml` is an issue-centric, agent-capable pipeline: it can
+calculate size/progress and run Bugbot. Pushes themselves stay silent; a
+purpose-specific progress or review surface is updated only when that outcome
+exists. Its default exclusion of `master` and `develop` avoids irrelevant issue
+lookup, agent provisioning, duplicate PR analysis, higher API/model usage, and
+bot feedback loops on integration branches.
 
 The lightweight observer provides the useful part of all-branch visibility without broadening that expensive workflow. Repositories may still remove the commit-workflow exclusions deliberately, but branch synchronization does not require doing so.

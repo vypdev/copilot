@@ -1,5 +1,5 @@
 import { Result } from "../../../../data/model/result";
-import type { BoundIssueClosurePort } from "../../../../application/ports/issue_lifecycle_ports";
+import type { BoundIssueStatePort } from "../../../../application/ports/issue_lifecycle_ports";
 import { logDebugInfo, logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
@@ -9,7 +9,7 @@ import type { CloseIssueAfterMergeContext } from '../../issue_workflow_context';
 export class CloseIssueAfterMergingUseCase implements ParamUseCase<CloseIssueAfterMergeContext, Result[]> {
     taskId: string = 'CloseIssueAfterMergingUseCase';
     
-    constructor(private readonly issueRepository: BoundIssueClosurePort) {}
+    constructor(private readonly issueRepository: BoundIssueStatePort) {}
 
     async invoke(param: CloseIssueAfterMergeContext): Promise<Result[]> {
         logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`)
@@ -28,10 +28,6 @@ export class CloseIssueAfterMergingUseCase implements ParamUseCase<CloseIssueAft
             const closed = await this.issueRepository.closeIssue(param.issueNumber);
             if (closed) {
                 logInfo(`Issue #${param.issueNumber} closed after merging PR #${param.pullRequestNumber}.`);
-                await this.issueRepository.addComment(
-                    param.issueNumber,
-                    `This issue was closed after merging #${param.pullRequestNumber}.`,
-                )
                 result.push(
                     new Result({
                         id: this.taskId,

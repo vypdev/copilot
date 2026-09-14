@@ -1,0 +1,90 @@
+import { createHash } from 'node:crypto';
+import {
+    PUBLICATION_TOPICS,
+    publicationTargetToken,
+    type PublicationIdentity,
+    type PublicationTopic,
+} from '../../domain/github_publication';
+
+export const PUBLICATION_SCHEMA = '1';
+export const PUBLICATION_MARKER_PREFIX = 'copilot:publication';
+export const PUBLICATION_DUPLICATE_MARKER_PREFIX = 'copilot:publication-duplicate';
+export const PUBLICATION_REPLY_MARKER_PREFIX = 'copilot:reply';
+const SAFE_VALUE = /^[A-Za-z0-9._:-]{1,128}$/u;
+const DIGEST = /^[a-f0-9]{8,64}$/u;
+
+export interface PublicationMarker {
+    readonly identity: PublicationIdentity;
+    readonly sourceVersion: string;
+    readonly digest: string;
+}
+
+export interface PublicationReplyMarker {
+    readonly target: string;
+    readonly correlationId: string;
+    readonly messageKey: string;
+    readonly digest: string;
+}
+
+export function createSemanticDigest(value: unknown): string {
+    return createHash('sha256').update(stableSerialize(value), 'utf8').digest('hex').slice(0, 16);
+}
+
+export function buildPublicationMarker(marker: PublicationMarker): string {
+    const target = publicationTargetToken(marker.identity.target);
+    for (const value of [marker.identity.topic, target, marker.identity.key, marker.sourceVersion]) {
+        if (!SAFE_VALUE.test(value)) throw new Error('Publication marker contains an unsafe identity value.');
+    }
+    if (!DIGEST.test(marker.digest)) throw new Error('Publication marker contains an invalid digest.');
+    return `<!-- ${PUBLICATION_MARKER_PREFIX} schema="${PUBLICATION_SCHEMA}" topic="${marker.identity.topic}" target="${target}" key="${marker.identity.key}" source="${marker.sourceVersion}" digest="${marker.digest}" -->`;
+}
+
+export function parsePublicationMarker(body: string | null | undefined): PublicationMarker | undefined {
+    if (typeof body !== 'string') return undefined;
+    const match = body.match(/<!-- copilot:publication schema="1" topic="([A-Za-z0-9._:-]{1,128})" target="(issue|pr):(\d+)" key="([A-Za-z0-9._:-]{1,128})" source="([A-Za-z0-9._:-]{1,128})" digest="([a-f0-9]{8,64})" -->/u);
+    if (!match) return undefined;
+    const topic = match[1] as PublicationTopic;
+    if (!PUBLICATION_TOPICS.includes(topic)) return undefined;
+    const number = Number(match[3]);
+    if (!Number.isSafeInteger(number) || number < 1) return undefined;
+    return Object.freeze({
+        identity: Object.freeze({
+            topic,
+            target: Object.freeze({ kind: match[2] === 'pr' ? 'pull-request' : 'issue', number }),
+            key: match[4],
+        }),
+        sourceVersion: match[5],
+        digest: match[6],
+    });
+}
+
+export function buildPublicationReplyMarker(marker: PublicationReplyMarker): string {
+    for (const value of [marker.target, marker.correlationId, marker.messageKey]) {
+        if (!SAFE_VALUE.test(value)) throw new Error('Publication reply marker contains an unsafe identity value.');
+    }
+    if (!DIGEST.test(marker.digest)) throw new Error('Publication reply marker contains an invalid digest.');
+    return `<!-- ${PUBLICATION_REPLY_MARKER_PREFIX} schema="${PUBLICATION_SCHEMA}" target="${marker.target}" correlation="${marker.correlationId}" key="${marker.messageKey}" digest="${marker.digest}" -->`;
+}
+
+export function parsePublicationReplyMarker(body: string | null | undefined): PublicationReplyMarker | undefined {
+    if (typeof body !== 'string') return undefined;
+    const match = body.match(/<!-- copilot:reply schema="1" target="((?:issue|pr):\d+)" correlation="([A-Za-z0-9._:-]{1,128})" key="([A-Za-z0-9._:-]{1,128})" digest="([a-f0-9]{8,64})" -->/u);
+    if (!match) return undefined;
+    return Object.freeze({ target: match[1], correlationId: match[2], messageKey: match[3], digest: match[4] });
+}
+
+export function buildDuplicateMarker(canonicalCommentId: number): string {
+    if (!Number.isSafeInteger(canonicalCommentId) || canonicalCommentId < 1) {
+        throw new Error('Canonical comment id must be a positive integer.');
+    }
+    return `<!-- ${PUBLICATION_DUPLICATE_MARKER_PREFIX} schema="${PUBLICATION_SCHEMA}" canonical="${canonicalCommentId}" -->`;
+}
+
+function stableSerialize(value: unknown): string {
+    if (Array.isArray(value)) return `[${value.map(stableSerialize).join(',')}]`;
+    if (value && typeof value === 'object') {
+        const record = value as Record<string, unknown>;
+        return `{${Object.keys(record).sort().map(key => `${JSON.stringify(key)}:${stableSerialize(record[key])}`).join(',')}}`;
+    }
+    return JSON.stringify(value) ?? 'null';
+}

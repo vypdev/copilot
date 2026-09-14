@@ -343,76 +343,76 @@ inputs:
     description: "Naming convention for release branches."
     default: "release"
   images-on-issue:
-    description: "Include images in issue comments."
-    default: "true"
+    description: "Deprecated compatibility input. Semantic issue messages do not include decorative images."
+    default: "false"
   images-on-pull-request:
-    description: "Include images in pull request comments."
-    default: "true"
+    description: "Deprecated compatibility input. Semantic pull request messages do not include decorative images."
+    default: "false"
   images-on-commit:
-    description: "Include images in commit comments."
-    default: "true"
+    description: "Deprecated compatibility input. Push events do not include decorative images."
+    default: "false"
   images-issue-automatic:
-    description: "Image URLs to display in automatic action issue comments."
+    description: "Deprecated issue image URL pool retained for input compatibility."
     default: ""
   images-issue-feature:
-    description: "Image URLs to display in feature action issue comments."
+    description: "Deprecated issue image URL pool retained for input compatibility."
     default: ""
   images-issue-bugfix:
-    description: "Image URLs to display in bugfix action issue comments."
+    description: "Deprecated issue image URL pool retained for input compatibility."
     default: ""
   images-issue-docs:
-    description: "Image URLs to display in docs action issue comments."
+    description: "Deprecated issue image URL pool retained for input compatibility."
     default: ""
   images-issue-chore:
-    description: "Image URLs to display in chore action issue comments."
+    description: "Deprecated issue image URL pool retained for input compatibility."
     default: ""
   images-issue-hotfix:
-    description: "Image URLs to display in hotfix action issue comments."
+    description: "Deprecated issue image URL pool retained for input compatibility."
     default: ""
   images-issue-release:
-    description: "Image URLs to display in release action issue comments."
+    description: "Deprecated issue image URL pool retained for input compatibility."
     default: ""
   images-pull-request-automatic:
-    description: "Image URLs to display in automatic action pull request comments."
+    description: "Deprecated pull request image URL pool retained for input compatibility."
     default: ""
   images-pull-request-feature:
-    description: "Image URLs to display in feature action pull request comments."
+    description: "Deprecated pull request image URL pool retained for input compatibility."
     default: ""
   images-pull-request-bugfix:
-    description: "Image URLs to display in bugfix action pull request comments."
+    description: "Deprecated pull request image URL pool retained for input compatibility."
     default: ""
   images-pull-request-docs:
-    description: "Image URLs to display in docs action pull request comments."
+    description: "Deprecated pull request image URL pool retained for input compatibility."
     default: ""
   images-pull-request-chore:
-    description: "Image URLs to display in chore action pull request comments."
+    description: "Deprecated pull request image URL pool retained for input compatibility."
     default: ""
   images-pull-request-hotfix:
-    description: "Image URLs to display in hotfix action pull request comments."
+    description: "Deprecated pull request image URL pool retained for input compatibility."
     default: ""
   images-pull-request-release:
-    description: "Image URLs to display in release action pull request comments."
+    description: "Deprecated pull request image URL pool retained for input compatibility."
     default: ""
   images-commit-feature:
-    description: "Image URLs to display in feature action commit comments."
+    description: "Deprecated commit image URL pool retained for input compatibility."
     default: ""
   images-commit-bugfix:
-    description: "Image URLs to display in bugfix action commit comments."
+    description: "Deprecated commit image URL pool retained for input compatibility."
     default: ""
   images-commit-release:
-    description: "Image URLs to display in release action commit comments."
+    description: "Deprecated commit image URL pool retained for input compatibility."
     default: ""
   images-commit-automatic:
-    description: "Image URLs to display in automatic action commit comments."
+    description: "Deprecated commit image URL pool retained for input compatibility."
     default: ""
   images-commit-docs:
-    description: "Image URLs to display in docs action commit comments."
+    description: "Deprecated commit image URL pool retained for input compatibility."
     default: ""
   images-commit-chore:
-    description: "Image URLs to display in chore action commit comments."
+    description: "Deprecated commit image URL pool retained for input compatibility."
     default: ""
   images-commit-hotfix:
-    description: "Image URLs to display in hotfix action commit comments."
+    description: "Deprecated commit image URL pool retained for input compatibility."
     default: "" 
   commit-prefix-transforms:
     description: "List of transformations to apply sequentially for commit prefix generation. Options: replace-slash, replace-all, lowercase, uppercase, kebab-case, snake-case, camel-case, trim, remove-numbers, clean-dashes, etc."

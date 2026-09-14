@@ -86,6 +86,25 @@ const validWorkflow = {
 };
 
 describe('workflow contract validator', () => {
+  it('keeps decorative image inputs disabled and explicitly deprecated', () => {
+    const manifest = yaml.load(
+      readFileSync(path.join(process.cwd(), 'action.yml'), 'utf8'),
+    ) as {
+      inputs: Record<string, { default?: string; description?: string }>;
+    };
+    const toggles = ['images-on-issue', 'images-on-pull-request', 'images-on-commit'];
+    const pools = Object.keys(manifest.inputs).filter(name => name.startsWith('images-') && !toggles.includes(name));
+
+    for (const name of toggles) {
+      expect(manifest.inputs[name]).toMatchObject({ default: 'false' });
+      expect(manifest.inputs[name].description).toMatch(/^Deprecated compatibility input\./);
+    }
+    expect(pools).toHaveLength(21);
+    for (const name of pools) {
+      expect(manifest.inputs[name].description).toMatch(/^Deprecated .* image URL pool retained for input compatibility\.$/);
+    }
+  });
+
   it('keeps the repository validation manifest unique and the queue budget synchronized', () => {
     const workflowNames = QUEUE_WORKFLOW_MANIFEST.map(entry => entry.workflowName);
     expect(new Set(workflowNames).size).toBe(workflowNames.length);

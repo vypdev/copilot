@@ -1,5 +1,6 @@
 import type { DeploymentOperationSnapshot, DeploymentPhase, ReconciliationTargetState } from "../../domain/deployment_operation";
 import { buildManagedPullRequestMarker } from "../../domain/managed_pull_request";
+import { buildPublicationMarker, createSemanticDigest } from './publication_identity_policy';
 
 type SupportedLocale = "en-US" | "es-ES";
 
@@ -147,6 +148,15 @@ export function renderDeploymentDashboard(operation: DeploymentOperationSnapshot
   const title = operation.kind === "release" ? messages.release : messages.hotfix;
   const action = deploymentAction(operation, messages);
   const lines = [
+    buildPublicationMarker({
+      identity: {
+        topic: 'release',
+        target: { kind: 'issue', number: context.issue },
+        key: `operation:${createSemanticDigest(operation.operationId)}`,
+      },
+      sourceVersion: `revision:${operation.revision}`,
+      digest: createSemanticDigest({ locale: context.issueLocale, operation }),
+    }),
     deploymentDashboardMarker(operation.operationId, context.issue), "",
     `# ${operation.phase === "blocked" ? "❌" : operation.phase === "completed" ? "✅" : "🚀"} ${title} ${inline(operation.version)}`, "",
     `> **${messages.currentStatus}: ${messages.phase[operation.phase]}.**`,

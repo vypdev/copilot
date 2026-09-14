@@ -6,7 +6,6 @@ import type {
   BugbotContext,
 } from "../types";
 import type { ExistingByFindingId } from '../../../../../../domain/bugbot/finding';
-import { getCommentWatermark } from "../../../../../../utils/comment_watermark";
 import { buildMarker } from '../../../../../policies/bugbot_finding_marker_policy';
 import type { BugbotContextSelectionContext } from '../bugbot_review_operation_context';
 
@@ -258,7 +257,7 @@ describe("markFindingsResolved", () => {
   });
 
   it("updates from the full issue body and removes its old trailing watermark", async () => {
-    const fullBody = `${unresolvedBody}\n\n${"x".repeat(15000)}\n\n${getCommentWatermark()}`;
+    const fullBody = `${unresolvedBody}\n\n${"x".repeat(15000)}\n\n<sup>Made with ❤️ by [vypdev/copilot](https://github.com/marketplace/actions/copilot-github-with-super-powers)</sup>`;
 
     const errors = await markFindingsResolved({
       operation: baseOperation(),

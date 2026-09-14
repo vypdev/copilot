@@ -109,19 +109,21 @@ Link PRs to a board and assign two reviewers:
 
 Ensure the project has a column named **"In Review"** (or use your actual column name).
 
-## Example: Images on PR comments
+## Deprecated image compatibility
 
-Enable images in PR comments and set URLs for feature PRs:
+Existing workflows may still contain image inputs such as:
 
 ```yaml
 - uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
-    images-on-pull-request: true
+    images-on-pull-request: false
     images-pull-request-feature: "https://example.com/images/feature-pr.png"
 ```
 
-Other branch types: `images-pull-request-bugfix`, `images-pull-request-docs`, `images-pull-request-chore`, `images-pull-request-hotfix`, `images-pull-request-release`. See [Configuration](/configuration).
+These inputs are accepted temporarily, but semantic comments do not use them.
+New workflows should omit the toggle and all image pools. See
+[Configuration](/configuration).
 
 ## Next steps
 

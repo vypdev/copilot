@@ -29,15 +29,18 @@ See [AI PR description](/pull-requests/ai-description) for how the description i
 
 Copilot preserves the original review comment byte-for-byte. For an addressed request in another language it performs one bounded adaptation before domain work, keeps commands and technical operands intact, and adds escaped translation context to the bot-owned response only when translation occurred.
 
-## Images on pull requests
+## Deprecated image inputs
 
 | Input | Description | Default |
 |-------|-------------|---------|
-| `images-on-pull-request` | Enable images in PR comments | "true" |
-| `images-pull-request-automatic` | Image URLs for automatic PR comments | (built-in) |
-| `images-pull-request-feature` | Image URLs for feature PR comments | (built-in) |
-| `images-pull-request-bugfix` | Image URLs for bugfix PR comments | (built-in) |
-| … | Same pattern for `docs`, `chore`, `hotfix`, `release` | — |
+| `images-on-pull-request` | Deprecated compatibility toggle; semantic PR messages do not render decorative images | `false` |
+| `images-pull-request-automatic` | Deprecated URL pool | empty |
+| `images-pull-request-feature` | Deprecated URL pool | empty |
+| `images-pull-request-bugfix` | Deprecated URL pool | empty |
+| … | Same deprecated pattern for `docs`, `chore`, `hotfix`, `release` | empty |
+
+New workflows should omit these inputs. They remain accepted temporarily for
+configuration compatibility.
 
 ## Other
 

@@ -1,0 +1,128 @@
+import { Result } from '../../../data/model/result';
+import {
+  renderSemanticReply,
+  renderSemanticStatus,
+  selectSemanticReplyIntents,
+  selectSemanticStatusIntents,
+} from '../semantic_result_publication_policy';
+
+describe('semantic result publication policy', () => {
+  it('selects only successful, executed, validated plan and progress payloads', () => {
+    const results = [
+      new Result({ id: 'RecommendStepsUseCase', success: true, executed: true, payload: { issueNumber: 7, recommendedSteps: '1. Build', recommendationState: { issueDescriptionFingerprint: 'abc' } } }),
+      new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 7, progress: 101.2, summary: ' Done ', remaining: '', branch: '', developmentBranch: ' develop ' } }),
+      new Result({ id: 'RecommendStepsUseCase', success: false, executed: true, payload: { issueNumber: 7, recommendedSteps: 'ignored' } }),
+      new Result({ id: 'CheckProgressUseCase', success: true, executed: false, payload: { issueNumber: 7, progress: 20, summary: 'ignored' } }),
+      new Result({ id: 'Other', success: true, executed: true, payload: { issueNumber: 7, progress: 20, summary: 'ignored' } }),
+    ];
+
+    const intents = selectSemanticStatusIntents({ locale: 'en-US', results });
+
+    expect(intents).toHaveLength(2);
+    expect(intents[0]).toMatchObject({ kind: 'status', identity: { topic: 'plan', key: 'implementation' }, projection: { kind: 'plan' } });
+    expect(intents[1]).toMatchObject({ identity: { topic: 'progress', key: 'work' }, projection: { progress: 100, summary: 'Done', developmentBranch: 'develop' } });
+    expect(intents[1].projection).not.toHaveProperty('remaining');
+    expect(intents[1].projection).not.toHaveProperty('branch');
+  });
+
+  it.each([
+    new Result({ id: 'RecommendStepsUseCase', success: true, executed: true, payload: null }),
+    new Result({ id: 'RecommendStepsUseCase', success: true, executed: true, payload: { issueNumber: 0, recommendedSteps: 'x' } }),
+    new Result({ id: 'RecommendStepsUseCase', success: true, executed: true, payload: { issueNumber: 1, recommendedSteps: ' ' } }),
+    new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 1, progress: '10', summary: 'x' } }),
+    new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 1, progress: 10, summary: 1 } }),
+  ])('rejects malformed compatibility payloads', (result) => {
+    expect(selectSemanticStatusIntents({ locale: 'en-US', results: [result] })).toEqual([]);
+  });
+
+  it('bounds and sanitizes plan and progress presentation', () => {
+    const [plan] = selectSemanticStatusIntents({
+      locale: 'en-US',
+      results: [new Result({ id: 'RecommendStepsUseCase', success: true, executed: true, payload: { issueNumber: 2, recommendedSteps: `# Unsafe\n@attacker\n/fix\n${'x'.repeat(10_000)}` } })],
+    });
+    const [progress] = selectSemanticStatusIntents({
+      locale: 'en-US',
+      results: [new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 2, progress: -4, summary: '@attacker', remaining: '/fix' } })],
+    });
+
+    const planBody = renderSemanticStatus(plan);
+    const progressBody = renderSemanticStatus(progress);
+    expect(planBody.length).toBeLessThan(9_000);
+    expect(planBody).toContain('@\u200battacker');
+    expect(planBody).toContain('\u200b/fix');
+    expect(progressBody).toContain('## Progress: 0% — not started');
+    expect(progressBody).toContain('**Next:** \u200b/fix');
+  });
+
+  it('omits the next section for incomplete progress without remaining work', () => {
+    const [intent] = selectSemanticStatusIntents({
+      locale: 'en-US',
+      results: [new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 2, progress: 50, summary: '' } })],
+    });
+    const body = renderSemanticStatus(intent);
+    expect(body).toContain('Progress was assessed without a summary.');
+    expect(body).not.toContain('**Next:**');
+  });
+
+  it.each([
+    ['help', '## Copilot commands'],
+    ['welcome', 'Hi! I’m **@vypbot**'],
+  ] as const)('selects and renders an idempotent %s reply without reading steps', (kind, expected) => {
+    const [intent] = selectSemanticReplyIntents({
+      locale: 'en-US',
+      target: { kind: 'issue', number: 7 },
+      correlationId: 'comment:12',
+      botLogin: 'vypbot',
+      results: [new Result({
+        id: `Comment.${kind}`, success: true, executed: true,
+        steps: ['legacy text must not be selected'],
+        payload: { publication: { kind, botLogin: 'vypbot' } },
+      })],
+    });
+
+    expect(intent).toMatchObject({ kind: 'reply', correlationId: 'comment:12', messageKey: `copilot-${kind}` });
+    expect(renderSemanticReply(intent)).toContain(expected);
+    expect(renderSemanticReply(intent)).not.toContain('legacy text');
+  });
+
+  it('renders a typed status-command projection in the configured locale', () => {
+    const [intent] = selectSemanticReplyIntents({
+      locale: 'es-ES', target: { kind: 'pull-request', number: 9 }, correlationId: 'comment:22',
+      results: [new Result({
+        id: 'Comment.Status', success: true, executed: true,
+        payload: { status: {
+          owner: 'acme', repository: 'widgets', event: 'issue_comment', action: 'created', target: 'pull-request',
+          pullRequestNumber: 9, branch: 'feature/x', lifecycle: 'reviewing', issueLabels: [], pullRequestLabels: ['reviewing'],
+          pullRequestDescriptionMode: 'replace',
+        } },
+      })],
+    });
+
+    expect(renderSemanticReply(intent)).toContain('## Estado de Copilot');
+    expect(renderSemanticReply(intent)).toContain('target="pr:9"');
+  });
+
+  it('renders a concise localized access-policy explanation', () => {
+    const [intent] = selectSemanticReplyIntents({
+      locale: 'es-ES', target: { kind: 'issue', number: 8 }, correlationId: 'event:abc12345',
+      results: [new Result({
+        id: 'CloseNotAllowedIssueUseCase', success: true, executed: true,
+        payload: { publication: { kind: 'access-policy' } },
+      })],
+    });
+    const body = renderSemanticReply(intent);
+    expect(body).toContain('Issue cerrada: se requiere acceso de colaborador');
+    expect(body).toContain('contacta con un mantenedor');
+    expect(body).not.toContain('banned');
+  });
+
+  it('omits malformed, failed, uncorrelated, or untargeted replies', () => {
+    const result = new Result({ id: 'Comment.Help', success: true, executed: true, payload: { publication: { kind: 'help' } } });
+    expect(selectSemanticReplyIntents({ locale: 'en-US', results: [result] })).toEqual([]);
+    expect(selectSemanticReplyIntents({ locale: 'en-US', target: { kind: 'issue', number: 1 }, correlationId: '', results: [result] })).toEqual([]);
+    expect(selectSemanticReplyIntents({
+      locale: 'en-US', target: { kind: 'issue', number: 1 }, correlationId: 'comment:1',
+      results: [new Result({ id: 'Comment.Help', success: false, executed: true, payload: { publication: { kind: 'help' } } })],
+    })).toEqual([]);
+  });
+});
