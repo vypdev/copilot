@@ -937,7 +937,7 @@ pull-requests-locale: ""
 7. Update all named docs, generated workflows/action bundles, and related SDD
    clauses before announcing support.
 
-Implementation evidence as of 2026-09-14: PRs #366–#373 deliver the canonical
+Implementation evidence as of 2026-09-14: PRs #366–#374 deliver the canonical
 locale profile, typed and validated catalog resolution, English-default shared
 publication, non-mutating addressed-language adaptation, localized agent
 response contracts, branch synchronization, and bounded review context. The
@@ -953,9 +953,13 @@ four bounded milestones, and removes internal `Result.steps` from deployment
 operator UI. The installed release/hotfix templates pass `repository-locale` and
 empty inheriting issue/PR overrides. Legacy version-1 operations without a locale
 remain readable and use the current effective profile until completion.
-Merge-readiness diagnostics,
-lifecycle, setup/doctor, and the remaining public surfaces are not claimed
-complete by this evidence.
+The setup/doctor follow-up adds one English-default repository-locale catalog for
+the complete doctor artifact, reuses it for merge-readiness rows and terminal
+presentation, replaces pull-request-mode prose with stable reason codes, and
+keeps raw provider and credential-health diagnostics out of UI. Setup itself
+remains one authoritative English artifact while it creates the repository
+profile. Lifecycle and the remaining public surfaces are not claimed complete
+by this evidence.
 
 ### 13.5 Rollback
 

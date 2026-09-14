@@ -148,6 +148,8 @@ All commands support `-h, --help`. The `-d, --debug` option enables additional d
 
 Initializes the current GitHub repository through an interactive English-language wizard. It can select the workflows and templates to install, route each Copilot task to Codex, OpenCode, or Cursor, configure repository behavior and AI policy, inspect and provision GitHub Actions Variables and Secrets at repository or organization scope, verify access, and create the configured labels and issue types. If the repository has no version tags, setup asks whether it should create `v1.0.0`.
 
+Setup is the profile-creation surface, so its questionnaire, plan, confirmation, and embedded readiness checks stay in authoritative English until the repository configuration is installed. The selected `repository-locale` governs subsequent repository-aware output, including `copilot doctor`; issue and pull-request overrides do not change setup or doctor language.
+
 | Option | Required | Description |
 | --- | --- | --- |
 | `-t, --token <token>` | No | Setup PAT override. Otherwise uses the hidden prompt interactively or `PERSONAL_ACCESS_TOKEN` from the environment. |
@@ -206,6 +208,21 @@ The explicit `--workflow-pat` and `--secret` options are provided for automation
 ### `copilot doctor`
 
 Checks the setup PAT, selected workflow templates, Repository Variables, Secret presence, remote credential health, and live merge-queue readiness for production and development targets. It combines classic branch protection with effective rulesets and emits stable, ordered checks with `pass`, `warn`, `fail`, or dependency-blocked `skipped` status. Active release branches are discovered and revalidated at hotfix runtime. A failed setup PAT does not hide independent local drift: local checks continue and remote dependants name the blocking check. Independent remote probes use a fixed maximum concurrency of four, but their completion order never changes report order. Doctor exits non-zero exactly when at least one check fails.
+
+The complete human-readable report uses the configured repository locale and defaults to English (`en-US`). English and Spanish use reviewed bundled catalogs with exact or compatible-base matching. Any other valid BCP-47 locale uses one schema-constrained planner/language-agent request for the complete report catalog. If that request is unavailable or invalid, the whole report falls back atomically to English—never a mixture of translated headings and English diagnostics. Check IDs, status enums, branch names, credential names, and other machine facts remain stable. Raw provider and credential-health messages are not echoed into the report.
+
+This reduced two-check fixture shows the default English shape:
+
+```text
+Copilot Doctor
+
+✓ PASS    Configuration — Setup configuration is valid.
+✗ FAIL    Merge queue production — Target policy could not be inspected because the provider request failed.
+            Action: Check the setup PAT permissions and target branch policy, then retry.
+
+Checks: 1 pass, 0 warn, 1 fail, 0 skipped.
+No repository configuration was changed.
+```
 
 Doctor's composition contains query ports only: it never creates, updates, deletes, or overwrites repository configuration. The credential health query may dispatch the already-installed `copilot_credential_health.yml` workflow, which creates an Actions run but does not modify repository configuration or expose Secret values. Only setup owns the separate temporary health-workflow bootstrap capability.
 

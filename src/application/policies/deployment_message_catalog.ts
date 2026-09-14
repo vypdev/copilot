@@ -14,6 +14,12 @@ import {
   resolveStaticMessageCatalogView,
   type ResolvedMessageCatalogView,
 } from './resolved_message_catalog_policy';
+import {
+  ENGLISH_MERGE_QUEUE_MESSAGES,
+  MERGE_QUEUE_MESSAGE_IDS,
+  SPANISH_MERGE_QUEUE_MESSAGES,
+  type MergeQueueMessageId,
+} from './merge_queue_message_catalog';
 
 const SIMPLE_MESSAGE_KEYS = Object.freeze([
   'release', 'hotfix', 'currentStatus', 'noAction', 'actionRequired', 'progress',
@@ -75,7 +81,8 @@ export type DeploymentMessageId =
   | SimpleMessageId
   | PhaseMessageId
   | DiagramMessageId
-  | TemplateMessageId;
+  | TemplateMessageId
+  | MergeQueueMessageId;
 export type DeploymentMessageCatalog = ResolvedMessageCatalogView<DeploymentMessageId>;
 
 export interface DeploymentCopy extends Readonly<Record<SimpleMessageKey, string>> {
@@ -88,6 +95,7 @@ export const DEPLOYMENT_MESSAGE_IDS: readonly DeploymentMessageId[] = Object.fre
   ...DEPLOYMENT_PHASES.map(phase => `deployment.phase.${phase}` as const),
   ...DIAGRAM_KEYS.map(key => `deployment.diagram.${key}` as const),
   ...TEMPLATE_MESSAGE_IDS,
+  ...MERGE_QUEUE_MESSAGE_IDS,
 ]);
 
 const ENGLISH_SIMPLE: Readonly<Record<SimpleMessageKey, string>> = Object.freeze({
@@ -235,12 +243,14 @@ function catalogMessages(
   phases: Readonly<Record<DeploymentPhase, string>>,
   diagram: Readonly<Record<DiagramKey, string>>,
   templates: Readonly<Record<TemplateMessageId, CatalogMessage>>,
+  mergeQueue: Readonly<Record<MergeQueueMessageId, CatalogMessage>>,
 ): Readonly<Record<DeploymentMessageId, CatalogMessage>> {
   return Object.freeze({
     ...Object.fromEntries(SIMPLE_MESSAGE_KEYS.map(key => [`deployment.${key}`, simple[key]])),
     ...Object.fromEntries(DEPLOYMENT_PHASES.map(phase => [`deployment.phase.${phase}`, phases[phase]])),
     ...Object.fromEntries(DIAGRAM_KEYS.map(key => [`deployment.diagram.${key}`, diagram[key]])),
     ...templates,
+    ...mergeQueue,
   }) as Readonly<Record<DeploymentMessageId, CatalogMessage>>;
 }
 
@@ -248,14 +258,26 @@ export const ENGLISH_DEPLOYMENT_DEFINITION: MessageCatalogDefinition<DeploymentM
   version: MESSAGE_CATALOG_VERSION,
   locale: 'en-US',
   compatibleBaseLanguage: 'en',
-  messages: catalogMessages(ENGLISH_SIMPLE, ENGLISH_PHASES, ENGLISH_DIAGRAM, ENGLISH_TEMPLATES),
+  messages: catalogMessages(
+    ENGLISH_SIMPLE,
+    ENGLISH_PHASES,
+    ENGLISH_DIAGRAM,
+    ENGLISH_TEMPLATES,
+    ENGLISH_MERGE_QUEUE_MESSAGES,
+  ),
 });
 
 export const SPANISH_DEPLOYMENT_DEFINITION: MessageCatalogDefinition<DeploymentMessageId> = Object.freeze({
   version: MESSAGE_CATALOG_VERSION,
   locale: 'es-ES',
   compatibleBaseLanguage: 'es',
-  messages: catalogMessages(SPANISH_SIMPLE, SPANISH_PHASES, SPANISH_DIAGRAM, SPANISH_TEMPLATES),
+  messages: catalogMessages(
+    SPANISH_SIMPLE,
+    SPANISH_PHASES,
+    SPANISH_DIAGRAM,
+    SPANISH_TEMPLATES,
+    SPANISH_MERGE_QUEUE_MESSAGES,
+  ),
 });
 
 export const DEPLOYMENT_CATALOG_DEFINITIONS = Object.freeze([

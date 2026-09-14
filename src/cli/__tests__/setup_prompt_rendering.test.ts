@@ -1,5 +1,6 @@
 import {
     color,
+    displayWidth,
     doctorIcon,
     formatTask,
     renderBox,
@@ -52,6 +53,16 @@ describe('setup prompt rendering', () => {
 
         expect(rendered.split('\n').every((line) => line.length <= 40)).toBe(true);
         expect(rendered).toContain('diagnostic sentence');
+    });
+
+    it('wraps unspaced CJK and spaced right-to-left copy by visible terminal width', () => {
+        const cjk = renderBox('診断結果を安全に表示して次の操作を明確に案内します', '診断', 32, 32);
+        const rtl = renderBox('حالة التشخيص الحالية تتطلب إجراء واضحا وآمنا', 'التشخيص', 32, 32);
+
+        expect(cjk.split('\n').every((line) => displayWidth(line) <= 32)).toBe(true);
+        expect(rtl.split('\n').every((line) => displayWidth(line) <= 32)).toBe(true);
+        expect(cjk.split('\n').length).toBeGreaterThan(3);
+        expect(rtl.split('\n').length).toBeGreaterThan(3);
     });
 
     it('renders remote metadata without exposing credential values', () => {

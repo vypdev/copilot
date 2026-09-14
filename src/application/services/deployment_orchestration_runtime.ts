@@ -5,6 +5,7 @@ import type {
 } from "../ports/deployment_orchestration_ports";
 import {
   mergeQueueReadinessFailureMessage,
+  pullRequestModeDecisionMessage,
   selectPullRequestMode,
   type PullRequestModeDecision,
   type TargetMergeCapabilities,
@@ -218,9 +219,10 @@ export class DeploymentOrchestrationRuntime {
         attestations: context.deployment.mergeQueueCheckAttestations,
       });
       if (readiness.verdict !== "ready") {
+        const catalog = await this.presentationCatalog('issue', context, operation);
         return {
           kind: "blocked",
-          reason: mergeQueueReadinessFailureMessage(readiness, effectiveLocale(context, operation).issue),
+          reason: mergeQueueReadinessFailureMessage(readiness, catalog),
         };
       }
     }
@@ -302,16 +304,17 @@ export class DeploymentOrchestrationRuntime {
     }
   }
 
-  private unsupportedMergeBehavior(
+  private async unsupportedMergeBehavior(
     context: DeploymentOrchestrationContext,
     operation: DeploymentOperationSnapshot,
     targetRole: MergeQueueTargetRole,
     targetBranch: string,
     capabilities: TargetMergeCapabilities,
     decision: Extract<PullRequestModeDecision, { readonly kind: "unsupported" }>,
-  ): { readonly kind: "blocked"; readonly reason: string } {
+  ): Promise<{ readonly kind: "blocked"; readonly reason: string }> {
+    const catalog = await this.presentationCatalog('issue', context, operation);
     if (capabilities.mergeQueueObservationProblems.length === 0) {
-      return { kind: "blocked", reason: decision.reason };
+      return { kind: "blocked", reason: pullRequestModeDecisionMessage(decision, catalog) };
     }
     const readiness = evaluateMergeQueueReadiness({
       queueRequired: true,
@@ -323,7 +326,7 @@ export class DeploymentOrchestrationRuntime {
     });
     return {
       kind: "blocked",
-      reason: mergeQueueReadinessFailureMessage(readiness, effectiveLocale(context, operation).issue),
+      reason: mergeQueueReadinessFailureMessage(readiness, catalog),
     };
   }
 

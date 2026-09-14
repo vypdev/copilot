@@ -4,6 +4,7 @@
   complete; clean-tree bundle validation and controlled live queue validation
   remain external completion gates
 - Date: 2026-09-10
+- Last updated: 2026-09-14
 - Owners: `vypdev/copilot` product and engineering maintainers
 - Scope: discover the effective merge policy of every deployment target and
   prevent a managed pull request from entering an unusable merge queue.
@@ -563,13 +564,21 @@ queue mutation was attempted.
   same comment policy rather than a separate unbounded channel.
 - The dashboard is published as GitHub-owned only after auto-merge/queue
   mutation succeeds or authoritative queue membership already exists.
-- English and Spanish renderers MUST carry the same facts and action. Unknown
-  provider text falls back to English.
+- Repository-aware readiness UI uses the repository locale and authoritative
+  English by default. Reviewed English and Spanish catalogs resolve through
+  exact or compatible-base matching; any other valid BCP-47 locale resolves one
+  complete schema-constrained catalog through the configured language agent or
+  falls back atomically to English.
+- Readiness and pull-request-mode policies expose stable semantic reason codes.
+  Renderers translate those reasons; raw provider or workflow inspection prose
+  is not copied into product UI. Technical verdicts, target roles, branch names,
+  check names, and integration identities remain locale-independent facts.
 - Emoji supplements text and is never the sole status signal. Tables use text
   verdicts, logical headings, and descriptive links. Mobile rendering keeps the
   primary status/action above tables and details.
-- Contexts, branch names, provider messages, Markdown, markers, mentions, and
-  URLs are sanitized with the existing deployment presentation rules.
+- Contexts, branch names, Markdown, markers, mentions, and URLs are sanitized
+  with the existing deployment presentation rules. Untrusted provider messages
+  remain bounded internal diagnostics and cannot create mixed-language output.
 
 ## 10. Failure, recovery, and cleanup
 
@@ -635,7 +644,7 @@ republish on retry.
 
 ## 14. Testing strategy and numeric budget
 
-The minimum is **46 distinct cases**, derived from the rule-source, evidence,
+The minimum is **50 distinct cases**, derived from the rule-source, evidence,
 ordering, race, recovery, and presentation risks below.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
@@ -644,9 +653,9 @@ ordering, race, recovery, and presentation risks below.
 | State/application/idempotency/races | 10 | promotion and reconciliation preflight ordering; no side effects on block; final reread; changed rules; moved head; already queued; ambiguous enqueue retry; post-publication retained facts; create-only bypass of readiness |
 | Adapters/provider contracts | 11 | classic present/404/403; effective rules parsing; repository/org source aggregation; queue/strict/status/workflow rule mapping; GitHub Actions identity; workflow exact match; dynamic/ambiguous job; inaccessible workflow/error mapping |
 | Workflows/setup/schema | 6 | active/setup `merge_group`; structured generated input; setup ready/unknown; doctor drift; no obsolete boolean; least-privilege API contract |
-| UI/UX/localization/sanitization | 5 | ready, pre-mutation block, post-publication partial, recovered/queued, Spanish plus hostile provider values |
+| UI/UX/localization/sanitization | 9 | ready, pre-mutation block, post-publication partial, recovered/queued, English default, Spanish exact/base, arbitrary dynamic locale, atomic fallback, hostile provider suppression |
 | Integration/security/migration | 2 | ruleset-only repository end-to-end fake; existing operation with new unknown required check |
-| **Total** | **46** | No double counting |
+| **Total** | **50** | No double counting |
 
 Repository thresholds remain lines/statements 90%, functions 88%, and branches
 82%. New pure readiness and attestation policies require 100% statement/function
@@ -708,6 +717,17 @@ human-facing name.
     rendered, then mentions, workflow commands, Markdown, and markers are inert.
 14. Given Spanish locale, when readiness blocks, then status, action, retained
     facts, and technical evidence are semantically equivalent to English.
+15. Given no locale configuration, when setup or deployment renders readiness,
+    then all product prose is English.
+16. Given `es-MX`, when readiness renders, then the complete Spanish base
+    catalog is used and stable verdicts and target identities remain unchanged.
+17. Given a valid non-bundled locale and a valid dynamic catalog, when doctor
+    inspects two targets, then one catalog request serves the complete artifact.
+18. Given an unavailable or structurally invalid dynamic catalog, when doctor
+    renders, then every heading, state, reason, and action uses English.
+19. Given hostile or foreign-language provider diagnostic text, when readiness
+    renders, then the raw text is absent and a bounded semantic reason/action is
+    shown in the resolved artifact locale.
 
 ## 17. Requirements traceability
 
@@ -736,9 +756,10 @@ human-facing name.
 6. Add pre-mutation and pre-enqueue evaluations, expected-head enqueue, and
    idempotent membership recovery.
 7. Integrate structured setup/doctor inspection and generated Action input.
-8. Add English/Spanish readiness recovery, target/producer rows in setup and
-   doctor, and actionable dashboard/Job Summary failures.
-9. Update public docs and workflow contracts, satisfy the 46-case budget,
+8. Add English-default generic locale resolution, target/producer rows in setup
+   and doctor, and actionable dashboard/Job Summary failures without rendering
+   raw provider prose.
+9. Update public docs and workflow contracts, satisfy the 50-case budget,
    coverage, architecture, build, and documentation gates.
 10. Run a controlled repository test with a temporary non-required fixture
     workflow first; enable a real merge-queue ruleset only through an explicit
@@ -753,7 +774,7 @@ human-facing name.
 - [x] Queue mutation is head-bound and idempotently recoverable.
 - [x] No legacy optimistic mode or obsolete boolean remains.
 - [x] Architecture boundaries and the no-polling contract are executable.
-- [x] More than 46 distinct feature cases and repository coverage thresholds pass.
+- [x] More than 50 distinct feature cases and repository coverage thresholds pass.
 - [x] Setup, doctor, issue dashboard, Job Summary, English, Spanish,
       sanitization, and comment-budget automated acceptance pass.
 - [x] User, setup, operator, contributor, and parent-spec documentation agree.

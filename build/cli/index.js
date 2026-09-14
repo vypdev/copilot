@@ -43511,6 +43511,7 @@ exports.deploymentCopy = deploymentCopy;
 const deployment_operation_1 = __nccwpck_require__(92730);
 const message_catalog_1 = __nccwpck_require__(27097);
 const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
+const merge_queue_message_catalog_1 = __nccwpck_require__(56033);
 const SIMPLE_MESSAGE_KEYS = Object.freeze([
     'release', 'hotfix', 'currentStatus', 'noAction', 'actionRequired', 'progress',
     'currentTransition', 'whatNext', 'links', 'technical', 'alreadyPublished',
@@ -43562,6 +43563,7 @@ exports.DEPLOYMENT_MESSAGE_IDS = Object.freeze([
     ...deployment_operation_1.DEPLOYMENT_PHASES.map(phase => `deployment.phase.${phase}`),
     ...DIAGRAM_KEYS.map(key => `deployment.diagram.${key}`),
     ...TEMPLATE_MESSAGE_IDS,
+    ...merge_queue_message_catalog_1.MERGE_QUEUE_MESSAGE_IDS,
 ]);
 const ENGLISH_SIMPLE = Object.freeze({
     release: 'Release', hotfix: 'Hotfix', currentStatus: 'Current status',
@@ -43695,25 +43697,26 @@ const SPANISH_TEMPLATES = Object.freeze({
     'deployment.milestone.reconciliationBlocked': '❌ Despliegue bloqueado: {reason}',
     'deployment.milestone.complete': '✅ El despliegue {tag} y todos los destinos de reconciliación configurados se han completado.',
 });
-function catalogMessages(simple, phases, diagram, templates) {
+function catalogMessages(simple, phases, diagram, templates, mergeQueue) {
     return Object.freeze({
         ...Object.fromEntries(SIMPLE_MESSAGE_KEYS.map(key => [`deployment.${key}`, simple[key]])),
         ...Object.fromEntries(deployment_operation_1.DEPLOYMENT_PHASES.map(phase => [`deployment.phase.${phase}`, phases[phase]])),
         ...Object.fromEntries(DIAGRAM_KEYS.map(key => [`deployment.diagram.${key}`, diagram[key]])),
         ...templates,
+        ...mergeQueue,
     });
 }
 exports.ENGLISH_DEPLOYMENT_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
     locale: 'en-US',
     compatibleBaseLanguage: 'en',
-    messages: catalogMessages(ENGLISH_SIMPLE, ENGLISH_PHASES, ENGLISH_DIAGRAM, ENGLISH_TEMPLATES),
+    messages: catalogMessages(ENGLISH_SIMPLE, ENGLISH_PHASES, ENGLISH_DIAGRAM, ENGLISH_TEMPLATES, merge_queue_message_catalog_1.ENGLISH_MERGE_QUEUE_MESSAGES),
 });
 exports.SPANISH_DEPLOYMENT_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
     locale: 'es-ES',
     compatibleBaseLanguage: 'es',
-    messages: catalogMessages(SPANISH_SIMPLE, SPANISH_PHASES, SPANISH_DIAGRAM, SPANISH_TEMPLATES),
+    messages: catalogMessages(SPANISH_SIMPLE, SPANISH_PHASES, SPANISH_DIAGRAM, SPANISH_TEMPLATES, merge_queue_message_catalog_1.SPANISH_MERGE_QUEUE_MESSAGES),
 });
 exports.DEPLOYMENT_CATALOG_DEFINITIONS = Object.freeze([
     exports.ENGLISH_DEPLOYMENT_DEFINITION,
@@ -43744,6 +43747,7 @@ function deploymentCopy(catalog) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildInitialDeploymentOperation = buildInitialDeploymentOperation;
 exports.selectPullRequestMode = selectPullRequestMode;
+exports.pullRequestModeDecisionMessage = pullRequestModeDecisionMessage;
 exports.mergeQueueReadinessFailureMessage = mergeQueueReadinessFailureMessage;
 exports.selectBackmergeMode = selectBackmergeMode;
 exports.selectReconciliationTargetBranches = selectReconciliationTargetBranches;
@@ -43752,7 +43756,7 @@ exports.buildReconciliationTarget = buildReconciliationTarget;
 exports.buildReconciliationBranchName = buildReconciliationBranchName;
 exports.validateInitialDeploymentInput = validateInitialDeploymentInput;
 const deployment_operation_1 = __nccwpck_require__(92730);
-const sensitive_text_1 = __nccwpck_require__(47122);
+const merge_queue_message_catalog_1 = __nccwpck_require__(56033);
 function buildInitialDeploymentOperation(input) {
     const strategy = input.kind === "release"
         ? input.configuration.releaseReconciliationStrategy
@@ -43792,67 +43796,51 @@ function buildInitialDeploymentOperation(input) {
 }
 function selectPullRequestMode(configured, capabilities) {
     if (configured === "create-only") {
-        return { kind: "mode", mode: configured, reason: "Explicitly configured." };
+        return { kind: "mode", mode: configured, reasonCode: 'explicit-create-only' };
     }
     if (capabilities.mergeQueueObservationProblems.length > 0) {
         return {
             kind: "unsupported",
-            reason: `The target merge policy could not be verified: ${boundedDiagnostic(capabilities.mergeQueueObservationProblems[0].message)}`,
+            reasonCode: 'policy-observation-failed',
         };
     }
     if (capabilities.mergeQueueRequired) {
         return configured === "auto-merge"
-            ? { kind: "unsupported", reason: "Auto-merge mode was selected, but the target requires its merge queue." }
-            : { kind: "mode", mode: "merge-queue", reason: "The target requires its merge queue." };
+            ? { kind: "unsupported", reasonCode: 'auto-merge-rejected' }
+            : { kind: "mode", mode: "merge-queue", reasonCode: 'queue-required' };
     }
     if (configured === "merge-queue") {
-        return { kind: "unsupported", reason: "The target does not expose a required merge queue." };
+        return { kind: "unsupported", reasonCode: 'queue-not-exposed' };
     }
     if (configured === "auto-merge") {
         return capabilities.autoMergeAllowed
-            ? { kind: "mode", mode: "auto-merge", reason: "Native auto-merge was explicitly configured." }
-            : { kind: "unsupported", reason: "Native auto-merge is disabled for this repository." };
+            ? { kind: "mode", mode: "auto-merge", reasonCode: 'auto-merge-configured' }
+            : { kind: "unsupported", reasonCode: 'auto-merge-disabled' };
     }
     if (capabilities.immediatelyMergeable) {
-        return { kind: "mode", mode: "auto-merge", reason: "GitHub reports the PR ready; native auto-merge preserves branch protection." };
+        return { kind: "mode", mode: "auto-merge", reasonCode: 'immediately-mergeable' };
     }
     return capabilities.autoMergeAllowed
-        ? { kind: "mode", mode: "auto-merge", reason: "GitHub will merge after checks and reviews complete." }
-        : { kind: "mode", mode: "create-only", reason: "Repository auto-merge is unavailable; maintainer merge is required." };
+        ? { kind: "mode", mode: "auto-merge", reasonCode: 'auto-merge-available' }
+        : { kind: "mode", mode: "create-only", reasonCode: 'create-only-required' };
 }
-function mergeQueueReadinessFailureMessage(readiness, locale = "en-US") {
-    const spanish = locale.toLowerCase().startsWith("es");
-    const failed = readiness.producers.filter((producer) => producer.verdict === "unsupported" || producer.verdict === "unknown");
-    const producerDetails = failed.slice(0, 5)
-        .map((producer) => `${boundedDiagnostic(producer.name)} [${producer.verdict}]: ${boundedDiagnostic(producer.reason)}`)
-        .join("; ");
-    const problemDetails = readiness.problems.slice(0, 3)
-        .map((problem) => `${problem.area}: ${boundedDiagnostic(problem.message)}`)
-        .join("; ");
-    const details = [producerDetails, problemDetails].filter(Boolean).join("; ");
-    const hasUnsupportedProducer = failed.some((producer) => producer.verdict === "unsupported");
-    const hasObservationProblem = readiness.problems.length > 0;
-    if (spanish) {
-        const action = hasUnsupportedProducer
-            ? "Añade merge_group: checks_requested al workflow requerido y vuelve a intentarlo."
-            : hasObservationProblem
-                ? "Restaura el acceso de lectura y una respuesta válida para la política y los workflows del destino, y vuelve a intentarlo."
-                : "Haz que el productor requerido soporte merge groups o añade una atestación exacta revisada y vuelve a intentarlo.";
-        return `La preparación de la merge queue está en estado ${readiness.verdict} para el destino ${readiness.targetRole} ${boundedDiagnostic(readiness.targetBranch)}. ${details || "La evidencia del productor requerido está incompleta."} ${action}`;
-    }
-    const action = hasUnsupportedProducer
-        ? "Add merge_group: checks_requested to the required workflow, then retry."
-        : hasObservationProblem
-            ? "Restore read access and a valid response for the target policy and workflows, then retry."
-            : "Make the required producer support merge groups or add an exact reviewed check attestation, then retry.";
-    return `Merge queue readiness is ${readiness.verdict} for ${readiness.targetRole} target ${boundedDiagnostic(readiness.targetBranch)}. ${details || "Required producer evidence is incomplete."} ${action}`;
+function pullRequestModeDecisionMessage(decision, catalog) {
+    const ids = {
+        'explicit-create-only': 'mergeQueue.decision.explicitCreateOnly',
+        'policy-observation-failed': 'mergeQueue.decision.policyObservationFailed',
+        'auto-merge-rejected': 'mergeQueue.decision.autoMergeRejected',
+        'queue-required': 'mergeQueue.decision.queueRequired',
+        'queue-not-exposed': 'mergeQueue.decision.queueNotExposed',
+        'auto-merge-configured': 'mergeQueue.decision.autoMergeConfigured',
+        'auto-merge-disabled': 'mergeQueue.decision.autoMergeDisabled',
+        'immediately-mergeable': 'mergeQueue.decision.immediatelyMergeable',
+        'auto-merge-available': 'mergeQueue.decision.autoMergeAvailable',
+        'create-only-required': 'mergeQueue.decision.createOnlyRequired',
+    };
+    return catalog.message(ids[decision.reasonCode]);
 }
-function boundedDiagnostic(value) {
-    return (0, sensitive_text_1.redactSensitiveText)(value)
-        .replace(/[\r\n<>]/g, " ")
-        .replace(/::/g, "﹕﹕")
-        .replace(/@/g, "@\u200b")
-        .slice(0, 500);
+function mergeQueueReadinessFailureMessage(readiness, catalog) {
+    return (0, merge_queue_message_catalog_1.renderMergeQueueReadinessFailure)(readiness, catalog);
 }
 function selectBackmergeMode(configured, requiresStrictStatusChecks, directHeadIsUpToDate, directSourceIsExact = true) {
     const directIsUnsafe = !directSourceIsExact
@@ -44530,6 +44518,139 @@ function buildManagedBranchPresentation(input) {
             reminder,
         ],
     };
+}
+
+
+/***/ }),
+
+/***/ 56033:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SPANISH_MERGE_QUEUE_MESSAGES = exports.ENGLISH_MERGE_QUEUE_MESSAGES = exports.MERGE_QUEUE_MESSAGE_IDS = void 0;
+exports.renderMergeQueueReadinessFailure = renderMergeQueueReadinessFailure;
+exports.producerStateMessageId = producerStateMessageId;
+exports.boundedMergeQueueDiagnostic = boundedMergeQueueDiagnostic;
+const sensitive_text_1 = __nccwpck_require__(47122);
+exports.MERGE_QUEUE_MESSAGE_IDS = Object.freeze([
+    'mergeQueue.readiness.failure',
+    'mergeQueue.readiness.incompleteEvidence',
+    'mergeQueue.readiness.action.unsupported',
+    'mergeQueue.readiness.action.observation',
+    'mergeQueue.readiness.action.unknown',
+    'mergeQueue.producerState.verified',
+    'mergeQueue.producerState.attested',
+    'mergeQueue.producerState.unknown',
+    'mergeQueue.producerState.unsupported',
+    'mergeQueue.problem.classicProtection',
+    'mergeQueue.problem.effectiveRules',
+    'mergeQueue.problem.workflowContract',
+    'mergeQueue.problem.queueMembership',
+    'mergeQueue.decision.explicitCreateOnly',
+    'mergeQueue.decision.policyObservationFailed',
+    'mergeQueue.decision.autoMergeRejected',
+    'mergeQueue.decision.queueRequired',
+    'mergeQueue.decision.queueNotExposed',
+    'mergeQueue.decision.autoMergeConfigured',
+    'mergeQueue.decision.autoMergeDisabled',
+    'mergeQueue.decision.immediatelyMergeable',
+    'mergeQueue.decision.autoMergeAvailable',
+    'mergeQueue.decision.createOnlyRequired',
+]);
+exports.ENGLISH_MERGE_QUEUE_MESSAGES = Object.freeze({
+    'mergeQueue.readiness.failure': 'Merge queue readiness is {verdict} for {role} target {branch}. {details} {action}',
+    'mergeQueue.readiness.incompleteEvidence': 'Required producer evidence is incomplete.',
+    'mergeQueue.readiness.action.unsupported': 'Add {event} to the required workflow, then retry.',
+    'mergeQueue.readiness.action.observation': 'Restore read access and a valid response for the target policy and workflows, then retry.',
+    'mergeQueue.readiness.action.unknown': 'Make the required producer support merge groups or add an exact reviewed check attestation, then retry.',
+    'mergeQueue.producerState.verified': 'supports merge groups',
+    'mergeQueue.producerState.attested': 'covered by an exact reviewed attestation',
+    'mergeQueue.producerState.unknown': 'support could not be verified',
+    'mergeQueue.producerState.unsupported': 'does not support merge groups',
+    'mergeQueue.problem.classicProtection': 'Classic branch protection could not be inspected.',
+    'mergeQueue.problem.effectiveRules': 'Effective repository rules could not be inspected.',
+    'mergeQueue.problem.workflowContract': 'Required workflow contracts could not be inspected.',
+    'mergeQueue.problem.queueMembership': 'Merge-queue membership could not be inspected.',
+    'mergeQueue.decision.explicitCreateOnly': 'Create-only mode was explicitly configured.',
+    'mergeQueue.decision.policyObservationFailed': 'The target merge policy could not be verified.',
+    'mergeQueue.decision.autoMergeRejected': 'Auto-merge mode was selected, but the target requires its merge queue.',
+    'mergeQueue.decision.queueRequired': 'The target requires its merge queue.',
+    'mergeQueue.decision.queueNotExposed': 'The target does not expose a required merge queue.',
+    'mergeQueue.decision.autoMergeConfigured': 'Native auto-merge was explicitly configured.',
+    'mergeQueue.decision.autoMergeDisabled': 'Native auto-merge is disabled for this repository.',
+    'mergeQueue.decision.immediatelyMergeable': 'GitHub reports the pull request ready; native auto-merge preserves branch protection.',
+    'mergeQueue.decision.autoMergeAvailable': 'GitHub will merge after checks and reviews complete.',
+    'mergeQueue.decision.createOnlyRequired': 'Repository auto-merge is unavailable; maintainer merge is required.',
+});
+exports.SPANISH_MERGE_QUEUE_MESSAGES = Object.freeze({
+    'mergeQueue.readiness.failure': 'La preparación de la merge queue está en estado {verdict} para el destino {role} {branch}. {details} {action}',
+    'mergeQueue.readiness.incompleteEvidence': 'La evidencia del productor requerido está incompleta.',
+    'mergeQueue.readiness.action.unsupported': 'Añade {event} al workflow requerido y vuelve a intentarlo.',
+    'mergeQueue.readiness.action.observation': 'Restaura el acceso de lectura y una respuesta válida para la política y los workflows del destino, y vuelve a intentarlo.',
+    'mergeQueue.readiness.action.unknown': 'Haz que el productor requerido soporte merge groups o añade una atestación exacta revisada y vuelve a intentarlo.',
+    'mergeQueue.producerState.verified': 'admite merge groups',
+    'mergeQueue.producerState.attested': 'está cubierto por una atestación exacta revisada',
+    'mergeQueue.producerState.unknown': 'no se ha podido verificar su compatibilidad',
+    'mergeQueue.producerState.unsupported': 'no admite merge groups',
+    'mergeQueue.problem.classicProtection': 'No se ha podido inspeccionar la protección de rama clásica.',
+    'mergeQueue.problem.effectiveRules': 'No se han podido inspeccionar las reglas efectivas del repositorio.',
+    'mergeQueue.problem.workflowContract': 'No se han podido inspeccionar los contratos de los workflows requeridos.',
+    'mergeQueue.problem.queueMembership': 'No se ha podido inspeccionar la pertenencia a la merge queue.',
+    'mergeQueue.decision.explicitCreateOnly': 'El modo de solo creación se ha configurado explícitamente.',
+    'mergeQueue.decision.policyObservationFailed': 'No se ha podido verificar la política de merge del destino.',
+    'mergeQueue.decision.autoMergeRejected': 'Se ha seleccionado auto-merge, pero el destino requiere su merge queue.',
+    'mergeQueue.decision.queueRequired': 'El destino requiere su merge queue.',
+    'mergeQueue.decision.queueNotExposed': 'El destino no expone una merge queue obligatoria.',
+    'mergeQueue.decision.autoMergeConfigured': 'El auto-merge nativo se ha configurado explícitamente.',
+    'mergeQueue.decision.autoMergeDisabled': 'El auto-merge nativo está deshabilitado en este repositorio.',
+    'mergeQueue.decision.immediatelyMergeable': 'GitHub indica que la pull request está lista; el auto-merge nativo preserva la protección de rama.',
+    'mergeQueue.decision.autoMergeAvailable': 'GitHub hará merge cuando terminen los checks y las revisiones.',
+    'mergeQueue.decision.createOnlyRequired': 'El auto-merge del repositorio no está disponible; se requiere el merge de una persona mantenedora.',
+});
+function renderMergeQueueReadinessFailure(readiness, catalog) {
+    const failed = readiness.producers.filter((producer) => producer.verdict === 'unsupported' || producer.verdict === 'unknown');
+    const producerDetails = failed.slice(0, 5)
+        .map((producer) => `${boundedMergeQueueDiagnostic(producer.name)} [${producer.verdict}]: ${catalog.message(producerStateMessageId(producer.verdict))}`)
+        .join('; ');
+    const problemDetails = readiness.problems.slice(0, 3)
+        .map((problem) => `${problem.area}: ${catalog.message(problemMessageId(problem.area))}`)
+        .join('; ');
+    const details = [producerDetails, problemDetails].filter(Boolean).join('; ')
+        || catalog.message('mergeQueue.readiness.incompleteEvidence');
+    const unsupported = failed.some((producer) => producer.verdict === 'unsupported');
+    const action = catalog.message(unsupported
+        ? 'mergeQueue.readiness.action.unsupported'
+        : readiness.problems.length > 0
+            ? 'mergeQueue.readiness.action.observation'
+            : 'mergeQueue.readiness.action.unknown', unsupported ? { event: 'merge_group: checks_requested' } : {});
+    return catalog.message('mergeQueue.readiness.failure', {
+        verdict: readiness.verdict,
+        role: readiness.targetRole,
+        branch: boundedMergeQueueDiagnostic(readiness.targetBranch),
+        details,
+        action,
+    });
+}
+function producerStateMessageId(verdict) {
+    return `mergeQueue.producerState.${verdict}`;
+}
+function problemMessageId(area) {
+    const ids = {
+        'classic-protection': 'mergeQueue.problem.classicProtection',
+        'effective-rules': 'mergeQueue.problem.effectiveRules',
+        'workflow-contract': 'mergeQueue.problem.workflowContract',
+        'queue-membership': 'mergeQueue.problem.queueMembership',
+    };
+    return ids[area];
+}
+function boundedMergeQueueDiagnostic(value) {
+    return (0, sensitive_text_1.redactSensitiveText)(value)
+        .replace(/[\r\n<>]/gu, ' ')
+        .replace(/::/gu, '﹕﹕')
+        .replace(/@/gu, '@\u200b')
+        .slice(0, 500);
 }
 
 
@@ -45985,6 +46106,345 @@ function uniqueDefined(current, next) {
 
 /***/ }),
 
+/***/ 80226:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SETUP_DOCTOR_CATALOG_DEFINITIONS = exports.SPANISH_SETUP_DOCTOR_DEFINITION = exports.ENGLISH_SETUP_DOCTOR_DEFINITION = exports.SETUP_DOCTOR_MESSAGE_IDS = void 0;
+exports.resolveStaticSetupDoctorCatalog = resolveStaticSetupDoctorCatalog;
+exports.resolveSetupDoctorCatalog = resolveSetupDoctorCatalog;
+const message_catalog_1 = __nccwpck_require__(27097);
+const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
+const merge_queue_message_catalog_1 = __nccwpck_require__(56033);
+const DOCTOR_ONLY_MESSAGE_IDS = Object.freeze([
+    'doctor.title',
+    'doctor.title.partial',
+    'doctor.summary',
+    'doctor.noMutation',
+    'doctor.blockedBy',
+    'doctor.action',
+    'doctor.status.pass',
+    'doctor.status.warn',
+    'doctor.status.fail',
+    'doctor.status.skipped',
+    'doctor.label.configuration',
+    'doctor.label.repositoryRoot',
+    'doctor.label.setupPat',
+    'doctor.label.githubScopes',
+    'doctor.label.repositorySecrets',
+    'doctor.label.repositoryVariables',
+    'doctor.label.mergeQueue',
+    'doctor.label.localeProfile',
+    'doctor.label.repositoryLocale',
+    'doctor.label.issueLocale',
+    'doctor.label.pullRequestLocale',
+    'doctor.label.workflow',
+    'doctor.label.variable',
+    'doctor.label.credential',
+    'doctor.label.mergeQueueTarget',
+    'doctor.locale.invalid',
+    'doctor.locale.invalidAction',
+    'doctor.locale.fallback',
+    'doctor.locale.fallbackInherited',
+    'doctor.locale.resolved',
+    'doctor.locale.resolvedInherited',
+    'doctor.locale.separatorAction',
+    'doctor.locale.dynamicAction',
+    'doctor.configuration.valid',
+    'doctor.configuration.invalid',
+    'doctor.configuration.action',
+    'doctor.repositoryRoot.valid',
+    'doctor.repositoryRoot.invalid',
+    'doctor.repositoryRoot.unverified',
+    'doctor.repositoryRoot.action',
+    'doctor.workflow.skipped',
+    'doctor.workflow.matches',
+    'doctor.workflow.drift',
+    'doctor.workflow.unverified',
+    'doctor.workflow.configurationAction',
+    'doctor.workflow.repairAction',
+    'doctor.workflow.unverifiedAction',
+    'doctor.setupPat.valid',
+    'doctor.setupPat.invalid',
+    'doctor.setupPat.unverified',
+    'doctor.setupPat.replaceAction',
+    'doctor.setupPat.unverifiedAction',
+    'doctor.mergeQueue.skipped',
+    'doctor.mergeQueue.skippedAction',
+    'doctor.mergeQueue.unverified',
+    'doctor.mergeQueue.unverifiedAction',
+    'doctor.scope.unverified',
+    'doctor.scope.unverifiedAction',
+    'doctor.scope.readable',
+    'doctor.scope.unavailable',
+    'doctor.scope.grantAction',
+    'doctor.variable.missing',
+    'doctor.variable.configured',
+    'doctor.variable.preserved',
+    'doctor.variable.different',
+    'doctor.variable.action',
+    'doctor.secretMetadata.readable',
+    'doctor.credential.group.runnerRequired',
+    'doctor.credential.group.missing',
+    'doctor.credential.group.healthy',
+    'doctor.credential.group.invalid',
+    'doctor.credential.group.unverified',
+    'doctor.credential.group.action',
+    'doctor.credential.missing',
+    'doctor.credential.valid',
+    'doctor.credential.invalid',
+    'doctor.credential.unverifiable',
+    'doctor.credential.unverified',
+    'doctor.credential.action',
+    'doctor.skipped.scope',
+    'doctor.skipped.scopeAction',
+    'doctor.skipped.variables',
+    'doctor.skipped.secrets',
+    'doctor.skipped.credentials',
+    'doctor.skipped.resourceAction',
+    'doctor.mergeQueue.configureSupportedAction',
+    'doctor.mergeQueue.repairOrAttestAction',
+    'doctor.mergeQueue.selectedMode',
+    'doctor.mergeQueue.ready',
+    'doctor.mergeQueue.targetUnverified',
+    'doctor.mergeQueue.targetUnverifiedAction',
+    'doctor.mergeQueue.activeRelease',
+    'doctor.mergeQueue.staleAttestation',
+    'doctor.mergeQueue.staleAttestationAction',
+    'doctor.mergeQueue.producer',
+    'doctor.mergeQueue.producerAction',
+]);
+exports.SETUP_DOCTOR_MESSAGE_IDS = Object.freeze([
+    ...DOCTOR_ONLY_MESSAGE_IDS,
+    ...merge_queue_message_catalog_1.MERGE_QUEUE_MESSAGE_IDS,
+]);
+const ENGLISH_DOCTOR_MESSAGES = Object.freeze({
+    'doctor.title': 'Copilot Doctor',
+    'doctor.title.partial': 'Copilot Doctor — partial diagnosis',
+    'doctor.summary': 'Checks: {pass} pass, {warn} warn, {fail} fail, {skipped} skipped.',
+    'doctor.noMutation': 'No repository configuration was changed.',
+    'doctor.blockedBy': 'Blocked by: {checks}',
+    'doctor.action': 'Action: {action}',
+    'doctor.status.pass': 'PASS',
+    'doctor.status.warn': 'WARN',
+    'doctor.status.fail': 'FAIL',
+    'doctor.status.skipped': 'SKIP',
+    'doctor.label.configuration': 'Configuration',
+    'doctor.label.repositoryRoot': 'Repository root',
+    'doctor.label.setupPat': 'Setup PAT',
+    'doctor.label.githubScopes': 'GitHub Actions scopes',
+    'doctor.label.repositorySecrets': 'Repository Secrets',
+    'doctor.label.repositoryVariables': 'Repository Variables',
+    'doctor.label.mergeQueue': 'Merge queue',
+    'doctor.label.localeProfile': 'Locale profile',
+    'doctor.label.repositoryLocale': 'Repository locale',
+    'doctor.label.issueLocale': 'Issue locale',
+    'doctor.label.pullRequestLocale': 'Pull-request locale',
+    'doctor.label.workflow': 'Workflow {id}',
+    'doctor.label.variable': 'Variable {name}',
+    'doctor.label.credential': 'Credential {name}',
+    'doctor.label.mergeQueueTarget': 'Merge queue {target}',
+    'doctor.locale.invalid': 'Locale capability could not be inspected because locale configuration is invalid.',
+    'doctor.locale.invalidAction': 'Correct the locale values and run doctor again.',
+    'doctor.locale.fallback': 'Effective locale {locale} could not resolve a complete safe catalog; product copy fell back atomically to en-US.',
+    'doctor.locale.fallbackInherited': 'Effective locale {locale} could not resolve a complete safe catalog; product copy fell back atomically to en-US. It inherits the repository locale.',
+    'doctor.locale.resolved': 'Effective locale {locale} resolves through the {source} catalog path.',
+    'doctor.locale.resolvedInherited': 'Effective locale {locale} resolves through the {source} catalog path. It inherits the repository locale.',
+    'doctor.locale.separatorAction': 'Replace legacy underscore separators with canonical BCP-47 hyphens.',
+    'doctor.locale.dynamicAction': 'Check that the planner/language agent is ready and returns valid localized copy, then run doctor again.',
+    'doctor.configuration.valid': 'Setup configuration is valid.',
+    'doctor.configuration.invalid': 'Setup configuration has {count} validation error(s).',
+    'doctor.configuration.action': 'Fix the setup configuration and run doctor again.',
+    'doctor.repositoryRoot.valid': 'Current directory is the repository root.',
+    'doctor.repositoryRoot.invalid': 'Current directory is not the repository root.',
+    'doctor.repositoryRoot.unverified': 'Repository root could not be verified.',
+    'doctor.repositoryRoot.action': 'Run doctor from the root of the target Git repository.',
+    'doctor.workflow.skipped': 'Workflow comparison was skipped because setup configuration is invalid.',
+    'doctor.workflow.matches': 'Matches the installed setup template.',
+    'doctor.workflow.drift': 'Local workflow is {state}.',
+    'doctor.workflow.unverified': 'Managed workflows could not be compared.',
+    'doctor.workflow.configurationAction': 'Fix setup configuration, then run doctor again.',
+    'doctor.workflow.repairAction': 'Run setup to repair this managed workflow.',
+    'doctor.workflow.unverifiedAction': 'Check local workflow files and run doctor again.',
+    'doctor.setupPat.valid': 'The setup PAT is valid.',
+    'doctor.setupPat.invalid': 'The setup PAT is invalid.',
+    'doctor.setupPat.unverified': 'The setup PAT could not be validated.',
+    'doctor.setupPat.replaceAction': 'Replace the setup PAT and run doctor again.',
+    'doctor.setupPat.unverifiedAction': 'Check the setup PAT and network access, then run doctor again.',
+    'doctor.mergeQueue.skipped': 'Merge-queue readiness was not inspected because setup configuration is invalid.',
+    'doctor.mergeQueue.skippedAction': 'Fix the reported configuration errors, then run doctor again.',
+    'doctor.mergeQueue.unverified': 'Merge-queue readiness could not be inspected.',
+    'doctor.mergeQueue.unverifiedAction': 'Check branch policy access and run doctor again.',
+    'doctor.scope.unverified': 'GitHub Actions resource scopes could not be inspected.',
+    'doctor.scope.unverifiedAction': 'Check setup PAT access to repository and organization Actions metadata, then retry.',
+    'doctor.scope.readable': 'GitHub Actions resource scopes are readable.',
+    'doctor.scope.unavailable': 'Some organization-level GitHub Actions resource scopes are unavailable.',
+    'doctor.scope.grantAction': 'Grant the setup PAT the required organization Actions metadata access.',
+    'doctor.variable.missing': 'Variable is missing.',
+    'doctor.variable.configured': 'Variable is configured at {scope} scope.',
+    'doctor.variable.preserved': 'Variable differs but is intentionally preserved at {scope} scope.',
+    'doctor.variable.different': 'Variable differs from the expected setup configuration.',
+    'doctor.variable.action': 'Run setup to reconcile this Variable.',
+    'doctor.secretMetadata.readable': 'GitHub Actions Secret metadata is readable.',
+    'doctor.credential.group.runnerRequired': 'No fallback Secret is configured; runner authentication must satisfy this group.',
+    'doctor.credential.group.missing': 'No alternative credential is present.',
+    'doctor.credential.group.healthy': 'At least one alternative credential is healthy.',
+    'doctor.credential.group.invalid': 'Every available alternative credential is invalid.',
+    'doctor.credential.group.unverified': 'An alternative credential is present, but remote health is unavailable.',
+    'doctor.credential.group.action': 'Configure and validate one credential for this requirement group.',
+    'doctor.credential.missing': 'Required Secret is missing.',
+    'doctor.credential.valid': 'Credential health is valid.',
+    'doctor.credential.invalid': 'Credential health is invalid.',
+    'doctor.credential.unverifiable': 'Credential health cannot be verified automatically.',
+    'doctor.credential.unverified': 'Secret is present, but remote health is unavailable.',
+    'doctor.credential.action': 'Configure or replace {name}, then rerun credential health.',
+    'doctor.skipped.scope': 'Resource-scope inspection requires a valid setup PAT.',
+    'doctor.skipped.scopeAction': 'Replace the setup PAT.',
+    'doctor.skipped.variables': 'Variable checks could not run.',
+    'doctor.skipped.secrets': 'Secret metadata checks could not run.',
+    'doctor.skipped.credentials': 'Credential health could not run.',
+    'doctor.skipped.resourceAction': 'Resolve the blocking check and rerun doctor.',
+    'doctor.mergeQueue.configureSupportedAction': 'Configure a supported merge-queue producer or choose another reconciliation mode.',
+    'doctor.mergeQueue.repairOrAttestAction': 'Repair or attest every required merge-queue producer.',
+    'doctor.mergeQueue.selectedMode': 'Selected mode is {mode}; merge-queue producer evidence is not required for this target.',
+    'doctor.mergeQueue.ready': 'Ready. {verified} required producer(s) verified automatically and {attested} covered by exact attestation.',
+    'doctor.mergeQueue.targetUnverified': 'Target policy could not be inspected because the provider request failed.',
+    'doctor.mergeQueue.targetUnverifiedAction': 'Check the setup PAT permissions and target branch policy, then retry.',
+    'doctor.mergeQueue.activeRelease': 'Active release branches are discovered dynamically and are revalidated before a hotfix reconciliation branch or pull request is created.',
+    'doctor.mergeQueue.staleAttestation': 'This exact attestation does not match a required check observed on production or development.',
+    'doctor.mergeQueue.staleAttestationAction': 'Remove the stale attestation or correct its exact check identity.',
+    'doctor.mergeQueue.producer': '{verdict}: {state}',
+    'doctor.mergeQueue.producerAction': 'Configure or exactly attest this required producer.',
+});
+const SPANISH_DOCTOR_MESSAGES = Object.freeze({
+    'doctor.title': 'Diagnóstico de Copilot',
+    'doctor.title.partial': 'Diagnóstico de Copilot — diagnóstico parcial',
+    'doctor.summary': 'Checks: {pass} correctos, {warn} avisos, {fail} fallos, {skipped} omitidos.',
+    'doctor.noMutation': 'No se ha cambiado la configuración del repositorio.',
+    'doctor.blockedBy': 'Bloqueado por: {checks}',
+    'doctor.action': 'Acción: {action}',
+    'doctor.status.pass': 'OK',
+    'doctor.status.warn': 'AVISO',
+    'doctor.status.fail': 'FALLO',
+    'doctor.status.skipped': 'OMITIDO',
+    'doctor.label.configuration': 'Configuración',
+    'doctor.label.repositoryRoot': 'Raíz del repositorio',
+    'doctor.label.setupPat': 'PAT de setup',
+    'doctor.label.githubScopes': 'Permisos de GitHub Actions',
+    'doctor.label.repositorySecrets': 'Secrets del repositorio',
+    'doctor.label.repositoryVariables': 'Variables del repositorio',
+    'doctor.label.mergeQueue': 'Merge queue',
+    'doctor.label.localeProfile': 'Perfil de locale',
+    'doctor.label.repositoryLocale': 'Locale del repositorio',
+    'doctor.label.issueLocale': 'Locale de issues',
+    'doctor.label.pullRequestLocale': 'Locale de pull requests',
+    'doctor.label.workflow': 'Workflow {id}',
+    'doctor.label.variable': 'Variable {name}',
+    'doctor.label.credential': 'Credencial {name}',
+    'doctor.label.mergeQueueTarget': 'Merge queue {target}',
+    'doctor.locale.invalid': 'No se ha podido inspeccionar la localización porque la configuración de locale no es válida.',
+    'doctor.locale.invalidAction': 'Corrige los valores de locale y vuelve a ejecutar doctor.',
+    'doctor.locale.fallback': 'El locale efectivo {locale} no ha podido resolver un catálogo completo y seguro; el texto de producto ha usado en-US de forma atómica.',
+    'doctor.locale.fallbackInherited': 'El locale efectivo {locale} no ha podido resolver un catálogo completo y seguro; el texto de producto ha usado en-US de forma atómica. Hereda el locale del repositorio.',
+    'doctor.locale.resolved': 'El locale efectivo {locale} se resuelve mediante la ruta de catálogo {source}.',
+    'doctor.locale.resolvedInherited': 'El locale efectivo {locale} se resuelve mediante la ruta de catálogo {source}. Hereda el locale del repositorio.',
+    'doctor.locale.separatorAction': 'Sustituye los separadores bajos heredados por guiones BCP-47 canónicos.',
+    'doctor.locale.dynamicAction': 'Comprueba que el agente de planificación/idioma está disponible y devuelve texto localizado válido; después, vuelve a ejecutar doctor.',
+    'doctor.configuration.valid': 'La configuración de setup es válida.',
+    'doctor.configuration.invalid': 'La configuración de setup tiene {count} error(es) de validación.',
+    'doctor.configuration.action': 'Corrige la configuración de setup y vuelve a ejecutar doctor.',
+    'doctor.repositoryRoot.valid': 'El directorio actual es la raíz del repositorio.',
+    'doctor.repositoryRoot.invalid': 'El directorio actual no es la raíz del repositorio.',
+    'doctor.repositoryRoot.unverified': 'No se ha podido verificar la raíz del repositorio.',
+    'doctor.repositoryRoot.action': 'Ejecuta doctor desde la raíz del repositorio Git de destino.',
+    'doctor.workflow.skipped': 'Se ha omitido la comparación de workflows porque la configuración de setup no es válida.',
+    'doctor.workflow.matches': 'Coincide con la plantilla de setup instalada.',
+    'doctor.workflow.drift': 'El workflow local está en estado {state}.',
+    'doctor.workflow.unverified': 'No se han podido comparar los workflows gestionados.',
+    'doctor.workflow.configurationAction': 'Corrige la configuración de setup y vuelve a ejecutar doctor.',
+    'doctor.workflow.repairAction': 'Ejecuta setup para reparar este workflow gestionado.',
+    'doctor.workflow.unverifiedAction': 'Comprueba los workflows locales y vuelve a ejecutar doctor.',
+    'doctor.setupPat.valid': 'El PAT de setup es válido.',
+    'doctor.setupPat.invalid': 'El PAT de setup no es válido.',
+    'doctor.setupPat.unverified': 'No se ha podido validar el PAT de setup.',
+    'doctor.setupPat.replaceAction': 'Sustituye el PAT de setup y vuelve a ejecutar doctor.',
+    'doctor.setupPat.unverifiedAction': 'Comprueba el PAT de setup y el acceso de red, y vuelve a ejecutar doctor.',
+    'doctor.mergeQueue.skipped': 'No se ha inspeccionado la preparación de merge queue porque la configuración de setup no es válida.',
+    'doctor.mergeQueue.skippedAction': 'Corrige los errores de configuración indicados y vuelve a ejecutar doctor.',
+    'doctor.mergeQueue.unverified': 'No se ha podido inspeccionar la preparación de merge queue.',
+    'doctor.mergeQueue.unverifiedAction': 'Comprueba el acceso a la política de rama y vuelve a ejecutar doctor.',
+    'doctor.scope.unverified': 'No se han podido inspeccionar los ámbitos de recursos de GitHub Actions.',
+    'doctor.scope.unverifiedAction': 'Comprueba el acceso del PAT de setup a los metadatos de Actions del repositorio y la organización, y vuelve a intentarlo.',
+    'doctor.scope.readable': 'Los ámbitos de recursos de GitHub Actions son legibles.',
+    'doctor.scope.unavailable': 'Algunos ámbitos de recursos de GitHub Actions de la organización no están disponibles.',
+    'doctor.scope.grantAction': 'Concede al PAT de setup el acceso necesario a los metadatos de Actions de la organización.',
+    'doctor.variable.missing': 'Falta la Variable.',
+    'doctor.variable.configured': 'La Variable está configurada en el ámbito {scope}.',
+    'doctor.variable.preserved': 'La Variable difiere, pero se conserva intencionadamente en el ámbito {scope}.',
+    'doctor.variable.different': 'La Variable difiere de la configuración de setup esperada.',
+    'doctor.variable.action': 'Ejecuta setup para reconciliar esta Variable.',
+    'doctor.secretMetadata.readable': 'Los metadatos de Secrets de GitHub Actions son legibles.',
+    'doctor.credential.group.runnerRequired': 'No hay un Secret alternativo configurado; la autenticación del runner debe satisfacer este grupo.',
+    'doctor.credential.group.missing': 'No hay ninguna credencial alternativa disponible.',
+    'doctor.credential.group.healthy': 'Al menos una credencial alternativa es válida.',
+    'doctor.credential.group.invalid': 'Todas las credenciales alternativas disponibles son inválidas.',
+    'doctor.credential.group.unverified': 'Hay una credencial alternativa, pero su estado remoto no está disponible.',
+    'doctor.credential.group.action': 'Configura y valida una credencial para este grupo de requisitos.',
+    'doctor.credential.missing': 'Falta el Secret requerido.',
+    'doctor.credential.valid': 'El estado de la credencial es válido.',
+    'doctor.credential.invalid': 'El estado de la credencial es inválido.',
+    'doctor.credential.unverifiable': 'El estado de la credencial no se puede verificar automáticamente.',
+    'doctor.credential.unverified': 'El Secret está presente, pero su estado remoto no está disponible.',
+    'doctor.credential.action': 'Configura o sustituye {name} y vuelve a ejecutar la comprobación de credenciales.',
+    'doctor.skipped.scope': 'La inspección de ámbitos requiere un PAT de setup válido.',
+    'doctor.skipped.scopeAction': 'Sustituye el PAT de setup.',
+    'doctor.skipped.variables': 'No se han podido comprobar las Variables.',
+    'doctor.skipped.secrets': 'No se han podido comprobar los metadatos de Secrets.',
+    'doctor.skipped.credentials': 'No se ha podido comprobar el estado de las credenciales.',
+    'doctor.skipped.resourceAction': 'Resuelve el check bloqueante y vuelve a ejecutar doctor.',
+    'doctor.mergeQueue.configureSupportedAction': 'Configura un productor de merge queue compatible o elige otro modo de reconciliación.',
+    'doctor.mergeQueue.repairOrAttestAction': 'Repara o atestigua cada productor obligatorio de merge queue.',
+    'doctor.mergeQueue.selectedMode': 'El modo seleccionado es {mode}; este destino no necesita evidencia de productores de merge queue.',
+    'doctor.mergeQueue.ready': 'Listo. {verified} productor(es) obligatorio(s) verificados automáticamente y {attested} cubiertos por atestación exacta.',
+    'doctor.mergeQueue.targetUnverified': 'No se ha podido inspeccionar la política del destino porque ha fallado la petición al proveedor.',
+    'doctor.mergeQueue.targetUnverifiedAction': 'Comprueba los permisos del PAT de setup y la política de la rama de destino, y vuelve a intentarlo.',
+    'doctor.mergeQueue.activeRelease': 'Las ramas de release activas se descubren dinámicamente y se revalidan antes de crear una rama o pull request de reconciliación de hotfix.',
+    'doctor.mergeQueue.staleAttestation': 'Esta atestación exacta no coincide con ningún check obligatorio observado en producción o desarrollo.',
+    'doctor.mergeQueue.staleAttestationAction': 'Elimina la atestación obsoleta o corrige la identidad exacta del check.',
+    'doctor.mergeQueue.producer': '{verdict}: {state}',
+    'doctor.mergeQueue.producerAction': 'Configura o atestigua exactamente este productor obligatorio.',
+});
+function messages(doctor, mergeQueue) {
+    return Object.freeze({ ...doctor, ...mergeQueue });
+}
+exports.ENGLISH_SETUP_DOCTOR_DEFINITION = Object.freeze({
+    version: message_catalog_1.MESSAGE_CATALOG_VERSION,
+    locale: 'en-US',
+    compatibleBaseLanguage: 'en',
+    messages: messages(ENGLISH_DOCTOR_MESSAGES, merge_queue_message_catalog_1.ENGLISH_MERGE_QUEUE_MESSAGES),
+});
+exports.SPANISH_SETUP_DOCTOR_DEFINITION = Object.freeze({
+    version: message_catalog_1.MESSAGE_CATALOG_VERSION,
+    locale: 'es-ES',
+    compatibleBaseLanguage: 'es',
+    messages: messages(SPANISH_DOCTOR_MESSAGES, merge_queue_message_catalog_1.SPANISH_MERGE_QUEUE_MESSAGES),
+});
+exports.SETUP_DOCTOR_CATALOG_DEFINITIONS = Object.freeze([
+    exports.ENGLISH_SETUP_DOCTOR_DEFINITION,
+    exports.SPANISH_SETUP_DOCTOR_DEFINITION,
+]);
+function resolveStaticSetupDoctorCatalog(locale = 'en-US') {
+    return (0, resolved_message_catalog_policy_1.resolveStaticMessageCatalogView)(locale, exports.ENGLISH_SETUP_DOCTOR_DEFINITION, exports.SETUP_DOCTOR_CATALOG_DEFINITIONS);
+}
+function resolveSetupDoctorCatalog(locale, configuration, resolver) {
+    return (0, resolved_message_catalog_policy_1.resolveMessageCatalogView)(locale, exports.SETUP_DOCTOR_MESSAGE_IDS, exports.ENGLISH_SETUP_DOCTOR_DEFINITION, exports.SETUP_DOCTOR_CATALOG_DEFINITIONS, configuration, resolver);
+}
+
+
+/***/ }),
+
 /***/ 67615:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -45998,8 +46458,8 @@ exports.normalizedDoctorPathId = normalizedDoctorPathId;
 exports.buildLocaleDoctorChecks = buildLocaleDoctorChecks;
 const locale_1 = __nccwpck_require__(15386);
 const message_catalog_1 = __nccwpck_require__(27097);
-const publication_message_catalog_1 = __nccwpck_require__(34223);
 const agent_1 = __nccwpck_require__(89040);
+const setup_doctor_message_catalog_1 = __nccwpck_require__(80226);
 const EMPTY_TOTALS = {
     pass: 0,
     warn: 0,
@@ -46041,39 +46501,45 @@ function normalizedDoctorPathId(path) {
         .slice(0, 120);
     return normalized || 'unknown';
 }
-function buildLocaleDoctorChecks(configuration) {
+function buildLocaleDoctorChecks(configuration, catalog = (0, setup_doctor_message_catalog_1.resolveStaticSetupDoctorCatalog)()) {
     try {
         const profile = (0, locale_1.resolveLocaleProfile)(configuration.repository.repositoryLocale, configuration.repository.issueLocale, configuration.repository.pullRequestLocale);
         const dynamicReady = (0, agent_1.isAgentConfigurationReady)(configuration.agents.planner);
+        const repositoryCatalogSource = catalog.requestedLocale === profile.repository
+            ? catalog.resolutionSource
+            : undefined;
         return Object.freeze([
-            localeDoctorCheck('repository', configuration.repository.repositoryLocale, profile.repository, false, dynamicReady),
-            localeDoctorCheck('issue', configuration.repository.issueLocale, profile.issue, true, dynamicReady),
-            localeDoctorCheck('pull-request', configuration.repository.pullRequestLocale, profile.pullRequest, true, dynamicReady),
+            localeDoctorCheck('repository', configuration.repository.repositoryLocale, profile.repository, false, dynamicReady, catalog, repositoryCatalogSource),
+            localeDoctorCheck('issue', configuration.repository.issueLocale, profile.issue, true, dynamicReady, catalog),
+            localeDoctorCheck('pull-request', configuration.repository.pullRequestLocale, profile.pullRequest, true, dynamicReady, catalog),
         ]);
     }
     catch {
         return Object.freeze([
-            skippedDoctorCheck('locale.profile', ['configuration.valid'], 'Locale capability could not be inspected because locale configuration is invalid.', 'Correct the locale values and run doctor again.'),
+            skippedDoctorCheck('locale.profile', ['configuration.valid'], catalog.message('doctor.locale.invalid'), catalog.message('doctor.locale.invalidAction')),
         ]);
     }
 }
-function localeDoctorCheck(scope, configured, effective, inheritedWhenEmpty, dynamicReady) {
-    const bundled = (0, message_catalog_1.selectBundledMessageCatalog)(effective, publication_message_catalog_1.PUBLICATION_CATALOG_DEFINITIONS);
-    const catalogSource = bundled?.source ?? (dynamicReady ? 'dynamic' : 'fallback');
+function localeDoctorCheck(scope, configured, effective, inheritedWhenEmpty, dynamicReady, catalog, resolvedCatalogSource) {
+    const bundled = (0, message_catalog_1.selectBundledMessageCatalog)(effective, setup_doctor_message_catalog_1.SETUP_DOCTOR_CATALOG_DEFINITIONS);
+    const catalogSource = resolvedCatalogSource ?? bundled?.source ?? (dynamicReady ? 'dynamic' : 'fallback');
     const legacySeparator = configured.includes('_');
     const fallback = catalogSource === 'fallback';
     const status = legacySeparator || fallback ? 'warn' : 'pass';
-    const inheritance = inheritedWhenEmpty && !configured.trim() ? ' It inherits the repository locale.' : '';
+    const inherited = inheritedWhenEmpty && !configured.trim();
     return doctorCheck({
         id: `locale.${scope}`,
         status,
         summary: fallback
-            ? `Effective locale ${effective} has no bundled catalog and no ready language agent; product copy will fall back atomically to en-US.${inheritance}`
-            : `Effective locale ${effective} resolves through the ${catalogSource} catalog path.${inheritance}`,
+            ? catalog.message(inherited ? 'doctor.locale.fallbackInherited' : 'doctor.locale.fallback', { locale: effective })
+            : catalog.message(inherited ? 'doctor.locale.resolvedInherited' : 'doctor.locale.resolved', {
+                locale: effective,
+                source: catalogSource,
+            }),
         ...(legacySeparator
-            ? { action: 'Replace legacy underscore separators with canonical BCP-47 hyphens.' }
+            ? { action: catalog.message('doctor.locale.separatorAction') }
             : fallback
-                ? { action: 'Configure a ready language agent if localized non-English product copy is required.' }
+                ? { action: catalog.message('doctor.locale.dynamicAction') }
                 : {}),
         evidence: {
             configured: configured || '(inherit)',
@@ -46789,9 +47255,10 @@ class DeploymentOrchestrationRuntime {
                 attestations: context.deployment.mergeQueueCheckAttestations,
             });
             if (readiness.verdict !== "ready") {
+                const catalog = await this.presentationCatalog('issue', context, operation);
                 return {
                     kind: "blocked",
-                    reason: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, effectiveLocale(context, operation).issue),
+                    reason: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, catalog),
                 };
             }
         }
@@ -46843,9 +47310,10 @@ class DeploymentOrchestrationRuntime {
             await this.dependencies.pullRequests.enableAutoMerge(pullRequest.nodeId);
         }
     }
-    unsupportedMergeBehavior(context, operation, targetRole, targetBranch, capabilities, decision) {
+    async unsupportedMergeBehavior(context, operation, targetRole, targetBranch, capabilities, decision) {
+        const catalog = await this.presentationCatalog('issue', context, operation);
         if (capabilities.mergeQueueObservationProblems.length === 0) {
-            return { kind: "blocked", reason: decision.reason };
+            return { kind: "blocked", reason: (0, deployment_plan_policy_1.pullRequestModeDecisionMessage)(decision, catalog) };
         }
         const readiness = (0, merge_queue_readiness_1.evaluateMergeQueueReadiness)({
             queueRequired: true,
@@ -46857,7 +47325,7 @@ class DeploymentOrchestrationRuntime {
         });
         return {
             kind: "blocked",
-            reason: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, effectiveLocale(context, operation).issue),
+            reason: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, catalog),
         };
     }
     presentationCatalog(scope, context, operation) {
@@ -51846,26 +52314,29 @@ function deepFreezeCopy(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupDoctorUseCase = void 0;
+const locale_1 = __nccwpck_require__(15386);
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const setup_doctor_report_policy_1 = __nccwpck_require__(67615);
 const bounded_concurrency_policy_1 = __nccwpck_require__(35596);
+const setup_doctor_message_catalog_1 = __nccwpck_require__(80226);
 class SetupDoctorUseCase {
     constructor(dependencies) {
         this.dependencies = dependencies;
     }
     async execute(request) {
+        const catalog = await (0, setup_doctor_message_catalog_1.resolveSetupDoctorCatalog)(doctorCatalogLocale(request.configuration), request.configuration.agents.planner, this.dependencies.catalogResolver);
         const configurationErrors = (0, setup_configuration_policy_1.validateSetupConfiguration)(request.configuration);
         const checks = [
-            configurationCheck(configurationErrors),
-            ...(0, setup_doctor_report_policy_1.buildLocaleDoctorChecks)(request.configuration),
-            repositoryRootCheck(this.dependencies.workspace),
-            ...workflowChecks(request.configuration, configurationErrors, this.dependencies.workspace),
+            configurationCheck(configurationErrors, catalog),
+            ...(0, setup_doctor_report_policy_1.buildLocaleDoctorChecks)(request.configuration, catalog),
+            repositoryRootCheck(this.dependencies.workspace, catalog),
+            ...workflowChecks(request.configuration, configurationErrors, this.dependencies.workspace, catalog),
         ];
-        const pat = await this.validatePat(request);
+        const pat = await this.validatePat(request, catalog);
         checks.push(pat);
         if (pat.status !== 'pass') {
-            checks.push(...skippedRemoteChecks(request.configuration, pat.id));
-            return (0, setup_doctor_report_policy_1.buildDoctorReport)(checks);
+            checks.push(...skippedRemoteChecks(request.configuration, pat.id, catalog));
+            return { report: (0, setup_doctor_report_policy_1.buildDoctorReport)(checks), catalog };
         }
         const remote = await (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)([
             async () => {
@@ -51883,7 +52354,7 @@ class SetupDoctorUseCase {
                 if (configurationErrors.length > 0) {
                     return {
                         kind: 'merge-queue',
-                        value: [(0, setup_doctor_report_policy_1.skippedDoctorCheck)('github.merge-queue', ['configuration.valid'], 'Merge-queue readiness was not inspected because setup configuration is invalid.', 'Fix the reported configuration errors, then run doctor again.')],
+                        value: [(0, setup_doctor_report_policy_1.skippedDoctorCheck)('github.merge-queue', ['configuration.valid'], catalog.message('doctor.mergeQueue.skipped'), catalog.message('doctor.mergeQueue.skippedAction'))],
                     };
                 }
                 try {
@@ -51894,6 +52365,7 @@ class SetupDoctorUseCase {
                             repository: request.repository,
                             token: request.setupToken,
                             configuration: request.configuration,
+                            catalog,
                         }),
                     };
                 }
@@ -51906,29 +52378,29 @@ class SetupDoctorUseCase {
         const mergeQueueChecks = remote.find((result) => result.kind === 'merge-queue')?.value ?? [(0, setup_doctor_report_policy_1.doctorCheck)({
                 id: 'github.merge-queue',
                 status: 'fail',
-                summary: 'Merge-queue readiness could not be inspected.',
-                action: 'Check branch policy access and run doctor again.',
+                summary: catalog.message('doctor.mergeQueue.unverified'),
+                action: catalog.message('doctor.mergeQueue.unverifiedAction'),
             })];
         if (!remoteConfiguration) {
-            checks.push(remoteScopeFailure(request.configuration));
-            checks.push(...mergeQueueChecks, ...skippedResourceChecks(request.configuration, 'github.resource-scopes'));
-            return (0, setup_doctor_report_policy_1.buildDoctorReport)(checks);
+            checks.push(remoteScopeFailure(request.configuration, catalog));
+            checks.push(...mergeQueueChecks, ...skippedResourceChecks(request.configuration, 'github.resource-scopes', catalog));
+            return { report: (0, setup_doctor_report_policy_1.buildDoctorReport)(checks), catalog };
         }
-        checks.push(resourceScopeCheck(request.configuration, remoteConfiguration));
+        checks.push(resourceScopeCheck(request.configuration, remoteConfiguration, catalog));
         checks.push(...mergeQueueChecks);
-        checks.push(...variableChecks(request.configuration, remoteConfiguration));
-        checks.push(secretNamesCheck(remoteConfiguration));
-        checks.push(...await this.credentialChecks(request, remoteConfiguration));
-        return (0, setup_doctor_report_policy_1.buildDoctorReport)(checks);
+        checks.push(...variableChecks(request.configuration, remoteConfiguration, catalog));
+        checks.push(secretNamesCheck(remoteConfiguration, catalog));
+        checks.push(...await this.credentialChecks(request, remoteConfiguration, catalog));
+        return { report: (0, setup_doctor_report_policy_1.buildDoctorReport)(checks), catalog };
     }
-    async validatePat(request) {
+    async validatePat(request, catalog) {
         try {
             const result = await this.dependencies.validation.validateSetupPat(request.owner, request.repository, request.setupToken);
             return (0, setup_doctor_report_policy_1.doctorCheck)({
                 id: 'credentials.setup-pat',
                 status: result.status === 'valid' ? 'pass' : 'fail',
-                summary: result.message,
-                ...(result.status === 'valid' ? {} : { action: 'Replace the setup PAT and run doctor again.' }),
+                summary: catalog.message(result.status === 'valid' ? 'doctor.setupPat.valid' : 'doctor.setupPat.invalid'),
+                ...(result.status === 'valid' ? {} : { action: catalog.message('doctor.setupPat.replaceAction') }),
                 evidence: {
                     credential: 'SETUP_PAT',
                     ...(result.account ? { account: result.account } : {}),
@@ -51939,13 +52411,13 @@ class SetupDoctorUseCase {
             return (0, setup_doctor_report_policy_1.doctorCheck)({
                 id: 'credentials.setup-pat',
                 status: 'fail',
-                summary: 'The setup PAT could not be validated.',
-                action: 'Check the setup PAT and network access, then run doctor again.',
+                summary: catalog.message('doctor.setupPat.unverified'),
+                action: catalog.message('doctor.setupPat.unverifiedAction'),
                 evidence: { credential: 'SETUP_PAT' },
             });
         }
     }
-    async credentialChecks(request, remote) {
+    async credentialChecks(request, remote, catalog) {
         const requirements = (0, setup_configuration_policy_1.buildSetupCredentialRequirements)(request.configuration);
         const remoteSecrets = new Set([...remote.repositorySecrets, ...remote.organizationSecrets]);
         const present = requirements.filter((requirement) => remoteSecrets.has(requirement.name));
@@ -51958,43 +52430,43 @@ class SetupDoctorUseCase {
                 health = undefined;
             }
         }
-        return buildCredentialChecks(requirements, remoteSecrets, health);
+        return buildCredentialChecks(requirements, remoteSecrets, health, catalog);
     }
 }
 exports.SetupDoctorUseCase = SetupDoctorUseCase;
-function configurationCheck(errors) {
+function configurationCheck(errors, catalog) {
     return (0, setup_doctor_report_policy_1.doctorCheck)({
         id: 'configuration.valid',
         status: errors.length === 0 ? 'pass' : 'fail',
         summary: errors.length === 0
-            ? 'Setup configuration is valid.'
-            : `Setup configuration has ${errors.length} validation error(s).`,
-        ...(errors.length === 0 ? {} : { action: 'Fix the setup configuration and run doctor again.' }),
+            ? catalog.message('doctor.configuration.valid')
+            : catalog.message('doctor.configuration.invalid', { count: errors.length }),
+        ...(errors.length === 0 ? {} : { action: catalog.message('doctor.configuration.action') }),
         evidence: { errorCount: errors.length },
     });
 }
-function repositoryRootCheck(workspace) {
+function repositoryRootCheck(workspace, catalog) {
     try {
         const valid = workspace.isRepositoryRoot();
         return (0, setup_doctor_report_policy_1.doctorCheck)({
             id: 'workspace.repository-root',
             status: valid ? 'pass' : 'fail',
-            summary: valid ? 'Current directory is the repository root.' : 'Current directory is not the repository root.',
-            ...(valid ? {} : { action: 'Run doctor from the root of the target Git repository.' }),
+            summary: catalog.message(valid ? 'doctor.repositoryRoot.valid' : 'doctor.repositoryRoot.invalid'),
+            ...(valid ? {} : { action: catalog.message('doctor.repositoryRoot.action') }),
         });
     }
     catch {
         return (0, setup_doctor_report_policy_1.doctorCheck)({
             id: 'workspace.repository-root',
             status: 'fail',
-            summary: 'Repository root could not be verified.',
-            action: 'Run doctor from the root of the target Git repository.',
+            summary: catalog.message('doctor.repositoryRoot.unverified'),
+            action: catalog.message('doctor.repositoryRoot.action'),
         });
     }
 }
-function workflowChecks(configuration, configurationErrors, workspace) {
+function workflowChecks(configuration, configurationErrors, workspace, catalog) {
     if (configurationErrors.length > 0) {
-        return [(0, setup_doctor_report_policy_1.skippedDoctorCheck)('workflow.comparison', ['configuration.valid'], 'Workflow comparison was skipped because setup configuration is invalid.', 'Fix setup configuration, then run doctor again.')];
+        return [(0, setup_doctor_report_policy_1.skippedDoctorCheck)('workflow.comparison', ['configuration.valid'], catalog.message('doctor.workflow.skipped'), catalog.message('doctor.workflow.configurationAction'))];
     }
     try {
         return [...workspace.compareWorkflows(configuration.features)]
@@ -52003,9 +52475,9 @@ function workflowChecks(configuration, configurationErrors, workspace) {
             id: `workflow.${(0, setup_doctor_report_policy_1.normalizedDoctorPathId)(comparison.destination)}`,
             status: comparison.status === 'unchanged' ? 'pass' : 'fail',
             summary: comparison.status === 'unchanged'
-                ? 'Matches the installed setup template.'
-                : `Local workflow is ${comparison.status}.`,
-            ...(comparison.status === 'unchanged' ? {} : { action: 'Run setup to repair this managed workflow.' }),
+                ? catalog.message('doctor.workflow.matches')
+                : catalog.message('doctor.workflow.drift', { state: comparison.status }),
+            ...(comparison.status === 'unchanged' ? {} : { action: catalog.message('doctor.workflow.repairAction') }),
             evidence: { path: comparison.destination, state: comparison.status },
         }));
     }
@@ -52013,20 +52485,20 @@ function workflowChecks(configuration, configurationErrors, workspace) {
         return [(0, setup_doctor_report_policy_1.doctorCheck)({
                 id: 'workflow.comparison',
                 status: 'fail',
-                summary: 'Managed workflows could not be compared.',
-                action: 'Check local workflow files and run doctor again.',
+                summary: catalog.message('doctor.workflow.unverified'),
+                action: catalog.message('doctor.workflow.unverifiedAction'),
             })];
     }
 }
-function remoteScopeFailure(configuration) {
+function remoteScopeFailure(configuration, catalog) {
     return (0, setup_doctor_report_policy_1.doctorCheck)({
         id: 'github.resource-scopes',
         status: (0, setup_configuration_policy_1.usesOrganizationStorage)(configuration) ? 'fail' : 'warn',
-        summary: 'GitHub Actions resource scopes could not be inspected.',
-        action: 'Check setup PAT access to repository and organization Actions metadata, then retry.',
+        summary: catalog.message('doctor.scope.unverified'),
+        action: catalog.message('doctor.scope.unverifiedAction'),
     });
 }
-function resourceScopeCheck(configuration, remote) {
+function resourceScopeCheck(configuration, remote, catalog) {
     const unavailable = remote.organizationAccess === 'unavailable'
         || remote.organizationSecretsAccess === 'unavailable'
         || remote.organizationVariablesAccess === 'unavailable';
@@ -52035,10 +52507,8 @@ function resourceScopeCheck(configuration, remote) {
     return (0, setup_doctor_report_policy_1.doctorCheck)({
         id: 'github.resource-scopes',
         status,
-        summary: status === 'pass'
-            ? 'GitHub Actions resource scopes are readable.'
-            : 'Some organization-level GitHub Actions resource scopes are unavailable.',
-        ...(status === 'pass' ? {} : { action: 'Grant the setup PAT the required organization Actions metadata access.' }),
+        summary: catalog.message(status === 'pass' ? 'doctor.scope.readable' : 'doctor.scope.unavailable'),
+        ...(status === 'pass' ? {} : { action: catalog.message('doctor.scope.grantAction') }),
         evidence: {
             ownerType: remote.ownerType,
             repositoryVisibility: remote.repositoryVisibility,
@@ -52046,7 +52516,7 @@ function resourceScopeCheck(configuration, remote) {
         },
     });
 }
-function variableChecks(configuration, remote) {
+function variableChecks(configuration, remote, catalog) {
     const remoteVariables = new Map();
     for (const variable of remote.organizationVariables)
         remoteVariables.set(variable.name, { value: variable.value, source: 'organization' });
@@ -52066,29 +52536,29 @@ function variableChecks(configuration, remote) {
             id: `github.variables.${(0, setup_doctor_report_policy_1.normalizedDoctorPathId)(variable.name)}`,
             status,
             summary: !observed
-                ? 'Variable is missing.'
+                ? catalog.message('doctor.variable.missing')
                 : matches
-                    ? `Variable is configured at ${observed.source} scope.`
+                    ? catalog.message('doctor.variable.configured', { scope: observed.source })
                     : preserveExisting
-                        ? `Variable differs but is intentionally preserved at ${observed.source} scope.`
-                        : 'Variable differs from the expected setup configuration.',
-            ...(status === 'pass' || status === 'warn' ? {} : { action: 'Run setup to reconcile this Variable.' }),
+                        ? catalog.message('doctor.variable.preserved', { scope: observed.source })
+                        : catalog.message('doctor.variable.different'),
+            ...(status === 'pass' || status === 'warn' ? {} : { action: catalog.message('doctor.variable.action') }),
             evidence: { name: variable.name, present: observed !== undefined, matches, ...(observed ? { scope: observed.source } : {}) },
         });
     });
 }
-function secretNamesCheck(remote) {
+function secretNamesCheck(remote, catalog) {
     return (0, setup_doctor_report_policy_1.doctorCheck)({
         id: 'github.secret-names',
         status: 'pass',
-        summary: 'GitHub Actions Secret metadata is readable.',
+        summary: catalog.message('doctor.secretMetadata.readable'),
         evidence: {
             repositorySecretCount: remote.repositorySecrets.length,
             organizationSecretCount: remote.organizationSecrets.length,
         },
     });
 }
-function buildCredentialChecks(requirements, remoteSecrets, health) {
+function buildCredentialChecks(requirements, remoteSecrets, health, catalog) {
     const healthByName = new Map((health ?? []).map((check) => [check.name, check]));
     const reportedGroups = new Set();
     const checks = [];
@@ -52107,16 +52577,16 @@ function buildCredentialChecks(requirements, remoteSecrets, health) {
             checks.push((0, setup_doctor_report_policy_1.doctorCheck)({
                 id: `credential.${(0, setup_doctor_report_policy_1.normalizedDoctorPathId)(group)}`,
                 status,
-                summary: available.length === 0
+                summary: catalog.message(available.length === 0
                     ? runnerAllowed
-                        ? 'No fallback Secret is configured; runner authentication must satisfy this group.'
-                        : 'No alternative credential is present.'
+                        ? 'doctor.credential.group.runnerRequired'
+                        : 'doctor.credential.group.missing'
                     : healthy
-                        ? 'At least one alternative credential is healthy.'
+                        ? 'doctor.credential.group.healthy'
                         : invalid
-                            ? 'Every available alternative credential is invalid.'
-                            : 'An alternative credential is present, but remote health is unavailable.',
-                ...(status === 'pass' ? {} : { action: 'Configure and validate one credential for this requirement group.' }),
+                            ? 'doctor.credential.group.invalid'
+                            : 'doctor.credential.group.unverified'),
+                ...(status === 'pass' ? {} : { action: catalog.message('doctor.credential.group.action') }),
                 evidence: { group, availableCount: available.length, runnerAuthenticationAllowed: runnerAllowed },
             }));
             continue;
@@ -52127,26 +52597,47 @@ function buildCredentialChecks(requirements, remoteSecrets, health) {
         checks.push((0, setup_doctor_report_policy_1.doctorCheck)({
             id: `credential.${(0, setup_doctor_report_policy_1.normalizedDoctorPathId)(requirement.name)}`,
             status,
-            summary: !present ? 'Required Secret is missing.' : check?.message ?? 'Secret is present, but remote health is unavailable.',
-            ...(status === 'pass' ? {} : { action: `Configure or replace ${requirement.name}, then rerun credential health.` }),
+            summary: !present
+                ? catalog.message('doctor.credential.missing')
+                : catalog.message(check ? credentialHealthMessageId(check.status) : 'doctor.credential.unverified'),
+            ...(status === 'pass' ? {} : {
+                action: catalog.message('doctor.credential.action', { name: requirement.name }),
+            }),
             evidence: { name: requirement.name, present },
         }));
     }
     return checks;
 }
-function skippedRemoteChecks(configuration, blocker) {
+function skippedRemoteChecks(configuration, blocker, catalog) {
     return [
-        (0, setup_doctor_report_policy_1.skippedDoctorCheck)('github.resource-scopes', [blocker], 'Resource-scope inspection requires a valid setup PAT.', 'Replace the setup PAT.'),
-        (0, setup_doctor_report_policy_1.skippedDoctorCheck)('github.merge-queue', [blocker], 'Merge-queue inspection requires a valid setup PAT.', 'Replace the setup PAT.'),
-        ...skippedResourceChecks(configuration, blocker),
+        (0, setup_doctor_report_policy_1.skippedDoctorCheck)('github.resource-scopes', [blocker], catalog.message('doctor.skipped.scope'), catalog.message('doctor.skipped.scopeAction')),
+        (0, setup_doctor_report_policy_1.skippedDoctorCheck)('github.merge-queue', [blocker], catalog.message('doctor.mergeQueue.skipped'), catalog.message('doctor.skipped.scopeAction')),
+        ...skippedResourceChecks(configuration, blocker, catalog),
     ];
 }
-function skippedResourceChecks(configuration, blocker) {
+function skippedResourceChecks(configuration, blocker, catalog) {
     return [
-        (0, setup_doctor_report_policy_1.skippedDoctorCheck)('github.variables', [blocker], 'Variable checks could not run.', 'Resolve the blocking check and rerun doctor.'),
-        (0, setup_doctor_report_policy_1.skippedDoctorCheck)('github.secret-names', [blocker], 'Secret metadata checks could not run.', 'Resolve the blocking check and rerun doctor.'),
-        ...(0, setup_configuration_policy_1.buildSetupCredentialRequirements)(configuration).map((requirement) => (0, setup_doctor_report_policy_1.skippedDoctorCheck)(`credential.${(0, setup_doctor_report_policy_1.normalizedDoctorPathId)(requirement.alternativeGroups?.[0] ?? requirement.name)}`, [blocker], 'Credential health could not run.', 'Resolve the blocking check and rerun doctor.')).filter((check, index, all) => all.findIndex((candidate) => candidate.id === check.id) === index),
+        (0, setup_doctor_report_policy_1.skippedDoctorCheck)('github.variables', [blocker], catalog.message('doctor.skipped.variables'), catalog.message('doctor.skipped.resourceAction')),
+        (0, setup_doctor_report_policy_1.skippedDoctorCheck)('github.secret-names', [blocker], catalog.message('doctor.skipped.secrets'), catalog.message('doctor.skipped.resourceAction')),
+        ...(0, setup_configuration_policy_1.buildSetupCredentialRequirements)(configuration).map((requirement) => (0, setup_doctor_report_policy_1.skippedDoctorCheck)(`credential.${(0, setup_doctor_report_policy_1.normalizedDoctorPathId)(requirement.alternativeGroups?.[0] ?? requirement.name)}`, [blocker], catalog.message('doctor.skipped.credentials'), catalog.message('doctor.skipped.resourceAction'))).filter((check, index, all) => all.findIndex((candidate) => candidate.id === check.id) === index),
     ];
+}
+function credentialHealthMessageId(status) {
+    if (status === 'valid')
+        return 'doctor.credential.valid';
+    if (status === 'invalid')
+        return 'doctor.credential.invalid';
+    if (status === 'unverifiable')
+        return 'doctor.credential.unverifiable';
+    return 'doctor.credential.unverified';
+}
+function doctorCatalogLocale(configuration) {
+    try {
+        return (0, locale_1.resolveLocaleProfile)(configuration.repository.repositoryLocale, configuration.repository.issueLocale, configuration.repository.pullRequestLocale).repository;
+    }
+    catch {
+        return locale_1.DEFAULT_REPOSITORY_LOCALE;
+    }
 }
 
 
@@ -52178,17 +52669,19 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupMergeQueueReadinessUseCase = void 0;
 const deployment_plan_policy_1 = __nccwpck_require__(8352);
 const merge_queue_readiness_1 = __nccwpck_require__(12515);
-const sensitive_text_1 = __nccwpck_require__(47122);
 const setup_doctor_report_policy_1 = __nccwpck_require__(67615);
+const setup_doctor_message_catalog_1 = __nccwpck_require__(80226);
+const merge_queue_message_catalog_1 = __nccwpck_require__(56033);
 class SetupMergeQueueReadinessUseCase {
-    constructor(targets) {
+    constructor(targets, catalogResolver) {
         this.targets = targets;
+        this.catalogResolver = catalogResolver;
     }
     async inspect(request) {
         if (request.configuration.features.release === false && request.configuration.features.hotfix === false)
             return [];
+        const catalog = request.catalog ?? await (0, setup_doctor_message_catalog_1.resolveSetupDoctorCatalog)(request.configuration.repository.repositoryLocale, request.configuration.agents.planner, this.catalogResolver);
         const configuredMode = request.configuration.repository.reconciliationPullRequestMode;
-        const spanish = request.configuration.repository.issueLocale.toLowerCase().startsWith("es");
         const targets = uniqueTargets([
             { role: "production", branch: request.configuration.repository.mainBranch },
             { role: "development", branch: request.configuration.repository.developmentBranch },
@@ -52209,8 +52702,8 @@ class SetupMergeQueueReadinessUseCase {
                         return [(0, setup_doctor_report_policy_1.doctorCheck)({
                                 id,
                                 status: "fail",
-                                summary: decision.reason,
-                                action: "Configure a supported merge-queue producer or choose another reconciliation mode.",
+                                summary: (0, deployment_plan_policy_1.pullRequestModeDecisionMessage)(decision, catalog),
+                                action: catalog.message('doctor.mergeQueue.configureSupportedAction'),
                                 evidence: { targetRole: target.role, targetBranch: target.branch },
                             })];
                     }
@@ -52225,18 +52718,16 @@ class SetupMergeQueueReadinessUseCase {
                     return [(0, setup_doctor_report_policy_1.doctorCheck)({
                             id,
                             status: "fail",
-                            summary: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, request.configuration.repository.issueLocale),
-                            action: "Repair or attest every required merge-queue producer.",
+                            summary: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, catalog),
+                            action: catalog.message('doctor.mergeQueue.repairOrAttestAction'),
                             evidence: { targetRole: target.role, targetBranch: target.branch },
-                        }), ...producerChecks(readiness.producers, target.role, spanish)];
+                        }), ...producerChecks(readiness.producers, target.role, catalog)];
                 }
                 if (decision.mode !== "merge-queue") {
                     return [(0, setup_doctor_report_policy_1.doctorCheck)({
                             id,
                             status: "pass",
-                            summary: spanish
-                                ? `El modo seleccionado es ${decision.mode}; este destino no necesita evidencia de productores de merge queue.`
-                                : `Selected mode is ${decision.mode}; merge-queue producer evidence is not required for this target.`,
+                            summary: catalog.message('doctor.mergeQueue.selectedMode', { mode: decision.mode }),
                             evidence: { targetRole: target.role, targetBranch: target.branch, selectedMode: decision.mode },
                         })];
                 }
@@ -52252,28 +52743,26 @@ class SetupMergeQueueReadinessUseCase {
                     return [(0, setup_doctor_report_policy_1.doctorCheck)({
                             id,
                             status: "fail",
-                            summary: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, request.configuration.repository.issueLocale),
-                            action: "Repair or attest every required merge-queue producer.",
+                            summary: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, catalog),
+                            action: catalog.message('doctor.mergeQueue.repairOrAttestAction'),
                             evidence: { targetRole: target.role, targetBranch: target.branch },
-                        }), ...producerChecks(readiness.producers, target.role, spanish)];
+                        }), ...producerChecks(readiness.producers, target.role, catalog)];
                 }
                 const verified = readiness.producers.filter((producer) => producer.verdict === "verified").length;
                 const attested = readiness.producers.filter((producer) => producer.verdict === "attested").length;
                 return [(0, setup_doctor_report_policy_1.doctorCheck)({
                         id,
                         status: "pass",
-                        summary: spanish
-                            ? `Listo. ${verified} productor(es) requerido(s) verificados automáticamente y ${attested} cubiertos por atestación exacta.`
-                            : `Ready. ${verified} required producer(s) verified automatically and ${attested} covered by exact attestation.`,
+                        summary: catalog.message('doctor.mergeQueue.ready', { verified, attested }),
                         evidence: { targetRole: target.role, targetBranch: target.branch, verified, attested },
-                    }), ...producerChecks(readiness.producers, target.role, spanish)];
+                    }), ...producerChecks(readiness.producers, target.role, catalog)];
             }
             catch {
                 return [(0, setup_doctor_report_policy_1.doctorCheck)({
                         id,
                         status: "fail",
-                        summary: "Target policy could not be inspected because the provider request failed.",
-                        action: "Check the setup PAT permissions and target branch policy, then retry.",
+                        summary: catalog.message('doctor.mergeQueue.targetUnverified'),
+                        action: catalog.message('doctor.mergeQueue.targetUnverifiedAction'),
                         evidence: { targetRole: target.role, targetBranch: target.branch },
                     })];
             }
@@ -52283,9 +52772,7 @@ class SetupMergeQueueReadinessUseCase {
             checks.push((0, setup_doctor_report_policy_1.doctorCheck)({
                 id: "github.merge-queue.active-release",
                 status: "warn",
-                summary: spanish
-                    ? "Las ramas de release activas se descubren dinámicamente y se revalidan antes de crear una rama o PR de reconciliación de hotfix."
-                    : "Active release branches are discovered dynamically and are revalidated before a hotfix reconciliation branch or PR is created.",
+                summary: catalog.message('doctor.mergeQueue.activeRelease'),
                 evidence: { dynamicTarget: true },
             }));
         }
@@ -52294,10 +52781,8 @@ class SetupMergeQueueReadinessUseCase {
                 checks.push((0, setup_doctor_report_policy_1.doctorCheck)({
                     id: `github.merge-queue.attestation.${(0, setup_doctor_report_policy_1.normalizedDoctorPathId)(`${attestation.context}-${attestation.integrationId}`)}`,
                     status: "warn",
-                    summary: spanish
-                        ? "Esta atestación exacta no coincide con ningún check requerido observado en producción o desarrollo."
-                        : "This exact attestation does not match a required check observed on production or development.",
-                    action: "Remove the stale attestation or correct its exact check identity.",
+                    summary: catalog.message('doctor.mergeQueue.staleAttestation'),
+                    action: catalog.message('doctor.mergeQueue.staleAttestationAction'),
                     evidence: { context: attestation.context, integrationId: String(attestation.integrationId) },
                 }));
             }
@@ -52306,14 +52791,17 @@ class SetupMergeQueueReadinessUseCase {
     }
 }
 exports.SetupMergeQueueReadinessUseCase = SetupMergeQueueReadinessUseCase;
-function producerChecks(producers, role, spanish) {
+function producerChecks(producers, role, catalog) {
     return producers.map((producer) => (0, setup_doctor_report_policy_1.doctorCheck)({
         id: `github.merge-queue.${role}.producer.${(0, setup_doctor_report_policy_1.normalizedDoctorPathId)(`${producer.name}-${producer.integrationId ?? 'workflow'}`)}`,
         status: producer.verdict === "verified" || producer.verdict === "attested" ? "pass" : "fail",
-        summary: `${producer.verdict}: ${safeDiagnostic(producer.reason)}${spanish && producer.verdict === "attested" ? " (atestación exacta revisada)" : ""}`,
+        summary: catalog.message('doctor.mergeQueue.producer', {
+            verdict: producer.verdict,
+            state: catalog.message((0, merge_queue_message_catalog_1.producerStateMessageId)(producer.verdict)),
+        }),
         ...(producer.verdict === "verified" || producer.verdict === "attested"
             ? {}
-            : { action: "Configure or exactly attest this required producer." }),
+            : { action: catalog.message('doctor.mergeQueue.producerAction') }),
         evidence: { targetRole: role, producer: producer.name, verdict: producer.verdict },
     }));
 }
@@ -52326,13 +52814,6 @@ function uniqueTargets(targets) {
         seen.add(identity);
         return true;
     });
-}
-function safeDiagnostic(message) {
-    return (0, sensitive_text_1.redactSensitiveText)(message)
-        .replace(/[\r\n<>]/g, " ")
-        .replace(/::/g, "﹕﹕")
-        .replace(/@/g, "@\u200b")
-        .slice(0, 240);
 }
 
 
@@ -52544,6 +53025,7 @@ const application_error_1 = __nccwpck_require__(75999);
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
 const setup_configuration_clone_policy_1 = __nccwpck_require__(85881);
+const setup_doctor_message_catalog_1 = __nccwpck_require__(80226);
 class SetupWizardUseCase {
     constructor(dependencies) {
         this.dependencies = dependencies;
@@ -52591,6 +53073,9 @@ class SetupWizardUseCase {
                 repository: request.remoteTarget.repository,
                 token: request.remoteTarget.token,
                 configuration,
+                // Setup is the profile-creation surface, so its one artifact remains
+                // authoritative English until the repository profile is installed.
+                catalog: (0, setup_doctor_message_catalog_1.resolveStaticSetupDoctorCatalog)(),
             })
             : [];
         const plan = (0, setup_configuration_policy_1.buildSetupPlan)(configuration, readiness, migrationWarnings);
@@ -61315,14 +61800,14 @@ function registerDoctorCommand(program) {
             const overrides = options.config ? (0, setup_config_file_1.loadSetupConfigurationOverrides)(options.config) : {};
             const expected = (0, setup_configuration_policy_1.mergeSetupConfiguration)((0, setup_configuration_policy_1.createDefaultSetupConfiguration)(), overrides);
             (0, logger_1.logInfo)(`🩺 Checking Copilot configuration for ${gitInfo.owner}/${gitInfo.repo}...`);
-            const report = await (0, setup_doctor_composition_root_1.createSetupDoctorUseCase)().execute({
+            const diagnosis = await (0, setup_doctor_composition_root_1.createSetupDoctorUseCase)().execute({
                 owner: gitInfo.owner,
                 repository: gitInfo.repo,
                 setupToken: token,
                 configuration: expected,
             });
-            new setup_doctor_presenter_1.SetupDoctorPresenter().present(report);
-            if (!report.healthy)
+            new setup_doctor_presenter_1.SetupDoctorPresenter(diagnosis.catalog).present(diagnosis.report);
+            if (!diagnosis.report.healthy)
                 process.exitCode = 1;
         }
         catch (error) {
@@ -62344,61 +62829,76 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupDoctorPresenter = void 0;
 exports.renderDoctorReport = renderDoctorReport;
 exports.doctorCheckLabel = doctorCheckLabel;
+const setup_doctor_message_catalog_1 = __nccwpck_require__(80226);
 const setup_prompt_rendering_1 = __nccwpck_require__(83434);
 class SetupDoctorPresenter {
+    constructor(catalog = (0, setup_doctor_message_catalog_1.resolveStaticSetupDoctorCatalog)()) {
+        this.catalog = catalog;
+    }
     present(report) {
-        console.log(renderDoctorReport(report));
+        console.log(renderDoctorReport(report, this.catalog));
     }
 }
 exports.SetupDoctorPresenter = SetupDoctorPresenter;
-function renderDoctorReport(report) {
+function renderDoctorReport(report, catalog = (0, setup_doctor_message_catalog_1.resolveStaticSetupDoctorCatalog)()) {
     const partial = report.totals.skipped > 0 || report.totals.warn > 0;
-    const title = partial ? 'Copilot Doctor — partial diagnosis' : 'Copilot Doctor';
-    const checks = report.checks.flatMap((check) => renderCheck(check));
-    const summary = `Checks: ${report.totals.pass} pass, ${report.totals.warn} warn, ${report.totals.fail} fail, ${report.totals.skipped} skipped.`;
-    const mutation = 'No repository configuration was changed.';
+    const title = catalog.message(partial ? 'doctor.title.partial' : 'doctor.title');
+    const checks = report.checks.flatMap((check) => renderCheck(check, catalog));
+    const summary = catalog.message('doctor.summary', report.totals);
+    const mutation = catalog.message('doctor.noMutation');
     return (0, setup_prompt_rendering_1.renderBox)([...checks, '', summary, mutation].join('\n'), title, report.healthy ? 32 : 31);
 }
-function renderCheck(check) {
-    const status = check.status === 'skipped' ? 'SKIP' : check.status.toUpperCase();
-    const lines = [`  ${(0, setup_prompt_rendering_1.doctorIcon)(check.status)} ${status.padEnd(4)} ${doctorCheckLabel(check.id)} — ${check.summary}`];
-    if (check.blockedBy.length > 0)
-        lines.push(`         Blocked by: ${check.blockedBy.join(', ')}`);
+function renderCheck(check, catalog) {
+    const status = catalog.message(`doctor.status.${check.status}`);
+    const lines = [`  ${(0, setup_prompt_rendering_1.doctorIcon)(check.status)} ${status.padEnd(7)} ${doctorCheckLabel(check.id, catalog)} — ${check.summary}`];
+    if (check.blockedBy.length > 0) {
+        lines.push(`            ${catalog.message('doctor.blockedBy', { checks: check.blockedBy.join(', ') })}`);
+    }
     if (check.action)
-        lines.push(`         Action: ${check.action}`);
+        lines.push(`            ${catalog.message('doctor.action', { action: check.action })}`);
     return lines;
 }
-function doctorCheckLabel(id) {
+function doctorCheckLabel(id, catalog = (0, setup_doctor_message_catalog_1.resolveStaticSetupDoctorCatalog)()) {
     if (id === 'configuration.valid')
-        return 'Configuration';
+        return catalog.message('doctor.label.configuration');
     if (id === 'workspace.repository-root')
-        return 'Repository root';
+        return catalog.message('doctor.label.repositoryRoot');
     if (id === 'credentials.setup-pat')
-        return 'Setup PAT';
+        return catalog.message('doctor.label.setupPat');
     if (id === 'github.resource-scopes')
-        return 'GitHub Actions scopes';
+        return catalog.message('doctor.label.githubScopes');
     if (id === 'github.secret-names')
-        return 'Repository Secrets';
+        return catalog.message('doctor.label.repositorySecrets');
     if (id === 'github.variables')
-        return 'Repository Variables';
+        return catalog.message('doctor.label.repositoryVariables');
     if (id === 'github.merge-queue')
-        return 'Merge queue';
+        return catalog.message('doctor.label.mergeQueue');
     if (id === 'locale.profile')
-        return 'Locale profile';
+        return catalog.message('doctor.label.localeProfile');
     if (id === 'locale.repository')
-        return 'Repository locale';
+        return catalog.message('doctor.label.repositoryLocale');
     if (id === 'locale.issue')
-        return 'Issue locale';
+        return catalog.message('doctor.label.issueLocale');
     if (id === 'locale.pull-request')
-        return 'Pull-request locale';
-    if (id.startsWith('workflow.'))
-        return `Workflow ${id.slice('workflow.'.length)}`;
-    if (id.startsWith('github.variables.'))
-        return `Variable ${id.slice('github.variables.'.length).toUpperCase().replace(/-/g, '_')}`;
-    if (id.startsWith('credential.'))
-        return `Credential ${id.slice('credential.'.length).toUpperCase().replace(/-/g, '_')}`;
-    if (id.startsWith('github.merge-queue.'))
-        return `Merge queue ${id.slice('github.merge-queue.'.length)}`;
+        return catalog.message('doctor.label.pullRequestLocale');
+    if (id.startsWith('workflow.')) {
+        return catalog.message('doctor.label.workflow', { id: id.slice('workflow.'.length) });
+    }
+    if (id.startsWith('github.variables.')) {
+        return catalog.message('doctor.label.variable', {
+            name: id.slice('github.variables.'.length).toUpperCase().replace(/-/g, '_'),
+        });
+    }
+    if (id.startsWith('credential.')) {
+        return catalog.message('doctor.label.credential', {
+            name: id.slice('credential.'.length).toUpperCase().replace(/-/g, '_'),
+        });
+    }
+    if (id.startsWith('github.merge-queue.')) {
+        return catalog.message('doctor.label.mergeQueueTarget', {
+            target: id.slice('github.merge-queue.'.length),
+        });
+    }
     return id;
 }
 
@@ -62468,6 +62968,7 @@ exports.doctorIcon = doctorIcon;
 exports.formatTask = formatTask;
 exports.color = color;
 exports.renderBox = renderBox;
+exports.displayWidth = displayWidth;
 exports.renderRemoteConfiguration = renderRemoteConfiguration;
 const node_process_1 = __nccwpck_require__(97742);
 function statusIcon(status) {
@@ -62496,17 +62997,17 @@ function renderBox(content, title, borderCode = 36, maximumWidth = node_process_
     const contentWidth = Math.max(20, Math.min(120, maximumWidth) - 4);
     const wrapped = content.split('\n').flatMap((line) => wrapLine(line, contentWidth));
     const lines = [` ${title} `, ...wrapped.map(line => ` ${line}`)];
-    const width = Math.max(...lines.map(line => stripAnsi(line).length)) + 1;
+    const width = Math.max(...lines.map(displayWidth)) + 1;
     const border = color(`╭${'─'.repeat(width)}╮`, borderCode);
     const bottom = color(`╰${'─'.repeat(width)}╯`, borderCode);
     return [
         border,
-        ...lines.map(line => `${color('│', borderCode)}${line}${' '.repeat(Math.max(0, width - stripAnsi(line).length))}${color('│', borderCode)}`),
+        ...lines.map(line => `${color('│', borderCode)}${line}${' '.repeat(Math.max(0, width - displayWidth(line)))}${color('│', borderCode)}`),
         bottom,
     ].join('\n');
 }
 function wrapLine(line, maximumWidth) {
-    if (stripAnsi(line).length <= maximumWidth)
+    if (displayWidth(line) <= maximumWidth)
         return [line];
     const indent = line.match(/^\s*/)?.[0] ?? '';
     const words = line.trim().split(/\s+/);
@@ -62514,17 +63015,63 @@ function wrapLine(line, maximumWidth) {
     let current = indent;
     for (const word of words) {
         const candidate = current.trim() ? `${current} ${word}` : `${indent}${word}`;
-        if (stripAnsi(candidate).length <= maximumWidth) {
+        if (displayWidth(candidate) <= maximumWidth) {
             current = candidate;
             continue;
         }
         if (current.trim())
             lines.push(current);
-        current = `${indent}${word}`;
+        const chunks = splitVisibleToken(word, Math.max(1, maximumWidth - displayWidth(indent)));
+        for (const chunk of chunks.slice(0, -1))
+            lines.push(`${indent}${chunk}`);
+        current = `${indent}${chunks.at(-1) ?? ''}`;
     }
     if (current.trim() || lines.length === 0)
         lines.push(current);
     return lines;
+}
+function splitVisibleToken(value, maximumWidth) {
+    const characters = [...stripAnsi(value)];
+    const chunks = [];
+    let current = '';
+    let width = 0;
+    for (const character of characters) {
+        const characterWidth = displayWidth(character);
+        if (current && width + characterWidth > maximumWidth) {
+            chunks.push(current);
+            current = '';
+            width = 0;
+        }
+        current += character;
+        width += characterWidth;
+    }
+    if (current || chunks.length === 0)
+        chunks.push(current);
+    return chunks;
+}
+function displayWidth(value) {
+    return [...stripAnsi(value)].reduce((width, character) => {
+        if (/\p{Mark}/u.test(character))
+            return width;
+        const codePoint = character.codePointAt(0) ?? 0;
+        if (codePoint <= 31 || (codePoint >= 127 && codePoint <= 159))
+            return width;
+        return width + (isWideCodePoint(codePoint) ? 2 : 1);
+    }, 0);
+}
+function isWideCodePoint(codePoint) {
+    return codePoint >= 0x1100 && (codePoint <= 0x115f
+        || codePoint === 0x2329
+        || codePoint === 0x232a
+        || (codePoint >= 0x2e80 && codePoint <= 0xa4cf && codePoint !== 0x303f)
+        || (codePoint >= 0xac00 && codePoint <= 0xd7a3)
+        || (codePoint >= 0xf900 && codePoint <= 0xfaff)
+        || (codePoint >= 0xfe10 && codePoint <= 0xfe19)
+        || (codePoint >= 0xfe30 && codePoint <= 0xfe6f)
+        || (codePoint >= 0xff00 && codePoint <= 0xff60)
+        || (codePoint >= 0xffe0 && codePoint <= 0xffe6)
+        || (codePoint >= 0x1f300 && codePoint <= 0x1faff)
+        || (codePoint >= 0x20000 && codePoint <= 0x3fffd));
 }
 function renderRemoteConfiguration(remote, variables, requirements) {
     const lines = [
@@ -75851,17 +76398,21 @@ const octokit_credential_health_adapter_1 = __nccwpck_require__(41760);
 const github_target_merge_capabilities_inspector_1 = __nccwpck_require__(55527);
 const octokit_deployment_adapter_1 = __nccwpck_require__(46819);
 const merge_queue_readiness_use_case_1 = __nccwpck_require__(9890);
-function createSetupMergeQueueReadinessUseCase() {
-    return new merge_queue_readiness_use_case_1.SetupMergeQueueReadinessUseCase(new github_target_merge_capabilities_inspector_1.GithubTargetMergeCapabilitiesInspector(new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter()));
+const resolve_message_catalog_use_case_1 = __nccwpck_require__(99961);
+const agent_capability_composition_root_1 = __nccwpck_require__(85079);
+function createSetupMergeQueueReadinessUseCase(catalogResolver = new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)())) {
+    return new merge_queue_readiness_use_case_1.SetupMergeQueueReadinessUseCase(new github_target_merge_capabilities_inspector_1.GithubTargetMergeCapabilitiesInspector(new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter()), catalogResolver);
 }
 function createSetupDoctorUseCase() {
     const repositoryConfiguration = new repository_variables_repository_1.SetupRemoteConfigurationQueryRepository((0, github_identity_client_factory_1.createRepositoryVariablesClient)());
+    const catalogResolver = new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)());
     return new doctor_use_case_1.SetupDoctorUseCase({
         validation: new setup_credential_validation_adapter_1.SetupCredentialValidationAdapter(),
         workspace: new setup_workspace_adapter_1.SetupDoctorWorkspaceQueryAdapter(),
         remoteConfiguration: repositoryConfiguration,
         remoteHealth: new setup_remote_credential_health_adapter_1.SetupRemoteCredentialHealthQueryAdapter(new octokit_credential_health_adapter_1.OctokitCredentialHealthClientAdapter()),
-        mergeQueueReadiness: createSetupMergeQueueReadinessUseCase(),
+        mergeQueueReadiness: createSetupMergeQueueReadinessUseCase(catalogResolver),
+        catalogResolver,
     });
 }
 

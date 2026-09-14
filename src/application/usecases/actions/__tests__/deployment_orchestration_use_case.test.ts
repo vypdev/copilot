@@ -409,7 +409,10 @@ describe("DeploymentOrchestrationUseCase", () => {
     expect(result[0].success).toBe(false);
     expect(value.pullRequests.createManagedPullRequest).toHaveBeenCalledTimes(1);
     expect(value.pullRequests.enqueuePullRequest).not.toHaveBeenCalled();
-    expect(input.currentConfiguration.deploymentOrchestration?.lastFailure?.message).toContain("candidate workflow");
+    expect(input.currentConfiguration.deploymentOrchestration?.lastFailure?.message)
+      .toContain("CI Check [unsupported]: does not support merge groups");
+    expect(input.currentConfiguration.deploymentOrchestration?.lastFailure?.message)
+      .not.toContain("candidate workflow");
   });
 
   it("does not enqueue a PR twice when GitHub already reports queue membership", async () => {

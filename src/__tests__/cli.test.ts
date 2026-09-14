@@ -32,6 +32,7 @@ jest.mock('../data/repository/issue/issue_metadata_repository', () => ({
 const mockFix = jest.fn();
 jest.mock('../infrastructure/composition/agent_capability_composition_root', () => ({
   createFixerQueryPort: () => ({ fix: mockFix }),
+  createLanguageQueryPort: () => ({ query: jest.fn() }),
 }));
 
 const mockGetSetupToken = jest.fn();

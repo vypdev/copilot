@@ -2,8 +2,12 @@ import type { DoctorCheck, DoctorCheckStatus, DoctorReport } from '../../domain/
 import type { SetupConfiguration } from '../../domain/setup';
 import { resolveLocaleProfile } from '../../domain/locale';
 import { selectBundledMessageCatalog } from '../../domain/message_catalog';
-import { PUBLICATION_CATALOG_DEFINITIONS } from './publication_message_catalog';
 import { isAgentConfigurationReady } from '../../domain/agent';
+import {
+  resolveStaticSetupDoctorCatalog,
+  SETUP_DOCTOR_CATALOG_DEFINITIONS,
+  type SetupDoctorMessageCatalog,
+} from './setup_doctor_message_catalog';
 
 const EMPTY_TOTALS: Readonly<Record<DoctorCheckStatus, number>> = {
   pass: 0,
@@ -66,7 +70,10 @@ export function normalizedDoctorPathId(path: string): string {
   return normalized || 'unknown';
 }
 
-export function buildLocaleDoctorChecks(configuration: SetupConfiguration): readonly DoctorCheck[] {
+export function buildLocaleDoctorChecks(
+  configuration: SetupConfiguration,
+  catalog: SetupDoctorMessageCatalog = resolveStaticSetupDoctorCatalog(),
+): readonly DoctorCheck[] {
   try {
     const profile = resolveLocaleProfile(
       configuration.repository.repositoryLocale,
@@ -74,18 +81,29 @@ export function buildLocaleDoctorChecks(configuration: SetupConfiguration): read
       configuration.repository.pullRequestLocale,
     );
     const dynamicReady = isAgentConfigurationReady(configuration.agents.planner);
+    const repositoryCatalogSource = catalog.requestedLocale === profile.repository
+      ? catalog.resolutionSource
+      : undefined;
     return Object.freeze([
-      localeDoctorCheck('repository', configuration.repository.repositoryLocale, profile.repository, false, dynamicReady),
-      localeDoctorCheck('issue', configuration.repository.issueLocale, profile.issue, true, dynamicReady),
-      localeDoctorCheck('pull-request', configuration.repository.pullRequestLocale, profile.pullRequest, true, dynamicReady),
+      localeDoctorCheck(
+        'repository',
+        configuration.repository.repositoryLocale,
+        profile.repository,
+        false,
+        dynamicReady,
+        catalog,
+        repositoryCatalogSource,
+      ),
+      localeDoctorCheck('issue', configuration.repository.issueLocale, profile.issue, true, dynamicReady, catalog),
+      localeDoctorCheck('pull-request', configuration.repository.pullRequestLocale, profile.pullRequest, true, dynamicReady, catalog),
     ]);
   } catch {
     return Object.freeze([
       skippedDoctorCheck(
         'locale.profile',
         ['configuration.valid'],
-        'Locale capability could not be inspected because locale configuration is invalid.',
-        'Correct the locale values and run doctor again.',
+        catalog.message('doctor.locale.invalid'),
+        catalog.message('doctor.locale.invalidAction'),
       ),
     ]);
   }
@@ -97,23 +115,28 @@ function localeDoctorCheck(
   effective: string,
   inheritedWhenEmpty: boolean,
   dynamicReady: boolean,
+  catalog: SetupDoctorMessageCatalog,
+  resolvedCatalogSource?: 'exact' | 'base' | 'dynamic' | 'fallback',
 ): DoctorCheck {
-  const bundled = selectBundledMessageCatalog(effective, PUBLICATION_CATALOG_DEFINITIONS);
-  const catalogSource = bundled?.source ?? (dynamicReady ? 'dynamic' : 'fallback');
+  const bundled = selectBundledMessageCatalog(effective, SETUP_DOCTOR_CATALOG_DEFINITIONS);
+  const catalogSource = resolvedCatalogSource ?? bundled?.source ?? (dynamicReady ? 'dynamic' : 'fallback');
   const legacySeparator = configured.includes('_');
   const fallback = catalogSource === 'fallback';
   const status: DoctorCheckStatus = legacySeparator || fallback ? 'warn' : 'pass';
-  const inheritance = inheritedWhenEmpty && !configured.trim() ? ' It inherits the repository locale.' : '';
+  const inherited = inheritedWhenEmpty && !configured.trim();
   return doctorCheck({
     id: `locale.${scope}`,
     status,
     summary: fallback
-      ? `Effective locale ${effective} has no bundled catalog and no ready language agent; product copy will fall back atomically to en-US.${inheritance}`
-      : `Effective locale ${effective} resolves through the ${catalogSource} catalog path.${inheritance}`,
+      ? catalog.message(inherited ? 'doctor.locale.fallbackInherited' : 'doctor.locale.fallback', { locale: effective })
+      : catalog.message(inherited ? 'doctor.locale.resolvedInherited' : 'doctor.locale.resolved', {
+          locale: effective,
+          source: catalogSource,
+        }),
     ...(legacySeparator
-      ? { action: 'Replace legacy underscore separators with canonical BCP-47 hyphens.' }
+      ? { action: catalog.message('doctor.locale.separatorAction') }
       : fallback
-        ? { action: 'Configure a ready language agent if localized non-English product copy is required.' }
+        ? { action: catalog.message('doctor.locale.dynamicAction') }
         : {}),
     evidence: {
       configured: configured || '(inherit)',

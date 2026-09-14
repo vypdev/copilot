@@ -97,7 +97,7 @@ describe('setup doctor report policy', () => {
     expect(buildLocaleDoctorChecks(configuration)[0]).toMatchObject({
       status: 'warn',
       evidence: { catalogSource: 'fallback', effective: 'fr-FR' },
-      action: expect.stringContaining('Configure a ready language agent'),
+      action: expect.stringContaining('planner/language agent is ready'),
     });
   });
 

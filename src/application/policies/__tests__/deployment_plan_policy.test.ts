@@ -12,6 +12,7 @@ import {
   validateInitialDeploymentInput,
   type TargetMergeCapabilities,
 } from "../deployment_plan_policy";
+import { resolveStaticDeploymentCatalog } from '../deployment_message_catalog';
 
 const sha = (letter: string) => letter.repeat(40);
 const locale = Object.freeze({
@@ -139,10 +140,11 @@ describe("deployment plan policy", () => {
         message: "Forbidden\n::error::@team github_pat_abcdefghijklmnopqrstuvwxyz123456",
       }],
     }));
-    expect(decision).toEqual(expect.objectContaining({ kind: "unsupported", reason: expect.stringContaining("Forbidden") }));
-    expect(decision.reason).not.toContain("github_pat_");
-    expect(decision.reason).not.toContain("::error::");
-    expect(decision.reason).not.toContain("@team");
+    expect(decision).toEqual(expect.objectContaining({
+      kind: "unsupported",
+      reasonCode: 'policy-observation-failed',
+    }));
+    expect(decision).not.toHaveProperty('diagnostic');
   });
 
   it("rejects explicit auto-merge when the target requires its queue", () => {
@@ -156,7 +158,7 @@ describe("deployment plan policy", () => {
       targetBranch: "master",
       producers: [{ kind: "check", name: "CI Check", integrationId: 15368, verdict: "unsupported", reason: "Falta el trigger." }],
       problems: [],
-    }, "es-ES");
+    }, resolveStaticDeploymentCatalog("es-ES"));
     expect(message).toContain("preparación de la merge queue");
     expect(message).toContain("Añade merge_group: checks_requested");
     expect(message).toContain("CI Check [unsupported]");
@@ -169,10 +171,24 @@ describe("deployment plan policy", () => {
       targetBranch: "develop",
       producers: [],
       problems: [{ area: "effective-rules", message: "Forbidden" }],
-    }, "es-ES");
-    expect(message).toContain("effective-rules: Forbidden");
+    }, resolveStaticDeploymentCatalog("es-ES"));
+    expect(message).toContain("effective-rules: No se han podido inspeccionar las reglas efectivas");
+    expect(message).not.toContain("Forbidden");
     expect(message).toContain("Restaura el acceso de lectura");
     expect(message).not.toContain("Añade merge_group");
+  });
+
+  it('renders bounded generic evidence when readiness has no producer or observation detail', () => {
+    const message = mergeQueueReadinessFailureMessage({
+      verdict: 'unknown',
+      targetRole: 'production',
+      targetBranch: 'master',
+      producers: [],
+      problems: [],
+    }, resolveStaticDeploymentCatalog('en-US'));
+
+    expect(message).toContain('Required producer evidence is incomplete.');
+    expect(message).toContain('Make the required producer support merge groups');
   });
 
   it("uses a sync branch for a strict target whose source is stale", () => {
