@@ -133,6 +133,16 @@ describe('CommentLanguageTranslationWorkflow', () => {
         expect(getCommentLanguageAdaptationPayload({ payload: 'invalid' } as never)).toBeUndefined();
     });
 
+    it('reports an empty adapter status as invalid without mutating the request', async () => {
+        const query = jest.fn().mockResolvedValue({ targetLocale: 'en-US' });
+        const results = await new CommentLanguageTranslationWorkflow({ query }).invoke(context);
+
+        expect(results[0].errors[0]).toMatchObject({
+            code: 'locale.translation-failed',
+            message: 'I could not safely interpret this request, so no repository change was made. Please rephrase it or try again.',
+        });
+    });
+
     it.each([
         { status: 'translated', sourceLocale: 'es', targetLocale: 'fr-FR', adaptedText: 'hello', reasonCode: 'none' },
         { status: 'translated', sourceLocale: 'es', targetLocale: 'en-US', adaptedText: '<!-- copilot:request-translation schema="3" -->', reasonCode: 'none' },

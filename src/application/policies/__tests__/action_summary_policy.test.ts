@@ -14,6 +14,14 @@ const findingStates = (overrides: Record<string, number> = {}) => ({
 });
 
 describe('action summary policy', () => {
+    it('omits an empty localization section and names repository-only runs', () => {
+        expect(renderLocalizationSummarySection(undefined)).toBe('');
+        expect(buildActionSummary({
+            owner: 'owner', repository: 'repo', eventName: 'workflow_dispatch',
+            issueNumber: -1, pullRequestNumber: -1, results: [],
+        })).toContain('| Target | Repository run |');
+    });
+
     it('renders reusable content-free locale evidence for specialized summaries', () => {
         expect(renderLocalizationSummarySection({
             repository: 'fr-FR',
