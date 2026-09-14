@@ -12,6 +12,16 @@ function intent() {
   })[0];
 }
 
+function directAnswerIntent() {
+  return selectSemanticReplyIntents({
+    locale: 'de-DE', target: { kind: 'issue', number: 7 }, correlationId: 'event:abc12345',
+    results: [new Result({
+      id: 'AnswerIssueHelpUseCase', success: true, executed: true,
+      payload: { publication: { kind: 'direct-answer', answer: 'Die Antwort.' } },
+    })],
+  })[0];
+}
+
 function ports(initial: Array<{ id: number; body: string | null; user?: { login?: string } }> = []) {
   const comments = initial.map(value => ({ ...value }));
   let next = Math.max(0, ...comments.map(comment => comment.id)) + 1;
@@ -34,6 +44,21 @@ describe('reply publication workflow', () => {
     await expect(reconcileReply(context(), repository)).resolves.toMatchObject({ effect: 'created', canonicalCommentId: 1 });
     await expect(reconcileReply(context(), repository)).resolves.toMatchObject({ effect: 'unchanged', canonicalCommentId: 1 });
     expect(repository.addComment).toHaveBeenCalledTimes(1);
+  });
+
+  it('publishes an initial help answer once through the correlated reply boundary', async () => {
+    const repository = ports();
+    const directContext = { ...context(), intent: directAnswerIntent() };
+
+    await expect(reconcileReply(directContext, repository)).resolves.toMatchObject({
+      effect: 'created', canonicalCommentId: 1,
+    });
+    await expect(reconcileReply(directContext, repository)).resolves.toMatchObject({
+      effect: 'unchanged', canonicalCommentId: 1,
+    });
+    expect(repository.addComment).toHaveBeenCalledTimes(1);
+    expect(repository.comments[0].body).toContain('Die Antwort.');
+    expect(repository.comments[0].body).toContain('key="direct-answer"');
   });
 
   it('ignores a forged marker written by a different user', async () => {

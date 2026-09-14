@@ -940,6 +940,15 @@ locale copy atomically, retains sanitized operator steps, and renders one
 localization evidence section instead of two. Other capability rows and the
 global numeric budget remain open and are not claimed complete by this milestone.
 
+The initial-issue slice now enforces the §6.2 matrix at the route boundary. A
+normal issue with a publishable plan emits no welcome; a help/question issue
+returns a typed, locale-validated `direct-answer` projection that the shared
+reply reconciler sanitizes and creates at most once; failed or unavailable agent
+output falls back to one static welcome. Release and hotfix routes emit none of
+those three generic onboarding messages, including when conflicting labels are
+present. The help agent no longer owns a GitHub mutation port, and the exact
+application mutation inventory records that reduced surface.
+
 No remote product flag is required. Each phase must be independently releasable
 and its compatibility adapter must fail closed to Job Summary, not fall back to
 generic comments.

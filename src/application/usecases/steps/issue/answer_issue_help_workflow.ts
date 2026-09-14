@@ -4,20 +4,17 @@ import { Result } from '../../../../data/model/result';
 import { AGENT_PLAN } from '../../../../application/policies/agent_task_policy';
 import { THINK_RESPONSE_SCHEMA } from '../../../../application/policies/agent_response_schemas';
 import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
-import type { BoundIssueNotificationPort } from '../../../ports/issue_lifecycle_ports';
 import { getAnswerIssueHelpPrompt } from '../../../../prompts';
 import { logDebugInfo, logError, logInfo } from '../../../ports/logging_ports';
 import { PROJECT_CONTEXT_INSTRUCTION } from '../../../../utils/project_context_instruction';
 import { getTaskEmoji } from '../../../../utils/task_emoji';
 import { extractStructuredAnswer } from '../common/agent_answer_policy';
 import { sanitizeAgentMarkdown } from '../../../../application/policies/github_comment_publication_policy';
-import { buildCopilotWelcomeMessage } from '../../../../application/policies/copilot_interaction_policy';
 import { ApplicationError, toApplicationError } from '../../../errors/application_error';
 import type { AnswerIssueHelpContext } from '../../issue_workflow_context';
 import { productFacingAgentQueryOptions } from '../../../policies/agent_output_locale_policy';
 
 export interface AnswerIssueHelpWorkflowDependencies {
-    issueNotificationPort: BoundIssueNotificationPort;
     aiRepository: FindingsQueryPort;
 }
 
@@ -55,20 +52,17 @@ export async function runAnswerIssueHelpWorkflow(
             return [noAnswerResult()];
         }
 
-        const publishedAnswer = param.newIssue
-            ? `${buildCopilotWelcomeMessage(param.tokenUser, param.locale)}\n\n${answer}`
-            : answer;
-
-        await dependencies.issueNotificationPort.addComment(
-            issueNumber,
-            publishedAnswer,
-        );
-        logInfo(`Initial help reply posted to issue #${issueNumber}.`);
+        logInfo(`Initial help reply prepared for semantic publication on issue #${issueNumber}.`);
         return [new Result({
             id: TASK_ID,
             success: true,
             executed: true,
-            payload: { welcomePublished: param.newIssue },
+            payload: Object.freeze({
+                publication: Object.freeze({
+                    kind: 'direct-answer',
+                    answer,
+                }),
+            }),
         })];
     } catch (error) {
         const semanticError = toApplicationError(error, 'workflow.failed', `Error in ${TASK_ID}: unable to answer the help issue.`);

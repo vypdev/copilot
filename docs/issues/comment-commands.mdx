@@ -103,8 +103,11 @@ conversation or machine-authored status comments.
 
 When a new normal issue has a generated plan, that single plan card includes a
 one-line command hint and no separate welcome. A question/help issue receives
-its direct answer without a second onboarding comment. If neither plan nor
-answer can run, one static welcome explains `/copilot help` and `@vypbot`.
+its direct answer in the configured issue language without a second onboarding
+comment. Event replays reuse the answer's hidden correlation marker instead of
+creating a duplicate. If neither plan nor answer can run, one static welcome
+explains `/copilot help` and `@vypbot`. Release and hotfix issues do not receive
+this fallback because their durable deployment dashboard owns the presentation.
 
 The welcome contains a hidden marker so later workflow changes can recognize it without relying on the visible wording.
 

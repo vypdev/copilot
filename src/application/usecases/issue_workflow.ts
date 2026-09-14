@@ -1,8 +1,9 @@
-import { getResultPayload, Result } from "../../data/model/result";
+import { Result } from "../../data/model/result";
 import { logError } from "../ports/logging_ports";
 import type { ParamUseCase } from "./base/param_usecase";
 import type { IssueWorkflowSteps } from "./issue_workflow_steps";
-import { buildCopilotWelcomeResult, COPILOT_WELCOME_MARKER } from '../policies/copilot_interaction_policy';
+import { buildCopilotWelcomeResult } from '../policies/copilot_interaction_policy';
+import { hasPrimaryIssuePublication } from '../policies/semantic_result_publication_policy';
 import type { BoundActorAuthorizationPort } from '../ports/actor_authorization_ports';
 import { ApplicationError } from '../errors/application_error';
 import type { CheckPermissionsContext } from './steps/common/check_permissions_workflow';
@@ -25,6 +26,7 @@ export interface IssueWorkflowRouteContext {
   readonly membersOnly: boolean;
   readonly actor: string;
   readonly newIssue: boolean;
+  readonly onboardingEligible: boolean;
   readonly tokenUser?: string;
   readonly recommendation?: 'answer-help' | 'recommend';
   readonly recommendSteps: RecommendStepsContext;
@@ -115,20 +117,13 @@ export async function runIssueWorkflow(
       ? recommendationOutcome.configurationPatch
       : undefined;
     results.push(...recommendationResults);
-    if (context.newIssue && !containsWelcome(recommendationResults)) {
+    if (context.newIssue && context.onboardingEligible && !hasPrimaryIssuePublication(recommendationResults)) {
       results.push(buildCopilotWelcomeResult(context.tokenUser, ports.sharedContexts.steps.answerHelp.locale));
     }
-  } else if (context.newIssue) {
+  } else if (context.newIssue && context.onboardingEligible) {
     results.push(buildCopilotWelcomeResult(context.tokenUser, ports.sharedContexts.steps.answerHelp.locale));
   }
   return issueWorkflowOutcome(results, branchConfigurationPatch, recommendationStatePatch);
-}
-
-function containsWelcome(results: readonly Result[]): boolean {
-  return results.some((result) =>
-    result.steps.some((step) => step.includes(COPILOT_WELCOME_MARKER))
-    || getResultPayload(result.payload)?.welcomePublished === true,
-  );
 }
 
 function issueWorkflowOutcome(

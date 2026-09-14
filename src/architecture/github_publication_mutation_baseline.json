@@ -9,7 +9,6 @@
     { "file": "src/application/usecases/steps/commit/bugbot/synchronize_bugbot_review_presentation_use_case.ts", "addComment": 1, "updateComment": 2, "updatePullRequestReview": 1, "reason": "Reconciles the Bugbot aggregate card, duplicates, and historical review state." },
     { "file": "src/application/usecases/steps/common/reply_publication_workflow.ts", "addComment": 1, "updateComment": 1, "reason": "Publishes a correlated explicit reply and compacts concurrent duplicates." },
     { "file": "src/application/usecases/steps/common/status_card_publication_workflow.ts", "addComment": 1, "updateComment": 2, "reason": "Creates or reconciles one canonical semantic status card." },
-    { "file": "src/application/usecases/steps/common/think_answer_workflow.ts", "addComment": 1, "reason": "Publishes the single direct response to an addressed natural-language request." },
-    { "file": "src/application/usecases/steps/issue/answer_issue_help_workflow.ts", "addComment": 1, "reason": "Publishes the single direct answer for a question or help issue." }
+    { "file": "src/application/usecases/steps/common/think_answer_workflow.ts", "addComment": 1, "reason": "Publishes the single direct response to an addressed natural-language request." }
   ]
 }
