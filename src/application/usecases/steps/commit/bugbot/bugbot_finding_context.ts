@@ -1,5 +1,6 @@
 import type { PullRequestReviewComment } from "../../../../ports/pull_request_review_comment_ports";
 import type { PullRequestReviewThreadState } from "../../../../ports/pull_request_review_comment_ports";
+import type { BugbotIssueComment } from '../../../../ports/bugbot_issue_read_ports';
 import {
   MAX_FINDING_BODY_LENGTH,
   truncateFindingBody,
@@ -16,12 +17,7 @@ import { githubUsersMatch } from '../../../../../domain/github_user_policy';
 import { isHumanResolver } from '../../../../../domain/bugbot/review_state';
 import type { PreviousBugbotFinding } from './bugbot_previous_findings_context';
 
-export interface BugbotComment {
-  id: number;
-  body: string | null;
-  user?: { login?: string };
-  createdAt?: string;
-}
+export type BugbotComment = BugbotIssueComment;
 
 export interface ParsedBugbotFindingComments {
   /** Full bodies for issue-comment read-modify-write operations. */

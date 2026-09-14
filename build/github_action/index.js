@@ -52894,13 +52894,13 @@ function buildReviewConversationBlock(issueComments, commentsByPullRequest, botL
 function buildReviewConversationContext(issueComments, commentsByPullRequest, botLogin) {
     const entries = [];
     for (const comment of issueComments) {
-        if (isBot(comment.user?.login, botLogin))
+        if (comment.isAutomatedAuthor || isBot(comment.user?.login, botLogin))
             continue;
         appendConversationEntry(entries, comment.user?.login, 'general PR/issue comment', comment.body, comment.createdAt, `issue:${comment.id}`);
     }
     for (const comments of commentsByPullRequest.values()) {
         for (const comment of comments) {
-            if (isBot(comment.authorLogin, botLogin))
+            if (comment.isAutomatedAuthor || isBot(comment.authorLogin, botLogin))
                 continue;
             const location = comment.path
                 ? `inline review comment at ${comment.path}${comment.line ? `:${comment.line}` : ''}`
@@ -65412,13 +65412,13 @@ class BugbotIssueCommentQueryRepository {
               issueOrPullRequest(number: $issueNumber) {
                 ... on Issue {
                   comments(last: 100, before: $cursor) {
-                    nodes { databaseId body author { login } createdAt }
+                    nodes { databaseId body author { login __typename } createdAt }
                     pageInfo { hasPreviousPage startCursor }
                   }
                 }
                 ... on PullRequest {
                   comments(last: 100, before: $cursor) {
-                    nodes { databaseId body author { login } createdAt }
+                    nodes { databaseId body author { login __typename } createdAt }
                     pageInfo { hasPreviousPage startCursor }
                   }
                 }
@@ -65436,6 +65436,7 @@ class BugbotIssueCommentQueryRepository {
                             id: Number(comment.databaseId),
                             body: comment.body ?? null,
                             ...(comment.author?.login ? { user: { login: comment.author.login } } : {}),
+                            ...(comment.author?.__typename === 'Bot' ? { isAutomatedAuthor: true } : {}),
                             ...(comment.createdAt ? { createdAt: comment.createdAt } : {}),
                         }];
                 });
@@ -67698,6 +67699,7 @@ function toReviewComment(comment) {
         path: comment.path,
         line: comment.line ?? undefined,
         authorLogin: comment.user?.login ?? undefined,
+        ...(comment.user?.type === 'Bot' ? { isAutomatedAuthor: true } : {}),
         ...(comment.created_at ? { createdAt: comment.created_at } : {}),
         ...(comment.pull_request_review_id != null
             ? { parentReviewIdentity: String(comment.pull_request_review_id) }

@@ -2025,13 +2025,13 @@ function buildReviewConversationBlock(issueComments, commentsByPullRequest, botL
 function buildReviewConversationContext(issueComments, commentsByPullRequest, botLogin) {
     const entries = [];
     for (const comment of issueComments) {
-        if (isBot(comment.user?.login, botLogin))
+        if (comment.isAutomatedAuthor || isBot(comment.user?.login, botLogin))
             continue;
         appendConversationEntry(entries, comment.user?.login, 'general PR/issue comment', comment.body, comment.createdAt, `issue:${comment.id}`);
     }
     for (const comments of commentsByPullRequest.values()) {
         for (const comment of comments) {
-            if (isBot(comment.authorLogin, botLogin))
+            if (comment.isAutomatedAuthor || isBot(comment.authorLogin, botLogin))
                 continue;
             const location = comment.path
                 ? `inline review comment at ${comment.path}${comment.line ? `:${comment.line}` : ''}`

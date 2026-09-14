@@ -7,6 +7,8 @@ export type PullRequestReviewComment = {
   path?: string;
   line?: number;
   authorLogin?: string;
+  /** Provider-authenticated author classification; never inferred from the login. */
+  isAutomatedAuthor?: boolean;
   createdAt?: string;
   /** Opaque identity of the submitted review that owns this comment. */
   parentReviewIdentity?: string;
