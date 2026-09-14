@@ -69,6 +69,7 @@ import { OctokitDeploymentClientAdapter } from "../github/octokit_deployment_ada
 import { WorkflowDispatchRepository } from "../../data/repository/workflow/workflow_dispatch_repository";
 import { createWorkflowDispatchClient } from "./github_workflow_client_factory";
 import { randomUUID } from "node:crypto";
+import { ResolveMessageCatalogUseCase } from '../../application/usecases/localization/resolve_message_catalog_use_case';
 import type { BugbotScmBinding } from './bugbot_scm_port_factory';
 import {
   bindIssueDescriptionQuery,
@@ -115,6 +116,7 @@ export function createSingleActionUseCaseCompositionRoot(
   surface: MainRunCompositionSurface,
   binding: BugbotScmBinding,
 ): SingleActionUseCase {
+  const catalogResolver = new ResolveMessageCatalogUseCase(createLanguageQueryPort());
   const issueDescriptionQueryPort = createIssueContentCompositionRoot();
   const repositoryTagPort = surface === "github-workflow"
     ? new RepositoryTagRepository(createReleaseClient())
@@ -150,6 +152,7 @@ export function createSingleActionUseCaseCompositionRoot(
       bindBranchDependencies(new BranchDependencyRepository(createGraphqlTransportClient()), binding),
       bindBranchComparison(new BranchCompareRepository(createBranchComparisonClient()), binding),
       bindBranchSyncNotification(issueDescriptionQueryPort, binding),
+      catalogResolver,
     ),
     deploymentOrchestration,
   );

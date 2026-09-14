@@ -2,6 +2,8 @@ import type { Execution } from "../../../../data/model/execution";
 import { BRANCH_SYNC_ALIGNED_MARKER, BRANCH_SYNC_STALE_MARKER } from "../../../policies/branch_sync_notification_policy";
 import { ObserveBranchSyncUseCase } from "../observe_branch_sync_use_case";
 import { projectBranchObservationContext } from '../../push_single_action_contexts';
+import type { MessageCatalogResolutionPort } from '../../../ports/message_catalog_ports';
+import { ENGLISH_BRANCH_SYNC_DEFINITION } from '../../../policies/branch_sync_message_catalog';
 
 const dependency = { issueNumber: 42, parentBranch: "develop", workingBranch: "feature/42" };
 
@@ -11,13 +13,14 @@ function execution(overrides: Record<string, unknown> = {}) {
     repo: "repo",
     tokenUser: "vypbot",
     tokens: { token: "token" },
+    ai: { getAgentConfiguration: () => ({ provider: 'codex', model: 'planner-model' }) },
     commit: { branch: "develop" },
     inputs: { after: "abc" },
     ...overrides,
   } as unknown as Execution);
 }
 
-function setup(input: { behindBy?: number; comments?: unknown[] } = {}) {
+function setup(input: { behindBy?: number; comments?: unknown[]; resolver?: MessageCatalogResolutionPort } = {}) {
   const dependencies = {
     listOpenDependencies: jest.fn().mockResolvedValue([dependency]),
     resolveTarget: jest.fn(),
@@ -28,7 +31,7 @@ function setup(input: { behindBy?: number; comments?: unknown[] } = {}) {
     addComment: jest.fn().mockResolvedValue(undefined),
     updateComment: jest.fn().mockResolvedValue(undefined),
   };
-  return { dependencies, comparisons, notifications, useCase: new ObserveBranchSyncUseCase(dependencies, comparisons, notifications) };
+  return { dependencies, comparisons, notifications, useCase: new ObserveBranchSyncUseCase(dependencies, comparisons, notifications, input.resolver) };
 }
 
 describe("ObserveBranchSyncUseCase", () => {
@@ -95,6 +98,27 @@ describe("ObserveBranchSyncUseCase", () => {
     expect(results[0]).toMatchObject({ success: false, executed: true });
     expect(results[0].steps[0]).toContain("issue #42");
     expect(JSON.stringify(results)).not.toContain("secret provider detail");
+  });
+
+  it('resolves one complete locale slice before publishing branch-sync copy', async () => {
+    const resolve = jest.fn().mockResolvedValue({
+      requestedLocale: 'fr-FR',
+      resolvedLocale: 'fr-FR',
+      source: 'dynamic',
+      messages: {
+        ...ENGLISH_BRANCH_SYNC_DEFINITION.messages,
+        'branchSync.stale.heading': 'Synchronisation requise',
+      },
+    });
+    const context = setup({ resolver: { resolve } });
+
+    await context.useCase.invoke(execution({ locale: { issue: 'fr-FR' } }));
+
+    expect(resolve).toHaveBeenCalledTimes(1);
+    expect(context.notifications.addComment).toHaveBeenCalledWith(
+      42,
+      expect.stringContaining('## Synchronisation requise'),
+    );
   });
 
   it("sanitizes a dependency-discovery failure at the observer boundary", async () => {

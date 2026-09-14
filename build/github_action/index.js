@@ -42332,6 +42332,85 @@ function findPreviousIssueBranch(branches, issueNumber, branchTypes) {
 
 /***/ }),
 
+/***/ 89245:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BRANCH_SYNC_CATALOG_DEFINITIONS = exports.SPANISH_BRANCH_SYNC_DEFINITION = exports.ENGLISH_BRANCH_SYNC_DEFINITION = exports.BRANCH_SYNC_MESSAGE_IDS = void 0;
+exports.resolveStaticBranchSyncCatalog = resolveStaticBranchSyncCatalog;
+exports.resolveBranchSyncCatalog = resolveBranchSyncCatalog;
+const message_catalog_1 = __nccwpck_require__(27097);
+const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
+exports.BRANCH_SYNC_MESSAGE_IDS = Object.freeze([
+    'branchSync.stale.heading',
+    'branchSync.stale.behind',
+    'branchSync.stale.ahead',
+    'branchSync.stale.instructions',
+    'branchSync.stale.compare',
+    'branchSync.aligned.heading',
+    'branchSync.aligned.status',
+    'branchSync.aligned.resolved',
+]);
+const ENGLISH_MESSAGES = Object.freeze({
+    'branchSync.stale.heading': 'Action required: synchronize the branch',
+    'branchSync.stale.behind': Object.freeze({
+        one: '{workingBranch} is {count} commit behind its parent branch {parentBranch}.',
+        other: '{workingBranch} is {count} commits behind its parent branch {parentBranch}.',
+    }),
+    'branchSync.stale.ahead': Object.freeze({
+        one: 'It also contains {count} commit not present in the parent branch.',
+        other: 'It also contains {count} commits not present in the parent branch.',
+    }),
+    'branchSync.stale.instructions': 'Run {command} in this conversation to merge the parent changes safely. If Git reports conflicts, the configured fixer agent can resolve eligible files before the verification commands run.',
+    'branchSync.stale.compare': 'Compare parent and working branch',
+    'branchSync.aligned.heading': 'Branch synchronized',
+    'branchSync.aligned.status': '{workingBranch} now contains the current history of its parent branch {parentBranch}.',
+    'branchSync.aligned.resolved': 'The previous synchronization recommendation has been resolved.',
+});
+const SPANISH_MESSAGES = Object.freeze({
+    'branchSync.stale.heading': 'Acción necesaria: sincroniza la rama',
+    'branchSync.stale.behind': Object.freeze({
+        one: '{workingBranch} está {count} commit por detrás de su rama padre {parentBranch}.',
+        other: '{workingBranch} está {count} commits por detrás de su rama padre {parentBranch}.',
+    }),
+    'branchSync.stale.ahead': Object.freeze({
+        one: 'También contiene {count} commit que no está en la rama padre.',
+        other: 'También contiene {count} commits que no están en la rama padre.',
+    }),
+    'branchSync.stale.instructions': 'Ejecuta {command} en esta conversación para integrar de forma segura los cambios de la rama padre. Si Git detecta conflictos, el agente corrector configurado puede resolver los archivos permitidos antes de ejecutar las verificaciones.',
+    'branchSync.stale.compare': 'Comparar la rama padre y la rama de trabajo',
+    'branchSync.aligned.heading': 'Rama sincronizada',
+    'branchSync.aligned.status': '{workingBranch} ya contiene el historial actual de su rama padre {parentBranch}.',
+    'branchSync.aligned.resolved': 'La recomendación de sincronización anterior está resuelta.',
+});
+exports.ENGLISH_BRANCH_SYNC_DEFINITION = Object.freeze({
+    version: message_catalog_1.MESSAGE_CATALOG_VERSION,
+    locale: 'en-US',
+    compatibleBaseLanguage: 'en',
+    messages: ENGLISH_MESSAGES,
+});
+exports.SPANISH_BRANCH_SYNC_DEFINITION = Object.freeze({
+    version: message_catalog_1.MESSAGE_CATALOG_VERSION,
+    locale: 'es-ES',
+    compatibleBaseLanguage: 'es',
+    messages: SPANISH_MESSAGES,
+});
+exports.BRANCH_SYNC_CATALOG_DEFINITIONS = Object.freeze([
+    exports.ENGLISH_BRANCH_SYNC_DEFINITION,
+    exports.SPANISH_BRANCH_SYNC_DEFINITION,
+]);
+function resolveStaticBranchSyncCatalog(locale) {
+    return (0, resolved_message_catalog_policy_1.resolveStaticMessageCatalogView)(locale, exports.ENGLISH_BRANCH_SYNC_DEFINITION, exports.BRANCH_SYNC_CATALOG_DEFINITIONS);
+}
+async function resolveBranchSyncCatalog(locale, configuration, resolver) {
+    return (0, resolved_message_catalog_policy_1.resolveMessageCatalogView)(locale, exports.BRANCH_SYNC_MESSAGE_IDS, exports.ENGLISH_BRANCH_SYNC_DEFINITION, exports.BRANCH_SYNC_CATALOG_DEFINITIONS, configuration, resolver);
+}
+
+
+/***/ }),
+
 /***/ 79895:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -42345,7 +42424,6 @@ exports.isStaleBranchSyncComment = isStaleBranchSyncComment;
 exports.buildStaleBranchSyncComment = buildStaleBranchSyncComment;
 exports.buildAlignedBranchSyncComment = buildAlignedBranchSyncComment;
 const github_user_policy_1 = __nccwpck_require__(84403);
-const locale_1 = __nccwpck_require__(15386);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
 exports.BRANCH_SYNC_STALE_MARKER = '<!-- copilot-branch-sync:stale -->';
 exports.BRANCH_SYNC_ALIGNED_MARKER = '<!-- copilot-branch-sync:aligned -->';
@@ -42371,36 +42449,39 @@ function isStaleBranchSyncComment(body) {
 }
 function buildStaleBranchSyncComment(input) {
     const { dependency, comparison } = input;
-    const spanish = (0, locale_1.baseLanguage)(input.locale ?? 'en-US') === 'es';
     const compareUrl = buildCompareUrl(input.owner, input.repository, dependency.parentBranch, dependency.workingBranch);
     const divergence = comparison.aheadBy > 0
-        ? spanish
-            ? ` También contiene ${comparison.aheadBy} commit(s) que no están en la rama padre.`
-            : ` It also contains ${comparison.aheadBy} commit(s) not present in the parent branch.`
+        ? ` ${input.messages.message('branchSync.stale.ahead', { count: comparison.aheadBy }, comparison.aheadBy)}`
         : '';
     return `${buildSharedBranchSyncMarker(dependency, `comparison:${(0, publication_identity_policy_1.createSemanticDigest)(comparison)}`, (0, publication_identity_policy_1.createSemanticDigest)({ state: 'stale', comparison }))}
 ${exports.BRANCH_SYNC_STALE_MARKER}
 ${buildDependencyMarker(dependency)}
 
-## ${spanish ? 'Acción necesaria: sincroniza la rama' : 'Action required: synchronize the branch'}
+## ${input.messages.message('branchSync.stale.heading')}
 
-\`${dependency.workingBranch}\` ${spanish ? `está ${comparison.behindBy} commit(s) por detrás de su rama padre` : `is ${comparison.behindBy} commit(s) behind its parent branch`} \`${dependency.parentBranch}\`.${divergence}
+${input.messages.message('branchSync.stale.behind', {
+        workingBranch: inlineRef(dependency.workingBranch),
+        parentBranch: inlineRef(dependency.parentBranch),
+        count: comparison.behindBy,
+    }, comparison.behindBy)}${divergence}
 
-${spanish ? 'Ejecuta' : 'Run'} \`/copilot sync-branch\` ${spanish ? 'en esta conversación para integrar de forma segura los cambios de la rama padre. Si Git detecta conflictos, el agente corrector configurado puede resolver los archivos permitidos antes de ejecutar las verificaciones.' : 'in this conversation to merge the parent changes safely. If Git reports conflicts, the configured fixer agent can resolve eligible files before the verification commands run.'}
+${input.messages.message('branchSync.stale.instructions', { command: '`/copilot sync-branch`' })}
 
-[${spanish ? 'Comparar la rama padre y la rama de trabajo' : 'Compare parent and working branch'}](${compareUrl})`;
+[${input.messages.message('branchSync.stale.compare')}](${compareUrl})`;
 }
-function buildAlignedBranchSyncComment(dependency, locale = 'en-US') {
-    const spanish = (0, locale_1.baseLanguage)(locale) === 'es';
+function buildAlignedBranchSyncComment(dependency, messages) {
     return `${buildSharedBranchSyncMarker(dependency, `aligned:${(0, publication_identity_policy_1.createSemanticDigest)(dependency)}`, (0, publication_identity_policy_1.createSemanticDigest)({ state: 'aligned', dependency }))}
 ${exports.BRANCH_SYNC_ALIGNED_MARKER}
 ${buildDependencyMarker(dependency)}
 
-## ${spanish ? 'Rama sincronizada' : 'Branch synchronized'}
+## ${messages.message('branchSync.aligned.heading')}
 
-\`${dependency.workingBranch}\` ${spanish ? 'ya contiene el historial actual de su rama padre' : 'now contains the current history of its parent branch'} \`${dependency.parentBranch}\`.
+${messages.message('branchSync.aligned.status', {
+        workingBranch: inlineRef(dependency.workingBranch),
+        parentBranch: inlineRef(dependency.parentBranch),
+    })}
 
-${spanish ? 'La recomendación de sincronización anterior está resuelta.' : 'The previous synchronization recommendation has been resolved.'}`;
+${messages.message('branchSync.aligned.resolved')}`;
 }
 function buildSharedBranchSyncMarker(dependency, sourceVersion, digest) {
     return (0, publication_identity_policy_1.buildPublicationMarker)({
@@ -42427,6 +42508,9 @@ function matchesDependency(body, dependency) {
 }
 function buildCompareUrl(owner, repository, parentBranch, workingBranch) {
     return `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/compare/${encodeURIComponent(parentBranch)}...${encodeURIComponent(workingBranch)}`;
+}
+function inlineRef(value) {
+    return `\`${value.replace(/[\r\n`<>]/gu, '').replace(/@/gu, '@\u200b').slice(0, 255)}\``;
 }
 
 
@@ -45298,6 +45382,52 @@ function normalizeForFingerprint(value) {
 }
 function createSha256(value) {
     return (0, node_crypto_1.createHash)('sha256').update(value, 'utf8').digest('hex');
+}
+
+
+/***/ }),
+
+/***/ 55069:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.toResolvedMessageCatalogView = toResolvedMessageCatalogView;
+exports.resolveStaticMessageCatalogView = resolveStaticMessageCatalogView;
+exports.resolveMessageCatalogView = resolveMessageCatalogView;
+const message_catalog_1 = __nccwpck_require__(27097);
+const locale_1 = __nccwpck_require__(15386);
+function toResolvedMessageCatalogView(resolved) {
+    return Object.freeze({
+        locale: resolved.resolvedLocale,
+        requestedLocale: resolved.requestedLocale,
+        resolutionSource: resolved.source,
+        ...(resolved.fallbackReason ? { fallbackReason: resolved.fallbackReason } : {}),
+        message: (id, variables = {}, count) => (0, message_catalog_1.renderCatalogMessage)(resolved.messages[id], variables, resolved.requestedLocale, count),
+    });
+}
+function resolveStaticMessageCatalogView(locale, sourceCatalog, bundledCatalogs) {
+    const requestedLocale = (0, locale_1.canonicalizeLocaleTag)(locale || locale_1.DEFAULT_REPOSITORY_LOCALE);
+    const resolved = (0, message_catalog_1.selectBundledMessageCatalog)(requestedLocale, bundledCatalogs) ?? Object.freeze({
+        requestedLocale,
+        resolvedLocale: (0, locale_1.canonicalizeLocaleTag)(sourceCatalog.locale),
+        source: 'fallback',
+        messages: sourceCatalog.messages,
+        fallbackReason: 'dynamic-provider-unavailable',
+    });
+    return toResolvedMessageCatalogView(resolved);
+}
+async function resolveMessageCatalogView(locale, ids, sourceCatalog, bundledCatalogs, configuration, resolver) {
+    if (!resolver)
+        return resolveStaticMessageCatalogView(locale, sourceCatalog, bundledCatalogs);
+    return toResolvedMessageCatalogView(await resolver.resolve({
+        targetLocale: locale || locale_1.DEFAULT_REPOSITORY_LOCALE,
+        ids,
+        sourceCatalog,
+        bundledCatalogs,
+        configuration,
+    }));
 }
 
 
@@ -48539,16 +48669,18 @@ const result_1 = __nccwpck_require__(73817);
 const branch_sync_notification_policy_1 = __nccwpck_require__(79895);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
+const branch_sync_message_catalog_1 = __nccwpck_require__(89245);
 const TASK_ID = "ObserveBranchSyncUseCase";
 /**
  * Cheap push-time observer. It only queries branch relationships/comparisons
  * and maintains one stateful notification per issue; no agent is reachable.
  */
 class ObserveBranchSyncUseCase {
-    constructor(dependencies, comparisons, notifications) {
+    constructor(dependencies, comparisons, notifications, catalogResolver) {
         this.dependencies = dependencies;
         this.comparisons = comparisons;
         this.notifications = notifications;
+        this.catalogResolver = catalogResolver;
         this.taskId = TASK_ID;
     }
     async invoke(context) {
@@ -48561,9 +48693,10 @@ class ObserveBranchSyncUseCase {
                 (0, logging_ports_1.logInfo)(`No open branch dependencies are affected by ${pushedBranch}.`);
                 return [];
             }
+            const messages = await (0, branch_sync_message_catalog_1.resolveBranchSyncCatalog)(context.locale, context.agentConfiguration, this.catalogResolver);
             const results = [];
             for (const dependency of dependencies) {
-                results.push(await this.reconcileDependency(context, dependency));
+                results.push(await this.reconcileDependency(context, dependency, messages));
             }
             return results;
         }
@@ -48572,7 +48705,7 @@ class ObserveBranchSyncUseCase {
             return [failure("Unable to inspect branch synchronization safely.", cause)];
         }
     }
-    async reconcileDependency(context, dependency) {
+    async reconcileDependency(context, dependency, messages) {
         try {
             const comparison = await this.comparisons.compare(dependency.parentBranch, dependency.workingBranch);
             const comments = await this.notifications.listIssueComments(dependency.issueNumber);
@@ -48583,7 +48716,7 @@ class ObserveBranchSyncUseCase {
                     repository: context.repository.name,
                     dependency,
                     comparison,
-                    locale: context.locale,
+                    messages,
                 });
                 if (latest && (0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body)) {
                     await this.notifications.updateComment(dependency.issueNumber, latest.id, comment);
@@ -48594,7 +48727,7 @@ class ObserveBranchSyncUseCase {
                 return success(dependency, comparison.behindBy, "stale");
             }
             if (latest && (0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body)) {
-                await this.notifications.updateComment(dependency.issueNumber, latest.id, (0, branch_sync_notification_policy_1.buildAlignedBranchSyncComment)(dependency, context.locale));
+                await this.notifications.updateComment(dependency.issueNumber, latest.id, (0, branch_sync_notification_policy_1.buildAlignedBranchSyncComment)(dependency, messages));
             }
             return success(dependency, 0, "aligned");
         }
@@ -51762,6 +51895,7 @@ function projectBranchObservationContext(source) {
         ...(source.tokenUser ? { trustedBotLogin: source.tokenUser } : {}),
         repository: Object.freeze({ owner: source.owner, name: source.repo }),
         locale: source.locale?.issue ?? 'en-US',
+        agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
     });
 }
 function projectUserRequestContext(source) {
@@ -72514,6 +72648,7 @@ const octokit_deployment_adapter_1 = __nccwpck_require__(46819);
 const workflow_dispatch_repository_1 = __nccwpck_require__(29509);
 const github_workflow_client_factory_1 = __nccwpck_require__(29839);
 const node_crypto_1 = __nccwpck_require__(6005);
+const resolve_message_catalog_use_case_1 = __nccwpck_require__(99961);
 const shared_capability_port_binding_1 = __nccwpck_require__(47399);
 const lifecycle_capability_port_binding_1 = __nccwpck_require__(85785);
 const lifecycle_capability_port_binding_2 = __nccwpck_require__(85785);
@@ -72523,6 +72658,7 @@ function createDetectPotentialProblemsUseCase(binding) {
     return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.scm, bugbot.telemetry);
 }
 function createSingleActionUseCaseCompositionRoot(surface, binding) {
+    const catalogResolver = new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)());
     const issueDescriptionQueryPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
     const repositoryTagPort = surface === "github-workflow"
         ? new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)())
@@ -72535,7 +72671,7 @@ function createSingleActionUseCaseCompositionRoot(surface, binding) {
         : undefined;
     return new single_action_use_case_1.SingleActionUseCase(repositoryTagPort && repositoryReleasePort
         ? new publish_github_action_use_case_1.PublishGithubActionUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding), (0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding))
-        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, shared_capability_port_binding_1.bindIssueNotification)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncNotification)(issueDescriptionQueryPort, binding)), deploymentOrchestration);
+        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, shared_capability_port_binding_1.bindIssueNotification)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncNotification)(issueDescriptionQueryPort, binding), catalogResolver), deploymentOrchestration);
 }
 function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publication, binding) {
     const deploymentClient = new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter();

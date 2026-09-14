@@ -229,6 +229,7 @@ describe('push and single-action context projection', () => {
       deletedPush: false,
       repository: { owner: 'owner', name: 'repo' },
       locale: 'en-US',
+      agentConfiguration: { provider: 'codex', model: 'planner-model' },
     });
   });
 

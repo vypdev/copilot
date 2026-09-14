@@ -65,6 +65,7 @@ export interface BranchObservationContext {
   readonly trustedBotLogin?: string;
   readonly repository: { readonly owner: string; readonly name: string };
   readonly locale: string;
+  readonly agentConfiguration: Readonly<AgentConfiguration>;
 }
 
 export interface UserRequestContext {
@@ -310,6 +311,7 @@ export function projectBranchObservationContext(source: PushSingleActionContextS
     ...(source.tokenUser ? { trustedBotLogin: source.tokenUser } : {}),
     repository: Object.freeze({ owner: source.owner, name: source.repo }),
     locale: source.locale?.issue ?? 'en-US',
+    agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
   });
 }
 
