@@ -38,10 +38,11 @@ export function prepareLanguageAdaptationInput(
         });
     }
     if (trustedBotLogin.trim()) {
+        const normalizedBotLogin = trustedBotLogin.trim().replace(/^@/u, '');
         return Object.freeze({
             kind: 'mention',
-            prose: extractMentionQuestion(commentBody, trustedBotLogin),
-            trustedBotLogin: trustedBotLogin.trim().replace(/^@/u, ''),
+            prose: extractMentionQuestion(commentBody, normalizedBotLogin),
+            trustedBotLogin: normalizedBotLogin,
         });
     }
     return Object.freeze({ kind: 'plain', prose: commentBody.trim() });

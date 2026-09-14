@@ -82,6 +82,41 @@ describe('CommentLanguageTranslationWorkflow', () => {
         });
     });
 
+    it('does not query the adapter when a mention contains no prose', async () => {
+        const query = jest.fn();
+        const results = await new CommentLanguageTranslationWorkflow({ query }).invoke({
+            ...context,
+            commentBody: '@vypbot',
+        });
+
+        expect(query).not.toHaveBeenCalled();
+        expect(getCommentLanguageAdaptationPayload(results[0])).toMatchObject({
+            status: 'matches', interpretedComment: '@vypbot',
+        });
+        expect(getCommentLanguageAdaptationPayload(results[0])?.sourceLocale).toBeUndefined();
+    });
+
+    it('ignores an invalid optional source locale without failing a safe translation', async () => {
+        const query = jest.fn().mockResolvedValue({
+            status: 'translated', sourceLocale: 'not a locale', targetLocale: 'en-US',
+            adaptedText: 'inspect this', reason: null,
+        });
+        const results = await new CommentLanguageTranslationWorkflow({ query }).invoke(context);
+
+        expect(getCommentLanguageAdaptationPayload(results[0])).toMatchObject({
+            status: 'translated', targetLocale: 'en-US', interpretedComment: '@vypbot inspect this',
+        });
+        expect(getCommentLanguageAdaptationPayload(results[0])?.sourceLocale).toBeUndefined();
+    });
+
+    it('fails closed for a malformed adapter response', async () => {
+        const query = jest.fn().mockResolvedValue(null);
+        const results = await new CommentLanguageTranslationWorkflow({ query }).invoke(context);
+
+        expect(results[0].errors[0]).toMatchObject({ code: 'locale.translation-failed' });
+        expect(getCommentLanguageAdaptationPayload({ payload: 'invalid' } as never)).toBeUndefined();
+    });
+
     it.each([
         { status: 'translated', sourceLocale: 'es', targetLocale: 'fr-FR', adaptedText: 'hello', reason: null },
         { status: 'ambiguous', sourceLocale: null, targetLocale: 'en-US', adaptedText: null, reason: 'ambiguous' },

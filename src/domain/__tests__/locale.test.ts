@@ -24,6 +24,11 @@ describe('locale policy', () => {
     (input) => expect(() => canonicalizeLocaleTag(input)).toThrow(InvalidLocaleTagError),
   );
 
+  it('rejects non-string repository and override values at the domain boundary', () => {
+    expect(() => canonicalizeLocaleTag(42)).toThrow(InvalidLocaleTagError);
+    expect(() => resolveLocaleProfile('en-US', {})).toThrow(InvalidLocaleTagError);
+  });
+
   it('defaults the repository to English and lets empty surfaces inherit it', () => {
     expect(resolveLocaleProfile('', '', '')).toEqual({
       repository: DEFAULT_REPOSITORY_LOCALE,
@@ -44,6 +49,14 @@ describe('locale policy', () => {
     expect(localeForScope(profile, 'repository')).toBe('fr-FR');
     expect(localeForScope(profile, 'issue')).toBe('es-MX');
     expect(localeForScope(profile, 'pull-request')).toBe('zh-Hant-TW');
+  });
+
+  it('treats null and whitespace-only overrides as inheritance', () => {
+    expect(resolveLocaleProfile('de-DE', null, '   ')).toEqual({
+      repository: 'de-DE',
+      issue: 'de-DE',
+      pullRequest: 'de-DE',
+    });
   });
 
   it('compares canonical base languages without conflating different languages', () => {
