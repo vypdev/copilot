@@ -4,6 +4,7 @@ import type { PreparedBugbotFindings } from './prepare_bugbot_findings';
 import { projectBugbotFindingStatuses } from '../../../../policies/bugbot_finding_status_policy';
 import type { BugbotReviewProjection } from '../../../../../domain/bugbot/review_projection';
 import type { BugbotReviewOperationContext } from './bugbot_review_operation_context';
+import type { BugbotContextPreflight } from './load_bugbot_context_use_case';
 
 export interface BugbotReviewTelemetryClock {
     now(): number;
@@ -21,6 +22,7 @@ export class BugbotReviewTelemetry {
     private readonly stages: Record<string, number> = {};
     private promptCharacters = 0;
     private responseCharacters = 0;
+    private preflight?: BugbotContextPreflight;
     private context?: BugbotContext;
     private prepared?: PreparedBugbotFindings;
     private projection?: BugbotReviewProjection;
@@ -40,6 +42,10 @@ export class BugbotReviewTelemetry {
         } finally {
             this.stages[sanitizeMetricName(stage)] = Math.max(0, this.clock.now() - startedAt);
         }
+    }
+
+    observePreflight(preflight: BugbotContextPreflight): void {
+        this.preflight = preflight;
     }
 
     observeContext(context: BugbotContext, prompt: string): void {
@@ -62,8 +68,11 @@ export class BugbotReviewTelemetry {
 
     snapshot(outcome: BugbotReviewOutcome, errorCategory?: string): BugbotReviewTelemetrySnapshot {
         const changes = this.context?.prContext?.changes ?? [];
-        const headSha = this.context?.prContext?.prHeadSha;
-        const canonicalPullRequestNumber = this.context?.canonicalPullRequest?.number;
+        const canonicalPullRequest = this.context?.canonicalPullRequest
+            ?? this.preflight?.canonicalPullRequest;
+        const headSha = this.context?.prContext?.prHeadSha
+            ?? canonicalPullRequest?.headSha;
+        const canonicalPullRequestNumber = canonicalPullRequest?.number;
         const contextCoverage = Object.fromEntries(
             (this.context?.coverage.sources ?? [])
                 .map((source) => [source.source, {
@@ -77,7 +86,9 @@ export class BugbotReviewTelemetry {
                     ...(source.providerLimitReached ? { providerLimitReached: true } : {}),
                 }]),
         );
-        const providerSources = (this.context?.coverage.sources ?? []).filter((source) =>
+        const observedSources = this.context?.coverage.sources
+            ?? (this.preflight ? [this.preflight.selectionCoverage] : []);
+        const providerSources = observedSources.filter((source) =>
             source.pagesFetched > 0 && [
                 'selection',
                 'issue-comments',
@@ -85,8 +96,10 @@ export class BugbotReviewTelemetry {
                 'review-threads',
                 'diff',
             ].includes(source.source));
-        const selectionCandidates = this.context?.coverage.sources
+        const selectionCandidates = observedSources
             .find((source) => source.source === 'selection')?.itemsFetched;
+        const contextSelectionReason = this.context?.selectionReason
+            ?? this.preflight?.selectionReason;
         const repositoryId = this.execution.repository.id;
         const startedAtEpoch = Date.parse(this.startedAt);
         const reviewId = [
@@ -136,11 +149,13 @@ export class BugbotReviewTelemetry {
             changedFiles: changes.length,
             changedLines: changes.reduce((sum, change) => sum + change.additions + change.deletions, 0),
             rulesLoaded: this.context?.reviewRuleSources?.length ?? 0,
-            ...(this.context ? {
-                contextSelectionReason: this.context.selectionReason,
+            ...(contextSelectionReason ? {
+                contextSelectionReason,
                 ...(selectionCandidates !== undefined ? {
                     contextCandidateBucket: selectionCandidates >= 2 ? '2+' as const : String(selectionCandidates) as '0' | '1',
                 } : {}),
+            } : {}),
+            ...(this.context ? {
                 contextCoverageStatus: this.context.coverage.status,
                 contextCoverage,
             } : {}),

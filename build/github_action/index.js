@@ -42269,6 +42269,28 @@ exports.BUGBOT_MIN_SEVERITY = 'low';
 
 /***/ }),
 
+/***/ 52771:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.selectPullRequestOwnerForPushReview = selectPullRequestOwnerForPushReview;
+/**
+ * Automatic push review yields only after an exact-head provider lookup proves
+ * that an open same-repository pull request owns the branch revision.
+ */
+function selectPullRequestOwnerForPushReview(context) {
+    const pullRequestOwnsReview = context.triggerKind === 'push'
+        && !context.eventTargetsPullRequest
+        && context.selectionReason === 'exact-head'
+        && context.canonicalPullRequest !== null;
+    return pullRequestOwnsReview ? context.canonicalPullRequest : null;
+}
+
+
+/***/ }),
+
 /***/ 98024:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -49898,12 +49920,7 @@ class CommitUseCase {
                 || Boolean(this.actorAuthorizationPort && await this.actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token));
             if (agentAllowed) {
                 results.push(...(await this.checkProgressUseCase.invoke((0, push_single_action_contexts_1.projectProgressContext)(param))));
-                if (param.pullRequest.number > 0) {
-                    (0, logging_ports_1.logInfo)(`Skipping push Bugbot analysis because pull request #${param.pullRequest.number} owns review for this head.`);
-                }
-                else {
-                    results.push(...(await this.detectPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param))));
-                }
+                results.push(...(await this.detectPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param))));
             }
             else {
                 (0, logging_ports_1.logInfo)('Skipping push agent analysis because ai-members-only is enabled and the actor is not authorized.');
@@ -52462,6 +52479,9 @@ class BugbotReviewTelemetry {
             this.stages[sanitizeMetricName(stage)] = Math.max(0, this.clock.now() - startedAt);
         }
     }
+    observePreflight(preflight) {
+        this.preflight = preflight;
+    }
     observeContext(context, prompt) {
         this.context = context;
         this.promptCharacters = prompt.length;
@@ -52478,8 +52498,11 @@ class BugbotReviewTelemetry {
     }
     snapshot(outcome, errorCategory) {
         const changes = this.context?.prContext?.changes ?? [];
-        const headSha = this.context?.prContext?.prHeadSha;
-        const canonicalPullRequestNumber = this.context?.canonicalPullRequest?.number;
+        const canonicalPullRequest = this.context?.canonicalPullRequest
+            ?? this.preflight?.canonicalPullRequest;
+        const headSha = this.context?.prContext?.prHeadSha
+            ?? canonicalPullRequest?.headSha;
+        const canonicalPullRequestNumber = canonicalPullRequest?.number;
         const contextCoverage = Object.fromEntries((this.context?.coverage.sources ?? [])
             .map((source) => [source.source, {
                 status: source.status,
@@ -52491,15 +52514,19 @@ class BugbotReviewTelemetry {
                 limitReached: source.limitReached,
                 ...(source.providerLimitReached ? { providerLimitReached: true } : {}),
             }]));
-        const providerSources = (this.context?.coverage.sources ?? []).filter((source) => source.pagesFetched > 0 && [
+        const observedSources = this.context?.coverage.sources
+            ?? (this.preflight ? [this.preflight.selectionCoverage] : []);
+        const providerSources = observedSources.filter((source) => source.pagesFetched > 0 && [
             'selection',
             'issue-comments',
             'pull-request-comments',
             'review-threads',
             'diff',
         ].includes(source.source));
-        const selectionCandidates = this.context?.coverage.sources
+        const selectionCandidates = observedSources
             .find((source) => source.source === 'selection')?.itemsFetched;
+        const contextSelectionReason = this.context?.selectionReason
+            ?? this.preflight?.selectionReason;
         const repositoryId = this.execution.repository.id;
         const startedAtEpoch = Date.parse(this.startedAt);
         const reviewId = [
@@ -52544,11 +52571,13 @@ class BugbotReviewTelemetry {
             changedFiles: changes.length,
             changedLines: changes.reduce((sum, change) => sum + change.additions + change.deletions, 0),
             rulesLoaded: this.context?.reviewRuleSources?.length ?? 0,
-            ...(this.context ? {
-                contextSelectionReason: this.context.selectionReason,
+            ...(contextSelectionReason ? {
+                contextSelectionReason,
                 ...(selectionCandidates !== undefined ? {
                     contextCandidateBucket: selectionCandidates >= 2 ? '2+' : String(selectionCandidates),
                 } : {}),
+            } : {}),
+            ...(this.context ? {
                 contextCoverageStatus: this.context.coverage.status,
                 contextCoverage,
             } : {}),
@@ -53517,6 +53546,7 @@ function applyCommentLimit(findings, maxComments = bugbot_constants_1.BUGBOT_MAX
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.preflightBugbotContext = preflightBugbotContext;
 exports.loadBugbotContext = loadBugbotContext;
 const application_error_1 = __nccwpck_require__(75999);
 const bounded_concurrency_policy_1 = __nccwpck_require__(35596);
@@ -53527,10 +53557,19 @@ const bugbot_previous_findings_context_1 = __nccwpck_require__(3346);
 const bugbot_review_context_1 = __nccwpck_require__(50536);
 const file_ignore_1 = __nccwpck_require__(10304);
 const bugbot_review_rules_1 = __nccwpck_require__(25011);
-async function loadBugbotContext(request, ports) {
+/** Resolves and validates the provider-owned PR identity without loading review context. */
+async function preflightBugbotContext(request, ports) {
     const selection = await selectCanonicalPullRequest(request, ports);
     const canonicalPullRequest = requireUsableSelection(request, selection);
-    const selectionCoverage = (0, context_1.completeBugbotSourceCoverage)("selection", selection.kind === "canonical" ? 1 : selection.kind === "ambiguous" ? 2 : 0, selectionPageCount(request));
+    return {
+        canonicalPullRequest,
+        selectionReason: selection.kind === 'canonical' ? selection.reason : 'none',
+        selectionCoverage: (0, context_1.completeBugbotSourceCoverage)('selection', selection.kind === 'canonical' ? 1 : selection.kind === 'ambiguous' ? 2 : 0, selectionPageCount(request)),
+    };
+}
+async function loadBugbotContext(request, ports, resolvedPreflight) {
+    const preflight = resolvedPreflight ?? await preflightBugbotContext(request, ports);
+    const { canonicalPullRequest, selectionCoverage, selectionReason } = preflight;
     const tasks = [];
     if (request.target.issueNumber !== undefined) {
         tasks.push(async () => {
@@ -53606,12 +53645,12 @@ async function loadBugbotContext(request, ports) {
             limitReached: ruleSet.omitted > 0,
         },
     ]);
-    (0, logging_ports_1.logDebugInfo)(`LoadBugbotContext: selection=${selection.kind}, coverage=${coverage.status}, existing findings=${Object.keys(parsedComments.existingByFindingId).length}, retained previous findings=${previousContext.selected.length}, diff files=${prContext?.changes?.length ?? 0}.`);
+    (0, logging_ports_1.logDebugInfo)(`LoadBugbotContext: selection=${selectionReason}, coverage=${coverage.status}, existing findings=${Object.keys(parsedComments.existingByFindingId).length}, retained previous findings=${previousContext.selected.length}, diff files=${prContext?.changes?.length ?? 0}.`);
     return {
         existingByFindingId: parsedComments.existingByFindingId,
         issueComments: parsedComments.issueComments,
         canonicalPullRequest,
-        selectionReason: selection.kind === "canonical" ? selection.reason : "none",
+        selectionReason,
         coverage,
         eligibleResolutionIds: new Set(previousContext.selected.map((finding) => finding.id)),
         previousFindingsBlock: previousContext.block,
@@ -55294,6 +55333,7 @@ const analyze_bugbot_revision_use_case_1 = __nccwpck_require__(4658);
 const bugbot_review_freshness_1 = __nccwpck_require__(14307);
 const reconcile_bugbot_review_state_use_case_1 = __nccwpck_require__(57515);
 const application_error_1 = __nccwpck_require__(75999);
+const bugbot_event_ownership_policy_1 = __nccwpck_require__(52771);
 const TASK_ID = 'DetectPotentialProblemsUseCase';
 /** Coordinates Bugbot context, analysis and finding publication behind application ports. */
 async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
@@ -55336,7 +55376,20 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             return [];
         }
         const contextRequest = (0, bugbot_context_request_1.projectBugbotContextRequest)(reviewContext, contextOptions);
-        const context = await telemetry.measure('context', () => (0, load_bugbot_context_use_case_1.loadBugbotContext)(contextRequest, dependencies.scm.context));
+        const preflight = await telemetry.measure('context-preflight', () => (0, load_bugbot_context_use_case_1.preflightBugbotContext)(contextRequest, dependencies.scm.context));
+        telemetry.observePreflight(preflight);
+        const owningPullRequest = (0, bugbot_event_ownership_policy_1.selectPullRequestOwnerForPushReview)({
+            triggerKind: reviewContext.trigger.kind,
+            eventTargetsPullRequest: reviewContext.target.isPullRequest,
+            selectionReason: preflight.selectionReason,
+            canonicalPullRequest: preflight.canonicalPullRequest,
+        });
+        if (owningPullRequest) {
+            (0, logging_ports_1.logInfo)(`Skipping push Bugbot analysis because pull request #${owningPullRequest.number} owns review for this head.`);
+            await publishTelemetry('skipped', 'pull_request_ownership');
+            return [];
+        }
+        const context = await telemetry.measure('context', () => (0, load_bugbot_context_use_case_1.loadBugbotContext)(contextRequest, dependencies.scm.context, preflight));
         const eventHeadSha = reviewContext.trigger.expectedHeadSha;
         if ((0, bugbot_review_freshness_1.isLoadedBugbotRevisionSuperseded)(context, eventHeadSha)) {
             return await complete(supersededResult(context.prContext?.prHeadSha, eventHeadSha), 'superseded');

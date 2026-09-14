@@ -391,12 +391,15 @@ groups keyed by repository and branch. A paired `push` and
 cancel only an older replaceable run from the same workflow; PR metadata-only
 `edited` events MUST continue to queue without preempting an active PR review.
 
-After the Commit route discovers an open same-repository PR for its branch, it
-MUST retain native issue state, size, and progress work but MUST omit Bugbot.
-The PR `synchronize` route then exclusively owns Bugbot review for that head.
-An issue-linked branch without an open PR retains push-time Bugbot. Fork PR
-workflows remain outside this contract and MUST stay excluded by the existing
-same-repository admission gate.
+The Commit route MUST retain native issue state, size, and progress work, then
+invoke a read-only Bugbot preflight that resolves the pushed branch through the
+provider's exact-head lookup. If that validated selection is an open PR in the
+same base repository, the push route MUST stop before loading review context or
+invoking the agent. The PR `synchronize` route then exclusively owns Bugbot
+review for that head. The decision MUST NOT depend on a `pull_request` field in
+the `push` payload. An issue-linked branch without an open PR retains push-time
+Bugbot. Fork PR workflows remain outside this contract and MUST stay excluded
+by the existing same-repository admission gate.
 
 ### 6.6 State machine
 
@@ -1051,7 +1054,7 @@ removed.
 | §6.2 capability behavior | capability outcome adapters/coordinator | route and end-to-end cases | issue/PR/release/Bugbot pages |
 | §6.4 one canonical card | owned query/mutation ports and reconciler | duplicate/race/pagination tests | operator recovery guide |
 | §6.5 freshness | source guard and feature revisions | stale/out-of-order/replay tests | observability guide |
-| §6.5.1 event ownership | distinct push/PR groups + open-PR Bugbot omission | workflow contract, route unit test, PR #367 paired-event evidence | workflow setup and Bugbot guides |
+| §6.5.1 event ownership | distinct push/PR groups + exact-head preflight and ownership policy | workflow contract, push-shaped preflight integration test, policy matrix, PR #367 paired-event evidence | workflow setup and Bugbot guides |
 | §7 quiet/image defaults | action/setup configuration policies | action schema, setup, doctor, migration tests | configuration and upgrade pages |
 | §8 clean boundaries | architecture and source-inventory checks | executable boundary tests | contributor architecture |
 | §9 message hierarchy/examples | localized feature renderers | semantic golden fixtures and manual UX matrix | user journeys |

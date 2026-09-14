@@ -31,8 +31,11 @@ URLs MUST never be fetched.
 
 PR metadata normalization MUST share the PR-specific branch serialization
 boundary without preempting an active code review. Commit uses a distinct
-push-specific boundary, and once it discovers an open same-repository PR it
-MUST skip Bugbot so PR synchronization exclusively owns review for that head.
+push-specific boundary. Its Bugbot path MUST perform a provider-backed,
+exact-head, same-repository preflight and stop before review-context loading or
+agent invocation when that selection proves an open PR exists. It MUST NOT infer
+PR ownership from the push payload. PR synchronization then exclusively owns
+review for that head.
 A newer PR review event MAY cancel an obsolete PR review;
 `pull_request: edited` MUST wait and MUST NOT replace a real `synchronize`
 analysis with a green metadata-only run. After it waits, the
@@ -672,7 +675,7 @@ SDDs, catalog metadata, generated catalog, and bundles are updated together.
 | safe PR link | exact-target adapter and compensation workflow | forged URL, replay, marker, every failure edge | PR capabilities, troubleshooting |
 | clean cut and ceiling | AST ratchet, typecheck, generated bundles | zero-leaf/old-symbol negative fixtures | semantic context SDD |
 | UX/operations | semantic result strings and common publisher | state/retained-action assertions + manual review | PR and troubleshooting pages |
-| review-preserving ownership | distinct push/PR branch groups + conditional PR cancellation + open-PR Bugbot omission | workflow validator, cross-group negative fixtures, Commit route test, PR #363/#367 live sequence | workflow setup, Bugbot configuration/how-it-works |
+| review-preserving ownership | distinct push/PR branch groups + conditional PR cancellation + exact-head push preflight | workflow validator, cross-group negative fixtures, ownership policy matrix, push-shaped detection integration, PR #363/#367 live sequence | workflow setup, Bugbot configuration/how-it-works |
 | review publication ownership | result-publication mode + discriminated Bugbot telemetry/evidence policies | metadata-only comment/Check negatives, malformed-sibling cross-consumer cases, partial/complete/skipped policy cases, action-completion integration, PR #363 latest-by-name/noise sequence | workflow setup, Bugbot detection/how-it-works, troubleshooting |
 
 ## 18. Implementation sequence
@@ -741,8 +744,9 @@ SDDs, catalog metadata, generated catalog, and bundles are updated together.
 - Decision: one description request with an explicit trigger replaces two entry
   methods; rejected overloads and deprecated aliases.
 - Decision: use distinct push and PR branch concurrency keys, make PR
-  synchronization the sole Bugbot owner after an open same-repository PR is
-  discovered, and conditionally disable PR-key preemption for
+  synchronization the sole Bugbot owner after a provider-backed exact-head
+  preflight discovers an open same-repository PR, and conditionally disable
+  PR-key preemption for
   `pull_request: edited`. PR #363 proved unconditional metadata cancellation can
   hide a missed review; PR #367 proved the shared push/PR key can cancel useful
   completed push work. Separate event lanes are safe because only the PR lane

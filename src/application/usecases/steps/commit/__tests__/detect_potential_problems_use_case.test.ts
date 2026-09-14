@@ -51,6 +51,7 @@ const mockListPullRequestReviews = jest.fn();
 const mockUpdatePullRequestReview = jest.fn();
 
 const mockAskAgent = jest.fn();
+const mockPublishTelemetry = jest.fn();
 let issueCoverageOverride: BugbotSourceCoverage | undefined;
 
 function completeCoverage(source: BugbotContextSource, items: number) {
@@ -286,6 +287,7 @@ describe("DetectPotentialProblemsUseCase", () => {
           },
         },
       },
+      { publish: mockPublishTelemetry },
     );
     mockListIssueComments.mockReset();
     mockAddComment.mockReset();
@@ -313,6 +315,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockListPullRequestReviews.mockReset().mockResolvedValue([]);
     mockUpdatePullRequestReview.mockReset().mockResolvedValue(undefined);
     mockAskAgent.mockReset();
+    mockPublishTelemetry.mockReset();
     issueCoverageOverride = undefined;
 
     mockListIssueComments.mockResolvedValue([]);
@@ -366,6 +369,33 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(results).toHaveLength(0);
     expect(mockListIssueComments).not.toHaveBeenCalled();
     expect(mockAskAgent).not.toHaveBeenCalled();
+  });
+
+  it('lets the PR event own review when a push preflight discovers an exact-head open PR', async () => {
+    mockFindExactHeadCandidateNumbers.mockResolvedValue([17]);
+    mockGetPullRequestHeadSha.mockResolvedValue('a'.repeat(40));
+    const param = baseParam({
+      eventName: 'push',
+      inputs: { before: 'b'.repeat(40), after: 'a'.repeat(40) },
+    });
+
+    const results = await invokeUseCase(useCase, param);
+
+    expect(results).toEqual([]);
+    expect(mockFindExactHeadCandidateNumbers).toHaveBeenCalledWith('feature/42-add-feature');
+    expect(mockListIssueComments).not.toHaveBeenCalled();
+    expect(mockListPullRequestReviewComments).not.toHaveBeenCalled();
+    expect(mockGetReviewDiffSnapshot).not.toHaveBeenCalled();
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockPublishTelemetry).toHaveBeenCalledWith(expect.objectContaining({
+      outcome: 'skipped',
+      errorCategory: 'pull_request_ownership',
+      pullRequestNumber: 17,
+      contextSelectionReason: 'exact-head',
+      contextCandidateBucket: '1',
+      contextLogicalProviderReads: 1,
+      contextRawProviderRequests: 1,
+    }));
   });
 
   it('skips draft pull requests when draft reviews are disabled', async () => {

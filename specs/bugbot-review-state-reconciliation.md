@@ -176,9 +176,12 @@ canceled Commit run `34846885692` through the same native group after every job
 step had succeeded, leaving a misleading canceled conclusion. Running Bugbot
 from both event routes also made cancellation necessary only because ownership
 was duplicated. The final contract therefore uses distinct `copilot-push-…`
-and `copilot-pr-…` branch groups. When Commit discovers an open same-repository
-PR, it retains issue progress work but skips Bugbot; the PR synchronization
-event exclusively owns review for that head. PR metadata retains conditional
+and `copilot-pr-…` branch groups. The Commit route retains issue progress work,
+then Bugbot's read-only exact-head preflight validates whether an open
+same-repository PR owns the pushed branch. A match skips review-context loading
+and agent invocation; the PR synchronization event exclusively owns review for
+that head. This decision uses provider discovery rather than the absent
+`pull_request` field on a push payload. PR metadata retains conditional
 non-preemption within the PR-specific group, and fork PR execution remains
 excluded by the same-repository workflow gate.
 
@@ -471,9 +474,11 @@ readiness. `unknown` is a system failure and fails the review regardless of
   MUST NOT mutate findings or current-state projections.
 - Shipped Commit and Pull Request workflows MUST use distinct branch-scoped
   concurrency groups. Each uses cancel-in-progress semantics only for its own
-  replaceable revisions. After Commit discovers an open same-repository PR, it
-  skips Bugbot and the PR code-change event exclusively owns review for that
-  head. `pull_request: edited` uses the PR group with cancellation disabled, so
+  replaceable revisions. On push, a read-only exact-head preflight MUST validate
+  any open same-repository PR before Bugbot loads review context or invokes the
+  agent; a validated match yields to the PR code-change event. The decision MUST
+  NOT read PR identity from the push payload. `pull_request: edited` uses the PR
+  group with cancellation disabled, so
   it waits and cannot preempt an active review. Application freshness checks
   remain mandatory because API consumers and comment-triggered flows are not
   fully serialized by workflow YAML.
@@ -1322,7 +1327,7 @@ examples should reuse the same fixtures as presentation tests where practical.
 | Safe resolution/reopen order | reconciliation plan/apply use case | every partial mutation boundary | How it works, Failure scenarios |
 | Human dismissal precedence | lifecycle policy + resolver adapter | bot/human/unknown resolver matrix | Concepts, Detection |
 | Freshness and concurrency | head guards + workflow contract | stale, duplicate, canceled, race cases | Workflow setup |
-| Review ownership and metadata non-preemption | distinct push/PR branch groups + open-PR Bugbot omission + conditional PR cancellation | active/setup workflow parser, cross-group negative fixtures, Commit route test, PR #363/#367 live evidence | Workflow setup, Configuration, How it works |
+| Review ownership and metadata non-preemption | distinct push/PR branch groups + exact-head push preflight + conditional PR cancellation | active/setup workflow parser, cross-group negative fixtures, ownership policy matrix, push-shaped detection integration, PR #363/#367 live evidence | Workflow setup, Configuration, How it works |
 | Metadata/review publication ownership | result-publication mode + telemetry/evidence policies | metadata generic-comment negative, outcome matrix, completion integration, PR #363 latest-by-name/noise replay | Detection, Workflow setup, How it works, Troubleshooting |
 | Canonical Result evidence | discriminated telemetry-set and finding-state projections + completion/lifecycle/status/summary/Check policies | complete aggregation, malformed/duplicate telemetry siblings, required-outcome absence, missing/extra key, numeric limits, overflow, cross-surface fail-closed cases | Detection, Observability, Comment commands, Failure scenarios |
 | Coherent final snapshot | snapshot loader + explicit surface completeness | before/after head, head-change, missing-head, per-surface failure, shared issue/PR read cases | How it works, Failure scenarios |

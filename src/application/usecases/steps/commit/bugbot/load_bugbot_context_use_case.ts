@@ -29,17 +29,37 @@ type LoadedSource =
   | { readonly kind: "threads"; readonly value: Readonly<Record<string, import("../../../../ports/pull_request_review_comment_ports").PullRequestReviewThreadState>>; readonly coverage: BugbotSourceCoverage }
   | { readonly kind: "diff"; readonly value: import("../../../../ports/bugbot_pull_request_read_ports").PullRequestReviewDiffSnapshot; readonly coverage: BugbotSourceCoverage };
 
+export interface BugbotContextPreflight {
+  readonly canonicalPullRequest: BugbotPullRequestIdentity | null;
+  readonly selectionReason: 'event' | 'exact-head' | 'none';
+  readonly selectionCoverage: BugbotSourceCoverage;
+}
+
+/** Resolves and validates the provider-owned PR identity without loading review context. */
+export async function preflightBugbotContext(
+  request: BugbotContextRequest,
+  ports: BoundBugbotContextReadPorts,
+): Promise<BugbotContextPreflight> {
+  const selection = await selectCanonicalPullRequest(request, ports);
+  const canonicalPullRequest = requireUsableSelection(request, selection);
+  return {
+    canonicalPullRequest,
+    selectionReason: selection.kind === 'canonical' ? selection.reason : 'none',
+    selectionCoverage: completeBugbotSourceCoverage(
+      'selection',
+      selection.kind === 'canonical' ? 1 : selection.kind === 'ambiguous' ? 2 : 0,
+      selectionPageCount(request),
+    ),
+  };
+}
+
 export async function loadBugbotContext(
   request: BugbotContextRequest,
   ports: BoundBugbotContextReadPorts,
+  resolvedPreflight?: BugbotContextPreflight,
 ): Promise<BugbotContext> {
-  const selection = await selectCanonicalPullRequest(request, ports);
-  const canonicalPullRequest = requireUsableSelection(request, selection);
-  const selectionCoverage = completeBugbotSourceCoverage(
-    "selection",
-    selection.kind === "canonical" ? 1 : selection.kind === "ambiguous" ? 2 : 0,
-    selectionPageCount(request),
-  );
+  const preflight = resolvedPreflight ?? await preflightBugbotContext(request, ports);
+  const { canonicalPullRequest, selectionCoverage, selectionReason } = preflight;
   const tasks: Array<() => Promise<LoadedSource>> = [];
   if (request.target.issueNumber !== undefined) {
     tasks.push(async () => {
@@ -135,13 +155,13 @@ export async function loadBugbotContext(
     },
   ]);
   logDebugInfo(
-    `LoadBugbotContext: selection=${selection.kind}, coverage=${coverage.status}, existing findings=${Object.keys(parsedComments.existingByFindingId).length}, retained previous findings=${previousContext.selected.length}, diff files=${prContext?.changes?.length ?? 0}.`,
+    `LoadBugbotContext: selection=${selectionReason}, coverage=${coverage.status}, existing findings=${Object.keys(parsedComments.existingByFindingId).length}, retained previous findings=${previousContext.selected.length}, diff files=${prContext?.changes?.length ?? 0}.`,
   );
   return {
     existingByFindingId: parsedComments.existingByFindingId,
     issueComments: parsedComments.issueComments,
     canonicalPullRequest,
-    selectionReason: selection.kind === "canonical" ? selection.reason : "none",
+    selectionReason,
     coverage,
     eligibleResolutionIds: new Set(previousContext.selected.map((finding) => finding.id)),
     previousFindingsBlock: previousContext.block,

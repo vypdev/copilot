@@ -153,25 +153,6 @@ describe('CommitUseCase', () => {
     expect(results[1].id).toBe('c');
   });
 
-  it('keeps push metadata and progress but lets an open pull request own Bugbot review', async () => {
-    const useCase = new CommitUseCase(
-      { invoke: mockNotifyInvoke } as any,
-      { invoke: mockCheckChangesInvoke } as any,
-      { invoke: mockDetectProblemsInvoke } as any,
-      { invoke: mockCheckProgressInvoke } as any,
-    );
-    const param = minimalExecution({
-      pullRequest: { number: 42, head: 'feature/123', action: '' },
-    });
-
-    await useCase.invoke(param);
-
-    expect(mockNotifyInvoke).toHaveBeenCalledTimes(1);
-    expect(mockCheckChangesInvoke).toHaveBeenCalledTimes(1);
-    expect(mockCheckProgressInvoke).toHaveBeenCalledTimes(1);
-    expect(mockDetectProblemsInvoke).not.toHaveBeenCalled();
-  });
-
   it('on error pushes failure result and rethrows', async () => {
     mockNotifyInvoke.mockRejectedValue(new Error('step failed'));
 

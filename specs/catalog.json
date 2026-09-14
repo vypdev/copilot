@@ -214,7 +214,7 @@
         ".github/workflows/copilot_pull_request_comment.yml"
       ],
       "entrypoints": [
-        "src/application/usecases/commit_use_case.ts",
+        "src/application/usecases/steps/commit/detect_potential_problems_workflow.ts",
         "src/application/usecases/steps/commit/bugbot/reconcile_bugbot_review_state_use_case.ts",
         "src/actions/github_action_completion.ts"
       ],
@@ -222,6 +222,7 @@
         "src/domain/bugbot/review_state.ts",
         "src/domain/bugbot/review_projection.ts",
         "src/application/policies/bugbot_reconciliation_policy.ts",
+        "src/application/policies/bugbot_event_ownership_policy.ts",
         "src/application/policies/bugbot_result_finding_state_projection_policy.ts",
         "src/application/policies/bugbot_telemetry_projection_policy.ts",
         "src/application/policies/action_summary_policy.ts",
@@ -229,18 +230,19 @@
         "src/application/policies/lifecycle_state_policy.ts",
         "src/application/policies/status_command_policy.ts",
         "src/application/usecases/steps/common/publish_resume_workflow.ts",
+        "src/application/usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts",
         "src/application/usecases/steps/commit/bugbot/schema.ts",
         "src/application/usecases/steps/commit/bugbot/prepare_bugbot_findings_policy.ts",
         "src/application/usecases/steps/commit/bugbot/synchronize_bugbot_review_presentation_use_case.ts"
       ],
       "tests": [
-        "src/application/usecases/__tests__/commit_use_case.test.ts",
         "src/domain/bugbot/__tests__/review_state.test.ts",
         "src/domain/bugbot/__tests__/review_projection.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/schema.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/prepare_bugbot_findings.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/reconcile_bugbot_review_state_integration.test.ts",
         "src/application/policies/__tests__/bugbot_result_finding_state_projection_policy.test.ts",
+        "src/application/policies/__tests__/bugbot_event_ownership_policy.test.ts",
         "src/application/policies/__tests__/bugbot_telemetry_projection_policy.test.ts",
         "src/application/policies/__tests__/action_summary_policy.test.ts",
         "src/application/policies/__tests__/copilot_evidence_policy.test.ts",
@@ -249,6 +251,7 @@
         "src/actions/__tests__/github_action_completion.test.ts",
         "src/application/usecases/steps/common/__tests__/publish_resume_use_case.test.ts",
         "src/application/usecases/actions/__tests__/synchronize_lifecycle_state_use_case.test.ts",
+        "src/application/usecases/steps/commit/__tests__/detect_potential_problems_use_case.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts"
       ],
       "documentation": [

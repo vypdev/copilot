@@ -52,15 +52,9 @@ export class CommitUseCase implements ParamUseCase<Execution, Result[]> {
                 ));
             if (agentAllowed) {
                 results.push(...(await this.checkProgressUseCase.invoke(projectProgressContext(param))));
-                if (param.pullRequest.number > 0) {
-                    logInfo(
-                        `Skipping push Bugbot analysis because pull request #${param.pullRequest.number} owns review for this head.`,
-                    );
-                } else {
-                    results.push(...(await this.detectPotentialProblemsUseCase.invoke(
-                        projectBugbotReviewOperationContext(param),
-                    )));
-                }
+                results.push(...(await this.detectPotentialProblemsUseCase.invoke(
+                    projectBugbotReviewOperationContext(param),
+                )));
             } else {
                 logInfo('Skipping push agent analysis because ai-members-only is enabled and the actor is not authorized.');
             }
