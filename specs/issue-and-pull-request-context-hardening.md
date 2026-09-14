@@ -29,10 +29,16 @@ requests. That operation MUST use a repository-owned URL/query, a durable hidden
 marker, ordered compensation, and truthful partial-state results. Event-provided
 URLs MUST never be fetched.
 
-PR metadata normalization MUST share the branch serialization boundary without
-preempting an active code review. A newer code-change or review event MAY cancel
-an obsolete review; `pull_request: edited` MUST wait and MUST NOT replace a real
-`synchronize` analysis with a green metadata-only run. After it waits, the
+PR metadata normalization MUST share the PR-specific branch serialization
+boundary without preempting an active code review. Commit uses a distinct
+push-specific boundary. Its Bugbot path MUST perform a provider-backed,
+exact-head, same-repository preflight and stop before review-context loading or
+agent invocation when that selection proves an open PR exists. It MUST NOT infer
+PR ownership from the push payload. PR synchronization then exclusively owns
+review for that head.
+A newer PR review event MAY cancel an obsolete PR review;
+`pull_request: edited` MUST wait and MUST NOT replace a real `synchronize`
+analysis with a green metadata-only run. After it waits, the
 metadata-only run MUST publish its own workflow outcome and Job Summary without
 creating a generic result comment or a newer same-name `Copilot / Review` Check.
 That Check name is reserved for a result carrying exactly one current-schema
@@ -654,6 +660,9 @@ SDDs, catalog metadata, generated catalog, and bundles are updated together.
 19. Given Bugbot reports bounded `partial`, `skipped`, or `superseded` telemetry,
     the Review Check is neutral and names that outcome; it never claims success
     or whole-PR cleanliness.
+20. Given a push and PR synchronization are emitted for the same head, they use
+    distinct native queues; Commit retains issue progress but skips Bugbot, and
+    the PR synchronization event owns exactly one review.
 
 ## 17. Requirements traceability
 
@@ -666,7 +675,7 @@ SDDs, catalog metadata, generated catalog, and bundles are updated together.
 | safe PR link | exact-target adapter and compensation workflow | forged URL, replay, marker, every failure edge | PR capabilities, troubleshooting |
 | clean cut and ceiling | AST ratchet, typecheck, generated bundles | zero-leaf/old-symbol negative fixtures | semantic context SDD |
 | UX/operations | semantic result strings and common publisher | state/retained-action assertions + manual review | PR and troubleshooting pages |
-| review-preserving concurrency | shared branch group + conditional cancellation | workflow validator, negative fixture, PR #363 live sequence | workflow setup, Bugbot configuration/how-it-works |
+| review-preserving ownership | distinct push/PR branch groups + conditional PR cancellation + exact-head push preflight | workflow validator, cross-group negative fixtures, ownership policy matrix, push-shaped detection integration, PR #363/#367 live sequence | workflow setup, Bugbot configuration/how-it-works |
 | review publication ownership | result-publication mode + discriminated Bugbot telemetry/evidence policies | metadata-only comment/Check negatives, malformed-sibling cross-consumer cases, partial/complete/skipped policy cases, action-completion integration, PR #363 latest-by-name/noise sequence | workflow setup, Bugbot detection/how-it-works, troubleshooting |
 
 ## 18. Implementation sequence
@@ -734,10 +743,14 @@ SDDs, catalog metadata, generated catalog, and bundles are updated together.
   best-effort cleanup.
 - Decision: one description request with an explicit trigger replaces two entry
   methods; rejected overloads and deprecated aliases.
-- Decision: retain one shared branch concurrency key but conditionally disable
-  preemption for `pull_request: edited`; rejected unconditional cancellation
-  because PR #363 proved it can hide a missed review, and rejected parallel
-  metadata/review lanes because both can mutate the same PR surfaces.
+- Decision: use distinct push and PR branch concurrency keys, make PR
+  synchronization the sole Bugbot owner after a provider-backed exact-head
+  preflight discovers an open same-repository PR, and conditionally disable
+  PR-key preemption for
+  `pull_request: edited`. PR #363 proved unconditional metadata cancellation can
+  hide a missed review; PR #367 proved the shared push/PR key can cancel useful
+  completed push work. Separate event lanes are safe because only the PR lane
+  mutates Bugbot PR surfaces once a PR exists.
 - Decision: reserve `Copilot / Review` for structurally valid Bugbot telemetry
   and skip metadata-only evidence instead of reading/merging prior Checks;
   rejected a second metadata Check with the same name and a provider read/write

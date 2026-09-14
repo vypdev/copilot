@@ -54,15 +54,15 @@ describe('IssueContentRepository', () => {
         await expect(repository.getDescription('owner', 'repo', 7, 'token')).rejects.toThrow('Not Found');
     });
 
-    it('preserves the comment watermark contract', async () => {
+    it('publishes exactly the semantic body without a visible branding footer', async () => {
         mockCreateComment.mockResolvedValue(undefined);
         mockUpdateComment.mockResolvedValue(undefined);
 
         await repository.addComment('owner', 'repo', 7, 'comment', 'token');
         await repository.updateComment('owner', 'repo', 7, 12, 'updated', 'token');
 
-        expect(mockCreateComment).toHaveBeenCalledWith(expect.objectContaining({ issue_number: 7 }));
-        expect(mockUpdateComment).toHaveBeenCalledWith(expect.objectContaining({ comment_id: 12 }));
+        expect(mockCreateComment).toHaveBeenCalledWith(expect.objectContaining({ issue_number: 7, body: 'comment' }));
+        expect(mockUpdateComment).toHaveBeenCalledWith(expect.objectContaining({ comment_id: 12, body: 'updated' }));
     });
 
     it.each(['', '   ', '\n<!-- copilot metadata -->\n'])('does not publish an empty comment body: %j', async (comment) => {

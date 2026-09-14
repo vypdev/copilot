@@ -1,4 +1,3 @@
-import { getCommentWatermark } from "../../../utils/comment_watermark";
 import { hasVisibleCommentContent } from '../../../domain/comment_content_policy';
 import { logDebugInfo, logError } from "../../../utils/logger";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
@@ -90,15 +89,13 @@ export class IssueContentRepository {
             return;
         }
 
-        const watermark = getCommentWatermark(
-            options?.commitSha ? { commitSha: options.commitSha, owner, repo: repository } : undefined,
-        );
+        void options;
         const octokit = this.githubClient.getClient(token);
         await octokit.rest.issues.createComment({
             owner,
             repo: repository,
             issue_number: issueNumber,
-            body: `${comment}\n\n${watermark}`,
+            body: comment,
         });
         logDebugInfo(`Comment added to Issue ${issueNumber}.`);
     };
@@ -117,15 +114,13 @@ export class IssueContentRepository {
             return;
         }
 
-        const watermark = getCommentWatermark(
-            options?.commitSha ? { commitSha: options.commitSha, owner, repo: repository } : undefined,
-        );
+        void options;
         const octokit = this.githubClient.getClient(token);
         await octokit.rest.issues.updateComment({
             owner,
             repo: repository,
             comment_id: commentId,
-            body: `${comment}\n\n${watermark}`,
+            body: comment,
         });
         logDebugInfo(`Comment ${commentId} updated in Issue ${issueNumber}.`);
     };

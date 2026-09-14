@@ -1,509 +1,247 @@
 import { Result } from '../../../../../data/model/result';
 import { PublishResultUseCase } from '../publish_resume_use_case';
-import { ApplicationError } from '../../../../errors/application_error';
-import {
-  projectPublishResultContext,
-  type PublishResultContextSource,
-} from '../publish_resume_workflow';
+import { projectPublishResultContext, type PublishResultContextSource } from '../publish_resume_workflow';
+import type { IssueCommentPublicationTarget } from '../../../../ports/issue_lifecycle_ports';
 
-const mockGetAccumulatedLogsAsText = jest.fn(() => '');
-jest.mock('../../../../ports/logging_ports', () => ({
-  logInfo: jest.fn(),
-  logError: jest.fn(),
-  getAccumulatedLogsAsText: () => mockGetAccumulatedLogsAsText(),
-}));
+function recommendation(steps = '1. Add the policy\n2. Add tests', fingerprint = 'a'.repeat(16)): Result {
+  return new Result({
+    id: 'RecommendStepsUseCase', success: true, executed: true,
+    payload: {
+      issueNumber: 42,
+      recommendedSteps: steps,
+      recommendationState: { issueDescriptionFingerprint: fingerprint },
+    },
+    steps: ['legacy plan wrapper that must never be published'],
+  });
+}
 
-const mockGetRandomElement = jest.fn<string | undefined, [readonly string[]]>(() => undefined);
-jest.mock('../../../../../utils/list_utils', () => ({
-  getRandomElement: (values: readonly string[]) => mockGetRandomElement(values),
-}));
+function progress(value = 65, summary = 'Core behavior is implemented.', remaining = 'Finish validation.'): Result {
+  return new Result({
+    id: 'CheckProgressUseCase', success: true, executed: true,
+    payload: { issueNumber: 42, progress: value, summary, remaining, branch: 'feature/work', developmentBranch: 'develop' },
+    steps: ['legacy progress wrapper that must never be published'],
+  });
+}
 
-const mockAddComment = jest.fn();
-const logReport = {
-  getAccumulatedLogEntries: jest.fn(() => []),
-  getAccumulatedLogsAsText: () => mockGetAccumulatedLogsAsText(),
-  clearAccumulatedLogs: jest.fn(),
-};
-
-function baseImages(): PublishResultContextSource['images'] {
+function source(results: Result[], overrides: Partial<PublishResultContextSource> = {}): PublishResultContextSource {
   return {
-    imagesOnIssue: true,
-    imagesOnPullRequest: true,
-    issueAutomaticActions: [],
-    issueReleaseGifs: [],
-    issueHotfixGifs: [],
-    issueBugfixGifs: [],
-    issueFeatureGifs: [],
-    issueDocsGifs: [],
-    issueChoreGifs: [],
-    pullRequestReleaseGifs: [],
-    pullRequestHotfixGifs: [],
-    pullRequestBugfixGifs: [],
-    pullRequestFeatureGifs: [],
-    pullRequestDocsGifs: [],
-    pullRequestChoreGifs: [],
-    pullRequestAutomaticActions: [],
+    owner: 'acme', repo: 'widgets', tokenUser: 'vypbot', isPullRequest: false,
+    eventName: 'issues', issueNumber: 42, issue: { number: 42 }, pullRequest: { number: -1 }, inputs: { action: 'opened' },
+    locale: { issue: 'en-US', pullRequest: 'en-US' },
+    currentConfiguration: { results },
+    ...overrides,
   };
 }
 
-function baseParam(overrides: Partial<PublishResultContextSource> = {}) {
-  const defaultConfig = { results: [new Result({ id: 'x', success: true, executed: true, steps: ['Step 1'] })] };
-  return projectPublishResultContext({
-    issueNumber: 42,
-    issue: { number: 42 },
-    pullRequest: { number: 99, action: 'opened' },
-    isIssue: false,
-    isPullRequest: false,
-    isPush: false,
-    isSingleAction: false,
-    isBugfix: false,
-    isFeature: false,
-    isDocs: false,
-    isChore: false,
-    currentConfiguration: defaultConfig,
-    images: baseImages(),
-    singleAction: { issue: 123 },
-    release: { active: false },
-    hotfix: { active: false },
-    issueNotBranched: false,
-    debug: false,
-    ...overrides,
-  });
+function inMemoryComments(initial: IssueCommentPublicationTarget[] = []) {
+  const values = initial.map(comment => ({ ...comment }));
+  let nextId = Math.max(0, ...values.map(comment => comment.id)) + 1;
+  return {
+    values,
+    addComment: jest.fn(async (_issueNumber: number, body: string) => {
+      values.push({ id: nextId++, body, user: { login: 'vypbot' } });
+    }),
+    updateComment: jest.fn(async (_issueNumber: number, id: number, body: string) => {
+      const comment = values.find(candidate => candidate.id === id);
+      if (comment) comment.body = body;
+    }),
+    listIssueComments: jest.fn(async () => values.map(comment => ({ ...comment }))),
+  };
 }
 
-describe('PublishResultUseCase', () => {
-  let useCase: PublishResultUseCase;
+describe('PublishResultUseCase semantic compatibility boundary', () => {
+  it.each([
+    new Result({ id: 'metadata', success: true, executed: true, steps: ['Waiting state cleared.'] }),
+    new Result({ id: 'failure', success: false, executed: true, errors: [] }),
+    new Result({ id: 'reminder', success: true, executed: true, reminders: ['Internal reminder'] }),
+    new Result({ id: 'Bugbot', success: true, executed: true, steps: ['Review complete'] }),
+  ])('keeps legacy result evidence out of GitHub conversations', async (result) => {
+    const comments = inMemoryComments();
 
-  beforeEach(() => {
-    useCase = new PublishResultUseCase(
-      { addComment: mockAddComment },
-      logReport,
-    );
-    mockAddComment.mockReset();
-    mockGetAccumulatedLogsAsText.mockReturnValue('');
-    mockGetRandomElement.mockReset().mockReturnValue(undefined);
+    await new PublishResultUseCase(comments).invoke(projectPublishResultContext(source([result])));
+
+    expect(comments.listIssueComments).not.toHaveBeenCalled();
+    expect(comments.addComment).not.toHaveBeenCalled();
+    expect(comments.updateComment).not.toHaveBeenCalled();
   });
 
-  it('does not call addComment when content is empty (no steps in results)', async () => {
-    const param = baseParam({
-      isIssue: true,
-      currentConfiguration: { results: [new Result({ id: 'x', success: true, executed: true, steps: [] })] },
+  it('creates one concise implementation-plan card without retired chrome', async () => {
+    const comments = inMemoryComments();
+
+    await new PublishResultUseCase(comments).invoke(projectPublishResultContext(source([recommendation()])));
+
+    expect(comments.addComment).toHaveBeenCalledTimes(1);
+    expect(comments.values).toHaveLength(1);
+    expect(comments.values[0].body).toContain('topic="plan" target="issue:42"');
+    expect(comments.values[0].body).toContain('## Implementation plan');
+    expect(comments.values[0].body).toContain('1. Add the policy');
+    expect(comments.values[0].body).not.toMatch(/Automatic Actions|Feature Actions|Debug log|Happy coding|giphy|Made with/u);
+  });
+
+  it('publishes an explicit help reply once without reviving generic step publication', async () => {
+    const comments = inMemoryComments();
+    const result = new Result({
+      id: 'Comment.Help', success: true, executed: true,
+      steps: ['legacy wrapper'],
+      payload: { publication: { kind: 'help', botLogin: 'vypbot' } },
+    });
+    const value = projectPublishResultContext(source([result], {
+      eventName: 'issue_comment', inputs: { action: 'created', comment: { id: 99 } },
+    }));
+
+    await new PublishResultUseCase(comments).invoke(value);
+    await new PublishResultUseCase(comments).invoke(value);
+
+    expect(comments.addComment).toHaveBeenCalledTimes(1);
+    expect(comments.values[0].body).toContain('correlation="comment:99"');
+    expect(comments.values[0].body).toContain('## Copilot commands');
+    expect(comments.values[0].body).not.toContain('legacy wrapper');
+  });
+
+  it('recognizes the transient namespaced issue-comment marker without creating a duplicate', async () => {
+    const comments = inMemoryComments([{
+      id: 7,
+      user: { login: 'vypbot' },
+      body: '<!-- copilot:reply schema="1" target="issue:42" correlation="comment:issue_comment:99" key="copilot-help" digest="0123abcd" -->\n\nExisting response.',
+    }]);
+    const result = new Result({
+      id: 'Comment.Help', success: true, executed: true,
+      payload: { publication: { kind: 'help', botLogin: 'vypbot' } },
     });
 
-    await useCase.invoke(param);
+    await new PublishResultUseCase(comments).invoke(projectPublishResultContext(source([result], {
+      eventName: 'issue_comment', inputs: { action: 'created', comment: { id: 99 } },
+    })));
 
-    expect(mockAddComment).not.toHaveBeenCalled();
+    expect(comments.addComment).not.toHaveBeenCalled();
+    expect(comments.updateComment).not.toHaveBeenCalled();
+    expect(comments.values).toHaveLength(1);
   });
 
-  it('does not publish a GIF-only comment when debug logs are the only output', async () => {
-    mockGetAccumulatedLogsAsText.mockReturnValue('[INFO] no-op');
-    const param = baseParam({
-      isIssue: true,
-      debug: true,
-      release: { active: true },
-      images: {
-        ...baseImages(),
-        issueReleaseGifs: ['release.gif'],
-      },
-      currentConfiguration: {
-        results: [new Result({ id: 'x', success: true, executed: false, steps: [] })],
-      },
-    });
+  it('namespaces equal numeric comment ids by GitHub transport', () => {
+    const issueComment = projectPublishResultContext(source([], {
+      eventName: 'issue_comment', inputs: { action: 'created', comment: { id: 99 } },
+    }));
+    const reviewComment = projectPublishResultContext(source([], {
+      eventName: 'pull_request_review_comment', inputs: { action: 'created', pull_request_review_comment: { id: 99 } },
+    }));
 
-    await useCase.invoke(param);
-
-    expect(mockAddComment).not.toHaveBeenCalled();
+    expect(issueComment.requestCorrelationId).toBe('comment:99');
+    expect(reviewComment.requestCorrelationId).toBe('comment:pull_request_review_comment:99');
+    expect(issueComment.requestCorrelationId).not.toBe(reviewComment.requestCorrelationId);
   });
 
-  it('does not publish a reminder-only comment', async () => {
-    const param = baseParam({
-      isIssue: true,
-      release: { active: true },
-      images: {
-        ...baseImages(),
-        issueReleaseGifs: ['release.gif'],
-      },
-      currentConfiguration: {
-        results: [new Result({ id: 'x', success: true, executed: true, steps: [], reminders: ['Remember this'] })],
-      },
-    });
+  it('uses each review-comment id instead of collapsing replies into the event fallback', () => {
+    const first = projectPublishResultContext(source([], {
+      eventName: 'pull_request_review_comment',
+      inputs: { action: 'created', pull_request_review_comment: { id: 99 } },
+    }));
+    const second = projectPublishResultContext(source([], {
+      eventName: 'pull_request_review_comment',
+      inputs: { action: 'created', pull_request_review_comment: { id: 100 } },
+    }));
 
-    await useCase.invoke(param);
-
-    expect(mockAddComment).not.toHaveBeenCalled();
+    expect(first.requestCorrelationId).toBe('comment:pull_request_review_comment:99');
+    expect(second.requestCorrelationId).toBe('comment:pull_request_review_comment:100');
+    expect(first.requestCorrelationId).not.toBe(second.requestCorrelationId);
   });
 
-  it('publishes failures even when a result has no steps', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    const param = baseParam({
-      isIssue: true,
-      currentConfiguration: {
-        results: [new Result({ id: 'x', success: false, executed: true, errors: [new ApplicationError('authorization.credential-invalid', 'Agent authentication failed')] })],
-      },
-    });
+  it('keeps legacy issue-comment correlation stable regardless of event metadata', () => {
+    const context = projectPublishResultContext(source([], {
+      eventName: 'unsafe transport\n<!-- marker -->',
+      inputs: { action: 'created', comment: { id: 99 } },
+    }));
 
-    await useCase.invoke(param);
-
-    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('Agent authentication failed'));
+    expect(context.requestCorrelationId).toBe('comment:99');
   });
 
-  it('calls addComment on issue when isIssue and results have steps', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    const resultsWithSteps = [new Result({ id: 'a', success: true, executed: true, steps: ['Step 1'] })];
-    const param = baseParam({ isIssue: true, currentConfiguration: { results: resultsWithSteps } });
+  it('does not mutate an unchanged plan card on replay', async () => {
+    const comments = inMemoryComments();
+    const useCase = new PublishResultUseCase(comments);
+    const context = projectPublishResultContext(source([recommendation()]));
 
-    await useCase.invoke(param);
+    await useCase.invoke(context);
+    comments.addComment.mockClear();
+    comments.updateComment.mockClear();
+    await useCase.invoke(context);
 
-    expect(mockAddComment).toHaveBeenCalledTimes(1);
-    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('1. Step 1'));
+    expect(comments.addComment).not.toHaveBeenCalled();
+    expect(comments.updateComment).not.toHaveBeenCalled();
+    expect(comments.values).toHaveLength(1);
   });
 
-  it('preserves markdown result structure instead of numbering every line', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    const param = baseParam({
-      isIssue: true,
-      currentConfiguration: {
-        results: [new Result({
-          id: 'recommendation',
-          success: true,
-          executed: true,
-          stepFormat: 'markdown',
-          steps: ['## Recommended implementation steps', '1. Add the module\n2. Add tests\n\n```sh\npnpm test\n```'],
-        })],
-      },
-    });
+  it('updates the same plan card after a material recommendation change', async () => {
+    const comments = inMemoryComments();
+    const useCase = new PublishResultUseCase(comments);
 
-    await useCase.invoke(param);
+    await useCase.invoke(projectPublishResultContext(source([recommendation()])));
+    await useCase.invoke(projectPublishResultContext(source([
+      recommendation('1. Replace the policy\n2. Extend integration tests', 'b'.repeat(16)),
+    ])));
 
-    const commentBody = mockAddComment.mock.calls[0][1] as string;
-    expect(commentBody).toContain('# 🪄 Automatic Actions\n## Recommended implementation steps');
-    expect(commentBody).toContain('\n1. Add the module\n2. Add tests');
-    expect(commentBody).toContain('```sh\npnpm test\n```');
-    expect(commentBody).not.toContain('1. ## Recommended implementation steps');
-    expect(commentBody).not.toContain('2. 1. Add the module');
+    expect(comments.addComment).toHaveBeenCalledTimes(1);
+    expect(comments.updateComment).toHaveBeenCalledTimes(1);
+    expect(comments.values[0].body).toContain('Replace the policy');
   });
 
-  it('calls addComment on pull request when isPullRequest and results have steps', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    const resultsWithSteps = [new Result({ id: 'a', success: true, executed: true, steps: ['Step 1'] })];
-    const param = baseParam({ isPullRequest: true, currentConfiguration: { results: resultsWithSteps } });
+  it.each([
+    [0, 'not started'],
+    [65, 'in progress'],
+    [100, 'complete'],
+  ] as const)('renders bounded progress state for %s%%', async (value, state) => {
+    const comments = inMemoryComments();
 
-    await useCase.invoke(param);
+    await new PublishResultUseCase(comments).invoke(projectPublishResultContext(source([progress(value)])));
 
-    expect(mockAddComment).toHaveBeenCalledTimes(1);
-    expect(mockAddComment).toHaveBeenCalledWith(99, expect.stringContaining('1. Step 1'));
+    expect(comments.values[0].body).toContain(`## Progress: ${value}% — ${state}`);
+    expect(comments.values[0].body).not.toContain('Reasoning');
   });
 
-  it('does not duplicate a Bugbot native review with an independent PR comment', async () => {
-    const param = baseParam({
-      isPullRequest: true,
-      currentConfiguration: {
-        results: [new Result({
-          id: 'DetectPotentialProblemsUseCase',
-          success: true,
-          executed: true,
-          steps: ['Potential problems detection completed.'],
-        })],
-      },
-    });
+  it('uses the configured issue locale for deterministic Spanish copy', async () => {
+    const comments = inMemoryComments();
 
-    await useCase.invoke(param);
+    await new PublishResultUseCase(comments).invoke(projectPublishResultContext(source(
+      [progress(100)],
+      { locale: { issue: 'es-MX', pullRequest: 'en-US' } },
+    )));
 
-    expect(param.genericCommentMode).toBe('omit-feature-owned');
-    expect(mockAddComment).not.toHaveBeenCalled();
+    expect(comments.values[0].body).toContain('## Progreso: 100% — completado');
+    expect(comments.values[0].body).toContain('No se requiere ninguna acción.');
   });
 
-  it('keeps metadata-only PR edits in the Job Summary without a generic conversation comment', async () => {
-    mockGetAccumulatedLogsAsText.mockReturnValue('[DEBUG] metadata normalization completed');
-    const param = baseParam({
-      isPullRequest: true,
-      pullRequest: { number: 99, action: 'edited' },
-      debug: true,
-      currentConfiguration: {
-        results: [new Result({
-          id: 'SynchronizeLifecycleStateUseCase',
-          success: true,
-          executed: true,
-          steps: ['Waiting state cleared.'],
-        })],
-      },
-    });
+  it('omits semantic publication when the trusted bot identity is unavailable', async () => {
+    const comments = inMemoryComments();
 
-    await useCase.invoke(param);
+    await new PublishResultUseCase(comments).invoke(projectPublishResultContext(source(
+      [recommendation()], { tokenUser: '  ' },
+    )));
 
-    expect(param.genericCommentMode).toBe('omit-metadata-only');
-    expect(mockAddComment).not.toHaveBeenCalled();
+    expect(comments.listIssueComments).not.toHaveBeenCalled();
+    expect(comments.addComment).not.toHaveBeenCalled();
   });
 
-  it('includes debug log section in comment body when debug is true and logs are present', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    mockGetAccumulatedLogsAsText.mockReturnValue('[INFO] line1\n[WARN] line2');
-    const param = baseParam({
-      isIssue: true,
-      debug: true,
-      currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step 1'] })] },
-    });
+  it('returns a publication-only failure without replaying or mutating result data', async () => {
+    const original = recommendation();
+    const comments = inMemoryComments();
+    comments.listIssueComments.mockRejectedValue(new Error('provider unavailable'));
+    const context = projectPublishResultContext(source([original]));
+    original.steps[0] = 'mutated after projection';
 
-    await useCase.invoke(param);
+    const failure = await new PublishResultUseCase(comments).invoke(context);
 
-    const commentBody = mockAddComment.mock.calls[0][1] as string;
-    expect(commentBody).toContain('Debug log');
-    expect(commentBody).toContain('[INFO] line1');
-    expect(commentBody).toContain('[WARN] line2');
+    expect(context.results[0].steps).toEqual(['legacy plan wrapper that must never be published']);
+    expect(failure).toMatchObject({ success: false, executed: true });
+    expect(failure?.errors[0]).toMatchObject({ code: 'provider.unavailable' });
   });
 
-  it('does not include debug log section when debug is false', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    mockGetAccumulatedLogsAsText.mockReturnValue('[INFO] line1');
-    const param = baseParam({ isIssue: true, debug: false });
+  it('projects fallback issue targets and recursively copies array payloads', () => {
+    const mutable = [{ nested: ['value'] }];
+    const context = projectPublishResultContext(source([
+      new Result({ id: 'metadata', success: true, executed: true, payload: mutable }),
+    ], { issue: undefined, issueNumber: 42 }));
+    mutable[0].nested[0] = 'changed';
 
-    await useCase.invoke(param);
-
-    const commentBody = mockAddComment.mock.calls[0][1] as string;
-    expect(commentBody).not.toContain('Debug log');
-  });
-
-  it('does not include debug log section when debug is true but accumulated logs are empty', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    mockGetAccumulatedLogsAsText.mockReturnValue('');
-    const param = baseParam({
-      isIssue: true,
-      debug: true,
-      currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step 1'] })] },
-    });
-
-    await useCase.invoke(param);
-
-    const commentBody = mockAddComment.mock.calls[0][1] as string;
-    expect(commentBody).not.toContain('Debug log');
-  });
-
-  it('returns a failure result without mutating the publication snapshot when addComment throws', async () => {
-    mockAddComment.mockRejectedValue(new Error('API error'));
-    const param = baseParam({ isIssue: true });
-    const initialLength = param.results.length;
-
-    const failure = await useCase.invoke(param);
-
-    expect(param.results).toHaveLength(initialLength);
-    expect(failure?.success).toBe(false);
-    expect(failure?.steps).toContain('Tried to publish the resume, but there was a problem.');
-  });
-
-  it('uses release title and image when isIssue and release.active', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    const param = baseParam({
-      isIssue: true,
-      release: { active: true },
-      currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
-    });
-    await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('Release Actions'));
-  });
-
-  it('renders a selected issue image only when issue images are enabled', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    mockGetRandomElement.mockReturnValue('release.gif');
-    const param = baseParam({
-      isIssue: true,
-      release: { active: true },
-      images: { ...baseImages(), issueReleaseGifs: ['release.gif'] },
-    });
-
-    await useCase.invoke(param);
-
-    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('![image](release.gif)'));
-  });
-
-  it('omits a selected issue image when issue images are disabled', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    mockGetRandomElement.mockReturnValue('release.gif');
-    const param = baseParam({
-      isIssue: true,
-      release: { active: true },
-      images: { ...baseImages(), imagesOnIssue: false, issueReleaseGifs: ['release.gif'] },
-    });
-
-    await useCase.invoke(param);
-
-    expect(mockAddComment.mock.calls[0][1]).not.toContain('![image](release.gif)');
-  });
-
-  it('renders a selected pull-request image only when pull-request images are enabled', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    mockGetRandomElement.mockReturnValue('pull-request.gif');
-    const param = baseParam({
-      isPullRequest: true,
-      images: { ...baseImages(), pullRequestAutomaticActions: ['pull-request.gif'] },
-    });
-
-    await useCase.invoke(param);
-
-    expect(mockAddComment).toHaveBeenCalledWith(99, expect.stringContaining('![image](pull-request.gif)'));
-  });
-
-  it('omits a selected pull-request image when pull-request images are disabled', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    mockGetRandomElement.mockReturnValue('pull-request.gif');
-    const param = baseParam({
-      isPullRequest: true,
-      images: { ...baseImages(), imagesOnPullRequest: false, pullRequestAutomaticActions: ['pull-request.gif'] },
-    });
-
-    await useCase.invoke(param);
-
-    expect(mockAddComment.mock.calls[0][1]).not.toContain('![image](pull-request.gif)');
-  });
-
-  it('uses hotfix title when isIssue and hotfix.active', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    const param = baseParam({
-      isIssue: true,
-      hotfix: { active: true },
-      currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
-    });
-    await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('Hotfix Actions'));
-  });
-
-  it('uses feature title when isIssue and isFeature', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    const param = baseParam({
-      isIssue: true,
-      isFeature: true,
-      currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
-    });
-    await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('Feature Actions'));
-  });
-
-  it('uses docs title when isIssue and isDocs', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    const param = baseParam({
-      isIssue: true,
-      isDocs: true,
-      currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
-    });
-    await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('Documentation Actions'));
-  });
-
-  it('uses chore title when isPullRequest and isChore', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    const param = baseParam({
-      isPullRequest: true,
-      isChore: true,
-      currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
-    });
-    await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith(99, expect.stringContaining('Chore Actions'));
-  });
-
-  it('uses Automatic Actions and singleAction.issue when isSingleAction', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    const param = baseParam({
-      isSingleAction: true,
-      singleAction: { issue: 456 },
-      currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
-    });
-    await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith(456, expect.any(String));
-  });
-
-  it('includes reminder section when results have reminders', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    const param = baseParam({
-      isIssue: true,
-      currentConfiguration: {
-        results: [
-          new Result({ id: 'a', success: true, executed: true, steps: ['Step'], reminders: ['Remind me'] }),
-        ],
-      },
-    });
-    await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('Reminder'));
-    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('1. Remind me'));
-  });
-
-  it('includes errors section when results have errors', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    const param = baseParam({
-      isIssue: true,
-      currentConfiguration: {
-        results: [
-          new Result({ id: 'a', success: true, executed: true, steps: ['Step'], errors: [new ApplicationError('workflow.failed', 'Something failed')] }),
-        ],
-      },
-    });
-    await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('Errors Found'));
-  });
-
-  it('calls addComment on issueNumber when isPush and issueNumber > 0', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    const param = baseParam({
-      isPush: true,
-      issueNumber: 7,
-      currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
-    });
-    await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith(7, expect.any(String));
-  });
-
-  it('uses issueNotBranched and Automatic Actions title when isIssue and issueNotBranched', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    const param = baseParam({
-      isIssue: true,
-      issueNotBranched: true,
-      currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
-    });
-    await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('Automatic Actions'));
-  });
-
-  it('uses bugfix title when isIssue and isBugfix', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    const param = baseParam({
-      isIssue: true,
-      isBugfix: true,
-      currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
-    });
-    await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('Bugfix Actions'));
-  });
-
-  it('uses release title when isPullRequest and release.active', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    const param = baseParam({
-      isPullRequest: true,
-      release: { active: true },
-      currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
-    });
-    await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith(99, expect.stringContaining('Release Actions'));
-  });
-
-  it('uses Automatic Actions when isPullRequest and no release/hotfix/type flags', async () => {
-    mockAddComment.mockResolvedValue(undefined);
-    const param = baseParam({
-      isPullRequest: true,
-      release: { active: false },
-      hotfix: { active: false },
-      currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
-    });
-    await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith(99, expect.stringContaining('Automatic Actions'));
-  });
-
-  it('does not call addComment when isPush but issueNumber is 0', async () => {
-    const param = baseParam({
-      isPush: true,
-      isIssue: false,
-      isPullRequest: false,
-      issueNumber: 0,
-      currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
-    });
-    await useCase.invoke(param);
-    expect(mockAddComment).not.toHaveBeenCalled();
+    expect(context.target).toEqual({ kind: 'issue', number: 42 });
+    expect(context.results[0].payload).toEqual([{ nested: ['value'] }]);
   });
 });

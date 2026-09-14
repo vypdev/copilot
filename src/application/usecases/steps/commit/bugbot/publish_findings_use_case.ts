@@ -4,7 +4,6 @@
  */
 
 import type { BugbotFindingPublicationPorts } from "../../../../../application/ports/bugbot_finding_publication_ports";
-import { getCommentWatermark } from "../../../../../utils/comment_watermark";
 import type { BugbotContext } from "./types";
 import {
     findExistingFindingInfo,
@@ -19,7 +18,7 @@ export interface PublishFindingsParam {
     operation: BugbotReviewOperationContext;
     context: BugbotContext;
     findings: BugbotFinding[];
-    /** Commit SHA for bugbot watermark (commit link). When set, comment uses "for commit ..." watermark. */
+    /** Commit SHA retained as provider metadata for compatible issue adapters. */
     commitSha?: string;
     /** When findings were limited by max comments, add one summary comment with this overflow info. */
     overflowCount?: number;
@@ -31,11 +30,6 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
     const { operation, context, findings, commitSha, overflowCount = 0, overflowTitles = [], ports } = param;
     const { existingByFindingId, canonicalPullRequest, prContext } = context;
 
-    const watermark =
-        commitSha
-            ? getCommentWatermark({ commitSha, owner: operation.repository.owner, repo: operation.repository.name })
-            : getCommentWatermark();
-
     const reviewPublisher =
         prContext && canonicalPullRequest
             ? new PullRequestReviewCommentPublisher({
@@ -43,7 +37,6 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
                   operation,
                   openPrNumber: canonicalPullRequest.number,
                   prContext,
-                  watermark,
                   ruleSources: context.reviewRuleSources,
                   omittedRuleCount: context.omittedReviewRules,
               })

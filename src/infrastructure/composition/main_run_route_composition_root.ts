@@ -93,7 +93,7 @@ import {
   bindDeploymentState,
   bindDeploymentTargetRules,
   bindIssueCommentPublication,
-  bindIssuePushNotification,
+  bindIssueReopen,
   bindManagedPullRequests,
   bindPullRequestBranchQuery,
   bindRepositoryRelease,
@@ -276,7 +276,7 @@ export function createCommitUseCaseCompositionRoot(
   binding: BugbotScmBinding,
 ): CommitUseCase {
   return new CommitUseCase(
-    new NotifyNewCommitOnIssueUseCase(bindIssuePushNotification(createIssueNotificationRepository(), binding)),
+    new NotifyNewCommitOnIssueUseCase(bindIssueReopen(createIssueNotificationRepository(), binding)),
     new CheckChangesIssueSizeUseCase(
       bindProjectBoardCommands(projectBoardCommandPort, binding),
       bindIssueLabels(createIssueLabelRepository(), binding),

@@ -1,6 +1,7 @@
 import { Result } from '../../data/model/result';
 import type { CopilotLifecycleLabels } from '../../domain/copilot_lifecycle';
 import { projectBugbotResultFindingStates } from './bugbot_result_finding_state_projection_policy';
+import { baseLanguage } from '../../domain/locale';
 
 export interface CopilotStatusExecutionContext {
     readonly owner: string;
@@ -117,7 +118,8 @@ export function buildCopilotStatusResult(snapshot: CopilotStatusSnapshot, taskId
     });
 }
 
-export function formatCopilotStatus(snapshot: CopilotStatusSnapshot): string {
+export function formatCopilotStatus(snapshot: CopilotStatusSnapshot, locale = 'en-US'): string {
+    if (baseLanguage(locale) === 'es') return formatSpanishCopilotStatus(snapshot);
     const lines = [
         '## Copilot status',
         `- **Repository:** ${snapshot.owner}/${snapshot.repository}`,
@@ -134,6 +136,27 @@ export function formatCopilotStatus(snapshot: CopilotStatusSnapshot): string {
         lines.push('- **Bugbot findings:** invalid evidence; inspect the workflow result.');
     } else if (snapshot.findingStates) {
         lines.push(`- **Bugbot findings:** ${snapshot.findingStates.open} open, ${snapshot.findingStates.reopened} reopened, ${snapshot.findingStates.verificationRequired} verification required, ${snapshot.findingStates.unknown} unknown, ${snapshot.findingStates.resolved} resolved`);
+    }
+    return lines.join('\n');
+}
+
+function formatSpanishCopilotStatus(snapshot: CopilotStatusSnapshot): string {
+    const lines = [
+        '## Estado de Copilot',
+        `- **Repositorio:** ${snapshot.owner}/${snapshot.repository}`,
+        `- **Destino:** ${snapshot.target}${snapshot.issueNumber ? ` #${snapshot.issueNumber}` : ''}${snapshot.pullRequestNumber ? ` / PR #${snapshot.pullRequestNumber}` : ''}`,
+        `- **Evento:** ${snapshot.event}${snapshot.action ? ` (${snapshot.action})` : ''}`,
+        `- **Rama:** ${snapshot.branch ?? 'desconocida'}`,
+        `- **Ciclo de vida:** ${snapshot.lifecycle ?? 'sin definir'}`,
+        `- **Esperando a:** ${snapshot.waitingFor ?? 'sin respuesta humana pendiente'}`,
+        `- **Política de descripción de PR:** ${snapshot.pullRequestDescriptionMode}`,
+        `- **Etiquetas de issue:** ${snapshot.issueLabels.length > 0 ? snapshot.issueLabels.join(', ') : 'ninguna'}`,
+        `- **Etiquetas de PR:** ${snapshot.pullRequestLabels.length > 0 ? snapshot.pullRequestLabels.join(', ') : 'ninguna'}`,
+    ];
+    if (snapshot.findingStateEvidence === 'invalid') {
+        lines.push('- **Hallazgos de Bugbot:** evidencia no válida; revisa el resultado del workflow.');
+    } else if (snapshot.findingStates) {
+        lines.push(`- **Hallazgos de Bugbot:** ${snapshot.findingStates.open} abiertos, ${snapshot.findingStates.reopened} reabiertos, ${snapshot.findingStates.verificationRequired} requieren verificación, ${snapshot.findingStates.unknown} desconocidos, ${snapshot.findingStates.resolved} resueltos`);
     }
     return lines.join('\n');
 }

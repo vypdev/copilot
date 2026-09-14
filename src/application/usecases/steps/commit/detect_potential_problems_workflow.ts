@@ -5,7 +5,10 @@ import { getTaskEmoji } from '../../../../utils/task_emoji';
 import { logDebugInfo, logError, logInfo } from '../../../ports/logging_ports';
 import type { BugbotScmPorts } from '../../../ports/bugbot_scm_ports';
 import { PullRequestReviewOperationError } from '../../../ports/pull_request_review_errors';
-import { loadBugbotContext } from './bugbot/load_bugbot_context_use_case';
+import {
+    loadBugbotContext,
+    preflightBugbotContext,
+} from './bugbot/load_bugbot_context_use_case';
 import {
     projectBugbotContextRequest,
     type LoadBugbotContextOptions,
@@ -27,6 +30,7 @@ import { ApplicationError, toApplicationError } from '../../../errors/applicatio
 import {
     type BugbotReviewOperationContext,
 } from './bugbot/bugbot_review_operation_context';
+import { selectPullRequestOwnerForPushReview } from '../../../policies/bugbot_event_ownership_policy';
 
 export interface DetectPotentialProblemsWorkflowDependencies {
     aiRepository: FindingsQueryPort;
@@ -80,8 +84,24 @@ export async function runDetectPotentialProblemsWorkflow(
             return [];
         }
         const contextRequest = projectBugbotContextRequest(reviewContext, contextOptions);
+        const preflight = await telemetry.measure('context-preflight', () =>
+            preflightBugbotContext(contextRequest, dependencies.scm.context));
+        telemetry.observePreflight(preflight);
+        const owningPullRequest = selectPullRequestOwnerForPushReview({
+            triggerKind: reviewContext.trigger.kind,
+            eventTargetsPullRequest: reviewContext.target.isPullRequest,
+            selectionReason: preflight.selectionReason,
+            canonicalPullRequest: preflight.canonicalPullRequest,
+        });
+        if (owningPullRequest) {
+            logInfo(
+                `Skipping push Bugbot analysis because pull request #${owningPullRequest.number} owns review for this head.`,
+            );
+            await publishTelemetry('skipped', 'pull_request_ownership');
+            return [];
+        }
         const context = await telemetry.measure('context', () =>
-            loadBugbotContext(contextRequest, dependencies.scm.context));
+            loadBugbotContext(contextRequest, dependencies.scm.context, preflight));
         const eventHeadSha = reviewContext.trigger.expectedHeadSha;
         if (isLoadedBugbotRevisionSuperseded(context, eventHeadSha)) {
             return await complete(supersededResult(context.prContext?.prHeadSha, eventHeadSha), 'superseded');

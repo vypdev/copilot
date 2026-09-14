@@ -1,193 +1,158 @@
 import { Result } from '../../../../data/model/result';
-import type { BoundIssueNotificationPort } from '../../../ports/issue_lifecycle_ports';
-import type { ApplicationLogReportReaderPort } from '../../../ports/logging_ports';
-import { getRandomElement } from '../../../../utils/list_utils';
+import type { BoundIssueCommentPublicationPort } from '../../../ports/issue_lifecycle_ports';
 import { logError, logInfo } from '../../../ports/logging_ports';
-import {
-    buildDebugLogSection,
-    hasPublishableContent,
-    renderResultSections,
-    resolveResultPublicationIssueNumber,
-    resolveResultPublicationPresentation,
-} from '../../../policies/result_publication_policy';
-import type {
-    ResultPublicationContext,
-    ResultPublicationImages,
-    ResultPublicationRecord,
-    ResultPublicationTargetInput,
-} from '../../../policies/result_publication_contracts';
-import { buildApplicationErrorPresentation } from '../../../policies/application_error_presentation_policy';
+import { selectSemanticReplyIntents, selectSemanticStatusIntents } from '../../../policies/semantic_result_publication_policy';
+import type { PublicationTarget } from '../../../../domain/github_publication';
 import { toApplicationError } from '../../../errors/application_error';
+import { createSemanticDigest } from '../../../policies/publication_identity_policy';
+import { reconcileReply } from './reply_publication_workflow';
+import { reconcileStatusCard } from './status_card_publication_workflow';
 
 export interface PublishResultContext {
-    readonly genericCommentMode: 'publish' | 'omit-feature-owned' | 'omit-metadata-only';
-    readonly debug: boolean;
-    readonly target: ResultPublicationTargetInput;
-    readonly presentation: ResultPublicationContext;
-    readonly results: readonly ResultPublicationRecord[];
+    readonly owner: string;
+    readonly repository: string;
+    readonly botLogin: string;
+    readonly locale: string;
+    readonly target?: PublicationTarget;
+    readonly requestCorrelationId: string;
+    readonly results: readonly Result[];
 }
 
 export interface PublishResultContextSource {
-    readonly debug: boolean;
-    readonly isSingleAction: boolean;
-    readonly isIssue: boolean;
+    readonly owner: string;
+    readonly repo: string;
+    readonly tokenUser?: string;
+    readonly eventName?: string;
     readonly isPullRequest: boolean;
-    readonly isPush: boolean;
-    readonly issueNumber: number;
-    readonly issueNotBranched: boolean;
-    readonly isBugfix: boolean;
-    readonly isFeature: boolean;
-    readonly isDocs: boolean;
-    readonly isChore: boolean;
-    readonly singleAction: { readonly issue: number };
-    readonly issue: { readonly number: number };
-    readonly pullRequest: { readonly number: number; readonly action: string };
-    readonly release: { readonly active: boolean };
-    readonly hotfix: { readonly active: boolean };
-    readonly images: ResultPublicationImages;
-    readonly currentConfiguration: {
-        readonly results: readonly Result[];
+    readonly issueNumber?: number;
+    readonly issue?: { readonly number?: number };
+    readonly pullRequest?: { readonly number?: number };
+    readonly inputs?: {
+        readonly action?: string;
+        readonly comment?: { readonly id?: number };
+        readonly pull_request_review_comment?: { readonly id?: number };
     };
+    readonly locale?: { readonly issue: string; readonly pullRequest: string };
+    readonly currentConfiguration: { readonly results: readonly Result[] };
 }
 
 export function projectPublishResultContext(source: PublishResultContextSource): PublishResultContext {
-    const results = Object.freeze(source.currentConfiguration.results.map(projectResult));
+    const target = publicationTarget(source);
     return Object.freeze({
-        genericCommentMode: resolveGenericCommentMode(source, results),
-        debug: source.debug,
-        target: Object.freeze({
-            isSingleAction: source.isSingleAction,
-            singleActionIssue: source.singleAction.issue,
-            isIssue: source.isIssue,
-            issueNumber: source.issue.number,
-            isPullRequest: source.isPullRequest,
-            pullRequestNumber: source.pullRequest.number,
-            isPush: source.isPush,
-            pushIssueNumber: source.issueNumber,
-        }),
-        presentation: Object.freeze({
-            isIssue: source.isIssue,
-            isPullRequest: source.isPullRequest,
-            issueNotBranched: source.issueNotBranched,
-            releaseActive: source.release.active,
-            hotfixActive: source.hotfix.active,
-            isBugfix: source.isBugfix,
-            isFeature: source.isFeature,
-            isDocs: source.isDocs,
-            isChore: source.isChore,
-            images: projectImages(source.images),
-        }),
-        results,
+        owner: source.owner,
+        repository: source.repo,
+        botLogin: source.tokenUser?.trim() ?? '',
+        locale: source.isPullRequest
+            ? source.locale?.pullRequest ?? 'en-US'
+            : source.locale?.issue ?? 'en-US',
+        ...(target ? { target } : {}),
+        requestCorrelationId: requestCorrelationId(source, target),
+        results: Object.freeze(source.currentConfiguration.results.map(copyResult)),
     });
 }
 
+/**
+ * Compatibility boundary for legacy Result producers. Only explicitly mapped
+ * semantic payloads may reach GitHub; steps, reminders, errors, images, and
+ * debug logs remain operator evidence in the Job Summary and logs.
+ */
 export async function runPublishResume(
     param: PublishResultContext,
     taskId: string,
-    issueNotificationPort: BoundIssueNotificationPort,
-    logReport: ApplicationLogReportReaderPort,
+    comments: BoundIssueCommentPublicationPort,
 ): Promise<Result | undefined> {
     try {
-        if (param.genericCommentMode !== 'publish') {
-            logInfo(`Generic result comment omitted: ${param.genericCommentMode}.`);
+        const semanticContext = {
+            locale: param.locale,
+            results: param.results,
+            ...(param.target ? { target: param.target } : {}),
+            correlationId: param.requestCorrelationId,
+            botLogin: param.botLogin,
+        };
+        const replies = selectSemanticReplyIntents(semanticContext);
+        const statuses = selectSemanticStatusIntents(semanticContext);
+        if (replies.length === 0 && statuses.length === 0) {
+            logInfo('Conversation publication omitted: no explicit semantic publication intent.');
             return undefined;
         }
-        const sections = renderResultSections(param.results);
-        const debugLogSection = buildDebugLogSection(param.debug, logReport.getAccumulatedLogsAsText());
-        if (!hasPublishableContent(sections, debugLogSection)) return undefined;
-        const issueNumber = resolveResultPublicationIssueNumber(param.target);
-        if (issueNumber === undefined) return undefined;
-        await issueNotificationPort.addComment(
-            issueNumber,
-            buildResumeComment(param, sections, debugLogSection),
-        );
+        if (!param.botLogin) {
+            logInfo('Conversation publication omitted: the configured bot identity is unavailable.');
+            return undefined;
+        }
+        for (const intent of replies) {
+            const outcome = await reconcileReply({
+                owner: param.owner,
+                repository: param.repository,
+                botLogin: param.botLogin,
+                intent,
+            }, comments);
+            logInfo(`Semantic ${intent.messageKey} reply ${outcome.effect}; duplicates compacted=${outcome.duplicatesCompacted}.`);
+        }
+        for (const intent of statuses) {
+            const outcome = await reconcileStatusCard({
+                owner: param.owner,
+                repository: param.repository,
+                botLogin: param.botLogin,
+                intent,
+            }, comments);
+            logInfo(`Semantic ${intent.identity.topic} publication ${outcome.effect}; duplicates compacted=${outcome.duplicatesCompacted}.`);
+        }
         return undefined;
     } catch (error) {
-        const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to publish the workflow summary.');
+        const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to publish semantic GitHub status.');
         logError(semanticError);
-        return new Result({
-            id: taskId,
-            success: false,
-            executed: true,
-            steps: ['Tried to publish the resume, but there was a problem.'],
-            errors: [semanticError],
-        });
+        return new Result({ id: taskId, success: false, executed: true, errors: [semanticError] });
     }
 }
 
-function resolveGenericCommentMode(
-    source: PublishResultContextSource,
-    results: readonly ResultPublicationRecord[],
-): PublishResultContext['genericCommentMode'] {
-    if (!source.isPullRequest || source.isSingleAction) return 'publish';
-    if (source.pullRequest.action === 'edited') return 'omit-metadata-only';
-    return results.some((result) => result.id === 'DetectPotentialProblemsUseCase' && result.executed)
-        ? 'omit-feature-owned'
-        : 'publish';
+function publicationTarget(source: PublishResultContextSource): PublicationTarget | undefined {
+    const pullRequestNumber = source.pullRequest?.number;
+    if (source.isPullRequest && positiveInteger(pullRequestNumber)) {
+        return Object.freeze({ kind: 'pull-request', number: pullRequestNumber });
+    }
+    const issueNumber = source.issue?.number ?? source.issueNumber;
+    return positiveInteger(issueNumber) ? Object.freeze({ kind: 'issue', number: issueNumber }) : undefined;
 }
 
-function buildResumeComment(
-    param: PublishResultContext,
-    sections: ReturnType<typeof renderResultSections>,
-    debugLogSection: string,
-): string {
-    const presentation = resolveResultPublicationPresentation(
-        param.presentation,
-        (images) => getRandomElement([...images]),
-    );
-    const imageMarkdown = shouldRenderImage(param.presentation, presentation.image)
-        ? `![image](${presentation.image})`
-        : '';
-    return `# ${presentation.title}
-${sections.content}
-${sections.errors}
-
-${imageMarkdown}
-
-${sections.footer}
-${debugLogSection}
-🚀 Happy coding!
-            `;
+function requestCorrelationId(source: PublishResultContextSource, target: PublicationTarget | undefined): string {
+    const reviewCommentId = source.inputs?.pull_request_review_comment?.id;
+    if (positiveInteger(reviewCommentId)) {
+        return `comment:pull_request_review_comment:${reviewCommentId}`;
+    }
+    const issueCommentId = source.inputs?.comment?.id;
+    if (positiveInteger(issueCommentId)) {
+        return `comment:${issueCommentId}`;
+    }
+    return `event:${createSemanticDigest({
+        eventName: source.eventName ?? 'unknown',
+        action: source.inputs?.action ?? '',
+        target: target ?? null,
+    })}`;
 }
 
-function shouldRenderImage(
-    context: ResultPublicationContext,
-    image: string | undefined,
-): image is string {
-    if (!image) return false;
-    return context.isIssue
-        ? context.images.imagesOnIssue
-        : context.images.imagesOnPullRequest;
+function positiveInteger(value: unknown): value is number {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
 }
 
-function projectResult(result: Result): ResultPublicationRecord {
-    return Object.freeze({
+function copyResult(result: Result): Result {
+    return Object.freeze(new Result({
         id: result.id,
+        success: result.success,
         executed: result.executed,
-        steps: Object.freeze([...result.steps]),
-        reminders: Object.freeze([...result.reminders]),
-        errors: Object.freeze(result.errors.map((error) => Object.freeze(buildApplicationErrorPresentation(error)))),
+        steps: [...result.steps],
+        payload: copyPayload(result.payload),
+        reminders: [...result.reminders],
+        errors: [...result.errors],
         stepFormat: result.stepFormat,
-    });
+    }));
 }
 
-function projectImages(images: ResultPublicationImages): ResultPublicationImages {
-    return Object.freeze({
-        imagesOnIssue: images.imagesOnIssue,
-        issueAutomaticActions: Object.freeze([...images.issueAutomaticActions]),
-        issueFeatureGifs: Object.freeze([...images.issueFeatureGifs]),
-        issueBugfixGifs: Object.freeze([...images.issueBugfixGifs]),
-        issueReleaseGifs: Object.freeze([...images.issueReleaseGifs]),
-        issueHotfixGifs: Object.freeze([...images.issueHotfixGifs]),
-        issueDocsGifs: Object.freeze([...images.issueDocsGifs]),
-        issueChoreGifs: Object.freeze([...images.issueChoreGifs]),
-        imagesOnPullRequest: images.imagesOnPullRequest,
-        pullRequestAutomaticActions: Object.freeze([...images.pullRequestAutomaticActions]),
-        pullRequestFeatureGifs: Object.freeze([...images.pullRequestFeatureGifs]),
-        pullRequestBugfixGifs: Object.freeze([...images.pullRequestBugfixGifs]),
-        pullRequestReleaseGifs: Object.freeze([...images.pullRequestReleaseGifs]),
-        pullRequestHotfixGifs: Object.freeze([...images.pullRequestHotfixGifs]),
-        pullRequestDocsGifs: Object.freeze([...images.pullRequestDocsGifs]),
-        pullRequestChoreGifs: Object.freeze([...images.pullRequestChoreGifs]),
-    });
+function copyPayload(payload: unknown): unknown {
+    if (Array.isArray(payload)) return Object.freeze(payload.map(copyPayload));
+    if (payload && typeof payload === 'object') {
+        return Object.freeze(Object.fromEntries(
+            Object.entries(payload as Record<string, unknown>).map(([key, value]) => [key, copyPayload(value)]),
+        ));
+    }
+    return payload;
 }

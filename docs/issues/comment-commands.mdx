@@ -54,6 +54,11 @@ resolved. If the stored workflow result owns malformed finding-state evidence,
 the command says that evidence is invalid and directs you to the workflow
 result; it never substitutes zero or a clean state.
 
+`/copilot help` and `/copilot status` use correlated reply markers. A webhook
+retry with the same source comment does not create another response. These
+explicit replies contain only their requested content; they are never wrapped
+in an “Automatic Actions” summary.
+
 GitHub delivers a comment in the main PR conversation as an `issue_comment`
 event. Copilot uses GitHub's PR marker and exact PR number to keep that transport
 detail from changing the target: read-only commands such as `/copilot recheck`
@@ -96,7 +101,10 @@ conversation or machine-authored status comments.
 
 ## New-issue welcome
 
-When a new issue is opened, Copilot adds one contextual welcome message. For question/help issues it is combined with the initial answer; for other issue types it is combined with the recommendation when available. If no recommendation can run, the static welcome still explains how to use `/copilot help` and `@vypbot`.
+When a new normal issue has a generated plan, that single plan card includes a
+one-line command hint and no separate welcome. A question/help issue receives
+its direct answer without a second onboarding comment. If neither plan nor
+answer can run, one static welcome explains `/copilot help` and `@vypbot`.
 
 The welcome contains a hidden marker so later workflow changes can recognize it without relying on the visible wording.
 

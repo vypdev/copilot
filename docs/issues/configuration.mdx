@@ -93,37 +93,44 @@ The following parameters can be configured in the workflow:
 - `desired-assignees-count`: Number of assignees desired for the issue (default: "1", max: 10)
 - `desired-reviewers-count`: Number of reviewers desired for pull requests (default: "1", max: 15)
 
-#### Image Configuration
-- `images-on-issue`: Include images in issue comments (default: "true")
-- `images-on-pull-request`: Include images in pull request comments (default: "true")
-- `images-on-commit`: Include images in commit comments (default: "true")
+#### Deprecated Image Compatibility
+- `images-on-issue`: Deprecated compatibility toggle (default: `false`)
+- `images-on-pull-request`: Deprecated compatibility toggle (default: `false`)
+- `images-on-commit`: Deprecated compatibility toggle (default: `false`)
 
-##### Issue Images
-- `images-issue-automatic`: Image URLs to display in automatic action issue comments
-- `images-issue-feature`: Image URLs to display in feature action issue comments
-- `images-issue-bugfix`: Image URLs to display in bugfix action issue comments
-- `images-issue-docs`: Image URLs to display in docs action issue comments
-- `images-issue-chore`: Image URLs to display in chore action issue comments
-- `images-issue-hotfix`: Image URLs to display in hotfix action issue comments
-- `images-issue-release`: Image URLs to display in release action issue comments
+Semantic comments and cards do not render decorative images. The following URL
+pools remain accepted during the compatibility window, but new workflows should
+omit them.
 
-##### Pull Request Images
-- `images-pull-request-automatic`: Image URLs to display in automatic action pull request comments
-- `images-pull-request-feature`: Image URLs to display in feature action pull request comments
-- `images-pull-request-bugfix`: Image URLs to display in bugfix action pull request comments
-- `images-pull-request-docs`: Image URLs to display in docs action pull request comments
-- `images-pull-request-chore`: Image URLs to display in chore action pull request comments
-- `images-pull-request-hotfix`: Image URLs to display in hotfix action pull request comments
-- `images-pull-request-release`: Image URLs to display in release action pull request comments
+##### Deprecated issue image pools
+- `images-issue-automatic`
+- `images-issue-feature`
+- `images-issue-bugfix`
+- `images-issue-docs`
+- `images-issue-chore`
+- `images-issue-hotfix`
+- `images-issue-release`
 
-##### Commit Images
-- `images-commit-automatic`: Image URLs to display in automatic action commit comments
-- `images-commit-feature`: Image URLs to display in feature action commit comments
-- `images-commit-bugfix`: Image URLs to display in bugfix action commit comments
-- `images-commit-docs`: Image URLs to display in docs action commit comments
-- `images-commit-chore`: Image URLs to display in chore action commit comments
-- `images-commit-hotfix`: Image URLs to display in hotfix action commit comments
-- `images-commit-release`: Image URLs to display in release action commit comments
+##### Deprecated pull-request image pools
+- `images-pull-request-automatic`
+- `images-pull-request-feature`
+- `images-pull-request-bugfix`
+- `images-pull-request-docs`
+- `images-pull-request-chore`
+- `images-pull-request-hotfix`
+- `images-pull-request-release`
+
+##### Deprecated commit image pools
+- `images-commit-automatic`
+- `images-commit-feature`
+- `images-commit-bugfix`
+- `images-commit-docs`
+- `images-commit-chore`
+- `images-commit-hotfix`
+- `images-commit-release`
+
+All URL-pool inputs above are ignored by semantic publication. They remain in
+the action schema only so an existing workflow does not fail while migrating.
 
 #### AI agent selection
 The workflow can select one provider for both findings and fixer operations. The selected transport is resolved before execution; unsupported combinations fail instead of silently falling back to OpenCode.

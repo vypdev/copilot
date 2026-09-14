@@ -55,8 +55,11 @@ rate-limited 403 headers, bounded fallback backoff/jitter, and the absolute dead
 The workflow contract test keeps the nine queue-bearing workflow names synchronized with the
 validator and verifies the `90m queue / 120m job` budget, required runners, action
 inputs, missing/short timeouts, forbidden durable-mutation concurrency, and the
-exact shared branch concurrency contract permitted only for Commit/Pull Request
-Bugbot jobs.
+distinct branch concurrency and event-ownership contracts for Commit and Pull
+Request jobs. The Bugbot ownership policy matrix and push-shaped integration
+test additionally prove that exact-head provider discovery—not a nonexistent
+`pull_request` field on the push payload—stops duplicate agent review before
+the diff and conversation are loaded.
 
 GitHub lifecycle tests cover admission before queue polling, PAT-owner normal-run
 discard, valid single-action preservation, identity lookup failure, and the absence

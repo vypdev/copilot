@@ -7,7 +7,6 @@ jest.mock('../../../../../utils/logger', () => ({
 }));
 
 const mockCloseIssue = jest.fn();
-const mockAddComment = jest.fn();
 
 function baseParam() {
   return {
@@ -20,14 +19,12 @@ describe('CloseIssueAfterMergingUseCase', () => {
   let useCase: CloseIssueAfterMergingUseCase;
 
   beforeEach(() => {
-    useCase = new CloseIssueAfterMergingUseCase({ closeIssue: mockCloseIssue, addComment: mockAddComment });
+    useCase = new CloseIssueAfterMergingUseCase({ closeIssue: mockCloseIssue });
     mockCloseIssue.mockReset();
-    mockAddComment.mockReset();
   });
 
-  it('closes issue and adds comment when closeIssue returns true', async () => {
+  it('closes the issue using native state without adding a timeline comment', async () => {
     mockCloseIssue.mockResolvedValue(true);
-    mockAddComment.mockResolvedValue(undefined);
     const param = baseParam();
 
     const results = await useCase.invoke(param);
@@ -37,10 +34,6 @@ describe('CloseIssueAfterMergingUseCase', () => {
     expect(results[0].executed).toBe(true);
     expect(results[0].steps?.some((s) => s.includes('42') && s.includes('closed'))).toBe(true);
     expect(mockCloseIssue).toHaveBeenCalledWith(42);
-    expect(mockAddComment).toHaveBeenCalledWith(
-      42,
-      expect.stringContaining('closed after merging #10'),
-    );
   });
 
   it('returns success executed false when closeIssue returns false', async () => {
@@ -49,7 +42,6 @@ describe('CloseIssueAfterMergingUseCase', () => {
     const results = await useCase.invoke(param);
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(false);
-    expect(mockAddComment).not.toHaveBeenCalled();
   });
 
   it('does not call GitHub when a pull request has no linked issue', async () => {
@@ -57,7 +49,6 @@ describe('CloseIssueAfterMergingUseCase', () => {
 
     expect(results[0]).toMatchObject({ success: true, executed: false });
     expect(mockCloseIssue).not.toHaveBeenCalled();
-    expect(mockAddComment).not.toHaveBeenCalled();
   });
 
   it('returns failure when closeIssue throws', async () => {

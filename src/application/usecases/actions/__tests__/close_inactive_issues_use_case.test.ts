@@ -71,14 +71,24 @@ describe('CloseInactiveIssuesUseCase', () => {
         expect(closeIssue).toHaveBeenCalledWith(42);
         expect(addComment).toHaveBeenCalledWith(
             42,
-            expect.stringContaining('automatically closed due to inactivity'),
+            expect.stringContaining('## Issue closed after inactivity'),
         );
+        expect(addComment.mock.calls[0][1]).toContain('topic="inactivity" target="issue:42"');
         expect(result).toMatchObject({
             id: 'CloseInactiveIssuesUseCase',
             success: true,
             executed: true,
             payload: { scanned: 1, eligible: 1, closed: 1, skipped: 0 },
         });
+    });
+
+    it('uses the configured issue locale for the terminal explanation', async () => {
+        listOpenIssuesByLabel.mockResolvedValueOnce([snapshot()]);
+
+        await createUseCase().invoke(execution({ locale: { issue: 'es-MX' } }));
+
+        expect(addComment.mock.calls[0][1]).toContain('## Issue cerrada por inactividad');
+        expect(addComment.mock.calls[0][1]).toContain('168 horas');
     });
 
     it('does not close pull requests or recently active issues', async () => {

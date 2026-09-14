@@ -45,11 +45,13 @@ describe('Bugbot review presentation', () => {
 
   it('renders one complete clean status card with navigation and no-action copy', () => {
     const body = renderBugbotStatusCard(projection(['fixed']), 'en-US', links);
-    expect(body).toContain('## 🤖 Bugbot status');
+    expect(body).toContain('## Bugbot: review complete');
     expect(body).toContain('No active findings');
-    expect(body).toContain('No action required');
     expect(body).toContain('[Verified commit]');
-    expect(body).toContain('| Fixed | 1 |');
+    expect(body).not.toContain('### Findings');
+    expect(body).not.toContain('### Coverage');
+    expect(body).not.toContain('Technical details');
+    expect(body).toContain('topic="bugbot" target="pr:358" key="aggregate"');
     expect(isBugbotStatusComment(body)).toBe(true);
   });
 
@@ -59,9 +61,9 @@ describe('Bugbot review presentation', () => {
       'en-US',
       links,
     );
-    expect(body).toContain('2 finding(s) require attention');
+    expect(body).toContain('2 finding(s) need attention');
     expect(body).toContain('/copilot fix all');
-    expect(body).toContain('| Verification required | 1 |');
+    expect(body).toContain('[ ] verification-required');
   });
 
   it('renders unknown state as explicit recovery work', () => {
@@ -72,8 +74,8 @@ describe('Bugbot review presentation', () => {
 
   it('renders Spanish product copy while keeping machine markers neutral', () => {
     const body = renderBugbotStatusCard(projection(['fixed']), 'es-ES', links);
-    expect(body).toContain('## 🤖 Estado de Bugbot');
-    expect(body).toContain('No se requiere ninguna acción');
+    expect(body).toContain('## Bugbot: revisión completada');
+    expect(body).toContain('No hay hallazgos activos');
     expect(body).toContain('copilot-bugbot-status schema="1"');
   });
 
@@ -112,8 +114,9 @@ describe('Bugbot review presentation', () => {
         itemsFetched: 200,
         itemsRetained: 200,
         omittedItems: 1,
-        truncatedItems: 0,
+        truncatedItems: 2,
         limitReached: true,
+        providerLimitReached: true,
       }],
     };
     const body = renderBugbotStatusCard(buildBugbotReviewProjection({
@@ -125,16 +128,27 @@ describe('Bugbot review presentation', () => {
 
     expect(body).toContain('cannot declare the whole pull request clean');
     expect(body).toContain('issue-comments: partial; retained=200, omitted=1');
-    expect(body).toContain('Projection: partial');
+    expect(body).toContain('truncated=2');
+    expect(body).toContain('provider page limit reached');
+    expect(body).toContain('Inspect the omitted items or reduce the PR scope');
+    expect(body).toContain('Rerun the review only after changing');
+    expect(body).not.toContain('Run `/copilot recheck`');
     expect(body).not.toContain('No active findings');
     expect(body).not.toContain('No action required');
+    const spanish = renderBugbotStatusCard(buildBugbotReviewProjection({
+      pullRequestNumber: 358,
+      analyzedHeadSha: head,
+      coverage: partialCoverage,
+      findings: [],
+    }), 'es-ES', links);
+    expect(spanish).toContain('## Bugbot: revisión incompleta');
+    expect(spanish).toContain('Repite la revisión solo después de cambiar');
+    expect(spanish).toContain('<summary>Cobertura incompleta</summary>');
   });
 
   it('renders empty and long finding lists without requiring a workflow-run link', () => {
     const noRunLinks = { pullRequestUrl: links.pullRequestUrl, commitUrl: links.commitUrl };
-    expect(renderBugbotStatusCard(projection(), 'es-ES', noRunLinks)).toContain(
-      'No hay hallazgos registrados',
-    );
+    expect(renderBugbotStatusCard(projection(), 'es-ES', noRunLinks)).toContain('revisión completada');
     const long = buildBugbotReviewProjection({
       pullRequestNumber: 358,
       analyzedHeadSha: head,
@@ -145,10 +159,17 @@ describe('Bugbot review presentation', () => {
       })),
     });
     const body = renderBugbotStatusCard(long, 'en-US', noRunLinks);
-    expect(body).toContain('…and 2 more');
     expect(body).not.toContain('Workflow run');
-    expect(body).toContain('[x] obsolete');
-    expect(body).toContain('[x] dismissed');
+    expect(body).not.toContain('### Findings');
+
+    const actionable = buildBugbotReviewProjection({
+      pullRequestNumber: 358,
+      analyzedHeadSha: head,
+      coverage: completeCoverage,
+      findings: Array.from({ length: 22 }, (_, index) => ({ id: `open-${index}`, state: 'open' as const })),
+    });
+    expect(renderBugbotStatusCard(actionable, 'en-US', noRunLinks)).toContain('…and 2 more.');
+    expect(renderBugbotStatusCard(actionable, 'es-ES', noRunLinks)).toContain('…y 2 más.');
   });
 
   it('rejects malformed and outdated status markers', () => {
@@ -257,6 +278,21 @@ describe('Bugbot review presentation', () => {
     expect(clean).not.toContain('All findings originating');
     expect(active).toContain('con seguimiento individual');
     expect(active).toContain('overflow histórico sin thread individual');
+    expect(renderBugbotReviewSnapshot(original, {
+      reviewIdentity: '77', analyzedHeadSha: head, currentHeadSha: head,
+      projectionDigest: '12345678', coverageStatus: 'complete', findings: projection(['fixed']).findings,
+      locale: 'es-ES', statusUrl: links.pullRequestUrl,
+    })).toContain('Ningún hallazgo con seguimiento individual');
+  });
+
+  it('renders Spanish partial-coverage historical status', () => {
+    const body = renderBugbotReviewSnapshot(null, {
+      reviewIdentity: '77', analyzedHeadSha: head, currentHeadSha: head,
+      projectionDigest: '12345678', coverageStatus: 'partial', findings: [],
+      locale: 'es-ES', statusUrl: links.pullRequestUrl,
+    });
+    expect(body).toContain('La cobertura global es parcial');
+    expect(body).toContain('Última reconciliación en');
   });
 
   it('sanitizes titles before publishing them in the status card', () => {

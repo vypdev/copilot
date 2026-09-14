@@ -54,6 +54,7 @@ export interface InactivityContext {
   readonly waitingLabels: readonly string[];
   readonly activityLabel: string;
   readonly thresholdHours: number;
+  readonly locale: string;
 }
 
 export interface BranchObservationContext {
@@ -61,6 +62,7 @@ export interface BranchObservationContext {
   readonly deletedPush: boolean;
   readonly trustedBotLogin?: string;
   readonly repository: { readonly owner: string; readonly name: string };
+  readonly locale: string;
 }
 
 export interface UserRequestContext {
@@ -143,6 +145,7 @@ export interface PushSingleActionContextSource {
   readonly issueNumber: number;
   readonly eventName: string;
   readonly tokenUser?: string;
+  readonly locale?: { readonly repository?: string; readonly issue?: string; readonly pullRequest?: string };
   readonly inputs?: {
     readonly action?: string;
     readonly after?: string;
@@ -292,6 +295,7 @@ export function projectInactivityContext(source: PushSingleActionContextSource):
     ]),
     activityLabel: source.labels.lifecycle.aiProcessing,
     thresholdHours: source.inactivityThresholdHours,
+    locale: source.locale?.issue ?? 'en-US',
   });
 }
 
@@ -301,6 +305,7 @@ export function projectBranchObservationContext(source: PushSingleActionContextS
     deletedPush: typeof source.inputs?.after === 'string' && /^0+$/u.test(source.inputs.after),
     ...(source.tokenUser ? { trustedBotLogin: source.tokenUser } : {}),
     repository: Object.freeze({ owner: source.owner, name: source.repo }),
+    locale: source.locale?.issue ?? 'en-US',
   });
 }
 

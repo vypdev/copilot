@@ -56,7 +56,7 @@ import {
   bindBranchLifecycle,
   bindBranchWorkflow,
   bindIssueAssignee,
-  bindIssueClosure,
+  bindIssueState,
   bindIssueTypeAssignment,
   bindLinkedBranchCommand,
   bindOrganizationMemberSelection,
@@ -102,7 +102,6 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
   );
   const boundProjectBoard = bindProjectBoardCommands(projectBoard.command, binding);
   const boundBranchLifecycle = bindBranchLifecycle(branchLifecycle, binding);
-  const boundIssueClosure = bindIssueClosure(issueClosure, binding);
   const boundIssueAssignee = bindIssueAssignee(issueAssignee, binding);
   const boundOrganizationMembers = bindOrganizationMemberSelection(organizationMembers, binding);
   const boundLinkedBranch = bindLinkedBranchCommand(linkedBranch, binding);
@@ -110,7 +109,7 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
 
   const workflowSteps = {
     checkPermissions: new CheckPermissionsUseCase(bindOrganizationMembers(organizationMembers, binding)),
-    closeNotAllowedIssue: new CloseNotAllowedIssueUseCase(boundIssueClosure),
+    closeNotAllowedIssue: new CloseNotAllowedIssueUseCase(bindIssueState(issueClosure, binding)),
     removeIssueBranches: new RemoveIssueBranchesUseCase(boundBranchLifecycle),
     assignMemberToIssue: new AssignMemberToIssueUseCase(
       boundIssueAssignee,

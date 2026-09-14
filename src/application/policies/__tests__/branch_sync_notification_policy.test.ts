@@ -56,6 +56,7 @@ describe("branch sync notification policy", () => {
       comparison: { aheadBy: 2, behindBy: 3 },
     });
     expect(stale).toContain(BRANCH_SYNC_STALE_MARKER);
+    expect(stale).toContain('topic="branch-sync" target="issue:42"');
     expect(stale).toContain("3 commit(s) behind");
     expect(stale).toContain("2 commit(s) not present");
     expect(stale).toContain("/copilot sync-branch");
@@ -66,5 +67,15 @@ describe("branch sync notification policy", () => {
     expect(aligned).toContain(BRANCH_SYNC_ALIGNED_MARKER);
     expect(aligned).toContain("now contains");
     expect(isStaleBranchSyncComment(aligned)).toBe(false);
+  });
+
+  it('renders the same semantic branch states in Spanish', () => {
+    const stale = buildStaleBranchSyncComment({
+      owner: 'org', repository: 'repo', dependency,
+      comparison: { aheadBy: 1, behindBy: 2 }, locale: 'es-MX',
+    });
+    expect(stale).toContain('## Acción necesaria: sincroniza la rama');
+    expect(stale).toContain('Ejecuta `/copilot sync-branch`');
+    expect(buildAlignedBranchSyncComment(dependency, 'es-ES')).toContain('## Rama sincronizada');
   });
 });

@@ -14,7 +14,7 @@ jobs:
     runs-on: [self-hosted, codex]
     timeout-minutes: 120
     concurrency:
-      group: copilot-bugbot-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+      group: copilot-push-${{ github.repository }}-${{ github.ref_name }}
       cancel-in-progress: true
     permissions:
       contents: read

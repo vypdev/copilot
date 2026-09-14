@@ -424,7 +424,7 @@ describe('Bugbot review reconciliation integration', () => {
       'org',
       'repo',
       358,
-      expect.stringContaining('Unknown | 2'),
+      expect.stringContaining('2 finding(s) have unknown state'),
       'token',
       { commitSha: head },
     );
@@ -784,7 +784,7 @@ describe('Bugbot review reconciliation integration', () => {
     expect(report?.projection.actionableCount).toBe(0);
     expect(report?.projection.findings[0]?.id).toBe('malformed-comment-PRRC_malformed');
     expect(test.addComment).toHaveBeenCalledWith(
-      'org', 'repo', 358, expect.stringContaining('Unknown | 1'), 'token', { commitSha: head },
+      'org', 'repo', 358, expect.stringContaining('1 finding(s) have unknown state'), 'token', { commitSha: head },
     );
   });
 
@@ -1014,7 +1014,7 @@ describe('Bugbot review reconciliation integration', () => {
     expect(report?.statusCardOperation).toBe('updated');
     expect(test.updateComment).toHaveBeenCalledTimes(2);
     expect(test.updateComment).toHaveBeenCalledWith(
-      'org', 'repo', 358, 11, expect.stringContaining('no longer current'), 'token', { commitSha: head },
+      'org', 'repo', 358, 11, expect.stringContaining('superseded by the canonical card'), 'token', { commitSha: head },
     );
   });
 

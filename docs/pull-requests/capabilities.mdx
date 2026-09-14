@@ -1,18 +1,18 @@
 ---
 title: Capabilities
-description: What the action does on pull requests: linking, projects, reviewers, size, AI description, comments.
+description: What the action does on pull requests: linking, projects, reviewers, size, AI description, and semantic status.
 ---
 
 # What the action does on pull requests
 
-This page describes each **capability** the action performs when it runs on a pull request: PR–issue linking, project linking, reviewers, size and priority labels, AI-generated description, and comments with images.
+This page describes each **capability** the action performs when it runs on a pull request: PR–issue linking, project linking, reviewers, size and priority labels, AI-generated description, and semantic status.
 
 ## PR–issue linking
 
 The action **links the pull request to the issue** associated with its branch. The issue number is inferred from the **branch name** (e.g. `feature/123-add-login` → issue `123`). It then:
 
 - Creates the **link** in GitHub (so the issue shows “Linked pull requests” and the PR shows the issue).
-- Can **post a comment** on the PR with the link or a short summary (depending on configuration).
+- Relies on GitHub's native linked-PR UI; routine linkage does not create a summary comment.
 
 GitHub recognizes a closing reference for linkage when the PR targets the
 repository's default branch. Copilot therefore reads the current body of the
@@ -73,18 +73,19 @@ Thresholds are defined in [Configuration](/configuration) (e.g. `size-m-threshol
 
 See [AI PR description](/pull-requests/ai-description) for details, optional issue context, and how to enable it in your workflow.
 
-## Comments and images
+## Conversation messages
 
-The action can **post a comment** on the PR when it runs (e.g. on open or sync). The comment can include:
+Routine PR metadata, linking, reviewer assignment, size labels, description
+refreshes, and merge/close success do not create generic comments. Useful state
+is shown in its owning surface: the PR description, native metadata, one Bugbot
+status card, bounded inline findings, Checks, and the workflow Job Summary.
 
-- A short summary or link to the linked issue.
-- **Images** per branch type (feature, bugfix, docs, chore, hotfix, release) if **`images-on-pull-request`** is `true` and the corresponding **`images-pull-request-*`** inputs are set (e.g. `images-pull-request-feature` with image URLs).
-
-Use this for team branding or to show different visuals per type of PR. See [Configuration](/pull-requests/configuration) and the main [Configuration](/configuration) for image inputs.
+The old image toggles and URL pools default to `false` and are deprecated.
+Semantic PR messages never include decorative images.
 
 ## Bugbot on PRs
 
-**Bugbot** (potential problems) reviews the full PR on `opened` and `reopened`. On `synchronize`, it reviews the newly pushed commit range and checks every open finding against current code. It also reviews changes from the **push** workflow or the single action `detect_potential_problems_action`. It posts up to the configured comment limit as **review comments** at validated file/line or file-level anchors and summarizes overflow in the review. Each submitted review remains a historical snapshot; after every mutation Bugbot re-reads GitHub, projects durable per-review facts into generated review status blocks, and projects every accepted current finding—including overflow—into one canonical PR status card, labels, Job Summary, and Check. The review block explicitly flags historical overflow because those entries have no individual thread to reconcile. You can **ask the bot to fix findings** by replying in the thread or commenting on the PR. See [Bugbot](/bugbot).
+**Bugbot** (potential problems) reviews the full PR on `opened` and `reopened`. On `synchronize`, the PR workflow exclusively owns Bugbot: it reviews the newly pushed commit range and checks every open finding against current code. The paired **push** workflow still updates issue progress but skips Bugbot after discovering the open PR; push-time Bugbot remains available for issue-linked branches without an open PR. The single action `detect_potential_problems_action` remains available on demand. Bugbot posts up to the configured comment limit as **review comments** at validated file/line or file-level anchors and summarizes overflow in the review. Each submitted review remains a historical snapshot; after every mutation Bugbot re-reads GitHub, projects durable per-review facts into generated review status blocks, and projects every accepted current finding—including overflow—into one canonical PR status card, labels, Job Summary, and Check. The review block explicitly flags historical overflow because those entries have no individual thread to reconcile. You can **ask the bot to fix findings** by replying in the thread or commenting on the PR. See [Bugbot](/bugbot).
 
 ## Review state and evidence
 

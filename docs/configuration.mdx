@@ -146,7 +146,7 @@ Copilot provides extensive configuration options to customize your workflow. Use
     overrides a workflow proven to lack `merge_group: checks_requested`.
   </Tab>
 
-  <Tab title="Single Actions & Images" icon="image">
+  <Tab title="Single Actions & Compatibility Images" icon="image">
     ## Single Actions
 
     - `single-action`: Single action to run (e.g. `check_progress_action` or `think_action`). See [Single Actions](/single-actions).
@@ -159,15 +159,20 @@ Copilot provides extensive configuration options to customize your workflow. Use
     - `single-action-comment-mode`: `create`, `replace`, or `append`; defaults to `create` without an ID and `replace` with an ID
     - `inactivity-threshold-hours`: Inactivity window for `close_inactive_issues_action` (default: `168` hours; valid range: `1`–`8760`)
 
-    ## Image Configuration
+    ## Deprecated image compatibility
 
-    **Display:** `images-on-issue`, `images-on-pull-request`, `images-on-commit` (default: "true")
+    `images-on-issue`, `images-on-pull-request`, and `images-on-commit` now
+    default to `false`. Semantic plans, progress cards, Bugbot status, branch
+    synchronization, lifecycle explanations, and push handling never add a
+    decorative image. The booleans and URL pools remain accepted for one
+    compatibility window so existing workflows do not fail schema validation;
+    new configurations should omit them.
 
-    **Issue images:** `images-issue-automatic`, `images-issue-feature`, `images-issue-bugfix`, `images-issue-docs`, `images-issue-chore`, `images-issue-hotfix`, `images-issue-release`
+    **Deprecated issue pools:** `images-issue-automatic`, `images-issue-feature`, `images-issue-bugfix`, `images-issue-docs`, `images-issue-chore`, `images-issue-hotfix`, `images-issue-release`
 
-    **Pull request images:** `images-pull-request-automatic`, `images-pull-request-feature`, `images-pull-request-bugfix`, `images-pull-request-docs`, `images-pull-request-chore`, `images-pull-request-hotfix`, `images-pull-request-release`
+    **Deprecated pull-request pools:** `images-pull-request-automatic`, `images-pull-request-feature`, `images-pull-request-bugfix`, `images-pull-request-docs`, `images-pull-request-chore`, `images-pull-request-hotfix`, `images-pull-request-release`
 
-    **Commit images:** `images-commit-automatic`, `images-commit-feature`, `images-commit-bugfix`, `images-commit-docs`, `images-commit-chore`, `images-commit-hotfix`, `images-commit-release`
+    **Deprecated commit pools:** `images-commit-automatic`, `images-commit-feature`, `images-commit-bugfix`, `images-commit-docs`, `images-commit-chore`, `images-commit-hotfix`, `images-commit-release`
   </Tab>
 </Tabs>
 

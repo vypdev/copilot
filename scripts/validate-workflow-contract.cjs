@@ -24,12 +24,18 @@ const DEPLOYMENT_CONTINUATION_CONCURRENCY_GROUP = 'copilot-deployment-${{ github
 const DISTRIBUTED_COPILOT_ACTION = 'vypdev/copilot@v3';
 const CHECKOUT_ACTION = 'actions/checkout@v5';
 const SETUP_NODE_ACTION = 'actions/setup-node@v7';
-const BUGBOT_BRANCH_CONCURRENCY_GROUP = 'copilot-bugbot-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}';
+const PUSH_BRANCH_CONCURRENCY_GROUP = 'copilot-push-${{ github.repository }}-${{ github.ref_name }}';
+const PULL_REQUEST_BRANCH_CONCURRENCY_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}';
 const BUGBOT_PULL_REQUEST_CANCEL_EXPRESSION = "${{ github.event_name != 'pull_request' || github.event.action != 'edited' }}";
 const BUGBOT_CONCURRENCY_JOBS = Object.freeze({
-  'copilot_commit.yml': Object.freeze({ jobId: 'copilot-commits', cancelInProgress: true }),
+  'copilot_commit.yml': Object.freeze({
+    jobId: 'copilot-commits',
+    group: PUSH_BRANCH_CONCURRENCY_GROUP,
+    cancelInProgress: true,
+  }),
   'copilot_pull_request.yml': Object.freeze({
     jobId: 'copilot-pull-requests',
+    group: PULL_REQUEST_BRANCH_CONCURRENCY_GROUP,
     cancelInProgress: BUGBOT_PULL_REQUEST_CANCEL_EXPRESSION,
   }),
 });
@@ -313,7 +319,7 @@ function assertReviewConcurrency(relativeFile, workflow) {
     assertNoConcurrency(relativeFile, workflow);
     return;
   }
-  const { jobId: targetJobId, cancelInProgress } = contract;
+  const { jobId: targetJobId, group, cancelInProgress } = contract;
   if (workflow.concurrency !== undefined) {
     throw new Error(`${relativeFile} must scope Bugbot branch concurrency to job ${targetJobId}.`);
   }
@@ -324,9 +330,9 @@ function assertReviewConcurrency(relativeFile, workflow) {
       }
       continue;
     }
-    if (job.concurrency?.group !== BUGBOT_BRANCH_CONCURRENCY_GROUP
+    if (job.concurrency?.group !== group
       || job.concurrency?.['cancel-in-progress'] !== cancelInProgress) {
-      throw new Error(`${relativeFile} job ${jobId} must share the Bugbot branch group, cancel superseded code-review runs, and queue pull_request edited events without preempting an active review.`);
+      throw new Error(`${relativeFile} job ${jobId} must use its workflow-specific branch group, avoid cross-canceling the other event owner, cancel superseded runs, and queue pull_request edited events without preempting an active review.`);
     }
   }
 }

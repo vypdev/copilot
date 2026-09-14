@@ -8,6 +8,7 @@ import {
 } from '../../domain/bugbot/review_state';
 import { sanitizeAgentMarkdown } from './github_comment_publication_policy';
 import type { BugbotReviewNavigation } from '../ports/bugbot_review_navigation_ports';
+import { buildPublicationMarker } from './publication_identity_policy';
 
 export const BUGBOT_STATUS_MARKER_PREFIX = 'copilot-bugbot-status';
 export const BUGBOT_REVIEW_MARKER_PREFIX = 'copilot-bugbot-review';
@@ -46,7 +47,15 @@ export function renderBugbotStatusCard(
   const unknown = projection.counts.unknown;
   const partialCoverage = projection.coverage.status === 'partial';
   const shortHead = projection.verifiedHeadSha.slice(0, 7);
-  const heading = language === 'es-ES' ? '## 🤖 Estado de Bugbot' : '## 🤖 Bugbot status';
+  const heading = partialCoverage
+    ? language === 'es-ES' ? '## Bugbot: revisión incompleta' : '## Bugbot: review incomplete'
+    : projection.outcome === 'partial' || projection.outcome === 'failed' || unknown > 0
+      ? language === 'es-ES' ? '## Bugbot: la revisión necesita verificación' : '## Bugbot: review needs verification'
+      : actionable.length === 0
+        ? language === 'es-ES' ? '## Bugbot: revisión completada' : '## Bugbot: review complete'
+        : language === 'es-ES'
+          ? `## Bugbot: ${actionable.length} hallazgo(s) requieren atención`
+          : `## Bugbot: ${actionable.length} finding(s) need attention`;
   const status = partialCoverage
     ? language === 'es-ES'
       ? `La revisión de \`${shortHead}\` tiene cobertura parcial; no puede declarar limpio el pull request completo.`
@@ -66,36 +75,29 @@ export function renderBugbotStatusCard(
         : language === 'es-ES'
           ? `${actionable.length} hallazgo(s) requieren atención en \`${shortHead}\`.`
           : `${actionable.length} finding(s) require attention on \`${shortHead}\`.`;
-  const action = projection.outcome === 'partial' || projection.outcome === 'failed' || unknown > 0
+  const action = partialCoverage
     ? language === 'es-ES'
-      ? 'Ejecuta `/copilot recheck`; los detalles técnicos indican qué quedó pendiente.'
-      : 'Run `/copilot recheck`; the technical details identify what remains pending.'
-    : actionable.length === 0
-      ? language === 'es-ES' ? 'No se requiere ninguna acción.' : 'No action required.'
-      : language === 'es-ES'
+      ? 'Revisa los elementos omitidos o reduce el alcance del PR. Repite la revisión solo después de cambiar el alcance, los límites o el acceso.'
+      : 'Inspect the omitted items or reduce the PR scope. Rerun the review only after changing the scope, limits, or access.'
+    : projection.outcome === 'partial' || projection.outcome === 'failed' || unknown > 0
+    ? language === 'es-ES'
+      ? 'Corrige la causa indicada y ejecuta `/copilot recheck` una vez.'
+      : 'Correct the reported cause, then run `/copilot recheck` once.'
+    : actionable.length > 0
+      ? language === 'es-ES'
         ? 'Revisa los threads enlazados o comenta `/copilot fix all`.'
-        : 'Review the linked threads or comment `/copilot fix all`.';
-  const stateHeading = language === 'es-ES' ? '### Estado actual' : '### Current state';
+        : 'Review the linked threads or comment `/copilot fix all`.'
+      : undefined;
   const findingsHeading = language === 'es-ES' ? '### Hallazgos' : '### Findings';
-  const coverageHeading = language === 'es-ES' ? '### Cobertura' : '### Coverage';
-  const stateColumn = language === 'es-ES' ? 'Estado' : 'State';
-  const countColumn = language === 'es-ES' ? 'Cantidad' : 'Count';
-  const rows = [
-    ['Open / reopened', projection.counts.open + projection.counts.reopened],
-    ['Verification required', projection.counts['verification-required']],
-    ['Fixed', projection.counts.fixed],
-    ['Obsolete', projection.counts.obsolete],
-    ['Dismissed', projection.counts.dismissed],
-    ['Unknown', projection.counts.unknown],
-  ].map(([state, count]) => `| ${state} | ${count} |`);
-  const findingRows = projection.findings.length === 0
-    ? [language === 'es-ES' ? '- No hay hallazgos registrados.' : '- No findings recorded.']
-    : projection.findings.slice(0, 20).map((finding) => renderFindingRow(finding));
-  if (projection.findings.length > 20) {
+  const visibleFindings = projection.findings.filter((finding) =>
+    isBugbotActionableState(finding.state) || finding.state === 'unknown',
+  );
+  const findingRows = visibleFindings.slice(0, 20).map((finding) => renderFindingRow(finding));
+  if (visibleFindings.length > 20) {
     findingRows.push(
       language === 'es-ES'
-        ? `- …y ${projection.findings.length - 20} más.`
-        : `- …and ${projection.findings.length - 20} more.`,
+        ? `- …y ${visibleFindings.length - 20} más.`
+        : `- …and ${visibleFindings.length - 20} more.`,
     );
   }
   const navigation = [
@@ -111,47 +113,43 @@ export function renderBugbotStatusCard(
     const capped = source.providerLimitReached ? ', provider page limit reached; additional older records are uncounted' : '';
     return `- ${source.source}: ${source.status}; retained=${source.itemsRetained}${omitted}${truncated}${capped}`;
   });
-  const details = projection.errors.length === 0
-    ? (language === 'es-ES' ? 'Ninguna operación pendiente.' : 'No pending operations.')
-    : projection.errors
-        .slice(0, 10)
-        .map((error) => `- ${sanitizeAgentMarkdown(error, 500)}`)
-        .join('\n');
-  return [
+  const lines = [
+    buildPublicationMarker({
+      identity: { topic: 'bugbot', target: { kind: 'pull-request', number: projection.pullRequestNumber }, key: 'aggregate' },
+      sourceVersion: `head:${projection.verifiedHeadSha}`,
+      digest: projection.digest,
+    }),
     buildBugbotStatusMarker(projection),
     heading,
     '',
     `> **${language === 'es-ES' ? 'Estado actual' : 'Current status'}:** ${status}`,
-    '>',
-    `> **${language === 'es-ES' ? 'Acción requerida' : 'Action required'}:** ${action}`,
-    '',
-    stateHeading,
-    '',
-    `| ${stateColumn} | ${countColumn} |`,
-    '| --- | ---: |',
-    ...rows,
-    '',
-    findingsHeading,
-    '',
-    ...findingRows,
-    '',
-    coverageHeading,
-    '',
-    ...(coverageRows.length > 0
-      ? coverageRows
-      : [language === 'es-ES' ? '- Cobertura completa; ningún límite alcanzado.' : '- Complete coverage; no limit reached.']),
-    '',
-    navigation,
-    '',
-    '<details>',
-    `<summary>${language === 'es-ES' ? 'Detalles técnicos' : 'Technical details'}</summary>`,
-    '',
-    `Projection: ${projection.outcome} · Analyzed head: ${projection.analyzedHeadSha} · Digest: ${projection.digest}`,
-    '',
-    details,
-    '',
-    '</details>',
-  ].join('\n');
+  ];
+  if (action) lines.push('>', `> **${language === 'es-ES' ? 'Acción' : 'Action'}:** ${action}`);
+  if (findingRows.length > 0) lines.push('', findingsHeading, '', ...findingRows);
+  if (partialCoverage) {
+    lines.push(
+      '',
+      '<details>',
+      `<summary>${language === 'es-ES' ? 'Cobertura incompleta' : 'Incomplete coverage'}</summary>`,
+      '',
+      ...coverageRows,
+      '',
+      '</details>',
+    );
+  }
+  if (projection.errors.length > 0) {
+    lines.push(
+      '',
+      '<details>',
+      `<summary>${language === 'es-ES' ? 'Recuperación' : 'Recovery details'}</summary>`,
+      '',
+      ...projection.errors.slice(0, 10).map((error) => `- ${sanitizeAgentMarkdown(error, 500)}`),
+      '',
+      '</details>',
+    );
+  }
+  lines.push('', navigation);
+  return lines.join('\n');
 }
 
 export function renderBugbotReviewSnapshot(
@@ -254,7 +252,6 @@ function renderFindingRow(finding: BugbotProjectedFinding): string {
 }
 
 function stateLabel(state: BugbotFindingState): string {
-  if (state === 'fixed' || state === 'obsolete' || state === 'dismissed') return `[x] ${state}`;
   return `[ ] ${state}`;
 }
 

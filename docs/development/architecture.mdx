@@ -6,6 +6,15 @@ description: Clean Architecture boundaries for agent execution and workflow auto
 
 The repository separates semantic application ports from provider-specific adapters.
 
+GitHub conversation output crosses a closed publication boundary. Capabilities
+produce typed `none`, `reply`, `status`, `transition`, or `inline-finding`
+intents; the compatibility layer maps only reviewed semantic payloads and can
+never render `Result.steps`, reminders, errors, images, or debug logs. Status
+and reply workflows validate exact bot ownership, stable correlation or topic
+identity, and semantic digests before creating or updating a comment. The
+checked-in publication mutation inventory fails CI if a new application use
+case writes a comment or review without an explicit architectural decision.
+
 - Application: use cases, pure policies (agent configuration, reviewer/assignee
   selection, and result publication), and semantic ports.
 - Data/repository: external adapters for agent execution, authentication, provisioning, GitHub, and Git.

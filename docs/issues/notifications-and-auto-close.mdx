@@ -1,20 +1,33 @@
 ---
-title: Notifications and auto-close
-description: Commit notifications on the issue, reopen on push, and auto-close when branches are merged.
+title: Status messages and auto-close
+description: Quiet push handling, durable status cards, reopen behavior, and terminal issue explanations.
 ---
 
-# Notifications and auto-close
+# Status messages and auto-close
 
-Copilot keeps the issue in sync with the branch: it **notifies** you of new commits and can **reopen** a closed issue when pushes happen. When the branch is **merged**, it can **automatically close** the issue. This page describes these behaviors and the inputs that control them.
+Copilot keeps issue state synchronized without narrating every internal step.
+Routine metadata changes, each pushed commit, reopen success, merge success, and
+close success rely on GitHub's native UI and the workflow Job Summary. A
+conversation message appears only when it provides an implementation plan,
+current progress, an action, a direct answer, or a terminal policy explanation.
 
-## Commit notifications (real-time code tracking)
+## Push and progress behavior
 
-When the **push (commit)** workflow runs (on push to a branch linked to an issue), the action can **post a comment on the issue** with the new commit messages and links. That way, everyone following the issue sees progress in real time.
+When the push workflow runs for a branch linked to an issue, Copilot updates one
+owned progress card only when the progress projection changes. It does not post
+a commit list, image, reopen notice, debug report, or generic “Actions” summary.
+The workflow Job Summary remains the place for bounded operational detail.
 
-- **What is posted:** Commit summary (messages, authors, links to commits). Optionally **images** per branch type (feature, bugfix, etc.) if **`images-on-commit`** and the corresponding `images-commit-*` inputs are set. See [Configuration](/issues/configuration).
-- **Where:** The comment is posted on the **issue** associated with the branch (the issue number is derived from the branch name, e.g. `feature/123-title` → issue `123`).
+- **Where:** the issue associated with the branch (for example,
+  `feature/123-title` → issue `123`).
+- **Identity:** one hidden, bot-owned semantic marker identifies the progress
+  card. Equivalent retries create or update nothing.
+- **Content:** outcome, current status, and the next useful action only. Agent
+  reasoning and internal step names are excluded.
 
-Commit notifications are part of the **Commit** workflow, not the Issue workflow. Ensure you have a workflow that runs on **push** (e.g. `copilot_commit.yml`) and that the Copilot step has `token` and any configured agent CLI inputs. See [How to use](/how-to-use) and [Bugbot](/bugbot) for push-related features.
+Push processing is part of the **Commit** workflow, not the Issue workflow.
+Ensure `copilot_commit.yml` is installed and has its token and configured agent
+inputs. See [How to use](/how-to-use) and [Bugbot](/bugbot).
 
 ## Reopen issue on push
 
@@ -24,7 +37,8 @@ If an issue was **closed** but someone pushes again to its branch, you may want 
 |-------|---------|-------------|
 | **`reopen-issue-on-push`** | `true` | When the push workflow runs and the branch is linked to an issue that is **closed**, the action **reopens** that issue. Set to `false` to leave closed issues closed. |
 
-This applies only when the **Commit** workflow runs (on push); the Issue workflow does not reopen issues by itself.
+Reopen is a native state transition. A successful reopen creates no separate
+conversation comment. This applies only when the **Commit** workflow runs.
 
 ## Auto-close when branch is merged
 
@@ -32,6 +46,7 @@ When the **branch** created for the issue (e.g. `feature/123-title`) is **merged
 
 - **How it works:** The action listens for the merge (via the push/PR pipeline and branch state). When the branch no longer exists (merged and deleted) or the merge is detected, it closes the linked issue.
 - **No extra input** is required for this behavior; it is part of the normal flow when the Commit and/or PR workflows run and the branch is merged.
+- **No success comment** is added. GitHub's closed state is the authoritative UI.
 
 ## Auto-close by inactivity
 
@@ -44,13 +59,13 @@ repositories do not change behavior until `copilot setup` enables the
 - **Eligibility:** open issues carrying `state:awaiting-maintainer` or `state:awaiting-issue-author`.
 - **Activity:** GitHub's `updated_at` timestamp is used as the last observed issue activity. Pull requests, issues with `state:ai-processing`, missing/future timestamps, and recently updated issues are skipped.
 - **Default threshold:** 168 hours (7 days), configurable with `inactivity-threshold-hours` or the `INACTIVITY_THRESHOLD_HOURS` Repository Variable. Valid values are 1–8760 hours.
-- **Safety:** the issue is fetched again immediately before closing. If its state, waiting label, activity timestamp, or processing marker changed, it is left open. A closing comment explains the action; adding a new comment allows the issue to be reopened and re-evaluated.
+- **Safety:** the issue is fetched again immediately before closing. If its state, waiting label, activity timestamp, or processing marker changed, it is left open. One terminal explanation records the threshold and reopening path; it uses a stable semantic marker and the configured issue locale.
 
 ## Summary
 
 | Behavior | Controlled by | Where it runs |
 |----------|---------------|---------------|
-| Commit notifications on issue | Commit workflow + optional images config | Push (Commit) workflow |
+| Progress card update | Changed progress projection | Push (Commit) workflow |
 | Reopen closed issue on push | `reopen-issue-on-push` (default: true) | Push (Commit) workflow |
 | Auto-close issue when branch merged | Built-in | Push / PR workflow when merge is detected |
 | Auto-close waiting issue after inactivity | `inactiveIssueClosure` + `inactivity-threshold-hours` | Scheduled workflow every 6 hours |
@@ -58,5 +73,5 @@ repositories do not change behavior until `copilot setup` enables the
 ## Next steps
 
 - **[Workflow setup](/issues/workflow-setup)** — Issue workflow events and scheduled inactivity cleanup.
-- **[Configuration](/issues/configuration)** — `reopen-issue-on-push`, images on commit.
+- **[Configuration](/issues/configuration)** — `reopen-issue-on-push`, locale, and deprecated image compatibility.
 - [How to use](/how-to-use) — Full setup including Commit workflow.

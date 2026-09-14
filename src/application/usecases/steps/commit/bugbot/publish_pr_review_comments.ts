@@ -17,7 +17,6 @@ export interface PullRequestReviewCommentPublisherOptions {
   operation: BugbotReviewOperationContext;
   openPrNumber: number;
   prContext: BugbotPrContext;
-  watermark: string;
   ruleSources?: readonly string[];
   omittedRuleCount?: number;
 }
@@ -49,7 +48,7 @@ export class PullRequestReviewCommentPublisher {
       }
       // Existing comments do not carry enough anchor metadata to prove that a
       // GitHub suggestion is still attached to a RIGHT-side changed line.
-      const body = `${buildCommentBody(finding, false, undefined, { includeSuggestedChange: false })}\n\n${this.options.watermark}`;
+      const body = buildCommentBody(finding, false, undefined, { includeSuggestedChange: false });
       await this.options.repository.updatePullRequestReviewComment(
         existing.pullRequest.commentIdentity,
         body,
@@ -70,7 +69,7 @@ export class PullRequestReviewCommentPublisher {
     const findingBody = buildCommentBody(finding, false, undefined, {
       includeSuggestedChange: allowSuggestedChanges && anchor?.subjectType === 'line' && anchor.side === 'RIGHT',
     });
-    const body = `${findingBody}\n\n${this.options.watermark}`;
+    const body = findingBody;
     this.findingsToCreate.push(finding);
     if (!anchor) {
       this.unanchoredBodies.push(findingBody);
@@ -112,7 +111,6 @@ export class PullRequestReviewCommentPublisher {
         this.unanchoredBodies,
         overflowCount,
         overflowTitles,
-        this.options.watermark,
         operation.analysis.reviewConfiguration.traceRules
           ? this.options.ruleSources ?? []
           : [],
@@ -170,7 +168,6 @@ function buildReviewSummary(
   unanchoredBodies: readonly string[],
   overflowCount: number,
   overflowTitles: readonly string[],
-  watermark: string,
   ruleSources: readonly string[] = [],
   omittedRuleCount = 0,
   analyzedHeadSha = 'unknown',
@@ -219,7 +216,6 @@ function buildReviewSummary(
     if (omittedRuleCount > 0) rows.push(`| — | ${omittedRuleCount} omitted by duplicate, empty, or combined-budget policy |`);
     sections.push(`### Review configuration\n\nRules in effective precedence order:\n\n| Source | Status |\n| --- | --- |\n${rows.join('\n')}`);
   }
-  sections.push(watermark);
   return sections.join("\n\n");
 }
 

@@ -27,12 +27,13 @@ its findings as line comments on the current diff.
 
 ### 2. On every push (commit workflow)
 
-When you push to a branch that is **linked to an issue** (e.g. a feature or bugfix branch created by Copilot), the **Commit** workflow runs. If an agent CLI is configured, the action runs **DetectPotentialProblemsUseCase**: it fetches and reviews the exact event `before..after` range, loads existing finding context, and then publishes new findings and updates or marks as resolved any previous findings that no longer apply. The bounded fetch includes `after` and its parent. New-branch pushes, whose `before` value is GitHub's all-zero sentinel, and force-pushes whose previous object is no longer reachable can therefore fall back to the current commit parent without aborting the workflow or downloading full history.
+When you push to a branch that is **linked to an issue** (e.g. a feature or bugfix branch created by Copilot), the **Commit** workflow runs. If an agent CLI is configured and there is no open PR, the action runs **DetectPotentialProblemsUseCase**: it fetches and reviews the exact event `before..after` range, loads existing finding context, and then publishes new findings and updates or marks as resolved any previous findings that no longer apply. The bounded fetch includes `after` and its parent. New-branch pushes, whose `before` value is GitHub's all-zero sentinel, and force-pushes whose previous object is no longer reachable can therefore fall back to the current commit parent without aborting the workflow or downloading full history. When an open same-repository PR exists, Commit keeps issue progress current but skips Bugbot because the paired PR `synchronize` event owns review for that head.
 
 **Requirements:**
 
 - The push must be to a branch that has an associated issue (the action resolves the issue number from the branch name or from project/linking).
 - The Commit workflow must include the Copilot step (see [Examples → Push workflow](/bugbot/examples#push-workflow-with-bugbot)).
+- No open PR may own review for the branch; otherwise the PR synchronization workflow runs Bugbot.
 
 If the branch is not linked to an issue (e.g. `issueNumber === -1`), detection is skipped.
 
@@ -98,7 +99,13 @@ When the configured agent later reports a finding as **resolved** (e.g. after yo
 - **Marks the PR review thread as resolved** after the marker update succeeds.
 - **Re-reads GitHub** and refreshes the originating review's status block.
 
-One stable **Bugbot status** comment in the PR conversation is the easiest aggregate view: it shows the verified head, counts by state, links to findings, the required next action, and bounded technical recovery details. The durable per-finding authority is the trusted hidden marker together with the native thread facts; the review snapshot is history, not the sole source of current truth.
+One stable **Bugbot status** comment in the PR conversation is the aggregate
+view. It leads with the outcome, lists only findings that need attention or
+verification, and shows recovery details only when the review is incomplete.
+Full-coverage clean runs have no empty count table, no “action required” block,
+and no technical disclosure. The durable per-finding authority is the trusted
+hidden marker together with native thread facts; the review snapshot is history,
+not the sole source of current truth.
 
 ---
 
@@ -125,7 +132,7 @@ When there are more findings than the limit:
 
 - The action publishes the first N findings as individual issue comments for issue-only work, or as inline comments in one PR review.
 - Overflow is added to the same PR review summary. When no PR exists, one extra issue comment summarizes it.
-- On a PR, the canonical **Bugbot status** counts every accepted current finding, including overflow. Overflow rows have no thread link because they were deliberately not published individually; increase the limit or run `/copilot recheck` after addressing them. A historical review's mutable block reports its individually tracked findings and explicitly flags historical overflow instead of claiming that untracked entries are resolved.
+- On a PR, the canonical **Bugbot status** accounts for every accepted current finding, including overflow. Overflow rows have no thread link because they were deliberately not published individually. Increase the configured limit or reduce the PR scope; rerun only after changing the relevant scope, limit, access, or code. A historical review's mutable block reports its individually tracked findings and explicitly flags historical overflow instead of claiming that untracked entries are resolved.
 
 So a PR analysis creates one review batch instead of N unrelated reviews and N duplicated conversation comments.
 

@@ -86,6 +86,25 @@ const validWorkflow = {
 };
 
 describe('workflow contract validator', () => {
+  it('keeps decorative image inputs disabled and explicitly deprecated', () => {
+    const manifest = yaml.load(
+      readFileSync(path.join(process.cwd(), 'action.yml'), 'utf8'),
+    ) as {
+      inputs: Record<string, { default?: string; description?: string }>;
+    };
+    const toggles = ['images-on-issue', 'images-on-pull-request', 'images-on-commit'];
+    const pools = Object.keys(manifest.inputs).filter(name => name.startsWith('images-') && !toggles.includes(name));
+
+    for (const name of toggles) {
+      expect(manifest.inputs[name]).toMatchObject({ default: 'false' });
+      expect(manifest.inputs[name].description).toMatch(/^Deprecated compatibility input\./);
+    }
+    expect(pools).toHaveLength(21);
+    for (const name of pools) {
+      expect(manifest.inputs[name].description).toMatch(/^Deprecated .* image URL pool retained for input compatibility\.$/);
+    }
+  });
+
   it('keeps the repository validation manifest unique and the queue budget synchronized', () => {
     const workflowNames = QUEUE_WORKFLOW_MANIFEST.map(entry => entry.workflowName);
     expect(new Set(workflowNames).size).toBe(workflowNames.length);
@@ -98,7 +117,7 @@ describe('workflow contract validator', () => {
     expect(() => assertQueueBudget(90, 90)).not.toThrow();
   });
 
-  it('serializes durable mutations while canceling superseded branch review runs', () => {
+  it('serializes each branch event owner without cross-canceling the other workflow', () => {
     for (const directory of ['.github/workflows', 'setup/workflows']) {
       for (const manifest of QUEUE_WORKFLOW_MANIFEST) {
         const file = path.join(process.cwd(), directory, manifest.file);
@@ -108,7 +127,9 @@ describe('workflow contract validator', () => {
         expect(workflow.concurrency).toBeUndefined();
         if (['copilot_commit.yml', 'copilot_pull_request.yml'].includes(manifest.file)) {
           expect(workflow.jobs[manifest.jobId].concurrency).toEqual({
-            group: 'copilot-bugbot-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}',
+            group: manifest.file === 'copilot_pull_request.yml'
+              ? 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}'
+              : 'copilot-push-${{ github.repository }}-${{ github.ref_name }}',
             'cancel-in-progress': manifest.file === 'copilot_pull_request.yml'
               ? "${{ github.event_name != 'pull_request' || github.event.action != 'edited' }}"
               : true,
@@ -131,6 +152,20 @@ describe('workflow contract validator', () => {
       expect(() => validateWorkflow(file, workflow)).toThrow(
         'queue pull_request edited events without preempting an active review',
       );
+    },
+  );
+
+  it.each([
+    ['copilot_commit.yml', 'copilot-commits', 'copilot-pr-${{ github.repository }}-${{ github.ref_name }}'],
+    ['copilot_pull_request.yml', 'copilot-pull-requests', 'copilot-push-${{ github.repository }}-${{ github.ref_name }}'],
+  ])(
+    'rejects a cross-workflow concurrency group in %s',
+    (workflowFile, jobId, sharedGroup) => {
+      const file = path.join(process.cwd(), '.github/workflows', workflowFile);
+      const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+      workflow.jobs[jobId].concurrency.group = sharedGroup;
+
+      expect(() => validateWorkflow(file, workflow)).toThrow('avoid cross-canceling the other event owner');
     },
   );
 
