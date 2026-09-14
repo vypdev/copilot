@@ -54315,10 +54315,11 @@ function prepareLanguageAdaptationInput(commentBody, trustedBotLogin) {
         });
     }
     if (trustedBotLogin.trim()) {
+        const normalizedBotLogin = trustedBotLogin.trim().replace(/^@/u, '');
         return Object.freeze({
             kind: 'mention',
-            prose: (0, think_input_policy_1.extractMentionQuestion)(commentBody, trustedBotLogin),
-            trustedBotLogin: trustedBotLogin.trim().replace(/^@/u, ''),
+            prose: (0, think_input_policy_1.extractMentionQuestion)(commentBody, normalizedBotLogin),
+            trustedBotLogin: normalizedBotLogin,
         });
     }
     return Object.freeze({ kind: 'plain', prose: commentBody.trim() });
