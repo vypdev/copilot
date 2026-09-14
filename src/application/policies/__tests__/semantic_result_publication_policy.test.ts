@@ -1,5 +1,6 @@
 import { Result } from '../../../data/model/result';
 import {
+  hasOwnedPrimaryIssuePublication,
   hasPrimaryIssuePublication,
   renderSemanticReply,
   renderSemanticStatus,
@@ -8,6 +9,19 @@ import {
 } from '../semantic_result_publication_policy';
 
 describe('semantic result publication policy', () => {
+  it('recognizes only bot-owned primary markers for the exact issue', () => {
+    const plan = '<!-- copilot:publication schema="1" topic="plan" target="issue:7" key="implementation" source="issue-body:abcdef12" digest="abcdef12" -->';
+    const answer = '<!-- copilot:reply schema="1" target="issue:7" correlation="event:abcdef12" key="direct-answer" digest="abcdef12" -->';
+
+    expect(hasOwnedPrimaryIssuePublication([{ body: plan, user: { login: 'VypBot' } }], 7, 'vypbot')).toBe(true);
+    expect(hasOwnedPrimaryIssuePublication([{ body: answer, user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(true);
+    expect(hasOwnedPrimaryIssuePublication([{ body: plan, user: { login: 'human' } }], 7, 'vypbot')).toBe(false);
+    expect(hasOwnedPrimaryIssuePublication([{ body: plan.replace('issue:7', 'issue:8'), user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(false);
+    expect(hasOwnedPrimaryIssuePublication([{ body: answer.replace('direct-answer', 'copilot-help'), user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(false);
+    expect(hasOwnedPrimaryIssuePublication([], 0, 'vypbot')).toBe(false);
+    expect(hasOwnedPrimaryIssuePublication([], 7, ' ')).toBe(false);
+  });
+
   it('recognizes only publishable plan or direct-answer results as a primary issue response', () => {
     const plan = new Result({
       id: 'RecommendStepsUseCase', success: true, executed: true,

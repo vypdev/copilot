@@ -18,6 +18,7 @@ const mockRemoveNotNeededInvoke = jest.fn();
 const mockDeployAddedInvoke = jest.fn();
 const mockRecommendStepsInvoke = jest.fn();
 const mockAnswerIssueHelpInvoke = jest.fn();
+const mockListIssueComments = jest.fn();
 
 const workflowSteps = {
   checkPermissions: { taskId: 'check-permissions', invoke: mockCheckPermissionsInvoke },
@@ -103,11 +104,12 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
   return base as unknown as Execution;
 }
 
-function createUseCase(actorAuthorizationPort?: ConstructorParameters<typeof IssueUseCase>[3]): IssueUseCase {
+function createUseCase(actorAuthorizationPort?: ConstructorParameters<typeof IssueUseCase>[4]): IssueUseCase {
   return new IssueUseCase(
     { taskId: "RecommendStepsUseCase", invoke: mockRecommendStepsInvoke },
     { taskId: "AnswerIssueHelpUseCase", invoke: mockAnswerIssueHelpInvoke },
     workflowSteps,
+    { listIssueComments: mockListIssueComments },
     actorAuthorizationPort,
   );
 }
@@ -130,6 +132,7 @@ describe("IssueUseCase", () => {
     mockDeployAddedInvoke.mockResolvedValue([]);
     mockRecommendStepsInvoke.mockResolvedValue({ results: [] });
     mockAnswerIssueHelpInvoke.mockResolvedValue([]);
+    mockListIssueComments.mockResolvedValue([]);
   });
 
   it("closes and returns early when permissions fail", async () => {
@@ -338,6 +341,59 @@ describe("IssueUseCase", () => {
     expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(true);
   });
 
+  it('does not add a welcome when a replay finds an existing bot-owned plan', async () => {
+    mockListIssueComments.mockResolvedValue([{
+      id: 91,
+      body: '<!-- copilot:publication schema="1" topic="plan" target="issue:8" key="implementation" source="issue-body:abcdef12" digest="abcdef12" -->',
+      user: { login: 'vypbot' },
+    }]);
+    const param = minimalExecution({
+      tokenUser: 'vypbot',
+      eventName: 'issues',
+      inputs: { action: 'opened' },
+      issue: { opened: true },
+    });
+
+    const results = await createUseCase().invoke(param);
+
+    expect(mockListIssueComments).toHaveBeenCalledWith(8);
+    expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(false);
+  });
+
+  it('does not add a welcome when a replay finds an existing bot-owned direct answer', async () => {
+    mockListIssueComments.mockResolvedValue([{
+      id: 92,
+      body: '<!-- copilot:reply schema="1" target="issue:8" correlation="event:abcdef12" key="direct-answer" digest="abcdef12" -->',
+      user: { login: 'vypbot' },
+    }]);
+    const param = minimalExecution({
+      tokenUser: 'vypbot',
+      eventName: 'issues',
+      inputs: { action: 'opened' },
+      issue: { opened: true },
+      labels: { isQuestion: true },
+    });
+
+    const results = await createUseCase().invoke(param);
+
+    expect(mockListIssueComments).toHaveBeenCalledWith(8);
+    expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(false);
+  });
+
+  it('omits the optional welcome when historical publication cannot be verified', async () => {
+    mockListIssueComments.mockRejectedValue(new Error('GitHub unavailable'));
+    const param = minimalExecution({
+      tokenUser: 'vypbot',
+      eventName: 'issues',
+      inputs: { action: 'opened' },
+      issue: { opened: true },
+    });
+
+    const results = await createUseCase().invoke(param);
+
+    expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(false);
+  });
+
   it("posts a static welcome when the initial help agent cannot answer", async () => {
     const param = minimalExecution({
       tokenUser: "vypbot",
@@ -396,6 +452,7 @@ describe("IssueUseCase", () => {
 
     expect(mockRecommendStepsInvoke).not.toHaveBeenCalled();
     expect(mockAnswerIssueHelpInvoke).not.toHaveBeenCalled();
+    expect(mockListIssueComments).not.toHaveBeenCalled();
     expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(false);
   });
 });

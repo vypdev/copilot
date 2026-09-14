@@ -44,6 +44,7 @@ import { createProjectBoardCompositionRoot } from "./project_board_composition_r
 import { createActorAuthorizationRepository } from './actor_authorization_composition_root';
 import {
   bindIssueTitle,
+  bindIssueCommentQuery,
   bindIssueDescriptionQuery,
   bindOrganizationMembers,
   bindProjectContent,
@@ -139,6 +140,7 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
     new RecommendStepsUseCase(bindIssueDescriptionQuery(issueContent, binding), createFindingsQueryPort()),
     new AnswerIssueHelpUseCase(createFindingsQueryPort()),
     workflowSteps,
+    bindIssueCommentQuery(issueContent, binding),
     bindActorAuthorization(createActorAuthorizationRepository(), binding),
   );
 }

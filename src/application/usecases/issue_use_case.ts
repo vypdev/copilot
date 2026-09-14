@@ -6,6 +6,7 @@ import { ParamUseCase } from "./base/param_usecase";
 import type { IssueWorkflowSteps } from "./issue_workflow_steps";
 import { runIssueWorkflow, type IssueWorkflowRouteContext } from "./issue_workflow";
 import type { BoundActorAuthorizationPort } from '../ports/actor_authorization_ports';
+import type { BoundIssueCommentQueryPort } from '../ports/issue_lifecycle_ports';
 import { projectCheckPermissionsContext } from './steps/common/check_permissions_workflow';
 import { projectUpdateTitleContext } from './steps/common/update_title_workflow';
 import { projectIssueContentLinkContext } from './steps/common/project_content_link_workflow';
@@ -27,6 +28,7 @@ export class IssueUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly recommendStepsUseCase: ParamUseCase<RecommendStepsContext, RecommendStepsOutcome>,
     private readonly answerIssueHelpUseCase: ParamUseCase<AnswerIssueHelpContext, Result[]>,
     private readonly workflowSteps: IssueWorkflowSteps,
+    private readonly issueCommentQueryPort: BoundIssueCommentQueryPort,
     private readonly actorAuthorizationPort?: BoundActorAuthorizationPort,
   ) {}
 
@@ -37,6 +39,7 @@ export class IssueUseCase implements ParamUseCase<Execution, Result[]> {
       answerIssueHelpUseCase: this.answerIssueHelpUseCase,
       workflowSteps: this.workflowSteps,
       actorAuthorizationPort: this.actorAuthorizationPort,
+      issueCommentQueryPort: this.issueCommentQueryPort,
       sharedContexts: {
         permissions: projectCheckPermissionsContext(param),
         title: projectUpdateTitleContext(param),

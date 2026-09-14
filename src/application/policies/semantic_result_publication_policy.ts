@@ -1,8 +1,15 @@
 import { publicationTargetToken, type PublicationTarget, type ReplyPublicationIntent, type StatusPublicationIntent } from '../../domain/github_publication';
+import { githubUsersMatch } from '../../domain/github_user_policy';
 import type { Result } from '../../data/model/result';
 import { getResultPayload } from '../../data/model/result';
 import { sanitizeAgentMarkdown } from './github_comment_publication_policy';
-import { buildPublicationMarker, buildPublicationReplyMarker, createSemanticDigest } from './publication_identity_policy';
+import {
+    buildPublicationMarker,
+    buildPublicationReplyMarker,
+    createSemanticDigest,
+    parsePublicationMarker,
+    parsePublicationReplyMarker,
+} from './publication_identity_policy';
 import { resolveStaticPublicationCatalog, type PublicationMessageCatalog } from './publication_message_catalog';
 import { buildCopilotHelpMessage, buildCopilotWelcomeMessage } from './copilot_interaction_policy';
 import { formatCopilotStatus, type CopilotStatusSnapshot } from './status_command_policy';
@@ -40,6 +47,11 @@ export interface SemanticPublicationContext {
     readonly botLogin?: string;
 }
 
+export interface SemanticPublicationComment {
+    readonly body: string | null;
+    readonly user?: { readonly login?: string };
+}
+
 export function selectSemanticStatusIntents(context: SemanticPublicationContext): readonly SemanticStatusIntent[] {
     return Object.freeze(context.results.flatMap(result => {
         if (!result.executed || !result.success) return [];
@@ -61,6 +73,24 @@ export function hasPrimaryIssuePublication(results: readonly Result[]): boolean 
             isPlanPayload(result.id, payload)
             || directAnswerProjection(payload)
         ));
+    });
+}
+
+/** Recognizes only bot-owned plan or direct-answer markers for the exact issue. */
+export function hasOwnedPrimaryIssuePublication(
+    comments: readonly SemanticPublicationComment[],
+    issueNumber: number,
+    botLogin: string,
+): boolean {
+    if (!positiveInteger(issueNumber) || !botLogin.trim()) return false;
+    const expectedTarget = `issue:${issueNumber}`;
+    return comments.some(comment => {
+        if (!githubUsersMatch(comment.user?.login ?? '', botLogin)) return false;
+        const status = parsePublicationMarker(comment.body);
+        if (status?.identity.topic === 'plan'
+            && publicationTargetToken(status.identity.target) === expectedTarget) return true;
+        const reply = parsePublicationReplyMarker(comment.body);
+        return reply?.target === expectedTarget && reply.messageKey === 'direct-answer';
     });
 }
 

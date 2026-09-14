@@ -153,7 +153,7 @@ describe('RecommendStepsUseCase', () => {
     expect(prompt).toContain('leak');
   });
 
-  it('skips the agent when the visible issue description is unchanged', async () => {
+  it('reconciles the existing plan without calling the agent when the visible description is unchanged', async () => {
     mockGetDescription.mockResolvedValue('Implement login feature.');
     mockAskAgent.mockResolvedValue('1. Add auth module');
     const previousConfiguration = new Config({
@@ -179,9 +179,23 @@ describe('RecommendStepsUseCase', () => {
         },
       }),
     });
-    await invoke(matchingParam);
+    const results = await invoke(matchingParam);
 
     expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ id: 'RecommendStepsUseCase', success: true, executed: true });
+    expect(getResultPayload(results[0].payload)).toMatchObject({
+      issueNumber: 42,
+      recommendedSteps: '1. Add auth module',
+      recommendationState: { issueDescriptionFingerprint: fingerprint },
+    });
+
+    const unconfiguredResults = await invoke(baseParam({
+      ai: new Ai('', '', false, [], false, 'low', 20),
+      previousConfiguration: matchingParam.previousConfiguration,
+    }));
+    expect(unconfiguredResults).toHaveLength(1);
+    expect(getResultPayload(unconfiguredResults[0].payload)?.recommendedSteps).toBe('1. Add auth module');
   });
 
   it('does not publish a duplicate recommendation when the agent returns the sentinel', async () => {

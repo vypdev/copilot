@@ -947,7 +947,12 @@ reply reconciler sanitizes and creates at most once; failed or unavailable agent
 output falls back to one static welcome. Release and hotfix routes emit none of
 those three generic onboarding messages, including when conflicting labels are
 present. The help agent no longer owns a GitHub mutation port, and the exact
-application mutation inventory records that reduced surface.
+application mutation inventory records that reduced surface. Replayed unchanged
+recommendations re-project the persisted plan through the status reconciler so
+a deleted card is recreated without a new agent call. Before an optional welcome
+is emitted, a read-only comment boundary recognizes only exact-target,
+bot-owned plan or direct-answer markers; an unavailable history read fails
+closed to operator evidence and does not risk a redundant comment.
 
 No remote product flag is required. Each phase must be independently releasable
 and its compatibility adapter must fail closed to Job Summary, not fall back to

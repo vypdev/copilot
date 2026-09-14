@@ -3,9 +3,13 @@ import { logError } from "../ports/logging_ports";
 import type { ParamUseCase } from "./base/param_usecase";
 import type { IssueWorkflowSteps } from "./issue_workflow_steps";
 import { buildCopilotWelcomeResult } from '../policies/copilot_interaction_policy';
-import { hasPrimaryIssuePublication } from '../policies/semantic_result_publication_policy';
+import {
+  hasOwnedPrimaryIssuePublication,
+  hasPrimaryIssuePublication,
+} from '../policies/semantic_result_publication_policy';
 import type { BoundActorAuthorizationPort } from '../ports/actor_authorization_ports';
-import { ApplicationError } from '../errors/application_error';
+import type { BoundIssueCommentQueryPort } from '../ports/issue_lifecycle_ports';
+import { ApplicationError, toApplicationError } from '../errors/application_error';
 import type { CheckPermissionsContext } from './steps/common/check_permissions_workflow';
 import type { UpdateTitleContext } from './steps/common/update_title_workflow';
 import type { ProjectContentLinkContext } from './steps/common/project_content_link_workflow';
@@ -50,6 +54,7 @@ export interface IssueWorkflowPorts {
   answerIssueHelpUseCase: ParamUseCase<AnswerIssueHelpContext, Result[]>;
   workflowSteps: IssueWorkflowSteps;
   actorAuthorizationPort?: BoundActorAuthorizationPort;
+  issueCommentQueryPort: BoundIssueCommentQueryPort;
   sharedContexts: IssueSharedStepContexts;
 }
 
@@ -117,13 +122,34 @@ export async function runIssueWorkflow(
       ? recommendationOutcome.configurationPatch
       : undefined;
     results.push(...recommendationResults);
-    if (context.newIssue && context.onboardingEligible && !hasPrimaryIssuePublication(recommendationResults)) {
-      results.push(buildCopilotWelcomeResult(context.tokenUser, ports.sharedContexts.steps.answerHelp.locale));
-    }
+    await appendWelcomeFallback(results, recommendationResults, context, ports);
   } else if (context.newIssue && context.onboardingEligible) {
-    results.push(buildCopilotWelcomeResult(context.tokenUser, ports.sharedContexts.steps.answerHelp.locale));
+    await appendWelcomeFallback(results, [], context, ports);
   }
   return issueWorkflowOutcome(results, branchConfigurationPatch, recommendationStatePatch);
+}
+
+async function appendWelcomeFallback(
+  results: Result[],
+  recommendationResults: readonly Result[],
+  context: IssueWorkflowRouteContext,
+  ports: IssueWorkflowPorts,
+): Promise<void> {
+  if (!context.newIssue || !context.onboardingEligible || hasPrimaryIssuePublication(recommendationResults)) return;
+  if (context.tokenUser?.trim()) {
+    try {
+      const comments = await ports.issueCommentQueryPort.listIssueComments(context.recommendSteps.issueNumber);
+      if (hasOwnedPrimaryIssuePublication(comments, context.recommendSteps.issueNumber, context.tokenUser)) return;
+    } catch (error) {
+      logError(toApplicationError(
+        error,
+        'provider.unavailable',
+        'Unable to verify whether the issue already has a primary response; welcome publication was omitted.',
+      ));
+      return;
+    }
+  }
+  results.push(buildCopilotWelcomeResult(context.tokenUser, ports.sharedContexts.steps.answerHelp.locale));
 }
 
 function issueWorkflowOutcome(

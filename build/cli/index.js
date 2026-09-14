@@ -45246,10 +45246,12 @@ function calculateReviewersStillNeeded(desiredCount, currentCount, confirmedCoun
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.selectSemanticStatusIntents = selectSemanticStatusIntents;
 exports.hasPrimaryIssuePublication = hasPrimaryIssuePublication;
+exports.hasOwnedPrimaryIssuePublication = hasOwnedPrimaryIssuePublication;
 exports.selectSemanticReplyIntents = selectSemanticReplyIntents;
 exports.renderSemanticReply = renderSemanticReply;
 exports.renderSemanticStatus = renderSemanticStatus;
 const github_publication_1 = __nccwpck_require__(35793);
+const github_user_policy_1 = __nccwpck_require__(84403);
 const result_1 = __nccwpck_require__(73817);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
@@ -45278,6 +45280,22 @@ function hasPrimaryIssuePublication(results) {
         const payload = (0, result_1.getResultPayload)(result.payload);
         return Boolean(payload && (isPlanPayload(result.id, payload)
             || directAnswerProjection(payload)));
+    });
+}
+/** Recognizes only bot-owned plan or direct-answer markers for the exact issue. */
+function hasOwnedPrimaryIssuePublication(comments, issueNumber, botLogin) {
+    if (!positiveInteger(issueNumber) || !botLogin.trim())
+        return false;
+    const expectedTarget = `issue:${issueNumber}`;
+    return comments.some(comment => {
+        if (!(0, github_user_policy_1.githubUsersMatch)(comment.user?.login ?? '', botLogin))
+            return false;
+        const status = (0, publication_identity_policy_1.parsePublicationMarker)(comment.body);
+        if (status?.identity.topic === 'plan'
+            && (0, github_publication_1.publicationTargetToken)(status.identity.target) === expectedTarget)
+            return true;
+        const reply = (0, publication_identity_policy_1.parsePublicationReplyMarker)(comment.body);
+        return reply?.target === expectedTarget && reply.messageKey === 'direct-answer';
     });
 }
 function selectSemanticReplyIntents(context) {
@@ -49896,7 +49914,9 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId}.`);
     try {
         const configuration = param.agentConfiguration;
-        if (!(0, agent_1.isAgentConfigurationReady)(configuration)) {
+        const previousRecommendation = param.previousRecommendation;
+        const agentReady = (0, agent_1.isAgentConfigurationReady)(configuration);
+        if (!agentReady && !previousRecommendation) {
             return outcome([failure(taskId, 'Missing agent model or executable.', 'configuration.invalid')]);
         }
         const issueNumber = param.issueNumber;
@@ -49910,11 +49930,13 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
         if (!issueDescription?.trim()) {
             return outcome([failure(taskId, `No description found for issue #${issueNumber}.`, 'provider.not-found')]);
         }
-        const previousRecommendation = param.previousRecommendation;
         const issueDescriptionFingerprint = (0, recommendation_policy_1.createIssueDescriptionFingerprint)(issueDescription);
         if (previousRecommendation?.issueDescriptionFingerprint === issueDescriptionFingerprint) {
-            (0, logging_ports_1.logInfo)('RecommendSteps: issue description is unchanged; skipping recommendation.');
-            return outcome([]);
+            (0, logging_ports_1.logInfo)('RecommendSteps: issue description is unchanged; reconciling the existing plan.');
+            return replayExistingPlan(taskId, issueNumber, previousRecommendation);
+        }
+        if (!agentReady) {
+            return outcome([failure(taskId, 'Missing agent model or executable.', 'configuration.invalid')]);
         }
         const prompt = (0, prompts_1.getRecommendStepsPrompt)({
             projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
@@ -49945,6 +49967,18 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
             }),
         ]);
     }
+}
+function replayExistingPlan(taskId, issueNumber, recommendationState) {
+    return outcome([new result_1.Result({
+            id: taskId,
+            success: true,
+            executed: true,
+            payload: Object.freeze({
+                issueNumber,
+                recommendedSteps: recommendationState.recommendation,
+                recommendationState: Object.freeze({ ...recommendationState }),
+            }),
+        })]);
 }
 function outcome(results) {
     return Object.freeze({ results: Object.freeze([...results]) });
@@ -51566,10 +51600,11 @@ const project_content_link_workflow_1 = __nccwpck_require__(89064);
 const issue_workflow_context_1 = __nccwpck_require__(98005);
 const push_single_action_contexts_1 = __nccwpck_require__(47841);
 class IssueUseCase {
-    constructor(recommendStepsUseCase, answerIssueHelpUseCase, workflowSteps, actorAuthorizationPort) {
+    constructor(recommendStepsUseCase, answerIssueHelpUseCase, workflowSteps, issueCommentQueryPort, actorAuthorizationPort) {
         this.recommendStepsUseCase = recommendStepsUseCase;
         this.answerIssueHelpUseCase = answerIssueHelpUseCase;
         this.workflowSteps = workflowSteps;
+        this.issueCommentQueryPort = issueCommentQueryPort;
         this.actorAuthorizationPort = actorAuthorizationPort;
         this.taskId = "IssueUseCase";
     }
@@ -51580,6 +51615,7 @@ class IssueUseCase {
             answerIssueHelpUseCase: this.answerIssueHelpUseCase,
             workflowSteps: this.workflowSteps,
             actorAuthorizationPort: this.actorAuthorizationPort,
+            issueCommentQueryPort: this.issueCommentQueryPort,
             sharedContexts: {
                 permissions: (0, check_permissions_workflow_1.projectCheckPermissionsContext)(param),
                 title: (0, update_title_workflow_1.projectUpdateTitleContext)(param),
@@ -51704,14 +51740,28 @@ async function runIssueWorkflow(context, taskId, ports) {
             ? recommendationOutcome.configurationPatch
             : undefined;
         results.push(...recommendationResults);
-        if (context.newIssue && context.onboardingEligible && !(0, semantic_result_publication_policy_1.hasPrimaryIssuePublication)(recommendationResults)) {
-            results.push((0, copilot_interaction_policy_1.buildCopilotWelcomeResult)(context.tokenUser, ports.sharedContexts.steps.answerHelp.locale));
-        }
+        await appendWelcomeFallback(results, recommendationResults, context, ports);
     }
     else if (context.newIssue && context.onboardingEligible) {
-        results.push((0, copilot_interaction_policy_1.buildCopilotWelcomeResult)(context.tokenUser, ports.sharedContexts.steps.answerHelp.locale));
+        await appendWelcomeFallback(results, [], context, ports);
     }
     return issueWorkflowOutcome(results, branchConfigurationPatch, recommendationStatePatch);
+}
+async function appendWelcomeFallback(results, recommendationResults, context, ports) {
+    if (!context.newIssue || !context.onboardingEligible || (0, semantic_result_publication_policy_1.hasPrimaryIssuePublication)(recommendationResults))
+        return;
+    if (context.tokenUser?.trim()) {
+        try {
+            const comments = await ports.issueCommentQueryPort.listIssueComments(context.recommendSteps.issueNumber);
+            if ((0, semantic_result_publication_policy_1.hasOwnedPrimaryIssuePublication)(comments, context.recommendSteps.issueNumber, context.tokenUser))
+                return;
+        }
+        catch (error) {
+            (0, logging_ports_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to verify whether the issue already has a primary response; welcome publication was omitted.'));
+            return;
+        }
+    }
+    results.push((0, copilot_interaction_policy_1.buildCopilotWelcomeResult)(context.tokenUser, ports.sharedContexts.steps.answerHelp.locale));
 }
 function issueWorkflowOutcome(results, branchConfigurationPatch, recommendationStatePatch) {
     return Object.freeze({
@@ -75878,7 +75928,7 @@ function createIssueUseCaseCompositionRoot(binding) {
         removeNotNeededBranches: new remove_not_needed_branches_use_case_1.RemoveNotNeededBranchesUseCase(boundBranchLifecycle, branchName),
         deployAdded: new label_deploy_added_use_case_1.DeployAddedUseCase((0, lifecycle_capability_port_binding_1.bindBranchWorkflow)(new workflow_dispatch_repository_1.WorkflowDispatchRepository((0, github_workflow_client_factory_1.createWorkflowDispatchClient)()), binding), moveIssueToInProgress),
     };
-    return (0, issue_use_case_composition_1.composeIssueUseCase)(new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueContent, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), new answer_issue_help_use_case_1.AnswerIssueHelpUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding));
+    return (0, issue_use_case_composition_1.composeIssueUseCase)(new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueContent, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), new answer_issue_help_use_case_1.AnswerIssueHelpUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, (0, shared_capability_port_binding_1.bindIssueCommentQuery)(issueContent, binding), (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding));
 }
 
 
@@ -76671,6 +76721,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.bindOrganizationMembers = bindOrganizationMembers;
 exports.bindIssueDescriptionQuery = bindIssueDescriptionQuery;
 exports.bindIssueNotification = bindIssueNotification;
+exports.bindIssueCommentQuery = bindIssueCommentQuery;
 exports.bindIssueCommentUpdate = bindIssueCommentUpdate;
 exports.bindIssueTitle = bindIssueTitle;
 exports.bindProjectContent = bindProjectContent;
@@ -76688,6 +76739,11 @@ function bindIssueDescriptionQuery(port, binding) {
 function bindIssueNotification(port, binding) {
     return {
         addComment: (issueNumber, comment) => port.addComment(binding.owner, binding.repository, issueNumber, comment, binding.token),
+    };
+}
+function bindIssueCommentQuery(port, binding) {
+    return {
+        listIssueComments: (issueNumber) => port.listIssueComments(binding.owner, binding.repository, issueNumber, binding.token),
     };
 }
 function bindIssueCommentUpdate(port, binding) {
