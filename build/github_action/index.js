@@ -39603,6 +39603,7 @@ const publish_resume_workflow_1 = __nccwpck_require__(55340);
 const store_configuration_use_case_2 = __nccwpck_require__(84375);
 const logger_1 = __nccwpck_require__(91151);
 const action_summary_policy_1 = __nccwpck_require__(72995);
+const action_summary_message_catalog_1 = __nccwpck_require__(61544);
 const copilot_lifecycle_1 = __nccwpck_require__(72418);
 const copilot_evidence_policy_1 = __nccwpck_require__(47632);
 const application_error_1 = __nccwpck_require__(75999);
@@ -39664,6 +39665,7 @@ async function writeActionSummary(execution, summaryPort, catalogResolver) {
         : locale;
     let body;
     let localizationLabels;
+    let appendLocalizationEvidence = false;
     if (execution.singleAction.isDeploymentOrchestrationAction && operation) {
         const effectiveLocale = operation.locale ?? locale;
         const catalog = await (0, deployment_message_catalog_1.resolveDeploymentCatalog)(effectiveLocale.repository, execution.ai.getAgentConfiguration('planner'), catalogResolver);
@@ -39679,6 +39681,7 @@ async function writeActionSummary(execution, summaryPort, catalogResolver) {
             descriptors: messages.descriptors,
             reason: messages.reason,
         };
+        appendLocalizationEvidence = true;
         body = (0, deployment_presentation_policy_1.renderDeploymentJobSummary)(operation, {
             owner: execution.owner,
             repository: execution.repo,
@@ -39693,6 +39696,7 @@ async function writeActionSummary(execution, summaryPort, catalogResolver) {
         }, operation.lastFailure?.previousPhase, catalog);
     }
     else {
+        const catalog = await (0, action_summary_message_catalog_1.resolveActionSummaryCatalog)(locale.repository, execution.ai.getAgentConfiguration('planner'), catalogResolver);
         body = (0, action_summary_policy_1.buildActionSummary)({
             owner: execution.owner,
             repository: execution.repo,
@@ -39711,13 +39715,15 @@ async function writeActionSummary(execution, summaryPort, catalogResolver) {
             },
             catalogResolutions: catalogResolver?.observations?.() ?? [],
             results: execution.currentConfiguration.results,
-        });
+        }, catalog);
     }
-    const localizationEvidence = (0, action_summary_policy_1.renderLocalizationSummarySection)({
-        repository: summaryLocale.repository,
-        issue: summaryLocale.issue,
-        pullRequest: summaryLocale.pullRequest,
-    }, catalogResolver?.observations?.() ?? [], localizationLabels);
+    const localizationEvidence = appendLocalizationEvidence
+        ? (0, action_summary_policy_1.renderLocalizationSummarySection)({
+            repository: summaryLocale.repository,
+            issue: summaryLocale.issue,
+            pullRequest: summaryLocale.pullRequest,
+        }, catalogResolver?.observations?.() ?? [], localizationLabels)
+        : '';
     const summaryText = [body, localizationEvidence].filter(Boolean).join('\n\n');
     if (!summaryPort)
         return summaryText;
@@ -41120,6 +41126,180 @@ function runAtApplicationErrorBoundary(operation) {
 
 /***/ }),
 
+/***/ 61544:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ACTION_SUMMARY_CATALOG_DEFINITIONS = exports.SPANISH_ACTION_SUMMARY_DEFINITION = exports.ENGLISH_ACTION_SUMMARY_DEFINITION = exports.ACTION_SUMMARY_MESSAGE_IDS = void 0;
+exports.resolveStaticActionSummaryCatalog = resolveStaticActionSummaryCatalog;
+exports.resolveActionSummaryCatalog = resolveActionSummaryCatalog;
+const message_catalog_1 = __nccwpck_require__(27097);
+const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
+const SIMPLE_MESSAGE_KEYS = Object.freeze([
+    'heading', 'repository', 'property', 'value', 'status', 'event', 'target',
+    'lifecycle', 'descriptionPolicy', 'results', 'findingStates', 'bugbotReview',
+    'resultDetails', 'localization', 'repositoryLocale', 'issueLocale',
+    'pullRequestLocale', 'catalogResolution', 'descriptors', 'reason', 'failure',
+    'findings', 'partial', 'superseded', 'skipped', 'dryRun', 'success', 'invalid',
+    'none', 'noResult', 'unnamedResult', 'impact', 'cause', 'action',
+    'retainedState', 'reference',
+]);
+const TEMPLATE_MESSAGE_IDS = Object.freeze([
+    'summary.target.pullRequest',
+    'summary.target.issue',
+    'summary.target.repositoryRun',
+    'summary.bugbotTelemetry',
+]);
+const FINDING_STATE_KEYS = Object.freeze([
+    'open', 'reopened', 'fixed', 'obsolete', 'dismissed',
+    'verification-required', 'unknown',
+]);
+exports.ACTION_SUMMARY_MESSAGE_IDS = Object.freeze([
+    ...SIMPLE_MESSAGE_KEYS.map(key => `summary.${key}`),
+    ...TEMPLATE_MESSAGE_IDS,
+    ...FINDING_STATE_KEYS.map(key => `summary.findingState.${key}`),
+]);
+const ENGLISH_SIMPLE = Object.freeze({
+    heading: 'Copilot execution',
+    repository: 'Repository',
+    property: 'Property',
+    value: 'Value',
+    status: 'Status',
+    event: 'Event',
+    target: 'Target',
+    lifecycle: 'Lifecycle',
+    descriptionPolicy: 'PR description policy',
+    results: 'Results',
+    findingStates: 'Finding states',
+    bugbotReview: 'Bugbot review',
+    resultDetails: 'Result details',
+    localization: 'Localization',
+    repositoryLocale: 'Repository locale',
+    issueLocale: 'Issue locale',
+    pullRequestLocale: 'Pull-request locale',
+    catalogResolution: 'Catalog resolution',
+    descriptors: 'descriptors',
+    reason: 'reason',
+    failure: 'Failure',
+    findings: 'Findings',
+    partial: 'Partial',
+    superseded: 'Superseded',
+    skipped: 'Skipped',
+    dryRun: 'Dry run',
+    success: 'Success',
+    invalid: 'invalid',
+    none: 'none',
+    noResult: 'No application result was produced.',
+    unnamedResult: 'Unnamed result',
+    impact: 'Impact',
+    cause: 'Cause',
+    action: 'Action',
+    retainedState: 'Retained state',
+    reference: 'Reference',
+});
+const SPANISH_SIMPLE = Object.freeze({
+    heading: 'Ejecución de Copilot',
+    repository: 'Repositorio',
+    property: 'Propiedad',
+    value: 'Valor',
+    status: 'Estado',
+    event: 'Evento',
+    target: 'Destino',
+    lifecycle: 'Ciclo de vida',
+    descriptionPolicy: 'Política de descripción de PR',
+    results: 'Resultados',
+    findingStates: 'Estados de los hallazgos',
+    bugbotReview: 'Revisión de Bugbot',
+    resultDetails: 'Detalles del resultado',
+    localization: 'Localización',
+    repositoryLocale: 'Locale del repositorio',
+    issueLocale: 'Locale de la issue',
+    pullRequestLocale: 'Locale de la pull request',
+    catalogResolution: 'Resolución del catálogo',
+    descriptors: 'descriptores',
+    reason: 'motivo',
+    failure: 'Fallo',
+    findings: 'Hallazgos',
+    partial: 'Parcial',
+    superseded: 'Sustituido',
+    skipped: 'Omitido',
+    dryRun: 'Simulación',
+    success: 'Correcto',
+    invalid: 'no válido',
+    none: 'ninguno',
+    noResult: 'No se ha producido ningún resultado de aplicación.',
+    unnamedResult: 'Resultado sin nombre',
+    impact: 'Impacto',
+    cause: 'Causa',
+    action: 'Acción',
+    retainedState: 'Estado conservado',
+    reference: 'Referencia',
+});
+const ENGLISH_TEMPLATES = Object.freeze({
+    'summary.target.pullRequest': 'PR #{number}',
+    'summary.target.issue': 'Issue #{number}',
+    'summary.target.repositoryRun': 'Repository run',
+    'summary.bugbotTelemetry': '{outcome}, effort={effort}, {elapsed}ms',
+});
+const SPANISH_TEMPLATES = Object.freeze({
+    'summary.target.pullRequest': 'PR n.º {number}',
+    'summary.target.issue': 'Issue n.º {number}',
+    'summary.target.repositoryRun': 'Ejecución del repositorio',
+    'summary.bugbotTelemetry': '{outcome}, esfuerzo={effort}, {elapsed} ms',
+});
+const ENGLISH_FINDING_STATES = Object.freeze({
+    open: 'open',
+    reopened: 'reopened',
+    fixed: 'fixed',
+    obsolete: 'obsolete',
+    dismissed: 'dismissed',
+    'verification-required': 'verification required',
+    unknown: 'unknown',
+});
+const SPANISH_FINDING_STATES = Object.freeze({
+    open: 'abiertos',
+    reopened: 'reabiertos',
+    fixed: 'corregidos',
+    obsolete: 'obsoletos',
+    dismissed: 'descartados',
+    'verification-required': 'requieren verificación',
+    unknown: 'desconocidos',
+});
+function catalogMessages(simple, templates, findingStates) {
+    return Object.freeze({
+        ...Object.fromEntries(SIMPLE_MESSAGE_KEYS.map(key => [`summary.${key}`, simple[key]])),
+        ...templates,
+        ...Object.fromEntries(FINDING_STATE_KEYS.map(key => [`summary.findingState.${key}`, findingStates[key]])),
+    });
+}
+exports.ENGLISH_ACTION_SUMMARY_DEFINITION = Object.freeze({
+    version: message_catalog_1.MESSAGE_CATALOG_VERSION,
+    locale: 'en-US',
+    compatibleBaseLanguage: 'en',
+    messages: catalogMessages(ENGLISH_SIMPLE, ENGLISH_TEMPLATES, ENGLISH_FINDING_STATES),
+});
+exports.SPANISH_ACTION_SUMMARY_DEFINITION = Object.freeze({
+    version: message_catalog_1.MESSAGE_CATALOG_VERSION,
+    locale: 'es-ES',
+    compatibleBaseLanguage: 'es',
+    messages: catalogMessages(SPANISH_SIMPLE, SPANISH_TEMPLATES, SPANISH_FINDING_STATES),
+});
+exports.ACTION_SUMMARY_CATALOG_DEFINITIONS = Object.freeze([
+    exports.ENGLISH_ACTION_SUMMARY_DEFINITION,
+    exports.SPANISH_ACTION_SUMMARY_DEFINITION,
+]);
+function resolveStaticActionSummaryCatalog(locale) {
+    return (0, resolved_message_catalog_policy_1.resolveStaticMessageCatalogView)(locale, exports.ENGLISH_ACTION_SUMMARY_DEFINITION, exports.ACTION_SUMMARY_CATALOG_DEFINITIONS);
+}
+async function resolveActionSummaryCatalog(locale, configuration, resolver) {
+    return (0, resolved_message_catalog_policy_1.resolveMessageCatalogView)(locale, exports.ACTION_SUMMARY_MESSAGE_IDS, exports.ENGLISH_ACTION_SUMMARY_DEFINITION, exports.ACTION_SUMMARY_CATALOG_DEFINITIONS, configuration, resolver);
+}
+
+
+/***/ }),
+
 /***/ 72995:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -41127,12 +41307,14 @@ function runAtApplicationErrorBoundary(operation) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildActionSummary = buildActionSummary;
+exports.actionSummaryLocalizationLabels = actionSummaryLocalizationLabels;
 exports.renderLocalizationSummarySection = renderLocalizationSummarySection;
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const application_error_presentation_policy_1 = __nccwpck_require__(95067);
 const bugbot_telemetry_projection_policy_1 = __nccwpck_require__(43244);
 const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
 const review_state_1 = __nccwpck_require__(79200);
+const action_summary_message_catalog_1 = __nccwpck_require__(61544);
 const ENGLISH_LOCALIZATION_SUMMARY_LABELS = Object.freeze({
     heading: 'Localization',
     property: 'Property',
@@ -41144,8 +41326,8 @@ const ENGLISH_LOCALIZATION_SUMMARY_LABELS = Object.freeze({
     descriptors: 'descriptors',
     reason: 'reason',
 });
-/** Builds a bounded, publication-safe GitHub Actions Job Summary. */
-function buildActionSummary(context) {
+/** Builds one bounded, publication-safe, repository-locale GitHub Actions Job Summary. */
+function buildActionSummary(context, catalog = (0, action_summary_message_catalog_1.resolveStaticActionSummaryCatalog)(context.locale?.repository ?? 'en-US')) {
     const failures = context.results.filter(result => !result.success && result.executed);
     const findingStateProjection = (0, bugbot_result_finding_state_projection_policy_1.projectBugbotResultFindingStates)(context.results);
     const findingStates = findingStateProjection.status === 'valid' ? findingStateProjection.counts : undefined;
@@ -41159,34 +41341,48 @@ function buildActionSummary(context) {
         hasActionableFindings,
         failOnUnresolvedFindings: context.failOnUnresolvedFindings === true,
         bugbotTelemetry,
-    });
-    const target = resolveActionSummaryTarget(context);
+    }, catalog);
+    const target = resolveActionSummaryTarget(context, catalog);
     const lifecycle = context.lifecycleState ? `\`${(0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(context.lifecycleState, 100)}\`` : '—';
     const rows = [
-        `| Status | ${status} |`,
-        `| Event | \`${escapeTable(context.eventName)}\` |`,
-        `| Target | ${escapeTable(target)} |`,
-        `| Lifecycle | ${lifecycle} |`,
-        `| PR description policy | ${escapeTable(context.pullRequestDescriptionMode ?? '—')} |`,
-        `| Results | ${context.results.length} |`,
-        `| Finding states | ${formatFindingStates(findingStateProjection)} |`,
-        `| Bugbot review | ${formatBugbotTelemetry(telemetryProjection)} |`,
-        ...localizationSummaryRows(context.locale, context.catalogResolutions),
+        `| ${catalog.message('summary.status')} | ${status} |`,
+        `| ${catalog.message('summary.event')} | \`${escapeTable(context.eventName)}\` |`,
+        `| ${catalog.message('summary.target')} | ${escapeTable(target)} |`,
+        `| ${catalog.message('summary.lifecycle')} | ${lifecycle} |`,
+        `| ${catalog.message('summary.descriptionPolicy')} | ${escapeTable(context.pullRequestDescriptionMode ?? '—')} |`,
+        `| ${catalog.message('summary.results')} | ${context.results.length} |`,
+        `| ${catalog.message('summary.findingStates')} | ${formatFindingStates(findingStateProjection, catalog)} |`,
+        `| ${catalog.message('summary.bugbotReview')} | ${formatBugbotTelemetry(telemetryProjection, catalog)} |`,
     ];
+    const localization = renderLocalizationSummarySection(context.locale, context.catalogResolutions, actionSummaryLocalizationLabels(catalog));
     return [
-        '# Copilot execution',
+        `# ${catalog.message('summary.heading')}`,
         '',
-        `Repository: [${escapeTable(`${context.owner}/${context.repository}`)}](https://github.com/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)})`,
+        `${catalog.message('summary.repository')}: [${escapeTable(`${context.owner}/${context.repository}`)}](https://github.com/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)})`,
         '',
-        '| Property | Value |',
+        `| ${catalog.message('summary.property')} | ${catalog.message('summary.value')} |`,
         '| --- | --- |',
         ...rows,
         '',
-        '## Result details',
+        `## ${catalog.message('summary.resultDetails')}`,
         '',
-        renderResults(context.results),
+        renderResults(context.results, catalog),
         '',
+        localization,
     ].join('\n');
+}
+function actionSummaryLocalizationLabels(catalog) {
+    return Object.freeze({
+        heading: catalog.message('summary.localization'),
+        property: catalog.message('summary.property'),
+        value: catalog.message('summary.value'),
+        repositoryLocale: catalog.message('summary.repositoryLocale'),
+        issueLocale: catalog.message('summary.issueLocale'),
+        pullRequestLocale: catalog.message('summary.pullRequestLocale'),
+        catalogResolution: catalog.message('summary.catalogResolution'),
+        descriptors: catalog.message('summary.descriptors'),
+        reason: catalog.message('summary.reason'),
+    });
 }
 /** Renders the same content-free locale evidence for summaries owned by specialized workflows. */
 function renderLocalizationSummarySection(locale, catalogResolutions = [], labels = ENGLISH_LOCALIZATION_SUMMARY_LABELS) {
@@ -41220,50 +41416,55 @@ function formatCatalogResolutions(observations, labels) {
         return `\`${escapeTable(observation.requestedLocale)} -> ${escapeTable(observation.resolvedLocale)} (${observation.source}, ${labels.descriptors}=${observation.descriptorCount}${fallback})\``;
     }).join('<br>');
 }
-function resolveActionSummaryStatus(input) {
+function resolveActionSummaryStatus(input, catalog) {
     if (input.failureCount > 0 || input.hasUnknownFindings)
-        return '❌ Failure';
+        return `❌ ${catalog.message('summary.failure')}`;
     if (input.bugbotTelemetry?.outcome === 'failed')
-        return '❌ Failure';
+        return `❌ ${catalog.message('summary.failure')}`;
     if (input.hasActionableFindings && input.failOnUnresolvedFindings)
-        return '❌ Failure';
+        return `❌ ${catalog.message('summary.failure')}`;
     if (input.hasActionableFindings)
-        return '⚠️ Findings';
+        return `⚠️ ${catalog.message('summary.findings')}`;
     switch (input.bugbotTelemetry?.outcome) {
-        case 'partial': return '⚠️ Partial';
-        case 'superseded': return '⏭️ Superseded';
-        case 'skipped': return '⏭️ Skipped';
-        case 'dry-run': return '🧪 Dry run';
-        default: return '✅ Success';
+        case 'partial': return `⚠️ ${catalog.message('summary.partial')}`;
+        case 'superseded': return `⏭️ ${catalog.message('summary.superseded')}`;
+        case 'skipped': return `⏭️ ${catalog.message('summary.skipped')}`;
+        case 'dry-run': return `🧪 ${catalog.message('summary.dryRun')}`;
+        default: return `✅ ${catalog.message('summary.success')}`;
     }
 }
-function resolveActionSummaryTarget(context) {
-    if (context.pullRequestNumber > 0)
-        return `PR #${context.pullRequestNumber}`;
+function resolveActionSummaryTarget(context, catalog) {
+    if (context.pullRequestNumber > 0) {
+        return catalog.message('summary.target.pullRequest', { number: context.pullRequestNumber });
+    }
     if (context.issueNumber > 0)
-        return `Issue #${context.issueNumber}`;
-    return 'Repository run';
+        return catalog.message('summary.target.issue', { number: context.issueNumber });
+    return catalog.message('summary.target.repositoryRun');
 }
-function formatBugbotTelemetry(projection) {
+function formatBugbotTelemetry(projection, catalog) {
     if (projection.status === 'invalid')
-        return 'invalid';
+        return catalog.message('summary.invalid');
     if (projection.status === 'absent')
         return '—';
-    return `${escapeTable(projection.telemetry.outcome)}, effort=${escapeTable(projection.telemetry.configuredEffort)}, ${Math.max(0, Math.round(projection.telemetry.elapsedMs))}ms`;
+    return catalog.message('summary.bugbotTelemetry', {
+        outcome: escapeTable(projection.telemetry.outcome),
+        effort: escapeTable(projection.telemetry.configuredEffort),
+        elapsed: Math.max(0, Math.round(projection.telemetry.elapsedMs)),
+    });
 }
-function formatFindingStates(projection) {
+function formatFindingStates(projection, catalog) {
     if (projection.status === 'invalid')
-        return 'invalid';
+        return catalog.message('summary.invalid');
     if (projection.status === 'absent')
         return '—';
     return Object.entries(projection.counts)
         .filter(([, value]) => value > 0)
-        .map(([state, value]) => `${state}=${value}`)
-        .join(', ') || 'none';
+        .map(([state, value]) => `${catalog.message(`summary.findingState.${state}`)}=${value}`)
+        .join(', ') || catalog.message('summary.none');
 }
-function renderResults(results) {
+function renderResults(results, catalog) {
     if (results.length === 0)
-        return '_No application result was produced._';
+        return `_${catalog.message('summary.noResult')}_`;
     return results.map(result => {
         const icon = result.success ? '✅' : '❌';
         const details = result.steps
@@ -41273,14 +41474,14 @@ function renderResults(results) {
             .flatMap((error) => {
             const view = (0, application_error_presentation_policy_1.buildApplicationErrorPresentation)(error);
             return [
-                `  - **Impact:** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(view.impact)}`,
-                `    - **Cause (\`${view.code}\`):** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(view.cause)}`,
-                `    - **Action:** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(view.action)}`,
-                `    - **Retained state:** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(view.retainedState)}`,
-                `    - **Reference:** \`${view.reference}\``,
+                `  - **${catalog.message('summary.impact')}:** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(view.impact)}`,
+                `    - **${catalog.message('summary.cause')} (\`${view.code}\`):** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(view.cause)}`,
+                `    - **${catalog.message('summary.action')}:** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(view.action)}`,
+                `    - **${catalog.message('summary.retainedState')}:** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(view.retainedState)}`,
+                `    - **${catalog.message('summary.reference')}:** \`${view.reference}\``,
             ];
         });
-        return [`- ${icon} **${escapeTable(result.id || 'Unnamed result')}**`, ...details, ...errors].join('\n');
+        return [`- ${icon} **${escapeTable(result.id || catalog.message('summary.unnamedResult'))}**`, ...details, ...errors].join('\n');
     }).join('\n');
 }
 function escapeTable(value) {

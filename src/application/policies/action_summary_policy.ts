@@ -12,6 +12,11 @@ import {
 } from './bugbot_result_finding_state_projection_policy';
 import { countActionableBugbotFindings } from '../../domain/bugbot/review_state';
 import type { CatalogResolutionObservation } from '../../domain/message_catalog';
+import {
+    resolveStaticActionSummaryCatalog,
+    type ActionSummaryFindingState,
+    type ActionSummaryMessageCatalog,
+} from './action_summary_message_catalog';
 
 export interface ActionSummaryContext {
     readonly owner: string;
@@ -51,8 +56,11 @@ const ENGLISH_LOCALIZATION_SUMMARY_LABELS: LocalizationSummaryLabels = Object.fr
     reason: 'reason',
 });
 
-/** Builds a bounded, publication-safe GitHub Actions Job Summary. */
-export function buildActionSummary(context: ActionSummaryContext): string {
+/** Builds one bounded, publication-safe, repository-locale GitHub Actions Job Summary. */
+export function buildActionSummary(
+    context: ActionSummaryContext,
+    catalog: ActionSummaryMessageCatalog = resolveStaticActionSummaryCatalog(context.locale?.repository ?? 'en-US'),
+): string {
     const failures = context.results.filter(result => !result.success && result.executed);
     const findingStateProjection = projectBugbotResultFindingStates(context.results);
     const findingStates = findingStateProjection.status === 'valid' ? findingStateProjection.counts : undefined;
@@ -66,35 +74,54 @@ export function buildActionSummary(context: ActionSummaryContext): string {
         hasActionableFindings,
         failOnUnresolvedFindings: context.failOnUnresolvedFindings === true,
         bugbotTelemetry,
-    });
-    const target = resolveActionSummaryTarget(context);
+    }, catalog);
+    const target = resolveActionSummaryTarget(context, catalog);
     const lifecycle = context.lifecycleState ? `\`${sanitizeAgentMarkdown(context.lifecycleState, 100)}\`` : '—';
     const rows = [
-        `| Status | ${status} |`,
-        `| Event | \`${escapeTable(context.eventName)}\` |`,
-        `| Target | ${escapeTable(target)} |`,
-        `| Lifecycle | ${lifecycle} |`,
-        `| PR description policy | ${escapeTable(context.pullRequestDescriptionMode ?? '—')} |`,
-        `| Results | ${context.results.length} |`,
-        `| Finding states | ${formatFindingStates(findingStateProjection)} |`,
-        `| Bugbot review | ${formatBugbotTelemetry(telemetryProjection)} |`,
-        ...localizationSummaryRows(context.locale, context.catalogResolutions),
+        `| ${catalog.message('summary.status')} | ${status} |`,
+        `| ${catalog.message('summary.event')} | \`${escapeTable(context.eventName)}\` |`,
+        `| ${catalog.message('summary.target')} | ${escapeTable(target)} |`,
+        `| ${catalog.message('summary.lifecycle')} | ${lifecycle} |`,
+        `| ${catalog.message('summary.descriptionPolicy')} | ${escapeTable(context.pullRequestDescriptionMode ?? '—')} |`,
+        `| ${catalog.message('summary.results')} | ${context.results.length} |`,
+        `| ${catalog.message('summary.findingStates')} | ${formatFindingStates(findingStateProjection, catalog)} |`,
+        `| ${catalog.message('summary.bugbotReview')} | ${formatBugbotTelemetry(telemetryProjection, catalog)} |`,
     ];
+    const localization = renderLocalizationSummarySection(
+        context.locale,
+        context.catalogResolutions,
+        actionSummaryLocalizationLabels(catalog),
+    );
 
     return [
-        '# Copilot execution',
+        `# ${catalog.message('summary.heading')}`,
         '',
-        `Repository: [${escapeTable(`${context.owner}/${context.repository}`)}](https://github.com/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)})`,
+        `${catalog.message('summary.repository')}: [${escapeTable(`${context.owner}/${context.repository}`)}](https://github.com/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)})`,
         '',
-        '| Property | Value |',
+        `| ${catalog.message('summary.property')} | ${catalog.message('summary.value')} |`,
         '| --- | --- |',
         ...rows,
         '',
-        '## Result details',
+        `## ${catalog.message('summary.resultDetails')}`,
         '',
-        renderResults(context.results),
+        renderResults(context.results, catalog),
         '',
+        localization,
     ].join('\n');
+}
+
+export function actionSummaryLocalizationLabels(catalog: ActionSummaryMessageCatalog): LocalizationSummaryLabels {
+    return Object.freeze({
+        heading: catalog.message('summary.localization'),
+        property: catalog.message('summary.property'),
+        value: catalog.message('summary.value'),
+        repositoryLocale: catalog.message('summary.repositoryLocale'),
+        issueLocale: catalog.message('summary.issueLocale'),
+        pullRequestLocale: catalog.message('summary.pullRequestLocale'),
+        catalogResolution: catalog.message('summary.catalogResolution'),
+        descriptors: catalog.message('summary.descriptors'),
+        reason: catalog.message('summary.reason'),
+    });
 }
 
 /** Renders the same content-free locale evidence for summaries owned by specialized workflows. */
@@ -150,43 +177,55 @@ interface ActionSummaryStatusInput {
     readonly bugbotTelemetry?: BugbotTelemetryProjection;
 }
 
-function resolveActionSummaryStatus(input: ActionSummaryStatusInput): string {
-    if (input.failureCount > 0 || input.hasUnknownFindings) return '❌ Failure';
-    if (input.bugbotTelemetry?.outcome === 'failed') return '❌ Failure';
-    if (input.hasActionableFindings && input.failOnUnresolvedFindings) return '❌ Failure';
-    if (input.hasActionableFindings) return '⚠️ Findings';
+function resolveActionSummaryStatus(input: ActionSummaryStatusInput, catalog: ActionSummaryMessageCatalog): string {
+    if (input.failureCount > 0 || input.hasUnknownFindings) return `❌ ${catalog.message('summary.failure')}`;
+    if (input.bugbotTelemetry?.outcome === 'failed') return `❌ ${catalog.message('summary.failure')}`;
+    if (input.hasActionableFindings && input.failOnUnresolvedFindings) return `❌ ${catalog.message('summary.failure')}`;
+    if (input.hasActionableFindings) return `⚠️ ${catalog.message('summary.findings')}`;
     switch (input.bugbotTelemetry?.outcome) {
-        case 'partial': return '⚠️ Partial';
-        case 'superseded': return '⏭️ Superseded';
-        case 'skipped': return '⏭️ Skipped';
-        case 'dry-run': return '🧪 Dry run';
-        default: return '✅ Success';
+        case 'partial': return `⚠️ ${catalog.message('summary.partial')}`;
+        case 'superseded': return `⏭️ ${catalog.message('summary.superseded')}`;
+        case 'skipped': return `⏭️ ${catalog.message('summary.skipped')}`;
+        case 'dry-run': return `🧪 ${catalog.message('summary.dryRun')}`;
+        default: return `✅ ${catalog.message('summary.success')}`;
     }
 }
 
-function resolveActionSummaryTarget(context: ActionSummaryContext): string {
-    if (context.pullRequestNumber > 0) return `PR #${context.pullRequestNumber}`;
-    if (context.issueNumber > 0) return `Issue #${context.issueNumber}`;
-    return 'Repository run';
+function resolveActionSummaryTarget(context: ActionSummaryContext, catalog: ActionSummaryMessageCatalog): string {
+    if (context.pullRequestNumber > 0) {
+        return catalog.message('summary.target.pullRequest', { number: context.pullRequestNumber });
+    }
+    if (context.issueNumber > 0) return catalog.message('summary.target.issue', { number: context.issueNumber });
+    return catalog.message('summary.target.repositoryRun');
 }
 
-function formatBugbotTelemetry(projection: BugbotResultTelemetryProjection): string {
-    if (projection.status === 'invalid') return 'invalid';
+function formatBugbotTelemetry(
+    projection: BugbotResultTelemetryProjection,
+    catalog: ActionSummaryMessageCatalog,
+): string {
+    if (projection.status === 'invalid') return catalog.message('summary.invalid');
     if (projection.status === 'absent') return '—';
-    return `${escapeTable(projection.telemetry.outcome)}, effort=${escapeTable(projection.telemetry.configuredEffort)}, ${Math.max(0, Math.round(projection.telemetry.elapsedMs))}ms`;
+    return catalog.message('summary.bugbotTelemetry', {
+        outcome: escapeTable(projection.telemetry.outcome),
+        effort: escapeTable(projection.telemetry.configuredEffort),
+        elapsed: Math.max(0, Math.round(projection.telemetry.elapsedMs)),
+    });
 }
 
-function formatFindingStates(projection: BugbotResultFindingStateProjection): string {
-    if (projection.status === 'invalid') return 'invalid';
+function formatFindingStates(
+    projection: BugbotResultFindingStateProjection,
+    catalog: ActionSummaryMessageCatalog,
+): string {
+    if (projection.status === 'invalid') return catalog.message('summary.invalid');
     if (projection.status === 'absent') return '—';
     return Object.entries(projection.counts)
         .filter(([, value]) => value > 0)
-        .map(([state, value]) => `${state}=${value}`)
-        .join(', ') || 'none';
+        .map(([state, value]) => `${catalog.message(`summary.findingState.${state as ActionSummaryFindingState}`)}=${value}`)
+        .join(', ') || catalog.message('summary.none');
 }
 
-function renderResults(results: readonly Result[]): string {
-    if (results.length === 0) return '_No application result was produced._';
+function renderResults(results: readonly Result[], catalog: ActionSummaryMessageCatalog): string {
+    if (results.length === 0) return `_${catalog.message('summary.noResult')}_`;
     return results.map(result => {
         const icon = result.success ? '✅' : '❌';
         const details = result.steps
@@ -196,14 +235,14 @@ function renderResults(results: readonly Result[]): string {
             .flatMap((error) => {
                 const view = buildApplicationErrorPresentation(error);
                 return [
-                    `  - **Impact:** ${sanitizePublishedError(view.impact)}`,
-                    `    - **Cause (\`${view.code}\`):** ${sanitizePublishedError(view.cause)}`,
-                    `    - **Action:** ${sanitizePublishedError(view.action)}`,
-                    `    - **Retained state:** ${sanitizePublishedError(view.retainedState)}`,
-                    `    - **Reference:** \`${view.reference}\``,
+                    `  - **${catalog.message('summary.impact')}:** ${sanitizePublishedError(view.impact)}`,
+                    `    - **${catalog.message('summary.cause')} (\`${view.code}\`):** ${sanitizePublishedError(view.cause)}`,
+                    `    - **${catalog.message('summary.action')}:** ${sanitizePublishedError(view.action)}`,
+                    `    - **${catalog.message('summary.retainedState')}:** ${sanitizePublishedError(view.retainedState)}`,
+                    `    - **${catalog.message('summary.reference')}:** \`${view.reference}\``,
                 ];
             });
-        return [`- ${icon} **${escapeTable(result.id || 'Unnamed result')}**`, ...details, ...errors].join('\n');
+        return [`- ${icon} **${escapeTable(result.id || catalog.message('summary.unnamedResult'))}**`, ...details, ...errors].join('\n');
     }).join('\n');
 }
 

@@ -254,6 +254,31 @@ describe('finishGithubAction', () => {
         expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('test-owner/test-repo'));
     });
 
+    it('uses one repository-locale section in a localized generic summary', async () => {
+        const action = Object.assign(execution(), {
+            locale: { repository: 'es-ES', issue: 'es-ES', pullRequest: 'es-ES' },
+        });
+        const resolver = new ResolveMessageCatalogUseCase();
+
+        await finishGithubAction(
+            action,
+            [new Result({ id: 'MetadataUseCase', success: true, executed: true, steps: ['Updated labels.'] })],
+            {} as never,
+            {} as never,
+            undefined,
+            { publish: mockSummaryPublish },
+            resolver,
+        );
+
+        const summary = mockSummaryPublish.mock.calls[0][0] as string;
+        expect(summary).toContain('# Ejecución de Copilot');
+        expect(summary).toContain('| Estado | ✅ Correcto |');
+        expect(summary).toContain('## Detalles del resultado');
+        expect(summary).toContain('| Locale del repositorio | `es-ES` |');
+        expect(summary.match(/## Localización/gu)).toHaveLength(1);
+        expect(summary).not.toContain('## Localization');
+    });
+
     it('uses the durable repository locale for deployment summaries without replaying internal steps', async () => {
         const action = Object.assign(singleActionExecution(), {
             singleAction: {

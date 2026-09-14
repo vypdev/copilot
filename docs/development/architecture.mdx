@@ -341,3 +341,10 @@ and deployment Job Summary. Provider mutations accept those rendered values but
 cannot choose phase transitions. Architecture tests enforce the narrow context,
 provider-neutral port vocabulary, mutation-free renderer, global dependency
 direction, and acyclic production imports.
+
+The generic GitHub Actions Job Summary follows the same boundary. One complete
+typed catalog is resolved for `repository-locale`; bundled English and Spanish,
+arbitrary dynamic locales, and atomic English fallback share the repository
+localization resolver. The summary renders localization evidence once, keeps
+machine event/state/error values stable, and retains sanitized internal result
+detail without publishing it to an issue or pull-request conversation.

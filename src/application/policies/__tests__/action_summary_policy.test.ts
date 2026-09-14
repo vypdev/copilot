@@ -1,6 +1,7 @@
 import { Result } from '../../../data/model/result';
 import { buildActionSummary, renderLocalizationSummarySection } from '../action_summary_policy';
 import { ApplicationError } from '../../errors/application_error';
+import { resolveStaticActionSummaryCatalog } from '../action_summary_message_catalog';
 
 const findingStates = (overrides: Record<string, number> = {}) => ({
     open: 0,
@@ -67,6 +68,30 @@ describe('action summary policy', () => {
         expect(summary).toContain('| Repository locale | `fr-FR` |');
         expect(summary).toContain('| Issue locale | `es-ES` |');
         expect(summary).toContain('fr-FR -> en-US (fallback, descriptors=63, reason=dynamic-response-invalid)');
+        expect(summary.match(/## Localization/gu)).toHaveLength(1);
+    });
+
+    it('renders the whole summary atomically in the repository locale', () => {
+        const summary = buildActionSummary({
+            owner: 'owner', repository: 'repo', eventName: 'issues', issueNumber: 7, pullRequestNumber: -1,
+            locale: { repository: 'es-ES', issue: 'es-ES', pullRequest: 'es-ES' },
+            results: [new Result({
+                id: '',
+                success: false,
+                executed: true,
+                errors: [new ApplicationError('workflow.failed', 'Workflow failed.')],
+            })],
+        }, resolveStaticActionSummaryCatalog('es-ES'));
+
+        expect(summary).toContain('# Ejecución de Copilot');
+        expect(summary).toContain('Repositorio: [owner/repo]');
+        expect(summary).toContain('| Estado | ❌ Fallo |');
+        expect(summary).toContain('| Destino | Issue n.º 7 |');
+        expect(summary).toContain('## Detalles del resultado');
+        expect(summary).toContain('**Resultado sin nombre**');
+        expect(summary).toContain('**Impacto:**');
+        expect(summary).toContain('## Localización');
+        expect(summary).not.toContain('## Localization');
     });
 
     it('reports executed failures without exposing raw stack traces', () => {

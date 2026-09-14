@@ -15,6 +15,7 @@ import {
     renderLocalizationSummarySection,
     type LocalizationSummaryLabels,
 } from '../application/policies/action_summary_policy';
+import { resolveActionSummaryCatalog } from '../application/policies/action_summary_message_catalog';
 import { lifecycleStateFromLabels } from '../domain/copilot_lifecycle';
 import type { CopilotEvidencePort } from '../application/ports/copilot_evidence_ports';
 import { buildCopilotEvidence } from '../application/policies/copilot_evidence_policy';
@@ -92,6 +93,7 @@ async function writeActionSummary(
         : locale;
     let body: string;
     let localizationLabels: LocalizationSummaryLabels | undefined;
+    let appendLocalizationEvidence = false;
     if (execution.singleAction.isDeploymentOrchestrationAction && operation) {
         const effectiveLocale = operation.locale ?? locale;
         const catalog = await resolveDeploymentCatalog(
@@ -111,6 +113,7 @@ async function writeActionSummary(
             descriptors: messages.descriptors,
             reason: messages.reason,
         };
+        appendLocalizationEvidence = true;
         body = renderDeploymentJobSummary(operation, {
             owner: execution.owner,
             repository: execution.repo,
@@ -124,6 +127,11 @@ async function writeActionSummary(
                 : undefined,
         }, operation.lastFailure?.previousPhase, catalog);
     } else {
+        const catalog = await resolveActionSummaryCatalog(
+            locale.repository,
+            execution.ai.getAgentConfiguration('planner'),
+            catalogResolver,
+        );
         body = buildActionSummary({
             owner: execution.owner,
             repository: execution.repo,
@@ -145,13 +153,15 @@ async function writeActionSummary(
             },
             catalogResolutions: catalogResolver?.observations?.() ?? [],
             results: execution.currentConfiguration.results,
-        });
+        }, catalog);
     }
-    const localizationEvidence = renderLocalizationSummarySection({
-        repository: summaryLocale.repository,
-        issue: summaryLocale.issue,
-        pullRequest: summaryLocale.pullRequest,
-    }, catalogResolver?.observations?.() ?? [], localizationLabels);
+    const localizationEvidence = appendLocalizationEvidence
+        ? renderLocalizationSummarySection({
+            repository: summaryLocale.repository,
+            issue: summaryLocale.issue,
+            pullRequest: summaryLocale.pullRequest,
+        }, catalogResolver?.observations?.() ?? [], localizationLabels)
+        : '';
     const summaryText = [body, localizationEvidence].filter(Boolean).join('\n\n');
     if (!summaryPort) return summaryText;
     try {
