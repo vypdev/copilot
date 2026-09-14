@@ -4,6 +4,8 @@ import { Result } from '../../data/model/result';
 import { finishGithubAction } from '../github_action_completion';
 import * as core from '@actions/core';
 import { ApplicationError } from '../../application/errors/application_error';
+import type { DeploymentOperationSnapshot } from '../../domain/deployment_operation';
+import { ResolveMessageCatalogUseCase } from '../../application/usecases/localization/resolve_message_catalog_use_case';
 
 jest.mock('@actions/core', () => ({ setOutput: jest.fn(), setFailed: jest.fn() }));
 
@@ -28,6 +30,43 @@ const recommendationState = {
     recommendationFingerprint: 'recommendation-hash',
     recommendation: '1. Add tests',
 };
+
+function deploymentOperation(): DeploymentOperationSnapshot {
+    return {
+        stateVersion: 1,
+        revision: 3,
+        operationId: 'operation-12345678',
+        locale: { repository: 'es-ES', issue: 'fr-FR', pullRequest: 'de-DE', issueOverride: 'fr-FR', pullRequestOverride: 'de-DE' },
+        kind: 'release',
+        version: '3.4.0',
+        title: 'Release',
+        changelog: 'Changes',
+        phase: 'promotion_pr_pending',
+        strategy: 'production-lineage',
+        prMode: 'auto',
+        selectedPrMode: 'auto-merge',
+        backmergeMode: 'auto',
+        hotfixActiveReleasePolicy: 'prefer-release',
+        cleanup: 'all',
+        issueCompletion: 'close',
+        presentationMode: 'guided',
+        diagrams: true,
+        commentMode: 'update',
+        sourceBranch: 'release/3.4.0',
+        sourceSha: 'a'.repeat(40),
+        originBranch: 'develop',
+        originSha: 'b'.repeat(40),
+        productionBranch: 'master',
+        developmentBranch: 'develop',
+        reconciliationTree: 'sync',
+        promotionPullRequest: 40,
+        tag: 'v3.4.0',
+        publicationWorkflow: 'release_workflow.yml',
+        publicationVerified: false,
+        reconciliationTargets: [],
+        lastFailure: null,
+    };
+}
 
 function execution(): Execution {
     return {
@@ -213,6 +252,47 @@ describe('finishGithubAction', () => {
         await finishGithubAction(action, results, {} as never, {} as never, undefined, { publish: mockSummaryPublish });
 
         expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('test-owner/test-repo'));
+    });
+
+    it('uses the durable repository locale for deployment summaries without replaying internal steps', async () => {
+        const action = Object.assign(singleActionExecution(), {
+            singleAction: {
+                ...singleActionExecution().singleAction,
+                issue: 11,
+                isDeploymentOrchestrationAction: true,
+            },
+            currentConfiguration: { results: [], deploymentOrchestration: deploymentOperation() },
+        }) as Execution;
+        const resolver = new ResolveMessageCatalogUseCase();
+        const resolve = jest.spyOn(resolver, 'resolve');
+        const results = [new Result({
+            id: 'DeploymentOrchestrationUseCase',
+            success: true,
+            executed: true,
+            steps: ['Created promotion PR #40'],
+        })];
+
+        await finishGithubAction(
+            action,
+            results,
+            {} as never,
+            {} as never,
+            undefined,
+            { publish: mockSummaryPublish },
+            resolver,
+        );
+
+        const summary = mockSummaryPublish.mock.calls[0][0] as string;
+        expect(summary).toContain('# ⏳ Orquestación del despliegue');
+        expect(summary).not.toContain('Created promotion PR #40');
+        expect(summary).toContain('## Localización');
+        expect(summary).toContain('| Propiedad | Valor |');
+        expect(summary).toContain('| Locale del repositorio | `es-ES` |');
+        expect(summary).not.toContain('## Localization');
+        expect(summary).toContain('`es-ES -> es-ES (exact');
+        expect(resolve).toHaveBeenCalledTimes(1);
+        expect(resolve).toHaveBeenCalledWith(expect.objectContaining({ targetLocale: 'es-ES' }));
+        expect(mockPublishInvoke).not.toHaveBeenCalled();
     });
 
     it('uses the short-lived evidence token only for the native Check Run', async () => {

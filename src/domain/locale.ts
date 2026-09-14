@@ -86,6 +86,25 @@ export function localeForScope(profile: LocaleProfile, scope: LocaleScope): stri
     return profile.repository;
 }
 
+export function isLocaleProfile(value: unknown): value is LocaleProfile {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const candidate = value as Partial<LocaleProfile>;
+    try {
+        const resolved = resolveLocaleProfile(
+            candidate.repository,
+            candidate.issueOverride ?? '',
+            candidate.pullRequestOverride ?? '',
+        );
+        return candidate.repository === resolved.repository
+            && candidate.issue === resolved.issue
+            && candidate.pullRequest === resolved.pullRequest
+            && candidate.issueOverride === resolved.issueOverride
+            && candidate.pullRequestOverride === resolved.pullRequestOverride;
+    } catch {
+        return false;
+    }
+}
+
 export function localeLanguagesMatch(left: string, right: string): boolean {
     return baseLanguage(canonicalizeLocaleTag(left)) === baseLanguage(canonicalizeLocaleTag(right));
 }

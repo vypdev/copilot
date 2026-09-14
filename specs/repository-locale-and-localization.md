@@ -3,7 +3,9 @@
 - Status: In implementation
 - Date: 2026-09-14
 - Catalog capability ID: github-communication-experience
-- Last verified: 2026-09-14 for the delivered foundation, shared publication, branch-sync, and Bugbot slices; remaining clauses are prospective
+- Last verified: 2026-09-14 for the delivered foundation, shared publication,
+  branch-sync, Bugbot, and deployment-presentation slices; remaining clauses
+  are prospective
 - Owners: Copilot maintainers
 - Scope: Define one English-default repository locale profile and apply it generically to deterministic UI, agent-generated content, and safe interpretation of addressed comments.
 - Related issues/PRs: [issue #334](https://github.com/vypdev/copilot/issues/334), [PR #363](https://github.com/vypdev/copilot/pull/363), [PR #365](https://github.com/vypdev/copilot/pull/365)
@@ -60,9 +62,11 @@ participant's message is a poor authorship and trust boundary: the timeline no
 longer shows exactly what that person wrote as the primary body, and downstream
 automation can observe model-generated text under the human comment identity.
 
-### 2.2 Current behavior
+### 2.2 Baseline behavior before rollout
 
-The following facts are verified in the 2026-09-14 repository snapshot:
+The following facts describe the pre-PR-#366 baseline audited on 2026-09-14.
+They are retained as migration evidence and are not claims about the current
+implementation:
 
 1. `Locale` is a mutable data model with only `issue` and `pullRequest` strings;
    `Locale.DEFAULT` is `en-US`.
@@ -804,6 +808,7 @@ I couldn't safely interpret this request in `fr-FR`, so no repository change was
 | Addressed request translation fails | no repository mutation | original human comment | user retry only | rephrase or restore provider | one fallback reply |
 | Catalog misses one required ID | build fails for bundled catalog; runtime dynamic slice falls back atomically | English catalog | no | fix catalog manifest | no partial catalog publication |
 | Locale changes during durable release | in-flight operation remains in snapshot locale | operation state and cards | next operation uses new profile | none | no historical rewrite |
+| Legacy version-1 release state has no locale snapshot | in-flight operation uses the currently resolved profile | legacy operation and irreversible facts | each continuation remains safe | finish the operation, then use a fresh issue for a frozen profile | no state rewrite |
 | Locale changes for normal status card | old language remains until next semantic update | card identity/state | rerender on next update | optional explicit status command | history untouched |
 | Legacy v2 translated human comment | historic authorship surface remains as-is | translated body plus embedded original | no automatic rewrite | user may edit own comment manually | reader remains tolerant |
 
@@ -932,18 +937,23 @@ pull-requests-locale: ""
 7. Update all named docs, generated workflows/action bundles, and related SDD
    clauses before announcing support.
 
-Implementation evidence as of 2026-09-14: PRs #366–#372 deliver the canonical
+Implementation evidence as of 2026-09-14: PRs #366–#373 deliver the canonical
 locale profile, typed and validated catalog resolution, English-default shared
 publication, non-mutating addressed-language adaptation, localized agent
 response contracts, branch synchronization, and bounded review context. The
-current Bugbot slice adds one typed catalog resolution per publishing operation
+Bugbot slice adds one typed catalog resolution per publishing operation
 and reuses it across status cards, review snapshots, inline and issue findings,
 overflow, and resolution notes. Exact/base Spanish resolution, arbitrary BCP-47
 dynamic resolution, atomic English fallback, issue-versus-PR scope selection,
 target-locale cardinal plural completeness, and skip/dry-run/no-mutation no-call
-behavior are executable tests. Deployment, merge
-readiness, lifecycle, setup/doctor, and the remaining public surfaces are not
-claimed complete by this evidence.
+behavior are executable tests. The deployment-presentation slice snapshots the
+effective locale for new durable operations, resolves one catalog per issue or
+managed-PR destination, renders repository-locale Job Summaries, localizes the
+four bounded milestones, and removes internal `Result.steps` from deployment
+operator UI. Legacy version-1 operations without a locale remain readable and
+use the current effective profile until completion. Merge-readiness diagnostics,
+lifecycle, setup/doctor, and the remaining public surfaces are not claimed
+complete by this evidence.
 
 ### 13.5 Rollback
 

@@ -10,7 +10,11 @@ import { projectPublishResultContext } from '../application/usecases/steps/commo
 import { projectConfigurationPersistenceContext } from '../application/usecases/steps/common/store_configuration_use_case';
 
 import { logInfo } from '../utils/logger';
-import { buildActionSummary, renderLocalizationSummarySection } from '../application/policies/action_summary_policy';
+import {
+    buildActionSummary,
+    renderLocalizationSummarySection,
+    type LocalizationSummaryLabels,
+} from '../application/policies/action_summary_policy';
 import { lifecycleStateFromLabels } from '../domain/copilot_lifecycle';
 import type { CopilotEvidencePort } from '../application/ports/copilot_evidence_ports';
 import { buildCopilotEvidence } from '../application/policies/copilot_evidence_policy';
@@ -18,6 +22,7 @@ import type { ActionSummaryPort } from '../application/ports/action_summary_port
 import { toApplicationError } from '../application/errors/application_error';
 import { shouldPersistConfiguration } from '../application/policies/configuration_persistence_policy';
 import { renderDeploymentJobSummary } from '../application/policies/deployment_presentation_policy';
+import { deploymentCopy, resolveDeploymentCatalog } from '../application/policies/deployment_message_catalog';
 import { projectBugbotResultFindingStates } from '../application/policies/bugbot_result_finding_state_projection_policy';
 import { countActionableBugbotFindings } from '../domain/bugbot/review_state';
 import type { MessageCatalogResolutionPort } from '../application/ports/message_catalog_ports';
@@ -82,26 +87,44 @@ async function writeActionSummary(
 ): Promise<string> {
     const operation = execution.currentConfiguration.deploymentOrchestration;
     const locale = execution.locale ?? { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' };
-    const localizationEvidence = renderLocalizationSummarySection({
-        repository: locale.repository,
-        issue: locale.issue,
-        pullRequest: locale.pullRequest,
-    }, catalogResolver?.observations?.() ?? []);
-    const summaryText = execution.singleAction.isDeploymentOrchestrationAction && operation
-        ? [renderDeploymentJobSummary(operation, {
+    const summaryLocale = execution.singleAction.isDeploymentOrchestrationAction && operation?.locale
+        ? operation.locale
+        : locale;
+    let body: string;
+    let localizationLabels: LocalizationSummaryLabels | undefined;
+    if (execution.singleAction.isDeploymentOrchestrationAction && operation) {
+        const effectiveLocale = operation.locale ?? locale;
+        const catalog = await resolveDeploymentCatalog(
+            effectiveLocale.repository,
+            execution.ai.getAgentConfiguration('planner'),
+            catalogResolver,
+        );
+        const messages = deploymentCopy(catalog);
+        localizationLabels = {
+            heading: messages.localization,
+            property: messages.property,
+            value: messages.value,
+            repositoryLocale: messages.repositoryLocaleLabel,
+            issueLocale: messages.issueLocaleLabel,
+            pullRequestLocale: messages.pullRequestLocaleLabel,
+            catalogResolution: messages.catalogResolution,
+            descriptors: messages.descriptors,
+            reason: messages.reason,
+        };
+        body = renderDeploymentJobSummary(operation, {
             owner: execution.owner,
             repository: execution.repo,
             issue: execution.singleAction.issue,
-            issueLocale: locale.issue,
-            pullRequestLocale: locale.pullRequest,
+            repositoryLocale: effectiveLocale.repository,
+            issueLocale: effectiveLocale.issue,
+            pullRequestLocale: effectiveLocale.pullRequest,
             packageName: execution.owner === 'vypdev' && execution.repo === 'copilot' ? '@vypdev/copilot' : undefined,
             workflowRunUrl: process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
                 ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
                 : undefined,
-        }, operation.lastFailure?.previousPhase, execution.currentConfiguration.results.flatMap((result) => result.steps ?? [])), localizationEvidence]
-            .filter(Boolean)
-            .join('\n\n')
-        : buildActionSummary({
+        }, operation.lastFailure?.previousPhase, catalog);
+    } else {
+        body = buildActionSummary({
             owner: execution.owner,
             repository: execution.repo,
             eventName: execution.eventName,
@@ -123,6 +146,13 @@ async function writeActionSummary(
             catalogResolutions: catalogResolver?.observations?.() ?? [],
             results: execution.currentConfiguration.results,
         });
+    }
+    const localizationEvidence = renderLocalizationSummarySection({
+        repository: summaryLocale.repository,
+        issue: summaryLocale.issue,
+        pullRequest: summaryLocale.pullRequest,
+    }, catalogResolver?.observations?.() ?? [], localizationLabels);
+    const summaryText = [body, localizationEvidence].filter(Boolean).join('\n\n');
     if (!summaryPort) return summaryText;
     try {
         await summaryPort.publish(summaryText);

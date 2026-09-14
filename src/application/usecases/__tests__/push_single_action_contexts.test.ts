@@ -386,7 +386,8 @@ describe('push and single-action context projection', () => {
       owner: 'owner', repo: 'repo', tokens: { token: 'secret-token' },
       branches: { defaultBranch: 'master', development: 'develop', releaseTree: 'release', hotfixTree: 'hotfix' },
       workflows: { release: 'release.yml', hotfix: 'hotfix.yml' },
-      locale: { issue: 'en', pullRequest: 'en' },
+      locale: { repository: 'fr-FR', issue: 'es-ES', pullRequest: 'de-DE', issueOverride: 'es-ES', pullRequestOverride: 'de-DE' },
+      ai: { getAgentConfiguration: () => ({ provider: 'codex', model: 'planner-model' }) },
       labels: { isRelease: true, isHotfix: false, deploy: 'deploy', deployed: 'deployed', lifecycle: DEFAULT_COPILOT_LIFECYCLE_LABELS },
       deployment: { ...DEFAULT_DEPLOYMENT_CONFIGURATION },
       singleAction: {
@@ -407,6 +408,10 @@ describe('push and single-action context projection', () => {
     expect('tokens' in projected).toBe(false);
     expect(raw.currentConfiguration.releaseBranch).toBe('release/1.2.3');
     expect(Object.isFrozen(projected.branches)).toBe(true);
+    expect(projected.locale).toEqual(raw.locale);
+    expect(Object.isFrozen(projected.locale)).toBe(true);
+    expect(projected.agentConfiguration).toEqual({ provider: 'codex', model: 'planner-model' });
+    expect(Object.isFrozen(projected.agentConfiguration)).toBe(true);
     expect(withoutOperation.currentConfiguration.deploymentOrchestration).toBeUndefined();
   });
 });

@@ -12,10 +12,16 @@ import {
 import {
   deploymentDashboardMarker,
   renderDeploymentDashboard,
+  renderDeploymentMilestone,
   renderPromotionPullRequest,
   renderReconciliationPullRequest,
+  type DeploymentMilestone,
   type DeploymentPresentationContext,
 } from "../policies/deployment_presentation_policy";
+import {
+  resolveDeploymentCatalog,
+  type DeploymentMessageCatalog,
+} from "../policies/deployment_message_catalog";
 import {
   blockDeploymentOperation,
   type DeploymentOperationSnapshot,
@@ -32,6 +38,8 @@ import { DeploymentStateBoundary } from "./deployment_state_boundary";
 export const DEPLOYMENT_ORCHESTRATION_TASK_ID = "DeploymentOrchestrationUseCase";
 
 export class DeploymentOrchestrationRuntime {
+  private readonly presentationCatalogs = new Map<string, Promise<DeploymentMessageCatalog>>();
+
   constructor(
     readonly dependencies: DeploymentOrchestrationDependencies,
     readonly stateBoundary: DeploymentStateBoundary,
@@ -59,8 +67,7 @@ export class DeploymentOrchestrationRuntime {
     await this.publishMilestone(
       context,
       blocked,
-      "reconciliation-blocked",
-      `❌ Deployment blocked: ${blocked.lastFailure?.message}`,
+      { kind: "reconciliation-blocked", reason: blocked.lastFailure?.message ?? message },
     );
     return new Result({
       id: DEPLOYMENT_ORCHESTRATION_TASK_ID,
@@ -76,7 +83,8 @@ export class DeploymentOrchestrationRuntime {
     operation: DeploymentOperationSnapshot,
   ): Promise<void> {
     const marker = deploymentDashboardMarker(operation.operationId, context.singleAction.issue);
-    const body = renderDeploymentDashboard(operation, presentationContext(context));
+    const catalog = await this.presentationCatalog("issue", context, operation);
+    const body = renderDeploymentDashboard(operation, presentationContext(context, operation), catalog);
     const current = await this.dependencies.presentation.findDashboard(
       context.singleAction.issue,
       marker,
@@ -98,15 +106,15 @@ export class DeploymentOrchestrationRuntime {
   async publishMilestone(
     context: DeploymentOrchestrationContext,
     operation: DeploymentOperationSnapshot,
-    name: string,
-    body: string,
+    milestone: DeploymentMilestone,
   ): Promise<void> {
     if (operation.commentMode !== "milestones") return;
-    const marker = `<!-- copilot-deployment-milestone operation-id="${operation.operationId}" name="${name}" -->`;
+    const marker = `<!-- copilot-deployment-milestone operation-id="${operation.operationId}" name="${milestone.kind}" -->`;
+    const catalog = await this.presentationCatalog("issue", context, operation);
     await this.dependencies.presentation.publishMilestone(
       context.singleAction.issue,
       marker,
-      body,
+      renderDeploymentMilestone(milestone, catalog),
     );
   }
 
@@ -133,10 +141,11 @@ export class DeploymentOrchestrationRuntime {
       );
     }
     if (existing[0]) return existing[0];
-    const presentation = presentationContext(context);
+    const presentation = presentationContext(context, operation);
+    const catalog = await this.presentationCatalog("pull-request", context, operation);
     const content = phase === "promotion"
-      ? renderPromotionPullRequest(operation, presentation)
-      : renderReconciliationPullRequest(operation, requireTarget(target), presentation);
+      ? renderPromotionPullRequest(operation, presentation, catalog)
+      : renderReconciliationPullRequest(operation, requireTarget(target), presentation, catalog);
     return await this.dependencies.pullRequests.createManagedPullRequest({ ...query, ...content });
   }
 
@@ -195,7 +204,7 @@ export class DeploymentOrchestrationRuntime {
     );
     const decision = selectPullRequestMode(operation.prMode, capabilities);
     if (decision.kind === "unsupported") {
-      return this.unsupportedMergeBehavior(context, targetRole, targetBranch, capabilities, decision);
+      return this.unsupportedMergeBehavior(context, operation, targetRole, targetBranch, capabilities, decision);
     }
     if (decision.mode === "merge-queue") {
       const readiness = evaluateMergeQueueReadiness({
@@ -209,7 +218,7 @@ export class DeploymentOrchestrationRuntime {
       if (readiness.verdict !== "ready") {
         return {
           kind: "blocked",
-          reason: mergeQueueReadinessFailureMessage(readiness, context.locale.issue),
+          reason: mergeQueueReadinessFailureMessage(readiness, effectiveLocale(context, operation).issue),
         };
       }
     }
@@ -293,6 +302,7 @@ export class DeploymentOrchestrationRuntime {
 
   private unsupportedMergeBehavior(
     context: DeploymentOrchestrationContext,
+    operation: DeploymentOperationSnapshot,
     targetRole: MergeQueueTargetRole,
     targetBranch: string,
     capabilities: TargetMergeCapabilities,
@@ -311,8 +321,27 @@ export class DeploymentOrchestrationRuntime {
     });
     return {
       kind: "blocked",
-      reason: mergeQueueReadinessFailureMessage(readiness, context.locale.issue),
+      reason: mergeQueueReadinessFailureMessage(readiness, effectiveLocale(context, operation).issue),
     };
+  }
+
+  private presentationCatalog(
+    scope: "issue" | "pull-request",
+    context: DeploymentOrchestrationContext,
+    operation: DeploymentOperationSnapshot,
+  ): Promise<DeploymentMessageCatalog> {
+    const locale = effectiveLocale(context, operation);
+    const targetLocale = scope === "issue" ? locale.issue : locale.pullRequest;
+    const key = `${scope}:${targetLocale}`;
+    const existing = this.presentationCatalogs.get(key);
+    if (existing) return existing;
+    const resolution = resolveDeploymentCatalog(
+      targetLocale,
+      context.agentConfiguration,
+      this.dependencies.catalogResolver,
+    );
+    this.presentationCatalogs.set(key, resolution);
+    return resolution;
   }
 
   private async cleanupSyncBranches(
@@ -412,15 +441,27 @@ export function semanticCleanupError(error: unknown): ApplicationError {
   return toApplicationError(error, "workflow.failed", "Deployment cleanup failed.");
 }
 
-function presentationContext(context: DeploymentOrchestrationContext): DeploymentPresentationContext {
+function presentationContext(
+  context: DeploymentOrchestrationContext,
+  operation: DeploymentOperationSnapshot,
+): DeploymentPresentationContext {
+  const locale = effectiveLocale(context, operation);
   return {
     owner: context.owner,
     repository: context.repo,
     issue: context.singleAction.issue,
-    issueLocale: context.locale.issue,
-    pullRequestLocale: context.locale.pullRequest,
+    repositoryLocale: locale.repository,
+    issueLocale: locale.issue,
+    pullRequestLocale: locale.pullRequest,
     packageName: context.owner === "vypdev" && context.repo === "copilot" ? "@vypdev/copilot" : undefined,
   };
+}
+
+function effectiveLocale(
+  context: DeploymentOrchestrationContext,
+  operation: DeploymentOperationSnapshot,
+): DeploymentOrchestrationContext["locale"] {
+  return operation.locale ?? context.locale;
 }
 
 function requireTarget(target: ReconciliationTargetState | undefined): ReconciliationTargetState {

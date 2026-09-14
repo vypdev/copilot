@@ -27,6 +27,30 @@ export interface ActionSummaryContext {
     readonly catalogResolutions?: readonly CatalogResolutionObservation[];
 }
 
+export interface LocalizationSummaryLabels {
+    readonly heading: string;
+    readonly property: string;
+    readonly value: string;
+    readonly repositoryLocale: string;
+    readonly issueLocale: string;
+    readonly pullRequestLocale: string;
+    readonly catalogResolution: string;
+    readonly descriptors: string;
+    readonly reason: string;
+}
+
+const ENGLISH_LOCALIZATION_SUMMARY_LABELS: LocalizationSummaryLabels = Object.freeze({
+    heading: 'Localization',
+    property: 'Property',
+    value: 'Value',
+    repositoryLocale: 'Repository locale',
+    issueLocale: 'Issue locale',
+    pullRequestLocale: 'Pull-request locale',
+    catalogResolution: 'Catalog resolution',
+    descriptors: 'descriptors',
+    reason: 'reason',
+});
+
 /** Builds a bounded, publication-safe GitHub Actions Job Summary. */
 export function buildActionSummary(context: ActionSummaryContext): string {
     const failures = context.results.filter(result => !result.success && result.executed);
@@ -77,13 +101,14 @@ export function buildActionSummary(context: ActionSummaryContext): string {
 export function renderLocalizationSummarySection(
     locale: ActionSummaryContext['locale'],
     catalogResolutions: ActionSummaryContext['catalogResolutions'] = [],
+    labels: LocalizationSummaryLabels = ENGLISH_LOCALIZATION_SUMMARY_LABELS,
 ): string {
-    const rows = localizationSummaryRows(locale, catalogResolutions);
+    const rows = localizationSummaryRows(locale, catalogResolutions, labels);
     if (rows.length === 0) return '';
     return [
-        '## Localization',
+        `## ${labels.heading}`,
         '',
-        '| Property | Value |',
+        `| ${labels.property} | ${labels.value} |`,
         '| --- | --- |',
         ...rows,
         '',
@@ -93,23 +118,27 @@ export function renderLocalizationSummarySection(
 function localizationSummaryRows(
     locale: ActionSummaryContext['locale'],
     catalogResolutions: ActionSummaryContext['catalogResolutions'] = [],
+    labels: LocalizationSummaryLabels = ENGLISH_LOCALIZATION_SUMMARY_LABELS,
 ): string[] {
     return [
         ...(locale ? [
-            `| Repository locale | \`${escapeTable(locale.repository)}\` |`,
-            `| Issue locale | \`${escapeTable(locale.issue)}\` |`,
-            `| Pull-request locale | \`${escapeTable(locale.pullRequest)}\` |`,
+            `| ${labels.repositoryLocale} | \`${escapeTable(locale.repository)}\` |`,
+            `| ${labels.issueLocale} | \`${escapeTable(locale.issue)}\` |`,
+            `| ${labels.pullRequestLocale} | \`${escapeTable(locale.pullRequest)}\` |`,
         ] : []),
         ...(catalogResolutions.length ? [
-            `| Catalog resolution | ${formatCatalogResolutions(catalogResolutions)} |`,
+            `| ${labels.catalogResolution} | ${formatCatalogResolutions(catalogResolutions, labels)} |`,
         ] : []),
     ];
 }
 
-function formatCatalogResolutions(observations: readonly CatalogResolutionObservation[]): string {
+function formatCatalogResolutions(
+    observations: readonly CatalogResolutionObservation[],
+    labels: LocalizationSummaryLabels,
+): string {
     return observations.map(observation => {
-        const fallback = observation.fallbackReason ? `, reason=${observation.fallbackReason}` : '';
-        return `\`${escapeTable(observation.requestedLocale)} -> ${escapeTable(observation.resolvedLocale)} (${observation.source}, descriptors=${observation.descriptorCount}${fallback})\``;
+        const fallback = observation.fallbackReason ? `, ${labels.reason}=${observation.fallbackReason}` : '';
+        return `\`${escapeTable(observation.requestedLocale)} -> ${escapeTable(observation.resolvedLocale)} (${observation.source}, ${labels.descriptors}=${observation.descriptorCount}${fallback})\``;
     }).join('<br>');
 }
 

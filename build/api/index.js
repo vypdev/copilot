@@ -5222,6 +5222,7 @@ exports.canonicalizeLocaleTag = canonicalizeLocaleTag;
 exports.normalizeLocaleTag = normalizeLocaleTag;
 exports.resolveLocaleProfile = resolveLocaleProfile;
 exports.localeForScope = localeForScope;
+exports.isLocaleProfile = isLocaleProfile;
 exports.localeLanguagesMatch = localeLanguagesMatch;
 exports.baseLanguage = baseLanguage;
 exports.DEFAULT_REPOSITORY_LOCALE = 'en-US';
@@ -5290,6 +5291,22 @@ function localeForScope(profile, scope) {
     if (scope === 'pull-request')
         return profile.pullRequest;
     return profile.repository;
+}
+function isLocaleProfile(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const candidate = value;
+    try {
+        const resolved = resolveLocaleProfile(candidate.repository, candidate.issueOverride ?? '', candidate.pullRequestOverride ?? '');
+        return candidate.repository === resolved.repository
+            && candidate.issue === resolved.issue
+            && candidate.pullRequest === resolved.pullRequest
+            && candidate.issueOverride === resolved.issueOverride
+            && candidate.pullRequestOverride === resolved.pullRequestOverride;
+    }
+    catch {
+        return false;
+    }
 }
 function localeLanguagesMatch(left, right) {
     return baseLanguage(canonicalizeLocaleTag(left)) === baseLanguage(canonicalizeLocaleTag(right));
@@ -5452,7 +5469,7 @@ function validMessageText(value) {
 function safeDynamicText(value) {
     return validMessageText(value)
         && !/[\r\n\u202A-\u202E\u2066-\u2069]/u.test(value)
-        && !/<!--|-->|<\/?[A-Za-z]|https?:\/\/|```|[`*_[\]~]|(^|\s)\/(?:copilot)(?:\s|$)|@[A-Za-z0-9]/iu.test(value);
+        && !/<!--|-->|<\/?[A-Za-z]|https?:\/\/|```|[`*_[\]~|]|(^|\s)\/(?:copilot)(?:\s|$)|@[A-Za-z0-9]/iu.test(value);
 }
 function pluralPlaceholderParity(message) {
     const expected = placeholdersForTemplate(message.other);

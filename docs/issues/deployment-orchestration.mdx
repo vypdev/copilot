@@ -99,6 +99,40 @@ already be present when a managed promotion PR closes.
 The immutable facts are visible in one issue control-center comment. Duplicate
 events and retries update that comment instead of creating another operation.
 
+## Language and presentation
+
+Deployment UI follows the repository locale profile. English (`en-US`) is the
+default when no locale is configured.
+
+- The issue control center and the four optional milestone notifications use the
+  effective issue locale.
+- Managed promotion and reconciliation PR titles and descriptions use the
+  effective pull-request locale. The stable `release(...)` or `hotfix(...)`
+  prefix, refs, SHAs, tags, IDs, and marker fields are not translated.
+- The GitHub Actions Job Summary uses the repository locale because it belongs to
+  the run, not to the issue or PR conversation.
+
+Empty `issues-locale` and `pull-requests-locale` values inherit
+`repository-locale`. Complete reviewed catalogs ship for English and Spanish.
+Any other valid BCP-47 locale uses the configured planning agent to resolve one
+bounded catalog for the destination. If that response is unavailable, incomplete,
+or unsafe, the whole artifact falls back to English; Copilot never mixes
+languages or creates a separate fallback comment.
+
+The dashboard leads with current status and a required action only when a person
+must act. Progress, transition, and links follow, while operation IDs and other
+technical facts stay collapsed. Managed PR descriptions explain their single
+purpose and consequence without repeating the dashboard. The Job Summary shows
+the durable revision, branch/publication facts, retryability, and descriptive
+links; it does not replay internal workflow step logs such as “created” or
+“reused”.
+
+New operations snapshot the complete canonical locale profile when they start,
+so a later Variable change cannot switch an in-flight release between languages.
+A version-1 operation created before locale snapshots were added remains valid
+and uses the current profile until it completes. Start the next deployment from
+a fresh launcher issue to guarantee a newly configured profile.
+
 ## Serialization, durable revisions, and safe retries
 
 All release, hotfix, and managed-PR mutation routes for the same launcher issue

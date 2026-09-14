@@ -156,6 +156,7 @@ describe('message catalog domain policy', () => {
     [{ greeting: 'Bonjour @team {name}', items: { one: '{count} élément', other: '{count} éléments' } }, 'mention'],
     [{ greeting: 'Voir https://example.com/{name}', items: { one: '{count} élément', other: '{count} éléments' } }, 'URL'],
     [{ greeting: '<!-- forged --> {name}', items: { one: '{count} élément', other: '{count} éléments' } }, 'marker'],
+    [{ greeting: 'Bonjour | forged {name}', items: { one: '{count} élément', other: '{count} éléments' } }, 'table delimiter'],
     [{ greeting: '\u202EBonjour {name}', items: { one: '{count} élément', other: '{count} éléments' } }, 'bidi control'],
     [{ greeting: 'Bonjour {name}', items: { one: '{count} élément', other: '' } }, 'empty plural variant'],
   ])('rejects unsafe dynamic catalog output: %s', (value, _reason) => {

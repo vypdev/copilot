@@ -126,7 +126,7 @@ export function createSingleActionUseCaseCompositionRoot(
     ? new RepositoryReleasePublicationRepository(createReleaseClient())
     : undefined;
   const deploymentOrchestration = surface === "github-workflow"
-    ? createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, repositoryReleasePort!, binding)
+    ? createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, repositoryReleasePort!, binding, catalogResolver)
     : undefined;
   return new SingleActionUseCase(
     repositoryTagPort && repositoryReleasePort
@@ -163,6 +163,7 @@ function createDeploymentOrchestrationUseCase(
   issueDescriptionQueryPort: ReturnType<typeof createIssueContentCompositionRoot>,
   publication: RepositoryReleasePublicationRepository,
   binding: BugbotScmBinding,
+  catalogResolver: ResolveMessageCatalogUseCase,
 ): DeploymentOrchestrationUseCase {
   const deploymentClient = new OctokitDeploymentClientAdapter();
   return new DeploymentOrchestrationUseCase({
@@ -178,6 +179,7 @@ function createDeploymentOrchestrationUseCase(
     labels: bindDeploymentLabels(createIssueLabelRepository(), binding),
     issues: bindDeploymentIssues(createIssueClosureRepository(), binding),
     operationId: randomUUID,
+    catalogResolver,
   });
 }
 

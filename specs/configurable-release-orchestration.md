@@ -3,7 +3,7 @@
 - Status: Implemented; live rollout, human UX validation, and concurrency
   conformance hardening pending
 - Date: 2026-09-09
-- Last updated: 2026-09-11
+- Last updated: 2026-09-14
 - Owners: Copilot maintainers
 - Scope: release and hotfix promotion, publication, reconciliation, and cleanup
 - Related proposals:
@@ -359,8 +359,18 @@ The following inputs retain their current meaning:
 - `hotfix-tree`
 - `release-workflow`
 - `hotfix-workflow`
-- `issues-locale`, used for the issue control center and issue comments
-- `pull-requests-locale`, used for managed PR titles and descriptions
+- `repository-locale`, default `en-US`, used for repository/run surfaces such as
+  the deployment Job Summary
+- `issues-locale`, an optional override for the issue control center and issue
+  milestones; empty inherits `repository-locale`
+- `pull-requests-locale`, an optional override for managed PR titles and
+  descriptions; empty inherits `repository-locale`
+
+New operations snapshot the complete canonical locale profile with the branch
+and strategy facts, so changing repository Variables cannot switch language
+mid-operation. Existing version-1 state created before this field was introduced
+remains valid and uses the current effective profile until it completes; it is
+not rewritten solely to add locale metadata.
 
 ### 6.5 Project publication timing
 
@@ -802,13 +812,13 @@ The guided presentation follows this information hierarchy:
 ```markdown
 <!-- copilot-deployment-dashboard operation-id="..." issue="355" -->
 
-# 🚀 Release 3.4.0
+## 🚀 Release 3.4.0
 
 > **Current status: waiting for production approval**
 >
 > No action is required while GitHub checks are running.
 
-## Progress
+### Progress
 
 - [x] Release cut from `develop` at [`abc1234`](...)
 - [x] Version files, build, validation, and smoke test
@@ -817,18 +827,18 @@ The guided presentation follows this information hierarchy:
 - [ ] Reconciliation into `develop`
 - [ ] Cleanup and issue completion
 
-## Current transition
+### Current transition
 
 | From | To | State |
 |---|---|---|
 | `release/3.4.0` | `master` | ⏳ Checks and review |
 
-## What happens next
+### What happens next
 
 After [PR #401](...) is merged, Copilot will tag the accepted `master` commit,
 publish `@vypdev/copilot@3.4.0`, and start development reconciliation.
 
-## Links
+### Links
 
 [Promotion PR](...) · [Compare changes](...) · [Workflow run](...)
 
@@ -864,22 +874,22 @@ instruction with a direct link or copyable command.
 A blocked presentation uses the following order:
 
 ```markdown
-# ❌ Release 3.4.0 needs attention
+## ❌ Release 3.4.0 needs attention
 
 > **Published package:** No
 > **Production updated:** No
 > **Development synchronized:** No
 
-## What happened
+### What happened
 
 The production PR was closed without merging, so publication was stopped.
 
-## Action required
+### Action required
 
 Reopen [PR #401](...) or run `/copilot retry-release` after correcting the
 problem.
 
-## What Copilot protected
+### What Copilot protected
 
 No npm version, GitHub Release, or version tag was created.
 
@@ -1036,14 +1046,24 @@ automation. Labels supplement, but never replace, the PR body status.
 
 ### 16.10 Localization
 
-Issue-facing presentation uses `issues-locale`; PR-facing presentation uses
-`pull-requests-locale`.
+Issue-facing presentation uses the effective issue locale; PR-facing
+presentation uses the effective pull-request locale; the Job Summary uses the
+repository locale. Empty issue and PR overrides inherit `repository-locale`,
+whose default is `en-US`.
 
 All orchestration-owned headings, status sentences, instructions, table labels,
 and failure guidance MUST come from a typed message catalog rather than scattered
-string literals. The first implementation MUST provide complete `en-US` and
-`es-ES` catalogs. An unsupported locale falls back to `en-US` and emits one
-visible, non-blocking warning in technical details.
+string literals. The implementation provides complete `en-US` and `es-ES`
+catalogs. Any other valid BCP-47 locale uses one schema-constrained dynamic
+catalog resolution for the required slice. Missing, invalid, unsafe, or
+unavailable dynamic output falls back atomically to `en-US`; fallback is recorded
+in the Job Summary and never creates a second timeline comment or a mixed-language
+artifact.
+
+The localization-evidence heading, table labels, descriptor count, and
+fallback-reason labels in that Job Summary use the same repository-locale
+catalog. Locale tags, catalog source names, descriptor counts, and
+machine-readable fallback reasons remain provider facts and are not translated.
 
 Branch names, package names, tag names, GitHub check names, and copied provider
 facts are not translated.
@@ -1069,16 +1089,23 @@ facts are not translated.
 
 ### 16.12 Job Summary
 
-The Job Summary mirrors the issue's current facts but is optimized for operators:
+The Job Summary projects the operation's current semantic facts for operators;
+it does not replay internal use-case steps:
 
 - result and phase at the top;
 - transition performed by this invocation;
 - verified input/output SHAs;
-- API operations created/reused/skipped;
+- durable operation identity, revision, origin, prepared source, and accepted
+  production fact;
 - publication evidence;
 - pending external dependency;
 - sanitized failure classification and retryability; and
-- a final artifact/PR link table.
+- a final set of descriptive artifact and PR links.
+
+Raw `Result.steps`, provider narration, and duplicate “created/reused/skipped”
+logs remain in machine-searchable logs. They are not copied into the Job Summary
+because the operation state and descriptive links already communicate the useful
+result.
 
 It MUST distinguish `waiting externally` from `workflow failure`. A workflow that
 successfully creates a pending auto-merge PR finishes green and reports the
@@ -1395,8 +1422,9 @@ deviation. Deviations require an explicit update to this specification.
   configuration-controlled fallback.
 - Build every URL from verified repository entities and sanitize all untrusted
   values before Markdown publication.
-- Keep generic `Result.steps` for short generic feedback only; deployment
-  orchestration uses its dedicated structured presentation boundary.
+- Keep `Result.steps` as internal execution evidence; deployment orchestration
+  uses its dedicated structured presentation boundary and never replays those
+  steps into GitHub conversation UI or its Job Summary.
 
 ### 20.6 Documentation
 

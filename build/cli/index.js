@@ -43498,6 +43498,244 @@ function projectDeploymentLabels(current, operation, labels) {
 
 /***/ }),
 
+/***/ 79364:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DEPLOYMENT_CATALOG_DEFINITIONS = exports.SPANISH_DEPLOYMENT_DEFINITION = exports.ENGLISH_DEPLOYMENT_DEFINITION = exports.DEPLOYMENT_MESSAGE_IDS = void 0;
+exports.resolveStaticDeploymentCatalog = resolveStaticDeploymentCatalog;
+exports.resolveDeploymentCatalog = resolveDeploymentCatalog;
+exports.deploymentCopy = deploymentCopy;
+const deployment_operation_1 = __nccwpck_require__(92730);
+const message_catalog_1 = __nccwpck_require__(27097);
+const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
+const SIMPLE_MESSAGE_KEYS = Object.freeze([
+    'release', 'hotfix', 'currentStatus', 'noAction', 'actionRequired', 'progress',
+    'currentTransition', 'whatNext', 'links', 'technical', 'alreadyPublished',
+    'notPublished', 'productionUpdated', 'developmentSynchronized', 'yes', 'no',
+    'from', 'to', 'state', 'compare', 'controlCenter', 'purpose', 'afterMerge',
+    'purposePromotion', 'promotionOverview',
+    'reconciliationOverview', 'afterPromotion', 'noRepublish', 'origin',
+    'preparedSource', 'destination', 'publication', 'productionFact',
+    'developmentTarget', 'completionEffect', 'closeIssue', 'keepIssue',
+    'readyBeforeReview', 'buildValidation', 'packageSmoke', 'protectedChecks',
+    'syncReason', 'protectedFacts', 'cut', 'promotion', 'reconciliation', 'cleanup',
+    'jobSummary', 'result', 'externalWait', 'workflowFailure', 'previousPhase',
+    'resultingPhase', 'retryable', 'retryAfterCorrection', 'manualIntervention',
+    'reviewManagedPr', 'fallback', 'operation', 'strategy', 'pullRequestMode',
+    'sourceSha', 'productionSha', 'pending', 'publicationReceipt', 'absent',
+    'localization', 'property', 'value', 'repositoryLocaleLabel',
+    'issueLocaleLabel', 'pullRequestLocaleLabel', 'catalogResolution',
+    'descriptors', 'reason',
+]);
+const DIAGRAM_KEYS = Object.freeze([
+    'source', 'prepared', 'production', 'accepted', 'publication',
+    'reconciliation', 'complete',
+]);
+const TEMPLATE_MESSAGE_IDS = Object.freeze([
+    'deployment.template.promotionTitle',
+    'deployment.template.reconciliationTitle',
+    'deployment.template.promotionTechnical',
+    'deployment.template.reconciliationTechnical',
+    'deployment.template.jobState',
+    'deployment.template.admissionScope',
+    'deployment.template.sourceBranchLink',
+    'deployment.template.originCommitLink',
+    'deployment.template.preparedCommitLink',
+    'deployment.template.promotionPullRequestLink',
+    'deployment.template.reconciliationPullRequestLink',
+    'deployment.template.productionCommitLink',
+    'deployment.template.releaseLink',
+    'deployment.template.actionTagLink',
+    'deployment.template.npmLink',
+    'deployment.template.workflowRunLink',
+    'deployment.template.nextPromotion',
+    'deployment.milestone.promotionMerged',
+    'deployment.milestone.publicationComplete',
+    'deployment.milestone.reconciliationBlocked',
+    'deployment.milestone.complete',
+]);
+exports.DEPLOYMENT_MESSAGE_IDS = Object.freeze([
+    ...SIMPLE_MESSAGE_KEYS.map(key => `deployment.${key}`),
+    ...deployment_operation_1.DEPLOYMENT_PHASES.map(phase => `deployment.phase.${phase}`),
+    ...DIAGRAM_KEYS.map(key => `deployment.diagram.${key}`),
+    ...TEMPLATE_MESSAGE_IDS,
+]);
+const ENGLISH_SIMPLE = Object.freeze({
+    release: 'Release', hotfix: 'Hotfix', currentStatus: 'Current status',
+    noAction: 'No action is required while GitHub owns the pending transition.', actionRequired: 'Action required',
+    progress: 'Progress', currentTransition: 'Current transition', whatNext: 'What happens next', links: 'Links',
+    technical: 'Technical details', alreadyPublished: 'Package status: already published', notPublished: 'Package status: not published',
+    productionUpdated: 'Production updated', developmentSynchronized: 'Development synchronized', yes: 'Yes', no: 'No',
+    from: 'From', to: 'To', state: 'State', compare: 'Compare changes', controlCenter: 'Release control center',
+    purpose: 'Purpose', afterMerge: 'After merge', purposePromotion: 'accept the prepared change in production',
+    promotionOverview: 'Production promotion', reconciliationOverview: 'Development reconciliation',
+    afterPromotion: 'After merge, Copilot will tag and publish the accepted production commit.',
+    noRepublish: 'Merging or closing this PR cannot publish the package again.',
+    origin: 'Origin', preparedSource: 'Prepared source', destination: 'Destination', publication: 'Publication',
+    productionFact: 'Production fact', developmentTarget: 'Development target', completionEffect: 'Completion effect',
+    closeIssue: 'Close issue after all targets', keepIssue: 'Keep issue open', readyBeforeReview: 'Ready before review',
+    buildValidation: 'Build and release validation', packageSmoke: 'Package smoke test',
+    protectedChecks: 'Protected-branch checks and reviews',
+    syncReason: 'A dedicated sync branch preserves target-only commits and isolates target-dependent checks.',
+    protectedFacts: 'What Copilot protected', cut: 'Source cut', promotion: 'Production promotion',
+    reconciliation: 'Development reconciliation', cleanup: 'Cleanup and issue completion',
+    jobSummary: 'Deployment orchestration', result: 'Result', externalWait: 'Waiting externally',
+    workflowFailure: 'Workflow failed', previousPhase: 'Previous phase', resultingPhase: 'Resulting phase',
+    retryable: 'Retryable', retryAfterCorrection: 'Retry after correcting the cause',
+    manualIntervention: 'Manual intervention is required',
+    reviewManagedPr: 'review and merge the managed PR when GitHub reports it ready',
+    fallback: 'prepared -> production PR -> accepted -> published -> reconciled -> complete',
+    operation: 'Operation', strategy: 'Strategy', pullRequestMode: 'PR mode', sourceSha: 'Source SHA',
+    productionSha: 'Production SHA', pending: 'pending', publicationReceipt: 'Publication receipt', absent: 'absent',
+    localization: 'Localization', property: 'Property', value: 'Value',
+    repositoryLocaleLabel: 'Repository locale', issueLocaleLabel: 'Issue locale',
+    pullRequestLocaleLabel: 'Pull-request locale', catalogResolution: 'Catalog resolution',
+    descriptors: 'descriptors', reason: 'reason',
+});
+const SPANISH_SIMPLE = Object.freeze({
+    release: 'Release', hotfix: 'Hotfix', currentStatus: 'Estado actual',
+    noAction: 'No se requiere ninguna acción mientras GitHub gestiona la transición pendiente.', actionRequired: 'Acción necesaria',
+    progress: 'Progreso', currentTransition: 'Transición actual', whatNext: 'Qué ocurrirá después', links: 'Enlaces',
+    technical: 'Detalles técnicos', alreadyPublished: 'Estado del paquete: ya publicado', notPublished: 'Estado del paquete: no publicado',
+    productionUpdated: 'Producción actualizada', developmentSynchronized: 'Desarrollo sincronizado', yes: 'Sí', no: 'No',
+    from: 'Origen', to: 'Destino', state: 'Estado', compare: 'Comparar cambios', controlCenter: 'Centro de control de la release',
+    purpose: 'Propósito', afterMerge: 'Después del merge', purposePromotion: 'aceptar en producción el cambio preparado',
+    promotionOverview: 'Promoción a producción', reconciliationOverview: 'Reconciliación con desarrollo',
+    afterPromotion: 'Tras el merge, Copilot etiquetará y publicará el commit aceptado en producción.',
+    noRepublish: 'Mergear o cerrar esta PR no puede volver a publicar el paquete.',
+    origin: 'Origen', preparedSource: 'Fuente preparada', destination: 'Destino', publication: 'Publicación',
+    productionFact: 'Estado de producción', developmentTarget: 'Destino de desarrollo', completionEffect: 'Efecto al completar',
+    closeIssue: 'Cerrar la issue tras todos los destinos', keepIssue: 'Mantener la issue abierta', readyBeforeReview: 'Listo antes de revisar',
+    buildValidation: 'Build y validación de release', packageSmoke: 'Smoke test del paquete',
+    protectedChecks: 'Checks y revisiones de la rama protegida',
+    syncReason: 'Una rama de sincronización dedicada preserva los commits exclusivos del destino y aísla sus checks.',
+    protectedFacts: 'Qué ha protegido Copilot', cut: 'Corte de la fuente', promotion: 'Promoción a producción',
+    reconciliation: 'Reconciliación con desarrollo', cleanup: 'Limpieza y cierre de la issue',
+    jobSummary: 'Orquestación del despliegue', result: 'Resultado', externalWait: 'Esperando fuera del workflow',
+    workflowFailure: 'Workflow fallido', previousPhase: 'Fase anterior', resultingPhase: 'Fase resultante',
+    retryable: 'Reintentable', retryAfterCorrection: 'Vuelve a intentarlo después de corregir la causa',
+    manualIntervention: 'Se requiere intervención manual',
+    reviewManagedPr: 'revisa y mergea la PR gestionada cuando GitHub indique que está lista',
+    fallback: 'preparada -> PR de producción -> aceptada -> publicada -> reconciliada -> completada',
+    operation: 'Operación', strategy: 'Estrategia', pullRequestMode: 'Modo de PR', sourceSha: 'SHA de origen',
+    productionSha: 'SHA de producción', pending: 'pendiente', publicationReceipt: 'Recibo de publicación', absent: 'ausente',
+    localization: 'Localización', property: 'Propiedad', value: 'Valor',
+    repositoryLocaleLabel: 'Locale del repositorio', issueLocaleLabel: 'Locale de la issue',
+    pullRequestLocaleLabel: 'Locale de la pull request', catalogResolution: 'Resolución del catálogo',
+    descriptors: 'descriptores', reason: 'motivo',
+});
+const ENGLISH_PHASES = Object.freeze({
+    preparing: 'preparing the version', promotion_pr_pending: 'waiting for production approval',
+    promoted: 'accepted in production', publishing: 'publishing artifacts',
+    published: 'published; preparing development reconciliation',
+    reconciliation_pending: 'waiting for development reconciliation', completed: 'completed', blocked: 'needs attention',
+});
+const SPANISH_PHASES = Object.freeze({
+    preparing: 'preparando la versión', promotion_pr_pending: 'esperando aprobación en producción',
+    promoted: 'aceptada en producción', publishing: 'publicando artefactos',
+    published: 'publicada; preparando la reconciliación',
+    reconciliation_pending: 'esperando reconciliación con desarrollo', completed: 'completada', blocked: 'necesita atención',
+});
+const ENGLISH_DIAGRAM = Object.freeze({
+    source: 'Source snapshot', prepared: 'Version prepared', production: 'Production PR',
+    accepted: 'Accepted in production', publication: 'Package and release',
+    reconciliation: 'Development reconciliation', complete: 'Complete',
+});
+const SPANISH_DIAGRAM = Object.freeze({
+    source: 'Snapshot de origen', prepared: 'Versión preparada', production: 'PR de producción',
+    accepted: 'Aceptada en producción', publication: 'Paquete y release',
+    reconciliation: 'Reconciliación con desarrollo', complete: 'Completada',
+});
+const ENGLISH_TEMPLATES = Object.freeze({
+    'deployment.template.promotionTitle': '{kind}({version}): promote to {branch}',
+    'deployment.template.reconciliationTitle': '{kind}({version}): reconcile {source} into {target}',
+    'deployment.template.promotionTechnical': 'Operation {operation}; strategy {strategy}; merge mode {mergeMode}.',
+    'deployment.template.reconciliationTechnical': 'Operation {operation}; source SHA {sourceSha}.',
+    'deployment.template.jobState': 'State: version {version}, revision {revision}',
+    'deployment.template.admissionScope': 'Admission scope: repository + launcher issue #{issue}',
+    'deployment.template.sourceBranchLink': '{branch} branch',
+    'deployment.template.originCommitLink': '{commit} origin commit',
+    'deployment.template.preparedCommitLink': '{commit} prepared commit',
+    'deployment.template.promotionPullRequestLink': 'Promotion PR #{number}',
+    'deployment.template.reconciliationPullRequestLink': 'Reconciliation PR #{number}',
+    'deployment.template.productionCommitLink': '{commit} production commit',
+    'deployment.template.releaseLink': '{tag} GitHub Release',
+    'deployment.template.actionTagLink': '{tag} Action tag',
+    'deployment.template.npmLink': '{package} version {version} on npm',
+    'deployment.template.workflowRunLink': 'Workflow run',
+    'deployment.template.nextPromotion': '{source} is prepared for promotion to {production}.',
+    'deployment.milestone.promotionMerged': '✅ Promotion PR #{number} merged. Publication is starting from production SHA {productionSha}.',
+    'deployment.milestone.publicationComplete': '📦 {tag} is published from accepted production SHA {productionSha}.',
+    'deployment.milestone.reconciliationBlocked': '❌ Deployment blocked: {reason}',
+    'deployment.milestone.complete': '✅ Deployment {tag} and every configured reconciliation target are complete.',
+});
+const SPANISH_TEMPLATES = Object.freeze({
+    'deployment.template.promotionTitle': '{kind}({version}): promover a {branch}',
+    'deployment.template.reconciliationTitle': '{kind}({version}): reconciliar {source} con {target}',
+    'deployment.template.promotionTechnical': 'Operación {operation}; estrategia {strategy}; modo de merge {mergeMode}.',
+    'deployment.template.reconciliationTechnical': 'Operación {operation}; SHA de origen {sourceSha}.',
+    'deployment.template.jobState': 'Estado: versión {version}, revisión {revision}',
+    'deployment.template.admissionScope': 'Ámbito de admisión: repositorio + issue de lanzamiento #{issue}',
+    'deployment.template.sourceBranchLink': 'Rama {branch}',
+    'deployment.template.originCommitLink': 'Commit de origen {commit}',
+    'deployment.template.preparedCommitLink': 'Commit preparado {commit}',
+    'deployment.template.promotionPullRequestLink': 'PR de promoción #{number}',
+    'deployment.template.reconciliationPullRequestLink': 'PR de reconciliación #{number}',
+    'deployment.template.productionCommitLink': 'Commit de producción {commit}',
+    'deployment.template.releaseLink': 'Release de GitHub {tag}',
+    'deployment.template.actionTagLink': 'Tag de Action {tag}',
+    'deployment.template.npmLink': '{package}, versión {version}, en npm',
+    'deployment.template.workflowRunLink': 'Ejecución del workflow',
+    'deployment.template.nextPromotion': '{source} está preparada para promoverse a {production}.',
+    'deployment.milestone.promotionMerged': '✅ La PR de promoción #{number} se ha mergeado. La publicación comienza desde el SHA de producción {productionSha}.',
+    'deployment.milestone.publicationComplete': '📦 {tag} se ha publicado desde el SHA de producción aceptado {productionSha}.',
+    'deployment.milestone.reconciliationBlocked': '❌ Despliegue bloqueado: {reason}',
+    'deployment.milestone.complete': '✅ El despliegue {tag} y todos los destinos de reconciliación configurados se han completado.',
+});
+function catalogMessages(simple, phases, diagram, templates) {
+    return Object.freeze({
+        ...Object.fromEntries(SIMPLE_MESSAGE_KEYS.map(key => [`deployment.${key}`, simple[key]])),
+        ...Object.fromEntries(deployment_operation_1.DEPLOYMENT_PHASES.map(phase => [`deployment.phase.${phase}`, phases[phase]])),
+        ...Object.fromEntries(DIAGRAM_KEYS.map(key => [`deployment.diagram.${key}`, diagram[key]])),
+        ...templates,
+    });
+}
+exports.ENGLISH_DEPLOYMENT_DEFINITION = Object.freeze({
+    version: message_catalog_1.MESSAGE_CATALOG_VERSION,
+    locale: 'en-US',
+    compatibleBaseLanguage: 'en',
+    messages: catalogMessages(ENGLISH_SIMPLE, ENGLISH_PHASES, ENGLISH_DIAGRAM, ENGLISH_TEMPLATES),
+});
+exports.SPANISH_DEPLOYMENT_DEFINITION = Object.freeze({
+    version: message_catalog_1.MESSAGE_CATALOG_VERSION,
+    locale: 'es-ES',
+    compatibleBaseLanguage: 'es',
+    messages: catalogMessages(SPANISH_SIMPLE, SPANISH_PHASES, SPANISH_DIAGRAM, SPANISH_TEMPLATES),
+});
+exports.DEPLOYMENT_CATALOG_DEFINITIONS = Object.freeze([
+    exports.ENGLISH_DEPLOYMENT_DEFINITION,
+    exports.SPANISH_DEPLOYMENT_DEFINITION,
+]);
+function resolveStaticDeploymentCatalog(locale) {
+    return (0, resolved_message_catalog_policy_1.resolveStaticMessageCatalogView)(locale, exports.ENGLISH_DEPLOYMENT_DEFINITION, exports.DEPLOYMENT_CATALOG_DEFINITIONS);
+}
+function resolveDeploymentCatalog(locale, configuration, resolver) {
+    return (0, resolved_message_catalog_policy_1.resolveMessageCatalogView)(locale, exports.DEPLOYMENT_MESSAGE_IDS, exports.ENGLISH_DEPLOYMENT_DEFINITION, exports.DEPLOYMENT_CATALOG_DEFINITIONS, configuration, resolver);
+}
+function deploymentCopy(catalog) {
+    return Object.freeze({
+        ...Object.fromEntries(SIMPLE_MESSAGE_KEYS.map(key => [key, catalog.message(`deployment.${key}`)])),
+        phase: Object.freeze(Object.fromEntries(deployment_operation_1.DEPLOYMENT_PHASES.map(phase => [phase, catalog.message(`deployment.phase.${phase}`)]))),
+        diagram: Object.freeze(Object.fromEntries(DIAGRAM_KEYS.map(key => [key, catalog.message(`deployment.diagram.${key}`)]))),
+    });
+}
+
+
+/***/ }),
+
 /***/ 8352:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -43523,6 +43761,7 @@ function buildInitialDeploymentOperation(input) {
         stateVersion: deployment_operation_1.DEPLOYMENT_STATE_VERSION,
         revision: 0,
         operationId: input.operationId,
+        locale: Object.freeze({ ...input.locale }),
         kind: input.kind,
         version: input.version,
         title: input.title,
@@ -43704,74 +43943,17 @@ exports.renderDeploymentDashboard = renderDeploymentDashboard;
 exports.renderPromotionPullRequest = renderPromotionPullRequest;
 exports.renderReconciliationPullRequest = renderReconciliationPullRequest;
 exports.renderDeploymentJobSummary = renderDeploymentJobSummary;
-exports.normalizeLocale = normalizeLocale;
+exports.renderDeploymentMilestone = renderDeploymentMilestone;
 const managed_pull_request_1 = __nccwpck_require__(95914);
+const deployment_message_catalog_1 = __nccwpck_require__(79364);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
-const EN = {
-    release: "Release", hotfix: "Hotfix", currentStatus: "Current status",
-    noAction: "No action is required while GitHub owns the pending transition.", actionRequired: "Action required",
-    progress: "Progress", currentTransition: "Current transition", whatNext: "What happens next", links: "Links",
-    technical: "Technical details", alreadyPublished: "Package status: already published", notPublished: "Package status: not published",
-    productionUpdated: "Production updated", developmentSynchronized: "Development synchronized", yes: "Yes", no: "No",
-    from: "From", to: "To", state: "State", compare: "Compare changes", controlCenter: "Release control center",
-    purpose: "Purpose", afterMerge: "After merge", purposePromotion: "accept the prepared change in production",
-    purposeReconciliation: "bring the accepted production state back to the development line",
-    afterPromotion: "After merge, Copilot will tag and publish the accepted production commit.",
-    noRepublish: "Merging or closing this PR cannot publish the package again.",
-    origin: "Origin", preparedSource: "Prepared source", destination: "Destination", publication: "Publication",
-    productionFact: "Production fact", developmentTarget: "Development target", completionEffect: "Completion effect",
-    closeIssue: "Close issue after all targets", keepIssue: "Keep issue open", readyBeforeReview: "Ready before review",
-    buildValidation: "Build and release validation", packageSmoke: "Package smoke test",
-    protectedChecks: "Protected-branch checks and reviews", syncReason: "A dedicated sync branch preserves target-only commits and isolates target-dependent checks.",
-    protectedFacts: "What Copilot protected", cut: "Source cut", promotion: "Production promotion", reconciliation: "Development reconciliation",
-    cleanup: "Cleanup and issue completion", jobSummary: "Deployment orchestration", result: "Result",
-    externalWait: "Waiting externally", workflowFailure: "Workflow failed", previousPhase: "Previous phase", resultingPhase: "Resulting phase",
-    retryable: "Retryable", createdReused: "Created, reused, or skipped", fallback: "prepared -> production PR -> accepted -> published -> reconciled -> complete",
-    retryAfterCorrection: "Retry after correcting the cause", manualIntervention: "Manual intervention is required",
-    reviewManagedPr: "review and merge the managed PR when GitHub reports it ready",
-    phase: {
-        preparing: "preparing the version", promotion_pr_pending: "waiting for production approval", promoted: "accepted in production",
-        publishing: "publishing artifacts", published: "published; preparing development reconciliation",
-        reconciliation_pending: "waiting for development reconciliation", completed: "completed", blocked: "needs attention",
-    },
-    diagram: ["Source snapshot", "Version prepared", "Production PR", "Accepted in production", "Package and release", "Development reconciliation", "Complete"],
-};
-const ES = {
-    release: "Release", hotfix: "Hotfix", currentStatus: "Estado actual",
-    noAction: "No se requiere ninguna acción mientras GitHub gestiona la transición pendiente.", actionRequired: "Acción necesaria",
-    progress: "Progreso", currentTransition: "Transición actual", whatNext: "Qué ocurrirá después", links: "Enlaces",
-    technical: "Detalles técnicos", alreadyPublished: "Estado del paquete: ya publicado", notPublished: "Estado del paquete: no publicado",
-    productionUpdated: "Producción actualizada", developmentSynchronized: "Desarrollo sincronizado", yes: "Sí", no: "No",
-    from: "Origen", to: "Destino", state: "Estado", compare: "Comparar cambios", controlCenter: "Centro de control de la release",
-    purpose: "Propósito", afterMerge: "Después del merge", purposePromotion: "aceptar en producción el cambio preparado",
-    purposeReconciliation: "llevar el estado aceptado en producción de vuelta a desarrollo",
-    afterPromotion: "Tras el merge, Copilot etiquetará y publicará el commit aceptado en producción.",
-    noRepublish: "Mergear o cerrar esta PR no puede volver a publicar el paquete.",
-    origin: "Origen", preparedSource: "Fuente preparada", destination: "Destino", publication: "Publicación",
-    productionFact: "Estado de producción", developmentTarget: "Destino de desarrollo", completionEffect: "Efecto al completar",
-    closeIssue: "Cerrar la issue tras todos los destinos", keepIssue: "Mantener la issue abierta", readyBeforeReview: "Listo antes de revisar",
-    buildValidation: "Build y validación de release", packageSmoke: "Smoke test del paquete",
-    protectedChecks: "Checks y revisiones de la rama protegida", syncReason: "Una rama de sincronización dedicada preserva los commits exclusivos del destino y aísla sus checks.",
-    protectedFacts: "Qué ha protegido Copilot", cut: "Corte de la fuente", promotion: "Promoción a producción", reconciliation: "Reconciliación con desarrollo",
-    cleanup: "Limpieza y cierre de la issue", jobSummary: "Orquestación del despliegue", result: "Resultado",
-    externalWait: "Esperando fuera del workflow", workflowFailure: "Workflow fallido", previousPhase: "Fase anterior", resultingPhase: "Fase resultante",
-    retryable: "Reintentable", createdReused: "Creado, reutilizado u omitido", fallback: "preparada -> PR de producción -> aceptada -> publicada -> reconciliada -> completada",
-    retryAfterCorrection: "Vuelve a intentarlo después de corregir la causa", manualIntervention: "Se requiere intervención manual",
-    reviewManagedPr: "revisa y mergea la PR gestionada cuando GitHub indique que está lista",
-    phase: {
-        preparing: "preparando la versión", promotion_pr_pending: "esperando aprobación en producción", promoted: "aceptada en producción",
-        publishing: "publicando artefactos", published: "publicada; preparando la reconciliación",
-        reconciliation_pending: "esperando reconciliación con desarrollo", completed: "completada", blocked: "necesita atención",
-    },
-    diagram: ["Snapshot de origen", "Versión preparada", "PR de producción", "Aceptada en producción", "Paquete y release", "Reconciliación con desarrollo", "Completada"],
-};
-exports.DEPLOYMENT_DASHBOARD_MARKER = "copilot-deployment-dashboard";
+exports.DEPLOYMENT_DASHBOARD_MARKER = 'copilot-deployment-dashboard';
 function deploymentDashboardMarker(operationId, issue) {
     return `<!-- ${exports.DEPLOYMENT_DASHBOARD_MARKER} operation-id="${safeMarkerValue(operationId)}" issue="${issue}" -->`;
 }
-function renderDeploymentDashboard(operation, context) {
-    const messages = messagesFor(context.issueLocale);
-    const title = operation.kind === "release" ? messages.release : messages.hotfix;
+function renderDeploymentDashboard(operation, context, catalog = (0, deployment_message_catalog_1.resolveStaticDeploymentCatalog)(context.issueLocale)) {
+    const messages = (0, deployment_message_catalog_1.deploymentCopy)(catalog);
+    const title = operation.kind === 'release' ? messages.release : messages.hotfix;
     const action = deploymentAction(operation, messages);
     const lines = [
         (0, publication_identity_policy_1.buildPublicationMarker)({
@@ -43781,121 +43963,174 @@ function renderDeploymentDashboard(operation, context) {
                 key: `operation:${(0, publication_identity_policy_1.createSemanticDigest)(operation.operationId)}`,
             },
             sourceVersion: `revision:${operation.revision}`,
-            digest: (0, publication_identity_policy_1.createSemanticDigest)({ locale: context.issueLocale, operation }),
+            digest: (0, publication_identity_policy_1.createSemanticDigest)({
+                requestedLocale: catalog.requestedLocale,
+                resolvedLocale: catalog.locale,
+                operation,
+            }),
         }),
-        deploymentDashboardMarker(operation.operationId, context.issue), "",
-        `# ${operation.phase === "blocked" ? "❌" : operation.phase === "completed" ? "✅" : "🚀"} ${title} ${inline(operation.version)}`, "",
+        deploymentDashboardMarker(operation.operationId, context.issue), '',
+        `## ${operation.phase === 'blocked' ? '❌' : operation.phase === 'completed' ? '✅' : '🚀'} ${title} ${inline(operation.version)}`, '',
         `> **${messages.currentStatus}: ${messages.phase[operation.phase]}.**`,
     ];
     if (action.required)
-        lines.push("", `## ${messages.actionRequired}`, "", action.message);
+        lines.push('', `### ${messages.actionRequired}`, '', action.message);
     else
         lines.push(`> ${action.message}`);
-    lines.push("");
-    if (operation.phase === "blocked")
-        lines.push(...factTable(operation, messages), "", `## ${messages.protectedFacts}`, "", protectedFact(operation, messages), "");
-    if (operation.presentationMode !== "quiet")
-        lines.push(`## ${messages.progress}`, "", ...progressLines(operation, messages), "");
-    if (operation.presentationMode === "guided" && operation.diagrams)
-        lines.push(...deploymentDiagram(messages), "");
-    if (operation.presentationMode !== "quiet") {
-        lines.push(`## ${messages.currentTransition}`, "", ...transitionTable(operation, messages), "", `## ${messages.whatNext}`, "", nextDescription(operation, messages), "", `## ${messages.links}`, "", deploymentLinks(operation, context, messages).join(" · "), "");
+    lines.push('');
+    if (operation.phase === 'blocked') {
+        lines.push(...factTable(operation, messages), '', `### ${messages.protectedFacts}`, '', protectedFact(operation, messages), '');
     }
-    lines.push("<details>", `<summary>${messages.technical}</summary>`, "", `- Operation: ${inline(operation.operationId)}`, `- Strategy: ${inline(operation.strategy)}`, `- PR mode: ${inline(operation.selectedPrMode ?? operation.prMode)}`, `- Source SHA: ${inline(operation.sourceSha)}`, `- Production SHA: ${inline(operation.productionSha ?? "pending")}`, "</details>");
-    return lines.join("\n");
+    if (operation.presentationMode !== 'quiet') {
+        lines.push(`### ${messages.progress}`, '', ...progressLines(operation, messages), '');
+    }
+    if (operation.presentationMode === 'guided' && operation.diagrams) {
+        lines.push(...deploymentDiagram(messages), '');
+    }
+    if (operation.presentationMode !== 'quiet') {
+        lines.push(`### ${messages.currentTransition}`, '', ...transitionTable(operation, messages), '');
+        if (operation.phase !== 'blocked') {
+            lines.push(`### ${messages.whatNext}`, '', nextDescription(operation, messages, catalog), '');
+        }
+        lines.push(`### ${messages.links}`, '', deploymentLinks(operation, context, messages, catalog).join(' · '), '');
+    }
+    lines.push('<details>', `<summary>${messages.technical}</summary>`, '', `- ${messages.operation}: ${inline(operation.operationId)}`, `- ${messages.strategy}: ${inline(operation.strategy)}`, `- ${messages.pullRequestMode}: ${inline(operation.selectedPrMode ?? operation.prMode)}`, `- ${messages.sourceSha}: ${inline(operation.sourceSha)}`, `- ${messages.productionSha}: ${inline(operation.productionSha ?? messages.pending)}`, '</details>');
+    return lines.join('\n');
 }
-function renderPromotionPullRequest(operation, context) {
-    const messages = messagesFor(context.pullRequestLocale);
-    const kind = operation.kind === "release" ? "release" : "hotfix";
-    const title = `${kind}(${safeText(operation.version)}): promote to ${safeText(operation.productionBranch)}`;
+function renderPromotionPullRequest(operation, context, catalog = (0, deployment_message_catalog_1.resolveStaticDeploymentCatalog)(context.pullRequestLocale)) {
+    const messages = (0, deployment_message_catalog_1.deploymentCopy)(catalog);
+    const kind = operation.kind;
+    const title = catalog.message('deployment.template.promotionTitle', {
+        kind,
+        version: safeText(operation.version),
+        branch: safeText(operation.productionBranch),
+    }).slice(0, 240);
     const body = [
-        `# 🚀 ${capitalize(messages.purposePromotion)}`, "",
-        `> **${messages.purpose}:** ${capitalize(messages.purposePromotion)}.`,
-        `> **${messages.afterMerge}:** ${messages.afterPromotion}`, "",
+        `## 🚀 ${messages.promotionOverview}`, '',
+        `> **${messages.purpose}:** ${messages.purposePromotion}.`, '',
         `| ${messages.origin} | ${messages.preparedSource} | ${messages.destination} | ${messages.publication} |`,
-        "|---|---|---|---|",
-        `| ${inline(`${operation.originBranch}@${shortSha(operation.originSha)}`)} | ${inline(`${operation.sourceBranch}@${shortSha(operation.sourceSha)}`)} | ${inline(operation.productionBranch)} | ${messages.afterMerge} |`, "",
-        `## ${messages.readyBeforeReview}`, "",
-        `- ✅ ${messages.buildValidation}`, `- ✅ ${messages.packageSmoke}`, `- ⏳ ${messages.protectedChecks}`, "",
-        `## ${messages.afterMerge}`, "",
-        `- ${messages.afterPromotion}`, `- ${messages.reconciliation}: ${inline(operation.developmentBranch)}.`, "",
-        `[${messages.compare}](${compareUrl(context, operation.productionBranch, operation.sourceBranch)}) · [${messages.controlCenter}](${issueUrl(context)})`, "",
-        "<details>", `<summary>${messages.technical}</summary>`, "",
-        `Operation ${inline(operation.operationId)}; strategy ${inline(operation.strategy)}; merge mode ${inline(operation.prMode)}.`,
-        "</details>", "", (0, managed_pull_request_1.buildManagedPullRequestMarker)({ operationId: operation.operationId, phase: "promotion", issue: context.issue }),
-    ].join("\n");
+        '|---|---|---|---|',
+        `| ${inline(`${operation.originBranch}@${shortSha(operation.originSha)}`)} | ${inline(`${operation.sourceBranch}@${shortSha(operation.sourceSha)}`)} | ${inline(operation.productionBranch)} | ${messages.notPublished} |`, '',
+        `### ${messages.readyBeforeReview}`, '',
+        `- ✅ ${messages.buildValidation}`, `- ✅ ${messages.packageSmoke}`, `- ⏳ ${messages.protectedChecks}`, '',
+        `### ${messages.afterMerge}`, '',
+        `- ${messages.afterPromotion}`, `- ${messages.reconciliation}: ${inline(operation.developmentBranch)}.`, '',
+        `[${messages.compare}](${compareUrl(context, operation.productionBranch, operation.sourceBranch)}) · [${messages.controlCenter}](${issueUrl(context)})`, '',
+        '<details>', `<summary>${messages.technical}</summary>`, '',
+        catalog.message('deployment.template.promotionTechnical', {
+            operation: inline(operation.operationId),
+            strategy: inline(operation.strategy),
+            mergeMode: inline(operation.prMode),
+        }),
+        '</details>', '',
+        (0, managed_pull_request_1.buildManagedPullRequestMarker)({ operationId: operation.operationId, phase: 'promotion', issue: context.issue }),
+    ].join('\n');
     return { title, body };
 }
-function renderReconciliationPullRequest(operation, target, context) {
-    const messages = messagesFor(context.pullRequestLocale);
-    const kind = operation.kind === "release" ? "release" : "hotfix";
-    const title = `${kind}(${safeText(operation.version)}): reconcile ${safeText(target.sourceBranch)} into ${safeText(target.targetBranch)}`;
+function renderReconciliationPullRequest(operation, target, context, catalog = (0, deployment_message_catalog_1.resolveStaticDeploymentCatalog)(context.pullRequestLocale)) {
+    const messages = (0, deployment_message_catalog_1.deploymentCopy)(catalog);
+    const kind = operation.kind;
+    const title = catalog.message('deployment.template.reconciliationTitle', {
+        kind,
+        version: safeText(operation.version),
+        source: safeText(target.sourceBranch),
+        target: safeText(target.targetBranch),
+    }).slice(0, 240);
     const body = [
-        `# 🔄 ${capitalize(messages.purposeReconciliation)}`, "",
-        `> **${messages.alreadyPublished}.** ${messages.noRepublish}`, "",
-        `| ${messages.productionFact} | ${messages.developmentTarget} | ${messages.completionEffect} |`, "|---|---|---|",
-        `| ${inline(`${operation.tag}@${shortSha(operation.productionSha ?? target.sourceSha)}`)} | ${inline(target.targetBranch)} | ${operation.issueCompletion === "close" ? messages.closeIssue : messages.keepIssue} |`, "",
-        ...(target.syncBranch ? [`${messages.syncReason} ${inline(target.syncBranch)}`, ""] : []),
-        `${messages.noRepublish}`, "",
-        `[${messages.compare}](${compareUrl(context, target.targetBranch, target.syncBranch ?? target.sourceBranch)}) · [${messages.controlCenter}](${issueUrl(context)})`, "",
-        "<details>", `<summary>${messages.technical}</summary>`, "", `Operation ${inline(operation.operationId)}; source SHA ${inline(target.sourceSha)}.`,
-        "</details>", "", (0, managed_pull_request_1.buildManagedPullRequestMarker)({ operationId: operation.operationId, phase: "reconciliation", issue: context.issue }),
-    ].join("\n");
+        `## 🔄 ${messages.reconciliationOverview}`, '',
+        `> **${messages.alreadyPublished}.** ${messages.noRepublish}`, '',
+        `| ${messages.productionFact} | ${messages.developmentTarget} | ${messages.completionEffect} |`, '|---|---|---|',
+        `| ${inline(`${operation.tag}@${shortSha(operation.productionSha ?? target.sourceSha)}`)} | ${inline(target.targetBranch)} | ${operation.issueCompletion === 'close' ? messages.closeIssue : messages.keepIssue} |`, '',
+        ...(target.syncBranch ? [`${messages.syncReason} ${inline(target.syncBranch)}`, ''] : []),
+        `[${messages.compare}](${compareUrl(context, target.targetBranch, target.syncBranch ?? target.sourceBranch)}) · [${messages.controlCenter}](${issueUrl(context)})`, '',
+        '<details>', `<summary>${messages.technical}</summary>`, '',
+        catalog.message('deployment.template.reconciliationTechnical', {
+            operation: inline(operation.operationId),
+            sourceSha: inline(target.sourceSha),
+        }),
+        '</details>', '',
+        (0, managed_pull_request_1.buildManagedPullRequestMarker)({ operationId: operation.operationId, phase: 'reconciliation', issue: context.issue }),
+    ].join('\n');
     return { title, body };
 }
-function renderDeploymentJobSummary(operation, context, previousPhase, operations = []) {
-    const messages = messagesFor(context.issueLocale);
-    const externallyPending = operation.phase === "promotion_pr_pending" || operation.phase === "reconciliation_pending";
-    const result = operation.phase === "blocked" ? messages.workflowFailure : externallyPending ? messages.externalWait : messages.phase[operation.phase];
+function renderDeploymentJobSummary(operation, context, previousPhase, catalog = (0, deployment_message_catalog_1.resolveStaticDeploymentCatalog)(context.repositoryLocale)) {
+    const messages = (0, deployment_message_catalog_1.deploymentCopy)(catalog);
+    const externallyPending = operation.phase === 'promotion_pr_pending' || operation.phase === 'reconciliation_pending';
+    const result = operation.phase === 'blocked'
+        ? messages.workflowFailure
+        : externallyPending ? messages.externalWait : messages.phase[operation.phase];
     const lines = [
-        `# ${operation.phase === "blocked" ? "❌" : externallyPending ? "⏳" : "✅"} ${messages.jobSummary}`, "",
-        `> **${messages.result}: ${result}.**`, "",
-        `| ${messages.previousPhase} | ${messages.resultingPhase} | ${messages.retryable} |`, "|---|---|---|",
-        `| ${inline(previousPhase ?? operation.phase)} | ${inline(operation.phase)} | ${operation.lastFailure?.retryable ? messages.yes : messages.no} |`, "",
-        `- Operation: ${inline(operation.operationId)}`,
-        `- State: version ${operation.stateVersion}, revision ${operation.revision}`,
-        `- Admission scope: repository + launcher issue #${context.issue}`,
+        `# ${operation.phase === 'blocked' ? '❌' : externallyPending ? '⏳' : '✅'} ${messages.jobSummary}`, '',
+        `> **${messages.result}: ${result}.**`, '',
+        `| ${messages.previousPhase} | ${messages.resultingPhase} | ${messages.retryable} |`, '|---|---|---|',
+        `| ${inline(previousPhase ?? operation.phase)} | ${inline(operation.phase)} | ${operation.lastFailure?.retryable ? messages.yes : messages.no} |`, '',
+        `- ${messages.operation}: ${inline(operation.operationId)}`,
+        `- ${catalog.message('deployment.template.jobState', { version: operation.stateVersion, revision: operation.revision })}`,
+        `- ${catalog.message('deployment.template.admissionScope', { issue: context.issue })}`,
         `- ${messages.origin}: ${inline(`${operation.originBranch}@${shortSha(operation.originSha)}`)}`,
         `- ${messages.preparedSource}: ${inline(`${operation.sourceBranch}@${shortSha(operation.sourceSha)}`)}`,
-        `- ${messages.productionFact}: ${inline(operation.productionSha ? `${operation.productionBranch}@${shortSha(operation.productionSha)}` : "pending")}`,
-        `- ${messages.publication}: ${operation.publicationVerified ? messages.alreadyPublished : messages.notPublished}`,
-        `- Publication receipt: ${operation.publicationReceipt ? inline(`${operation.publicationReceipt.tag}@${shortSha(operation.publicationReceipt.productionSha)}`) : "absent"}`,
-        `- ${messages.createdReused}: ${safeText(operations.join(", ") || "none")}`, "",
+        `- ${messages.productionFact}: ${inline(operation.productionSha ? `${operation.productionBranch}@${shortSha(operation.productionSha)}` : messages.pending)}`,
+        `- ${operation.publicationVerified ? messages.alreadyPublished : messages.notPublished}`,
+        `- ${messages.publicationReceipt}: ${operation.publicationReceipt
+            ? inline(`${operation.publicationReceipt.tag}@${shortSha(operation.publicationReceipt.productionSha)}`)
+            : messages.absent}`, '',
     ];
-    if (operation.phase === "blocked") {
-        lines.push(`## ${messages.actionRequired}`, "", `${safeText(operation.lastFailure?.message ?? messages.workflowFailure)}. ${operation.lastFailure?.retryable ? messages.retryAfterCorrection : messages.manualIntervention}.`, "");
+    if (operation.phase === 'blocked') {
+        lines.push(`## ${messages.actionRequired}`, '', `${safeText(operation.lastFailure?.message ?? messages.workflowFailure)}. ${operation.lastFailure?.retryable ? messages.retryAfterCorrection : messages.manualIntervention}.`, '');
     }
-    lines.push(deploymentLinks(operation, context, messages).join(" · "));
-    return lines.join("\n");
+    lines.push(deploymentLinks(operation, context, messages, catalog).join(' · '));
+    return lines.join('\n');
+}
+function renderDeploymentMilestone(milestone, catalog) {
+    switch (milestone.kind) {
+        case 'promotion-merged':
+            return catalog.message('deployment.milestone.promotionMerged', {
+                number: milestone.pullRequest,
+                productionSha: inline(milestone.productionSha),
+            });
+        case 'publication-complete':
+            return catalog.message('deployment.milestone.publicationComplete', {
+                tag: inline(milestone.tag),
+                productionSha: inline(milestone.productionSha),
+            });
+        case 'reconciliation-blocked':
+            return catalog.message('deployment.milestone.reconciliationBlocked', { reason: safeText(milestone.reason) });
+        case 'orchestration-complete':
+            return catalog.message('deployment.milestone.complete', { tag: inline(milestone.tag) });
+    }
 }
 function progressLines(operation, messages) {
-    const phase = operation.phase === "blocked" ? operation.lastFailure?.previousPhase ?? "preparing" : operation.phase;
+    const phase = operation.phase === 'blocked' ? operation.lastFailure?.previousPhase ?? 'preparing' : operation.phase;
     const reached = (expected) => phaseRank(phase) >= phaseRank(expected);
     return [
         `- [x] ${messages.cut}: ${inline(`${operation.originBranch}@${shortSha(operation.originSha)}`)}`,
         `- [x] ${messages.buildValidation} + ${messages.packageSmoke}`,
-        `- [${operation.productionSha || reached("promoted") ? "x" : " "}] ${messages.promotion}: ${inline(operation.productionBranch)}`,
-        `- [${operation.publicationVerified ? "x" : " "}] ${operation.publicationVerified ? messages.alreadyPublished : messages.notPublished}`,
-        `- [${reconciliationCompleted(operation) ? "x" : " "}] ${messages.reconciliation}: ${inline(operation.developmentBranch)}`,
-        `- [${operation.phase === "completed" ? "x" : " "}] ${messages.cleanup}`,
+        `- [${operation.productionSha || reached('promoted') ? 'x' : ' '}] ${messages.promotion}: ${inline(operation.productionBranch)}`,
+        `- [${operation.publicationVerified ? 'x' : ' '}] ${operation.publicationVerified ? messages.alreadyPublished : messages.notPublished}`,
+        `- [${reconciliationCompleted(operation) ? 'x' : ' '}] ${messages.reconciliation}: ${inline(operation.developmentBranch)}`,
+        `- [${operation.phase === 'completed' ? 'x' : ' '}] ${messages.cleanup}`,
     ];
 }
 function deploymentDiagram(messages) {
-    const [source, prepared, production, accepted, publication, reconciliation, complete] = messages.diagram;
+    const { source, prepared, production, accepted, publication, reconciliation, complete } = messages.diagram;
     return [
-        "```mermaid", "flowchart LR", `    D[${source}] --> R[${prepared}]`, `    R --> P[${production}]`,
-        `    P --> A[${accepted}]`, `    A --> N[${publication}]`, `    N --> B[${reconciliation}]`, `    B --> C[${complete}]`, "```", "", messages.fallback,
+        '```mermaid', 'flowchart LR', `    D[${source}] --> R[${prepared}]`, `    R --> P[${production}]`,
+        `    P --> A[${accepted}]`, `    A --> N[${publication}]`, `    N --> B[${reconciliation}]`,
+        `    B --> C[${complete}]`, '```', '', messages.fallback,
     ];
 }
 function transitionTable(operation, messages) {
-    const activeTarget = operation.reconciliationTargets.find((target) => target.status !== "completed");
+    const activeTarget = operation.reconciliationTargets.find(target => target.status !== 'completed');
     const from = activeTarget?.syncBranch ?? activeTarget?.sourceBranch ?? operation.sourceBranch;
     const to = activeTarget?.targetBranch ?? operation.productionBranch;
-    return [`| ${messages.from} | ${messages.to} | ${messages.state} |`, "|---|---|---|", `| ${inline(from)} | ${inline(to)} | ${inline(messages.phase[operation.phase])} |`];
+    return [
+        `| ${messages.from} | ${messages.to} | ${messages.state} |`, '|---|---|---|',
+        `| ${inline(from)} | ${inline(to)} | ${safeText(messages.phase[operation.phase])} |`,
+    ];
 }
 function factTable(operation, messages) {
     return [
-        `| ${messages.productionUpdated} | ${messages.alreadyPublished} | ${messages.developmentSynchronized} |`, "|---|---|---|",
+        `| ${messages.productionUpdated} | ${messages.publication} | ${messages.developmentSynchronized} |`, '|---|---|---|',
         `| ${operation.productionSha ? messages.yes : messages.no} | ${operation.publicationVerified ? messages.yes : messages.no} | ${reconciliationCompleted(operation) ? messages.yes : messages.no} |`,
     ];
 }
@@ -43906,27 +44141,26 @@ function protectedFact(operation, messages) {
         return `${messages.productionUpdated}: ${messages.yes}. ${messages.notPublished}.`;
     return `${messages.productionUpdated}: ${messages.no}. ${messages.notPublished}.`;
 }
-function nextDescription(operation, messages) {
-    if (operation.phase === "blocked") {
-        const diagnostic = safeText(operation.lastFailure?.message ?? messages.workflowFailure);
-        return `${diagnostic}. ${messages.actionRequired}: ${operation.lastFailure?.retryable ? messages.retryAfterCorrection : messages.manualIntervention}.`;
+function nextDescription(operation, messages, catalog) {
+    if (operation.phase === 'promotion_pr_pending' || operation.phase === 'publishing' || operation.phase === 'promoted') {
+        return messages.afterPromotion;
     }
-    if (operation.phase === "promotion_pr_pending")
-        return messages.afterPromotion;
-    if (operation.phase === "publishing" || operation.phase === "promoted")
-        return messages.afterPromotion;
-    if (operation.phase === "reconciliation_pending" || operation.phase === "published")
+    if (operation.phase === 'reconciliation_pending' || operation.phase === 'published')
         return messages.noRepublish;
-    if (operation.phase === "completed")
+    if (operation.phase === 'completed') {
         return `${messages.productionUpdated}: ${messages.yes}. ${messages.developmentSynchronized}: ${messages.yes}.`;
-    return `${messages.promotion}: ${inline(operation.sourceBranch)} -> ${inline(operation.productionBranch)}.`;
+    }
+    return catalog.message('deployment.template.nextPromotion', {
+        source: inline(operation.sourceBranch),
+        production: inline(operation.productionBranch),
+    });
 }
 function deploymentAction(operation, messages) {
-    const manual = (operation.selectedPrMode ?? operation.prMode) === "create-only"
-        && (operation.phase === "promotion_pr_pending" || operation.phase === "reconciliation_pending");
+    const manual = (operation.selectedPrMode ?? operation.prMode) === 'create-only'
+        && (operation.phase === 'promotion_pr_pending' || operation.phase === 'reconciliation_pending');
     if (manual)
         return { required: true, message: `${messages.protectedChecks}: ${messages.reviewManagedPr}.` };
-    if (operation.phase !== "blocked")
+    if (operation.phase !== 'blocked')
         return { required: false, message: messages.noAction };
     return {
         required: true,
@@ -43935,52 +44169,106 @@ function deploymentAction(operation, messages) {
             : `${safeText(operation.lastFailure?.message ?? messages.workflowFailure)}. ${messages.manualIntervention}.`,
     };
 }
-function deploymentLinks(operation, context, messages) {
+function deploymentLinks(operation, context, messages, catalog) {
     const links = [`[${messages.controlCenter}](${issueUrl(context)})`];
-    links.push(`[${safeText(operation.sourceBranch)} branch](${branchUrl(context, operation.sourceBranch)})`);
-    links.push(`[${shortSha(operation.originSha)} origin commit](${commitUrl(context, operation.originSha)})`);
-    links.push(`[${shortSha(operation.sourceSha)} prepared commit](${commitUrl(context, operation.sourceSha)})`);
-    const activeTarget = operation.reconciliationTargets.find((target) => target.status !== "completed");
+    links.push(markdownLink(catalog.message('deployment.template.sourceBranchLink', {
+        branch: safeText(operation.sourceBranch),
+    }), branchUrl(context, operation.sourceBranch)));
+    links.push(markdownLink(catalog.message('deployment.template.originCommitLink', {
+        commit: shortSha(operation.originSha),
+    }), commitUrl(context, operation.originSha)));
+    links.push(markdownLink(catalog.message('deployment.template.preparedCommitLink', {
+        commit: shortSha(operation.sourceSha),
+    }), commitUrl(context, operation.sourceSha)));
+    const activeTarget = operation.reconciliationTargets.find(target => target.status !== 'completed');
     links.push(`[${messages.compare}](${compareUrl(context, activeTarget?.targetBranch ?? operation.productionBranch, activeTarget?.syncBranch ?? activeTarget?.sourceBranch ?? operation.sourceBranch)})`);
-    if (operation.promotionPullRequest)
-        links.push(`[Promotion PR #${operation.promotionPullRequest}](${pullRequestUrl(context, operation.promotionPullRequest)})`);
+    if (operation.promotionPullRequest) {
+        links.push(markdownLink(catalog.message('deployment.template.promotionPullRequestLink', {
+            number: operation.promotionPullRequest,
+        }), pullRequestUrl(context, operation.promotionPullRequest)));
+    }
     for (const target of operation.reconciliationTargets) {
-        if (target.pullRequest)
-            links.push(`[Reconciliation PR #${target.pullRequest}](${pullRequestUrl(context, target.pullRequest)})`);
+        if (target.pullRequest) {
+            links.push(markdownLink(catalog.message('deployment.template.reconciliationPullRequestLink', {
+                number: target.pullRequest,
+            }), pullRequestUrl(context, target.pullRequest)));
+        }
     }
-    if (operation.productionSha)
-        links.push(`[${shortSha(operation.productionSha)} production commit](${commitUrl(context, operation.productionSha)})`);
+    if (operation.productionSha) {
+        links.push(markdownLink(catalog.message('deployment.template.productionCommitLink', {
+            commit: shortSha(operation.productionSha),
+        }), commitUrl(context, operation.productionSha)));
+    }
     if (operation.publicationVerified) {
-        links.push(`[${safeText(operation.tag)} GitHub Release](${repositoryUrl(context)}/releases/tag/${encodeURIComponent(operation.tag)})`);
-        links.push(`[v${safeText(operation.version.split(".")[0])} Action tag](${branchUrl(context, `v${operation.version.split(".")[0]}`)})`);
-        if (context.packageName)
-            links.push(`[${safeText(context.packageName)}@${safeText(operation.version)} on npm](${npmVersionUrl(context.packageName, operation.version)})`);
+        links.push(markdownLink(catalog.message('deployment.template.releaseLink', {
+            tag: safeText(operation.tag),
+        }), `${repositoryUrl(context)}/releases/tag/${encodeURIComponent(operation.tag)}`));
+        const actionTag = `v${operation.version.split('.')[0]}`;
+        links.push(markdownLink(catalog.message('deployment.template.actionTagLink', {
+            tag: actionTag,
+        }), branchUrl(context, actionTag)));
+        if (context.packageName) {
+            links.push(markdownLink(catalog.message('deployment.template.npmLink', {
+                package: safeText(context.packageName),
+                version: safeText(operation.version),
+            }), npmVersionUrl(context.packageName, operation.version)));
+        }
     }
-    if (context.workflowRunUrl)
-        links.push(`[Workflow run](${safeUrl(context.workflowRunUrl)})`);
+    if (context.workflowRunUrl) {
+        links.push(markdownLink(catalog.message('deployment.template.workflowRunLink'), safeUrl(context.workflowRunUrl)));
+    }
     return links;
 }
-function messagesFor(locale) { return normalizeLocale(locale) === "es-ES" ? ES : EN; }
-function normalizeLocale(locale) { return locale.toLowerCase().startsWith("es") ? "es-ES" : "en-US"; }
 function reconciliationCompleted(operation) {
-    return operation.phase === "completed"
+    return operation.phase === 'completed'
         || (operation.reconciliationTargets.length > 0
-            && operation.reconciliationTargets.every((target) => target.status === "completed"));
+            && operation.reconciliationTargets.every(target => target.status === 'completed'));
 }
-function phaseRank(phase) { return ["preparing", "promotion_pr_pending", "promoted", "publishing", "published", "reconciliation_pending", "completed"].indexOf(phase); }
-function repositoryUrl(context) { return `https://github.com/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)}`; }
-function issueUrl(context) { return `${repositoryUrl(context)}/issues/${context.issue}`; }
-function pullRequestUrl(context, number) { return `${repositoryUrl(context)}/pull/${number}`; }
-function branchUrl(context, branch) { return `${repositoryUrl(context)}/tree/${encodeURIComponent(branch)}`; }
-function commitUrl(context, sha) { return `${repositoryUrl(context)}/commit/${encodeURIComponent(sha)}`; }
-function npmVersionUrl(packageName, version) { return `https://www.npmjs.com/package/${encodeURIComponent(packageName)}/v/${encodeURIComponent(version)}`; }
-function compareUrl(context, base, head) { return `${repositoryUrl(context)}/compare/${encodeURIComponent(base)}...${encodeURIComponent(head)}`; }
-function inline(value) { return `\`${safeText(value)}\``; }
-function safeText(value) { return value.replace(/[\r\n`<>]/g, "").replace(/@/g, "@\u200b").replace(/::/g, "﹕﹕").slice(0, 240); }
-function safeMarkerValue(value) { return value.replace(/[^A-Za-z0-9._-]/g, "").slice(0, 128); }
-function safeUrl(value) { return /^https:\/\/github\.com\//.test(value) ? value : "https://github.com"; }
-function shortSha(value) { return safeText(value).slice(0, 7); }
-function capitalize(value) { return value.charAt(0).toUpperCase() + value.slice(1); }
+function phaseRank(phase) {
+    return ['preparing', 'promotion_pr_pending', 'promoted', 'publishing', 'published', 'reconciliation_pending', 'completed'].indexOf(phase);
+}
+function repositoryUrl(context) {
+    return `https://github.com/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)}`;
+}
+function issueUrl(context) {
+    return `${repositoryUrl(context)}/issues/${context.issue}`;
+}
+function pullRequestUrl(context, number) {
+    return `${repositoryUrl(context)}/pull/${number}`;
+}
+function branchUrl(context, branch) {
+    return `${repositoryUrl(context)}/tree/${encodeURIComponent(branch)}`;
+}
+function commitUrl(context, sha) {
+    return `${repositoryUrl(context)}/commit/${encodeURIComponent(sha)}`;
+}
+function npmVersionUrl(packageName, version) {
+    return `https://www.npmjs.com/package/${encodeURIComponent(packageName)}/v/${encodeURIComponent(version)}`;
+}
+function compareUrl(context, base, head) {
+    return `${repositoryUrl(context)}/compare/${encodeURIComponent(base)}...${encodeURIComponent(head)}`;
+}
+function markdownLink(label, url) {
+    return `[${safeLinkLabel(label)}](${url})`;
+}
+function inline(value) {
+    return `\`${safeText(value)}\``;
+}
+function safeText(value) {
+    return value.replace(/[\r\n`<>|]/gu, '').replace(/@/gu, '@\u200b').replace(/::/gu, '﹕﹕').slice(0, 240);
+}
+function safeLinkLabel(value) {
+    return safeText(value).replace(/[[\]()]/gu, '');
+}
+function safeMarkerValue(value) {
+    return value.replace(/[^A-Za-z0-9._-]/gu, '').slice(0, 128);
+}
+function safeUrl(value) {
+    return /^https:\/\/github\.com\//u.test(value) ? value : 'https://github.com';
+}
+function shortSha(value) {
+    return safeText(value).slice(0, 7);
+}
 
 
 /***/ }),
@@ -46398,6 +46686,7 @@ exports.semanticCleanupError = semanticCleanupError;
 const application_error_1 = __nccwpck_require__(75999);
 const deployment_plan_policy_1 = __nccwpck_require__(8352);
 const deployment_presentation_policy_1 = __nccwpck_require__(83221);
+const deployment_message_catalog_1 = __nccwpck_require__(79364);
 const deployment_operation_1 = __nccwpck_require__(92730);
 const merge_queue_readiness_1 = __nccwpck_require__(12515);
 const result_1 = __nccwpck_require__(73817);
@@ -46406,6 +46695,7 @@ class DeploymentOrchestrationRuntime {
     constructor(dependencies, stateBoundary) {
         this.dependencies = dependencies;
         this.stateBoundary = stateBoundary;
+        this.presentationCatalogs = new Map();
     }
     async persist(context, operation) {
         context.currentConfiguration.deploymentOrchestration = operation;
@@ -46415,7 +46705,7 @@ class DeploymentOrchestrationRuntime {
         const blocked = (0, deployment_operation_1.blockDeploymentOperation)(operation, category, message, retryable);
         await this.persist(context, blocked);
         await this.publishDashboard(context, blocked);
-        await this.publishMilestone(context, blocked, "reconciliation-blocked", `❌ Deployment blocked: ${blocked.lastFailure?.message}`);
+        await this.publishMilestone(context, blocked, { kind: "reconciliation-blocked", reason: blocked.lastFailure?.message ?? message });
         return new result_1.Result({
             id: exports.DEPLOYMENT_ORCHESTRATION_TASK_ID,
             success: false,
@@ -46426,7 +46716,8 @@ class DeploymentOrchestrationRuntime {
     }
     async publishDashboard(context, operation) {
         const marker = (0, deployment_presentation_policy_1.deploymentDashboardMarker)(operation.operationId, context.singleAction.issue);
-        const body = (0, deployment_presentation_policy_1.renderDeploymentDashboard)(operation, presentationContext(context));
+        const catalog = await this.presentationCatalog("issue", context, operation);
+        const body = (0, deployment_presentation_policy_1.renderDeploymentDashboard)(operation, presentationContext(context, operation), catalog);
         const current = await this.dependencies.presentation.findDashboard(context.singleAction.issue, marker);
         if (current) {
             await this.dependencies.presentation.updateDashboard(context.singleAction.issue, current.id, body);
@@ -46434,11 +46725,12 @@ class DeploymentOrchestrationRuntime {
         }
         await this.dependencies.presentation.createDashboard(context.singleAction.issue, body);
     }
-    async publishMilestone(context, operation, name, body) {
+    async publishMilestone(context, operation, milestone) {
         if (operation.commentMode !== "milestones")
             return;
-        const marker = `<!-- copilot-deployment-milestone operation-id="${operation.operationId}" name="${name}" -->`;
-        await this.dependencies.presentation.publishMilestone(context.singleAction.issue, marker, body);
+        const marker = `<!-- copilot-deployment-milestone operation-id="${operation.operationId}" name="${milestone.kind}" -->`;
+        const catalog = await this.presentationCatalog("issue", context, operation);
+        await this.dependencies.presentation.publishMilestone(context.singleAction.issue, marker, (0, deployment_presentation_policy_1.renderDeploymentMilestone)(milestone, catalog));
     }
     async createOrReusePullRequest(context, operation, phase, target) {
         const headBranch = target?.syncBranch ?? target?.sourceBranch ?? operation.sourceBranch;
@@ -46456,10 +46748,11 @@ class DeploymentOrchestrationRuntime {
         }
         if (existing[0])
             return existing[0];
-        const presentation = presentationContext(context);
+        const presentation = presentationContext(context, operation);
+        const catalog = await this.presentationCatalog("pull-request", context, operation);
         const content = phase === "promotion"
-            ? (0, deployment_presentation_policy_1.renderPromotionPullRequest)(operation, presentation)
-            : (0, deployment_presentation_policy_1.renderReconciliationPullRequest)(operation, requireTarget(target), presentation);
+            ? (0, deployment_presentation_policy_1.renderPromotionPullRequest)(operation, presentation, catalog)
+            : (0, deployment_presentation_policy_1.renderReconciliationPullRequest)(operation, requireTarget(target), presentation, catalog);
         return await this.dependencies.pullRequests.createManagedPullRequest({ ...query, ...content });
     }
     async configureMergeBehavior(context, operation, pullRequest, category, targetRole) {
@@ -46483,7 +46776,7 @@ class DeploymentOrchestrationRuntime {
         const capabilities = await this.dependencies.targetRules.getTargetCapabilities(targetBranch, { candidateHeadSha, ...(pullRequest === undefined ? {} : { pullRequest }) });
         const decision = (0, deployment_plan_policy_1.selectPullRequestMode)(operation.prMode, capabilities);
         if (decision.kind === "unsupported") {
-            return this.unsupportedMergeBehavior(context, targetRole, targetBranch, capabilities, decision);
+            return this.unsupportedMergeBehavior(context, operation, targetRole, targetBranch, capabilities, decision);
         }
         if (decision.mode === "merge-queue") {
             const readiness = (0, merge_queue_readiness_1.evaluateMergeQueueReadiness)({
@@ -46497,7 +46790,7 @@ class DeploymentOrchestrationRuntime {
             if (readiness.verdict !== "ready") {
                 return {
                     kind: "blocked",
-                    reason: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, context.locale.issue),
+                    reason: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, effectiveLocale(context, operation).issue),
                 };
             }
         }
@@ -46549,7 +46842,7 @@ class DeploymentOrchestrationRuntime {
             await this.dependencies.pullRequests.enableAutoMerge(pullRequest.nodeId);
         }
     }
-    unsupportedMergeBehavior(context, targetRole, targetBranch, capabilities, decision) {
+    unsupportedMergeBehavior(context, operation, targetRole, targetBranch, capabilities, decision) {
         if (capabilities.mergeQueueObservationProblems.length === 0) {
             return { kind: "blocked", reason: decision.reason };
         }
@@ -46563,8 +46856,19 @@ class DeploymentOrchestrationRuntime {
         });
         return {
             kind: "blocked",
-            reason: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, context.locale.issue),
+            reason: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, effectiveLocale(context, operation).issue),
         };
+    }
+    presentationCatalog(scope, context, operation) {
+        const locale = effectiveLocale(context, operation);
+        const targetLocale = scope === "issue" ? locale.issue : locale.pullRequest;
+        const key = `${scope}:${targetLocale}`;
+        const existing = this.presentationCatalogs.get(key);
+        if (existing)
+            return existing;
+        const resolution = (0, deployment_message_catalog_1.resolveDeploymentCatalog)(targetLocale, context.agentConfiguration, this.dependencies.catalogResolver);
+        this.presentationCatalogs.set(key, resolution);
+        return resolution;
     }
     async cleanupSyncBranches(context, operation) {
         for (const target of operation.reconciliationTargets) {
@@ -46634,15 +46938,20 @@ function shouldRecordUnexpectedFailure(error) {
 function semanticCleanupError(error) {
     return (0, application_error_1.toApplicationError)(error, "workflow.failed", "Deployment cleanup failed.");
 }
-function presentationContext(context) {
+function presentationContext(context, operation) {
+    const locale = effectiveLocale(context, operation);
     return {
         owner: context.owner,
         repository: context.repo,
         issue: context.singleAction.issue,
-        issueLocale: context.locale.issue,
-        pullRequestLocale: context.locale.pullRequest,
+        repositoryLocale: locale.repository,
+        issueLocale: locale.issue,
+        pullRequestLocale: locale.pullRequest,
         packageName: context.owner === "vypdev" && context.repo === "copilot" ? "@vypdev/copilot" : undefined,
     };
+}
+function effectiveLocale(context, operation) {
+    return operation.locale ?? context.locale;
 }
 function requireTarget(target) {
     if (!target)
@@ -47301,7 +47610,7 @@ class AcceptPromotionHandler {
         const publishing = { ...promoted, phase: "publishing" };
         await this.runtime.persist(context, publishing);
         await this.runtime.publishDashboard(context, publishing);
-        await this.runtime.publishMilestone(context, publishing, "promotion-merged", `✅ Promotion PR #${pullRequest.number} merged. Publication is starting from production SHA \`${productionSha}\`.`);
+        await this.runtime.publishMilestone(context, publishing, { kind: "promotion-merged", pullRequest: pullRequest.number, productionSha });
         await this.runtime.dependencies.continuation.dispatch(operation.publicationWorkflow, operation.productionBranch, operation.operationId, context.singleAction.issue, operation.version);
         return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Promotion PR #${pullRequest.number} was verified; publication continuation was dispatched from ${operation.productionBranch}.`);
     }
@@ -47374,7 +47683,7 @@ class ConfirmPublicationHandler {
             lastFailure: null,
         };
         await this.runtime.persist(context, published);
-        await this.runtime.publishMilestone(context, published, "publication-complete", `📦 ${published.tag} is published from accepted production SHA \`${published.productionSha}\`.`);
+        await this.runtime.publishMilestone(context, published, { kind: "publication-complete", tag: published.tag, productionSha });
         return await this.beginReconciliation(context, published);
     }
     async resumeRetryableBlock(context, operation) {
@@ -47575,6 +47884,7 @@ class PreparePromotionHandler {
         const originSha = persistedOrigin ?? await this.runtime.dependencies.git.getMergeBaseSha(originBranch, sourceBranch);
         const operation = (0, deployment_plan_policy_1.buildInitialDeploymentOperation)({
             operationId: this.runtime.dependencies.operationId(),
+            locale: context.locale,
             kind,
             version: context.singleAction.version,
             title: context.singleAction.title,
@@ -47632,6 +47942,7 @@ function selectOriginBranch(context, kind) {
 function validateOperation(context, operation) {
     const errors = (0, deployment_plan_policy_1.validateInitialDeploymentInput)({
         operationId: operation.operationId,
+        locale: operation.locale ?? context.locale,
         kind: operation.kind,
         version: operation.version,
         title: operation.title,
@@ -47772,7 +48083,7 @@ class ReconciliationHandler {
         const completed = { ...operation, phase: "completed", lastFailure: null };
         await this.runtime.persist(context, completed);
         await this.runtime.publishDashboard(context, completed);
-        await this.runtime.publishMilestone(context, completed, "orchestration-complete", `✅ Deployment ${completed.tag} and every configured reconciliation target are complete.`);
+        await this.runtime.publishMilestone(context, completed, { kind: "orchestration-complete", tag: completed.tag });
         return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Deployment ${completed.tag} completed${completionContext}.`);
     }
     async finishOrPresent(context, operation) {
@@ -51309,6 +51620,11 @@ function projectDeploymentOrchestrationContext(source) {
         branches: Object.freeze({ ...source.branches }),
         workflows: Object.freeze({ ...source.workflows }),
         locale: Object.freeze({ ...source.locale }),
+        ...(source.agentConfiguration
+            ? { agentConfiguration: Object.freeze({ ...source.agentConfiguration }) }
+            : source.ai
+                ? { agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }) }
+                : {}),
         labels: Object.freeze({
             ...source.labels,
             lifecycle: Object.freeze({ ...source.labels.lifecycle }),
@@ -51498,6 +51814,7 @@ function copyInitialLabels(source) {
 function copyDeploymentOperation(operation) {
     return Object.freeze({
         ...operation,
+        ...(operation.locale ? { locale: Object.freeze({ ...operation.locale }) } : {}),
         reconciliationTargets: Object.freeze((operation.reconciliationTargets ?? []).map(target => Object.freeze({ ...target }))),
         ...(operation.publicationReceipt ? { publicationReceipt: Object.freeze({ ...operation.publicationReceipt }) } : {}),
         ...(operation.lastFailure ? { lastFailure: Object.freeze({ ...operation.lastFailure }) } : {}),
@@ -72304,6 +72621,7 @@ exports.completeReconciliationTarget = completeReconciliationTarget;
 exports.sanitizeDeploymentMessage = sanitizeDeploymentMessage;
 exports.isDeploymentOperationSnapshot = isDeploymentOperationSnapshot;
 const deployment_configuration_1 = __nccwpck_require__(22495);
+const locale_1 = __nccwpck_require__(15386);
 exports.DEPLOYMENT_PHASES = [
     "preparing",
     "promotion_pr_pending",
@@ -72386,6 +72704,7 @@ function isDeploymentOperationSnapshot(value) {
         && operation.revision > 0
         && typeof operation.operationId === "string"
         && /^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(operation.operationId)
+        && (operation.locale === undefined || (0, locale_1.isLocaleProfile)(operation.locale))
         && (operation.kind === "release" || operation.kind === "hotfix")
         && typeof operation.version === "string" && /^[0-9]+\.[0-9]+\.[0-9]+$/.test(operation.version)
         && typeof operation.title === "string" && operation.title.length <= 1000
@@ -72737,6 +73056,7 @@ exports.canonicalizeLocaleTag = canonicalizeLocaleTag;
 exports.normalizeLocaleTag = normalizeLocaleTag;
 exports.resolveLocaleProfile = resolveLocaleProfile;
 exports.localeForScope = localeForScope;
+exports.isLocaleProfile = isLocaleProfile;
 exports.localeLanguagesMatch = localeLanguagesMatch;
 exports.baseLanguage = baseLanguage;
 exports.DEFAULT_REPOSITORY_LOCALE = 'en-US';
@@ -72805,6 +73125,22 @@ function localeForScope(profile, scope) {
     if (scope === 'pull-request')
         return profile.pullRequest;
     return profile.repository;
+}
+function isLocaleProfile(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const candidate = value;
+    try {
+        const resolved = resolveLocaleProfile(candidate.repository, candidate.issueOverride ?? '', candidate.pullRequestOverride ?? '');
+        return candidate.repository === resolved.repository
+            && candidate.issue === resolved.issue
+            && candidate.pullRequest === resolved.pullRequest
+            && candidate.issueOverride === resolved.issueOverride
+            && candidate.pullRequestOverride === resolved.pullRequestOverride;
+    }
+    catch {
+        return false;
+    }
 }
 function localeLanguagesMatch(left, right) {
     return baseLanguage(canonicalizeLocaleTag(left)) === baseLanguage(canonicalizeLocaleTag(right));
@@ -73137,7 +73473,7 @@ function validMessageText(value) {
 function safeDynamicText(value) {
     return validMessageText(value)
         && !/[\r\n\u202A-\u202E\u2066-\u2069]/u.test(value)
-        && !/<!--|-->|<\/?[A-Za-z]|https?:\/\/|```|[`*_[\]~]|(^|\s)\/(?:copilot)(?:\s|$)|@[A-Za-z0-9]/iu.test(value);
+        && !/<!--|-->|<\/?[A-Za-z]|https?:\/\/|```|[`*_[\]~|]|(^|\s)\/(?:copilot)(?:\s|$)|@[A-Za-z0-9]/iu.test(value);
 }
 function pluralPlaceholderParity(message) {
     const expected = placeholdersForTemplate(message.other);
@@ -74994,13 +75330,13 @@ function createSingleActionUseCaseCompositionRoot(surface, binding) {
         ? new repository_release_publication_repository_1.RepositoryReleasePublicationRepository((0, github_release_client_factory_1.createReleaseClient)())
         : undefined;
     const deploymentOrchestration = surface === "github-workflow"
-        ? createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, repositoryReleasePort, binding)
+        ? createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, repositoryReleasePort, binding, catalogResolver)
         : undefined;
     return new single_action_use_case_1.SingleActionUseCase(repositoryTagPort && repositoryReleasePort
         ? new publish_github_action_use_case_1.PublishGithubActionUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding), (0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding))
         : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, shared_capability_port_binding_1.bindIssueNotification)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncNotification)(issueDescriptionQueryPort, binding), catalogResolver), deploymentOrchestration);
 }
-function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publication, binding) {
+function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publication, binding, catalogResolver) {
     const deploymentClient = new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter();
     return new deployment_orchestration_use_case_1.DeploymentOrchestrationUseCase({
         pullRequests: (0, push_single_action_capability_port_binding_1.bindManagedPullRequests)(new github_managed_pull_request_repository_1.GithubManagedPullRequestRepository(deploymentClient), binding),
@@ -75013,6 +75349,7 @@ function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publica
         labels: (0, push_single_action_capability_port_binding_1.bindDeploymentLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding),
         issues: (0, push_single_action_capability_port_binding_1.bindDeploymentIssues)((0, issue_interaction_composition_root_1.createIssueClosureRepository)(), binding),
         operationId: node_crypto_1.randomUUID,
+        catalogResolver,
     });
 }
 function createIssueCommentUseCaseCompositionRoot(binding) {

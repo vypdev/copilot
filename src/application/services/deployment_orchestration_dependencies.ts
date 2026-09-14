@@ -9,6 +9,7 @@ import type {
 } from "../ports/deployment_orchestration_ports";
 import type { BoundIssueClosurePort } from "../ports/issue_lifecycle_ports";
 import type { BoundIssueLabelsPort } from "../ports/issue_management_ports";
+import type { MessageCatalogResolutionPort } from '../ports/message_catalog_ports';
 
 export interface DeploymentOrchestrationDependencies {
   readonly pullRequests: BoundManagedPullRequestPort;
@@ -21,4 +22,5 @@ export interface DeploymentOrchestrationDependencies {
   readonly labels: BoundIssueLabelsPort;
   readonly issues: BoundIssueClosurePort;
   readonly operationId: () => string;
+  readonly catalogResolver?: MessageCatalogResolutionPort;
 }

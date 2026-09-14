@@ -142,7 +142,9 @@ jobs:
 The durable release dashboard owns the issue presentation. Routine
 orchestration does not create an “Actions” summary or a decorative image. The
 legacy `images-issue-release` input remains accepted only for configuration
-compatibility.
+compatibility. The dashboard uses the effective issue locale, managed PRs use
+the pull-request locale, and the Actions summary uses the English-default
+repository locale; see the orchestration guide for inheritance and fallback.
 
 ## Template
 You can use this template for release issues that helps capture all the necessary information. The template includes fields for:

@@ -103,6 +103,7 @@ export class PreparePromotionHandler {
     );
     const operation = buildInitialDeploymentOperation({
       operationId: this.runtime.dependencies.operationId(),
+      locale: context.locale,
       kind,
       version: context.singleAction.version,
       title: context.singleAction.title,
@@ -194,6 +195,7 @@ function validateOperation(
 ): void {
   const errors = validateInitialDeploymentInput({
     operationId: operation.operationId,
+    locale: operation.locale ?? context.locale,
     kind: operation.kind,
     version: operation.version,
     title: operation.title,

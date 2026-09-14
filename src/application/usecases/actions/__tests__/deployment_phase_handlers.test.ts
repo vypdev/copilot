@@ -82,7 +82,7 @@ function context(
       hotfixTree: "hotfix",
     },
     workflows: { release: "release_workflow.yml", hotfix: "hotfix_workflow.yml" },
-    locale: { issue: "en-US", pullRequest: "en-US" },
+    locale: { repository: "en-US", issue: "en-US", pullRequest: "en-US" },
     labels: {
       isRelease: true,
       isHotfix: false,

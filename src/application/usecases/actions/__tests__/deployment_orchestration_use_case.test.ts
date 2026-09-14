@@ -8,6 +8,7 @@ import {
   decideDeploymentStateSave,
   readDeploymentOperationState,
 } from "../../../../domain/deployment_state_fence";
+import { ResolveMessageCatalogUseCase } from "../../../usecases/localization/resolve_message_catalog_use_case";
 
 const sourceSha = "a".repeat(40);
 const originSha = "b".repeat(40);
@@ -91,7 +92,11 @@ function execution(action: "prepare" | "continue" | "published" | "failed", curr
     tokens: { token: "pat" },
     branches: { defaultBranch: "master", development: "develop", releaseTree: "release", hotfixTree: "hotfix" },
     workflows: { release: "release_workflow.yml", hotfix: "hotfix_workflow.yml" },
-    locale: { issue: "en-US", pullRequest: "en-US" },
+    locale: {
+      repository: "en-US",
+      issue: "en-US",
+      pullRequest: "en-US",
+    },
     labels: {
       isRelease: true,
       isHotfix: false,
@@ -126,6 +131,8 @@ function execution(action: "prepare" | "continue" | "published" | "failed", curr
 }
 
 function harness() {
+  const catalogResolver = new ResolveMessageCatalogUseCase();
+  const catalogResolve = jest.spyOn(catalogResolver, "resolve");
   const pullRequests = {
     findManagedPullRequests: jest.fn().mockResolvedValue([]),
     createManagedPullRequest: jest.fn().mockResolvedValue(pr()),
@@ -192,6 +199,7 @@ function harness() {
     labels,
     issues,
     operationId: () => "operation-12345678",
+    catalogResolver,
   });
   return {
     useCase,
@@ -205,6 +213,7 @@ function harness() {
     stateFactory,
     labels,
     issues,
+    catalogResolve,
   };
 }
 
@@ -216,6 +225,30 @@ describe("DeploymentOrchestrationUseCase", () => {
     expect(result[0].success).toBe(true);
     expect(value.pullRequests.createManagedPullRequest).toHaveBeenCalledTimes(1);
     expect(input.currentConfiguration.deploymentOrchestration).toEqual(expect.objectContaining({ phase: "promotion_pr_pending", promotionPullRequest: 40 }));
+  });
+
+  it("resolves one catalog per destination and snapshots the effective locale profile", async () => {
+    const value = harness();
+    const input = execution("prepare");
+    input.locale = {
+      repository: "fr-FR",
+      issue: "es-ES",
+      pullRequest: "de-DE",
+      issueOverride: "es-ES",
+      pullRequestOverride: "de-DE",
+    };
+    Object.assign(input, { agentConfiguration: { provider: "codex", model: "planner-model" } });
+
+    await value.useCase.invoke(input);
+
+    expect(value.catalogResolve).toHaveBeenCalledTimes(2);
+    expect(value.catalogResolve.mock.calls.map(([request]) => request.targetLocale).sort())
+      .toEqual(["de-DE", "es-ES"]);
+    expect(value.catalogResolve).toHaveBeenCalledWith(expect.objectContaining({
+      configuration: { provider: "codex", model: "planner-model" },
+    }));
+    expect(input.currentConfiguration.deploymentOrchestration?.locale).toEqual(input.locale);
+    expect(Object.isFrozen(input.currentConfiguration.deploymentOrchestration?.locale)).toBe(true);
   });
 
   it("snapshots the exact release origin SHA and workflow", async () => {
@@ -272,6 +305,23 @@ describe("DeploymentOrchestrationUseCase", () => {
     value.pullRequests.findManagedPullRequests.mockResolvedValue([pr()]);
     await value.useCase.invoke(execution("prepare", operation("promotion_pr_pending")));
     expect(value.pullRequests.createManagedPullRequest).not.toHaveBeenCalled();
+  });
+
+  it("updates the owned dashboard and lets legacy state use the current locale profile", async () => {
+    const value = harness();
+    value.presentation.findDashboard.mockResolvedValue({ id: 99 });
+    value.pullRequests.findManagedPullRequests.mockResolvedValue([pr()]);
+    const input = execution("prepare", operation("promotion_pr_pending"));
+    input.locale = { repository: "es-ES", issue: "es-ES", pullRequest: "es-ES" };
+
+    await value.useCase.invoke(input);
+
+    expect(value.presentation.createDashboard).not.toHaveBeenCalled();
+    expect(value.presentation.updateDashboard).toHaveBeenCalledWith(
+      355,
+      99,
+      expect.stringContaining("Estado actual"),
+    );
   });
 
   it("blocks if the frozen release head changed after preparation", async () => {

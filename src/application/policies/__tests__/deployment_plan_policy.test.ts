@@ -14,6 +14,11 @@ import {
 } from "../deployment_plan_policy";
 
 const sha = (letter: string) => letter.repeat(40);
+const locale = Object.freeze({
+  repository: "en-US",
+  issue: "en-US",
+  pullRequest: "en-US",
+});
 const capabilities = (overrides: Partial<TargetMergeCapabilities> = {}): TargetMergeCapabilities => ({
   autoMergeAllowed: true,
   mergeQueueRequired: false,
@@ -67,6 +72,7 @@ describe("deployment plan policy", () => {
   it("snapshots a release plan from the development cut", () => {
     const value = buildInitialDeploymentOperation({
       operationId: "operation-12345678",
+      locale,
       kind: "release",
       version: "3.4.0",
       title: "Release",
@@ -80,12 +86,14 @@ describe("deployment plan policy", () => {
       configuration: { ...DEFAULT_DEPLOYMENT_CONFIGURATION },
       publicationWorkflow: "release_workflow.yml",
     });
-    expect(value).toEqual(expect.objectContaining({ phase: "preparing", originBranch: "develop", originSha: sha("b"), tag: "v3.4.0" }));
+    expect(value).toEqual(expect.objectContaining({ phase: "preparing", originBranch: "develop", originSha: sha("b"), tag: "v3.4.0", locale }));
+    expect(Object.isFrozen(value.locale)).toBe(true);
   });
 
   it("selects the hotfix strategy independently", () => {
     const value = buildInitialDeploymentOperation({
       operationId: "operation-12345678", kind: "hotfix", version: "3.4.1", title: "Hotfix", changelog: "Fix",
+      locale,
       sourceBranch: "hotfix/3.4.1", sourceSha: sha("a"), originBranch: "v3.4.0", originSha: sha("b"),
       productionBranch: "master", developmentBranch: "develop", publicationWorkflow: "hotfix_workflow.yml",
       configuration: { ...DEFAULT_DEPLOYMENT_CONFIGURATION, hotfixReconciliationStrategy: "canonical-gitflow" },
@@ -240,6 +248,7 @@ describe("deployment plan policy", () => {
   it("rejects invalid initial deployment facts", () => {
     const input = {
       operationId: "operation-12345678", kind: "release" as const, version: "v3", title: "", changelog: "",
+      locale,
       sourceBranch: "master", sourceSha: "bad", originBranch: "develop", originSha: "bad",
       productionBranch: "master", developmentBranch: "develop", publicationWorkflow: "release_workflow.yml",
       configuration: { ...DEFAULT_DEPLOYMENT_CONFIGURATION },
