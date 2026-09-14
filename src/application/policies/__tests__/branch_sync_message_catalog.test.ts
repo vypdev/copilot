@@ -39,6 +39,16 @@ describe('branch sync message catalog', () => {
     await expect(resolveBranchSyncCatalog('', configuration, undefined)).resolves.toMatchObject({
       requestedLocale: 'en-US', locale: 'en-US', resolutionSource: 'exact',
     });
+    const resolve = jest.fn().mockResolvedValue({
+      requestedLocale: 'en-US',
+      resolvedLocale: 'en-US',
+      source: 'exact',
+      messages: ENGLISH_BRANCH_SYNC_DEFINITION.messages,
+    });
+    await expect(resolveBranchSyncCatalog('', configuration, { resolve })).resolves.toMatchObject({
+      requestedLocale: 'en-US', locale: 'en-US', resolutionSource: 'exact',
+    });
+    expect(resolve).toHaveBeenCalledWith(expect.objectContaining({ targetLocale: 'en-US' }));
   });
 
   it('resolves an arbitrary BCP-47 locale through one schema-constrained request', async () => {
