@@ -198,6 +198,30 @@ describe('RecommendStepsUseCase', () => {
     expect(getResultPayload(unconfiguredResults[0].payload)?.recommendedSteps).toBe('1. Add auth module');
   });
 
+  it('fails without calling the agent when a stored plan is stale and the agent is no longer configured', async () => {
+    mockGetDescription.mockResolvedValue('The issue description has changed.');
+    const previousConfiguration = new Config({
+      recommendationState: {
+        issueDescriptionFingerprint: 'stale-description',
+        recommendationFingerprint: 'existing-recommendation',
+        recommendation: '1. Keep the existing plan',
+      },
+    });
+
+    const results = await invoke(baseParam({
+      ai: new Ai('', '', false, [], false, 'low', 20),
+      previousConfiguration,
+    }));
+
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ success: false, executed: true });
+    expect(results[0].errors[0]).toMatchObject({
+      code: 'configuration.invalid',
+      message: 'Missing agent model or executable.',
+    });
+  });
+
   it('does not publish a duplicate recommendation when the agent returns the sentinel', async () => {
     mockGetDescription.mockResolvedValue('Implement login feature with more detail.');
     mockAskAgent.mockResolvedValue('NO_NEW_RECOMMENDATIONS');

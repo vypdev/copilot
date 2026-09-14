@@ -278,15 +278,49 @@ describe("IssueUseCase", () => {
     const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(false) };
     const param = minimalExecution({
       actor: 'outsider',
+      eventName: 'issues',
+      inputs: { action: 'opened' },
       issue: { opened: true },
       ai: new Ai('', 'model', true, [], false, 'low', 20),
     });
 
-    await createUseCase(authorization).invoke(param);
+    const results = await createUseCase(authorization).invoke(param);
 
     expect(authorization.isActorAllowedToModifyFiles).toHaveBeenCalledWith('outsider');
     expect(mockRecommendStepsInvoke).not.toHaveBeenCalled();
     expect(mockAnswerIssueHelpInvoke).not.toHaveBeenCalled();
+    expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(true);
+  });
+
+  it('applies the recommendation state patch returned by the recommendation workflow', async () => {
+    mockRecommendStepsInvoke.mockResolvedValue({
+      results: [new Result({
+        id: 'RecommendStepsUseCase',
+        success: true,
+        executed: true,
+        payload: { issueNumber: 8, recommendedSteps: '1. Implement the change.' },
+      })],
+      configurationPatch: {
+        recommendationState: {
+          issueDescriptionFingerprint: 'description-fingerprint',
+          recommendationFingerprint: 'recommendation-fingerprint',
+          recommendation: '1. Implement the change.',
+        },
+      },
+    });
+    const param = minimalExecution({
+      eventName: 'issues',
+      inputs: { action: 'opened' },
+      issue: { opened: true },
+    });
+
+    await createUseCase().invoke(param);
+
+    expect(param.currentConfiguration.recommendationState).toEqual({
+      issueDescriptionFingerprint: 'description-fingerprint',
+      recommendationFingerprint: 'recommendation-fingerprint',
+      recommendation: '1. Implement the change.',
+    });
   });
 
   it("does not recommend steps for an unrelated issue edit", async () => {
