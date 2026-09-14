@@ -154,10 +154,12 @@ describe('branch sync message catalog', () => {
       'branchSync.stale.heading': 'Synchronisation de branche requise',
       'branchSync.stale.behind': {
         one: '{workingBranch} a {count} commit de retard sur {parentBranch}.',
+        many: '{workingBranch} a {count} commit de retard sur {parentBranch}.',
         other: '{workingBranch} a {count} commits de retard sur {parentBranch}.',
       },
       'branchSync.stale.ahead': {
         one: 'Elle contient aussi {count} commit absent de la branche parente.',
+        many: 'Elle contient aussi {count} commit absent de la branche parente.',
         other: 'Elle contient aussi {count} commits absents de la branche parente.',
       },
       'branchSync.stale.instructions': 'Exécutez {command} dans cette conversation pour intégrer les changements en sécurité.',

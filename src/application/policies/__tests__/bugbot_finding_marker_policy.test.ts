@@ -283,7 +283,7 @@ describe("marker", () => {
         semanticFingerprint: SEMANTIC_FINGERPRINT,
       };
       const body = buildCommentBody(finding, true);
-      expect(body).toContain("**Resolved**");
+      expect(body).toContain("**Resolved:**");
       expect(body).toContain("resolved:true");
     });
 

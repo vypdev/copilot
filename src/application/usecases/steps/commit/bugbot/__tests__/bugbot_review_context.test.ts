@@ -64,7 +64,26 @@ describe('Bugbot review context', () => {
     expect(block).not.toContain('build/generated.js');
     expect(block).not.toContain('generatedgenerated');
     expect(block).toContain('src/review-me.ts');
-    expect(block).toContain('1 file(s) excluded by configured ignore patterns');
+    expect(block).toContain('1 file excluded by configured ignore patterns');
+  });
+
+  it('uses plural coverage nouns for multiple ignored and truncated patches', () => {
+    const context = buildReviewDiffContext({
+      prHeadSha: 'sha',
+      prFiles: [],
+      pathToFirstDiffLine: {},
+      changes: [
+        ...['build/a.js', 'build/b.js'].map((filename) => ({
+          filename, status: 'modified', additions: 1, deletions: 0, patch: '+generated',
+        })),
+        ...['src/a.ts', 'src/b.ts'].map((filename) => ({
+          filename, status: 'modified', additions: 1, deletions: 0, patch: 'x'.repeat(12_001),
+        })),
+      ],
+    }, ['build/*']);
+
+    expect(context.block).toContain('2 files excluded by configured ignore patterns');
+    expect(context.block).toContain('2 patches truncated');
   });
 
   it('names a provider patch that is unavailable', () => {
@@ -160,8 +179,18 @@ describe('Bugbot review context', () => {
     expect(context.block).not.toContain('body[09]');
     expect(context.block).toContain('body[10]');
     expect(context.block.indexOf('body[10]')).toBeLessThan(context.block.indexOf('body[59]'));
-    expect(context.block).toContain('10 older discussion item(s) omitted');
+    expect(context.block).toContain('10 older discussion items omitted');
     expect(context.block.length).toBeLessThanOrEqual(24_000);
+  });
+
+  it('uses the singular discussion noun when exactly one older item is omitted', () => {
+    const context = buildReviewConversationContext(
+      Array.from({ length: 51 }, (_, index) => ({ id: index, body: `body-${index}` })),
+      new Map(),
+    );
+
+    expect(context.omitted).toBe(1);
+    expect(context.block).toContain('1 older discussion item omitted');
   });
 
   it('reports per-item truncation without allowing the diff or discussion blocks past their caps', () => {
@@ -221,5 +250,23 @@ describe('Bugbot review context', () => {
     expect(context.omitted).toBeGreaterThan(0);
     expect(context.block).toContain('omitted by the prompt budget');
     expect(context.block.length).toBeLessThanOrEqual(64_000);
+  });
+
+  it('uses the singular file-patch noun when exactly one diff is omitted', () => {
+    const context = buildReviewDiffContext({
+      prHeadSha: 'sha',
+      prFiles: [],
+      pathToFirstDiffLine: {},
+      changes: Array.from({ length: 6 }, (_, index) => ({
+        filename: `src/singular-${index}.ts`,
+        status: 'modified',
+        additions: 1,
+        deletions: 0,
+        patch: 'x'.repeat(12_000),
+      })),
+    });
+
+    expect(context.omitted).toBe(1);
+    expect(context.block).toContain('1 file patch omitted by the prompt budget');
   });
 });

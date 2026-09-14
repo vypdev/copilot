@@ -17,7 +17,11 @@ const spanish: MessageCatalogDefinition<Id> = Object.freeze({
   compatibleBaseLanguage: 'es',
   messages: Object.freeze({
     heading: 'Estado actual',
-    count: Object.freeze({ one: '{count} hallazgo', other: '{count} hallazgos' }),
+    count: Object.freeze({
+      one: '{count} hallazgo',
+      many: '{count} hallazgos',
+      other: '{count} hallazgos',
+    }),
   }),
 });
 const configuration = { provider: 'codex' as const, model: 'model' };
@@ -44,7 +48,7 @@ describe('ResolveMessageCatalogUseCase', () => {
   it('resolves and caches one exact dynamic catalog per locale and ID digest', async () => {
     const query = jest.fn().mockResolvedValue({
       targetLocale: 'fr-FR',
-      messages: { heading: 'État actuel', count: { one: '{count} résultat', other: '{count} résultats' } },
+      messages: { heading: 'État actuel', count: { one: '{count} résultat', many: '{count} résultat', other: '{count} résultats' } },
     });
     const resolver = new ResolveMessageCatalogUseCase({ query });
     const request = {
@@ -141,5 +145,23 @@ describe('ResolveMessageCatalogUseCase', () => {
         },
       },
     });
+    expect(buildCatalogResponseSchema(source.messages, ['heading', 'count'], 'pl-PL'))
+      .toMatchObject({
+        properties: {
+          messages: {
+            properties: {
+              count: {
+                required: ['one', 'few', 'many', 'other'],
+                properties: {
+                  one: { type: 'string' },
+                  few: { type: 'string' },
+                  many: { type: 'string' },
+                  other: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      });
   });
 });

@@ -11,6 +11,7 @@ import { resolvePullRequestFinding } from './resolve_pull_request_finding';
 import { isHumanResolver } from '../../../../../domain/bugbot/review_state';
 import { ApplicationError } from '../../../../errors/application_error';
 import type { BugbotContextSelectionContext } from './bugbot_review_operation_context';
+import type { BugbotMessageCatalog } from '../../../../policies/bugbot_message_catalog';
 
 export interface MarkFindingsResolvedParam {
     operation: BugbotContextSelectionContext;
@@ -18,12 +19,13 @@ export interface MarkFindingsResolvedParam {
     resolvedFindingIds: Set<string>;
     resolvedFindingResolutions?: ReadonlyMap<string, BugbotFindingResolution>;
     ports: BugbotFindingResolutionPorts;
+    catalog?: BugbotMessageCatalog;
 }
 
 export async function markFindingsResolved(param: MarkFindingsResolvedParam): Promise<ApplicationError[]> {
     const errors: ApplicationError[] = [];
     for (const [findingId, existing] of Object.entries(param.context.existingByFindingId)) {
-        await repairExistingPullRequestFinding(param.ports, param.operation, findingId, existing.pullRequest, errors);
+        await repairExistingPullRequestFinding(param.ports, param.operation, findingId, existing.pullRequest, errors, param.catalog);
         if (!param.resolvedFindingIds.has(findingId)) continue;
         await resolvePullRequestIfNeeded(param, findingId, existing.pullRequest, errors);
         await resolveIssueIfNeeded(param, findingId, existing.issue, errors);
@@ -37,10 +39,11 @@ async function repairExistingPullRequestFinding(
     findingId: string,
     destination: ExistingPullRequestFindingInfo | undefined,
     errors: ApplicationError[],
+    catalog?: BugbotMessageCatalog,
 ): Promise<void> {
     if (destination == null) return;
     if (destination.resolution === 'dismissed' && destination.threadResolved === true) {
-        await tryResolvePullRequestFinding(ports, findingId, destination, errors, 'dismissed');
+        await tryResolvePullRequestFinding(ports, findingId, destination, errors, 'dismissed', catalog);
         return;
     }
     if (!destination.resolved
@@ -72,6 +75,7 @@ async function resolvePullRequestIfNeeded(
             destination,
             errors,
             param.resolvedFindingResolutions?.get(findingId),
+            param.catalog,
         );
     }
 }
@@ -94,7 +98,7 @@ async function resolveIssueIfNeeded(
             comment: { id: comment.id, body: comment.body },
             issueNumber: param.operation.target.issueNumber,
             resolution: param.resolvedFindingResolutions?.get(findingId),
-        });
+        }, param.catalog);
     } catch {
         addResolutionError(errors, 'issue');
     }
@@ -106,6 +110,7 @@ async function tryResolvePullRequestFinding(
     destination: ExistingPullRequestFindingInfo,
     errors: ApplicationError[],
     resolution?: BugbotFindingResolution,
+    catalog?: BugbotMessageCatalog,
 ): Promise<void> {
     try {
         await resolvePullRequestFinding(ports.pullRequestComments, {
@@ -113,7 +118,7 @@ async function tryResolvePullRequestFinding(
             commentIdentity: destination.commentIdentity,
             pullRequestNumber: destination.pullRequestNumber,
             resolution,
-        });
+        }, catalog);
     } catch {
         addResolutionError(errors, 'pull request');
     }

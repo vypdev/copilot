@@ -62,6 +62,12 @@ context, publication, resolution, reconciliation, and optional telemetry
 capabilities. The gateway binds provider credentials before service
 construction and is the sole source of repository identity; neither
 `BugbotReviewRequest` nor any application use case can receive its credentials.
+An optional `MessageCatalogResolutionPort` supplies a complete dynamic catalog
+for valid non-bundled locales. Its schema requires every cardinal plural
+category reported for the target locale. English and Spanish resolve locally;
+unavailable, failed, or invalid dynamic resolution falls back atomically to English. The
+resolver is not called for dry-run, skipped, superseded, or issue-only
+no-mutation publication paths.
 Reconciliation requires semantic review-summary reads and writes
 in addition to inline-comment/thread capabilities, so an adapter cannot
 silently omit final projection support. It also provides trusted PR/commit/run navigation;

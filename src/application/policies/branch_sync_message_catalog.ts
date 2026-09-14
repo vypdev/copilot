@@ -46,10 +46,12 @@ const SPANISH_MESSAGES: Readonly<Record<BranchSyncMessageId, CatalogMessage>> = 
   'branchSync.stale.heading': 'Acción necesaria: sincroniza la rama',
   'branchSync.stale.behind': Object.freeze({
     one: '{workingBranch} está {count} commit por detrás de su rama padre {parentBranch}.',
+    many: '{workingBranch} está {count} commits por detrás de su rama padre {parentBranch}.',
     other: '{workingBranch} está {count} commits por detrás de su rama padre {parentBranch}.',
   }),
   'branchSync.stale.ahead': Object.freeze({
     one: 'También contiene {count} commit que no está en la rama padre.',
+    many: 'También contiene {count} commits que no están en la rama padre.',
     other: 'También contiene {count} commits que no están en la rama padre.',
   }),
   'branchSync.stale.instructions': 'Ejecuta {command} en esta conversación para integrar de forma segura los cambios de la rama padre. Si Git detecta conflictos, el agente corrector configurado puede resolver los archivos permitidos antes de ejecutar las verificaciones.',

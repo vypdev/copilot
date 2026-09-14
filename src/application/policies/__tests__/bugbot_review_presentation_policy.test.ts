@@ -61,7 +61,7 @@ describe('Bugbot review presentation', () => {
       'en-US',
       links,
     );
-    expect(body).toContain('2 finding(s) need attention');
+    expect(body).toContain('2 findings need attention');
     expect(body).toContain('/copilot fix all');
     expect(body).toContain('[ ] verification-required');
   });
@@ -84,7 +84,7 @@ describe('Bugbot review presentation', () => {
       'estado desconocido',
     );
     expect(renderBugbotStatusCard(projection(['reopened']), 'es-ES', links)).toContain(
-      'requieren atención',
+      'requiere atención',
     );
   });
 
@@ -130,7 +130,7 @@ describe('Bugbot review presentation', () => {
     expect(body).toContain('issue-comments: partial; retained=200, omitted=1');
     expect(body).toContain('truncated=2');
     expect(body).toContain('provider page limit reached');
-    expect(body).toContain('Inspect the omitted items or reduce the PR scope');
+    expect(body).toContain('Inspect the omitted items or reduce the pull request scope');
     expect(body).toContain('Rerun the review only after changing');
     expect(body).not.toContain('Run `/copilot recheck`');
     expect(body).not.toContain('No active findings');
@@ -235,8 +235,8 @@ describe('Bugbot review presentation', () => {
         locale,
         statusUrl: links.pullRequestUrl,
       });
-    expect(render(['open'], 'en-US')).toContain('require attention');
-    expect(render(['open'], 'es-ES')).toContain('requieren atención');
+    expect(render(['open'], 'en-US')).toContain('requires attention');
+    expect(render(['open'], 'es-ES')).toContain('requiere atención');
     expect(render(['unknown'], 'en-US')).toContain('could not be verified');
     expect(render(['unknown'], 'es-ES')).toContain('No se pudo verificar');
     expect(render(['fixed'], 'es-ES', 'Historical detail.')).toContain(
@@ -277,7 +277,7 @@ describe('Bugbot review presentation', () => {
     expect(clean).toContain('historical overflow without individual threads');
     expect(clean).not.toContain('All findings originating');
     expect(active).toContain('con seguimiento individual');
-    expect(active).toContain('overflow histórico sin thread individual');
+    expect(active).toContain('hallazgos históricos sin hilo individual');
     expect(renderBugbotReviewSnapshot(original, {
       reviewIdentity: '77', analyzedHeadSha: head, currentHeadSha: head,
       projectionDigest: '12345678', coverageStatus: 'complete', findings: projection(['fixed']).findings,

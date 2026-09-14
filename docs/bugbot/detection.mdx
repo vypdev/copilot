@@ -93,8 +93,16 @@ Each child comment is attached to an exact line/range confirmed from the current
 
 The action checks the PR head before invoking the reviewer, before mutation, after finding mutations, and before projecting current state. If a newer revision owns the PR, the old run is recorded as superseded and does not overwrite current-state surfaces.
 
-Finding titles, descriptions, evidence, and suggestions use the effective PR
-locale. Paths, line numbers, symbols, code, severities, IDs, commands, and links
+Finding titles, descriptions, evidence, and suggestions use the effective
+surface locale: `issues-locale` for issue-only publication and
+`pull-requests-locale` for a verified PR, with both inheriting
+`repository-locale` (`en-US` by default). The status card, historical snapshot,
+section labels, overflow summary, fallback-anchor note, and resolution note use
+the same atomically resolved catalog. Reviewed English and Spanish catalogs are
+bundled; another valid BCP-47 locale is resolved dynamically once per run with
+all cardinal plural categories required by that locale, or the whole artifact
+falls back to English. Paths, line numbers, symbols, code,
+severities, categories, IDs, commands, links, state values, and hidden markers
 remain structured and unchanged. The findings response must echo the exact
 canonical locale in `outputLocale`; a missing or different tag rejects the
 whole analysis before any finding or review is published.

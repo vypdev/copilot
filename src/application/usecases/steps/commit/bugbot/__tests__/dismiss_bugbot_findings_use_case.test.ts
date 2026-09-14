@@ -62,6 +62,26 @@ describe('DismissBugbotFindingsUseCase', () => {
         expect(results[0]).toMatchObject({ success: true, executed: true });
     });
 
+    it('uses the issue locale for the durable dismissal note', async () => {
+        const useCase = new DismissBugbotFindingsUseCase({
+            contextPorts: {} as never,
+            resolutionPorts: {} as never,
+        });
+
+        await useCase.invoke({
+            operation: {
+                ...operation(),
+                locale: { issue: 'es-MX', pullRequest: 'fr-FR' },
+                agentConfiguration: { provider: 'codex', model: 'model' },
+            },
+            findingIds: ['finding-1'],
+        });
+
+        const catalog = mockMarkFindingsResolved.mock.calls[0][0].catalog;
+        expect(catalog).toMatchObject({ resolutionSource: 'base', locale: 'es-ES' });
+        expect(catalog.message('bugbot.finding.dismissedLabel')).toBe('Descartado');
+    });
+
     it('is an idempotent no-op when no requested finding exists', async () => {
         const useCase = new DismissBugbotFindingsUseCase({
             contextPorts: {} as never,

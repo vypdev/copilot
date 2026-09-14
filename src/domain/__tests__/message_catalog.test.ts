@@ -1,5 +1,6 @@
 import {
   MESSAGE_CATALOG_VERSION,
+  catalogPluralCategories,
   catalogPlaceholders,
   renderCatalogMessage,
   selectBundledMessageCatalog,
@@ -25,7 +26,11 @@ const spanish: MessageCatalogDefinition<Id> = Object.freeze({
   compatibleBaseLanguage: 'es',
   messages: Object.freeze({
     greeting: 'Hola {name}',
-    items: Object.freeze({ one: '{count} elemento', other: '{count} elementos' }),
+    items: Object.freeze({
+      one: '{count} elemento',
+      many: '{count} elementos',
+      other: '{count} elementos',
+    }),
   }),
 });
 
@@ -67,12 +72,28 @@ describe('message catalog domain policy', () => {
       .toContain('catalog-message-invalid:greeting');
     expect(validateCatalogDefinition({ ...english, messages: { ...english.messages, greeting: 'x'.repeat(2_001) } }, ['greeting', 'items']))
       .toContain('catalog-message-invalid:greeting');
+    expect(validateCatalogDefinition({
+      ...english,
+      messages: { ...english.messages, items: { one: '{count} item', other: '{total} items' } },
+    }, ['greeting', 'items'])).toContain('catalog-message-invalid:items');
+    expect(validateCatalogDefinition({
+      ...english,
+      messages: { ...english.messages, items: { other: '{count} items' } },
+    }, ['greeting', 'items'])).toContain('catalog-message-invalid:items');
+    expect(validateCatalogDefinition({
+      ...english,
+      messages: { ...english.messages, items: { one: '{count} item', other: '{count} items', invalid: 'x' } as never },
+    }, ['greeting', 'items'])).toContain('catalog-message-invalid:items');
   });
 
   it('renders typed placeholders, locale-aware numbers, and plurals', () => {
     expect(renderCatalogMessage(english.messages.greeting, { name: 'Ada' })).toBe('Hello Ada');
     expect(renderCatalogMessage(english.messages.items, { count: 1 }, 'en-US', 1)).toBe('1 item');
     expect(renderCatalogMessage(english.messages.items, { count: 2 }, 'en-US', 2)).toBe('2 items');
+    expect(renderCatalogMessage(spanish.messages.items, { count: 1_000_000 }, 'es-ES', 1_000_000))
+      .toMatch(/1.*000.*000 elementos/u);
+    expect(renderCatalogMessage({ other: '{count} items' }, { count: 1 }, 'en-US', 1))
+      .toBe('1 items');
     expect(renderCatalogMessage(english.messages.items, { count: 1 })).toBe('1 item');
     expect(() => renderCatalogMessage(english.messages.items)).toThrow('Missing catalog variable: count.');
     expect(renderCatalogMessage('{count} éléments', { count: 1234 }, 'fr-FR')).toMatch(/1[^0-9]234 éléments/u);
@@ -90,6 +111,37 @@ describe('message catalog domain policy', () => {
       greeting: 'Bonjour {name}',
       items: { one: '{count} élément', other: '{count} éléments' },
     }, english.messages, ['greeting', 'items'])).toBe(true);
+  });
+
+  it('requires and renders every cardinal plural category for the target locale', () => {
+    const polish = {
+      greeting: 'Cześć {name}',
+      items: {
+        one: '{count} element',
+        few: '{count} elementy',
+        many: '{count} elementów',
+        other: '{count} elementu',
+      },
+    };
+
+    expect(catalogPluralCategories('pl-PL')).toEqual(['one', 'few', 'many', 'other']);
+    expect(validateDynamicCatalogMessages(polish, english.messages, ['greeting', 'items'], 'pl-PL'))
+      .toBe(true);
+    expect(validateDynamicCatalogMessages({
+      ...polish,
+      items: { one: '{count} element', few: '{count} elementy', other: '{count} elementu' },
+    }, english.messages, ['greeting', 'items'], 'pl-PL')).toBe(false);
+    expect(renderCatalogMessage(polish.items, { count: 1 }, 'pl-PL', 1)).toBe('1 element');
+    expect(renderCatalogMessage(polish.items, { count: 2 }, 'pl-PL', 2)).toBe('2 elementy');
+    expect(renderCatalogMessage(polish.items, { count: 5 }, 'pl-PL', 5)).toBe('5 elementów');
+    expect(renderCatalogMessage(polish.items, { count: 1.5 }, 'pl-PL', 1.5)).toBe('1,5 elementu');
+  });
+
+  it('accepts an other-only dynamic plural for locales without cardinal variants', () => {
+    expect(validateDynamicCatalogMessages({
+      greeting: 'こんにちは {name}',
+      items: { other: '{count} 件' },
+    }, english.messages, ['greeting', 'items'], 'ja-JP')).toBe(true);
   });
 
   it.each([

@@ -1,9 +1,9 @@
 # Bugbot Pull-Request Review State Reconciliation
 
-- Status: Implemented; local gates pass, PR #363 final review-evidence correction pending controlled live verification
+- Status: Implemented
 - Date: 2026-09-11
 - Catalog capability ID: `bugbot-review-state-reconciliation`
-- Last verified: 2026-09-13 on `develop`
+- Last verified: 2026-09-14 on `develop`; generic localized presentation is verified by the catalog and publication contract tests
 - Owners: `vypdev/copilot` product and engineering maintainers
 - Scope: make every Bugbot pull-request surface present one coherent, current,
   recoverable finding state without erasing the historical review record.
@@ -525,7 +525,7 @@ guarantee, not a preference.
 | `bugbot-fail-on-unresolved` | boolean | `false` | Open/reopened/verification-required states are neutral when false and failing when true; system/unknown/projection errors always fail | read per run |
 | `bugbot-comment-limit` | integer | `20` | Bounds inline findings and active rows; it does not disable the single status card | read per run |
 | `bugbot-dry-run` | boolean | `false` | When true, no review/status/check/label mutation occurs | read per run |
-| `pull-requests-locale` | locale | `en-US` | Selects `en-US` or `es-ES` review/status copy; unsupported locales fall back to English | read per run |
+| `repository-locale`, `pull-requests-locale` | BCP-47 locale | repository `en-US`; PR override empty | Selects the effective PR locale. English and Spanish are bundled; any other valid locale uses one complete dynamic catalog or atomically falls back to English | read once per run before the first publication mutation |
 | `bugbot-telemetry` | boolean | `true` | Controls content-free telemetry only, never user-visible consistency | read per run |
 
 Invalid combinations and fixed rules:
@@ -700,7 +700,10 @@ Add pure Bugbot presentation policies, following the existing deployment
 presentation pattern:
 
 - one view model generated from the final projection;
-- `en-US` and `es-ES` copy with English fallback;
+- one typed catalog resolved for the effective PR locale and reused by every
+  review/status/finding surface in the operation; English and Spanish are
+  bundled, while any other valid BCP-47 locale resolves dynamically with every
+  target-locale cardinal plural category or falls back atomically to English;
 - deterministic review status block, status card, partial/failure details, and
   compact Job/Check summaries;
 - surface-specific watermarks: mutable finding comments say “last reconciled,”
@@ -906,8 +909,13 @@ and reported 1 active finding.
 
 ### 9.8 Accessibility, localization, and responsive behavior
 
-- Support `en-US` and `es-ES` through `pull-requests-locale`; fall back to
-  `en-US` for every other value.
+- Use the effective `pull-requests-locale`, inherited from
+  `repository-locale` (`en-US` by default). English and Spanish resolve from
+  reviewed bundled catalogs; another valid BCP-47 locale resolves one complete
+  dynamic catalog or falls back atomically to `en-US`.
+- Reuse that catalog across the mutable status, historical snapshot, inline
+  findings, review-level findings, overflow, and resolution notes. Skipped,
+  superseded, and dry-run paths do not pay for presentation resolution.
 - Status words accompany every emoji and checkbox.
 - Tables contain no essential action that is absent from surrounding prose.
 - Active finding lists remain readable without horizontal scrolling; technical
@@ -1265,8 +1273,10 @@ examples should reuse the same fixtures as presentation tests where practical.
 23. Given a closed/merged PR, then no new review-state mutation occurs and
     historical evidence remains.
 24. Given a reopened PR, then a full review reconstructs the current projection.
-25. Given `es-ES`, every primary status/action string is Spanish; given an
-    unsupported locale, English is used; machine markers remain locale-neutral.
+25. Given `es-ES`, every primary status/action string is Spanish; given any
+    other valid BCP-47 locale, one schema-valid complete catalog is reused or
+    the whole operation falls back to English; machine markers remain
+    locale-neutral.
 26. Given narrow/mobile rendering or no emoji/color perception, status and the
     required action remain unambiguous in text.
 27. Given any active/reopened/verification-required state, then the Check
@@ -1453,8 +1463,11 @@ evidence.
       introduced.
 - [x] Status card, review block, thread body, labels, Job Summary, Check, and
       telemetry agree in every fixture.
-- [ ] English, Spanish, fallback, narrow/mobile, light/dark, non-color, links,
-      headings, sanitization, and notification budget are reviewed.
+- [ ] English, Spanish, arbitrary-locale atomic fallback, narrow/mobile,
+      light/dark, non-color, links, headings, sanitization, and notification
+      budget are reviewed. Catalog completeness, pluralization, scope selection,
+      one-call reuse, and no-call terminal paths are automated; visual review
+      remains open.
 - [x] User, setup, operator, contributor, API, migration, and troubleshooting
       documentation is complete and discoverable.
 - [x] Permissions, identity trust, fork isolation, secret redaction, abuse

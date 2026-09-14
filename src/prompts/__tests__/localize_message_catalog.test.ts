@@ -9,6 +9,8 @@ describe('localize message catalog prompt', () => {
     expect(prompt).toContain('fr-FR');
     expect(prompt).toContain('"heading":"Hello {name}"');
     expect(prompt).toContain('"one":"{count} item"');
+    expect(prompt).toContain('one, many, other');
+    expect(prompt).toContain('Preserve the same placeholders in every category');
     expect(prompt).toContain('Return only the schema-constrained JSON object');
   });
 });
