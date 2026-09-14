@@ -41493,7 +41493,7 @@ function sanitizeLocalizationSummaryLabels(labels) {
 }
 /** Catalog output is untrusted prose; renderers alone own Markdown structure. */
 function escapeMarkdownText(value) {
-    return String(value ?? '').slice(0, 2000)
+    return value.slice(0, 2000)
         .replace(/[\r\n]+/gu, ' ')
         .replace(/<!--/gu, '&lt;!--')
         .replace(/-->/gu, '--&gt;')

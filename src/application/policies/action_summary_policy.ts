@@ -262,8 +262,8 @@ function sanitizeLocalizationSummaryLabels(labels: LocalizationSummaryLabels): L
 }
 
 /** Catalog output is untrusted prose; renderers alone own Markdown structure. */
-function escapeMarkdownText(value: unknown): string {
-    return String(value ?? '').slice(0, 2_000)
+function escapeMarkdownText(value: string): string {
+    return value.slice(0, 2_000)
         .replace(/[\r\n]+/gu, ' ')
         .replace(/<!--/gu, '&lt;!--')
         .replace(/-->/gu, '--&gt;')
