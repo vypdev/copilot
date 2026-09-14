@@ -25,6 +25,17 @@ cached language-agent request. A missing or invalid dynamic slice falls back
 atomically to English and records only locale, source, descriptor count, and a
 stable reason in the Job Summary.
 
+`copilot doctor` applies that boundary before constructing any visible check.
+The doctor use case resolves one complete catalog from the repository locale,
+passes the same immutable view into merge-queue readiness, returns it with the
+semantic report, and the CLI presenter uses that exact view. Setup passes an
+explicit English catalog to embedded readiness because setup is still creating
+the profile. Stable check IDs, evidence keys, verdicts, refs, and credential
+names remain machine facts; raw provider and credential-health prose is never
+rendered. Pull-request-mode selection returns reason codes rather than localized
+strings, so neither application use cases nor composition roots branch on `en`
+or `es`.
+
 Product-facing agent calls cross a second closed locale boundary. The fixed
 inventory is Think, initial help, recommendations, progress, pull-request
 descriptions, and Bugbot review. Each call uses the common structured-query

@@ -409,7 +409,10 @@ describe("DeploymentOrchestrationUseCase", () => {
     expect(result[0].success).toBe(false);
     expect(value.pullRequests.createManagedPullRequest).toHaveBeenCalledTimes(1);
     expect(value.pullRequests.enqueuePullRequest).not.toHaveBeenCalled();
-    expect(input.currentConfiguration.deploymentOrchestration?.lastFailure?.message).toContain("candidate workflow");
+    expect(input.currentConfiguration.deploymentOrchestration?.lastFailure?.message)
+      .toContain("CI Check [unsupported]: does not support merge groups");
+    expect(input.currentConfiguration.deploymentOrchestration?.lastFailure?.message)
+      .not.toContain("candidate workflow");
   });
 
   it("does not enqueue a PR twice when GitHub already reports queue membership", async () => {
@@ -483,6 +486,21 @@ describe("DeploymentOrchestrationUseCase", () => {
     expect(value.pullRequests.createManagedPullRequest).not.toHaveBeenCalled();
     expect(input.currentConfiguration.deploymentOrchestration?.lastFailure?.message)
       .toContain("Restaura el acceso de lectura");
+  });
+
+  it('publishes a semantic reason when explicitly requested auto-merge is unavailable', async () => {
+    const value = harness();
+    value.targetRules.getTargetCapabilities.mockResolvedValue(capabilities({ autoMergeAllowed: false }));
+    const input = execution('prepare');
+    input.deployment = { ...input.deployment, reconciliationPullRequestMode: 'auto-merge' };
+
+    const result = await value.useCase.invoke(input);
+
+    expect(result[0].success).toBe(false);
+    expect(value.pullRequests.createManagedPullRequest).not.toHaveBeenCalled();
+    expect(input.currentConfiguration.deploymentOrchestration?.lastFailure?.message)
+      .toBe('Native auto-merge is disabled for this repository.');
+    expect(value.catalogResolve).toHaveBeenCalledTimes(1);
   });
 
   it("blocks a promotion PR closed without merge and never dispatches publication", async () => {

@@ -88,12 +88,17 @@ describe('GitHub conversation publication boundaries', () => {
       'src/application/policies/semantic_result_publication_policy.ts',
       'src/application/policies/status_command_policy.ts',
       'src/application/policies/deployment_presentation_policy.ts',
+      'src/application/policies/deployment_plan_policy.ts',
+      'src/application/policies/setup_doctor_report_policy.ts',
+      'src/application/usecases/setup/doctor_use_case.ts',
+      'src/application/usecases/setup/merge_queue_readiness_use_case.ts',
       'src/application/usecases/steps/common/reply_publication_workflow.ts',
       'src/application/usecases/steps/common/status_card_publication_workflow.ts',
       'src/application/usecases/steps/commit/bugbot/publish_overflow_comment.ts',
       'src/application/usecases/steps/commit/bugbot/publish_pr_review_comments.ts',
       'src/application/usecases/steps/commit/bugbot/resolve_issue_finding.ts',
       'src/application/usecases/steps/commit/bugbot/resolve_pull_request_finding.ts',
+      'src/cli/setup_doctor_presenter.ts',
     ];
     const featureLocalLocaleBranch = /baseLanguage|startsWith\(['"](?:en|es)|===?\s*['"](?:en|es|en-US|es-ES)['"]/u;
     const violations = files.filter(file => featureLocalLocaleBranch.test(readFileSync(join(root, file), 'utf8')));

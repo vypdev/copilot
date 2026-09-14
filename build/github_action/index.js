@@ -44381,6 +44381,7 @@ exports.deploymentCopy = deploymentCopy;
 const deployment_operation_1 = __nccwpck_require__(92730);
 const message_catalog_1 = __nccwpck_require__(27097);
 const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
+const merge_queue_message_catalog_1 = __nccwpck_require__(56033);
 const SIMPLE_MESSAGE_KEYS = Object.freeze([
     'release', 'hotfix', 'currentStatus', 'noAction', 'actionRequired', 'progress',
     'currentTransition', 'whatNext', 'links', 'technical', 'alreadyPublished',
@@ -44432,6 +44433,7 @@ exports.DEPLOYMENT_MESSAGE_IDS = Object.freeze([
     ...deployment_operation_1.DEPLOYMENT_PHASES.map(phase => `deployment.phase.${phase}`),
     ...DIAGRAM_KEYS.map(key => `deployment.diagram.${key}`),
     ...TEMPLATE_MESSAGE_IDS,
+    ...merge_queue_message_catalog_1.MERGE_QUEUE_MESSAGE_IDS,
 ]);
 const ENGLISH_SIMPLE = Object.freeze({
     release: 'Release', hotfix: 'Hotfix', currentStatus: 'Current status',
@@ -44565,25 +44567,26 @@ const SPANISH_TEMPLATES = Object.freeze({
     'deployment.milestone.reconciliationBlocked': '❌ Despliegue bloqueado: {reason}',
     'deployment.milestone.complete': '✅ El despliegue {tag} y todos los destinos de reconciliación configurados se han completado.',
 });
-function catalogMessages(simple, phases, diagram, templates) {
+function catalogMessages(simple, phases, diagram, templates, mergeQueue) {
     return Object.freeze({
         ...Object.fromEntries(SIMPLE_MESSAGE_KEYS.map(key => [`deployment.${key}`, simple[key]])),
         ...Object.fromEntries(deployment_operation_1.DEPLOYMENT_PHASES.map(phase => [`deployment.phase.${phase}`, phases[phase]])),
         ...Object.fromEntries(DIAGRAM_KEYS.map(key => [`deployment.diagram.${key}`, diagram[key]])),
         ...templates,
+        ...mergeQueue,
     });
 }
 exports.ENGLISH_DEPLOYMENT_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
     locale: 'en-US',
     compatibleBaseLanguage: 'en',
-    messages: catalogMessages(ENGLISH_SIMPLE, ENGLISH_PHASES, ENGLISH_DIAGRAM, ENGLISH_TEMPLATES),
+    messages: catalogMessages(ENGLISH_SIMPLE, ENGLISH_PHASES, ENGLISH_DIAGRAM, ENGLISH_TEMPLATES, merge_queue_message_catalog_1.ENGLISH_MERGE_QUEUE_MESSAGES),
 });
 exports.SPANISH_DEPLOYMENT_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
     locale: 'es-ES',
     compatibleBaseLanguage: 'es',
-    messages: catalogMessages(SPANISH_SIMPLE, SPANISH_PHASES, SPANISH_DIAGRAM, SPANISH_TEMPLATES),
+    messages: catalogMessages(SPANISH_SIMPLE, SPANISH_PHASES, SPANISH_DIAGRAM, SPANISH_TEMPLATES, merge_queue_message_catalog_1.SPANISH_MERGE_QUEUE_MESSAGES),
 });
 exports.DEPLOYMENT_CATALOG_DEFINITIONS = Object.freeze([
     exports.ENGLISH_DEPLOYMENT_DEFINITION,
@@ -44614,6 +44617,7 @@ function deploymentCopy(catalog) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildInitialDeploymentOperation = buildInitialDeploymentOperation;
 exports.selectPullRequestMode = selectPullRequestMode;
+exports.pullRequestModeDecisionMessage = pullRequestModeDecisionMessage;
 exports.mergeQueueReadinessFailureMessage = mergeQueueReadinessFailureMessage;
 exports.selectBackmergeMode = selectBackmergeMode;
 exports.selectReconciliationTargetBranches = selectReconciliationTargetBranches;
@@ -44622,7 +44626,7 @@ exports.buildReconciliationTarget = buildReconciliationTarget;
 exports.buildReconciliationBranchName = buildReconciliationBranchName;
 exports.validateInitialDeploymentInput = validateInitialDeploymentInput;
 const deployment_operation_1 = __nccwpck_require__(92730);
-const sensitive_text_1 = __nccwpck_require__(47122);
+const merge_queue_message_catalog_1 = __nccwpck_require__(56033);
 function buildInitialDeploymentOperation(input) {
     const strategy = input.kind === "release"
         ? input.configuration.releaseReconciliationStrategy
@@ -44662,67 +44666,51 @@ function buildInitialDeploymentOperation(input) {
 }
 function selectPullRequestMode(configured, capabilities) {
     if (configured === "create-only") {
-        return { kind: "mode", mode: configured, reason: "Explicitly configured." };
+        return { kind: "mode", mode: configured, reasonCode: 'explicit-create-only' };
     }
     if (capabilities.mergeQueueObservationProblems.length > 0) {
         return {
             kind: "unsupported",
-            reason: `The target merge policy could not be verified: ${boundedDiagnostic(capabilities.mergeQueueObservationProblems[0].message)}`,
+            reasonCode: 'policy-observation-failed',
         };
     }
     if (capabilities.mergeQueueRequired) {
         return configured === "auto-merge"
-            ? { kind: "unsupported", reason: "Auto-merge mode was selected, but the target requires its merge queue." }
-            : { kind: "mode", mode: "merge-queue", reason: "The target requires its merge queue." };
+            ? { kind: "unsupported", reasonCode: 'auto-merge-rejected' }
+            : { kind: "mode", mode: "merge-queue", reasonCode: 'queue-required' };
     }
     if (configured === "merge-queue") {
-        return { kind: "unsupported", reason: "The target does not expose a required merge queue." };
+        return { kind: "unsupported", reasonCode: 'queue-not-exposed' };
     }
     if (configured === "auto-merge") {
         return capabilities.autoMergeAllowed
-            ? { kind: "mode", mode: "auto-merge", reason: "Native auto-merge was explicitly configured." }
-            : { kind: "unsupported", reason: "Native auto-merge is disabled for this repository." };
+            ? { kind: "mode", mode: "auto-merge", reasonCode: 'auto-merge-configured' }
+            : { kind: "unsupported", reasonCode: 'auto-merge-disabled' };
     }
     if (capabilities.immediatelyMergeable) {
-        return { kind: "mode", mode: "auto-merge", reason: "GitHub reports the PR ready; native auto-merge preserves branch protection." };
+        return { kind: "mode", mode: "auto-merge", reasonCode: 'immediately-mergeable' };
     }
     return capabilities.autoMergeAllowed
-        ? { kind: "mode", mode: "auto-merge", reason: "GitHub will merge after checks and reviews complete." }
-        : { kind: "mode", mode: "create-only", reason: "Repository auto-merge is unavailable; maintainer merge is required." };
+        ? { kind: "mode", mode: "auto-merge", reasonCode: 'auto-merge-available' }
+        : { kind: "mode", mode: "create-only", reasonCode: 'create-only-required' };
 }
-function mergeQueueReadinessFailureMessage(readiness, locale = "en-US") {
-    const spanish = locale.toLowerCase().startsWith("es");
-    const failed = readiness.producers.filter((producer) => producer.verdict === "unsupported" || producer.verdict === "unknown");
-    const producerDetails = failed.slice(0, 5)
-        .map((producer) => `${boundedDiagnostic(producer.name)} [${producer.verdict}]: ${boundedDiagnostic(producer.reason)}`)
-        .join("; ");
-    const problemDetails = readiness.problems.slice(0, 3)
-        .map((problem) => `${problem.area}: ${boundedDiagnostic(problem.message)}`)
-        .join("; ");
-    const details = [producerDetails, problemDetails].filter(Boolean).join("; ");
-    const hasUnsupportedProducer = failed.some((producer) => producer.verdict === "unsupported");
-    const hasObservationProblem = readiness.problems.length > 0;
-    if (spanish) {
-        const action = hasUnsupportedProducer
-            ? "Añade merge_group: checks_requested al workflow requerido y vuelve a intentarlo."
-            : hasObservationProblem
-                ? "Restaura el acceso de lectura y una respuesta válida para la política y los workflows del destino, y vuelve a intentarlo."
-                : "Haz que el productor requerido soporte merge groups o añade una atestación exacta revisada y vuelve a intentarlo.";
-        return `La preparación de la merge queue está en estado ${readiness.verdict} para el destino ${readiness.targetRole} ${boundedDiagnostic(readiness.targetBranch)}. ${details || "La evidencia del productor requerido está incompleta."} ${action}`;
-    }
-    const action = hasUnsupportedProducer
-        ? "Add merge_group: checks_requested to the required workflow, then retry."
-        : hasObservationProblem
-            ? "Restore read access and a valid response for the target policy and workflows, then retry."
-            : "Make the required producer support merge groups or add an exact reviewed check attestation, then retry.";
-    return `Merge queue readiness is ${readiness.verdict} for ${readiness.targetRole} target ${boundedDiagnostic(readiness.targetBranch)}. ${details || "Required producer evidence is incomplete."} ${action}`;
+function pullRequestModeDecisionMessage(decision, catalog) {
+    const ids = {
+        'explicit-create-only': 'mergeQueue.decision.explicitCreateOnly',
+        'policy-observation-failed': 'mergeQueue.decision.policyObservationFailed',
+        'auto-merge-rejected': 'mergeQueue.decision.autoMergeRejected',
+        'queue-required': 'mergeQueue.decision.queueRequired',
+        'queue-not-exposed': 'mergeQueue.decision.queueNotExposed',
+        'auto-merge-configured': 'mergeQueue.decision.autoMergeConfigured',
+        'auto-merge-disabled': 'mergeQueue.decision.autoMergeDisabled',
+        'immediately-mergeable': 'mergeQueue.decision.immediatelyMergeable',
+        'auto-merge-available': 'mergeQueue.decision.autoMergeAvailable',
+        'create-only-required': 'mergeQueue.decision.createOnlyRequired',
+    };
+    return catalog.message(ids[decision.reasonCode]);
 }
-function boundedDiagnostic(value) {
-    return (0, sensitive_text_1.redactSensitiveText)(value)
-        .replace(/[\r\n<>]/g, " ")
-        .replace(/::/g, "﹕﹕")
-        .replace(/@/g, "@\u200b")
-        .slice(0, 500);
+function mergeQueueReadinessFailureMessage(readiness, catalog) {
+    return (0, merge_queue_message_catalog_1.renderMergeQueueReadinessFailure)(readiness, catalog);
 }
 function selectBackmergeMode(configured, requiresStrictStatusChecks, directHeadIsUpToDate, directSourceIsExact = true) {
     const directIsUnsafe = !directSourceIsExact
@@ -45547,6 +45535,139 @@ function buildManagedBranchPresentation(input) {
             reminder,
         ],
     };
+}
+
+
+/***/ }),
+
+/***/ 56033:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SPANISH_MERGE_QUEUE_MESSAGES = exports.ENGLISH_MERGE_QUEUE_MESSAGES = exports.MERGE_QUEUE_MESSAGE_IDS = void 0;
+exports.renderMergeQueueReadinessFailure = renderMergeQueueReadinessFailure;
+exports.producerStateMessageId = producerStateMessageId;
+exports.boundedMergeQueueDiagnostic = boundedMergeQueueDiagnostic;
+const sensitive_text_1 = __nccwpck_require__(47122);
+exports.MERGE_QUEUE_MESSAGE_IDS = Object.freeze([
+    'mergeQueue.readiness.failure',
+    'mergeQueue.readiness.incompleteEvidence',
+    'mergeQueue.readiness.action.unsupported',
+    'mergeQueue.readiness.action.observation',
+    'mergeQueue.readiness.action.unknown',
+    'mergeQueue.producerState.verified',
+    'mergeQueue.producerState.attested',
+    'mergeQueue.producerState.unknown',
+    'mergeQueue.producerState.unsupported',
+    'mergeQueue.problem.classicProtection',
+    'mergeQueue.problem.effectiveRules',
+    'mergeQueue.problem.workflowContract',
+    'mergeQueue.problem.queueMembership',
+    'mergeQueue.decision.explicitCreateOnly',
+    'mergeQueue.decision.policyObservationFailed',
+    'mergeQueue.decision.autoMergeRejected',
+    'mergeQueue.decision.queueRequired',
+    'mergeQueue.decision.queueNotExposed',
+    'mergeQueue.decision.autoMergeConfigured',
+    'mergeQueue.decision.autoMergeDisabled',
+    'mergeQueue.decision.immediatelyMergeable',
+    'mergeQueue.decision.autoMergeAvailable',
+    'mergeQueue.decision.createOnlyRequired',
+]);
+exports.ENGLISH_MERGE_QUEUE_MESSAGES = Object.freeze({
+    'mergeQueue.readiness.failure': 'Merge queue readiness is {verdict} for {role} target {branch}. {details} {action}',
+    'mergeQueue.readiness.incompleteEvidence': 'Required producer evidence is incomplete.',
+    'mergeQueue.readiness.action.unsupported': 'Add {event} to the required workflow, then retry.',
+    'mergeQueue.readiness.action.observation': 'Restore read access and a valid response for the target policy and workflows, then retry.',
+    'mergeQueue.readiness.action.unknown': 'Make the required producer support merge groups or add an exact reviewed check attestation, then retry.',
+    'mergeQueue.producerState.verified': 'supports merge groups',
+    'mergeQueue.producerState.attested': 'covered by an exact reviewed attestation',
+    'mergeQueue.producerState.unknown': 'support could not be verified',
+    'mergeQueue.producerState.unsupported': 'does not support merge groups',
+    'mergeQueue.problem.classicProtection': 'Classic branch protection could not be inspected.',
+    'mergeQueue.problem.effectiveRules': 'Effective repository rules could not be inspected.',
+    'mergeQueue.problem.workflowContract': 'Required workflow contracts could not be inspected.',
+    'mergeQueue.problem.queueMembership': 'Merge-queue membership could not be inspected.',
+    'mergeQueue.decision.explicitCreateOnly': 'Create-only mode was explicitly configured.',
+    'mergeQueue.decision.policyObservationFailed': 'The target merge policy could not be verified.',
+    'mergeQueue.decision.autoMergeRejected': 'Auto-merge mode was selected, but the target requires its merge queue.',
+    'mergeQueue.decision.queueRequired': 'The target requires its merge queue.',
+    'mergeQueue.decision.queueNotExposed': 'The target does not expose a required merge queue.',
+    'mergeQueue.decision.autoMergeConfigured': 'Native auto-merge was explicitly configured.',
+    'mergeQueue.decision.autoMergeDisabled': 'Native auto-merge is disabled for this repository.',
+    'mergeQueue.decision.immediatelyMergeable': 'GitHub reports the pull request ready; native auto-merge preserves branch protection.',
+    'mergeQueue.decision.autoMergeAvailable': 'GitHub will merge after checks and reviews complete.',
+    'mergeQueue.decision.createOnlyRequired': 'Repository auto-merge is unavailable; maintainer merge is required.',
+});
+exports.SPANISH_MERGE_QUEUE_MESSAGES = Object.freeze({
+    'mergeQueue.readiness.failure': 'La preparación de la merge queue está en estado {verdict} para el destino {role} {branch}. {details} {action}',
+    'mergeQueue.readiness.incompleteEvidence': 'La evidencia del productor requerido está incompleta.',
+    'mergeQueue.readiness.action.unsupported': 'Añade {event} al workflow requerido y vuelve a intentarlo.',
+    'mergeQueue.readiness.action.observation': 'Restaura el acceso de lectura y una respuesta válida para la política y los workflows del destino, y vuelve a intentarlo.',
+    'mergeQueue.readiness.action.unknown': 'Haz que el productor requerido soporte merge groups o añade una atestación exacta revisada y vuelve a intentarlo.',
+    'mergeQueue.producerState.verified': 'admite merge groups',
+    'mergeQueue.producerState.attested': 'está cubierto por una atestación exacta revisada',
+    'mergeQueue.producerState.unknown': 'no se ha podido verificar su compatibilidad',
+    'mergeQueue.producerState.unsupported': 'no admite merge groups',
+    'mergeQueue.problem.classicProtection': 'No se ha podido inspeccionar la protección de rama clásica.',
+    'mergeQueue.problem.effectiveRules': 'No se han podido inspeccionar las reglas efectivas del repositorio.',
+    'mergeQueue.problem.workflowContract': 'No se han podido inspeccionar los contratos de los workflows requeridos.',
+    'mergeQueue.problem.queueMembership': 'No se ha podido inspeccionar la pertenencia a la merge queue.',
+    'mergeQueue.decision.explicitCreateOnly': 'El modo de solo creación se ha configurado explícitamente.',
+    'mergeQueue.decision.policyObservationFailed': 'No se ha podido verificar la política de merge del destino.',
+    'mergeQueue.decision.autoMergeRejected': 'Se ha seleccionado auto-merge, pero el destino requiere su merge queue.',
+    'mergeQueue.decision.queueRequired': 'El destino requiere su merge queue.',
+    'mergeQueue.decision.queueNotExposed': 'El destino no expone una merge queue obligatoria.',
+    'mergeQueue.decision.autoMergeConfigured': 'El auto-merge nativo se ha configurado explícitamente.',
+    'mergeQueue.decision.autoMergeDisabled': 'El auto-merge nativo está deshabilitado en este repositorio.',
+    'mergeQueue.decision.immediatelyMergeable': 'GitHub indica que la pull request está lista; el auto-merge nativo preserva la protección de rama.',
+    'mergeQueue.decision.autoMergeAvailable': 'GitHub hará merge cuando terminen los checks y las revisiones.',
+    'mergeQueue.decision.createOnlyRequired': 'El auto-merge del repositorio no está disponible; se requiere el merge de una persona mantenedora.',
+});
+function renderMergeQueueReadinessFailure(readiness, catalog) {
+    const failed = readiness.producers.filter((producer) => producer.verdict === 'unsupported' || producer.verdict === 'unknown');
+    const producerDetails = failed.slice(0, 5)
+        .map((producer) => `${boundedMergeQueueDiagnostic(producer.name)} [${producer.verdict}]: ${catalog.message(producerStateMessageId(producer.verdict))}`)
+        .join('; ');
+    const problemDetails = readiness.problems.slice(0, 3)
+        .map((problem) => `${problem.area}: ${catalog.message(problemMessageId(problem.area))}`)
+        .join('; ');
+    const details = [producerDetails, problemDetails].filter(Boolean).join('; ')
+        || catalog.message('mergeQueue.readiness.incompleteEvidence');
+    const unsupported = failed.some((producer) => producer.verdict === 'unsupported');
+    const action = catalog.message(unsupported
+        ? 'mergeQueue.readiness.action.unsupported'
+        : readiness.problems.length > 0
+            ? 'mergeQueue.readiness.action.observation'
+            : 'mergeQueue.readiness.action.unknown', unsupported ? { event: 'merge_group: checks_requested' } : {});
+    return catalog.message('mergeQueue.readiness.failure', {
+        verdict: readiness.verdict,
+        role: readiness.targetRole,
+        branch: boundedMergeQueueDiagnostic(readiness.targetBranch),
+        details,
+        action,
+    });
+}
+function producerStateMessageId(verdict) {
+    return `mergeQueue.producerState.${verdict}`;
+}
+function problemMessageId(area) {
+    const ids = {
+        'classic-protection': 'mergeQueue.problem.classicProtection',
+        'effective-rules': 'mergeQueue.problem.effectiveRules',
+        'workflow-contract': 'mergeQueue.problem.workflowContract',
+        'queue-membership': 'mergeQueue.problem.queueMembership',
+    };
+    return ids[area];
+}
+function boundedMergeQueueDiagnostic(value) {
+    return (0, sensitive_text_1.redactSensitiveText)(value)
+        .replace(/[\r\n<>]/gu, ' ')
+        .replace(/::/gu, '﹕﹕')
+        .replace(/@/gu, '@\u200b')
+        .slice(0, 500);
 }
 
 
@@ -47538,9 +47659,10 @@ class DeploymentOrchestrationRuntime {
                 attestations: context.deployment.mergeQueueCheckAttestations,
             });
             if (readiness.verdict !== "ready") {
+                const catalog = await this.presentationCatalog('issue', context, operation);
                 return {
                     kind: "blocked",
-                    reason: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, effectiveLocale(context, operation).issue),
+                    reason: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, catalog),
                 };
             }
         }
@@ -47592,9 +47714,10 @@ class DeploymentOrchestrationRuntime {
             await this.dependencies.pullRequests.enableAutoMerge(pullRequest.nodeId);
         }
     }
-    unsupportedMergeBehavior(context, operation, targetRole, targetBranch, capabilities, decision) {
+    async unsupportedMergeBehavior(context, operation, targetRole, targetBranch, capabilities, decision) {
+        const catalog = await this.presentationCatalog('issue', context, operation);
         if (capabilities.mergeQueueObservationProblems.length === 0) {
-            return { kind: "blocked", reason: decision.reason };
+            return { kind: "blocked", reason: (0, deployment_plan_policy_1.pullRequestModeDecisionMessage)(decision, catalog) };
         }
         const readiness = (0, merge_queue_readiness_1.evaluateMergeQueueReadiness)({
             queueRequired: true,
@@ -47606,7 +47729,7 @@ class DeploymentOrchestrationRuntime {
         });
         return {
             kind: "blocked",
-            reason: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, effectiveLocale(context, operation).issue),
+            reason: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, catalog),
         };
     }
     presentationCatalog(scope, context, operation) {

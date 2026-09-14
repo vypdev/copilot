@@ -5,6 +5,9 @@ import {
   createDefaultSetupConfiguration,
 } from '../../../policies/setup_configuration_policy';
 import type { SetupConfiguration, SetupRemoteConfiguration } from '../../../../domain/setup';
+import type { CatalogMessage } from '../../../../domain/message_catalog';
+import { ResolveMessageCatalogUseCase } from '../../localization/resolve_message_catalog_use_case';
+import { ENGLISH_SETUP_DOCTOR_DEFINITION } from '../../../policies/setup_doctor_message_catalog';
 
 function completeRemote(configuration: SetupConfiguration): SetupRemoteConfiguration {
   return {
@@ -51,7 +54,7 @@ describe('SetupDoctorUseCase', () => {
         ]),
       },
     });
-    const report = await new SetupDoctorUseCase(deps).execute(request(configuration));
+    const { report } = await new SetupDoctorUseCase(deps).execute(request(configuration));
 
     expect(report.healthy).toBe(false);
     expect(report.checks).toEqual(expect.arrayContaining([
@@ -68,7 +71,7 @@ describe('SetupDoctorUseCase', () => {
 
   it('returns an ordered healthy report when all required facts match', async () => {
     const configuration = createDefaultSetupConfiguration();
-    const report = await new SetupDoctorUseCase(dependencies(configuration)).execute(request(configuration));
+    const { report } = await new SetupDoctorUseCase(dependencies(configuration)).execute(request(configuration));
 
     expect(report.healthy).toBe(true);
     expect(report.checks.slice(0, 5).map((check) => check.id)).toEqual([
@@ -79,6 +82,85 @@ describe('SetupDoctorUseCase', () => {
       'workspace.repository-root',
     ]);
     expect(report.totals.fail).toBe(0);
+  });
+
+  it('uses repository locale for the whole report and reuses its catalog in merge readiness', async () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.repository.repositoryLocale = 'es-ES';
+    configuration.repository.issueLocale = 'en-US';
+    const deps = dependencies(configuration);
+
+    const diagnosis = await new SetupDoctorUseCase(deps).execute(request(configuration));
+
+    expect(diagnosis.catalog).toMatchObject({ locale: 'es-ES', resolutionSource: 'exact' });
+    expect(diagnosis.report.checks.find((check) => check.id === 'configuration.valid')?.summary)
+      .toBe('La configuración de setup es válida.');
+    expect(deps.mergeQueueReadiness.inspect).toHaveBeenCalledWith(expect.objectContaining({
+      catalog: diagnosis.catalog,
+    }));
+  });
+
+  it('resolves an arbitrary repository locale once and returns the same dynamic catalog', async () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.repository.repositoryLocale = 'fr-FR';
+    const messages = Object.fromEntries(Object.entries(ENGLISH_SETUP_DOCTOR_DEFINITION.messages)
+      .map(([id, message]) => [id, `FR ${message as string}`])) as Record<string, CatalogMessage>;
+    const query = jest.fn().mockResolvedValue({ targetLocale: 'fr-FR', messages });
+    const deps = dependencies(configuration, {
+      catalogResolver: new ResolveMessageCatalogUseCase({ query }),
+    });
+
+    const diagnosis = await new SetupDoctorUseCase(deps).execute(request(configuration));
+
+    expect(diagnosis.catalog).toMatchObject({ locale: 'fr-FR', resolutionSource: 'dynamic' });
+    expect(diagnosis.report.checks.find((check) => check.id === 'configuration.valid')?.summary)
+      .toBe('FR Setup configuration is valid.');
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports the actual atomic English fallback when dynamic catalog validation fails', async () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.repository.repositoryLocale = 'fr-FR';
+    const messages = Object.fromEntries(Object.entries(ENGLISH_SETUP_DOCTOR_DEFINITION.messages)
+      .map(([id, message]) => [id, `FR ${message as string}`])) as Record<string, CatalogMessage>;
+    delete messages['doctor.title'];
+    const query = jest.fn().mockResolvedValue({ targetLocale: 'fr-FR', messages });
+
+    const diagnosis = await new SetupDoctorUseCase(dependencies(configuration, {
+      catalogResolver: new ResolveMessageCatalogUseCase({ query }),
+    })).execute(request(configuration));
+
+    expect(diagnosis.catalog).toMatchObject({
+      requestedLocale: 'fr-FR',
+      locale: 'en-US',
+      resolutionSource: 'fallback',
+      fallbackReason: 'dynamic-response-invalid',
+    });
+    expect(diagnosis.report.checks.filter((check) => check.id.startsWith('locale.')))
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: 'locale.repository', status: 'warn', evidence: expect.objectContaining({ catalogSource: 'fallback' }) }),
+        expect.objectContaining({ id: 'locale.issue', status: 'warn', evidence: expect.objectContaining({ catalogSource: 'fallback' }) }),
+        expect.objectContaining({ id: 'locale.pull-request', status: 'warn', evidence: expect.objectContaining({ catalogSource: 'fallback' }) }),
+      ]));
+    const productCopy = diagnosis.report.checks.flatMap((check) => [check.summary, check.action ?? '']);
+    expect(productCopy.some((message) => message.startsWith('FR '))).toBe(false);
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the English catalog when the configured repository locale is invalid', async () => {
+    const configuration = createDefaultSetupConfiguration();
+    const deps = dependencies(configuration);
+    configuration.repository.repositoryLocale = 'x-private';
+
+    const diagnosis = await new SetupDoctorUseCase(deps).execute(request(configuration));
+
+    expect(diagnosis.catalog).toMatchObject({ locale: 'en-US', resolutionSource: 'exact' });
+    expect(diagnosis.report.checks.find((check) => check.id === 'locale.profile'))
+      .toEqual(expect.objectContaining({ status: 'skipped', blockedBy: ['configuration.valid'] }));
+    expect(diagnosis.report.checks.find((check) => check.id === 'github.variables'))
+      .toEqual(expect.objectContaining({ status: 'skipped', blockedBy: ['configuration.valid'] }));
+    expect(diagnosis.report.checks.find((check) => check.id === 'configuration.valid')?.summary)
+      .toMatch(/^Setup configuration has \d+ validation error/);
   });
 
   it('preserves an independent merge-queue result when resource inspection fails', async () => {
@@ -94,7 +176,7 @@ describe('SetupDoctorUseCase', () => {
       remoteConfiguration: { inspect: jest.fn().mockRejectedValue(new Error('forbidden')) },
       mergeQueueReadiness: { inspect: jest.fn().mockResolvedValue([queueCheck]) },
     });
-    const report = await new SetupDoctorUseCase(deps).execute(request(configuration));
+    const { report } = await new SetupDoctorUseCase(deps).execute(request(configuration));
 
     expect(report.checks).toEqual(expect.arrayContaining([
       queueCheck,
@@ -108,7 +190,7 @@ describe('SetupDoctorUseCase', () => {
     const deps = dependencies(configuration, {
       mergeQueueReadiness: { inspect: jest.fn().mockRejectedValue(new Error('provider details')) },
     });
-    const report = await new SetupDoctorUseCase(deps).execute(request(configuration));
+    const { report } = await new SetupDoctorUseCase(deps).execute(request(configuration));
 
     expect(report.checks.find((check) => check.id === 'github.merge-queue')).toEqual(expect.objectContaining({
       status: 'fail',
@@ -125,7 +207,7 @@ describe('SetupDoctorUseCase', () => {
       organizationAccess: 'unavailable' as const,
       organizationVariablesAccess: 'unavailable' as const,
     };
-    const report = await new SetupDoctorUseCase(dependencies(configuration, {
+    const { report } = await new SetupDoctorUseCase(dependencies(configuration, {
       remoteConfiguration: { inspect: jest.fn().mockResolvedValue(unavailable) },
     })).execute(request(configuration));
 
@@ -135,7 +217,7 @@ describe('SetupDoctorUseCase', () => {
 
   it('reports unavailable health as warnings rather than passes', async () => {
     const configuration = createDefaultSetupConfiguration();
-    const report = await new SetupDoctorUseCase(dependencies(configuration, {
+    const { report } = await new SetupDoctorUseCase(dependencies(configuration, {
       remoteHealth: { validateExisting: jest.fn().mockRejectedValue(new Error('unavailable')) },
     })).execute(request(configuration));
 
@@ -146,7 +228,7 @@ describe('SetupDoctorUseCase', () => {
 
   it('reports unchanged workflow comparisons as passing facts', async () => {
     const configuration = createDefaultSetupConfiguration();
-    const report = await new SetupDoctorUseCase(dependencies(configuration, {
+    const { report } = await new SetupDoctorUseCase(dependencies(configuration, {
       workspace: {
         isRepositoryRoot: jest.fn(() => true),
         compareWorkflows: jest.fn(() => [
@@ -172,7 +254,7 @@ describe('SetupDoctorUseCase', () => {
     const pending = new SetupDoctorUseCase(deps).execute(request(configuration));
     releaseQueue([]);
     releaseRemote(completeRemote(configuration));
-    const report = await pending;
+    const { report } = await pending;
 
     expect(report.checks.findIndex((check) => check.id === 'github.resource-scopes'))
       .toBeLessThan(report.checks.findIndex((check) => check.id.startsWith('github.variables.')));
@@ -182,7 +264,7 @@ describe('SetupDoctorUseCase', () => {
     const configuration = createDefaultSetupConfiguration();
     configuration.repository.mainBranch = '';
     const deps = dependencies(configuration);
-    const report = await new SetupDoctorUseCase(deps).execute(request(configuration));
+    const { report } = await new SetupDoctorUseCase(deps).execute(request(configuration));
 
     expect(report.checks).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: 'configuration.valid', status: 'fail' }),
@@ -196,7 +278,7 @@ describe('SetupDoctorUseCase', () => {
 
   it('maps local probe exceptions and non-root workspaces to bounded failures', async () => {
     const configuration = createDefaultSetupConfiguration();
-    const report = await new SetupDoctorUseCase(dependencies(configuration, {
+    const { report } = await new SetupDoctorUseCase(dependencies(configuration, {
       workspace: {
         isRepositoryRoot: jest.fn(() => false),
         compareWorkflows: jest.fn(() => { throw new Error('/private/path'); }),
@@ -208,7 +290,7 @@ describe('SetupDoctorUseCase', () => {
       expect.objectContaining({ id: 'workflow.comparison', status: 'fail', summary: 'Managed workflows could not be compared.' }),
     ]));
 
-    const thrownRoot = await new SetupDoctorUseCase(dependencies(configuration, {
+    const { report: thrownRoot } = await new SetupDoctorUseCase(dependencies(configuration, {
       workspace: {
         isRepositoryRoot: jest.fn(() => { throw new Error('private'); }),
         compareWorkflows: jest.fn(() => []),
@@ -219,7 +301,7 @@ describe('SetupDoctorUseCase', () => {
 
   it('maps a thrown PAT validation to a safe failure', async () => {
     const configuration = createDefaultSetupConfiguration();
-    const report = await new SetupDoctorUseCase(dependencies(configuration, {
+    const { report } = await new SetupDoctorUseCase(dependencies(configuration, {
       validation: { validateSetupPat: jest.fn().mockRejectedValue(new Error('github_pat_private')) },
     })).execute(request(configuration));
 
@@ -241,7 +323,7 @@ describe('SetupDoctorUseCase', () => {
       repositoryVariables,
       organizationVariables: [{ name: 'AGENT_PROVIDER', value: 'different' }],
     };
-    const report = await new SetupDoctorUseCase(dependencies(configuration, {
+    const { report } = await new SetupDoctorUseCase(dependencies(configuration, {
       remoteConfiguration: { inspect: jest.fn().mockResolvedValue(remote) },
     })).execute(request(configuration));
 
@@ -256,7 +338,7 @@ describe('SetupDoctorUseCase', () => {
     const configuration = createDefaultSetupConfiguration();
     for (const task of Object.values(configuration.agents)) task.provider = 'cursor';
     const remoteHealth = { validateExisting: jest.fn() };
-    const report = await new SetupDoctorUseCase(dependencies(configuration, {
+    const { report } = await new SetupDoctorUseCase(dependencies(configuration, {
       remoteConfiguration: {
         inspect: jest.fn().mockResolvedValue({ ...completeRemote(configuration), repositorySecrets: [] }),
       },
@@ -274,13 +356,13 @@ describe('SetupDoctorUseCase', () => {
     const configuration = createDefaultSetupConfiguration();
     for (const task of Object.values(configuration.agents)) task.provider = 'opencode';
     const requirements = buildSetupCredentialRequirements(configuration);
-    const report = await new SetupDoctorUseCase(dependencies(configuration, {
+    const { report } = await new SetupDoctorUseCase(dependencies(configuration, {
       remoteConfiguration: { inspect: jest.fn().mockResolvedValue(completeRemote(configuration)) },
       remoteHealth: {
         validateExisting: jest.fn().mockResolvedValue(requirements.map((requirement) => ({
           name: requirement.name,
           status: 'invalid',
-          message: 'Invalid.',
+          message: 'Invalid github_pat_private credential from provider.',
         }))),
       },
     })).execute(request(configuration));
@@ -289,6 +371,8 @@ describe('SetupDoctorUseCase', () => {
       status: 'fail',
       summary: 'Every available alternative credential is invalid.',
     }));
+    expect(JSON.stringify(report)).not.toContain('github_pat_private');
+    expect(JSON.stringify(report)).not.toContain('from provider');
   });
 });
 

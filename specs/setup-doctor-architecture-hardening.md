@@ -2,9 +2,9 @@
 
 - Status: Implemented — automated gates complete; controlled live GitHub permission-path evidence remains external
 - Date: 2026-09-11
-- Last updated: 2026-09-12
+- Last updated: 2026-09-14
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-09-12 in the P1-B implementation worktree
+- Last verified: 2026-09-14
 - Owners: Copilot maintainers and setup operators
 - Scope: separate setup decisions from terminal mechanics, execute doctor as a
   deterministic read-only check graph, and split remote resource responsibilities
@@ -24,7 +24,9 @@ collection remains a separate secret-aware flow after configuration is approved.
 when the setup PAT is invalid; remote dependants are marked `skipped`. Independent
 read-only probes run with a fixed maximum concurrency of four, but the report is
 always rendered in declared plan order. Doctor composition exposes no mutation
-port.
+port and resolves one complete repository-locale catalog for checks, merge
+readiness, and terminal presentation. English remains the authoritative default
+and atomic fallback.
 
 ```text
 defaults + overrides -> questionnaire -> immutable config -> plan -> confirm -> apply
@@ -101,6 +103,8 @@ as pass.
 3. Return the maximum safe doctor diagnosis even after a failed dependency.
 4. Guarantee stable report order under parallel completion.
 5. Make read-only doctor authority structurally impossible to weaken.
+6. Keep each doctor artifact in one resolved locale without feature-local
+   language branching or raw provider prose.
 
 ### 4.2 Non-goals
 
@@ -123,6 +127,10 @@ as pass.
 5. Secrets are masked on entry, memory-only, excluded from questionnaire state,
    plan, errors, backups, report, and logs.
 6. Fixed check order and maximum concurrency four are not user-configurable.
+7. The repository locale alone selects doctor language; issue/PR overrides are
+   diagnosed facts. Check IDs, enums, names, refs, and evidence keys never localize.
+8. One missing or invalid dynamic descriptor falls the complete report back to
+   English before presentation.
 
 ## 5. Current versus proposed product journey
 
@@ -247,16 +255,19 @@ check caused by a failed dependency does not add a second failure.
 | Plan order | Check group/ID | Dependency | Execution |
 |---:|---|---|---|
 | 1 | `configuration.valid` | none | pure/local |
-| 2 | `workspace.repository-root` | none | local |
-| 3 | `workflow.<normalized-relative-path>` sorted by path | configuration | local, sequential projection |
-| 4 | `credentials.setup-pat` | repository coordinates | remote gate |
-| 5 | `github.resource-scopes` | valid PAT | remote group, max four |
-| 6 | `github.merge-queue` | valid PAT + valid config | remote group, max four |
-| 7 | `github.variables` | valid PAT + scopes | remote group, max four |
-| 8 | `github.secret-names` | valid PAT + scopes | remote group, max four |
-| 9 | `credential.<requirement-or-group>` in requirement order | secret names + valid PAT | health group, max four |
+| 2 | `locale.repository`, `locale.issue`, `locale.pull-request` or `locale.profile` | configuration | pure/catalog capability |
+| 3 | `workspace.repository-root` | none | local |
+| 4 | `workflow.<normalized-relative-path>` sorted by path | configuration | local, sequential projection |
+| 5 | `credentials.setup-pat` | repository coordinates | remote gate |
+| 6 | `github.resource-scopes` | valid PAT | remote group, max four |
+| 7 | `github.merge-queue` | valid PAT + valid config | remote group, max four |
+| 8 | `github.variables` | valid PAT + scopes | remote group, max four |
+| 9 | `github.secret-names` | valid PAT + scopes | remote group, max four |
+| 10 | `credential.<requirement-or-group>` in requirement order | secret names + valid PAT | health group, max four |
 
-Stage 0 runs configuration, root, and workflow comparisons even when PAT
+Before stage 0, doctor validates the locale profile and resolves one complete
+catalog through exact, base, dynamic, or fallback selection. Stage 0 runs
+configuration, locale capability, root, and workflow comparisons even when PAT
 validation fails. Stage 1 validates PAT. Stage 2 starts applicable resource,
 queue, Variables, and Secret-name queries with a shared four-slot limiter. Stage
 3 queries credential health only for present required credentials after Secret
@@ -295,7 +306,9 @@ to one semantic check result rather than aborting unrelated checks.
 ## 7. User-facing configuration
 
 All existing setup options/defaults/precedence remain defined by the baseline
-SDD. This refactor adds no public option. The questionnaire order, question/check
+SDD. This refactor adds no public option. `repository-locale` defaults to
+`en-US`; empty issue and pull-request overrides inherit it but never select
+terminal language. The questionnaire order, question/check
 IDs, cancellation semantics, doctor statuses, DAG, concurrency four, report
 order, and mutation-port prohibition are fixed.
 
@@ -310,8 +323,8 @@ config keys/values remain errors, never ignored forward compatibility.
 
 | Layer/boundary | Owns | Must not own/import |
 |---|---|---|
-| Domain/pure policies | questionnaire transitions, config validation, check plan/report ordering | TTY, Octokit, fs mutation |
-| Application | controllers, setup plan, doctor scheduler, semantic read/command ports | console, provider DTOs |
+| Domain/pure policies | questionnaire transitions, config validation, check plan/report ordering, locale/catalog contracts | TTY, Octokit, fs mutation |
+| Application | controllers, setup plan, doctor scheduler, typed catalogs, semantic read/command/language ports | console, provider DTOs, hard-coded feature copy |
 | Adapters | terminal events, local workflow comparison, narrow GitHub reads/writes | question/check policy |
 | Infrastructure | fixed composition, auth binding, four-slot limiter | product defaults/status decisions |
 | Entrypoints | flags/config/repo target and exit mapping | questions/check algorithms |
@@ -328,6 +341,9 @@ config keys/values remain errors, never ignored forward compatibility.
 5. A concurrency instrumentation test proves maximum four and stable plan order.
 6. Each remote adapter implements one catalogued semantic port; broad method bags
    and service locators fail architecture review/checks.
+7. Doctor resolves one catalog before constructing visible checks, passes the
+   same immutable view to merge readiness and the presenter, and never branches
+   on a concrete language tag.
 
 ## 9. UI/UX and content contract
 
@@ -338,13 +354,16 @@ stays adjacent to the question. Secrets render no characters and no default.
 ```text
 Copilot Doctor — partial diagnosis
 
-FAIL    Setup PAT                 Credential was rejected by GitHub.
-PASS    Workflow copilot_issue   Matches the installed template.
-FAIL    Workflow release         Local workflow differs from the template.
-SKIP    Repository Variables     Requires a valid setup PAT.
-SKIP    Workflow credentials     Requires repository Secret metadata.
+FAIL    Setup PAT — The setup PAT is invalid.
+        Action: Replace the setup PAT and run doctor again.
+PASS    Workflow copilot-issue-yml — Matches the installed setup template.
+FAIL    Workflow release-yml — Local workflow is changed.
+        Action: Run setup to repair this managed workflow.
+SKIP    Repository Variables — Variable checks could not run.
+        Blocked by: credentials.setup-pat
+        Action: Resolve the blocking check and rerun doctor.
 
-Action: replace the setup PAT, repair the release workflow, then run `copilot doctor` again.
+Checks: 1 pass, 0 warn, 2 fail, 1 skipped.
 No repository configuration was changed.
 ```
 
@@ -352,8 +371,11 @@ Pending setup shows current section and position; action-required shows one
 validation/confirmation; blocked shows impact/cause/action/no-write; partial
 doctor distinguishes warn/skipped/fail; complete says how many checks passed and
 that no configuration was changed. Status always has text in addition to icon or
-color. Width 40/80/120 fixtures must remain readable; `NO_COLOR` and English
-fallback remain supported.
+color. Width 40/80/120 fixtures must remain readable; `NO_COLOR`, Spanish
+exact/base resolution, arbitrary BCP-47 dynamic resolution, and whole-artifact
+English fallback remain supported. Raw PAT, credential-health, workflow, and
+rule-provider messages never appear in the report; stable semantic copy states
+the impact and one recovery action.
 
 ## 10. Failure, recovery, and cleanup
 
@@ -404,7 +426,7 @@ report per command avoids interleaved parallel output.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **24 distinct cases**.
+This SDD owns at least **30 distinct cases**.
 
 | Area | Minimum cases | Required risks |
 |---|---:|---|
@@ -413,9 +435,9 @@ This SDD owns at least **24 distinct cases**.
 | Application controllers/scheduler | 4 | interactive, non-interactive, dry-run, partial doctor |
 | Adapters/provider mapping | 3 | TTY secret, remote scope/error, health mapping |
 | Workflow/schema/setup contract | 2 | active/template comparison and sole config schema |
-| UX/accessibility/sanitization | 4 | pending, blocked, partial, complete at widths/no-color |
+| UX/accessibility/sanitization/localization | 10 | pending, blocked, partial, complete at widths/no-color; English default; Spanish exact/base; arbitrary locale; atomic fallback; hostile diagnostic suppression |
 | Integration/security | 3 | no-write composition, max four, no secret/reference sharing |
-| **Total** | **24** | no double counting |
+| **Total** | **30** | no double counting |
 
 Questionnaire transition, validation, check-plan, and report policies require
 100% enumerated branch coverage. Terminal adapters require 90% lines and 85%
@@ -452,6 +474,12 @@ required inputs, exit codes, skipped semantics, read-only guarantee, and recover
 10. Secret values are absent from every state, plan, error, backup, log, fixture,
     and report.
 11. All primary views are text-readable at narrow width and without color.
+12. One doctor run resolves exactly one complete repository-locale catalog and
+    passes that same view through merge readiness and terminal presentation.
+13. Spanish base and arbitrary dynamic locale fixtures preserve the stable check
+    graph while localizing every human heading, state, summary, and action.
+14. A missing descriptor, provider error, or unsafe dynamic response yields a
+    complete English report with no raw provider or credential diagnostic.
 
 ## 17. Requirements traceability
 
@@ -480,7 +508,7 @@ required inputs, exit codes, skipped semantics, read-only guarantee, and recover
 - [x] All cancel/non-interactive paths prove no write and correct exit code.
 - [x] Doctor runs the fixed DAG, max concurrency four, stable order, and skipped semantics.
 - [x] Doctor composition exposes only read ports; secret safety tests pass.
-- [x] At least 24 distinct cases and all coverage/architecture gates pass.
+- [x] At least 30 distinct cases and all coverage/architecture gates pass.
 - [x] CLI UX, docs, config schema, active/setup assets, SDD, and catalog agree.
 - [x] No open decision, legacy state/result, compatibility adapter, in-place
       mutation, broad adapter, or service registry remains.

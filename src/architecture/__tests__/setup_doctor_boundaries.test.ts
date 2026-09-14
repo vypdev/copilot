@@ -33,11 +33,37 @@ describe('setup and doctor architecture boundaries', () => {
   it('keeps questionnaire and report policies free of runtime/provider imports', () => {
     for (const file of [
       'src/application/policies/setup_questionnaire_policy.ts',
+      'src/application/policies/merge_queue_message_catalog.ts',
+      'src/application/policies/setup_doctor_message_catalog.ts',
       'src/application/policies/setup_doctor_report_policy.ts',
     ]) {
       const source = read(file);
       expect(source).not.toMatch(/from ['"]node:|\/cli\/|\/infrastructure\/|octokit|Execution/);
     }
+  });
+
+  it('resolves one doctor catalog and reuses it through readiness and presentation', () => {
+    const doctor = read('src/application/usecases/setup/doctor_use_case.ts');
+    const command = read('src/cli/commands/doctor.ts');
+    const readiness = read('src/application/usecases/setup/merge_queue_readiness_use_case.ts');
+    const setup = read('src/application/usecases/setup/setup_wizard_use_case.ts');
+
+    expect(doctor).toContain('resolveSetupDoctorCatalog(');
+    expect(doctor).toMatch(/mergeQueueReadiness\.inspect\([\s\S]*?catalog,/u);
+    expect(command).toContain('new SetupDoctorPresenter(diagnosis.catalog)');
+    expect(readiness).toContain('request.catalog ?? await resolveSetupDoctorCatalog(');
+    expect(setup).toMatch(/catalog: resolveStaticSetupDoctorCatalog\(\)/u);
+  });
+
+  it('keeps raw provider diagnostics out of doctor and readiness presentation', () => {
+    const sources = [
+      'src/application/usecases/setup/doctor_use_case.ts',
+      'src/application/usecases/setup/merge_queue_readiness_use_case.ts',
+      'src/application/policies/merge_queue_message_catalog.ts',
+      'src/cli/setup_doctor_presenter.ts',
+    ].map(read).join('\n');
+
+    expect(sources).not.toMatch(/producer\.reason|problem\.message|result\.message|check\.message/u);
   });
 });
 

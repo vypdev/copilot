@@ -34,14 +34,14 @@ export function registerDoctorCommand(program: Command): void {
                 const overrides = options.config ? loadSetupConfigurationOverrides(options.config) : {};
                 const expected = mergeSetupConfiguration(createDefaultSetupConfiguration(), overrides);
                 logInfo(`🩺 Checking Copilot configuration for ${gitInfo.owner}/${gitInfo.repo}...`);
-                const report = await createSetupDoctorUseCase().execute({
+                const diagnosis = await createSetupDoctorUseCase().execute({
                     owner: gitInfo.owner,
                     repository: gitInfo.repo,
                     setupToken: token,
                     configuration: expected,
                 });
-                new SetupDoctorPresenter().present(report);
-                if (!report.healthy) process.exitCode = 1;
+                new SetupDoctorPresenter(diagnosis.catalog).present(diagnosis.report);
+                if (!diagnosis.report.healthy) process.exitCode = 1;
             } catch (error) {
                 if (error instanceof SetupTerminalCancelledError) {
                     logInfo('Doctor cancelled. No repository configuration was changed.');

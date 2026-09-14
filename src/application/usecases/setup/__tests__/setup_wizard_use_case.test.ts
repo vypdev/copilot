@@ -151,7 +151,11 @@ describe('SetupWizardUseCase', () => {
       remoteTarget: { owner: 'owner', repository: 'repo', token: 'token' },
     });
 
-    expect(readiness.inspect).toHaveBeenCalledWith(expect.objectContaining({ owner: 'owner', repository: 'repo' }));
+    expect(readiness.inspect).toHaveBeenCalledWith(expect.objectContaining({
+      owner: 'owner',
+      repository: 'repo',
+      catalog: expect.objectContaining({ locale: 'en-US', resolutionSource: 'exact' }),
+    }));
     expect(deps.planPresenter.present).toHaveBeenCalledWith(expect.objectContaining({ mergeQueueReadiness: [check] }));
   });
 

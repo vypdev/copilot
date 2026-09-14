@@ -6,6 +6,7 @@ import {
   skippedDoctorCheck,
 } from '../setup_doctor_report_policy';
 import { createDefaultSetupConfiguration } from '../setup_configuration_policy';
+import { resolveStaticSetupDoctorCatalog } from '../setup_doctor_message_catalog';
 
 describe('setup doctor report policy', () => {
   it('aggregates every status and is unhealthy only when a failure exists', () => {
@@ -97,8 +98,23 @@ describe('setup doctor report policy', () => {
     expect(buildLocaleDoctorChecks(configuration)[0]).toMatchObject({
       status: 'warn',
       evidence: { catalogSource: 'fallback', effective: 'fr-FR' },
-      action: expect.stringContaining('Configure a ready language agent'),
+      action: expect.stringContaining('planner/language agent is ready'),
     });
+  });
+
+  it('projects the actual repository fallback onto inherited issue and pull-request locales', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.repository.repositoryLocale = 'fr-FR';
+    const checks = buildLocaleDoctorChecks(
+      configuration,
+      resolveStaticSetupDoctorCatalog('fr-FR'),
+    );
+
+    expect(checks.map((check) => check.status)).toEqual(['warn', 'warn', 'warn']);
+    expect(checks.map((check) => check.evidence.catalogSource))
+      .toEqual(['fallback', 'fallback', 'fallback']);
+    expect(checks.slice(1).every((check) => check.summary.includes('fell back atomically to en-US')))
+      .toBe(true);
   });
 
   it('skips locale capability detail when the profile is invalid', () => {
