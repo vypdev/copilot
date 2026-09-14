@@ -84,6 +84,9 @@ export function buildLocaleDoctorChecks(
     const repositoryCatalogSource = catalog.requestedLocale === profile.repository
       ? catalog.resolutionSource
       : undefined;
+    const inheritedCatalogSource = (configured: string) => configured.trim()
+      ? undefined
+      : repositoryCatalogSource;
     return Object.freeze([
       localeDoctorCheck(
         'repository',
@@ -94,8 +97,24 @@ export function buildLocaleDoctorChecks(
         catalog,
         repositoryCatalogSource,
       ),
-      localeDoctorCheck('issue', configuration.repository.issueLocale, profile.issue, true, dynamicReady, catalog),
-      localeDoctorCheck('pull-request', configuration.repository.pullRequestLocale, profile.pullRequest, true, dynamicReady, catalog),
+      localeDoctorCheck(
+        'issue',
+        configuration.repository.issueLocale,
+        profile.issue,
+        true,
+        dynamicReady,
+        catalog,
+        inheritedCatalogSource(configuration.repository.issueLocale),
+      ),
+      localeDoctorCheck(
+        'pull-request',
+        configuration.repository.pullRequestLocale,
+        profile.pullRequest,
+        true,
+        dynamicReady,
+        catalog,
+        inheritedCatalogSource(configuration.repository.pullRequestLocale),
+      ),
     ]);
   } catch {
     return Object.freeze([

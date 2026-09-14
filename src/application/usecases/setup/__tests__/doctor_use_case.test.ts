@@ -136,8 +136,12 @@ describe('SetupDoctorUseCase', () => {
       resolutionSource: 'fallback',
       fallbackReason: 'dynamic-response-invalid',
     });
-    expect(diagnosis.report.checks.find((check) => check.id === 'locale.repository'))
-      .toMatchObject({ status: 'warn', evidence: { catalogSource: 'fallback' } });
+    expect(diagnosis.report.checks.filter((check) => check.id.startsWith('locale.')))
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: 'locale.repository', status: 'warn', evidence: expect.objectContaining({ catalogSource: 'fallback' }) }),
+        expect.objectContaining({ id: 'locale.issue', status: 'warn', evidence: expect.objectContaining({ catalogSource: 'fallback' }) }),
+        expect.objectContaining({ id: 'locale.pull-request', status: 'warn', evidence: expect.objectContaining({ catalogSource: 'fallback' }) }),
+      ]));
     const productCopy = diagnosis.report.checks.flatMap((check) => [check.summary, check.action ?? '']);
     expect(productCopy.some((message) => message.startsWith('FR '))).toBe(false);
     expect(query).toHaveBeenCalledTimes(1);

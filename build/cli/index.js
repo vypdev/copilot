@@ -46508,10 +46508,13 @@ function buildLocaleDoctorChecks(configuration, catalog = (0, setup_doctor_messa
         const repositoryCatalogSource = catalog.requestedLocale === profile.repository
             ? catalog.resolutionSource
             : undefined;
+        const inheritedCatalogSource = (configured) => configured.trim()
+            ? undefined
+            : repositoryCatalogSource;
         return Object.freeze([
             localeDoctorCheck('repository', configuration.repository.repositoryLocale, profile.repository, false, dynamicReady, catalog, repositoryCatalogSource),
-            localeDoctorCheck('issue', configuration.repository.issueLocale, profile.issue, true, dynamicReady, catalog),
-            localeDoctorCheck('pull-request', configuration.repository.pullRequestLocale, profile.pullRequest, true, dynamicReady, catalog),
+            localeDoctorCheck('issue', configuration.repository.issueLocale, profile.issue, true, dynamicReady, catalog, inheritedCatalogSource(configuration.repository.issueLocale)),
+            localeDoctorCheck('pull-request', configuration.repository.pullRequestLocale, profile.pullRequest, true, dynamicReady, catalog, inheritedCatalogSource(configuration.repository.pullRequestLocale)),
         ]);
     }
     catch {
