@@ -91,6 +91,19 @@ describe('ResolveMessageCatalogUseCase', () => {
     expect(query).not.toHaveBeenCalled();
   });
 
+  it('falls back observably without a language port for an unauthorized runtime', async () => {
+    const resolver = new ResolveMessageCatalogUseCase();
+    const result = await resolver.resolve({
+      targetLocale: 'fr-FR', ids: ['heading', 'count'], sourceCatalog: source,
+      bundledCatalogs: [source, spanish], configuration,
+    });
+
+    expect(result).toMatchObject({ source: 'fallback', fallbackReason: 'dynamic-provider-unavailable' });
+    expect(resolver.observations()).toEqual([expect.objectContaining({
+      requestedLocale: 'fr-FR', resolvedLocale: 'en-US', source: 'fallback',
+    })]);
+  });
+
   it('maps provider exceptions to a content-free fallback reason', async () => {
     const query = jest.fn().mockRejectedValue(new Error('secret provider body'));
     const resolver = new ResolveMessageCatalogUseCase({ query });

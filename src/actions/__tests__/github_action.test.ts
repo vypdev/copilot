@@ -41,6 +41,12 @@ jest.mock('../common_action', () => ({
   mainRun: (...args: unknown[]) => mockMainRun(...args),
 }));
 
+const mockLanguageQuery = jest.fn();
+const mockCreateLanguageQueryPort = jest.fn(() => ({ query: mockLanguageQuery }));
+jest.mock('../../infrastructure/composition/agent_capability_composition_root', () => ({
+  createLanguageQueryPort: () => mockCreateLanguageQueryPort(),
+}));
+
 const mockExecutionAdmissionInvoke = jest.fn();
 jest.mock('../../infrastructure/composition/github_execution_admission_composition_root', () => ({
   createGithubExecutionAdmissionUseCase: jest.fn().mockImplementation(() => ({
@@ -133,6 +139,7 @@ describe('runGitHubAction', () => {
     expect(projectCompositionSpy).not.toHaveBeenCalled();
     expect(executionBuilderSpy).not.toHaveBeenCalled();
     expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(mockCreateLanguageQueryPort).not.toHaveBeenCalled();
     expect(mockMainRun).not.toHaveBeenCalled();
     expect(finishActionSpy).not.toHaveBeenCalled();
     expect(mockGetProjectDetail).not.toHaveBeenCalled();
@@ -222,6 +229,7 @@ describe('runGitHubAction', () => {
       'fake-token',
     );
     expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(mockCreateLanguageQueryPort).not.toHaveBeenCalled();
     expect(mockMainRun).toHaveBeenCalledTimes(1);
     expect(mockMainRun.mock.calls[0][0].ai.getAgentConfiguration('planner')).toEqual(expect.objectContaining({
       model: '',
@@ -267,6 +275,7 @@ describe('runGitHubAction', () => {
       localeInputs: expect.objectContaining({ repository: 'fr-FR', issue: 'fr-FR', pullRequest: 'fr-FR' }),
       activeAgentTasks: expect.arrayContaining(['planner']),
     }));
+    expect(mockCreateLanguageQueryPort).toHaveBeenCalledTimes(1);
   });
 
   it('publishes results but skips configuration persistence when no issue target exists', async () => {

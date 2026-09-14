@@ -37,6 +37,7 @@ export async function runAnswerIssueHelpWorkflow(
         const prompt = getAnswerIssueHelpPrompt({
             description,
             projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
+            targetLocale: param.locale,
         });
         logDebugInfo(
             `AnswerIssueHelp: prompt length=${prompt.length}, issue description length=${description.length}. Calling configured agent.`,
@@ -58,7 +59,7 @@ export async function runAnswerIssueHelpWorkflow(
         }
 
         const publishedAnswer = param.newIssue
-            ? `${buildCopilotWelcomeMessage(param.tokenUser)}\n\n${answer}`
+            ? `${buildCopilotWelcomeMessage(param.tokenUser, param.locale)}\n\n${answer}`
             : answer;
 
         await dependencies.issueNotificationPort.addComment(

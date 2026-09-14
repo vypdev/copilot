@@ -130,7 +130,9 @@ export async function runGitHubAction(): Promise<void> {
         },
         createCopilotEvidenceCompositionRoot(),
         createGithubActionSummaryCompositionRoot(),
-        new ResolveMessageCatalogUseCase(createLanguageQueryPort()),
+        new ResolveMessageCatalogUseCase(
+            agentRuntimeAuthorized ? createLanguageQueryPort() : undefined,
+        ),
     );
 }
 

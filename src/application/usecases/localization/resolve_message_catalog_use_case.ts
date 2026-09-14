@@ -22,7 +22,7 @@ export class ResolveMessageCatalogUseCase implements MessageCatalogResolutionPor
     private readonly cache = new Map<string, ResolvedMessageCatalog<string>>();
     private readonly resolutionObservations = new Map<string, CatalogResolutionObservation>();
 
-    constructor(private readonly language: LanguageQueryPort) {}
+    constructor(private readonly language?: LanguageQueryPort) {}
 
     async resolve<Id extends string>(
         request: MessageCatalogResolutionRequest<Id>,
@@ -42,7 +42,7 @@ export class ResolveMessageCatalogUseCase implements MessageCatalogResolutionPor
         const cacheKey = [MESSAGE_CATALOG_VERSION, targetLocale, configurationKey, ...[...request.ids].sort()].join('\0');
         const cached = this.cache.get(cacheKey);
         if (cached) return cached as ResolvedMessageCatalog<Id>;
-        if (!request.configuration?.model.trim()) {
+        if (!this.language || !request.configuration?.model.trim()) {
             return this.cacheFallback(cacheKey, request, targetLocale, 'dynamic-provider-unavailable');
         }
         try {
