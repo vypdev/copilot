@@ -66,4 +66,24 @@ describe('reply publication workflow', () => {
     });
     expect(repository.listIssueComments).not.toHaveBeenCalled();
   });
+
+  it('tolerates create visibility lag without guessing a reply id', async () => {
+    const repository = ports();
+    repository.addComment.mockImplementation(async () => undefined);
+    await expect(reconcileReply(context(), repository)).resolves.toEqual({ effect: 'created', duplicatesCompacted: 0 });
+  });
+
+  it('links a compacted pull-request reply to the canonical PR comment', async () => {
+    const value = { ...intent(), target: { kind: 'pull-request' as const, number: 9 }, locale: 'es-ES' };
+    const seeded = ports();
+    await reconcileReply({ ...context(), intent: value }, seeded);
+    const repository = ports([
+      { id: 7, body: seeded.comments[0].body, user: { login: 'vypbot' } },
+      { id: 4, body: seeded.comments[0].body, user: { login: 'vypbot' } },
+    ]);
+
+    await reconcileReply({ ...context(), intent: value }, repository);
+    expect(repository.comments.find(comment => comment.id === 7)?.body).toContain('/pull/9#issuecomment-4');
+    expect(repository.comments.find(comment => comment.id === 7)?.body).toContain('respuesta duplicada');
+  });
 });

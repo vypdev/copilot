@@ -11,6 +11,7 @@ describe('publication message catalog', () => {
     ['es-ES', 'es-ES', false],
     ['es-MX', 'es-ES', false],
     ['fr-FR', 'en-US', true],
+    ['', 'en-US', false],
   ] as const)('resolves %s through deterministic catalogs', (locale, catalogLocale, fallback) => {
     const resolved = resolveStaticPublicationCatalog(locale);
     expect(resolved.catalog.locale).toBe(catalogLocale);

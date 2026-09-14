@@ -40,13 +40,13 @@ export function renderBugbotStatusCard(
   locale: string,
   links: BugbotPresentationLinks,
 ): string {
-    const language = normalizeBugbotPresentationLocale(locale);
-    const actionable = projection.findings.filter((finding) =>
-      isBugbotActionableState(finding.state),
-    );
-    const unknown = projection.counts.unknown;
-    const partialCoverage = projection.coverage.status === 'partial';
-    const shortHead = projection.verifiedHeadSha.slice(0, 7);
+  const language = normalizeBugbotPresentationLocale(locale);
+  const actionable = projection.findings.filter((finding) =>
+    isBugbotActionableState(finding.state),
+  );
+  const unknown = projection.counts.unknown;
+  const partialCoverage = projection.coverage.status === 'partial';
+  const shortHead = projection.verifiedHeadSha.slice(0, 7);
   const heading = partialCoverage
     ? language === 'es-ES' ? '## Bugbot: revisión incompleta' : '## Bugbot: review incomplete'
     : projection.outcome === 'partial' || projection.outcome === 'failed' || unknown > 0
@@ -88,7 +88,7 @@ export function renderBugbotStatusCard(
         ? 'Revisa los threads enlazados o comenta `/copilot fix all`.'
         : 'Review the linked threads or comment `/copilot fix all`.'
       : undefined;
-    const findingsHeading = language === 'es-ES' ? '### Hallazgos' : '### Findings';
+  const findingsHeading = language === 'es-ES' ? '### Hallazgos' : '### Findings';
   const visibleFindings = projection.findings.filter((finding) =>
     isBugbotActionableState(finding.state) || finding.state === 'unknown',
   );
@@ -252,7 +252,6 @@ function renderFindingRow(finding: BugbotProjectedFinding): string {
 }
 
 function stateLabel(state: BugbotFindingState): string {
-  if (state === 'fixed' || state === 'obsolete' || state === 'dismissed') return `[x] ${state}`;
   return `[ ] ${state}`;
 }
 

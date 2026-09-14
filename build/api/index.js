@@ -951,8 +951,6 @@ function renderFindingRow(finding) {
         : `- ${state} — ${label}`;
 }
 function stateLabel(state) {
-    if (state === 'fixed' || state === 'obsolete' || state === 'dismissed')
-        return `[x] ${state}`;
     return `[ ] ${state}`;
 }
 function escapeRegExp(value) {

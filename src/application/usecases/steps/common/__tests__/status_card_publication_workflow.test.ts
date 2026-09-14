@@ -88,4 +88,36 @@ describe('status card publication workflow', () => {
     repository.addComment.mockImplementation(async () => undefined);
     await expect(reconcileStatusCard(context(), repository)).resolves.toEqual({ effect: 'created', duplicatesCompacted: 0 });
   });
+
+  it('preserves the created outcome when post-create discovery finds a stale canonical card', async () => {
+    const value = intent('Latest');
+    const repository = ports([{ id: 1, body: renderSemanticStatus(intent('Stale')), user: { login: 'vypbot' } }]);
+    let reads = 0;
+    repository.listIssueComments.mockImplementation(async () => {
+      reads += 1;
+      return reads === 1 ? [] : repository.comments.map(comment => ({ ...comment }));
+    });
+
+    await expect(reconcileStatusCard(context(value), repository)).resolves.toMatchObject({
+      effect: 'created', canonicalCommentId: 1,
+    });
+    expect(repository.comments[0].body).toContain('Latest');
+  });
+
+  it('links compacted pull-request cards to the canonical PR comment', async () => {
+    const value = {
+      ...intent('Latest'),
+      identity: { ...intent('Latest').identity, target: { kind: 'pull-request' as const, number: 9 } },
+      locale: 'es-ES',
+    };
+    const body = renderSemanticStatus(value);
+    const repository = ports([
+      { id: 7, body, user: { login: 'vypbot' } },
+      { id: 4, body, user: { login: 'vypbot' } },
+    ]);
+
+    await reconcileStatusCard(context(value), repository);
+    expect(repository.comments.find(comment => comment.id === 7)?.body).toContain('/pull/9#issuecomment-4');
+    expect(repository.comments.find(comment => comment.id === 7)?.body).toContain('tarjeta canónica');
+  });
 });

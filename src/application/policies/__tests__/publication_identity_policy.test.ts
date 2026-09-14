@@ -75,5 +75,9 @@ describe('publication identity policy', () => {
     expect(() => buildPublicationReplyMarker({
       target: 'issue:42', correlationId: 'unsafe value', messageKey: 'copilot-help', digest: '0123abcd',
     })).toThrow('unsafe identity');
+    expect(() => buildPublicationReplyMarker({
+      target: 'issue:42', correlationId: 'comment:99', messageKey: 'copilot-help', digest: 'invalid',
+    })).toThrow('invalid digest');
+    expect(parsePublicationReplyMarker(null)).toBeUndefined();
   });
 });

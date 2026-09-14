@@ -116,6 +116,51 @@ describe('semantic result publication policy', () => {
     expect(body).not.toContain('banned');
   });
 
+  it('renders the English access-policy fallback', () => {
+    const [intent] = selectSemanticReplyIntents({
+      locale: 'fr-FR', target: { kind: 'issue', number: 8 }, correlationId: 'event:abc12345',
+      results: [new Result({
+        id: 'CloseNotAllowedIssueUseCase', success: true, executed: true,
+        payload: { publication: { kind: 'access-policy' } },
+      })],
+    });
+
+    expect(renderSemanticReply(intent)).toContain('Issue closed: contributor access required');
+  });
+
+  it('sanitizes reply correlation and falls back to the trusted bot login', () => {
+    const [intent] = selectSemanticReplyIntents({
+      locale: 'en-US', target: { kind: 'issue', number: 8 }, correlationId: 'unsafe\ncorrelation', botLogin: ' trusted-bot ',
+      results: [new Result({
+        id: 'Comment.Help', success: true, executed: true,
+        payload: { publication: { kind: 'help', botLogin: ' ' } },
+      })],
+    });
+
+    expect(intent.correlationId).toMatch(/^digest:[a-f0-9]{16}$/u);
+    expect(renderSemanticReply(intent)).toContain('@trusted-bot');
+  });
+
+  it('copies optional finding state in a status reply and accepts an existing plan fingerprint', () => {
+    const [status] = selectSemanticReplyIntents({
+      locale: 'en-US', target: { kind: 'issue', number: 8 }, correlationId: 'comment:issue_comment:8',
+      results: [new Result({ id: 'Comment.Status', success: true, executed: true, payload: { status: {
+        owner: 'acme', repository: 'widgets', event: 'issues', action: 'opened', target: 'issue',
+        issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+        findingStates: { open: 1, reopened: 0, verificationRequired: 0, unknown: 0, resolved: 2 },
+      } } })],
+    });
+    const [plan] = selectSemanticStatusIntents({
+      locale: 'en-US', results: [new Result({
+        id: 'RecommendStepsUseCase', success: true, executed: true,
+        payload: { issueNumber: 8, recommendedSteps: '1. Implement', recommendationState: { issueDescriptionFingerprint: 'abcdef12' } },
+      })],
+    });
+
+    expect(status.projection).toMatchObject({ kind: 'status-command', snapshot: { findingStates: { open: 1 } } });
+    expect(plan.sourceVersion).toBe('issue-body:abcdef12');
+  });
+
   it('omits malformed, failed, uncorrelated, or untargeted replies', () => {
     const result = new Result({ id: 'Comment.Help', success: true, executed: true, payload: { publication: { kind: 'help' } } });
     expect(selectSemanticReplyIntents({ locale: 'en-US', results: [result] })).toEqual([]);

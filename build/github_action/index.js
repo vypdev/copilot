@@ -43149,8 +43149,6 @@ function renderFindingRow(finding) {
         : `- ${state} — ${label}`;
 }
 function stateLabel(state) {
-    if (state === 'fixed' || state === 'obsolete' || state === 'dismissed')
-        return `[x] ${state}`;
     return `[ ] ${state}`;
 }
 function escapeRegExp(value) {
@@ -56713,14 +56711,22 @@ function publicationTarget(source) {
     return positiveInteger(issueNumber) ? Object.freeze({ kind: 'issue', number: issueNumber }) : undefined;
 }
 function requestCorrelationId(source, target) {
-    const commentId = source.inputs?.comment?.id;
-    if (positiveInteger(commentId))
-        return `comment:${commentId}`;
+    const commentId = source.inputs?.pull_request_review_comment?.id ?? source.inputs?.comment?.id;
+    if (positiveInteger(commentId)) {
+        const transport = safeCorrelationTransport(source.eventName);
+        return `comment:${transport}:${commentId}`;
+    }
     return `event:${(0, publication_identity_policy_1.createSemanticDigest)({
         eventName: source.eventName ?? 'unknown',
         action: source.inputs?.action ?? '',
         target: target ?? null,
     })}`;
+}
+function safeCorrelationTransport(eventName) {
+    const value = eventName?.trim() || 'unknown';
+    return /^[A-Za-z0-9._-]{1,64}$/u.test(value)
+        ? value
+        : `event-${(0, publication_identity_policy_1.createSemanticDigest)(value)}`;
 }
 function positiveInteger(value) {
     return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;

@@ -93,9 +93,46 @@ describe('PublishResultUseCase semantic compatibility boundary', () => {
     await new PublishResultUseCase(comments).invoke(value);
 
     expect(comments.addComment).toHaveBeenCalledTimes(1);
-    expect(comments.values[0].body).toContain('correlation="comment:99"');
+    expect(comments.values[0].body).toContain('correlation="comment:issue_comment:99"');
     expect(comments.values[0].body).toContain('## Copilot commands');
     expect(comments.values[0].body).not.toContain('legacy wrapper');
+  });
+
+  it('namespaces equal numeric comment ids by GitHub transport', () => {
+    const issueComment = projectPublishResultContext(source([], {
+      eventName: 'issue_comment', inputs: { action: 'created', comment: { id: 99 } },
+    }));
+    const reviewComment = projectPublishResultContext(source([], {
+      eventName: 'pull_request_review_comment', inputs: { action: 'created', pull_request_review_comment: { id: 99 } },
+    }));
+
+    expect(issueComment.requestCorrelationId).toBe('comment:issue_comment:99');
+    expect(reviewComment.requestCorrelationId).toBe('comment:pull_request_review_comment:99');
+    expect(issueComment.requestCorrelationId).not.toBe(reviewComment.requestCorrelationId);
+  });
+
+  it('uses each review-comment id instead of collapsing replies into the event fallback', () => {
+    const first = projectPublishResultContext(source([], {
+      eventName: 'pull_request_review_comment',
+      inputs: { action: 'created', pull_request_review_comment: { id: 99 } },
+    }));
+    const second = projectPublishResultContext(source([], {
+      eventName: 'pull_request_review_comment',
+      inputs: { action: 'created', pull_request_review_comment: { id: 100 } },
+    }));
+
+    expect(first.requestCorrelationId).toBe('comment:pull_request_review_comment:99');
+    expect(second.requestCorrelationId).toBe('comment:pull_request_review_comment:100');
+    expect(first.requestCorrelationId).not.toBe(second.requestCorrelationId);
+  });
+
+  it('bounds an unexpected transport value before embedding it in a marker', () => {
+    const context = projectPublishResultContext(source([], {
+      eventName: 'unsafe transport\n<!-- marker -->',
+      inputs: { action: 'created', comment: { id: 99 } },
+    }));
+
+    expect(context.requestCorrelationId).toMatch(/^comment:event-[a-f0-9]{16}:99$/u);
   });
 
   it('does not mutate an unchanged plan card on replay', async () => {
@@ -175,5 +212,16 @@ describe('PublishResultUseCase semantic compatibility boundary', () => {
     expect(context.results[0].steps).toEqual(['legacy plan wrapper that must never be published']);
     expect(failure).toMatchObject({ success: false, executed: true });
     expect(failure?.errors[0]).toMatchObject({ code: 'provider.unavailable' });
+  });
+
+  it('projects fallback issue targets and recursively copies array payloads', () => {
+    const mutable = [{ nested: ['value'] }];
+    const context = projectPublishResultContext(source([
+      new Result({ id: 'metadata', success: true, executed: true, payload: mutable }),
+    ], { issue: undefined, issueNumber: 42 }));
+    mutable[0].nested[0] = 'changed';
+
+    expect(context.target).toEqual({ kind: 'issue', number: 42 });
+    expect(context.results[0].payload).toEqual([{ nested: ['value'] }]);
   });
 });

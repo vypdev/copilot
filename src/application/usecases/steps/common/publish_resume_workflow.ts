@@ -27,7 +27,11 @@ export interface PublishResultContextSource {
     readonly issueNumber?: number;
     readonly issue?: { readonly number?: number };
     readonly pullRequest?: { readonly number?: number };
-    readonly inputs?: { readonly action?: string; readonly comment?: { readonly id?: number } };
+    readonly inputs?: {
+        readonly action?: string;
+        readonly comment?: { readonly id?: number };
+        readonly pull_request_review_comment?: { readonly id?: number };
+    };
     readonly locale?: { readonly issue: string; readonly pullRequest: string };
     readonly currentConfiguration: { readonly results: readonly Result[] };
 }
@@ -111,13 +115,23 @@ function publicationTarget(source: PublishResultContextSource): PublicationTarge
 }
 
 function requestCorrelationId(source: PublishResultContextSource, target: PublicationTarget | undefined): string {
-    const commentId = source.inputs?.comment?.id;
-    if (positiveInteger(commentId)) return `comment:${commentId}`;
+    const commentId = source.inputs?.pull_request_review_comment?.id ?? source.inputs?.comment?.id;
+    if (positiveInteger(commentId)) {
+        const transport = safeCorrelationTransport(source.eventName);
+        return `comment:${transport}:${commentId}`;
+    }
     return `event:${createSemanticDigest({
         eventName: source.eventName ?? 'unknown',
         action: source.inputs?.action ?? '',
         target: target ?? null,
     })}`;
+}
+
+function safeCorrelationTransport(eventName: string | undefined): string {
+    const value = eventName?.trim() || 'unknown';
+    return /^[A-Za-z0-9._-]{1,64}$/u.test(value)
+        ? value
+        : `event-${createSemanticDigest(value)}`;
 }
 
 function positiveInteger(value: unknown): value is number {
