@@ -295,6 +295,72 @@ describe('finishGithubAction', () => {
         expect(mockPublishInvoke).not.toHaveBeenCalled();
     });
 
+    it('links the published package from the first-party deployment summary', async () => {
+        const base = deploymentOperation();
+        const productionSha = 'c'.repeat(40);
+        const action = Object.assign(singleActionExecution(), {
+            owner: 'vypdev',
+            repo: 'copilot',
+            singleAction: {
+                ...singleActionExecution().singleAction,
+                issue: 11,
+                isDeploymentOrchestrationAction: true,
+            },
+            currentConfiguration: {
+                results: [],
+                deploymentOrchestration: {
+                    ...base,
+                    phase: 'published',
+                    productionSha,
+                    publicationVerified: true,
+                    publicationReceipt: {
+                        tag: base.tag,
+                        productionSha,
+                        operationId: base.operationId,
+                        releaseUrl: 'https://github.com/vypdev/copilot/releases/tag/v3.4.0',
+                    },
+                },
+            },
+        }) as Execution;
+
+        await finishGithubAction(
+            action,
+            [new Result({ id: 'DeploymentOrchestrationUseCase', success: true, executed: true })],
+            {} as never,
+            {} as never,
+            undefined,
+            { publish: mockSummaryPublish },
+        );
+
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining(
+            'https://www.npmjs.com/package/%40vypdev%2Fcopilot/v/3.4.0',
+        ));
+    });
+
+    it('uses the current repository locale for a legacy deployment without a locale snapshot', async () => {
+        const { locale: _locale, ...legacyOperation } = deploymentOperation();
+        const action = Object.assign(singleActionExecution(), {
+            locale: { repository: 'es-ES', issue: 'es-ES', pullRequest: 'es-ES' },
+            singleAction: {
+                ...singleActionExecution().singleAction,
+                issue: 11,
+                isDeploymentOrchestrationAction: true,
+            },
+            currentConfiguration: { results: [], deploymentOrchestration: legacyOperation },
+        }) as Execution;
+
+        await finishGithubAction(
+            action,
+            [new Result({ id: 'DeploymentOrchestrationUseCase', success: true, executed: true })],
+            {} as never,
+            {} as never,
+            undefined,
+            { publish: mockSummaryPublish },
+        );
+
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('# ⏳ Orquestación del despliegue'));
+    });
+
     it('uses the short-lived evidence token only for the native Check Run', async () => {
         process.env.COPILOT_EVIDENCE_TOKEN = 'github-actions-token';
         const action = Object.assign(execution(), {

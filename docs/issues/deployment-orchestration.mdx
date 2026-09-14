@@ -119,6 +119,10 @@ bounded catalog for the destination. If that response is unavailable, incomplete
 or unsafe, the whole artifact falls back to English; Copilot never mixes
 languages or creates a separate fallback comment.
 
+The installed release and hotfix workflow templates pass `repository-locale`
+and preserve empty issue/PR overrides. This matters when the repository locale is
+not English: replacing an empty override with `en-US` would disable inheritance.
+
 The dashboard leads with current status and a required action only when a person
 must act. Progress, transition, and links follow, while operation IDs and other
 technical facts stay collapsed. Managed PR descriptions explain their single

@@ -196,6 +196,23 @@ describe("deployment presentation policy", () => {
     expect(value.body).toContain('phase="reconciliation" issue="355"');
   });
 
+  it("uses the target source fact and preserves an open launcher issue when production is pending", () => {
+    const target = {
+      targetBranch: "develop",
+      sourceBranch: "master",
+      sourceSha: "d".repeat(40),
+      status: "pending" as const,
+    };
+    const value = renderReconciliationPullRequest(
+      operation("reconciliation_pending", { issueCompletion: "keep-open", productionSha: undefined }),
+      target,
+      context,
+    );
+
+    expect(value.body).toMatch(/`v3\.4\.0@\u200bddddddd`/u);
+    expect(value.body).toContain("Keep issue open");
+  });
+
   it("localizes the reconciliation PR and explains a sync branch", () => {
     const target = { targetBranch: "develop", sourceBranch: "master", sourceSha: "c".repeat(40), syncBranch: "sync/release", status: "pending" as const };
     const value = renderReconciliationPullRequest(

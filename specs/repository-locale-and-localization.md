@@ -950,8 +950,10 @@ behavior are executable tests. The deployment-presentation slice snapshots the
 effective locale for new durable operations, resolves one catalog per issue or
 managed-PR destination, renders repository-locale Job Summaries, localizes the
 four bounded milestones, and removes internal `Result.steps` from deployment
-operator UI. Legacy version-1 operations without a locale remain readable and
-use the current effective profile until completion. Merge-readiness diagnostics,
+operator UI. The installed release/hotfix templates pass `repository-locale` and
+empty inheriting issue/PR overrides. Legacy version-1 operations without a locale
+remain readable and use the current effective profile until completion.
+Merge-readiness diagnostics,
 lifecycle, setup/doctor, and the remaining public surfaces are not claimed
 complete by this evidence.
 

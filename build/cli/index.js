@@ -46705,7 +46705,7 @@ class DeploymentOrchestrationRuntime {
         const blocked = (0, deployment_operation_1.blockDeploymentOperation)(operation, category, message, retryable);
         await this.persist(context, blocked);
         await this.publishDashboard(context, blocked);
-        await this.publishMilestone(context, blocked, { kind: "reconciliation-blocked", reason: blocked.lastFailure?.message ?? message });
+        await this.publishMilestone(context, blocked, { kind: "reconciliation-blocked", reason: message });
         return new result_1.Result({
             id: exports.DEPLOYMENT_ORCHESTRATION_TASK_ID,
             success: false,
@@ -47942,7 +47942,7 @@ function selectOriginBranch(context, kind) {
 function validateOperation(context, operation) {
     const errors = (0, deployment_plan_policy_1.validateInitialDeploymentInput)({
         operationId: operation.operationId,
-        locale: operation.locale ?? context.locale,
+        locale: operation.locale,
         kind: operation.kind,
         version: operation.version,
         title: operation.title,

@@ -3,6 +3,7 @@ import type { DeploymentOrchestrationContext } from "../../../ports/deployment_o
 import {
   buildInitialDeploymentOperation,
   validateInitialDeploymentInput,
+  type InitialDeploymentOperation,
 } from "../../../policies/deployment_plan_policy";
 import {
   resumeBlockedDeployment,
@@ -191,11 +192,11 @@ function selectOriginBranch(
 
 function validateOperation(
   context: DeploymentOrchestrationContext,
-  operation: DeploymentOperationSnapshot,
+  operation: InitialDeploymentOperation,
 ): void {
   const errors = validateInitialDeploymentInput({
     operationId: operation.operationId,
-    locale: operation.locale ?? context.locale,
+    locale: operation.locale,
     kind: operation.kind,
     version: operation.version,
     title: operation.title,

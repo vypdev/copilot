@@ -67,7 +67,7 @@ export class DeploymentOrchestrationRuntime {
     await this.publishMilestone(
       context,
       blocked,
-      { kind: "reconciliation-blocked", reason: blocked.lastFailure?.message ?? message },
+      { kind: "reconciliation-blocked", reason: message },
     );
     return new Result({
       id: DEPLOYMENT_ORCHESTRATION_TASK_ID,

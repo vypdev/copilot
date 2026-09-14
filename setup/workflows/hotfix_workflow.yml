@@ -136,8 +136,9 @@ jobs:
           orchestration-presentation-mode: ${{ vars.ORCHESTRATION_PRESENTATION_MODE || 'guided' }}
           orchestration-diagrams: ${{ vars.ORCHESTRATION_DIAGRAMS || 'true' }}
           orchestration-comment-mode: ${{ vars.ORCHESTRATION_COMMENT_MODE || 'update' }}
-          issues-locale: ${{ vars.ISSUES_LOCALE || 'en-US' }}
-          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || 'en-US' }}
+          repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
+          issues-locale: ${{ vars.ISSUES_LOCALE || '' }}
+          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || '' }}
           token: ${{ secrets.PAT }}
 
   publish:

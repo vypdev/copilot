@@ -400,6 +400,21 @@ describe('push and single-action context projection', () => {
     } as unknown as DeploymentOrchestrationContext;
     const projected = projectDeploymentOrchestrationContext(raw);
     projected.currentConfiguration.releaseBranch = 'release/changed';
+    const explicitConfiguration = projectDeploymentOrchestrationContext({
+      ...raw,
+      agentConfiguration: { provider: 'codex', model: 'explicit-planner' },
+    });
+    const withoutConfiguration = projectDeploymentOrchestrationContext({ ...raw, ai: undefined });
+    const withLocaleSnapshot = projectDeploymentOrchestrationContext({
+      ...raw,
+      currentConfiguration: {
+        ...raw.currentConfiguration,
+        deploymentOrchestration: {
+          ...(operation as unknown as Record<string, unknown>),
+          locale: { repository: 'en-US', issue: 'es-ES', pullRequest: 'de-DE' },
+        } as never,
+      },
+    });
     const withoutOperation = projectDeploymentOrchestrationContext({
       ...raw,
       currentConfiguration: { ...raw.currentConfiguration, deploymentOrchestration: undefined },
@@ -412,6 +427,11 @@ describe('push and single-action context projection', () => {
     expect(Object.isFrozen(projected.locale)).toBe(true);
     expect(projected.agentConfiguration).toEqual({ provider: 'codex', model: 'planner-model' });
     expect(Object.isFrozen(projected.agentConfiguration)).toBe(true);
+    expect(explicitConfiguration.agentConfiguration).toEqual({ provider: 'codex', model: 'explicit-planner' });
+    expect(withoutConfiguration).not.toHaveProperty('agentConfiguration');
+    expect(withLocaleSnapshot.currentConfiguration.deploymentOrchestration?.locale)
+      .toEqual({ repository: 'en-US', issue: 'es-ES', pullRequest: 'de-DE' });
+    expect(Object.isFrozen(withLocaleSnapshot.currentConfiguration.deploymentOrchestration?.locale)).toBe(true);
     expect(withoutOperation.currentConfiguration.deploymentOrchestration).toBeUndefined();
   });
 });

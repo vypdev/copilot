@@ -652,6 +652,8 @@ describe('workflow contract validator', () => {
         'copilot_issue_comment.yml',
         'copilot_pull_request.yml',
         'copilot_pull_request_comment.yml',
+        'release_workflow.yml',
+        'hotfix_workflow.yml',
       ]) {
         const file = path.join(process.cwd(), directory, fileName);
         const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
