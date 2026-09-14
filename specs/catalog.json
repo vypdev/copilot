@@ -68,7 +68,6 @@
         "src/application/policies/__tests__/semantic_result_publication_policy.test.ts",
         "src/application/policies/__tests__/action_summary_policy.test.ts",
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
-        "src/application/policies/__tests__/branch_sync_message_catalog.test.ts",
         "src/application/usecases/actions/__tests__/observe_branch_sync_use_case.test.ts",
         "src/application/policies/__tests__/bugbot_review_presentation_policy.test.ts",
         "src/application/policies/__tests__/deployment_presentation_policy.test.ts",
