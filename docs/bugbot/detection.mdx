@@ -93,6 +93,12 @@ Each child comment is attached to an exact line/range confirmed from the current
 
 The action checks the PR head before invoking the reviewer, before mutation, after finding mutations, and before projecting current state. If a newer revision owns the PR, the old run is recorded as superseded and does not overwrite current-state surfaces.
 
+Finding titles, descriptions, evidence, and suggestions use the effective PR
+locale. Paths, line numbers, symbols, code, severities, IDs, commands, and links
+remain structured and unchanged. The findings response must echo the exact
+canonical locale in `outputLocale`; a missing or different tag rejects the
+whole analysis before any finding or review is published.
+
 When the configured agent later reports a finding as **resolved** (e.g. after you or the bot fixed the code), the action:
 
 - **Updates** every existing stored destination so the marker shows `resolved: true`.

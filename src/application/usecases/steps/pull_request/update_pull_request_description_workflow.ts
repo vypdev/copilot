@@ -13,8 +13,14 @@ import {
     mergeManagedPullRequestDescription,
     shouldAutomaticallyUpdatePullRequestDescription,
 } from '../../../../domain/pull_request_description';
-import { ApplicationError } from '../../../errors/application_error';
+import { ApplicationError, toApplicationError } from '../../../errors/application_error';
 import { parsePositiveSafeInteger } from '../../../../domain/positive_integer_policy';
+import { PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA } from '../../../policies/agent_response_schemas';
+import {
+    agentOutputLocaleFailureMessage,
+    productFacingAgentQueryOptions,
+    validateAgentOutputLocale,
+} from '../../../policies/agent_output_locale_policy';
 import type {
     PullRequestDescriptionRequest,
     PullRequestDescriptionContext,
@@ -83,6 +89,7 @@ export async function runUpdatePullRequestDescriptionWorkflow(
             relatedIssueInstruction: context.issueNumber > 0
                 ? `Include \`Closes #${context.issueNumber}\` and "Related to #" only if relevant.`
                 : 'Do not add a Closes line because this pull request has no linked issue.',
+            targetLocale: context.targetLocale,
         });
         logDebugInfo(
             `UpdatePullRequestDescription: prompt length=${prompt.length}, issue description length=${issueDescription.length}. Calling configured agent.`,
@@ -91,8 +98,12 @@ export async function runUpdatePullRequestDescriptionWorkflow(
             configuration: context.agentConfiguration,
             agentId: AGENT_PLAN,
             prompt,
+            options: productFacingAgentQueryOptions(
+                'pull-request-description',
+                PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA,
+            ),
         });
-        const generatedDescription = sanitizeAgentMarkdown(extractDescription(response));
+        const generatedDescription = sanitizeAgentMarkdown(extractDescription(response, context.targetLocale));
         if (!generatedDescription.trim()) {
             return [new Result({
                 id: taskId,
@@ -112,7 +123,7 @@ export async function runUpdatePullRequestDescriptionWorkflow(
         );
         return [new Result({ id: taskId, success: true, executed: true, steps: [] })];
     } catch (cause) {
-        const semanticError = new ApplicationError('workflow.failed', 'Unable to update pull request description.', { cause });
+        const semanticError = toApplicationError(cause, 'workflow.failed', 'Unable to update pull request description.');
         logError(semanticError);
         return [new Result({
             id: taskId,
@@ -153,10 +164,13 @@ async function loadPullRequestDetails(
         : undefined;
 }
 
-function extractDescription(response: string | Record<string, unknown> | undefined): string {
-    if (typeof response === 'string') return response;
-    if (!response) return '';
-    return typeof response.description === 'string' ? response.description : '';
+function extractDescription(response: string | Record<string, unknown> | undefined, targetLocale: string): string {
+    if (response == null) return '';
+    const validation = validateAgentOutputLocale(response, targetLocale);
+    if (validation.kind === 'invalid') {
+        throw new ApplicationError('locale.output-invalid', agentOutputLocaleFailureMessage(validation));
+    }
+    return typeof validation.payload.description === 'string' ? validation.payload.description : '';
 }
 
 function skipped(taskId: string, step: string): Result[] {

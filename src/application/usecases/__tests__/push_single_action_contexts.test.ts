@@ -193,6 +193,7 @@ describe('push and single-action context projection', () => {
       eventName: 'push',
       eventAction: '',
       agentConfiguration: { provider: 'codex', model: 'planner-model' },
+      targetLocale: 'en-US',
     });
   });
 

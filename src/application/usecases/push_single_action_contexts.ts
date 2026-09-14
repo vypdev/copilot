@@ -30,6 +30,7 @@ export interface ProgressContext {
   readonly branchTypes: readonly string[];
   readonly agentConfiguration: Readonly<AgentConfiguration>;
   readonly includeReasoning: boolean;
+  readonly targetLocale: string;
 }
 
 export interface RecommendStepsContext {
@@ -39,6 +40,7 @@ export interface RecommendStepsContext {
   readonly tokenUser?: string;
   readonly previousRecommendation?: Readonly<RecommendationState>;
   readonly agentConfiguration: Readonly<AgentConfiguration>;
+  readonly targetLocale: string;
 }
 
 export interface RecommendationStatePatch {
@@ -272,6 +274,7 @@ export function projectProgressContext(source: PushSingleActionContextSource): P
     ]),
     agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('findings') }),
     includeReasoning: source.ai.getAiIncludeReasoning(),
+    targetLocale: source.locale?.issue ?? 'en-US',
   });
 }
 
@@ -284,6 +287,7 @@ export function projectRecommendStepsContext(source: PushSingleActionContextSour
     ...(source.tokenUser ? { tokenUser: source.tokenUser } : {}),
     ...(previous ? { previousRecommendation: Object.freeze({ ...previous }) } : {}),
     agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
+    targetLocale: source.locale?.issue ?? 'en-US',
   });
 }
 

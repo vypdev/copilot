@@ -11,14 +11,14 @@ This page is the maintained acceptance contract for Copilot's agent surface. An 
 
 | Capability | Trigger | Role | Agent output | Authorized side effect |
 | --- | --- | --- | --- | --- |
-| Initial help and assistance | Opened question/help issue | `planner` | Schema-validated answer | Sanitized issue comment |
-| Recommendations | Issue lifecycle, single action, or CLI | `planner` | Markdown recommendation | Managed issue comment/state |
-| Progress analysis | Push, single action, or CLI | `findings` | Schema-validated progress | Issue/PR progress state |
-| PR description | PR lifecycle or `/copilot description` | `planner` | Sanitized Markdown | Managed append block by default; explicit replace mode only |
-| Think, explain, diagnose, analyze, and conversational commands | Authorized issue/PR comment or CLI | `planner`, `findings`, or `reviewer` by command | Schema-validated answer | Sanitized comment |
-| Test plan | `/copilot test-plan` | `tester` | Schema-validated answer | Sanitized comment |
-| Translation | Explicitly addressed issue or PR comment | `findings` | Schema-validated language decision and translation | Idempotent comment update |
-| Bugbot detection | Push, PR, `/copilot review`, `/copilot recheck`, single action, or CLI | `findings` or `reviewer` | Bounded findings schema | Review/comments plus persisted finding lifecycle |
+| Initial help and assistance | Opened question/help issue | `planner` | Locale-tagged schema-validated answer | One sanitized issue reply |
+| Recommendations | Issue lifecycle, single action, or CLI | `planner` | Locale-tagged Markdown recommendation or typed unchanged state | One durable plan card/state |
+| Progress analysis | Push, single action, or CLI | `findings` | Locale-tagged progress facts and prose | One durable progress card plus issue/PR labels |
+| PR description | PR lifecycle or `/copilot description` | `planner` | Locale-tagged sanitized Markdown | Managed append block or configured replace mode |
+| Think, explain, diagnose, analyze, and conversational commands | Authorized issue/PR comment or CLI | `planner`, `findings`, or `reviewer` by command | Locale-tagged schema-validated answer | One sanitized reply |
+| Test plan | `/copilot test-plan` | `tester` | Locale-tagged schema-validated answer | One sanitized reply |
+| Translation | Explicitly addressed issue or PR comment | `findings` | One schema-validated adaptation decision | Internal localized request; source comment remains unchanged |
+| Bugbot detection | Push, PR, `/copilot review`, `/copilot recheck`, single action, or CLI | `findings` or `reviewer` | Locale-tagged bounded findings schema | Canonical status/review plus persisted finding lifecycle |
 | Bugbot autofix | Explicit `/copilot fix` or authorized intent | `fixer` | Workspace edits | Exact-path commit and token-scoped push after verification |
 | General implementation | Explicit `/copilot implement`, authorized intent, or CLI | `fixer` | Workspace edits | Exact-path commit and token-scoped push after verification |
 
@@ -29,6 +29,12 @@ and addressed-comment route; normal non-AI lifecycle automation remains
 available. File mutation requires an authorized actor, a clean workspace, the
 expected branch, a bounded exact-path change set, sensitive-path rejection,
 isolated verification commands, and a second postflight check before commit.
+
+All six product-facing query families receive the effective surface locale and
+must echo it exactly as `outputLocale`. The common parser rejects absent,
+malformed, non-canonical, or mismatched metadata before a product-facing side
+effect. Fixer responses and intent classifiers are not public prose and remain
+separate contracts; trusted application code owns their eventual status UI.
 
 ## Runtime matrix
 

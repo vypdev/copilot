@@ -5,6 +5,8 @@ import { fillTemplate } from './fill';
 
 const TEMPLATE = `You are analyzing the latest code changes for potential bugs and issues.
 
+Write every human-readable finding title, description, evidence, and suggestion in {{targetLocale}}. Preserve identifiers, code, symbols, paths, refs, commands, and URLs verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
+
 {{projectContextInstruction}}
 
 **Repository context:**
@@ -38,7 +40,7 @@ For every finding:
 Return every finding field required by the response schema. Use null for file, line, endLine, severity, confidence, category, evidence, suggestion, symbol, codeSnippet, or suggestedCode when that value does not safely apply. Only include files outside the ignore list.
 {{previousBlock}}
 
-**Output:** Return a JSON object with "findings" (new/current problems from task 1) and "resolved_findings" (objects containing the exact prior finding id and either "fixed" or "obsolete"). Always return both arrays; use an empty array when there are no resolved findings. Never resolve an id that was not included in the previous-findings list.`;
+**Output:** Return a JSON object with "outputLocale", "findings" (new/current problems from task 1), and "resolved_findings" (objects containing the exact prior finding id and either "fixed" or "obsolete"). Always return both arrays; use an empty array when there are no resolved findings. Never resolve an id that was not included in the previous-findings list.`;
 
 export type BugbotParams = {
     projectContextInstruction: string;
@@ -55,6 +57,7 @@ export type BugbotParams = {
     reviewConversationBlock?: string;
     rulesBlock?: string;
     effortBlock?: string;
+    targetLocale: string;
 };
 
 export function getBugbotPrompt(params: BugbotParams): string {

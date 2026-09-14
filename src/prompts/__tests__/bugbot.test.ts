@@ -13,6 +13,7 @@ describe('getBugbotPrompt', () => {
             ignoreBlock: '\n**Files to ignore:** *.test.ts',
             previousBlock: '(No previous findings.)',
             coverageBlock: '**Context coverage:** complete.',
+            targetLocale: 'de-DE',
         });
         expect(prompt).toContain('**Context.**');
         expect(prompt).toContain('org');
@@ -26,6 +27,7 @@ describe('getBugbotPrompt', () => {
         expect(prompt).toContain('Context coverage');
         expect(prompt).toContain('findings');
         expect(prompt).toContain('resolved_findings');
+        expect(prompt).toContain('outputLocale` exactly as `de-DE');
         expect(prompt).not.toContain('{{');
     });
 });

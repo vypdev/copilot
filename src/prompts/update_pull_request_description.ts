@@ -5,6 +5,8 @@ import { fillTemplate } from './fill';
 
 const TEMPLATE = `You are in the repository workspace. Your task is to produce a pull request description by filling the project's PR template with information from the branch diff and the issue.
 
+Write every human-readable sentence in {{targetLocale}}. Preserve code identifiers, paths, refs, commands, URLs, issue/PR references, and conventional title prefixes verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
+
 {{projectContextInstruction}}
 
 **Branches:**
@@ -25,12 +27,12 @@ const TEMPLATE = `You are in the repository workspace. Your task is to produce a
    - **Breaking Changes:** list any, or "None".
    - **Notes for Reviewers / Additional Context:** fill only if useful; otherwise a short placeholder or omit.
 5. Do not output a single compact paragraph. Output the full filled template so the PR description is well-structured and easy to scan. Preserve the template's formatting (headings with # and ##, horizontal rules). Use checkboxes \`- [ ]\` / \`- [x]\` only where they add value; you may simplify or drop a section if it does not apply.
-6. **Output format:** Return only the filled template content. Do not add any preamble, meta-commentary, or framing phrases (e.g. "Based on my analysis...", "After reviewing the diff...", "Here is the description..."). Start directly with the first heading of the template (e.g. # Summary). Do not wrap the output in code blocks.
+6. **Output format:** Return one JSON object with \`outputLocale\` and \`description\`. Put only the filled template content in \`description\`; do not add any preamble, meta-commentary, or framing phrases (e.g. "Based on my analysis...", "After reviewing the diff...", "Here is the description..."). Start \`description\` directly with the first heading of the template (e.g. # Summary). Do not wrap it in code blocks.
 
 **Issue description:**
 {{issueDescription}}
 
-Output only the filled template content (the PR description body), starting with the first heading. No preamble, no commentary.`;
+Return the structured JSON response only.`;
 
 export type UpdatePullRequestDescriptionParams = {
     projectContextInstruction: string;
@@ -39,6 +41,7 @@ export type UpdatePullRequestDescriptionParams = {
     issueNumber: string;
     issueDescription: string;
     relatedIssueInstruction: string;
+    targetLocale: string;
 };
 
 export function getUpdatePullRequestDescriptionPrompt(params: UpdatePullRequestDescriptionParams): string {
@@ -49,5 +52,6 @@ export function getUpdatePullRequestDescriptionPrompt(params: UpdatePullRequestD
         issueNumber: String(params.issueNumber),
         issueDescription: params.issueDescription,
         relatedIssueInstruction: params.relatedIssueInstruction,
+        targetLocale: params.targetLocale,
     });
 }

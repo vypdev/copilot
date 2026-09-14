@@ -14,6 +14,7 @@ import { sanitizeAgentMarkdown } from '../../../../application/policies/github_c
 import { buildCopilotWelcomeMessage } from '../../../../application/policies/copilot_interaction_policy';
 import { ApplicationError, toApplicationError } from '../../../errors/application_error';
 import type { AnswerIssueHelpContext } from '../../issue_workflow_context';
+import { productFacingAgentQueryOptions } from '../../../policies/agent_output_locale_policy';
 
 export interface AnswerIssueHelpWorkflowDependencies {
     issueNotificationPort: BoundIssueNotificationPort;
@@ -46,13 +47,9 @@ export async function runAnswerIssueHelpWorkflow(
             configuration,
             agentId: AGENT_PLAN,
             prompt,
-            options: {
-                expectJson: true,
-                schema: THINK_RESPONSE_SCHEMA as unknown as Record<string, unknown>,
-                schemaName: 'answer_issue_help_response',
-            },
+            options: productFacingAgentQueryOptions('answer-issue-help', THINK_RESPONSE_SCHEMA),
         });
-        const answer = sanitizeAgentMarkdown(extractStructuredAnswer(response));
+        const answer = sanitizeAgentMarkdown(extractStructuredAnswer(response, param.locale));
         logDebugInfo(`AnswerIssueHelp: agent response. Answer length=${answer.length}.`);
         if (!answer) {
             return [noAnswerResult()];

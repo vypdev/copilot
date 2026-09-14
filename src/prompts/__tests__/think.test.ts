@@ -6,6 +6,7 @@ describe('getThinkPrompt', () => {
             projectContextInstruction: '**Use context.**',
             contextBlock: '\n\nContext (issue #1):\nFix the bug.\n\n',
             question: 'what is 2+2?',
+            targetLocale: 'fr-FR',
         });
         expect(prompt).toContain('helpful assistant');
         expect(prompt).toContain('**Use context.**');
@@ -13,6 +14,7 @@ describe('getThinkPrompt', () => {
         expect(prompt).toContain('Fix the bug.');
         expect(prompt).toContain('Question: [BEGIN_UNTRUSTED_DATA origin=prompt.question');
         expect(prompt).toContain('what is 2+2?');
+        expect(prompt).toContain('outputLocale` set exactly to `fr-FR');
         expect(prompt).not.toContain('{{');
     });
 
@@ -21,6 +23,7 @@ describe('getThinkPrompt', () => {
             projectContextInstruction: 'X',
             contextBlock: '\n\n',
             question: 'q',
+            targetLocale: 'en-US',
         });
         expect(prompt).toContain('Question: [BEGIN_UNTRUSTED_DATA origin=prompt.question');
         expect(prompt).toContain('\nq\n');

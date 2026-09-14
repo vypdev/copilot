@@ -4,6 +4,7 @@ import type {
   PullRequestDescriptionContext,
   PullRequestDescriptionRequest,
 } from '../../../pull_request_workflow_context';
+import type { AgentQueryResult } from '../../../../ports/agent_query_ports';
 
 jest.mock('../../../../../utils/logger', () => ({
   logInfo: jest.fn(), logDebugInfo: jest.fn(), logError: jest.fn(),
@@ -14,6 +15,13 @@ const mockGetAllMembers = jest.fn();
 const mockAskAgent = jest.fn();
 const mockUpdateDescription = jest.fn();
 const mockGetDetails = jest.fn();
+
+async function localizedDescription(value: Parameters<typeof mockAskAgent>[0]): Promise<AgentQueryResult> {
+  const response = await mockAskAgent(value);
+  return typeof response === 'string'
+    ? { outputLocale: 'en-US', description: response }
+    : response;
+}
 
 function context(overrides: Partial<PullRequestDescriptionContext> = {}): PullRequestDescriptionContext {
   const ai = new Ai('http://localhost:4096', 'model', false, [], false, 'low', 20);
@@ -30,6 +38,7 @@ function context(overrides: Partial<PullRequestDescriptionContext> = {}): PullRe
     mode: 'replace',
     membersOnly: false,
     agentConfiguration: ai.getAgentConfiguration('planner'),
+    targetLocale: 'en-US',
     ...overrides,
   };
 }
@@ -50,7 +59,7 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
       { updateDescription: mockUpdateDescription, getDetails: mockGetDetails },
       { getDescription: mockGetIssueDescription },
       { getAllMembers: mockGetAllMembers },
-      { query: (value) => mockAskAgent(value) },
+      { query: localizedDescription },
     );
     mockGetIssueDescription.mockResolvedValue('Issue description');
     mockGetAllMembers.mockResolvedValue(['alice', 'bob']);
@@ -161,5 +170,19 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     expect(results[0]).toMatchObject({ success: false, executed: true });
     expect(mockUpdateDescription).not.toHaveBeenCalled();
     expect(JSON.stringify(results)).not.toContain('secret diagnostic');
+  });
+
+  it('uses the PR locale contract and rejects mismatched output before updating the body', async () => {
+    mockAskAgent.mockResolvedValue({ outputLocale: 'fr-FR', description: '# Résumé' });
+
+    const results = await useCase.invoke(request({ targetLocale: 'es-ES' }));
+
+    expect(mockAskAgent.mock.calls[0][0].prompt).toContain('outputLocale` exactly as `es-ES');
+    expect(mockAskAgent.mock.calls[0][0].options).toMatchObject({
+      expectJson: true,
+      schemaName: 'pull_request_description_response',
+    });
+    expect(results[0].errors[0]).toMatchObject({ code: 'locale.output-invalid' });
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
   });
 });

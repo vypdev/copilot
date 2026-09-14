@@ -1,6 +1,7 @@
 import { ThinkUseCase } from '../think_use_case';
 import { Ai } from '../../../../../data/model/ai';
 import { projectThinkContext, type ThinkContextSource } from '../think_workflow';
+import type { AgentQueryResult } from '../../../../ports/agent_query_ports';
 
 jest.mock('../../../../../utils/logger', () => ({
   logInfo: jest.fn(),
@@ -11,6 +12,13 @@ jest.mock('../../../../../utils/logger', () => ({
 const mockAskAgent = jest.fn();
 const mockAddComment = jest.fn();
 const mockGetDescription = jest.fn();
+
+async function localizedAnswer(prompt: string): Promise<AgentQueryResult> {
+  const response = await mockAskAgent.mock.results[mockAskAgent.mock.results.length - 1]?.value;
+  if (!response || typeof response !== 'object' || Array.isArray(response)) return response;
+  const outputLocale = prompt.includes('es-ES') ? 'es-ES' : 'en-US';
+  return { outputLocale, ...response as Record<string, unknown> };
+}
 
 function baseParam(overrides: Record<string, unknown> = {}) {
   return {
@@ -43,7 +51,10 @@ describe('ThinkUseCase', () => {
     useCase = new ThinkUseCase(
       { getDescription: mockGetDescription },
       { addComment: mockAddComment },
-      { query: (request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }) => mockAskAgent(request.configuration, request.agentId, request.prompt, request.options) },
+      { query: async (request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }) => {
+        mockAskAgent(request.configuration, request.agentId, request.prompt, request.options);
+        return localizedAnswer(request.prompt);
+      } },
     );
     mockAskAgent.mockReset();
     mockAddComment.mockReset();
@@ -186,6 +197,19 @@ describe('ThinkUseCase', () => {
     expect(mockAddComment).toHaveBeenCalledWith(1, 'Here is the answer.');
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(true);
+  });
+
+  it('rejects a response for another locale before posting the answer', async () => {
+    mockAskAgent.mockResolvedValue({ outputLocale: 'fr-FR', answer: 'Réponse.' });
+    const param = baseParam({
+      locale: { issue: 'en-US', pullRequest: 'en-US' },
+      issue: { ...baseParam().issue, commentBody: '@bot answer this' },
+    });
+
+    const results = await invoke(param);
+
+    expect(results[0].errors[0]).toMatchObject({ code: 'locale.output-invalid' });
+    expect(mockAddComment).not.toHaveBeenCalled();
   });
 
   it('returns error when OpenCode model is empty', async () => {

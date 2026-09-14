@@ -24,6 +24,7 @@ describe('getPrompt', () => {
             projectContextInstruction: 'X',
             contextBlock: '\n\n',
             question: 'q',
+            targetLocale: 'en-US',
         };
         const viaRegistry = getPrompt(PROMPT_NAMES.THINK, params);
         const viaGetter = getThinkPrompt(params);

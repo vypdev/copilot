@@ -33,6 +33,7 @@ export async function analyzeBugbotRevision(
             dependencies.agent,
             execution.analysis.agentConfiguration,
             prompt,
+            execution.locale.pullRequest,
         ),
     );
     dependencies.telemetry.observeResponse(agentResponse);

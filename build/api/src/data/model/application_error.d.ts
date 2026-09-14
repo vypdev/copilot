@@ -1,5 +1,5 @@
 export type ApplicationErrorKind = 'configuration' | 'authorization' | 'provider' | 'agent' | 'validation' | 'workflow' | 'unknown';
-export type ApplicationErrorCode = 'configuration.invalid' | 'configuration.unsupported' | 'authorization.denied' | 'authorization.credential-invalid' | 'provider.not-found' | 'provider.conflict' | 'provider.rate-limited' | 'provider.unavailable' | 'provider.contract-invalid' | 'agent.policy-rejected' | 'agent.failed' | 'locale.translation-failed' | 'validation.invalid-input' | 'workflow.invalid-event' | 'workflow.stale' | 'workflow.cancelled' | 'workflow.failed' | 'timeout' | 'unexpected';
+export type ApplicationErrorCode = 'configuration.invalid' | 'configuration.unsupported' | 'authorization.denied' | 'authorization.credential-invalid' | 'provider.not-found' | 'provider.conflict' | 'provider.rate-limited' | 'provider.unavailable' | 'provider.contract-invalid' | 'agent.policy-rejected' | 'agent.failed' | 'locale.output-invalid' | 'locale.translation-failed' | 'validation.invalid-input' | 'workflow.invalid-event' | 'workflow.stale' | 'workflow.cancelled' | 'workflow.failed' | 'timeout' | 'unexpected';
 interface ApplicationErrorMetadata {
     readonly kind: ApplicationErrorKind;
     readonly retryable: boolean;

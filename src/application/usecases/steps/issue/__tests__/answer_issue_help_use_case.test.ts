@@ -1,6 +1,7 @@
 import { AnswerIssueHelpUseCase } from '../answer_issue_help_use_case';
 import { Ai } from '../../../../../data/model/ai';
 import type { AnswerIssueHelpContext } from '../../../issue_workflow_context';
+import type { AgentQueryResult } from '../../../../ports/agent_query_ports';
 
 jest.mock('../../../../../utils/logger', () => ({
   logInfo: jest.fn(),
@@ -16,6 +17,12 @@ const mockAddComment = jest.fn();
 
 
 const mockAskAgent = jest.fn();
+async function localizedAnswer(prompt: string): Promise<AgentQueryResult> {
+  const response = await mockAskAgent.mock.results[mockAskAgent.mock.results.length - 1]?.value;
+  if (!response || typeof response !== 'object' || Array.isArray(response)) return response;
+  const outputLocale = prompt.includes('es-ES') ? 'es-ES' : 'en-US';
+  return { outputLocale, ...response as Record<string, unknown> };
+}
 function configuredAgent() {
   return new Ai('http://localhost:4096', 'opencode/model', false, [], false, 'low', 20)
     .getAgentConfiguration('planner');
@@ -38,7 +45,10 @@ describe('AnswerIssueHelpUseCase', () => {
   let useCase: AnswerIssueHelpUseCase;
 
   beforeEach(() => {
-    useCase = new AnswerIssueHelpUseCase({ addComment: mockAddComment }, { query: (request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }) => mockAskAgent(request.configuration, request.agentId, request.prompt, request.options) });
+    useCase = new AnswerIssueHelpUseCase({ addComment: mockAddComment }, { query: async (request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }) => {
+      mockAskAgent(request.configuration, request.agentId, request.prompt, request.options);
+      return localizedAnswer(request.prompt);
+    } });
     mockAddComment.mockReset();
     mockAskAgent.mockReset();
   });
@@ -172,6 +182,15 @@ describe('AnswerIssueHelpUseCase', () => {
     const publishedComment = mockAddComment.mock.calls[0][1] as string;
     expect(publishedComment).toContain('Hola, soy **@vypbot**');
     expect(publishedComment).toContain('Aquí tienes ayuda.');
+  });
+
+  it('rejects a response for another locale before posting help', async () => {
+    mockAskAgent.mockResolvedValue({ outputLocale: 'fr-FR', answer: 'Aide.' });
+
+    const results = await useCase.invoke(baseParam({ locale: 'en-US' }));
+
+    expect(results[0].errors[0]).toMatchObject({ code: 'locale.output-invalid' });
+    expect(mockAddComment).not.toHaveBeenCalled();
   });
 
   it('returns failure when OpenCode returns no answer', async () => {
