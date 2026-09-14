@@ -6,6 +6,7 @@ import type {
 } from '../../ports/message_catalog_ports';
 import {
     MESSAGE_CATALOG_VERSION,
+    catalogPluralCategories,
     selectBundledMessageCatalog,
     validateCatalogDefinition,
     validateDynamicCatalogMessages,
@@ -56,7 +57,11 @@ export class ResolveMessageCatalogUseCase implements MessageCatalogResolutionPor
                 options: {
                     expectJson: true,
                     schemaName: 'localized_message_catalog',
-                    schema: buildCatalogResponseSchema(request.sourceCatalog.messages, request.ids),
+                    schema: buildCatalogResponseSchema(
+                        request.sourceCatalog.messages,
+                        request.ids,
+                        targetLocale,
+                    ),
                 },
             });
             if (!response || typeof response !== 'object' || Array.isArray(response)) {
@@ -71,7 +76,12 @@ export class ResolveMessageCatalogUseCase implements MessageCatalogResolutionPor
                 return this.cacheFallback(cacheKey, request, targetLocale, 'dynamic-response-invalid');
             }
             if (responseTarget !== targetLocale
-                || !validateDynamicCatalogMessages(response.messages, request.sourceCatalog.messages, request.ids)) {
+                || !validateDynamicCatalogMessages(
+                    response.messages,
+                    request.sourceCatalog.messages,
+                    request.ids,
+                    targetLocale,
+                )) {
                 return this.cacheFallback(cacheKey, request, targetLocale, 'dynamic-response-invalid');
             }
             const resolved = Object.freeze({
@@ -139,16 +149,18 @@ function selectMessages<Id extends string>(
 export function buildCatalogResponseSchema<Id extends string>(
     source: Readonly<Record<Id, CatalogMessage>>,
     ids: readonly Id[],
+    targetLocale = 'en-US',
 ): Record<string, unknown> {
+    const pluralCategories = catalogPluralCategories(targetLocale);
     const properties = Object.fromEntries(ids.map(id => [id, typeof source[id] === 'string'
         ? { type: 'string', minLength: 1, maxLength: 2_000 }
         : {
             type: 'object',
-            properties: {
-                one: { type: 'string', minLength: 1, maxLength: 2_000 },
-                other: { type: 'string', minLength: 1, maxLength: 2_000 },
-            },
-            required: ['one', 'other'],
+            properties: Object.fromEntries(pluralCategories.map(category => [
+                category,
+                { type: 'string', minLength: 1, maxLength: 2_000 },
+            ])),
+            required: pluralCategories,
             additionalProperties: false,
         }]));
     return {

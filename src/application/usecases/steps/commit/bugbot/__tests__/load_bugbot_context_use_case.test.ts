@@ -308,6 +308,6 @@ describe('loadBugbotContext', () => {
     expect(context.eligibleResolutionIds.has('finding-0')).toBe(false);
     expect(context.eligibleResolutionIds.has('finding-100')).toBe(true);
     expect(context.coverage.status).toBe('partial');
-    expect(context.previousFindingsBlock).toContain('older finding(s) were omitted');
+    expect(context.previousFindingsBlock).toContain('older finding was omitted');
   });
 });

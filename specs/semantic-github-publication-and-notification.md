@@ -1,9 +1,9 @@
 # Semantic GitHub Publication and Notification
 
-- Status: Ready for implementation
+- Status: In implementation
 - Date: 2026-09-14
 - Catalog capability ID: github-communication-experience
-- Last verified: Not applicable; this is a prospective specification based on a 2026-09-14 audit
+- Last verified: 2026-09-14 for the delivered shared publication, branch-sync, review-context, and Bugbot slices; remaining clauses are prospective
 - Owners: Copilot maintainers
 - Scope: Replace generic step-dump comments with bounded, semantic, idempotent GitHub messages across issues, pull requests, reviews, pushes, and single actions.
 - Related issues/PRs: [issue #334](https://github.com/vypdev/copilot/issues/334), [issue #344](https://github.com/vypdev/copilot/issues/344), [issue #355](https://github.com/vypdev/copilot/issues/355), [PR #358](https://github.com/vypdev/copilot/pull/358), [PR #363](https://github.com/vypdev/copilot/pull/363), [PR #365](https://github.com/vypdev/copilot/pull/365)
@@ -923,6 +923,17 @@ generic output is left intact.
    a controlled GitHub UX acceptance matrix.
 6. Remove the legacy generic renderer after one release with zero observed
    fallback use.
+
+Implementation evidence as of 2026-09-14: PRs #367–#372 establish semantic
+reply/status publication, remove retired generic conversation chrome from the
+covered paths, localize branch-sync state, and keep automated reports out of
+Bugbot's human-conversation context. The current Bugbot slice preserves its
+feature-owned review/thread model while replacing ad hoc public strings with a
+single typed catalog per publication operation, proper plural forms, stable
+machine markers, and bounded English-default/localized renderers. The executable
+mutation inventory, locale-branch ratchet, and pseudo-plural ratchet protect
+these boundaries. Other capability rows and the global numeric budget remain
+open and are not claimed complete by this milestone.
 
 No remote product flag is required. Each phase must be independently releasable
 and its compatibility adapter must fail closed to Job Summary, not fall back to

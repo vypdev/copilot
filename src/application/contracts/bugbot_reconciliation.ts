@@ -59,9 +59,25 @@ export type BugbotReconciliationSnapshotResult =
       readonly verifiedHeadSha: string;
     };
 
+export type BugbotPresentationDiagnostic =
+  | { readonly code: 'operation-failed'; readonly operatorMessage: string }
+  | { readonly code: 'identity-unavailable' }
+  | { readonly code: 'snapshot-pull-request-comments-failed' }
+  | { readonly code: 'snapshot-review-threads-failed' }
+  | { readonly code: 'snapshot-reviews-failed' }
+  | { readonly code: 'snapshot-conversation-failed' }
+  | { readonly code: 'snapshot-linked-issue-comments-failed' }
+  | { readonly code: 'snapshot-navigation-failed' }
+  | { readonly code: 'marker-malformed' }
+  | { readonly code: 'provider-omitted-findings'; readonly count: number }
+  | { readonly code: 'published-finding-unobservable'; readonly findingId: string }
+  | { readonly code: 'review-update-failed'; readonly reviewIdentity: string }
+  | { readonly code: 'review-updates-pending'; readonly count: number }
+  | { readonly code: 'status-card-update-failed' };
+
 export interface BugbotReconciliationPlan {
   readonly findings: readonly BugbotProjectedFinding[];
-  readonly diagnostics: readonly string[];
+  readonly diagnostics: readonly BugbotPresentationDiagnostic[];
   readonly coverage: BugbotContextCoverage;
 }
 

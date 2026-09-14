@@ -18,7 +18,7 @@ import { CheckPriorityPullRequestSizeUseCase } from "../../application/usecases/
 import { LinkPullRequestIssueUseCase } from "../../application/usecases/steps/pull_request/link_pull_request_issue_use_case";
 import { LinkPullRequestProjectUseCase } from "../../application/usecases/steps/pull_request/link_pull_request_project_use_case";
 import { SyncSizeAndProgressLabelsFromIssueToPrUseCase } from "../../application/usecases/steps/pull_request/sync_size_and_progress_labels_from_issue_to_pr_use_case";
-import { createFindingsQueryPort } from "./agent_capability_composition_root";
+import { createFindingsQueryPort, createLanguageQueryPort } from "./agent_capability_composition_root";
 import { IssueAssignmentRepository } from "../../data/repository/issue/issue_assignment_repository";
 import { IssueClosureRepository } from "../../data/repository/issue/issue_closure_repository";
 import { IssueContentRepository } from "../../data/repository/issue/issue_content_repository";
@@ -33,6 +33,7 @@ import { createOrganizationMembersCompositionRoot } from "./organization_members
 import { createProjectBoardCompositionRoot } from "./project_board_composition_root";
 import { TimerDelayAdapter } from "../time/timer_delay_adapter";
 import { DetectPotentialProblemsUseCase } from "../../application/usecases/steps/commit/detect_potential_problems_use_case";
+import { ResolveMessageCatalogUseCase } from '../../application/usecases/localization/resolve_message_catalog_use_case';
 import { createBugbotCompositionRoot } from "./bugbot_composition_root";
 import { createActorAuthorizationRepository } from './actor_authorization_composition_root';
 import type { BugbotScmBinding } from './bugbot_scm_port_factory';
@@ -127,6 +128,7 @@ export function createPullRequestUseCaseCompositionRoot(binding: BugbotScmBindin
       createFindingsQueryPort(),
       bugbot.scm,
       bugbot.telemetry,
+      new ResolveMessageCatalogUseCase(createLanguageQueryPort()),
     ),
     bindActorAuthorization(createActorAuthorizationRepository(), binding),
   );

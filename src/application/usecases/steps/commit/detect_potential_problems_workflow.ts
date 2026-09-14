@@ -31,11 +31,17 @@ import {
     type BugbotReviewOperationContext,
 } from './bugbot/bugbot_review_operation_context';
 import { selectPullRequestOwnerForPushReview } from '../../../policies/bugbot_event_ownership_policy';
+import type { MessageCatalogResolutionPort } from '../../../ports/message_catalog_ports';
+import {
+    resolveBugbotCatalog,
+    type BugbotMessageCatalog,
+} from '../../../policies/bugbot_message_catalog';
 
 export interface DetectPotentialProblemsWorkflowDependencies {
     aiRepository: FindingsQueryPort;
     scm: BugbotScmPorts;
     telemetryPort?: BugbotTelemetryPort;
+    catalogResolver?: MessageCatalogResolutionPort;
 }
 
 const TASK_ID = 'DetectPotentialProblemsUseCase';
@@ -109,6 +115,10 @@ export async function runDetectPotentialProblemsWorkflow(
         const prepared = await analyzeBugbotRevision(reviewContext, context, { agent: dependencies.aiRepository, telemetry });
         if (prepared === undefined) {
             const analysisError = new ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
+            const catalog = reviewContext.analysis.reviewConfiguration.publicationMode === 'publish'
+                && context.prContext && context.canonicalPullRequest
+                ? await resolvePublicationCatalog(reviewContext, dependencies, true)
+                : undefined;
             const presentation = reviewContext.analysis.reviewConfiguration.publicationMode === 'publish'
                 ? await telemetry.measure('projection', () => reconcileReviewState({
                     operation: reviewContext,
@@ -116,6 +126,7 @@ export async function runDetectPotentialProblemsWorkflow(
                     activeFindings: [],
                     mutationErrors: [analysisError],
                     dependencies,
+                    catalog,
                 }))
                 : undefined;
             if (presentation) telemetry.observeProjection(presentation.projection);
@@ -129,12 +140,20 @@ export async function runDetectPotentialProblemsWorkflow(
         if (reviewContext.analysis.reviewConfiguration.publicationMode === 'dry-run') {
             return await complete(dryRunResult(prepared, context), 'dry-run');
         }
+        // A pull request still publishes its canonical status card when there are no finding mutations.
+        const presentsPullRequestStatus = Boolean(context.prContext && context.canonicalPullRequest);
+        const mutatesFindingComments = prepared.toPublish.length > 0
+            || prepared.resolvedFindingIds.size > 0;
+        const catalog = presentsPullRequestStatus || mutatesFindingComments
+            ? await resolvePublicationCatalog(reviewContext, dependencies, presentsPullRequestStatus)
+            : undefined;
         const resolutionErrors = await telemetry.measure('publication', () => applyDetectedFindings(
             reviewContext,
             context,
             prepared,
             dependencies.scm.publication,
             dependencies.scm.resolution,
+            catalog,
         ));
         if (await telemetry.measure('post-publication-freshness', () =>
             hasNewerBugbotRevision(context, dependencies.scm.context))) {
@@ -148,6 +167,7 @@ export async function runDetectPotentialProblemsWorkflow(
                 expectedPublishedFindings: prepared.toPublish,
                 mutationErrors: resolutionErrors,
                 dependencies,
+                catalog,
             }));
         if (presentation) telemetry.observeProjection(presentation.projection);
         logInfo(`Bugbot workflow completed in ${Date.now() - workflowStartedAt}ms.`);
@@ -191,6 +211,7 @@ function skippedDraftResult(): Result {
 }
 
 function dryRunResult(prepared: PreparedBugbotFindings, context: BugbotContext): Result {
+    const acceptedCount = prepared.activeFindings?.length ?? 0;
     const statuses = projectBugbotFindingStatuses(
         context.existingByFindingId,
         prepared.activeFindings ?? prepared.toPublish,
@@ -201,7 +222,7 @@ function dryRunResult(prepared: PreparedBugbotFindings, context: BugbotContext):
         id: TASK_ID,
         success: true,
         executed: true,
-        steps: [`Bugbot dry-run completed with ${prepared.activeFindings?.length ?? 0} accepted finding(s); no SCM mutations performed.`],
+        steps: [`Bugbot dry-run completed with ${acceptedCount} accepted ${acceptedCount === 1 ? 'finding' : 'findings'}; no SCM mutations performed.`],
         payload: {
             dryRun: true,
             findings: prepared.activeFindings ?? prepared.toPublish,
@@ -292,7 +313,7 @@ function detectionResult(
 ): Result {
     const hasFindingChanges = prepared.toPublish.length > 0 || prepared.resolvedFindingIds.size > 0;
     const stepParts = hasFindingChanges
-        ? [`${prepared.toPublish.length} new/current finding(s) from configured agent`]
+        ? [`${prepared.toPublish.length} new/current ${prepared.toPublish.length === 1 ? 'finding' : 'findings'} from configured agent`]
         : ['no new findings, no resolved'];
     if (prepared.overflowCount > 0) stepParts.push(`${prepared.overflowCount} more not published (see summary comment)`);
     if (prepared.resolvedFindingIds.size > 0) stepParts.push(`${prepared.resolvedFindingIds.size} marked as resolved by configured agent`);
@@ -365,6 +386,7 @@ async function reconcileReviewState(input: {
     readonly expectedPublishedFindings?: readonly BugbotFinding[];
     readonly mutationErrors?: readonly Error[];
     readonly dependencies: DetectPotentialProblemsWorkflowDependencies;
+    readonly catalog?: BugbotMessageCatalog;
 }): Promise<BugbotPresentationReport | undefined> {
     const pullRequestNumber = input.loadedContext.canonicalPullRequest?.number;
     const analyzedHeadSha = input.loadedContext.prContext?.prHeadSha;
@@ -389,5 +411,21 @@ async function reconcileReviewState(input: {
         ...(input.mutationErrors ? { mutationErrors: input.mutationErrors } : {}),
         snapshotPorts: input.dependencies.scm.reconciliation.snapshot,
         presentationPorts: input.dependencies.scm.reconciliation.presentation,
+        catalog: input.catalog,
     });
+}
+
+function resolvePublicationCatalog(
+    operation: BugbotReviewOperationContext,
+    dependencies: DetectPotentialProblemsWorkflowDependencies,
+    publishesToPullRequest: boolean,
+): Promise<BugbotMessageCatalog> {
+    const locale = publishesToPullRequest
+        ? operation.locale.pullRequest
+        : operation.locale.issue ?? operation.locale.pullRequest;
+    return resolveBugbotCatalog(
+        locale,
+        operation.analysis.agentConfiguration,
+        dependencies.catalogResolver,
+    );
 }

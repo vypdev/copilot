@@ -83,13 +83,33 @@ describe('GitHub conversation publication boundaries', () => {
     const files = [
       'src/application/policies/copilot_interaction_policy.ts',
       'src/application/policies/branch_sync_notification_policy.ts',
+      'src/application/policies/bugbot_finding_marker_policy.ts',
+      'src/application/policies/bugbot_review_presentation_policy.ts',
       'src/application/policies/semantic_result_publication_policy.ts',
       'src/application/policies/status_command_policy.ts',
       'src/application/usecases/steps/common/reply_publication_workflow.ts',
       'src/application/usecases/steps/common/status_card_publication_workflow.ts',
+      'src/application/usecases/steps/commit/bugbot/publish_overflow_comment.ts',
+      'src/application/usecases/steps/commit/bugbot/publish_pr_review_comments.ts',
+      'src/application/usecases/steps/commit/bugbot/resolve_issue_finding.ts',
+      'src/application/usecases/steps/commit/bugbot/resolve_pull_request_finding.ts',
     ];
     const featureLocalLocaleBranch = /baseLanguage|startsWith\(['"](?:en|es)|===?\s*['"](?:en|es|en-US|es-ES)['"]/u;
     const violations = files.filter(file => featureLocalLocaleBranch.test(readFileSync(join(root, file), 'utf8')));
+    expect(violations).toEqual([]);
+  });
+
+  it('keeps Bugbot public presentation free of pseudo-plural copy', () => {
+    const files = [
+      'src/application/policies/bugbot_message_catalog.ts',
+      'src/application/policies/bugbot_finding_marker_policy.ts',
+      'src/application/policies/bugbot_review_presentation_policy.ts',
+      'src/application/usecases/steps/commit/bugbot/publish_issue_finding_comment.ts',
+      'src/application/usecases/steps/commit/bugbot/publish_overflow_comment.ts',
+      'src/application/usecases/steps/commit/bugbot/publish_pr_review_comments.ts',
+    ];
+    const pseudoPlural = /\p{L}+\(s\)/u;
+    const violations = files.filter(file => pseudoPlural.test(readFileSync(join(root, file), 'utf8')));
     expect(violations).toEqual([]);
   });
 });

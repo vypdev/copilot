@@ -13,6 +13,7 @@ import { publishIssueFindingComment } from "./publish_issue_finding_comment";
 import { PullRequestReviewCommentPublisher } from "./publish_pr_review_comments";
 import { publishOverflowComment } from "./publish_overflow_comment";
 import type { BugbotReviewOperationContext } from './bugbot_review_operation_context';
+import type { BugbotMessageCatalog } from '../../../../policies/bugbot_message_catalog';
 
 export interface PublishFindingsParam {
     operation: BugbotReviewOperationContext;
@@ -24,10 +25,11 @@ export interface PublishFindingsParam {
     overflowCount?: number;
     overflowTitles?: string[];
     ports: BugbotFindingPublicationPorts;
+    catalog?: BugbotMessageCatalog;
 }
 
 export async function publishFindings(param: PublishFindingsParam): Promise<void> {
-    const { operation, context, findings, commitSha, overflowCount = 0, overflowTitles = [], ports } = param;
+    const { operation, context, findings, commitSha, overflowCount = 0, overflowTitles = [], ports, catalog } = param;
     const { existingByFindingId, canonicalPullRequest, prContext } = context;
 
     const reviewPublisher =
@@ -39,6 +41,7 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
                   prContext,
                   ruleSources: context.reviewRuleSources,
                   omittedRuleCount: context.omittedReviewRules,
+                  catalog,
               })
             : undefined;
 
@@ -49,7 +52,8 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
                 operation.target.issueNumber,
                 finding,
                 findExistingFindingInfo(existingByFindingId, finding),
-                commitSha
+                commitSha,
+                catalog,
             );
         }
         if (reviewPublisher) {
@@ -64,7 +68,8 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
             operation.target.issueNumber,
             overflowCount,
             overflowTitles,
-            commitSha
+            commitSha,
+            catalog,
         );
     }
 }

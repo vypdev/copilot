@@ -62,7 +62,9 @@ export function buildBugbotPrompt(param: BugbotReviewOperationContext, context: 
         reviewConversationBlock: context.reviewConversationBlock,
         rulesBlock: context.reviewRulesBlock,
         effortBlock: `**Review effort:** ${resolvedEffort}. ${resolvedEffort === 'high' ? 'Perform deeper cross-file and adversarial analysis.' : resolvedEffort === 'low' ? 'Prioritize high-signal changed-code defects and avoid speculative breadth.' : 'Balance depth, latency, and false-positive control.'}`,
-        targetLocale: param.locale.pullRequest,
+        targetLocale: context.prContext && context.canonicalPullRequest
+            ? param.locale.pullRequest
+            : param.locale.issue ?? param.locale.pullRequest,
     });
 }
 

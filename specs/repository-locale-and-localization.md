@@ -1,9 +1,9 @@
 # Repository Locale and End-to-End Localization
 
-- Status: Ready for implementation
+- Status: In implementation
 - Date: 2026-09-14
 - Catalog capability ID: github-communication-experience
-- Last verified: Not applicable; this is a prospective specification based on a 2026-09-14 audit
+- Last verified: 2026-09-14 for the delivered foundation, shared publication, branch-sync, and Bugbot slices; remaining clauses are prospective
 - Owners: Copilot maintainers
 - Scope: Define one English-default repository locale profile and apply it generically to deterministic UI, agent-generated content, and safe interpretation of addressed comments.
 - Related issues/PRs: [issue #334](https://github.com/vypdev/copilot/issues/334), [PR #363](https://github.com/vypdev/copilot/pull/363), [PR #365](https://github.com/vypdev/copilot/pull/365)
@@ -931,6 +931,19 @@ pull-requests-locale: ""
    and the full multilingual/security fixture matrix.
 7. Update all named docs, generated workflows/action bundles, and related SDD
    clauses before announcing support.
+
+Implementation evidence as of 2026-09-14: PRs #366–#372 deliver the canonical
+locale profile, typed and validated catalog resolution, English-default shared
+publication, non-mutating addressed-language adaptation, localized agent
+response contracts, branch synchronization, and bounded review context. The
+current Bugbot slice adds one typed catalog resolution per publishing operation
+and reuses it across status cards, review snapshots, inline and issue findings,
+overflow, and resolution notes. Exact/base Spanish resolution, arbitrary BCP-47
+dynamic resolution, atomic English fallback, issue-versus-PR scope selection,
+target-locale cardinal plural completeness, and skip/dry-run/no-mutation no-call
+behavior are executable tests. Deployment, merge
+readiness, lifecycle, setup/doctor, and the remaining public surfaces are not
+claimed complete by this evidence.
 
 ### 13.5 Rollback
 

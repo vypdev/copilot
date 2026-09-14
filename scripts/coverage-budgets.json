@@ -55,6 +55,30 @@
       "successMessage": "bugbot context coverage: PASS (pure policies 100%; changed path 95% lines/statements, 90% branches/functions)"
     },
     {
+      "name": "Bugbot presentation",
+      "missingEntryLabel": "Bugbot presentation",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/bugbot_message_catalog.ts",
+            "src/application/policies/bugbot_reconciliation_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/policies/bugbot_finding_marker_policy.ts",
+            "src/application/policies/bugbot_review_presentation_policy.ts",
+            "src/application/usecases/steps/commit/bugbot/synchronize_bugbot_review_presentation_use_case.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "Bugbot presentation coverage: PASS (catalog/reconciliation 100%; rendered path 95% lines/statements, 90% branches/functions)"
+    },
+    {
       "name": "Agent execution",
       "missingEntryLabel": "agent execution",
       "rules": [

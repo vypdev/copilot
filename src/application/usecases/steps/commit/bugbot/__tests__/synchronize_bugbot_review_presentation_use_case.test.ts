@@ -75,7 +75,7 @@ describe('synchronizeBugbotReviewPresentation', () => {
     const result = await synchronizeBugbotReviewPresentation({
       target: target(),
       snapshot: currentSnapshot,
-      plan: plan({ diagnostics: ['Unable to build safe Bugbot navigation links.'] }),
+      plan: plan({ diagnostics: [{ code: 'snapshot-navigation-failed' }] }),
       ports: test.ports,
     });
 
@@ -113,7 +113,7 @@ describe('synchronizeBugbotReviewPresentation', () => {
     const result = await synchronizeBugbotReviewPresentation({
       target: target(),
       snapshot: currentSnapshot,
-      plan: plan({ diagnostics: ['Unable to re-read the pull request conversation.'] }),
+      plan: plan({ diagnostics: [{ code: 'snapshot-conversation-failed' }] }),
       ports: test.ports,
     });
 
@@ -159,6 +159,24 @@ describe('synchronizeBugbotReviewPresentation', () => {
       expect.stringContaining('could not fully synchronize'),
       { commitSha: head },
     );
+  });
+
+  it('renders recovery diagnostics with the same configured catalog as the status card', async () => {
+    const test = harness();
+    const result = await synchronizeBugbotReviewPresentation({
+      target: target({ locale: 'es-MX' }),
+      snapshot: snapshot(),
+      plan: plan({ diagnostics: [{ code: 'snapshot-reviews-failed' }] }),
+      ports: test.ports,
+    });
+
+    const body = test.addComment.mock.calls[0]?.[1] as string;
+    expect(body).toContain('## Bugbot: la revisión necesita verificación');
+    expect(body).toContain('No se pudieron volver a leer las revisiones del pull request.');
+    expect(body).not.toContain('Unable to re-read pull request reviews.');
+    expect(result.errors.map((error) => error.message)).toEqual([
+      'Unable to re-read pull request reviews.',
+    ]);
   });
 
   it('leaves an already-current review status block unchanged on replay', async () => {

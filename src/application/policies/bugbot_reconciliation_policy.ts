@@ -4,6 +4,7 @@ import type {
     ExistingFindingInfo,
 } from '../../domain/bugbot/finding';
 import type {
+    BugbotPresentationDiagnostic,
     BugbotReconciliationPlan,
     BugbotSnapshotCompleteness,
 } from '../contracts/bugbot_reconciliation';
@@ -20,7 +21,7 @@ export function buildBugbotReconciliationPlan(input: {
     readonly previousFindingTitles: ReadonlyMap<string, string>;
     readonly activeFindings: readonly BugbotFinding[];
     readonly expectedPublishedFindings: readonly BugbotFinding[];
-    readonly diagnostics?: readonly string[];
+    readonly diagnostics?: readonly BugbotPresentationDiagnostic[];
     readonly coverage: BugbotContextCoverage;
 }): BugbotReconciliationPlan {
     const diagnostics = [...(input.diagnostics ?? [])];
@@ -28,7 +29,7 @@ export function buildBugbotReconciliationPlan(input: {
         input.providerProjection.findings.map((finding) => [finding.id, finding]),
     );
     if (input.providerProjection.malformedEvidence) {
-        diagnostics.push('A trusted Bugbot finding marker is malformed.');
+        diagnostics.push({ code: 'marker-malformed' });
     }
 
     const missingDurableFindingIds = findMissingNonCleanDurableFindingIds(
@@ -52,9 +53,10 @@ export function buildBugbotReconciliationPlan(input: {
         });
     }
     if (missingDurableFindingIds.length > 0) {
-        diagnostics.push(
-            `The final provider snapshot omitted ${missingDurableFindingIds.length} previously observed unresolved or unverified Bugbot finding(s).`,
-        );
+        diagnostics.push({
+            code: 'provider-omitted-findings',
+            count: missingDurableFindingIds.length,
+        });
     }
 
     const expectedPublishedIds = new Set(
@@ -70,7 +72,10 @@ export function buildBugbotReconciliationPlan(input: {
             title: finding.title,
         });
         if (!missingDurableFindingIdSet.has(finding.id)) {
-            diagnostics.push(`Published finding ${finding.id} is not yet observable from GitHub.`);
+            diagnostics.push({
+                code: 'published-finding-unobservable',
+                findingId: finding.id,
+            });
         }
     }
 
@@ -88,17 +93,20 @@ export function buildBugbotReconciliationPlan(input: {
 /** Maps explicit snapshot completeness to bounded, provider-safe diagnostics. */
 export function describeBugbotSnapshotFailures(
     completeness: BugbotSnapshotCompleteness,
-): string[] {
-    const messages: Array<readonly [keyof BugbotSnapshotCompleteness, string]> = [
-        ['pullRequestComments', 'Unable to re-read pull request review comments.'],
-        ['reviewThreads', 'Unable to re-read pull request review thread state.'],
-        ['reviews', 'Unable to re-read pull request reviews.'],
-        ['conversation', 'Unable to re-read the pull request conversation.'],
-        ['linkedIssueComments', 'Unable to re-read linked issue finding comments.'],
-        ['navigation', 'Unable to build safe Bugbot navigation links.'],
+): BugbotPresentationDiagnostic[] {
+    const messages: Array<readonly [
+        keyof BugbotSnapshotCompleteness,
+        BugbotPresentationDiagnostic['code'],
+    ]> = [
+        ['pullRequestComments', 'snapshot-pull-request-comments-failed'],
+        ['reviewThreads', 'snapshot-review-threads-failed'],
+        ['reviews', 'snapshot-reviews-failed'],
+        ['conversation', 'snapshot-conversation-failed'],
+        ['linkedIssueComments', 'snapshot-linked-issue-comments-failed'],
+        ['navigation', 'snapshot-navigation-failed'],
     ];
-    return messages.flatMap(([surface, message]) =>
-        completeness[surface] === 'failed' ? [message] : [],
+    return messages.flatMap(([surface, code]) =>
+        completeness[surface] === 'failed' ? [{ code } as BugbotPresentationDiagnostic] : [],
     );
 }
 

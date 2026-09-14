@@ -23,9 +23,11 @@
       "entrypoints": [
         "src/actions/github_action.ts",
         "src/actions/github_action_completion.ts",
+        "src/api.ts",
         "src/cli.ts"
       ],
       "code": [
+        "scripts/coverage-budgets.json",
         "src/domain/locale.ts",
         "src/domain/message_catalog.ts",
         "src/data/model/locale.ts",
@@ -47,8 +49,12 @@
         "src/architecture/github_publication_mutation_baseline.json",
         "src/application/policies/action_summary_policy.ts",
         "src/application/policies/branch_sync_notification_policy.ts",
+        "src/application/policies/bugbot_message_catalog.ts",
         "src/application/usecases/actions/observe_branch_sync_use_case.ts",
         "src/application/policies/bugbot_review_presentation_policy.ts",
+        "src/application/usecases/steps/commit/detect_potential_problems_workflow.ts",
+        "src/application/usecases/steps/commit/bugbot/publish_pr_review_comments.ts",
+        "src/application/usecases/steps/commit/bugbot/synchronize_bugbot_review_presentation_use_case.ts",
         "src/application/policies/deployment_presentation_policy.ts",
         "src/application/usecases/actions/recommend_steps_workflow.ts",
         "src/application/usecases/actions/check_progress_workflow.ts",
@@ -69,12 +75,17 @@
         "src/application/policies/__tests__/action_summary_policy.test.ts",
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
         "src/application/usecases/actions/__tests__/observe_branch_sync_use_case.test.ts",
+        "src/application/policies/__tests__/bugbot_message_catalog.test.ts",
         "src/application/policies/__tests__/bugbot_review_presentation_policy.test.ts",
+        "src/application/usecases/steps/commit/__tests__/detect_potential_problems_use_case.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/dismiss_bugbot_findings_use_case.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/synchronize_bugbot_review_presentation_use_case.test.ts",
         "src/application/policies/__tests__/deployment_presentation_policy.test.ts",
         "src/application/usecases/steps/common/__tests__/comment_language_translation_workflow.test.ts",
         "src/application/usecases/steps/common/__tests__/publish_resume_use_case.test.ts",
         "src/application/usecases/steps/common/__tests__/status_card_publication_workflow.test.ts",
         "src/application/usecases/steps/common/__tests__/reply_publication_workflow.test.ts",
+        "src/infrastructure/composition/__tests__/pull_request_use_case_composition_root.test.ts",
         "src/architecture/__tests__/github_publication_boundaries.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/application/usecases/actions/__tests__/recommend_steps_use_case.test.ts",
@@ -103,6 +114,9 @@
         "docs/bugbot/configuration.mdx",
         "docs/bugbot/finding-publication.mdx",
         "docs/bugbot/detection.mdx",
+        "docs/bugbot/how-it-works.mdx",
+        "docs/bugbot/programmatic-api.mdx",
+        "docs/bugbot/quality-observability.mdx",
         "docs/bugbot/failure-scenarios.mdx",
         "docs/bugbot/examples.mdx",
         "docs/single-actions/configuration.mdx",
@@ -228,15 +242,20 @@
       "entrypoints": [
         "src/application/usecases/steps/commit/detect_potential_problems_workflow.ts",
         "src/application/usecases/steps/commit/bugbot/reconcile_bugbot_review_state_use_case.ts",
-        "src/actions/github_action_completion.ts"
+        "src/actions/github_action_completion.ts",
+        "src/api.ts"
       ],
       "code": [
+        "scripts/coverage-budgets.json",
         "src/domain/bugbot/review_state.ts",
         "src/domain/bugbot/review_projection.ts",
         "src/application/policies/bugbot_reconciliation_policy.ts",
         "src/application/policies/bugbot_event_ownership_policy.ts",
         "src/application/policies/bugbot_result_finding_state_projection_policy.ts",
         "src/application/policies/bugbot_telemetry_projection_policy.ts",
+        "src/application/policies/bugbot_message_catalog.ts",
+        "src/application/policies/bugbot_finding_marker_policy.ts",
+        "src/application/policies/bugbot_review_presentation_policy.ts",
         "src/application/policies/action_summary_policy.ts",
         "src/application/policies/copilot_evidence_policy.ts",
         "src/application/policies/lifecycle_state_policy.ts",
@@ -245,6 +264,7 @@
         "src/application/usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts",
         "src/application/usecases/steps/commit/bugbot/schema.ts",
         "src/application/usecases/steps/commit/bugbot/prepare_bugbot_findings_policy.ts",
+        "src/application/usecases/steps/commit/bugbot/publish_pr_review_comments.ts",
         "src/application/usecases/steps/commit/bugbot/synchronize_bugbot_review_presentation_use_case.ts"
       ],
       "tests": [
@@ -256,6 +276,9 @@
         "src/application/policies/__tests__/bugbot_result_finding_state_projection_policy.test.ts",
         "src/application/policies/__tests__/bugbot_event_ownership_policy.test.ts",
         "src/application/policies/__tests__/bugbot_telemetry_projection_policy.test.ts",
+        "src/application/policies/__tests__/bugbot_message_catalog.test.ts",
+        "src/application/policies/__tests__/bugbot_finding_marker_policy.test.ts",
+        "src/application/policies/__tests__/bugbot_review_presentation_policy.test.ts",
         "src/application/policies/__tests__/action_summary_policy.test.ts",
         "src/application/policies/__tests__/copilot_evidence_policy.test.ts",
         "src/application/policies/__tests__/lifecycle_state_policy.test.ts",
@@ -264,6 +287,7 @@
         "src/application/usecases/steps/common/__tests__/publish_resume_use_case.test.ts",
         "src/application/usecases/actions/__tests__/synchronize_lifecycle_state_use_case.test.ts",
         "src/application/usecases/steps/commit/__tests__/detect_potential_problems_use_case.test.ts",
+        "src/infrastructure/composition/__tests__/pull_request_use_case_composition_root.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts"
       ],
       "documentation": [
@@ -273,6 +297,7 @@
         "docs/bugbot/failure-scenarios.mdx",
         "docs/bugbot/configuration.mdx",
         "docs/bugbot/how-it-works.mdx",
+        "docs/bugbot/programmatic-api.mdx",
         "docs/pull-requests/workflow-setup.mdx"
       ]
     },

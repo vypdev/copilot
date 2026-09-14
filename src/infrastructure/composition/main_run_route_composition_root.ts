@@ -107,6 +107,7 @@ function createDetectPotentialProblemsUseCase(binding: BugbotScmBinding): Detect
     createFindingsQueryPort(),
     bugbot.scm,
     bugbot.telemetry,
+    new ResolveMessageCatalogUseCase(createLanguageQueryPort()),
   );
 }
 
@@ -219,8 +220,17 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
     new DoUserRequestUseCase(fixer, bugbotGit),
     createActorAuthorizationRepository(),
     bugbotGit,
-    new DismissBugbotFindingsUseCase({ contextPorts: bugbot.scm.context, resolutionPorts: bugbot.scm.resolution }),
-    new DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry),
+    new DismissBugbotFindingsUseCase({
+      contextPorts: bugbot.scm.context,
+      resolutionPorts: bugbot.scm.resolution,
+      catalogResolver: new ResolveMessageCatalogUseCase(language),
+    }),
+    new DetectPotentialProblemsUseCase(
+      findings,
+      bugbot.scm,
+      bugbot.telemetry,
+      new ResolveMessageCatalogUseCase(language),
+    ),
     pullRequestDescription,
     new RememberBugbotRuleUseCase(bugbot.rules),
     branchSync,
@@ -266,8 +276,17 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
     new DoUserRequestUseCase(fixer, bugbotGit),
     createActorAuthorizationRepository(),
     bugbotGit,
-    new DismissBugbotFindingsUseCase({ contextPorts: bugbot.scm.context, resolutionPorts: bugbot.scm.resolution }),
-    new DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry),
+    new DismissBugbotFindingsUseCase({
+      contextPorts: bugbot.scm.context,
+      resolutionPorts: bugbot.scm.resolution,
+      catalogResolver: new ResolveMessageCatalogUseCase(language),
+    }),
+    new DetectPotentialProblemsUseCase(
+      findings,
+      bugbot.scm,
+      bugbot.telemetry,
+      new ResolveMessageCatalogUseCase(language),
+    ),
     pullRequestDescription,
     new RememberBugbotRuleUseCase(bugbot.rules),
     branchSync,

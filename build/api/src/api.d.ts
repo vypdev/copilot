@@ -4,6 +4,8 @@ import type { FindingsQueryPort } from './application/ports/agent_findings_ports
 import type { BugbotScmPorts } from './application/ports/bugbot_scm_ports';
 import type { BugbotTelemetryPort } from './application/ports/bugbot_telemetry_ports';
 import type { BugbotReviewConfiguration } from './domain/bugbot/review_configuration';
+import type { MessageCatalogResolutionPort } from './application/ports/message_catalog_ports';
+export type { MessageCatalogResolutionPort } from './application/ports/message_catalog_ports';
 /** Already-bound SCM authority for exactly one repository. */
 export interface BugbotScmGateway extends BugbotScmPorts {
     readonly repository: {
@@ -41,6 +43,7 @@ export interface BugbotReviewRequest {
     readonly commentLimit?: number;
     readonly authenticatedUser?: string;
     readonly locale?: {
+        readonly issue?: string;
         readonly pullRequest?: string;
     };
 }
@@ -48,7 +51,7 @@ export interface BugbotReviewRequest {
 export declare class BugbotReviewService {
     private readonly useCase;
     private readonly repository;
-    constructor(agent: FindingsQueryPort, scm: BugbotScmGateway);
+    constructor(agent: FindingsQueryPort, scm: BugbotScmGateway, catalogResolver?: MessageCatalogResolutionPort);
     review(request: BugbotReviewRequest): Promise<readonly Result[]>;
 }
 export { evaluateBugbotFindings, evaluateBugbotQualityGate } from './tooling/bugbot_quality_eval';

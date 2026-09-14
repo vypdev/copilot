@@ -43,6 +43,23 @@ describe("commitAutofixAndResolveFindings", () => {
     expect(logInfo).toHaveBeenCalledWith(expect.stringContaining("remain open until a fresh review"));
   });
 
+  it('uses natural plural grammar when multiple autofixes were committed', async () => {
+    runBugbotAutofixCommitAndPush.mockResolvedValue({ success: true, committed: true });
+
+    await commitAutofixAndResolveFindings(
+      {} as never,
+      {
+        branchOverride: 'bugfix',
+        targetFindingIds: ['finding-1', 'finding-2'],
+        context: {},
+      } as never,
+      [{ success: true, payload: {} } as Result],
+      {} as never,
+    );
+
+    expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('2 findings'));
+  });
+
   it("does not resolve findings when no commit was created", async () => {
     runBugbotAutofixCommitAndPush.mockResolvedValue({ success: true, committed: false });
 

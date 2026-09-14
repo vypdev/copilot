@@ -9,15 +9,22 @@ import { logError } from '../../../../ports/logging_ports';
 import type { BugbotFindingResolution } from '../../../../../domain/bugbot/finding';
 import { toApplicationError } from '../../../../errors/application_error';
 import type { BugbotContextSelectionContext } from './bugbot_review_operation_context';
+import type { AgentConfiguration } from '../../../../../domain/agent';
+import type { MessageCatalogResolutionPort } from '../../../../ports/message_catalog_ports';
+import { resolveBugbotCatalog } from '../../../../policies/bugbot_message_catalog';
 
 export interface DismissBugbotFindingsParam {
-    operation: BugbotContextSelectionContext;
+    operation: BugbotContextSelectionContext & {
+        readonly locale?: { readonly issue?: string; readonly pullRequest?: string };
+        readonly agentConfiguration?: Readonly<AgentConfiguration>;
+    };
     findingIds: readonly string[];
 }
 
 export interface DismissBugbotFindingsDependencies {
     contextPorts: BugbotContextPorts;
     resolutionPorts: BugbotFindingResolutionPorts;
+    catalogResolver?: MessageCatalogResolutionPort;
 }
 
 /** Dismisses only findings present in the current persisted Bugbot context. */
@@ -50,12 +57,19 @@ export class DismissBugbotFindingsUseCase {
                 resolvedFindingIds: dismissibleIds,
                 resolvedFindingResolutions: new Map([...dismissibleIds].map(id => [id, 'dismissed' as BugbotFindingResolution])),
                 ports: this.dependencies.resolutionPorts,
+                catalog: await resolveBugbotCatalog(
+                    param.operation.target.isPullRequest
+                        ? param.operation.locale?.pullRequest ?? 'en-US'
+                        : param.operation.locale?.issue ?? 'en-US',
+                    param.operation.agentConfiguration,
+                    this.dependencies.catalogResolver,
+                ),
             });
             return [new Result({
                 id: this.taskId,
                 success: errors.length === 0,
                 executed: true,
-                steps: [`Dismissed ${dismissibleIds.size} Bugbot finding(s) by explicit user command.`],
+                steps: [`Dismissed ${dismissibleIds.size} Bugbot ${dismissibleIds.size === 1 ? 'finding' : 'findings'} by explicit user command.`],
                 errors: errors.map(error => toApplicationError(
                     error,
                     'provider.unavailable',
