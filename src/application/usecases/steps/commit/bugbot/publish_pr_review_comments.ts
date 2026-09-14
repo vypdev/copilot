@@ -184,10 +184,10 @@ function buildReviewSummary(
   unanchoredBodies: readonly string[],
   overflowCount: number,
   overflowTitles: readonly string[],
-  ruleSources: readonly string[] = [],
-  omittedRuleCount = 0,
-  analyzedHeadSha = 'unknown',
-  catalog: BugbotMessageCatalog = resolveStaticBugbotCatalog('en-US'),
+  ruleSources: readonly string[],
+  omittedRuleCount: number,
+  analyzedHeadSha: string,
+  catalog: BugbotMessageCatalog,
 ): string {
   const findingLines = findings.map((finding) => {
     const severity = sanitizeSummaryText(finding.severity, 32) || catalog.message('bugbot.finding.unspecified');

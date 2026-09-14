@@ -55466,7 +55466,7 @@ function resolveReviewAnchor(reportedLine, reportedEndLine, reportedPath, contex
     const fallback = context.prFiles.find((file) => file.status !== 'removed') ?? context.prFiles[0];
     return fallback ? { path: fallback.filename, subjectType: 'file' } : undefined;
 }
-function buildReviewSummary(findings, inlineCount, unanchoredBodies, overflowCount, overflowTitles, ruleSources = [], omittedRuleCount = 0, analyzedHeadSha = 'unknown', catalog = (0, bugbot_message_catalog_1.resolveStaticBugbotCatalog)('en-US')) {
+function buildReviewSummary(findings, inlineCount, unanchoredBodies, overflowCount, overflowTitles, ruleSources, omittedRuleCount, analyzedHeadSha, catalog) {
     const findingLines = findings.map((finding) => {
         const severity = sanitizeSummaryText(finding.severity, 32) || catalog.message('bugbot.finding.unspecified');
         const title = sanitizeSummaryText(finding.title, 500) || catalog.message('bugbot.finding.defaultTitle');

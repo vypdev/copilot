@@ -11,8 +11,10 @@ import {
   replaceMarkerInBody,
   extractTitleFromBody,
   buildCommentBody,
+  buildResolvedFindingNote,
 } from '../bugbot_finding_marker_policy';
 import type { BugbotFinding } from '../../../domain/bugbot/finding';
+import { resolveStaticBugbotCatalog } from '../bugbot_message_catalog';
 
 const FINGERPRINT = 'fp-0123abcd';
 const SEMANTIC_FINGERPRINT = 'sf-0123abcd';
@@ -232,6 +234,19 @@ describe("marker", () => {
       expect(body).toContain("resolved:false");
     });
 
+    it('uses localized defaults when provider prose is empty', () => {
+      const body = buildCommentBody({
+        id: 'empty-prose',
+        title: '',
+        description: '',
+        fingerprint: FINGERPRINT,
+        semanticFingerprint: SEMANTIC_FINGERPRINT,
+      }, false, undefined, { catalog: resolveStaticBugbotCatalog('es-ES') });
+
+      expect(body).toContain('## Problema potencial');
+      expect(body).toContain('No se proporcionó una descripción.');
+    });
+
     it("includes severity when present", () => {
       const finding: BugbotFinding = {
         id: "f2",
@@ -274,6 +289,23 @@ describe("marker", () => {
       expect(body).toContain("Use X instead.");
     });
 
+    it('localizes category, confidence, and evidence metadata', () => {
+      const body = buildCommentBody({
+        id: 'metadata',
+        title: 'Hallazgo',
+        description: 'Descripción',
+        fingerprint: FINGERPRINT,
+        semanticFingerprint: SEMANTIC_FINGERPRINT,
+        category: 'correctness',
+        confidence: 0.91,
+        evidence: 'La ruta no valida el valor.',
+      }, false, undefined, { catalog: resolveStaticBugbotCatalog('es-ES') });
+
+      expect(body).toContain('**Categoría:** correctness');
+      expect(body).toContain('**Confianza:** 91%');
+      expect(body).toContain('**Evidencia:**\nLa ruta no valida el valor.');
+    });
+
     it("adds Resolved note when resolved is true", () => {
       const finding: BugbotFinding = {
         id: "f5",
@@ -296,6 +328,15 @@ describe("marker", () => {
 
       expect(() => buildCommentBody(finding, false))
         .toThrow("Prepared finding is missing its local identity.");
+    });
+
+    it('renders every terminal resolution reason with default and localized catalogs', () => {
+      expect(buildResolvedFindingNote('fixed')).toContain('confirmed it was fixed');
+      expect(buildResolvedFindingNote('obsolete')).toContain('No longer applies');
+      expect(buildResolvedFindingNote(
+        'dismissed',
+        resolveStaticBugbotCatalog('es-ES'),
+      )).toContain('**Descartado:** Lo descartó explícitamente');
     });
   });
 });

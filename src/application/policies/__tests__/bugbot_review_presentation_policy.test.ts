@@ -146,6 +146,27 @@ describe('Bugbot review presentation', () => {
     expect(spanish).toContain('<summary>Cobertura incompleta</summary>');
   });
 
+  it('omits zero-valued coverage qualifiers from a partial source row', () => {
+    const body = renderBugbotStatusCard(buildBugbotReviewProjection({
+      pullRequestNumber: 358,
+      analyzedHeadSha: head,
+      coverage: {
+        status: 'partial',
+        sources: [{
+          source: 'diff', status: 'partial', pagesFetched: 1,
+          itemsFetched: 1, itemsRetained: 1, omittedItems: 0,
+          truncatedItems: 0, limitReached: false, providerLimitReached: false,
+        }],
+      },
+      findings: [],
+    }), 'en-US', links);
+
+    expect(body).toContain('- diff: partial; retained=1');
+    expect(body).not.toContain('omitted=0');
+    expect(body).not.toContain('truncated=0');
+    expect(body).not.toContain('provider page limit reached');
+  });
+
   it('renders empty and long finding lists without requiring a workflow-run link', () => {
     const noRunLinks = { pullRequestUrl: links.pullRequestUrl, commitUrl: links.commitUrl };
     expect(renderBugbotStatusCard(projection(), 'es-ES', noRunLinks)).toContain('revisión completada');
@@ -293,6 +314,17 @@ describe('Bugbot review presentation', () => {
     });
     expect(body).toContain('La cobertura global es parcial');
     expect(body).toContain('Última reconciliación en');
+  });
+
+  it('defaults a review snapshot without locale metadata to English', () => {
+    const body = renderBugbotReviewSnapshot(null, {
+      reviewIdentity: '77', analyzedHeadSha: head, currentHeadSha: head,
+      projectionDigest: '12345678', coverageStatus: 'complete', findings: [],
+      statusUrl: links.pullRequestUrl,
+    });
+
+    expect(body).toContain('## 🤖 Bugbot review snapshot');
+    expect(body).toContain('All findings originating in this review are resolved');
   });
 
   it('sanitizes titles before publishing them in the status card', () => {

@@ -120,6 +120,25 @@ describe('DismissBugbotFindingsUseCase', () => {
         expect(results[0].errors[0].message).toBe('A Bugbot finding could not be dismissed.');
     });
 
+    it('defaults a PR dismissal without locale metadata to English', async () => {
+        const useCase = new DismissBugbotFindingsUseCase({
+            contextPorts: {} as never,
+            resolutionPorts: {} as never,
+        });
+        const request = operation();
+
+        await useCase.invoke({
+            operation: {
+                ...request,
+                target: { ...request.target, isPullRequest: true, pullRequestNumber: 17 },
+            },
+            findingIds: ['finding-1'],
+        });
+
+        expect(mockMarkFindingsResolved.mock.calls[0][0].catalog)
+            .toMatchObject({ resolutionSource: 'exact', locale: 'en-US' });
+    });
+
     it('is an idempotent no-op when no requested finding exists', async () => {
         const useCase = new DismissBugbotFindingsUseCase({
             contextPorts: {} as never,
