@@ -247,6 +247,16 @@ describe("deployment presentation policy", () => {
     expect(body).toContain("/compare/");
   });
 
+  it("replaces an untrusted workflow URL with the safe GitHub root", () => {
+    const body = renderDeploymentDashboard(operation(), {
+      ...context,
+      workflowRunUrl: "https://example.com/@team\nunsafe",
+    });
+
+    expect(body).toContain("[Workflow run](https://github.com)");
+    expect(body).not.toContain("example.com");
+  });
+
   it("renders a pending external transition as a successful wait in the Job Summary", () => {
     const summary = renderDeploymentJobSummary(operation(), context, "preparing");
     expect(summary).toContain("Waiting externally");
