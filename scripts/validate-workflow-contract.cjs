@@ -99,6 +99,13 @@ const REPOSITORY_LOCALE_INPUTS = Object.freeze({
   'issues-locale': "${{ vars.ISSUES_LOCALE || '' }}",
   'pull-requests-locale': "${{ vars.PULL_REQUESTS_LOCALE || '' }}",
 });
+const REPOSITORY_BUGBOT_CONTEXT_EXCLUSIONS = 'build/*,specs/CATALOG.md';
+const REPOSITORY_BUGBOT_WORKFLOW_FILES = new Set([
+  'copilot_issue.yml',
+  'copilot_issue_comment.yml',
+  'copilot_pull_request.yml',
+  'copilot_pull_request_comment.yml',
+]);
 
 function workflowFiles(directory) {
   return readdirSync(directory)
@@ -223,6 +230,20 @@ function assertRepositoryLocaleInputs(file, workflow) {
         .map(([input]) => input);
       if (invalid.length > 0) {
         throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} must pass the repository locale and inheriting empty scope overrides exactly; invalid: ${invalid.join(', ')}.`);
+      }
+    }
+  }
+}
+
+function assertRepositoryBugbotContextExclusions(file, workflow) {
+  const relativeFile = relativeWorkflow(file);
+  if (!relativeFile.startsWith('.github/workflows/')
+    || !REPOSITORY_BUGBOT_WORKFLOW_FILES.has(path.basename(file))) return;
+  for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    for (const [stepIndex, step] of (job.steps ?? []).entries()) {
+      if (!isCopilotAction(step)) continue;
+      if (step.with?.['ai-ignore-files'] !== REPOSITORY_BUGBOT_CONTEXT_EXCLUSIONS) {
+        throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} must exclude generated build and specification catalog artifacts from Bugbot context exactly.`);
       }
     }
   }
@@ -859,6 +880,7 @@ function validateWorkflow(file, workflow) {
   assertSequentialMutationWorkflow(file, workflow);
   assertAgentInputs(file, workflow);
   assertRepositoryLocaleInputs(file, workflow);
+  assertRepositoryBugbotContextExclusions(file, workflow);
   assertAgentInstallationPrerequisites(file, workflow);
   assertNoJobLevelSecrets(file, workflow);
   assertAgentWorkflowPermissions(file, workflow);
@@ -910,6 +932,7 @@ module.exports = {
   assertCopilotActionInputs,
   assertAgentInputs,
   assertRepositoryLocaleInputs,
+  assertRepositoryBugbotContextExclusions,
   assertAgentInstallationPrerequisites,
   assertNoJobLevelSecrets,
   assertAgentWorkflowPermissions,
