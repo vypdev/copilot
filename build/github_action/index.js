@@ -43656,13 +43656,13 @@ function buildCopilotWelcomeMessage(username, locale = 'en-US', catalog = (0, pu
     ].join('\n');
 }
 /** Creates a publishable result for issues that have no agent-generated reply. */
-function buildCopilotWelcomeResult(username) {
+function buildCopilotWelcomeResult(username, locale = 'en-US') {
     return new result_1.Result({
         id: 'CopilotWelcomeUseCase',
         success: true,
         executed: true,
         stepFormat: 'markdown',
-        steps: [buildCopilotWelcomeMessage(username)],
+        steps: [buildCopilotWelcomeMessage(username, locale)],
         payload: Object.freeze({ publication: Object.freeze({ kind: 'welcome', botLogin: normalizeCopilotBotUsername(username) }) }),
     });
 }
@@ -50930,11 +50930,11 @@ async function runIssueWorkflow(context, taskId, ports) {
             : undefined;
         results.push(...recommendationResults);
         if (context.newIssue && !containsWelcome(recommendationResults)) {
-            results.push((0, copilot_interaction_policy_1.buildCopilotWelcomeResult)(context.tokenUser));
+            results.push((0, copilot_interaction_policy_1.buildCopilotWelcomeResult)(context.tokenUser, ports.sharedContexts.steps.answerHelp.locale));
         }
     }
     else if (context.newIssue) {
-        results.push((0, copilot_interaction_policy_1.buildCopilotWelcomeResult)(context.tokenUser));
+        results.push((0, copilot_interaction_policy_1.buildCopilotWelcomeResult)(context.tokenUser, ports.sharedContexts.steps.answerHelp.locale));
     }
     return issueWorkflowOutcome(results, branchConfigurationPatch, recommendationStatePatch);
 }

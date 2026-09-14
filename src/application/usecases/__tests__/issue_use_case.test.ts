@@ -295,6 +295,7 @@ describe("IssueUseCase", () => {
       inputs: { eventName: "issues", action: "opened" },
       issue: { opened: true },
       labels: { isRelease: true, isQuestion: false, isHelp: false },
+      locale: { repository: 'es-ES', issue: 'es-ES', pullRequest: 'es-ES' },
     });
 
     const results = await createUseCase().invoke(param);
@@ -303,6 +304,9 @@ describe("IssueUseCase", () => {
     expect(results.some((result) => result.id === "CopilotWelcomeUseCase")).toBe(true);
     expect(results.find((result) => result.id === "CopilotWelcomeUseCase")?.steps[0]).toContain(
       "<!-- copilot:welcome -->",
+    );
+    expect(results.find((result) => result.id === "CopilotWelcomeUseCase")?.steps[0]).toContain(
+      "Hola, soy **@vypbot**",
     );
   });
 
@@ -313,12 +317,16 @@ describe("IssueUseCase", () => {
       inputs: { eventName: "issues", action: "opened" },
       issue: { opened: true },
       labels: { isRelease: false, isQuestion: true, isHelp: false },
+      locale: { repository: 'es-ES', issue: 'es-ES', pullRequest: 'es-ES' },
     });
 
     const results = await createUseCase().invoke(param);
 
     expect(mockAnswerIssueHelpInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8, questionOrHelp: true }));
     expect(results.some((result) => result.id === "CopilotWelcomeUseCase")).toBe(true);
+    expect(results.find((result) => result.id === "CopilotWelcomeUseCase")?.steps[0]).toContain(
+      "Hola, soy **@vypbot**",
+    );
   });
 
   it("answers help for a newly opened question or help issue", async () => {

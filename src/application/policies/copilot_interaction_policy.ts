@@ -88,13 +88,13 @@ export function buildCopilotWelcomeMessage(
 }
 
 /** Creates a publishable result for issues that have no agent-generated reply. */
-export function buildCopilotWelcomeResult(username?: string): Result {
+export function buildCopilotWelcomeResult(username?: string, locale = 'en-US'): Result {
     return new Result({
         id: 'CopilotWelcomeUseCase',
         success: true,
         executed: true,
         stepFormat: 'markdown',
-        steps: [buildCopilotWelcomeMessage(username)],
+        steps: [buildCopilotWelcomeMessage(username, locale)],
         payload: Object.freeze({ publication: Object.freeze({ kind: 'welcome', botLogin: normalizeCopilotBotUsername(username) }) }),
     });
 }

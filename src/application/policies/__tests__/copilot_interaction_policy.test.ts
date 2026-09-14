@@ -41,5 +41,6 @@ describe('Copilot interaction policy', () => {
             stepFormat: 'markdown',
             executed: true,
         });
+        expect(buildCopilotWelcomeResult('vypbot', 'es-ES').steps[0]).toContain('Hola, soy **@vypbot**');
     });
 });
