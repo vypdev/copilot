@@ -640,7 +640,8 @@ describe("DeploymentOrchestrationUseCase", () => {
 
   it("records a publication workflow failure in durable state and the dashboard", async () => {
     const value = harness();
-    const input = execution("failed", operation("publishing"));
+    const input = execution("failed", operation("publishing", { commentMode: "milestones" }));
+    input.singleAction.message = "::error:: @team <!-- unsafe -->";
     const result = await value.useCase.invoke(input);
     expect(result[0].success).toBe(false);
     expect(input.currentConfiguration.deploymentOrchestration).toEqual(expect.objectContaining({
@@ -648,6 +649,15 @@ describe("DeploymentOrchestrationUseCase", () => {
       lastFailure: expect.objectContaining({ category: "publication", previousPhase: "publishing", retryable: true }),
     }));
     expect(value.presentation.createDashboard).toHaveBeenCalled();
+    expect(value.presentation.publishMilestone).toHaveBeenCalledWith(
+      355,
+      expect.stringContaining('name="reconciliation-blocked"'),
+      expect.stringContaining("﹕﹕error﹕﹕"),
+    );
+    const milestone = value.presentation.publishMilestone.mock.calls[0]?.[2] as string;
+    expect(milestone).toContain("&lt;!-- unsafe --&gt;");
+    expect(milestone).not.toContain("<!-- unsafe -->");
+    expect(milestone).not.toContain("@team");
   });
 
   it("ignores a delayed failure report after completion", async () => {

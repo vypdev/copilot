@@ -24,6 +24,7 @@ import {
 } from "../policies/deployment_message_catalog";
 import {
   blockDeploymentOperation,
+  sanitizeDeploymentMessage,
   type DeploymentOperationSnapshot,
   type ReconciliationTargetState,
 } from "../../domain/deployment_operation";
@@ -61,20 +62,21 @@ export class DeploymentOrchestrationRuntime {
     retryable: boolean,
     semanticError?: ApplicationError,
   ): Promise<Result> {
-    const blocked = blockDeploymentOperation(operation, category, message, retryable);
+    const sanitizedMessage = sanitizeDeploymentMessage(message);
+    const blocked = blockDeploymentOperation(operation, category, sanitizedMessage, retryable);
     await this.persist(context, blocked);
     await this.publishDashboard(context, blocked);
     await this.publishMilestone(
       context,
       blocked,
-      { kind: "reconciliation-blocked", reason: message },
+      { kind: "reconciliation-blocked", reason: sanitizedMessage },
     );
     return new Result({
       id: DEPLOYMENT_ORCHESTRATION_TASK_ID,
       success: false,
       executed: true,
-      steps: [message],
-      errors: [semanticError ?? new ApplicationError("workflow.failed", message, { retryable })],
+      steps: [sanitizedMessage],
+      errors: [semanticError ?? new ApplicationError("workflow.failed", sanitizedMessage, { retryable })],
     });
   }
 
