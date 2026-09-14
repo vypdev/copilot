@@ -55,6 +55,8 @@ describe('message catalog domain policy', () => {
 
   it('validates complete, versioned, language-compatible catalog definitions', () => {
     expect(validateCatalogDefinition(english, ['greeting', 'items'])).toEqual([]);
+    expect(catalogPluralCategories('es-ES')).toEqual(['one', 'many', 'other']);
+    expect(validateCatalogDefinition(spanish, ['greeting', 'items'])).toEqual([]);
     expect(validateCatalogDefinition({ ...english, version: 'old' }, ['greeting', 'items']))
       .toContain('catalog-version-mismatch');
     expect(validateCatalogDefinition({ ...english, locale: 'not a locale' }, ['greeting', 'items']))

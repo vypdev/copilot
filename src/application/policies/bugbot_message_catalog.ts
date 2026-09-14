@@ -189,6 +189,9 @@ const ENGLISH_MESSAGES: Readonly<Record<BugbotMessageId, CatalogMessage>> = Obje
   'bugbot.diagnostic.statusCardUpdateFailed': 'Unable to create or update the canonical Bugbot PR status card.',
 });
 
+// Current Node.js Intl/CLDR cardinal rules expose `one`, `many`, and `other`
+// for Spanish. The uncommon `many` category covers exponent-form numbers;
+// bundled definitions intentionally match the runtime category set exactly.
 const SPANISH_MESSAGES: Readonly<Record<BugbotMessageId, CatalogMessage>> = Object.freeze({
   'bugbot.status.heading.partial': 'Bugbot: revisión incompleta',
   'bugbot.status.heading.verification': 'Bugbot: la revisión necesita verificación',

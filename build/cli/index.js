@@ -42260,6 +42260,9 @@ const ENGLISH_MESSAGES = Object.freeze({
     'bugbot.diagnostic.reviewUpdatesPending': Object.freeze({ one: '{count} Bugbot review status block remains pending; run {command}.', other: '{count} Bugbot review status blocks remain pending; run {command}.' }),
     'bugbot.diagnostic.statusCardUpdateFailed': 'Unable to create or update the canonical Bugbot PR status card.',
 });
+// Current Node.js Intl/CLDR cardinal rules expose `one`, `many`, and `other`
+// for Spanish. The uncommon `many` category covers exponent-form numbers;
+// bundled definitions intentionally match the runtime category set exactly.
 const SPANISH_MESSAGES = Object.freeze({
     'bugbot.status.heading.partial': 'Bugbot: revisión incompleta',
     'bugbot.status.heading.verification': 'Bugbot: la revisión necesita verificación',

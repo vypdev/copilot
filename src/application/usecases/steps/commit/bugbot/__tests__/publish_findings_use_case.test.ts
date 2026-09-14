@@ -492,6 +492,33 @@ describe("publishFindings", () => {
         expect(overflowCall[1]).not.toContain("Finding 19");
     });
 
+    it('renders localized overflow inside the PR review summary without an issue comment', async () => {
+        await publishFindings({
+            operation: {
+                ...baseOperation,
+                target: { ...baseOperation.target, issueNumber: -1 },
+                locale: { pullRequest: 'es-ES' },
+            },
+            context: baseContext({
+                prContext: {
+                    prHeadSha: 'sha1',
+                    prFiles: [{ filename: 'src/foo.ts', status: 'modified' }],
+                    pathToFirstDiffLine: { 'src/foo.ts': 5 },
+                },
+            }),
+            findings: [],
+            overflowCount: 20,
+            overflowTitles: ['Extra 1', 'Extra 2'],
+        });
+
+        expect(mockAddComment).not.toHaveBeenCalled();
+        expect(mockCreateReviewWithComments).toHaveBeenCalledTimes(1);
+        const summary = mockCreateReviewWithComments.mock.calls[0][2] as string;
+        expect(summary).toContain('copilot-bugbot-review-overflow');
+        expect(summary).toContain('Se detectaron **20** hallazgos adicionales.');
+        expect(summary).toContain('y 18 más.');
+    });
+
     it("uses commitSha for watermark and passes commitSha to addComment when provided", async () => {
         await publishFindings({
             operation: baseOperation,
