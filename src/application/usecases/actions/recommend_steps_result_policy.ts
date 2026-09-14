@@ -19,12 +19,14 @@ export function buildRecommendationResult(
 ): RecommendStepsOutcome {
     const steps = extractRecommendationText(response, param.targetLocale);
     if (!steps) {
-        const semanticError = new ApplicationError('agent.failed', 'The configured agent returned no recommendation.');
-        logError(semanticError);
-        return recommendationOutcome([new Result({ id: taskId, success: false, executed: true, errors: [semanticError] })]);
+        return recommendationFailure(taskId, 'The configured agent returned no recommendation.');
     }
     logDebugInfo(`RecommendSteps: agent response received. Steps length=${steps.length}.`);
-    if (previousRecommendation && isNoNewRecommendation(steps)) return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'agent found no material change');
+    if (isNoNewRecommendation(steps)) {
+        return previousRecommendation
+            ? skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'agent found no material change')
+            : recommendationFailure(taskId, 'The configured agent returned unchanged without a previous recommendation.');
+    }
     const recommendationFingerprint = createRecommendationFingerprint(steps);
     if (previousRecommendation?.recommendationFingerprint === recommendationFingerprint) return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'recommendation is unchanged');
     const recommendationState: RecommendationState = {
@@ -52,6 +54,14 @@ function recommendationOutcome(results: readonly Result[], recommendationState?:
             configurationPatch: Object.freeze({ recommendationState: Object.freeze({ ...recommendationState }) }),
         } : {}),
     });
+}
+
+function recommendationFailure(taskId: string, message: string): RecommendStepsOutcome {
+    const semanticError = new ApplicationError('agent.failed', message);
+    logError(semanticError);
+    return recommendationOutcome([
+        new Result({ id: taskId, success: false, executed: true, errors: [semanticError] }),
+    ]);
 }
 
 function extractRecommendationText(response: string | Record<string, unknown> | undefined, targetLocale: string): string {

@@ -203,6 +203,21 @@ describe('RecommendStepsUseCase', () => {
     expect(lastOutcome?.configurationPatch?.recommendationState.issueDescriptionFingerprint).not.toBe('old-description');
   });
 
+  it('rejects unchanged status when no previous recommendation exists', async () => {
+    mockGetDescription.mockResolvedValue('Implement login feature.');
+    mockAskAgent.mockResolvedValue('NO_NEW_RECOMMENDATIONS');
+
+    const results = await invoke(baseParam());
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ success: false, executed: true });
+    expect(results[0].errors[0]).toMatchObject({
+      code: 'agent.failed',
+      message: 'The configured agent returned unchanged without a previous recommendation.',
+    });
+    expect(lastOutcome?.configurationPatch).toBeUndefined();
+  });
+
   it('does not publish a duplicate recommendation when the normalized response is unchanged', async () => {
     mockGetDescription.mockReset();
     mockGetDescription

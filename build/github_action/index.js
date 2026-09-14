@@ -49009,13 +49009,14 @@ const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 function buildRecommendationResult(param, taskId, response, issueDescriptionFingerprint, previousRecommendation, issueNumber) {
     const steps = extractRecommendationText(response, param.targetLocale);
     if (!steps) {
-        const semanticError = new application_error_1.ApplicationError('agent.failed', 'The configured agent returned no recommendation.');
-        (0, logging_ports_1.logError)(semanticError);
-        return recommendationOutcome([new result_1.Result({ id: taskId, success: false, executed: true, errors: [semanticError] })]);
+        return recommendationFailure(taskId, 'The configured agent returned no recommendation.');
     }
     (0, logging_ports_1.logDebugInfo)(`RecommendSteps: agent response received. Steps length=${steps.length}.`);
-    if (previousRecommendation && (0, recommendation_policy_1.isNoNewRecommendation)(steps))
-        return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'agent found no material change');
+    if ((0, recommendation_policy_1.isNoNewRecommendation)(steps)) {
+        return previousRecommendation
+            ? skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'agent found no material change')
+            : recommendationFailure(taskId, 'The configured agent returned unchanged without a previous recommendation.');
+    }
     const recommendationFingerprint = (0, recommendation_policy_1.createRecommendationFingerprint)(steps);
     if (previousRecommendation?.recommendationFingerprint === recommendationFingerprint)
         return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'recommendation is unchanged');
@@ -49042,6 +49043,13 @@ function recommendationOutcome(results, recommendationState) {
             configurationPatch: Object.freeze({ recommendationState: Object.freeze({ ...recommendationState }) }),
         } : {}),
     });
+}
+function recommendationFailure(taskId, message) {
+    const semanticError = new application_error_1.ApplicationError('agent.failed', message);
+    (0, logging_ports_1.logError)(semanticError);
+    return recommendationOutcome([
+        new result_1.Result({ id: taskId, success: false, executed: true, errors: [semanticError] }),
+    ]);
 }
 function extractRecommendationText(response, targetLocale) {
     if (response == null)
