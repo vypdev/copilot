@@ -45282,7 +45282,7 @@ function hasPrimaryIssuePublication(results) {
             || directAnswerProjection(payload)));
     });
 }
-/** Recognizes only bot-owned plan or direct-answer markers for the exact issue. */
+/** Recognizes only bot-owned primary-response markers on the exact issue comment list. */
 function hasOwnedPrimaryIssuePublication(comments, issueNumber, botLogin) {
     if (!positiveInteger(issueNumber) || !botLogin.trim())
         return false;
@@ -45295,7 +45295,10 @@ function hasOwnedPrimaryIssuePublication(comments, issueNumber, botLogin) {
             && (0, github_publication_1.publicationTargetToken)(status.identity.target) === expectedTarget)
             return true;
         const reply = (0, publication_identity_policy_1.parsePublicationReplyMarker)(comment.body);
-        return reply?.target === expectedTarget && reply.messageKey === 'direct-answer';
+        if (reply?.target === expectedTarget
+            && (reply.messageKey === 'direct-answer' || reply.messageKey === 'copilot-welcome'))
+            return true;
+        return comment.body?.includes(copilot_interaction_policy_1.COPILOT_WELCOME_MARKER) === true;
     });
 }
 function selectSemanticReplyIntents(context) {
