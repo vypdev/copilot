@@ -4,8 +4,8 @@ import type {
   BranchSyncNotificationComment,
 } from '../ports/branch_sync_ports';
 import { githubUsersMatch } from '../../domain/github_user_policy';
-import { baseLanguage } from '../../domain/locale';
 import { buildPublicationMarker, createSemanticDigest } from './publication_identity_policy';
+import type { BranchSyncMessageCatalog } from './branch_sync_message_catalog';
 
 export const BRANCH_SYNC_STALE_MARKER = '<!-- copilot-branch-sync:stale -->';
 export const BRANCH_SYNC_ALIGNED_MARKER = '<!-- copilot-branch-sync:aligned -->';
@@ -51,10 +51,9 @@ export function buildStaleBranchSyncComment(input: {
   repository: string;
   dependency: BranchDependency;
   comparison: BranchSyncComparison;
-  locale?: string;
+  messages: BranchSyncMessageCatalog;
 }): string {
   const { dependency, comparison } = input;
-  const spanish = baseLanguage(input.locale ?? 'en-US') === 'es';
   const compareUrl = buildCompareUrl(
     input.owner,
     input.repository,
@@ -62,37 +61,41 @@ export function buildStaleBranchSyncComment(input: {
     dependency.workingBranch,
   );
   const divergence = comparison.aheadBy > 0
-    ? spanish
-      ? ` También contiene ${comparison.aheadBy} commit(s) que no están en la rama padre.`
-      : ` It also contains ${comparison.aheadBy} commit(s) not present in the parent branch.`
+    ? ` ${input.messages.message('branchSync.stale.ahead', { count: comparison.aheadBy }, comparison.aheadBy)}`
     : '';
   return `${buildSharedBranchSyncMarker(dependency, `comparison:${createSemanticDigest(comparison)}`, createSemanticDigest({ state: 'stale', comparison }))}
 ${BRANCH_SYNC_STALE_MARKER}
 ${buildDependencyMarker(dependency)}
 
-## ${spanish ? 'Acción necesaria: sincroniza la rama' : 'Action required: synchronize the branch'}
+## ${input.messages.message('branchSync.stale.heading')}
 
-\`${dependency.workingBranch}\` ${spanish ? `está ${comparison.behindBy} commit(s) por detrás de su rama padre` : `is ${comparison.behindBy} commit(s) behind its parent branch`} \`${dependency.parentBranch}\`.${divergence}
+${input.messages.message('branchSync.stale.behind', {
+    workingBranch: inlineRef(dependency.workingBranch),
+    parentBranch: inlineRef(dependency.parentBranch),
+    count: comparison.behindBy,
+  }, comparison.behindBy)}${divergence}
 
-${spanish ? 'Ejecuta' : 'Run'} \`/copilot sync-branch\` ${spanish ? 'en esta conversación para integrar de forma segura los cambios de la rama padre. Si Git detecta conflictos, el agente corrector configurado puede resolver los archivos permitidos antes de ejecutar las verificaciones.' : 'in this conversation to merge the parent changes safely. If Git reports conflicts, the configured fixer agent can resolve eligible files before the verification commands run.'}
+${input.messages.message('branchSync.stale.instructions', { command: '`/copilot sync-branch`' })}
 
-[${spanish ? 'Comparar la rama padre y la rama de trabajo' : 'Compare parent and working branch'}](${compareUrl})`;
+[${input.messages.message('branchSync.stale.compare')}](${compareUrl})`;
 }
 
 export function buildAlignedBranchSyncComment(
   dependency: BranchDependency,
-  locale = 'en-US',
+  messages: BranchSyncMessageCatalog,
 ): string {
-  const spanish = baseLanguage(locale) === 'es';
   return `${buildSharedBranchSyncMarker(dependency, `aligned:${createSemanticDigest(dependency)}`, createSemanticDigest({ state: 'aligned', dependency }))}
 ${BRANCH_SYNC_ALIGNED_MARKER}
 ${buildDependencyMarker(dependency)}
 
-## ${spanish ? 'Rama sincronizada' : 'Branch synchronized'}
+## ${messages.message('branchSync.aligned.heading')}
 
-\`${dependency.workingBranch}\` ${spanish ? 'ya contiene el historial actual de su rama padre' : 'now contains the current history of its parent branch'} \`${dependency.parentBranch}\`.
+${messages.message('branchSync.aligned.status', {
+    workingBranch: inlineRef(dependency.workingBranch),
+    parentBranch: inlineRef(dependency.parentBranch),
+  })}
 
-${spanish ? 'La recomendación de sincronización anterior está resuelta.' : 'The previous synchronization recommendation has been resolved.'}`;
+${messages.message('branchSync.aligned.resolved')}`;
 }
 
 function buildSharedBranchSyncMarker(
@@ -135,4 +138,8 @@ function buildCompareUrl(
   workingBranch: string,
 ): string {
   return `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/compare/${encodeURIComponent(parentBranch)}...${encodeURIComponent(workingBranch)}`;
+}
+
+function inlineRef(value: string): string {
+  return `\`${value.replace(/[\r\n`<>]/gu, '').replace(/@/gu, '@\u200b').slice(0, 255)}\``;
 }

@@ -5,7 +5,7 @@ description: Detect parent-branch drift on every push and safely align issue or 
 
 # Branch synchronization
 
-Copilot can watch parent-to-child branch relationships and notify the related open issue when its working branch falls behind. Detection is intentionally separate from the normal commit workflow: `copilot_branch_sync.yml` listens to pushes on **all branches**, performs only GitHub metadata and comparison requests, and never loads Bugbot or an agent.
+Copilot can watch parent-to-child branch relationships and notify the related open issue when its working branch falls behind. Detection is intentionally separate from the normal commit workflow: `copilot_branch_sync.yml` listens to pushes on **all branches**, performs GitHub metadata and comparison requests, and never loads Bugbot or a code-changing agent. English and Spanish notices use bundled catalogs. Another configured BCP-47 locale may make one schema-constrained language request for the complete branch-notice catalog; invalid or unavailable localization falls back atomically to English before any comment is written.
 
 This separation keeps pushes to `main`, `master`, `develop`, release branches, and intermediate feature branches observable without paying the cost or accepting the noise of the full commit-analysis pipeline.
 
@@ -20,6 +20,8 @@ On each non-deletion push, the observer:
 5. creates or updates a single bot-authored synchronization notice on the issue.
 
 The notice is stateful. Further parent pushes update it instead of creating comment spam. When the working branch catches up—including after an automated synchronization—the same notice is marked resolved. A PAT-authored sync push is observed too, so a chain such as `develop → feature/A → feature/B` can propagate recommendations to the next level.
+
+Notice prose uses the issue locale inherited from the repository locale unless `issues-locale` overrides it. Commands, branch names, comparison URLs, markers, and machine-readable state remain unchanged in every language.
 
 <Info>
   A manually created linked branch needs an open PR whose head is that branch to establish its parent. Branches created by Copilot already persist `parentBranch` and `workingBranch`, so they do not require this fallback.

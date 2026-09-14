@@ -16,6 +16,11 @@ import type { BranchObservationContext } from '../push_single_action_contexts';
 import { logError, logInfo } from "../../ports/logging_ports";
 import type { ParamUseCase } from "../base/param_usecase";
 import { toApplicationError } from "../../errors/application_error";
+import type { MessageCatalogResolutionPort } from '../../ports/message_catalog_ports';
+import {
+  resolveBranchSyncCatalog,
+  type BranchSyncMessageCatalog,
+} from '../../policies/branch_sync_message_catalog';
 
 const TASK_ID = "ObserveBranchSyncUseCase";
 
@@ -30,6 +35,7 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
     private readonly dependencies: BoundBranchDependencyQueryPort,
     private readonly comparisons: BoundBranchSyncComparisonPort,
     private readonly notifications: BoundBranchSyncNotificationPort,
+    private readonly catalogResolver?: MessageCatalogResolutionPort,
   ) {}
 
   async invoke(context: BranchObservationContext): Promise<Result[]> {
@@ -46,9 +52,14 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
         return [];
       }
 
+      const messages = await resolveBranchSyncCatalog(
+        context.locale,
+        context.agentConfiguration,
+        this.catalogResolver,
+      );
       const results: Result[] = [];
       for (const dependency of dependencies) {
-        results.push(await this.reconcileDependency(context, dependency));
+        results.push(await this.reconcileDependency(context, dependency, messages));
       }
       return results;
     } catch (cause) {
@@ -60,6 +71,7 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
   private async reconcileDependency(
     context: BranchObservationContext,
     dependency: BranchDependency,
+    messages: BranchSyncMessageCatalog,
   ): Promise<Result> {
     try {
       const comparison = await this.comparisons.compare(
@@ -77,7 +89,7 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
           repository: context.repository.name,
           dependency,
           comparison,
-          locale: context.locale,
+          messages,
         });
         if (latest && isStaleBranchSyncComment(latest.body)) {
           await this.notifications.updateComment(
@@ -98,7 +110,7 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
         await this.notifications.updateComment(
           dependency.issueNumber,
           latest.id,
-          buildAlignedBranchSyncComment(dependency, context.locale),
+          buildAlignedBranchSyncComment(dependency, messages),
         );
       }
       return success(dependency, 0, "aligned");

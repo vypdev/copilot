@@ -7,6 +7,10 @@ import {
   isStaleBranchSyncComment,
   selectBranchDependenciesForPush,
 } from "../branch_sync_notification_policy";
+import { resolveStaticBranchSyncCatalog } from '../branch_sync_message_catalog';
+
+const english = resolveStaticBranchSyncCatalog('en-US');
+const spanish = resolveStaticBranchSyncCatalog('es-MX');
 
 const dependency = {
   issueNumber: 42,
@@ -35,10 +39,11 @@ describe("branch sync notification policy", () => {
   });
 
   it("keeps notification state independent for multiple branches on one issue", () => {
-    const firstBody = buildAlignedBranchSyncComment(dependency);
+    const firstBody = buildAlignedBranchSyncComment(dependency, english);
     const second = { ...dependency, workingBranch: "feature/43" };
     const secondBody = buildStaleBranchSyncComment({
       owner: "org", repository: "repo", dependency: second, comparison: { aheadBy: 0, behindBy: 1 },
+      messages: english,
     });
     const comments = [
       { id: 1, body: firstBody, user: { login: "vypbot" } },
@@ -54,28 +59,41 @@ describe("branch sync notification policy", () => {
       repository: "repo",
       dependency,
       comparison: { aheadBy: 2, behindBy: 3 },
+      messages: english,
     });
     expect(stale).toContain(BRANCH_SYNC_STALE_MARKER);
     expect(stale).toContain('topic="branch-sync" target="issue:42"');
-    expect(stale).toContain("3 commit(s) behind");
-    expect(stale).toContain("2 commit(s) not present");
+    expect(stale).toContain("3 commits behind");
+    expect(stale).toContain("2 commits not present");
     expect(stale).toContain("/copilot sync-branch");
     expect(stale).toContain("release%2F2.0...feature%2F42-sync");
     expect(isStaleBranchSyncComment(stale)).toBe(true);
 
-    const aligned = buildAlignedBranchSyncComment(dependency);
+    const aligned = buildAlignedBranchSyncComment(dependency, english);
     expect(aligned).toContain(BRANCH_SYNC_ALIGNED_MARKER);
     expect(aligned).toContain("now contains");
     expect(isStaleBranchSyncComment(aligned)).toBe(false);
   });
 
+  it('uses locale-aware singular forms and neutralizes unsafe ref presentation', () => {
+    const unsafe = { ...dependency, workingBranch: 'feature/`@team' };
+    const stale = buildStaleBranchSyncComment({
+      owner: 'org', repository: 'repo', dependency: unsafe,
+      comparison: { aheadBy: 1, behindBy: 1 }, messages: english,
+    });
+    expect(stale).toContain('is 1 commit behind');
+    expect(stale).toContain('contains 1 commit not present');
+    expect(stale).not.toContain('`@team');
+    expect(stale).toContain('@\u200bteam');
+  });
+
   it('renders the same semantic branch states in Spanish', () => {
     const stale = buildStaleBranchSyncComment({
       owner: 'org', repository: 'repo', dependency,
-      comparison: { aheadBy: 1, behindBy: 2 }, locale: 'es-MX',
+      comparison: { aheadBy: 1, behindBy: 2 }, messages: spanish,
     });
     expect(stale).toContain('## Acción necesaria: sincroniza la rama');
     expect(stale).toContain('Ejecuta `/copilot sync-branch`');
-    expect(buildAlignedBranchSyncComment(dependency, 'es-ES')).toContain('## Rama sincronizada');
+    expect(buildAlignedBranchSyncComment(dependency, spanish)).toContain('## Rama sincronizada');
   });
 });

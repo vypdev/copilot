@@ -82,6 +82,7 @@ describe('GitHub conversation publication boundaries', () => {
   it('keeps common presentation locale decisions inside the message catalog', () => {
     const files = [
       'src/application/policies/copilot_interaction_policy.ts',
+      'src/application/policies/branch_sync_notification_policy.ts',
       'src/application/policies/semantic_result_publication_policy.ts',
       'src/application/policies/status_command_policy.ts',
       'src/application/usecases/steps/common/reply_publication_workflow.ts',
