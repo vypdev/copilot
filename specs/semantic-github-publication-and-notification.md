@@ -951,7 +951,7 @@ application mutation inventory records that reduced surface. Replayed unchanged
 recommendations re-project the persisted plan through the status reconciler so
 a deleted card is recreated without a new agent call. Before an optional welcome
 is emitted, a read-only comment boundary recognizes only exact-target,
-bot-owned plan or direct-answer markers; an unavailable history read fails
+bot-owned plan, direct-answer, or current/legacy welcome markers; an unavailable history read fails
 closed to operator evidence and does not risk a redundant comment.
 
 No remote product flag is required. Each phase must be independently releasable

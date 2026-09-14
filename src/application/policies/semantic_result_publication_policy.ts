@@ -11,7 +11,11 @@ import {
     parsePublicationReplyMarker,
 } from './publication_identity_policy';
 import { resolveStaticPublicationCatalog, type PublicationMessageCatalog } from './publication_message_catalog';
-import { buildCopilotHelpMessage, buildCopilotWelcomeMessage } from './copilot_interaction_policy';
+import {
+    buildCopilotHelpMessage,
+    buildCopilotWelcomeMessage,
+    COPILOT_WELCOME_MARKER,
+} from './copilot_interaction_policy';
 import { formatCopilotStatus, type CopilotStatusSnapshot } from './status_command_policy';
 
 export interface PlanPublicationProjection {
@@ -76,7 +80,7 @@ export function hasPrimaryIssuePublication(results: readonly Result[]): boolean 
     });
 }
 
-/** Recognizes only bot-owned plan or direct-answer markers for the exact issue. */
+/** Recognizes only bot-owned primary-response markers on the exact issue comment list. */
 export function hasOwnedPrimaryIssuePublication(
     comments: readonly SemanticPublicationComment[],
     issueNumber: number,
@@ -90,7 +94,9 @@ export function hasOwnedPrimaryIssuePublication(
         if (status?.identity.topic === 'plan'
             && publicationTargetToken(status.identity.target) === expectedTarget) return true;
         const reply = parsePublicationReplyMarker(comment.body);
-        return reply?.target === expectedTarget && reply.messageKey === 'direct-answer';
+        if (reply?.target === expectedTarget
+            && (reply.messageKey === 'direct-answer' || reply.messageKey === 'copilot-welcome')) return true;
+        return comment.body?.includes(COPILOT_WELCOME_MARKER) === true;
     });
 }
 

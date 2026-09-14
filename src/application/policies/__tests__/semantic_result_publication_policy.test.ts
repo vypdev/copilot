@@ -12,11 +12,17 @@ describe('semantic result publication policy', () => {
   it('recognizes only bot-owned primary markers for the exact issue', () => {
     const plan = '<!-- copilot:publication schema="1" topic="plan" target="issue:7" key="implementation" source="issue-body:abcdef12" digest="abcdef12" -->';
     const answer = '<!-- copilot:reply schema="1" target="issue:7" correlation="event:abcdef12" key="direct-answer" digest="abcdef12" -->';
+    const welcome = '<!-- copilot:reply schema="1" target="issue:7" correlation="event:abcdef12" key="copilot-welcome" digest="abcdef12" -->';
+    const legacyWelcome = '<!-- copilot:welcome -->';
 
     expect(hasOwnedPrimaryIssuePublication([{ body: plan, user: { login: 'VypBot' } }], 7, 'vypbot')).toBe(true);
     expect(hasOwnedPrimaryIssuePublication([{ body: answer, user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(true);
+    expect(hasOwnedPrimaryIssuePublication([{ body: welcome, user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(true);
+    expect(hasOwnedPrimaryIssuePublication([{ body: legacyWelcome, user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(true);
     expect(hasOwnedPrimaryIssuePublication([{ body: plan, user: { login: 'human' } }], 7, 'vypbot')).toBe(false);
+    expect(hasOwnedPrimaryIssuePublication([{ body: legacyWelcome, user: { login: 'human' } }], 7, 'vypbot')).toBe(false);
     expect(hasOwnedPrimaryIssuePublication([{ body: plan.replace('issue:7', 'issue:8'), user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(false);
+    expect(hasOwnedPrimaryIssuePublication([{ body: welcome.replace('issue:7', 'issue:8'), user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(false);
     expect(hasOwnedPrimaryIssuePublication([{ body: answer.replace('direct-answer', 'copilot-help'), user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(false);
     expect(hasOwnedPrimaryIssuePublication([], 0, 'vypbot')).toBe(false);
     expect(hasOwnedPrimaryIssuePublication([], 7, ' ')).toBe(false);

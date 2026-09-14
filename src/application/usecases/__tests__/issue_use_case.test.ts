@@ -414,6 +414,24 @@ describe("IssueUseCase", () => {
     expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(false);
   });
 
+  it.each([
+    ['correlated', '<!-- copilot:reply schema="1" target="issue:8" correlation="event:abcdef12" key="copilot-welcome" digest="abcdef12" -->'],
+    ['legacy', '<!-- copilot:welcome -->'],
+  ])('does not add a welcome when a replay finds an existing bot-owned %s welcome', async (_kind, body) => {
+    mockListIssueComments.mockResolvedValue([{ id: 93, body, user: { login: 'vypbot' } }]);
+    const param = minimalExecution({
+      tokenUser: 'vypbot',
+      eventName: 'issues',
+      inputs: { action: 'opened' },
+      issue: { opened: true },
+    });
+
+    const results = await createUseCase().invoke(param);
+
+    expect(mockListIssueComments).toHaveBeenCalledWith(8);
+    expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(false);
+  });
+
   it('omits the optional welcome when historical publication cannot be verified', async () => {
     mockListIssueComments.mockRejectedValue(new Error('GitHub unavailable'));
     const param = minimalExecution({

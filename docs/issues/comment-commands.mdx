@@ -107,7 +107,7 @@ its direct answer in the configured issue language without a second onboarding
 comment. Event replays reuse the answer's hidden correlation marker instead of
 creating a duplicate; unchanged stored plans are reconciled with their existing
 card and recreated if that card was removed. Before adding a fallback, Copilot
-also checks its own existing plan and direct-answer markers. If neither plan nor
+also checks its own existing plan, direct-answer, and current or legacy welcome markers. If neither plan nor
 answer can run, one static welcome explains `/copilot help` and `@vypbot`.
 Release and hotfix issues do not receive this fallback because their durable
 deployment dashboard owns the presentation.

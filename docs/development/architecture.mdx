@@ -21,7 +21,7 @@ correlation. Issue routing emits a welcome only when an eligible normal issue
 produces neither a publishable plan nor a direct answer; release and hotfix
 issues leave conversation ownership to their durable dashboard. Before the
 optional fallback is emitted, a read-only comment port checks exact-target,
-bot-owned plan and direct-answer markers. An unavailable history read fails
+bot-owned plan, direct-answer, and current or legacy welcome markers. An unavailable history read fails
 closed by omitting the welcome. An unchanged stored recommendation is projected
 again so the status reconciler can adopt, preserve, or recreate its plan card.
 
