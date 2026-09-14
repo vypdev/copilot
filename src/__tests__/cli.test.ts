@@ -46,6 +46,20 @@ jest.mock('../utils/setup_files', () => {
   };
 });
 
+const mockDoctorExecute = jest.fn();
+const mockDoctorPresent = jest.fn();
+const mockDoctorPresenter = jest.fn();
+jest.mock('../infrastructure/composition/setup_doctor_composition_root', () => ({
+  createSetupDoctorUseCase: () => ({ execute: mockDoctorExecute }),
+  createSetupMergeQueueReadinessUseCase: () => ({ inspect: jest.fn().mockResolvedValue([]) }),
+}));
+jest.mock('../cli/setup_doctor_presenter', () => ({
+  SetupDoctorPresenter: jest.fn().mockImplementation((...args: unknown[]) => {
+    mockDoctorPresenter(...args);
+    return { present: mockDoctorPresent };
+  }),
+}));
+
 jest.mock('../infrastructure/composition/setup_credentials_composition_root', () => ({
   createSetupCredentialsUseCase: () => ({ collect: jest.fn().mockResolvedValue({ collection: { apiKeys: [] }, checks: [], existingSecretNames: [] }) }),
   createSetupRemoteConfigurationReadPort: () => ({
@@ -87,6 +101,10 @@ describe('CLI', () => {
       override?.trim() && override.trim().length >= 20 ? override.trim() : undefined
     );
     mockSetupEnvFileExists.mockReturnValue(false);
+    mockDoctorExecute.mockResolvedValue({
+      catalog: { locale: 'en-US', message: jest.fn() },
+      report: { healthy: true, checks: [], totals: { pass: 0, warn: 0, fail: 0, skipped: 0 } },
+    });
   });
 
   afterEach(() => {
@@ -141,6 +159,32 @@ describe('CLI', () => {
       await program.parseAsync(['node', 'cli', 'think', '-q', 'hello']);
 
       expect(logError).toHaveBeenCalled();
+      expect(process.exitCode).toBe(1);
+    });
+  });
+
+  describe('doctor', () => {
+    it('presents the report with its resolved catalog and returns a failing exit code when unhealthy', async () => {
+      const catalog = { locale: 'es-ES', message: jest.fn() };
+      const report = { healthy: false, checks: [], totals: { pass: 0, warn: 0, fail: 1, skipped: 0 } };
+      mockDoctorExecute.mockResolvedValueOnce({ catalog, report });
+
+      await program.parseAsync([
+        'node',
+        'cli',
+        'doctor',
+        '--non-interactive',
+        '--token',
+        'github_pat_doctor_test_token',
+      ]);
+
+      expect(mockDoctorExecute).toHaveBeenCalledWith(expect.objectContaining({
+        owner: 'test-owner',
+        repository: 'test-repo',
+        setupToken: 'github_pat_doctor_test_token',
+      }));
+      expect(mockDoctorPresenter).toHaveBeenCalledWith(catalog);
+      expect(mockDoctorPresent).toHaveBeenCalledWith(report);
       expect(process.exitCode).toBe(1);
     });
   });

@@ -7,6 +7,7 @@ import {
     renderRemoteConfiguration,
     statusIcon,
 } from '../setup_prompt_rendering';
+import { stdout } from 'node:process';
 
 describe('setup prompt rendering', () => {
     it.each([
@@ -32,6 +33,23 @@ describe('setup prompt rendering', () => {
         expect(formatTask('planner')).toBe('Planner');
         expect(formatTask('')).toBe('');
         expect(color('text', 36)).toBe('text');
+    });
+
+    it('colors TTY output while visible width ignores ANSI, combining marks, and controls', () => {
+        const descriptor = Object.getOwnPropertyDescriptor(stdout, 'isTTY');
+        const previousNoColor = process.env.NO_COLOR;
+        Object.defineProperty(stdout, 'isTTY', { configurable: true, value: true });
+        delete process.env.NO_COLOR;
+
+        try {
+            expect(color('text', 36)).toBe('\u001b[36mtext\u001b[0m');
+            expect(displayWidth('\u001b[36me\u0301🙂\u0007\u001b[0m')).toBe(3);
+        } finally {
+            if (descriptor) Object.defineProperty(stdout, 'isTTY', descriptor);
+            else Reflect.deleteProperty(stdout, 'isTTY');
+            if (previousNoColor === undefined) delete process.env.NO_COLOR;
+            else process.env.NO_COLOR = previousNoColor;
+        }
     });
 
     it('renders a bordered box with a title and content', () => {

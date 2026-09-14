@@ -149,7 +149,14 @@ export class SetupDoctorUseCase {
 
     checks.push(resourceScopeCheck(request.configuration, remoteConfiguration, catalog));
     checks.push(...mergeQueueChecks);
-    checks.push(...variableChecks(request.configuration, remoteConfiguration, catalog));
+    checks.push(...(configurationErrors.length > 0
+      ? [skippedDoctorCheck(
+          'github.variables',
+          ['configuration.valid'],
+          catalog.message('doctor.skipped.variables'),
+          catalog.message('doctor.skipped.resourceAction'),
+        )]
+      : variableChecks(request.configuration, remoteConfiguration, catalog)));
     checks.push(secretNamesCheck(remoteConfiguration, catalog));
     checks.push(...await this.credentialChecks(request, remoteConfiguration, catalog));
     return { report: buildDoctorReport(checks), catalog };

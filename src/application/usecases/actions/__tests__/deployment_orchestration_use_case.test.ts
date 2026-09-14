@@ -488,6 +488,21 @@ describe("DeploymentOrchestrationUseCase", () => {
       .toContain("Restaura el acceso de lectura");
   });
 
+  it('publishes a semantic reason when explicitly requested auto-merge is unavailable', async () => {
+    const value = harness();
+    value.targetRules.getTargetCapabilities.mockResolvedValue(capabilities({ autoMergeAllowed: false }));
+    const input = execution('prepare');
+    input.deployment = { ...input.deployment, reconciliationPullRequestMode: 'auto-merge' };
+
+    const result = await value.useCase.invoke(input);
+
+    expect(result[0].success).toBe(false);
+    expect(value.pullRequests.createManagedPullRequest).not.toHaveBeenCalled();
+    expect(input.currentConfiguration.deploymentOrchestration?.lastFailure?.message)
+      .toBe('Native auto-merge is disabled for this repository.');
+    expect(value.catalogResolve).toHaveBeenCalledTimes(1);
+  });
+
   it("blocks a promotion PR closed without merge and never dispatches publication", async () => {
     const value = harness();
     value.pullRequests.findManagedPullRequests.mockResolvedValue([pr({ state: "closed" })]);

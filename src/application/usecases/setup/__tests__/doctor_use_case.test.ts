@@ -143,6 +143,22 @@ describe('SetupDoctorUseCase', () => {
     expect(query).toHaveBeenCalledTimes(1);
   });
 
+  it('uses the English catalog when the configured repository locale is invalid', async () => {
+    const configuration = createDefaultSetupConfiguration();
+    const deps = dependencies(configuration);
+    configuration.repository.repositoryLocale = 'x-private';
+
+    const diagnosis = await new SetupDoctorUseCase(deps).execute(request(configuration));
+
+    expect(diagnosis.catalog).toMatchObject({ locale: 'en-US', resolutionSource: 'exact' });
+    expect(diagnosis.report.checks.find((check) => check.id === 'locale.profile'))
+      .toEqual(expect.objectContaining({ status: 'skipped', blockedBy: ['configuration.valid'] }));
+    expect(diagnosis.report.checks.find((check) => check.id === 'github.variables'))
+      .toEqual(expect.objectContaining({ status: 'skipped', blockedBy: ['configuration.valid'] }));
+    expect(diagnosis.report.checks.find((check) => check.id === 'configuration.valid')?.summary)
+      .toMatch(/^Setup configuration has \d+ validation error/);
+  });
+
   it('preserves an independent merge-queue result when resource inspection fails', async () => {
     const configuration = createDefaultSetupConfiguration();
     const queueCheck = {
