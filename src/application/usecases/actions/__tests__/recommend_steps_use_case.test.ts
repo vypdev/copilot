@@ -4,6 +4,7 @@ import { Config } from '../../../../data/model/config';
 import { getResultPayload } from '../../../../data/model/result';
 import type { Execution } from '../../../../data/model/execution';
 import { projectRecommendStepsContext, type RecommendStepsOutcome } from '../../push_single_action_contexts';
+import type { AgentQueryResult } from '../../../ports/agent_query_ports';
 
 jest.mock('../../../../utils/logger', () => ({
   logInfo: jest.fn(),
@@ -17,6 +18,22 @@ jest.mock('../../../../utils/task_emoji', () => ({
 
 const mockGetDescription = jest.fn();
 const mockAskAgent = jest.fn();
+
+async function localizedRecommendation(request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }): Promise<AgentQueryResult> {
+  const response = await mockAskAgent(request.configuration, request.agentId, request.prompt, request.options);
+  if (typeof response === 'string') {
+    return response === 'NO_NEW_RECOMMENDATIONS'
+      ? { outputLocale: 'en-US', status: 'unchanged', steps: null }
+      : { outputLocale: 'en-US', status: 'recommendation', steps: response };
+  }
+  if (!response || typeof response !== 'object' || Array.isArray(response)) return response;
+  const payload = response as Record<string, unknown>;
+  return {
+    outputLocale: 'en-US',
+    status: typeof payload.steps === 'string' ? 'recommendation' : payload.status,
+    ...payload,
+  };
+}
 
 function baseParam(overrides: Record<string, unknown> = {}): Execution {
   return {
@@ -35,7 +52,7 @@ describe('RecommendStepsUseCase', () => {
   let invoke: (param: Execution) => Promise<readonly import('../../../../data/model/result').Result[]>;
 
   beforeEach(() => {
-    useCase = new RecommendStepsUseCase({ getDescription: mockGetDescription }, { query: (request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }) => mockAskAgent(request.configuration, request.agentId, request.prompt, request.options) });
+    useCase = new RecommendStepsUseCase({ getDescription: mockGetDescription }, { query: localizedRecommendation });
     invoke = async (param) => {
       lastOutcome = await useCase.invoke(projectRecommendStepsContext(param));
       return lastOutcome.results;
@@ -76,13 +93,16 @@ describe('RecommendStepsUseCase', () => {
     const results = await invoke(param);
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
-    expect(results[0].steps).toBeDefined();
-    expect(results[0].stepFormat).toBe('markdown');
-    expect(results[0].steps[0]).toBe('## Recommended implementation steps');
+    expect(results[0].steps).toEqual([]);
     expect(getResultPayload(results[0].payload)?.recommendedSteps).toContain('1. Add auth module');
     const prompt = mockAskAgent.mock.calls[0][2];
     expect(prompt).toContain('42');
     expect(prompt).toContain('Implement login feature.');
+    expect(prompt).toContain('outputLocale` exactly as `en-US');
+    expect(mockAskAgent.mock.calls[0][3]).toMatchObject({
+      expectJson: true,
+      schemaName: 'recommend_steps_response',
+    });
   });
 
   it('returns success when AI returns object with steps', async () => {
@@ -94,7 +114,7 @@ describe('RecommendStepsUseCase', () => {
     expect(getResultPayload(results[0].payload)?.recommendedSteps).toContain('1. Reproduce');
   });
 
-  it('includes the bot welcome in the first recommendation for a newly opened issue', async () => {
+  it('keeps onboarding inside the single semantic plan card instead of result steps', async () => {
     mockGetDescription.mockResolvedValue('Implement login feature.');
     mockAskAgent.mockResolvedValue('1. Add auth module');
     const param = baseParam({
@@ -106,9 +126,8 @@ describe('RecommendStepsUseCase', () => {
 
     const results = await invoke(param);
 
-    expect(results[0].steps[0]).toContain('<!-- copilot:welcome -->');
-    expect(results[0].steps[0]).toContain('Hi! I’m **@vypbot**');
-    expect(results[0].steps).toContain('## Recommended implementation steps');
+    expect(results[0].steps).toEqual([]);
+    expect(getResultPayload(results[0].payload)?.recommendedSteps).toBe('1. Add auth module');
   });
 
   it('removes Copilot metadata from the prompt and fingerprint input', async () => {
@@ -184,6 +203,21 @@ describe('RecommendStepsUseCase', () => {
     expect(lastOutcome?.configurationPatch?.recommendationState.issueDescriptionFingerprint).not.toBe('old-description');
   });
 
+  it('rejects unchanged status when no previous recommendation exists', async () => {
+    mockGetDescription.mockResolvedValue('Implement login feature.');
+    mockAskAgent.mockResolvedValue('NO_NEW_RECOMMENDATIONS');
+
+    const results = await invoke(baseParam());
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ success: false, executed: true });
+    expect(results[0].errors[0]).toMatchObject({
+      code: 'agent.failed',
+      message: 'The configured agent returned unchanged without a previous recommendation.',
+    });
+    expect(lastOutcome?.configurationPatch).toBeUndefined();
+  });
+
   it('does not publish a duplicate recommendation when the normalized response is unchanged', async () => {
     mockGetDescription.mockReset();
     mockGetDescription
@@ -240,5 +274,15 @@ describe('RecommendStepsUseCase', () => {
 
     expect(results[0].success).toBe(false);
     expect(results[0].errors[0].message).toBe('The configured agent returned no recommendation.');
+  });
+
+  it('rejects a mismatched output locale without creating recommendation state', async () => {
+    mockGetDescription.mockResolvedValue('Do something');
+    mockAskAgent.mockResolvedValue({ outputLocale: 'fr-FR', status: 'recommendation', steps: '1. Faire' });
+
+    const results = await invoke(baseParam());
+
+    expect(results[0].errors[0]).toMatchObject({ code: 'locale.output-invalid' });
+    expect(lastOutcome?.configurationPatch).toBeUndefined();
   });
 });

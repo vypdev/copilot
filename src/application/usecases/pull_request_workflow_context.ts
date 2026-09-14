@@ -35,6 +35,7 @@ export interface PullRequestDescriptionContext {
   readonly mode: PullRequestDescriptionMode;
   readonly membersOnly: boolean;
   readonly agentConfiguration: Readonly<AgentConfiguration>;
+  readonly targetLocale: string;
 }
 
 export interface PullRequestDescriptionRequest {
@@ -96,6 +97,7 @@ export interface PullRequestWorkflowContextSource {
     getAiMembersOnly(): boolean;
     getAgentConfiguration(task: 'planner'): AgentConfiguration;
   };
+  readonly locale?: { readonly pullRequest?: string };
 }
 
 export function projectPullRequestWorkflowStepContexts(
@@ -155,5 +157,6 @@ export function projectPullRequestDescriptionContext(
     mode: source.ai.getPullRequestDescriptionMode(),
     membersOnly: source.ai.getAiMembersOnly(),
     agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
+    targetLocale: source.locale?.pullRequest ?? 'en-US',
   });
 }

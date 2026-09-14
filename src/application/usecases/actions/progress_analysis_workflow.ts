@@ -16,6 +16,7 @@ import {
     type ProgressAttemptResult,
 } from './progress_response';
 import { ApplicationError, type ApplicationErrorCode } from '../../errors/application_error';
+import { productFacingAgentQueryOptions } from '../../policies/agent_output_locale_policy';
 
 export interface ProgressAnalysisDependencies {
     issueDescriptionQueryPort: BoundIssueDescriptionQueryPort;
@@ -97,6 +98,7 @@ export async function analyzeProgress(
         issueDescription,
         baseBranch: developmentBranch,
         currentBranch: resolvedBranch,
+        targetLocale: param.targetLocale,
     });
     logDebugInfo(
         `CheckProgress: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`,
@@ -108,12 +110,11 @@ export async function analyzeProgress(
             agentId: AGENT_PLAN,
             prompt,
             options: {
-                expectJson: true,
-                schema: PROGRESS_RESPONSE_SCHEMA as unknown as Record<string, unknown>,
-                schemaName: 'progress_response',
+                ...productFacingAgentQueryOptions('progress', PROGRESS_RESPONSE_SCHEMA),
                 includeReasoning: param.includeReasoning,
             },
         }),
+        param.targetLocale,
     );
 
     return {

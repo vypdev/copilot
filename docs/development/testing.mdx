@@ -85,7 +85,12 @@ all-branch observer workflow is also contract-checked to remain free of agent in
 
 Architecture tests additionally verify that production imports remain acyclic,
 application code does not depend on concrete adapters, and pure model/policy
-code remains free of runtime, provider, and logging dependencies. Refresh the
+code remains free of runtime, provider, and logging dependencies. The
+product-facing agent inventory test also requires exactly one guarded query for
+Think, help, recommendations, progress, PR descriptions, and Bugbot, and prompt
+tests require both `targetLocale` and `outputLocale`. Workflow tests prove that
+a mismatched response cannot publish or mutate labels, descriptions,
+recommendation state, or findings. Refresh the
 local topology before an architecture review with Graphify, and use the
 RepoWise index-only health/dead-code reports to distinguish current complexity
 from history-based churn signals:

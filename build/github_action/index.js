@@ -41848,14 +41848,101 @@ function isRecord(value) {
 
 /***/ }),
 
+/***/ 30601:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY = exports.PRODUCT_FACING_AGENT_TASKS = void 0;
+exports.productFacingAgentQueryOptions = productFacingAgentQueryOptions;
+exports.validateAgentOutputLocale = validateAgentOutputLocale;
+exports.agentOutputLocaleFailureMessage = agentOutputLocaleFailureMessage;
+const locale_1 = __nccwpck_require__(15386);
+exports.PRODUCT_FACING_AGENT_TASKS = [
+    'think',
+    'answer-issue-help',
+    'progress',
+    'recommend-steps',
+    'pull-request-description',
+    'bugbot-review',
+];
+const PRODUCT_FACING_AGENT_SCHEMA_NAMES = Object.freeze({
+    think: 'think_response',
+    'answer-issue-help': 'answer_issue_help_response',
+    progress: 'progress_response',
+    'recommend-steps': 'recommend_steps_response',
+    'pull-request-description': 'pull_request_description_response',
+    'bugbot-review': 'bugbot_findings',
+});
+exports.AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY = {
+    type: 'string',
+    minLength: 1,
+    maxLength: 255,
+    description: 'The exact canonical BCP-47 locale requested in targetLocale.',
+};
+/**
+ * Builds the only supported structured-output options for product-facing agent
+ * calls. Runtime assertions make an accidentally weakened schema fail before
+ * an agent provider is invoked.
+ */
+function productFacingAgentQueryOptions(task, schema) {
+    if (!schema.properties?.outputLocale || !schema.required?.includes('outputLocale')) {
+        throw new TypeError(`Product-facing agent schema for ${task} must require outputLocale.`);
+    }
+    return Object.freeze({
+        expectJson: true,
+        schema: schema,
+        schemaName: PRODUCT_FACING_AGENT_SCHEMA_NAMES[task],
+    });
+}
+/** Validates locale metadata before any model prose can reach product state. */
+function validateAgentOutputLocale(response, targetLocale) {
+    const expectedLocale = (0, locale_1.canonicalizeLocaleTag)(targetLocale);
+    if (response == null || typeof response !== 'object' || Array.isArray(response)) {
+        return Object.freeze({ kind: 'invalid', expectedLocale, reason: 'response-not-object' });
+    }
+    const payload = response;
+    if (typeof payload.outputLocale !== 'string' || !payload.outputLocale.trim()) {
+        return Object.freeze({ kind: 'invalid', expectedLocale, reason: 'output-locale-missing' });
+    }
+    let actualLocale;
+    try {
+        actualLocale = (0, locale_1.canonicalizeLocaleTag)(payload.outputLocale);
+    }
+    catch {
+        return Object.freeze({
+            kind: 'invalid',
+            expectedLocale,
+            reason: 'output-locale-invalid',
+        });
+    }
+    if (actualLocale !== expectedLocale || payload.outputLocale !== expectedLocale) {
+        return Object.freeze({
+            kind: 'invalid',
+            expectedLocale,
+            actualLocale,
+            reason: 'output-locale-mismatch',
+        });
+    }
+    return Object.freeze({ kind: 'valid', expectedLocale, payload: Object.freeze({ ...payload }) });
+}
+function agentOutputLocaleFailureMessage(validation) {
+    return `Configured agent output was rejected before publication (${validation.reason}; expected ${validation.expectedLocale}).`;
+}
+
+
+/***/ }),
+
 /***/ 25603:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 /** Shared structured-response contracts used by agent-backed application flows. */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.LANGUAGE_CHECK_RESPONSE_SCHEMA = exports.THINK_RESPONSE_SCHEMA = exports.TRANSLATION_RESPONSE_SCHEMA = exports.LANGUAGE_ADAPTATION_RESPONSE_SCHEMA = void 0;
+exports.LANGUAGE_CHECK_RESPONSE_SCHEMA = exports.PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA = exports.RECOMMEND_STEPS_RESPONSE_SCHEMA = exports.THINK_RESPONSE_SCHEMA = exports.TRANSLATION_RESPONSE_SCHEMA = exports.LANGUAGE_ADAPTATION_RESPONSE_SCHEMA = void 0;
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 exports.LANGUAGE_ADAPTATION_RESPONSE_SCHEMA = {
     type: 'object',
     properties: {
@@ -41894,6 +41981,7 @@ exports.TRANSLATION_RESPONSE_SCHEMA = exports.LANGUAGE_ADAPTATION_RESPONSE_SCHEM
 exports.THINK_RESPONSE_SCHEMA = {
     type: 'object',
     properties: {
+        outputLocale: agent_output_locale_policy_1.AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
         answer: {
             type: 'string',
             minLength: 1,
@@ -41901,7 +41989,39 @@ exports.THINK_RESPONSE_SCHEMA = {
             description: 'The concise answer to the user question. Required.',
         },
     },
-    required: ['answer'],
+    required: ['outputLocale', 'answer'],
+    additionalProperties: false,
+};
+exports.RECOMMEND_STEPS_RESPONSE_SCHEMA = {
+    type: 'object',
+    properties: {
+        outputLocale: agent_output_locale_policy_1.AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
+        status: {
+            type: 'string',
+            enum: ['recommendation', 'unchanged'],
+            description: 'Whether a recommendation is present or the previous recommendation remains valid.',
+        },
+        steps: {
+            type: ['string', 'null'],
+            maxLength: 12000,
+            description: 'Markdown implementation steps for recommendation; null when status is unchanged.',
+        },
+    },
+    required: ['outputLocale', 'status', 'steps'],
+    additionalProperties: false,
+};
+exports.PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA = {
+    type: 'object',
+    properties: {
+        outputLocale: agent_output_locale_policy_1.AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
+        description: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 60000,
+            description: 'The complete Markdown pull-request description body.',
+        },
+    },
+    required: ['outputLocale', 'description'],
     additionalProperties: false,
 };
 /** @deprecated Retained for API compatibility; runtime adaptation uses one combined schema. */
@@ -48530,6 +48650,7 @@ const find_issue_branch_1 = __nccwpck_require__(38575);
 const progress_prerequisite_policy_1 = __nccwpck_require__(31001);
 const progress_response_1 = __nccwpck_require__(64264);
 const application_error_1 = __nccwpck_require__(75999);
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 /** Loads progress context and asks the configured agent for an assessment. */
 async function analyzeProgress(param, taskId, dependencies) {
     const issueNumber = param.issueNumber;
@@ -48576,6 +48697,7 @@ async function analyzeProgress(param, taskId, dependencies) {
         issueDescription,
         baseBranch: developmentBranch,
         currentBranch: resolvedBranch,
+        targetLocale: param.targetLocale,
     });
     (0, logging_ports_1.logDebugInfo)(`CheckProgress: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`);
     (0, logging_ports_1.logInfo)('🤖 Analyzing progress using the configured agent...');
@@ -48584,12 +48706,10 @@ async function analyzeProgress(param, taskId, dependencies) {
         agentId: agent_task_policy_1.AGENT_PLAN,
         prompt,
         options: {
-            expectJson: true,
-            schema: progress_response_1.PROGRESS_RESPONSE_SCHEMA,
-            schemaName: 'progress_response',
+            ...(0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('progress', progress_response_1.PROGRESS_RESPONSE_SCHEMA),
             includeReasoning: param.includeReasoning,
         },
-    }));
+    }), param.targetLocale);
     return {
         kind: 'ready',
         issueNumber,
@@ -48637,25 +48757,32 @@ function validateProgressPrerequisites(input) {
 /***/ }),
 
 /***/ 64264:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PROGRESS_RESPONSE_SCHEMA = void 0;
 exports.parseProgressResponse = parseProgressResponse;
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
+const application_error_1 = __nccwpck_require__(75999);
 exports.PROGRESS_RESPONSE_SCHEMA = {
     type: 'object',
     properties: {
+        outputLocale: agent_output_locale_policy_1.AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
         progress: { type: 'number', minimum: 0, maximum: 100, description: 'Completion percentage 0-100' },
         summary: { type: 'string', minLength: 1, maxLength: 8000, description: 'Short explanation of the assessment' },
         remaining: { type: ['string', 'null'], maxLength: 8000, description: 'When progress < 100: what is left to do to reach 100%; otherwise null.' },
     },
-    required: ['progress', 'summary', 'remaining'],
+    required: ['outputLocale', 'progress', 'summary', 'remaining'],
     additionalProperties: false,
 };
-function parseProgressResponse(response) {
-    const payload = response && typeof response === 'object' ? response : {};
+function parseProgressResponse(response, targetLocale) {
+    const validation = (0, agent_output_locale_policy_1.validateAgentOutputLocale)(response, targetLocale);
+    if (validation.kind === 'invalid') {
+        throw new application_error_1.ApplicationError('locale.output-invalid', (0, agent_output_locale_policy_1.agentOutputLocaleFailureMessage)(validation));
+    }
+    const payload = validation.payload;
     const rawProgress = typeof payload.progress === 'number' ? payload.progress : 0;
     return {
         progress: Math.min(100, Math.max(0, Math.round(rawProgress))),
@@ -48877,18 +49004,19 @@ exports.buildRecommendationResult = buildRecommendationResult;
 const result_1 = __nccwpck_require__(73817);
 const recommendation_policy_1 = __nccwpck_require__(39410);
 const logging_ports_1 = __nccwpck_require__(6152);
-const copilot_interaction_policy_1 = __nccwpck_require__(90108);
 const application_error_1 = __nccwpck_require__(75999);
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 function buildRecommendationResult(param, taskId, response, issueDescriptionFingerprint, previousRecommendation, issueNumber) {
-    const steps = extractRecommendationText(response);
+    const steps = extractRecommendationText(response, param.targetLocale);
     if (!steps) {
-        const semanticError = new application_error_1.ApplicationError('agent.failed', 'The configured agent returned no recommendation.');
-        (0, logging_ports_1.logError)(semanticError);
-        return recommendationOutcome([new result_1.Result({ id: taskId, success: false, executed: true, errors: [semanticError] })]);
+        return recommendationFailure(taskId, 'The configured agent returned no recommendation.');
     }
     (0, logging_ports_1.logDebugInfo)(`RecommendSteps: agent response received. Steps length=${steps.length}.`);
-    if (previousRecommendation && (0, recommendation_policy_1.isNoNewRecommendation)(steps))
-        return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'agent found no material change');
+    if ((0, recommendation_policy_1.isNoNewRecommendation)(steps)) {
+        return previousRecommendation
+            ? skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'agent found no material change')
+            : recommendationFailure(taskId, 'The configured agent returned unchanged without a previous recommendation.');
+    }
     const recommendationFingerprint = (0, recommendation_policy_1.createRecommendationFingerprint)(steps);
     if (previousRecommendation?.recommendationFingerprint === recommendationFingerprint)
         return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'recommendation is unchanged');
@@ -48897,20 +49025,12 @@ function buildRecommendationResult(param, taskId, response, issueDescriptionFing
         recommendationFingerprint,
         recommendation: (0, recommendation_policy_1.limitStoredRecommendation)(steps),
     };
-    const stepsWithWelcome = isNewIssue(param)
-        ? [(0, copilot_interaction_policy_1.buildCopilotWelcomeMessage)(param.tokenUser), '## Recommended implementation steps', steps]
-        : ['## Recommended implementation steps', steps];
     return recommendationOutcome([new result_1.Result({
             id: taskId,
             success: true,
             executed: true,
-            stepFormat: 'markdown',
-            steps: stepsWithWelcome,
             payload: { issueNumber, recommendedSteps: steps, recommendationState },
         })]);
-}
-function isNewIssue(param) {
-    return param.eventName === 'issues' && param.eventAction === 'opened';
 }
 function skipUnchangedRecommendation(_param, previous, fingerprint, reason) {
     (0, logging_ports_1.logInfo)(`RecommendSteps: ${reason}; skipping recommendation comment.`);
@@ -48924,12 +49044,23 @@ function recommendationOutcome(results, recommendationState) {
         } : {}),
     });
 }
-function extractRecommendationText(response) {
-    if (typeof response === 'string')
-        return response.trim();
-    if (!response || typeof response.steps !== 'string')
+function recommendationFailure(taskId, message) {
+    const semanticError = new application_error_1.ApplicationError('agent.failed', message);
+    (0, logging_ports_1.logError)(semanticError);
+    return recommendationOutcome([
+        new result_1.Result({ id: taskId, success: false, executed: true, errors: [semanticError] }),
+    ]);
+}
+function extractRecommendationText(response, targetLocale) {
+    if (response == null)
         return '';
-    return response.steps.trim();
+    const validation = (0, agent_output_locale_policy_1.validateAgentOutputLocale)(response, targetLocale);
+    if (validation.kind === 'invalid') {
+        throw new application_error_1.ApplicationError('locale.output-invalid', (0, agent_output_locale_policy_1.agentOutputLocaleFailureMessage)(validation));
+    }
+    if (validation.payload.status === 'unchanged')
+        return recommendation_policy_1.NO_NEW_RECOMMENDATIONS;
+    return typeof validation.payload.steps === 'string' ? validation.payload.steps.trim() : '';
 }
 
 
@@ -48979,6 +49110,8 @@ const project_context_instruction_1 = __nccwpck_require__(63907);
 const task_emoji_1 = __nccwpck_require__(46103);
 const recommend_steps_result_policy_1 = __nccwpck_require__(65928);
 const application_error_1 = __nccwpck_require__(75999);
+const agent_response_schemas_1 = __nccwpck_require__(25603);
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 /** Runs the recommendation policy and agent interaction for an issue. */
 async function runRecommendStepsWorkflow(param, taskId, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId}.`);
@@ -49009,6 +49142,7 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
             issueNumber: String(issueNumber),
             issueDescription,
             previousRecommendation: previousRecommendation?.recommendation,
+            targetLocale: param.targetLocale,
         });
         (0, logging_ports_1.logDebugInfo)(`RecommendSteps: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`);
         (0, logging_ports_1.logInfo)('🤖 Recommending steps using the configured agent...');
@@ -49016,6 +49150,7 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
             configuration,
             agentId: agent_task_policy_1.AGENT_PLAN,
             prompt,
+            options: (0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('recommend-steps', agent_response_schemas_1.RECOMMEND_STEPS_RESPONSE_SCHEMA),
         });
         return (0, recommend_steps_result_policy_1.buildRecommendationResult)(param, taskId, response, issueDescriptionFingerprint, previousRecommendation, issueNumber);
     }
@@ -51521,6 +51656,7 @@ function projectPullRequestDescriptionContext(source) {
         mode: source.ai.getPullRequestDescriptionMode(),
         membersOnly: source.ai.getAiMembersOnly(),
         agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
+        targetLocale: source.locale?.pullRequest ?? 'en-US',
     });
 }
 
@@ -51593,6 +51729,7 @@ function projectProgressContext(source) {
         ]),
         agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('findings') }),
         includeReasoning: source.ai.getAiIncludeReasoning(),
+        targetLocale: source.locale?.issue ?? 'en-US',
     });
 }
 function projectRecommendStepsContext(source) {
@@ -51604,6 +51741,7 @@ function projectRecommendStepsContext(source) {
         ...(source.tokenUser ? { tokenUser: source.tokenUser } : {}),
         ...(previous ? { previousRecommendation: Object.freeze({ ...previous }) } : {}),
         agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
+        targetLocale: source.locale?.issue ?? 'en-US',
     });
 }
 function projectInactivityContext(source) {
@@ -51961,7 +52099,7 @@ async function analyzeBugbotRevision(execution, context, dependencies) {
     dependencies.telemetry.observeContext(context, prompt);
     (0, logging_ports_1.logInfo)('Detecting potential problems via configured agent using canonical change context...');
     const startedAt = Date.now();
-    const agentResponse = await dependencies.telemetry.measure('analysis', () => (0, query_bugbot_findings_1.queryBugbotFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt));
+    const agentResponse = await dependencies.telemetry.measure('analysis', () => (0, query_bugbot_findings_1.queryBugbotFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, execution.locale.pullRequest));
     dependencies.telemetry.observeResponse(agentResponse);
     (0, logging_ports_1.logInfo)(`Bugbot reviewer completed in ${Date.now() - startedAt}ms.`);
     const raw = await dependencies.telemetry.measure('normalization', () => (0, prepare_bugbot_findings_1.prepareBugbotFindings)(agentResponse, execution.ignorePatterns, execution.analysis.minimumSeverity, execution.analysis.commentLimit));
@@ -53277,6 +53415,7 @@ function buildBugbotPrompt(param, context) {
         reviewConversationBlock: context.reviewConversationBlock,
         rulesBlock: context.reviewRulesBlock,
         effortBlock: `**Review effort:** ${resolvedEffort}. ${resolvedEffort === 'high' ? 'Perform deeper cross-file and adversarial analysis.' : resolvedEffort === 'low' ? 'Prioritize high-signal changed-code defects and avoid speculative breadth.' : 'Balance depth, latency, and false-positive control.'}`,
+        targetLocale: param.locale.pullRequest,
     });
 }
 function buildCoverageBlock(context) {
@@ -54885,17 +55024,22 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.queryBugbotFindings = queryBugbotFindings;
 const agent_task_policy_1 = __nccwpck_require__(85712);
 const schema_1 = __nccwpck_require__(16808);
-async function queryBugbotFindings(repository, configuration, prompt) {
-    return repository.query({
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
+const application_error_1 = __nccwpck_require__(75999);
+async function queryBugbotFindings(repository, configuration, prompt, targetLocale) {
+    const response = await repository.query({
         configuration,
         agentId: agent_task_policy_1.AGENT_PLAN,
         prompt,
-        options: {
-            expectJson: true,
-            schema: schema_1.BUGBOT_RESPONSE_SCHEMA,
-            schemaName: 'bugbot_findings',
-        },
+        options: (0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('bugbot-review', schema_1.BUGBOT_RESPONSE_SCHEMA),
     });
+    if (response == null || typeof response !== 'object' || Array.isArray(response))
+        return response;
+    const validation = (0, agent_output_locale_policy_1.validateAgentOutputLocale)(response, targetLocale);
+    if (validation.kind === 'invalid') {
+        throw new application_error_1.ApplicationError('locale.output-invalid', (0, agent_output_locale_policy_1.agentOutputLocaleFailureMessage)(validation));
+    }
+    return validation.payload;
 }
 
 
@@ -55154,10 +55298,12 @@ function sanitizeUserCommentForPrompt(raw) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BUGBOT_FIX_INTENT_RESPONSE_SCHEMA = exports.BUGBOT_RESPONSE_SCHEMA = void 0;
 const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 /** Detection returns findings and explicit lifecycle changes for prior finding IDs. */
 exports.BUGBOT_RESPONSE_SCHEMA = {
     type: 'object',
     properties: {
+        outputLocale: agent_output_locale_policy_1.AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
         findings: {
             type: 'array',
             maxItems: 200,
@@ -55216,7 +55362,7 @@ exports.BUGBOT_RESPONSE_SCHEMA = {
             description: 'Retained previous findings that are now fixed or obsolete; use an empty array when none are resolved.',
         },
     },
-    required: ['findings', 'resolved_findings'],
+    required: ['outputLocale', 'findings', 'resolved_findings'],
     additionalProperties: false,
 };
 /**
@@ -56451,16 +56597,22 @@ async function inspectWorkspace(gitCommitPort, phase) {
 /***/ }),
 
 /***/ 72063:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.extractStructuredAnswer = extractStructuredAnswer;
-function extractStructuredAnswer(response) {
-    if (response == null || typeof response !== 'object')
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
+const application_error_1 = __nccwpck_require__(75999);
+function extractStructuredAnswer(response, targetLocale) {
+    if (response == null)
         return '';
-    const answer = response.answer;
+    const validation = (0, agent_output_locale_policy_1.validateAgentOutputLocale)(response, targetLocale);
+    if (validation.kind === 'invalid') {
+        throw new application_error_1.ApplicationError('locale.output-invalid', (0, agent_output_locale_policy_1.agentOutputLocaleFailureMessage)(validation));
+    }
+    const answer = validation.payload.answer;
     return typeof answer === 'string' ? answer.trim() : '';
 }
 
@@ -57524,6 +57676,7 @@ const agent_answer_policy_1 = __nccwpck_require__(72063);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const application_error_1 = __nccwpck_require__(75999);
 const comment_translation_policy_1 = __nccwpck_require__(27150);
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 async function runThinkAnswerWorkflow(param, taskId, request, dependencies) {
     const issueDescription = await loadIssueDescription(request.issueNumberForContext, dependencies.issueDescriptionQueryPort);
     const contextBlock = issueDescription
@@ -57536,7 +57689,7 @@ async function runThinkAnswerWorkflow(param, taskId, request, dependencies) {
         question: request.question,
         targetLocale: param.targetLocale ?? 'en-US',
     });
-    const answer = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(await queryThinkAnswer(param, prompt, dependencies.aiRepository));
+    const answer = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(await queryThinkAnswer(param, prompt, dependencies.aiRepository, param.targetLocale ?? 'en-US'));
     if (!answer) {
         (0, logging_ports_1.logError)('Configured agent returned no answer for Think.');
         return [
@@ -57569,19 +57722,15 @@ async function loadIssueDescription(issueNumber, repository) {
     const description = await repository.getDescription(issueNumber);
     return description?.trim() ?? '';
 }
-async function queryThinkAnswer(param, prompt, repository) {
+async function queryThinkAnswer(param, prompt, repository, targetLocale) {
     (0, logging_ports_1.logDebugInfo)(`Think: calling configured agent (prompt length=${prompt.length}).`);
     const response = await repository.query({
         configuration: param.agentConfiguration,
         agentId: agent_task_policy_1.AGENT_PLAN,
         prompt,
-        options: {
-            expectJson: true,
-            schema: agent_response_schemas_1.THINK_RESPONSE_SCHEMA,
-            schemaName: 'think_response',
-        },
+        options: (0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('think', agent_response_schemas_1.THINK_RESPONSE_SCHEMA),
     });
-    const answer = (0, agent_answer_policy_1.extractStructuredAnswer)(response);
+    const answer = (0, agent_answer_policy_1.extractStructuredAnswer)(response, targetLocale);
     (0, logging_ports_1.logDebugInfo)(`Think: agent response received. Answer length=${answer.length}.`);
     return answer;
 }
@@ -57980,6 +58129,7 @@ const agent_answer_policy_1 = __nccwpck_require__(72063);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const copilot_interaction_policy_1 = __nccwpck_require__(90108);
 const application_error_1 = __nccwpck_require__(75999);
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 const TASK_ID = 'AnswerIssueHelpUseCase';
 /** Posts one contextual answer for a newly opened question/help issue. */
 async function runAnswerIssueHelpWorkflow(param, dependencies) {
@@ -58000,13 +58150,9 @@ async function runAnswerIssueHelpWorkflow(param, dependencies) {
             configuration,
             agentId: agent_task_policy_1.AGENT_PLAN,
             prompt,
-            options: {
-                expectJson: true,
-                schema: agent_response_schemas_1.THINK_RESPONSE_SCHEMA,
-                schemaName: 'answer_issue_help_response',
-            },
+            options: (0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('answer-issue-help', agent_response_schemas_1.THINK_RESPONSE_SCHEMA),
         });
-        const answer = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)((0, agent_answer_policy_1.extractStructuredAnswer)(response));
+        const answer = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)((0, agent_answer_policy_1.extractStructuredAnswer)(response, param.locale));
         (0, logging_ports_1.logDebugInfo)(`AnswerIssueHelp: agent response. Answer length=${answer.length}.`);
         if (!answer) {
             return [noAnswerResult()];
@@ -59758,6 +59904,8 @@ const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const pull_request_description_1 = __nccwpck_require__(45315);
 const application_error_1 = __nccwpck_require__(75999);
 const positive_integer_policy_1 = __nccwpck_require__(19879);
+const agent_response_schemas_1 = __nccwpck_require__(25603);
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 /** Generates and publishes a PR description from an immutable, capability-scoped request. */
 async function runUpdatePullRequestDescriptionWorkflow(request, taskId, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId} (AI PR description).`);
@@ -59801,14 +59949,16 @@ async function runUpdatePullRequestDescriptionWorkflow(request, taskId, dependen
             relatedIssueInstruction: context.issueNumber > 0
                 ? `Include \`Closes #${context.issueNumber}\` and "Related to #" only if relevant.`
                 : 'Do not add a Closes line because this pull request has no linked issue.',
+            targetLocale: context.targetLocale,
         });
         (0, logging_ports_1.logDebugInfo)(`UpdatePullRequestDescription: prompt length=${prompt.length}, issue description length=${issueDescription.length}. Calling configured agent.`);
         const response = await dependencies.aiRepository.query({
             configuration: context.agentConfiguration,
             agentId: agent_task_policy_1.AGENT_PLAN,
             prompt,
+            options: (0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('pull-request-description', agent_response_schemas_1.PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA),
         });
-        const generatedDescription = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(extractDescription(response));
+        const generatedDescription = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(extractDescription(response, context.targetLocale));
         if (!generatedDescription.trim()) {
             return [new result_1.Result({
                     id: taskId,
@@ -59825,7 +59975,7 @@ async function runUpdatePullRequestDescriptionWorkflow(request, taskId, dependen
         return [new result_1.Result({ id: taskId, success: true, executed: true, steps: [] })];
     }
     catch (cause) {
-        const semanticError = new application_error_1.ApplicationError('workflow.failed', 'Unable to update pull request description.', { cause });
+        const semanticError = (0, application_error_1.toApplicationError)(cause, 'workflow.failed', 'Unable to update pull request description.');
         (0, logging_ports_1.logError)(semanticError);
         return [new result_1.Result({
                 id: taskId,
@@ -59856,12 +60006,14 @@ async function loadPullRequestDetails(context, dependencies, trigger) {
         ? dependencies.pullRequestDescriptionCommandPort.getDetails(context.pullRequest.number)
         : undefined;
 }
-function extractDescription(response) {
-    if (typeof response === 'string')
-        return response;
-    if (!response)
+function extractDescription(response, targetLocale) {
+    if (response == null)
         return '';
-    return typeof response.description === 'string' ? response.description : '';
+    const validation = (0, agent_output_locale_policy_1.validateAgentOutputLocale)(response, targetLocale);
+    if (validation.kind === 'invalid') {
+        throw new application_error_1.ApplicationError('locale.output-invalid', (0, agent_output_locale_policy_1.agentOutputLocaleFailureMessage)(validation));
+    }
+    return typeof validation.payload.description === 'string' ? validation.payload.description : '';
 }
 function skipped(taskId, step) {
     return [new result_1.Result({ id: taskId, success: false, executed: false, steps: [step] })];
@@ -60232,6 +60384,12 @@ exports.APPLICATION_ERROR_METADATA = {
         impact: 'The admitted agent did not produce a usable result.',
         action: 'Inspect the sanitized agent status and retry if appropriate.',
         retainedState: PRESERVED_STATE,
+    },
+    'locale.output-invalid': {
+        kind: 'agent', retryable: true,
+        impact: 'Agent-generated product content was rejected before publication because its locale contract was invalid.',
+        action: 'Retry with a provider that supports the configured repository locale.',
+        retainedState: UNCHANGED_STATE,
     },
     'locale.translation-failed': {
         kind: 'agent', retryable: true,
@@ -74194,6 +74352,8 @@ exports.getAnswerIssueHelpPrompt = getAnswerIssueHelpPrompt;
 const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `The user has just opened a question/help issue. Provide a helpful initial response to their question or request below. Be concise and actionable. Write every human-readable sentence in {{targetLocale}} while preserving code identifiers, paths, refs, commands, and URLs verbatim.
 
+Return a JSON object with \`outputLocale\` set exactly to \`{{targetLocale}}\` and \`answer\` containing the Markdown response.
+
 **Answer in this single response:** Give a complete, direct answer. Do not reply that you need to explore the repository, read documentation first, or gather more information—use the project (README, docs/, code, .cursor/rules) to answer now. For "how do I…" or tutorial-style questions (e.g. how to implement or configure this project), provide concrete steps or guidance based on the project's actual documentation and structure.
 
 {{projectContextInstruction}}
@@ -74201,7 +74361,7 @@ const TEMPLATE = `The user has just opened a question/help issue. Provide a help
 **Issue description (user's question or request):**
 {{description}}
 
-Respond with a single JSON object containing an "answer" field with your reply. Format the answer in **markdown** (headings, lists, code blocks where useful) so it is easy to read. Do not include the question in your response.`;
+Respond with a single JSON object containing \`outputLocale\` and \`answer\`. Format the answer in **markdown** (headings, lists, code blocks where useful) so it is easy to read. Do not include the question in your response.`;
 function getAnswerIssueHelpPrompt(params) {
     return (0, fill_1.fillTemplate)(TEMPLATE, {
         description: params.description,
@@ -74249,6 +74409,8 @@ exports.getBugbotPrompt = getBugbotPrompt;
 const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `You are analyzing the latest code changes for potential bugs and issues.
 
+Write every human-readable finding title, description, evidence, and suggestion in {{targetLocale}}. Preserve identifiers, code, symbols, paths, refs, commands, and URLs verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
+
 {{projectContextInstruction}}
 
 **Repository context:**
@@ -74282,7 +74444,7 @@ For every finding:
 Return every finding field required by the response schema. Use null for file, line, endLine, severity, confidence, category, evidence, suggestion, symbol, codeSnippet, or suggestedCode when that value does not safely apply. Only include files outside the ignore list.
 {{previousBlock}}
 
-**Output:** Return a JSON object with "findings" (new/current problems from task 1) and "resolved_findings" (objects containing the exact prior finding id and either "fixed" or "obsolete"). Always return both arrays; use an empty array when there are no resolved findings. Never resolve an id that was not included in the previous-findings list.`;
+**Output:** Return a JSON object with "outputLocale", "findings" (new/current problems from task 1), and "resolved_findings" (objects containing the exact prior finding id and either "fixed" or "obsolete"). Always return both arrays; use an empty array when there are no resolved findings. Never resolve an id that was not included in the previous-findings list.`;
 function getBugbotPrompt(params) {
     return (0, fill_1.fillTemplate)(TEMPLATE, {
         ...params,
@@ -74435,6 +74597,8 @@ exports.getCheckProgressPrompt = getCheckProgressPrompt;
 const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `You are in the repository workspace. Assess the progress of issue #{{issueNumber}} using the full diff between the base (parent) branch and the current branch.
 
+Write every human-readable sentence in {{targetLocale}}. Preserve code identifiers, paths, refs, commands, URLs, percentages, and JSON keys verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
+
 {{projectContextInstruction}}
 
 **Branches:**
@@ -74450,7 +74614,7 @@ const TEMPLATE = `You are in the repository workspace. Assess the progress of is
 **Issue description:**
 {{issueDescription}}
 
-Respond with a single JSON object: { "progress": <number 0-100>, "summary": "<short explanation>", "remaining": "<what is left to reach 100%>" | null }.`;
+Respond with a single JSON object: { "outputLocale": "{{targetLocale}}", "progress": <number 0-100>, "summary": "<short explanation>", "remaining": "<what is left to reach 100%>" | null }.`;
 function getCheckProgressPrompt(params) {
     return (0, fill_1.fillTemplate)(TEMPLATE, {
         projectContextInstruction: params.projectContextInstruction,
@@ -74458,6 +74622,7 @@ function getCheckProgressPrompt(params) {
         baseBranch: params.baseBranch,
         currentBranch: params.currentBranch,
         issueDescription: params.issueDescription,
+        targetLocale: params.targetLocale,
     });
 }
 
@@ -74665,6 +74830,8 @@ exports.getRecommendStepsPrompt = getRecommendStepsPrompt;
 const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `Based on the following issue description, recommend concrete steps to implement or address this issue. Order the steps logically (e.g. setup, implementation, tests, docs). Keep each step clear and actionable.
 
+Write every human-readable sentence in {{targetLocale}}. Preserve code identifiers, paths, refs, commands, and URLs verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
+
 {{projectContextInstruction}}
 
 **Issue #{{issueNumber}} description:**
@@ -74672,14 +74839,15 @@ const TEMPLATE = `Based on the following issue description, recommend concrete s
 
 {{previousRecommendation}}
 
-Provide a complete numbered list of recommended steps in **markdown** (use headings, lists, code blocks for commands or snippets) so it is easy to read. You can add brief sub-bullets per step if needed.
+Return one JSON object with \`outputLocale\`, \`status\`, and \`steps\`. When a material recommendation is needed, set \`status\` to \`recommendation\` and put a complete numbered list in Markdown in \`steps\` (headings, lists, and code blocks are allowed). You can add brief sub-bullets per step if needed.
 
-If the current description does not require any material change to the previous recommendation, output exactly \`NO_NEW_RECOMMENDATIONS\` and nothing else. Do not use that sentinel when there is no previous recommendation.`;
+If the current description does not require any material change to the previous recommendation, set \`status\` to \`unchanged\` and \`steps\` to null. Do not return \`unchanged\` when there is no previous recommendation.`;
 function getRecommendStepsPrompt(params) {
     return (0, fill_1.fillTemplate)(TEMPLATE, {
         projectContextInstruction: params.projectContextInstruction,
         issueNumber: String(params.issueNumber),
         issueDescription: params.issueDescription,
+        targetLocale: params.targetLocale,
         previousRecommendation: params.previousRecommendation
             ? `Previous recommendation (use only to detect whether the current plan is still valid):\n<previous-recommendation>\n${params.previousRecommendation}\n</previous-recommendation>`
             : 'There is no previous recommendation for this issue.',
@@ -74702,6 +74870,8 @@ exports.getThinkPrompt = getThinkPrompt;
 const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `You are a helpful assistant. Answer the following question concisely in {{targetLocale}}, using the context below when relevant. Format your answer in **markdown** (headings, lists, code blocks where useful) so it is easy to read. Do not include the question in your response. Preserve code identifiers, paths, refs, commands, and URLs verbatim.
 
+Return a JSON object with \`outputLocale\` set exactly to \`{{targetLocale}}\` and \`answer\` containing the Markdown response. Every human-readable sentence in \`answer\` must use the target locale.
+
 {{projectContextInstruction}}
 {{contextBlock}}Question: {{question}}`;
 function getThinkPrompt(params) {
@@ -74709,7 +74879,7 @@ function getThinkPrompt(params) {
         projectContextInstruction: params.projectContextInstruction,
         contextBlock: params.contextBlock,
         question: params.question,
-        targetLocale: params.targetLocale ?? 'en-US',
+        targetLocale: params.targetLocale,
     });
 }
 
@@ -74728,6 +74898,8 @@ exports.getUpdatePullRequestDescriptionPrompt = getUpdatePullRequestDescriptionP
  */
 const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `You are in the repository workspace. Your task is to produce a pull request description by filling the project's PR template with information from the branch diff and the issue.
+
+Write every human-readable sentence in {{targetLocale}}. Preserve code identifiers, paths, refs, commands, URLs, issue/PR references, and conventional title prefixes verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
 
 {{projectContextInstruction}}
 
@@ -74749,12 +74921,12 @@ const TEMPLATE = `You are in the repository workspace. Your task is to produce a
    - **Breaking Changes:** list any, or "None".
    - **Notes for Reviewers / Additional Context:** fill only if useful; otherwise a short placeholder or omit.
 5. Do not output a single compact paragraph. Output the full filled template so the PR description is well-structured and easy to scan. Preserve the template's formatting (headings with # and ##, horizontal rules). Use checkboxes \`- [ ]\` / \`- [x]\` only where they add value; you may simplify or drop a section if it does not apply.
-6. **Output format:** Return only the filled template content. Do not add any preamble, meta-commentary, or framing phrases (e.g. "Based on my analysis...", "After reviewing the diff...", "Here is the description..."). Start directly with the first heading of the template (e.g. # Summary). Do not wrap the output in code blocks.
+6. **Output format:** Return one JSON object with \`outputLocale\` and \`description\`. Put only the filled template content in \`description\`; do not add any preamble, meta-commentary, or framing phrases (e.g. "Based on my analysis...", "After reviewing the diff...", "Here is the description..."). Start \`description\` directly with the first heading of the template (e.g. # Summary). Do not wrap it in code blocks.
 
 **Issue description:**
 {{issueDescription}}
 
-Output only the filled template content (the PR description body), starting with the first heading. No preamble, no commentary.`;
+Return the structured JSON response only.`;
 function getUpdatePullRequestDescriptionPrompt(params) {
     return (0, fill_1.fillTemplate)(TEMPLATE, {
         projectContextInstruction: params.projectContextInstruction,
@@ -74763,6 +74935,7 @@ function getUpdatePullRequestDescriptionPrompt(params) {
         issueNumber: String(params.issueNumber),
         issueDescription: params.issueDescription,
         relatedIssueInstruction: params.relatedIssueInstruction,
+        targetLocale: params.targetLocale,
     });
 }
 

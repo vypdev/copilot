@@ -14,6 +14,8 @@ import { PROJECT_CONTEXT_INSTRUCTION } from '../../../utils/project_context_inst
 import { getTaskEmoji } from '../../../utils/task_emoji';
 import { buildRecommendationResult } from './recommend_steps_result_policy';
 import { ApplicationError, toApplicationError } from '../../errors/application_error';
+import { RECOMMEND_STEPS_RESPONSE_SCHEMA } from '../../policies/agent_response_schemas';
+import { productFacingAgentQueryOptions } from '../../policies/agent_output_locale_policy';
 
 export interface RecommendStepsWorkflowDependencies {
     issueDescriptionQueryPort: BoundIssueDescriptionQueryPort;
@@ -62,6 +64,7 @@ export async function runRecommendStepsWorkflow(
             issueNumber: String(issueNumber),
             issueDescription,
             previousRecommendation: previousRecommendation?.recommendation,
+            targetLocale: param.targetLocale,
         });
         logDebugInfo(
             `RecommendSteps: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`,
@@ -72,6 +75,7 @@ export async function runRecommendStepsWorkflow(
             configuration,
             agentId: AGENT_PLAN,
             prompt,
+            options: productFacingAgentQueryOptions('recommend-steps', RECOMMEND_STEPS_RESPONSE_SCHEMA),
         });
         return buildRecommendationResult(param, taskId, response, issueDescriptionFingerprint, previousRecommendation, issueNumber);
     } catch (error) {

@@ -15,6 +15,7 @@ import type { AgentConfiguration } from '../../../../data/model/agent';
 import type { AgentTask } from '../../../../domain/agent';
 import { appendTranslationContext } from '../../../policies/comment_translation_policy';
 import type { TranslationPublication } from '../../../policies/comment_translation_policy';
+import { productFacingAgentQueryOptions } from '../../../policies/agent_output_locale_policy';
 
 export interface ThinkAnswerDependencies {
     issueDescriptionQueryPort: BoundIssueDescriptionQueryPort;
@@ -54,7 +55,12 @@ export async function runThinkAnswerWorkflow(
         question: request.question,
         targetLocale: param.targetLocale ?? 'en-US',
     });
-    const answer = sanitizeAgentMarkdown(await queryThinkAnswer(param, prompt, dependencies.aiRepository));
+    const answer = sanitizeAgentMarkdown(await queryThinkAnswer(
+        param,
+        prompt,
+        dependencies.aiRepository,
+        param.targetLocale ?? 'en-US',
+    ));
     if (!answer) {
         logError('Configured agent returned no answer for Think.');
         return [
@@ -103,19 +109,16 @@ async function queryThinkAnswer(
     param: ThinkAnswerContext,
     prompt: string,
     repository: FindingsQueryPort,
+    targetLocale: string,
 ): Promise<string> {
     logDebugInfo(`Think: calling configured agent (prompt length=${prompt.length}).`);
     const response = await repository.query({
         configuration: param.agentConfiguration,
         agentId: AGENT_PLAN,
         prompt,
-        options: {
-            expectJson: true,
-            schema: THINK_RESPONSE_SCHEMA as unknown as Record<string, unknown>,
-            schemaName: 'think_response',
-        },
+        options: productFacingAgentQueryOptions('think', THINK_RESPONSE_SCHEMA),
     });
-    const answer = extractStructuredAnswer(response);
+    const answer = extractStructuredAnswer(response, targetLocale);
     logDebugInfo(`Think: agent response received. Answer length=${answer.length}.`);
     return answer;
 }

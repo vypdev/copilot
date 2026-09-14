@@ -69,6 +69,91 @@ function runAtApplicationErrorBoundary(operation) {
 
 /***/ }),
 
+/***/ 601:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY = exports.PRODUCT_FACING_AGENT_TASKS = void 0;
+exports.productFacingAgentQueryOptions = productFacingAgentQueryOptions;
+exports.validateAgentOutputLocale = validateAgentOutputLocale;
+exports.agentOutputLocaleFailureMessage = agentOutputLocaleFailureMessage;
+const locale_1 = __nccwpck_require__(5386);
+exports.PRODUCT_FACING_AGENT_TASKS = [
+    'think',
+    'answer-issue-help',
+    'progress',
+    'recommend-steps',
+    'pull-request-description',
+    'bugbot-review',
+];
+const PRODUCT_FACING_AGENT_SCHEMA_NAMES = Object.freeze({
+    think: 'think_response',
+    'answer-issue-help': 'answer_issue_help_response',
+    progress: 'progress_response',
+    'recommend-steps': 'recommend_steps_response',
+    'pull-request-description': 'pull_request_description_response',
+    'bugbot-review': 'bugbot_findings',
+});
+exports.AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY = {
+    type: 'string',
+    minLength: 1,
+    maxLength: 255,
+    description: 'The exact canonical BCP-47 locale requested in targetLocale.',
+};
+/**
+ * Builds the only supported structured-output options for product-facing agent
+ * calls. Runtime assertions make an accidentally weakened schema fail before
+ * an agent provider is invoked.
+ */
+function productFacingAgentQueryOptions(task, schema) {
+    if (!schema.properties?.outputLocale || !schema.required?.includes('outputLocale')) {
+        throw new TypeError(`Product-facing agent schema for ${task} must require outputLocale.`);
+    }
+    return Object.freeze({
+        expectJson: true,
+        schema: schema,
+        schemaName: PRODUCT_FACING_AGENT_SCHEMA_NAMES[task],
+    });
+}
+/** Validates locale metadata before any model prose can reach product state. */
+function validateAgentOutputLocale(response, targetLocale) {
+    const expectedLocale = (0, locale_1.canonicalizeLocaleTag)(targetLocale);
+    if (response == null || typeof response !== 'object' || Array.isArray(response)) {
+        return Object.freeze({ kind: 'invalid', expectedLocale, reason: 'response-not-object' });
+    }
+    const payload = response;
+    if (typeof payload.outputLocale !== 'string' || !payload.outputLocale.trim()) {
+        return Object.freeze({ kind: 'invalid', expectedLocale, reason: 'output-locale-missing' });
+    }
+    let actualLocale;
+    try {
+        actualLocale = (0, locale_1.canonicalizeLocaleTag)(payload.outputLocale);
+    }
+    catch {
+        return Object.freeze({
+            kind: 'invalid',
+            expectedLocale,
+            reason: 'output-locale-invalid',
+        });
+    }
+    if (actualLocale !== expectedLocale || payload.outputLocale !== expectedLocale) {
+        return Object.freeze({
+            kind: 'invalid',
+            expectedLocale,
+            actualLocale,
+            reason: 'output-locale-mismatch',
+        });
+    }
+    return Object.freeze({ kind: 'valid', expectedLocale, payload: Object.freeze({ ...payload }) });
+}
+function agentOutputLocaleFailureMessage(validation) {
+    return `Configured agent output was rejected before publication (${validation.reason}; expected ${validation.expectedLocale}).`;
+}
+
+
+/***/ }),
+
 /***/ 5712:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -1560,7 +1645,7 @@ async function analyzeBugbotRevision(execution, context, dependencies) {
     dependencies.telemetry.observeContext(context, prompt);
     (0, logging_ports_1.logInfo)('Detecting potential problems via configured agent using canonical change context...');
     const startedAt = Date.now();
-    const agentResponse = await dependencies.telemetry.measure('analysis', () => (0, query_bugbot_findings_1.queryBugbotFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt));
+    const agentResponse = await dependencies.telemetry.measure('analysis', () => (0, query_bugbot_findings_1.queryBugbotFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, execution.locale.pullRequest));
     dependencies.telemetry.observeResponse(agentResponse);
     (0, logging_ports_1.logInfo)(`Bugbot reviewer completed in ${Date.now() - startedAt}ms.`);
     const raw = await dependencies.telemetry.measure('normalization', () => (0, prepare_bugbot_findings_1.prepareBugbotFindings)(agentResponse, execution.ignorePatterns, execution.analysis.minimumSeverity, execution.analysis.commentLimit));
@@ -2374,6 +2459,7 @@ function buildBugbotPrompt(param, context) {
         reviewConversationBlock: context.reviewConversationBlock,
         rulesBlock: context.reviewRulesBlock,
         effortBlock: `**Review effort:** ${resolvedEffort}. ${resolvedEffort === 'high' ? 'Perform deeper cross-file and adversarial analysis.' : resolvedEffort === 'low' ? 'Prioritize high-signal changed-code defects and avoid speculative breadth.' : 'Balance depth, latency, and false-positive control.'}`,
+        targetLocale: param.locale.pullRequest,
     });
 }
 function buildCoverageBlock(context) {
@@ -3415,17 +3501,22 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.queryBugbotFindings = queryBugbotFindings;
 const agent_task_policy_1 = __nccwpck_require__(5712);
 const schema_1 = __nccwpck_require__(6808);
-async function queryBugbotFindings(repository, configuration, prompt) {
-    return repository.query({
+const agent_output_locale_policy_1 = __nccwpck_require__(601);
+const application_error_1 = __nccwpck_require__(5999);
+async function queryBugbotFindings(repository, configuration, prompt, targetLocale) {
+    const response = await repository.query({
         configuration,
         agentId: agent_task_policy_1.AGENT_PLAN,
         prompt,
-        options: {
-            expectJson: true,
-            schema: schema_1.BUGBOT_RESPONSE_SCHEMA,
-            schemaName: 'bugbot_findings',
-        },
+        options: (0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('bugbot-review', schema_1.BUGBOT_RESPONSE_SCHEMA),
     });
+    if (response == null || typeof response !== 'object' || Array.isArray(response))
+        return response;
+    const validation = (0, agent_output_locale_policy_1.validateAgentOutputLocale)(response, targetLocale);
+    if (validation.kind === 'invalid') {
+        throw new application_error_1.ApplicationError('locale.output-invalid', (0, agent_output_locale_policy_1.agentOutputLocaleFailureMessage)(validation));
+    }
+    return validation.payload;
 }
 
 
@@ -3636,10 +3727,12 @@ function sanitizeUserCommentForPrompt(raw) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BUGBOT_FIX_INTENT_RESPONSE_SCHEMA = exports.BUGBOT_RESPONSE_SCHEMA = void 0;
 const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
+const agent_output_locale_policy_1 = __nccwpck_require__(601);
 /** Detection returns findings and explicit lifecycle changes for prior finding IDs. */
 exports.BUGBOT_RESPONSE_SCHEMA = {
     type: 'object',
     properties: {
+        outputLocale: agent_output_locale_policy_1.AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
         findings: {
             type: 'array',
             maxItems: 200,
@@ -3698,7 +3791,7 @@ exports.BUGBOT_RESPONSE_SCHEMA = {
             description: 'Retained previous findings that are now fixed or obsolete; use an empty array when none are resolved.',
         },
     },
-    required: ['findings', 'resolved_findings'],
+    required: ['outputLocale', 'findings', 'resolved_findings'],
     additionalProperties: false,
 };
 /**
@@ -4377,6 +4470,12 @@ exports.APPLICATION_ERROR_METADATA = {
         impact: 'The admitted agent did not produce a usable result.',
         action: 'Inspect the sanitized agent status and retry if appropriate.',
         retainedState: PRESERVED_STATE,
+    },
+    'locale.output-invalid': {
+        kind: 'agent', retryable: true,
+        impact: 'Agent-generated product content was rejected before publication because its locale contract was invalid.',
+        action: 'Retry with a provider that supports the configured repository locale.',
+        retainedState: UNCHANGED_STATE,
     },
     'locale.translation-failed': {
         kind: 'agent', retryable: true,
@@ -5351,6 +5450,8 @@ exports.getAnswerIssueHelpPrompt = getAnswerIssueHelpPrompt;
 const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `The user has just opened a question/help issue. Provide a helpful initial response to their question or request below. Be concise and actionable. Write every human-readable sentence in {{targetLocale}} while preserving code identifiers, paths, refs, commands, and URLs verbatim.
 
+Return a JSON object with \`outputLocale\` set exactly to \`{{targetLocale}}\` and \`answer\` containing the Markdown response.
+
 **Answer in this single response:** Give a complete, direct answer. Do not reply that you need to explore the repository, read documentation first, or gather more information—use the project (README, docs/, code, .cursor/rules) to answer now. For "how do I…" or tutorial-style questions (e.g. how to implement or configure this project), provide concrete steps or guidance based on the project's actual documentation and structure.
 
 {{projectContextInstruction}}
@@ -5358,7 +5459,7 @@ const TEMPLATE = `The user has just opened a question/help issue. Provide a help
 **Issue description (user's question or request):**
 {{description}}
 
-Respond with a single JSON object containing an "answer" field with your reply. Format the answer in **markdown** (headings, lists, code blocks where useful) so it is easy to read. Do not include the question in your response.`;
+Respond with a single JSON object containing \`outputLocale\` and \`answer\`. Format the answer in **markdown** (headings, lists, code blocks where useful) so it is easy to read. Do not include the question in your response.`;
 function getAnswerIssueHelpPrompt(params) {
     return (0, fill_1.fillTemplate)(TEMPLATE, {
         description: params.description,
@@ -5381,6 +5482,8 @@ exports.getBugbotPrompt = getBugbotPrompt;
  */
 const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `You are analyzing the latest code changes for potential bugs and issues.
+
+Write every human-readable finding title, description, evidence, and suggestion in {{targetLocale}}. Preserve identifiers, code, symbols, paths, refs, commands, and URLs verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
 
 {{projectContextInstruction}}
 
@@ -5415,7 +5518,7 @@ For every finding:
 Return every finding field required by the response schema. Use null for file, line, endLine, severity, confidence, category, evidence, suggestion, symbol, codeSnippet, or suggestedCode when that value does not safely apply. Only include files outside the ignore list.
 {{previousBlock}}
 
-**Output:** Return a JSON object with "findings" (new/current problems from task 1) and "resolved_findings" (objects containing the exact prior finding id and either "fixed" or "obsolete"). Always return both arrays; use an empty array when there are no resolved findings. Never resolve an id that was not included in the previous-findings list.`;
+**Output:** Return a JSON object with "outputLocale", "findings" (new/current problems from task 1), and "resolved_findings" (objects containing the exact prior finding id and either "fixed" or "obsolete"). Always return both arrays; use an empty array when there are no resolved findings. Never resolve an id that was not included in the previous-findings list.`;
 function getBugbotPrompt(params) {
     return (0, fill_1.fillTemplate)(TEMPLATE, {
         ...params,
@@ -5564,6 +5667,8 @@ exports.getCheckProgressPrompt = getCheckProgressPrompt;
 const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `You are in the repository workspace. Assess the progress of issue #{{issueNumber}} using the full diff between the base (parent) branch and the current branch.
 
+Write every human-readable sentence in {{targetLocale}}. Preserve code identifiers, paths, refs, commands, URLs, percentages, and JSON keys verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
+
 {{projectContextInstruction}}
 
 **Branches:**
@@ -5579,7 +5684,7 @@ const TEMPLATE = `You are in the repository workspace. Assess the progress of is
 **Issue description:**
 {{issueDescription}}
 
-Respond with a single JSON object: { "progress": <number 0-100>, "summary": "<short explanation>", "remaining": "<what is left to reach 100%>" | null }.`;
+Respond with a single JSON object: { "outputLocale": "{{targetLocale}}", "progress": <number 0-100>, "summary": "<short explanation>", "remaining": "<what is left to reach 100%>" | null }.`;
 function getCheckProgressPrompt(params) {
     return (0, fill_1.fillTemplate)(TEMPLATE, {
         projectContextInstruction: params.projectContextInstruction,
@@ -5587,6 +5692,7 @@ function getCheckProgressPrompt(params) {
         baseBranch: params.baseBranch,
         currentBranch: params.currentBranch,
         issueDescription: params.issueDescription,
+        targetLocale: params.targetLocale,
     });
 }
 
@@ -5767,6 +5873,8 @@ exports.getRecommendStepsPrompt = getRecommendStepsPrompt;
 const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `Based on the following issue description, recommend concrete steps to implement or address this issue. Order the steps logically (e.g. setup, implementation, tests, docs). Keep each step clear and actionable.
 
+Write every human-readable sentence in {{targetLocale}}. Preserve code identifiers, paths, refs, commands, and URLs verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
+
 {{projectContextInstruction}}
 
 **Issue #{{issueNumber}} description:**
@@ -5774,14 +5882,15 @@ const TEMPLATE = `Based on the following issue description, recommend concrete s
 
 {{previousRecommendation}}
 
-Provide a complete numbered list of recommended steps in **markdown** (use headings, lists, code blocks for commands or snippets) so it is easy to read. You can add brief sub-bullets per step if needed.
+Return one JSON object with \`outputLocale\`, \`status\`, and \`steps\`. When a material recommendation is needed, set \`status\` to \`recommendation\` and put a complete numbered list in Markdown in \`steps\` (headings, lists, and code blocks are allowed). You can add brief sub-bullets per step if needed.
 
-If the current description does not require any material change to the previous recommendation, output exactly \`NO_NEW_RECOMMENDATIONS\` and nothing else. Do not use that sentinel when there is no previous recommendation.`;
+If the current description does not require any material change to the previous recommendation, set \`status\` to \`unchanged\` and \`steps\` to null. Do not return \`unchanged\` when there is no previous recommendation.`;
 function getRecommendStepsPrompt(params) {
     return (0, fill_1.fillTemplate)(TEMPLATE, {
         projectContextInstruction: params.projectContextInstruction,
         issueNumber: String(params.issueNumber),
         issueDescription: params.issueDescription,
+        targetLocale: params.targetLocale,
         previousRecommendation: params.previousRecommendation
             ? `Previous recommendation (use only to detect whether the current plan is still valid):\n<previous-recommendation>\n${params.previousRecommendation}\n</previous-recommendation>`
             : 'There is no previous recommendation for this issue.',
@@ -5803,6 +5912,8 @@ exports.getThinkPrompt = getThinkPrompt;
 const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `You are a helpful assistant. Answer the following question concisely in {{targetLocale}}, using the context below when relevant. Format your answer in **markdown** (headings, lists, code blocks where useful) so it is easy to read. Do not include the question in your response. Preserve code identifiers, paths, refs, commands, and URLs verbatim.
 
+Return a JSON object with \`outputLocale\` set exactly to \`{{targetLocale}}\` and \`answer\` containing the Markdown response. Every human-readable sentence in \`answer\` must use the target locale.
+
 {{projectContextInstruction}}
 {{contextBlock}}Question: {{question}}`;
 function getThinkPrompt(params) {
@@ -5810,7 +5921,7 @@ function getThinkPrompt(params) {
         projectContextInstruction: params.projectContextInstruction,
         contextBlock: params.contextBlock,
         question: params.question,
-        targetLocale: params.targetLocale ?? 'en-US',
+        targetLocale: params.targetLocale,
     });
 }
 
@@ -5828,6 +5939,8 @@ exports.getUpdatePullRequestDescriptionPrompt = getUpdatePullRequestDescriptionP
  */
 const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `You are in the repository workspace. Your task is to produce a pull request description by filling the project's PR template with information from the branch diff and the issue.
+
+Write every human-readable sentence in {{targetLocale}}. Preserve code identifiers, paths, refs, commands, URLs, issue/PR references, and conventional title prefixes verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
 
 {{projectContextInstruction}}
 
@@ -5849,12 +5962,12 @@ const TEMPLATE = `You are in the repository workspace. Your task is to produce a
    - **Breaking Changes:** list any, or "None".
    - **Notes for Reviewers / Additional Context:** fill only if useful; otherwise a short placeholder or omit.
 5. Do not output a single compact paragraph. Output the full filled template so the PR description is well-structured and easy to scan. Preserve the template's formatting (headings with # and ##, horizontal rules). Use checkboxes \`- [ ]\` / \`- [x]\` only where they add value; you may simplify or drop a section if it does not apply.
-6. **Output format:** Return only the filled template content. Do not add any preamble, meta-commentary, or framing phrases (e.g. "Based on my analysis...", "After reviewing the diff...", "Here is the description..."). Start directly with the first heading of the template (e.g. # Summary). Do not wrap the output in code blocks.
+6. **Output format:** Return one JSON object with \`outputLocale\` and \`description\`. Put only the filled template content in \`description\`; do not add any preamble, meta-commentary, or framing phrases (e.g. "Based on my analysis...", "After reviewing the diff...", "Here is the description..."). Start \`description\` directly with the first heading of the template (e.g. # Summary). Do not wrap it in code blocks.
 
 **Issue description:**
 {{issueDescription}}
 
-Output only the filled template content (the PR description body), starting with the first heading. No preamble, no commentary.`;
+Return the structured JSON response only.`;
 function getUpdatePullRequestDescriptionPrompt(params) {
     return (0, fill_1.fillTemplate)(TEMPLATE, {
         projectContextInstruction: params.projectContextInstruction,
@@ -5863,6 +5976,7 @@ function getUpdatePullRequestDescriptionPrompt(params) {
         issueNumber: String(params.issueNumber),
         issueDescription: params.issueDescription,
         relatedIssueInstruction: params.relatedIssueInstruction,
+        targetLocale: params.targetLocale,
     });
 }
 

@@ -1,5 +1,7 @@
 /** Shared structured-response contracts used by agent-backed application flows. */
 
+import { AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY } from './agent_output_locale_policy';
+
 export const LANGUAGE_ADAPTATION_RESPONSE_SCHEMA = {
     type: 'object',
     properties: {
@@ -40,6 +42,7 @@ export const TRANSLATION_RESPONSE_SCHEMA = LANGUAGE_ADAPTATION_RESPONSE_SCHEMA;
 export const THINK_RESPONSE_SCHEMA = {
     type: 'object',
     properties: {
+        outputLocale: AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
         answer: {
             type: 'string',
             minLength: 1,
@@ -47,7 +50,41 @@ export const THINK_RESPONSE_SCHEMA = {
             description: 'The concise answer to the user question. Required.',
         },
     },
-    required: ['answer'],
+    required: ['outputLocale', 'answer'],
+    additionalProperties: false,
+} as const;
+
+export const RECOMMEND_STEPS_RESPONSE_SCHEMA = {
+    type: 'object',
+    properties: {
+        outputLocale: AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
+        status: {
+            type: 'string',
+            enum: ['recommendation', 'unchanged'],
+            description: 'Whether a recommendation is present or the previous recommendation remains valid.',
+        },
+        steps: {
+            type: ['string', 'null'],
+            maxLength: 12_000,
+            description: 'Markdown implementation steps for recommendation; null when status is unchanged.',
+        },
+    },
+    required: ['outputLocale', 'status', 'steps'],
+    additionalProperties: false,
+} as const;
+
+export const PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA = {
+    type: 'object',
+    properties: {
+        outputLocale: AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
+        description: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 60_000,
+            description: 'The complete Markdown pull-request description body.',
+        },
+    },
+    required: ['outputLocale', 'description'],
     additionalProperties: false,
 } as const;
 

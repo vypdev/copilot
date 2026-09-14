@@ -14,7 +14,8 @@ description: How the configured agent fills your pull request template from the 
    - Computes the **diff** between base and head (e.g. `git diff base..head`) to understand what changed.
    - Uses the **issue description** (when the PR branch is linked to an issue) as context; otherwise it infers intent from the PR metadata and diff.
 3. The agent **fills the template** with a structured description: summary, scope of changes, technical details, how to test, breaking changes, deployment notes, etc., following the same sections and format as your template.
-4. The action writes the result to the PR body (prefixed with the issue number for reference).
+4. The request carries the effective PR locale (`pull-requests-locale`, otherwise `repository-locale`, otherwise `en-US`). The response must echo that exact canonical tag in `outputLocale`; a mismatch stops before the body changes.
+5. The action writes the validated result to the PR body according to the configured ownership mode.
 
 No pre-computed file list or patches are sent from the action; the agent has access to the workspace and computes the diff itself, similar to the [check progress](/single-actions) flow.
 

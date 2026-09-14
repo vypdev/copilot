@@ -12,7 +12,7 @@ describe('ApplicationError', () => {
     it('exposes the closed semantic contract for every error code', () => {
         const codes = Object.keys(APPLICATION_ERROR_METADATA) as ApplicationErrorCode[];
 
-        expect(codes).toHaveLength(19);
+        expect(codes).toHaveLength(20);
         for (const code of codes) {
             const error = new ApplicationError(code, 'Safe public message.', { correlationId: CORRELATION_ID });
             expect(error).toMatchObject({

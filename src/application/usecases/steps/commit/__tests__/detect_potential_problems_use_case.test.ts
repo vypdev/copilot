@@ -239,12 +239,14 @@ describe("DetectPotentialProblemsUseCase", () => {
           prompt: string;
           options?: unknown;
         }) =>
-          mockAskAgent(
+          Promise.resolve(mockAskAgent(
             request.configuration,
             request.agentId,
             request.prompt,
             request.options,
-          ),
+          )).then((response) => response && typeof response === 'object' && !Array.isArray(response)
+            ? { outputLocale: 'en-US', ...response }
+            : response),
       },
       {
         context,
@@ -460,6 +462,32 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(results[0].success).toBe(false);
     expect(results[0].errors?.[0].message).toContain("no potential-problem analysis");
     expect(mockAddComment).not.toHaveBeenCalled();
+  });
+
+  it("rejects a mismatched output locale before publishing or resolving findings", async () => {
+    mockAskAgent.mockResolvedValue({
+      outputLocale: "fr-FR",
+      findings: [{
+        id: "src/foo.ts:10:possible-null",
+        title: "Déréférencement nul possible",
+        description: "La variable peut être nulle.",
+      }],
+      resolved_findings: ["existing-finding"],
+    });
+
+    const results = await invokeUseCase(useCase, baseParam());
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toEqual(expect.objectContaining({ success: false, executed: true }));
+    expect(results[0].errors[0]).toEqual(expect.objectContaining({
+      code: "locale.output-invalid",
+    }));
+    expect(mockAddComment).not.toHaveBeenCalled();
+    expect(mockUpdateComment).not.toHaveBeenCalled();
+    expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+    expect(mockUpdatePullRequestReviewComment).not.toHaveBeenCalled();
+    expect(mockResolvePullRequestReviewThread).not.toHaveBeenCalled();
+    expect(mockUnresolvePullRequestReviewThread).not.toHaveBeenCalled();
   });
 
   it('returns success with "no new findings, no resolved" when findings and resolved_findings are empty', async () => {
@@ -1011,6 +1039,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       },
     );
     mockAskAgent.mockResolvedValue({
+      outputLocale: 'en-US',
       findings: [
         {
           id: "f1",

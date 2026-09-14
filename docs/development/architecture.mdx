@@ -25,6 +25,14 @@ cached language-agent request. A missing or invalid dynamic slice falls back
 atomically to English and records only locale, source, descriptor count, and a
 stable reason in the Job Summary.
 
+Product-facing agent calls cross a second closed locale boundary. The fixed
+inventory is Think, initial help, recommendations, progress, pull-request
+descriptions, and Bugbot review. Each call uses the common structured-query
+options builder, receives `targetLocale`, requires `outputLocale`, and validates
+an exact canonical match before any product mutation. An architecture test
+compares the call sites with that inventory, while strict-schema tests require
+the locale field in every response contract.
+
 Language adaptation is separate from catalog resolution. Comment admission,
 command parsing, and authorization establish trusted command identity before at
 most one prose adaptation. The language port has no comment-update capability:
@@ -101,7 +109,7 @@ reconciliation use cases receive narrow context contracts containing only the
 facts they need; they do not depend on the complete `Execution` aggregate.
 This keeps pure decisions independently testable and makes new event sources
 less likely to couple unrelated capabilities. Application failures use the
-closed `ApplicationError` contract: one of 18 semantic codes, a derived
+closed `ApplicationError` contract: one of 20 semantic codes, a derived
 category and retry decision, impact, recommended action, retained-state
 summary, and request correlation UUID. A raw cause is ECMAScript-private,
 never serialized or logged, and cannot enter `Result.errors`. CLI output,

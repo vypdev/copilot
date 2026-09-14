@@ -8,6 +8,7 @@ import { CheckProgressUseCase } from '../check_progress_use_case';
 import { Ai } from '../../../../data/model/ai';
 import type { Execution } from '../../../../data/model/execution';
 import { projectProgressContext } from '../../push_single_action_contexts';
+import type { AgentQueryResult } from '../../../ports/agent_query_ports';
 
 jest.mock('../../../../utils/logger', () => ({
   logInfo: jest.fn(),
@@ -27,6 +28,12 @@ const mockGetOpenPullRequestNumbersByHeadBranch = jest.fn();
 
 
 const mockAskAgent = jest.fn();
+async function localizedProgress(request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }): Promise<AgentQueryResult> {
+  const response = await mockAskAgent(request.configuration, request.agentId, request.prompt, request.options);
+  return response && typeof response === 'object' && !Array.isArray(response)
+    ? { outputLocale: 'en-US', ...response as Record<string, unknown> }
+    : response;
+}
 function baseParam(overrides: Record<string, unknown> = {}): Execution {
   const branches = {
     main: 'main',
@@ -61,7 +68,7 @@ describe('CheckProgressUseCase', () => {
       { setProgressLabel: mockSetProgressLabel },
       { getListOfBranches: mockGetListOfBranches },
       { getOpenPullRequestNumbersByHeadBranch: mockGetOpenPullRequestNumbersByHeadBranch },
-      { query: (request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }) => mockAskAgent(request.configuration, request.agentId, request.prompt, request.options) },
+      { query: localizedProgress },
     );
     invoke = (param) => useCase.invoke(projectProgressContext(param));
     mockGetDescription.mockReset();
@@ -171,8 +178,20 @@ describe('CheckProgressUseCase', () => {
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
-    expect(results[0].errors?.some((e) => String(e).includes('Progress detection returned 0%'))).toBe(true);
+    expect(results[0].errors[0]).toMatchObject({ code: 'locale.output-invalid' });
     expect(mockAskAgent).toHaveBeenCalledTimes(1);
+    expect(mockSetProgressLabel).not.toHaveBeenCalled();
+  });
+
+  it('rejects a mismatched output locale before changing labels', async () => {
+    mockGetDescription.mockResolvedValue('Issue body');
+    mockAskAgent.mockResolvedValue({ outputLocale: 'fr-FR', progress: 80, summary: 'Terminé', remaining: null });
+
+    const results = await invoke(baseParam());
+
+    expect(results[0].errors[0]).toMatchObject({ code: 'locale.output-invalid' });
+    expect(mockSetProgressLabel).not.toHaveBeenCalled();
+    expect(mockSetLabels).not.toHaveBeenCalled();
   });
 
   it('returns error when progress is 0% (single call; HTTP retries are in the findings adapter)', async () => {

@@ -9,6 +9,7 @@ describe('getUpdatePullRequestDescriptionPrompt', () => {
             issueNumber: '42',
             issueDescription: 'Add login screen.',
             relatedIssueInstruction: 'Include `Closes #42` when relevant.',
+            targetLocale: 'es-ES',
         });
         expect(prompt).toContain('**Use repo.**');
         expect(prompt).toContain('`main`');
@@ -17,6 +18,7 @@ describe('getUpdatePullRequestDescriptionPrompt', () => {
         expect(prompt).toContain('Add login screen.');
         expect(prompt).toContain('pull_request_template.md');
         expect(prompt).toContain('git diff');
+        expect(prompt).toContain('outputLocale` exactly as `es-ES');
         expect(prompt).not.toContain('{{');
     });
 });
