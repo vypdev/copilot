@@ -4,8 +4,8 @@
 - Date: 2026-09-14
 - Catalog capability ID: github-communication-experience
 - Last verified: 2026-09-14 for the delivered foundation, shared publication,
-  branch-sync, Bugbot, and deployment-presentation slices; remaining clauses
-  are prospective
+  branch-sync, Bugbot, deployment-presentation, setup-doctor, and generic Job
+  Summary slices; remaining clauses are prospective
 - Owners: Copilot maintainers
 - Scope: Define one English-default repository locale profile and apply it generically to deterministic UI, agent-generated content, and safe interpretation of addressed comments.
 - Related issues/PRs: [issue #334](https://github.com/vypdev/copilot/issues/334), [PR #363](https://github.com/vypdev/copilot/pull/363), [PR #365](https://github.com/vypdev/copilot/pull/365)
@@ -958,8 +958,11 @@ the complete doctor artifact, reuses it for merge-readiness rows and terminal
 presentation, replaces pull-request-mode prose with stable reason codes, and
 keeps raw provider and credential-health diagnostics out of UI. Setup itself
 remains one authoritative English artifact while it creates the repository
-profile. Lifecycle and the remaining public surfaces are not claimed complete
-by this evidence.
+profile. The generic Actions Job Summary now resolves one complete catalog in
+the repository locale, localizes its headings and explanatory labels, preserves
+machine values, and emits localization evidence once instead of duplicating it
+inside and below the main table. Lifecycle and the remaining public surfaces are
+not claimed complete by this evidence.
 
 ### 13.5 Rollback
 

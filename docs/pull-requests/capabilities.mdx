@@ -102,6 +102,10 @@ one stable `Copilot / Review` Check for the PR head. Actionable findings are
 `neutral` by default and become `failure` only with
 `bugbot-fail-on-unresolved: true`; `unknown`, incomplete reconciliation, and analysis failures always fail. Missing Checks
 capability does not make an otherwise successful functional workflow fail.
+The Job Summary uses `repository-locale` for headings and explanatory labels,
+defaults to English, and records one non-duplicated localization section. Stable
+event, lifecycle, finding-state, and error-code values remain suitable for
+operator diagnosis even when the surrounding copy is localized.
 
 ## Next steps
 

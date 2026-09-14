@@ -248,6 +248,7 @@
           "files": [
             "src/domain/locale.ts",
             "src/domain/message_catalog.ts",
+            "src/application/policies/action_summary_message_catalog.ts",
             "src/application/policies/comment_translation_policy.ts",
             "src/application/policies/merge_queue_message_catalog.ts",
             "src/application/policies/publication_message_catalog.ts",
@@ -264,6 +265,7 @@
             "src/actions/github_action_completion.ts",
             "src/actions/github_action_execution.ts",
             "src/application/policies/action_summary_policy.ts",
+            "src/application/policies/action_summary_message_catalog.ts",
             "src/application/policies/comment_translation_policy.ts",
             "src/application/policies/copilot_interaction_policy.ts",
             "src/application/policies/publication_message_catalog.ts",

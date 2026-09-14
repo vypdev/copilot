@@ -12,6 +12,11 @@ import {
 } from './bugbot_result_finding_state_projection_policy';
 import { countActionableBugbotFindings } from '../../domain/bugbot/review_state';
 import type { CatalogResolutionObservation } from '../../domain/message_catalog';
+import {
+    resolveStaticActionSummaryCatalog,
+    type ActionSummaryFindingState,
+    type ActionSummaryMessageCatalog,
+} from './action_summary_message_catalog';
 
 export interface ActionSummaryContext {
     readonly owner: string;
@@ -51,8 +56,11 @@ const ENGLISH_LOCALIZATION_SUMMARY_LABELS: LocalizationSummaryLabels = Object.fr
     reason: 'reason',
 });
 
-/** Builds a bounded, publication-safe GitHub Actions Job Summary. */
-export function buildActionSummary(context: ActionSummaryContext): string {
+/** Builds one bounded, publication-safe, repository-locale GitHub Actions Job Summary. */
+export function buildActionSummary(
+    context: ActionSummaryContext,
+    catalog: ActionSummaryMessageCatalog = resolveStaticActionSummaryCatalog(context.locale?.repository ?? 'en-US'),
+): string {
     const failures = context.results.filter(result => !result.success && result.executed);
     const findingStateProjection = projectBugbotResultFindingStates(context.results);
     const findingStates = findingStateProjection.status === 'valid' ? findingStateProjection.counts : undefined;
@@ -66,35 +74,54 @@ export function buildActionSummary(context: ActionSummaryContext): string {
         hasActionableFindings,
         failOnUnresolvedFindings: context.failOnUnresolvedFindings === true,
         bugbotTelemetry,
-    });
-    const target = resolveActionSummaryTarget(context);
+    }, catalog);
+    const target = resolveActionSummaryTarget(context, catalog);
     const lifecycle = context.lifecycleState ? `\`${sanitizeAgentMarkdown(context.lifecycleState, 100)}\`` : '—';
     const rows = [
-        `| Status | ${status} |`,
-        `| Event | \`${escapeTable(context.eventName)}\` |`,
-        `| Target | ${escapeTable(target)} |`,
-        `| Lifecycle | ${lifecycle} |`,
-        `| PR description policy | ${escapeTable(context.pullRequestDescriptionMode ?? '—')} |`,
-        `| Results | ${context.results.length} |`,
-        `| Finding states | ${formatFindingStates(findingStateProjection)} |`,
-        `| Bugbot review | ${formatBugbotTelemetry(telemetryProjection)} |`,
-        ...localizationSummaryRows(context.locale, context.catalogResolutions),
+        `| ${catalogText(catalog, 'summary.status')} | ${status} |`,
+        `| ${catalogText(catalog, 'summary.event')} | \`${escapeTable(context.eventName)}\` |`,
+        `| ${catalogText(catalog, 'summary.target')} | ${escapeTable(target)} |`,
+        `| ${catalogText(catalog, 'summary.lifecycle')} | ${lifecycle} |`,
+        `| ${catalogText(catalog, 'summary.descriptionPolicy')} | ${escapeTable(context.pullRequestDescriptionMode ?? '—')} |`,
+        `| ${catalogText(catalog, 'summary.results')} | ${context.results.length} |`,
+        `| ${catalogText(catalog, 'summary.findingStates')} | ${formatFindingStates(findingStateProjection, catalog)} |`,
+        `| ${catalogText(catalog, 'summary.bugbotReview')} | ${formatBugbotTelemetry(telemetryProjection, catalog)} |`,
     ];
+    const localization = renderLocalizationSummarySection(
+        context.locale,
+        context.catalogResolutions,
+        actionSummaryLocalizationLabels(catalog),
+    );
 
     return [
-        '# Copilot execution',
+        `# ${catalogText(catalog, 'summary.heading')}`,
         '',
-        `Repository: [${escapeTable(`${context.owner}/${context.repository}`)}](https://github.com/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)})`,
+        `${catalogText(catalog, 'summary.repository')}: [${escapeTable(`${context.owner}/${context.repository}`)}](https://github.com/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)})`,
         '',
-        '| Property | Value |',
+        `| ${catalogText(catalog, 'summary.property')} | ${catalogText(catalog, 'summary.value')} |`,
         '| --- | --- |',
         ...rows,
         '',
-        '## Result details',
+        `## ${catalogText(catalog, 'summary.resultDetails')}`,
         '',
-        renderResults(context.results),
+        renderResults(context.results, catalog),
         '',
+        localization,
     ].join('\n');
+}
+
+export function actionSummaryLocalizationLabels(catalog: ActionSummaryMessageCatalog): LocalizationSummaryLabels {
+    return Object.freeze({
+        heading: catalog.message('summary.localization'),
+        property: catalog.message('summary.property'),
+        value: catalog.message('summary.value'),
+        repositoryLocale: catalog.message('summary.repositoryLocale'),
+        issueLocale: catalog.message('summary.issueLocale'),
+        pullRequestLocale: catalog.message('summary.pullRequestLocale'),
+        catalogResolution: catalog.message('summary.catalogResolution'),
+        descriptors: catalog.message('summary.descriptors'),
+        reason: catalog.message('summary.reason'),
+    });
 }
 
 /** Renders the same content-free locale evidence for summaries owned by specialized workflows. */
@@ -103,12 +130,13 @@ export function renderLocalizationSummarySection(
     catalogResolutions: ActionSummaryContext['catalogResolutions'] = [],
     labels: LocalizationSummaryLabels = ENGLISH_LOCALIZATION_SUMMARY_LABELS,
 ): string {
-    const rows = localizationSummaryRows(locale, catalogResolutions, labels);
+    const safeLabels = sanitizeLocalizationSummaryLabels(labels);
+    const rows = localizationSummaryRows(locale, catalogResolutions, safeLabels);
     if (rows.length === 0) return '';
     return [
-        `## ${labels.heading}`,
+        `## ${safeLabels.heading}`,
         '',
-        `| ${labels.property} | ${labels.value} |`,
+        `| ${safeLabels.property} | ${safeLabels.value} |`,
         '| --- | --- |',
         ...rows,
         '',
@@ -150,43 +178,55 @@ interface ActionSummaryStatusInput {
     readonly bugbotTelemetry?: BugbotTelemetryProjection;
 }
 
-function resolveActionSummaryStatus(input: ActionSummaryStatusInput): string {
-    if (input.failureCount > 0 || input.hasUnknownFindings) return '❌ Failure';
-    if (input.bugbotTelemetry?.outcome === 'failed') return '❌ Failure';
-    if (input.hasActionableFindings && input.failOnUnresolvedFindings) return '❌ Failure';
-    if (input.hasActionableFindings) return '⚠️ Findings';
+function resolveActionSummaryStatus(input: ActionSummaryStatusInput, catalog: ActionSummaryMessageCatalog): string {
+    if (input.failureCount > 0 || input.hasUnknownFindings) return `❌ ${catalogText(catalog, 'summary.failure')}`;
+    if (input.bugbotTelemetry?.outcome === 'failed') return `❌ ${catalogText(catalog, 'summary.failure')}`;
+    if (input.hasActionableFindings && input.failOnUnresolvedFindings) return `❌ ${catalogText(catalog, 'summary.failure')}`;
+    if (input.hasActionableFindings) return `⚠️ ${catalogText(catalog, 'summary.findings')}`;
     switch (input.bugbotTelemetry?.outcome) {
-        case 'partial': return '⚠️ Partial';
-        case 'superseded': return '⏭️ Superseded';
-        case 'skipped': return '⏭️ Skipped';
-        case 'dry-run': return '🧪 Dry run';
-        default: return '✅ Success';
+        case 'partial': return `⚠️ ${catalogText(catalog, 'summary.partial')}`;
+        case 'superseded': return `⏭️ ${catalogText(catalog, 'summary.superseded')}`;
+        case 'skipped': return `⏭️ ${catalogText(catalog, 'summary.skipped')}`;
+        case 'dry-run': return `🧪 ${catalogText(catalog, 'summary.dryRun')}`;
+        default: return `✅ ${catalogText(catalog, 'summary.success')}`;
     }
 }
 
-function resolveActionSummaryTarget(context: ActionSummaryContext): string {
-    if (context.pullRequestNumber > 0) return `PR #${context.pullRequestNumber}`;
-    if (context.issueNumber > 0) return `Issue #${context.issueNumber}`;
-    return 'Repository run';
+function resolveActionSummaryTarget(context: ActionSummaryContext, catalog: ActionSummaryMessageCatalog): string {
+    if (context.pullRequestNumber > 0) {
+        return catalogText(catalog, 'summary.target.pullRequest', { number: context.pullRequestNumber });
+    }
+    if (context.issueNumber > 0) return catalogText(catalog, 'summary.target.issue', { number: context.issueNumber });
+    return catalogText(catalog, 'summary.target.repositoryRun');
 }
 
-function formatBugbotTelemetry(projection: BugbotResultTelemetryProjection): string {
-    if (projection.status === 'invalid') return 'invalid';
+function formatBugbotTelemetry(
+    projection: BugbotResultTelemetryProjection,
+    catalog: ActionSummaryMessageCatalog,
+): string {
+    if (projection.status === 'invalid') return catalogText(catalog, 'summary.invalid');
     if (projection.status === 'absent') return '—';
-    return `${escapeTable(projection.telemetry.outcome)}, effort=${escapeTable(projection.telemetry.configuredEffort)}, ${Math.max(0, Math.round(projection.telemetry.elapsedMs))}ms`;
+    return catalogText(catalog, 'summary.bugbotTelemetry', {
+        outcome: escapeTable(projection.telemetry.outcome),
+        effort: escapeTable(projection.telemetry.configuredEffort),
+        elapsed: Math.max(0, Math.round(projection.telemetry.elapsedMs)),
+    });
 }
 
-function formatFindingStates(projection: BugbotResultFindingStateProjection): string {
-    if (projection.status === 'invalid') return 'invalid';
+function formatFindingStates(
+    projection: BugbotResultFindingStateProjection,
+    catalog: ActionSummaryMessageCatalog,
+): string {
+    if (projection.status === 'invalid') return catalogText(catalog, 'summary.invalid');
     if (projection.status === 'absent') return '—';
     return Object.entries(projection.counts)
         .filter(([, value]) => value > 0)
-        .map(([state, value]) => `${state}=${value}`)
-        .join(', ') || 'none';
+        .map(([state, value]) => `${catalogText(catalog, `summary.findingState.${state as ActionSummaryFindingState}`)}=${value}`)
+        .join(', ') || catalogText(catalog, 'summary.none');
 }
 
-function renderResults(results: readonly Result[]): string {
-    if (results.length === 0) return '_No application result was produced._';
+function renderResults(results: readonly Result[], catalog: ActionSummaryMessageCatalog): string {
+    if (results.length === 0) return `_${catalogText(catalog, 'summary.noResult')}_`;
     return results.map(result => {
         const icon = result.success ? '✅' : '❌';
         const details = result.steps
@@ -196,15 +236,42 @@ function renderResults(results: readonly Result[]): string {
             .flatMap((error) => {
                 const view = buildApplicationErrorPresentation(error);
                 return [
-                    `  - **Impact:** ${sanitizePublishedError(view.impact)}`,
-                    `    - **Cause (\`${view.code}\`):** ${sanitizePublishedError(view.cause)}`,
-                    `    - **Action:** ${sanitizePublishedError(view.action)}`,
-                    `    - **Retained state:** ${sanitizePublishedError(view.retainedState)}`,
-                    `    - **Reference:** \`${view.reference}\``,
+                    `  - **${catalogText(catalog, 'summary.impact')}:** ${sanitizePublishedError(view.impact)}`,
+                    `    - **${catalogText(catalog, 'summary.cause')} (\`${view.code}\`):** ${sanitizePublishedError(view.cause)}`,
+                    `    - **${catalogText(catalog, 'summary.action')}:** ${sanitizePublishedError(view.action)}`,
+                    `    - **${catalogText(catalog, 'summary.retainedState')}:** ${sanitizePublishedError(view.retainedState)}`,
+                    `    - **${catalogText(catalog, 'summary.reference')}:** \`${view.reference}\``,
                 ];
             });
-        return [`- ${icon} **${escapeTable(result.id || 'Unnamed result')}**`, ...details, ...errors].join('\n');
+        return [`- ${icon} **${escapeTable(result.id || catalogText(catalog, 'summary.unnamedResult'))}**`, ...details, ...errors].join('\n');
     }).join('\n');
+}
+
+function catalogText(
+    catalog: ActionSummaryMessageCatalog,
+    id: Parameters<ActionSummaryMessageCatalog['message']>[0],
+    variables: Readonly<Record<string, string | number>> = {},
+): string {
+    return escapeMarkdownText(catalog.message(id, variables));
+}
+
+function sanitizeLocalizationSummaryLabels(labels: LocalizationSummaryLabels): LocalizationSummaryLabels {
+    return Object.freeze(Object.fromEntries(
+        Object.entries(labels).map(([key, value]) => [key, escapeMarkdownText(value)]),
+    ) as unknown as LocalizationSummaryLabels);
+}
+
+/** Catalog output is untrusted prose; renderers alone own Markdown structure. */
+function escapeMarkdownText(value: string): string {
+    return value.slice(0, 2_000)
+        .replace(/[\r\n]+/gu, ' ')
+        .replace(/<!--/gu, '&lt;!--')
+        .replace(/-->/gu, '--&gt;')
+        .replace(/::/gu, ':\u200b:')
+        .replace(/@(?=[a-zA-Z0-9][a-zA-Z0-9-])/gu, '@\u200b')
+        .replace(/\b(https?):\/\//giu, '$1:\u200b//')
+        .replace(/\\/gu, '\\\\')
+        .replace(/([`*_[\]<>|~])/gu, '\\$1');
 }
 
 function escapeTable(value: string): string {

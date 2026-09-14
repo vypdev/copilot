@@ -3,7 +3,9 @@
 - Status: In implementation
 - Date: 2026-09-14
 - Catalog capability ID: github-communication-experience
-- Last verified: 2026-09-14 for the delivered shared publication, branch-sync, review-context, and Bugbot slices; remaining clauses are prospective
+- Last verified: 2026-09-14 for the delivered shared publication, branch-sync,
+  review-context, Bugbot, deployment, setup-doctor, and generic Job Summary
+  slices; remaining clauses are prospective
 - Owners: Copilot maintainers
 - Scope: Replace generic step-dump comments with bounded, semantic, idempotent GitHub messages across issues, pull requests, reviews, pushes, and single actions.
 - Related issues/PRs: [issue #334](https://github.com/vypdev/copilot/issues/334), [issue #344](https://github.com/vypdev/copilot/issues/344), [issue #355](https://github.com/vypdev/copilot/issues/355), [PR #358](https://github.com/vypdev/copilot/pull/358), [PR #363](https://github.com/vypdev/copilot/pull/363), [PR #365](https://github.com/vypdev/copilot/pull/365)
@@ -932,8 +934,11 @@ feature-owned review/thread model while replacing ad hoc public strings with a
 single typed catalog per publication operation, proper plural forms, stable
 machine markers, and bounded English-default/localized renderers. The executable
 mutation inventory, locale-branch ratchet, and pseudo-plural ratchet protect
-these boundaries. Other capability rows and the global numeric budget remain
-open and are not claimed complete by this milestone.
+these boundaries. Subsequent deployment and setup-doctor slices cover their
+feature-owned views, and the generic Job Summary slice resolves repository-
+locale copy atomically, retains sanitized operator steps, and renders one
+localization evidence section instead of two. Other capability rows and the
+global numeric budget remain open and are not claimed complete by this milestone.
 
 No remote product flag is required. Each phase must be independently releasable
 and its compatibility adapter must fail closed to Job Summary, not fall back to
