@@ -125,9 +125,9 @@ implementation:
   `src/application/policies/action_summary_policy.ts`,
   `src/application/policies/copilot_evidence_policy.ts`, and progress/plan
   policies and prompts.
-- Baseline documentation inventory: `docs/configuration.mdx`, issue/PR configuration pages,
-  `docs/features.mdx`, comment-command docs, Bugbot docs, deployment docs, and
-  agent CLI configuration docs.
+- Baseline documentation inventory: `docs/configuration.mdx`, issue/PR
+  configuration pages, `docs/features.mdx`, comment-command docs, Bugbot docs,
+  deployment docs, and agent CLI configuration docs.
 
 #### External primary sources
 

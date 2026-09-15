@@ -979,8 +979,8 @@ generic output is left intact.
    fallback use.
 
 The first implementation slices in PRs #367–#372 established semantic
-reply/status publication, remove retired generic conversation chrome from the
-covered paths, localize branch-sync state, and keep automated reports out of
+reply/status publication, removed retired generic conversation chrome from the
+covered paths, localized branch-sync state, and kept automated reports out of
 Bugbot's human-conversation context. The Bugbot slice preserves its
 feature-owned review/thread model while replacing ad hoc public strings with a
 single typed catalog per publication operation, proper plural forms, stable
@@ -1120,9 +1120,9 @@ count once, and `validate:specifications` fails if a file crosses budgets, an
 allocation exceeds qualifying declarations since the baseline, or either SDD
 falls below its numeric minimum. PRs #366–#389 provide controlled
 English-default GitHub evidence for quiet updates, stable Checks, one edited
-Bugbot card, partial
-coverage disclosure, and inline-finding resolution; PR #390 closes the
-executable concurrency and disjoint-budget evidence. Multilingual, bidi, CJK,
+Bugbot card, partial coverage disclosure, and inline-finding resolution. PR #390
+closes the executable concurrency and disjoint-budget evidence. Multilingual,
+bidi, CJK,
 expansion, and narrow-layout states are retained as deterministic renderer and
 terminal fixtures so validation does not mutate repository-wide locale settings.
 
