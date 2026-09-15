@@ -303,6 +303,7 @@
             "src/domain/locale.ts",
             "src/domain/message_catalog.ts",
             "src/application/policies/action_summary_message_catalog.ts",
+            "src/application/policies/branch_sync_message_catalog.ts",
             "src/application/policies/comment_translation_policy.ts",
             "src/application/policies/inactivity_message_catalog.ts",
             "src/application/policies/inactivity_notification_policy.ts",
@@ -356,6 +357,29 @@
         }
       ],
       "successMessage": "repository localization coverage: PASS (pure policies 100%; changed path 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Branch synchronization presentation",
+      "missingEntryLabel": "branch synchronization presentation",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/branch_sync_message_catalog.ts",
+            "src/application/policies/branch_sync_notification_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/usecases/actions/observe_branch_sync_use_case.ts",
+            "src/application/usecases/steps/common/transition_notification_workflow.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "branch synchronization presentation coverage: PASS (catalog/policy 100%; observer/publication path 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

@@ -66,6 +66,7 @@ export interface InactivityContext {
 export interface BranchObservationContext {
   readonly pushedBranch: string;
   readonly deletedPush: boolean;
+  readonly sourceHeadSha?: string;
   readonly trustedBotLogin?: string;
   readonly repository: { readonly owner: string; readonly name: string };
   readonly locale: string;
@@ -320,9 +321,12 @@ export function projectInactivityContext(source: PushSingleActionContextSource):
 }
 
 export function projectBranchObservationContext(source: PushSingleActionContextSource): BranchObservationContext {
+  const deletedPush = typeof source.inputs?.after === 'string' && /^0+$/u.test(source.inputs.after);
+  const sourceHeadSha = deletedPush ? undefined : canonicalGitObjectId(source.inputs?.after);
   return Object.freeze({
     pushedBranch: source.commit.branch.trim(),
-    deletedPush: typeof source.inputs?.after === 'string' && /^0+$/u.test(source.inputs.after),
+    deletedPush,
+    ...(sourceHeadSha ? { sourceHeadSha } : {}),
     ...(source.tokenUser ? { trustedBotLogin: source.tokenUser } : {}),
     repository: Object.freeze({ owner: source.owner, name: source.repo }),
     locale: source.locale?.issue ?? 'en-US',

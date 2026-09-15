@@ -1,11 +1,18 @@
 import type {
   BranchDependency,
   BranchSyncComparison,
-  BranchSyncNotificationComment,
 } from '../ports/branch_sync_ports';
+import type { IssueCommentPublicationTarget } from '../ports/issue_lifecycle_ports';
 import { githubUsersMatch } from '../../domain/github_user_policy';
-import { buildPublicationMarker, createSemanticDigest } from './publication_identity_policy';
+import type { PublicationIdentity, TransitionPublicationIntent } from '../../domain/github_publication';
+import { canonicalGitObjectId } from '../../domain/git_object_id';
+import {
+  buildPublicationMarker,
+  createSemanticDigest,
+  createTransitionFingerprint,
+} from './publication_identity_policy';
 import type { BranchSyncMessageCatalog } from './branch_sync_message_catalog';
+import { sanitizeAgentMarkdown } from './github_comment_publication_policy';
 
 export const BRANCH_SYNC_STALE_MARKER = '<!-- copilot-branch-sync:stale -->';
 export const BRANCH_SYNC_ALIGNED_MARKER = '<!-- copilot-branch-sync:aligned -->';
@@ -31,15 +38,75 @@ export function selectBranchDependenciesForPush(
 }
 
 export function findLatestBranchSyncComment(
-  comments: readonly BranchSyncNotificationComment[],
+  comments: readonly IssueCommentPublicationTarget[],
   botLogin?: string,
   dependency?: BranchDependency,
-): BranchSyncNotificationComment | undefined {
+): IssueCommentPublicationTarget | undefined {
   return [...comments]
     .reverse()
     .find((comment) => isBranchSyncComment(comment.body)
       && matchesDependency(comment.body, dependency)
       && Boolean(botLogin && comment.user?.login && githubUsersMatch(botLogin, comment.user.login)));
+}
+
+export function branchSyncPublicationIdentity(dependency: BranchDependency): Readonly<PublicationIdentity> {
+  return Object.freeze({
+    topic: 'branch-sync',
+    target: Object.freeze({ kind: 'issue', number: dependency.issueNumber }),
+    key: `dependency:${createSemanticDigest({ parent: dependency.parentBranch, working: dependency.workingBranch })}`,
+  });
+}
+
+export function buildBranchSyncTransitionIntent(
+  dependency: BranchDependency,
+  sourceHeadSha: string,
+  locale: string,
+): Readonly<TransitionPublicationIntent> {
+  const canonicalHead = canonicalGitObjectId(sourceHeadSha);
+  if (!canonicalHead) throw new Error('Branch synchronization transition requires a canonical source head.');
+  const identity = branchSyncPublicationIdentity(dependency);
+  return Object.freeze({
+    kind: 'transition',
+    identity,
+    fingerprint: createTransitionFingerprint(identity, 'branch-sync-required', `head:${canonicalHead}`),
+    messageKey: 'branchSync.transition.required',
+    locale,
+    values: Object.freeze({
+      parentBranch: dependency.parentBranch,
+      workingBranch: dependency.workingBranch,
+    }),
+  });
+}
+
+export function buildBranchSyncTransitionNotification(
+  dependency: BranchDependency,
+  messages: BranchSyncMessageCatalog,
+  statusUrl: string,
+): string {
+  return `${safeSentence(messages.message('branchSync.transition.required', {
+    workingBranch: inlineRef(dependency.workingBranch),
+    parentBranch: inlineRef(dependency.parentBranch),
+  }))} [${safeLinkLabel(messages.message('branchSync.transition.openStatus'))}](${statusUrl}).`;
+}
+
+export function buildBranchSyncDuplicatePointer(
+  messages: BranchSyncMessageCatalog,
+  canonicalUrl: string,
+): string {
+  return `${safeSentence(messages.message('branchSync.transition.duplicate'))} [${safeLinkLabel(messages.message('branchSync.transition.viewOriginal'))}](${canonicalUrl}).`;
+}
+
+export function buildBranchSyncStatusCommentUrl(
+  owner: string,
+  repository: string,
+  issueNumber: number,
+  commentId: number,
+): string {
+  if (!Number.isSafeInteger(issueNumber) || issueNumber < 1
+    || !Number.isSafeInteger(commentId) || commentId < 1) {
+    throw new Error('Branch synchronization status link requires positive safe integer identifiers.');
+  }
+  return `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/issues/${issueNumber}#issuecomment-${commentId}`;
 }
 
 export function isStaleBranchSyncComment(body: string | null | undefined): boolean {
@@ -104,11 +171,7 @@ function buildSharedBranchSyncMarker(
   digest: string,
 ): string {
   return buildPublicationMarker({
-    identity: {
-      topic: 'branch-sync',
-      target: { kind: 'issue', number: dependency.issueNumber },
-      key: `dependency:${createSemanticDigest({ parent: dependency.parentBranch, working: dependency.workingBranch })}`,
-    },
+    identity: branchSyncPublicationIdentity(dependency),
     sourceVersion,
     digest,
   });
@@ -142,4 +205,16 @@ function buildCompareUrl(
 
 function inlineRef(value: string): string {
   return `\`${value.replace(/[\r\n`<>]/gu, '').replace(/@/gu, '@\u200b').slice(0, 255)}\``;
+}
+
+function safeSentence(value: string): string {
+  return sanitizeAgentMarkdown(value, 120).replace(/[\r\n]+/gu, ' ').trim();
+}
+
+function safeLinkLabel(value: string): string {
+  return sanitizeAgentMarkdown(value, 40)
+    .replace(/\[([^\]]*)\]\([^)]*\)/gu, '$1')
+    .replace(/https?:\/\/\S+/giu, '')
+    .replace(/[\r\n()[\]<>]/gu, '')
+    .trim() || 'Open notification';
 }

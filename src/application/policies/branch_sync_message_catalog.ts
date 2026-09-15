@@ -20,6 +20,10 @@ export const BRANCH_SYNC_MESSAGE_IDS = Object.freeze([
   'branchSync.aligned.heading',
   'branchSync.aligned.status',
   'branchSync.aligned.resolved',
+  'branchSync.transition.required',
+  'branchSync.transition.openStatus',
+  'branchSync.transition.duplicate',
+  'branchSync.transition.viewOriginal',
 ] as const);
 
 export type BranchSyncMessageId = typeof BRANCH_SYNC_MESSAGE_IDS[number];
@@ -40,6 +44,10 @@ const ENGLISH_MESSAGES: Readonly<Record<BranchSyncMessageId, CatalogMessage>> = 
   'branchSync.aligned.heading': 'Branch synchronized',
   'branchSync.aligned.status': '{workingBranch} now contains the current history of its parent branch {parentBranch}.',
   'branchSync.aligned.resolved': 'The previous synchronization recommendation has been resolved.',
+  'branchSync.transition.required': 'Branch synchronization needs attention: {workingBranch} is behind {parentBranch}.',
+  'branchSync.transition.openStatus': 'Open the current status',
+  'branchSync.transition.duplicate': 'A duplicate action notification was suppressed.',
+  'branchSync.transition.viewOriginal': 'View the original notification',
 });
 
 const SPANISH_MESSAGES: Readonly<Record<BranchSyncMessageId, CatalogMessage>> = Object.freeze({
@@ -59,6 +67,10 @@ const SPANISH_MESSAGES: Readonly<Record<BranchSyncMessageId, CatalogMessage>> = 
   'branchSync.aligned.heading': 'Rama sincronizada',
   'branchSync.aligned.status': '{workingBranch} ya contiene el historial actual de su rama padre {parentBranch}.',
   'branchSync.aligned.resolved': 'La recomendación de sincronización anterior está resuelta.',
+  'branchSync.transition.required': 'La sincronización de la rama necesita atención: {workingBranch} está por detrás de {parentBranch}.',
+  'branchSync.transition.openStatus': 'Abrir el estado actual',
+  'branchSync.transition.duplicate': 'Se ha suprimido una notificación de acción duplicada.',
+  'branchSync.transition.viewOriginal': 'Ver la notificación original',
 });
 
 export const ENGLISH_BRANCH_SYNC_DEFINITION: MessageCatalogDefinition<BranchSyncMessageId> = Object.freeze({

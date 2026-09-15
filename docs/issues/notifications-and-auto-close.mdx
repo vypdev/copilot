@@ -50,6 +50,26 @@ Push processing is part of the **Commit** workflow, not the Issue workflow.
 Ensure `copilot_commit.yml` is installed and has its token and configured agent
 inputs. See [How to use](/how-to-use) and [Bugbot](/bugbot).
 
+## Cross-capability notification budget
+
+Copilot treats GitHub comments as product UI and potential notifications, not as
+an execution log. Routine metadata, no-op, replay, stale, superseded, merge, and
+close-success events create no new comment. A durable capability creates at
+most one initial status card and updates that card only when its semantic
+projection changes.
+
+A short transition notification is reserved for the moment an existing state
+newly requires human action. It is limited to 400 visible characters and two
+links, points back to the current status, and is created once for an immutable
+semantic fingerprint. For example, branch synchronization creates no second
+comment for its first stale observation; it notifies only when a previously
+aligned card becomes stale again. Equivalent retries are silent. See
+[Branch synchronization](/issues/branch-synchronization) for the complete flow.
+
+Created or reused notifications and any duplicate-cleanup debt are reported in
+the repository-locale Job Summary. Message bodies, internal steps, and provider
+diagnostics are not copied into that evidence.
+
 ## Reopen issue on push
 
 If an issue was **closed** but someone pushes again to its branch, you may want the issue to **reopen** so it’s not forgotten.
@@ -114,6 +134,7 @@ the missing context matters.
 | Behavior | Controlled by | Where it runs |
 |----------|---------------|---------------|
 | Progress card update | Changed progress projection | Push (Commit) workflow |
+| Branch-sync action notification | Aligned card becomes stale at a new source head | Branch Sync workflow |
 | Reopen closed issue on push | `reopen-issue-on-push` (default: true) | Push (Commit) workflow |
 | Auto-close issue when branch merged | Built-in | Push / PR workflow when merge is detected |
 | Auto-close waiting issue after inactivity | `inactiveIssueClosure` + `inactivity-threshold-hours` | Scheduled workflow every 6 hours |

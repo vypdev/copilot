@@ -5,7 +5,7 @@
 - Catalog capability ID: github-communication-experience
 - Last verified: 2026-09-15 for the delivered shared publication, progress
   source-freshness, exact-duplicate cleanup, transition-notification substrate,
-  branch-sync,
+  branch-sync transition adoption,
   review-context, Bugbot, deployment, setup-doctor, generic Job Summary,
   application-error, explicit-request, and local-result slices; remaining
   clauses are prospective
@@ -320,7 +320,7 @@ a generic comment.
 | Release/hotfix issue | release dashboard owns the issue presentation; no plan/welcome/generic comment | durable operation state |
 | Push to linked work branch | update progress card when its projection changes; do not post a commit or reopened notice | commit, labels, Checks, Job Summary |
 | Explicit command/mention | at most one direct reply; a capability MAY also update its existing card when the reply links to it | command result and Job Summary |
-| Branch drift/sync | create one stale card, update it to aligned/blocked; no second generic result | comparison and workflow run |
+| Branch drift/sync | create one initial stale card; update it to aligned or changed stale state; on a later aligned-to-stale transition, create one fingerprinted notification linked to the card | comparison, publication evidence, and workflow run |
 | Bugbot | one canonical aggregate card plus bounded inline findings; no generic result | Review Check and Job Summary |
 | Release/hotfix transition | update one dashboard; default mode creates no milestones; configured milestone mode follows its existing bounded contract | managed PR, release, package, Job Summary |
 | Merge/close success | no new comment; update any owned active card to a terminal state when useful | native merge/issue state |
@@ -1066,6 +1066,18 @@ fingerprint in the configured repository locale. No feature is considered
 migrated merely because this shared substrate exists; branch-sync adoption is a
 separate rollout slice.
 
+Branch-sync now completes that first feature adoption. Its existing bot-owned
+stale/aligned card remains the source of truth: initial stale discovery creates
+only the card, identical stale renders mutate nothing, changed comparisons update
+the card, and alignment resolves it. A later aligned-to-stale transition with a
+canonical push head updates the card and invokes the shared coordinator once.
+The localized notification contains one trusted link to current status; dynamic
+catalog copy is neutralized before publication, while the link URL and label
+structure are policy-owned. Exact concurrent duplicates are deleted or compacted
+through the generic semantic publication port, and content-free transition and
+cleanup evidence feeds the repository-locale Job Summary. A publication-only
+failure preserves the updated stale card and cannot replay branch work.
+
 No remote product flag is required. Each phase must be independently releasable
 and its compatibility adapter must fail closed to Job Summary, not fall back to
 generic comments.
@@ -1170,8 +1182,10 @@ removed.
     explanation appears with a recovery path and no second generic comment.
 12. Given an explicitly addressed no-op command, then one sentence explains that
     no change was needed; a background equivalent emits no comment.
-13. Given a newly actionable failure, then one transition notification links to
-    the updated status; retries with the same fingerprint create none.
+13. Given a branch-sync card that changes from aligned to stale at a canonical
+    source head, then one transition notification links to the updated status;
+    retries with the same fingerprint create none. Initial stale-card creation
+    creates no second comment.
 14. Given `debug=true`, then detailed diagnostics appear in masked logs/Job
     Summary and no conversation body contains a debug heading, stack trace,
     prompt, token, or runner path.

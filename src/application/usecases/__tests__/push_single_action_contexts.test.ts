@@ -223,10 +223,21 @@ describe('push and single-action context projection', () => {
     const input = source();
     input.inputs = { ...input.inputs, after };
 
-    expect(projectBranchObservationContext(input)).toMatchObject({
+    const projected = projectBranchObservationContext(input);
+    expect(projected).toMatchObject({
       pushedBranch: 'feature/42-contexts', deletedPush, trustedBotLogin: 'copilot-bot',
       repository: { owner: 'owner', name: 'repo' },
     });
+    expect(projected.sourceHeadSha).toBe(deletedPush ? undefined : after);
+  });
+
+  it('canonicalizes the branch-observation source head and rejects malformed object ids', () => {
+    const input = source();
+    input.inputs!.after = 'A'.repeat(64);
+    expect(projectBranchObservationContext(input).sourceHeadSha).toBe('a'.repeat(64));
+
+    input.inputs!.after = 'not-a-git-object-id';
+    expect(projectBranchObservationContext(input)).not.toHaveProperty('sourceHeadSha');
   });
 
   it('omits absent branch-observation actor and classifies a missing after SHA as active', () => {

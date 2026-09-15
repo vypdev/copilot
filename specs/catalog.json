@@ -887,10 +887,10 @@
     {
       "id": "branch-synchronization",
       "title": "Branch synchronization and conflict recovery",
-      "status": "as-built-baseline",
-      "scope": "Observe parent drift and safely merge a parent branch into a linked working branch",
+      "status": "implemented",
+      "scope": "Observe parent drift with one localized status card and transition-only notifications, then safely merge a parent branch into a linked working branch",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-11",
+      "lastVerified": "2026-09-15",
       "specs": [
         "specs/branch-synchronization-and-conflict-recovery.md"
       ],
@@ -904,20 +904,35 @@
       ],
       "code": [
         "src/domain/branch_sync_command.ts",
+        "src/application/ports/branch_sync_ports.ts",
+        "src/application/policies/branch_sync_message_catalog.ts",
+        "src/application/policies/branch_sync_notification_policy.ts",
         "src/application/usecases/branch_sync/branch_sync_execution_policy.ts",
+        "src/application/usecases/actions/observe_branch_sync_use_case.ts",
+        "src/application/usecases/push_single_action_contexts.ts",
+        "src/application/usecases/steps/common/transition_notification_workflow.ts",
         "src/data/repository/branch_sync/branch_dependency_policy.ts",
         "src/data/repository/branch_sync/branch_dependency_repository.ts",
+        "src/infrastructure/composition/main_run_route_composition_root.ts",
+        "src/infrastructure/composition/push_single_action_capability_port_binding.ts",
         "src/infrastructure/branch_sync_workspace_adapter.ts"
       ],
       "tests": [
+        "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
+        "src/application/usecases/actions/__tests__/observe_branch_sync_use_case.test.ts",
         "src/application/usecases/branch_sync/__tests__/sync_branch_use_case.test.ts",
+        "src/application/usecases/__tests__/push_single_action_contexts.test.ts",
+        "src/application/usecases/steps/common/__tests__/transition_notification_workflow.test.ts",
         "src/data/repository/branch_sync/__tests__/branch_dependency_policy.test.ts",
         "src/data/repository/branch_sync/__tests__/branch_dependency_repository.test.ts",
-        "src/infrastructure/__tests__/branch_sync_workspace_adapter.test.ts"
+        "src/infrastructure/__tests__/branch_sync_workspace_adapter.test.ts",
+        "src/infrastructure/composition/__tests__/push_single_action_capability_port_binding.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",
-        "docs/issues/comment-commands.mdx"
+        "docs/issues/comment-commands.mdx",
+        "docs/issues/notifications-and-auto-close.mdx",
+        "docs/development/architecture.mdx"
       ]
     },
     {

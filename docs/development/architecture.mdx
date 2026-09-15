@@ -347,18 +347,28 @@ unit tests.
 
 Branch synchronization has two independent entry points behind the same semantic
 ports. The all-branch push workflow invokes `check_branch_sync_action`, which can
-reach only dependency discovery, branch comparison, and issue notification adapters.
+reach only dependency discovery, branch comparison, and the generic semantic
+issue-publication adapter.
 It has no agent role or agent environment. The comment command resolves one target,
 authorizes the actor, and delegates Git merge ownership to a specialized workspace
 adapter. The fixer capability becomes reachable only after Git reports eligible
 conflicts.
 
 The application use case owns orchestration and publishable results; pure policies
-own command parsing, dependency selection, and notification rendering; repositories
+own command parsing, dependency selection, stable publication identity, source-head
+fingerprints, and localized safe rendering; repositories
 translate GitHub GraphQL/REST responses; and the Git adapter owns transient merge
 state. Verification runs without credentials. The adapter rejects changes to Git
 heads, merge metadata, the non-conflicted index, or the prepared path set, then
 re-fetches both remote heads immediately before the trusted commit/push boundary.
+
+The observer creates only the initial stale status card, skips an identical
+render, updates changed stale/aligned projections in place, and delegates only an
+aligned-to-stale human-action transition to the shared immutable notification
+coordinator. That coordinator reuses the generic issue-comment publication port
+for exact bot ownership, concurrent-create reconciliation, duplicate removal or
+compaction, and content-free Job Summary evidence. Branch-sync defines no parallel
+comment authority.
 
 ## Deployment orchestration boundary
 

@@ -38,36 +38,6 @@ export interface BranchSyncComparisonPort {
   ): Promise<BranchSyncComparison>;
 }
 
-export interface BranchSyncNotificationComment {
-  readonly id: number;
-  readonly body: string | null;
-  readonly user?: { readonly login?: string };
-}
-
-export interface BranchSyncNotificationPort {
-  listIssueComments(
-    owner: string,
-    repository: string,
-    issueNumber: number,
-    token: string,
-  ): Promise<BranchSyncNotificationComment[]>;
-  addComment(
-    owner: string,
-    repository: string,
-    issueNumber: number,
-    comment: string,
-    token: string,
-  ): Promise<void>;
-  updateComment(
-    owner: string,
-    repository: string,
-    issueNumber: number,
-    commentId: number,
-    comment: string,
-    token: string,
-  ): Promise<void>;
-}
-
 export type BranchMergePreparation =
   | {
       readonly kind: "aligned";
@@ -123,12 +93,6 @@ export interface BoundBranchDependencyQueryPort {
 
 export interface BoundBranchSyncComparisonPort {
   compare(parentBranch: string, workingBranch: string): Promise<BranchSyncComparison>;
-}
-
-export interface BoundBranchSyncNotificationPort {
-  listIssueComments(issueNumber: number): Promise<readonly BranchSyncNotificationComment[]>;
-  addComment(issueNumber: number, comment: string): Promise<void>;
-  updateComment(issueNumber: number, commentId: number, comment: string): Promise<void>;
 }
 
 export interface BoundBranchSyncWorkspacePort {
