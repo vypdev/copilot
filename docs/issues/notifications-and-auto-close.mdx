@@ -36,7 +36,13 @@ locales plus exact, base-language, dynamic, or English-fallback catalog evidence
   `feature/123-title` → issue `123`).
 - **Identity:** one hidden, bot-owned semantic marker identifies the progress
   card and records the analyzed branch-head object ID. Equivalent retries
-  create or update nothing.
+  create or update nothing. Comment discovery follows every GitHub result page.
+  If concurrent runs create the same semantic card, Copilot keeps the oldest
+  exact bot-owned comment and removes later duplicates. A localized link to the
+  canonical card replaces a duplicate only when GitHub specifically forbids
+  deletion; the Job Summary records the affected comment IDs with a bounded
+  list. Human, third-party, malformed, and legacy comments are never removed by
+  this cleanup.
 - **Content:** outcome, current status, and the next useful action only. Agent
   reasoning and internal step names are excluded.
 

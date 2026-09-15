@@ -8,6 +8,7 @@ import {
 } from '../../../policies/publication_identity_policy';
 import { resolveStaticPublicationCatalog, type PublicationMessageCatalog } from '../../../policies/publication_message_catalog';
 import { renderSemanticReply, type SemanticReplyIntent } from '../../../policies/semantic_result_publication_policy';
+import { cleanupDuplicateComment } from './duplicate_comment_cleanup_workflow';
 
 export interface ReplyPublicationContext {
     readonly owner: string;
@@ -20,7 +21,9 @@ export interface ReplyPublicationContext {
 export interface ReplyPublicationOutcome {
     readonly effect: 'created' | 'unchanged';
     readonly canonicalCommentId?: number;
+    readonly duplicatesRemoved: number;
     readonly duplicatesCompacted: number;
+    readonly compactedCommentIds: readonly number[];
 }
 
 /** Publishes an explicit reply at most once for a trusted request correlation. */
@@ -28,7 +31,7 @@ export async function reconcileReply(
     context: ReplyPublicationContext,
     comments: BoundIssueCommentPublicationPort,
 ): Promise<ReplyPublicationOutcome> {
-    if (!context.botLogin.trim()) return Object.freeze({ effect: 'unchanged', duplicatesCompacted: 0 });
+    if (!context.botLogin.trim()) return unchangedOutcome();
     const target = context.intent.target;
     let owned = matchingReplies(await comments.listIssueComments(target.number), context);
     let effect: ReplyPublicationOutcome['effect'] = 'unchanged';
@@ -37,13 +40,42 @@ export async function reconcileReply(
         effect = 'created';
         owned = matchingReplies(await comments.listIssueComments(target.number), context);
     }
-    if (owned.length === 0) return Object.freeze({ effect, duplicatesCompacted: 0 });
+    if (owned.length === 0) {
+        return Object.freeze({
+            effect, duplicatesRemoved: 0, duplicatesCompacted: 0, compactedCommentIds: Object.freeze([]),
+        });
+    }
 
     const [canonical, ...duplicates] = owned.sort((left, right) => left.id - right.id);
+    let duplicatesRemoved = 0;
+    let duplicatesCompacted = 0;
+    const compactedCommentIds: number[] = [];
     for (const duplicate of duplicates) {
-        await comments.updateComment(target.number, duplicate.id, duplicatePointer(context, canonical.id));
+        const cleanup = await cleanupDuplicateComment({
+            issueNumber: target.number,
+            duplicateCommentId: duplicate.id,
+            compactBody: duplicatePointer(context, canonical.id),
+        }, comments);
+        if (cleanup === 'removed') duplicatesRemoved += 1;
+        else {
+            duplicatesCompacted += 1;
+            compactedCommentIds.push(duplicate.id);
+        }
     }
-    return Object.freeze({ effect, canonicalCommentId: canonical.id, duplicatesCompacted: duplicates.length });
+    return Object.freeze({
+        effect,
+        canonicalCommentId: canonical.id,
+        duplicatesRemoved,
+        duplicatesCompacted,
+        compactedCommentIds: Object.freeze(compactedCommentIds),
+    });
+}
+
+function unchangedOutcome(): ReplyPublicationOutcome {
+    return Object.freeze({
+        effect: 'unchanged', duplicatesRemoved: 0, duplicatesCompacted: 0,
+        compactedCommentIds: Object.freeze([]),
+    });
 }
 
 function matchingReplies(

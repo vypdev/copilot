@@ -53,6 +53,11 @@ function inMemoryComments(initial: IssueCommentPublicationTarget[] = []) {
       const comment = values.find(candidate => candidate.id === id);
       if (comment) comment.body = body;
     }),
+    removeComment: jest.fn(async (_issueNumber: number, id: number): Promise<'removed' | 'compaction-required'> => {
+      const index = values.findIndex(candidate => candidate.id === id);
+      if (index >= 0) values.splice(index, 1);
+      return 'removed';
+    }),
     listIssueComments: jest.fn(async () => values.map(comment => ({ ...comment }))),
   };
 }
@@ -236,6 +241,27 @@ describe('PublishResultUseCase semantic compatibility boundary', () => {
     expect(comments.addComment).toHaveBeenCalledTimes(1);
     expect(comments.updateComment).toHaveBeenCalledTimes(1);
     expect(comments.values[0].body).toContain('Replace the policy');
+  });
+
+  it('returns bounded operator evidence when duplicate deletion is forbidden', async () => {
+    const comments = inMemoryComments();
+    const useCase = new PublishResultUseCase(comments);
+    const value = projectPublishResultContext(source([recommendation()]));
+    await useCase.invoke(value);
+    comments.values.push({ id: 2, body: comments.values[0].body, user: { login: 'vypbot' } });
+    comments.removeComment.mockResolvedValue('compaction-required');
+
+    const outcome = await useCase.invoke(value);
+
+    expect(outcome).toMatchObject({
+      success: true,
+      executed: true,
+      payload: { publicationCleanup: {
+        reason: 'duplicate-deletion-forbidden', compactedCount: 1, compactedCommentIds: [2],
+      } },
+    });
+    expect(comments.values.find(comment => comment.id === 2)?.body)
+      .toContain('copilot:publication-duplicate');
   });
 
   it.each([

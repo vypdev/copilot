@@ -59,11 +59,16 @@ describe('push and single-action capability binding', () => {
 
   it('binds issue-comment publication without accepting repository inputs', async () => {
     const addComment = jest.fn().mockResolvedValue(7);
-    const bound = bindIssueCommentPublication({ addComment, updateComment: jest.fn(), listIssueComments: jest.fn() } as never, binding);
+    const removeComment = jest.fn().mockResolvedValue('removed');
+    const bound = bindIssueCommentPublication({
+      addComment, removeComment, updateComment: jest.fn(), listIssueComments: jest.fn(),
+    } as never, binding);
 
     await bound.addComment(42, 'Ready');
+    await bound.removeComment(42, 9);
 
     expect(addComment).toHaveBeenCalledWith('owner', 'repo', 42, 'Ready', 'secret-token');
+    expect(removeComment).toHaveBeenCalledWith('owner', 'repo', 42, 9, 'secret-token');
   });
 
   it('binds branch-sync workspace credentials only on remote operations', async () => {
@@ -220,7 +225,9 @@ describe('push and single-action capability binding', () => {
       updateTag: jest.fn(), createTag: jest.fn(), createOrVerifyTagAtSha: jest.fn(),
     };
     const releasePort = { updateRelease: jest.fn(), createRelease: jest.fn() };
-    const commentPort = { addComment: jest.fn(), updateComment: jest.fn(), listIssueComments: jest.fn() };
+    const commentPort = {
+      addComment: jest.fn(), updateComment: jest.fn(), removeComment: jest.fn(), listIssueComments: jest.fn(),
+    };
     const gitPort = {
       getBranchSha: jest.fn(), getMergeBaseSha: jest.fn(), isCommitReachable: jest.fn(),
       createOrVerifyBranch: jest.fn(), mergeCommitIntoBranch: jest.fn(), deleteBranch: jest.fn(), listBranches: jest.fn(),
@@ -243,6 +250,7 @@ describe('push and single-action capability binding', () => {
     await tags.createOrVerifyTagAtSha('a'.repeat(40), 'v1.2.3');
     await releases.updateRelease('next', 'stable');
     await comments.updateComment(42, 7, 'updated');
+    await comments.removeComment(42, 8);
     await comments.listIssueComments(42);
     await git.getMergeBaseSha('master', 'develop');
     await git.isCommitReachable('master', 'a'.repeat(40));
@@ -265,6 +273,7 @@ describe('push and single-action capability binding', () => {
     expect(presentationPort.publishMilestone).toHaveBeenCalledWith(
       'owner', 'repo', 42, '<!-- milestone -->', 'body', 'secret-token',
     );
+    expect(commentPort.removeComment).toHaveBeenCalledWith('owner', 'repo', 42, 8, 'secret-token');
   });
 
   it('forwards every remaining issue, branch-query, and synchronization operation', async () => {

@@ -228,6 +228,7 @@ export function bindIssueCommentPublication(
   return Object.freeze<BoundIssueCommentPublicationPort>({
     addComment: (issueNumber, comment) => port.addComment(binding.owner, binding.repository, issueNumber, comment, binding.token),
     updateComment: (issueNumber, commentId, comment) => port.updateComment(binding.owner, binding.repository, issueNumber, commentId, comment, binding.token),
+    removeComment: (issueNumber, commentId) => port.removeComment(binding.owner, binding.repository, issueNumber, commentId, binding.token),
     listIssueComments: (issueNumber) => port.listIssueComments(binding.owner, binding.repository, issueNumber, binding.token),
   });
 }

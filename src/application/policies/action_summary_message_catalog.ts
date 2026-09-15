@@ -21,6 +21,7 @@ const SIMPLE_MESSAGE_KEYS = Object.freeze([
   'heading', 'repository', 'property', 'value', 'status', 'event', 'target',
   'lifecycle', 'descriptionPolicy', 'results', 'findingStates', 'bugbotReview',
   'sourceFreshness', 'staleSourceSuppressed',
+  'duplicateCleanup',
   'resultDetails', 'localization', 'repositoryLocale', 'issueLocale',
   'pullRequestLocale', 'catalogResolution', 'descriptors', 'reason', 'failure',
   'findings', 'partial', 'superseded', 'skipped', 'dryRun', 'success', 'invalid',
@@ -32,6 +33,9 @@ const TEMPLATE_MESSAGE_IDS = Object.freeze([
   'summary.target.issue',
   'summary.target.repositoryRun',
   'summary.bugbotTelemetry',
+  'summary.duplicateCleanup.single',
+  'summary.duplicateCleanup.multiple',
+  'summary.duplicateCleanup.bounded',
 ] as const);
 
 const FINDING_STATE_KEYS = Object.freeze([
@@ -74,6 +78,7 @@ const ENGLISH_SIMPLE: Readonly<Record<SimpleMessageKey, string>> = Object.freeze
   bugbotReview: 'Bugbot review',
   sourceFreshness: 'Source freshness',
   staleSourceSuppressed: 'Stale result suppressed; branch HEAD changed during the run',
+  duplicateCleanup: 'Duplicate cleanup',
   resultDetails: 'Failure details',
   localization: 'Localization',
   repositoryLocale: 'Repository locale',
@@ -111,6 +116,7 @@ const SPANISH_SIMPLE: Readonly<Record<SimpleMessageKey, string>> = Object.freeze
   bugbotReview: 'Revisión de Bugbot',
   sourceFreshness: 'Vigencia del origen',
   staleSourceSuppressed: 'Resultado obsoleto omitido; el HEAD de la rama cambió durante la ejecución',
+  duplicateCleanup: 'Limpieza de duplicados',
   resultDetails: 'Detalles del fallo',
   localization: 'Localización',
   repositoryLocale: 'Locale del repositorio',
@@ -138,6 +144,9 @@ const ENGLISH_TEMPLATES: Readonly<Record<TemplateMessageId, CatalogMessage>> = O
   'summary.target.issue': 'Issue #{number}',
   'summary.target.repositoryRun': 'Repository run',
   'summary.bugbotTelemetry': '{outcome}, effort={effort}, {elapsed}ms',
+  'summary.duplicateCleanup.single': 'Deletion was forbidden; retained a compact pointer for comment {ids}',
+  'summary.duplicateCleanup.multiple': 'Deletion was forbidden; retained compact pointers for {count} comments (IDs: {ids})',
+  'summary.duplicateCleanup.bounded': 'Deletion was forbidden; retained compact pointers for {count} comments (first {reported} IDs: {ids})',
 });
 
 const SPANISH_TEMPLATES: Readonly<Record<TemplateMessageId, CatalogMessage>> = Object.freeze({
@@ -145,6 +154,9 @@ const SPANISH_TEMPLATES: Readonly<Record<TemplateMessageId, CatalogMessage>> = O
   'summary.target.issue': 'Issue n.º {number}',
   'summary.target.repositoryRun': 'Ejecución del repositorio',
   'summary.bugbotTelemetry': '{outcome}, esfuerzo={effort}, {elapsed} ms',
+  'summary.duplicateCleanup.single': 'Se denegó el borrado; se conservó un enlace compacto para el comentario {ids}',
+  'summary.duplicateCleanup.multiple': 'Se denegó el borrado; se conservaron enlaces compactos para {count} comentarios (ID: {ids})',
+  'summary.duplicateCleanup.bounded': 'Se denegó el borrado; se conservaron enlaces compactos para {count} comentarios (primeros {reported} ID: {ids})',
 });
 
 const ENGLISH_FINDING_STATES: Readonly<Record<ActionSummaryFindingState, string>> = Object.freeze({

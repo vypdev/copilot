@@ -44458,7 +44458,10 @@ exports.SPANISH_PUBLICATION_CATALOG = toPublicationCatalog(Object.freeze({
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildStaleSourcePublicationPayload = buildStaleSourcePublicationPayload;
 exports.hasStaleSourcePublicationOutcome = hasStaleSourcePublicationOutcome;
+exports.buildDuplicateCompactionPublicationPayload = buildDuplicateCompactionPublicationPayload;
+exports.duplicateCompactionPublicationOutcomes = duplicateCompactionPublicationOutcomes;
 const result_1 = __nccwpck_require__(73817);
+const MAX_REPORTED_COMMENT_IDS = 20;
 /** Builds bounded evidence for a commit-derived result that was intentionally suppressed. */
 function buildStaleSourcePublicationPayload(branch, sourceHeadSha) {
     return Object.freeze({
@@ -44475,6 +44478,52 @@ function hasStaleSourcePublicationOutcome(results) {
         const outcome = (0, result_1.getResultPayload)(payload?.publicationOutcome);
         return outcome?.reason === 'stale-source';
     });
+}
+/** Builds bounded operator evidence for duplicates retained as compact pointers. */
+function buildDuplicateCompactionPublicationPayload(commentIds) {
+    const validIds = [...new Set(commentIds.filter(isPositiveInteger))].sort((left, right) => left - right);
+    if (validIds.length === 0)
+        return undefined;
+    return Object.freeze({
+        publicationCleanup: Object.freeze({
+            reason: 'duplicate-deletion-forbidden',
+            compactedCommentIds: Object.freeze(validIds.slice(0, MAX_REPORTED_COMMENT_IDS)),
+            compactedCount: validIds.length,
+        }),
+    });
+}
+function duplicateCompactionPublicationOutcomes(results) {
+    return Object.freeze(results.flatMap(result => {
+        const payload = (0, result_1.getResultPayload)(result.payload);
+        const cleanup = (0, result_1.getResultPayload)(payload?.publicationCleanup);
+        if (cleanup?.reason !== 'duplicate-deletion-forbidden'
+            || !isPositiveInteger(cleanup.compactedCount)
+            || !Array.isArray(cleanup.compactedCommentIds)
+            || cleanup.compactedCommentIds.length > MAX_REPORTED_COMMENT_IDS
+            || cleanup.compactedCommentIds.length > cleanup.compactedCount
+            || !areOrderedUniquePositiveIntegers(cleanup.compactedCommentIds)) {
+            return [];
+        }
+        return [Object.freeze({
+                reason: 'duplicate-deletion-forbidden',
+                compactedCommentIds: Object.freeze([...cleanup.compactedCommentIds]),
+                compactedCount: cleanup.compactedCount,
+            })];
+    }));
+}
+function isPositiveInteger(value) {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+}
+function areOrderedUniquePositiveIntegers(values) {
+    if (values.length === 0)
+        return false;
+    let previous;
+    for (const value of values) {
+        if (!isPositiveInteger(value) || previous !== undefined && value <= previous)
+            return false;
+        previous = value;
+    }
+    return true;
 }
 
 
@@ -68296,7 +68345,7 @@ exports.GitCliRepository = GitCliRepository;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isGithubAlreadyExists = exports.isGithubNotFound = exports.getGithubErrorStatus = void 0;
+exports.isGithubAlreadyExists = exports.isGithubPermissionDenied = exports.isGithubNotFound = exports.getGithubErrorStatus = void 0;
 const getGithubErrorStatus = (error) => {
     if (typeof error !== "object" || error === null)
         return undefined;
@@ -68306,6 +68355,27 @@ const getGithubErrorStatus = (error) => {
 exports.getGithubErrorStatus = getGithubErrorStatus;
 const isGithubNotFound = (error) => (0, exports.getGithubErrorStatus)(error) === 404;
 exports.isGithubNotFound = isGithubNotFound;
+const isGithubPermissionDenied = (error) => {
+    if ((0, exports.getGithubErrorStatus)(error) !== 403)
+        return false;
+    const errorRecord = readRecord(error);
+    const headers = readRecord(readRecord(errorRecord?.response)?.headers);
+    if (readHeader(headers, 'retry-after') !== undefined)
+        return false;
+    if (readHeader(headers, 'x-ratelimit-remaining') === '0')
+        return false;
+    const message = errorRecord?.message;
+    if (typeof message !== 'string')
+        return false;
+    const normalized = message.trim().toLowerCase();
+    return normalized === 'forbidden'
+        || normalized.includes('resource not accessible by integration')
+        || normalized.includes('permission')
+        || normalized.includes('not permitted')
+        || normalized.includes('not allowed')
+        || normalized.includes('must have admin rights');
+};
+exports.isGithubPermissionDenied = isGithubPermissionDenied;
 const isGithubAlreadyExists = (error) => {
     if ((0, exports.getGithubErrorStatus)(error) !== 422)
         return false;
@@ -68329,6 +68399,13 @@ function readRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value)
         ? value
         : undefined;
+}
+function readHeader(headers, expected) {
+    if (!headers)
+        return undefined;
+    const key = Object.keys(headers).find(candidate => candidate.toLowerCase() === expected);
+    const value = key ? headers[key] : undefined;
+    return typeof value === 'string' || typeof value === 'number' ? String(value) : undefined;
 }
 
 
@@ -68649,6 +68726,7 @@ const comment_content_policy_1 = __nccwpck_require__(77454);
 const logger_1 = __nccwpck_require__(91151);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
 const application_error_1 = __nccwpck_require__(75999);
+const github_error_policy_1 = __nccwpck_require__(58791);
 class IssueContentRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -68723,6 +68801,30 @@ class IssueContentRepository {
                 body: comment,
             });
             (0, logger_1.logDebugInfo)(`Comment ${commentId} updated in Issue ${issueNumber}.`);
+        };
+        this.removeComment = async (owner, repository, issueNumber, commentId, token) => {
+            const octokit = this.githubClient.getClient(token);
+            try {
+                await octokit.rest.issues.deleteComment({
+                    owner,
+                    repo: repository,
+                    comment_id: commentId,
+                });
+                (0, logger_1.logDebugInfo)(`Duplicate comment ${commentId} removed from Issue ${issueNumber}.`);
+                return 'removed';
+            }
+            catch (error) {
+                const status = (0, github_error_policy_1.getGithubErrorStatus)(error);
+                if (status === 404) {
+                    (0, logger_1.logDebugInfo)(`Duplicate comment ${commentId} was already absent from Issue ${issueNumber}.`);
+                    return 'removed';
+                }
+                if ((0, github_error_policy_1.isGithubPermissionDenied)(error)) {
+                    (0, logger_1.logDebugInfo)(`Duplicate comment ${commentId} cannot be removed from Issue ${issueNumber}; compacting it instead.`);
+                    return 'compaction-required';
+                }
+                throw error;
+            }
         };
         this.listIssueComments = async (owner, repository, issueNumber, token) => {
             const octokit = this.githubClient.getClient(token);
@@ -76437,6 +76539,7 @@ function bindIssueCommentPublication(port, binding) {
     return Object.freeze({
         addComment: (issueNumber, comment) => port.addComment(binding.owner, binding.repository, issueNumber, comment, binding.token),
         updateComment: (issueNumber, commentId, comment) => port.updateComment(binding.owner, binding.repository, issueNumber, commentId, comment, binding.token),
+        removeComment: (issueNumber, commentId) => port.removeComment(binding.owner, binding.repository, issueNumber, commentId, binding.token),
         listIssueComments: (issueNumber) => port.listIssueComments(binding.owner, binding.repository, issueNumber, binding.token),
     });
 }

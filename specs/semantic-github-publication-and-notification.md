@@ -4,7 +4,7 @@
 - Date: 2026-09-14
 - Catalog capability ID: github-communication-experience
 - Last verified: 2026-09-15 for the delivered shared publication, progress
-  source-freshness, branch-sync,
+  source-freshness, exact-duplicate cleanup, branch-sync,
   review-context, Bugbot, deployment, setup-doctor, generic Job Summary,
   application-error, explicit-request, and local-result slices; remaining
   clauses are prospective
@@ -1019,6 +1019,17 @@ write. Stale results return typed `stale-source` evidence; the localized Job
 Summary displays the suppression reason while issue and PR conversations remain
 unchanged. The GitHub adapter and credential binding stay outside application
 policy, and the CLI, push, and on-demand Action paths reuse the same guard.
+
+Shared status and correlated-reply reconciliation now completes the exact-
+duplicate cleanup contract. Paginated discovery first proves an exact semantic
+identity and matching bot login, keeps the lowest comment ID as canonical, and
+requests removal only for later matches. GitHub 404 is an idempotent success; an
+explicit permission-denied 403 retains a localized compact pointer to the
+canonical comment, while rate-limit 403 responses and all other failures remain
+visible as provider failures. The localized Job Summary reports the total and
+up to 20 affected comment IDs. Commit-derived cards revalidate source freshness
+before both deletion and any fallback update. Explicit caller-selected comment
+and deployment ports remain narrower and receive no deletion authority.
 
 No remote product flag is required. Each phase must be independently releasable
 and its compatibility adapter must fail closed to Job Summary, not fall back to
