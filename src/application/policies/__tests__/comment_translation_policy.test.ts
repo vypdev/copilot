@@ -88,6 +88,11 @@ describe('comment translation policy', () => {
         expect(restoreLanguageAdaptationOutput(input, translated)).toBe(
             'why `src/cache.ts` fails on feature/cache --verbose https://example.com/log a1b2c3d',
         );
+        expect(restoreLanguageAdaptationOutput(input, [
+            'COPILOT_OPERAND_0_TOKEN works on',
+            'COPILOT_OPERAND_1_TOKEN COPILOT_OPERAND_2_TOKEN',
+            'COPILOT_OPERAND_3_TOKEN COPILOT_OPERAND_4_TOKEN',
+        ].join(' '))).toContain('`src/cache.ts` works on feature/cache');
         expect(rebuildAdaptedComment(input, translated)).toContain(
             '/copilot explain why `src/cache.ts` fails on feature/cache --verbose',
         );
@@ -102,6 +107,10 @@ describe('comment translation policy', () => {
         'translated COPILOT_OPERAND_0_TOKEN src/other.ts',
         'translated COPILOT_OPERAND_0_TOKEN https://attacker.example',
         'translated COPILOT_OPERAND_0_TOKEN "different literal"',
+        'translated COPILOT_OPERAND_0_TOKENx',
+        'translated xCOPILOT_OPERAND_0_TOKEN',
+        'translated COPILOT_OPERAND_0_TOKEN.tsx',
+        'translated COPILOT_OPERAND_0_TOKEN?ref=main',
     ])('rejects missing, duplicated, unknown, or generated technical operands: %s', (translated) => {
         const input = prepareLanguageAdaptationInput('/copilot explain src/cache.ts', 'vypbot');
 
@@ -113,6 +122,19 @@ describe('comment translation policy', () => {
         const input = prepareLanguageAdaptationInput('@vypbot explica esto', 'vypbot');
 
         expect(restoreLanguageAdaptationOutput(input, 'explain COPILOT_OPERAND_0_TOKEN')).toBeUndefined();
+    });
+
+    it('rejects reordered operands and malformed trusted adaptation input', () => {
+        const reordered = prepareLanguageAdaptationInput('/copilot explain src/a.ts src/b.ts', 'vypbot');
+        expect(restoreLanguageAdaptationOutput(
+            reordered,
+            'COPILOT_OPERAND_1_TOKEN COPILOT_OPERAND_0_TOKEN',
+        )).toBeUndefined();
+        expect(restoreLanguageAdaptationOutput({
+            kind: 'plain',
+            prose: 'COPILOT_OPERAND_0_TOKEN',
+            protectedOperands: [{ placeholder: 'COPILOT_OPERAND_0_TOKEN', value: 'not-an-operand' }],
+        }, 'COPILOT_OPERAND_0_TOKEN')).toBeUndefined();
     });
 
     it('rejects text that becomes empty after unsafe format controls are removed', () => {

@@ -32,6 +32,7 @@ export type LanguageAdaptationInput = {
 const PROTECTED_OPERAND_PATTERN = /`[^`\r\n]+`|https?:\/\/[^\s<>()]+|"(?:\\.|[^"\\\r\n])+"|'(?:\\.|[^'\\\r\n])+'|(?<![\p{L}\p{N}_])--?[A-Za-z0-9][A-Za-z0-9-]*(?:=[^\s]+)?|(?<![\p{L}\p{N}_<])(?:\.{0,2}\/|[A-Za-z0-9_.-]+\/)[A-Za-z0-9_./-]+|(?<![0-9A-Fa-f])[0-9A-Fa-f]{7,64}(?![0-9A-Fa-f])/gu;
 const GENERATED_OPERAND_PATTERN = /`[^`\r\n]+`|https?:\/\/[^\s<>()]+|"(?:\\.|[^"\\\r\n])+"|'(?:\\.|[^'\\\r\n])+'|(?<![\p{L}\p{N}_])--?[A-Za-z0-9][A-Za-z0-9-]*(?:=[^\s]+)?|(?<![\p{L}\p{N}_<])(?:\.{0,2}\/|[A-Za-z0-9_.-]+\/)[A-Za-z0-9_./-]+|(?<![0-9A-Fa-f])[0-9A-Fa-f]{7,64}(?![0-9A-Fa-f])/gu;
 const OPERAND_PLACEHOLDER_PATTERN = /COPILOT_OPERAND_\d+_TOKEN/gu;
+const OPERAND_ADJACENCY_PATTERN = /[\p{L}\p{N}_./:@#%+?=&-]/u;
 
 export function prepareLanguageAdaptationInput(
     commentBody: string,
@@ -67,10 +68,13 @@ export function restoreLanguageAdaptationOutput(
 
     let restored = adaptedText;
     for (const operand of operands) {
-        if (restored.split(operand.placeholder).length !== 2) return undefined;
+        if (!hasExactPlaceholderBoundary(restored, operand.placeholder)) return undefined;
         restored = restored.replace(operand.placeholder, operand.value);
     }
     if (matches(OPERAND_PLACEHOLDER_PATTERN, restored)) return undefined;
+    const restoredOperands = matchingValues(PROTECTED_OPERAND_PATTERN, restored);
+    if (restoredOperands.length !== operands.length
+        || restoredOperands.some((value, index) => value !== operands[index].value)) return undefined;
     return restored;
 }
 
@@ -109,6 +113,22 @@ function matches(pattern: RegExp, value: string): boolean {
     const matched = pattern.test(value);
     pattern.lastIndex = 0;
     return matched;
+}
+
+function hasExactPlaceholderBoundary(value: string, placeholder: string): boolean {
+    const index = value.indexOf(placeholder);
+    if (index < 0 || index !== value.lastIndexOf(placeholder)) return false;
+    const before = index > 0 ? value[index - 1] : '';
+    const afterIndex = index + placeholder.length;
+    const after = afterIndex < value.length ? value[afterIndex] : '';
+    return !OPERAND_ADJACENCY_PATTERN.test(before) && !OPERAND_ADJACENCY_PATTERN.test(after);
+}
+
+function matchingValues(pattern: RegExp, value: string): readonly string[] {
+    pattern.lastIndex = 0;
+    const values = [...value.matchAll(pattern)].map(match => match[0]);
+    pattern.lastIndex = 0;
+    return values;
 }
 
 export function hasTranslatedCommentMarker(body: string | null | undefined): boolean {

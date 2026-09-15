@@ -74,6 +74,8 @@ describe('CommentLanguageTranslationWorkflow', () => {
         'why COPILOT_OPERAND_0_TOKEN --force fails',
         'why COPILOT_OPERAND_0_TOKEN COPILOT_OPERAND_0_TOKEN fails',
         'why COPILOT_OPERAND_9_TOKEN fails',
+        'why COPILOT_OPERAND_0_TOKENx fails',
+        'why COPILOT_OPERAND_0_TOKEN.tsx fails',
     ])('fails closed when translated output changes a protected operand: %s', async (adaptedText) => {
         const query = jest.fn().mockResolvedValue({
             status: 'translated', sourceLocale: 'es', targetLocale: 'en-US', adaptedText, reasonCode: 'none',
