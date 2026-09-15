@@ -30,7 +30,7 @@ describe('CommentLanguageTranslationWorkflow', () => {
             status: 'translated',
             sourceLocale: 'es-ES',
             targetLocale: 'en-US',
-            adaptedText: 'inspect @octocat\n/fix',
+            adaptedText: 'inspect this request',
             reasonCode: 'none',
         });
         const workflow = new CommentLanguageTranslationWorkflow({ query });
@@ -45,8 +45,8 @@ describe('CommentLanguageTranslationWorkflow', () => {
         expect(payload).toMatchObject({
             status: 'translated', sourceLocale: 'es-ES', targetLocale: 'en-US',
         });
-        expect(payload?.interpretedComment).toContain('@vypbot inspect @\u200boctocat');
-        expect(payload?.publication?.translatedText).toContain('inspect @\u200boctocat');
+        expect(payload?.interpretedComment).toContain('@vypbot inspect this request');
+        expect(payload?.publication?.translatedText).toContain('inspect this request');
         expect(payload?.publication?.originalText).toContain('<script>');
         expect(payload?.publication).toMatchObject({ sourceLocale: 'es-ES', targetLocale: 'en-US' });
     });
@@ -54,7 +54,7 @@ describe('CommentLanguageTranslationWorkflow', () => {
     it('preserves a deterministic command while adapting only its arguments', async () => {
         const query = jest.fn().mockResolvedValue({
             status: 'translated', sourceLocale: 'es', targetLocale: 'en-US',
-            adaptedText: 'why src/cache.ts fails', reasonCode: 'none',
+            adaptedText: 'why COPILOT_OPERAND_0_TOKEN fails', reasonCode: 'none',
         });
         const workflow = new CommentLanguageTranslationWorkflow({ query });
         const results = await workflow.invoke({
@@ -64,7 +64,52 @@ describe('CommentLanguageTranslationWorkflow', () => {
 
         const payload = getCommentLanguageAdaptationPayload(results[0]);
         expect(payload?.interpretedComment).toBe('/copilot explain why src/cache.ts fails');
-        expect(query.mock.calls[0][0].prompt).toContain('por qué falla src/cache.ts');
+        expect(payload?.publication?.translatedText).toBe('why src/cache.ts fails');
+        expect(query.mock.calls[0][0].prompt).toContain('por qué falla COPILOT_OPERAND_0_TOKEN');
+        expect(query.mock.calls[0][0].prompt).not.toContain('src/cache.ts');
+    });
+
+    it('keeps bare files, refs, and issue references out of the language-provider prompt', async () => {
+        const query = jest.fn().mockResolvedValue({
+            status: 'translated', sourceLocale: 'es', targetLocale: 'en-US',
+            adaptedText: 'fix COPILOT_OPERAND_0_TOKEN on COPILOT_OPERAND_1_TOKEN for COPILOT_OPERAND_2_TOKEN',
+            reasonCode: 'none',
+        });
+        const results = await new CommentLanguageTranslationWorkflow({ query }).invoke({
+            ...context,
+            commentBody: '/copilot fix corrige README.md en main para #123',
+        });
+
+        expect(getCommentLanguageAdaptationPayload(results[0])?.interpretedComment)
+            .toBe('/copilot fix fix README.md on main for #123');
+        const prompt = query.mock.calls[0][0].prompt as string;
+        expect(prompt).toContain('corrige COPILOT_OPERAND_0_TOKEN en COPILOT_OPERAND_1_TOKEN para COPILOT_OPERAND_2_TOKEN');
+        expect(prompt).not.toContain('README.md');
+        expect(prompt).not.toContain('#123');
+    });
+
+    it.each([
+        'why src/other.ts fails',
+        'why COPILOT_OPERAND_0_TOKEN --force fails',
+        'why COPILOT_OPERAND_0_TOKEN COPILOT_OPERAND_0_TOKEN fails',
+        'why COPILOT_OPERAND_9_TOKEN fails',
+        'why COPILOT_OPERAND_0_TOKENx fails',
+        'why COPILOT_OPERAND_0_TOKEN.tsx fails',
+        'why COPILOT_OPERAND_0_TOKEN fails in README.md',
+        'why COPILOT_OPERAND_0_TOKEN fails in main',
+        'why COPILOT_OPERAND_0_TOKEN fails in #999',
+    ])('fails closed when translated output changes a protected operand: %s', async (adaptedText) => {
+        const query = jest.fn().mockResolvedValue({
+            status: 'translated', sourceLocale: 'es', targetLocale: 'en-US', adaptedText, reasonCode: 'none',
+        });
+        const results = await new CommentLanguageTranslationWorkflow({ query }).invoke({
+            ...context,
+            commentBody: '/copilot explain por qué falla src/cache.ts',
+        });
+
+        expect(results[0]).toMatchObject({ success: false, executed: true });
+        expect(results[0].errors[0]).toMatchObject({ code: 'locale.translation-failed' });
+        expect(getCommentLanguageAdaptationPayload(results[0])?.status).toBe('failed');
     });
 
     it('uses the original request when the source language matches', async () => {

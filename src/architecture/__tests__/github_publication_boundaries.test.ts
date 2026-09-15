@@ -143,6 +143,31 @@ describe('GitHub conversation publication boundaries', () => {
     expect(presentation).not.toMatch(/error\.message/u);
   });
 
+  it('keeps local human output semantic instead of replaying result steps or reminder prose', () => {
+    const localOutput = readFileSync(join(root, 'src/actions/local_action_output.ts'), 'utf8');
+
+    expect(localOutput).not.toMatch(/result\.steps|steps\.join/u);
+    expect(localOutput).not.toMatch(/result\.reminders\.join|reminders\.join/u);
+    expect(localOutput).toContain('catalog.cli.statusValue');
+    expect(localOutput).toContain('renderApplicationErrorText');
+  });
+
+  it('publishes explicit failures through the semantic reply policy only', () => {
+    const presentation = readFileSync(
+      join(root, 'src/application/policies/semantic_result_publication_policy.ts'),
+      'utf8',
+    );
+    const workflow = readFileSync(
+      join(root, 'src/application/usecases/steps/common/publish_resume_workflow.ts'),
+      'utf8',
+    );
+
+    expect(presentation).toContain("context.correlationId.startsWith('comment:')");
+    expect(presentation).toContain("'application-error'");
+    expect(presentation).not.toMatch(/error\.message/u);
+    expect(workflow).not.toMatch(/result\.errors[\s\S]{0,200}(?:addComment|updateComment)/u);
+  });
+
   it('keeps Bugbot public presentation free of pseudo-plural copy', () => {
     const files = [
       'src/application/policies/bugbot_message_catalog.ts',

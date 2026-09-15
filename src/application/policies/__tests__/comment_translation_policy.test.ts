@@ -4,6 +4,7 @@ import {
     prepareLanguageAdaptationInput,
     rebuildAdaptedComment,
     renderTranslationContext,
+    restoreLanguageAdaptationOutput,
     TRANSLATED_COMMENT_MARKER,
 } from '../comment_translation_policy';
 import {
@@ -63,8 +64,121 @@ describe('comment translation policy', () => {
         expect(rebuildAdaptedComment(plain, ' translated ')).toBe('translated');
         expect(rebuildAdaptedComment(mention, '')).toBe('@vypbot');
         expect(rebuildAdaptedComment(mention, 'translated')).toBe('@vypbot translated');
+        expect(rebuildAdaptedComment({ kind: 'mention', prose: 'plain' }, 'translated')).toBe('translated');
         expect(rebuildAdaptedComment(command, '')).toBe('/copilot explain');
         expect(rebuildAdaptedComment(command, 'translated')).toBe('/copilot explain translated');
+    });
+
+    it('protects technical operands from translation and restores them only after exact validation', () => {
+        const input = prepareLanguageAdaptationInput(
+            '/copilot explain por qué falla `src/cache.ts` en feature/cache --verbose https://example.com/log a1b2c3d',
+            'vypbot',
+        );
+
+        expect(input.prose).toBe(
+            'por qué falla COPILOT_OPERAND_0_TOKEN en COPILOT_OPERAND_1_TOKEN COPILOT_OPERAND_2_TOKEN COPILOT_OPERAND_3_TOKEN COPILOT_OPERAND_4_TOKEN',
+        );
+        expect(input.protectedOperands?.map(operand => operand.value)).toEqual([
+            '`src/cache.ts`', 'feature/cache', '--verbose', 'https://example.com/log', 'a1b2c3d',
+        ]);
+        expect(Object.isFrozen(input.protectedOperands)).toBe(true);
+        expect(input.protectedOperands?.every(Object.isFrozen)).toBe(true);
+
+        const translated = 'why COPILOT_OPERAND_0_TOKEN fails on COPILOT_OPERAND_1_TOKEN COPILOT_OPERAND_2_TOKEN COPILOT_OPERAND_3_TOKEN COPILOT_OPERAND_4_TOKEN';
+        expect(restoreLanguageAdaptationOutput(input, translated)).toBe(
+            'why `src/cache.ts` fails on feature/cache --verbose https://example.com/log a1b2c3d',
+        );
+        expect(restoreLanguageAdaptationOutput(input, [
+            'COPILOT_OPERAND_0_TOKEN works on',
+            'COPILOT_OPERAND_1_TOKEN COPILOT_OPERAND_2_TOKEN',
+            'COPILOT_OPERAND_3_TOKEN COPILOT_OPERAND_4_TOKEN',
+        ].join(' '))).toContain('`src/cache.ts` works on feature/cache');
+        expect(rebuildAdaptedComment(input, translated)).toContain(
+            '/copilot explain why `src/cache.ts` fails on feature/cache --verbose',
+        );
+    });
+
+    it.each([
+        ['/copilot fix README.md', ['README.md']],
+        ['/copilot explain package.json', ['package.json']],
+        ['/copilot diagnose .github', ['.github']],
+        ['/copilot fix Dockerfile', ['Dockerfile']],
+        ['/copilot explain failure in #123 and GH-456', ['#123', 'GH-456']],
+        ['/copilot diagnose main at HEAD~2 for v1.2.3-rc.1', ['main', 'HEAD~2', 'v1.2.3-rc.1']],
+    ])('protects bare repository operands in adaptable command prose: %s', (comment, expected) => {
+        const input = prepareLanguageAdaptationInput(comment, 'vypbot');
+
+        expect(input.protectedOperands?.map(operand => operand.value)).toEqual(expected);
+        expect(restoreLanguageAdaptationOutput(input, input.prose)).toBe(
+            comment.replace(/^\/copilot\s+\S+\s*/u, ''),
+        );
+    });
+
+    it('protects every argument of commands whose grammar does not accept adaptable prose', () => {
+        const input = prepareLanguageAdaptationInput('/copilot sync-branch --from main', 'vypbot');
+
+        expect(input).toMatchObject({
+            kind: 'command',
+            commandName: 'sync-branch',
+            prose: 'COPILOT_OPERAND_0_TOKEN COPILOT_OPERAND_1_TOKEN',
+            protectedOperands: [
+                { placeholder: 'COPILOT_OPERAND_0_TOKEN', value: '--from' },
+                { placeholder: 'COPILOT_OPERAND_1_TOKEN', value: 'main' },
+            ],
+        });
+        expect(rebuildAdaptedComment(input, input.prose)).toBe('/copilot sync-branch --from main');
+
+        const arbitraryIdentifier = prepareLanguageAdaptationInput('/copilot dismiss finding-one', 'vypbot');
+        expect(rebuildAdaptedComment(arbitraryIdentifier, arbitraryIdentifier.prose))
+            .toBe('/copilot dismiss finding-one');
+    });
+
+    it.each([
+        'translated without the required placeholder',
+        'translated COPILOT_OPERAND_0_TOKEN COPILOT_OPERAND_0_TOKEN',
+        'translated COPILOT_OPERAND_9_TOKEN',
+        'translated COPILOT_OPERAND_0_TOKEN COPILOT_OPERAND_9_TOKEN',
+        'translated COPILOT_OPERAND_0_TOKEN --force',
+        'translated COPILOT_OPERAND_0_TOKEN src/other.ts',
+        'translated COPILOT_OPERAND_0_TOKEN https://attacker.example',
+        'translated COPILOT_OPERAND_0_TOKEN "different literal"',
+        'translated COPILOT_OPERAND_0_TOKEN README.md',
+        'translated COPILOT_OPERAND_0_TOKEN #999',
+        'translated COPILOT_OPERAND_0_TOKEN main',
+        'translated COPILOT_OPERAND_0_TOKENx',
+        'translated xCOPILOT_OPERAND_0_TOKEN',
+        'translated COPILOT_OPERAND_0_TOKEN.tsx',
+        'translated COPILOT_OPERAND_0_TOKEN?ref=main',
+    ])('rejects missing, duplicated, unknown, or generated technical operands: %s', (translated) => {
+        const input = prepareLanguageAdaptationInput('/copilot explain src/cache.ts', 'vypbot');
+
+        expect(restoreLanguageAdaptationOutput(input, translated)).toBeUndefined();
+        expect(rebuildAdaptedComment(input, translated)).toBeUndefined();
+    });
+
+    it('rejects an operand placeholder invented for prose that had no protected values', () => {
+        const input = prepareLanguageAdaptationInput('@vypbot explica esto', 'vypbot');
+
+        expect(restoreLanguageAdaptationOutput(input, 'explain COPILOT_OPERAND_0_TOKEN')).toBeUndefined();
+    });
+
+    it('rejects reordered operands and malformed trusted adaptation input', () => {
+        const reordered = prepareLanguageAdaptationInput('/copilot explain src/a.ts src/b.ts', 'vypbot');
+        expect(restoreLanguageAdaptationOutput(
+            reordered,
+            'COPILOT_OPERAND_1_TOKEN COPILOT_OPERAND_0_TOKEN',
+        )).toBeUndefined();
+        expect(restoreLanguageAdaptationOutput({
+            kind: 'plain',
+            prose: 'COPILOT_OPERAND_0_TOKEN',
+            protectedOperands: [{ placeholder: 'COPILOT_OPERAND_0_TOKEN', value: 'not-an-operand' }],
+        }, 'COPILOT_OPERAND_0_TOKEN')).toBeUndefined();
+        expect(restoreLanguageAdaptationOutput({
+            kind: 'command',
+            commandName: 'dismiss',
+            prose: 'COPILOT_OPERAND_0_TOKEN',
+            protectedOperands: [{ placeholder: 'COPILOT_OPERAND_0_TOKEN', value: 'prefix/ref:suffix' }],
+        }, 'COPILOT_OPERAND_0_TOKEN')).toBeUndefined();
     });
 
     it('rejects text that becomes empty after unsafe format controls are removed', () => {

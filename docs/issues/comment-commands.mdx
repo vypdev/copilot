@@ -92,6 +92,23 @@ own timeline comment. English is used when no locale is configured; any valid
 configured BCP-47 locale uses its complete resolved catalog or an atomic English
 fallback.
 
+Before the language provider receives an addressed request, Copilot replaces
+code spans, paths (including bare names such as `README.md`), recognizable Git
+refs and versions, issue or PR references, URLs, quoted literals, option flags,
+and commit IDs with opaque operands. Commands whose grammar has no translatable
+prose protect every argument, including an arbitrary value passed to `--from`.
+The provider must return every operand exactly once. Copilot restores them only
+after validating that none was removed, duplicated, reordered, changed, or
+introduced, so a translation cannot turn `src/cache.ts` into another path or add
+`--force`. A failed validation performs no requested repository change.
+
+An explicit command or mention that fails receives one correlated semantic
+error reply with impact, recovery action, retained state, stable error code,
+retryability, and reference. It never exposes parser, provider, or exception
+text. Background failures remain in the Check and Job Summary instead of
+creating timeline noise. If the request itself could not be translated safely,
+that reply uses the complete English fallback so it cannot mix languages.
+
 ## Authorization and safety
 
 - Read-only commands and answers can be requested by any participant who can comment.

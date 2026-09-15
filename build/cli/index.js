@@ -38592,19 +38592,37 @@ const publication_message_catalog_1 = __nccwpck_require__(34223);
 const logger_1 = __nccwpck_require__(91151);
 function renderLocalActionResults(results, catalog = publication_message_catalog_1.ENGLISH_PUBLICATION_CATALOG) {
     let content = '';
+    const failed = results.filter(result => result.errors.length > 0 || !result.success).length;
+    const completed = results.filter(result => result.executed
+        && result.errors.length === 0
+        && result.success).length;
+    const skipped = results.filter(result => !result.executed
+        && result.errors.length === 0
+        && result.success).length;
+    const operatorReminders = results.reduce((total, result) => total + result.reminders.length, 0);
     const answersContent = results
-        .filter(result => result.executed)
+        .filter(result => result.executed && result.errors.length === 0 && result.success)
         .map(result => directAnswer(result.payload))
         .filter((answer) => Boolean(answer))
         .map(answer => chalk_1.default.gray(answer)).join('\n\n');
     if (answersContent.length > 0) {
         content += '\n' + chalk_1.default.cyan(`${catalog.cli.answer}:`) + '\n' + answersContent;
     }
-    const stepsContent = results
-        .filter(result => result.executed && result.steps.length > 0)
-        .map(result => chalk_1.default.gray(result.steps.join('\n'))).join('\n');
-    if (stepsContent.length > 0) {
-        content += '\n' + chalk_1.default.cyan(`${catalog.cli.steps}:`) + '\n' + stepsContent;
+    if (answersContent.length === 0 || failed > 0 || skipped > 0 || operatorReminders > 0) {
+        const status = failed > 0
+            ? completed > 0 ? 'partial' : 'failed'
+            : completed > 0 ? 'succeeded' : 'no-changes';
+        const number = new Intl.NumberFormat(catalog.locale);
+        const rows = [
+            `${catalog.cli.status}: ${catalog.cli.statusValue[status]}`,
+            ...(completed > 0 ? [`${catalog.cli.completed}: ${number.format(completed)}`] : []),
+            ...(skipped > 0 ? [`${catalog.cli.skipped}: ${number.format(skipped)}`] : []),
+            ...(failed > 0 ? [`${catalog.cli.failed}: ${number.format(failed)}`] : []),
+            ...(operatorReminders > 0
+                ? [`${catalog.cli.operatorReminders}: ${number.format(operatorReminders)}`]
+                : []),
+        ];
+        content += '\n' + chalk_1.default.cyan(`${catalog.cli.outcome}:`) + '\n' + chalk_1.default.gray(rows.join('\n'));
     }
     const errorsContent = results
         .filter(result => result.errors.length > 0)
@@ -38613,12 +38631,6 @@ function renderLocalActionResults(results, catalog = publication_message_catalog
         .join('\n\n'))).join('\n');
     if (errorsContent.length > 0) {
         content += '\n' + chalk_1.default.red(`${catalog.cli.errors}:`) + '\n' + errorsContent;
-    }
-    const reminderContent = results
-        .filter(result => result.executed && result.reminders.length > 0)
-        .map(result => chalk_1.default.gray(result.reminders.join('\n'))).join('\n');
-    if (reminderContent.length > 0) {
-        content += '\n' + chalk_1.default.cyan(`${catalog.cli.reminder}:`) + '\n' + reminderContent;
     }
     (0, logger_1.logInfo)('\n');
     (0, logger_1.logInfo)((0, boxen_1.default)(content, {
@@ -40483,6 +40495,7 @@ exports.readEnglishApplicationErrorMessage = readEnglishApplicationErrorMessage;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildApplicationErrorPresentation = buildApplicationErrorPresentation;
 exports.renderApplicationErrorText = renderApplicationErrorText;
+exports.renderApplicationErrorMarkdown = renderApplicationErrorMarkdown;
 const application_error_message_catalog_1 = __nccwpck_require__(64809);
 /** Shared semantic view model for terminal, GitHub, and API presentation. */
 function buildApplicationErrorPresentation(error, message = application_error_message_catalog_1.readEnglishApplicationErrorMessage) {
@@ -40508,6 +40521,23 @@ function renderApplicationErrorText(error, message = application_error_message_c
         `${message('error.label.retainedState')}: ${view.retainedState}`,
         `${message('error.label.retryable')}: ${view.retryable}`,
         `${message('error.label.reference')}: ${view.reference}`,
+    ].join('\n');
+}
+/** Renders the same safe semantic failure as compact GitHub Markdown. */
+function renderApplicationErrorMarkdown(error, message = application_error_message_catalog_1.readEnglishApplicationErrorMessage) {
+    const view = buildApplicationErrorPresentation(error, message);
+    return [
+        `> **${message('error.label.impact')}:** ${view.impact}`,
+        '',
+        `**${message('error.label.action')}:** ${view.action}`,
+        '',
+        `**${message('error.label.retainedState')}:** ${view.retainedState}`,
+        '',
+        `**${message('error.label.errorCode')}:** \`${view.code}\``,
+        '',
+        `**${message('error.label.retryable')}:** ${view.retryable}`,
+        '',
+        `**${message('error.label.reference')}:** \`${view.reference}\``,
     ].join('\n');
 }
 
@@ -42147,6 +42177,7 @@ function hasBugbotTelemetryField(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TRANSLATED_COMMENT_MARKER = exports.LEGACY_TRANSLATED_COMMENT_MARKER = void 0;
 exports.prepareLanguageAdaptationInput = prepareLanguageAdaptationInput;
+exports.restoreLanguageAdaptationOutput = restoreLanguageAdaptationOutput;
 exports.rebuildAdaptedComment = rebuildAdaptedComment;
 exports.hasTranslatedCommentMarker = hasTranslatedCommentMarker;
 exports.composeTranslatedComment = composeTranslatedComment;
@@ -42160,27 +42191,81 @@ exports.LEGACY_TRANSLATED_COMMENT_MARKER = '<!-- copilot:translated-comment:v2 -
 exports.TRANSLATED_COMMENT_MARKER = '<!-- copilot:request-translation schema="3"';
 const MAX_TRANSLATED_COMMENT_LENGTH = untrusted_content_1.DEFAULT_UNTRUSTED_CONTENT_LIMIT;
 const MAX_ESCAPED_ORIGINAL_LENGTH = 40000;
+const TECHNICAL_OPERAND_PATTERNS = Object.freeze([
+    /`[^`\r\n]+`/u.source,
+    /https?:\/\/[^\s<>()]+/u.source,
+    /"(?:\\.|[^"\\\r\n])+"/u.source,
+    /'(?:\\.|[^'\\\r\n])+'/u.source,
+    /(?<![\p{L}\p{N}_])--?[A-Za-z0-9][A-Za-z0-9-]*(?:=[^\s]+)?/u.source,
+    /(?<![\p{L}\p{N}_<])(?:\.{0,2}\/|[A-Za-z0-9_.-]+\/)[A-Za-z0-9_./-]+/u.source,
+    /(?<![\p{L}\p{N}_./-])(?:\.[A-Za-z0-9][A-Za-z0-9_.-]*|[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+|Dockerfile|Makefile|Gemfile|Procfile)(?![\p{L}\p{N}_./-])/u.source,
+    /(?<![\p{L}\p{N}_#-])(?:#\d+|GH-\d+)(?![\p{L}\p{N}_-])/u.source,
+    /(?<![\p{L}\p{N}_-])(?:HEAD(?:[~^]\d*)?|main|master|develop|development|trunk)(?![\p{L}\p{N}_-])/u.source,
+    /(?<![\p{L}\p{N}_])v?\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?(?![\p{L}\p{N}_.-])/u.source,
+    /(?<![0-9A-Fa-f])[0-9A-Fa-f]{7,64}(?![0-9A-Fa-f])/u.source,
+]);
+const PROTECTED_OPERAND_PATTERN = technicalOperandPattern();
+const GENERATED_OPERAND_PATTERN = technicalOperandPattern();
+const OPERAND_PLACEHOLDER_PATTERN = /COPILOT_OPERAND_\d+_TOKEN/gu;
+const OPERAND_ADJACENCY_PATTERN = /[\p{L}\p{N}_./:@#%+?=&-]/u;
 function prepareLanguageAdaptationInput(commentBody, trustedBotLogin) {
     const parsed = (0, copilot_command_1.parseCopilotCommand)(commentBody);
     if (parsed.kind === 'command') {
-        return Object.freeze({
+        return languageAdaptationInput({
             kind: 'command',
             prose: parsed.command.arguments.join(' ').trim(),
             commandName: parsed.command.name,
-        });
+        }, !(0, copilot_command_1.copilotCommandAcceptsAdaptableProse)(parsed.command.name));
     }
     if (trustedBotLogin.trim()) {
         const normalizedBotLogin = trustedBotLogin.trim().replace(/^@/u, '');
-        return Object.freeze({
+        return languageAdaptationInput({
             kind: 'mention',
             prose: (0, think_input_policy_1.extractMentionQuestion)(commentBody, normalizedBotLogin),
             trustedBotLogin: normalizedBotLogin,
         });
     }
-    return Object.freeze({ kind: 'plain', prose: commentBody.trim() });
+    return languageAdaptationInput({ kind: 'plain', prose: commentBody.trim() });
+}
+function restoreLanguageAdaptationOutput(input, adaptedText) {
+    const operands = input.protectedOperands ?? [];
+    const commandProtectsEveryToken = input.kind === 'command'
+        && input.commandName !== undefined
+        && !(0, copilot_command_1.copilotCommandAcceptsAdaptableProse)(input.commandName);
+    if (operands.some((operand, index) => (operand.placeholder !== `COPILOT_OPERAND_${index}_TOKEN`
+        || !operand.value
+        || (!commandProtectsEveryToken && !isTechnicalOperand(operand.value)))))
+        return undefined;
+    if (matches(OPERAND_PLACEHOLDER_PATTERN, adaptedText)
+        && operands.length === 0)
+        return undefined;
+    if (matches(GENERATED_OPERAND_PATTERN, adaptedText))
+        return undefined;
+    let restored = adaptedText;
+    let previousPlaceholderIndex = -1;
+    for (const operand of operands) {
+        const placeholderIndex = exactPlaceholderIndex(restored, operand.placeholder);
+        if (placeholderIndex === undefined || placeholderIndex <= previousPlaceholderIndex)
+            return undefined;
+        previousPlaceholderIndex = placeholderIndex;
+        restored = restored.replace(operand.placeholder, operand.value);
+    }
+    if (matches(OPERAND_PLACEHOLDER_PATTERN, restored))
+        return undefined;
+    const restoredOperands = matchingValues(PROTECTED_OPERAND_PATTERN, restored);
+    const expectedTechnicalOperands = operands
+        .map(operand => operand.value)
+        .filter(isTechnicalOperand);
+    if (restoredOperands.length !== expectedTechnicalOperands.length
+        || restoredOperands.some((value, index) => value !== expectedTechnicalOperands[index]))
+        return undefined;
+    return restored;
 }
 function rebuildAdaptedComment(input, adaptedText) {
-    const safeText = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(adaptedText, MAX_TRANSLATED_COMMENT_LENGTH).trim();
+    const restored = restoreLanguageAdaptationOutput(input, adaptedText);
+    if (restored === undefined)
+        return undefined;
+    const safeText = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(restored, MAX_TRANSLATED_COMMENT_LENGTH).trim();
     if (input.kind === 'command' && input.commandName) {
         return `/copilot ${input.commandName}${safeText ? ` ${safeText}` : ''}`;
     }
@@ -42188,6 +42273,52 @@ function rebuildAdaptedComment(input, adaptedText) {
         return `@${input.trustedBotLogin}${safeText ? ` ${safeText}` : ''}`;
     }
     return safeText;
+}
+function languageAdaptationInput(input, protectEveryToken = false) {
+    const operands = [];
+    const pattern = protectEveryToken ? /\S+/gu : PROTECTED_OPERAND_PATTERN;
+    const prose = input.prose.replace(pattern, value => {
+        const placeholder = `COPILOT_OPERAND_${operands.length}_TOKEN`;
+        operands.push(Object.freeze({ placeholder, value }));
+        return placeholder;
+    });
+    pattern.lastIndex = 0;
+    return Object.freeze({
+        ...input,
+        prose,
+        ...(operands.length > 0 ? { protectedOperands: Object.freeze(operands) } : {}),
+    });
+}
+function matches(pattern, value) {
+    pattern.lastIndex = 0;
+    const matched = pattern.test(value);
+    pattern.lastIndex = 0;
+    return matched;
+}
+function exactPlaceholderIndex(value, placeholder) {
+    const index = value.indexOf(placeholder);
+    if (index < 0 || index !== value.lastIndexOf(placeholder))
+        return undefined;
+    const before = index > 0 ? value[index - 1] : '';
+    const afterIndex = index + placeholder.length;
+    const after = afterIndex < value.length ? value[afterIndex] : '';
+    return !OPERAND_ADJACENCY_PATTERN.test(before) && !OPERAND_ADJACENCY_PATTERN.test(after)
+        ? index
+        : undefined;
+}
+function matchingValues(pattern, value) {
+    pattern.lastIndex = 0;
+    const values = [...value.matchAll(pattern)].map(match => match[0]);
+    pattern.lastIndex = 0;
+    return values;
+}
+function isTechnicalOperand(value) {
+    const pattern = technicalOperandPattern(true);
+    return pattern.test(value);
+}
+function technicalOperandPattern(anchored = false) {
+    const source = TECHNICAL_OPERAND_PATTERNS.join('|');
+    return new RegExp(anchored ? `^(?:${source})$` : source, anchored ? 'u' : 'gu');
 }
 function hasTranslatedCommentMarker(body) {
     return typeof body === 'string'
@@ -44012,6 +44143,7 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.translation.summary',
     'interaction.translation.interpretedRequest',
     'interaction.translation.originalRequest',
+    'interaction.error.heading',
     'interaction.status.heading',
     'interaction.status.repository',
     'interaction.status.target',
@@ -44030,9 +44162,17 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.status.findingsInvalid',
     'interaction.status.findingCounts',
     'cli.answer',
-    'cli.steps',
+    'cli.outcome',
+    'cli.status',
+    'cli.status.succeeded',
+    'cli.status.partial',
+    'cli.status.failed',
+    'cli.status.noChanges',
+    'cli.completed',
+    'cli.skipped',
+    'cli.failed',
+    'cli.operatorReminders',
     'cli.errors',
-    'cli.reminder',
 ]);
 exports.PUBLICATION_MESSAGE_IDS = Object.freeze([
     ...PUBLICATION_SURFACE_MESSAGE_IDS,
@@ -44087,6 +44227,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.translation.summary': 'Request interpreted from {sourceLanguage}',
     'interaction.translation.interpretedRequest': 'Interpreted request',
     'interaction.translation.originalRequest': 'Original request',
+    'interaction.error.heading': 'Request could not be completed',
     'interaction.status.heading': 'Copilot status',
     'interaction.status.repository': 'Repository',
     'interaction.status.target': 'Target',
@@ -44105,9 +44246,17 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.status.findingsInvalid': 'invalid evidence; inspect the workflow result.',
     'interaction.status.findingCounts': '{open} open, {reopened} reopened, {verificationRequired} verification required, {unknown} unknown, {resolved} resolved',
     'cli.answer': 'Answer',
-    'cli.steps': 'Steps',
+    'cli.outcome': 'Outcome',
+    'cli.status': 'Status',
+    'cli.status.succeeded': 'Succeeded',
+    'cli.status.partial': 'Partially completed',
+    'cli.status.failed': 'Failed',
+    'cli.status.noChanges': 'No changes',
+    'cli.completed': 'Completed operations',
+    'cli.skipped': 'Skipped operations',
+    'cli.failed': 'Failed operations',
+    'cli.operatorReminders': 'Operator reminders recorded',
     'cli.errors': 'Errors',
-    'cli.reminder': 'Reminder',
     ...application_error_message_catalog_1.ENGLISH_APPLICATION_ERROR_MESSAGES,
 });
 const SPANISH_MESSAGES = Object.freeze({
@@ -44159,6 +44308,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.translation.summary': 'Solicitud interpretada desde {sourceLanguage}',
     'interaction.translation.interpretedRequest': 'Solicitud interpretada',
     'interaction.translation.originalRequest': 'Solicitud original',
+    'interaction.error.heading': 'No se pudo completar la solicitud',
     'interaction.status.heading': 'Estado de Copilot',
     'interaction.status.repository': 'Repositorio',
     'interaction.status.target': 'Destino',
@@ -44177,9 +44327,17 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.status.findingsInvalid': 'evidencia no válida; revisa el resultado del workflow.',
     'interaction.status.findingCounts': '{open} abiertos, {reopened} reabiertos, {verificationRequired} requieren verificación, {unknown} desconocidos, {resolved} resueltos',
     'cli.answer': 'Respuesta',
-    'cli.steps': 'Pasos',
+    'cli.outcome': 'Resultado',
+    'cli.status': 'Estado',
+    'cli.status.succeeded': 'Completado',
+    'cli.status.partial': 'Completado parcialmente',
+    'cli.status.failed': 'Fallido',
+    'cli.status.noChanges': 'Sin cambios',
+    'cli.completed': 'Operaciones completadas',
+    'cli.skipped': 'Operaciones omitidas',
+    'cli.failed': 'Operaciones fallidas',
+    'cli.operatorReminders': 'Recordatorios de operación registrados',
     'cli.errors': 'Errores',
-    'cli.reminder': 'Recordatorio',
     ...application_error_message_catalog_1.SPANISH_APPLICATION_ERROR_MESSAGES,
 });
 exports.ENGLISH_PUBLICATION_DEFINITION = Object.freeze({
@@ -44265,9 +44423,19 @@ function toPublicationCatalog(resolved) {
         }),
         cli: Object.freeze({
             answer: message('cli.answer'),
-            steps: message('cli.steps'),
+            outcome: message('cli.outcome'),
+            status: message('cli.status'),
+            statusValue: Object.freeze({
+                succeeded: message('cli.status.succeeded'),
+                partial: message('cli.status.partial'),
+                failed: message('cli.status.failed'),
+                'no-changes': message('cli.status.noChanges'),
+            }),
+            completed: message('cli.completed'),
+            skipped: message('cli.skipped'),
+            failed: message('cli.failed'),
+            operatorReminders: message('cli.operatorReminders'),
             errors: message('cli.errors'),
-            reminder: message('cli.reminder'),
         }),
         render: message,
     });
@@ -44654,6 +44822,7 @@ const publication_message_catalog_1 = __nccwpck_require__(34223);
 const copilot_interaction_policy_1 = __nccwpck_require__(90108);
 const status_command_policy_1 = __nccwpck_require__(3449);
 const comment_translation_policy_1 = __nccwpck_require__(27150);
+const application_error_presentation_policy_1 = __nccwpck_require__(95067);
 function selectSemanticStatusIntents(context) {
     return Object.freeze(context.results.flatMap(result => {
         if (!result.executed || !result.success)
@@ -44701,7 +44870,7 @@ function selectSemanticReplyIntents(context) {
     if (!context.target || !positiveInteger(context.target.number) || !context.correlationId?.trim())
         return [];
     const correlationId = safeMarkerToken(context.correlationId);
-    return Object.freeze(context.results.flatMap(result => {
+    const replies = context.results.flatMap(result => {
         if (!result.executed || !result.success)
             return [];
         const payload = (0, result_1.getResultPayload)(result.payload);
@@ -44731,7 +44900,24 @@ function selectSemanticReplyIntents(context) {
             return [replyIntent(context, correlationId, 'copilot-status', projection)];
         }
         return [];
-    }));
+    });
+    if (replies.length > 0)
+        return Object.freeze([replies[0]]);
+    if (!context.correlationId.startsWith('comment:'))
+        return Object.freeze([]);
+    const error = context.results.flatMap(result => result.errors).at(0);
+    if (!error)
+        return Object.freeze([]);
+    const projection = Object.freeze({
+        kind: 'application-error',
+        error: Object.freeze({
+            code: error.code,
+            retryable: error.retryable,
+            correlationId: error.correlationId,
+            ...(error.recovery ? { recovery: error.recovery } : {}),
+        }),
+    });
+    return Object.freeze([replyIntent(context, correlationId, 'application-error', projection)]);
 }
 function renderSemanticReply(intent, catalog = (0, publication_message_catalog_1.resolveStaticPublicationCatalog)(intent.locale).catalog) {
     const marker = (0, publication_identity_policy_1.buildPublicationReplyMarker)({
@@ -44740,16 +44926,31 @@ function renderSemanticReply(intent, catalog = (0, publication_message_catalog_1
         messageKey: intent.messageKey,
         digest: intent.digest,
     });
-    const body = intent.projection.kind === 'direct-answer'
-        ? renderDirectAnswer(intent.projection, catalog)
-        : intent.projection.kind === 'help'
-            ? (0, copilot_interaction_policy_1.buildCopilotHelpMessage)(intent.projection.botLogin, intent.locale, catalog)
-            : intent.projection.kind === 'welcome'
-                ? (0, copilot_interaction_policy_1.buildCopilotWelcomeMessage)(intent.projection.botLogin, intent.locale, catalog)
-                : intent.projection.kind === 'access-policy'
-                    ? renderAccessPolicyReply(catalog)
-                    : (0, status_command_policy_1.formatCopilotStatus)(intent.projection.snapshot, intent.locale, catalog);
+    const body = renderReplyBody(intent, catalog);
     return `${marker}\n\n${body}`;
+}
+function renderReplyBody(intent, catalog) {
+    if (intent.projection.kind === 'direct-answer')
+        return renderDirectAnswer(intent.projection, catalog);
+    if (intent.projection.kind === 'help') {
+        return (0, copilot_interaction_policy_1.buildCopilotHelpMessage)(intent.projection.botLogin, intent.locale, catalog);
+    }
+    if (intent.projection.kind === 'welcome') {
+        return (0, copilot_interaction_policy_1.buildCopilotWelcomeMessage)(intent.projection.botLogin, intent.locale, catalog);
+    }
+    if (intent.projection.kind === 'access-policy')
+        return renderAccessPolicyReply(catalog);
+    if (intent.projection.kind === 'application-error') {
+        const messages = intent.projection.error.code === 'locale.translation-failed'
+            ? publication_message_catalog_1.ENGLISH_PUBLICATION_CATALOG
+            : catalog;
+        return [
+            `## ${messages.render('interaction.error.heading')}`,
+            '',
+            (0, application_error_presentation_policy_1.renderApplicationErrorMarkdown)(intent.projection.error, messages.render),
+        ].join('\n');
+    }
+    return (0, status_command_policy_1.formatCopilotStatus)(intent.projection.snapshot, intent.locale, catalog);
 }
 function renderDirectAnswer(projection, catalog) {
     const answer = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(projection.answer).trim();
@@ -50425,9 +50626,6 @@ const branch_sync_command_1 = __nccwpck_require__(51114);
 const branch_sync_comment_command_1 = __nccwpck_require__(4643);
 const comment_automation_context_1 = __nccwpck_require__(37055);
 const comment_language_translation_workflow_1 = __nccwpck_require__(72770);
-const COMMANDS_WITH_ADAPTABLE_PROSE = new Set([
-    'plan', 'clarify', 'estimate', 'test-plan', 'explain', 'diagnose', 'fix', 'implement',
-]);
 async function runCommentAutomation(initialParam, options, actorAuthorizationPort) {
     (0, logging_ports_1.logInfo)(`${options.taskId} started.`);
     let languageResults = [];
@@ -50449,7 +50647,7 @@ async function runCommentAutomation(initialParam, options, actorAuthorizationPor
         }
         const commandHasAdaptableProse = command.kind === 'command'
             && command.command.arguments.length > 0
-            && COMMANDS_WITH_ADAPTABLE_PROSE.has(command.command.name);
+            && (0, copilot_command_1.copilotCommandAcceptsAdaptableProse)(command.command.name);
         if (command.kind === 'command' && !commandHasAdaptableProse) {
             const explicitResults = await (0, comment_automation_command_workflow_1.runExplicitCommentCommand)(param, options, command.command, actorAuthorizationPort);
             if (explicitResults)
@@ -57795,14 +57993,19 @@ class CommentLanguageTranslationWorkflow {
             }
             const adaptedText = this.stringProperty(response, 'adaptedText');
             const sourceLocale = this.optionalStringProperty(response, 'sourceLocale');
-            const publication = (0, comment_translation_policy_1.composeTranslatedComment)(adaptedText, context.commentBody, {
+            const restoredProse = (0, comment_translation_policy_1.restoreLanguageAdaptationOutput)(input, adaptedText);
+            const interpretedComment = (0, comment_translation_policy_1.rebuildAdaptedComment)(input, adaptedText);
+            if (restoredProse === undefined || interpretedComment === undefined) {
+                return [failedAdaptation(context, targetLocale, 'The language adapter changed or introduced a protected technical operand.')];
+            }
+            const publication = (0, comment_translation_policy_1.composeTranslatedComment)(restoredProse, context.commentBody, {
                 sourceLocale,
                 targetLocale,
             });
             if (!publication) {
                 return [failedAdaptation(context, targetLocale, 'The language adapter returned unsafe or empty text.')];
             }
-            return [adaptationResult(context, targetLocale, 'translated', (0, comment_translation_policy_1.rebuildAdaptedComment)(input, publication.translatedText), sourceLocale, reasonCode, publication)];
+            return [adaptationResult(context, targetLocale, 'translated', interpretedComment, sourceLocale, reasonCode, publication)];
         }
         catch (error) {
             (0, logging_ports_1.logInfo)('Language adaptation failed; the source comment was preserved and no requested mutation ran.');
@@ -72657,6 +72860,7 @@ function hasVisibleCommentContent(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.COPILOT_COMMAND_NAMES = void 0;
+exports.copilotCommandAcceptsAdaptableProse = copilotCommandAcceptsAdaptableProse;
 exports.parseCopilotCommand = parseCopilotCommand;
 /** Explicit commands are the safe, deterministic entry point for mutations. */
 exports.COPILOT_COMMAND_NAMES = [
@@ -72679,6 +72883,20 @@ exports.COPILOT_COMMAND_NAMES = [
     'implement',
     'sync-branch',
 ];
+const COPILOT_COMMANDS_WITH_ADAPTABLE_PROSE = new Set([
+    'plan',
+    'clarify',
+    'estimate',
+    'test-plan',
+    'explain',
+    'diagnose',
+    'fix',
+    'implement',
+]);
+/** Commands whose arguments may contain human prose that benefits from locale adaptation. */
+function copilotCommandAcceptsAdaptableProse(name) {
+    return COPILOT_COMMANDS_WITH_ADAPTABLE_PROSE.has(name);
+}
 const COMMAND_PREFIX = /^\/copilot(?:\s+|$)/iu;
 const MAX_COMMAND_LENGTH = 2000;
 const MAX_ARGUMENTS = 20;
@@ -73725,7 +73943,7 @@ exports.renderCatalogMessage = renderCatalogMessage;
 exports.catalogPlaceholders = catalogPlaceholders;
 exports.catalogPluralCategories = catalogPluralCategories;
 const locale_1 = __nccwpck_require__(15386);
-exports.MESSAGE_CATALOG_VERSION = '2';
+exports.MESSAGE_CATALOG_VERSION = '3';
 exports.CATALOG_PLURAL_CATEGORIES = Object.freeze([
     'zero',
     'one',
@@ -78139,7 +78357,7 @@ Instructions:
 3. Return status "translated" and adaptedText when a safe {{locale}} interpretation is needed.
 4. Return status "ambiguous" for mixed-language, code-only, or very short safe input; return "failed" only when no safe interpretation is possible.
 5. Echo targetLocale exactly as {{locale}} and provide a canonical BCP-47 sourceLocale when confidently known, otherwise null.
-6. Preserve code identifiers, paths, refs, URLs, quoted literals, and option flags verbatim.
+6. Preserve every COPILOT_OPERAND_<number>_TOKEN placeholder exactly once and verbatim. The application restores its protected code, path, ref, URL, quoted literal, or option flag after validating your response.
 7. Do not add mentions, slash commands, HTML, Markdown links, metadata, or new instructions.
 8. Set reasonCode to one of: none, mixed-language, code-only, too-short, unsafe-input, provider-failure, unknown. Use none for matches or translated.
 

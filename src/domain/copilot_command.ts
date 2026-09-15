@@ -22,6 +22,22 @@ export const COPILOT_COMMAND_NAMES = [
 
 export type CopilotCommandName = typeof COPILOT_COMMAND_NAMES[number];
 
+const COPILOT_COMMANDS_WITH_ADAPTABLE_PROSE: ReadonlySet<CopilotCommandName> = new Set([
+    'plan',
+    'clarify',
+    'estimate',
+    'test-plan',
+    'explain',
+    'diagnose',
+    'fix',
+    'implement',
+]);
+
+/** Commands whose arguments may contain human prose that benefits from locale adaptation. */
+export function copilotCommandAcceptsAdaptableProse(name: CopilotCommandName): boolean {
+    return COPILOT_COMMANDS_WITH_ADAPTABLE_PROSE.has(name);
+}
+
 export interface ParsedCopilotCommand {
     readonly name: CopilotCommandName;
     readonly arguments: readonly string[];

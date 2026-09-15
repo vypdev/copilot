@@ -354,6 +354,7 @@ describe("runCommentAutomation", () => {
 
   it.each([
     ['/copilot sync-branch --from release/3', 'release/3'],
+    ['/copilot sync-branch --from main', 'main'],
   ])('routes authorized branch synchronization directly: %s', async (userComment, parentOverride) => {
     const sync = { invoke: jest.fn().mockResolvedValue([successfulResult('sync')]) };
     const language = { invoke: jest.fn() };

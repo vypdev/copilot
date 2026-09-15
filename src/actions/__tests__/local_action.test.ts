@@ -109,11 +109,11 @@ describe('runLocalAction', () => {
     });
   });
 
-  it('logs steps and reminders via boxen after mainRun', async () => {
+  it('renders a semantic aggregate and keeps internal steps and reminder prose out of the terminal', async () => {
     const boxen = require('boxen');
     mockMainRun.mockResolvedValue([
-      { executed: true, steps: ['Step 1'], errors: [], reminders: [] },
-      { executed: true, steps: [], errors: [], reminders: ['Reminder 1'] },
+      { success: true, executed: true, steps: ['Step 1'], errors: [], reminders: [] },
+      { success: true, executed: true, steps: [], errors: [], reminders: ['Reminder 1'] },
     ]);
     const params: Record<string, unknown> = {
       [INPUT_KEYS.TOKEN]: 't',
@@ -125,13 +125,19 @@ describe('runLocalAction', () => {
     await runLocalAction(params);
 
     expect(boxen).toHaveBeenCalled();
-    expect(boxen.mock.calls[0][0]).toContain('Step 1');
-    expect(boxen.mock.calls[0][0]).toContain('Reminder 1');
+    const content = boxen.mock.calls[0][0] as string;
+    expect(content).toContain('Outcome:');
+    expect(content).toContain('Status: Succeeded');
+    expect(content).toContain('Completed operations: 2');
+    expect(content).toContain('Operator reminders recorded: 1');
+    expect(content).not.toContain('Step 1');
+    expect(content).not.toContain('Reminder 1');
   });
 
   it('renders a semantic Think response as an answer instead of generic steps', async () => {
     const boxen = require('boxen');
     mockMainRun.mockResolvedValue([{
+      success: true,
       executed: true,
       steps: [],
       errors: [],
@@ -157,6 +163,7 @@ describe('runLocalAction', () => {
   it('uses the configured repository locale for local result labels', async () => {
     const boxen = require('boxen');
     mockMainRun.mockResolvedValue([{
+      success: true,
       executed: true,
       steps: [],
       errors: [],
@@ -176,6 +183,43 @@ describe('runLocalAction', () => {
 
     expect(boxen.mock.calls[0][0]).toContain('Respuesta:');
     expect(boxen.mock.calls[0][0]).not.toContain('Answer:');
+  });
+
+  it('renders aggregate success and skip state wholly in the configured repository locale', async () => {
+    const boxen = require('boxen');
+    mockMainRun.mockResolvedValue([
+      { success: true, executed: true, steps: ['Internal English step'], errors: [], reminders: [] },
+      { success: true, executed: false, steps: [], errors: [], reminders: [] },
+    ]);
+
+    await runLocalAction({
+      [INPUT_KEYS.TOKEN]: 't',
+      [INPUT_KEYS.REPOSITORY_LOCALE]: 'es-ES',
+      repo: { owner: 'o', repo: 'r' },
+      eventName: 'push',
+      commits: { ref: 'refs/heads/main' },
+    });
+
+    const content = boxen.mock.calls[0][0] as string;
+    expect(content).toContain('Resultado:');
+    expect(content).toContain('Estado: Completado');
+    expect(content).toContain('Operaciones completadas: 1');
+    expect(content).toContain('Operaciones omitidas: 1');
+    expect(content).not.toContain('Internal English step');
+    expect(content).not.toContain('Outcome:');
+  });
+
+  it('renders an empty result set as an explicit no-change outcome', async () => {
+    const boxen = require('boxen');
+
+    await runLocalAction({
+      [INPUT_KEYS.TOKEN]: 't',
+      repo: { owner: 'o', repo: 'r' },
+      eventName: 'push',
+      commits: { ref: 'refs/heads/main' },
+    });
+
+    expect(boxen.mock.calls[0][0]).toContain('Status: No changes');
   });
 
   it('calls getProjectDetail for each project id when PROJECT_IDS is set', async () => {
@@ -225,11 +269,11 @@ describe('runLocalAction', () => {
     expect(mockGetProjectDetail).not.toHaveBeenCalled();
   });
 
-  it('includes errors and reminders in boxen content when results have errors and reminders', async () => {
+  it('expands semantic errors and summarizes reminder evidence without replaying its prose', async () => {
     const boxen = require('boxen');
     mockMainRun.mockResolvedValue([
-      { executed: false, steps: [], errors: [new ApplicationError('provider.unavailable', 'Provider detail.')], reminders: [] },
-      { executed: true, steps: [], errors: [], reminders: ['Reminder text'] },
+      { success: false, executed: false, steps: [], errors: [new ApplicationError('provider.unavailable', 'Provider detail.')], reminders: [] },
+      { success: true, executed: true, steps: [], errors: [], reminders: ['Reminder text'] },
     ]);
     const params: Record<string, unknown> = {
       [INPUT_KEYS.TOKEN]: 't',
@@ -243,13 +287,15 @@ describe('runLocalAction', () => {
     const content = boxen.mock.calls[0][0];
     expect(content).toContain('Error code: provider.unavailable');
     expect(content).not.toContain('Provider detail.');
-    expect(content).toContain('Reminder text');
+    expect(content).toContain('Status: Partially completed');
+    expect(content).toContain('Operator reminders recorded: 1');
+    expect(content).not.toContain('Reminder text');
   });
 
   it('renders errors even when the failed operation was executed', async () => {
     const boxen = require('boxen');
     mockMainRun.mockResolvedValue([
-      { executed: true, steps: ['Attempted operation'], errors: [new ApplicationError('workflow.failed', 'Executed operation failed.')], reminders: [] },
+      { success: false, executed: true, steps: ['Attempted operation'], errors: [new ApplicationError('workflow.failed', 'Executed operation failed.')], reminders: [] },
     ]);
     const params: Record<string, unknown> = {
       [INPUT_KEYS.TOKEN]: 't',
@@ -267,6 +313,7 @@ describe('runLocalAction', () => {
   it('renders one complete error view in the configured repository locale', async () => {
     const boxen = require('boxen');
     mockMainRun.mockResolvedValue([{
+      success: false,
       executed: true,
       steps: [],
       errors: [new ApplicationError('provider.rate-limited', 'English provider message.')],
@@ -294,6 +341,7 @@ describe('runLocalAction', () => {
   it('renders validated partial-state recovery without losing its safe identifier', async () => {
     const boxen = require('boxen');
     mockMainRun.mockResolvedValue([{
+      success: false,
       executed: true,
       steps: [],
       errors: [new ApplicationError('provider.unavailable', 'Producer message.', {

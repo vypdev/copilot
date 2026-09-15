@@ -140,6 +140,21 @@ Run repository-dependent commands from the **root of the target repository**, no
 
 For local use, prefer the hidden prompt or an environment variable instead of putting a token in shell history. `copilot setup` and `copilot doctor` prompt for the setup PAT; other commands accept `-t, --token` or `PERSONAL_ACCESS_TOKEN`. `copilot do` does not use a GitHub PAT option and reads the configured agent environment instead. See [Authentication](/authentication) and [Agent CLI configuration](/agents/cli-configuration).
 
+## Human-readable result output
+
+Repository-aware single actions render one semantic outcome in the configured
+`repository-locale`, which defaults to English. The terminal reports the status
+(`Succeeded`, `Partially completed`, `Failed`, or `No changes`) and bounded
+counts for completed, skipped, and failed operations. Semantic answers and
+errors are expanded because they help the operator decide what to do next.
+
+Internal `Result.steps` and reminder prose are not replayed into the terminal:
+they are operational evidence and may contain implementation-oriented English
+that would make localized output misleading. The terminal reports only the
+number of recorded operator reminders; use debug logs or structured results when
+that evidence is required. Error codes and references remain stable in every
+locale, and raw provider messages are never shown.
+
 ## Command reference
 
 All commands support `-h, --help`. The `-d, --debug` option enables additional diagnostics where listed below.

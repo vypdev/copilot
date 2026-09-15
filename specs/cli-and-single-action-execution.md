@@ -207,6 +207,10 @@ Errors start with impact and one recovery action; debug adds sanitized detail.
 JSON MUST be machine-readable without ANSI/prose contamination. Text is the
 default and English fallback. Repository-aware labels use the complete resolved
 repository-locale catalog; commands, flags, and machine keys remain English.
+Local single-action text MUST summarize completed, skipped, and failed result
+counts and MUST NOT replay `Result.steps` or reminder prose. Semantic answers
+and code-specific error recovery remain visible; only the reminder count is
+shown when operational reminders exist.
 Terminal output must wrap/read at narrow widths;
 icons are supplemental. Secret values and raw provider responses are never shown.
 
@@ -299,6 +303,8 @@ installed CLI help/text/JSON, narrow terminal, Action dispatch, and error recove
 10. `copilot think -q <question>` runs without probing issue `#1`, prints one
     localized answer, and performs no GitHub comment mutation; `--issue 42`
     loads only issue `#42` as optional context.
+11. A repository-aware local single action renders a localized semantic outcome
+    and contains none of its internal step or reminder strings.
 
 ## 17. Requirements traceability
 

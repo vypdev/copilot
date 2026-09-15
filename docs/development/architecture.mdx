@@ -72,6 +72,18 @@ Check names, log codes, and machine-readable fields never localize. Architecture
 tests reject feature-local `en`/`es` branches in common presentation and any
 source-comment mutation dependency in the adaptation path.
 
+Technical operands are enforced, not prompt-trusted. The adaptation policy
+replaces code spans, slash and bare-file paths, recognizable refs/versions,
+issue or PR references, URLs, quoted literals, option flags, and commit IDs with
+deterministic placeholders; commands without adaptable prose protect every
+argument. A response is rejected unless each placeholder is returned exactly
+once and in order and no new technical operand appears; only then does the
+application restore the original values. Explicit-request errors
+are projected to one safe `application-error` reply by the shared publisher,
+while background errors stay in operator evidence. Local human output follows
+the same outcome/evidence split: it renders localized aggregate state and
+semantic errors, never raw `Result.steps` or reminder prose.
+
 - Application: use cases, pure policies (agent configuration, reviewer/assignee
   selection, and result publication), and semantic ports.
 - Data/repository: external adapters for agent execution, authentication, provisioning, GitHub, and Git.

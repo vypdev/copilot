@@ -10,7 +10,11 @@ import {
     parsePublicationMarker,
     parsePublicationReplyMarker,
 } from './publication_identity_policy';
-import { resolveStaticPublicationCatalog, type PublicationMessageCatalog } from './publication_message_catalog';
+import {
+    ENGLISH_PUBLICATION_CATALOG,
+    resolveStaticPublicationCatalog,
+    type PublicationMessageCatalog,
+} from './publication_message_catalog';
 import {
     buildCopilotHelpMessage,
     buildCopilotWelcomeMessage,
@@ -21,6 +25,10 @@ import {
     renderTranslationContext,
     type TranslationPublication,
 } from './comment_translation_policy';
+import {
+    renderApplicationErrorMarkdown,
+    type ApplicationErrorPresentationSource,
+} from './application_error_presentation_policy';
 
 export interface PlanPublicationProjection {
     readonly kind: 'plan';
@@ -47,6 +55,7 @@ export type SemanticReplyProjection =
         readonly answer: string;
         readonly translation?: TranslationPublication;
     }
+    | { readonly kind: 'application-error'; readonly error: ApplicationErrorPresentationSource }
     | { readonly kind: 'access-policy' }
     | { readonly kind: 'status-command'; readonly snapshot: CopilotStatusSnapshot };
 export type SemanticReplyIntent = ReplyPublicationIntent<SemanticReplyProjection>;
@@ -111,7 +120,7 @@ export function hasOwnedPrimaryIssuePublication(
 export function selectSemanticReplyIntents(context: SemanticPublicationContext): readonly SemanticReplyIntent[] {
     if (!context.target || !positiveInteger(context.target.number) || !context.correlationId?.trim()) return [];
     const correlationId = safeMarkerToken(context.correlationId);
-    return Object.freeze(context.results.flatMap(result => {
+    const replies = context.results.flatMap(result => {
         if (!result.executed || !result.success) return [];
         const payload = getResultPayload(result.payload);
         if (!payload) return [];
@@ -138,7 +147,21 @@ export function selectSemanticReplyIntents(context: SemanticPublicationContext):
             return [replyIntent(context, correlationId, 'copilot-status', projection)];
         }
         return [];
-    }));
+    });
+    if (replies.length > 0) return Object.freeze([replies[0]]);
+    if (!context.correlationId.startsWith('comment:')) return Object.freeze([]);
+    const error = context.results.flatMap(result => result.errors).at(0);
+    if (!error) return Object.freeze([]);
+    const projection = Object.freeze({
+        kind: 'application-error' as const,
+        error: Object.freeze({
+            code: error.code,
+            retryable: error.retryable,
+            correlationId: error.correlationId,
+            ...(error.recovery ? { recovery: error.recovery } : {}),
+        }),
+    });
+    return Object.freeze([replyIntent(context, correlationId, 'application-error', projection)]);
 }
 
 export function renderSemanticReply(
@@ -151,16 +174,30 @@ export function renderSemanticReply(
         messageKey: intent.messageKey,
         digest: intent.digest,
     });
-    const body = intent.projection.kind === 'direct-answer'
-        ? renderDirectAnswer(intent.projection, catalog)
-        : intent.projection.kind === 'help'
-            ? buildCopilotHelpMessage(intent.projection.botLogin, intent.locale, catalog)
-            : intent.projection.kind === 'welcome'
-                ? buildCopilotWelcomeMessage(intent.projection.botLogin, intent.locale, catalog)
-                : intent.projection.kind === 'access-policy'
-                    ? renderAccessPolicyReply(catalog)
-                    : formatCopilotStatus(intent.projection.snapshot, intent.locale, catalog);
+    const body = renderReplyBody(intent, catalog);
     return `${marker}\n\n${body}`;
+}
+
+function renderReplyBody(intent: SemanticReplyIntent, catalog: PublicationMessageCatalog): string {
+    if (intent.projection.kind === 'direct-answer') return renderDirectAnswer(intent.projection, catalog);
+    if (intent.projection.kind === 'help') {
+        return buildCopilotHelpMessage(intent.projection.botLogin, intent.locale, catalog);
+    }
+    if (intent.projection.kind === 'welcome') {
+        return buildCopilotWelcomeMessage(intent.projection.botLogin, intent.locale, catalog);
+    }
+    if (intent.projection.kind === 'access-policy') return renderAccessPolicyReply(catalog);
+    if (intent.projection.kind === 'application-error') {
+        const messages = intent.projection.error.code === 'locale.translation-failed'
+            ? ENGLISH_PUBLICATION_CATALOG
+            : catalog;
+        return [
+            `## ${messages.render('interaction.error.heading')}`,
+            '',
+            renderApplicationErrorMarkdown(intent.projection.error, messages.render),
+        ].join('\n');
+    }
+    return formatCopilotStatus(intent.projection.snapshot, intent.locale, catalog);
 }
 
 function renderDirectAnswer(

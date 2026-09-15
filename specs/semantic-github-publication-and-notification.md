@@ -3,9 +3,10 @@
 - Status: In implementation
 - Date: 2026-09-14
 - Catalog capability ID: github-communication-experience
-- Last verified: 2026-09-14 for the delivered shared publication, branch-sync,
-  review-context, Bugbot, deployment, setup-doctor, and generic Job Summary
-  slices; remaining clauses are prospective
+- Last verified: 2026-09-15 for the delivered shared publication, branch-sync,
+  review-context, Bugbot, deployment, setup-doctor, generic Job Summary,
+  application-error, explicit-request, and local-result slices; remaining
+  clauses are prospective
 - Owners: Copilot maintainers
 - Scope: Replace generic step-dump comments with bounded, semantic, idempotent GitHub messages across issues, pull requests, reviews, pushes, and single actions.
 - Related issues/PRs: [issue #334](https://github.com/vypdev/copilot/issues/334), [issue #344](https://github.com/vypdev/copilot/issues/344), [issue #355](https://github.com/vypdev/copilot/issues/355), [PR #358](https://github.com/vypdev/copilot/pull/358), [PR #363](https://github.com/vypdev/copilot/pull/363), [PR #365](https://github.com/vypdev/copilot/pull/365)
@@ -985,6 +986,16 @@ failures are classified separately so a partial publication failure cannot
 rewrite the already-completed domain outcome. Because a later scan cannot replay
 the missing comment for an already-closed issue, that state is explicitly
 non-retryable and gives the operator a localized manual recovery action.
+
+Explicit request failures now use the shared correlated reply reconciler rather
+than disappearing into a run-only error or reviving the generic result renderer.
+The policy selects at most one primary reply, projects only the semantic error
+code, retry decision, correlation reference, and closed recovery descriptor,
+and renders impact/action/retained state from the resolved catalog. Background
+errors continue to create no conversation output. Translation failures use the
+complete English fallback, because a safe requested-language interpretation was
+not established. The local action presenter now applies the same outcome versus
+evidence split and cannot render internal `Result.steps` or reminder prose.
 
 No remote product flag is required. Each phase must be independently releasable
 and its compatibility adapter must fail closed to Job Summary, not fall back to
