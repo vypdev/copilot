@@ -90,9 +90,9 @@ export const PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA = {
             maxItems: 6,
             items: { type: 'string', minLength: 1, maxLength: 1_000 },
         },
-        validationHeading: { type: 'string', minLength: 1, maxLength: 100 },
+        validationHeading: { type: ['string', 'null'], minLength: 1, maxLength: 100 },
         validation: {
-            type: 'array',
+            type: ['array', 'null'],
             minItems: 1,
             maxItems: 8,
             items: { type: 'string', minLength: 1, maxLength: 1_000 },

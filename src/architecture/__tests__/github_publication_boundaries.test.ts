@@ -116,6 +116,16 @@ describe('GitHub conversation publication boundaries', () => {
     expect(presentation).not.toMatch(/operations|Automatic Actions|Feature Actions/u);
   });
 
+  it('keeps the generic Job Summary independent from internal Result steps', () => {
+    const presentation = readFileSync(
+      join(root, 'src/application/policies/action_summary_policy.ts'),
+      'utf8',
+    );
+
+    expect(presentation).not.toMatch(/result\.steps/u);
+    expect(presentation).not.toContain('buildApplicationErrorPresentation');
+  });
+
   it('keeps Bugbot public presentation free of pseudo-plural copy', () => {
     const files = [
       'src/application/policies/bugbot_message_catalog.ts',

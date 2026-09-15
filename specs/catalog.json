@@ -933,6 +933,7 @@
         "src/application/usecases/steps/pull_request/__tests__/link_pull_request_issue_use_case.test.ts",
         "src/application/usecases/steps/pull_request/__tests__/update_pull_request_description_use_case.test.ts",
         "src/application/policies/__tests__/pull_request_description_content_policy.test.ts",
+        "src/application/policies/__tests__/agent_response_schemas.test.ts",
         "src/prompts/__tests__/update_pull_request_description.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/infrastructure/composition/__tests__/lifecycle_capability_port_binding.test.ts",

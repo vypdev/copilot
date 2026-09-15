@@ -16,10 +16,12 @@ current progress, an action, a direct answer, or a terminal policy explanation.
 When the push workflow runs for a branch linked to an issue, Copilot updates one
 owned progress card only when the progress projection changes. It does not post
 a commit list, image, reopen notice, debug report, or generic “Actions” summary.
-The workflow Job Summary remains the place for bounded operational detail. Its
+The workflow Job Summary remains the place for bounded operational state. Its
 headings and explanatory labels use `repository-locale` (English by default),
 while event names, lifecycle values, error codes, and other machine facts remain
-stable. It contains one localization section showing the effective issue and PR
+stable. It reports compact per-result outcomes and category-localized recovery
+guidance without replaying internal `Result.steps` or arbitrary provider text.
+It contains one localization section showing the effective issue and PR
 locales plus exact, base-language, dynamic, or English-fallback catalog evidence.
 
 - **Where:** the issue associated with the branch (for example,

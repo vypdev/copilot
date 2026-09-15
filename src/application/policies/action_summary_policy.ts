@@ -1,6 +1,5 @@
 import type { Result } from '../../data/model/result';
-import { sanitizeAgentMarkdown, sanitizePublishedError } from './github_comment_publication_policy';
-import { buildApplicationErrorPresentation } from './application_error_presentation_policy';
+import { sanitizeAgentMarkdown } from './github_comment_publication_policy';
 import {
     projectBugbotResultTelemetry,
     type BugbotResultTelemetryProjection,
@@ -61,7 +60,7 @@ export function buildActionSummary(
     context: ActionSummaryContext,
     catalog: ActionSummaryMessageCatalog = resolveStaticActionSummaryCatalog(context.locale?.repository ?? 'en-US'),
 ): string {
-    const failures = context.results.filter(result => !result.success && result.executed);
+    const failures = context.results.filter(result => result.errors.length > 0 || (!result.success && result.executed));
     const findingStateProjection = projectBugbotResultFindingStates(context.results);
     const findingStates = findingStateProjection.status === 'valid' ? findingStateProjection.counts : undefined;
     const telemetryProjection = projectBugbotResultTelemetry(context.results);
@@ -74,6 +73,7 @@ export function buildActionSummary(
         hasActionableFindings,
         failOnUnresolvedFindings: context.failOnUnresolvedFindings === true,
         bugbotTelemetry,
+        allResultsSkipped: context.results.length > 0 && context.results.every(result => !result.executed),
     }, catalog);
     const target = resolveActionSummaryTarget(context, catalog);
     const lifecycle = context.lifecycleState ? `\`${sanitizeAgentMarkdown(context.lifecycleState, 100)}\`` : '—';
@@ -176,6 +176,7 @@ interface ActionSummaryStatusInput {
     readonly hasActionableFindings: boolean;
     readonly failOnUnresolvedFindings: boolean;
     readonly bugbotTelemetry?: BugbotTelemetryProjection;
+    readonly allResultsSkipped: boolean;
 }
 
 function resolveActionSummaryStatus(input: ActionSummaryStatusInput, catalog: ActionSummaryMessageCatalog): string {
@@ -183,6 +184,7 @@ function resolveActionSummaryStatus(input: ActionSummaryStatusInput, catalog: Ac
     if (input.bugbotTelemetry?.outcome === 'failed') return `❌ ${catalogText(catalog, 'summary.failure')}`;
     if (input.hasActionableFindings && input.failOnUnresolvedFindings) return `❌ ${catalogText(catalog, 'summary.failure')}`;
     if (input.hasActionableFindings) return `⚠️ ${catalogText(catalog, 'summary.findings')}`;
+    if (input.allResultsSkipped) return `⏭️ ${catalogText(catalog, 'summary.skipped')}`;
     switch (input.bugbotTelemetry?.outcome) {
         case 'partial': return `⚠️ ${catalogText(catalog, 'summary.partial')}`;
         case 'superseded': return `⏭️ ${catalogText(catalog, 'summary.superseded')}`;
@@ -228,23 +230,38 @@ function formatFindingStates(
 function renderResults(results: readonly Result[], catalog: ActionSummaryMessageCatalog): string {
     if (results.length === 0) return `_${catalogText(catalog, 'summary.noResult')}_`;
     return results.map(result => {
-        const icon = result.success ? '✅' : '❌';
-        const details = result.steps
-            .filter(step => step.trim())
-            .map(step => `  - ${sanitizeAgentMarkdown(step, 1_000)}`);
+        const failed = result.errors.length > 0 || (!result.success && result.executed);
+        const outcome = failed
+            ? { icon: '❌', label: catalogText(catalog, 'summary.resultFailed') }
+            : !result.executed
+                ? { icon: '⏭️', label: catalogText(catalog, 'summary.resultSkipped') }
+                : result.success
+                    ? { icon: '✅', label: catalogText(catalog, 'summary.resultSucceeded') }
+                    : { icon: '❌', label: catalogText(catalog, 'summary.resultFailed') };
         const errors = result.errors
             .flatMap((error) => {
-                const view = buildApplicationErrorPresentation(error);
                 return [
-                    `  - **${catalogText(catalog, 'summary.impact')}:** ${sanitizePublishedError(view.impact)}`,
-                    `    - **${catalogText(catalog, 'summary.cause')} (\`${view.code}\`):** ${sanitizePublishedError(view.cause)}`,
-                    `    - **${catalogText(catalog, 'summary.action')}:** ${sanitizePublishedError(view.action)}`,
-                    `    - **${catalogText(catalog, 'summary.retainedState')}:** ${sanitizePublishedError(view.retainedState)}`,
-                    `    - **${catalogText(catalog, 'summary.reference')}:** \`${view.reference}\``,
+                    `  - **${catalogText(catalog, 'summary.impact')}:** ${errorCatalogText(catalog, error.kind, 'impact')}`,
+                    `    - **${catalogText(catalog, 'summary.cause')}:** \`${error.code}\``,
+                    `    - **${catalogText(catalog, 'summary.action')}:** ${errorCatalogText(catalog, error.kind, 'action')}`,
+                    `    - **${catalogText(catalog, 'summary.retainedState')}:** ${errorCatalogText(catalog, error.kind, 'retainedState')}`,
+                    `    - **${catalogText(catalog, 'summary.retryable')}:** ${catalogText(catalog, error.retryable ? 'summary.yes' : 'summary.no')}`,
+                    `    - **${catalogText(catalog, 'summary.reference')}:** \`${error.correlationId}\``,
                 ];
             });
-        return [`- ${icon} **${escapeTable(result.id || catalogText(catalog, 'summary.unnamedResult'))}**`, ...details, ...errors].join('\n');
+        return [
+            `- ${outcome.icon} **${escapeTable(result.id || catalogText(catalog, 'summary.unnamedResult'))}** — ${outcome.label}`,
+            ...errors,
+        ].join('\n');
     }).join('\n');
+}
+
+function errorCatalogText(
+    catalog: ActionSummaryMessageCatalog,
+    kind: Result['errors'][number]['kind'],
+    field: 'impact' | 'action' | 'retainedState',
+): string {
+    return catalogText(catalog, `summary.error.${kind}.${field}`);
 }
 
 function catalogText(

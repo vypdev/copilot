@@ -142,9 +142,11 @@ less likely to couple unrelated capabilities. Application failures use the
 closed `ApplicationError` contract: one of 20 semantic codes, a derived
 category and retry decision, impact, recommended action, retained-state
 summary, and request correlation UUID. A raw cause is ECMAScript-private,
-never serialized or logged, and cannot enter `Result.errors`. CLI output,
-GitHub comments, Job Summaries, and Check failures project the same semantic
-view.
+never serialized or logged, and cannot enter `Result.errors`. The generic Job
+Summary projects the stable kind/code/retry/reference through its repository-
+locale catalog and does not replay producer error prose. CLI and early boundary
+failures retain the safe default English error view until repository-aware
+presentation is available.
 
 The main-run setup path follows that rule end to end. Its action boundary copies
 and freezes a `SetupExecutionContext`, setup returns a discriminated result, and
@@ -365,5 +367,8 @@ The generic GitHub Actions Job Summary follows the same boundary. One complete
 typed catalog is resolved for `repository-locale`; bundled English and Spanish,
 arbitrary dynamic locales, and atomic English fallback share the repository
 localization resolver. The summary renders localization evidence once, keeps
-machine event/state/error values stable, and retains sanitized internal result
-detail without publishing it to an issue or pull-request conversation.
+machine event/state/error values stable, and projects each result as a compact
+localized outcome. Internal `Result.steps` and arbitrary error messages remain
+in logs or machine evidence; they are never replayed into the summary. Failures
+show category-localized impact, action, and retained-state guidance beside the
+stable code, retry decision, and correlation reference.

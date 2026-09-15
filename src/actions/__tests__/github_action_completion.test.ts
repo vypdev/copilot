@@ -311,6 +311,8 @@ describe('finishGithubAction', () => {
         expect(summary).toContain('## Detalles del resultado');
         expect(summary).toContain('| Locale del repositorio | `es-ES` |');
         expect(summary.match(/## Localización/gu)).toHaveLength(1);
+        expect(summary).toContain('✅ **MetadataUseCase** — Completado');
+        expect(summary).not.toContain('Updated labels.');
         expect(summary).not.toContain('## Localization');
     });
 
@@ -518,7 +520,8 @@ describe('finishGithubAction', () => {
         );
 
         expect(mockPublishInvoke).toHaveBeenCalledWith(expect.objectContaining({ locale: 'en-US' }));
-        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('Title normalization failed.'));
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('`provider.unavailable`'));
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.not.stringContaining('Title normalization failed.'));
         expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Title normalization failed.'));
     });
 

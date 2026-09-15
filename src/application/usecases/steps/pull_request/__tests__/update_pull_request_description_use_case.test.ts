@@ -188,6 +188,19 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     expect(mockUpdateDescription).toHaveBeenCalled();
   });
 
+  it('publishes no validation section when the agent has no verified evidence', async () => {
+    mockAskAgent.mockResolvedValue(descriptionContent('PR does X.', {
+      validationHeading: null,
+      validation: null,
+    }));
+
+    const results = await useCase.invoke(request());
+
+    expect(results[0]).toMatchObject({ success: true, executed: true });
+    expect(mockUpdateDescription).toHaveBeenCalledWith(10, expect.not.stringContaining('Validation'));
+    expect(mockUpdateDescription).toHaveBeenCalledWith(10, expect.not.stringContaining('not run'));
+  });
+
   it('does not publish blank agent output', async () => {
     mockAskAgent.mockResolvedValue('');
     const results = await useCase.invoke(request());

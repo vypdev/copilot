@@ -15,7 +15,7 @@ On an opened PR, Copilot enriches the PR even when no issue is linked. When the
 branch identifies a separate issue, Copilot also links and synchronizes that
 issue; it never falls back to treating the PR number as the issue number.
 Generated descriptions prioritize reviewer decisions: a short outcome,
-material changes, verified validation evidence, and conditional review notes.
+material changes, verified validation evidence when available, and conditional review notes.
 Synchronize events refresh enabled generated content and review; metadata-only
 edits are ignored so Copilot's own body update cannot retrigger the pipeline. A
 merged PR closes only a distinct linked issue. Human-authored body content is
@@ -254,7 +254,10 @@ by Copilot updating its own description.
 Metadata-only PR edits no longer normalize titles automatically; human edits are preserved.
 ```
 
-The opening outcome and the first two sections are required. `Review notes` and a
+The opening outcome and `What changed` are required. `Validation` appears only
+when at least one command, check, or manual scenario has supporting evidence;
+the whole section is omitted instead of displaying a “not run” placeholder.
+`Review notes` and a
 distinct `Closes #…` reference appear only when supported. The normal target is
 4,000 characters and the schema rejects more than 12,000. Empty template
 sections, emoji, separators, generic checklists, file/use-case inventories,
@@ -386,8 +389,9 @@ body mutation that produces no follow-up PR workflow.
     reference, both, or neither remain, and replay never layers another marker.
 12. A generated body is rendered from a strict structured response, starts with
     a one-to-three sentence outcome, has two to six
-    material-change bullets and evidence-based validation, stays within 12,000
-    characters, and omits empty/generic sections.
+    material-change bullets, includes validation only when evidence exists,
+    stays within 12,000 characters, and omits empty/generic sections and
+    “not run” placeholders.
 13. Copilot's own PR body update creates zero follow-up PR workflow runs.
 14. Actions distinguish PR analysis, review-state observation, and merge-queue
     admission without requiring log inspection; review state uses a distinct

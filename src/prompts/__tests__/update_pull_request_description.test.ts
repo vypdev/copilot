@@ -20,7 +20,8 @@ describe('getUpdatePullRequestDescriptionPrompt', () => {
         expect(prompt).toContain('git diff main...feature/123');
         expect(prompt).toContain('`whatChangedHeading`');
         expect(prompt).toContain('never infer that result from the presence of test files or commands');
-        expect(prompt).toContain('validation was not run or was not available');
+        expect(prompt).toContain('set both fields to `null`');
+        expect(prompt).toContain('do not add a “not run” placeholder');
         expect(prompt).toContain('`validationHeading`');
         expect(prompt).toContain('application renders the Markdown structure');
         expect(prompt).toContain('normally under 4,000 characters');

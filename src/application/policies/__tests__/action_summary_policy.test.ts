@@ -89,7 +89,7 @@ describe('action summary policy', () => {
         expect(summary).not.toContain('<details>Repository</details>');
     });
 
-    it('renders bounded result details and lifecycle metadata', () => {
+    it('renders compact result states and keeps internal step narration out of the summary', () => {
         const summary = buildActionSummary({
             owner: 'owner',
             repository: 'repo',
@@ -97,12 +97,18 @@ describe('action summary policy', () => {
             issueNumber: 7,
             pullRequestNumber: -1,
             lifecycleState: 'planned',
-            results: [new Result({ id: 'Plan', success: true, executed: true, steps: ['## Ready', 'safe | text'] })],
+            results: [
+                new Result({ id: 'Plan', success: true, executed: true, steps: ['## Ready', 'safe | text'] }),
+                new Result({ id: 'OptionalStep', success: false, executed: false, steps: ['Skipped because of internal policy.'] }),
+            ],
         });
 
         expect(summary).toContain('# Copilot execution');
         expect(summary).toContain('`planned`');
-        expect(summary).toContain('safe | text');
+        expect(summary).toContain('✅ **Plan** — Succeeded');
+        expect(summary).toContain('⏭️ **OptionalStep** — Skipped');
+        expect(summary).not.toContain('safe | text');
+        expect(summary).not.toContain('Skipped because of internal policy.');
         expect(summary).not.toContain('{{');
     });
 
@@ -142,6 +148,11 @@ describe('action summary policy', () => {
         expect(summary).toContain('## Detalles del resultado');
         expect(summary).toContain('**Resultado sin nombre**');
         expect(summary).toContain('**Impacto:**');
+        expect(summary).toContain('El workflow no pudo completar la operación solicitada.');
+        expect(summary).toContain('**Código de error:** `workflow.failed`');
+        expect(summary).toContain('**Reintentable:** Sí');
+        expect(summary).not.toContain('Workflow failed.');
+        expect(summary).not.toContain('The workflow could not complete');
         expect(summary).toContain('## Localización');
         expect(summary).not.toContain('## Localization');
     });
@@ -157,8 +168,34 @@ describe('action summary policy', () => {
         });
 
         expect(summary).toContain('❌ Failure');
+        expect(summary).toContain('**Error code:** `workflow.failed`');
+        expect(summary).toContain('**Retryable:** Yes');
         expect(summary).not.toContain('secret-value');
         expect(summary).not.toContain('at hidden');
+    });
+
+    it('distinguishes an intentional all-skipped run from success and treats any semantic error as failure', () => {
+        const base = {
+            owner: 'owner', repository: 'repo', eventName: 'issues', issueNumber: 7, pullRequestNumber: -1,
+        };
+        const skipped = buildActionSummary({
+            ...base,
+            results: [new Result({ id: 'Optional', success: false, executed: false })],
+        });
+        const rejected = buildActionSummary({
+            ...base,
+            results: [new Result({
+                id: 'Rejected', success: false, executed: false,
+                errors: [new ApplicationError('authorization.denied', 'Internal rejection detail.')],
+            })],
+        });
+
+        expect(skipped).toContain('| Status | ⏭️ Skipped |');
+        expect(skipped).toContain('⏭️ **Optional** — Skipped');
+        expect(rejected).toContain('| Status | ❌ Failure |');
+        expect(rejected).toContain('❌ **Rejected** — Failed');
+        expect(rejected).toContain('**Error code:** `authorization.denied`');
+        expect(rejected).not.toContain('Internal rejection detail.');
     });
 
     it('reports active findings as a warning unless fail-on-unresolved is enabled', () => {
