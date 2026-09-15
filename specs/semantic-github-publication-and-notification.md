@@ -1,17 +1,14 @@
 # Semantic GitHub Publication and Notification
 
-- Status: In implementation
+- Status: Implemented — automated gates and controlled pull-request UX evidence complete
 - Date: 2026-09-14
 - Catalog capability ID: github-communication-experience
-- Last verified: 2026-09-15 for the delivered shared publication, progress
-  source-freshness, exact-duplicate cleanup, transition-notification substrate,
-  branch-sync transition adoption,
-  review-context, Bugbot, deployment, setup-doctor, generic Job Summary,
-  application-error, explicit-request, and local-result slices; remaining
-  clauses are prospective
+- Last verified: 2026-09-15; implementation is on `develop` through PR #389,
+  with the executable concurrency and disjoint test-budget closure verified in
+  PR #390
 - Owners: Copilot maintainers
 - Scope: Replace generic step-dump comments with bounded, semantic, idempotent GitHub messages across issues, pull requests, reviews, pushes, and single actions.
-- Related issues/PRs: [issue #334](https://github.com/vypdev/copilot/issues/334), [issue #344](https://github.com/vypdev/copilot/issues/344), [issue #355](https://github.com/vypdev/copilot/issues/355), [PR #358](https://github.com/vypdev/copilot/pull/358), [PR #363](https://github.com/vypdev/copilot/pull/363), [PR #365](https://github.com/vypdev/copilot/pull/365)
+- Related issues/PRs: [issue #334](https://github.com/vypdev/copilot/issues/334), [issue #344](https://github.com/vypdev/copilot/issues/344), [issue #355](https://github.com/vypdev/copilot/issues/355), [PR #366](https://github.com/vypdev/copilot/pull/366) through [PR #390](https://github.com/vypdev/copilot/pull/390)
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none
 
@@ -45,16 +42,17 @@ GitHub event -> capability result -> semantic publication decision
              -> operator evidence in Job Summary and logs
 ```
 
-## 2. Problem, current behavior, and evidence
+## 2. Problem, baseline behavior, and evidence
 
 ### 2.1 Problem
 
-Maintainers currently have to scan many comments to discover whether anything
-material happened. The dominant comment template describes the branch category
-and internal steps rather than the outcome. A one-line fact such as “waiting
-state cleared” can arrive inside a roughly one-kilobyte comment containing a
-level-one heading, a GIF, a debug disclosure, and a footer. Repeated workflow
-events produce new timeline entries instead of updating the state already shown.
+Before this program, maintainers had to scan many comments to discover whether
+anything material happened. The dominant comment template described the branch
+category and internal steps rather than the outcome. A one-line fact such as
+“waiting state cleared” could arrive inside a roughly one-kilobyte comment
+containing a level-one heading, a GIF, a debug disclosure, and a footer.
+Repeated workflow events produced new timeline entries instead of updating the
+state already shown.
 
 The result has four product costs:
 
@@ -66,9 +64,11 @@ The result has four product costs:
 4. internal execution details, including runner paths, can leak into a public
    collaboration surface even when they belong only in operator evidence.
 
-### 2.2 Current behavior
+### 2.2 Baseline behavior before rollout
 
-The following sequence is verified in the 2026-09-14 repository snapshot:
+The following sequence was verified in the pre-implementation 2026-09-14
+repository snapshot. It is retained as migration evidence and is not a claim
+about the implemented product:
 
 1. Use cases append human-readable strings to `Result.steps`, regardless of
    whether those strings are product messages or operational evidence.
@@ -92,7 +92,7 @@ The following sequence is verified in the 2026-09-14 repository snapshot:
 
 ### 2.3 Evidence
 
-#### Repository evidence
+#### Baseline repository evidence
 
 - Generic completion path:
   `src/application/usecases/steps/common/publish_resume_workflow.ts`,
@@ -151,13 +151,13 @@ Representative failure modes:
 - issue #334 contains two very large, substantially overlapping implementation
   plans and exposed local runner-oriented details that are not useful issue UI.
 
-#### Documentation and external evidence
+#### Baseline documentation and external evidence
 
-- `docs/configuration.mdx`, `docs/issues/configuration.mdx`, and
-  `docs/pull-requests/capabilities.mdx` currently present images as enabled by
+- At the baseline, `docs/configuration.mdx`, `docs/issues/configuration.mdx`,
+  and `docs/pull-requests/capabilities.mdx` presented images as enabled by
   default.
-- `docs/issues/notifications-and-auto-close.mdx` describes lifecycle comments
-  without a cross-capability notification budget.
+- At the baseline, `docs/issues/notifications-and-auto-close.mdx` described
+  lifecycle comments without a cross-capability notification budget.
 - GitHub documents that creating issue, commit, and review comments can trigger
   notifications and secondary rate limiting. GitHub also provides update
   endpoints, so stable bot-owned comments are an available provider primitive.
@@ -166,9 +166,10 @@ Representative failure modes:
 
 ### 2.4 Retrospective classification
 
-Not applicable. This is a prospective behavior change. Current facts are
-recorded only to establish the migration boundary; they are not presented as
-the desired contract.
+This SDD began as a prospective behavior change. Section 2 preserves the
+pre-implementation facts that established the migration boundary; sections
+13–19 record the completed rollout and executable evidence. Baseline behavior
+is not part of the implemented contract.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -257,9 +258,9 @@ Terms used normatively:
    operation.
 10. Notification and size budgets are safety limits and are not configurable.
 
-## 5. Current versus proposed product journey
+## 5. Baseline versus implemented product journey
 
-| Stage | Current | Proposed | User/operator effect |
+| Stage | Baseline | Implemented | User/operator effect |
 |---|---|---|---|
 | Capability work | Use cases accumulate prose in `Result.steps` | Use cases return semantic outcome plus operator evidence | Meaning is explicit and testable |
 | Publication decision | Any visible step/error usually enables a comment | Pure policy selects none, reply, status, transition, or inline finding | Routine work stays quiet |
@@ -961,7 +962,7 @@ generic output is left intact.
 - The next major removes image pool inputs and all random-image selection code.
 - No compatibility flag restores generic result comments or debug disclosure.
 
-### 13.3 Rollout
+### 13.3 Implementation sequence (completed)
 
 1. Land contracts, characterization tests, metrics, and conversation string/call
    inventories with no behavior change.
@@ -977,10 +978,10 @@ generic output is left intact.
 6. Remove the legacy generic renderer after one release with zero observed
    fallback use.
 
-Implementation evidence as of 2026-09-14: PRs #367–#372 establish semantic
-reply/status publication, remove retired generic conversation chrome from the
-covered paths, localize branch-sync state, and keep automated reports out of
-Bugbot's human-conversation context. The current Bugbot slice preserves its
+The first implementation slices in PRs #367–#372 established semantic
+reply/status publication, removed retired generic conversation chrome from the
+covered paths, localized branch-sync state, and kept automated reports out of
+Bugbot's human-conversation context. The Bugbot slice preserves its
 feature-owned review/thread model while replacing ad hoc public strings with a
 single typed catalog per publication operation, proper plural forms, stable
 machine markers, and bounded English-default/localized renderers. The executable
@@ -988,10 +989,10 @@ mutation inventory, locale-branch ratchet, and pseudo-plural ratchet protect
 these boundaries. Subsequent deployment and setup-doctor slices cover their
 feature-owned views, and the generic Job Summary slice resolves repository-
 locale copy atomically, renders aggregate result counts and expands only safe
-code-specific localized error recovery, excludes internal result names, steps, and
-arbitrary error messages, and renders
-one localization evidence section instead of two. Other capability rows and the
-global numeric budget remain open and are not claimed complete by this milestone.
+code-specific localized error recovery, excludes internal result names, steps,
+and arbitrary error messages, and renders one localization evidence section
+instead of two. The later slices below completed the remaining capability rows;
+the closure ledger provides the final non-overlapping numeric evidence.
 
 The shared error-presentation slice replaces route-local Action termination with
 semantic results and one final locale-aware conclusion boundary. Generic and
@@ -1110,6 +1111,21 @@ An explicitly addressed `sync-branch` request produces one source-correlated
 semantic reply for aligned, dry-run, and successful merge outcomes; replay
 reuses the reply and never exposes the command's internal `Result.steps`.
 
+The 2026-09-15 closure audit runs two first-publication calls simultaneously for
+status cards, correlated replies, and immutable transition notifications. All
+three paths converge on the lowest bot-owned comment ID and idempotently remove
+the later exact duplicate. The checked-in budget ledger conservatively allocates
+160 semantic cases and 141 localization cases to disjoint test files; matrix rows
+count once, and `validate:specifications` fails if a file crosses budgets, an
+allocation exceeds qualifying declarations since the baseline, or either SDD
+falls below its numeric minimum. PRs #366–#389 provide controlled
+English-default GitHub evidence for quiet updates, stable Checks, one edited
+Bugbot card, partial coverage disclosure, and inline-finding resolution. PR #390
+closes the executable concurrency and disjoint-budget evidence. Multilingual,
+bidi, CJK,
+expansion, and narrow-layout states are retained as deterministic renderer and
+terminal fixtures so validation does not mutate repository-wide locale settings.
+
 No remote product flag is required. Each phase must be independently releasable
 and its compatibility adapter must fail closed to Job Summary, not fall back to
 generic comments.
@@ -1128,6 +1144,11 @@ The implementation requires at least **128 distinct new or materially rewritten
 test cases**. This budget covers semantic publication only; locale resolution,
 translation correctness, and multilingual matrices are counted in the companion
 SDD and MUST NOT be double-counted here.
+
+`src/architecture/github_communication_test_budget.json` records 160 qualifying
+semantic cases from the implementation diff against the specification baseline.
+Its files are disjoint from the localization allocation and are enforced by
+`pnpm run validate:specifications`.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
@@ -1240,6 +1261,10 @@ removed.
     then Think performs no comment mutation and the shared reply boundary creates
     or reconciles exactly one `direct-answer` for the source-comment identity;
     local CLI execution prints the same semantic answer without GitHub writes.
+21. Given two application calls that both observe no existing status, reply, or
+    transition comment before either create returns, then both provider creates
+    succeed, both calls select the lowest ID after re-listing, and the durable
+    conversation retains exactly one active bot-owned publication.
 
 ## 17. Requirements traceability
 
@@ -1260,7 +1285,7 @@ removed.
 | §11 trust/ownership | marker parser, sanitizer, authorization | forged marker/mention/secret tests | security operations |
 | §12 evidence/metrics | Job Summary and telemetry ports | summary/metric assertions | quality observability |
 | §13 migration | legacy marker readers and deprecated inputs | adoption/rollback/deprecation tests | migration guide |
-| §14 quality budget | coverage and validation scripts | CI evidence | contributor testing guide |
+| §14 quality budget | coverage scripts and disjoint communication test ledger | 160 allocated semantic cases plus CI coverage evidence | contributor testing guide |
 
 ## 18. Implementation sequence
 
@@ -1289,32 +1314,32 @@ removed.
 
 ## 19. Definition of Done
 
-- [ ] Every conversation publication is created from a typed semantic intent;
+- [x] Every conversation publication is created from a typed semantic intent;
       generic `Result.steps` publication is impossible.
-- [ ] All capability rows in §6.2 satisfy their create/update budgets.
-- [ ] One-card identity, unchanged replay, stale rejection, concurrent creation,
+- [x] All capability rows in §6.2 satisfy their create/update budgets.
+- [x] One-card identity, unchanged replay, stale rejection, concurrent creation,
       and exact duplicate cleanup pass.
-- [ ] Plans, progress, branch sync, Bugbot, releases, lifecycle, failures,
+- [x] Plans, progress, branch sync, Bugbot, releases, lifecycle, failures,
       explicit replies, and single actions implement the representative contract.
-- [ ] No new conversation contains retired generic headings, debug logs,
+- [x] No new conversation contains retired generic headings, debug logs,
       decorative media by default, “Happy coding”, or the visible default
       marketplace watermark.
-- [ ] Job Summary and logs retain bounded, masked operator evidence and link from
+- [x] Job Summary and logs retain bounded, masked operator evidence and link from
       actionable UI.
-- [ ] Architecture boundaries and direct-mutation inventory are automatically
+- [x] Architecture boundaries and direct-mutation inventory are automatically
       enforced.
-- [ ] The 128-case numeric budget and changed-module coverage gates pass without
+- [x] The 128-case numeric budget and changed-module coverage gates pass without
       double counting localization tests.
-- [ ] Configuration defaults, deprecated image window, setup, doctor, action
+- [x] Configuration defaults, deprecated image window, setup, doctor, action
       schema, and generated bundles agree.
-- [ ] English-default and configured-locale output passes the companion SDD.
-- [ ] User, setup, operator, security, migration, and contributor documentation
+- [x] English-default and configured-locale output passes the companion SDD.
+- [x] User, setup, operator, security, migration, and contributor documentation
       is complete, discoverable, fixture-backed, and contains no stale behavior.
-- [ ] Failure, partial success, retry, idempotency, security, and cleanup tests
+- [x] Failure, partial success, retry, idempotency, security, and cleanup tests
       pass without replaying domain mutations.
-- [ ] `specs/catalog.json` and `specs/CATALOG.md` are current and
+- [x] `specs/catalog.json` and `specs/CATALOG.md` are current and
       `pnpm run validate:specifications` passes.
-- [ ] No readiness-blocking decision remains unresolved.
+- [x] No readiness-blocking decision remains unresolved.
 
 ## 20. References and decisions
 

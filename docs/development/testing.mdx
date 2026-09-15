@@ -30,7 +30,16 @@ inputs, actions, commands, and orchestration modes.
 `validate:specifications` validates unique capability ownership, safe existing
 repository-relative evidence paths, complete registration of top-level SDDs,
 retrospective-baseline structure, and byte-for-byte freshness of the generated
-`specs/CATALOG.md` view.
+`specs/CATALOG.md` view. It also enforces the communication-program test ledger:
+at least 128 semantic-publication cases and 136 localization cases, allocated to
+disjoint test files. Parameterized declarations count once, and removing tests,
+inflating an allocation, or assigning one file to both budgets fails the gate.
+
+The ledger lives at
+`src/architecture/github_communication_test_budget.json`. Its qualifying counts
+are a conservative audit of new Jest `it`/`test` declarations since the two SDDs
+landed at baseline `0bb83b75^`; a table-driven declaration is not multiplied by
+its data rows.
 
 Merge-queue contract tests cover ruleset-only targets, classic/ruleset union,
 GitHub Actions workflow parsing on target and candidate refs, external exact

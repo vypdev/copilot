@@ -1,15 +1,14 @@
 # Repository Locale and End-to-End Localization
 
-- Status: In implementation
+- Status: Implemented — automated gates and controlled pull-request UX evidence complete
 - Date: 2026-09-14
 - Catalog capability ID: github-communication-experience
-- Last verified: 2026-09-15 for the delivered foundation, shared publication,
-  branch-sync, Bugbot, deployment-presentation, setup-doctor, generic Job
-  Summary, application-error, explicit-request, and local-result slices;
-  remaining clauses are prospective
+- Last verified: 2026-09-15; implementation is on `develop` through PR #389,
+  with the executable disjoint test-budget and multilingual fixture closure
+  verified in PR #390
 - Owners: Copilot maintainers
 - Scope: Define one English-default repository locale profile and apply it generically to deterministic UI, agent-generated content, and safe interpretation of addressed comments.
-- Related issues/PRs: [issue #334](https://github.com/vypdev/copilot/issues/334), [PR #363](https://github.com/vypdev/copilot/pull/363), [PR #365](https://github.com/vypdev/copilot/pull/365)
+- Related issues/PRs: [issue #334](https://github.com/vypdev/copilot/issues/334), [PR #366](https://github.com/vypdev/copilot/pull/366) through [PR #390](https://github.com/vypdev/copilot/pull/390)
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none
 
@@ -45,23 +44,23 @@ Addressed input -> deterministic command/authorization -> one safe interpretatio
 This SDD is the localization foundation required by
 [`semantic-github-publication-and-notification.md`](./semantic-github-publication-and-notification.md).
 
-## 2. Problem, current behavior, and evidence
+## 2. Problem, baseline behavior, and evidence
 
 ### 2.1 Problem
 
-The current product has locale-shaped inputs but no single repository-language
-contract. Some features translate incoming comments, some render Spanish or
-English with ad hoc branching, and many always emit English. As a result,
-configuring `issues-locale` or `pull-requests-locale` does not guarantee that the
-corresponding product surface uses that language. A conversation can mix an
-English generic heading, agent prose in another language, English errors, and a
-Spanish feature card.
+Before this program, the product had locale-shaped inputs but no single
+repository-language contract. Some features translated incoming comments, some
+rendered Spanish or English with ad hoc branching, and many always emitted
+English. As a result, configuring `issues-locale` or `pull-requests-locale` did
+not guarantee that the corresponding product surface used that language. A
+conversation could mix an English generic heading, agent prose in another
+language, English errors, and a Spanish feature card.
 
-The current translation workflow also mutates the human-authored addressed
-comment. Although it preserves the original in a disclosure, editing another
-participant's message is a poor authorship and trust boundary: the timeline no
-longer shows exactly what that person wrote as the primary body, and downstream
-automation can observe model-generated text under the human comment identity.
+The baseline translation workflow also mutated the human-authored addressed
+comment. Although it preserved the original in a disclosure, editing another
+participant's message was a poor authorship and trust boundary: the timeline no
+longer showed exactly what that person wrote as the primary body, and downstream
+automation could observe model-generated text under the human comment identity.
 
 ### 2.2 Baseline behavior before rollout
 
@@ -126,9 +125,9 @@ implementation:
   `src/application/policies/action_summary_policy.ts`,
   `src/application/policies/copilot_evidence_policy.ts`, and progress/plan
   policies and prompts.
-- Current docs: `docs/configuration.mdx`, issue/PR configuration pages,
-  `docs/features.mdx`, comment-command docs, Bugbot docs, deployment docs, and
-  agent CLI configuration docs.
+- Baseline documentation inventory: `docs/configuration.mdx`, issue/PR
+  configuration pages, `docs/features.mdx`, comment-command docs, Bugbot docs,
+  deployment docs, and agent CLI configuration docs.
 
 #### External primary sources
 
@@ -152,8 +151,10 @@ implementation:
 
 ### 2.4 Retrospective classification
 
-Not applicable. This is a prospective behavior change. The current behavior is
-recorded to define compatibility and migration, not as the desired contract.
+This SDD began as a prospective behavior change. Section 2 preserves the
+pre-implementation facts used to define compatibility and migration; sections
+13–19 record the completed rollout and executable evidence. Baseline behavior
+is not part of the implemented contract.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -256,9 +257,9 @@ Normative terms:
 11. Machine contracts remain stable across locale changes.
 12. Locale and translation safety rules are not user-configurable.
 
-## 5. Current versus proposed product journey
+## 5. Baseline versus implemented product journey
 
-| Stage | Current | Proposed | User/operator effect |
+| Stage | Baseline | Implemented | User/operator effect |
 |---|---|---|---|
 | Configure language | independent issue/PR values default to English | repository locale defaults to English; optional issue/PR values inherit | one understandable default and bounded overrides |
 | Validate locale | arbitrary strings flow to ad hoc checks | canonical BCP-47 value object validates before mutation | predictable configuration |
@@ -924,7 +925,7 @@ pull-requests-locale: ""
 - Durable bot-owned cards rerender in the latest effective locale on their next
   real semantic update, subject to release snapshot rules.
 
-### 13.4 Rollout
+### 13.4 Implementation sequence (completed)
 
 1. Add locale value objects/profile, action/setup migration, catalog manifest,
    English/Spanish catalogs, validation, and observability without changing
@@ -940,7 +941,7 @@ pull-requests-locale: ""
 7. Update all named docs, generated workflows/action bundles, and related SDD
    clauses before announcing support.
 
-Implementation evidence as of 2026-09-14: PRs #366–#374 deliver the canonical
+The first implementation slices in PRs #366–#374 delivered the canonical
 locale profile, typed and validated catalog resolution, English-default shared
 publication, non-mutating addressed-language adaptation, localized agent
 response contracts, branch synchronization, and bounded review context. The
@@ -975,8 +976,8 @@ Closed recovery variants carry only validated branch-name or issue-number
 variables, preserving operation-specific partial-state guidance in the same
 atomic catalog locale.
 Failures before repository/agent resolution use a deterministic complete
-bundled or English-default catalog. Other lifecycle surfaces are not claimed
-complete by this evidence.
+bundled or English-default catalog. The later slices below completed the
+remaining lifecycle and explicit-request surfaces.
 
 The addressed-Think follow-up removes its feature-owned comment mutation and
 returns the same typed `direct-answer` projection as initial issue help. GitHub
@@ -1042,6 +1043,18 @@ publication catalog renders source-correlated `sync-branch` outcomes in the
 requesting conversation's effective locale; branch names, commit IDs, command
 identity, markers, and correlation remain locale-independent.
 
+The 2026-09-15 closure audit assigns 141 qualifying localization cases to test
+files that are disjoint from the 160-case semantic-publication allocation. The
+ledger counts each parameterized declaration once and is enforced by
+`validate:specifications`, alongside exhaustive locale/catalog coverage and the
+closed product-facing agent inventory. Controlled PRs #366–#389 verify the
+English default, stable machine names, atomic Check/card updates, and honest
+partial states in GitHub; PR #390 closes the executable concurrency and
+disjoint-budget evidence. Bundled Spanish, arbitrary dynamic locales, fallback,
+right-to-left, CJK, 200% expansion, bidi neutralization, and narrow terminals
+remain deterministic fixtures; the audit intentionally does not change the live
+repository locale merely to manufacture evidence.
+
 ### 13.5 Rollback
 
 Rollback MUST preserve the new input inheritance reader and legacy/new marker
@@ -1055,6 +1068,11 @@ locale and irreversible facts.
 The implementation requires at least **136 distinct new or materially rewritten
 test cases**. Semantic message timing/count/idempotency belongs to the companion
 SDD and is not double-counted here.
+
+`src/architecture/github_communication_test_budget.json` records 141 qualifying
+localization cases from the implementation diff against the specification
+baseline. No listed test file appears in the semantic allocation, and the
+contract is enforced by `pnpm run validate:specifications`.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
@@ -1178,6 +1196,11 @@ tags and never imply that fallback is a successful translation.
 22. Given implementation completion, then related SDDs, catalog, action/setup
     defaults, generated bundles, 136-case budget, coverage, documentation, and
     all repository validations agree without stale en/es conditionals.
+23. Given an unchanged issue whose stored structured plan was produced in a
+    different or unknown locale, when planning runs in the current effective
+    issue locale, then replay is forbidden, a configured agent must return a
+    complete replacement with the exact target locale, `unchanged` is rejected,
+    and an unconfigured run leaves the previous card untouched.
 
 ## 17. Requirements traceability
 
@@ -1198,7 +1221,7 @@ tags and never imply that fallback is a successful translation.
 | §11 privacy/security | sanitizer, minimizer, telemetry projection | injection/bidi/secret/body-absence tests | security operations |
 | §12 observability/cost | summary/log/metric projections and run cache | fields, one-call, no-body assertions | quality observability |
 | §13 compatibility | legacy readers and profile migration | explicit override/v2/v3/rollback tests | migration guide |
-| §14 quality budget | coverage/contract scripts | CI evidence | contributor testing guide |
+| §14 quality budget | coverage scripts and disjoint communication test ledger | 141 allocated localization cases plus CI coverage evidence | contributor testing guide |
 
 ## 18. Implementation sequence
 
@@ -1230,40 +1253,40 @@ tags and never imply that fallback is a successful translation.
 
 ## 19. Definition of Done
 
-- [ ] `repository-locale` defaults to `en-US`; issue/PR overrides inherit when
+- [x] `repository-locale` defaults to `en-US`; issue/PR overrides inherit when
       empty; explicit existing values migrate without loss.
-- [ ] Any accepted BCP-47 target follows one canonical validation and atomic
+- [x] Any accepted BCP-47 target follows one canonical validation and atomic
       exact/base/dynamic/English fallback contract.
-- [ ] Authoritative English and reviewed Spanish catalogs are complete, typed,
+- [x] Authoritative English and reviewed Spanish catalogs are complete, typed,
       versioned, and free of feature-local duplicate conditionals.
-- [ ] Every product-facing deterministic and agent-generated artifact uses the
+- [x] Every product-facing deterministic and agent-generated artifact uses the
       effective surface locale; stable machine contracts remain unchanged.
-- [ ] Every product-facing agent task carries target locale and validates output
+- [x] Every product-facing agent task carries target locale and validates output
       locale with prose separated from technical operands.
-- [ ] Addressed translation uses at most one adaptation call, never edits the
+- [x] Addressed translation uses at most one adaptation call, never edits the
       source comment, and includes translated interpretation followed by escaped
       original in the single bot response when needed.
-- [ ] Unaddressed comments, authorization, commands, flags, slash paths, bare
+- [x] Unaddressed comments, authorization, commands, flags, slash paths, bare
       filenames, refs, versions, issue/PR references, URLs, markers, and
       execution boundaries cannot be changed by translation; non-prose command
       grammars preserve every argument byte-for-byte.
-- [ ] Atomic fallback, provider failure, wrong-language output, locale change,
+- [x] Atomic fallback, provider failure, wrong-language output, locale change,
       durable snapshot, v2/v3 compatibility, and rollback pass.
-- [ ] RTL, CJK, expansion, plural, narrow-width, descriptive-link, sanitization,
+- [x] RTL, CJK, expansion, plural, narrow-width, descriptive-link, sanitization,
       and bidi tests/manual evidence pass.
-- [ ] Architecture, source-string, agent-task, catalog-manifest, and no-comment-
+- [x] Architecture, source-string, agent-task, catalog-manifest, and no-comment-
       update constraints are executable and blocking.
-- [ ] The 136-case numeric budget and changed-module coverage gates pass without
+- [x] The 136-case numeric budget and changed-module coverage gates pass without
       double counting semantic publication tests.
-- [ ] Action/setup/doctor/CLI/workflow schemas, persisted variables, generated
+- [x] Action/setup/doctor/CLI/workflow schemas, persisted variables, generated
       bundles, examples, and defaults agree.
-- [ ] User, setup, operator, security, migration, and contributor documentation
+- [x] User, setup, operator, security, migration, and contributor documentation
       is complete, fixture-backed, discoverable, and contains no obsolete claims.
-- [ ] Related implemented/as-built SDD localization clauses are amended in the
+- [x] Related implemented/as-built SDD localization clauses are amended in the
       implementation change so there is one current normative contract.
-- [ ] `specs/catalog.json` and `specs/CATALOG.md` are current and
+- [x] `specs/catalog.json` and `specs/CATALOG.md` are current and
       `pnpm run validate:specifications` passes.
-- [ ] No readiness-blocking decision remains unresolved.
+- [x] No readiness-blocking decision remains unresolved.
 
 ## 20. References and decisions
 
