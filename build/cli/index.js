@@ -37702,10 +37702,8 @@ exports.buildEmoji = buildEmoji;
 exports.buildTokens = buildTokens;
 exports.buildLabels = buildLabels;
 exports.buildIssueTypes = buildIssueTypes;
-exports.buildImages = buildImages;
 const emoji_1 = __nccwpck_require__(24146);
 const issue_1 = __nccwpck_require__(46760);
-const images_1 = __nccwpck_require__(76625);
 const issue_types_1 = __nccwpck_require__(27357);
 const labels_1 = __nccwpck_require__(79463);
 const locale_1 = __nccwpck_require__(9832);
@@ -37740,195 +37738,6 @@ function buildLabels(values) {
 function buildIssueTypes(values) {
     return new issue_types_1.IssueTypes(values.task.name, values.task.description, values.task.color, values.bug.name, values.bug.description, values.bug.color, values.feature.name, values.feature.description, values.feature.color, values.documentation.name, values.documentation.description, values.documentation.color, values.maintenance.name, values.maintenance.description, values.maintenance.color, values.hotfix.name, values.hotfix.description, values.hotfix.color, values.release.name, values.release.description, values.release.color, values.question.name, values.question.description, values.question.color, values.help.name, values.help.description, values.help.color);
 }
-function buildImages(values) {
-    return new images_1.Images(values.onIssue, values.onPullRequest, values.onCommit, values.issue.automatic, values.issue.feature, values.issue.bugfix, values.issue.docs, values.issue.chore, values.issue.release, values.issue.hotfix, values.pullRequest.automatic, values.pullRequest.feature, values.pullRequest.bugfix, values.pullRequest.release, values.pullRequest.hotfix, values.pullRequest.docs, values.pullRequest.chore, values.commit.automatic, values.commit.feature, values.commit.bugfix, values.commit.release, values.commit.hotfix, values.commit.docs, values.commit.chore);
-}
-
-
-/***/ }),
-
-/***/ 14387:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DEFAULT_IMAGE_CONFIG = void 0;
-/** Default illustration URLs used when an action does not receive custom images. */
-exports.DEFAULT_IMAGE_CONFIG = {
-    issue: {
-        automatic: [
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMm5iZHJydTJ4NGticXdxd3ZxYnZqNXdvaDQwOHdtb3o5NTRhdnRhOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LSX49vHf7JHGyGjrC0/giphy.gif",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExYzRsNGFicndqMXgzMTVwdnhpeXNyZGsydXVxamV4eGxndWhna291OSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ktcUyw6mBlMVa/200.webp",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdjkyeWVubngzM28xODFrbXZ4Nng3Y2hubmM4cXJqNGpic3Bheml0NSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/M11UVCRrc0LUk/giphy.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExenQwNDJmZnZraDBzNXBoNjUwZjEzMzFlanMxcHVodmF4b3l3bDl2biZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/zrdUjl6N99nLq/200.webp",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmozN3plMWNiYjZoemh6N2RmeTB1MG9ieHlqYTJsb3BrZmNoY3h0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/stv1Dliu5TrMs/giphy.webp"
-        ],
-        feature: [
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMm5iZHJydTJ4NGticXdxd3ZxYnZqNXdvaDQwOHdtb3o5NTRhdnRhOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LSX49vHf7JHGyGjrC0/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExYmc4YWplZWs0Y2c3ZXNtbGpwZnQzdWpncmNjNXpodjg3MHdtbnJ5NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/OMK7LRBedcnhm/200.webp",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHBrYXpmd2poeGU5cWswbjRqNmJlZ2U2dWc0ejVpY3RpcXVuYTY3dSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/llKJGxQ1ESmac/giphy.webp",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMnFleXV0MXZteGN6c2s2b3R3ZGc2cWY1aXB0Y3ZzNmpvZHhyNDVmNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/10FwycrnAkpshW/giphy.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExcHo0MjIzaGIycTRmeWFwZmp6bGExczJicXcyZTQxemsxaTY1b3V1NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/QKkV58ufpV4ksJ1Okh/giphy.gif",
-        ],
-        bugfix: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExazc3OWszenA5c2FlemE3a25oNnlmZDBra3liMWRqMW82NzM2b2FveCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/xPGkOAdiIO3Is/giphy.webp",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmozN3plMWNiYjZoemh6N2RmeTB1MG9ieHlqYTJsb3BrZmNoY3h0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/stv1Dliu5TrMs/giphy.webp",
-            "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExY3liaGF2NzI3bzM1YjRmdHFsaGdyenp4b3o3M3dqM3F0bGN5MHZtNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/npUpB306c3EStRK6qP/200.webp",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWh6d3Nld3E0MTF1eTk2YXFibnI3MTBhbGtpamJiemRwejl3YmkzMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/gU25raLP4pUu4/giphy.webp",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmM1OWR0cnk5eXI0dXpoNWRzbmVseTVyd2l3MzdrOHZueHJ6bjhjMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12yjKJaLB7DuG4/giphy.webp"
-        ],
-        hotfix: [
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmozN3plMWNiYjZoemh6N2RmeTB1MG9ieHlqYTJsb3BrZmNoY3h0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/stv1Dliu5TrMs/giphy.webp",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExd2R0cjNxbXBjZjRjNmg4NmN3MGlhazVkNHJsaDkxMHZkY2hweGRtZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/pCU4bC7kC6sxy/200.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExenkyZTc3aDlweWl0MnI0cXJsZGptY3g0bzE2NTY1aWMyaHd4Y201ZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/dbtDDSvWErdf2/giphy.webp",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExM25ndGd2d3Uya3g3dnlnenJ1bjh0Y2NtNHdwZHY3Mjh2NnBmZDJpbyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2xF8gHUf085aNyyAQR/200.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExdjU3bHdsc3FtamlyazBlbWppNHc3MTV3MW4xdHd2cWo4b2tzbTkwcSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/1EghTrigJJhq8/200.webp",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmM1OWR0cnk5eXI0dXpoNWRzbmVseTVyd2l3MzdrOHZueHJ6bjhjMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12yjKJaLB7DuG4/giphy.webp"
-        ],
-        release: [
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExY2NxcHEzam92enRtd29xc21pMHhmbHozMWljamF1cmt4cjhwZTI0ayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/PApUm1HPVYlDNLoMmr/giphy.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNXU4dnhwOWVqZzc4NXVsdTY3c2I4Mm9lOHF1c253MDJya25zNXU0ZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/dxn6fRlTIShoeBr69N/giphy.webp",
-            "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXN2bjJob3pxazE2NDJhbGE3ZWY5d2dzbDM4czgwZnA4ejlxY3ZqeCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/9D37RaHngWP7ZmmsEt/giphy.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExZnI0YTM2N2hwamd2dXYwNmN2MjRpYXIyN203cnNpbW13YjNhZGRhdyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LYWPXVUNz30ze/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdW1jZ3F4ZGRwMWkyc3ZocHJ3aXhyb2FuZGppcnMyMWtsYXpjbDY2ZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tXLpxypfSXvUc/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHRianpoOW51MzZ4Yjk3MmNpbmdseTJlb3o3dWVpYzJpazc5ZHNoayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/b85mPT4Usz7fq/giphy.gif",
-        ],
-        docs: [
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExaGRpZHJqYzRvZ25xcjR3ZXcwbzVudXF2Z2hsaHoyc2g1ZjZuam81YiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/eDArHBLT4aATKEKtCd/giphy.gif",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExa2NubXR1b2M1dDQ2Z2UxYmk5bzltbHdudWI1emVzOGFlbDNsOGU1bSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/wpgYasZ0tBrP4lCgS3/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExMmEyNzc3M2V0anp4d2JtOTJuMTZ2dXNnMmEyN3A4MmE0ZGpiaDhnNCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orifaQEOagjYJ1EXe/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExZjUyenc2eG5pZ3NjYzcyZXg2dDFndm5qZHRqMHk5amNoYjhhNnNvZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/7E8lI6TkLrvvAcPXso/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExaWFxcXZ3MTMxM3Bjd2IwNG43ZDJjdndreXNmdTVvZ2g3Z2Q4NjczMCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3tJdi9wQQ10BD2H47g/giphy.gif",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNjFrejZmaHQ2Z2o1Y3B2MDl6cmU5bzNybG84eXFrYjBjZjV0dGFpeSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/fsXOS3oBboiYf6fSsY/giphy.gif",
-            "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHdhOHRianU1YmtrNHE0c2R2M2I2MTBzNnZhdnBrMW5ueG02eHF6OSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieOEBYMAwTClHqM/giphy.gif",
-        ],
-        chore: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExNjFtNXY0ZXdmdGxkdno2Nm5odGk3Nzd3aTRuYnJtbDA4MXIxdHFhdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/10zsjaH4g0GgmY/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExZG1sNXB6eTZvdDNtNzJwNXVxenNjendwaGgxb2xzNWI1dGNpdTVmZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/NHHYRm7mAUQ6Y/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHd4bDJrc216YWpicDQ5emczdWF3bTk0dXYzeGQ4ajg2a3IyYjV6diZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/FHEjBpiqMwSuA/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3d5b2U1Z3Jic3AxY2llYjQwNW5wODFpNWp5NHY0dGV5Z2cxdThkdCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/kLZNLNqUZ6bC0/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExbTNpZ2w0c3NrMmc0cmZobTd2eTM3YTRlM2lnbWpoZDUzNnRjdnNmZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/NV4cSrRYXXwfUcYnua/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmFzZHNuODg0dDRheGt0aGU2bjVvd2xiNDI1bWFmYTVsbHJ2eHI2dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/XaAbmtzzz35IgW3Ntn/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExYWM2OHkzYmNkajZxa204Njg0bmQzaWp1M3NobnJjbWxyYWJrbDNnciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/OiwOPq0fFqqyainyMu/giphy.gif",
-        ],
-    },
-    pullRequest: {
-        automatic: [
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMm5iZHJydTJ4NGticXdxd3ZxYnZqNXdvaDQwOHdtb3o5NTRhdnRhOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LSX49vHf7JHGyGjrC0/giphy.gif",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExYzRsNGFicndqMXgzMTVwdnhpeXNyZGsydXVxamV4eGxndWhna291OSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ktcUyw6mBlMVa/200.webp",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdjkyeWVubngzM28xODFrbXZ4Nng3Y2hubmM4cXJqNGpic3Bheml0NSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/M11UVCRrc0LUk/giphy.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExenQwNDJmZnZraDBzNXBoNjUwZjEzMzFlanMxcHVodmF4b3l3bDl2biZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/zrdUjl6N99nLq/200.webp",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmozN3plMWNiYjZoemh6N2RmeTB1MG9ieHlqYTJsb3BrZmNoY3h0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/stv1Dliu5TrMs/giphy.webp",
-        ],
-        feature: [
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMm5iZHJydTJ4NGticXdxd3ZxYnZqNXdvaDQwOHdtb3o5NTRhdnRhOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LSX49vHf7JHGyGjrC0/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExYmc4YWplZWs0Y2c3ZXNtbGpwZnQzdWpncmNjNXpodjg3MHdtbnJ5NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/OMK7LRBedcnhm/200.webp",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHBrYXpmd2poeGU5cWswbjRqNmJlZ2U2dWc0ejVpY3RpcXVuYTY3dSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/llKJGxQ1ESmac/giphy.webp",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMnFleXV0MXZteGN6c2s2b3R3ZGc2cWY1aXB0Y3ZzNmpvZHhyNDVmNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/10FwycrnAkpshW/giphy.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExcHo0MjIzaGIycTRmeWFwZmp6bGExczJicXcyZTQxemsxaTY1b3V1NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/QKkV58ufpV4ksJ1Okh/giphy.gif",
-        ],
-        bugfix: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExazc3OWszenA5c2FlemE3a25oNnlmZDBra3liMWRqMW82NzM2b2FveCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/xPGkOAdiIO3Is/giphy.webp",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmozN3plMWNiYjZoemh6N2RmeTB1MG9ieHlqYTJsb3BrZmNoY3h0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/stv1Dliu5TrMs/giphy.webp",
-            "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExY3liaGF2NzI3bzM1YjRmdHFsaGdyenp4b3o3M3dqM3F0bGN5MHZtNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/npUpB306c3EStRK6qP/200.webp",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWh6d3Nld3E0MTF1eTk2YXFibnI3MTBhbGtpamJiemRwejl3YmkzMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/gU25raLP4pUu4/giphy.webp",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmM1OWR0cnk5eXI0dXpoNWRzbmVseTVyd2l3MzdrOHZueHJ6bjhjMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12yjKJaLB7DuG4/giphy.webp",
-        ],
-        hotfix: [
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmozN3plMWNiYjZoemh6N2RmeTB1MG9ieHlqYTJsb3BrZmNoY3h0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/stv1Dliu5TrMs/giphy.webp",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExd2R0cjNxbXBjZjRjNmg4NmN3MGlhazVkNHJsaDkxMHZkY2hweGRtZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/pCU4bC7kC6sxy/200.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExenkyZTc3aDlweWl0MnI0cXJsZGptY3g0bzE2NTY1aWMyaHd4Y201ZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/dbtDDSvWErdf2/giphy.webp",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExM25ndGd2d3Uya3g3dnlnenJ1bjh0Y2NtNHdwZHY3Mjh2NnBmZDJpbyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2xF8gHUf085aNyyAQR/200.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExdjU3bHdsc3FtamlyazBlbWppNHc3MTV3MW4xdHd2cWo4b2tzbTkwcSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/1EghTrigJJhq8/200.webp",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmM1OWR0cnk5eXI0dXpoNWRzbmVseTVyd2l3MzdrOHZueHJ6bjhjMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12yjKJaLB7DuG4/giphy.webp",
-        ],
-        release: [
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExY2NxcHEzam92enRtd29xc21pMHhmbHozMWljamF1cmt4cjhwZTI0ayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/PApUm1HPVYlDNLoMmr/giphy.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNXU4dnhwOWVqZzc4NXVsdTY3c2I4Mm9lOHF1c253MDJya25zNXU0ZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/dxn6fRlTIShoeBr69N/giphy.webp",
-            "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXN2bjJob3pxazE2NDJhbGE3ZWY5d2dzbDM4czgwZnA4ejlxY3ZqeCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/9D37RaHngWP7ZmmsEt/giphy.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExZnI0YTM2N2hwamd2dXYwNmN2MjRpYXIyN203cnNpbW13YjNhZGRhdyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LYWPXVUNz30ze/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdW1jZ3F4ZGRwMWkyc3ZocHJ3aXhyb2FuZGppcnMyMWtsYXpjbDY2ZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tXLpxypfSXvUc/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHRianpoOW51MzZ4Yjk3MmNpbmdseTJlb3o3dWVpYzJpazc5ZHNoayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/b85mPT4Usz7fq/giphy.gif",
-        ],
-        docs: [
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExaGRpZHJqYzRvZ25xcjR3ZXcwbzVudXF2Z2hsaHoyc2g1ZjZuam81YiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/eDArHBLT4aATKEKtCd/giphy.gif",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExa2NubXR1b2M1dDQ2Z2UxYmk5bzltbHdudWI1emVzOGFlbDNsOGU1bSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/wpgYasZ0tBrP4lCgS3/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExMmEyNzc3M2V0anp4d2JtOTJuMTZ2dXNnMmEyN3A4MmE0ZGpiaDhnNCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orifaQEOagjYJ1EXe/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExZjUyenc2eG5pZ3NjYzcyZXg2dDFndm5qZHRqMHk5amNoYjhhNnNvZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/7E8lI6TkLrvvAcPXso/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExaWFxcXZ3MTMxM3Bjd2IwNG43ZDJjdndreXNmdTVvZ2g3Z2Q4NjczMCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3tJdi9wQQ10BD2H47g/giphy.gif",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNjFrejZmaHQ2Z2o1Y3B2MDl6cmU5bzNybG84eXFrYjBjZjV0dGFpeSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/fsXOS3oBboiYf6fSsY/giphy.gif",
-            "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHdhOHRianU1YmtrNHE0c2R2M2I2MTBzNnZhdnBrMW5ueG02eHF6OSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieOEBYMAwTClHqM/giphy.gif",
-        ],
-        chore: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExNjFtNXY0ZXdmdGxkdno2Nm5odGk3Nzd3aTRuYnJtbDA4MXIxdHFhdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/10zsjaH4g0GgmY/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExZG1sNXB6eTZvdDNtNzJwNXVxenNjendwaGgxb2xzNWI1dGNpdTVmZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/NHHYRm7mAUQ6Y/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHd4bDJrc216YWpicDQ5emczdWF3bTk0dXYzeGQ4ajg2a3IyYjV6diZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/FHEjBpiqMwSuA/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3d5b2U1Z3Jic3AxY2llYjQwNW5wODFpNWp5NHY0dGV5Z2cxdThkdCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/kLZNLNqUZ6bC0/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExbTNpZ2w0c3NrMmc0cmZobTd2eTM3YTRlM2lnbWpoZDUzNnRjdnNmZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/NV4cSrRYXXwfUcYnua/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmFzZHNuODg0dDRheGt0aGU2bjVvd2xiNDI1bWFmYTVsbHJ2eHI2dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/XaAbmtzzz35IgW3Ntn/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExYWM2OHkzYmNkajZxa204Njg0bmQzaWp1M3NobnJjbWxyYWJrbDNnciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/OiwOPq0fFqqyainyMu/giphy.gif",
-        ],
-    },
-    commit: {
-        automatic: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
-        ],
-        feature: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
-        ],
-        bugfix: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
-        ],
-        hotfix: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
-        ],
-        release: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
-        ],
-        docs: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
-        ],
-        chore: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
-        ]
-    }
-};
 
 
 /***/ }),
@@ -38006,69 +37815,6 @@ exports.buildExecution = buildExecution;
 const execution_1 = __nccwpck_require__(31546);
 function buildExecution(components) {
     return new execution_1.Execution(components);
-}
-
-
-/***/ }),
-
-/***/ 9246:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.buildImageConfiguration = buildImageConfiguration;
-const default_image_config_1 = __nccwpck_require__(14387);
-const input_keys_1 = __nccwpck_require__(88539);
-const input_boolean_policy_1 = __nccwpck_require__(18330);
-const input_values_policy_1 = __nccwpck_require__(68841);
-const imageInputKeys = {
-    issue: {
-        automatic: input_keys_1.INPUT_KEYS.IMAGES_ISSUE_AUTOMATIC,
-        feature: input_keys_1.INPUT_KEYS.IMAGES_ISSUE_FEATURE,
-        bugfix: input_keys_1.INPUT_KEYS.IMAGES_ISSUE_BUGFIX,
-        release: input_keys_1.INPUT_KEYS.IMAGES_ISSUE_RELEASE,
-        hotfix: input_keys_1.INPUT_KEYS.IMAGES_ISSUE_HOTFIX,
-        docs: input_keys_1.INPUT_KEYS.IMAGES_ISSUE_DOCS,
-        chore: input_keys_1.INPUT_KEYS.IMAGES_ISSUE_CHORE,
-    },
-    pullRequest: {
-        automatic: input_keys_1.INPUT_KEYS.IMAGES_PULL_REQUEST_AUTOMATIC,
-        feature: input_keys_1.INPUT_KEYS.IMAGES_PULL_REQUEST_FEATURE,
-        bugfix: input_keys_1.INPUT_KEYS.IMAGES_PULL_REQUEST_BUGFIX,
-        release: input_keys_1.INPUT_KEYS.IMAGES_PULL_REQUEST_RELEASE,
-        hotfix: input_keys_1.INPUT_KEYS.IMAGES_PULL_REQUEST_HOTFIX,
-        docs: input_keys_1.INPUT_KEYS.IMAGES_PULL_REQUEST_DOCS,
-        chore: input_keys_1.INPUT_KEYS.IMAGES_PULL_REQUEST_CHORE,
-    },
-    commit: {
-        automatic: input_keys_1.INPUT_KEYS.IMAGES_COMMIT_AUTOMATIC,
-        feature: input_keys_1.INPUT_KEYS.IMAGES_COMMIT_FEATURE,
-        bugfix: input_keys_1.INPUT_KEYS.IMAGES_COMMIT_BUGFIX,
-        release: input_keys_1.INPUT_KEYS.IMAGES_COMMIT_RELEASE,
-        hotfix: input_keys_1.INPUT_KEYS.IMAGES_COMMIT_HOTFIX,
-        docs: input_keys_1.INPUT_KEYS.IMAGES_COMMIT_DOCS,
-        chore: input_keys_1.INPUT_KEYS.IMAGES_COMMIT_CHORE,
-    },
-};
-function buildImageConfiguration(read) {
-    const groups = {};
-    for (const group of Object.keys(imageInputKeys)) {
-        const variants = {};
-        for (const variant of Object.keys(imageInputKeys[group])) {
-            const configured = (0, input_values_policy_1.parseDelimitedValues)(read(imageInputKeys[group][variant]));
-            variants[variant] = configured.length > 0
-                ? configured
-                : [...default_image_config_1.DEFAULT_IMAGE_CONFIG[group][variant]];
-        }
-        groups[group] = variants;
-    }
-    return {
-        onIssue: (0, input_boolean_policy_1.isEnabledInput)(read(input_keys_1.INPUT_KEYS.IMAGES_ON_ISSUE)),
-        onPullRequest: (0, input_boolean_policy_1.isEnabledInput)(read(input_keys_1.INPUT_KEYS.IMAGES_ON_PULL_REQUEST)),
-        onCommit: (0, input_boolean_policy_1.isEnabledInput)(read(input_keys_1.INPUT_KEYS.IMAGES_ON_COMMIT)),
-        ...groups,
-    };
 }
 
 
@@ -38235,7 +37981,6 @@ const project_details_loader_1 = __nccwpck_require__(73448);
 const input_number_policy_1 = __nccwpck_require__(47165);
 const input_values_policy_1 = __nccwpck_require__(68841);
 const agent_input_builder_1 = __nccwpck_require__(71404);
-const image_configuration_builder_1 = __nccwpck_require__(9246);
 const pull_request_description_1 = __nccwpck_require__(45315);
 const issue_inactivity_1 = __nccwpck_require__(38572);
 const review_configuration_1 = __nccwpck_require__(3994);
@@ -38444,7 +38189,6 @@ function readLocalWorkflowConfiguration(additionalParams, actionInputs) {
     const hotfixTree = read(input_keys_1.INPUT_KEYS.HOTFIX_TREE);
     const locale = new locale_1.Locale(read(input_keys_1.INPUT_KEYS.REPOSITORY_LOCALE) || locale_1.Locale.DEFAULT, read(input_keys_1.INPUT_KEYS.ISSUES_LOCALE) || '', read(input_keys_1.INPUT_KEYS.PULL_REQUESTS_LOCALE) || '');
     return {
-        imageConfiguration: (0, image_configuration_builder_1.buildImageConfiguration)((key) => additionalParams[key] ?? actionInputs[key]),
         releaseWorkflow: read(input_keys_1.INPUT_KEYS.RELEASE_WORKFLOW),
         hotfixWorkflow: read(input_keys_1.INPUT_KEYS.HOTFIX_WORKFLOW),
         titleEmoji: read(input_keys_1.INPUT_KEYS.EMOJI_LABELED_TITLE) === 'true',
@@ -38496,7 +38240,7 @@ const configuration_builders_1 = __nccwpck_require__(19094);
 const branches_builder_1 = __nccwpck_require__(30085);
 const size_threshold_builder_1 = __nccwpck_require__(39757);
 function buildLocalActionExecution(configuration, additionalParams) {
-    const { debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog, singleActionMessage, singleActionCommentId, singleActionCommentMode, singleActionOperationId, inactivityThresholdHours, commitPrefixBuilder, branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount, pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, titleEmoji, branchManagementEmoji, imageConfiguration, token, agentModel, aiPullRequestDescriptionMode, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, bugbotReviewConfiguration, agentTasks, branchManagementLauncherLabel, bugLabel, bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel, deployLabel, deployedLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel, priorityHighLabel, priorityMediumLabel, priorityLowLabel, priorityNoneLabel, sizeXxlLabel, sizeXlLabel, sizeLLabel, sizeMLabel, sizeSLabel, sizeXsLabel, lifecycle, issueTypeTask, issueTypeTaskDescription, issueTypeTaskColor, issueTypeBug, issueTypeBugDescription, issueTypeBugColor, issueTypeFeature, issueTypeFeatureDescription, issueTypeFeatureColor, issueTypeDocumentation, issueTypeDocumentationDescription, issueTypeDocumentationColor, issueTypeMaintenance, issueTypeMaintenanceDescription, issueTypeMaintenanceColor, issueTypeHotfix, issueTypeHotfixDescription, issueTypeHotfixColor, issueTypeRelease, issueTypeReleaseDescription, issueTypeReleaseColor, issueTypeQuestion, issueTypeQuestionDescription, issueTypeQuestionColor, issueTypeHelp, issueTypeHelpDescription, issueTypeHelpColor, repositoryLocale, issueLocale, pullRequestLocale, sizeXxlThresholdLines, sizeXxlThresholdFiles, sizeXxlThresholdCommits, sizeXlThresholdLines, sizeXlThresholdFiles, sizeXlThresholdCommits, sizeLThresholdLines, sizeLThresholdFiles, sizeLThresholdCommits, sizeMThresholdLines, sizeMThresholdFiles, sizeMThresholdCommits, sizeSThresholdLines, sizeSThresholdFiles, sizeSThresholdCommits, sizeXsThresholdLines, sizeXsThresholdFiles, sizeXsThresholdCommits, mainBranch, developmentBranch, featureTree, bugfixTree, hotfixTree, releaseTree, docsTree, choreTree, releaseWorkflow, hotfixWorkflow, projects, projectColumnIssueCreated, projectColumnPullRequestCreated, projectColumnIssueInProgress, projectColumnPullRequestInProgress, welcomeTitle, welcomeMessages, deployment, } = configuration;
+    const { debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog, singleActionMessage, singleActionCommentId, singleActionCommentMode, singleActionOperationId, inactivityThresholdHours, commitPrefixBuilder, branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount, pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, titleEmoji, branchManagementEmoji, token, agentModel, aiPullRequestDescriptionMode, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, bugbotReviewConfiguration, agentTasks, branchManagementLauncherLabel, bugLabel, bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel, deployLabel, deployedLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel, priorityHighLabel, priorityMediumLabel, priorityLowLabel, priorityNoneLabel, sizeXxlLabel, sizeXlLabel, sizeLLabel, sizeMLabel, sizeSLabel, sizeXsLabel, lifecycle, issueTypeTask, issueTypeTaskDescription, issueTypeTaskColor, issueTypeBug, issueTypeBugDescription, issueTypeBugColor, issueTypeFeature, issueTypeFeatureDescription, issueTypeFeatureColor, issueTypeDocumentation, issueTypeDocumentationDescription, issueTypeDocumentationColor, issueTypeMaintenance, issueTypeMaintenanceDescription, issueTypeMaintenanceColor, issueTypeHotfix, issueTypeHotfixDescription, issueTypeHotfixColor, issueTypeRelease, issueTypeReleaseDescription, issueTypeReleaseColor, issueTypeQuestion, issueTypeQuestionDescription, issueTypeQuestionColor, issueTypeHelp, issueTypeHelpDescription, issueTypeHelpColor, repositoryLocale, issueLocale, pullRequestLocale, sizeXxlThresholdLines, sizeXxlThresholdFiles, sizeXxlThresholdCommits, sizeXlThresholdLines, sizeXlThresholdFiles, sizeXlThresholdCommits, sizeLThresholdLines, sizeLThresholdFiles, sizeLThresholdCommits, sizeMThresholdLines, sizeMThresholdFiles, sizeMThresholdCommits, sizeSThresholdLines, sizeSThresholdFiles, sizeSThresholdCommits, sizeXsThresholdLines, sizeXsThresholdFiles, sizeXsThresholdCommits, mainBranch, developmentBranch, featureTree, bugfixTree, hotfixTree, releaseTree, docsTree, choreTree, releaseWorkflow, hotfixWorkflow, projects, projectColumnIssueCreated, projectColumnPullRequestCreated, projectColumnIssueInProgress, projectColumnPullRequestInProgress, welcomeTitle, welcomeMessages, deployment, } = configuration;
     return (0, execution_builder_1.buildExecution)({
         debug,
         inactivityThresholdHours,
@@ -38505,14 +38249,6 @@ function buildLocalActionExecution(configuration, additionalParams) {
         issue: (0, configuration_builders_1.buildIssue)(branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount, additionalParams),
         pullRequest: (0, configuration_builders_1.buildPullRequest)(pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, additionalParams),
         emoji: (0, configuration_builders_1.buildEmoji)(titleEmoji, branchManagementEmoji),
-        images: (0, configuration_builders_1.buildImages)({
-            onIssue: imageConfiguration.onIssue,
-            onPullRequest: imageConfiguration.onPullRequest,
-            onCommit: imageConfiguration.onCommit,
-            issue: imageConfiguration.issue,
-            pullRequest: imageConfiguration.pullRequest,
-            commit: imageConfiguration.commit,
-        }),
         tokens: (0, configuration_builders_1.buildTokens)(token),
         ai: new ai_1.Ai('', agentModel, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, agentTasks, aiPullRequestDescriptionMode, bugbotReviewConfiguration),
         labels: (0, configuration_builders_1.buildLabels)({
@@ -39144,31 +38880,6 @@ exports.INPUT_KEYS = {
     PROJECT_COLUMN_PULL_REQUEST_CREATED: 'project-column-pull-request-created',
     PROJECT_COLUMN_ISSUE_IN_PROGRESS: 'project-column-issue-in-progress',
     PROJECT_COLUMN_PULL_REQUEST_IN_PROGRESS: 'project-column-pull-request-in-progress',
-    // Images
-    IMAGES_ON_ISSUE: 'images-on-issue',
-    IMAGES_ON_PULL_REQUEST: 'images-on-pull-request',
-    IMAGES_ON_COMMIT: 'images-on-commit',
-    IMAGES_ISSUE_AUTOMATIC: 'images-issue-automatic',
-    IMAGES_ISSUE_FEATURE: 'images-issue-feature',
-    IMAGES_ISSUE_BUGFIX: 'images-issue-bugfix',
-    IMAGES_ISSUE_DOCS: 'images-issue-docs',
-    IMAGES_ISSUE_CHORE: 'images-issue-chore',
-    IMAGES_ISSUE_RELEASE: 'images-issue-release',
-    IMAGES_ISSUE_HOTFIX: 'images-issue-hotfix',
-    IMAGES_PULL_REQUEST_AUTOMATIC: 'images-pull-request-automatic',
-    IMAGES_PULL_REQUEST_FEATURE: 'images-pull-request-feature',
-    IMAGES_PULL_REQUEST_BUGFIX: 'images-pull-request-bugfix',
-    IMAGES_PULL_REQUEST_RELEASE: 'images-pull-request-release',
-    IMAGES_PULL_REQUEST_HOTFIX: 'images-pull-request-hotfix',
-    IMAGES_PULL_REQUEST_DOCS: 'images-pull-request-docs',
-    IMAGES_PULL_REQUEST_CHORE: 'images-pull-request-chore',
-    IMAGES_COMMIT_AUTOMATIC: 'images-commit-automatic',
-    IMAGES_COMMIT_FEATURE: 'images-commit-feature',
-    IMAGES_COMMIT_BUGFIX: 'images-commit-bugfix',
-    IMAGES_COMMIT_RELEASE: 'images-commit-release',
-    IMAGES_COMMIT_HOTFIX: 'images-commit-hotfix',
-    IMAGES_COMMIT_DOCS: 'images-commit-docs',
-    IMAGES_COMMIT_CHORE: 'images-commit-chore',
     // Workflows
     RELEASE_WORKFLOW: 'release-workflow',
     HOTFIX_WORKFLOW: 'hotfix-workflow',
@@ -41291,7 +41002,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'bugbot.status.syncFailure': 'Bugbot could not fully synchronize the state of {commit}.',
     'bugbot.status.clean': 'No active findings on {commit}.',
     'bugbot.status.attention': Object.freeze({ one: '{count} finding requires attention on {commit}.', other: '{count} findings require attention on {commit}.' }),
-    'bugbot.status.action.partial': 'Inspect the omitted items or reduce the pull request scope. Rerun the review only after changing the scope, limits, or access.',
+    'bugbot.status.action.partial': 'Do not treat this review as complete. Review the sources under Incomplete coverage and manually inspect omitted items; rerun only after reducing the relevant scope or restoring provider access.',
     'bugbot.status.action.recheck': 'Correct the reported cause, then run {command} once.',
     'bugbot.status.action.findings': 'Review the linked threads or comment {command}.',
     'bugbot.status.findingsHeading': 'Findings',
@@ -41380,7 +41091,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'bugbot.status.syncFailure': 'Bugbot no pudo sincronizar por completo el estado de {commit}.',
     'bugbot.status.clean': 'No hay hallazgos activos en {commit}.',
     'bugbot.status.attention': Object.freeze({ one: '{count} hallazgo requiere atención en {commit}.', many: '{count} hallazgos requieren atención en {commit}.', other: '{count} hallazgos requieren atención en {commit}.' }),
-    'bugbot.status.action.partial': 'Revisa los elementos omitidos o reduce el alcance del pull request. Repite la revisión solo después de cambiar el alcance, los límites o el acceso.',
+    'bugbot.status.action.partial': 'No consideres completa esta revisión. Revisa las fuentes en Cobertura incompleta e inspecciona manualmente los elementos omitidos; repite la revisión solo después de reducir el alcance relevante o restaurar el acceso al proveedor.',
     'bugbot.status.action.recheck': 'Corrige la causa indicada y ejecuta {command} una vez.',
     'bugbot.status.action.findings': 'Revisa los hilos enlazados o comenta {command}.',
     'bugbot.status.findingsHeading': 'Hallazgos',
@@ -52636,19 +52347,9 @@ function projectBranchSyncContext(source) {
     });
 }
 function projectCommitNotificationContext(source) {
-    const theme = commitTheme(source);
     return Object.freeze({
         issueNumber: source.issueNumber,
-        branch: source.commit.branch,
-        commits: Object.freeze(source.commit.commits.map(commit => Object.freeze({
-            ...commit,
-            ...(commit.author ? { author: Object.freeze({ ...commit.author }) } : {}),
-        }))),
-        commitPrefixBuilder: source.commitPrefixBuilder,
         reopenOnPush: source.issue.reopenOnPush,
-        theme: theme.kind,
-        imagesOnCommit: source.images.imagesOnCommit,
-        themeImages: Object.freeze([...theme.images]),
     });
 }
 function projectChangeSizeContext(source) {
@@ -52708,21 +52409,6 @@ function projectAgentActivityContext(source) {
         } : {}),
         activityLabel: source.labels.lifecycle.aiProcessing,
     });
-}
-function commitTheme(source) {
-    if (source.release.active)
-        return { kind: 'release', images: source.images.commitReleaseGifs };
-    if (source.hotfix.active)
-        return { kind: 'hotfix', images: source.images.commitHotfixGifs };
-    if (source.isBugfix)
-        return { kind: 'bugfix', images: source.images.commitBugfixGifs };
-    if (source.isFeature)
-        return { kind: 'feature', images: source.images.commitFeatureGifs };
-    if (source.isDocs)
-        return { kind: 'docs', images: source.images.commitDocsGifs };
-    if (source.isChore)
-        return { kind: 'chore', images: source.images.commitChoreGifs };
-    return { kind: 'automatic', images: source.images.commitAutomaticActions };
 }
 function copyInitialLabels(source) {
     const keys = [
@@ -58957,8 +58643,8 @@ function projectIssueContentLinkContext(source) {
 function projectPullRequestContentLinkContext(source) {
     return projectContext(source, 'pull request', source.pullRequest.number, source.project.getProjectColumnPullRequestCreated(), source.pullRequest.id);
 }
-/** Links issue-like content to each configured project and moves it after propagation. */
-async function runProjectContentLinkWorkflow(param, taskId, port, waitForPropagation) {
+/** Links issue-like content to each configured project and updates the returned item directly. */
+async function runProjectContentLinkWorkflow(param, taskId, port) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId}.`);
     if (param.projects.length === 0) {
         (0, logging_ports_1.logDebugInfo)(`Link${capitalize(param.contentType)}: no projects configured; skipping.`);
@@ -58968,20 +58654,15 @@ async function runProjectContentLinkWorkflow(param, taskId, port, waitForPropaga
         const contentId = param.contentId ?? await port.resolveIssueContentId(param.contentNumber);
         const results = [];
         for (const project of param.projects) {
-            const linked = await port.linkContentId(project, contentId);
-            if (!linked) {
-                (0, logging_ports_1.logDebugInfo)(`Link${capitalize(param.contentType)}: ${param.contentType} already linked to project "${project.title}" or link failed.`);
-                continue;
-            }
-            await waitForPropagation();
-            const moved = await port.moveContent(project, param.contentNumber, param.columnName);
+            const projectItemId = await port.linkContentId(project, contentId);
+            const moved = await port.moveContent(project, projectItemId, param.columnName);
             if (moved) {
                 results.push(new result_1.Result({
                     id: taskId,
                     success: true,
                     executed: true,
                     steps: [
-                        `The ${param.contentType} was linked to [**${project.title}**](${project.url}) and moved to the column \`${param.columnName}\`.`,
+                        `The ${param.contentType} is linked to [**${project.title}**](${project.url}) with status \`${param.columnName}\`.`,
                     ],
                 }));
             }
@@ -59021,14 +58702,11 @@ function projectContext(source, contentType, contentNumber, columnName, contentI
     });
 }
 function moveFailureResult(context, taskId, project) {
-    if (context.contentType === 'issue') {
-        return new result_1.Result({ id: taskId, success: true, executed: false, steps: [] });
-    }
     return new result_1.Result({
         id: taskId,
         success: false,
         executed: true,
-        steps: [`The ${context.contentType} was linked to [**${project.title}**](${project.url}) but there was an error moving it to the column \`${context.columnName}\`.`],
+        steps: [`The ${context.contentType} is linked to [**${project.title}**](${project.url}), but its status could not be set to \`${context.columnName}\`.`],
     });
 }
 function capitalize(value) {
@@ -60220,13 +59898,12 @@ exports.LinkIssueProjectUseCase = void 0;
 const project_content_link_workflow_1 = __nccwpck_require__(89064);
 /** Application boundary for linking issues to configured ProjectV2 boards. */
 class LinkIssueProjectUseCase {
-    constructor(projectContentPort, eventualConsistencyDelayPort) {
+    constructor(projectContentPort) {
         this.projectContentPort = projectContentPort;
-        this.eventualConsistencyDelayPort = eventualConsistencyDelayPort;
         this.taskId = 'LinkIssueProjectUseCase';
     }
     async invoke(param) {
-        return (0, project_content_link_workflow_1.runProjectContentLinkWorkflow)(param, this.taskId, this.projectContentPort, () => this.eventualConsistencyDelayPort.wait(10000));
+        return (0, project_content_link_workflow_1.runProjectContentLinkWorkflow)(param, this.taskId, this.projectContentPort);
     }
 }
 exports.LinkIssueProjectUseCase = LinkIssueProjectUseCase;
@@ -61277,13 +60954,12 @@ exports.LinkPullRequestProjectUseCase = void 0;
 const project_content_link_workflow_1 = __nccwpck_require__(89064);
 /** Application boundary for linking pull requests to configured ProjectV2 boards. */
 class LinkPullRequestProjectUseCase {
-    constructor(projectContentPort, eventualConsistencyDelayPort) {
+    constructor(projectContentPort) {
         this.projectContentPort = projectContentPort;
-        this.eventualConsistencyDelayPort = eventualConsistencyDelayPort;
         this.taskId = 'LinkPullRequestProjectUseCase';
     }
     async invoke(param) {
-        return (0, project_content_link_workflow_1.runProjectContentLinkWorkflow)(param, this.taskId, this.projectContentPort, () => this.eventualConsistencyDelayPort.wait(10000));
+        return (0, project_content_link_workflow_1.runProjectContentLinkWorkflow)(param, this.taskId, this.projectContentPort);
     }
 }
 exports.LinkPullRequestProjectUseCase = LinkPullRequestProjectUseCase;
@@ -64629,7 +64305,6 @@ class Execution {
         this.commitPrefixBuilder = components.commitPrefixBuilder;
         this.issue = components.issue;
         this.pullRequest = components.pullRequest;
-        this.images = components.images;
         this.tokens = components.tokens;
         this.ai = components.ai;
         this.emoji = components.emoji;
@@ -64668,46 +64343,6 @@ class Hotfix {
     }
 }
 exports.Hotfix = Hotfix;
-
-
-/***/ }),
-
-/***/ 76625:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Images = void 0;
-class Images {
-    constructor(imagesOnIssue, imagesOnPullRequest, imagesOnCommit, cleanUpGifs, featureGifs, bugfixGifs, docsGifs, choreGifs, releaseGifs, hotfixGifs, prLinkGifs, prFeatureGifs, prBugfixGifs, prReleaseGifs, prHotfixGifs, prDocsGifs, prChoreGifs, commitAutomaticActions, commitFeatureGifs, commitBugfixGifs, commitReleaseGifs, commitHotfixGifs, commitDocsGifs, commitChoreGifs) {
-        this.imagesOnIssue = imagesOnIssue;
-        this.imagesOnPullRequest = imagesOnPullRequest;
-        this.imagesOnCommit = imagesOnCommit;
-        this.issueAutomaticActions = cleanUpGifs;
-        this.issueFeatureGifs = featureGifs;
-        this.issueBugfixGifs = bugfixGifs;
-        this.issueReleaseGifs = releaseGifs;
-        this.issueHotfixGifs = hotfixGifs;
-        this.issueDocsGifs = docsGifs;
-        this.issueChoreGifs = choreGifs;
-        this.pullRequestAutomaticActions = prLinkGifs;
-        this.pullRequestFeatureGifs = prFeatureGifs;
-        this.pullRequestBugfixGifs = prBugfixGifs;
-        this.pullRequestReleaseGifs = prReleaseGifs;
-        this.pullRequestHotfixGifs = prHotfixGifs;
-        this.pullRequestDocsGifs = prDocsGifs;
-        this.pullRequestChoreGifs = prChoreGifs;
-        this.commitAutomaticActions = commitAutomaticActions;
-        this.commitFeatureGifs = commitFeatureGifs;
-        this.commitBugfixGifs = commitBugfixGifs;
-        this.commitReleaseGifs = commitReleaseGifs;
-        this.commitHotfixGifs = commitHotfixGifs;
-        this.commitDocsGifs = commitDocsGifs;
-        this.commitChoreGifs = commitChoreGifs;
-    }
-}
-exports.Images = Images;
 
 
 /***/ }),
@@ -70449,6 +70084,7 @@ class ProjectBoardCommandRepository {
         this.setTaskPriority = (project, owner, repo, issueOrPullRequestNumber, priorityLabel, token) => this.setField(project, owner, repo, issueOrPullRequestNumber, this.priorityField, priorityLabel, token);
         this.setTaskSize = (project, owner, repo, issueOrPullRequestNumber, sizeLabel, token) => this.setField(project, owner, repo, issueOrPullRequestNumber, this.sizeField, sizeLabel, token);
         this.moveIssueToColumn = (project, owner, repo, issueOrPullRequestNumber, columnName, token) => this.setField(project, owner, repo, issueOrPullRequestNumber, this.statusField, columnName, token);
+        this.moveProjectItemToColumn = (project, projectItemId, columnName, token) => (0, project_board_field_update_1.setProjectBoardSingleSelectFieldByItemId)(this.graphqlClient, project, projectItemId, this.statusField, columnName, token);
     }
     setField(project, owner, repo, issueOrPullRequestNumber, fieldName, fieldValue, token) {
         return (0, project_board_field_update_1.setProjectBoardSingleSelectField)(this.projectBoardContentQueryPort, this.graphqlClient, project, owner, repo, issueOrPullRequestNumber, fieldName, fieldValue, token);
@@ -70539,6 +70175,7 @@ function validateProjectId(projectId) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.setProjectBoardSingleSelectField = setProjectBoardSingleSelectField;
+exports.setProjectBoardSingleSelectFieldByItemId = setProjectBoardSingleSelectFieldByItemId;
 const project_board_provider_limits_1 = __nccwpck_require__(96997);
 const logger_1 = __nccwpck_require__(91151);
 const github_pagination_adapter_1 = __nccwpck_require__(2761);
@@ -70609,9 +70246,18 @@ async function setProjectBoardSingleSelectField(contentQueryPort, graphqlClient,
         (0, logger_1.logDebugInfo)(`Field '${fieldName}' is already set to '${fieldValue}'. No update needed.`);
         return false;
     }
+    return updateProjectBoardSingleSelectField(client, project, contentId, target);
+}
+/** Updates a ProjectV2 item returned by the link mutation without waiting for list propagation. */
+async function setProjectBoardSingleSelectFieldByItemId(graphqlClient, project, projectItemId, fieldName, fieldValue, token) {
+    const client = graphqlClient.getClient(token);
+    const target = await findFieldOption(client, project, fieldName, fieldValue);
+    return updateProjectBoardSingleSelectField(client, project, projectItemId, target);
+}
+async function updateProjectBoardSingleSelectField(client, project, projectItemId, target) {
     const mutationResult = await client.graphql(UPDATE_FIELD_MUTATION, {
         projectId: project.id,
-        itemId: contentId,
+        itemId: projectItemId,
         fieldId: target.fieldId,
         optionId: target.optionId,
     });
@@ -70679,7 +70325,7 @@ async function findProjectItem(client, project, itemId, fieldName) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getProjectItemId = getProjectItemId;
-exports.isProjectContentLinked = isProjectContentLinked;
+exports.getProjectItemIdByContentId = getProjectItemIdByContentId;
 const project_board_provider_limits_1 = __nccwpck_require__(96997);
 const logger_1 = __nccwpck_require__(91151);
 const github_pagination_adapter_1 = __nccwpck_require__(2761);
@@ -70725,8 +70371,8 @@ async function getProjectItemId(graphqlClient, project, owner, repo, issueOrPull
     }
     return projectItemId;
 }
-async function isProjectContentLinked(graphqlClient, project, contentId) {
-    return Boolean(await findProjectItemId(graphqlClient, project, contentId));
+async function getProjectItemIdByContentId(graphqlClient, project, contentId) {
+    return findProjectItemId(graphqlClient, project, contentId);
 }
 async function findProjectItemId(client, project, contentId) {
     for await (const page of (0, github_pagination_adapter_1.paginateCursor)(async (after) => {
@@ -70765,19 +70411,19 @@ class ProjectBoardLinkRepository {
         this.projectBoardQueryPort = projectBoardQueryPort;
         this.graphqlClient = graphqlClient;
         this.linkContentId = async (project, contentId, token) => {
-            if (await this.projectBoardQueryPort.isContentLinked(project, contentId, token)) {
+            const existingItemId = await this.projectBoardQueryPort.getLinkedContentItemId(project, contentId, token);
+            if (existingItemId) {
                 (0, logger_1.logDebugInfo)(`Content ${contentId} is already linked to project ${project.id}.`);
-                return false;
+                return existingItemId;
             }
             const linkMutation = `mutation($projectId: ID!, $contentId: ID!) { addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) { item { id } } }`;
             const linkResult = await this.graphqlClient.getClient(token).graphql(linkMutation, { projectId: project.id, contentId });
             const linkedItemId = linkResult.addProjectV2ItemById?.item?.id;
             if (!linkedItemId) {
-                (0, logger_1.logDebugInfo)(`Project link mutation returned no item for content ${contentId} and project ${project.id}.`);
-                return false;
+                throw new Error(`GitHub did not return the project item created for content ${contentId} in project ${project.id}.`);
             }
             (0, logger_1.logDebugInfo)(`Linked ${contentId} with id ${linkedItemId} to project ${project.id}`);
-            return true;
+            return linkedItemId;
         };
     }
 }
@@ -70801,7 +70447,7 @@ class ProjectBoardQueryRepository {
         this.graphqlClient = graphqlClient;
         this.getProjectDetail = (projectId, owner, token) => (0, project_board_detail_query_1.getProjectBoardDetail)(this.ownerTypeClient, this.graphqlClient, projectId, owner, token);
         this.getProjectItemId = async (project, owner, repo, issueOrPullRequestNumber, token) => (0, project_board_item_query_1.getProjectItemId)(this.graphqlClient.getClient(token), project, owner, repo, issueOrPullRequestNumber);
-        this.isContentLinked = async (project, contentId, token) => (0, project_board_item_query_1.isProjectContentLinked)(this.graphqlClient.getClient(token), project, contentId);
+        this.getLinkedContentItemId = async (project, contentId, token) => (0, project_board_item_query_1.getProjectItemIdByContentId)(this.graphqlClient.getClient(token), project, contentId);
     }
 }
 exports.ProjectBoardQueryRepository = ProjectBoardQueryRepository;
@@ -76492,7 +76138,6 @@ const issue_title_repository_1 = __nccwpck_require__(10121);
 const issue_type_assignment_repository_1 = __nccwpck_require__(19118);
 const workflow_dispatch_repository_1 = __nccwpck_require__(29509);
 const timer_branch_propagation_delay_adapter_1 = __nccwpck_require__(20846);
-const timer_delay_adapter_1 = __nccwpck_require__(71942);
 const agent_capability_composition_root_1 = __nccwpck_require__(85079);
 const issue_use_case_composition_1 = __nccwpck_require__(21239);
 const organization_members_composition_root_1 = __nccwpck_require__(50603);
@@ -76510,7 +76155,6 @@ function createIssueUseCaseCompositionRoot(binding) {
     const gitCli = new git_cli_repository_1.GitCliRepository();
     const linkedBranch = new linked_branch_repository_1.LinkedBranchRepository((0, github_project_client_factory_1.createGraphqlTransportClient)());
     const branchPropagationDelay = new timer_branch_propagation_delay_adapter_1.TimerBranchPropagationDelayAdapter();
-    const eventualConsistencyDelay = new timer_delay_adapter_1.TimerDelayAdapter();
     const projectBoard = (0, project_board_composition_root_1.createProjectBoardCompositionRoot)();
     const issueAssignee = new issue_assignment_repository_1.IssueAssignmentRepository((0, github_issue_client_factory_1.createIssueAssignmentClient)());
     const issueClosure = new issue_closure_repository_1.IssueClosureRepository(issueLifecycle, issueContent);
@@ -76530,7 +76174,7 @@ function createIssueUseCaseCompositionRoot(binding) {
         assignMemberToIssue: new assign_members_to_issue_use_case_1.AssignMemberToIssueUseCase(boundIssueAssignee, boundOrganizationMembers),
         updateTitle: new update_title_use_case_1.UpdateTitleUseCase((0, shared_capability_port_binding_1.bindIssueTitle)(issueTitle, binding)),
         updateIssueType: new update_issue_type_use_case_1.UpdateIssueTypeUseCase((0, lifecycle_capability_port_binding_1.bindIssueTypeAssignment)(issueTypeAssignment, binding)),
-        linkIssueProject: new link_issue_project_use_case_1.LinkIssueProjectUseCase(projectContent, eventualConsistencyDelay),
+        linkIssueProject: new link_issue_project_use_case_1.LinkIssueProjectUseCase(projectContent),
         checkPriorityIssueSize: new check_priority_issue_size_use_case_1.CheckPriorityIssueSizeUseCase(boundProjectBoard),
         prepareBranches: new prepare_branches_use_case_1.PrepareBranchesUseCase(boundBranchLifecycle, branchName, gitCli, gitCli, boundLinkedBranch, branchPropagationDelay, moveIssueToInProgress),
         removeNotNeededBranches: new remove_not_needed_branches_use_case_1.RemoveNotNeededBranchesUseCase(boundBranchLifecycle, branchName),
@@ -77016,7 +76660,7 @@ function createPullRequestUseCaseCompositionRoot(binding) {
         updateTitle: new update_title_use_case_1.UpdateTitleUseCase((0, shared_capability_port_binding_1.bindIssueTitle)(issueTitle, binding)),
         assignMemberToIssue: new assign_members_to_issue_use_case_1.AssignMemberToIssueUseCase(boundIssueAssignee, boundOrganizationSelection),
         assignReviewersToIssue: new assign_reviewers_to_issue_use_case_1.AssignReviewersToIssueUseCase(boundIssueAssignee, (0, lifecycle_capability_port_binding_1.bindPullRequestReviewer)(pullRequestReviewer, binding), boundOrganizationSelection),
-        linkPullRequestProject: new link_pull_request_project_use_case_1.LinkPullRequestProjectUseCase(projectContent, eventualConsistencyDelay),
+        linkPullRequestProject: new link_pull_request_project_use_case_1.LinkPullRequestProjectUseCase(projectContent),
         linkPullRequestIssue: new link_pull_request_issue_use_case_1.LinkPullRequestIssueUseCase(boundPullRequestLifecycle, eventualConsistencyDelay),
         syncSizeAndProgressLabels: new sync_size_and_progress_labels_from_issue_to_pr_use_case_1.SyncSizeAndProgressLabelsFromIssueToPrUseCase((0, lifecycle_capability_port_binding_1.bindIssueLabels)(pullRequestLabels, binding)),
         checkPriorityPullRequestSize: new check_priority_pull_request_size_use_case_1.CheckPriorityPullRequestSizeUseCase(boundProjectBoard),
@@ -77372,7 +77016,7 @@ function bindProjectContent(identity, commands, links, binding) {
     return {
         resolveIssueContentId: (issueNumber) => identity.getId(binding.owner, binding.repository, issueNumber, binding.token),
         linkContentId: (project, contentId) => links.linkContentId(toProjectDetail(project), contentId, binding.token),
-        moveContent: (project, contentNumber, columnName) => commands.moveIssueToColumn(toProjectDetail(project), binding.owner, binding.repository, contentNumber, columnName, binding.token),
+        moveContent: (project, projectItemId, columnName) => commands.moveProjectItemToColumn(toProjectDetail(project), projectItemId, columnName, binding.token),
     };
 }
 function toProjectDetail(project) {
@@ -79576,7 +79220,7 @@ Write every human-readable sentence in {{targetLocale}}. Preserve code identifie
 4. Provide \`overview\` as one to three sentences that state the outcome and why it matters.
 5. Provide \`whatChangedHeading\` as the plain-text {{targetLocale}} equivalent of "What changed" and \`changes\` as two to six short, outcome-oriented items. Do not inventory files, use-case names, internal categories, or every implementation step.
 6. When execution or manual-verification evidence is available, provide \`validationHeading\` as the plain-text {{targetLocale}} equivalent of "Validation" and \`validation\` with only the supported commands, automated checks, or manual scenarios. Never claim a check passed unless the evidence says it did, and never infer that result from the presence of test files or commands. When no verification evidence is available, set both fields to \`null\`; do not add a “not run” placeholder.
-7. Set \`reviewNotesHeading\` and \`reviewNotes\` to \`null\` unless reviewers need material migration, security, performance, compatibility, rollout, manual-verification, risk, or follow-up context. Otherwise use the localized plain-text heading and one to four concise items. {{relatedIssueInstruction}}
+7. Set \`reviewNotesHeading\` and \`reviewNotes\` to \`null\` unless reviewers need material migration, security, performance, compatibility, rollout, manual-verification, risk, or follow-up context. Do not infer consumers, compatibility obligations, upgrade steps, migration work, or rollout requirements merely because code, configuration, inputs, or symbols were removed or named deprecated. Include that context only when the issue, diff, repository documentation, or verification evidence identifies a concrete affected consumer or required transition. Otherwise use the localized plain-text heading and one to four concise items. {{relatedIssueInstruction}}
 8. Keep the description practical and normally under 4,000 characters. It must never exceed 12,000 characters. Do not use emoji, horizontal separators, generic checklists, empty headings, repeated statements, placeholder text, or unsupported "no impact" claims.
 9. Return one JSON object with exactly \`outputLocale\`, \`overview\`, \`whatChangedHeading\`, \`changes\`, \`validationHeading\`, \`validation\`, \`reviewNotesHeading\`, \`reviewNotes\`, and \`closesLinkedIssue\`. Every content field is plain text except Markdown links, code spans, refs, and commands inside content values. The application renders the Markdown structure; do not include headings, bullet prefixes, a preamble, meta-commentary, or code fence in the values.
 

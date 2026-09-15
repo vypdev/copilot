@@ -46,12 +46,11 @@ export function projectPullRequestContentLinkContext(source: ProjectContentLinkS
     );
 }
 
-/** Links issue-like content to each configured project and moves it after propagation. */
+/** Links issue-like content to each configured project and updates the returned item directly. */
 export async function runProjectContentLinkWorkflow(
     param: ProjectContentLinkContext,
     taskId: string,
     port: BoundProjectContentPort,
-    waitForPropagation: () => Promise<void>,
 ): Promise<Result[]> {
     logInfo(`${getTaskEmoji(taskId)} Executing ${taskId}.`);
     if (param.projects.length === 0) {
@@ -63,23 +62,15 @@ export async function runProjectContentLinkWorkflow(
         const contentId = param.contentId ?? await port.resolveIssueContentId(param.contentNumber);
         const results: Result[] = [];
         for (const project of param.projects) {
-            const linked = await port.linkContentId(project, contentId);
-            if (!linked) {
-                logDebugInfo(
-                    `Link${capitalize(param.contentType)}: ${param.contentType} already linked to project "${project.title}" or link failed.`,
-                );
-                continue;
-            }
-
-            await waitForPropagation();
-            const moved = await port.moveContent(project, param.contentNumber, param.columnName);
+            const projectItemId = await port.linkContentId(project, contentId);
+            const moved = await port.moveContent(project, projectItemId, param.columnName);
             if (moved) {
                 results.push(new Result({
                     id: taskId,
                     success: true,
                     executed: true,
                     steps: [
-                        `The ${param.contentType} was linked to [**${project.title}**](${project.url}) and moved to the column \`${param.columnName}\`.`,
+                        `The ${param.contentType} is linked to [**${project.title}**](${project.url}) with status \`${param.columnName}\`.`,
                     ],
                 }));
             } else {
@@ -131,14 +122,11 @@ function moveFailureResult(
     taskId: string,
     project: ProjectReference,
 ): Result {
-    if (context.contentType === 'issue') {
-        return new Result({ id: taskId, success: true, executed: false, steps: [] });
-    }
     return new Result({
         id: taskId,
         success: false,
         executed: true,
-        steps: [`The ${context.contentType} was linked to [**${project.title}**](${project.url}) but there was an error moving it to the column \`${context.columnName}\`.`],
+        steps: [`The ${context.contentType} is linked to [**${project.title}**](${project.url}), but its status could not be set to \`${context.columnName}\`.`],
     });
 }
 

@@ -461,42 +461,34 @@ last valid card and exposes publication degradation in the Job Summary.
 ## 7. User-facing configuration
 
 The semantic notification rules are intentionally mostly fixed. Configuration
-may choose a legitimate release presentation or temporarily preserve onboarding
-media, but it cannot restore generic step dumps or debug-in-comments.
+may choose a legitimate release presentation, but it cannot restore generic
+step dumps, debug-in-comments, or decorative media.
 
 | Input | Type | Recommended default | Allowed values/range | Scope/persistence |
 |---|---|---|---|---|
 | `orchestration-comment-mode` | enum | `update` — one dashboard | existing `update`, `milestones` | snapshotted by release operation |
 | `orchestration-presentation-mode` | enum | `guided` | existing `guided`, `compact`, `quiet` | snapshotted by release operation |
-| `images-on-issue` | deprecated boolean | `false` | `false`; `true` accepted during compatibility window only | repository/run |
-| `images-on-pull-request` | deprecated boolean | `false` | `false`; `true` accepted during compatibility window only | repository/run |
-| `images-on-commit` | deprecated boolean | `false` | `false`; `true` accepted during compatibility window only | repository/run |
 | locale inputs | BCP-47 profile | see companion SDD | bounded by localization contract | repository/run or operation snapshot |
 
-During one minor-release compatibility window, `images-on-issue=true` MAY render
-one configured image only in the one-time welcome state when no feature-owned
-card or answer exists. It MUST have descriptive alt text. PR, commit, status,
-finding, warning, error, progress, plan, and release messages never render
-decorative images. All image pool inputs are deprecated with the same window and
-are removed in the next major release.
+PR, commit, status, finding, warning, error, progress, plan, welcome, and release
+messages never render decorative media. The public action schema exposes no
+image toggle or URL-pool input. Because the project has no consumers, retired
+image configuration is removed outright rather than parsed, ignored, warned
+about, or migrated.
 
 `debug` remains supported for operator logs and Job Summary evidence. It has no
 conversation-publication effect.
 
 No inputs are added for generic titles, footer text, raw-step publication,
-status-card multiplicity, failure deduplication, or notification limits. Unknown
-or retired image values follow the setup/doctor deprecation policy. Release
-configuration precedence and snapshot semantics remain as specified by the
-release orchestration SDD.
+status-card multiplicity, failure deduplication, notification limits, or
+decorative media. Release configuration precedence and snapshot semantics
+remain as specified by the release orchestration SDD.
 
 Recommended configuration:
 
 ```yaml
 with:
   repository-locale: en-US
-  images-on-issue: false
-  images-on-pull-request: false
-  images-on-commit: false
   orchestration-comment-mode: update
 ```
 
@@ -519,7 +511,7 @@ does not increase generic publication or expose debug output.
 | Layer/boundary | Owns | Must not own/import |
 |---|---|---|
 | Domain/pure policy | semantic identity, outcome/action states, fingerprinting, publication and noise decisions | Octokit, Actions context, Markdown, locale catalogs, logs |
-| Application | capability outcomes, publication coordinator, stale guards, semantic ports, operator evidence | concrete GitHub SDK calls, random images, raw event DTOs |
+| Application | capability outcomes, publication coordinator, stale guards, semantic ports, operator evidence | concrete GitHub SDK calls, decorative-media selection, raw event DTOs |
 | Adapters/data | list/create/update/delete owned comments, reviews, Checks, provider error mapping | deciding whether a comment is useful or selecting copy |
 | Infrastructure/composition | bind ports and feature publishers; wire Job Summary and localization | branch/lifecycle product decisions |
 | Entrypoints | validate/project input, route event, invoke completion | building comments from results |
@@ -857,8 +849,7 @@ facts, and recovery links before optional detail.
   permitted in a title, and removing it must not change meaning.
 - Comments MUST remain readable at narrow widths. Use lists before wide tables;
   tables are limited to four columns and require a prose status sentence.
-- Decorative images are absent after the compatibility window. Any temporary
-  welcome image has useful alt text and no text embedded solely in the image.
+- Decorative media is absent from every generated conversation surface.
 - Heading levels are logical. Comments start at `##`; nested sections use `###`.
 - Every link is descriptive and independently understandable.
 - All copy and user-supplied content follows the companion locale, atomic
@@ -952,14 +943,15 @@ generic output is left intact.
 - Existing progress labels remain authoritative during progress-card adoption.
 - Human-authored and third-party comments are never migrated.
 
-### 13.2 Configuration and deprecation
+### 13.2 Greenfield configuration boundary
 
-- Image toggles change default from `true` to `false` in `action.yml`, setup
-  templates, CLI defaults, examples, and generated bundles together.
-- One minor release accepts deprecated image inputs and limits their effect to a
-  one-time welcome. Setup and doctor display one deprecation warning.
-- The next major removes image pool inputs and all random-image selection code.
-- No compatibility flag restores generic result comments or debug disclosure.
+- Image toggles, URL pools, random-image selection, and their dependencies are
+  absent from `action.yml`, runtime configuration, setup, CLI, documentation,
+  and generated bundles.
+- There is no compatibility alias, ignored-value reader, warning, migration
+  path, feature flag, or delayed removal window.
+- No configuration restores generic result comments, decorative media, or debug
+  disclosure.
 
 ### 13.3 Implementation sequence (completed)
 
@@ -972,8 +964,8 @@ generic output is left intact.
    publication.
 4. Adopt the shared marker/localization envelope in branch sync, Bugbot, and
    release without changing their domain behavior.
-5. Change image defaults, update setup/doctor/docs, regenerate bundles, and run
-   a controlled GitHub UX acceptance matrix.
+5. Remove decorative-media configuration and runtime code, update docs,
+   regenerate bundles, and run a controlled GitHub UX acceptance matrix.
 6. Remove the legacy generic renderer after one release with zero observed
    fallback use.
 
@@ -1126,7 +1118,7 @@ expansion, and narrow-layout states are retained as deterministic renderer and
 terminal fixtures so validation does not mutate repository-wide locale settings.
 
 No remote product flag is required. Each phase must be independently releasable
-and its compatibility adapter must fail closed to Job Summary, not fall back to
+and its publication boundary must fail closed to Job Summary, not fall back to
 generic comments.
 
 ### 13.4 Rollback
@@ -1151,7 +1143,7 @@ Its files are disjoint from the localization allocation and are enforced by
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/configuration/pure planning | 26 | intent decision matrix, identity, digest, transition fingerprint, size/noise rules, image deprecation |
+| Domain/configuration/pure planning | 26 | intent decision matrix, identity, digest, transition fingerprint, size/noise rules, decorative-media exclusion |
 | State/application/idempotency/races | 30 | create/update/unchanged, stale source, out-of-order revision, duplicate create healing, partial publication, per-feature coordination |
 | Adapters/provider contracts | 18 | ownership filtering, pagination, create/update/delete, review threads, rate-limit/error mapping, trusted URLs |
 | Workflows/setup/schema | 16 | issue/PR/push/single-action routes, completion omission, setup defaults, doctor warnings, marker/workflow contracts |
@@ -1188,17 +1180,15 @@ Required quality gates:
 | Issue author | `docs/issues/comment-commands.mdx`, `docs/issues/branch-management.mdx` | direct replies, plan/progress cards, branch-sync action | command contract fixture |
 | PR author | `docs/pull-requests/capabilities.mdx`, Bugbot publication docs | status card vs inline finding vs Check; close/merge behavior | review fixture matrix |
 | Release operator | `docs/issues/deployment-orchestration.mdx` | one dashboard, opt-in milestones, partial-success wording | operation-state fixture links |
-| Setup owner | `docs/configuration.mdx`, issue/PR configuration pages, checklist | image default/deprecation and immutable noise limits | action/setup schema test |
+| Setup owner | `docs/configuration.mdx`, issue/PR configuration pages, checklist | public inputs and immutable noise limits | action/setup schema test |
 | Operator | troubleshooting, error reference, quality observability | Job Summary ownership, publication degradation, cleanup | decision tree and error-code test |
 | CLI/single-action user | single-action available/configuration/workflow pages | requested comment is not wrapped; plan/progress identity | CLI/action parity test |
 | Contributor | `docs/development/architecture.mdx`, specification catalog | outcome/evidence split, ports, markers, forbidden call sites | architecture/source inventory tests |
 
 Every before/after example in user documentation MUST be sourced from or checked
 against the same semantic fixtures as the renderer tests. Documentation MUST not
-state that images, debug comments, generic action headings, or per-push commit
-comments are the default after rollout. Migration notes identify the exact
-minor/major removal window and are deleted when the deprecated inputs are
-removed.
+state that decorative media, debug comments, generic action headings, or
+per-push commit comments are generated after rollout.
 
 ## 16. Acceptance scenarios
 
@@ -1244,8 +1234,9 @@ removed.
 15. Given hostile model/provider/user Markdown containing mentions, commands, or
     forged markers, then the visible message is safe and ownership/state cannot
     be forged.
-16. Given image inputs are omitted after rollout, then all configured defaults
-    are false and no generated conversation contains decorative image Markdown.
+16. Given the public action contract, then no image toggle or URL-pool input is
+    present, no runtime image configuration exists, and no generated
+    conversation contains decorative image Markdown.
 17. Given an action explicitly publishes caller-supplied issue content, then
     exactly that bounded create/update/append occurs without a generic wrapper;
     existing authorization and sanitization contracts remain in force.
@@ -1275,7 +1266,7 @@ removed.
 | §6.4 one canonical card | owned query/mutation ports and reconciler | duplicate/race/pagination tests | operator recovery guide |
 | §6.5 freshness | source guard and feature revisions | stale/out-of-order/replay tests | observability guide |
 | §6.5.1 event ownership | distinct push/PR groups + exact-head preflight and ownership policy | workflow contract, push-shaped preflight integration test, policy matrix, PR #367 paired-event evidence | workflow setup and Bugbot guides |
-| §7 quiet/image defaults | action/setup configuration policies | action schema, setup, doctor, migration tests | configuration and upgrade pages |
+| §7 quiet/decorative-media boundary | action and runtime configuration policies | action-schema absence and source-inventory tests | configuration pages |
 | §8 clean boundaries | architecture and source-inventory checks | executable boundary tests | contributor architecture |
 | §9 message hierarchy/examples | localized feature renderers | semantic golden fixtures and manual UX matrix | user journeys |
 | §9.4 notification budget | notification budget policy | per-event/per-lifecycle count assertions | notifications page |
@@ -1283,7 +1274,7 @@ removed.
 | §10 partial/recovery | error presentation and publication-only retry | failure/partial/irreversible cases | error/troubleshooting pages |
 | §11 trust/ownership | marker parser, sanitizer, authorization | forged marker/mention/secret tests | security operations |
 | §12 evidence/metrics | Job Summary and telemetry ports | summary/metric assertions | quality observability |
-| §13 migration | legacy marker readers and deprecated inputs | adoption/rollback/deprecation tests | migration guide |
+| §13 adoption | marker adoption and greenfield input removal | adoption, rollback, and schema-absence tests | architecture and configuration guides |
 | §14 quality budget | coverage scripts and disjoint communication test ledger | 160 allocated semantic cases plus CI coverage evidence | contributor testing guide |
 
 ## 18. Implementation sequence
@@ -1303,8 +1294,9 @@ removed.
    inactivity, access-policy, and single actions with end-to-end tests.
 7. Adopt shared contracts in branch sync, Bugbot, and release while retaining
    their feature state and safety policies.
-8. Change image defaults, add setup/doctor migration, regenerate action/setup
-   bundles, and remove visible watermarks/footers from generated messages.
+8. Remove image inputs, image runtime code, and random-selection dependencies;
+   regenerate action/setup bundles and remove visible watermarks/footers from
+   generated messages.
 9. Update every named user/operator/contributor page and bind examples to
    renderer fixtures.
 10. Run typecheck, lint, unit/integration/coverage, workflow, documentation,
@@ -1321,7 +1313,7 @@ removed.
 - [x] Plans, progress, branch sync, Bugbot, releases, lifecycle, failures,
       explicit replies, and single actions implement the representative contract.
 - [x] No new conversation contains retired generic headings, debug logs,
-      decorative media by default, “Happy coding”, or the visible default
+      decorative media, “Happy coding”, or the visible default
       marketplace watermark.
 - [x] Job Summary and logs retain bounded, masked operator evidence and link from
       actionable UI.
@@ -1329,8 +1321,8 @@ removed.
       enforced.
 - [x] The 128-case numeric budget and changed-module coverage gates pass without
       double counting localization tests.
-- [x] Configuration defaults, deprecated image window, setup, doctor, action
-      schema, and generated bundles agree.
+- [x] Action schema, runtime configuration, setup, CLI, docs, dependencies, and
+      generated bundles contain no decorative-image configuration surface.
 - [x] English-default and configured-locale output passes the companion SDD.
 - [x] User, setup, operator, security, migration, and contributor documentation
       is complete, discoverable, fixture-backed, and contains no stale behavior.
@@ -1392,5 +1384,3 @@ implementation change so current and proposed documentation cannot be confused.
 
 - Measuring reader comprehension or notification-open rates requires product
   analytics and user consent not currently available.
-- Removing deprecated image inputs occurs in the next major after the specified
-  compatibility window; it is not silently accelerated.

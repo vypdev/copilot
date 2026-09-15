@@ -2,7 +2,6 @@ import type { Ai } from './ai';
 import type { Branches } from './branches';
 import type { Emoji } from './emoji';
 import type { Hotfix } from './hotfix';
-import type { Images } from './images';
 import type { Issue } from './issue';
 import type { IssueTypes } from './issue_types';
 import type { Labels } from './labels';
@@ -26,7 +25,6 @@ export interface ExecutionComponents {
     issue: Issue;
     pullRequest: PullRequest;
     emoji: Emoji;
-    images: Images;
     tokens: Tokens;
     ai: Ai;
     labels: Labels;

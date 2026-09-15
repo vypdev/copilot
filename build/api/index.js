@@ -591,7 +591,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'bugbot.status.syncFailure': 'Bugbot could not fully synchronize the state of {commit}.',
     'bugbot.status.clean': 'No active findings on {commit}.',
     'bugbot.status.attention': Object.freeze({ one: '{count} finding requires attention on {commit}.', other: '{count} findings require attention on {commit}.' }),
-    'bugbot.status.action.partial': 'Inspect the omitted items or reduce the pull request scope. Rerun the review only after changing the scope, limits, or access.',
+    'bugbot.status.action.partial': 'Do not treat this review as complete. Review the sources under Incomplete coverage and manually inspect omitted items; rerun only after reducing the relevant scope or restoring provider access.',
     'bugbot.status.action.recheck': 'Correct the reported cause, then run {command} once.',
     'bugbot.status.action.findings': 'Review the linked threads or comment {command}.',
     'bugbot.status.findingsHeading': 'Findings',
@@ -680,7 +680,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'bugbot.status.syncFailure': 'Bugbot no pudo sincronizar por completo el estado de {commit}.',
     'bugbot.status.clean': 'No hay hallazgos activos en {commit}.',
     'bugbot.status.attention': Object.freeze({ one: '{count} hallazgo requiere atención en {commit}.', many: '{count} hallazgos requieren atención en {commit}.', other: '{count} hallazgos requieren atención en {commit}.' }),
-    'bugbot.status.action.partial': 'Revisa los elementos omitidos o reduce el alcance del pull request. Repite la revisión solo después de cambiar el alcance, los límites o el acceso.',
+    'bugbot.status.action.partial': 'No consideres completa esta revisión. Revisa las fuentes en Cobertura incompleta e inspecciona manualmente los elementos omitidos; repite la revisión solo después de reducir el alcance relevante o restaurar el acceso al proveedor.',
     'bugbot.status.action.recheck': 'Corrige la causa indicada y ejecuta {command} una vez.',
     'bugbot.status.action.findings': 'Revisa los hilos enlazados o comenta {command}.',
     'bugbot.status.findingsHeading': 'Hallazgos',
@@ -6255,7 +6255,7 @@ Write every human-readable sentence in {{targetLocale}}. Preserve code identifie
 4. Provide \`overview\` as one to three sentences that state the outcome and why it matters.
 5. Provide \`whatChangedHeading\` as the plain-text {{targetLocale}} equivalent of "What changed" and \`changes\` as two to six short, outcome-oriented items. Do not inventory files, use-case names, internal categories, or every implementation step.
 6. When execution or manual-verification evidence is available, provide \`validationHeading\` as the plain-text {{targetLocale}} equivalent of "Validation" and \`validation\` with only the supported commands, automated checks, or manual scenarios. Never claim a check passed unless the evidence says it did, and never infer that result from the presence of test files or commands. When no verification evidence is available, set both fields to \`null\`; do not add a “not run” placeholder.
-7. Set \`reviewNotesHeading\` and \`reviewNotes\` to \`null\` unless reviewers need material migration, security, performance, compatibility, rollout, manual-verification, risk, or follow-up context. Otherwise use the localized plain-text heading and one to four concise items. {{relatedIssueInstruction}}
+7. Set \`reviewNotesHeading\` and \`reviewNotes\` to \`null\` unless reviewers need material migration, security, performance, compatibility, rollout, manual-verification, risk, or follow-up context. Do not infer consumers, compatibility obligations, upgrade steps, migration work, or rollout requirements merely because code, configuration, inputs, or symbols were removed or named deprecated. Include that context only when the issue, diff, repository documentation, or verification evidence identifies a concrete affected consumer or required transition. Otherwise use the localized plain-text heading and one to four concise items. {{relatedIssueInstruction}}
 8. Keep the description practical and normally under 4,000 characters. It must never exceed 12,000 characters. Do not use emoji, horizontal separators, generic checklists, empty headings, repeated statements, placeholder text, or unsupported "no impact" claims.
 9. Return one JSON object with exactly \`outputLocale\`, \`overview\`, \`whatChangedHeading\`, \`changes\`, \`validationHeading\`, \`validation\`, \`reviewNotesHeading\`, \`reviewNotes\`, and \`closesLinkedIssue\`. Every content field is plain text except Markdown links, code spans, refs, and commands inside content values. The application renders the Markdown structure; do not include headings, bullet prefixes, a preamble, meta-commentary, or code fence in the values.
 

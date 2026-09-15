@@ -12,19 +12,8 @@ const openIssue = jest.fn();
 function context(reopenOnPush: boolean) {
   return projectCommitNotificationContext({
     issueNumber: 42,
-    commit: {
-      branch: 'feature/42-add-login',
-      commits: [{ id: 'abc', message: 'feat: add button', author: { name: 'Alice', username: 'alice' } }],
-    },
-    commitPrefixBuilder: 'replace-slash',
-    images: { imagesOnCommit: true, commitFeatureGifs: ['decorative.gif'] },
+    commit: { branch: 'feature/42-add-login' },
     issue: { reopenOnPush },
-    release: { active: false },
-    hotfix: { active: false },
-    isFeature: true,
-    isBugfix: false,
-    isDocs: false,
-    isChore: false,
   } as never);
 }
 

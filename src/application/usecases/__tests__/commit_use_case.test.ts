@@ -76,23 +76,6 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
     sizeThresholds: Object.fromEntries(['xxl', 'xl', 'l', 'm', 's', 'xs'].map(key => [key, { lines: 1, files: 1, commits: 1 }])),
     project: { getProjects: () => [] },
     issue: { number: 123, reopenOnPush: false },
-    release: { active: false },
-    hotfix: { active: false },
-    images: {
-      imagesOnCommit: false,
-      commitAutomaticActions: [],
-      commitFeatureGifs: [],
-      commitBugfixGifs: [],
-      commitReleaseGifs: [],
-      commitHotfixGifs: [],
-      commitDocsGifs: [],
-      commitChoreGifs: [],
-    },
-    isBugfix: false,
-    isFeature: true,
-    isDocs: false,
-    isChore: false,
-    commitPrefixBuilder: '',
     pullRequest: { number: -1, head: '', action: '' },
     ai: new Ai('', 'model', false, [], false, 'low', 20),
     ...overrides,
@@ -142,7 +125,7 @@ describe('CommitUseCase', () => {
     const param = minimalExecution();
     const results = await useCase.invoke(param);
 
-    expect(mockNotifyInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 123, branch: 'feature/123' }));
+    expect(mockNotifyInvoke).toHaveBeenCalledWith({ issueNumber: 123, reopenOnPush: false });
     expect(mockCheckChangesInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 123, headBranch: 'feature/123' }));
     expect(mockCheckProgressInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 123, pushedBranch: 'feature/123' }));
     expect(mockDetectProblemsInvoke).toHaveBeenCalledWith(expect.objectContaining({

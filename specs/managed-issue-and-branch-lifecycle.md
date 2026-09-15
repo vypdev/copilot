@@ -2,7 +2,7 @@
 
 - Status: As-built baseline
 - Date: 2026-09-13
-- Last verified: 2026-09-13 on `develop` (P2-E implementation validation)
+- Last verified: 2026-09-15 on PR #393 implementation branch
 - Owners: Copilot maintainers
 - Scope: issue admission, metadata enrichment, managed branch creation, lifecycle state, and merge-driven closure
 - Related issues/PRs: release orchestration and branch synchronization SDDs
@@ -54,8 +54,9 @@ and hotfix origin mistakes are especially hard to recover.
 - Intentional contract: semantic origins, deterministic strategy precedence,
   idempotent reuse, persisted branch facts, and one welcome.
 - Known debt and limitations: linked-branch propagation includes an adapter
-  delay; GitHub linkage/project APIs may be eventually consistent; lifecycle
-  labels supplement rather than replace GitHub state.
+  delay; project linking avoids list propagation by using the ProjectV2 item ID
+  returned by the add mutation; lifecycle labels supplement rather than replace
+  GitHub state.
 - Unknown rationale: historic emoji/title defaults are treated as current
   presentation choices, not architectural necessities.
 - Proposed improvements: replacing propagation delay with provider events needs
@@ -120,6 +121,10 @@ the route only after the preparation step returns.
 4. GitHub creates and links the branch; Copilot persists facts and marks in-progress.
 5. Commits and a linked PR advance review state; merge closes the issue.
 
+Project enrichment is immediate and deterministic: the existing-item query or
+add mutation returns the exact ProjectV2 item ID, and the status mutation uses
+that ID directly without a fixed sleep or a second board-list lookup.
+
 ### 6.2 Alternative paths
 
 - With `branch-management-always=false`, normal work waits for `branched`.
@@ -182,6 +187,10 @@ flowchart LR
 
 Architecture tests MUST keep policies provider-free, application ports semantic,
 and composition as the only concrete wiring owner.
+The project-link semantic port returns a required ProjectV2 item ID. An add
+response without that ID fails explicitly; the application never treats it as
+an already-linked skip. The project command adapter updates the returned item
+directly, while credentials and GraphQL details remain outside the use case.
 
 ## 9. UI/UX and content contract
 
@@ -208,6 +217,7 @@ Untrusted titles/body/branch text is sanitized before Markdown or commands.
 | create/link fails | no or partial link | provider state | yes | inspect branch first | do not duplicate |
 | branch created, later metadata move fails | branch exists; configuration patch still returned | exact branch URL/name and patch | yes | continue work and retry metadata | never delete a valid branch implicitly |
 | project/metadata fails | branch may exist | branch/config | yes | retry enrichment | none |
+| project linked, status update fails | project membership remains but its configured status is unconfirmed | authoritative ProjectV2 item ID and link | yes | rerun enrichment | never delete the valid item implicitly |
 | stale cleanup request | wrong deletion risk | all branches | no unsafe retry | re-resolve exact targets | exact branches only |
 
 ## 11. Security, permissions, and privacy
@@ -274,6 +284,8 @@ dark/light, and non-English fallback.
 9. Untrusted issue text cannot inject commands, mentions, or markers.
 10. A branch helper cannot mutate route-owned configuration; the route applies
     exactly the returned frozen patch after the step completes.
+11. Issue project linking uses the mutation-returned item ID for the status
+    update without a timer or board-list read; replay reuses the existing item.
 
 ## 17. Requirements traceability
 

@@ -168,22 +168,6 @@ Link PRs to a board and assign two reviewers:
 
 Ensure the project has a column named **"In Review"** (or use your actual column name).
 
-## Deprecated image compatibility
-
-Existing workflows may still contain image inputs such as:
-
-```yaml
-- uses: vypdev/copilot@v3
-  with:
-    token: ${{ secrets.PAT }}
-    images-on-pull-request: false
-    images-pull-request-feature: "https://example.com/images/feature-pr.png"
-```
-
-These inputs are accepted temporarily, but semantic comments do not use them.
-New workflows should omit the toggle and all image pools. See
-[Configuration](/configuration).
-
 ## Next steps
 
 - **[Workflow setup](/pull-requests/workflow-setup)** — Events and what runs when.

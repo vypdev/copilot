@@ -91,8 +91,8 @@ describe('shared capability repository bindings', () => {
 
   it('rehydrates project references only inside the bound project adapter', async () => {
     const getId = jest.fn().mockResolvedValue('ISSUE_10');
-    const linkContentId = jest.fn().mockResolvedValue(true);
-    const moveIssueToColumn = jest.fn().mockResolvedValue(true);
+    const linkContentId = jest.fn().mockResolvedValue('PVTI_1');
+    const moveProjectItemToColumn = jest.fn().mockResolvedValue(true);
     const project = {
       id: 'PVT_1',
       title: 'Delivery',
@@ -103,19 +103,19 @@ describe('shared capability repository bindings', () => {
     };
     const port = bindProjectContent(
       { getId } as never,
-      { moveIssueToColumn } as never,
+      { moveProjectItemToColumn } as never,
       { linkContentId } as never,
       binding,
     );
 
     await port.resolveIssueContentId(10);
     await port.linkContentId(project, 'ISSUE_10');
-    await port.moveContent(project, 10, 'In progress');
+    await port.moveContent(project, 'PVTI_1', 'In progress');
 
     expect(getId).toHaveBeenCalledWith('acme', 'demo', 10, 'secret');
     expect(linkContentId).toHaveBeenCalledWith(expect.objectContaining(project), 'ISSUE_10', 'secret');
-    expect(moveIssueToColumn).toHaveBeenCalledWith(
-      expect.objectContaining(project), 'acme', 'demo', 10, 'In progress', 'secret',
+    expect(moveProjectItemToColumn).toHaveBeenCalledWith(
+      expect.objectContaining(project), 'PVTI_1', 'In progress', 'secret',
     );
   });
 });

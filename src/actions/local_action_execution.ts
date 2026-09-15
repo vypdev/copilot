@@ -4,7 +4,7 @@ import { Release } from '../data/model/release';
 import { SingleAction } from '../data/model/single_action';
 import { Welcome } from '../data/model/welcome';
 import { buildExecution } from './execution_builder';
-import { buildEmoji, buildImages, buildIssue, buildIssueTypes, buildLabels, buildLocale, buildProjects, buildPullRequest, buildTokens, buildWorkflows } from './configuration_builders';
+import { buildEmoji, buildIssue, buildIssueTypes, buildLabels, buildLocale, buildProjects, buildPullRequest, buildTokens, buildWorkflows } from './configuration_builders';
 import { buildBranches } from './branches_builder';
 import { buildSizeThresholds } from './size_threshold_builder';
 import type { LocalActionConfiguration } from './local_action_configuration';
@@ -19,7 +19,7 @@ export function buildLocalActionExecution(
         inactivityThresholdHours,
         commitPrefixBuilder, branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount,
         pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount,
-        titleEmoji, branchManagementEmoji, imageConfiguration, token, agentModel,
+        titleEmoji, branchManagementEmoji, token, agentModel,
         aiPullRequestDescriptionMode, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity,
         bugbotCommentLimit, bugbotFixVerifyCommands, bugbotReviewConfiguration, agentTasks, branchManagementLauncherLabel, bugLabel,
         bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel,
@@ -59,14 +59,6 @@ export function buildLocalActionExecution(
         issue: buildIssue(branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount, additionalParams),
         pullRequest: buildPullRequest(pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, additionalParams),
         emoji: buildEmoji(titleEmoji, branchManagementEmoji),
-        images: buildImages({
-            onIssue: imageConfiguration.onIssue,
-            onPullRequest: imageConfiguration.onPullRequest,
-            onCommit: imageConfiguration.onCommit,
-            issue: imageConfiguration.issue,
-            pullRequest: imageConfiguration.pullRequest,
-            commit: imageConfiguration.commit,
-        }),
         tokens: buildTokens(token),
         ai: new Ai(
             '',

@@ -57,7 +57,6 @@ function source(): DeepMutable<PushSingleActionContextSource> {
     },
     commit: {
       branch: 'feature/42-contexts',
-      commits: [{ id: 'abc', message: 'feat: context', author: { name: 'A', username: 'a' } }],
     },
     currentConfiguration: { parentBranch: 'develop', deploymentOrchestration: operation },
     previousConfiguration: {
@@ -113,19 +112,6 @@ function source(): DeepMutable<PushSingleActionContextSource> {
     }] },
     issue: { number: 42, reopenOnPush: true },
     pullRequest: { number: 99 },
-    release: { active: false },
-    hotfix: { active: false },
-    images: {
-      imagesOnCommit: true,
-      commitAutomaticActions: ['automatic.gif'], commitFeatureGifs: ['feature.gif'],
-      commitBugfixGifs: ['bugfix.gif'], commitReleaseGifs: ['release.gif'],
-      commitHotfixGifs: ['hotfix.gif'], commitDocsGifs: ['docs.gif'], commitChoreGifs: ['chore.gif'],
-    },
-    isBugfix: false,
-    isFeature: true,
-    isDocs: false,
-    isChore: false,
-    commitPrefixBuilder: 'replace-slash',
     issueTypes: {} as never,
   };
 }
@@ -306,48 +292,24 @@ describe('push and single-action context projection', () => {
     expect(Object.isFrozen(projected.verifyCommands)).toBe(true);
   });
 
-  it.each([
-    ['release', { release: true }],
-    ['hotfix', { hotfix: true }],
-    ['bugfix', { bugfix: true }],
-    ['feature', { feature: true }],
-    ['docs', { docs: true }],
-    ['chore', { chore: true }],
-    ['automatic', {}],
-  ] as const)('projects %s commit presentation facts', (theme, flags) => {
-    const input = source();
-    input.release.active = Boolean('release' in flags && flags.release);
-    input.hotfix.active = Boolean('hotfix' in flags && flags.hotfix);
-    input.isBugfix = Boolean('bugfix' in flags && flags.bugfix);
-    input.isFeature = Boolean('feature' in flags && flags.feature);
-    input.isDocs = Boolean('docs' in flags && flags.docs);
-    input.isChore = Boolean('chore' in flags && flags.chore);
-
-    expect(projectCommitNotificationContext(input).theme).toBe(theme);
-  });
-
-  it('deep-copies commits, thresholds, labels, and project facts', () => {
+  it('projects only the facts required to reopen an issue and isolates size facts', () => {
     const input = source();
     const notification = projectCommitNotificationContext(input);
     const size = projectChangeSizeContext(input);
-    input.commit.commits[0].message = 'mutated';
     input.sizeThresholds.xxl.lines = 0;
 
-    expect(notification.commits[0].message).toBe('feat: context');
+    expect(notification).toEqual({ issueNumber: 42, reopenOnPush: true });
     expect(size.thresholds.xxl.lines).toBe(100);
     expect(size.labels).toEqual({ xxl: 'size: XXL', xl: 'size: XL', l: 'size: L', m: 'size: M', s: 'size: S', xs: 'size: XS' });
     expect(Object.isFrozen(size.projects)).toBe(true);
   });
 
-  it('supports commits without author metadata and omits an absent current size', () => {
+  it('omits an absent current size', () => {
     const input = source();
-    input.commit.commits = [{ id: 'abc', message: 'feat: context' }];
     delete input.labels.sizedLabelOnIssue;
 
-    const notification = projectCommitNotificationContext(input);
     const size = projectChangeSizeContext(input);
 
-    expect(notification.commits).toEqual([{ id: 'abc', message: 'feat: context' }]);
     expect(size).not.toHaveProperty('currentSize');
   });
 

@@ -90,23 +90,14 @@ const validWorkflow = {
 };
 
 describe('workflow contract validator', () => {
-  it('keeps decorative image inputs disabled and explicitly deprecated', () => {
+  it('excludes retired decorative image inputs from the public action contract', () => {
     const manifest = yaml.load(
       readFileSync(path.join(process.cwd(), 'action.yml'), 'utf8'),
     ) as {
       inputs: Record<string, { default?: string; description?: string }>;
     };
-    const toggles = ['images-on-issue', 'images-on-pull-request', 'images-on-commit'];
-    const pools = Object.keys(manifest.inputs).filter(name => name.startsWith('images-') && !toggles.includes(name));
 
-    for (const name of toggles) {
-      expect(manifest.inputs[name]).toMatchObject({ default: 'false' });
-      expect(manifest.inputs[name].description).toMatch(/^Deprecated compatibility input\./);
-    }
-    expect(pools).toHaveLength(21);
-    for (const name of pools) {
-      expect(manifest.inputs[name].description).toMatch(/^Deprecated .* image URL pool retained for input compatibility\.$/);
-    }
+    expect(Object.keys(manifest.inputs)).not.toContainEqual(expect.stringMatching(/^images-(?:on-|issue-|pull-request-|commit-)/u));
   });
 
   it('keeps the repository validation manifest unique and the queue budget synchronized', () => {

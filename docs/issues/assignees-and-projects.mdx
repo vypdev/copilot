@@ -39,6 +39,11 @@ Linking issues to **GitHub Project** boards requires a **Personal Access Token (
 - **Format:** Comma-separated list of **project IDs** (numeric). You find the project ID in the project URL or via the API; it is **not** the project name.
 - **Effect:** When the action runs (e.g. on issue opened or edited), it **links the issue** to each of these projects and can **move the issue** to a column (e.g. "Todo", "In Progress") based on **`project-column-issue-created`** and **`project-column-issue-in-progress`** (see [Configuration](/configuration)).
 
+The column update uses the exact ProjectV2 item returned by GitHub when the
+issue is added. It does not wait and re-list the board, so normal Project
+propagation delay cannot turn a successful link into a failed run. Replays reuse
+the existing item and do not create duplicates.
+
 ### How many boards?
 
 You can link each issue to **multiple** boards by listing several IDs:

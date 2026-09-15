@@ -35,6 +35,10 @@ The branch name must follow the pattern that includes the issue number (e.g. `<t
 ## Project linking
 
 If **`project-ids`** is set, the action **adds the PR** to the configured GitHub Project boards and **moves it** to the configured column.
+The status update uses the exact ProjectV2 item returned by GitHub when the PR is
+added. It does not wait and re-list the board, so normal Project propagation
+delay cannot turn a successful link into a failed run. Replays reuse the existing
+item and do not create duplicates.
 
 | Input | Default | Description |
 |-------|---------|-------------|
@@ -69,7 +73,7 @@ Thresholds are defined in [Configuration](/configuration) (e.g. `size-m-threshol
 
 - Reads your repo’s **pull request template** (`.github/pull_request_template.md`).
 - Uses the optional **issue description** and the merge-base **branch diff** (`base...head`) as context.
-- Writes a concise outcome and material changes. Validation appears only with supporting evidence; reviewer notes appear only when they carry useful risk, migration, rollout, or manual-verification context.
+- Writes a concise outcome and material changes. Validation appears only with supporting evidence; reviewer notes appear only when they carry useful risk, migration, rollout, or manual-verification context. Removing unused or deprecated code/configuration does not by itself imply consumers, upgrade steps, or migration work.
 - Omits empty template sections, generic checklists, implementation inventories, and self-closing issue references.
 
 See [AI PR description](/pull-requests/ai-description) for details, optional issue context, and how to enable it in your workflow.
@@ -81,8 +85,8 @@ refreshes, and merge/close success do not create generic comments. Useful state
 is shown in its owning surface: the PR description, native metadata, one Bugbot
 status card, bounded inline findings, Checks, and the workflow Job Summary.
 
-The old image toggles and URL pools default to `false` and are deprecated.
-Semantic PR messages never include decorative images.
+Semantic PR messages never include decorative media, and the action exposes no
+configuration for adding it.
 
 ## Bugbot on PRs
 

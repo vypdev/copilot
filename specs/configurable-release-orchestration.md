@@ -1074,9 +1074,8 @@ facts are not translated.
   node style.
 - Images and diagrams have concise alternative text or an adjacent textual
   equivalent.
-- Decorative GIFs are omitted from the durable control center by default; they
-  may appear only outside the operational status block when existing image
-  configuration enables them.
+- Decorative GIFs are omitted from every orchestration surface; no image
+  configuration is exposed.
 - Primary status and required action are never hidden inside `<details>`.
 - Tables use at most four columns and avoid long unbroken full SHAs.
 - Full SHAs and verbose provider facts remain available in technical details.

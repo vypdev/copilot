@@ -11,7 +11,6 @@ import { parseBoundedPositiveIntegerInput, parseIntegerInput } from './input_num
 import { parseDelimitedValues } from './input_values_policy';
 import { readGithubActionAiInputs } from './github_action_ai_inputs';
 import { prepareGithubAgentRuntime } from './github_action_runtime';
-import { readGithubActionImageInputs } from './github_action_image_inputs';
 import { readGithubActionLocaleInputs } from './github_action_locale_inputs';
 import { buildSizeThresholds } from './size_threshold_builder';
 import { readGithubActionThresholdInputs } from './github_action_threshold_inputs';
@@ -22,7 +21,7 @@ import { readGithubActionWorkflowInputs } from './github_action_workflow_inputs'
 import { readGithubActionIssueTypeInputs } from './github_action_issue_type_inputs';
 import { readGithubActionProjectInputs } from './github_action_project_inputs';
 import { buildExecution } from './execution_builder';
-import { buildEmoji, buildImages, buildIssue, buildIssueTypes, buildLabels, buildLocale, buildProjects, buildPullRequest, buildTokens, buildWorkflows } from './configuration_builders';
+import { buildEmoji, buildIssue, buildIssueTypes, buildLabels, buildLocale, buildProjects, buildPullRequest, buildTokens, buildWorkflows } from './configuration_builders';
 import { loadProjectDetails } from './project_details_loader';
 import type { buildGithubActionEventInputs } from './github_event_inputs';
 import { DEFAULT_INACTIVITY_THRESHOLD_HOURS, MAX_INACTIVITY_THRESHOLD_HOURS } from '../domain/issue_inactivity';
@@ -75,7 +74,6 @@ export async function buildGithubActionExecution(
         token,
     );
     const projectInputs = readGithubActionProjectInputs(getInput, projects);
-    const imageConfiguration = readGithubActionImageInputs(getInput);
     const workflowInputs = readGithubActionWorkflowInputs(getInput);
     const labelInputs = readGithubActionLabelInputs(getInput);
     const issueTypeInputs = readGithubActionIssueTypeInputs(getInput);
@@ -112,7 +110,6 @@ export async function buildGithubActionExecution(
             getInput(INPUT_KEYS.EMOJI_LABELED_TITLE) === 'true',
             getInput(INPUT_KEYS.BRANCH_MANAGEMENT_EMOJI),
         ),
-        images: buildImages(imageConfiguration),
         tokens: buildTokens(token),
         ai: new Ai(
             '',

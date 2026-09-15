@@ -97,7 +97,6 @@ describe('application architecture boundaries', () => {
         const allowedUtilities = new Set([
             'comment_watermark',
             'content_utils',
-            'list_utils',
             'project_context_instruction',
             'secret_redaction',
             'task_emoji',

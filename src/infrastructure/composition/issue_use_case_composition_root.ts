@@ -36,7 +36,6 @@ import { IssueTitleRepository } from "../../data/repository/issue/issue_title_re
 import { IssueTypeAssignmentRepository } from "../../data/repository/issue/issue_type_assignment_repository";
 import { WorkflowDispatchRepository } from "../../data/repository/workflow/workflow_dispatch_repository";
 import { TimerBranchPropagationDelayAdapter } from "../time/timer_branch_propagation_delay_adapter";
-import { TimerDelayAdapter } from "../time/timer_delay_adapter";
 import { createFindingsQueryPort } from "./agent_capability_composition_root";
 import { composeIssueUseCase } from "./issue_use_case_composition";
 import { createOrganizationMembersCompositionRoot } from "./organization_members_composition_root";
@@ -79,7 +78,6 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
     createGraphqlTransportClient(),
   );
   const branchPropagationDelay = new TimerBranchPropagationDelayAdapter();
-  const eventualConsistencyDelay = new TimerDelayAdapter();
   const projectBoard = createProjectBoardCompositionRoot();
   const issueAssignee = new IssueAssignmentRepository(createIssueAssignmentClient());
   const issueClosure = new IssueClosureRepository(issueLifecycle, issueContent);
@@ -112,10 +110,7 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
     ),
     updateTitle: new UpdateTitleUseCase(bindIssueTitle(issueTitle, binding)),
     updateIssueType: new UpdateIssueTypeUseCase(bindIssueTypeAssignment(issueTypeAssignment, binding)),
-    linkIssueProject: new LinkIssueProjectUseCase(
-      projectContent,
-      eventualConsistencyDelay,
-    ),
+    linkIssueProject: new LinkIssueProjectUseCase(projectContent),
     checkPriorityIssueSize: new CheckPriorityIssueSizeUseCase(boundProjectBoard),
     prepareBranches: new PrepareBranchesUseCase(
       boundBranchLifecycle,

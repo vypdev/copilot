@@ -7,19 +7,9 @@ jest.mock('../../../../../utils/logger', () => ({
   logWarn: jest.fn(),
 }));
 
-jest.useFakeTimers();
-
 const mockGetId = jest.fn();
-const mockWait = jest.fn((milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds)));
-
 const mockLinkContentId = jest.fn();
-const mockMoveIssueToColumn = jest.fn();
-jest.mock('../../../../../data/repository/project/project_board_query_repository', () => ({
-  ProjectBoardQueryRepository: jest.fn().mockImplementation(() => ({
-    linkContentId: mockLinkContentId,
-    moveIssueToColumn: mockMoveIssueToColumn,
-  })),
-}));
+const mockMoveContent = jest.fn();
 
 function baseParam(overrides: Record<string, unknown> = {}) {
   return {
@@ -35,44 +25,37 @@ describe('LinkIssueProjectUseCase', () => {
   let useCase: LinkIssueProjectUseCase;
 
   beforeEach(() => {
-    useCase = new LinkIssueProjectUseCase(
-      {
-        resolveIssueContentId: mockGetId,
-        linkContentId: mockLinkContentId,
-        moveContent: mockMoveIssueToColumn,
-      },
-      { wait: mockWait },
-    );
+    jest.clearAllMocks();
+    useCase = new LinkIssueProjectUseCase({
+      resolveIssueContentId: mockGetId,
+      linkContentId: mockLinkContentId,
+      moveContent: mockMoveContent,
+    });
     mockGetId.mockResolvedValue('issue-node-1');
-    mockLinkContentId.mockResolvedValue(true);
-    mockMoveIssueToColumn.mockResolvedValue(true);
-    mockGetId.mockClear();
-    mockLinkContentId.mockClear();
-    mockMoveIssueToColumn.mockClear();
-    mockWait.mockClear();
+    mockLinkContentId.mockResolvedValue('project-item-1');
+    mockMoveContent.mockResolvedValue(true);
   });
 
-  afterEach(() => {
-    jest.useRealTimers();
-  });
+  it('uses the authoritative project item ID to set the configured status immediately', async () => {
+    const results = await useCase.invoke(baseParam());
 
-  it('links issue to project and moves to column when linkContentId and moveIssueToColumn succeed', async () => {
-    const param = baseParam();
-    const promise = useCase.invoke(param);
-    await jest.advanceTimersByTimeAsync(10000);
-    const results = await promise;
     expect(mockGetId).toHaveBeenCalledWith(42);
-    expect(mockLinkContentId).toHaveBeenCalled();
-    expect(mockMoveIssueToColumn).toHaveBeenCalledWith(expect.any(Object), 42, 'To Do');
-    expect(results.some((r) => r.success && r.steps?.some((s) => s.includes('Backlog')))).toBe(true);
+    expect(mockLinkContentId).toHaveBeenCalledWith(expect.any(Object), 'issue-node-1');
+    expect(mockMoveContent).toHaveBeenCalledWith(expect.any(Object), 'project-item-1', 'To Do');
+    expect(results).toEqual([expect.objectContaining({
+      success: true,
+      executed: true,
+      steps: [expect.stringContaining('with status `To Do`')],
+    })]);
   });
 
-  it('returns result with executed false when linkContentId returns false', async () => {
-    mockLinkContentId.mockResolvedValue(false);
-    const param = baseParam();
-    const results = await useCase.invoke(param);
-    expect(mockMoveIssueToColumn).not.toHaveBeenCalled();
-    expect(results.length).toBeGreaterThanOrEqual(0);
+  it('returns a failure when linking does not yield a usable project item', async () => {
+    mockLinkContentId.mockRejectedValue(new Error('GitHub returned no item'));
+
+    const results = await useCase.invoke(baseParam());
+
+    expect(mockMoveContent).not.toHaveBeenCalled();
+    expect(results).toEqual([expect.objectContaining({ success: false, executed: true })]);
   });
 
   it('skips provider calls when no projects are configured', async () => {
@@ -81,25 +64,26 @@ describe('LinkIssueProjectUseCase', () => {
     expect(results).toEqual([]);
     expect(mockGetId).not.toHaveBeenCalled();
     expect(mockLinkContentId).not.toHaveBeenCalled();
+    expect(mockMoveContent).not.toHaveBeenCalled();
   });
 
-  it('returns success executed false when linkContentId succeeds but moveIssueToColumn returns false', async () => {
-    jest.useFakeTimers();
-    mockLinkContentId.mockResolvedValue(true);
-    mockMoveIssueToColumn.mockResolvedValue(false);
-    const param = baseParam();
-    const promise = useCase.invoke(param);
-    await jest.advanceTimersByTimeAsync(10000);
-    const results = await promise;
-    expect(mockMoveIssueToColumn).toHaveBeenCalled();
-    expect(results.some((r) => r.success === true && r.executed === false && (r.steps?.length ?? 0) === 0)).toBe(true);
-    jest.useRealTimers();
+  it('reports the retained link when setting the project status fails', async () => {
+    mockMoveContent.mockResolvedValue(false);
+
+    const results = await useCase.invoke(baseParam());
+
+    expect(results).toEqual([expect.objectContaining({
+      success: false,
+      executed: true,
+      steps: [expect.stringContaining('status could not be set')],
+    })]);
   });
 
-  it('returns failure on error', async () => {
+  it('returns failure when resolving the issue content ID fails', async () => {
     mockGetId.mockRejectedValue(new Error('API error'));
-    const param = baseParam();
-    const results = await useCase.invoke(param);
-    expect(results.some((r) => r.success === false)).toBe(true);
+
+    const results = await useCase.invoke(baseParam());
+
+    expect(results).toEqual([expect.objectContaining({ success: false })]);
   });
 });

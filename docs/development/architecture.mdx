@@ -8,8 +8,8 @@ The repository separates semantic application ports from provider-specific adapt
 
 GitHub conversation output crosses a closed publication boundary. Capabilities
 produce typed `none`, `reply`, `status`, `transition`, or `inline-finding`
-intents; the compatibility layer maps only reviewed semantic payloads and can
-never render `Result.steps`, reminders, errors, images, or debug logs. Status
+intents; the publication layer maps only reviewed semantic payloads and can
+never render `Result.steps`, reminders, errors, or debug logs. Status
 and reply workflows validate exact bot ownership, stable correlation or topic
 identity, and semantic digests before creating or updating a comment. The
 checked-in publication mutation inventory fails CI if a new application use

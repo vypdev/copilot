@@ -133,7 +133,6 @@ function baseExecution(overrides: Partial<Execution> = {}): Execution {
     commitPrefixBuilder: "",
     commitPrefixBuilderParams: {},
     emoji: {} as Execution["emoji"],
-    images: {} as Execution["images"],
     ...overrides,
   } as Execution;
 }

@@ -27,6 +27,8 @@ describe('getUpdatePullRequestDescriptionPrompt', () => {
         expect(prompt).toContain('normally under 4,000 characters');
         expect(prompt).toContain('never exceed 12,000 characters');
         expect(prompt).toContain('Never claim a check passed unless the evidence says it did');
+        expect(prompt).toContain('Do not infer consumers, compatibility obligations, upgrade steps');
+        expect(prompt).toContain('identifies a concrete affected consumer or required transition');
         expect(prompt).toContain('Do not reproduce empty placeholder sections');
         expect(prompt).not.toContain('full filled template');
         expect(prompt).toContain('Do not use emoji, horizontal separators, generic checklists');

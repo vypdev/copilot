@@ -33,6 +33,12 @@ available, both validation fields are `null` and the entire section is omitted;
 Copilot does not add a “not run” placeholder. A template can add useful constraints,
 but it cannot force the agent to reproduce empty boilerplate.
 
+Review notes also require evidence. Removing code, configuration, inputs, or a
+symbol named “deprecated” does not by itself prove that consumers exist or that
+an upgrade, migration, compatibility, or rollout step is required. Copilot adds
+those notes only when the issue, diff, repository documentation, or verification
+evidence identifies a concrete affected consumer or transition.
+
 <Info>
   **Recommendation:** Keep the template short. Ask for the outcome, material changes, validation evidence, and conditional reviewer notes. The setup template follows this contract.
 </Info>
