@@ -127,7 +127,7 @@ Codex is the default runtime for the repository's AI feature paths. OpenCode and
 
 | Feature | Where it runs | Description |
 |--------|----------------|-------------|
-| **Check progress** | Push (commit) pipeline; optional single action `check_progress_action` / CLI `check-progress` | Compares issue vs branch diff, updates progress labels, and reconciles one issue progress card only when its semantic projection changes. It does not post per-commit narration. |
+| **Check progress** | Push (commit) pipeline; optional single action `check_progress_action` / CLI `check-progress` | Compares issue vs branch diff, updates progress labels, and reconciles one issue progress card only when its semantic projection changes and the analyzed branch `HEAD` is still current. Stale results change nothing and are explained in the Job Summary. It does not post per-commit narration. |
 | **Bugbot (potential problems)** | Push (commit) pipeline; optional single action `detect_potential_problems_action` / CLI `detect-potential-problems` | Analyzes branch vs base and posts bounded findings near code plus one concise aggregate status card. A clean full-coverage card omits empty tables and technical detail; incomplete coverage names an effective recovery action instead of requesting identical rechecks. |
 | **Do user request** | Issue comment; PR review comment | When you comment asking to perform a change in the repo (or use `/copilot implement <request>`), the configured agent applies the changes in the workspace, runs verify commands, and the action commits and pushes with a generic message. Organization repositories require an org member; personal repositories require the owner or a `push`/`maintain`/`admin` collaborator. Uses the same `bugbot-fix-verify-commands` and agent CLI setup. |
 | **Think / reasoning** | Issue/PR comment pipeline; single action `think_action` | Deep code analysis and change proposals (configured agent CLI). On GitHub, returns one sanitized, correlated semantic answer to an explicit `/copilot` command or exact bot mention; Think itself has no comment mutation capability. In the CLI, it prints the answer locally and `--issue` is optional context. |
@@ -151,6 +151,10 @@ description refreshes, pushes, reopens, merges, and closes do not create a
 generic roll-up. The Job Summary keeps aggregate result counts and expands only
 safe error recovery evidence; internal result names, step narration, and arbitrary
 error text remain in logs.
+Progress is guarded twice against branch movement: before native label writes
+and before every progress-card mutation. This also applies to the on-demand
+Action and repository-aware CLI because both snapshot the authoritative remote
+branch before analysis.
 Hidden markers provide stable identity and are trusted only when the comment is
 authored by the configured bot. Decorative image inputs default to `false` and
 are deprecated.

@@ -328,6 +328,13 @@ The first version deliberately scopes reconciliation to workflow templates. Bran
 ### `copilot check-progress`
 
 Checks the progress of an issue from the selected branch and updates the progress label on the issue and its related open pull requests.
+The command sends the current workspace object ID, verifies that it matches the
+selected remote branch `HEAD` before agent analysis, then revalidates that
+remote snapshot before changing labels. The shared publisher performs the
+same check before each progress-card mutation in GitHub Actions. If the branch
+advances, the run succeeds as **No changes**, the stale result is suppressed,
+and newer state remains untouched. The selected branch must therefore exist on
+the configured GitHub remote.
 
 | Option | Required | Default | Description |
 | --- | --- | --- | --- |

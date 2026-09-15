@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { runLocalAction } from '../../actions/local_action';
 import { TITLE } from '../../application/contracts/product_identity';
 import { logError } from '../../utils/logger';
-import { getGitInfo } from '../../cli_context';
+import { getCurrentHeadSha, getGitInfo } from '../../cli_context';
 import { cleanCliArgument } from '../command_input_policy';
 import { buildCheckProgressParams, parseIssueNumber } from './issue_command_policy';
 import { toApplicationError } from '../../application/errors/application_error';
@@ -33,7 +33,13 @@ export function registerCheckProgressCommand(program: Command): void {
         process.exitCode = 1;
         return;
       }
-      const params = buildCheckProgressParams(options, gitInfo);
+      const sourceHeadSha = getCurrentHeadSha();
+      if (!sourceHeadSha) {
+        logError('Unable to resolve the current Git revision for progress analysis.');
+        process.exitCode = 1;
+        return;
+      }
+      const params = buildCheckProgressParams(options, gitInfo, sourceHeadSha);
       if (!params) return;
       try {
         await runLocalAction(params);

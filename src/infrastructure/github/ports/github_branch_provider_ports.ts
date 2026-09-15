@@ -18,7 +18,7 @@ export interface GithubBranchClient {
             listBranches(parameters: Record<string, unknown>): Promise<{ data: Array<{ name: string }> }>;
         };
         git: {
-            getRef(parameters: Record<string, unknown>): Promise<{ data: { ref: string } }>;
+            getRef(parameters: Record<string, unknown>): Promise<{ data: { ref: string; object?: { sha?: string } } }>;
             deleteRef(parameters: Record<string, unknown>): Promise<unknown>;
         };
     };

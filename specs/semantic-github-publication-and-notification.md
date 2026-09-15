@@ -3,7 +3,8 @@
 - Status: In implementation
 - Date: 2026-09-14
 - Catalog capability ID: github-communication-experience
-- Last verified: 2026-09-15 for the delivered shared publication, branch-sync,
+- Last verified: 2026-09-15 for the delivered shared publication, progress
+  source-freshness, branch-sync,
   review-context, Bugbot, deployment, setup-doctor, generic Job Summary,
   application-error, explicit-request, and local-result slices; remaining
   clauses are prospective
@@ -383,7 +384,16 @@ The shared marker format is:
   transient `comment:issue_comment:<issue-comment-id>` form emitted during
   migration and compact it with the stable identity; new writes MUST NOT use
   that transient form.
-- Commit-derived cards MUST revalidate the expected head SHA before update.
+- Commit-derived progress MUST snapshot the authoritative remote branch head
+  before analysis. An event-provided head that is already stale MUST stop before
+  agent execution. The workflow MUST revalidate the snapshot immediately before
+  native issue/PR label mutation, and the card reconciler MUST revalidate it
+  immediately before every create or update. SHA-1 and SHA-256 object IDs are
+  accepted only in canonical hexadecimal form after case normalization.
+- A stale progress result MUST mutate neither native state nor conversation
+  state. It is a successful skipped outcome with reason `stale-source`, and the
+  repository-locale Job Summary MUST explain that suppression without exposing
+  full object IDs.
 - Revisioned operations MUST reject any revision lower than the stored revision.
 - Events without an orderable revision may update only after the shared workflow
   queue confirms no newer conflicting run; otherwise they resolve to `none` with
@@ -997,6 +1007,19 @@ complete English fallback, because a safe requested-language interpretation was
 not established. The local action presenter now applies the same outcome versus
 evidence split and cannot render internal `Result.steps` or reminder prose.
 
+Progress freshness is now enforced end to end. The progress workflow resolves
+the selected remote branch through a credential-bound, provider-neutral query
+port, snapshots its canonical SHA-1 or SHA-256 object ID before agent work, and
+revalidates it before native label writes. Event SHAs provide an earlier
+preflight that discards superseded push runs without invoking the agent; the CLI
+supplies its canonical workspace object ID for the same comparison. The
+shared status reconciler independently revalidates the same source immediately
+before comment creation, canonical-card update, and each duplicate compaction
+write. Stale results return typed `stale-source` evidence; the localized Job
+Summary displays the suppression reason while issue and PR conversations remain
+unchanged. The GitHub adapter and credential binding stay outside application
+policy, and the CLI, push, and on-demand Action paths reuse the same guard.
+
 No remote product flag is required. Each phase must be independently releasable
 and its compatibility adapter must fail closed to Job Summary, not fall back to
 generic comments.
@@ -1083,7 +1106,8 @@ removed.
    one progress card reflects the latest valid head and no commit/reopen/generic
    comments are created.
 6. Given an older progress run that finishes after a newer head, when it reaches
-   publication, then it cannot overwrite the newer card.
+   publication, then it cannot overwrite progress labels or the newer card, and
+   the Job Summary records `stale-source` suppression.
 7. Given two concurrent first publications for the same identity, when both
    provider creates succeed, then the lowest bot-owned comment becomes canonical
    and the later exact duplicate is deleted or compacted when deletion is not

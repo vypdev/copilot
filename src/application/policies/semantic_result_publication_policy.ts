@@ -29,6 +29,7 @@ import {
     renderApplicationErrorMarkdown,
     type ApplicationErrorPresentationSource,
 } from './application_error_presentation_policy';
+import { canonicalGitObjectId } from '../../domain/git_object_id';
 
 export interface PlanPublicationProjection {
     readonly kind: 'plan';
@@ -315,10 +316,14 @@ function translationProjection(value: unknown): TranslationPublication | undefin
 }
 
 function progressIntent(id: string, payload: Record<string, unknown>, locale: string): SemanticStatusIntent | undefined {
+    const sourceHeadSha = canonicalGitObjectId(payload.sourceHeadSha);
+    const branch = typeof payload.branch === 'string' ? payload.branch.trim() : '';
     if (id !== 'CheckProgressUseCase'
         || !positiveInteger(payload.issueNumber)
         || typeof payload.progress !== 'number'
-        || typeof payload.summary !== 'string') return undefined;
+        || typeof payload.summary !== 'string'
+        || !sourceHeadSha
+        || !branch) return undefined;
     const progress = Math.max(0, Math.min(100, Math.round(payload.progress)));
     const projection = Object.freeze<ProgressPublicationProjection>({
         kind: 'progress',
@@ -327,12 +332,15 @@ function progressIntent(id: string, payload: Record<string, unknown>, locale: st
         ...(typeof payload.remaining === 'string' && payload.remaining.trim()
             ? { remaining: payload.remaining.trim() }
             : {}),
-        ...(typeof payload.branch === 'string' && payload.branch.trim() ? { branch: payload.branch.trim() } : {}),
+        branch,
         ...(typeof payload.developmentBranch === 'string' && payload.developmentBranch.trim()
             ? { developmentBranch: payload.developmentBranch.trim() }
             : {}),
     });
-    return statusIntent('progress', payload.issueNumber, 'work', `progress:${createSemanticDigest(projection)}`, locale, projection);
+    return Object.freeze({
+        ...statusIntent('progress', payload.issueNumber, 'work', `head:${sourceHeadSha}`, locale, projection),
+        sourceGuard: Object.freeze({ kind: 'branch-head', branch, sha: sourceHeadSha }),
+    });
 }
 
 function statusIntent(

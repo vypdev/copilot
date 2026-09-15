@@ -5,6 +5,9 @@ import type { IssueCommentPublicationTarget } from '../../../../ports/issue_life
 import type { MessageCatalogResolutionPort } from '../../../../ports/message_catalog_ports';
 import { ApplicationError } from '../../../../errors/application_error';
 
+const SOURCE_HEAD = 'a'.repeat(40);
+const NEWER_HEAD = 'b'.repeat(40);
+
 function recommendation(steps = '1. Add the policy\n2. Add tests', fingerprint = 'a'.repeat(16)): Result {
   return new Result({
     id: 'RecommendStepsUseCase', success: true, executed: true,
@@ -20,7 +23,10 @@ function recommendation(steps = '1. Add the policy\n2. Add tests', fingerprint =
 function progress(value = 65, summary = 'Core behavior is implemented.', remaining = 'Finish validation.'): Result {
   return new Result({
     id: 'CheckProgressUseCase', success: true, executed: true,
-    payload: { issueNumber: 42, progress: value, summary, remaining, branch: 'feature/work', developmentBranch: 'develop' },
+    payload: {
+      issueNumber: 42, progress: value, summary, remaining,
+      branch: 'feature/work', developmentBranch: 'develop', sourceHeadSha: SOURCE_HEAD,
+    },
     steps: ['legacy progress wrapper that must never be published'],
   });
 }
@@ -49,6 +55,11 @@ function inMemoryComments(initial: IssueCommentPublicationTarget[] = []) {
     }),
     listIssueComments: jest.fn(async () => values.map(comment => ({ ...comment }))),
   };
+}
+
+function publicationSource(...heads: string[]) {
+  const remaining = [...heads];
+  return { getBranchHeadSha: jest.fn(async () => remaining.shift() ?? SOURCE_HEAD) };
 }
 
 describe('PublishResultUseCase semantic compatibility boundary', () => {
@@ -234,7 +245,8 @@ describe('PublishResultUseCase semantic compatibility boundary', () => {
   ] as const)('renders bounded progress state for %s%%', async (value, state) => {
     const comments = inMemoryComments();
 
-    await new PublishResultUseCase(comments).invoke(projectPublishResultContext(source([progress(value)])));
+    await new PublishResultUseCase(comments, undefined, publicationSource())
+      .invoke(projectPublishResultContext(source([progress(value)])));
 
     expect(comments.values[0].body).toContain(`## Progress: ${value}% — ${state}`);
     expect(comments.values[0].body).not.toContain('Reasoning');
@@ -243,7 +255,7 @@ describe('PublishResultUseCase semantic compatibility boundary', () => {
   it('uses the configured issue locale for deterministic Spanish copy', async () => {
     const comments = inMemoryComments();
 
-    await new PublishResultUseCase(comments).invoke(projectPublishResultContext(source(
+    await new PublishResultUseCase(comments, undefined, publicationSource()).invoke(projectPublishResultContext(source(
       [progress(100)],
       { locale: { issue: 'es-MX', pullRequest: 'en-US' } },
     )));
@@ -332,6 +344,35 @@ describe('PublishResultUseCase semantic compatibility boundary', () => {
     expect(context.results[0].steps).toEqual(['legacy plan wrapper that must never be published']);
     expect(failure).toMatchObject({ success: false, executed: true });
     expect(failure?.errors[0]).toMatchObject({ code: 'provider.unavailable' });
+  });
+
+  it('reports a stale progress publication without changing the issue conversation', async () => {
+    const comments = inMemoryComments();
+    const sourceQuery = publicationSource(NEWER_HEAD);
+
+    const outcome = await new PublishResultUseCase(comments, undefined, sourceQuery)
+      .invoke(projectPublishResultContext(source([progress()])));
+
+    expect(outcome).toMatchObject({
+      success: true,
+      executed: false,
+      payload: { publicationOutcome: { reason: 'stale-source', branch: 'feature/work', sourceHeadSha: SOURCE_HEAD } },
+    });
+    expect(sourceQuery.getBranchHeadSha).toHaveBeenCalledWith('feature/work');
+    expect(comments.listIssueComments).not.toHaveBeenCalled();
+    expect(comments.addComment).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when progress publication has no authoritative source query', async () => {
+    const comments = inMemoryComments();
+
+    const failure = await new PublishResultUseCase(comments)
+      .invoke(projectPublishResultContext(source([progress()])));
+
+    expect(failure).toMatchObject({ success: false, executed: true });
+    expect(failure?.errors[0]).toMatchObject({ code: 'configuration.unsupported' });
+    expect(comments.listIssueComments).not.toHaveBeenCalled();
+    expect(comments.addComment).not.toHaveBeenCalled();
   });
 
   it('projects fallback issue targets and recursively copies array payloads', () => {

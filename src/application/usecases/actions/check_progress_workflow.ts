@@ -8,6 +8,8 @@ import { syncProgressLabelsToOpenPullRequests } from './sync_progress_labels_to_
 import { buildProgressSummaryMessage } from './progress_summary_builder';
 import { analyzeProgress, type ProgressAnalysisDependencies } from './progress_analysis_workflow';
 import { ApplicationError, toApplicationError } from '../../errors/application_error';
+import type { BoundPublicationSourceQueryPort } from '../../ports/publication_freshness_ports';
+import { buildStaleSourcePublicationPayload } from '../../policies/publication_outcome_policy';
 
 export interface CheckProgressWorkflowDependencies extends ProgressAnalysisDependencies {
     issueLabelsPort: BoundIssueLabelsPort;
@@ -26,17 +28,44 @@ export async function runCheckProgressWorkflow(
     try {
         const analysis = await analyzeProgress(param, taskId, dependencies);
         if (analysis.kind === 'failure') return [analysis.result];
+        if (analysis.kind === 'stale-source') {
+            logInfo(`Progress analysis omitted: ${analysis.branch} no longer points at the event source.`);
+            return [buildStaleSourceResult(taskId, analysis.branch, analysis.sourceHeadSha)];
+        }
 
-        const { attemptResult, issueNumber, branch, developmentBranch } = analysis;
+        const { attemptResult, issueNumber, branch, developmentBranch, sourceHeadSha } = analysis;
         const { progress, summary, reasoning, remaining } = attemptResult;
         logProgressAssessment(progress, summary, reasoning, remaining);
 
+        if (!await sourceIsCurrent(branch, sourceHeadSha, dependencies.publicationSourceQuery)) {
+            logInfo(`Progress mutation omitted: ${branch} no longer points at the analyzed source.`);
+            return [buildStaleSourceResult(taskId, branch, sourceHeadSha)];
+        }
+
         if (progress === 0) {
-            return [buildZeroProgressResult(taskId, issueNumber, branch, developmentBranch, summary, reasoning)];
+            return [buildZeroProgressResult(
+                taskId,
+                issueNumber,
+                branch,
+                developmentBranch,
+                summary,
+                reasoning,
+                sourceHeadSha,
+            )];
         }
 
         await persistProgress(param, issueNumber, branch, progress, dependencies);
-        return [buildProgressResult(taskId, issueNumber, branch, developmentBranch, progress, summary, reasoning, remaining)];
+        return [buildProgressResult(
+            taskId,
+            issueNumber,
+            branch,
+            developmentBranch,
+            progress,
+            summary,
+            reasoning,
+            remaining,
+            sourceHeadSha,
+        )];
     } catch (error) {
         const semanticError = toApplicationError(error, 'workflow.failed', `Unable to complete ${taskId}.`);
         logError(semanticError);
@@ -51,6 +80,23 @@ export async function runCheckProgressWorkflow(
     }
 }
 
+async function sourceIsCurrent(
+    branch: string,
+    sourceHeadSha: string,
+    sourceQuery: BoundPublicationSourceQueryPort,
+): Promise<boolean> {
+    return await sourceQuery.getBranchHeadSha(branch) === sourceHeadSha;
+}
+
+function buildStaleSourceResult(taskId: string, branch: string, sourceHeadSha: string): Result {
+    return new Result({
+        id: taskId,
+        success: true,
+        executed: false,
+        payload: buildStaleSourcePublicationPayload(branch, sourceHeadSha),
+    });
+}
+
 function buildZeroProgressResult(
     taskId: string,
     issueNumber: number,
@@ -58,6 +104,7 @@ function buildZeroProgressResult(
     developmentBranch: string,
     summary: string,
     reasoning: string,
+    sourceHeadSha: string,
 ): Result {
     const message = 'Progress detection returned 0%. This may be due to a model error or no changes detected. Consider re-running the check.';
     logError(message);
@@ -67,7 +114,15 @@ function buildZeroProgressResult(
         executed: true,
         steps: [`Progress for issue #${issueNumber}: 0%`, summary],
         errors: [new ApplicationError('agent.failed', message)],
-        payload: { progress: 0, summary, reasoning: reasoning || undefined, issueNumber, branch, developmentBranch },
+        payload: {
+            progress: 0,
+            summary,
+            reasoning: reasoning || undefined,
+            issueNumber,
+            branch,
+            developmentBranch,
+            sourceHeadSha,
+        },
     });
 }
 
@@ -96,6 +151,7 @@ function buildProgressResult(
     summary: string,
     reasoning: string,
     remaining: string,
+    sourceHeadSha: string,
 ): Result {
     return new Result({
         id: taskId,
@@ -110,6 +166,7 @@ function buildProgressResult(
             issueNumber,
             branch,
             developmentBranch,
+            sourceHeadSha,
         },
     });
 }

@@ -39373,6 +39373,9 @@ const application_error_context_1 = __nccwpck_require__(4034);
 const application_error_1 = __nccwpck_require__(75999);
 const application_error_presentation_policy_1 = __nccwpck_require__(95067);
 const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
+const shared_capability_port_binding_1 = __nccwpck_require__(47399);
+const github_publication_source_repository_1 = __nccwpck_require__(52644);
+const github_branch_client_factory_1 = __nccwpck_require__(30144);
 const agent_capability_composition_root_1 = __nccwpck_require__(85079);
 const resolve_message_catalog_use_case_1 = __nccwpck_require__(99961);
 const github_action_locale_inputs_1 = __nccwpck_require__(58893);
@@ -39448,7 +39451,7 @@ async function runGitHubAction() {
             ...repositoryBinding,
             issueNumber: context.issueNumber,
         }, context),
-    }, (0, copilot_evidence_composition_root_1.createCopilotEvidenceCompositionRoot)(), (0, github_action_summary_composition_root_1.createGithubActionSummaryCompositionRoot)(), new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(agentRuntimeAuthorized ? (0, agent_capability_composition_root_1.createLanguageQueryPort)() : undefined));
+    }, (0, copilot_evidence_composition_root_1.createCopilotEvidenceCompositionRoot)(), (0, github_action_summary_composition_root_1.createGithubActionSummaryCompositionRoot)(), new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(agentRuntimeAuthorized ? (0, agent_capability_composition_root_1.createLanguageQueryPort)() : undefined), (0, shared_capability_port_binding_1.bindPublicationSourceQuery)(new github_publication_source_repository_1.GithubPublicationSourceRepository((0, github_branch_client_factory_1.createBranchClient)()), repositoryBinding));
 }
 /**
  * Runs the action entrypoint without forcing a successful process exit.
@@ -39623,7 +39626,7 @@ const deployment_presentation_policy_1 = __nccwpck_require__(83221);
 const deployment_message_catalog_1 = __nccwpck_require__(79364);
 const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
 const review_state_1 = __nccwpck_require__(79200);
-async function finishGithubAction(execution, results, issueNotificationPort, configurationStorePort, evidencePort, summaryPort, catalogResolver) {
+async function finishGithubAction(execution, results, issueNotificationPort, configurationStorePort, evidencePort, summaryPort, catalogResolver, publicationSourceQuery) {
     const stepCount = results.reduce((acc, result) => acc + (result.steps?.length ?? 0), 0);
     const errorCount = results.reduce((acc, result) => acc + (result.errors?.length ?? 0), 0);
     (0, logger_1.logInfo)(`Publishing result: ${results.length} result(s), ${stepCount} step(s), ${errorCount} error(s).`);
@@ -39632,9 +39635,9 @@ async function finishGithubAction(execution, results, issueNotificationPort, con
     const dryRun = results.some((result) => (0, result_1.getResultPayload)(result.payload)?.dryRun === true);
     const ownsDeploymentPresentation = execution.singleAction.isDeploymentOrchestrationAction;
     if (!dryRun && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
-        const publicationFailure = await new publish_resume_use_case_1.PublishResultUseCase(issueNotificationPort, catalogResolver).invoke((0, publish_resume_workflow_1.projectPublishResultContext)(execution));
-        if (publicationFailure)
-            results.push(publicationFailure);
+        const publicationOutcome = await new publish_resume_use_case_1.PublishResultUseCase(issueNotificationPort, catalogResolver, publicationSourceQuery).invoke((0, publish_resume_workflow_1.projectPublishResultContext)(execution));
+        if (publicationOutcome)
+            results.push(publicationOutcome);
     }
     else if (execution.singleAction.isPublishIssueCommentAction || ownsDeploymentPresentation) {
         (0, logger_1.logInfo)('Generic result publication skipped: this single action owns its user-facing presentation.');
@@ -40242,8 +40245,12 @@ function buildGithubActionEventInputs(context) {
     const repository = (0, repository_context_1.requireRepositoryCoordinates)(context.repo);
     const eventName = requireNonEmptyContextValue(context.eventName, 'event name');
     const actor = requireNonEmptyContextValue(context.actor, 'actor');
+    const payloadAfter = typeof context.payload.after === 'string' && context.payload.after.trim()
+        ? context.payload.after.trim()
+        : undefined;
     return {
         ...context.payload,
+        ...(payloadAfter ? { after: payloadAfter } : {}),
         eventName,
         actor,
         repo: repository,
@@ -41133,6 +41140,7 @@ const application_error_message_catalog_1 = __nccwpck_require__(64809);
 const SIMPLE_MESSAGE_KEYS = Object.freeze([
     'heading', 'repository', 'property', 'value', 'status', 'event', 'target',
     'lifecycle', 'descriptionPolicy', 'results', 'findingStates', 'bugbotReview',
+    'sourceFreshness', 'staleSourceSuppressed',
     'resultDetails', 'localization', 'repositoryLocale', 'issueLocale',
     'pullRequestLocale', 'catalogResolution', 'descriptors', 'reason', 'failure',
     'findings', 'partial', 'superseded', 'skipped', 'dryRun', 'success', 'invalid',
@@ -41167,6 +41175,8 @@ const ENGLISH_SIMPLE = Object.freeze({
     results: 'Results',
     findingStates: 'Finding states',
     bugbotReview: 'Bugbot review',
+    sourceFreshness: 'Source freshness',
+    staleSourceSuppressed: 'Stale result suppressed; branch HEAD changed during the run',
     resultDetails: 'Failure details',
     localization: 'Localization',
     repositoryLocale: 'Repository locale',
@@ -41201,6 +41211,8 @@ const SPANISH_SIMPLE = Object.freeze({
     results: 'Resultados',
     findingStates: 'Estados de los hallazgos',
     bugbotReview: 'Revisión de Bugbot',
+    sourceFreshness: 'Vigencia del origen',
+    staleSourceSuppressed: 'Resultado obsoleto omitido; el HEAD de la rama cambió durante la ejecución',
     resultDetails: 'Detalles del fallo',
     localization: 'Localización',
     repositoryLocale: 'Locale del repositorio',
@@ -41301,6 +41313,7 @@ const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(9811
 const review_state_1 = __nccwpck_require__(79200);
 const action_summary_message_catalog_1 = __nccwpck_require__(61544);
 const application_error_presentation_policy_1 = __nccwpck_require__(95067);
+const publication_outcome_policy_1 = __nccwpck_require__(79719);
 const ENGLISH_LOCALIZATION_SUMMARY_LABELS = Object.freeze({
     heading: 'Localization',
     property: 'Property',
@@ -41319,6 +41332,7 @@ function buildActionSummary(context, catalog = (0, action_summary_message_catalo
     const findingStates = findingStateProjection.status === 'valid' ? findingStateProjection.counts : undefined;
     const telemetryProjection = (0, bugbot_telemetry_projection_policy_1.projectBugbotResultTelemetry)(context.results);
     const bugbotTelemetry = telemetryProjection.status === 'valid' ? telemetryProjection.telemetry : undefined;
+    const staleSourceSuppressed = (0, publication_outcome_policy_1.hasStaleSourcePublicationOutcome)(context.results);
     const hasActionableFindings = findingStates ? (0, review_state_1.countActionableBugbotFindings)(findingStates) > 0 : false;
     const hasUnknownFindings = findingStateProjection.status === 'invalid' || (findingStates?.unknown ?? 0) > 0;
     const status = resolveActionSummaryStatus({
@@ -41340,6 +41354,9 @@ function buildActionSummary(context, catalog = (0, action_summary_message_catalo
         `| ${catalogText(catalog, 'summary.results')} | ${formatResultCounts(context.results, catalog)} |`,
         `| ${catalogText(catalog, 'summary.findingStates')} | ${formatFindingStates(findingStateProjection, catalog)} |`,
         `| ${catalogText(catalog, 'summary.bugbotReview')} | ${formatBugbotTelemetry(telemetryProjection, catalog)} |`,
+        ...(staleSourceSuppressed ? [
+            `| ${catalogText(catalog, 'summary.sourceFreshness')} | ${catalogText(catalog, 'summary.staleSourceSuppressed')} |`,
+        ] : []),
     ];
     const localization = renderLocalizationSummarySection(context.locale, context.catalogResolutions, actionSummaryLocalizationLabels(catalog));
     return [
@@ -46980,6 +46997,36 @@ exports.SPANISH_PUBLICATION_CATALOG = toPublicationCatalog(Object.freeze({
 
 /***/ }),
 
+/***/ 79719:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildStaleSourcePublicationPayload = buildStaleSourcePublicationPayload;
+exports.hasStaleSourcePublicationOutcome = hasStaleSourcePublicationOutcome;
+const result_1 = __nccwpck_require__(73817);
+/** Builds bounded evidence for a commit-derived result that was intentionally suppressed. */
+function buildStaleSourcePublicationPayload(branch, sourceHeadSha) {
+    return Object.freeze({
+        publicationOutcome: Object.freeze({
+            reason: 'stale-source',
+            branch,
+            sourceHeadSha,
+        }),
+    });
+}
+function hasStaleSourcePublicationOutcome(results) {
+    return results.some(result => {
+        const payload = (0, result_1.getResultPayload)(result.payload);
+        const outcome = (0, result_1.getResultPayload)(payload?.publicationOutcome);
+        return outcome?.reason === 'stale-source';
+    });
+}
+
+
+/***/ }),
+
 /***/ 43268:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -47353,6 +47400,7 @@ const copilot_interaction_policy_1 = __nccwpck_require__(90108);
 const status_command_policy_1 = __nccwpck_require__(3449);
 const comment_translation_policy_1 = __nccwpck_require__(27150);
 const application_error_presentation_policy_1 = __nccwpck_require__(95067);
+const git_object_id_1 = __nccwpck_require__(88623);
 function selectSemanticStatusIntents(context) {
     return Object.freeze(context.results.flatMap(result => {
         if (!result.executed || !result.success)
@@ -47585,10 +47633,14 @@ function translationProjection(value) {
     });
 }
 function progressIntent(id, payload, locale) {
+    const sourceHeadSha = (0, git_object_id_1.canonicalGitObjectId)(payload.sourceHeadSha);
+    const branch = typeof payload.branch === 'string' ? payload.branch.trim() : '';
     if (id !== 'CheckProgressUseCase'
         || !positiveInteger(payload.issueNumber)
         || typeof payload.progress !== 'number'
-        || typeof payload.summary !== 'string')
+        || typeof payload.summary !== 'string'
+        || !sourceHeadSha
+        || !branch)
         return undefined;
     const progress = Math.max(0, Math.min(100, Math.round(payload.progress)));
     const projection = Object.freeze({
@@ -47598,12 +47650,15 @@ function progressIntent(id, payload, locale) {
         ...(typeof payload.remaining === 'string' && payload.remaining.trim()
             ? { remaining: payload.remaining.trim() }
             : {}),
-        ...(typeof payload.branch === 'string' && payload.branch.trim() ? { branch: payload.branch.trim() } : {}),
+        branch,
         ...(typeof payload.developmentBranch === 'string' && payload.developmentBranch.trim()
             ? { developmentBranch: payload.developmentBranch.trim() }
             : {}),
     });
-    return statusIntent('progress', payload.issueNumber, 'work', `progress:${(0, publication_identity_policy_1.createSemanticDigest)(projection)}`, locale, projection);
+    return Object.freeze({
+        ...statusIntent('progress', payload.issueNumber, 'work', `head:${sourceHeadSha}`, locale, projection),
+        sourceGuard: Object.freeze({ kind: 'branch-head', branch, sha: sourceHeadSha }),
+    });
 }
 function statusIntent(topic, issueNumber, key, sourceVersion, locale, projection) {
     return Object.freeze({
@@ -49130,13 +49185,14 @@ exports.CheckProgressUseCase = void 0;
 const check_progress_workflow_1 = __nccwpck_require__(94343);
 /** Application boundary for assessing and publishing issue progress. */
 class CheckProgressUseCase {
-    constructor(issueDescriptionQueryPort, issueLabelsPort, issueProgressPort, branchRepository, pullRequestRepository, aiRepository) {
+    constructor(issueDescriptionQueryPort, issueLabelsPort, issueProgressPort, branchRepository, pullRequestRepository, aiRepository, publicationSourceQuery) {
         this.issueDescriptionQueryPort = issueDescriptionQueryPort;
         this.issueLabelsPort = issueLabelsPort;
         this.issueProgressPort = issueProgressPort;
         this.branchRepository = branchRepository;
         this.pullRequestRepository = pullRequestRepository;
         this.aiRepository = aiRepository;
+        this.publicationSourceQuery = publicationSourceQuery;
         this.taskId = 'CheckProgressUseCase';
     }
     async invoke(param) {
@@ -49147,6 +49203,7 @@ class CheckProgressUseCase {
             issueLabelsPort: this.issueLabelsPort,
             issueProgressPort: this.issueProgressPort,
             aiRepository: this.aiRepository,
+            publicationSourceQuery: this.publicationSourceQuery,
         });
     }
 }
@@ -49169,6 +49226,7 @@ const sync_progress_labels_to_open_pull_requests_1 = __nccwpck_require__(18277);
 const progress_summary_builder_1 = __nccwpck_require__(62721);
 const progress_analysis_workflow_1 = __nccwpck_require__(88729);
 const application_error_1 = __nccwpck_require__(75999);
+const publication_outcome_policy_1 = __nccwpck_require__(79719);
 /** Publishes a completed progress assessment after the analysis workflow succeeds. */
 async function runCheckProgressWorkflow(param, taskId, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId}.`);
@@ -49176,14 +49234,22 @@ async function runCheckProgressWorkflow(param, taskId, dependencies) {
         const analysis = await (0, progress_analysis_workflow_1.analyzeProgress)(param, taskId, dependencies);
         if (analysis.kind === 'failure')
             return [analysis.result];
-        const { attemptResult, issueNumber, branch, developmentBranch } = analysis;
+        if (analysis.kind === 'stale-source') {
+            (0, logging_ports_1.logInfo)(`Progress analysis omitted: ${analysis.branch} no longer points at the event source.`);
+            return [buildStaleSourceResult(taskId, analysis.branch, analysis.sourceHeadSha)];
+        }
+        const { attemptResult, issueNumber, branch, developmentBranch, sourceHeadSha } = analysis;
         const { progress, summary, reasoning, remaining } = attemptResult;
         logProgressAssessment(progress, summary, reasoning, remaining);
+        if (!await sourceIsCurrent(branch, sourceHeadSha, dependencies.publicationSourceQuery)) {
+            (0, logging_ports_1.logInfo)(`Progress mutation omitted: ${branch} no longer points at the analyzed source.`);
+            return [buildStaleSourceResult(taskId, branch, sourceHeadSha)];
+        }
         if (progress === 0) {
-            return [buildZeroProgressResult(taskId, issueNumber, branch, developmentBranch, summary, reasoning)];
+            return [buildZeroProgressResult(taskId, issueNumber, branch, developmentBranch, summary, reasoning, sourceHeadSha)];
         }
         await persistProgress(param, issueNumber, branch, progress, dependencies);
-        return [buildProgressResult(taskId, issueNumber, branch, developmentBranch, progress, summary, reasoning, remaining)];
+        return [buildProgressResult(taskId, issueNumber, branch, developmentBranch, progress, summary, reasoning, remaining, sourceHeadSha)];
     }
     catch (error) {
         const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', `Unable to complete ${taskId}.`);
@@ -49198,7 +49264,18 @@ async function runCheckProgressWorkflow(param, taskId, dependencies) {
         ];
     }
 }
-function buildZeroProgressResult(taskId, issueNumber, branch, developmentBranch, summary, reasoning) {
+async function sourceIsCurrent(branch, sourceHeadSha, sourceQuery) {
+    return await sourceQuery.getBranchHeadSha(branch) === sourceHeadSha;
+}
+function buildStaleSourceResult(taskId, branch, sourceHeadSha) {
+    return new result_1.Result({
+        id: taskId,
+        success: true,
+        executed: false,
+        payload: (0, publication_outcome_policy_1.buildStaleSourcePublicationPayload)(branch, sourceHeadSha),
+    });
+}
+function buildZeroProgressResult(taskId, issueNumber, branch, developmentBranch, summary, reasoning, sourceHeadSha) {
     const message = 'Progress detection returned 0%. This may be due to a model error or no changes detected. Consider re-running the check.';
     (0, logging_ports_1.logError)(message);
     return new result_1.Result({
@@ -49207,14 +49284,22 @@ function buildZeroProgressResult(taskId, issueNumber, branch, developmentBranch,
         executed: true,
         steps: [`Progress for issue #${issueNumber}: 0%`, summary],
         errors: [new application_error_1.ApplicationError('agent.failed', message)],
-        payload: { progress: 0, summary, reasoning: reasoning || undefined, issueNumber, branch, developmentBranch },
+        payload: {
+            progress: 0,
+            summary,
+            reasoning: reasoning || undefined,
+            issueNumber,
+            branch,
+            developmentBranch,
+            sourceHeadSha,
+        },
     });
 }
 async function persistProgress(param, issueNumber, branch, progress, dependencies) {
     await dependencies.issueProgressPort.setProgressLabel(issueNumber, progress);
     await (0, sync_progress_labels_to_open_pull_requests_1.syncProgressLabelsToOpenPullRequests)(branch, progress, dependencies.issueLabelsPort, dependencies.pullRequestRepository);
 }
-function buildProgressResult(taskId, issueNumber, branch, developmentBranch, progress, summary, reasoning, remaining) {
+function buildProgressResult(taskId, issueNumber, branch, developmentBranch, progress, summary, reasoning, remaining, sourceHeadSha) {
     return new result_1.Result({
         id: taskId,
         success: true,
@@ -49228,6 +49313,7 @@ function buildProgressResult(taskId, issueNumber, branch, developmentBranch, pro
             issueNumber,
             branch,
             developmentBranch,
+            sourceHeadSha,
         },
     });
 }
@@ -50824,6 +50910,10 @@ async function analyzeProgress(param, taskId, dependencies) {
         };
     }
     const resolvedBranch = branch;
+    const sourceHeadSha = await dependencies.publicationSourceQuery.getBranchHeadSha(resolvedBranch);
+    if (param.sourceHeadSha && param.sourceHeadSha !== sourceHeadSha) {
+        return { kind: 'stale-source', branch: resolvedBranch, sourceHeadSha: param.sourceHeadSha };
+    }
     const developmentBranch = param.developmentBranch;
     (0, logging_ports_1.logInfo)(`📦 Progress will be assessed from workspace diff: base branch "${developmentBranch}", current branch "${resolvedBranch}" (configured agent will run git diff).`);
     const prompt = (0, prompts_1.getCheckProgressPrompt)({
@@ -50850,6 +50940,7 @@ async function analyzeProgress(param, taskId, dependencies) {
         issueNumber,
         branch: resolvedBranch,
         developmentBranch,
+        sourceHeadSha,
         attemptResult,
     };
 }
@@ -53853,6 +53944,7 @@ exports.projectInitialSetupContext = projectInitialSetupContext;
 exports.projectIssueCommentActionContext = projectIssueCommentActionContext;
 exports.projectAgentActivityContext = projectAgentActivityContext;
 const issue_comment_publication_policy_1 = __nccwpck_require__(61899);
+const git_object_id_1 = __nccwpck_require__(88623);
 function projectDeploymentPublicationContext(source) {
     return Object.freeze({
         requestedOperationId: source.singleAction.operationId,
@@ -53890,6 +53982,7 @@ function projectDeploymentOrchestrationContext(source) {
     };
 }
 function projectProgressContext(source) {
+    const sourceHeadSha = (0, git_object_id_1.canonicalGitObjectId)(source.inputs?.after);
     return Object.freeze({
         issueNumber: source.issueNumber,
         pushedBranch: source.commit.branch,
@@ -53905,6 +53998,7 @@ function projectProgressContext(source) {
         agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('findings') }),
         includeReasoning: source.ai.getAiIncludeReasoning(),
         targetLocale: source.locale?.issue ?? 'en-US',
+        ...(sourceHeadSha ? { sourceHeadSha } : {}),
     });
 }
 function projectRecommendStepsContext(source) {
@@ -59542,14 +59636,15 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const publish_resume_workflow_1 = __nccwpck_require__(55340);
 class PublishResultUseCase {
-    constructor(comments, catalogResolver) {
+    constructor(comments, catalogResolver, sourceQuery) {
         this.comments = comments;
         this.catalogResolver = catalogResolver;
+        this.sourceQuery = sourceQuery;
         this.taskId = 'PublishResultUseCase';
     }
     async invoke(param) {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
-        return (0, publish_resume_workflow_1.runPublishResume)(param, this.taskId, this.comments, this.catalogResolver);
+        return (0, publish_resume_workflow_1.runPublishResume)(param, this.taskId, this.comments, this.catalogResolver, this.sourceQuery);
     }
 }
 exports.PublishResultUseCase = PublishResultUseCase;
@@ -59573,6 +59668,7 @@ const publication_identity_policy_1 = __nccwpck_require__(45403);
 const reply_publication_workflow_1 = __nccwpck_require__(22824);
 const status_card_publication_workflow_1 = __nccwpck_require__(62963);
 const publication_message_catalog_1 = __nccwpck_require__(34223);
+const publication_outcome_policy_1 = __nccwpck_require__(79719);
 function projectPublishResultContext(source) {
     const target = publicationTarget(source);
     return Object.freeze({
@@ -59593,7 +59689,7 @@ function projectPublishResultContext(source) {
  * semantic payloads may reach GitHub; steps, reminders, errors, images, and
  * debug logs remain operator evidence in the Job Summary and logs.
  */
-async function runPublishResume(param, taskId, comments, catalogResolver) {
+async function runPublishResume(param, taskId, comments, catalogResolver, sourceQuery) {
     try {
         const semanticContext = {
             locale: param.locale,
@@ -59613,6 +59709,7 @@ async function runPublishResume(param, taskId, comments, catalogResolver) {
             return undefined;
         }
         const catalog = await (0, publication_message_catalog_1.resolvePublicationCatalog)(param.locale, param.languageConfiguration, catalogResolver);
+        let staleSourceEvidence;
         for (const intent of replies) {
             const outcome = await (0, reply_publication_workflow_1.reconcileReply)({
                 owner: param.owner,
@@ -59630,10 +59727,25 @@ async function runPublishResume(param, taskId, comments, catalogResolver) {
                 botLogin: param.botLogin,
                 intent,
                 catalog,
-            }, comments);
-            (0, logging_ports_1.logInfo)(`Semantic ${intent.identity.topic} publication ${outcome.effect}; duplicates compacted=${outcome.duplicatesCompacted}.`);
+            }, comments, sourceQuery);
+            (0, logging_ports_1.logInfo)(`Semantic ${intent.identity.topic} publication ${outcome.effect}; `
+                + `reason=${outcome.reason ?? 'current'}; duplicates compacted=${outcome.duplicatesCompacted}.`);
+            if (outcome.reason === 'stale-source') {
+                const sourceGuard = intent.sourceGuard;
+                if (!sourceGuard) {
+                    throw new Error('Stale-source publication outcome requires a source guard.');
+                }
+                staleSourceEvidence ?? (staleSourceEvidence = Object.freeze({ branch: sourceGuard.branch, sha: sourceGuard.sha }));
+            }
         }
-        return undefined;
+        return staleSourceEvidence
+            ? new result_1.Result({
+                id: taskId,
+                success: true,
+                executed: false,
+                payload: (0, publication_outcome_policy_1.buildStaleSourcePublicationPayload)(staleSourceEvidence.branch, staleSourceEvidence.sha),
+            })
+            : undefined;
     }
     catch (error) {
         const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to publish semantic GitHub status.');
@@ -59762,14 +59874,19 @@ const github_user_policy_1 = __nccwpck_require__(84403);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
 const publication_message_catalog_1 = __nccwpck_require__(34223);
 const semantic_result_publication_policy_1 = __nccwpck_require__(81985);
-async function reconcileStatusCard(context, comments) {
+const application_error_1 = __nccwpck_require__(75999);
+async function reconcileStatusCard(context, comments, sourceQuery) {
     if (!context.botLogin.trim())
         return Object.freeze({ effect: 'unchanged', duplicatesCompacted: 0 });
+    if (!await sourceIsCurrent(context.intent, sourceQuery))
+        return staleSourceOutcome();
     const target = context.intent.identity.target;
     const rendered = (0, semantic_result_publication_policy_1.renderSemanticStatus)(context.intent, context.catalog);
     let owned = ownedCards(await comments.listIssueComments(target.number), context.intent.identity, context.botLogin);
     let effect = 'unchanged';
     if (owned.length === 0) {
+        if (!await sourceIsCurrent(context.intent, sourceQuery))
+            return staleSourceOutcome();
         await comments.addComment(target.number, rendered);
         effect = 'created';
         owned = ownedCards(await comments.listIssueComments(target.number), context.intent.identity, context.botLogin);
@@ -59779,16 +59896,41 @@ async function reconcileStatusCard(context, comments) {
     const [canonical, ...duplicates] = owned.sort((left, right) => left.id - right.id);
     const canonicalMarker = (0, publication_identity_policy_1.parsePublicationMarker)(canonical.body);
     if (canonicalMarker?.digest !== context.intent.digest) {
+        if (!await sourceIsCurrent(context.intent, sourceQuery)) {
+            return staleSourceOutcome(canonical.id);
+        }
         await comments.updateComment(target.number, canonical.id, rendered);
         effect = effect === 'created' ? 'created' : 'updated';
     }
+    let duplicatesCompacted = 0;
     for (const duplicate of duplicates) {
+        if (!await sourceIsCurrent(context.intent, sourceQuery)) {
+            return staleSourceOutcome(canonical.id, effect, duplicatesCompacted);
+        }
         await comments.updateComment(target.number, duplicate.id, duplicatePointer(context, canonical.id));
+        duplicatesCompacted += 1;
     }
     return Object.freeze({
         effect,
         canonicalCommentId: canonical.id,
-        duplicatesCompacted: duplicates.length,
+        duplicatesCompacted,
+    });
+}
+async function sourceIsCurrent(intent, sourceQuery) {
+    const guard = intent.sourceGuard;
+    if (!guard)
+        return true;
+    if (!sourceQuery) {
+        throw new application_error_1.ApplicationError('configuration.unsupported', 'Commit-derived status publication requires an authoritative source query.');
+    }
+    return await sourceQuery.getBranchHeadSha(guard.branch) === guard.sha;
+}
+function staleSourceOutcome(canonicalCommentId, effect = 'unchanged', duplicatesCompacted = 0) {
+    return Object.freeze({
+        effect,
+        ...(canonicalCommentId === undefined ? {} : { canonicalCommentId }),
+        duplicatesCompacted,
+        reason: 'stale-source',
     });
 }
 function ownedCards(comments, identity, botLogin) {
@@ -62429,11 +62571,13 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.cleanCliArg = cleanCliArg;
 exports.getGitInfo = getGitInfo;
 exports.getCurrentBranch = getCurrentBranch;
+exports.getCurrentHeadSha = getCurrentHeadSha;
 exports.isInsideGitRepo = isInsideGitRepo;
 exports.isGitRepositoryRoot = isGitRepositoryRoot;
 const child_process_1 = __nccwpck_require__(32081);
 const node_fs_1 = __nccwpck_require__(87561);
 const cli_errors_1 = __nccwpck_require__(81853);
+const git_object_id_1 = __nccwpck_require__(88623);
 function cleanCliArg(value) {
     if (value == null)
         return '';
@@ -62458,6 +62602,15 @@ function getCurrentBranch() {
     }
     catch {
         return 'main';
+    }
+}
+/** Returns the canonical object ID for the workspace revision being analyzed. */
+function getCurrentHeadSha() {
+    try {
+        return (0, git_object_id_1.canonicalGitObjectId)((0, child_process_1.execSync)('git rev-parse HEAD').toString().trim());
+    }
+    catch {
+        return undefined;
     }
 }
 function isInsideGitRepo(cwd) {
@@ -67588,6 +67741,38 @@ function requireObject(data, operation) {
     }
     return data;
 }
+
+
+/***/ }),
+
+/***/ 52644:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GithubPublicationSourceRepository = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+const git_object_id_1 = __nccwpck_require__(88623);
+/** Reads the authoritative branch head without exposing Octokit to application code. */
+class GithubPublicationSourceRepository {
+    constructor(clientProvider) {
+        this.clientProvider = clientProvider;
+    }
+    async getBranchHeadSha(owner, repository, branch, token) {
+        const { data } = await this.clientProvider.getClient(token).rest.git.getRef({
+            owner,
+            repo: repository,
+            ref: `heads/${branch}`,
+        });
+        const sha = (0, git_object_id_1.canonicalGitObjectId)(data.object?.sha);
+        if (!sha) {
+            throw new application_error_1.ApplicationError('provider.contract-invalid', 'GitHub returned an invalid branch-head object ID.');
+        }
+        return sha;
+    }
+}
+exports.GithubPublicationSourceRepository = GithubPublicationSourceRepository;
 
 
 /***/ }),
@@ -72740,6 +72925,27 @@ function isRecord(value) {
 
 /***/ }),
 
+/***/ 88623:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.canonicalGitObjectId = canonicalGitObjectId;
+const GIT_OBJECT_ID_PATTERN = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u;
+/** Canonicalizes a real SHA-1/SHA-256 object ID and rejects webhook null sentinels. */
+function canonicalGitObjectId(value) {
+    if (typeof value !== 'string')
+        return undefined;
+    const normalized = value.trim().toLowerCase();
+    if (!GIT_OBJECT_ID_PATTERN.test(normalized) || /^0+$/u.test(normalized))
+        return undefined;
+    return normalized;
+}
+
+
+/***/ }),
+
 /***/ 21486:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -74249,13 +74455,14 @@ const issue_progress_label_repository_1 = __nccwpck_require__(66610);
 const issue_progress_tracking_repository_1 = __nccwpck_require__(26674);
 const branch_lifecycle_repository_1 = __nccwpck_require__(19504);
 const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
+const github_publication_source_repository_1 = __nccwpck_require__(52644);
 const shared_capability_port_binding_1 = __nccwpck_require__(47399);
 const lifecycle_capability_port_binding_1 = __nccwpck_require__(85785);
 const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
 function createCheckProgressCompositionRoot(binding) {
     const labels = new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)());
     const content = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
-    return new check_progress_use_case_1.CheckProgressUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(content, binding), (0, lifecycle_capability_port_binding_1.bindIssueLabels)(labels, binding), (0, push_single_action_capability_port_binding_1.bindIssueProgress)(new issue_progress_tracking_repository_1.IssueProgressTrackingRepository(content, labels, new issue_progress_label_repository_1.IssueProgressLabelRepository(new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)()))), binding), (0, push_single_action_capability_port_binding_1.bindBranchListQuery)(new branch_lifecycle_repository_1.BranchLifecycleRepository((0, github_branch_client_factory_1.createBranchClient)()), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
+    return new check_progress_use_case_1.CheckProgressUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(content, binding), (0, lifecycle_capability_port_binding_1.bindIssueLabels)(labels, binding), (0, push_single_action_capability_port_binding_1.bindIssueProgress)(new issue_progress_tracking_repository_1.IssueProgressTrackingRepository(content, labels, new issue_progress_label_repository_1.IssueProgressLabelRepository(new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)()))), binding), (0, push_single_action_capability_port_binding_1.bindBranchListQuery)(new branch_lifecycle_repository_1.BranchLifecycleRepository((0, github_branch_client_factory_1.createBranchClient)()), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)(), (0, shared_capability_port_binding_1.bindPublicationSourceQuery)(new github_publication_source_repository_1.GithubPublicationSourceRepository((0, github_branch_client_factory_1.createBranchClient)()), binding));
 }
 
 
@@ -75445,6 +75652,7 @@ function bindSetupRemoteConfiguration(port, binding) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.bindPublicationSourceQuery = bindPublicationSourceQuery;
 exports.bindOrganizationMembers = bindOrganizationMembers;
 exports.bindIssueDescriptionQuery = bindIssueDescriptionQuery;
 exports.bindIssueNotification = bindIssueNotification;
@@ -75453,6 +75661,11 @@ exports.bindIssueCommentUpdate = bindIssueCommentUpdate;
 exports.bindIssueTitle = bindIssueTitle;
 exports.bindProjectContent = bindProjectContent;
 const project_detail_1 = __nccwpck_require__(33428);
+function bindPublicationSourceQuery(port, binding) {
+    return Object.freeze({
+        getBranchHeadSha: (branch) => port.getBranchHeadSha(binding.owner, binding.repository, branch, binding.token),
+    });
+}
 function bindOrganizationMembers(port, binding) {
     return {
         getAllMembers: () => port.getAllMembers(binding.owner, binding.token),

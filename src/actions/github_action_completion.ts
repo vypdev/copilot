@@ -28,6 +28,7 @@ import { projectBugbotResultFindingStates } from '../application/policies/bugbot
 import { countActionableBugbotFindings } from '../domain/bugbot/review_state';
 import type { MessageCatalogResolutionPort } from '../application/ports/message_catalog_ports';
 import type { ApplicationErrorMessageReader } from '../application/policies/application_error_message_catalog';
+import type { BoundPublicationSourceQueryPort } from '../application/ports/publication_freshness_ports';
 
 export async function finishGithubAction(
     execution: Execution,
@@ -37,6 +38,7 @@ export async function finishGithubAction(
     evidencePort?: CopilotEvidencePort,
     summaryPort?: ActionSummaryPort,
     catalogResolver?: MessageCatalogResolutionPort,
+    publicationSourceQuery?: BoundPublicationSourceQueryPort,
 ): Promise<void> {
     const stepCount = results.reduce((acc, result) => acc + (result.steps?.length ?? 0), 0);
     const errorCount = results.reduce((acc, result) => acc + (result.errors?.length ?? 0), 0);
@@ -47,11 +49,12 @@ export async function finishGithubAction(
     const dryRun = results.some((result) => getResultPayload(result.payload)?.dryRun === true);
     const ownsDeploymentPresentation = execution.singleAction.isDeploymentOrchestrationAction;
     if (!dryRun && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
-        const publicationFailure = await new PublishResultUseCase(
+        const publicationOutcome = await new PublishResultUseCase(
             issueNotificationPort,
             catalogResolver,
+            publicationSourceQuery,
         ).invoke(projectPublishResultContext(execution));
-        if (publicationFailure) results.push(publicationFailure);
+        if (publicationOutcome) results.push(publicationOutcome);
     } else if (execution.singleAction.isPublishIssueCommentAction || ownsDeploymentPresentation) {
         logInfo('Generic result publication skipped: this single action owns its user-facing presentation.');
     } else {

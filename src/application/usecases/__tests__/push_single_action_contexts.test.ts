@@ -165,6 +165,14 @@ describe('push and single-action context projection', () => {
     expect(projected.agentConfiguration.model).toBe('findings-model');
     expect(JSON.stringify(projected)).not.toContain('secret');
     expect(Object.isFrozen(projected.branchTypes)).toBe(true);
+    expect(projected).not.toHaveProperty('sourceHeadSha');
+  });
+
+  it('canonicalizes a valid push head for downstream freshness checks', () => {
+    const input = source();
+    input.inputs!.after = 'A'.repeat(40);
+
+    expect(projectProgressContext(input).sourceHeadSha).toBe('a'.repeat(40));
   });
 
   it('uses the fixed progress branch fallback for an empty development branch', () => {

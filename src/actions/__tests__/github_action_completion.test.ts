@@ -6,6 +6,7 @@ import * as core from '@actions/core';
 import { ApplicationError } from '../../application/errors/application_error';
 import type { DeploymentOperationSnapshot } from '../../domain/deployment_operation';
 import { ResolveMessageCatalogUseCase } from '../../application/usecases/localization/resolve_message_catalog_use_case';
+import { PublishResultUseCase } from '../../application/usecases/steps/common/publish_resume_use_case';
 
 jest.mock('@actions/core', () => ({ setOutput: jest.fn(), setFailed: jest.fn() }));
 
@@ -182,6 +183,32 @@ describe('finishGithubAction', () => {
         await finishGithubAction(action, results, {} as never, {} as never);
 
         expect(action.currentConfiguration.recommendationState).toBeUndefined();
+    });
+
+    it('passes the source query to publication and records stale suppression in the Job Summary', async () => {
+        const sourceQuery = { getBranchHeadSha: jest.fn() };
+        mockPublishInvoke.mockResolvedValue(new Result({
+            id: 'PublishResultUseCase', success: true, executed: false,
+            payload: { publicationOutcome: {
+                reason: 'stale-source', branch: 'feature/11-work', sourceHeadSha: 'a'.repeat(40),
+            } },
+        }));
+
+        await finishGithubAction(
+            execution(),
+            [],
+            {} as never,
+            {} as never,
+            undefined,
+            { publish: mockSummaryPublish },
+            undefined,
+            sourceQuery,
+        );
+
+        expect(PublishResultUseCase).toHaveBeenCalledWith(expect.anything(), undefined, sourceQuery);
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining(
+            '| Source freshness | Stale result suppressed; branch HEAD changed during the run |',
+        ));
     });
 
     it('does not persist configuration for a non-stateful single action', async () => {

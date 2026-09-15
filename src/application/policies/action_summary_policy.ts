@@ -18,6 +18,7 @@ import {
 } from './action_summary_message_catalog';
 import { buildApplicationErrorPresentation } from './application_error_presentation_policy';
 import type { ApplicationErrorMessageReader } from './application_error_message_catalog';
+import { hasStaleSourcePublicationOutcome } from './publication_outcome_policy';
 
 export interface ActionSummaryContext {
     readonly owner: string;
@@ -67,6 +68,7 @@ export function buildActionSummary(
     const findingStates = findingStateProjection.status === 'valid' ? findingStateProjection.counts : undefined;
     const telemetryProjection = projectBugbotResultTelemetry(context.results);
     const bugbotTelemetry = telemetryProjection.status === 'valid' ? telemetryProjection.telemetry : undefined;
+    const staleSourceSuppressed = hasStaleSourcePublicationOutcome(context.results);
     const hasActionableFindings = findingStates ? countActionableBugbotFindings(findingStates) > 0 : false;
     const hasUnknownFindings = findingStateProjection.status === 'invalid' || (findingStates?.unknown ?? 0) > 0;
     const status = resolveActionSummaryStatus({
@@ -88,6 +90,9 @@ export function buildActionSummary(
         `| ${catalogText(catalog, 'summary.results')} | ${formatResultCounts(context.results, catalog)} |`,
         `| ${catalogText(catalog, 'summary.findingStates')} | ${formatFindingStates(findingStateProjection, catalog)} |`,
         `| ${catalogText(catalog, 'summary.bugbotReview')} | ${formatBugbotTelemetry(telemetryProjection, catalog)} |`,
+        ...(staleSourceSuppressed ? [
+            `| ${catalogText(catalog, 'summary.sourceFreshness')} | ${catalogText(catalog, 'summary.staleSourceSuppressed')} |`,
+        ] : []),
     ];
     const localization = renderLocalizationSummarySection(
         context.locale,
