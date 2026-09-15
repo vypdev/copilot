@@ -18,7 +18,10 @@ import {
 } from './action_summary_message_catalog';
 import { buildApplicationErrorPresentation } from './application_error_presentation_policy';
 import type { ApplicationErrorMessageReader } from './application_error_message_catalog';
-import { hasStaleSourcePublicationOutcome } from './publication_outcome_policy';
+import {
+    duplicateCompactionPublicationOutcomes,
+    hasStaleSourcePublicationOutcome,
+} from './publication_outcome_policy';
 
 export interface ActionSummaryContext {
     readonly owner: string;
@@ -69,6 +72,7 @@ export function buildActionSummary(
     const telemetryProjection = projectBugbotResultTelemetry(context.results);
     const bugbotTelemetry = telemetryProjection.status === 'valid' ? telemetryProjection.telemetry : undefined;
     const staleSourceSuppressed = hasStaleSourcePublicationOutcome(context.results);
+    const duplicateCompactions = duplicateCompactionPublicationOutcomes(context.results);
     const hasActionableFindings = findingStates ? countActionableBugbotFindings(findingStates) > 0 : false;
     const hasUnknownFindings = findingStateProjection.status === 'invalid' || (findingStates?.unknown ?? 0) > 0;
     const status = resolveActionSummaryStatus({
@@ -93,6 +97,9 @@ export function buildActionSummary(
         ...(staleSourceSuppressed ? [
             `| ${catalogText(catalog, 'summary.sourceFreshness')} | ${catalogText(catalog, 'summary.staleSourceSuppressed')} |`,
         ] : []),
+        ...(duplicateCompactions.length > 0 ? [
+            `| ${catalogText(catalog, 'summary.duplicateCleanup')} | ${formatDuplicateCompactions(duplicateCompactions, catalog)} |`,
+        ] : []),
     ];
     const localization = renderLocalizationSummarySection(
         context.locale,
@@ -116,6 +123,22 @@ export function buildActionSummary(
         ] : []),
         ...(localization ? ['', localization] : []),
     ].join('\n');
+}
+
+function formatDuplicateCompactions(
+    outcomes: ReturnType<typeof duplicateCompactionPublicationOutcomes>,
+    catalog: ActionSummaryMessageCatalog,
+): string {
+    const count = outcomes.reduce((total, outcome) => total + outcome.compactedCount, 0);
+    const ids = [...new Set(outcomes.flatMap(outcome => outcome.compactedCommentIds))]
+        .sort((left, right) => left - right);
+    const variables = { count, reported: ids.length, ids: ids.join(', ') };
+    if (count === 1) return catalogText(catalog, 'summary.duplicateCleanup.single', variables);
+    return catalogText(
+        catalog,
+        count > ids.length ? 'summary.duplicateCleanup.bounded' : 'summary.duplicateCleanup.multiple',
+        variables,
+    );
 }
 
 export function actionSummaryLocalizationLabels(catalog: ActionSummaryMessageCatalog): LocalizationSummaryLabels {

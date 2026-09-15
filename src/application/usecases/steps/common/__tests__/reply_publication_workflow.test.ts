@@ -33,6 +33,11 @@ function ports(initial: Array<{ id: number; body: string | null; user?: { login?
       const comment = comments.find(value => value.id === id);
       if (comment) comment.body = body;
     }),
+    removeComment: jest.fn(async (_issue: number, id: number): Promise<'removed' | 'compaction-required'> => {
+      const index = comments.findIndex(value => value.id === id);
+      if (index >= 0) comments.splice(index, 1);
+      return 'removed';
+    }),
   };
 }
 
@@ -67,9 +72,10 @@ describe('reply publication workflow', () => {
     const forged = ports([{ id: 4, body: original.comments[0].body, user: { login: 'human' } }]);
     await reconcileReply(context(), forged);
     expect(forged.addComment).toHaveBeenCalledTimes(1);
+    expect(forged.removeComment).not.toHaveBeenCalled();
   });
 
-  it('compacts concurrent bot-owned duplicates and keeps the lowest id', async () => {
+  it('removes concurrent bot-owned duplicates and keeps the lowest id', async () => {
     const seeded = ports();
     await reconcileReply(context(), seeded);
     const body = seeded.comments[0].body;
@@ -79,9 +85,11 @@ describe('reply publication workflow', () => {
     ]);
 
     await expect(reconcileReply(context(), repository)).resolves.toEqual({
-      effect: 'unchanged', canonicalCommentId: 3, duplicatesCompacted: 1,
+      effect: 'unchanged', canonicalCommentId: 3,
+      duplicatesRemoved: 1, duplicatesCompacted: 0, compactedCommentIds: [],
     });
-    expect(repository.comments.find(comment => comment.id === 9)?.body).toContain('/issues/7#issuecomment-3');
+    expect(repository.comments.map(comment => comment.id)).toEqual([3]);
+    expect(repository.removeComment).toHaveBeenCalledWith(7, 9);
   });
 
   it('adopts and compacts the transient issue-comment correlation namespace', async () => {
@@ -98,17 +106,17 @@ describe('reply publication workflow', () => {
     ]);
 
     await expect(reconcileReply(context(), repository)).resolves.toEqual({
-      effect: 'unchanged', canonicalCommentId: 3, duplicatesCompacted: 1,
+      effect: 'unchanged', canonicalCommentId: 3,
+      duplicatesRemoved: 1, duplicatesCompacted: 0, compactedCommentIds: [],
     });
     expect(repository.addComment).not.toHaveBeenCalled();
-    expect(repository.comments.find(comment => comment.id === 8)?.body)
-      .toContain('/issues/7#issuecomment-3');
+    expect(repository.comments.find(comment => comment.id === 8)).toBeUndefined();
   });
 
   it('does no provider work without a trusted bot identity', async () => {
     const repository = ports();
     await expect(reconcileReply({ ...context(), botLogin: '' }, repository)).resolves.toEqual({
-      effect: 'unchanged', duplicatesCompacted: 0,
+      effect: 'unchanged', duplicatesRemoved: 0, duplicatesCompacted: 0, compactedCommentIds: [],
     });
     expect(repository.listIssueComments).not.toHaveBeenCalled();
   });
@@ -116,7 +124,9 @@ describe('reply publication workflow', () => {
   it('tolerates create visibility lag without guessing a reply id', async () => {
     const repository = ports();
     repository.addComment.mockImplementation(async () => undefined);
-    await expect(reconcileReply(context(), repository)).resolves.toEqual({ effect: 'created', duplicatesCompacted: 0 });
+    await expect(reconcileReply(context(), repository)).resolves.toEqual({
+      effect: 'created', duplicatesRemoved: 0, duplicatesCompacted: 0, compactedCommentIds: [],
+    });
   });
 
   it('links a compacted pull-request reply to the canonical PR comment', async () => {
@@ -127,9 +137,16 @@ describe('reply publication workflow', () => {
       { id: 7, body: seeded.comments[0].body, user: { login: 'vypbot' } },
       { id: 4, body: seeded.comments[0].body, user: { login: 'vypbot' } },
     ]);
+    repository.removeComment.mockResolvedValue('compaction-required');
 
-    await reconcileReply({ ...context(), intent: value }, repository);
+    await expect(reconcileReply({ ...context(), intent: value }, repository)).resolves.toMatchObject({
+      duplicatesRemoved: 0, duplicatesCompacted: 1, compactedCommentIds: [7],
+    });
     expect(repository.comments.find(comment => comment.id === 7)?.body).toContain('/pull/9#issuecomment-4');
     expect(repository.comments.find(comment => comment.id === 7)?.body).toContain('respuesta duplicada');
+
+    await reconcileReply({ ...context(), intent: value }, repository);
+    expect(repository.removeComment).toHaveBeenCalledTimes(1);
+    expect(repository.updateComment).toHaveBeenCalledTimes(1);
   });
 });

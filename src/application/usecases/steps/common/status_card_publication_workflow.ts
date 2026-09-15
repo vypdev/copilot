@@ -7,6 +7,7 @@ import { resolveStaticPublicationCatalog, type PublicationMessageCatalog } from 
 import { renderSemanticStatus, type SemanticStatusIntent } from '../../../policies/semantic_result_publication_policy';
 import type { BoundPublicationSourceQueryPort } from '../../../ports/publication_freshness_ports';
 import { ApplicationError } from '../../../errors/application_error';
+import { cleanupDuplicateComment } from './duplicate_comment_cleanup_workflow';
 
 export interface StatusCardPublicationContext {
     readonly owner: string;
@@ -19,7 +20,9 @@ export interface StatusCardPublicationContext {
 export interface StatusCardPublicationOutcome {
     readonly effect: 'created' | 'updated' | 'unchanged';
     readonly canonicalCommentId?: number;
+    readonly duplicatesRemoved: number;
     readonly duplicatesCompacted: number;
+    readonly compactedCommentIds: readonly number[];
     readonly reason?: 'stale-source';
 }
 
@@ -28,7 +31,7 @@ export async function reconcileStatusCard(
     comments: BoundIssueCommentPublicationPort,
     sourceQuery?: BoundPublicationSourceQueryPort,
 ): Promise<StatusCardPublicationOutcome> {
-    if (!context.botLogin.trim()) return Object.freeze({ effect: 'unchanged', duplicatesCompacted: 0 });
+    if (!context.botLogin.trim()) return unchangedOutcome();
     if (!await sourceIsCurrent(context.intent, sourceQuery)) return staleSourceOutcome();
     const target = context.intent.identity.target;
     const rendered = renderSemanticStatus(context.intent, context.catalog);
@@ -40,7 +43,11 @@ export async function reconcileStatusCard(
         effect = 'created';
         owned = ownedCards(await comments.listIssueComments(target.number), context.intent.identity, context.botLogin);
     }
-    if (owned.length === 0) return Object.freeze({ effect, duplicatesCompacted: 0 });
+    if (owned.length === 0) {
+        return Object.freeze({
+            effect, duplicatesRemoved: 0, duplicatesCompacted: 0, compactedCommentIds: Object.freeze([]),
+        });
+    }
 
     const [canonical, ...duplicates] = owned.sort((left, right) => left.id - right.id);
     const canonicalMarker = parsePublicationMarker(canonical.body);
@@ -51,18 +58,36 @@ export async function reconcileStatusCard(
         await comments.updateComment(target.number, canonical.id, rendered);
         effect = effect === 'created' ? 'created' : 'updated';
     }
+    let duplicatesRemoved = 0;
     let duplicatesCompacted = 0;
+    const compactedCommentIds: number[] = [];
     for (const duplicate of duplicates) {
-        if (!await sourceIsCurrent(context.intent, sourceQuery)) {
-            return staleSourceOutcome(canonical.id, effect, duplicatesCompacted);
+        const cleanup = await cleanupDuplicateComment({
+            issueNumber: target.number,
+            duplicateCommentId: duplicate.id,
+            compactBody: duplicatePointer(context, canonical.id),
+        }, comments, () => sourceIsCurrent(context.intent, sourceQuery));
+        if (cleanup === 'stale') {
+            return staleSourceOutcome(
+                canonical.id,
+                effect,
+                duplicatesRemoved,
+                duplicatesCompacted,
+                compactedCommentIds,
+            );
         }
-        await comments.updateComment(target.number, duplicate.id, duplicatePointer(context, canonical.id));
-        duplicatesCompacted += 1;
+        if (cleanup === 'removed') duplicatesRemoved += 1;
+        else {
+            duplicatesCompacted += 1;
+            compactedCommentIds.push(duplicate.id);
+        }
     }
     return Object.freeze({
         effect,
         canonicalCommentId: canonical.id,
+        duplicatesRemoved,
         duplicatesCompacted,
+        compactedCommentIds: Object.freeze(compactedCommentIds),
     });
 }
 
@@ -84,13 +109,24 @@ async function sourceIsCurrent(
 function staleSourceOutcome(
     canonicalCommentId?: number,
     effect: StatusCardPublicationOutcome['effect'] = 'unchanged',
+    duplicatesRemoved = 0,
     duplicatesCompacted = 0,
+    compactedCommentIds: readonly number[] = [],
 ): StatusCardPublicationOutcome {
     return Object.freeze({
         effect,
         ...(canonicalCommentId === undefined ? {} : { canonicalCommentId }),
+        duplicatesRemoved,
         duplicatesCompacted,
+        compactedCommentIds: Object.freeze([...compactedCommentIds]),
         reason: 'stale-source',
+    });
+}
+
+function unchangedOutcome(): StatusCardPublicationOutcome {
+    return Object.freeze({
+        effect: 'unchanged', duplicatesRemoved: 0, duplicatesCompacted: 0,
+        compactedCommentIds: Object.freeze([]),
     });
 }
 

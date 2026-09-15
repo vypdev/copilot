@@ -11,7 +11,10 @@ import type { AgentConfiguration } from '../../../../domain/agent';
 import type { MessageCatalogResolutionPort } from '../../../ports/message_catalog_ports';
 import { resolvePublicationCatalog } from '../../../policies/publication_message_catalog';
 import type { BoundPublicationSourceQueryPort } from '../../../ports/publication_freshness_ports';
-import { buildStaleSourcePublicationPayload } from '../../../policies/publication_outcome_policy';
+import {
+    buildDuplicateCompactionPublicationPayload,
+    buildStaleSourcePublicationPayload,
+} from '../../../policies/publication_outcome_policy';
 
 export interface PublishResultContext {
     readonly owner: string;
@@ -95,6 +98,7 @@ export async function runPublishResume(
             catalogResolver,
         );
         let staleSourceEvidence: Readonly<{ branch: string; sha: string }> | undefined;
+        const compactedCommentIds: number[] = [];
         for (const intent of replies) {
             const outcome = await reconcileReply({
                 owner: param.owner,
@@ -103,7 +107,11 @@ export async function runPublishResume(
                 intent,
                 catalog,
             }, comments);
-            logInfo(`Semantic ${intent.messageKey} reply ${outcome.effect}; duplicates compacted=${outcome.duplicatesCompacted}.`);
+            logInfo(
+                `Semantic ${intent.messageKey} reply ${outcome.effect}; `
+                + `duplicates removed=${outcome.duplicatesRemoved}; compacted=${outcome.duplicatesCompacted}.`,
+            );
+            compactedCommentIds.push(...outcome.compactedCommentIds);
         }
         for (const intent of statuses) {
             const outcome = await reconcileStatusCard({
@@ -115,7 +123,8 @@ export async function runPublishResume(
             }, comments, sourceQuery);
             logInfo(
                 `Semantic ${intent.identity.topic} publication ${outcome.effect}; `
-                + `reason=${outcome.reason ?? 'current'}; duplicates compacted=${outcome.duplicatesCompacted}.`,
+                + `reason=${outcome.reason ?? 'current'}; duplicates removed=${outcome.duplicatesRemoved}; `
+                + `compacted=${outcome.duplicatesCompacted}.`,
             );
             if (outcome.reason === 'stale-source') {
                 const sourceGuard = intent.sourceGuard;
@@ -124,18 +133,21 @@ export async function runPublishResume(
                 }
                 staleSourceEvidence ??= Object.freeze({ branch: sourceGuard.branch, sha: sourceGuard.sha });
             }
+            compactedCommentIds.push(...outcome.compactedCommentIds);
         }
-        return staleSourceEvidence
-            ? new Result({
-                id: taskId,
-                success: true,
-                executed: false,
-                payload: buildStaleSourcePublicationPayload(
-                    staleSourceEvidence.branch,
-                    staleSourceEvidence.sha,
-                ),
-            })
-            : undefined;
+        const cleanupEvidence = buildDuplicateCompactionPublicationPayload(compactedCommentIds);
+        if (!staleSourceEvidence && !cleanupEvidence) return undefined;
+        return new Result({
+            id: taskId,
+            success: true,
+            executed: cleanupEvidence !== undefined,
+            payload: Object.freeze({
+                ...(staleSourceEvidence
+                    ? buildStaleSourcePublicationPayload(staleSourceEvidence.branch, staleSourceEvidence.sha)
+                    : {}),
+                ...(cleanupEvidence ?? {}),
+            }),
+        });
     } catch (error) {
         const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to publish semantic GitHub status.');
         logError(semanticError);

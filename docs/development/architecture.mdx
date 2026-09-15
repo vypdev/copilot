@@ -14,6 +14,12 @@ and reply workflows validate exact bot ownership, stable correlation or topic
 identity, and semantic digests before creating or updating a comment. The
 checked-in publication mutation inventory fails CI if a new application use
 case writes a comment or review without an explicit architectural decision.
+The same bounded publication port exposes duplicate removal only to semantic
+reconcilers. They select later comments only after paginated discovery verifies
+the exact identity and bot owner. The GitHub repository treats an already absent
+comment as idempotently removed, maps a deletion-forbidden response to a
+localized compact-pointer fallback plus bounded Job Summary evidence, and
+propagates every other provider failure.
 Initial issue help and addressed Think requests follow that rule: each agent
 step returns an immutable `direct-answer` projection and receives no GitHub
 mutation port. The shared reply reconciler sanitizes and publishes the answer

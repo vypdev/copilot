@@ -73,6 +73,7 @@
         "src/application/ports/issue_lifecycle_ports.ts",
         "src/application/usecases/steps/common/status_card_publication_workflow.ts",
         "src/application/usecases/steps/common/reply_publication_workflow.ts",
+        "src/application/usecases/steps/common/duplicate_comment_cleanup_workflow.ts",
         "src/actions/local_action.ts",
         "src/actions/local_action_output.ts",
         "src/cli/commands/think.ts",
@@ -104,7 +105,9 @@
         "src/application/usecases/actions/progress_analysis_workflow.ts",
         "src/data/repository/github_publication_source_repository.ts",
         "src/infrastructure/composition/check_progress_composition_root.ts",
-        "src/data/repository/issue/issue_content_repository.ts"
+        "src/data/repository/issue/issue_content_repository.ts",
+        "src/data/repository/github/github_error_policy.ts",
+        "src/infrastructure/github/ports/github_issue_provider_ports.ts"
       ],
       "tests": [
         "src/domain/__tests__/locale.test.ts",
@@ -150,6 +153,9 @@
         "src/application/usecases/steps/common/__tests__/publish_resume_use_case.test.ts",
         "src/application/usecases/steps/common/__tests__/status_card_publication_workflow.test.ts",
         "src/application/usecases/steps/common/__tests__/reply_publication_workflow.test.ts",
+        "src/application/usecases/steps/common/__tests__/duplicate_comment_cleanup_workflow.test.ts",
+        "src/data/repository/issue/__tests__/issue_content_repository.test.ts",
+        "src/data/repository/__tests__/github_error_policy.test.ts",
         "src/application/usecases/steps/issue/__tests__/answer_issue_help_use_case.test.ts",
         "src/application/usecases/__tests__/issue_use_case.test.ts",
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",

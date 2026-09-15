@@ -5,6 +5,7 @@ interface BaselineEntry {
   readonly file: string;
   readonly addComment?: number;
   readonly updateComment?: number;
+  readonly removeComment?: number;
   readonly updatePullRequestReview?: number;
   readonly reason: string;
 }
@@ -15,7 +16,7 @@ const baseline = JSON.parse(readFileSync(
   join(root, 'src/architecture/github_publication_mutation_baseline.json'),
   'utf8',
 )) as { entries: BaselineEntry[] };
-const methods = ['addComment', 'updateComment', 'updatePullRequestReview'] as const;
+const methods = ['addComment', 'updateComment', 'removeComment', 'updatePullRequestReview'] as const;
 
 function productionFiles(directory: string): string[] {
   return readdirSync(directory).flatMap(name => {

@@ -1,6 +1,6 @@
 import { Result } from '../../../data/model/result';
 import { stripTrailingCommentWatermarks } from '../../../utils/comment_watermark';
-import type { BoundIssueCommentPublicationPort } from '../../ports/issue_lifecycle_ports';
+import type { BoundIssueCommentUpsertPort } from '../../ports/issue_lifecycle_ports';
 import type { IssueCommentActionContext } from '../push_single_action_contexts';
 import { logError } from '../../ports/logging_ports';
 import { ApplicationError, toApplicationError } from '../../errors/application_error';
@@ -8,7 +8,7 @@ import { ApplicationError, toApplicationError } from '../../errors/application_e
 export async function runPublishIssueComment(
     param: IssueCommentActionContext,
     taskId: string,
-    issueCommentPort: BoundIssueCommentPublicationPort,
+    issueCommentPort: BoundIssueCommentUpsertPort,
 ): Promise<Result[]> {
     if (param.kind === 'invalid') {
         return [new Result({

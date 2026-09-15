@@ -41141,6 +41141,7 @@ const SIMPLE_MESSAGE_KEYS = Object.freeze([
     'heading', 'repository', 'property', 'value', 'status', 'event', 'target',
     'lifecycle', 'descriptionPolicy', 'results', 'findingStates', 'bugbotReview',
     'sourceFreshness', 'staleSourceSuppressed',
+    'duplicateCleanup',
     'resultDetails', 'localization', 'repositoryLocale', 'issueLocale',
     'pullRequestLocale', 'catalogResolution', 'descriptors', 'reason', 'failure',
     'findings', 'partial', 'superseded', 'skipped', 'dryRun', 'success', 'invalid',
@@ -41151,6 +41152,9 @@ const TEMPLATE_MESSAGE_IDS = Object.freeze([
     'summary.target.issue',
     'summary.target.repositoryRun',
     'summary.bugbotTelemetry',
+    'summary.duplicateCleanup.single',
+    'summary.duplicateCleanup.multiple',
+    'summary.duplicateCleanup.bounded',
 ]);
 const FINDING_STATE_KEYS = Object.freeze([
     'open', 'reopened', 'fixed', 'obsolete', 'dismissed',
@@ -41177,6 +41181,7 @@ const ENGLISH_SIMPLE = Object.freeze({
     bugbotReview: 'Bugbot review',
     sourceFreshness: 'Source freshness',
     staleSourceSuppressed: 'Stale result suppressed; branch HEAD changed during the run',
+    duplicateCleanup: 'Duplicate cleanup',
     resultDetails: 'Failure details',
     localization: 'Localization',
     repositoryLocale: 'Repository locale',
@@ -41213,6 +41218,7 @@ const SPANISH_SIMPLE = Object.freeze({
     bugbotReview: 'Revisión de Bugbot',
     sourceFreshness: 'Vigencia del origen',
     staleSourceSuppressed: 'Resultado obsoleto omitido; el HEAD de la rama cambió durante la ejecución',
+    duplicateCleanup: 'Limpieza de duplicados',
     resultDetails: 'Detalles del fallo',
     localization: 'Localización',
     repositoryLocale: 'Locale del repositorio',
@@ -41239,12 +41245,18 @@ const ENGLISH_TEMPLATES = Object.freeze({
     'summary.target.issue': 'Issue #{number}',
     'summary.target.repositoryRun': 'Repository run',
     'summary.bugbotTelemetry': '{outcome}, effort={effort}, {elapsed}ms',
+    'summary.duplicateCleanup.single': 'Deletion was forbidden; retained a compact pointer for comment {ids}',
+    'summary.duplicateCleanup.multiple': 'Deletion was forbidden; retained compact pointers for {count} comments (IDs: {ids})',
+    'summary.duplicateCleanup.bounded': 'Deletion was forbidden; retained compact pointers for {count} comments (first {reported} IDs: {ids})',
 });
 const SPANISH_TEMPLATES = Object.freeze({
     'summary.target.pullRequest': 'PR n.º {number}',
     'summary.target.issue': 'Issue n.º {number}',
     'summary.target.repositoryRun': 'Ejecución del repositorio',
     'summary.bugbotTelemetry': '{outcome}, esfuerzo={effort}, {elapsed} ms',
+    'summary.duplicateCleanup.single': 'Se denegó el borrado; se conservó un enlace compacto para el comentario {ids}',
+    'summary.duplicateCleanup.multiple': 'Se denegó el borrado; se conservaron enlaces compactos para {count} comentarios (ID: {ids})',
+    'summary.duplicateCleanup.bounded': 'Se denegó el borrado; se conservaron enlaces compactos para {count} comentarios (primeros {reported} ID: {ids})',
 });
 const ENGLISH_FINDING_STATES = Object.freeze({
     open: 'open',
@@ -41333,6 +41345,7 @@ function buildActionSummary(context, catalog = (0, action_summary_message_catalo
     const telemetryProjection = (0, bugbot_telemetry_projection_policy_1.projectBugbotResultTelemetry)(context.results);
     const bugbotTelemetry = telemetryProjection.status === 'valid' ? telemetryProjection.telemetry : undefined;
     const staleSourceSuppressed = (0, publication_outcome_policy_1.hasStaleSourcePublicationOutcome)(context.results);
+    const duplicateCompactions = (0, publication_outcome_policy_1.duplicateCompactionPublicationOutcomes)(context.results);
     const hasActionableFindings = findingStates ? (0, review_state_1.countActionableBugbotFindings)(findingStates) > 0 : false;
     const hasUnknownFindings = findingStateProjection.status === 'invalid' || (findingStates?.unknown ?? 0) > 0;
     const status = resolveActionSummaryStatus({
@@ -41357,6 +41370,9 @@ function buildActionSummary(context, catalog = (0, action_summary_message_catalo
         ...(staleSourceSuppressed ? [
             `| ${catalogText(catalog, 'summary.sourceFreshness')} | ${catalogText(catalog, 'summary.staleSourceSuppressed')} |`,
         ] : []),
+        ...(duplicateCompactions.length > 0 ? [
+            `| ${catalogText(catalog, 'summary.duplicateCleanup')} | ${formatDuplicateCompactions(duplicateCompactions, catalog)} |`,
+        ] : []),
     ];
     const localization = renderLocalizationSummarySection(context.locale, context.catalogResolutions, actionSummaryLocalizationLabels(catalog));
     return [
@@ -41375,6 +41391,15 @@ function buildActionSummary(context, catalog = (0, action_summary_message_catalo
         ] : []),
         ...(localization ? ['', localization] : []),
     ].join('\n');
+}
+function formatDuplicateCompactions(outcomes, catalog) {
+    const count = outcomes.reduce((total, outcome) => total + outcome.compactedCount, 0);
+    const ids = [...new Set(outcomes.flatMap(outcome => outcome.compactedCommentIds))]
+        .sort((left, right) => left - right);
+    const variables = { count, reported: ids.length, ids: ids.join(', ') };
+    if (count === 1)
+        return catalogText(catalog, 'summary.duplicateCleanup.single', variables);
+    return catalogText(catalog, count > ids.length ? 'summary.duplicateCleanup.bounded' : 'summary.duplicateCleanup.multiple', variables);
 }
 function actionSummaryLocalizationLabels(catalog) {
     return Object.freeze({
@@ -47005,7 +47030,10 @@ exports.SPANISH_PUBLICATION_CATALOG = toPublicationCatalog(Object.freeze({
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildStaleSourcePublicationPayload = buildStaleSourcePublicationPayload;
 exports.hasStaleSourcePublicationOutcome = hasStaleSourcePublicationOutcome;
+exports.buildDuplicateCompactionPublicationPayload = buildDuplicateCompactionPublicationPayload;
+exports.duplicateCompactionPublicationOutcomes = duplicateCompactionPublicationOutcomes;
 const result_1 = __nccwpck_require__(73817);
+const MAX_REPORTED_COMMENT_IDS = 20;
 /** Builds bounded evidence for a commit-derived result that was intentionally suppressed. */
 function buildStaleSourcePublicationPayload(branch, sourceHeadSha) {
     return Object.freeze({
@@ -47022,6 +47050,52 @@ function hasStaleSourcePublicationOutcome(results) {
         const outcome = (0, result_1.getResultPayload)(payload?.publicationOutcome);
         return outcome?.reason === 'stale-source';
     });
+}
+/** Builds bounded operator evidence for duplicates retained as compact pointers. */
+function buildDuplicateCompactionPublicationPayload(commentIds) {
+    const validIds = [...new Set(commentIds.filter(isPositiveInteger))].sort((left, right) => left - right);
+    if (validIds.length === 0)
+        return undefined;
+    return Object.freeze({
+        publicationCleanup: Object.freeze({
+            reason: 'duplicate-deletion-forbidden',
+            compactedCommentIds: Object.freeze(validIds.slice(0, MAX_REPORTED_COMMENT_IDS)),
+            compactedCount: validIds.length,
+        }),
+    });
+}
+function duplicateCompactionPublicationOutcomes(results) {
+    return Object.freeze(results.flatMap(result => {
+        const payload = (0, result_1.getResultPayload)(result.payload);
+        const cleanup = (0, result_1.getResultPayload)(payload?.publicationCleanup);
+        if (cleanup?.reason !== 'duplicate-deletion-forbidden'
+            || !isPositiveInteger(cleanup.compactedCount)
+            || !Array.isArray(cleanup.compactedCommentIds)
+            || cleanup.compactedCommentIds.length > MAX_REPORTED_COMMENT_IDS
+            || cleanup.compactedCommentIds.length > cleanup.compactedCount
+            || !areOrderedUniquePositiveIntegers(cleanup.compactedCommentIds)) {
+            return [];
+        }
+        return [Object.freeze({
+                reason: 'duplicate-deletion-forbidden',
+                compactedCommentIds: Object.freeze([...cleanup.compactedCommentIds]),
+                compactedCount: cleanup.compactedCount,
+            })];
+    }));
+}
+function isPositiveInteger(value) {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+}
+function areOrderedUniquePositiveIntegers(values) {
+    if (values.length === 0)
+        return false;
+    let previous;
+    for (const value of values) {
+        if (!isPositiveInteger(value) || previous !== undefined && value <= previous)
+            return false;
+        previous = value;
+    }
+    return true;
 }
 
 
@@ -59252,6 +59326,29 @@ function toCamelCase(input) {
 
 /***/ }),
 
+/***/ 79544:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.cleanupDuplicateComment = cleanupDuplicateComment;
+/** Removes an exact owned duplicate, retaining a compact pointer only when deletion is forbidden. */
+async function cleanupDuplicateComment(context, comments, sourceIsCurrent) {
+    if (sourceIsCurrent && !await sourceIsCurrent())
+        return 'stale';
+    const removal = await comments.removeComment(context.issueNumber, context.duplicateCommentId);
+    if (removal === 'removed')
+        return 'removed';
+    if (sourceIsCurrent && !await sourceIsCurrent())
+        return 'stale';
+    await comments.updateComment(context.issueNumber, context.duplicateCommentId, context.compactBody);
+    return 'compacted';
+}
+
+
+/***/ }),
+
 /***/ 65440:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -59710,6 +59807,7 @@ async function runPublishResume(param, taskId, comments, catalogResolver, source
         }
         const catalog = await (0, publication_message_catalog_1.resolvePublicationCatalog)(param.locale, param.languageConfiguration, catalogResolver);
         let staleSourceEvidence;
+        const compactedCommentIds = [];
         for (const intent of replies) {
             const outcome = await (0, reply_publication_workflow_1.reconcileReply)({
                 owner: param.owner,
@@ -59718,7 +59816,9 @@ async function runPublishResume(param, taskId, comments, catalogResolver, source
                 intent,
                 catalog,
             }, comments);
-            (0, logging_ports_1.logInfo)(`Semantic ${intent.messageKey} reply ${outcome.effect}; duplicates compacted=${outcome.duplicatesCompacted}.`);
+            (0, logging_ports_1.logInfo)(`Semantic ${intent.messageKey} reply ${outcome.effect}; `
+                + `duplicates removed=${outcome.duplicatesRemoved}; compacted=${outcome.duplicatesCompacted}.`);
+            compactedCommentIds.push(...outcome.compactedCommentIds);
         }
         for (const intent of statuses) {
             const outcome = await (0, status_card_publication_workflow_1.reconcileStatusCard)({
@@ -59729,7 +59829,8 @@ async function runPublishResume(param, taskId, comments, catalogResolver, source
                 catalog,
             }, comments, sourceQuery);
             (0, logging_ports_1.logInfo)(`Semantic ${intent.identity.topic} publication ${outcome.effect}; `
-                + `reason=${outcome.reason ?? 'current'}; duplicates compacted=${outcome.duplicatesCompacted}.`);
+                + `reason=${outcome.reason ?? 'current'}; duplicates removed=${outcome.duplicatesRemoved}; `
+                + `compacted=${outcome.duplicatesCompacted}.`);
             if (outcome.reason === 'stale-source') {
                 const sourceGuard = intent.sourceGuard;
                 if (!sourceGuard) {
@@ -59737,15 +59838,22 @@ async function runPublishResume(param, taskId, comments, catalogResolver, source
                 }
                 staleSourceEvidence ?? (staleSourceEvidence = Object.freeze({ branch: sourceGuard.branch, sha: sourceGuard.sha }));
             }
+            compactedCommentIds.push(...outcome.compactedCommentIds);
         }
-        return staleSourceEvidence
-            ? new result_1.Result({
-                id: taskId,
-                success: true,
-                executed: false,
-                payload: (0, publication_outcome_policy_1.buildStaleSourcePublicationPayload)(staleSourceEvidence.branch, staleSourceEvidence.sha),
-            })
-            : undefined;
+        const cleanupEvidence = (0, publication_outcome_policy_1.buildDuplicateCompactionPublicationPayload)(compactedCommentIds);
+        if (!staleSourceEvidence && !cleanupEvidence)
+            return undefined;
+        return new result_1.Result({
+            id: taskId,
+            success: true,
+            executed: cleanupEvidence !== undefined,
+            payload: Object.freeze({
+                ...(staleSourceEvidence
+                    ? (0, publication_outcome_policy_1.buildStaleSourcePublicationPayload)(staleSourceEvidence.branch, staleSourceEvidence.sha)
+                    : {}),
+                ...(cleanupEvidence ?? {}),
+            }),
+        });
     }
     catch (error) {
         const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to publish semantic GitHub status.');
@@ -59815,10 +59923,11 @@ const github_user_policy_1 = __nccwpck_require__(84403);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
 const publication_message_catalog_1 = __nccwpck_require__(34223);
 const semantic_result_publication_policy_1 = __nccwpck_require__(81985);
+const duplicate_comment_cleanup_workflow_1 = __nccwpck_require__(79544);
 /** Publishes an explicit reply at most once for a trusted request correlation. */
 async function reconcileReply(context, comments) {
     if (!context.botLogin.trim())
-        return Object.freeze({ effect: 'unchanged', duplicatesCompacted: 0 });
+        return unchangedOutcome();
     const target = context.intent.target;
     let owned = matchingReplies(await comments.listIssueComments(target.number), context);
     let effect = 'unchanged';
@@ -59827,13 +59936,41 @@ async function reconcileReply(context, comments) {
         effect = 'created';
         owned = matchingReplies(await comments.listIssueComments(target.number), context);
     }
-    if (owned.length === 0)
-        return Object.freeze({ effect, duplicatesCompacted: 0 });
-    const [canonical, ...duplicates] = owned.sort((left, right) => left.id - right.id);
-    for (const duplicate of duplicates) {
-        await comments.updateComment(target.number, duplicate.id, duplicatePointer(context, canonical.id));
+    if (owned.length === 0) {
+        return Object.freeze({
+            effect, duplicatesRemoved: 0, duplicatesCompacted: 0, compactedCommentIds: Object.freeze([]),
+        });
     }
-    return Object.freeze({ effect, canonicalCommentId: canonical.id, duplicatesCompacted: duplicates.length });
+    const [canonical, ...duplicates] = owned.sort((left, right) => left.id - right.id);
+    let duplicatesRemoved = 0;
+    let duplicatesCompacted = 0;
+    const compactedCommentIds = [];
+    for (const duplicate of duplicates) {
+        const cleanup = await (0, duplicate_comment_cleanup_workflow_1.cleanupDuplicateComment)({
+            issueNumber: target.number,
+            duplicateCommentId: duplicate.id,
+            compactBody: duplicatePointer(context, canonical.id),
+        }, comments);
+        if (cleanup === 'removed')
+            duplicatesRemoved += 1;
+        else {
+            duplicatesCompacted += 1;
+            compactedCommentIds.push(duplicate.id);
+        }
+    }
+    return Object.freeze({
+        effect,
+        canonicalCommentId: canonical.id,
+        duplicatesRemoved,
+        duplicatesCompacted,
+        compactedCommentIds: Object.freeze(compactedCommentIds),
+    });
+}
+function unchangedOutcome() {
+    return Object.freeze({
+        effect: 'unchanged', duplicatesRemoved: 0, duplicatesCompacted: 0,
+        compactedCommentIds: Object.freeze([]),
+    });
 }
 function matchingReplies(comments, context) {
     const expectedTarget = (0, github_publication_1.publicationTargetToken)(context.intent.target);
@@ -59875,9 +60012,10 @@ const publication_identity_policy_1 = __nccwpck_require__(45403);
 const publication_message_catalog_1 = __nccwpck_require__(34223);
 const semantic_result_publication_policy_1 = __nccwpck_require__(81985);
 const application_error_1 = __nccwpck_require__(75999);
+const duplicate_comment_cleanup_workflow_1 = __nccwpck_require__(79544);
 async function reconcileStatusCard(context, comments, sourceQuery) {
     if (!context.botLogin.trim())
-        return Object.freeze({ effect: 'unchanged', duplicatesCompacted: 0 });
+        return unchangedOutcome();
     if (!await sourceIsCurrent(context.intent, sourceQuery))
         return staleSourceOutcome();
     const target = context.intent.identity.target;
@@ -59891,8 +60029,11 @@ async function reconcileStatusCard(context, comments, sourceQuery) {
         effect = 'created';
         owned = ownedCards(await comments.listIssueComments(target.number), context.intent.identity, context.botLogin);
     }
-    if (owned.length === 0)
-        return Object.freeze({ effect, duplicatesCompacted: 0 });
+    if (owned.length === 0) {
+        return Object.freeze({
+            effect, duplicatesRemoved: 0, duplicatesCompacted: 0, compactedCommentIds: Object.freeze([]),
+        });
+    }
     const [canonical, ...duplicates] = owned.sort((left, right) => left.id - right.id);
     const canonicalMarker = (0, publication_identity_policy_1.parsePublicationMarker)(canonical.body);
     if (canonicalMarker?.digest !== context.intent.digest) {
@@ -59902,18 +60043,31 @@ async function reconcileStatusCard(context, comments, sourceQuery) {
         await comments.updateComment(target.number, canonical.id, rendered);
         effect = effect === 'created' ? 'created' : 'updated';
     }
+    let duplicatesRemoved = 0;
     let duplicatesCompacted = 0;
+    const compactedCommentIds = [];
     for (const duplicate of duplicates) {
-        if (!await sourceIsCurrent(context.intent, sourceQuery)) {
-            return staleSourceOutcome(canonical.id, effect, duplicatesCompacted);
+        const cleanup = await (0, duplicate_comment_cleanup_workflow_1.cleanupDuplicateComment)({
+            issueNumber: target.number,
+            duplicateCommentId: duplicate.id,
+            compactBody: duplicatePointer(context, canonical.id),
+        }, comments, () => sourceIsCurrent(context.intent, sourceQuery));
+        if (cleanup === 'stale') {
+            return staleSourceOutcome(canonical.id, effect, duplicatesRemoved, duplicatesCompacted, compactedCommentIds);
         }
-        await comments.updateComment(target.number, duplicate.id, duplicatePointer(context, canonical.id));
-        duplicatesCompacted += 1;
+        if (cleanup === 'removed')
+            duplicatesRemoved += 1;
+        else {
+            duplicatesCompacted += 1;
+            compactedCommentIds.push(duplicate.id);
+        }
     }
     return Object.freeze({
         effect,
         canonicalCommentId: canonical.id,
+        duplicatesRemoved,
         duplicatesCompacted,
+        compactedCommentIds: Object.freeze(compactedCommentIds),
     });
 }
 async function sourceIsCurrent(intent, sourceQuery) {
@@ -59925,12 +60079,20 @@ async function sourceIsCurrent(intent, sourceQuery) {
     }
     return await sourceQuery.getBranchHeadSha(guard.branch) === guard.sha;
 }
-function staleSourceOutcome(canonicalCommentId, effect = 'unchanged', duplicatesCompacted = 0) {
+function staleSourceOutcome(canonicalCommentId, effect = 'unchanged', duplicatesRemoved = 0, duplicatesCompacted = 0, compactedCommentIds = []) {
     return Object.freeze({
         effect,
         ...(canonicalCommentId === undefined ? {} : { canonicalCommentId }),
+        duplicatesRemoved,
         duplicatesCompacted,
+        compactedCommentIds: Object.freeze([...compactedCommentIds]),
         reason: 'stale-source',
+    });
+}
+function unchangedOutcome() {
+    return Object.freeze({
+        effect: 'unchanged', duplicatesRemoved: 0, duplicatesCompacted: 0,
+        compactedCommentIds: Object.freeze([]),
     });
 }
 function ownedCards(comments, identity, botLogin) {
@@ -67639,7 +67801,7 @@ exports.GitCliRepository = GitCliRepository;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isGithubAlreadyExists = exports.isGithubNotFound = exports.getGithubErrorStatus = void 0;
+exports.isGithubAlreadyExists = exports.isGithubPermissionDenied = exports.isGithubNotFound = exports.getGithubErrorStatus = void 0;
 const getGithubErrorStatus = (error) => {
     if (typeof error !== "object" || error === null)
         return undefined;
@@ -67649,6 +67811,27 @@ const getGithubErrorStatus = (error) => {
 exports.getGithubErrorStatus = getGithubErrorStatus;
 const isGithubNotFound = (error) => (0, exports.getGithubErrorStatus)(error) === 404;
 exports.isGithubNotFound = isGithubNotFound;
+const isGithubPermissionDenied = (error) => {
+    if ((0, exports.getGithubErrorStatus)(error) !== 403)
+        return false;
+    const errorRecord = readRecord(error);
+    const headers = readRecord(readRecord(errorRecord?.response)?.headers);
+    if (readHeader(headers, 'retry-after') !== undefined)
+        return false;
+    if (readHeader(headers, 'x-ratelimit-remaining') === '0')
+        return false;
+    const message = errorRecord?.message;
+    if (typeof message !== 'string')
+        return false;
+    const normalized = message.trim().toLowerCase();
+    return normalized === 'forbidden'
+        || normalized.includes('resource not accessible by integration')
+        || normalized.includes('permission')
+        || normalized.includes('not permitted')
+        || normalized.includes('not allowed')
+        || normalized.includes('must have admin rights');
+};
+exports.isGithubPermissionDenied = isGithubPermissionDenied;
 const isGithubAlreadyExists = (error) => {
     if ((0, exports.getGithubErrorStatus)(error) !== 422)
         return false;
@@ -67672,6 +67855,13 @@ function readRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value)
         ? value
         : undefined;
+}
+function readHeader(headers, expected) {
+    if (!headers)
+        return undefined;
+    const key = Object.keys(headers).find(candidate => candidate.toLowerCase() === expected);
+    const value = key ? headers[key] : undefined;
+    return typeof value === 'string' || typeof value === 'number' ? String(value) : undefined;
 }
 
 
@@ -67992,6 +68182,7 @@ const comment_content_policy_1 = __nccwpck_require__(77454);
 const logger_1 = __nccwpck_require__(91151);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
 const application_error_1 = __nccwpck_require__(75999);
+const github_error_policy_1 = __nccwpck_require__(58791);
 class IssueContentRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -68066,6 +68257,30 @@ class IssueContentRepository {
                 body: comment,
             });
             (0, logger_1.logDebugInfo)(`Comment ${commentId} updated in Issue ${issueNumber}.`);
+        };
+        this.removeComment = async (owner, repository, issueNumber, commentId, token) => {
+            const octokit = this.githubClient.getClient(token);
+            try {
+                await octokit.rest.issues.deleteComment({
+                    owner,
+                    repo: repository,
+                    comment_id: commentId,
+                });
+                (0, logger_1.logDebugInfo)(`Duplicate comment ${commentId} removed from Issue ${issueNumber}.`);
+                return 'removed';
+            }
+            catch (error) {
+                const status = (0, github_error_policy_1.getGithubErrorStatus)(error);
+                if (status === 404) {
+                    (0, logger_1.logDebugInfo)(`Duplicate comment ${commentId} was already absent from Issue ${issueNumber}.`);
+                    return 'removed';
+                }
+                if ((0, github_error_policy_1.isGithubPermissionDenied)(error)) {
+                    (0, logger_1.logDebugInfo)(`Duplicate comment ${commentId} cannot be removed from Issue ${issueNumber}; compacting it instead.`);
+                    return 'compaction-required';
+                }
+                throw error;
+            }
         };
         this.listIssueComments = async (owner, repository, issueNumber, token) => {
             const octokit = this.githubClient.getClient(token);
@@ -75540,6 +75755,7 @@ function bindIssueCommentPublication(port, binding) {
     return Object.freeze({
         addComment: (issueNumber, comment) => port.addComment(binding.owner, binding.repository, issueNumber, comment, binding.token),
         updateComment: (issueNumber, commentId, comment) => port.updateComment(binding.owner, binding.repository, issueNumber, commentId, comment, binding.token),
+        removeComment: (issueNumber, commentId) => port.removeComment(binding.owner, binding.repository, issueNumber, commentId, binding.token),
         listIssueComments: (issueNumber) => port.listIssueComments(binding.owner, binding.repository, issueNumber, binding.token),
     });
 }

@@ -137,6 +137,11 @@ describe('action summary policy', () => {
                 success: false,
                 executed: true,
                 errors: [new ApplicationError('workflow.failed', 'Workflow failed.')],
+            }), new Result({
+                id: 'cleanup', success: true, executed: true,
+                payload: { publicationCleanup: {
+                    reason: 'duplicate-deletion-forbidden', compactedCount: 1, compactedCommentIds: [12],
+                } },
             })],
         }, resolveStaticActionSummaryCatalog('es-ES'));
 
@@ -150,6 +155,7 @@ describe('action summary policy', () => {
         expect(summary).toContain('El workflow no pudo completar la operación solicitada.');
         expect(summary).toContain('**Código de error:** `workflow.failed`');
         expect(summary).toContain('**Reintentable:** Sí');
+        expect(summary).toContain('| Limpieza de duplicados | Se denegó el borrado; se conservó un enlace compacto para el comentario 12 |');
         expect(summary).not.toContain('Workflow failed.');
         expect(summary).not.toContain('The workflow could not complete');
         expect(summary).toContain('## Localización');
@@ -215,6 +221,32 @@ describe('action summary policy', () => {
         expect(summary).toContain('| Source freshness | Stale result suppressed; branch HEAD changed during the run |');
         expect(summary).not.toContain('feature/7-work');
         expect(summary).not.toContain('a'.repeat(40));
+    });
+
+    it('reports bounded comment IDs when forbidden deletion retains compact pointers', () => {
+        const ids = Array.from({ length: 20 }, (_, index) => index + 10);
+        const summary = buildActionSummary({
+            owner: 'owner', repository: 'repo', eventName: 'issues', issueNumber: 7, pullRequestNumber: -1,
+            results: [new Result({
+                id: 'PublishResultUseCase', success: true, executed: true,
+                payload: { publicationCleanup: {
+                    reason: 'duplicate-deletion-forbidden', compactedCount: 25, compactedCommentIds: ids,
+                } },
+            })],
+        });
+
+        expect(summary).toContain('| Duplicate cleanup | Deletion was forbidden; retained compact pointers for 25 comments (first 20 IDs: 10, 11, 12');
+
+        const complete = buildActionSummary({
+            owner: 'owner', repository: 'repo', eventName: 'issues', issueNumber: 7, pullRequestNumber: -1,
+            results: [new Result({
+                id: 'PublishResultUseCase', success: true, executed: true,
+                payload: { publicationCleanup: {
+                    reason: 'duplicate-deletion-forbidden', compactedCount: 2, compactedCommentIds: [12, 15],
+                } },
+            })],
+        });
+        expect(complete).toContain('retained compact pointers for 2 comments (IDs: 12, 15)');
     });
 
     it('reports active findings as a warning unless fail-on-unresolved is enabled', () => {

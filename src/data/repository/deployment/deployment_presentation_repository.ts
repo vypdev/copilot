@@ -1,8 +1,8 @@
 import type { DeploymentPresentationPort } from "../../../application/ports/deployment_orchestration_ports";
-import type { IssueCommentPublicationPort } from "../../../application/ports/issue_lifecycle_ports";
+import type { IssueCommentUpsertPort } from "../../../application/ports/issue_lifecycle_ports";
 
 export class DeploymentPresentationRepository implements DeploymentPresentationPort {
-  constructor(private readonly issues: IssueCommentPublicationPort) {}
+  constructor(private readonly issues: IssueCommentUpsertPort) {}
 
   async findDashboard(owner: string, repository: string, issue: number, marker: string, token: string) {
     const comments = await this.issues.listIssueComments(owner, repository, issue, token);
