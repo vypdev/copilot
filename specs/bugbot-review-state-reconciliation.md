@@ -484,8 +484,10 @@ readiness. `unknown` is a system failure and fails the review regardless of
 - A run whose analyzed head is no longer the PR head MUST return superseded and
   MUST NOT mutate findings or current-state projections.
 - Shipped Commit and Pull Request workflows MUST use distinct branch-scoped
-  concurrency groups. Each uses cancel-in-progress semantics only for its own
-  replaceable revisions. On push, a read-only exact-head preflight MUST validate
+  concurrency groups. Pull Request code/lifecycle and review-state events MUST
+  also use separate lane suffixes. Each uses cancel-in-progress semantics only
+  for its own replaceable revisions, so review-state observation cannot cancel
+  code analysis. On push, a read-only exact-head preflight MUST validate
   any open same-repository PR before Bugbot loads review context or invokes the
   agent; a validated match yields to the PR code-change event. The decision MUST
   NOT read PR identity from the push payload. The shipped PR workflow MUST NOT

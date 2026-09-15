@@ -25,7 +25,7 @@ const DISTRIBUTED_COPILOT_ACTION = 'vypdev/copilot@v3';
 const CHECKOUT_ACTION = 'actions/checkout@v5';
 const SETUP_NODE_ACTION = 'actions/setup-node@v7';
 const PUSH_BRANCH_CONCURRENCY_GROUP = 'copilot-push-${{ github.repository }}-${{ github.ref_name }}';
-const PULL_REQUEST_BRANCH_CONCURRENCY_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}';
+const PULL_REQUEST_BRANCH_CONCURRENCY_GROUP = "copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.event_name == 'pull_request_review' && 'review-state' || 'analysis' }}";
 const BUGBOT_CONCURRENCY_JOBS = Object.freeze({
   'copilot_commit.yml': Object.freeze({
     jobId: 'copilot-commits',
@@ -373,7 +373,7 @@ function assertReviewConcurrency(relativeFile, workflow) {
     }
     if (job.concurrency?.group !== group
       || job.concurrency?.['cancel-in-progress'] !== cancelInProgress) {
-      throw new Error(`${relativeFile} job ${jobId} must use its workflow-specific branch group, avoid cross-canceling the other event owner, and cancel superseded runs.`);
+      throw new Error(`${relativeFile} job ${jobId} must use its workflow- and event-specific branch group, avoid cross-canceling another event owner, and cancel superseded runs within its lane.`);
     }
   }
 }

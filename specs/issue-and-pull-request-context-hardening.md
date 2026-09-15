@@ -362,11 +362,13 @@ treated as compensation-required, not ordinary failure.
 ### 6.5 Workflow concurrency and event ordering
 
 The Commit and Pull Request workflows use distinct normalized
-repository/branch groups. Commit pushes plus PR `opened`, `reopened`,
-`synchronize`, `closed`, and review-state events use cancel-in-progress behavior
-within their own lane so newer evidence replaces obsolete work. The supplied PR
-workflow excludes `pull_request: edited`, preventing body/title-only mutations
-from entering either lane. Application head guards remain mandatory.
+repository/branch groups. Within the Pull Request workflow, `opened`, `reopened`,
+`synchronize`, and `closed` use an `analysis` lane while review-state events use
+a `review-state` lane. Each lane uses cancel-in-progress behavior so newer
+evidence replaces only obsolete work of the same class; a submitted or edited
+review cannot cancel code analysis. The supplied PR workflow excludes
+`pull_request: edited`, preventing body/title-only mutations from entering either
+lane. Application head guards remain mandatory.
 
 This rule is identical in the repository workflow and the shipped setup copy.
 It is not configurable because admitting self-generated metadata events creates
