@@ -543,6 +543,80 @@ describe('finishGithubAction', () => {
         expect(evidence.summary).not.toContain('# Copilot execution');
     });
 
+    it('uses the repository locale for a push Check without changing its stable name', async () => {
+        const previousSha = process.env.GITHUB_SHA;
+        process.env.GITHUB_SHA = 'push-sha';
+        const action = Object.assign(execution(), {
+            eventName: 'push',
+            isIssue: false,
+            isPullRequest: false,
+            isPush: true,
+            locale: { repository: 'es-ES', issue: 'en-US', pullRequest: 'en-US' },
+        });
+        try {
+            await finishGithubAction(
+                action,
+                [new Result({ id: 'VerifyUseCase', success: true, executed: true })],
+                {} as never,
+                {} as never,
+                { publish: mockEvidencePublish },
+                { publish: mockSummaryPublish },
+                new ResolveMessageCatalogUseCase(),
+            );
+        } finally {
+            if (previousSha === undefined) delete process.env.GITHUB_SHA;
+            else process.env.GITHUB_SHA = previousSha;
+        }
+
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('# Ejecución de Copilot'));
+        expect(mockEvidencePublish).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name: 'Copilot / Verification',
+                headSha: 'push-sha',
+                title: 'Copilot terminó correctamente',
+                summary: expect.stringContaining('# Ejecución de Copilot'),
+            }),
+            'test-owner',
+            'test-repo',
+            'product-pat',
+        );
+    });
+
+    it('keeps optional summary and Check provider failures non-blocking', async () => {
+        mockSummaryPublish.mockRejectedValueOnce(new Error('summary unavailable'));
+        mockEvidencePublish.mockRejectedValueOnce(new Error('checks unavailable'));
+        const action = Object.assign(execution(), {
+            eventName: 'pull_request',
+            isIssue: false,
+            isPullRequest: true,
+            pullRequest: { number: 12, action: 'synchronize' },
+            inputs: { pull_request: { head: { sha: 'abc1234' } } },
+        });
+        const results = [new Result({
+            id: 'DetectPotentialProblemsUseCase', success: true, executed: true,
+            payload: {
+                bugbotTelemetry: {
+                    schemaVersion: 1, outcome: 'no-findings', elapsedMs: 12,
+                    configuredEffort: 'smart', headSha: 'abc1234',
+                },
+                findingStates: completeFindingStates(),
+            },
+        })];
+
+        await expect(finishGithubAction(
+            action,
+            results,
+            {} as never,
+            {} as never,
+            { publish: mockEvidencePublish },
+            { publish: mockSummaryPublish },
+        )).resolves.toBeUndefined();
+
+        expect(mockSummaryPublish).toHaveBeenCalledTimes(1);
+        expect(mockEvidencePublish).toHaveBeenCalledTimes(1);
+        expect(core.setFailed).not.toHaveBeenCalled();
+    });
+
     it('keeps metadata-only PR completion out of the stable Review Check', async () => {
         const action = Object.assign(execution(), {
             owner: 'test-owner',

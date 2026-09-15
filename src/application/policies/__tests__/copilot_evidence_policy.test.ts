@@ -244,6 +244,21 @@ describe('buildCopilotEvidence', () => {
         expect(evidence?.title).not.toContain('\n');
     });
 
+    it('falls back to a stable English Check title when a resolved catalog returns empty copy', () => {
+        const english = resolveStaticActionSummaryCatalog('en-US');
+        const catalog = {
+            ...english,
+            message: jest.fn((id: string) => id === 'summary.evidenceCompleted'
+                ? '   '
+                : english.message(id as Parameters<typeof english.message>[0])),
+        } as typeof english;
+
+        expect(buildCopilotEvidence({
+            eventName: 'push', headSha: 'sha-123', summary: 'summary', catalog,
+            results: [new Result({ id: 'verify', success: true, executed: true })],
+        })?.title).toBe('Copilot result');
+    });
+
     it.each([
         { open: '1', reopened: 0 },
         { open: 0, reopened: '1' },

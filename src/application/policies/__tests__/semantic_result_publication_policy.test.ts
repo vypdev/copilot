@@ -340,6 +340,40 @@ describe('semantic result publication policy', () => {
     })).toEqual([]);
   });
 
+  it.each([
+    ['wrong result', 'OtherUseCase', 'develop', 'feature/8'],
+    ['non-string parent', 'SyncBranchUseCase', 42, 'feature/8'],
+    ['blank parent', 'SyncBranchUseCase', '  ', 'feature/8'],
+    ['non-string working branch', 'SyncBranchUseCase', 'develop', 42],
+    ['blank working branch', 'SyncBranchUseCase', 'develop', '  '],
+  ] as const)('rejects a branch-sync payload with %s', (_label, id, parentBranch, workingBranch) => {
+    expect(selectSemanticReplyIntents({
+      locale: 'en-US', target: { kind: 'issue', number: 8 }, correlationId: 'comment:81',
+      results: [new Result({
+        id, success: true, executed: true,
+        payload: {
+          outcome: 'already-aligned', parentBranch, workingBranch,
+          conflictPaths: [], verificationCount: 0,
+        },
+      })],
+    })).toEqual([]);
+  });
+
+  it.each(['invalid', -1, 1.5] as const)('normalizes an invalid branch-sync verification count (%s)', verificationCount => {
+    const [intent] = selectSemanticReplyIntents({
+      locale: 'en-US', target: { kind: 'issue', number: 8 }, correlationId: 'comment:81',
+      results: [new Result({
+        id: 'SyncBranchUseCase', success: true, executed: true,
+        payload: {
+          outcome: 'dry-run-conflicted', parentBranch: 'develop', workingBranch: 'feature/8',
+          conflictPaths: 'not-an-array', verificationCount,
+        },
+      })],
+    });
+
+    expect(intent.projection).toMatchObject({ kind: 'branch-sync-result', conflictCount: 0, verificationCount: 0 });
+  });
+
   it('publishes one localized semantic error for an explicit request without producer prose', () => {
     const [intent] = selectSemanticReplyIntents({
       locale: 'es-ES', target: { kind: 'issue', number: 8 }, correlationId: 'comment:81',

@@ -48,6 +48,41 @@ export interface ProgressPublicationProjection {
 export type SemanticStatusProjection = PlanPublicationProjection | ProgressPublicationProjection;
 export type SemanticStatusIntent = StatusPublicationIntent<SemanticStatusProjection>;
 
+type BranchSyncReplyProjection =
+    | {
+        readonly kind: 'branch-sync-result';
+        readonly outcome: 'already-aligned';
+        readonly parentBranch: string;
+        readonly workingBranch: string;
+        readonly conflictCount: number;
+        readonly verificationCount: number;
+    }
+    | {
+        readonly kind: 'branch-sync-result';
+        readonly outcome: 'dry-run-clean';
+        readonly parentBranch: string;
+        readonly workingBranch: string;
+        readonly conflictCount: number;
+        readonly verificationCount: number;
+    }
+    | {
+        readonly kind: 'branch-sync-result';
+        readonly outcome: 'dry-run-conflicted';
+        readonly parentBranch: string;
+        readonly workingBranch: string;
+        readonly conflictCount: number;
+        readonly verificationCount: number;
+    }
+    | {
+        readonly kind: 'branch-sync-result';
+        readonly outcome: 'merged-cleanly' | 'merged-with-agent';
+        readonly parentBranch: string;
+        readonly workingBranch: string;
+        readonly conflictCount: number;
+        readonly verificationCount: number;
+        readonly commitSha: string;
+    };
+
 export type SemanticReplyProjection =
     | { readonly kind: 'help'; readonly botLogin: string }
     | { readonly kind: 'welcome'; readonly botLogin: string }
@@ -57,15 +92,7 @@ export type SemanticReplyProjection =
         readonly translation?: TranslationPublication;
     }
     | { readonly kind: 'application-error'; readonly error: ApplicationErrorPresentationSource }
-    | {
-        readonly kind: 'branch-sync-result';
-        readonly outcome: 'already-aligned' | 'dry-run-clean' | 'dry-run-conflicted' | 'merged-cleanly' | 'merged-with-agent';
-        readonly parentBranch: string;
-        readonly workingBranch: string;
-        readonly conflictCount: number;
-        readonly verificationCount: number;
-        readonly commitSha?: string;
-    }
+    | BranchSyncReplyProjection
     | { readonly kind: 'access-policy' }
     | { readonly kind: 'status-command'; readonly snapshot: CopilotStatusSnapshot };
 export type SemanticReplyIntent = ReplyPublicationIntent<SemanticReplyProjection>;
@@ -217,7 +244,7 @@ function renderReplyBody(intent: SemanticReplyIntent, catalog: PublicationMessag
 }
 
 function renderBranchSyncResult(
-    projection: Extract<SemanticReplyProjection, { readonly kind: 'branch-sync-result' }>,
+    projection: BranchSyncReplyProjection,
     catalog: PublicationMessageCatalog,
 ): string {
     const values = {
@@ -239,7 +266,7 @@ function renderBranchSyncResult(
     const details = [
         safeCatalogSentence(catalog.render('interaction.branchSync.merged', {
             ...values,
-            commitSha: inlineRef(projection.commitSha ?? 'unknown'),
+            commitSha: inlineRef(projection.commitSha),
         })),
         ...(projection.outcome === 'merged-with-agent' ? [
             safeCatalogSentence(catalog.render(
@@ -355,7 +382,7 @@ function branchSyncResultProjection(
     resultId: string,
     payload: Record<string, unknown>,
     correlationId: string | undefined,
-): Extract<SemanticReplyProjection, { readonly kind: 'branch-sync-result' }> | undefined {
+): BranchSyncReplyProjection | undefined {
     const outcomes = [
         'already-aligned',
         'dry-run-clean',
@@ -375,15 +402,16 @@ function branchSyncResultProjection(
     if ((outcome === 'merged-cleanly' || outcome === 'merged-with-agent') && !commitSha) return undefined;
     const conflictPaths = Array.isArray(payload.conflictPaths) ? payload.conflictPaths : [];
     const verificationCount = positiveCount(payload.verificationCount);
-    return Object.freeze({
+    const common = {
         kind: 'branch-sync-result',
-        outcome,
         parentBranch: payload.parentBranch.trim(),
         workingBranch: payload.workingBranch.trim(),
         conflictCount: conflictPaths.length,
         verificationCount,
-        ...(commitSha ? { commitSha } : {}),
-    });
+    } as const;
+    return outcome === 'merged-cleanly' || outcome === 'merged-with-agent'
+        ? Object.freeze({ ...common, outcome, commitSha: commitSha as string })
+        : Object.freeze({ ...common, outcome });
 }
 
 function translationProjection(value: unknown): TranslationPublication | undefined {

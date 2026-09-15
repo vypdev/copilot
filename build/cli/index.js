@@ -45266,7 +45266,7 @@ function renderBranchSyncResult(projection, catalog) {
     const details = [
         safeCatalogSentence(catalog.render('interaction.branchSync.merged', {
             ...values,
-            commitSha: inlineRef(projection.commitSha ?? 'unknown'),
+            commitSha: inlineRef(projection.commitSha),
         })),
         ...(projection.outcome === 'merged-with-agent' ? [
             safeCatalogSentence(catalog.render('interaction.branchSync.agentResolution', { count: projection.conflictCount })),
@@ -45381,15 +45381,16 @@ function branchSyncResultProjection(resultId, payload, correlationId) {
         return undefined;
     const conflictPaths = Array.isArray(payload.conflictPaths) ? payload.conflictPaths : [];
     const verificationCount = positiveCount(payload.verificationCount);
-    return Object.freeze({
+    const common = {
         kind: 'branch-sync-result',
-        outcome,
         parentBranch: payload.parentBranch.trim(),
         workingBranch: payload.workingBranch.trim(),
         conflictCount: conflictPaths.length,
         verificationCount,
-        ...(commitSha ? { commitSha } : {}),
-    });
+    };
+    return outcome === 'merged-cleanly' || outcome === 'merged-with-agent'
+        ? Object.freeze({ ...common, outcome, commitSha: commitSha })
+        : Object.freeze({ ...common, outcome });
 }
 function translationProjection(value) {
     const translation = (0, result_1.getResultPayload)(value);
