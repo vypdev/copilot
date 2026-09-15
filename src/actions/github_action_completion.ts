@@ -94,7 +94,7 @@ interface WrittenActionSummary {
 
 function actionSummaryContext(
     execution: Execution,
-    catalogResolutions: readonly CatalogResolutionObservation[] = [],
+    catalogResolutions: readonly CatalogResolutionObservation[],
 ): ActionSummaryContext {
     const locale = execution.locale ?? { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' };
     return Object.freeze({

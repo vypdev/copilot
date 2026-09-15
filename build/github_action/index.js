@@ -39667,7 +39667,7 @@ async function finishGithubAction(execution, results, issueNotificationPort, con
     if (completionError)
         core.setFailed((0, application_error_presentation_policy_1.renderApplicationErrorText)(completionError, summary.errorMessage));
 }
-function actionSummaryContext(execution, catalogResolutions = []) {
+function actionSummaryContext(execution, catalogResolutions) {
     const locale = execution.locale ?? { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' };
     return Object.freeze({
         owner: execution.owner,

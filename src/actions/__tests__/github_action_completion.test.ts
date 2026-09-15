@@ -582,6 +582,51 @@ describe('finishGithubAction', () => {
         );
     });
 
+    it('defaults legacy push completion without locale or conversation targets to English', async () => {
+        const previousSha = process.env.GITHUB_SHA;
+        process.env.GITHUB_SHA = 'legacy-push-sha';
+        const action = Object.assign(execution(), {
+            eventName: 'push',
+            isIssue: false,
+            isPullRequest: false,
+            isPush: true,
+        });
+        const legacyShape = action as unknown as {
+            locale?: Execution['locale'];
+            issue?: Execution['issue'];
+            pullRequest?: Execution['pullRequest'];
+        };
+        delete legacyShape.locale;
+        delete legacyShape.issue;
+        delete legacyShape.pullRequest;
+        try {
+            await finishGithubAction(
+                action,
+                [new Result({ id: 'VerifyUseCase', success: true, executed: true })],
+                {} as never,
+                {} as never,
+                { publish: mockEvidencePublish },
+                { publish: mockSummaryPublish },
+            );
+        } finally {
+            if (previousSha === undefined) delete process.env.GITHUB_SHA;
+            else process.env.GITHUB_SHA = previousSha;
+        }
+
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('# Copilot execution'));
+        expect(mockEvidencePublish).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name: 'Copilot / Verification',
+                headSha: 'legacy-push-sha',
+                title: 'Copilot completed successfully',
+                summary: expect.stringContaining('# Copilot execution'),
+            }),
+            'test-owner',
+            'test-repo',
+            'product-pat',
+        );
+    });
+
     it('keeps optional summary and Check provider failures non-blocking', async () => {
         mockSummaryPublish.mockRejectedValueOnce(new Error('summary unavailable'));
         mockEvidencePublish.mockRejectedValueOnce(new Error('checks unavailable'));
