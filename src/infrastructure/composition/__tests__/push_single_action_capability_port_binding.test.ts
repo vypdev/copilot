@@ -4,7 +4,6 @@ import {
   bindBranchComparison,
   bindBranchDependencies,
   bindBranchListQuery,
-  bindBranchSyncNotification,
   bindBranchSyncWorkspace,
   bindDeploymentContinuation,
   bindDeploymentGit,
@@ -280,7 +279,6 @@ describe('push and single-action capability binding', () => {
     const issuePushPort = { openIssue: jest.fn() };
     const inactivityPort = { listOpenIssuesByLabel: jest.fn(), getOpenIssue: jest.fn() };
     const dependencyPort = { listOpenDependencies: jest.fn(), resolveTarget: jest.fn() };
-    const notificationPort = { listIssueComments: jest.fn(), addComment: jest.fn(), updateComment: jest.fn() };
     const defaultBranch = bindRepositoryDefaultBranch({ getDefaultBranch: jest.fn() } as never, binding);
     const issuePush = bindIssueReopen(issuePushPort as never, binding);
     const branches = bindBranchListQuery({ getListOfBranches: jest.fn() } as never, binding);
@@ -290,7 +288,6 @@ describe('push and single-action capability binding', () => {
     const size = bindBranchChangeSize({ getSizeCategoryAndReason: jest.fn() } as never, binding);
     const dependencies = bindBranchDependencies(dependencyPort as never, binding);
     const comparison = bindBranchComparison({ compare: jest.fn() } as never, binding);
-    const notifications = bindBranchSyncNotification(notificationPort as never, binding);
 
     await defaultBranch.getDefaultBranch();
     await issuePush.openIssue(42);
@@ -303,13 +300,9 @@ describe('push and single-action capability binding', () => {
     await dependencies.listOpenDependencies();
     await dependencies.resolveTarget(42);
     await comparison.compare('develop', 'feature/42');
-    await notifications.listIssueComments(42);
-    await notifications.addComment(42, 'body');
-    await notifications.updateComment(42, 7, 'updated');
 
     expect(issuePushPort.openIssue).toHaveBeenCalledWith('owner', 'repo', 42, 'secret-token');
     expect(dependencyPort.resolveTarget).toHaveBeenCalledWith('owner', 'repo', 42, 'secret-token');
-    expect(notificationPort.updateComment).toHaveBeenCalledWith('owner', 'repo', 42, 7, 'updated', 'secret-token');
   });
 
   it('forwards setup provisioning and every credential-bearing workspace operation', async () => {

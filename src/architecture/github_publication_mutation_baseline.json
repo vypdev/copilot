@@ -1,7 +1,7 @@
 {
   "entries": [
     { "file": "src/application/usecases/actions/close_inactive_issues_workflow.ts", "addComment": 1, "reason": "Publishes the terminal inactivity policy after a successful native close." },
-    { "file": "src/application/usecases/actions/observe_branch_sync_use_case.ts", "addComment": 1, "updateComment": 2, "reason": "Reconciles the feature-owned branch synchronization card." },
+    { "file": "src/application/usecases/actions/observe_branch_sync_use_case.ts", "addComment": 1, "updateComment": 2, "reason": "Reconciles the feature-owned branch synchronization card and delegates actionable transitions to the shared publisher." },
     { "file": "src/application/usecases/actions/publish_issue_comment_workflow.ts", "addComment": 1, "updateComment": 1, "reason": "Executes the explicitly requested caller-supplied comment mutation." },
     { "file": "src/application/usecases/steps/commit/bugbot/publish_issue_finding_comment.ts", "addComment": 1, "updateComment": 1, "reason": "Creates or updates one Bugbot issue finding." },
     { "file": "src/application/usecases/steps/commit/bugbot/publish_overflow_comment.ts", "addComment": 1, "reason": "Publishes the bounded Bugbot overflow record." },

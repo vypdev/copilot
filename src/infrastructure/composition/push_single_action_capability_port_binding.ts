@@ -4,11 +4,9 @@ import type { BranchListQueryPort, BoundBranchListQueryPort } from '../../applic
 import type {
   BoundBranchDependencyQueryPort,
   BoundBranchSyncComparisonPort,
-  BoundBranchSyncNotificationPort,
   BoundBranchSyncWorkspacePort,
   BranchDependencyQueryPort,
   BranchSyncComparisonPort,
-  BranchSyncNotificationPort,
   BranchSyncWorkspacePort,
 } from '../../application/ports/branch_sync_ports';
 import type {
@@ -329,17 +327,6 @@ export function bindBranchComparison(
       workingBranch,
       binding.token,
     ),
-  });
-}
-
-export function bindBranchSyncNotification(
-  port: BranchSyncNotificationPort,
-  binding: RepositoryCredentialBinding,
-): BoundBranchSyncNotificationPort {
-  return Object.freeze<BoundBranchSyncNotificationPort>({
-    listIssueComments: (issueNumber) => port.listIssueComments(binding.owner, binding.repository, issueNumber, binding.token),
-    addComment: (issueNumber, comment) => port.addComment(binding.owner, binding.repository, issueNumber, comment, binding.token),
-    updateComment: (issueNumber, commentId, comment) => port.updateComment(binding.owner, binding.repository, issueNumber, commentId, comment, binding.token),
   });
 }
 

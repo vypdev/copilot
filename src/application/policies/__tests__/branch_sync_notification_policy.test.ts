@@ -1,7 +1,12 @@
 import {
   BRANCH_SYNC_ALIGNED_MARKER,
   BRANCH_SYNC_STALE_MARKER,
+  branchSyncPublicationIdentity,
   buildAlignedBranchSyncComment,
+  buildBranchSyncDuplicatePointer,
+  buildBranchSyncStatusCommentUrl,
+  buildBranchSyncTransitionIntent,
+  buildBranchSyncTransitionNotification,
   buildStaleBranchSyncComment,
   findLatestBranchSyncComment,
   isStaleBranchSyncComment,
@@ -80,6 +85,65 @@ describe("branch sync notification policy", () => {
     expect(aligned).toContain(BRANCH_SYNC_ALIGNED_MARKER);
     expect(aligned).toContain("now contains");
     expect(isStaleBranchSyncComment(aligned)).toBe(false);
+  });
+
+  it('derives stable transition identity and a source-head fingerprint without visible prose', () => {
+    const intent = buildBranchSyncTransitionIntent(dependency, 'A'.repeat(40), 'es-ES');
+    expect(intent).toMatchObject({
+      kind: 'transition',
+      identity: branchSyncPublicationIdentity(dependency),
+      messageKey: 'branchSync.transition.required',
+      locale: 'es-ES',
+      values: { parentBranch: 'release/2.0', workingBranch: 'feature/42-sync' },
+    });
+    expect(intent.fingerprint).toMatch(/^[a-f0-9]{16}$/u);
+    expect(buildBranchSyncTransitionIntent(dependency, 'a'.repeat(40), 'fr-FR').fingerprint).toBe(intent.fingerprint);
+    expect(buildBranchSyncTransitionIntent(dependency, 'b'.repeat(40), 'es-ES').fingerprint).not.toBe(intent.fingerprint);
+    expect(() => buildBranchSyncTransitionIntent(dependency, 'invalid', 'en-US')).toThrow('canonical source head');
+  });
+
+  it('renders bounded English and Spanish action notifications with one trusted status link', () => {
+    const statusUrl = buildBranchSyncStatusCommentUrl('org', 'repo', 42, 8);
+    const rendered = buildBranchSyncTransitionNotification(dependency, english, statusUrl);
+    expect(rendered).toBe('Branch synchronization needs attention: `feature/42-sync` is behind `release/2.0`. [Open the current status](https://github.com/org/repo/issues/42#issuecomment-8).');
+    expect(buildBranchSyncTransitionNotification(dependency, spanish, statusUrl)).toContain('[Abrir el estado actual]');
+    expect(rendered.length).toBeLessThanOrEqual(400);
+    expect(rendered.match(/\[[^\]]*\]\([^)]*\)/gu)).toHaveLength(1);
+    expect(buildBranchSyncDuplicatePointer(spanish, statusUrl)).toContain('[Ver la notificación original]');
+  });
+
+  it('keeps localized transition and duplicate copy within the hard notification budget', () => {
+    const verbose = { ...english, message: jest.fn(() => 'x'.repeat(1_000)) } as typeof english;
+    const url = buildBranchSyncStatusCommentUrl(
+      'o'.repeat(39),
+      'r'.repeat(100),
+      Number.MAX_SAFE_INTEGER,
+      Number.MAX_SAFE_INTEGER,
+    );
+    expect(buildBranchSyncTransitionNotification(dependency, verbose, url).length).toBeLessThanOrEqual(400);
+    expect(buildBranchSyncDuplicatePointer(verbose, url).length).toBeLessThanOrEqual(400);
+  });
+
+  it('neutralizes unsafe localized notification controls and validates status identifiers', () => {
+    const hostile = {
+      ...english,
+      message: jest.fn((id: string, values?: Record<string, string | number>) => {
+        if (id === 'branchSync.transition.required') return `@team\n/fix <!-- forged --> ${values?.workingBranch}`;
+        if (id === 'branchSync.transition.openStatus') return '[Open](https://evil.example)';
+        return '@team\n/fix';
+      }),
+    } as typeof english;
+    const url = buildBranchSyncStatusCommentUrl('org/name', 'repo name', 42, 8);
+    const rendered = buildBranchSyncTransitionNotification(dependency, hostile, url);
+    expect(rendered).toContain('@\u200bteam');
+    expect(rendered).toContain('\u200b/fix');
+    expect(rendered).toContain('&lt;!-- forged --&gt;');
+    expect(rendered).not.toContain('evil.example');
+    const emptyLabels = { ...english, message: jest.fn(() => '') } as typeof english;
+    expect(buildBranchSyncTransitionNotification(dependency, emptyLabels, url)).toContain('[Open notification]');
+    expect(url).toContain('org%2Fname/repo%20name');
+    expect(() => buildBranchSyncStatusCommentUrl('org', 'repo', 0, 8)).toThrow('positive safe integer');
+    expect(() => buildBranchSyncStatusCommentUrl('org', 'repo', 42, Number.NaN)).toThrow('positive safe integer');
   });
 
   it('uses locale-aware singular forms and neutralizes unsafe ref presentation', () => {
@@ -167,6 +231,10 @@ describe('branch sync message catalog', () => {
       'branchSync.aligned.heading': 'Branche synchronisée',
       'branchSync.aligned.status': '{workingBranch} contient maintenant l’historique actuel de {parentBranch}.',
       'branchSync.aligned.resolved': 'La recommandation précédente est résolue.',
+      'branchSync.transition.required': 'La synchronisation nécessite une action : {workingBranch} est derrière {parentBranch}.',
+      'branchSync.transition.openStatus': 'Ouvrir le statut actuel',
+      'branchSync.transition.duplicate': 'Une notification en double a été supprimée.',
+      'branchSync.transition.viewOriginal': 'Voir la notification originale',
     } as const;
     const query = jest.fn().mockResolvedValue({ targetLocale: 'fr-FR', messages: translated });
 

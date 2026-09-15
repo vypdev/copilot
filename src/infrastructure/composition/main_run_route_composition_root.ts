@@ -82,7 +82,6 @@ import {
   bindBranchChangeSize,
   bindBranchComparison,
   bindBranchDependencies,
-  bindBranchSyncNotification,
   bindBranchSyncWorkspace,
   bindDeploymentContinuation,
   bindDeploymentGit,
@@ -150,7 +149,7 @@ export function createSingleActionUseCaseCompositionRoot(
     new ObserveBranchSyncUseCase(
       bindBranchDependencies(new BranchDependencyRepository(createGraphqlTransportClient()), binding),
       bindBranchComparison(new BranchCompareRepository(createBranchComparisonClient()), binding),
-      bindBranchSyncNotification(issueDescriptionQueryPort, binding),
+      bindIssueCommentPublication(issueDescriptionQueryPort, binding),
       catalogResolver,
     ),
     deploymentOrchestration,

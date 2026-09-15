@@ -40675,6 +40675,10 @@ exports.BRANCH_SYNC_MESSAGE_IDS = Object.freeze([
     'branchSync.aligned.heading',
     'branchSync.aligned.status',
     'branchSync.aligned.resolved',
+    'branchSync.transition.required',
+    'branchSync.transition.openStatus',
+    'branchSync.transition.duplicate',
+    'branchSync.transition.viewOriginal',
 ]);
 const ENGLISH_MESSAGES = Object.freeze({
     'branchSync.stale.heading': 'Action required: synchronize the branch',
@@ -40691,6 +40695,10 @@ const ENGLISH_MESSAGES = Object.freeze({
     'branchSync.aligned.heading': 'Branch synchronized',
     'branchSync.aligned.status': '{workingBranch} now contains the current history of its parent branch {parentBranch}.',
     'branchSync.aligned.resolved': 'The previous synchronization recommendation has been resolved.',
+    'branchSync.transition.required': 'Branch synchronization needs attention: {workingBranch} is behind {parentBranch}.',
+    'branchSync.transition.openStatus': 'Open the current status',
+    'branchSync.transition.duplicate': 'A duplicate action notification was suppressed.',
+    'branchSync.transition.viewOriginal': 'View the original notification',
 });
 const SPANISH_MESSAGES = Object.freeze({
     'branchSync.stale.heading': 'Acción necesaria: sincroniza la rama',
@@ -40709,6 +40717,10 @@ const SPANISH_MESSAGES = Object.freeze({
     'branchSync.aligned.heading': 'Rama sincronizada',
     'branchSync.aligned.status': '{workingBranch} ya contiene el historial actual de su rama padre {parentBranch}.',
     'branchSync.aligned.resolved': 'La recomendación de sincronización anterior está resuelta.',
+    'branchSync.transition.required': 'La sincronización de la rama necesita atención: {workingBranch} está por detrás de {parentBranch}.',
+    'branchSync.transition.openStatus': 'Abrir el estado actual',
+    'branchSync.transition.duplicate': 'Se ha suprimido una notificación de acción duplicada.',
+    'branchSync.transition.viewOriginal': 'Ver la notificación original',
 });
 exports.ENGLISH_BRANCH_SYNC_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
@@ -40745,11 +40757,18 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BRANCH_SYNC_ALIGNED_MARKER = exports.BRANCH_SYNC_STALE_MARKER = void 0;
 exports.selectBranchDependenciesForPush = selectBranchDependenciesForPush;
 exports.findLatestBranchSyncComment = findLatestBranchSyncComment;
+exports.branchSyncPublicationIdentity = branchSyncPublicationIdentity;
+exports.buildBranchSyncTransitionIntent = buildBranchSyncTransitionIntent;
+exports.buildBranchSyncTransitionNotification = buildBranchSyncTransitionNotification;
+exports.buildBranchSyncDuplicatePointer = buildBranchSyncDuplicatePointer;
+exports.buildBranchSyncStatusCommentUrl = buildBranchSyncStatusCommentUrl;
 exports.isStaleBranchSyncComment = isStaleBranchSyncComment;
 exports.buildStaleBranchSyncComment = buildStaleBranchSyncComment;
 exports.buildAlignedBranchSyncComment = buildAlignedBranchSyncComment;
 const github_user_policy_1 = __nccwpck_require__(84403);
+const git_object_id_1 = __nccwpck_require__(88623);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 exports.BRANCH_SYNC_STALE_MARKER = '<!-- copilot-branch-sync:stale -->';
 exports.BRANCH_SYNC_ALIGNED_MARKER = '<!-- copilot-branch-sync:aligned -->';
 const BRANCH_SYNC_KEY_MARKER = '<!-- copilot-branch-sync-key:';
@@ -40768,6 +40787,46 @@ function findLatestBranchSyncComment(comments, botLogin, dependency) {
         .find((comment) => isBranchSyncComment(comment.body)
         && matchesDependency(comment.body, dependency)
         && Boolean(botLogin && comment.user?.login && (0, github_user_policy_1.githubUsersMatch)(botLogin, comment.user.login)));
+}
+function branchSyncPublicationIdentity(dependency) {
+    return Object.freeze({
+        topic: 'branch-sync',
+        target: Object.freeze({ kind: 'issue', number: dependency.issueNumber }),
+        key: `dependency:${(0, publication_identity_policy_1.createSemanticDigest)({ parent: dependency.parentBranch, working: dependency.workingBranch })}`,
+    });
+}
+function buildBranchSyncTransitionIntent(dependency, sourceHeadSha, locale) {
+    const canonicalHead = (0, git_object_id_1.canonicalGitObjectId)(sourceHeadSha);
+    if (!canonicalHead)
+        throw new Error('Branch synchronization transition requires a canonical source head.');
+    const identity = branchSyncPublicationIdentity(dependency);
+    return Object.freeze({
+        kind: 'transition',
+        identity,
+        fingerprint: (0, publication_identity_policy_1.createTransitionFingerprint)(identity, 'branch-sync-required', `head:${canonicalHead}`),
+        messageKey: 'branchSync.transition.required',
+        locale,
+        values: Object.freeze({
+            parentBranch: dependency.parentBranch,
+            workingBranch: dependency.workingBranch,
+        }),
+    });
+}
+function buildBranchSyncTransitionNotification(dependency, messages, statusUrl) {
+    return `${safeSentence(messages.message('branchSync.transition.required', {
+        workingBranch: inlineRef(dependency.workingBranch),
+        parentBranch: inlineRef(dependency.parentBranch),
+    }))} [${safeLinkLabel(messages.message('branchSync.transition.openStatus'))}](${statusUrl}).`;
+}
+function buildBranchSyncDuplicatePointer(messages, canonicalUrl) {
+    return `${safeSentence(messages.message('branchSync.transition.duplicate'))} [${safeLinkLabel(messages.message('branchSync.transition.viewOriginal'))}](${canonicalUrl}).`;
+}
+function buildBranchSyncStatusCommentUrl(owner, repository, issueNumber, commentId) {
+    if (!Number.isSafeInteger(issueNumber) || issueNumber < 1
+        || !Number.isSafeInteger(commentId) || commentId < 1) {
+        throw new Error('Branch synchronization status link requires positive safe integer identifiers.');
+    }
+    return `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/issues/${issueNumber}#issuecomment-${commentId}`;
 }
 function isStaleBranchSyncComment(body) {
     return body?.includes(exports.BRANCH_SYNC_STALE_MARKER) === true;
@@ -40810,11 +40869,7 @@ ${messages.message('branchSync.aligned.resolved')}`;
 }
 function buildSharedBranchSyncMarker(dependency, sourceVersion, digest) {
     return (0, publication_identity_policy_1.buildPublicationMarker)({
-        identity: {
-            topic: 'branch-sync',
-            target: { kind: 'issue', number: dependency.issueNumber },
-            key: `dependency:${(0, publication_identity_policy_1.createSemanticDigest)({ parent: dependency.parentBranch, working: dependency.workingBranch })}`,
-        },
+        identity: branchSyncPublicationIdentity(dependency),
         sourceVersion,
         digest,
     });
@@ -40836,6 +40891,16 @@ function buildCompareUrl(owner, repository, parentBranch, workingBranch) {
 }
 function inlineRef(value) {
     return `\`${value.replace(/[\r\n`<>]/gu, '').replace(/@/gu, '@\u200b').slice(0, 255)}\``;
+}
+function safeSentence(value) {
+    return (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(value, 120).replace(/[\r\n]+/gu, ' ').trim();
+}
+function safeLinkLabel(value) {
+    return (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(value, 40)
+        .replace(/\[([^\]]*)\]\([^)]*\)/gu, '$1')
+        .replace(/https?:\/\/\S+/giu, '')
+        .replace(/[\r\n()[\]<>]/gu, '')
+        .trim() || 'Open notification';
 }
 
 
@@ -49194,6 +49259,8 @@ const branch_sync_notification_policy_1 = __nccwpck_require__(79895);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
 const branch_sync_message_catalog_1 = __nccwpck_require__(89245);
+const transition_notification_workflow_1 = __nccwpck_require__(1725);
+const publication_outcome_policy_1 = __nccwpck_require__(79719);
 const TASK_ID = "ObserveBranchSyncUseCase";
 /**
  * Cheap push-time observer. It only queries branch relationships/comparisons
@@ -49242,13 +49309,36 @@ class ObserveBranchSyncUseCase {
                     comparison,
                     messages,
                 });
-                if (latest && (0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body)) {
+                if (!latest) {
+                    await this.notifications.addComment(dependency.issueNumber, comment);
+                    return success(dependency, comparison.behindBy, "stale");
+                }
+                const transitionedFromAligned = !(0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body);
+                if (latest.body !== comment) {
                     await this.notifications.updateComment(dependency.issueNumber, latest.id, comment);
                 }
-                else {
-                    await this.notifications.addComment(dependency.issueNumber, comment);
+                if (!transitionedFromAligned || !context.sourceHeadSha || !context.trustedBotLogin) {
+                    return success(dependency, comparison.behindBy, "stale");
                 }
-                return success(dependency, comparison.behindBy, "stale");
+                const intent = (0, branch_sync_notification_policy_1.buildBranchSyncTransitionIntent)(dependency, context.sourceHeadSha, context.locale);
+                try {
+                    const transition = await (0, transition_notification_workflow_1.reconcileTransitionNotification)({
+                        owner: context.repository.owner,
+                        repository: context.repository.name,
+                        botLogin: context.trustedBotLogin,
+                        intent,
+                        message: (0, branch_sync_notification_policy_1.buildBranchSyncTransitionNotification)(dependency, messages, (0, branch_sync_notification_policy_1.buildBranchSyncStatusCommentUrl)(context.repository.owner, context.repository.name, dependency.issueNumber, latest.id)),
+                        duplicatePointer: canonicalUrl => (0, branch_sync_notification_policy_1.buildBranchSyncDuplicatePointer)(messages, canonicalUrl),
+                    }, this.notifications);
+                    const cleanup = (0, publication_outcome_policy_1.buildDuplicateCompactionPublicationPayload)(transition.compactedCommentIds);
+                    return success(dependency, comparison.behindBy, "stale", {
+                        ...(0, publication_outcome_policy_1.buildTransitionPublicationPayload)(intent, transition.effect),
+                        ...(cleanup ?? {}),
+                    });
+                }
+                catch (cause) {
+                    return failure(`Branch status was updated for issue #${dependency.issueNumber}, but its action notification could not be published.`, cause, { ...dependency, behindBy: comparison.behindBy, state: 'stale', statusUpdated: true });
+                }
             }
             if (latest && (0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body)) {
                 await this.notifications.updateComment(dependency.issueNumber, latest.id, (0, branch_sync_notification_policy_1.buildAlignedBranchSyncComment)(dependency, messages));
@@ -49264,7 +49354,7 @@ class ObserveBranchSyncUseCase {
     }
 }
 exports.ObserveBranchSyncUseCase = ObserveBranchSyncUseCase;
-function success(dependency, behindBy, state) {
+function success(dependency, behindBy, state, evidence = {}) {
     return new result_1.Result({
         id: TASK_ID,
         success: true,
@@ -49274,16 +49364,17 @@ function success(dependency, behindBy, state) {
                 ? `Issue #${dependency.issueNumber}: ${dependency.workingBranch} is ${behindBy} commit(s) behind ${dependency.parentBranch}.`
                 : `Issue #${dependency.issueNumber}: ${dependency.workingBranch} is aligned with ${dependency.parentBranch}.`,
         ],
-        payload: { ...dependency, behindBy, state },
+        payload: { ...dependency, behindBy, state, ...evidence },
     });
 }
-function failure(message, cause) {
+function failure(message, cause, payload) {
     return new result_1.Result({
         id: TASK_ID,
         success: false,
         executed: true,
         steps: [message],
         errors: [(0, application_error_1.toApplicationError)(cause, 'provider.unavailable', message)],
+        ...(payload ? { payload } : {}),
     });
 }
 
@@ -52322,9 +52413,12 @@ function projectInactivityContext(source) {
     });
 }
 function projectBranchObservationContext(source) {
+    const deletedPush = typeof source.inputs?.after === 'string' && /^0+$/u.test(source.inputs.after);
+    const sourceHeadSha = deletedPush ? undefined : (0, git_object_id_1.canonicalGitObjectId)(source.inputs?.after);
     return Object.freeze({
         pushedBranch: source.commit.branch.trim(),
-        deletedPush: typeof source.inputs?.after === 'string' && /^0+$/u.test(source.inputs.after),
+        deletedPush,
+        ...(sourceHeadSha ? { sourceHeadSha } : {}),
         ...(source.tokenUser ? { trustedBotLogin: source.tokenUser } : {}),
         repository: Object.freeze({ owner: source.owner, name: source.repo }),
         locale: source.locale?.issue ?? 'en-US',
@@ -58353,6 +58447,29 @@ function toCamelCase(input) {
 
 /***/ }),
 
+/***/ 79544:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.cleanupDuplicateComment = cleanupDuplicateComment;
+/** Removes an exact owned duplicate, retaining a compact pointer only when deletion is forbidden. */
+async function cleanupDuplicateComment(context, comments, sourceIsCurrent) {
+    if (sourceIsCurrent && !await sourceIsCurrent())
+        return 'stale';
+    const removal = await comments.removeComment(context.issueNumber, context.duplicateCommentId);
+    if (removal === 'removed')
+        return 'removed';
+    if (sourceIsCurrent && !await sourceIsCurrent())
+        return 'stale';
+    await comments.updateComment(context.issueNumber, context.duplicateCommentId, context.compactBody);
+    return 'compacted';
+}
+
+
+/***/ }),
+
 /***/ 65440:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -59030,6 +59147,105 @@ function logSkipReason(reason, tokenUser) {
     else if (reason === 'invalid-command') {
         (0, logging_ports_1.logInfo)('Invalid explicit Copilot command; skipping.');
     }
+}
+
+
+/***/ }),
+
+/***/ 1725:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MAX_TRANSITION_NOTIFICATION_LINKS = exports.MAX_TRANSITION_NOTIFICATION_CHARACTERS = void 0;
+exports.reconcileTransitionNotification = reconcileTransitionNotification;
+exports.renderTransitionNotification = renderTransitionNotification;
+const github_publication_1 = __nccwpck_require__(35793);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+const duplicate_comment_cleanup_workflow_1 = __nccwpck_require__(79544);
+exports.MAX_TRANSITION_NOTIFICATION_CHARACTERS = 400;
+exports.MAX_TRANSITION_NOTIFICATION_LINKS = 2;
+/** Creates one immutable action notification per exact transition fingerprint. */
+async function reconcileTransitionNotification(context, comments) {
+    if (!context.botLogin.trim())
+        return unchangedOutcome();
+    const target = context.intent.identity.target;
+    const rendered = renderTransitionNotification(context.intent, context.message);
+    let owned = ownedNotifications(await comments.listIssueComments(target.number), context.intent.identity, context.intent.fingerprint, context.botLogin);
+    let effect = 'unchanged';
+    if (owned.length === 0) {
+        await comments.addComment(target.number, rendered);
+        effect = 'created';
+        owned = ownedNotifications(await comments.listIssueComments(target.number), context.intent.identity, context.intent.fingerprint, context.botLogin);
+    }
+    if (owned.length === 0)
+        return outcome(effect);
+    const [canonical, ...duplicates] = owned.sort((left, right) => left.id - right.id);
+    let duplicatesRemoved = 0;
+    let duplicatesCompacted = 0;
+    const compactedCommentIds = [];
+    for (const duplicate of duplicates) {
+        const pointer = validateVisibleMessage(context.duplicatePointer(canonicalCommentUrl(context, canonical.id)));
+        const cleanup = await (0, duplicate_comment_cleanup_workflow_1.cleanupDuplicateComment)({
+            issueNumber: target.number,
+            duplicateCommentId: duplicate.id,
+            compactBody: [(0, publication_identity_policy_1.buildDuplicateMarker)(canonical.id), '', pointer].join('\n'),
+        }, comments);
+        if (cleanup === 'removed')
+            duplicatesRemoved += 1;
+        if (cleanup === 'compacted') {
+            duplicatesCompacted += 1;
+            compactedCommentIds.push(duplicate.id);
+        }
+    }
+    return outcome(effect, canonical.id, duplicatesRemoved, duplicatesCompacted, compactedCommentIds);
+}
+function canonicalCommentUrl(context, commentId) {
+    const target = context.intent.identity.target;
+    const targetPath = target.kind === 'pull-request' ? 'pull' : 'issues';
+    return `https://github.com/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)}/${targetPath}/${target.number}#issuecomment-${commentId}`;
+}
+function renderTransitionNotification(intent, message) {
+    return [(0, publication_identity_policy_1.buildPublicationTransitionMarker)(intent), '', validateVisibleMessage(message)].join('\n');
+}
+function validateVisibleMessage(message) {
+    const normalized = message.trim();
+    if (!normalized)
+        throw new Error('Transition notification message must not be empty.');
+    if (normalized.length > exports.MAX_TRANSITION_NOTIFICATION_CHARACTERS) {
+        throw new Error('Transition notification message exceeds the character budget.');
+    }
+    const links = normalized.match(/\[[^\]]*\]\([^)]*\)/gu) ?? [];
+    if (links.length > exports.MAX_TRANSITION_NOTIFICATION_LINKS) {
+        throw new Error('Transition notification message exceeds the link budget.');
+    }
+    if (normalized.includes('<!--')) {
+        throw new Error('Transition notification message must not contain an HTML marker.');
+    }
+    return normalized;
+}
+function ownedNotifications(comments, identity, fingerprint, botLogin) {
+    return comments.filter(comment => {
+        const marker = (0, publication_identity_policy_1.parsePublicationTransitionMarker)(comment.body);
+        return marker !== undefined
+            && (0, github_publication_1.publicationIdentityEquals)(marker.identity, identity)
+            && marker.fingerprint === fingerprint
+            && (0, github_user_policy_1.githubUsersMatch)(comment.user?.login ?? '', botLogin);
+    });
+}
+function unchangedOutcome() {
+    return outcome('unchanged');
+}
+function outcome(effect, canonicalCommentId, duplicatesRemoved = 0, duplicatesCompacted = 0, compactedCommentIds = []) {
+    return Object.freeze({
+        effect,
+        ...(canonicalCommentId === undefined ? {} : { canonicalCommentId }),
+        duplicatesRemoved,
+        duplicatesCompacted,
+        compactedCommentIds: Object.freeze([...compactedCommentIds]),
+    });
 }
 
 
@@ -76280,7 +76496,7 @@ function createSingleActionUseCaseCompositionRoot(surface, binding) {
         : undefined;
     return new single_action_use_case_1.SingleActionUseCase(repositoryTagPort && repositoryReleasePort
         ? new publish_github_action_use_case_1.PublishGithubActionUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding), (0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding))
-        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding, catalogResolver), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncNotification)(issueDescriptionQueryPort, binding), catalogResolver), deploymentOrchestration);
+        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding, catalogResolver), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding), catalogResolver), deploymentOrchestration);
 }
 function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publication, binding, catalogResolver) {
     const deploymentClient = new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter();
@@ -76549,7 +76765,6 @@ exports.bindIssueInactivityQuery = bindIssueInactivityQuery;
 exports.bindBranchChangeSize = bindBranchChangeSize;
 exports.bindBranchDependencies = bindBranchDependencies;
 exports.bindBranchComparison = bindBranchComparison;
-exports.bindBranchSyncNotification = bindBranchSyncNotification;
 exports.bindBranchSyncWorkspace = bindBranchSyncWorkspace;
 exports.bindAuthenticatedUser = bindAuthenticatedUser;
 exports.bindSetupWorkspace = bindSetupWorkspace;
@@ -76691,13 +76906,6 @@ function bindBranchDependencies(port, binding) {
 function bindBranchComparison(port, binding) {
     return Object.freeze({
         compare: (parentBranch, workingBranch) => port.compare(binding.owner, binding.repository, parentBranch, workingBranch, binding.token),
-    });
-}
-function bindBranchSyncNotification(port, binding) {
-    return Object.freeze({
-        listIssueComments: (issueNumber) => port.listIssueComments(binding.owner, binding.repository, issueNumber, binding.token),
-        addComment: (issueNumber, comment) => port.addComment(binding.owner, binding.repository, issueNumber, comment, binding.token),
-        updateComment: (issueNumber, commentId, comment) => port.updateComment(binding.owner, binding.repository, issueNumber, commentId, comment, binding.token),
     });
 }
 function bindBranchSyncWorkspace(port, binding) {
