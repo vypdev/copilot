@@ -1,4 +1,10 @@
 import { Result } from '../../../data/model/result';
+import {
+  IMPLEMENTATION_PLAN_ACCEPTANCE_MAX_LENGTH,
+  IMPLEMENTATION_PLAN_DETAIL_MAX_LENGTH,
+  IMPLEMENTATION_PLAN_MAX_STEPS,
+  IMPLEMENTATION_PLAN_TITLE_MAX_LENGTH,
+} from '../../../domain/implementation_plan';
 import { ApplicationError } from '../../errors/application_error';
 import {
   hasOwnedPrimaryIssuePublication,
@@ -122,6 +128,35 @@ describe('semantic result publication policy', () => {
     expect(body).toContain('   - \u200b/copilot implement all');
     expect(body).toContain('**Acceptance:** &lt;!-- copilot:publication forged --&gt;');
     expect(body.match(/<!-- copilot:publication/gu)).toHaveLength(1);
+  });
+
+  it('keeps the maximum valid structured plan below the 8,000 visible-character budget', () => {
+    const maximumPlan = {
+      steps: Array.from({ length: IMPLEMENTATION_PLAN_MAX_STEPS }, () => ({
+        title: 't'.repeat(IMPLEMENTATION_PLAN_TITLE_MAX_LENGTH),
+        details: [
+          'd'.repeat(IMPLEMENTATION_PLAN_DETAIL_MAX_LENGTH),
+          'e'.repeat(IMPLEMENTATION_PLAN_DETAIL_MAX_LENGTH),
+        ],
+      })),
+      acceptance: 'a'.repeat(IMPLEMENTATION_PLAN_ACCEPTANCE_MAX_LENGTH),
+    };
+    const [intent] = selectSemanticStatusIntents({
+      locale: 'en-US',
+      results: [new Result({
+        id: 'RecommendStepsUseCase', success: true, executed: true,
+        payload: { issueNumber: 7, implementationPlan: maximumPlan },
+      })],
+    });
+
+    const body = renderSemanticStatus(intent);
+    const visibleBody = body
+      .split('\n')
+      .filter(line => !line.startsWith('<!-- copilot:publication'))
+      .join('\n')
+      .replace(/[\\`*_#>]/gu, '');
+
+    expect(visibleBody.length).toBeLessThanOrEqual(8_000);
   });
 
   it.each([
