@@ -281,6 +281,26 @@ describe('semantic result publication policy', () => {
     expect(body).not.toContain('Raw parser detail.');
   });
 
+  it('preserves typed partial-success recovery when projecting an explicit-request error', () => {
+    const [intent] = selectSemanticReplyIntents({
+      locale: 'en-US', target: { kind: 'issue', number: 8 }, correlationId: 'comment:85',
+      results: [new Result({
+        id: 'PrepareBranch', success: false, executed: true,
+        errors: [new ApplicationError('workflow.failed', 'Producer detail.', {
+          recovery: { id: 'managed-branch-enrichment-failed', variables: { branchName: 'issue/8' } },
+        })],
+      })],
+    });
+
+    expect(intent.projection).toMatchObject({
+      kind: 'application-error',
+      error: { recovery: { id: 'managed-branch-enrichment-failed', variables: { branchName: 'issue/8' } } },
+    });
+    const body = renderSemanticReply(intent);
+    expect(body).toContain('Continue on issue/8 and rerun issue enrichment.');
+    expect(body).not.toContain('Producer detail.');
+  });
+
   it('uses the atomic English fallback for a request-translation failure', () => {
     const [intent] = selectSemanticReplyIntents({
       locale: 'es-ES', target: { kind: 'pull-request', number: 8 }, correlationId: 'comment:82',
