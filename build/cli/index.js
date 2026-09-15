@@ -40126,12 +40126,32 @@ exports.RECOMMEND_STEPS_RESPONSE_SCHEMA = {
             description: 'Whether a recommendation is present or the previous recommendation remains valid.',
         },
         steps: {
+            type: ['array', 'null'],
+            minItems: 3,
+            maxItems: 8,
+            items: {
+                type: 'object',
+                properties: {
+                    title: { type: 'string', minLength: 1, maxLength: 200 },
+                    details: {
+                        type: 'array',
+                        maxItems: 2,
+                        items: { type: 'string', minLength: 1, maxLength: 300 },
+                    },
+                },
+                required: ['title', 'details'],
+                additionalProperties: false,
+            },
+            description: 'Three to eight ordered implementation steps; null when status is unchanged.',
+        },
+        acceptance: {
             type: ['string', 'null'],
-            maxLength: 12000,
-            description: 'Markdown implementation steps for recommendation; null when status is unchanged.',
+            minLength: 1,
+            maxLength: 800,
+            description: 'One verifiable completion criterion; null when status is unchanged.',
         },
     },
-    required: ['outputLocale', 'status', 'steps'],
+    required: ['outputLocale', 'status', 'steps', 'acceptance'],
     additionalProperties: false,
 };
 exports.PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA = {
@@ -44219,6 +44239,7 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'publication.implementationPlan',
     'publication.planReady',
     'publication.planAcceptance',
+    'publication.legacyPlanAcceptance',
     'publication.commandsHint',
     'publication.progress',
     'publication.progress.notStarted',
@@ -44310,6 +44331,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'publication.implementationPlan': 'Implementation plan',
     'publication.planReady': 'Ready to start. No action is required from maintainers before implementation.',
     'publication.planAcceptance': 'Acceptance',
+    'publication.legacyPlanAcceptance': 'Complete the listed work and verify the behavior requested by the issue.',
     'publication.commandsHint': 'Need something else? Mention the bot with a question or use {helpCommand}.',
     'publication.progress': 'Progress',
     'publication.progress.notStarted': 'not started',
@@ -44407,6 +44429,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'publication.implementationPlan': 'Plan de implementación',
     'publication.planReady': 'Listo para comenzar. No se requiere ninguna acción de mantenimiento antes de la implementación.',
     'publication.planAcceptance': 'Aceptación',
+    'publication.legacyPlanAcceptance': 'Completa el trabajo indicado y verifica el comportamiento solicitado por la issue.',
     'publication.commandsHint': '¿Necesitas algo más? Menciona al bot con una pregunta o usa {helpCommand}.',
     'publication.progress': 'Progreso',
     'publication.progress.notStarted': 'sin iniciar',
@@ -44560,6 +44583,7 @@ function toPublicationCatalog(resolved) {
         implementationPlan: message('publication.implementationPlan'),
         planReady: message('publication.planReady'),
         planAcceptance: message('publication.planAcceptance'),
+        legacyPlanAcceptance: message('publication.legacyPlanAcceptance'),
         commandsHint: message('publication.commandsHint', { helpCommand: '`/copilot help`' }),
         progress: message('publication.progress'),
         progressState: Object.freeze({
@@ -45112,6 +45136,7 @@ const status_command_policy_1 = __nccwpck_require__(3449);
 const comment_translation_policy_1 = __nccwpck_require__(27150);
 const application_error_presentation_policy_1 = __nccwpck_require__(95067);
 const git_object_id_1 = __nccwpck_require__(88623);
+const implementation_plan_1 = __nccwpck_require__(77001);
 function selectSemanticStatusIntents(context) {
     return Object.freeze(context.results.flatMap(result => {
         if (!result.executed || !result.success)
@@ -45295,7 +45320,12 @@ function renderAccessPolicyReply(messages) {
 function renderSemanticStatus(intent, messages = (0, publication_message_catalog_1.resolveStaticPublicationCatalog)(intent.locale).catalog) {
     const marker = (0, publication_identity_policy_1.buildPublicationMarker)(intent);
     if (intent.projection.kind === 'plan') {
-        const plan = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(intent.projection.recommendation, 8000).trim();
+        const plan = 'plan' in intent.projection
+            ? renderImplementationPlan(intent.projection.plan)
+            : (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(intent.projection.legacyRecommendation, 7000).trim();
+        const acceptance = 'plan' in intent.projection
+            ? safePlanField(intent.projection.plan.acceptance, 800)
+            : messages.legacyPlanAcceptance;
         return [
             marker,
             '',
@@ -45305,7 +45335,7 @@ function renderSemanticStatus(intent, messages = (0, publication_message_catalog
             '',
             plan,
             '',
-            `**${messages.planAcceptance}:** ${messages.noActionRequired}`,
+            `**${messages.planAcceptance}:** ${acceptance}`,
             '',
             messages.commandsHint,
         ].join('\n').trim();
@@ -45330,21 +45360,42 @@ function renderSemanticStatus(intent, messages = (0, publication_message_catalog
 function planIntent(id, payload, locale) {
     if (!isPlanPayload(id, payload))
         return undefined;
+    const implementationPlan = (0, implementation_plan_1.parseImplementationPlan)(payload.implementationPlan);
+    const legacyRecommendation = typeof payload.recommendedSteps === 'string'
+        ? payload.recommendedSteps.trim()
+        : '';
+    const semanticInput = implementationPlan
+        ? (0, implementation_plan_1.implementationPlanFingerprintInput)(implementationPlan)
+        : legacyRecommendation;
     const state = (0, result_1.getResultPayload)(payload.recommendationState);
     const issueFingerprint = typeof state?.issueDescriptionFingerprint === 'string'
         ? state.issueDescriptionFingerprint
-        : (0, publication_identity_policy_1.createSemanticDigest)(payload.recommendedSteps);
-    const projection = Object.freeze({
-        kind: 'plan',
-        recommendation: payload.recommendedSteps.trim(),
-    });
+        : (0, publication_identity_policy_1.createSemanticDigest)(semanticInput);
+    const projection = implementationPlan
+        ? Object.freeze({ kind: 'plan', plan: implementationPlan })
+        : Object.freeze({ kind: 'plan', legacyRecommendation });
     return statusIntent('plan', payload.issueNumber, 'implementation', `issue-body:${safeDigest(issueFingerprint)}`, locale, projection);
 }
 function isPlanPayload(id, payload) {
+    const structuredPlan = (0, implementation_plan_1.parseImplementationPlan)(payload.implementationPlan);
     return id === 'RecommendStepsUseCase'
         && positiveInteger(payload.issueNumber)
-        && typeof payload.recommendedSteps === 'string'
-        && Boolean(payload.recommendedSteps.trim());
+        && (structuredPlan !== undefined
+            || (payload.implementationPlan === undefined
+                && typeof payload.recommendedSteps === 'string'
+                && Boolean(payload.recommendedSteps.trim())));
+}
+function renderImplementationPlan(plan) {
+    return plan.steps.flatMap((step, index) => [
+        `${index + 1}. **${safePlanField(step.title, 200)}**`,
+        ...step.details.map(detail => `   - ${safePlanField(detail, 300)}`),
+    ]).join('\n');
+}
+function safePlanField(value, maximum) {
+    return (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(value, maximum)
+        .replace(/[\r\n]+/gu, ' ')
+        .trim()
+        .replace(/(?<!\\)([`*_[\]])/gu, '\\$1');
 }
 function directAnswerProjection(payload) {
     const publication = (0, result_1.getResultPayload)(payload.publication);
@@ -49878,30 +49929,42 @@ const recommendation_policy_1 = __nccwpck_require__(39410);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
 const agent_output_locale_policy_1 = __nccwpck_require__(30601);
+const implementation_plan_1 = __nccwpck_require__(77001);
 function buildRecommendationResult(param, taskId, response, issueDescriptionFingerprint, previousRecommendation, issueNumber) {
-    const steps = extractRecommendationText(response, param.targetLocale);
-    if (!steps) {
-        return recommendationFailure(taskId, 'The configured agent returned no recommendation.');
+    const extracted = extractImplementationPlan(response, param.targetLocale);
+    if (!extracted) {
+        return recommendationFailure(taskId, 'The configured agent returned an invalid implementation plan.');
     }
-    (0, logging_ports_1.logDebugInfo)(`RecommendSteps: agent response received. Steps length=${steps.length}.`);
-    if ((0, recommendation_policy_1.isNoNewRecommendation)(steps)) {
-        return previousRecommendation
-            ? skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'agent found no material change')
-            : recommendationFailure(taskId, 'The configured agent returned unchanged without a previous recommendation.');
+    if (extracted.kind === 'unchanged') {
+        if (!previousRecommendation) {
+            return recommendationFailure(taskId, 'The configured agent returned unchanged without a previous recommendation.');
+        }
+        if (!previousRecommendation.implementationPlan) {
+            return recommendationFailure(taskId, 'The configured agent returned unchanged for a legacy plan that requires structured migration.');
+        }
+        return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'agent found no material change');
     }
-    const recommendationFingerprint = (0, recommendation_policy_1.createRecommendationFingerprint)(steps);
+    const recommendation = implementationPlanContextText(extracted.plan);
+    (0, logging_ports_1.logDebugInfo)(`RecommendSteps: structured agent response received. Step count=${extracted.plan.steps.length}.`);
+    const recommendationFingerprint = (0, recommendation_policy_1.createRecommendationFingerprint)((0, implementation_plan_1.implementationPlanFingerprintInput)(extracted.plan));
     if (previousRecommendation?.recommendationFingerprint === recommendationFingerprint)
         return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'recommendation is unchanged');
     const recommendationState = {
         issueDescriptionFingerprint,
         recommendationFingerprint,
-        recommendation: (0, recommendation_policy_1.limitStoredRecommendation)(steps),
+        recommendation: (0, recommendation_policy_1.limitStoredRecommendation)(recommendation),
+        implementationPlan: extracted.plan,
     };
     return recommendationOutcome([new result_1.Result({
             id: taskId,
             success: true,
             executed: true,
-            payload: { issueNumber, recommendedSteps: steps, recommendationState },
+            payload: {
+                issueNumber,
+                recommendedSteps: recommendation,
+                implementationPlan: extracted.plan,
+                recommendationState,
+            },
         })]);
 }
 function skipUnchangedRecommendation(_param, previous, fingerprint, reason) {
@@ -49923,16 +49986,38 @@ function recommendationFailure(taskId, message) {
         new result_1.Result({ id: taskId, success: false, executed: true, errors: [semanticError] }),
     ]);
 }
-function extractRecommendationText(response, targetLocale) {
+function extractImplementationPlan(response, targetLocale) {
     if (response == null)
-        return '';
+        return undefined;
     const validation = (0, agent_output_locale_policy_1.validateAgentOutputLocale)(response, targetLocale);
     if (validation.kind === 'invalid') {
         throw new application_error_1.ApplicationError('locale.output-invalid', (0, agent_output_locale_policy_1.agentOutputLocaleFailureMessage)(validation));
     }
-    if (validation.payload.status === 'unchanged')
-        return recommendation_policy_1.NO_NEW_RECOMMENDATIONS;
-    return typeof validation.payload.steps === 'string' ? validation.payload.steps.trim() : '';
+    if (!hasOnlyResponseKeys(validation.payload))
+        return undefined;
+    if (validation.payload.status === 'unchanged') {
+        return validation.payload.steps === null && validation.payload.acceptance === null
+            ? Object.freeze({ kind: 'unchanged' })
+            : undefined;
+    }
+    if (validation.payload.status !== 'recommendation')
+        return undefined;
+    const plan = (0, implementation_plan_1.parseImplementationPlan)({
+        steps: validation.payload.steps,
+        acceptance: validation.payload.acceptance,
+    });
+    return plan ? Object.freeze({ kind: 'recommendation', plan }) : undefined;
+}
+function hasOnlyResponseKeys(payload) {
+    const allowed = ['outputLocale', 'status', 'steps', 'acceptance'];
+    return Object.keys(payload).every(key => allowed.includes(key));
+}
+function implementationPlanContextText(plan) {
+    const steps = plan.steps.flatMap((step, index) => [
+        `${index + 1}. ${step.title}`,
+        ...step.details.map(detail => `   - ${detail}`),
+    ]);
+    return [...steps, '', `Acceptance: ${plan.acceptance}`].join('\n');
 }
 
 
@@ -49984,6 +50069,7 @@ const recommend_steps_result_policy_1 = __nccwpck_require__(65928);
 const application_error_1 = __nccwpck_require__(75999);
 const agent_response_schemas_1 = __nccwpck_require__(25603);
 const agent_output_locale_policy_1 = __nccwpck_require__(30601);
+const implementation_plan_1 = __nccwpck_require__(77001);
 /** Runs the recommendation policy and agent interaction for an issue. */
 async function runRecommendStepsWorkflow(param, taskId, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId}.`);
@@ -50006,9 +50092,13 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
             return outcome([failure(taskId, `No description found for issue #${issueNumber}.`, 'provider.not-found')]);
         }
         const issueDescriptionFingerprint = (0, recommendation_policy_1.createIssueDescriptionFingerprint)(issueDescription);
-        if (previousRecommendation?.issueDescriptionFingerprint === issueDescriptionFingerprint) {
+        const matchingPreviousRecommendation = previousRecommendation?.issueDescriptionFingerprint === issueDescriptionFingerprint;
+        if (matchingPreviousRecommendation && (previousRecommendation.implementationPlan || !agentReady)) {
             (0, logging_ports_1.logInfo)('RecommendSteps: issue description is unchanged; reconciling the existing plan.');
             return replayExistingPlan(taskId, issueNumber, previousRecommendation);
+        }
+        if (matchingPreviousRecommendation) {
+            (0, logging_ports_1.logInfo)('RecommendSteps: migrating the matching legacy recommendation to the structured plan contract.');
         }
         if (!agentReady) {
             return outcome([failure(taskId, 'Missing agent model or executable.', 'configuration.invalid')]);
@@ -50018,6 +50108,7 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
             issueNumber: String(issueNumber),
             issueDescription,
             previousRecommendation: previousRecommendation?.recommendation,
+            previousRecommendationFormat: previousRecommendation?.implementationPlan ? 'structured' : 'legacy',
             targetLocale: param.targetLocale,
         });
         (0, logging_ports_1.logDebugInfo)(`RecommendSteps: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`);
@@ -50044,6 +50135,7 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
     }
 }
 function replayExistingPlan(taskId, issueNumber, recommendationState) {
+    const implementationPlan = (0, implementation_plan_1.parseImplementationPlan)(recommendationState.implementationPlan);
     return outcome([new result_1.Result({
             id: taskId,
             success: true,
@@ -50051,6 +50143,7 @@ function replayExistingPlan(taskId, issueNumber, recommendationState) {
             payload: Object.freeze({
                 issueNumber,
                 recommendedSteps: recommendationState.recommendation,
+                ...(implementationPlan ? { implementationPlan } : {}),
                 recommendationState: Object.freeze({ ...recommendationState }),
             }),
         })]);
@@ -52448,6 +52541,7 @@ exports.projectChangeSizeContext = projectChangeSizeContext;
 exports.projectInitialSetupContext = projectInitialSetupContext;
 exports.projectIssueCommentActionContext = projectIssueCommentActionContext;
 exports.projectAgentActivityContext = projectAgentActivityContext;
+const recommendation_state_1 = __nccwpck_require__(68514);
 const issue_comment_publication_policy_1 = __nccwpck_require__(61899);
 const git_object_id_1 = __nccwpck_require__(88623);
 function projectDeploymentPublicationContext(source) {
@@ -52507,13 +52601,13 @@ function projectProgressContext(source) {
     });
 }
 function projectRecommendStepsContext(source) {
-    const previous = source.previousConfiguration?.recommendationState;
+    const previous = (0, recommendation_state_1.restoreRecommendationState)(source.previousConfiguration?.recommendationState);
     return Object.freeze({
         issueNumber: source.issueNumber,
         eventName: source.eventName,
         eventAction: source.inputs?.action ?? '',
         ...(source.tokenUser ? { tokenUser: source.tokenUser } : {}),
-        ...(previous ? { previousRecommendation: Object.freeze({ ...previous }) } : {}),
+        ...(previous ? { previousRecommendation: previous } : {}),
         agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
         targetLocale: source.locale?.issue ?? 'en-US',
     });
@@ -64428,9 +64522,7 @@ class Config {
         if (input['branchConfiguration'] !== undefined && input['branchConfiguration'] !== null) {
             this.branchConfiguration = new branch_configuration_1.BranchConfiguration(input['branchConfiguration']);
         }
-        if ((0, recommendation_state_1.isRecommendationState)(input['recommendationState'])) {
-            this.recommendationState = input['recommendationState'];
-        }
+        this.recommendationState = (0, recommendation_state_1.restoreRecommendationState)(input['recommendationState']);
         if ((0, deployment_operation_1.isDeploymentOperationSnapshot)(input['deploymentOrchestration'])) {
             this.deploymentOrchestration = input['deploymentOrchestration'];
         }
@@ -65344,22 +65436,40 @@ function uniquePullRequestNumber(pullRequests) {
 /***/ }),
 
 /***/ 68514:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.isRecommendationState = isRecommendationState;
+exports.restoreRecommendationState = restoreRecommendationState;
+const implementation_plan_1 = __nccwpck_require__(77001);
 function isRecommendationState(value) {
+    return restoreRecommendationState(value) !== undefined;
+}
+function restoreRecommendationState(value) {
     if (typeof value !== 'object' || value === null)
-        return false;
+        return undefined;
     const candidate = value;
-    return typeof candidate.issueDescriptionFingerprint === 'string'
+    const legacyFieldsValid = typeof candidate.issueDescriptionFingerprint === 'string'
         && candidate.issueDescriptionFingerprint.length > 0
         && typeof candidate.recommendationFingerprint === 'string'
         && candidate.recommendationFingerprint.length > 0
         && typeof candidate.recommendation === 'string'
         && candidate.recommendation.length > 0;
+    if (!legacyFieldsValid)
+        return undefined;
+    const implementationPlan = candidate.implementationPlan === undefined
+        ? undefined
+        : (0, implementation_plan_1.parseImplementationPlan)(candidate.implementationPlan);
+    if (candidate.implementationPlan !== undefined && !implementationPlan)
+        return undefined;
+    return Object.freeze({
+        issueDescriptionFingerprint: candidate.issueDescriptionFingerprint,
+        recommendationFingerprint: candidate.recommendationFingerprint,
+        recommendation: candidate.recommendation,
+        ...(implementationPlan ? { implementationPlan } : {}),
+    });
 }
 
 
@@ -74281,6 +74391,77 @@ function githubUsersMatch(left, right) {
 
 /***/ }),
 
+/***/ 77001:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.IMPLEMENTATION_PLAN_ACCEPTANCE_MAX_LENGTH = exports.IMPLEMENTATION_PLAN_DETAIL_MAX_LENGTH = exports.IMPLEMENTATION_PLAN_TITLE_MAX_LENGTH = exports.IMPLEMENTATION_PLAN_MAX_DETAILS = exports.IMPLEMENTATION_PLAN_MAX_STEPS = exports.IMPLEMENTATION_PLAN_MIN_STEPS = void 0;
+exports.parseImplementationPlan = parseImplementationPlan;
+exports.implementationPlanFingerprintInput = implementationPlanFingerprintInput;
+exports.IMPLEMENTATION_PLAN_MIN_STEPS = 3;
+exports.IMPLEMENTATION_PLAN_MAX_STEPS = 8;
+exports.IMPLEMENTATION_PLAN_MAX_DETAILS = 2;
+exports.IMPLEMENTATION_PLAN_TITLE_MAX_LENGTH = 200;
+exports.IMPLEMENTATION_PLAN_DETAIL_MAX_LENGTH = 300;
+exports.IMPLEMENTATION_PLAN_ACCEPTANCE_MAX_LENGTH = 800;
+/** Restores only the bounded, renderer-owned implementation-plan contract. */
+function parseImplementationPlan(value) {
+    if (!isRecord(value)
+        || !hasOnlyKeys(value, ['steps', 'acceptance'])
+        || !Array.isArray(value.steps)
+        || value.steps.length < exports.IMPLEMENTATION_PLAN_MIN_STEPS
+        || value.steps.length > exports.IMPLEMENTATION_PLAN_MAX_STEPS)
+        return undefined;
+    const steps = value.steps.map(parseStep);
+    if (steps.some(step => step === undefined))
+        return undefined;
+    const acceptance = boundedSingleLine(value.acceptance, exports.IMPLEMENTATION_PLAN_ACCEPTANCE_MAX_LENGTH);
+    if (!acceptance)
+        return undefined;
+    return Object.freeze({
+        steps: Object.freeze(steps),
+        acceptance,
+    });
+}
+/** Stable semantic input for fingerprints; independent from localized UI chrome. */
+function implementationPlanFingerprintInput(plan) {
+    return JSON.stringify({
+        steps: plan.steps.map(step => ({ title: step.title, details: [...step.details] })),
+        acceptance: plan.acceptance,
+    });
+}
+function parseStep(value) {
+    if (!isRecord(value) || !hasOnlyKeys(value, ['title', 'details']))
+        return undefined;
+    const title = boundedSingleLine(value.title, exports.IMPLEMENTATION_PLAN_TITLE_MAX_LENGTH);
+    if (!title || !Array.isArray(value.details) || value.details.length > exports.IMPLEMENTATION_PLAN_MAX_DETAILS) {
+        return undefined;
+    }
+    const details = value.details.map(detail => boundedSingleLine(detail, exports.IMPLEMENTATION_PLAN_DETAIL_MAX_LENGTH));
+    if (details.some(detail => detail === undefined))
+        return undefined;
+    return Object.freeze({ title, details: Object.freeze(details) });
+}
+function boundedSingleLine(value, maximum) {
+    if (typeof value !== 'string')
+        return undefined;
+    const normalized = value.trim();
+    return normalized && normalized.length <= maximum && !/[\r\n]/u.test(normalized)
+        ? normalized
+        : undefined;
+}
+function isRecord(value) {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+function hasOnlyKeys(value, allowed) {
+    return Object.keys(value).every(key => allowed.includes(key));
+}
+
+
+/***/ }),
+
 /***/ 38572:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -79318,9 +79499,9 @@ exports.getRecommendStepsPrompt = getRecommendStepsPrompt;
  * Prompt for recommending implementation steps from an issue (RecommendStepsUseCase).
  */
 const fill_1 = __nccwpck_require__(2559);
-const TEMPLATE = `Based on the following issue description, recommend concrete steps to implement or address this issue. Order the steps logically (e.g. setup, implementation, tests, docs). Keep each step clear and actionable.
+const TEMPLATE = `Based on the following issue description, produce a concise implementation plan. Return three to eight logically ordered steps (for example: contract, implementation, tests, and documentation). Each step needs a short action title and zero to two brief supporting details. Add one specific, verifiable acceptance criterion for the whole plan.
 
-Write every human-readable sentence in {{targetLocale}}. Preserve code identifiers, paths, refs, commands, and URLs verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
+Write every human-readable field in {{targetLocale}}. Preserve code identifiers, repository-relative paths, refs, and commands verbatim. Do not write Markdown or headings inside fields; the product owns presentation. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
 
 {{projectContextInstruction}}
 
@@ -79329,9 +79510,9 @@ Write every human-readable sentence in {{targetLocale}}. Preserve code identifie
 
 {{previousRecommendation}}
 
-Return one JSON object with \`outputLocale\`, \`status\`, and \`steps\`. When a material recommendation is needed, set \`status\` to \`recommendation\` and put a complete numbered list in Markdown in \`steps\` (headings, lists, and code blocks are allowed). You can add brief sub-bullets per step if needed.
+Return one JSON object with \`outputLocale\`, \`status\`, \`steps\`, and \`acceptance\`. When a material recommendation is needed, set \`status\` to \`recommendation\`, return \`steps\` as an array of objects with \`title\` and \`details\`, and return the verifiable criterion in \`acceptance\`.
 
-If the current description does not require any material change to the previous recommendation, set \`status\` to \`unchanged\` and \`steps\` to null. Do not return \`unchanged\` when there is no previous recommendation.`;
+If the current description does not require any material change to the previous recommendation, set \`status\` to \`unchanged\` and set both \`steps\` and \`acceptance\` to null. Do not return \`unchanged\` when there is no previous recommendation.`;
 function getRecommendStepsPrompt(params) {
     return (0, fill_1.fillTemplate)(TEMPLATE, {
         projectContextInstruction: params.projectContextInstruction,
@@ -79339,7 +79520,9 @@ function getRecommendStepsPrompt(params) {
         issueDescription: params.issueDescription,
         targetLocale: params.targetLocale,
         previousRecommendation: params.previousRecommendation
-            ? `Previous recommendation (use only to detect whether the current plan is still valid):\n<previous-recommendation>\n${params.previousRecommendation}\n</previous-recommendation>`
+            ? `${params.previousRecommendationFormat === 'structured'
+                ? 'Previous structured recommendation (use only to detect whether the current plan is still valid):'
+                : 'Previous legacy recommendation (return a complete structured replacement; do not return unchanged):'}\n<previous-recommendation>\n${params.previousRecommendation}\n</previous-recommendation>`
             : 'There is no previous recommendation for this issue.',
     });
 }

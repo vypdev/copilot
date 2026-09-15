@@ -31,6 +31,17 @@ const recommendationState = {
     recommendationFingerprint: 'recommendation-hash',
     recommendation: '1. Add tests',
 };
+const structuredRecommendationState = {
+    ...recommendationState,
+    implementationPlan: {
+        steps: [
+            { title: 'Define', details: ['Contract'] },
+            { title: 'Implement', details: [] },
+            { title: 'Verify', details: ['Tests'] },
+        ],
+        acceptance: 'All relevant checks pass.',
+    },
+};
 
 function deploymentOperation(): DeploymentOperationSnapshot {
     return {
@@ -161,6 +172,24 @@ describe('finishGithubAction', () => {
             issueNumber: 11,
             currentConfiguration: expect.objectContaining({ recommendationState }),
         }));
+    });
+
+    it('deep-restores a structured recommendation state before committing it', async () => {
+        const action = execution();
+        const mutableState = structuredClone(structuredRecommendationState);
+        const results = [new Result({
+            id: 'RecommendStepsUseCase',
+            success: true,
+            executed: true,
+            payload: { recommendationState: mutableState },
+        })];
+
+        await finishGithubAction(action, results, {} as never, {} as never);
+        mutableState.implementationPlan.steps[0].details[0] = 'mutated';
+
+        expect(action.currentConfiguration.recommendationState).toEqual(structuredRecommendationState);
+        expect(Object.isFrozen(action.currentConfiguration.recommendationState)).toBe(true);
+        expect(Object.isFrozen(action.currentConfiguration.recommendationState?.implementationPlan?.steps[0].details)).toBe(true);
     });
 
     it('does not commit a pending recommendation state when publication fails', async () => {

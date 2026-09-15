@@ -8,7 +8,7 @@ import type {
   SetupRemoteConfiguration,
 } from '../../domain/setup';
 import type { EventCommitPayload } from '../../data/model/execution_inputs';
-import type { RecommendationState } from '../../data/model/recommendation_state';
+import { restoreRecommendationState, type RecommendationState } from '../../data/model/recommendation_state';
 import type { ProjectReference } from '../ports/project_board_link_ports';
 import type {
   InitialIssueTypeConfiguration,
@@ -294,13 +294,13 @@ export function projectProgressContext(source: PushSingleActionContextSource): P
 }
 
 export function projectRecommendStepsContext(source: PushSingleActionContextSource): RecommendStepsContext {
-  const previous = source.previousConfiguration?.recommendationState;
+  const previous = restoreRecommendationState(source.previousConfiguration?.recommendationState);
   return Object.freeze({
     issueNumber: source.issueNumber,
     eventName: source.eventName,
     eventAction: source.inputs?.action ?? '',
     ...(source.tokenUser ? { tokenUser: source.tokenUser } : {}),
-    ...(previous ? { previousRecommendation: Object.freeze({ ...previous }) } : {}),
+    ...(previous ? { previousRecommendation: previous } : {}),
     agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
     targetLocale: source.locale?.issue ?? 'en-US',
   });

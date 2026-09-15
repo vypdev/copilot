@@ -64,6 +64,14 @@ function source(): DeepMutable<PushSingleActionContextSource> {
         issueDescriptionFingerprint: 'description',
         recommendationFingerprint: 'recommendation',
         recommendation: 'Do this',
+        implementationPlan: {
+          steps: [
+            { title: 'Define', details: ['Contract'] },
+            { title: 'Implement', details: [] },
+            { title: 'Verify', details: ['Tests'] },
+          ],
+          acceptance: 'All relevant checks pass.',
+        },
       },
     },
     branches: {
@@ -183,10 +191,16 @@ describe('push and single-action context projection', () => {
   });
 
   it('projects recommendation event and previous state as frozen facts', () => {
-    const projected = projectRecommendStepsContext(source());
+    const input = source();
+    const projected = projectRecommendStepsContext(input);
+    input.previousConfiguration!.recommendationState!.implementationPlan!.steps[0].details[0] = 'mutated';
 
     expect(projected).toMatchObject({ issueNumber: 42, eventAction: 'opened', tokenUser: 'copilot-bot' });
     expect(Object.isFrozen(projected.previousRecommendation)).toBe(true);
+    expect(projected.previousRecommendation?.implementationPlan?.steps[0].details[0]).toBe('Contract');
+    expect(Object.isFrozen(projected.previousRecommendation?.implementationPlan)).toBe(true);
+    expect(Object.isFrozen(projected.previousRecommendation?.implementationPlan?.steps)).toBe(true);
+    expect(Object.isFrozen(projected.previousRecommendation?.implementationPlan?.steps[0].details)).toBe(true);
     expect(projected.agentConfiguration.model).toBe('planner-model');
   });
 

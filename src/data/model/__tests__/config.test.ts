@@ -62,8 +62,52 @@ describe('Config', () => {
     });
   });
 
+  it('deep-restores and freezes a structured implementation plan', () => {
+    const input = {
+      issueDescriptionFingerprint: 'description-hash',
+      recommendationFingerprint: 'recommendation-hash',
+      recommendation: 'Stored compatibility text',
+      implementationPlan: {
+        steps: [
+          { title: ' Define ', details: [' Contract '] },
+          { title: 'Implement', details: [] },
+          { title: 'Verify', details: ['Tests', 'Documentation'] },
+        ],
+        acceptance: ' All relevant checks pass. ',
+      },
+    };
+
+    const state = new Config({ recommendationState: input }).recommendationState;
+
+    expect(state?.implementationPlan).toEqual({
+      steps: [
+        { title: 'Define', details: ['Contract'] },
+        { title: 'Implement', details: [] },
+        { title: 'Verify', details: ['Tests', 'Documentation'] },
+      ],
+      acceptance: 'All relevant checks pass.',
+    });
+    expect(Object.isFrozen(state)).toBe(true);
+    expect(Object.isFrozen(state?.implementationPlan)).toBe(true);
+    expect(Object.isFrozen(state?.implementationPlan?.steps)).toBe(true);
+    expect(Object.isFrozen(state?.implementationPlan?.steps[0].details)).toBe(true);
+  });
+
   it('ignores malformed recommendation state', () => {
     const c = new Config({ recommendationState: { recommendation: 'incomplete' } });
+
+    expect(c.recommendationState).toBeUndefined();
+  });
+
+  it('rejects the complete recommendation state when its optional structured plan is malformed', () => {
+    const c = new Config({
+      recommendationState: {
+        issueDescriptionFingerprint: 'description-hash',
+        recommendationFingerprint: 'recommendation-hash',
+        recommendation: 'Stored compatibility text',
+        implementationPlan: { steps: [{ title: 'Too short', details: [] }], acceptance: 'Done.' },
+      },
+    });
 
     expect(c.recommendationState).toBeUndefined();
   });

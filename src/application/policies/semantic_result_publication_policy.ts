@@ -30,11 +30,15 @@ import {
     type ApplicationErrorPresentationSource,
 } from './application_error_presentation_policy';
 import { canonicalGitObjectId } from '../../domain/git_object_id';
+import {
+    implementationPlanFingerprintInput,
+    parseImplementationPlan,
+    type ImplementationPlan,
+} from '../../domain/implementation_plan';
 
-export interface PlanPublicationProjection {
-    readonly kind: 'plan';
-    readonly recommendation: string;
-}
+export type PlanPublicationProjection =
+    | { readonly kind: 'plan'; readonly plan: ImplementationPlan }
+    | { readonly kind: 'plan'; readonly legacyRecommendation: string };
 
 export interface ProgressPublicationProjection {
     readonly kind: 'progress';
@@ -310,7 +314,12 @@ export function renderSemanticStatus(
 ): string {
     const marker = buildPublicationMarker(intent);
     if (intent.projection.kind === 'plan') {
-        const plan = sanitizeAgentMarkdown(intent.projection.recommendation, 8_000).trim();
+        const plan = 'plan' in intent.projection
+            ? renderImplementationPlan(intent.projection.plan)
+            : sanitizeAgentMarkdown(intent.projection.legacyRecommendation, 7_000).trim();
+        const acceptance = 'plan' in intent.projection
+            ? safePlanField(intent.projection.plan.acceptance, 800)
+            : messages.legacyPlanAcceptance;
         return [
             marker,
             '',
@@ -320,7 +329,7 @@ export function renderSemanticStatus(
             '',
             plan,
             '',
-            `**${messages.planAcceptance}:** ${messages.noActionRequired}`,
+            `**${messages.planAcceptance}:** ${acceptance}`,
             '',
             messages.commandsHint,
         ].join('\n').trim();
@@ -344,25 +353,48 @@ export function renderSemanticStatus(
 
 function planIntent(id: string, payload: Record<string, unknown>, locale: string): SemanticStatusIntent | undefined {
     if (!isPlanPayload(id, payload)) return undefined;
+    const implementationPlan = parseImplementationPlan(payload.implementationPlan);
+    const legacyRecommendation = typeof payload.recommendedSteps === 'string'
+        ? payload.recommendedSteps.trim()
+        : '';
+    const semanticInput = implementationPlan
+        ? implementationPlanFingerprintInput(implementationPlan)
+        : legacyRecommendation;
     const state = getResultPayload(payload.recommendationState);
     const issueFingerprint = typeof state?.issueDescriptionFingerprint === 'string'
         ? state.issueDescriptionFingerprint
-        : createSemanticDigest(payload.recommendedSteps);
-    const projection = Object.freeze<PlanPublicationProjection>({
-        kind: 'plan',
-        recommendation: payload.recommendedSteps.trim(),
-    });
+        : createSemanticDigest(semanticInput);
+    const projection = implementationPlan
+        ? Object.freeze<PlanPublicationProjection>({ kind: 'plan', plan: implementationPlan })
+        : Object.freeze<PlanPublicationProjection>({ kind: 'plan', legacyRecommendation });
     return statusIntent('plan', payload.issueNumber, 'implementation', `issue-body:${safeDigest(issueFingerprint)}`, locale, projection);
 }
 
 function isPlanPayload(
     id: string,
     payload: Record<string, unknown>,
-): payload is Record<string, unknown> & { readonly issueNumber: number; readonly recommendedSteps: string } {
+): payload is Record<string, unknown> & { readonly issueNumber: number } {
+    const structuredPlan = parseImplementationPlan(payload.implementationPlan);
     return id === 'RecommendStepsUseCase'
         && positiveInteger(payload.issueNumber)
-        && typeof payload.recommendedSteps === 'string'
-        && Boolean(payload.recommendedSteps.trim());
+        && (structuredPlan !== undefined
+            || (payload.implementationPlan === undefined
+                && typeof payload.recommendedSteps === 'string'
+                && Boolean(payload.recommendedSteps.trim())));
+}
+
+function renderImplementationPlan(plan: ImplementationPlan): string {
+    return plan.steps.flatMap((step, index) => [
+        `${index + 1}. **${safePlanField(step.title, 200)}**`,
+        ...step.details.map(detail => `   - ${safePlanField(detail, 300)}`),
+    ]).join('\n');
+}
+
+function safePlanField(value: string, maximum: number): string {
+    return sanitizeAgentMarkdown(value, maximum)
+        .replace(/[\r\n]+/gu, ' ')
+        .trim()
+        .replace(/(?<!\\)([`*_[\]])/gu, '\\$1');
 }
 
 function directAnswerProjection(payload: Record<string, unknown>): SemanticReplyProjection | undefined {

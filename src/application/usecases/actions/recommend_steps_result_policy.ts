@@ -1,6 +1,6 @@
 import { Result } from '../../../data/model/result';
 import type { RecommendationState } from '../../../data/model/recommendation_state';
-import { createRecommendationFingerprint, isNoNewRecommendation, limitStoredRecommendation, NO_NEW_RECOMMENDATIONS } from '../../../application/policies/recommendation_policy';
+import { createRecommendationFingerprint, limitStoredRecommendation } from '../../../application/policies/recommendation_policy';
 import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
 import { ApplicationError } from '../../errors/application_error';
 import type { RecommendStepsContext, RecommendStepsOutcome } from '../push_single_action_contexts';
@@ -8,6 +8,11 @@ import {
     agentOutputLocaleFailureMessage,
     validateAgentOutputLocale,
 } from '../../policies/agent_output_locale_policy';
+import {
+    implementationPlanFingerprintInput,
+    parseImplementationPlan,
+    type ImplementationPlan,
+} from '../../../domain/implementation_plan';
 
 export function buildRecommendationResult(
     param: RecommendStepsContext,
@@ -17,28 +22,41 @@ export function buildRecommendationResult(
     previousRecommendation: RecommendationState | undefined,
     issueNumber: number,
 ): RecommendStepsOutcome {
-    const steps = extractRecommendationText(response, param.targetLocale);
-    if (!steps) {
-        return recommendationFailure(taskId, 'The configured agent returned no recommendation.');
+    const extracted = extractImplementationPlan(response, param.targetLocale);
+    if (!extracted) {
+        return recommendationFailure(taskId, 'The configured agent returned an invalid implementation plan.');
     }
-    logDebugInfo(`RecommendSteps: agent response received. Steps length=${steps.length}.`);
-    if (isNoNewRecommendation(steps)) {
-        return previousRecommendation
-            ? skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'agent found no material change')
-            : recommendationFailure(taskId, 'The configured agent returned unchanged without a previous recommendation.');
+    if (extracted.kind === 'unchanged') {
+        if (!previousRecommendation) {
+            return recommendationFailure(taskId, 'The configured agent returned unchanged without a previous recommendation.');
+        }
+        if (!previousRecommendation.implementationPlan) {
+            return recommendationFailure(taskId, 'The configured agent returned unchanged for a legacy plan that requires structured migration.');
+        }
+        return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'agent found no material change');
     }
-    const recommendationFingerprint = createRecommendationFingerprint(steps);
+    const recommendation = implementationPlanContextText(extracted.plan);
+    logDebugInfo(`RecommendSteps: structured agent response received. Step count=${extracted.plan.steps.length}.`);
+    const recommendationFingerprint = createRecommendationFingerprint(
+        implementationPlanFingerprintInput(extracted.plan),
+    );
     if (previousRecommendation?.recommendationFingerprint === recommendationFingerprint) return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'recommendation is unchanged');
     const recommendationState: RecommendationState = {
         issueDescriptionFingerprint,
         recommendationFingerprint,
-        recommendation: limitStoredRecommendation(steps),
+        recommendation: limitStoredRecommendation(recommendation),
+        implementationPlan: extracted.plan,
     };
     return recommendationOutcome([new Result({
         id: taskId,
         success: true,
         executed: true,
-        payload: { issueNumber, recommendedSteps: steps, recommendationState },
+        payload: {
+            issueNumber,
+            recommendedSteps: recommendation,
+            implementationPlan: extracted.plan,
+            recommendationState,
+        },
     })]);
 }
 
@@ -64,12 +82,42 @@ function recommendationFailure(taskId: string, message: string): RecommendStepsO
     ]);
 }
 
-function extractRecommendationText(response: string | Record<string, unknown> | undefined, targetLocale: string): string {
-    if (response == null) return '';
+type ExtractedImplementationPlan =
+    | { readonly kind: 'unchanged' }
+    | { readonly kind: 'recommendation'; readonly plan: ImplementationPlan };
+
+function extractImplementationPlan(
+    response: string | Record<string, unknown> | undefined,
+    targetLocale: string,
+): ExtractedImplementationPlan | undefined {
+    if (response == null) return undefined;
     const validation = validateAgentOutputLocale(response, targetLocale);
     if (validation.kind === 'invalid') {
         throw new ApplicationError('locale.output-invalid', agentOutputLocaleFailureMessage(validation));
     }
-    if (validation.payload.status === 'unchanged') return NO_NEW_RECOMMENDATIONS;
-    return typeof validation.payload.steps === 'string' ? validation.payload.steps.trim() : '';
+    if (!hasOnlyResponseKeys(validation.payload)) return undefined;
+    if (validation.payload.status === 'unchanged') {
+        return validation.payload.steps === null && validation.payload.acceptance === null
+            ? Object.freeze({ kind: 'unchanged' })
+            : undefined;
+    }
+    if (validation.payload.status !== 'recommendation') return undefined;
+    const plan = parseImplementationPlan({
+        steps: validation.payload.steps,
+        acceptance: validation.payload.acceptance,
+    });
+    return plan ? Object.freeze({ kind: 'recommendation', plan }) : undefined;
+}
+
+function hasOnlyResponseKeys(payload: Readonly<Record<string, unknown>>): boolean {
+    const allowed = ['outputLocale', 'status', 'steps', 'acceptance'];
+    return Object.keys(payload).every(key => allowed.includes(key));
+}
+
+function implementationPlanContextText(plan: ImplementationPlan): string {
+    const steps = plan.steps.flatMap((step, index) => [
+        `${index + 1}. ${step.title}`,
+        ...step.details.map(detail => `   - ${detail}`),
+    ]);
+    return [...steps, '', `Acceptance: ${plan.acceptance}`].join('\n');
 }

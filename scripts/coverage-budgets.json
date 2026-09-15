@@ -360,6 +360,31 @@
       "successMessage": "repository localization coverage: PASS (pure policies 100%; changed path 95% lines/statements, 90% branches/functions)"
     },
     {
+      "name": "Structured implementation plan",
+      "missingEntryLabel": "structured implementation plan",
+      "rules": [
+        {
+          "files": [
+            "src/domain/implementation_plan.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/data/model/recommendation_state.ts",
+            "src/application/policies/agent_response_schemas.ts",
+            "src/application/policies/semantic_result_publication_policy.ts",
+            "src/application/usecases/actions/recommend_steps_result_policy.ts",
+            "src/application/usecases/actions/recommend_steps_workflow.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "structured implementation plan coverage: PASS (domain contract 100%; schema/workflow/publication path 95% lines/statements, 90% branches/functions)"
+    },
+    {
       "name": "Branch synchronization presentation",
       "missingEntryLabel": "branch synchronization presentation",
       "rules": [
