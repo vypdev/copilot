@@ -1,4 +1,5 @@
 import { CONFIG_SCHEMA_VERSION, Config } from '../config';
+import { isRecommendationState } from '../recommendation_state';
 
 describe('Config', () => {
   it('ignores malformed external data without throwing', () => {
@@ -60,6 +61,8 @@ describe('Config', () => {
       recommendationFingerprint: 'recommendation-hash',
       recommendation: '1. Add tests',
     });
+    expect(isRecommendationState(c.recommendationState)).toBe(true);
+    expect(isRecommendationState({ recommendation: 'incomplete' })).toBe(false);
   });
 
   it('deep-restores and freezes a structured implementation plan', () => {

@@ -299,6 +299,27 @@ describe('RecommendStepsUseCase', () => {
     expect(lastOutcome?.configurationPatch).toBeUndefined();
   });
 
+  it.each([
+    { steps: null, acceptance: 'Must be null.' },
+    { steps: planFromText('One\nTwo\nThree').steps, acceptance: null },
+  ])('rejects an inconsistent unchanged response %#', async ({ steps, acceptance }) => {
+    mockGetDescription.mockResolvedValue('Implement login feature.');
+    mockAskAgent.mockResolvedValue({ status: 'unchanged', steps, acceptance });
+
+    const results = await invoke(baseParam());
+
+    expect(results[0].errors[0].message).toBe('The configured agent returned an invalid implementation plan.');
+  });
+
+  it('rejects an unknown response status', async () => {
+    mockGetDescription.mockResolvedValue('Implement login feature.');
+    mockAskAgent.mockResolvedValue({ status: 'unexpected', steps: null, acceptance: null });
+
+    const results = await invoke(baseParam());
+
+    expect(results[0].errors[0].message).toBe('The configured agent returned an invalid implementation plan.');
+  });
+
   it('does not publish a duplicate recommendation when the normalized response is unchanged', async () => {
     mockGetDescription.mockReset();
     mockGetDescription
