@@ -3,9 +3,9 @@
 - Status: Implemented — automated gates and controlled pull-request UX evidence complete
 - Date: 2026-09-14
 - Catalog capability ID: github-communication-experience
-- Last verified: 2026-09-15 against the merged implementation and the
-  executable disjoint test-budget and multilingual fixture evidence described
-  in §13
+- Last verified: 2026-09-15 against the strict greenfield locale contract, the
+  executable disjoint test budget, and the multilingual fixture evidence
+  described in §13
 - Owners: Copilot maintainers
 - Scope: Define one English-default repository locale profile and apply it generically to deterministic UI, agent-generated content, and safe interpretation of addressed comments.
 - Related issues/PRs: [issue #334](https://github.com/vypdev/copilot/issues/334), [PR #366](https://github.com/vypdev/copilot/pull/366) through [PR #390](https://github.com/vypdev/copilot/pull/390)
@@ -65,7 +65,7 @@ automation could observe model-generated text under the human comment identity.
 ### 2.2 Baseline behavior before rollout
 
 The following facts describe the pre-PR-#366 baseline audited on 2026-09-14.
-They are retained as migration evidence and are not claims about the current
+They are retained as decision evidence and are not claims about the current
 implementation:
 
 1. `Locale` is a mutable data model with only `issue` and `pullRequest` strings;
@@ -152,7 +152,7 @@ implementation:
 ### 2.4 Retrospective classification
 
 This SDD began as a prospective behavior change. Section 2 preserves the
-pre-implementation facts used to define compatibility and migration; sections
+pre-implementation facts used to define the replacement contract; sections
 13–19 record the completed rollout and executable evidence. Baseline behavior
 is not part of the implemented contract.
 
@@ -214,7 +214,7 @@ Normative terms:
    bot-owned response only when source and target materially differ.
 8. Guarantee atomic English fallback and observable fallback reasons without
    breaking the underlying domain operation.
-9. Provide complete setup, doctor, migration, operator, security, and contributor
+9. Provide complete setup, doctor, operator, security, and contributor
    documentation with executable examples.
 
 ### 4.2 Non-goals
@@ -225,14 +225,12 @@ Normative terms:
    protection, error codes, JSON keys, markers, labels, branch names, refs,
    package names, or URLs.
 3. Infer the repository's target language from each incoming comment.
-4. Automatically rewrite existing human comments that carry the legacy v2
-   translation marker.
-5. Provide user-editable arbitrary HTML/Markdown templates or an unbounded
+4. Provide user-editable arbitrary HTML/Markdown templates or an unbounded
    terminology customization system.
-6. Guarantee region-specific professional translation quality without a reviewed
+5. Guarantee region-specific professional translation quality without a reviewed
    bundled catalog; safe dynamic localization and fallback are the generic
    contract.
-7. Translate machine-searchable operational logs.
+6. Translate machine-searchable operational logs.
 
 ### 4.3 Fixed product/safety invariants
 
@@ -325,19 +323,18 @@ Summary language.
 ### 6.2 Locale validation and canonicalization
 
 1. Trim surrounding ASCII whitespace.
-2. Empty scope override means inheritance; empty repository locale means the
-   default `en-US` only for backward-compatible action deserialization.
+2. Empty scope override means inheritance; empty repository locale resolves to
+   the product default `en-US`.
 3. Accept at most 255 characters.
 4. Validate and canonicalize with the runtime `Intl.getCanonicalLocales` /
    `Intl.Locale` implementation supported by the declared Node runtime.
 5. Require a meaningful language subtag; reject `und` and private-use-only
    targets because they cannot select product language.
 6. Persist and expose the canonical hyphenated tag.
-7. During one major-version migration window, accept underscores such as
-   `pt_BR` by replacing separators before validation and emit one setup/doctor
-   deprecation warning. New documentation uses only canonical hyphens.
+7. Reject underscore-separated values such as `pt_BR`; accepted tags use BCP-47
+   hyphens and may be canonicalized for casing, for example `pt-br` to `pt-BR`.
 8. Reject malformed, duplicate-extension, over-255-character, control-character,
-   and noncanonical-after-normalization values before any provider mutation.
+   `und`, and private-use-only values before any provider mutation.
 
 ### 6.3 Deterministic message catalogs
 
@@ -569,7 +566,7 @@ semantic ports and returns one safe localized artifact.
 - **Trusted inputs:** validated configured locale, fixed descriptor/placeholder
   schemas, trusted repository URLs, stable command definitions.
 - **Untrusted inputs:** user prose, issue/PR content, agent/dynamic catalog output,
-  provider errors, legacy translated bodies, and arbitrary existing comments.
+  provider errors, unrecognized translation-like markers, and arbitrary comments.
 - **Provider error mapping:** language/catalog failures become stable reason codes
   (`locale.catalog-unavailable`, `locale.output-invalid`,
   `locale.translation-failed`) and atomic fallback, not thrown raw text.
@@ -812,9 +809,9 @@ I couldn't safely interpret this request in `fr-FR`, so no repository change was
 | Addressed request translation fails | no repository mutation | original human comment | user retry only | rephrase or restore provider | one fallback reply |
 | Catalog misses one required ID | build fails for bundled catalog; runtime dynamic slice falls back atomically | English catalog | no | fix catalog manifest | no partial catalog publication |
 | Locale changes during durable release | in-flight operation remains in snapshot locale | operation state and cards | next operation uses new profile | none | no historical rewrite |
-| Legacy version-1 release state has no locale snapshot | in-flight operation uses the currently resolved profile | legacy operation and irreversible facts | each continuation remains safe | finish the operation, then use a fresh issue for a frozen profile | no state rewrite |
+| Durable release state has no valid locale snapshot | state is invalid and continuation stops before provider mutation | unreadable bytes only | no | start a new operation from valid current configuration | discard invalid state after operator review |
 | Locale changes for normal status card | old language remains until next semantic update | card identity/state | rerender on next update | optional explicit status command | history untouched |
-| Legacy v2 translated human comment | historic authorship surface remains as-is | translated body plus embedded original | no automatic rewrite | user may edit own comment manually | reader remains tolerant |
+| Comment contains an unrecognized translation-like marker | marker grants no ownership, replay, or skip semantics | original comment | normal admission rules only | use a current addressed request if action is intended | none |
 
 Fallback errors follow the semantic error contract and never imply the domain
 operation failed when only localization/publication degraded. Publication retry
@@ -850,7 +847,7 @@ does not rerun irreversible work.
   original quotation only when translation occurred.
 - **Setup/doctor:** configured/canonical/effective repository, issue, and PR
   locales; exact/base/dynamic catalog resolution capability; agent readiness;
-  underscore deprecation; no secret values.
+  strict invalid-tag reporting; no secret values.
 - **Job Summary:** repository-locale prose plus stable fields for requested,
   resolved, and source locale; catalog version/source; fallback reason;
   adaptation status; output-locale validation; translation disclosure included;
@@ -872,62 +869,51 @@ does not rerun irreversible work.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
-### 13.1 Configuration migration
+### 13.1 Greenfield contract
 
-Current configuration:
+There are no installed users or persisted production states to migrate. The
+implementation therefore exposes exactly one current contract:
 
-```yaml
-issues-locale: en-US
-pull-requests-locale: en-US
-```
+- `repository-locale` defaults to `en-US`; empty issue and PR overrides inherit;
+- configured tags use valid BCP-47 hyphens; underscore variants are invalid;
+- one `adapt_comment_language` prompt and one
+  `LANGUAGE_ADAPTATION_RESPONSE_SCHEMA` exist;
+- only `copilot:request-translation schema="3"` is recognized as translation
+  metadata;
+- every ready product-facing agent context carries an explicit target locale;
+  and
+- every durable deployment operation carries a valid immutable locale profile.
 
-New effective equivalent:
+Removed names, marker formats, optional locale fields, and alternate schemas are
+not parsed, warned about, converted, or re-emitted. Unknown action inputs remain
+configuration errors under the action schema.
 
-```yaml
-repository-locale: en-US
-issues-locale: ""
-pull-requests-locale: ""
-```
+### 13.2 Catalog and code rollout
 
-- Add `repository-locale` with action/setup/CLI default `en-US`.
-- Change issue/PR action input defaults to empty inheritance.
-- Preserve any explicitly stored existing issue/PR values as overrides.
-- If existing workflows omit both fields, behavior remains English.
-- Setup migration writes the repository value first, removes redundant explicit
-  `en-US` scope variables when safe, and never overwrites a non-English explicit
-  value.
-- One major-version window accepts underscore-separated legacy values with a
-  doctor warning; canonical storage uses hyphens.
-
-### 13.2 Catalog and code migration
-
-- Extract all current user-facing deterministic strings into the authoritative
-  typed English catalog.
+- Extract all user-facing deterministic strings into the authoritative typed
+  English catalog.
 - Consolidate deployment/Bugbot/ad hoc Spanish copy into the reviewed generic
   Spanish catalog and remove feature-local locale conditionals.
-- Introduce a temporary source inventory allowlist, reduce it to zero
-  unauthorized product strings, then make the check blocking.
-- Update every product-facing agent prompt/schema to carry target/output locale.
-- Replace the two-call comment check/translation path with one adaptation use
-  case that has no source-comment update port.
+- Keep the source inventory check blocking at zero unauthorized product strings.
+- Require target/output locale on every product-facing agent prompt/schema.
+- Use one adaptation use case with no source-comment update port.
+- Reject incomplete current state at the domain or application boundary before
+  any provider mutation.
 
-### 13.3 Existing content and markers
+### 13.3 Content and markers
 
-- Do not rewrite historic issue/PR/review comments, descriptions, Checks, or Job
-  Summaries solely because configuration changes.
-- Continue recognizing legacy v2 translated-comment markers as inert metadata so
-  they cannot retrigger automation.
-- Do not automatically restore legacy-mutated human comments; the embedded
-  original may be incomplete/truncated and automatic authorship repair could lose
-  user edits.
-- New responses use `copilot:request-translation schema="3"`; this marker exists
-  only in bot-owned response content.
+- Configuration changes never rewrite issue/PR/review comments, descriptions,
+  Checks, or Job Summaries solely to change their language.
+- Current responses use `copilot:request-translation schema="3"`; the marker
+  exists only in bot-owned response content.
+- Any other translation-like marker is untrusted comment text and grants no
+  ownership, skip, replay, or update semantics.
 - Durable bot-owned cards rerender in the latest effective locale on their next
   real semantic update, subject to release snapshot rules.
 
 ### 13.4 Implementation sequence (completed)
 
-1. Add locale value objects/profile, action/setup migration, catalog manifest,
+1. Add locale value objects/profile, action/setup cutover, catalog manifest,
    English/Spanish catalogs, validation, and observability without changing
    source comments.
 2. Migrate deterministic common errors, welcome/help, Job Summary, Check
@@ -955,8 +941,8 @@ effective locale for new durable operations, resolves one catalog per issue or
 managed-PR destination, renders repository-locale Job Summaries, localizes the
 four bounded milestones, and removes internal `Result.steps` from deployment
 operator UI. The installed release/hotfix templates pass `repository-locale` and
-empty inheriting issue/PR overrides. Legacy version-1 operations without a locale
-remain readable and use the current effective profile until completion.
+empty inheriting issue/PR overrides. Durable operations without a valid locale
+snapshot are rejected before continuation.
 The setup/doctor follow-up adds one English-default repository-locale catalog for
 the complete doctor artifact, reuses it for merge-readiness rows and terminal
 presentation, replaces pull-request-mode prose with stable reason codes, and
@@ -1057,11 +1043,12 @@ repository locale merely to manufacture evidence.
 
 ### 13.5 Rollback
 
-Rollback MUST preserve the new input inheritance reader and legacy/new marker
-tolerance. Incident response may force atomic `en-US` presentation while keeping
-domain behavior operational. It MUST NOT restore source-comment mutation or
-mixed partial catalogs. In-flight durable releases retain their snapshotted
-locale and irreversible facts.
+Rollback MUST preserve the single locale reader and current marker contract.
+Incident response may force atomic `en-US` presentation while keeping domain
+behavior operational. It MUST NOT reintroduce removed aliases, alternate
+schemas, permissive state readers, source-comment mutation, or mixed partial
+catalogs. In-flight durable releases retain their required snapshotted locale
+and irreversible facts.
 
 ## 14. Testing strategy and numeric budget
 
@@ -1076,12 +1063,12 @@ contract is enforced by `pnpm run validate:specifications`.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/configuration/pure planning | 26 | defaults, inheritance, canonicalization, invalid/legacy tags, 255-char bound, scope/snapshot, locale equality |
+| Domain/configuration/pure planning | 26 | defaults, inheritance, canonicalization, invalid tags including underscores, 255-char bound, scope/snapshot, locale equality |
 | Catalog/renderer contracts | 28 | completeness, exact/base/dynamic/fallback, atomicity, placeholders, plurals, number formatting, expansion, missing/hostile IDs |
 | Translation/application state | 26 | admission order, command arguments, mention path, matches/translated/ambiguous/failed, one call, output-locale recovery, duplicate request |
 | Adapters/provider contracts | 16 | static/dynamic adapters, schema errors, timeouts, cache key, error mapping, no comment update capability |
-| Workflows/setup/generated schemas | 18 | action defaults, setup migration, doctor, issue/PR/run/CLI surface propagation, agent task inventory, release snapshot |
-| UI/UX/security/migration/integration | 22 | five primary states, en/es/fr/ar/zh fixtures, bidi/CJK, quotes, mentions/commands/markers, v2/v3, fallback, end-to-end paths |
+| Workflows/setup/generated schemas | 18 | action defaults, strict setup validation, doctor, issue/PR/run/CLI surface propagation, agent task inventory, release snapshot |
+| UI/UX/security/integration | 22 | five primary states, en/es/fr/ar/zh fixtures, bidi/CJK, quotes, mentions/commands/current markers, fallback, end-to-end paths |
 | **Total** | **136** | No double counting |
 
 Required quality gates:
@@ -1115,7 +1102,7 @@ Required quality gates:
 | Audience | Artifact/page | Required content | Validation/navigation |
 |---|---|---|---|
 | Repository owner | `docs/configuration.mdx`, checklist, issue/PR configuration pages | default, precedence, examples, valid tags, agent prerequisite, fallback | action/setup schema fixtures |
-| Setup owner | setup/doctor and provisioning docs | storage names, migration, effective output, warnings | CLI golden tests |
+| Setup owner | setup/doctor and provisioning docs | storage names, validation, effective output, warnings | CLI golden tests |
 | Issue/PR user | `docs/features.mdx`, comment commands, pull-request capabilities | what is translated, target vs source, original quote, no source edit | response fixture links |
 | Bugbot user | Bugbot configuration/finding/how-it-works docs | PR locale, localized findings/cards, stable commands/Check names | Bugbot locale matrix |
 | Release operator | deployment orchestration and release/hotfix docs | issue vs PR scope, operation snapshot, fallback | release fixture matrix |
@@ -1134,9 +1121,8 @@ only” language, and clearly distinguish:
 - safe English fallback; and
 - machine contracts that never localize.
 
-Migration/deprecation copy remains only for its declared window and is removed
-with the legacy underscore reader/v2 workflow. Locale examples use real valid
-tags and never imply that fallback is a successful translation.
+No migration or deprecation copy is rendered. Locale examples use real valid
+hyphenated tags and never imply that fallback is a successful translation.
 
 ## 16. Acceptance scenarios
 
@@ -1147,10 +1133,10 @@ tags and never imply that fallback is a successful translation.
    repository UI inherit Spanish while commands/codes/refs remain unchanged.
 3. Given repository French and issue Spanish override, then an issue card is
    Spanish, a PR card is French, and a Job Summary is French.
-4. Given an explicit existing `pull-requests-locale: es-ES` during migration,
-   then it remains an override and is not replaced by repository English.
-5. Given `pt_BR` during the compatibility window, setup canonicalizes it to
-   `pt-BR`, warns once, and persists only the canonical tag.
+4. Given an explicit `pull-requests-locale: es-ES`, then it remains an override
+   and is not replaced by repository English.
+5. Given `pt_BR`, then setup rejects the configuration before planning or
+   mutation and instructs the operator to supply a valid BCP-47 tag.
 6. Given malformed, overlong, `und`, or private-use-only locale configuration,
    then validation fails before labels, comments, branches, releases, or other
    provider/domain mutations.
@@ -1185,9 +1171,9 @@ tags and never imply that fallback is a successful translation.
     its snapshotted issue/PR locale; the next release uses the new profile.
 18. Given a locale change for an ordinary progress card, then historic comments
     remain untouched and the next semantic card update uses the new locale.
-19. Given a legacy v2 translated human comment, then it remains inert and is not
-    automatically rewritten; all new translated requests use bot-owned v3
-    response context.
+19. Given a comment containing a noncurrent translation-like marker, then that
+    text grants no ownership or skip semantics; only current bot-owned schema-3
+    response context is recognized.
 20. Given right-to-left and CJK fixtures at narrow width, then state/action/links
     remain understandable, technical identifiers retain order, and text meaning
     does not depend on icon or layout direction.
@@ -1213,14 +1199,14 @@ tags and never imply that fallback is a successful translation.
 | §6.4 agent locale propagation | agent request/schema inventory | every task target/output-locale tests | agent execution contract |
 | §6.5 non-mutating adaptation | adapt-user-request use case and language port | ordering, one-call, no-update, response context cases | comment-command guide |
 | §6.6 state/error behavior | adaptation state policy | matches/translated/ambiguous/failed/replay | troubleshooting |
-| §7 configuration/migration | action/setup/doctor policies | schema/storage/migration/snapshot tests | setup and upgrade pages |
+| §7 configuration | action/setup/doctor policies | schema/storage/rejection/snapshot tests | setup and configuration pages |
 | §8 architecture/trust | boundary and source-inventory checks | import/string/port/schema tests | architecture guide |
 | §9 localized UX | semantic feature renderers | multilingual golden/semantic/manual fixtures | issue/PR/Bugbot/release pages |
 | §9.3 original quote | translation-context renderer | escaping, mention, marker, size tests | translation behavior page |
 | §10 atomic fallback/recovery | localization error policy | provider/schema/partial/operation tests | error reference |
 | §11 privacy/security | sanitizer, minimizer, telemetry projection | injection/bidi/secret/body-absence tests | security operations |
 | §12 observability/cost | summary/log/metric projections and run cache | fields, one-call, no-body assertions | quality observability |
-| §13 compatibility | legacy readers and profile migration | explicit override/v2/v3/rollback tests | migration guide |
+| §13 greenfield cutover | strict readers and required locale state | removed-name/invalid-marker/state/rollback tests | configuration guide |
 | §14 quality budget | coverage scripts and disjoint communication test ledger | 141 allocated localization cases plus CI coverage evidence | contributor testing guide |
 
 ## 18. Implementation sequence
@@ -1229,7 +1215,7 @@ tags and never imply that fallback is a successful translation.
    hard-coded product strings, product-facing agent tasks, source-comment update
    calls, docs, workflows, and generated bundles.
 2. Introduce immutable BCP-47 `LocaleTag`, repository profile, surface selector,
-   input precedence, action/setup migration, and pure exhaustive tests.
+   input precedence, action/setup cutover, and pure exhaustive tests.
 3. Define typed descriptors, English source catalog, reviewed generic Spanish
    catalog, manifests, placeholder/plural validators, atomic resolver, and
    renderer contracts.
@@ -1245,8 +1231,8 @@ tags and never imply that fallback is a successful translation.
    arguments.
 8. Migrate Bugbot, deployment, merge readiness, branch sync, plans, progress,
    lifecycle explanations, and remaining local en/es branches.
-9. Add setup/doctor diagnostics, legacy v2/underscore compatibility, v3 response
-   markers, and controlled rollback behavior.
+9. Add setup/doctor diagnostics, strict underscore rejection, current response
+   markers, and controlled rollback behavior with no alternate reader.
 10. Update every named SDD and documentation page, regenerate action/setup/build
     artifacts, run the complete test/coverage/type/lint/workflow/docs/spec/build
     validation suite, and perform multilingual manual GitHub acceptance.
@@ -1271,7 +1257,7 @@ tags and never imply that fallback is a successful translation.
       execution boundaries cannot be changed by translation; non-prose command
       grammars preserve every argument byte-for-byte.
 - [x] Atomic fallback, provider failure, wrong-language output, locale change,
-      durable snapshot, v2/v3 compatibility, and rollback pass.
+      required durable snapshot, removed-marker rejection, and rollback pass.
 - [x] RTL, CJK, expansion, plural, narrow-width, descriptive-link, sanitization,
       and bidi tests/manual evidence pass.
 - [x] Architecture, source-string, agent-task, catalog-manifest, and no-comment-
@@ -1280,7 +1266,7 @@ tags and never imply that fallback is a successful translation.
       double counting semantic publication tests.
 - [x] Action/setup/doctor/CLI/workflow schemas, persisted variables, generated
       bundles, examples, and defaults agree.
-- [x] User, setup, operator, security, migration, and contributor documentation
+- [x] User, setup, operator, security, configuration, and contributor documentation
       is complete, fixture-backed, discoverable, and contains no obsolete claims.
 - [x] Related implemented/as-built SDD localization clauses are amended in the
       implementation change so there is one current normative contract.

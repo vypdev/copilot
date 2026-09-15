@@ -10,7 +10,6 @@ import {
     shouldUpsertSetupResource,
     validateSetupStorageAgainstRemote,
     validateSetupConfiguration,
-    setupLocaleMigrationWarnings,
 } from '../setup_configuration_policy';
 import type { SetupConfigurationOverrides } from '../setup_configuration_policy';
 
@@ -46,18 +45,15 @@ describe('setup configuration policy', () => {
         ]);
     });
 
-    it('canonicalizes legacy locale separators while preserving empty override inheritance', () => {
+    it('canonicalizes valid BCP-47 casing while preserving empty override inheritance', () => {
         const configuration = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
-            repository: { repositoryLocale: 'pt_BR', issueLocale: '', pullRequestLocale: 'zh_hant_tw' },
+            repository: { repositoryLocale: 'pt-br', issueLocale: '', pullRequestLocale: 'zh-hant-tw' },
         });
         const normalized = normalizeSetupConfigurationLocales(configuration);
 
         expect(normalized.repository).toMatchObject({
             repositoryLocale: 'pt-BR', issueLocale: '', pullRequestLocale: 'zh-Hant-TW',
         });
-        expect(setupLocaleMigrationWarnings(configuration)).toEqual([
-            expect.stringContaining('underscore locale separators'),
-        ]);
         expect(buildSetupRepositoryVariables(configuration)).toEqual(expect.arrayContaining([
             { name: 'REPOSITORY_LOCALE', value: 'pt-BR' },
             { name: 'PULL_REQUESTS_LOCALE', value: 'zh-Hant-TW' },
@@ -68,9 +64,9 @@ describe('setup configuration policy', () => {
         });
     });
 
-    it('adds locale migration warnings ahead of operational setup warnings', () => {
-        const plan = buildSetupPlan(createDefaultSetupConfiguration(), [], ['Canonicalized legacy locale.']);
-        expect(plan.warnings[0]).toBe('Canonicalized legacy locale.');
+    it('adds explicit operational warnings to the setup plan', () => {
+        const plan = buildSetupPlan(createDefaultSetupConfiguration(), [], ['Confirm protected branch readiness.']);
+        expect(plan.warnings[0]).toBe('Confirm protected branch readiness.');
     });
 
     it('removes optional files while retaining core setup resources', () => {

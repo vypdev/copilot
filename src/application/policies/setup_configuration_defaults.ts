@@ -213,16 +213,3 @@ export function normalizeSetupConfigurationLocales(configuration: SetupConfigura
         },
     };
 }
-
-export function setupLocaleMigrationWarnings(configuration: SetupConfiguration): readonly string[] {
-    const values = [
-        configuration.repository.repositoryLocale,
-        configuration.repository.issueLocale,
-        configuration.repository.pullRequestLocale,
-    ];
-    return values.some(value => value.includes('_'))
-        ? Object.freeze([
-            'Legacy underscore locale separators were canonicalized to BCP-47 hyphens. Update saved configuration before the next major version.',
-        ])
-        : Object.freeze([]);
-}

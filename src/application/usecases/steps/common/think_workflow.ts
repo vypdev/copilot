@@ -12,6 +12,7 @@ import type { AgentTask } from '../../../../domain/agent';
 import { ApplicationError, toApplicationError } from '../../../errors/application_error';
 import type { ThinkRequestSource } from './think_request_policy';
 import type { TranslationPublication } from '../../../policies/comment_translation_policy';
+import { canonicalizeLocaleTag } from '../../../../domain/locale';
 
 export interface ThinkWorkflowDependencies {
     issueDescriptionQueryPort: BoundIssueDescriptionQueryPort;
@@ -29,12 +30,12 @@ export type ThinkContext =
         readonly agentTask: AgentTask;
         readonly agentConfiguration: Readonly<AgentConfiguration>;
         readonly translationPublication?: TranslationPublication;
-        readonly targetLocale?: string;
+        readonly targetLocale: string;
     };
 
 export interface ThinkContextSource extends ThinkRequestSource {
     readonly ai: { getAgentConfiguration(task: AgentTask): AgentConfiguration };
-    readonly locale?: { readonly repository?: string; readonly issue?: string; readonly pullRequest?: string };
+    readonly locale: { readonly repository: string; readonly issue: string; readonly pullRequest: string };
 }
 
 export function projectThinkContext(source: ThinkContextSource): ThinkContext {
@@ -59,10 +60,10 @@ export function projectThinkContext(source: ThinkContextSource): ThinkContext {
         agentTask,
         agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration(agentTask) }),
         targetLocale: request.destinationType === 'PR'
-            ? source.locale?.pullRequest ?? 'en-US'
+            ? source.locale.pullRequest
             : request.destinationType === 'local'
-                ? source.locale?.repository ?? 'en-US'
-                : source.locale?.issue ?? 'en-US',
+                ? source.locale.repository
+                : source.locale.issue,
     });
 }
 
@@ -82,6 +83,10 @@ export async function runThinkWorkflow(
         if (!('agentConfiguration' in param)) {
             throw new ApplicationError('provider.contract-invalid', 'Ready Think context is missing its selected agent configuration.');
         }
+        if (!('targetLocale' in param)) {
+            throw new ApplicationError('provider.contract-invalid', 'Ready Think context is missing its target locale.');
+        }
+        canonicalizeLocaleTag(param.targetLocale);
         if (!isAgentConfigurationReady(param.agentConfiguration)) {
             return [
                 new Result({

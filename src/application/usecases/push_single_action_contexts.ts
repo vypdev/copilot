@@ -153,7 +153,7 @@ export interface PushSingleActionContextSource {
   readonly issueNumber: number;
   readonly eventName: string;
   readonly tokenUser?: string;
-  readonly locale?: { readonly repository?: string; readonly issue?: string; readonly pullRequest?: string };
+  readonly locale: { readonly repository: string; readonly issue: string; readonly pullRequest: string };
   readonly inputs?: {
     readonly action?: string;
     readonly after?: string;
@@ -288,7 +288,7 @@ export function projectProgressContext(source: PushSingleActionContextSource): P
     ]),
     agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('findings') }),
     includeReasoning: source.ai.getAiIncludeReasoning(),
-    targetLocale: source.locale?.issue ?? 'en-US',
+    targetLocale: source.locale.issue,
     ...(sourceHeadSha ? { sourceHeadSha } : {}),
   });
 }
@@ -302,7 +302,7 @@ export function projectRecommendStepsContext(source: PushSingleActionContextSour
     ...(source.tokenUser ? { tokenUser: source.tokenUser } : {}),
     ...(previous ? { previousRecommendation: previous } : {}),
     agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
-    targetLocale: source.locale?.issue ?? 'en-US',
+    targetLocale: source.locale.issue,
   });
 }
 
@@ -314,8 +314,8 @@ export function projectInactivityContext(source: PushSingleActionContextSource):
     ]),
     activityLabel: source.labels.lifecycle.aiProcessing,
     thresholdHours: source.inactivityThresholdHours,
-    locale: source.locale?.issue ?? 'en-US',
-    repositoryLocale: source.locale?.repository ?? 'en-US',
+    locale: source.locale.issue,
+    repositoryLocale: source.locale.repository,
     agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
   });
 }
@@ -329,7 +329,7 @@ export function projectBranchObservationContext(source: PushSingleActionContextS
     ...(sourceHeadSha ? { sourceHeadSha } : {}),
     ...(source.tokenUser ? { trustedBotLogin: source.tokenUser } : {}),
     repository: Object.freeze({ owner: source.owner, name: source.repo }),
-    locale: source.locale?.issue ?? 'en-US',
+    locale: source.locale.issue,
     agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
   });
 }
@@ -460,7 +460,7 @@ function copyInitialLabels(source: PushSingleActionContextSource['labels']): Ini
 function copyDeploymentOperation(operation: DeploymentOperationSnapshot): DeploymentOperationSnapshot {
   return Object.freeze({
     ...operation,
-    ...(operation.locale ? { locale: Object.freeze({ ...operation.locale }) } : {}),
+    locale: Object.freeze({ ...operation.locale }),
     reconciliationTargets: Object.freeze((operation.reconciliationTargets ?? []).map(target => Object.freeze({ ...target }))),
     ...(operation.publicationReceipt ? { publicationReceipt: Object.freeze({ ...operation.publicationReceipt }) } : {}),
     ...(operation.lastFailure ? { lastFailure: Object.freeze({ ...operation.lastFailure }) } : {}),

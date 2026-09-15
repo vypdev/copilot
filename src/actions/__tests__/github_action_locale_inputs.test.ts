@@ -13,12 +13,12 @@ describe('readGithubActionLocaleInputs', () => {
   });
 
   it('inherits the repository locale when surface overrides are empty', () => {
-    expect(readGithubActionLocaleInputs(reader({ [INPUT_KEYS.REPOSITORY_LOCALE]: 'fr_FR' }))).toEqual({
+    expect(readGithubActionLocaleInputs(reader({ [INPUT_KEYS.REPOSITORY_LOCALE]: 'fr-fr' }))).toEqual({
       repository: 'fr-FR', issue: 'fr-FR', pullRequest: 'fr-FR',
     });
   });
 
-  it('preserves explicit legacy surface configuration as overrides', () => {
+  it('preserves explicit surface configuration as overrides', () => {
     expect(readGithubActionLocaleInputs(reader({
       [INPUT_KEYS.REPOSITORY_LOCALE]: 'en-US',
       [INPUT_KEYS.ISSUES_LOCALE]: 'es-ES',
@@ -31,7 +31,7 @@ describe('readGithubActionLocaleInputs', () => {
 
   it('rejects malformed configuration before any workflow can mutate GitHub', () => {
     expect(() => readGithubActionLocaleInputs(reader({
-      [INPUT_KEYS.REPOSITORY_LOCALE]: 'not a locale',
+      [INPUT_KEYS.REPOSITORY_LOCALE]: 'pt_BR',
     }))).toThrow('Invalid locale tag');
   });
 });

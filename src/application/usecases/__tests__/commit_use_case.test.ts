@@ -46,6 +46,7 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
     eventName: 'push',
     tokenUser: 'bot',
     tokens: { token: 'token' },
+    locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
     commit: {
       commits: [{ id: 'c1', message: 'msg' }],
       branch: 'feature/123',

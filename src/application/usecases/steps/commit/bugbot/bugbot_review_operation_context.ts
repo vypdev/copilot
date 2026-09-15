@@ -33,7 +33,7 @@ export interface BugbotContextSelectionContext {
 
 export interface BugbotReviewOperationContext extends BugbotContextSelectionContext {
   readonly locale: {
-    readonly issue?: string;
+    readonly issue: string;
     readonly pullRequest: string;
   };
   readonly analysis: {
@@ -66,7 +66,7 @@ export interface BugbotCommitContext {
 }
 
 export interface BugbotContextSelectionSource {
-  readonly locale?: { readonly issue?: string; readonly pullRequest?: string };
+  readonly locale: { readonly issue: string; readonly pullRequest: string };
   readonly owner: string;
   readonly repo: string;
   readonly issueNumber: number;
@@ -159,8 +159,8 @@ export function projectBugbotReviewOperationContext(
   return Object.freeze({
     ...selection,
     locale: Object.freeze({
-      issue: source.locale?.issue ?? 'en-US',
-      pullRequest: source.locale?.pullRequest ?? 'en-US',
+      issue: source.locale.issue,
+      pullRequest: source.locale.pullRequest,
     }),
     analysis: Object.freeze({
       agentConfiguration: Object.freeze({ ...agentConfiguration }),
@@ -199,8 +199,8 @@ export function projectBugbotFixIntentContext(
   return Object.freeze({
     ...selection,
     locale: Object.freeze({
-      issue: source.locale?.issue ?? 'en-US',
-      pullRequest: source.locale?.pullRequest ?? 'en-US',
+      issue: source.locale.issue,
+      pullRequest: source.locale.pullRequest,
     }),
     comment: Object.freeze({
       body: isPullRequestReviewComment

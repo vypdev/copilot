@@ -35,8 +35,8 @@ describe('CheckIssueCommentLanguageUseCase', () => {
     }))).toMatchObject({ locale: 'fr-FR', issueNumber: 9, commentId: 90 });
   });
 
-  it('is inert for empty and legacy-translated comments', async () => {
-    for (const commentBody of ['', 'Done\n<!-- copilot:translated-comment:v2 -->']) {
+  it('is inert for empty and current translated comments', async () => {
+    for (const commentBody of ['', 'Done\n<!-- copilot:request-translation schema="3" -->']) {
       const results = await useCase.invoke(projectIssueCommentLanguageRequest(source({
         issue: { number: 1, commentId: 42, commentBody },
       })));

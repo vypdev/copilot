@@ -1321,7 +1321,7 @@ function renderBugbotStatusCard(projection, catalogOrLocale, links) {
     return lines.join('\n');
 }
 function renderBugbotReviewSnapshot(originalBody, input) {
-    const catalog = presentationCatalog(input.catalog ?? input.locale ?? 'en-US');
+    const catalog = presentationCatalog(input.catalog ?? input.locale);
     const hasUntrackedOverflow = /copilot-bugbot-review-overflow|### (?:Additional findings omitted by the comment limit|Hallazgos adicionales omitidos por el límite de comentarios)/u.test(originalBody ?? '');
     const normalized = normalizeHistoricalSnapshot(originalBody ?? '', input.analyzedHeadSha, catalog);
     const actionable = input.findings.filter((finding) => (0, review_state_1.isBugbotActionableState)(finding.state)).length;
@@ -5329,7 +5329,6 @@ function githubUsersMatch(left, right) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InvalidLocaleTagError = exports.MAX_LOCALE_TAG_LENGTH = exports.DEFAULT_REPOSITORY_LOCALE = void 0;
 exports.canonicalizeLocaleTag = canonicalizeLocaleTag;
-exports.normalizeLocaleTag = normalizeLocaleTag;
 exports.resolveLocaleProfile = resolveLocaleProfile;
 exports.localeForScope = localeForScope;
 exports.isLocaleProfile = isLocaleProfile;
@@ -5345,14 +5344,7 @@ class InvalidLocaleTagError extends Error {
     }
 }
 exports.InvalidLocaleTagError = InvalidLocaleTagError;
-/**
- * Canonicalizes one BCP-47 locale. Underscores are accepted for the documented
- * migration window, but every value leaving this boundary uses hyphens.
- */
 function canonicalizeLocaleTag(value) {
-    return normalizeLocaleTag(value).canonical;
-}
-function normalizeLocaleTag(value) {
     if (typeof value !== 'string')
         throw new InvalidLocaleTagError(String(value));
     const trimmed = value.trim();
@@ -5361,19 +5353,17 @@ function normalizeLocaleTag(value) {
         return codePoint <= 31 || codePoint === 127;
     }))
         throw new InvalidLocaleTagError(value);
-    const usedLegacySeparator = trimmed.includes('_');
-    const normalized = trimmed.replace(/_/gu, '-');
-    if (!normalized || normalized.length > exports.MAX_LOCALE_TAG_LENGTH) {
+    if (!trimmed || trimmed.length > exports.MAX_LOCALE_TAG_LENGTH || trimmed.includes('_')) {
         throw new InvalidLocaleTagError(value);
     }
-    if (/^x(?:-|$)/iu.test(normalized) || /^und(?:-|$)/iu.test(normalized)) {
+    if (/^x(?:-|$)/iu.test(trimmed) || /^und(?:-|$)/iu.test(trimmed)) {
         throw new InvalidLocaleTagError(value);
     }
     try {
-        const [canonical] = Intl.getCanonicalLocales(normalized);
+        const [canonical] = Intl.getCanonicalLocales(trimmed);
         if (!canonical)
             throw new InvalidLocaleTagError(value);
-        return Object.freeze({ canonical, usedLegacySeparator });
+        return canonical;
     }
     catch (error) {
         if (error instanceof InvalidLocaleTagError)
@@ -5930,7 +5920,6 @@ function getBugbotFixIntentPrompt(params) {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getTranslateCommentPrompt = exports.getCheckCommentLanguagePrompt = void 0;
 exports.getAdaptCommentLanguagePrompt = getAdaptCommentLanguagePrompt;
 /** Builds the single, schema-constrained request adaptation prompt. */
 const fill_1 = __nccwpck_require__(2559);
@@ -5956,10 +5945,6 @@ function getAdaptCommentLanguagePrompt(params) {
         commentBody: params.commentBody,
     });
 }
-/** @deprecated Compatibility export; both old entry points now use one adaptation prompt. */
-exports.getCheckCommentLanguagePrompt = getAdaptCommentLanguagePrompt;
-/** @deprecated Compatibility export for integrations importing the old prompt name. */
-exports.getTranslateCommentPrompt = getAdaptCommentLanguagePrompt;
 
 
 /***/ }),
@@ -6085,7 +6070,7 @@ function fillTemplate(template, params) {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PROMPT_NAMES = exports.getBugbotFixIntentPrompt = exports.getBugbotFixPrompt = exports.getBugbotPrompt = exports.getCliDoPrompt = exports.getTranslateCommentPrompt = exports.getAdaptCommentLanguagePrompt = exports.getCheckProgressPrompt = exports.getRecommendStepsPrompt = exports.getUserRequestPrompt = exports.getUpdatePullRequestDescriptionPrompt = exports.getThinkPrompt = exports.getAnswerIssueHelpPrompt = exports.fillTemplate = void 0;
+exports.PROMPT_NAMES = exports.getBugbotFixIntentPrompt = exports.getBugbotFixPrompt = exports.getBugbotPrompt = exports.getCliDoPrompt = exports.getAdaptCommentLanguagePrompt = exports.getCheckProgressPrompt = exports.getRecommendStepsPrompt = exports.getUserRequestPrompt = exports.getUpdatePullRequestDescriptionPrompt = exports.getThinkPrompt = exports.getAnswerIssueHelpPrompt = exports.fillTemplate = void 0;
 exports.getPrompt = getPrompt;
 /**
  * Prompt provider: one file per prompt, each exports a getter that fills the template with params.
@@ -6118,7 +6103,6 @@ var check_progress_2 = __nccwpck_require__(4623);
 Object.defineProperty(exports, "getCheckProgressPrompt", ({ enumerable: true, get: function () { return check_progress_2.getCheckProgressPrompt; } }));
 var check_comment_language_2 = __nccwpck_require__(3425);
 Object.defineProperty(exports, "getAdaptCommentLanguagePrompt", ({ enumerable: true, get: function () { return check_comment_language_2.getAdaptCommentLanguagePrompt; } }));
-Object.defineProperty(exports, "getTranslateCommentPrompt", ({ enumerable: true, get: function () { return check_comment_language_2.getTranslateCommentPrompt; } }));
 var cli_do_2 = __nccwpck_require__(2506);
 Object.defineProperty(exports, "getCliDoPrompt", ({ enumerable: true, get: function () { return cli_do_2.getCliDoPrompt; } }));
 var bugbot_2 = __nccwpck_require__(6998);
@@ -6135,8 +6119,7 @@ exports.PROMPT_NAMES = {
     USER_REQUEST: 'user_request',
     RECOMMEND_STEPS: 'recommend_steps',
     CHECK_PROGRESS: 'check_progress',
-    CHECK_COMMENT_LANGUAGE: 'check_comment_language',
-    TRANSLATE_COMMENT: 'translate_comment',
+    ADAPT_COMMENT_LANGUAGE: 'adapt_comment_language',
     CLI_DO: 'cli_do',
     BUGBOT: 'bugbot',
     BUGBOT_FIX: 'bugbot_fix',
@@ -6149,8 +6132,7 @@ const registry = {
     [exports.PROMPT_NAMES.USER_REQUEST]: (p) => (0, user_request_1.getUserRequestPrompt)(p),
     [exports.PROMPT_NAMES.RECOMMEND_STEPS]: (p) => (0, recommend_steps_1.getRecommendStepsPrompt)(p),
     [exports.PROMPT_NAMES.CHECK_PROGRESS]: (p) => (0, check_progress_1.getCheckProgressPrompt)(p),
-    [exports.PROMPT_NAMES.CHECK_COMMENT_LANGUAGE]: (p) => (0, check_comment_language_1.getAdaptCommentLanguagePrompt)(p),
-    [exports.PROMPT_NAMES.TRANSLATE_COMMENT]: (p) => (0, check_comment_language_1.getTranslateCommentPrompt)(p),
+    [exports.PROMPT_NAMES.ADAPT_COMMENT_LANGUAGE]: (p) => (0, check_comment_language_1.getAdaptCommentLanguagePrompt)(p),
     [exports.PROMPT_NAMES.CLI_DO]: (p) => (0, cli_do_1.getCliDoPrompt)(p),
     [exports.PROMPT_NAMES.BUGBOT]: (p) => (0, bugbot_1.getBugbotPrompt)(p),
     [exports.PROMPT_NAMES.BUGBOT_FIX]: (p) => (0, bugbot_fix_1.getBugbotFixPrompt)(p),

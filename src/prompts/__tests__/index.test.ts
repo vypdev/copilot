@@ -36,8 +36,7 @@ describe('getPrompt', () => {
         PROMPT_NAMES.USER_REQUEST,
         PROMPT_NAMES.RECOMMEND_STEPS,
         PROMPT_NAMES.CHECK_PROGRESS,
-        PROMPT_NAMES.CHECK_COMMENT_LANGUAGE,
-        PROMPT_NAMES.TRANSLATE_COMMENT,
+        PROMPT_NAMES.ADAPT_COMMENT_LANGUAGE,
         PROMPT_NAMES.CLI_DO,
         PROMPT_NAMES.BUGBOT,
         PROMPT_NAMES.BUGBOT_FIX,
@@ -61,8 +60,7 @@ describe('PROMPT_NAMES', () => {
         expect(PROMPT_NAMES.USER_REQUEST).toBe('user_request');
         expect(PROMPT_NAMES.RECOMMEND_STEPS).toBe('recommend_steps');
         expect(PROMPT_NAMES.CHECK_PROGRESS).toBe('check_progress');
-        expect(PROMPT_NAMES.CHECK_COMMENT_LANGUAGE).toBe('check_comment_language');
-        expect(PROMPT_NAMES.TRANSLATE_COMMENT).toBe('translate_comment');
+        expect(PROMPT_NAMES.ADAPT_COMMENT_LANGUAGE).toBe('adapt_comment_language');
         expect(PROMPT_NAMES.CLI_DO).toBe('cli_do');
         expect(PROMPT_NAMES.BUGBOT).toBe('bugbot');
         expect(PROMPT_NAMES.BUGBOT_FIX).toBe('bugbot_fix');

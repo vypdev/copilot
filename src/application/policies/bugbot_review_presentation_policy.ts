@@ -136,21 +136,24 @@ export function renderBugbotStatusCard(
   return lines.join('\n');
 }
 
+type BugbotReviewSnapshotInput = {
+  readonly reviewIdentity: string;
+  readonly analyzedHeadSha: string;
+  readonly currentHeadSha: string;
+  readonly projectionDigest: string;
+  readonly coverageStatus: 'complete' | 'partial';
+  readonly findings: readonly BugbotProjectedFinding[];
+  readonly statusUrl: string;
+} & (
+  | { readonly catalog: BugbotMessageCatalog; readonly locale?: never }
+  | { readonly locale: string; readonly catalog?: never }
+);
+
 export function renderBugbotReviewSnapshot(
   originalBody: string | null,
-  input: {
-    readonly reviewIdentity: string;
-    readonly analyzedHeadSha: string;
-    readonly currentHeadSha: string;
-    readonly projectionDigest: string;
-    readonly coverageStatus: 'complete' | 'partial';
-    readonly findings: readonly BugbotProjectedFinding[];
-    readonly locale?: string;
-    readonly catalog?: BugbotMessageCatalog;
-    readonly statusUrl: string;
-  },
+  input: BugbotReviewSnapshotInput,
 ): string {
-  const catalog = presentationCatalog(input.catalog ?? input.locale ?? 'en-US');
+  const catalog = presentationCatalog(input.catalog ?? input.locale);
   const hasUntrackedOverflow = /copilot-bugbot-review-overflow|### (?:Additional findings omitted by the comment limit|Hallazgos adicionales omitidos por el límite de comentarios)/u.test(originalBody ?? '');
   const normalized = normalizeHistoricalSnapshot(originalBody ?? '', input.analyzedHeadSha, catalog);
   const actionable = input.findings.filter((finding) => isBugbotActionableState(finding.state)).length;

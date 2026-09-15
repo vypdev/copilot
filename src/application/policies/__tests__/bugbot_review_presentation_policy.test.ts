@@ -316,15 +316,12 @@ describe('Bugbot review presentation', () => {
     expect(body).toContain('Última reconciliación en');
   });
 
-  it('defaults a review snapshot without locale metadata to English', () => {
-    const body = renderBugbotReviewSnapshot(null, {
+  it('requires either a locale or a resolved catalog for a review snapshot', () => {
+    expect(() => renderBugbotReviewSnapshot(null, {
       reviewIdentity: '77', analyzedHeadSha: head, currentHeadSha: head,
       projectionDigest: '12345678', coverageStatus: 'complete', findings: [],
       statusUrl: links.pullRequestUrl,
-    });
-
-    expect(body).toContain('## 🤖 Bugbot review snapshot');
-    expect(body).toContain('All findings originating in this review are resolved');
+    } as never)).toThrow();
   });
 
   it('sanitizes titles before publishing them in the status card', () => {

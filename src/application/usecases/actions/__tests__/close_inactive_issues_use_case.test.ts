@@ -15,6 +15,7 @@ function execution(overrides: Record<string, unknown> = {}) {
         owner: 'owner',
         repo: 'repo',
         tokens: { token: 'token' },
+        locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
         inactivityThresholdHours: 168,
         labels: {
             lifecycle: {

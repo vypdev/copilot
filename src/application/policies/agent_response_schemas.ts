@@ -36,9 +36,6 @@ export const LANGUAGE_ADAPTATION_RESPONSE_SCHEMA = {
     additionalProperties: false,
 } as const;
 
-/** @deprecated Use the single-call language-adaptation schema. */
-export const TRANSLATION_RESPONSE_SCHEMA = LANGUAGE_ADAPTATION_RESPONSE_SCHEMA;
-
 export const THINK_RESPONSE_SCHEMA = {
     type: 'object',
     properties: {
@@ -140,15 +137,5 @@ export const PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA = {
         'reviewNotes',
         'closesLinkedIssue',
     ],
-    additionalProperties: false,
-} as const;
-
-/** @deprecated Retained for API compatibility; runtime adaptation uses one combined schema. */
-export const LANGUAGE_CHECK_RESPONSE_SCHEMA = {
-    type: 'object',
-    properties: {
-        status: { type: 'string', enum: ['done', 'must_translate'] },
-    },
-    required: ['status'],
     additionalProperties: false,
 } as const;

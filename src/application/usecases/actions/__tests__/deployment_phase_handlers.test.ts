@@ -65,6 +65,7 @@ function operation(
     reconciliationTargets: [],
     lastFailure: null,
     ...overrides,
+    locale: overrides.locale ?? { repository: "en-US", issue: "en-US", pullRequest: "en-US" },
   };
 }
 

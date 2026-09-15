@@ -23,6 +23,7 @@ function issueSource() {
   return {
     owner: 'acme', repo: 'demo', issueNumber: 42, isIssue: true, isPullRequest: false,
     eventName: 'issues', tokenUser: 'copilot-bot', managementBranch: 'feature',
+    locale: { issue: 'en-US' },
     issue: {
       number: 42, title: 'Ship context boundary', body: 'Body', creator: 'alice',
       opened: true, labeled: true, labelAdded: 'deploy', desiredAssigneesCount: 10,
@@ -63,6 +64,7 @@ function pullRequestSource() {
       creator: 'bob', desiredAssigneesCount: 1, desiredReviewersCount: 15,
     },
     branches: { defaultBranch: 'main' },
+    locale: { pullRequest: 'en-US' },
     labels: {
       sizeLabels: ['size: S', 'size: M'], priorityLabelOnIssue: 'priority: medium',
       priorityLabelOnIssueProcessable: true, priorityHigh: 'priority: high',

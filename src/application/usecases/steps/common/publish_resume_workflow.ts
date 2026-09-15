@@ -41,7 +41,7 @@ export interface PublishResultContextSource {
         readonly comment?: { readonly id?: number };
         readonly pull_request_review_comment?: { readonly id?: number };
     };
-    readonly locale?: { readonly issue: string; readonly pullRequest: string };
+    readonly locale: { readonly issue: string; readonly pullRequest: string };
     readonly currentConfiguration: { readonly results: readonly Result[] };
     readonly ai?: { getAgentConfiguration(task: 'planner'): AgentConfiguration };
 }
@@ -52,9 +52,7 @@ export function projectPublishResultContext(source: PublishResultContextSource):
         owner: source.owner,
         repository: source.repo,
         botLogin: source.tokenUser?.trim() ?? '',
-        locale: source.isPullRequest
-            ? source.locale?.pullRequest ?? 'en-US'
-            : source.locale?.issue ?? 'en-US',
+        locale: source.isPullRequest ? source.locale.pullRequest : source.locale.issue,
         ...(target ? { target } : {}),
         requestCorrelationId: requestCorrelationId(source, target),
         results: Object.freeze(source.currentConfiguration.results.map(copyResult)),
@@ -63,9 +61,9 @@ export function projectPublishResultContext(source: PublishResultContextSource):
 }
 
 /**
- * Compatibility boundary for legacy Result producers. Only explicitly mapped
- * semantic payloads may reach GitHub; steps, reminders, errors, images, and
- * debug logs remain operator evidence in the Job Summary and logs.
+ * Semantic publication boundary. Only explicitly mapped payloads may reach
+ * GitHub; steps, reminders, errors, images, and debug logs remain operator
+ * evidence in the Job Summary and logs.
  */
 export async function runPublishResume(
     param: PublishResultContext,

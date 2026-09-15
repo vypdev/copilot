@@ -21,6 +21,10 @@ describe('runThinkCommand', () => {
     process.exitCode = undefined;
   });
 
+  afterEach(() => {
+    process.exitCode = undefined;
+  });
+
   it('runs an issue-comment-shaped local request without requiring issue #1 to exist', async () => {
     await runThinkCommand({ question: ['explain', 'the locale system'] });
 

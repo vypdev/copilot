@@ -12,7 +12,6 @@ import { extractMentionQuestion } from '../usecases/steps/common/think_input_pol
 import type { PublicationMessageCatalog } from './publication_message_catalog';
 
 /** Opaque marker: it is metadata, not an instruction for another agent. */
-export const LEGACY_TRANSLATED_COMMENT_MARKER = '<!-- copilot:translated-comment:v2 -->';
 export const TRANSLATED_COMMENT_MARKER = '<!-- copilot:request-translation schema="3"';
 
 const MAX_TRANSLATED_COMMENT_LENGTH = DEFAULT_UNTRUSTED_CONTENT_LIMIT;
@@ -178,7 +177,7 @@ function technicalOperandPattern(anchored = false): RegExp {
 
 export function hasTranslatedCommentMarker(body: string | null | undefined): boolean {
     return typeof body === 'string'
-        && (body.includes(TRANSLATED_COMMENT_MARKER) || body.includes(LEGACY_TRANSLATED_COMMENT_MARKER));
+        && body.includes(TRANSLATED_COMMENT_MARKER);
 }
 
 /**

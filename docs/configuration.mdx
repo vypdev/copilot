@@ -30,7 +30,7 @@ Copilot provides extensive configuration options to customize your workflow. Use
     ## AI Features
 
     - `ai-pull-request-description-mode`: Select the PR body policy: `replace` owns the complete generated body, `append` preserves human text and maintains a Copilot-managed section, `preserve` never updates automatically but allows `/copilot description`, and `disabled` never changes the body. Defaults to `replace`.
-    - `repository-locale`: BCP-47 target locale for repository-facing product messages (default: `en-US`). Values are validated and canonicalized (`pt_BR` is accepted during migration and becomes `pt-BR`).
+    - `repository-locale`: BCP-47 target locale for repository-facing product messages (default: `en-US`). Values are validated and canonicalized for casing (`pt-br` becomes `pt-BR`); underscore forms such as `pt_BR` are invalid.
     - `issues-locale`: Optional issue-surface override. Its empty default inherits `repository-locale`; an explicit existing value remains authoritative.
     - `pull-requests-locale`: Optional pull-request-surface override. Its empty default inherits `repository-locale`; an explicit existing value remains authoritative.
 

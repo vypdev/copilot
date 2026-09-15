@@ -84,6 +84,7 @@ function baseParam(overrides: Record<string, unknown> = {}): Execution {
     issueNumber: 42,
     tokenUser: "bot",
     tokens: { token: "token" },
+    locale: { repository: "en-US", issue: "en-US", pullRequest: "en-US" },
     commit: { branch: "feature/42-add-feature" },
     currentConfiguration: { parentBranch: "develop" },
     branches: { development: "develop" },

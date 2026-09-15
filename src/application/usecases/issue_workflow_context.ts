@@ -223,7 +223,7 @@ export interface IssueWorkflowContextSource {
     getProjectColumnIssueInProgress(): string;
   };
   readonly ai: { getAgentConfiguration(task: 'planner'): AgentConfiguration };
-  readonly locale?: { readonly issue?: string };
+  readonly locale: { readonly issue: string };
   readonly inputs?: { readonly action?: string };
 }
 
@@ -326,7 +326,7 @@ export function projectIssueWorkflowStepContexts(source: IssueWorkflowContextSou
       questionOrHelp: source.labels.isQuestion || source.labels.isHelp,
       description: (source.issue.body ?? '').trim(),
       agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
-      locale: source.locale?.issue ?? 'en-US',
+      locale: source.locale.issue,
     }),
   });
 }

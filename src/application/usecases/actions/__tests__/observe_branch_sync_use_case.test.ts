@@ -21,6 +21,7 @@ function execution(overrides: Record<string, unknown> = {}) {
     repo: "repo",
     tokenUser: "vypbot",
     tokens: { token: "token" },
+    locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
     ai: { getAgentConfiguration: () => ({ provider: 'codex', model: 'planner-model' }) },
     commit: { branch: "develop" },
     inputs: { after: "abc" },

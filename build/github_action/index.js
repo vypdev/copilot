@@ -39668,7 +39668,7 @@ async function finishGithubAction(execution, results, issueNotificationPort, con
         core.setFailed((0, application_error_presentation_policy_1.renderApplicationErrorText)(completionError, summary.errorMessage));
 }
 function actionSummaryContext(execution, catalogResolutions) {
-    const locale = execution.locale ?? { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' };
+    const locale = execution.locale;
     return Object.freeze({
         owner: execution.owner,
         repository: execution.repo,
@@ -39697,8 +39697,8 @@ function extractBugbotTelemetry(results) {
 }
 async function writeActionSummary(execution, summaryPort, catalogResolver) {
     const operation = execution.currentConfiguration.deploymentOrchestration;
-    const locale = execution.locale ?? { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' };
-    const summaryLocale = execution.singleAction.isDeploymentOrchestrationAction && operation?.locale
+    const locale = execution.locale;
+    const summaryLocale = execution.singleAction.isDeploymentOrchestrationAction && operation
         ? operation.locale
         : locale;
     let body;
@@ -39706,7 +39706,7 @@ async function writeActionSummary(execution, summaryPort, catalogResolver) {
     let appendLocalizationEvidence = false;
     let errorMessage;
     if (execution.singleAction.isDeploymentOrchestrationAction && operation) {
-        const effectiveLocale = operation.locale ?? locale;
+        const effectiveLocale = operation.locale;
         const catalog = await (0, deployment_message_catalog_1.resolveDeploymentCatalog)(effectiveLocale.repository, execution.ai.getAgentConfiguration('planner'), catalogResolver);
         const messages = (0, deployment_message_catalog_1.deploymentCopy)(catalog);
         errorMessage = (id, variables) => catalog.message(id, variables);
@@ -39772,7 +39772,7 @@ async function publishCopilotEvidence(execution, results, summary, evidencePort,
     };
     if (!(0, copilot_evidence_policy_1.buildCopilotEvidence)(evidenceInput))
         return;
-    const locale = execution.locale ?? { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' };
+    const locale = execution.locale;
     const surfaceLocale = execution.isPullRequest
         ? locale.pullRequest
         : execution.isIssue ? locale.issue : locale.repository;
@@ -42307,7 +42307,7 @@ function agentOutputLocaleFailureMessage(validation) {
 
 /** Shared structured-response contracts used by agent-backed application flows. */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.LANGUAGE_CHECK_RESPONSE_SCHEMA = exports.PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA = exports.RECOMMEND_STEPS_RESPONSE_SCHEMA = exports.THINK_RESPONSE_SCHEMA = exports.TRANSLATION_RESPONSE_SCHEMA = exports.LANGUAGE_ADAPTATION_RESPONSE_SCHEMA = void 0;
+exports.PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA = exports.RECOMMEND_STEPS_RESPONSE_SCHEMA = exports.THINK_RESPONSE_SCHEMA = exports.LANGUAGE_ADAPTATION_RESPONSE_SCHEMA = void 0;
 const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 exports.LANGUAGE_ADAPTATION_RESPONSE_SCHEMA = {
     type: 'object',
@@ -42342,8 +42342,6 @@ exports.LANGUAGE_ADAPTATION_RESPONSE_SCHEMA = {
     required: ['status', 'sourceLocale', 'targetLocale', 'adaptedText', 'reasonCode'],
     additionalProperties: false,
 };
-/** @deprecated Use the single-call language-adaptation schema. */
-exports.TRANSLATION_RESPONSE_SCHEMA = exports.LANGUAGE_ADAPTATION_RESPONSE_SCHEMA;
 exports.THINK_RESPONSE_SCHEMA = {
     type: 'object',
     properties: {
@@ -42443,15 +42441,6 @@ exports.PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA = {
         'reviewNotes',
         'closesLinkedIssue',
     ],
-    additionalProperties: false,
-};
-/** @deprecated Retained for API compatibility; runtime adaptation uses one combined schema. */
-exports.LANGUAGE_CHECK_RESPONSE_SCHEMA = {
-    type: 'object',
-    properties: {
-        status: { type: 'string', enum: ['done', 'must_translate'] },
-    },
-    required: ['status'],
     additionalProperties: false,
 };
 
@@ -44470,7 +44459,7 @@ function renderBugbotStatusCard(projection, catalogOrLocale, links) {
     return lines.join('\n');
 }
 function renderBugbotReviewSnapshot(originalBody, input) {
-    const catalog = presentationCatalog(input.catalog ?? input.locale ?? 'en-US');
+    const catalog = presentationCatalog(input.catalog ?? input.locale);
     const hasUntrackedOverflow = /copilot-bugbot-review-overflow|### (?:Additional findings omitted by the comment limit|Hallazgos adicionales omitidos por el límite de comentarios)/u.test(originalBody ?? '');
     const normalized = normalizeHistoricalSnapshot(originalBody ?? '', input.analyzedHeadSha, catalog);
     const actionable = input.findings.filter((finding) => (0, review_state_1.isBugbotActionableState)(finding.state)).length;
@@ -44621,7 +44610,7 @@ function hasBugbotTelemetryField(value) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.TRANSLATED_COMMENT_MARKER = exports.LEGACY_TRANSLATED_COMMENT_MARKER = void 0;
+exports.TRANSLATED_COMMENT_MARKER = void 0;
 exports.prepareLanguageAdaptationInput = prepareLanguageAdaptationInput;
 exports.restoreLanguageAdaptationOutput = restoreLanguageAdaptationOutput;
 exports.rebuildAdaptedComment = rebuildAdaptedComment;
@@ -44633,7 +44622,6 @@ const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const copilot_command_1 = __nccwpck_require__(11771);
 const think_input_policy_1 = __nccwpck_require__(59687);
 /** Opaque marker: it is metadata, not an instruction for another agent. */
-exports.LEGACY_TRANSLATED_COMMENT_MARKER = '<!-- copilot:translated-comment:v2 -->';
 exports.TRANSLATED_COMMENT_MARKER = '<!-- copilot:request-translation schema="3"';
 const MAX_TRANSLATED_COMMENT_LENGTH = untrusted_content_1.DEFAULT_UNTRUSTED_CONTENT_LIMIT;
 const MAX_ESCAPED_ORIGINAL_LENGTH = 40000;
@@ -44768,7 +44756,7 @@ function technicalOperandPattern(anchored = false) {
 }
 function hasTranslatedCommentMarker(body) {
     return typeof body === 'string'
-        && (body.includes(exports.TRANSLATED_COMMENT_MARKER) || body.includes(exports.LEGACY_TRANSLATED_COMMENT_MARKER));
+        && body.includes(exports.TRANSLATED_COMMENT_MARKER);
 }
 /**
  * Validates and composes a translation without allowing the model output or
@@ -48210,7 +48198,6 @@ exports.createDefaultSetupStorageConfiguration = createDefaultSetupStorageConfig
 exports.createDefaultSetupConfiguration = createDefaultSetupConfiguration;
 exports.mergeSetupConfiguration = mergeSetupConfiguration;
 exports.normalizeSetupConfigurationLocales = normalizeSetupConfigurationLocales;
-exports.setupLocaleMigrationWarnings = setupLocaleMigrationWarnings;
 const agent_1 = __nccwpck_require__(89040);
 const issue_inactivity_1 = __nccwpck_require__(38572);
 const deployment_configuration_1 = __nccwpck_require__(22495);
@@ -48374,18 +48361,6 @@ function normalizeSetupConfigurationLocales(configuration) {
             pullRequestLocale: profile.pullRequestOverride ?? '',
         },
     };
-}
-function setupLocaleMigrationWarnings(configuration) {
-    const values = [
-        configuration.repository.repositoryLocale,
-        configuration.repository.issueLocale,
-        configuration.repository.pullRequestLocale,
-    ];
-    return values.some(value => value.includes('_'))
-        ? Object.freeze([
-            'Legacy underscore locale separators were canonicalized to BCP-47 hyphens. Update saved configuration before the next major version.',
-        ])
-        : Object.freeze([]);
 }
 
 
@@ -49550,8 +49525,8 @@ function presentationContext(context, operation) {
         packageName: context.owner === "vypdev" && context.repo === "copilot" ? "@vypdev/copilot" : undefined,
     };
 }
-function effectiveLocale(context, operation) {
-    return operation.locale ?? context.locale;
+function effectiveLocale(_context, operation) {
+    return operation.locale;
 }
 function requireTarget(target) {
     if (!target)
@@ -54025,7 +54000,7 @@ function projectIssueWorkflowStepContexts(source) {
             questionOrHelp: source.labels.isQuestion || source.labels.isHelp,
             description: (source.issue.body ?? '').trim(),
             agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
-            locale: source.locale?.issue ?? 'en-US',
+            locale: source.locale.issue,
         }),
     });
 }
@@ -54481,7 +54456,7 @@ function projectPullRequestDescriptionContext(source) {
         mode: source.ai.getPullRequestDescriptionMode(),
         membersOnly: source.ai.getAiMembersOnly(),
         agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
-        targetLocale: source.locale?.pullRequest ?? 'en-US',
+        targetLocale: source.locale.pullRequest,
     });
 }
 
@@ -54562,7 +54537,7 @@ function projectProgressContext(source) {
         ]),
         agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('findings') }),
         includeReasoning: source.ai.getAiIncludeReasoning(),
-        targetLocale: source.locale?.issue ?? 'en-US',
+        targetLocale: source.locale.issue,
         ...(sourceHeadSha ? { sourceHeadSha } : {}),
     });
 }
@@ -54575,7 +54550,7 @@ function projectRecommendStepsContext(source) {
         ...(source.tokenUser ? { tokenUser: source.tokenUser } : {}),
         ...(previous ? { previousRecommendation: previous } : {}),
         agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
-        targetLocale: source.locale?.issue ?? 'en-US',
+        targetLocale: source.locale.issue,
     });
 }
 function projectInactivityContext(source) {
@@ -54586,8 +54561,8 @@ function projectInactivityContext(source) {
         ]),
         activityLabel: source.labels.lifecycle.aiProcessing,
         thresholdHours: source.inactivityThresholdHours,
-        locale: source.locale?.issue ?? 'en-US',
-        repositoryLocale: source.locale?.repository ?? 'en-US',
+        locale: source.locale.issue,
+        repositoryLocale: source.locale.repository,
         agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
     });
 }
@@ -54600,7 +54575,7 @@ function projectBranchObservationContext(source) {
         ...(sourceHeadSha ? { sourceHeadSha } : {}),
         ...(source.tokenUser ? { trustedBotLogin: source.tokenUser } : {}),
         repository: Object.freeze({ owner: source.owner, name: source.repo }),
-        locale: source.locale?.issue ?? 'en-US',
+        locale: source.locale.issue,
         agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
     });
 }
@@ -54727,7 +54702,7 @@ function copyInitialLabels(source) {
 function copyDeploymentOperation(operation) {
     return Object.freeze({
         ...operation,
-        ...(operation.locale ? { locale: Object.freeze({ ...operation.locale }) } : {}),
+        locale: Object.freeze({ ...operation.locale }),
         reconciliationTargets: Object.freeze((operation.reconciliationTargets ?? []).map(target => Object.freeze({ ...target }))),
         ...(operation.publicationReceipt ? { publicationReceipt: Object.freeze({ ...operation.publicationReceipt }) } : {}),
         ...(operation.lastFailure ? { lastFailure: Object.freeze({ ...operation.lastFailure }) } : {}),
@@ -55716,8 +55691,8 @@ function projectBugbotReviewOperationContext(source) {
     return Object.freeze({
         ...selection,
         locale: Object.freeze({
-            issue: source.locale?.issue ?? 'en-US',
-            pullRequest: source.locale?.pullRequest ?? 'en-US',
+            issue: source.locale.issue,
+            pullRequest: source.locale.pullRequest,
         }),
         analysis: Object.freeze({
             agentConfiguration: Object.freeze({ ...agentConfiguration }),
@@ -55749,8 +55724,8 @@ function projectBugbotFixIntentContext(source) {
     return Object.freeze({
         ...selection,
         locale: Object.freeze({
-            issue: source.locale?.issue ?? 'en-US',
-            pullRequest: source.locale?.pullRequest ?? 'en-US',
+            issue: source.locale.issue,
+            pullRequest: source.locale.pullRequest,
         }),
         comment: Object.freeze({
             body: isPullRequestReviewComment
@@ -56870,8 +56845,8 @@ class DismissBugbotFindingsUseCase {
                 resolvedFindingResolutions: new Map([...dismissibleIds].map(id => [id, 'dismissed'])),
                 ports: this.dependencies.resolutionPorts,
                 catalog: await (0, bugbot_message_catalog_1.resolveBugbotCatalog)(param.operation.target.isPullRequest
-                    ? param.operation.locale?.pullRequest ?? 'en-US'
-                    : param.operation.locale?.issue ?? 'en-US', param.operation.agentConfiguration, this.dependencies.catalogResolver),
+                    ? param.operation.locale.pullRequest
+                    : param.operation.locale.issue, param.operation.agentConfiguration, this.dependencies.catalogResolver),
             });
             return [new result_1.Result({
                     id: this.taskId,
@@ -60266,9 +60241,7 @@ function projectPublishResultContext(source) {
         owner: source.owner,
         repository: source.repo,
         botLogin: source.tokenUser?.trim() ?? '',
-        locale: source.isPullRequest
-            ? source.locale?.pullRequest ?? 'en-US'
-            : source.locale?.issue ?? 'en-US',
+        locale: source.isPullRequest ? source.locale.pullRequest : source.locale.issue,
         ...(target ? { target } : {}),
         requestCorrelationId: requestCorrelationId(source, target),
         results: Object.freeze(source.currentConfiguration.results.map(copyResult)),
@@ -60276,9 +60249,9 @@ function projectPublishResultContext(source) {
     });
 }
 /**
- * Compatibility boundary for legacy Result producers. Only explicitly mapped
- * semantic payloads may reach GitHub; steps, reminders, errors, images, and
- * debug logs remain operator evidence in the Job Summary and logs.
+ * Semantic publication boundary. Only explicitly mapped payloads may reach
+ * GitHub; steps, reminders, errors, images, and debug logs remain operator
+ * evidence in the Job Summary and logs.
  */
 async function runPublishResume(param, taskId, comments, catalogResolver, sourceQuery) {
     try {
@@ -60724,9 +60697,9 @@ async function runThinkAnswerWorkflow(param, taskId, request, dependencies) {
         projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
         contextBlock,
         question: request.question,
-        targetLocale: param.targetLocale ?? 'en-US',
+        targetLocale: param.targetLocale,
     });
-    const answer = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(await queryThinkAnswer(param, prompt, dependencies.aiRepository, param.targetLocale ?? 'en-US'));
+    const answer = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(await queryThinkAnswer(param, prompt, dependencies.aiRepository, param.targetLocale));
     if (!answer) {
         (0, logging_ports_1.logError)('Configured agent returned no answer for Think.');
         return [
@@ -60927,6 +60900,7 @@ const think_request_policy_1 = __nccwpck_require__(23995);
 const think_answer_workflow_1 = __nccwpck_require__(40558);
 const agent_task_policy_1 = __nccwpck_require__(85712);
 const application_error_1 = __nccwpck_require__(75999);
+const locale_1 = __nccwpck_require__(15386);
 function projectThinkContext(source) {
     const request = (0, think_request_policy_1.resolveThinkRequest)(source);
     const tokenUser = source.tokenUser?.trim();
@@ -60946,10 +60920,10 @@ function projectThinkContext(source) {
         agentTask,
         agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration(agentTask) }),
         targetLocale: request.destinationType === 'PR'
-            ? source.locale?.pullRequest ?? 'en-US'
+            ? source.locale.pullRequest
             : request.destinationType === 'local'
-                ? source.locale?.repository ?? 'en-US'
-                : source.locale?.issue ?? 'en-US',
+                ? source.locale.repository
+                : source.locale.issue,
     });
 }
 async function runThinkWorkflow(param, taskId, dependencies) {
@@ -60963,6 +60937,10 @@ async function runThinkWorkflow(param, taskId, dependencies) {
         if (!('agentConfiguration' in param)) {
             throw new application_error_1.ApplicationError('provider.contract-invalid', 'Ready Think context is missing its selected agent configuration.');
         }
+        if (!('targetLocale' in param)) {
+            throw new application_error_1.ApplicationError('provider.contract-invalid', 'Ready Think context is missing its target locale.');
+        }
+        (0, locale_1.canonicalizeLocaleTag)(param.targetLocale);
         if (!(0, agent_1.isAgentConfigurationReady)(param.agentConfiguration)) {
             return [
                 new result_1.Result({
@@ -73544,7 +73522,7 @@ function isDeploymentOperationSnapshot(value) {
         && operation.revision > 0
         && typeof operation.operationId === "string"
         && /^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(operation.operationId)
-        && (operation.locale === undefined || (0, locale_1.isLocaleProfile)(operation.locale))
+        && (0, locale_1.isLocaleProfile)(operation.locale)
         && (operation.kind === "release" || operation.kind === "hotfix")
         && typeof operation.version === "string" && /^[0-9]+\.[0-9]+\.[0-9]+$/.test(operation.version)
         && typeof operation.title === "string" && operation.title.length <= 1000
@@ -73991,7 +73969,6 @@ function normalize(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InvalidLocaleTagError = exports.MAX_LOCALE_TAG_LENGTH = exports.DEFAULT_REPOSITORY_LOCALE = void 0;
 exports.canonicalizeLocaleTag = canonicalizeLocaleTag;
-exports.normalizeLocaleTag = normalizeLocaleTag;
 exports.resolveLocaleProfile = resolveLocaleProfile;
 exports.localeForScope = localeForScope;
 exports.isLocaleProfile = isLocaleProfile;
@@ -74007,14 +73984,7 @@ class InvalidLocaleTagError extends Error {
     }
 }
 exports.InvalidLocaleTagError = InvalidLocaleTagError;
-/**
- * Canonicalizes one BCP-47 locale. Underscores are accepted for the documented
- * migration window, but every value leaving this boundary uses hyphens.
- */
 function canonicalizeLocaleTag(value) {
-    return normalizeLocaleTag(value).canonical;
-}
-function normalizeLocaleTag(value) {
     if (typeof value !== 'string')
         throw new InvalidLocaleTagError(String(value));
     const trimmed = value.trim();
@@ -74023,19 +73993,17 @@ function normalizeLocaleTag(value) {
         return codePoint <= 31 || codePoint === 127;
     }))
         throw new InvalidLocaleTagError(value);
-    const usedLegacySeparator = trimmed.includes('_');
-    const normalized = trimmed.replace(/_/gu, '-');
-    if (!normalized || normalized.length > exports.MAX_LOCALE_TAG_LENGTH) {
+    if (!trimmed || trimmed.length > exports.MAX_LOCALE_TAG_LENGTH || trimmed.includes('_')) {
         throw new InvalidLocaleTagError(value);
     }
-    if (/^x(?:-|$)/iu.test(normalized) || /^und(?:-|$)/iu.test(normalized)) {
+    if (/^x(?:-|$)/iu.test(trimmed) || /^und(?:-|$)/iu.test(trimmed)) {
         throw new InvalidLocaleTagError(value);
     }
     try {
-        const [canonical] = Intl.getCanonicalLocales(normalized);
+        const [canonical] = Intl.getCanonicalLocales(trimmed);
         if (!canonical)
             throw new InvalidLocaleTagError(value);
-        return Object.freeze({ canonical, usedLegacySeparator });
+        return canonical;
     }
     catch (error) {
         if (error instanceof InvalidLocaleTagError)
@@ -78117,7 +78085,6 @@ function getBugbotFixIntentPrompt(params) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getTranslateCommentPrompt = exports.getCheckCommentLanguagePrompt = void 0;
 exports.getAdaptCommentLanguagePrompt = getAdaptCommentLanguagePrompt;
 /** Builds the single, schema-constrained request adaptation prompt. */
 const fill_1 = __nccwpck_require__(2559);
@@ -78143,10 +78110,6 @@ function getAdaptCommentLanguagePrompt(params) {
         commentBody: params.commentBody,
     });
 }
-/** @deprecated Compatibility export; both old entry points now use one adaptation prompt. */
-exports.getCheckCommentLanguagePrompt = getAdaptCommentLanguagePrompt;
-/** @deprecated Compatibility export for integrations importing the old prompt name. */
-exports.getTranslateCommentPrompt = getAdaptCommentLanguagePrompt;
 
 
 /***/ }),
@@ -78276,7 +78239,7 @@ function fillTemplate(template, params) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PROMPT_NAMES = exports.getBugbotFixIntentPrompt = exports.getBugbotFixPrompt = exports.getBugbotPrompt = exports.getCliDoPrompt = exports.getTranslateCommentPrompt = exports.getAdaptCommentLanguagePrompt = exports.getCheckProgressPrompt = exports.getRecommendStepsPrompt = exports.getUserRequestPrompt = exports.getUpdatePullRequestDescriptionPrompt = exports.getThinkPrompt = exports.getAnswerIssueHelpPrompt = exports.fillTemplate = void 0;
+exports.PROMPT_NAMES = exports.getBugbotFixIntentPrompt = exports.getBugbotFixPrompt = exports.getBugbotPrompt = exports.getCliDoPrompt = exports.getAdaptCommentLanguagePrompt = exports.getCheckProgressPrompt = exports.getRecommendStepsPrompt = exports.getUserRequestPrompt = exports.getUpdatePullRequestDescriptionPrompt = exports.getThinkPrompt = exports.getAnswerIssueHelpPrompt = exports.fillTemplate = void 0;
 exports.getPrompt = getPrompt;
 /**
  * Prompt provider: one file per prompt, each exports a getter that fills the template with params.
@@ -78309,7 +78272,6 @@ var check_progress_2 = __nccwpck_require__(74623);
 Object.defineProperty(exports, "getCheckProgressPrompt", ({ enumerable: true, get: function () { return check_progress_2.getCheckProgressPrompt; } }));
 var check_comment_language_2 = __nccwpck_require__(63425);
 Object.defineProperty(exports, "getAdaptCommentLanguagePrompt", ({ enumerable: true, get: function () { return check_comment_language_2.getAdaptCommentLanguagePrompt; } }));
-Object.defineProperty(exports, "getTranslateCommentPrompt", ({ enumerable: true, get: function () { return check_comment_language_2.getTranslateCommentPrompt; } }));
 var cli_do_2 = __nccwpck_require__(32506);
 Object.defineProperty(exports, "getCliDoPrompt", ({ enumerable: true, get: function () { return cli_do_2.getCliDoPrompt; } }));
 var bugbot_2 = __nccwpck_require__(56998);
@@ -78326,8 +78288,7 @@ exports.PROMPT_NAMES = {
     USER_REQUEST: 'user_request',
     RECOMMEND_STEPS: 'recommend_steps',
     CHECK_PROGRESS: 'check_progress',
-    CHECK_COMMENT_LANGUAGE: 'check_comment_language',
-    TRANSLATE_COMMENT: 'translate_comment',
+    ADAPT_COMMENT_LANGUAGE: 'adapt_comment_language',
     CLI_DO: 'cli_do',
     BUGBOT: 'bugbot',
     BUGBOT_FIX: 'bugbot_fix',
@@ -78340,8 +78301,7 @@ const registry = {
     [exports.PROMPT_NAMES.USER_REQUEST]: (p) => (0, user_request_1.getUserRequestPrompt)(p),
     [exports.PROMPT_NAMES.RECOMMEND_STEPS]: (p) => (0, recommend_steps_1.getRecommendStepsPrompt)(p),
     [exports.PROMPT_NAMES.CHECK_PROGRESS]: (p) => (0, check_progress_1.getCheckProgressPrompt)(p),
-    [exports.PROMPT_NAMES.CHECK_COMMENT_LANGUAGE]: (p) => (0, check_comment_language_1.getAdaptCommentLanguagePrompt)(p),
-    [exports.PROMPT_NAMES.TRANSLATE_COMMENT]: (p) => (0, check_comment_language_1.getTranslateCommentPrompt)(p),
+    [exports.PROMPT_NAMES.ADAPT_COMMENT_LANGUAGE]: (p) => (0, check_comment_language_1.getAdaptCommentLanguagePrompt)(p),
     [exports.PROMPT_NAMES.CLI_DO]: (p) => (0, cli_do_1.getCliDoPrompt)(p),
     [exports.PROMPT_NAMES.BUGBOT]: (p) => (0, bugbot_1.getBugbotPrompt)(p),
     [exports.PROMPT_NAMES.BUGBOT_FIX]: (p) => (0, bugbot_fix_1.getBugbotFixPrompt)(p),

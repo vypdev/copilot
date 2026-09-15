@@ -169,6 +169,7 @@ function scmPorts(provider: InMemoryReviewProvider) {
 function execution(mode: 'publish' | 'dry-run' = 'publish'): Execution {
   return {
     owner: 'org', repo: 'repo', issueNumber: -1, tokenUser: 'bot', tokens: { token: 'token' },
+    locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
     isPullRequest: true,
     inputs: { eventName: 'pull_request', pull_request: { head: { sha: 'a'.repeat(40) } } },
     pullRequest: { number: 7, head: 'feature/review', action: 'opened' },

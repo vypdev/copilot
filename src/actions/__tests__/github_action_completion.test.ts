@@ -457,8 +457,8 @@ describe('finishGithubAction', () => {
         ));
     });
 
-    it('uses the current repository locale for a legacy deployment without a locale snapshot', async () => {
-        const { locale: _locale, ...legacyOperation } = deploymentOperation();
+    it('uses the locale snapshot captured by the deployment operation', async () => {
+        const operation = deploymentOperation();
         const action = Object.assign(singleActionExecution(), {
             locale: { repository: 'es-ES', issue: 'es-ES', pullRequest: 'es-ES' },
             singleAction: {
@@ -466,7 +466,7 @@ describe('finishGithubAction', () => {
                 issue: 11,
                 isDeploymentOrchestrationAction: true,
             },
-            currentConfiguration: { results: [], deploymentOrchestration: legacyOperation },
+            currentConfiguration: { results: [], deploymentOrchestration: operation },
         }) as Execution;
 
         await finishGithubAction(
@@ -612,23 +612,15 @@ describe('finishGithubAction', () => {
         );
     });
 
-    it('defaults legacy push completion without locale or conversation targets to English', async () => {
+    it('uses the required execution locale for push completion without conversation targets', async () => {
         const previousSha = process.env.GITHUB_SHA;
-        process.env.GITHUB_SHA = 'legacy-push-sha';
+        process.env.GITHUB_SHA = 'push-sha';
         const action = Object.assign(execution(), {
             eventName: 'push',
             isIssue: false,
             isPullRequest: false,
             isPush: true,
         });
-        const legacyShape = action as unknown as {
-            locale?: Execution['locale'];
-            issue?: Execution['issue'];
-            pullRequest?: Execution['pullRequest'];
-        };
-        delete legacyShape.locale;
-        delete legacyShape.issue;
-        delete legacyShape.pullRequest;
         try {
             await finishGithubAction(
                 action,
@@ -647,7 +639,7 @@ describe('finishGithubAction', () => {
         expect(mockEvidencePublish).toHaveBeenCalledWith(
             expect.objectContaining({
                 name: 'Copilot / Verification',
-                headSha: 'legacy-push-sha',
+                headSha: 'push-sha',
                 title: 'Copilot completed successfully',
                 summary: expect.stringContaining('# Copilot execution'),
             }),

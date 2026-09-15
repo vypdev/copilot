@@ -24,8 +24,8 @@ describe('CheckPullRequestCommentLanguageUseCase', () => {
     });
   });
 
-  it('is inert for empty and legacy-translated comments', async () => {
-    for (const body of ['', 'Done\n<!-- copilot:translated-comment:v2 -->']) {
+  it('is inert for empty and current translated comments', async () => {
+    for (const body of ['', 'Done\n<!-- copilot:request-translation schema="3" -->']) {
       const results = await useCase.invoke(projectPullRequestCommentLanguageRequest(source(body)));
       expect(results[0]).toMatchObject({ success: true, executed: false });
     }

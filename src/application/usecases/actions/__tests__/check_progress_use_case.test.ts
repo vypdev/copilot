@@ -53,6 +53,7 @@ function baseParam(overrides: Record<string, unknown> = {}): Execution {
     repo: 'repo',
     issueNumber: 123,
     tokens: { token: 'token' },
+    locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
     ai: new Ai('http://localhost:4096', 'opencode/kimi-k2.5', false, [], false, 'low', 20),
     commit: { branch: 'feature/123-add-feature' },
     branches,

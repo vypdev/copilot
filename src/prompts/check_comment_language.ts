@@ -29,8 +29,3 @@ export function getAdaptCommentLanguagePrompt(params: CheckCommentLanguageParams
         commentBody: params.commentBody,
     });
 }
-
-/** @deprecated Compatibility export; both old entry points now use one adaptation prompt. */
-export const getCheckCommentLanguagePrompt = getAdaptCommentLanguagePrompt;
-/** @deprecated Compatibility export for integrations importing the old prompt name. */
-export const getTranslateCommentPrompt = getAdaptCommentLanguagePrompt;

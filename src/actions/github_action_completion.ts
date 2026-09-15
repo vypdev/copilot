@@ -96,7 +96,7 @@ function actionSummaryContext(
     execution: Execution,
     catalogResolutions: readonly CatalogResolutionObservation[],
 ): ActionSummaryContext {
-    const locale = execution.locale ?? { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' };
+    const locale = execution.locale;
     return Object.freeze({
         owner: execution.owner,
         repository: execution.repo,
@@ -134,8 +134,8 @@ async function writeActionSummary(
     catalogResolver?: MessageCatalogResolutionPort,
 ): Promise<WrittenActionSummary> {
     const operation = execution.currentConfiguration.deploymentOrchestration;
-    const locale = execution.locale ?? { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' };
-    const summaryLocale = execution.singleAction.isDeploymentOrchestrationAction && operation?.locale
+    const locale = execution.locale;
+    const summaryLocale = execution.singleAction.isDeploymentOrchestrationAction && operation
         ? operation.locale
         : locale;
     let body: string;
@@ -143,7 +143,7 @@ async function writeActionSummary(
     let appendLocalizationEvidence = false;
     let errorMessage: ApplicationErrorMessageReader;
     if (execution.singleAction.isDeploymentOrchestrationAction && operation) {
-        const effectiveLocale = operation.locale ?? locale;
+        const effectiveLocale = operation.locale;
         const catalog = await resolveDeploymentCatalog(
             effectiveLocale.repository,
             execution.ai.getAgentConfiguration('planner'),
@@ -222,7 +222,7 @@ async function publishCopilotEvidence(
         failOnUnresolvedFindings: execution.ai.getBugbotReviewConfiguration().failOnUnresolved,
     };
     if (!buildCopilotEvidence(evidenceInput)) return;
-    const locale = execution.locale ?? { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' };
+    const locale = execution.locale;
     const surfaceLocale = execution.isPullRequest
         ? locale.pullRequest
         : execution.isIssue ? locale.issue : locale.repository;

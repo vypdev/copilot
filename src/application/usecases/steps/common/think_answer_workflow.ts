@@ -28,7 +28,7 @@ export interface ThinkAnswerContext {
     readonly agentTask: AgentTask;
     readonly agentConfiguration: Readonly<AgentConfiguration>;
     readonly translationPublication?: TranslationPublication;
-    readonly targetLocale?: string;
+    readonly targetLocale: string;
 }
 
 export async function runThinkAnswerWorkflow(
@@ -50,13 +50,13 @@ export async function runThinkAnswerWorkflow(
         projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
         contextBlock,
         question: request.question,
-        targetLocale: param.targetLocale ?? 'en-US',
+        targetLocale: param.targetLocale,
     });
     const answer = sanitizeAgentMarkdown(await queryThinkAnswer(
         param,
         prompt,
         dependencies.aiRepository,
-        param.targetLocale ?? 'en-US',
+        param.targetLocale,
     ));
     if (!answer) {
         logError('Configured agent returned no answer for Think.');

@@ -29,7 +29,7 @@ function mockExecution(overrides: {
         trigger: { kind: 'unknown', headOwner: 'o', ...overrides.trigger },
         ignorePatterns: overrides.ignorePatterns ?? [],
         organizationRules: [],
-        locale: { pullRequest: 'en-US' },
+        locale: { issue: 'en-US', pullRequest: 'en-US' },
         analysis: {
             agentConfiguration: { provider: 'codex', model: 'model' },
             minimumSeverity: 'low',

@@ -95,6 +95,7 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
     commitPrefixBuilder: '',
     workflows: { release: 'release.yml', hotfix: 'hotfix.yml' },
     eventName: '',
+    locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
     ai: new Ai("", "model", false, [], false, "low", 20),
     ...overrides,
   } as Record<string, unknown>;
