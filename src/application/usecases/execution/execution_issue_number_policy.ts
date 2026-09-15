@@ -14,6 +14,12 @@ export function resolveEventIssueNumber(context: SetupExecutionContext): Executi
     else if (context.isPullRequest) {
         if (['check_suite', 'workflow_run'].includes(context.eventName)) {
             issueNumber = positiveIssueNumberOrUndefined(context.pullRequest.number);
+        } else if (['pull_request', 'pull_request_review'].includes(context.eventName)) {
+            const pullRequestNumber = positiveIssueNumberOrUndefined(context.pullRequest.number);
+            const branchIssueNumber = positiveIssueNumberOrUndefined(
+                extractIssueNumberFromBranch(context.pullRequest.head),
+            );
+            issueNumber = branchIssueNumber === pullRequestNumber ? undefined : branchIssueNumber;
         } else {
             issueNumber = positiveIssueNumberOrUndefined(extractIssueNumberFromBranch(context.pullRequest.head))
                 ?? positiveIssueNumberOrUndefined(context.pullRequest.number);

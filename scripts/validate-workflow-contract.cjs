@@ -26,7 +26,6 @@ const CHECKOUT_ACTION = 'actions/checkout@v5';
 const SETUP_NODE_ACTION = 'actions/setup-node@v7';
 const PUSH_BRANCH_CONCURRENCY_GROUP = 'copilot-push-${{ github.repository }}-${{ github.ref_name }}';
 const PULL_REQUEST_BRANCH_CONCURRENCY_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}';
-const BUGBOT_PULL_REQUEST_CANCEL_EXPRESSION = "${{ github.event_name != 'pull_request' || github.event.action != 'edited' }}";
 const BUGBOT_CONCURRENCY_JOBS = Object.freeze({
   'copilot_commit.yml': Object.freeze({
     jobId: 'copilot-commits',
@@ -36,7 +35,7 @@ const BUGBOT_CONCURRENCY_JOBS = Object.freeze({
   'copilot_pull_request.yml': Object.freeze({
     jobId: 'copilot-pull-requests',
     group: PULL_REQUEST_BRANCH_CONCURRENCY_GROUP,
-    cancelInProgress: BUGBOT_PULL_REQUEST_CANCEL_EXPRESSION,
+    cancelInProgress: true,
   }),
 });
 
@@ -374,7 +373,7 @@ function assertReviewConcurrency(relativeFile, workflow) {
     }
     if (job.concurrency?.group !== group
       || job.concurrency?.['cancel-in-progress'] !== cancelInProgress) {
-      throw new Error(`${relativeFile} job ${jobId} must use its workflow-specific branch group, avoid cross-canceling the other event owner, cancel superseded runs, and queue pull_request edited events without preempting an active review.`);
+      throw new Error(`${relativeFile} job ${jobId} must use its workflow-specific branch group, avoid cross-canceling the other event owner, and cancel superseded runs.`);
     }
   }
 }
@@ -388,6 +387,26 @@ function assertDirectEventTriggers(file, workflow) {
   if (!relativeFile.endsWith('/copilot_pull_request.yml')) return;
   if (!triggers.pull_request || !triggers.pull_request_review) {
     throw new Error(`${relativeFile} must define direct pull_request and pull_request_review triggers.`);
+  }
+  const pullRequestTypes = triggers.pull_request.types;
+  if (!Array.isArray(pullRequestTypes)
+    || pullRequestTypes.includes('edited')
+    || ['opened', 'reopened', 'closed', 'synchronize'].some(type => !pullRequestTypes.includes(type))) {
+    throw new Error(`${relativeFile} must handle code/lifecycle PR events without subscribing to metadata-only edited events.`);
+  }
+  if (typeof workflow['run-name'] !== 'string'
+    || !workflow['run-name'].includes('github.event_name')
+    || !workflow['run-name'].includes('github.event.action')) {
+    throw new Error(`${relativeFile} must expose the event kind and action in its run identity.`);
+  }
+  const pullRequestJobName = workflow.jobs?.['copilot-pull-requests']?.name;
+  const mergeQueueJobName = workflow.jobs?.['copilot-merge-group']?.name;
+  const expectedPullRequestJobName = "${{ github.event_name == 'pull_request_review' && 'Copilot - Pull Request Review State' || 'Copilot - Pull Request' }}";
+  if (pullRequestJobName !== expectedPullRequestJobName) {
+    throw new Error(`${relativeFile} must give review-state events their exact distinct check identity while preserving the normal PR analysis identity.`);
+  }
+  if (mergeQueueJobName !== 'Copilot - Pull Request') {
+    throw new Error(`${relativeFile} must preserve the Copilot - Pull Request required-check identity for merge-group runs; the run name provides event distinction.`);
   }
 }
 

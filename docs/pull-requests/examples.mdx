@@ -13,18 +13,21 @@ Example `.github/workflows/copilot_pull_request.yml` with common inputs:
 
 ```yaml
 name: Copilot - Pull Request
+run-name: Copilot PR · ${{ github.event_name }}:${{ github.event.action }}
 
 on:
   pull_request:
-    types: [opened, reopened, edited, closed, synchronize]
+    types: [opened, reopened, closed, synchronize]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
 
 jobs:
   copilot-pull-requests:
-    name: Copilot - Pull Request
+    name: ${{ github.event_name == 'pull_request_review' && 'Copilot - Pull Request Review State' || 'Copilot - Pull Request' }}
     runs-on: ubuntu-latest
     concurrency:
       group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}
-      cancel-in-progress: ${{ github.event_name != 'pull_request' || github.event.action != 'edited' }}
+      cancel-in-progress: true
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5

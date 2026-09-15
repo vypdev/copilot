@@ -77,14 +77,49 @@ export const PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA = {
     type: 'object',
     properties: {
         outputLocale: AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
-        description: {
+        overview: {
             type: 'string',
             minLength: 1,
-            maxLength: 60_000,
-            description: 'The complete Markdown pull-request description body.',
+            maxLength: 1_500,
+            description: 'One to three sentences describing the outcome and why it matters.',
+        },
+        whatChangedHeading: { type: 'string', minLength: 1, maxLength: 100 },
+        changes: {
+            type: 'array',
+            minItems: 2,
+            maxItems: 6,
+            items: { type: 'string', minLength: 1, maxLength: 1_000 },
+        },
+        validationHeading: { type: 'string', minLength: 1, maxLength: 100 },
+        validation: {
+            type: 'array',
+            minItems: 1,
+            maxItems: 8,
+            items: { type: 'string', minLength: 1, maxLength: 1_000 },
+        },
+        reviewNotesHeading: { type: ['string', 'null'], minLength: 1, maxLength: 100 },
+        reviewNotes: {
+            type: ['array', 'null'],
+            minItems: 1,
+            maxItems: 4,
+            items: { type: 'string', minLength: 1, maxLength: 1_000 },
+        },
+        closesLinkedIssue: {
+            type: 'boolean',
+            description: 'Whether this PR fully resolves the separate linked issue supplied by the application.',
         },
     },
-    required: ['outputLocale', 'description'],
+    required: [
+        'outputLocale',
+        'overview',
+        'whatChangedHeading',
+        'changes',
+        'validationHeading',
+        'validation',
+        'reviewNotesHeading',
+        'reviewNotes',
+        'closesLinkedIssue',
+    ],
     additionalProperties: false,
 } as const;
 

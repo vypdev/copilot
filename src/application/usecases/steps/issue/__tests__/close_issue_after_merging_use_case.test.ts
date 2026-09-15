@@ -44,8 +44,8 @@ describe('CloseIssueAfterMergingUseCase', () => {
     expect(results[0].executed).toBe(false);
   });
 
-  it('does not call GitHub when a pull request has no linked issue', async () => {
-    const results = await useCase.invoke({ ...baseParam(), issueNumber: -1 } as unknown as Parameters<CloseIssueAfterMergingUseCase['invoke']>[0]);
+  it.each([-1, 10, Number.MAX_SAFE_INTEGER + 1, Number.NaN])('does not call GitHub when a pull request has no separate safe linked issue: %s', async (issueNumber) => {
+    const results = await useCase.invoke({ ...baseParam(), issueNumber } as unknown as Parameters<CloseIssueAfterMergingUseCase['invoke']>[0]);
 
     expect(results[0]).toMatchObject({ success: true, executed: false });
     expect(mockCloseIssue).not.toHaveBeenCalled();

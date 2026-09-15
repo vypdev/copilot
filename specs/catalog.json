@@ -296,7 +296,7 @@
       "status": "implemented",
       "scope": "Reconcile review snapshots, findings, threads, comments, and check conclusions",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-14",
+      "lastVerified": "2026-09-15",
       "specs": [
         "specs/bugbot-review-state-reconciliation.md"
       ],
@@ -373,7 +373,7 @@
       "status": "implemented",
       "scope": "Shared GitHub Action lifecycle from event admission through durable user-facing results",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-14",
+      "lastVerified": "2026-09-15",
       "specs": [
         "specs/execution-admission-queue-and-publication.md",
         "specs/execution-error-and-context-hardening.md",
@@ -479,7 +479,7 @@
       "status": "implemented",
       "scope": "Close verified concurrency, error-contract, context-coupling, fan-out, setup/doctor, and provider-policy risks in dependency order",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-14",
+      "lastVerified": "2026-09-15",
       "specs": [
         "specs/architecture-quality-and-scalability-hardening.md",
         "specs/issue-and-pull-request-context-hardening.md"
@@ -878,41 +878,57 @@
     {
       "id": "pull-request-lifecycle",
       "title": "Pull request lifecycle and enrichment",
-      "status": "as-built-baseline",
-      "scope": "Link pull requests to issues and projects, synchronize metadata, reviewers, size, and descriptions",
+      "status": "implemented",
+      "scope": "Enrich linked and unlinked pull requests with safe issue linkage, projects, metadata, reviewers, concise descriptions, and distinct workflow evidence",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-13",
+      "lastVerified": "2026-09-15",
       "specs": [
         "specs/pull-request-lifecycle-and-enrichment.md"
       ],
       "workflows": [
-        ".github/workflows/copilot_pull_request.yml"
+        ".github/workflows/copilot_pull_request.yml",
+        "setup/workflows/copilot_pull_request.yml"
       ],
       "entrypoints": [
-        "src/application/usecases/pull_request_use_case.ts"
+        "src/application/usecases/pull_request_use_case.ts",
+        "src/actions/common_action.ts"
       ],
       "code": [
+        "src/application/usecases/execution/execution_issue_number_policy.ts",
+        "src/application/usecases/execution/setup_execution_workflow.ts",
         "src/application/usecases/pull_request_workflow_context.ts",
         "src/application/usecases/pull_request_workflow.ts",
         "src/application/usecases/pull_request_workflow_steps.ts",
         "src/application/usecases/steps/pull_request/link_pull_request_issue_workflow.ts",
         "src/application/usecases/steps/pull_request/update_pull_request_description_use_case.ts",
+        "src/prompts/update_pull_request_description.ts",
+        "src/application/policies/agent_response_schemas.ts",
+        "src/application/policies/pull_request_description_content_policy.ts",
         "src/infrastructure/composition/lifecycle_capability_port_binding.ts",
         "src/domain/pull_request_description.ts",
         "src/data/repository/pull_request/pull_request_lifecycle_repository.ts"
       ],
       "tests": [
+        "src/application/usecases/execution/__tests__/execution_issue_number_policy.test.ts",
+        "src/data/model/__tests__/execution.test.ts",
+        "src/actions/__tests__/common_action.test.ts",
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
         "src/application/usecases/__tests__/pull_request_use_case.test.ts",
         "src/application/usecases/steps/pull_request/__tests__/link_pull_request_issue_use_case.test.ts",
         "src/application/usecases/steps/pull_request/__tests__/update_pull_request_description_use_case.test.ts",
+        "src/application/policies/__tests__/pull_request_description_content_policy.test.ts",
+        "src/prompts/__tests__/update_pull_request_description.test.ts",
+        "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/infrastructure/composition/__tests__/lifecycle_capability_port_binding.test.ts",
         "src/data/repository/__tests__/pull_request_lifecycle_repository.test.ts"
       ],
       "documentation": [
         "docs/pull-requests/capabilities.mdx",
         "docs/pull-requests/ai-description.mdx",
-        "docs/pull-requests/configuration.mdx"
+        "docs/pull-requests/configuration.mdx",
+        "docs/features.mdx",
+        "docs/bugbot/how-it-works.mdx",
+        "docs/bugbot/configuration.mdx"
       ]
     },
     {

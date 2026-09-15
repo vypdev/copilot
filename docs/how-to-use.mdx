@@ -416,7 +416,14 @@ The **labels** in each template must match the label names configured in the act
 
 ### `setup/pull_request_template.md`
 
-Copied to `.github/pull_request_template.md`. Used as the default body for new PRs. The AI PR description feature can fill this structure; you can edit the sections (Summary, Related Issues, Scope, Technical Details, How to Test, etc.) to fit your repo. No Copilot logic depends on specific headings; only the deploy/release/hotfix flows depend on **workflow filenames** and **label names**.
+Copied to `.github/pull_request_template.md`. Used as the default body for new
+PRs and as guidance for AI-generated descriptions. The shipped template asks
+for a short outcome, material changes, and validation; reviewer notes are
+conditional. You can add repository-specific instructions, but the agent omits
+empty boilerplate, generic checklists, and unsupported claims rather than
+reproducing every heading. No Copilot logic depends on specific headings; only
+the deploy/release/hotfix flows depend on **workflow filenames** and **label
+names**.
 
 ---
 

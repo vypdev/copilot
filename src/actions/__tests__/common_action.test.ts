@@ -456,6 +456,22 @@ describe('mainRun', () => {
     expect(mockSingleActionInvoke).not.toHaveBeenCalled();
   });
 
+  it('dispatches an unlinked pull request instead of treating it as a targetless action', async () => {
+    const execution = mockExecution({
+      eventName: 'pull_request',
+      issueNumber: -1,
+      isPullRequest: true,
+      pullRequest: { number: 84, isPullRequest: true },
+    });
+    mockPullRequestInvoke.mockResolvedValue([new Result({ id: 'pr', success: true })]);
+
+    const results = await runMain(execution);
+
+    expect(mockPullRequestInvoke).toHaveBeenCalledWith(execution);
+    expect(mockSingleActionInvoke).not.toHaveBeenCalled();
+    expect(results).toHaveLength(1);
+  });
+
   it('runs IssueCommentUseCase when isIssue and issue comment', async () => {
     const execution = mockExecution({
       isIssue: true,

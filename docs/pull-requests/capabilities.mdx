@@ -9,7 +9,7 @@ This page describes each **capability** the action performs when it runs on a pu
 
 ## PR–issue linking
 
-The action **links the pull request to the issue** associated with its branch. The issue number is inferred from the **branch name** (e.g. `feature/123-add-login` → issue `123`). It then:
+The action links the pull request to a **separate issue** inferred from its branch (for example, `feature/123-add-login` → issue `123`). It then:
 
 - Creates the **link** in GitHub (so the issue shows “Linked pull requests” and the PR shows the issue).
 - Relies on GitHub's native linked-PR UI; routine linkage does not create a summary comment.
@@ -30,7 +30,7 @@ compensated failure says that the original body and base were restored.
 If a newer event sees a different current base, Copilot stops without writing;
 restore the base named by the failed run or start again from the current PR state.
 
-The branch name must follow the pattern that includes the issue number (e.g. `<tree>/<issue-number>-<slug>`). If the branch does not match, the action cannot link an issue. See [Issues → Branch management](/issues/branch-management) for naming conventions.
+The branch name must follow the pattern that includes the issue number (e.g. `<tree>/<issue-number>-<slug>`). If it does not, the PR still receives PR-native enrichment such as title normalization on open/reopen, assignee and reviewer selection, project linking, description, and review where configured. Issue-derived priority, size, and progress synchronization and merge closure are skipped because those policies need a separate issue. Copilot never uses the PR number itself as fallback linkage and never creates `Closes #<same-pr-number>`. See [Issues → Branch management](/issues/branch-management) for naming conventions.
 
 ## Project linking
 
@@ -68,8 +68,9 @@ Thresholds are defined in [Configuration](/configuration) (e.g. `size-m-threshol
 
 
 - Reads your repo’s **pull request template** (`.github/pull_request_template.md`).
-- Uses the **issue description** and the **branch diff** (base..head) as context.
-- Fills the template with a structured description (summary, scope, technical details, how to test, etc.).
+- Uses the optional **issue description** and the merge-base **branch diff** (`base...head`) as context.
+- Writes a concise outcome, material changes, and validation evidence. Reviewer notes appear only when they carry useful risk, migration, rollout, or manual-verification context.
+- Omits empty template sections, generic checklists, implementation inventories, and self-closing issue references.
 
 See [AI PR description](/pull-requests/ai-description) for details, optional issue context, and how to enable it in your workflow.
 
@@ -106,6 +107,15 @@ The Job Summary uses `repository-locale` for headings and explanatory labels,
 defaults to English, and records one non-duplicated localization section. Stable
 event, lifecycle, finding-state, and error-code values remain suitable for
 operator diagnosis even when the surrounding copy is localized.
+
+The supplied workflow names runs as `Copilot PR · <event>:<action>`, so normal
+analysis, review-state observation, and merge-queue admission are recognizable
+without opening logs. Review-state events use the distinct
+`Copilot - Pull Request Review State` check. Normal analysis and merge-group
+runs intentionally share `Copilot - Pull Request`, preserving the exact
+required-check context that GitHub branch protection and merge queues expect.
+Metadata-only body/title edits do not start the PR workflow; new commits and
+lifecycle changes still do.
 
 ## Next steps
 

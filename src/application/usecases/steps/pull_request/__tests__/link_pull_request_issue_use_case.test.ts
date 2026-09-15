@@ -60,6 +60,28 @@ describe('LinkPullRequestIssueUseCase', () => {
     expect(mockUpdateDescription).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { issueNumber: -1 },
+    { issueNumber: 10 },
+  ])('skips without provider I/O when no separate issue exists: %p', async (override) => {
+    const results = await useCase.invoke(context(override));
+
+    expect(results[0]).toMatchObject({ success: true, executed: false });
+    expect(results[0].steps[0]).toContain('No separate linked issue');
+    expect(mockGetDetails).not.toHaveBeenCalled();
+    expect(mockIsLinked).not.toHaveBeenCalled();
+    expect(mockUpdateBaseBranch).not.toHaveBeenCalled();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invalid PR identity even when no separate issue exists', async () => {
+    const results = await useCase.invoke(context({ pullRequestNumber: Number.NaN, issueNumber: -1 }));
+
+    expect(results[0]).toMatchObject({ success: false, executed: false });
+    expect(results[0].steps[0]).toContain('positive pull-request number');
+    expect(mockGetDetails).not.toHaveBeenCalled();
+  });
+
   it('cleans an owned pending operation even when GitHub already reports the link', async () => {
     const pending = '<!-- copilot:pr-issue-link:v1;pr=10;issue=42;base=develop;state=pending -->';
     mockGetDetails.mockResolvedValue({ body: `Original\n\nResolves #42\n\n${pending}`, baseBranch: 'main' });
@@ -235,7 +257,6 @@ describe('LinkPullRequestIssueUseCase', () => {
   });
 
   it.each([
-    { issueNumber: -1 },
     { pullRequestNumber: Number.MAX_SAFE_INTEGER + 1 },
     { defaultBranch: '../unsafe' },
     { originalBaseBranch: '' },
