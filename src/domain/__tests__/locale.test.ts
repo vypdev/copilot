@@ -6,14 +6,12 @@ import {
   isLocaleProfile,
   localeForScope,
   localeLanguagesMatch,
-  normalizeLocaleTag,
   resolveLocaleProfile,
 } from '../locale';
 
 describe('locale policy', () => {
   it.each([
     ['en-us', 'en-US'],
-    ['pt_BR', 'pt-BR'],
     ['zh-hant-tw', 'zh-Hant-TW'],
     ['es', 'es'],
     [' ar ', 'ar'],
@@ -26,16 +24,15 @@ describe('locale policy', () => {
     (input) => expect(() => canonicalizeLocaleTag(input)).toThrow(InvalidLocaleTagError),
   );
 
+  it('rejects underscore separators instead of converting an alternate locale shape', () => {
+    expect(() => canonicalizeLocaleTag('pt_BR')).toThrow(InvalidLocaleTagError);
+    expect(() => resolveLocaleProfile('en-US', 'es_MX')).toThrow(InvalidLocaleTagError);
+  });
+
   it.each(['en-US\u0000', 'en-\nUS', 'en\u007f-US'])(
     'rejects control characters in %p before Intl processing',
     (input) => expect(() => canonicalizeLocaleTag(input)).toThrow(InvalidLocaleTagError),
   );
-
-  it('reports legacy underscore normalization without leaking it downstream', () => {
-    expect(normalizeLocaleTag('pt_BR')).toEqual({ canonical: 'pt-BR', usedLegacySeparator: true });
-    expect(normalizeLocaleTag('pt-BR')).toEqual({ canonical: 'pt-BR', usedLegacySeparator: false });
-    expect(Object.isFrozen(normalizeLocaleTag('pt_BR'))).toBe(true);
-  });
 
   it('fails closed if the platform canonicalizer yields no locale', () => {
     const canonicalizer = jest.spyOn(Intl, 'getCanonicalLocales').mockReturnValue([]);
@@ -68,7 +65,7 @@ describe('locale policy', () => {
   });
 
   it('resolves independent issue and pull-request overrides', () => {
-    const profile = resolveLocaleProfile('fr-fr', 'es_mx', 'zh-Hant-TW');
+    const profile = resolveLocaleProfile('fr-fr', 'es-mx', 'zh-Hant-TW');
     expect(profile).toEqual({
       repository: 'fr-FR',
       issue: 'es-MX',
@@ -97,7 +94,7 @@ describe('locale policy', () => {
   });
 
   it('accepts only canonical, internally consistent locale profiles', () => {
-    expect(isLocaleProfile(resolveLocaleProfile('fr-fr', 'es_mx', 'zh-Hant-TW'))).toBe(true);
+    expect(isLocaleProfile(resolveLocaleProfile('fr-fr', 'es-mx', 'zh-Hant-TW'))).toBe(true);
     expect(isLocaleProfile({ repository: 'en-US', issue: 'es-ES', pullRequest: 'en-US' })).toBe(false);
     expect(isLocaleProfile({ repository: 'en-us', issue: 'en-US', pullRequest: 'en-US' })).toBe(false);
     expect(isLocaleProfile({ repository: 'en-US', issue: 'en-US', pullRequest: 'en-US', issueOverride: '' })).toBe(false);

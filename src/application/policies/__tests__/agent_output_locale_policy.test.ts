@@ -53,7 +53,7 @@ describe('agent output locale policy', () => {
         ['text', 'response-not-object'],
         [{}, 'output-locale-missing'],
         [{ outputLocale: '@@' }, 'output-locale-invalid'],
-        [{ outputLocale: 'en_us' }, 'output-locale-mismatch'],
+        [{ outputLocale: 'en_us' }, 'output-locale-invalid'],
         [{ outputLocale: ' en-US ' }, 'output-locale-mismatch'],
         [{ outputLocale: 'fr-FR' }, 'output-locale-mismatch'],
     ])('rejects invalid locale-tagged output %#', (response, reason) => {

@@ -62,6 +62,7 @@ function baseParam(overrides: Record<string, unknown> = {}): Execution {
     repo: 'repo',
     issueNumber: 42,
     tokens: { token: 'token' },
+    locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
     currentConfiguration: new Config({}),
     ai: new Ai('http://localhost:4096', 'opencode/model', false, [], false, 'low', 20),
     ...overrides,

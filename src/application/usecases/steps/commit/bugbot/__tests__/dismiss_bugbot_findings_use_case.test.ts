@@ -11,7 +11,7 @@ jest.mock('../mark_findings_resolved_workflow', () => ({
     markFindingsResolved: (...args: unknown[]) => mockMarkFindingsResolved(...args),
 }));
 
-function operation(): BugbotContextSelectionContext {
+function operation(): BugbotContextSelectionContext & { readonly locale: { readonly issue: string; readonly pullRequest: string } } {
     return {
         repository: { owner: 'owner', name: 'repo' },
         target: {
@@ -27,6 +27,7 @@ function operation(): BugbotContextSelectionContext {
         trigger: { kind: 'issue_comment', headOwner: 'owner' },
         ignorePatterns: [],
         organizationRules: [],
+        locale: { issue: 'en-US', pullRequest: 'en-US' },
     };
 }
 
@@ -120,7 +121,7 @@ describe('DismissBugbotFindingsUseCase', () => {
         expect(results[0].errors[0].message).toBe('A Bugbot finding could not be dismissed.');
     });
 
-    it('defaults a PR dismissal without locale metadata to English', async () => {
+    it('uses the required PR locale for dismissal presentation', async () => {
         const useCase = new DismissBugbotFindingsUseCase({
             contextPorts: {} as never,
             resolutionPorts: {} as never,
@@ -131,12 +132,13 @@ describe('DismissBugbotFindingsUseCase', () => {
             operation: {
                 ...request,
                 target: { ...request.target, isPullRequest: true, pullRequestNumber: 17 },
+                locale: { issue: 'fr-FR', pullRequest: 'es-ES' },
             },
             findingIds: ['finding-1'],
         });
 
         expect(mockMarkFindingsResolved.mock.calls[0][0].catalog)
-            .toMatchObject({ resolutionSource: 'exact', locale: 'en-US' });
+            .toMatchObject({ resolutionSource: 'exact', locale: 'es-ES' });
     });
 
     it('is an idempotent no-op when no requested finding exists', async () => {
@@ -157,7 +159,7 @@ describe('DismissBugbotFindingsUseCase', () => {
             resolutionPorts: {} as never,
         });
         const request = operation();
-        const fallbackOperation: BugbotContextSelectionContext = {
+        const fallbackOperation = {
             ...request,
             target: {
                 ...request.target,
@@ -185,7 +187,7 @@ describe('DismissBugbotFindingsUseCase', () => {
             resolutionPorts: {} as never,
         });
         const request = operation();
-        const branchlessOperation: BugbotContextSelectionContext = {
+        const branchlessOperation = {
             ...request,
             target: {
                 ...request.target,

@@ -133,9 +133,8 @@ links; it does not replay internal workflow step logs such as “created” or
 
 New operations snapshot the complete canonical locale profile when they start,
 so a later Variable change cannot switch an in-flight release between languages.
-A version-1 operation created before locale snapshots were added remains valid
-and uses the current profile until it completes. Start the next deployment from
-a fresh launcher issue to guarantee a newly configured profile.
+An operation without that snapshot is invalid and stops before continuation or
+provider mutation. Start a new deployment from valid current configuration.
 
 ## Serialization, durable revisions, and safe retries
 

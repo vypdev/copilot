@@ -139,9 +139,8 @@ function localeDoctorCheck(
 ): DoctorCheck {
   const bundled = selectBundledMessageCatalog(effective, SETUP_DOCTOR_CATALOG_DEFINITIONS);
   const catalogSource = resolvedCatalogSource ?? bundled?.source ?? (dynamicReady ? 'dynamic' : 'fallback');
-  const legacySeparator = configured.includes('_');
   const fallback = catalogSource === 'fallback';
-  const status: DoctorCheckStatus = legacySeparator || fallback ? 'warn' : 'pass';
+  const status: DoctorCheckStatus = fallback ? 'warn' : 'pass';
   const inherited = inheritedWhenEmpty && !configured.trim();
   return doctorCheck({
     id: `locale.${scope}`,
@@ -152,16 +151,11 @@ function localeDoctorCheck(
           locale: effective,
           source: catalogSource,
         }),
-    ...(legacySeparator
-      ? { action: catalog.message('doctor.locale.separatorAction') }
-      : fallback
-        ? { action: catalog.message('doctor.locale.dynamicAction') }
-        : {}),
+    ...(fallback ? { action: catalog.message('doctor.locale.dynamicAction') } : {}),
     evidence: {
       configured: configured || '(inherit)',
       effective,
       catalogSource,
-      legacySeparator,
     },
   });
 }

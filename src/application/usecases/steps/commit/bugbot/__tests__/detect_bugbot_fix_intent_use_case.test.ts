@@ -27,6 +27,7 @@ function baseExecution(overrides: Partial<Execution> = {}): Execution {
         repo: "r",
         issueNumber: 42,
         tokens: { token: "t" },
+        locale: { repository: "en-US", issue: "en-US", pullRequest: "en-US" },
         commit: { branch: "feature/42-foo" },
         issue: {
             isIssueComment: true,

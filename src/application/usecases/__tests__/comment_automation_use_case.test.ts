@@ -67,6 +67,7 @@ function runCommentAutomation(
     issueNumber: execution.issueNumber ?? -1,
     isPullRequest: execution.isPullRequest ?? false,
     eventName: execution.eventName ?? 'issue_comment',
+    locale: execution.locale ?? { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
     commit: { ...(execution.commit ?? {}), branch: execution.commit?.branch ?? '' },
     currentConfiguration: execution.currentConfiguration ?? {},
     branches: execution.branches ?? {},

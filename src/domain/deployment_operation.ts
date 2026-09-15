@@ -64,8 +64,8 @@ export interface DeploymentOperationSnapshot {
   readonly stateVersion: typeof DEPLOYMENT_STATE_VERSION;
   readonly revision: number;
   readonly operationId: string;
-  /** Effective locale profile captured when the durable operation starts. Absent only on legacy v1 state. */
-  readonly locale?: LocaleProfile;
+  /** Effective locale profile captured when the durable operation starts. */
+  readonly locale: LocaleProfile;
   readonly kind: DeploymentKind;
   readonly version: string;
   readonly title: string;
@@ -192,7 +192,7 @@ export function isDeploymentOperationSnapshot(value: unknown): value is Deployme
     && operation.revision > 0
     && typeof operation.operationId === "string"
     && /^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(operation.operationId)
-    && (operation.locale === undefined || isLocaleProfile(operation.locale))
+    && isLocaleProfile(operation.locale)
     && (operation.kind === "release" || operation.kind === "hotfix")
     && typeof operation.version === "string" && /^[0-9]+\.[0-9]+\.[0-9]+$/.test(operation.version)
     && typeof operation.title === "string" && operation.title.length <= 1_000

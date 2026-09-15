@@ -46,6 +46,7 @@ function source(): DeepMutable<PushSingleActionContextSource> {
     issueNumber: 42,
     eventName: 'push',
     tokenUser: 'copilot-bot',
+    locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
     inputs: {
       action: 'opened',
       after: '0'.repeat(40),

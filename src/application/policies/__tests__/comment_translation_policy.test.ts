@@ -39,7 +39,7 @@ describe('comment translation policy', () => {
 
     it('recognizes only the current translated-comment marker', () => {
         expect(hasTranslatedCommentMarker(`text\n${TRANSLATED_COMMENT_MARKER}`)).toBe(true);
-        expect(hasTranslatedCommentMarker('text\n<!-- copilot:translated-comment:v2 -->')).toBe(true);
+        expect(hasTranslatedCommentMarker('text\n<!-- copilot:translated-comment:v2 -->')).toBe(false);
         expect(hasTranslatedCommentMarker('plain comment')).toBe(false);
         expect(hasTranslatedCommentMarker(undefined)).toBe(false);
     });

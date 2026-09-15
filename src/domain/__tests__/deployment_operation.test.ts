@@ -12,6 +12,7 @@ const operation = (phase: DeploymentPhase = "preparing", overrides: Partial<Depl
   stateVersion: 1,
   revision: 1,
   operationId: "operation-12345678",
+  locale: { repository: "en-US", issue: "en-US", pullRequest: "en-US" },
   kind: "release",
   version: "3.4.0",
   title: "Release",
@@ -132,7 +133,7 @@ describe("deployment operation state machine", () => {
     expect(isDeploymentOperationSnapshot(operation())).toBe(true);
   });
 
-  it("accepts legacy state without a locale and validates canonical locale snapshots", () => {
+  it("requires a canonical locale snapshot", () => {
     expect(isDeploymentOperationSnapshot(operation())).toBe(true);
     expect(isDeploymentOperationSnapshot(operation("preparing", {
       locale: {
@@ -149,6 +150,8 @@ describe("deployment operation state machine", () => {
     expect(isDeploymentOperationSnapshot(operation("preparing", {
       locale: { repository: "en-US", issue: "es-ES", pullRequest: "en-US" },
     }))).toBe(false);
+    const { locale: _locale, ...missingLocale } = operation();
+    expect(isDeploymentOperationSnapshot(missingLocale)).toBe(false);
   });
 
   it("requires an exact provider receipt when publication is verified", () => {

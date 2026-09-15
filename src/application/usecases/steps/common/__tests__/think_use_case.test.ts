@@ -27,6 +27,7 @@ function baseParam(overrides: Record<string, unknown> = {}) {
     issueNumber: 1,
     tokenUser: 'bot',
     tokens: { token: 't' },
+    locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
     ai: new Ai('https://opencode.example.com', 'model-x', false, [], false, 'low', 20),
     labels: { isQuestion: false, isHelp: false },
     issue: {
@@ -177,7 +178,7 @@ describe('ThinkUseCase', () => {
     expect(mockAskAgent).not.toHaveBeenCalled();
   });
 
-  it('defaults a legacy ready context without targetLocale to canonical English', async () => {
+  it('rejects a ready context without its required target locale', async () => {
     mockAskAgent.mockResolvedValue({ answer: 'Plan ready.' });
     const ai = new Ai('https://opencode.example.com', 'model-x', false, [], false, 'low', 20);
 
@@ -192,14 +193,11 @@ describe('ThinkUseCase', () => {
       },
       agentTask: 'planner',
       agentConfiguration: ai.getAgentConfiguration('planner'),
-    });
+    } as never);
 
-    expect(mockAskAgent.mock.calls[0][2]).toContain('outputLocale` set exactly to `en-US');
-    expect(results[0]).toMatchObject({
-      success: true,
-      executed: true,
-      payload: { publication: { kind: 'direct-answer', answer: 'Plan ready.' } },
-    });
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(results[0]).toMatchObject({ success: false, executed: false });
+    expect(results[0].errors.map((error) => error.code)).toContain('provider.contract-invalid');
   });
 
   it('carries translation provenance as typed semantic publication data', async () => {

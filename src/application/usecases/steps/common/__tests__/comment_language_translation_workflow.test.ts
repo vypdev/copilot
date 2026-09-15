@@ -15,13 +15,11 @@ describe('CommentLanguageTranslationWorkflow', () => {
         configuration: undefined,
     } as const;
 
-    it('returns a skipped result for legacy and current translation markers', async () => {
+    it('returns a skipped result for the current translation marker', async () => {
         const query = jest.fn();
         const workflow = new CommentLanguageTranslationWorkflow({ query });
-        for (const marker of [TRANSLATED_COMMENT_MARKER, '<!-- copilot:translated-comment:v2 -->']) {
-            const results = await workflow.invoke({ ...context, commentBody: `body\n${marker}` });
-            expect(results[0].executed).toBe(false);
-        }
+        const results = await workflow.invoke({ ...context, commentBody: `body\n${TRANSLATED_COMMENT_MARKER}` });
+        expect(results[0].executed).toBe(false);
         expect(query).not.toHaveBeenCalled();
     });
 

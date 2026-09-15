@@ -69,6 +69,7 @@ function minimalExecution(singleAction: {
     actor: 'alice',
     eventName: 'workflow_dispatch',
     tokens: { token: 'token' },
+    locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
     ai: new Ai('', 'model', false, [], false, 'low', 20),
     issueNumber: 12,
     tokenUser: 'bot',

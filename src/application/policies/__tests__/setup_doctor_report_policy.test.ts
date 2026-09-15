@@ -80,15 +80,15 @@ describe('setup doctor report policy', () => {
     expect(checks[1].evidence.effective).toBe(issue ? new Intl.Locale(issue).toString() : new Intl.Locale(repository).toString());
   });
 
-  it('warns once per affected scope for legacy separators and exposes canonical effective values', () => {
+  it('rejects underscore-separated locale tags instead of exposing a migration path', () => {
     const configuration = createDefaultSetupConfiguration();
     configuration.repository.repositoryLocale = 'pt_BR';
     configuration.repository.issueLocale = 'es_MX';
     const checks = buildLocaleDoctorChecks(configuration);
 
-    expect(checks[0]).toMatchObject({ status: 'warn', evidence: { effective: 'pt-BR', legacySeparator: true } });
-    expect(checks[1]).toMatchObject({ status: 'warn', evidence: { effective: 'es-MX', legacySeparator: true } });
-    expect(checks[2]).toMatchObject({ evidence: { configured: '(inherit)', effective: 'pt-BR' } });
+    expect(checks).toEqual([
+      expect.objectContaining({ id: 'locale.profile', status: 'skipped', blockedBy: ['configuration.valid'] }),
+    ]);
   });
 
   it('reports atomic English fallback when no language agent is ready', () => {

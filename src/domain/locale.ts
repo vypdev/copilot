@@ -21,38 +21,23 @@ export class InvalidLocaleTagError extends Error {
     }
 }
 
-export interface LocaleTagNormalization {
-    readonly canonical: string;
-    readonly usedLegacySeparator: boolean;
-}
-
-/**
- * Canonicalizes one BCP-47 locale. Underscores are accepted for the documented
- * migration window, but every value leaving this boundary uses hyphens.
- */
 export function canonicalizeLocaleTag(value: unknown): string {
-    return normalizeLocaleTag(value).canonical;
-}
-
-export function normalizeLocaleTag(value: unknown): LocaleTagNormalization {
     if (typeof value !== 'string') throw new InvalidLocaleTagError(String(value));
     const trimmed = value.trim();
     if (Array.from(trimmed).some(character => {
         const codePoint = character.charCodeAt(0);
         return codePoint <= 31 || codePoint === 127;
     })) throw new InvalidLocaleTagError(value);
-    const usedLegacySeparator = trimmed.includes('_');
-    const normalized = trimmed.replace(/_/gu, '-');
-    if (!normalized || normalized.length > MAX_LOCALE_TAG_LENGTH) {
+    if (!trimmed || trimmed.length > MAX_LOCALE_TAG_LENGTH || trimmed.includes('_')) {
         throw new InvalidLocaleTagError(value);
     }
-    if (/^x(?:-|$)/iu.test(normalized) || /^und(?:-|$)/iu.test(normalized)) {
+    if (/^x(?:-|$)/iu.test(trimmed) || /^und(?:-|$)/iu.test(trimmed)) {
         throw new InvalidLocaleTagError(value);
     }
     try {
-        const [canonical] = Intl.getCanonicalLocales(normalized);
+        const [canonical] = Intl.getCanonicalLocales(trimmed);
         if (!canonical) throw new InvalidLocaleTagError(value);
-        return Object.freeze({ canonical, usedLegacySeparator });
+        return canonical;
     } catch (error) {
         if (error instanceof InvalidLocaleTagError) throw error;
         throw new InvalidLocaleTagError(value);

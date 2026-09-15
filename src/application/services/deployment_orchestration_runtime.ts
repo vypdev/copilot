@@ -463,10 +463,10 @@ function presentationContext(
 }
 
 function effectiveLocale(
-  context: DeploymentOrchestrationContext,
+  _context: DeploymentOrchestrationContext,
   operation: DeploymentOperationSnapshot,
 ): DeploymentOrchestrationContext["locale"] {
-  return operation.locale ?? context.locale;
+  return operation.locale;
 }
 
 function requireTarget(target: ReconciliationTargetState | undefined): ReconciliationTargetState {

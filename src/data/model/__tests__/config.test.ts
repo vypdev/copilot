@@ -78,7 +78,7 @@ describe('Config', () => {
         ],
         acceptance: ' All relevant checks pass. ',
       },
-      implementationPlanLocale: 'es_MX',
+      implementationPlanLocale: 'es-mx',
     };
 
     const state = new Config({ recommendationState: input }).recommendationState;

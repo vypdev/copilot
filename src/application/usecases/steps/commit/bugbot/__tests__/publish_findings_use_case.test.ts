@@ -83,7 +83,7 @@ const baseOperation: BugbotReviewOperationContext = {
     trigger: { kind: 'pull_request', headOwner: 'o' },
     ignorePatterns: [],
     organizationRules: [],
-    locale: { pullRequest: 'en-US' },
+    locale: { issue: 'en-US', pullRequest: 'en-US' },
     analysis: {
         agentConfiguration: { provider: 'codex', model: 'model' },
         minimumSeverity: 'low',
@@ -497,7 +497,7 @@ describe("publishFindings", () => {
             operation: {
                 ...baseOperation,
                 target: { ...baseOperation.target, issueNumber: -1 },
-                locale: { pullRequest: 'es-ES' },
+                locale: { issue: 'en-US', pullRequest: 'es-ES' },
             },
             context: baseContext({
                 prContext: {

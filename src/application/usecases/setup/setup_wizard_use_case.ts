@@ -16,7 +16,6 @@ import {
   createDefaultSetupConfiguration,
   mergeSetupConfiguration,
   normalizeSetupConfigurationLocales,
-  setupLocaleMigrationWarnings,
   validateSetupStorageAgainstRemote,
   validateSetupConfiguration,
   type SetupConfigurationOverrides,
@@ -84,6 +83,13 @@ export class SetupWizardUseCase {
           request.remoteTarget.token,
         )
       : undefined;
+    const defaultValidationErrors = validateSetupConfiguration(defaults);
+    if (defaultValidationErrors.length > 0) {
+      throw new ApplicationError(
+        'configuration.invalid',
+        `Invalid setup configuration:\n${defaultValidationErrors.map((error) => `- ${error}`).join('\n')}`,
+      );
+    }
     const context = {
       ...(remoteConfiguration ? { remote: remoteConfiguration } : {}),
       variableNames: buildSetupRepositoryVariables(defaults).map((variable) => variable.name),
@@ -102,7 +108,6 @@ export class SetupWizardUseCase {
     }
 
     const collectedConfiguration = cloneSetupConfiguration(questionnaire.draft);
-    const migrationWarnings = setupLocaleMigrationWarnings(collectedConfiguration);
     const validationErrors = validateSetupConfiguration(collectedConfiguration);
     const configuration = validationErrors.length === 0
       ? normalizeSetupConfigurationLocales(collectedConfiguration)
@@ -128,7 +133,7 @@ export class SetupWizardUseCase {
           catalog: resolveStaticSetupDoctorCatalog(),
         })
       : [];
-    const plan = buildSetupPlan(configuration, readiness, migrationWarnings);
+    const plan = buildSetupPlan(configuration, readiness);
     this.dependencies.planPresenter.present(plan);
     const confirmation = enterSetupConfirmation(questionnaire);
     const decision = await this.dependencies.confirmation.confirm(plan);

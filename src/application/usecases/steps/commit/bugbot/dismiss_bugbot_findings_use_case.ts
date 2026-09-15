@@ -15,7 +15,7 @@ import { resolveBugbotCatalog } from '../../../../policies/bugbot_message_catalo
 
 export interface DismissBugbotFindingsParam {
     operation: BugbotContextSelectionContext & {
-        readonly locale?: { readonly issue?: string; readonly pullRequest?: string };
+        readonly locale: { readonly issue: string; readonly pullRequest: string };
         readonly agentConfiguration?: Readonly<AgentConfiguration>;
     };
     findingIds: readonly string[];
@@ -59,8 +59,8 @@ export class DismissBugbotFindingsUseCase {
                 ports: this.dependencies.resolutionPorts,
                 catalog: await resolveBugbotCatalog(
                     param.operation.target.isPullRequest
-                        ? param.operation.locale?.pullRequest ?? 'en-US'
-                        : param.operation.locale?.issue ?? 'en-US',
+                        ? param.operation.locale.pullRequest
+                        : param.operation.locale.issue,
                     param.operation.agentConfiguration,
                     this.dependencies.catalogResolver,
                 ),

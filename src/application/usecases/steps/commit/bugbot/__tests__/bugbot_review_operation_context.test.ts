@@ -20,7 +20,7 @@ function source(overrides: Partial<BugbotReviewOperationSource> = {}): BugbotRev
         commit: { branch: 'refs/pull/9/merge' },
         currentConfiguration: { parentBranch: 'master' },
         branches: { development: 'develop' },
-        locale: { pullRequest: 'es-ES' },
+        locale: { issue: 'en-US', pullRequest: 'es-ES' },
         inputs: {
             before: 'a'.repeat(40),
             after: 'b'.repeat(40),

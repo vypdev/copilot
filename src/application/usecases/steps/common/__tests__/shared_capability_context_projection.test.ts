@@ -135,6 +135,7 @@ describe('P2-D shared capability context projections', () => {
       tokenUser: 'copilot-bot',
       issue: { commentBody: '@copilot-bot plan this', isIssueComment: true, number: 9 },
       pullRequest: { commentBody: '', isPullRequestReviewComment: false, number: -1 },
+      locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
       ai: { getAgentConfiguration: () => selected },
       tokens: { token: 'secret-value' },
     } as never);
@@ -347,6 +348,7 @@ describe('P2-D shared capability context projections', () => {
       singleAction: { issue: -1 },
       issue: { number: 14 },
       pullRequest: { number: -1, action: '' },
+      locale: { issue: 'en-US', pullRequest: 'en-US' },
       release: { active: false },
       hotfix: { active: false },
       images: publicationImages,

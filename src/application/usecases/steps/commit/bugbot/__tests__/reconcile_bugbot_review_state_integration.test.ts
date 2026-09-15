@@ -158,7 +158,7 @@ async function reconcileBugbotReviewState(input: {
       ...(input.execution.tokenUser
         ? { trustedAuthorLogin: input.execution.tokenUser }
         : {}),
-      locale: input.execution.locale?.pullRequest ?? 'en-US',
+      locale: input.execution.locale.pullRequest,
     },
     loadedContext: input.loadedContext,
     activeFindings: input.activeFindings,

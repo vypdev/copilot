@@ -29,6 +29,7 @@ const operation = (phase: DeploymentPhase, overrides: Partial<DeploymentOperatio
   stateVersion: 1,
   revision: 1,
   operationId: "operation-12345678",
+  locale: { repository: "en-US", issue: "en-US", pullRequest: "en-US" },
   kind: "release",
   version: "3.4.0",
   title: "Release",
@@ -307,12 +308,14 @@ describe("DeploymentOrchestrationUseCase", () => {
     expect(value.pullRequests.createManagedPullRequest).not.toHaveBeenCalled();
   });
 
-  it("updates the owned dashboard and lets legacy state use the current locale profile", async () => {
+  it("updates the owned dashboard with the operation locale snapshot", async () => {
     const value = harness();
     value.presentation.findDashboard.mockResolvedValue({ id: 99 });
     value.pullRequests.findManagedPullRequests.mockResolvedValue([pr()]);
-    const input = execution("prepare", operation("promotion_pr_pending"));
-    input.locale = { repository: "es-ES", issue: "es-ES", pullRequest: "es-ES" };
+    const input = execution("prepare", operation("promotion_pr_pending", {
+      locale: { repository: "es-ES", issue: "es-ES", pullRequest: "es-ES" },
+    }));
+    input.locale = { repository: "en-US", issue: "en-US", pullRequest: "en-US" };
 
     await value.useCase.invoke(input);
 

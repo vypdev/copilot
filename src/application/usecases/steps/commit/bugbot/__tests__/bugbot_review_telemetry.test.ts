@@ -19,7 +19,7 @@ function operationContext(overrides: Partial<BugbotReviewOperationContext> = {})
         trigger: { kind: 'pull_request', headOwner: 'org' },
         ignorePatterns: [],
         organizationRules: [],
-        locale: { pullRequest: 'en-US' },
+        locale: { issue: 'en-US', pullRequest: 'en-US' },
         analysis: {
             agentConfiguration: { provider: 'codex', model: 'model' },
             minimumSeverity: 'low',

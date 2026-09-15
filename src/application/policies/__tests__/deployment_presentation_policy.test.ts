@@ -43,6 +43,7 @@ const operation = (phase: DeploymentPhase = "promotion_pr_pending", overrides: P
   reconciliationTargets: [],
   lastFailure: null,
   ...overrides,
+  locale: overrides.locale ?? { repository: "en-US", issue: "en-US", pullRequest: "en-US" },
 });
 
 const context = {
