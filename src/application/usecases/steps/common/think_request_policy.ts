@@ -10,8 +10,8 @@ export type ThinkRequestDecision =
         commentBody: string;
         question: string;
         issueNumberForContext: number;
-        destinationNumber: number;
-        destinationType: 'issue' | 'PR';
+        destinationNumber?: number;
+        destinationType: 'issue' | 'PR' | 'local';
         command?: ParsedCopilotCommand;
     };
 
@@ -29,6 +29,10 @@ export interface ThinkRequestSource {
     };
     readonly issueNumber: number;
     readonly tokenUser?: string;
+    readonly singleAction?: {
+        readonly isThinkAction?: boolean;
+        readonly issue?: number;
+    };
 }
 
 /** Resolves the comment input and destination without performing I/O. */
@@ -44,26 +48,42 @@ export function resolveThinkRequest(
     if (!commentBody.trim()) return { kind: 'skip', reason: 'empty-comment' };
     const command = parseCopilotCommand(commentBody);
     if (command.kind === 'invalid') return { kind: 'skip', reason: 'invalid-command', detail: command.reason };
-    if (command.kind === 'none') {
+    const isLocalThink = param.singleAction?.isThinkAction === true;
+    if (command.kind === 'none' && !isLocalThink) {
         if (!param.tokenUser?.trim()) return { kind: 'skip', reason: 'missing-token' };
         if (!containsBotMention(commentBody, param.tokenUser)) return { kind: 'skip', reason: 'not-mentioned' };
     }
 
     const question = command.kind === 'command'
         ? buildExplicitCommandQuestion(command.command)
-        : extractMentionQuestion(commentBody, param.tokenUser ?? '');
+        : isLocalThink
+            ? commentBody.trim()
+            : extractMentionQuestion(commentBody, param.tokenUser ?? '');
     if (!question) return { kind: 'skip', reason: 'empty-question' };
 
     const isPullRequestTarget = param.isPullRequest;
+    const issueDestination = positiveInteger(param.issue.number) ? param.issue.number : undefined;
+    const destinationType = isPullRequestTarget
+        ? 'PR'
+        : issueDestination
+            ? 'issue'
+            : isLocalThink
+                ? 'local'
+                : 'issue';
+    const destinationNumber = isPullRequestTarget ? param.pullRequest.number : issueDestination;
     return {
         kind: 'ready',
         commentBody,
         question,
         issueNumberForContext: isPullRequestTarget ? param.issueNumber : param.issue.number,
-        destinationNumber: isPullRequestTarget ? param.pullRequest.number : param.issue.number,
-        destinationType: isPullRequestTarget ? 'PR' : 'issue',
+        ...(destinationNumber !== undefined ? { destinationNumber } : {}),
+        destinationType,
         ...(command.kind === 'command' ? { command: command.command } : {}),
     };
+}
+
+function positiveInteger(value: unknown): value is number {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
 }
 
 export function buildExplicitCommandQuestion(command: ParsedCopilotCommand): string {

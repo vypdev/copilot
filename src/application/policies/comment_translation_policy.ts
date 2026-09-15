@@ -5,6 +5,7 @@ import {
 import { escapeHtml, sanitizeAgentMarkdown } from './github_comment_publication_policy';
 import { parseCopilotCommand, type CopilotCommandName } from '../../domain/copilot_command';
 import { extractMentionQuestion } from '../usecases/steps/common/think_input_policy';
+import type { PublicationMessageCatalog } from './publication_message_catalog';
 
 /** Opaque marker: it is metadata, not an instruction for another agent. */
 export const LEGACY_TRANSLATED_COMMENT_MARKER = '<!-- copilot:translated-comment:v2 -->';
@@ -15,7 +16,7 @@ const MAX_ESCAPED_ORIGINAL_LENGTH = 40_000;
 
 export type TranslationPublication = {
     readonly translatedText: string;
-    readonly commentBody: string;
+    readonly originalText: string;
     readonly sourceLocale: string;
     readonly targetLocale: string;
 };
@@ -88,45 +89,65 @@ export function composeTranslatedComment(
 
     const safeTranslated = sanitizeAgentMarkdown(boundedTranslated, MAX_TRANSLATED_COMMENT_LENGTH);
     const boundedOriginal = createUntrustedContent(
-        escapeHtml(originalComment),
-        'github.comment.original.escaped',
+        originalComment,
+        'github.comment.original',
         MAX_ESCAPED_ORIGINAL_LENGTH,
     ).text;
-    const safeOriginal = neutralizeQuotedOriginal(boundedOriginal);
     const targetLocale = canonicalLocaleOr(locale.targetLocale, 'en-US');
     const sourceLocale = canonicalLocaleOr(locale.sourceLocale, 'und');
-    const marker = `${TRANSLATED_COMMENT_MARKER} source="${sourceLocale}" target="${targetLocale}" -->`;
     return {
         translatedText: safeTranslated,
+        originalText: boundedOriginal,
         sourceLocale,
         targetLocale,
-        commentBody: [
-            '<details>',
-            `<summary>${escapeHtml(translationSummary(sourceLocale, targetLocale))}</summary>`,
-            '',
-            safeTranslated,
-            '',
-            '---',
-            '',
-            '<pre>',
-            safeOriginal,
-            '</pre>',
-            '</details>',
-            '',
-            marker,
-            '',
-        ].join('\n'),
     };
 }
 
-function translationSummary(sourceLocale: string, targetLocale: string): string {
-    if (targetLocale.toLowerCase().startsWith('en')) {
-        return `Request interpreted from ${displayLanguage(sourceLocale, targetLocale)}`;
-    }
-    if (targetLocale.toLowerCase().startsWith('es')) {
-        return `Solicitud interpretada desde ${displayLanguage(sourceLocale, targetLocale)}`;
-    }
-    return `${sourceLocale} → ${targetLocale}`;
+/** Renders localized provenance only at the publication boundary. */
+export function renderTranslationContext(
+    publication: TranslationPublication,
+    catalog: PublicationMessageCatalog,
+): string {
+    const translatedText = sanitizeAgentMarkdown(
+        createUntrustedContent(
+            publication.translatedText,
+            'publication.translation.interpreted',
+            MAX_TRANSLATED_COMMENT_LENGTH,
+        ).text,
+        MAX_TRANSLATED_COMMENT_LENGTH,
+    ).trim();
+    const boundedOriginalText = createUntrustedContent(
+        publication.originalText,
+        'publication.translation.original',
+        MAX_ESCAPED_ORIGINAL_LENGTH,
+    ).text;
+    const escapedOriginalText = neutralizeQuotedOriginal(createUntrustedContent(
+        escapeHtml(boundedOriginalText),
+        'publication.translation.original.escaped',
+        MAX_ESCAPED_ORIGINAL_LENGTH,
+    ).text).trim();
+    if (!translatedText || !escapedOriginalText) return '';
+
+    const sourceLocale = canonicalLocaleOr(publication.sourceLocale, 'und');
+    const targetLocale = canonicalLocaleOr(publication.targetLocale, 'en-US');
+    const marker = `${TRANSLATED_COMMENT_MARKER} source="${sourceLocale}" target="${targetLocale}" -->`;
+    return [
+        '<details>',
+        `<summary>${escapeHtml(catalog.translation.summary(displayLanguage(sourceLocale, catalog.locale)))}</summary>`,
+        '',
+        `**${catalog.translation.interpretedRequest}**`,
+        '',
+        translatedText,
+        '',
+        `**${catalog.translation.originalRequest}**`,
+        '',
+        '<pre>',
+        escapedOriginalText,
+        '</pre>',
+        '</details>',
+        '',
+        marker,
+    ].join('\n');
 }
 
 function displayLanguage(sourceLocale: string, targetLocale: string): string {
@@ -152,9 +173,4 @@ function neutralizeQuotedOriginal(value: string): string {
         .replace(/[\u202A-\u202E\u2066-\u2069]/gu, '')
         .replace(/(^|\n)([ \t]*)\/(?!\/)/gu, '$1$2\u200b/')
         .replace(/@(?=[a-zA-Z0-9][a-zA-Z0-9-])/gu, '@\u200b');
-}
-
-export function appendTranslationContext(response: string, publication: TranslationPublication | undefined): string {
-    if (!publication) return response;
-    return `${response.trim()}\n\n${publication.commentBody}`;
 }

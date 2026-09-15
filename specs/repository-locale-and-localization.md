@@ -731,13 +731,15 @@ Le changement invalide correctement le cache à l’écriture, mais il manque un
 **Action :** ajoutez le test de concurrence avant la fusion.
 
 <details>
-<summary>Requête interprétée depuis l’espagnol</summary>
+<summary>Demande interprétée depuis l’espagnol</summary>
 
-Traduction utilisée : « Vérifie si ce changement casse le cache et indique-moi ce qu’il reste à faire. »
+**Demande interprétée**
 
-Original :
+Vérifie si ce changement casse le cache et indique-moi ce qu’il reste à faire.
 
-> @​vypbot revisa si este cambio rompe la caché y dime qué falta
+**Demande originale**
+
+<pre>@​vypbot revisa si este cambio rompe la caché y dime qué falta</pre>
 
 </details>
 
@@ -963,6 +965,17 @@ the repository locale, localizes its headings and explanatory labels, preserves
 machine values, and emits localization evidence once instead of duplicating it
 inside and below the main table. Lifecycle and the remaining public surfaces are
 not claimed complete by this evidence.
+
+The addressed-Think follow-up removes its feature-owned comment mutation and
+returns the same typed `direct-answer` projection as initial issue help. GitHub
+publication now uses the shared exact-target, source-correlated reply reconciler;
+translation evidence remains structured until that boundary and its summary and
+section labels come from the complete publication catalog. English and reviewed
+Spanish are bundled; arbitrary valid BCP-47 catalogs render the identical fixed
+Markdown structure, and an invalid dynamic slice falls back wholly to English.
+Local Think prints the semantic answer with repository-locale labels, does not
+write GitHub, and treats `--issue` as optional description context rather than
+silently requiring issue `#1`.
 
 ### 13.5 Rollback
 

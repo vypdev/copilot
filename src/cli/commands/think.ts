@@ -6,7 +6,7 @@ export function registerThinkCommand(program: Command): void {
   program
     .command("think")
     .description(`${TITLE} - Deep code analysis and change proposals using AI reasoning`)
-    .option("-i, --issue <number>", "Issue number to process (optional)", "1")
+    .option("-i, --issue <number>", "Optional issue number used as analysis context")
     .option("-b, --branch <name>", "Branch name", "master")
     .option("-d, --debug", "Debug mode", false)
     .option("-t, --token <token>", "Personal access token (or PERSONAL_ACCESS_TOKEN from the environment)")

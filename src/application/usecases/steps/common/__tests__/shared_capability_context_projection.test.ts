@@ -221,7 +221,7 @@ describe('P2-D shared capability context projections', () => {
       kind: 'comment-language-adaptation', status: 'translated', targetLocale: 'en-US',
       sourceLocale: 'es', reasonCode: 'none', interpretedComment: '@copilot-bot inspect this',
       publication: {
-        translatedText: 'inspect this', commentBody: '<details>translation</details>',
+        translatedText: 'inspect this', originalText: '@copilot-bot revisa esto',
         sourceLocale: 'es', targetLocale: 'en-US',
       },
     });

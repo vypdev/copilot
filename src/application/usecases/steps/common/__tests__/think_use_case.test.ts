@@ -10,7 +10,6 @@ jest.mock('../../../../../utils/logger', () => ({
 }));
 
 const mockAskAgent = jest.fn();
-const mockAddComment = jest.fn();
 const mockGetDescription = jest.fn();
 
 async function localizedAnswer(prompt: string): Promise<AgentQueryResult> {
@@ -50,14 +49,12 @@ describe('ThinkUseCase', () => {
   beforeEach(() => {
     useCase = new ThinkUseCase(
       { getDescription: mockGetDescription },
-      { addComment: mockAddComment },
       { query: async (request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }) => {
         mockAskAgent(request.configuration, request.agentId, request.prompt, request.options);
         return localizedAnswer(request.prompt);
       } },
     );
     mockAskAgent.mockReset();
-    mockAddComment.mockReset();
     mockGetDescription.mockReset();
     mockGetDescription.mockResolvedValue(undefined);
   });
@@ -75,7 +72,6 @@ describe('ThinkUseCase', () => {
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(false);
     expect(mockAskAgent).not.toHaveBeenCalled();
-    expect(mockAddComment).not.toHaveBeenCalled();
   });
 
   it('returns success executed false when tokenUser is not set', async () => {
@@ -93,7 +89,6 @@ describe('ThinkUseCase', () => {
 
   it('executes an explicit command without requiring a bot username', async () => {
     mockAskAgent.mockResolvedValue({ answer: 'Plan ready.' });
-    mockAddComment.mockResolvedValue(undefined);
     const param = baseParam({
       tokenUser: '',
       issue: { ...baseParam().issue, commentBody: '/copilot plan the rollout' },
@@ -111,6 +106,31 @@ describe('ThinkUseCase', () => {
     expect(results[0]).toMatchObject({ success: true, executed: true });
   });
 
+  it('returns a local semantic answer without an issue, mention, or publication target', async () => {
+    mockAskAgent.mockResolvedValue({ answer: 'Usa el catálogo configurado.' });
+    const context = projectThinkContext(baseParam({
+      issueNumber: -1,
+      tokenUser: '',
+      issue: { ...baseParam().issue, commentBody: 'explica el catálogo', number: -1 },
+      singleAction: { isThinkAction: true, issue: 0 },
+      locale: { repository: 'es-ES', issue: 'en-US', pullRequest: 'en-US' },
+    }));
+
+    const results = await useCase.invoke(context);
+
+    expect(context).toMatchObject({
+      request: { kind: 'ready', question: 'explica el catálogo', destinationType: 'local' },
+      targetLocale: 'es-ES',
+    });
+    expect(mockGetDescription).not.toHaveBeenCalled();
+    expect(mockAskAgent.mock.calls[0][2]).toContain('outputLocale` set exactly to `es-ES');
+    expect(results[0]).toMatchObject({
+      success: true,
+      executed: true,
+      payload: { publication: { kind: 'direct-answer', answer: 'Usa el catálogo configurado.' } },
+    });
+  });
+
   it('skips an invalid explicit command before invoking the agent', async () => {
     const results = await invoke(baseParam({
       issue: { ...baseParam().issue, commentBody: '/copilot unknown' },
@@ -118,7 +138,6 @@ describe('ThinkUseCase', () => {
 
     expect(results[0]).toMatchObject({ success: true, executed: false });
     expect(mockAskAgent).not.toHaveBeenCalled();
-    expect(mockAddComment).not.toHaveBeenCalled();
   });
 
   it('returns a contract error for a ready context without selected agent configuration', async () => {
@@ -141,7 +160,6 @@ describe('ThinkUseCase', () => {
 
   it('defaults a legacy ready context without targetLocale to canonical English', async () => {
     mockAskAgent.mockResolvedValue({ answer: 'Plan ready.' });
-    mockAddComment.mockResolvedValue(undefined);
     const ai = new Ai('https://opencode.example.com', 'model-x', false, [], false, 'low', 20);
 
     const results = await useCase.invoke({
@@ -158,8 +176,49 @@ describe('ThinkUseCase', () => {
     });
 
     expect(mockAskAgent.mock.calls[0][2]).toContain('outputLocale` set exactly to `en-US');
-    expect(mockAddComment).toHaveBeenCalledWith(1, 'Plan ready.');
-    expect(results[0]).toMatchObject({ success: true, executed: true });
+    expect(results[0]).toMatchObject({
+      success: true,
+      executed: true,
+      payload: { publication: { kind: 'direct-answer', answer: 'Plan ready.' } },
+    });
+  });
+
+  it('carries translation provenance as typed semantic publication data', async () => {
+    mockAskAgent.mockResolvedValue({ answer: 'Use the documented setting.' });
+    const ai = new Ai('https://opencode.example.com', 'model-x', false, [], false, 'low', 20);
+
+    const results = await useCase.invoke({
+      request: {
+        kind: 'ready',
+        commentBody: '@bot usa esto',
+        question: 'use this',
+        issueNumberForContext: 1,
+        destinationNumber: 1,
+        destinationType: 'issue',
+      },
+      agentTask: 'planner',
+      agentConfiguration: ai.getAgentConfiguration('planner'),
+      targetLocale: 'en-US',
+      translationPublication: {
+        translatedText: 'use this',
+        originalText: '@bot usa esto',
+        sourceLocale: 'es-ES',
+        targetLocale: 'en-US',
+      },
+    });
+
+    expect(results[0].payload).toEqual({
+      publication: {
+        kind: 'direct-answer',
+        answer: 'Use the documented setting.',
+        translation: {
+          translatedText: 'use this',
+          originalText: '@bot usa esto',
+          sourceLocale: 'es-ES',
+          targetLocale: 'en-US',
+        },
+      },
+    });
   });
 
   it('returns success executed false when comment does not mention @user', async () => {
@@ -173,7 +232,6 @@ describe('ThinkUseCase', () => {
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(false);
     expect(mockAskAgent).not.toHaveBeenCalled();
-    expect(mockAddComment).not.toHaveBeenCalled();
   });
 
   it('does not respond without @mention even when issue has question label', async () => {
@@ -185,7 +243,6 @@ describe('ThinkUseCase', () => {
     const results = await invoke(param);
 
     expect(mockAskAgent).not.toHaveBeenCalled();
-    expect(mockAddComment).not.toHaveBeenCalled();
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(false);
   });
@@ -199,7 +256,6 @@ describe('ThinkUseCase', () => {
     const results = await invoke(param);
 
     expect(mockAskAgent).not.toHaveBeenCalled();
-    expect(mockAddComment).not.toHaveBeenCalled();
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(false);
   });
@@ -207,7 +263,6 @@ describe('ThinkUseCase', () => {
   it('responds when issue has question label and comment mentions bot', async () => {
     mockGetDescription.mockResolvedValue(undefined);
     mockAskAgent.mockResolvedValue({ answer: 'Here is the answer.' });
-    mockAddComment.mockResolvedValue(undefined);
     const param = baseParam({
       labels: { isQuestion: true, isHelp: false },
       issue: { ...baseParam().issue, commentBody: '@bot how do I configure the webhook?' },
@@ -217,9 +272,11 @@ describe('ThinkUseCase', () => {
 
     expect(mockAskAgent).toHaveBeenCalledTimes(1);
     expect(mockAskAgent.mock.calls[0][2]).toContain('how do I configure the webhook?');
-    expect(mockAddComment).toHaveBeenCalledWith(1, 'Here is the answer.');
-    expect(results[0].success).toBe(true);
-    expect(results[0].executed).toBe(true);
+    expect(results[0]).toMatchObject({
+      success: true,
+      executed: true,
+      payload: { publication: { kind: 'direct-answer', answer: 'Here is the answer.' } },
+    });
   });
 
   it('rejects a response for another locale before posting the answer', async () => {
@@ -232,7 +289,6 @@ describe('ThinkUseCase', () => {
     const results = await invoke(param);
 
     expect(results[0].errors[0]).toMatchObject({ code: 'locale.output-invalid' });
-    expect(mockAddComment).not.toHaveBeenCalled();
   });
 
   it('returns error when OpenCode model is empty', async () => {
@@ -273,10 +329,9 @@ describe('ThinkUseCase', () => {
     expect(mockAskAgent).not.toHaveBeenCalled();
   });
 
-  it('calls getDescription then askAgent and addComment when comment mentions bot', async () => {
+  it('loads issue context and returns a semantic answer when a comment mentions the bot', async () => {
     mockGetDescription.mockResolvedValue(undefined);
     mockAskAgent.mockResolvedValue({ answer: '4' });
-    mockAddComment.mockResolvedValue(undefined);
     const param = baseParam({
       issue: { ...baseParam().issue, commentBody: '@bot what is 2+2?' },
     });
@@ -285,16 +340,17 @@ describe('ThinkUseCase', () => {
 
     expect(mockGetDescription).toHaveBeenCalledWith(1);
     expect(mockAskAgent).toHaveBeenCalledTimes(1);
-    expect(mockAddComment).toHaveBeenCalledWith(1, '4');
     expect(results).toHaveLength(1);
-    expect(results[0].success).toBe(true);
-    expect(results[0].executed).toBe(true);
+    expect(results[0]).toMatchObject({
+      success: true,
+      executed: true,
+      payload: { publication: { kind: 'direct-answer', answer: '4' } },
+    });
   });
 
   it('strips mention correctly when tokenUser contains regex-special chars', async () => {
     mockGetDescription.mockResolvedValue(undefined);
     mockAskAgent.mockResolvedValue({ answer: 'OK' });
-    mockAddComment.mockResolvedValue(undefined);
     const param = baseParam({
       tokenUser: 'bot.',
       issue: { ...baseParam().issue, commentBody: '@bot. what is 2+2?' },
@@ -313,7 +369,6 @@ describe('ThinkUseCase', () => {
   it('includes issue description in prompt when getDescription returns content', async () => {
     mockGetDescription.mockResolvedValue('Implement login feature for the app.');
     mockAskAgent.mockResolvedValue({ answer: 'Sure, here is how...' });
-    mockAddComment.mockResolvedValue(undefined);
     const param = baseParam({
       issue: { ...baseParam().issue, commentBody: '@bot how should I start?', number: 42 },
     });
@@ -331,7 +386,6 @@ describe('ThinkUseCase', () => {
   it('for PR review comment uses issueNumber to fetch issue description', async () => {
     mockGetDescription.mockResolvedValue('Original issue description.');
     mockAskAgent.mockResolvedValue({ answer: 'Reply' });
-    mockAddComment.mockResolvedValue(undefined);
     const param = baseParam({
       isPullRequest: true,
       issue: { ...baseParam().issue, isIssueComment: false, commentBody: '', number: 0 },
@@ -360,7 +414,6 @@ describe('ThinkUseCase', () => {
     const results = await invoke(param);
 
     expect(mockAskAgent).toHaveBeenCalledTimes(1);
-    expect(mockAddComment).not.toHaveBeenCalled();
     expect(results[0].success).toBe(false);
     expect(results[0].executed).toBe(true);
     expect(results[0].errors.map((error) => error.message)).toContain('Configured agent returned no answer.');
@@ -375,14 +428,12 @@ describe('ThinkUseCase', () => {
     const results = await invoke(param);
 
     expect(mockAskAgent).toHaveBeenCalledTimes(1);
-    expect(mockAddComment).not.toHaveBeenCalled();
     expect(results[0].success).toBe(false);
     expect(results[0].errors.map((error) => error.message)).toContain('Configured agent returned no answer.');
   });
 
-  it('posts comment to PR number when pull_request_review_comment', async () => {
+  it('returns a semantic answer for a pull-request review comment', async () => {
     mockAskAgent.mockResolvedValue({ answer: 'Reply' });
-    mockAddComment.mockResolvedValue(undefined);
     const param = baseParam({
       isPullRequest: true,
       issue: { ...baseParam().issue, isIssueComment: false, commentBody: '' },
@@ -395,28 +446,15 @@ describe('ThinkUseCase', () => {
 
     const results = await invoke(param);
 
-    expect(mockAddComment).toHaveBeenCalledWith(7, 'Reply');
-    expect(results[0].success).toBe(true);
-    expect(results[0].executed).toBe(true);
-  });
-
-  it('returns error result when addComment throws', async () => {
-    mockAskAgent.mockResolvedValue({ answer: 'ok' });
-    mockAddComment.mockRejectedValue(new Error('API error'));
-    const param = baseParam({
-      issue: { ...baseParam().issue, commentBody: '@bot hi' },
+    expect(results[0]).toMatchObject({
+      success: true,
+      executed: true,
+      payload: { publication: { kind: 'direct-answer', answer: 'Reply' } },
     });
-
-    const results = await invoke(param);
-
-    expect(results).toHaveLength(1);
-    expect(results[0].success).toBe(false);
-    expect(results[0].errors?.some((e) => String(e).includes('ThinkUseCase'))).toBe(true);
   });
 
   it('returns error when issue or PR number is 0 or negative', async () => {
     mockAskAgent.mockResolvedValue({ answer: 'Reply' });
-    mockAddComment.mockResolvedValue(undefined);
     const param = baseParam({
       issue: { ...baseParam().issue, commentBody: '@bot hi', number: 0 },
     });
@@ -426,6 +464,5 @@ describe('ThinkUseCase', () => {
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
     expect(results[0].errors.map((error) => error.message)).toContain('Issue or PR number not available.');
-    expect(mockAddComment).not.toHaveBeenCalled();
   });
 });

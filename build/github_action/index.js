@@ -44111,7 +44111,7 @@ exports.prepareLanguageAdaptationInput = prepareLanguageAdaptationInput;
 exports.rebuildAdaptedComment = rebuildAdaptedComment;
 exports.hasTranslatedCommentMarker = hasTranslatedCommentMarker;
 exports.composeTranslatedComment = composeTranslatedComment;
-exports.appendTranslationContext = appendTranslationContext;
+exports.renderTranslationContext = renderTranslationContext;
 const untrusted_content_1 = __nccwpck_require__(67057);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const copilot_command_1 = __nccwpck_require__(11771);
@@ -44168,41 +44168,43 @@ function composeTranslatedComment(translatedValue, originalComment, locale = {})
     if (!boundedTranslated.trim())
         return undefined;
     const safeTranslated = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(boundedTranslated, MAX_TRANSLATED_COMMENT_LENGTH);
-    const boundedOriginal = (0, untrusted_content_1.createUntrustedContent)((0, github_comment_publication_policy_1.escapeHtml)(originalComment), 'github.comment.original.escaped', MAX_ESCAPED_ORIGINAL_LENGTH).text;
-    const safeOriginal = neutralizeQuotedOriginal(boundedOriginal);
+    const boundedOriginal = (0, untrusted_content_1.createUntrustedContent)(originalComment, 'github.comment.original', MAX_ESCAPED_ORIGINAL_LENGTH).text;
     const targetLocale = canonicalLocaleOr(locale.targetLocale, 'en-US');
     const sourceLocale = canonicalLocaleOr(locale.sourceLocale, 'und');
-    const marker = `${exports.TRANSLATED_COMMENT_MARKER} source="${sourceLocale}" target="${targetLocale}" -->`;
     return {
         translatedText: safeTranslated,
+        originalText: boundedOriginal,
         sourceLocale,
         targetLocale,
-        commentBody: [
-            '<details>',
-            `<summary>${(0, github_comment_publication_policy_1.escapeHtml)(translationSummary(sourceLocale, targetLocale))}</summary>`,
-            '',
-            safeTranslated,
-            '',
-            '---',
-            '',
-            '<pre>',
-            safeOriginal,
-            '</pre>',
-            '</details>',
-            '',
-            marker,
-            '',
-        ].join('\n'),
     };
 }
-function translationSummary(sourceLocale, targetLocale) {
-    if (targetLocale.toLowerCase().startsWith('en')) {
-        return `Request interpreted from ${displayLanguage(sourceLocale, targetLocale)}`;
-    }
-    if (targetLocale.toLowerCase().startsWith('es')) {
-        return `Solicitud interpretada desde ${displayLanguage(sourceLocale, targetLocale)}`;
-    }
-    return `${sourceLocale} → ${targetLocale}`;
+/** Renders localized provenance only at the publication boundary. */
+function renderTranslationContext(publication, catalog) {
+    const translatedText = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)((0, untrusted_content_1.createUntrustedContent)(publication.translatedText, 'publication.translation.interpreted', MAX_TRANSLATED_COMMENT_LENGTH).text, MAX_TRANSLATED_COMMENT_LENGTH).trim();
+    const boundedOriginalText = (0, untrusted_content_1.createUntrustedContent)(publication.originalText, 'publication.translation.original', MAX_ESCAPED_ORIGINAL_LENGTH).text;
+    const escapedOriginalText = neutralizeQuotedOriginal((0, untrusted_content_1.createUntrustedContent)((0, github_comment_publication_policy_1.escapeHtml)(boundedOriginalText), 'publication.translation.original.escaped', MAX_ESCAPED_ORIGINAL_LENGTH).text).trim();
+    if (!translatedText || !escapedOriginalText)
+        return '';
+    const sourceLocale = canonicalLocaleOr(publication.sourceLocale, 'und');
+    const targetLocale = canonicalLocaleOr(publication.targetLocale, 'en-US');
+    const marker = `${exports.TRANSLATED_COMMENT_MARKER} source="${sourceLocale}" target="${targetLocale}" -->`;
+    return [
+        '<details>',
+        `<summary>${(0, github_comment_publication_policy_1.escapeHtml)(catalog.translation.summary(displayLanguage(sourceLocale, catalog.locale)))}</summary>`,
+        '',
+        `**${catalog.translation.interpretedRequest}**`,
+        '',
+        translatedText,
+        '',
+        `**${catalog.translation.originalRequest}**`,
+        '',
+        '<pre>',
+        escapedOriginalText,
+        '</pre>',
+        '</details>',
+        '',
+        marker,
+    ].join('\n');
 }
 function displayLanguage(sourceLocale, targetLocale) {
     if (sourceLocale === 'und')
@@ -44229,11 +44231,6 @@ function neutralizeQuotedOriginal(value) {
         .replace(/[\u202A-\u202E\u2066-\u2069]/gu, '')
         .replace(/(^|\n)([ \t]*)\/(?!\/)/gu, '$1$2\u200b/')
         .replace(/@(?=[a-zA-Z0-9][a-zA-Z0-9-])/gu, '@\u200b');
-}
-function appendTranslationContext(response, publication) {
-    if (!publication)
-        return response;
-    return `${response.trim()}\n\n${publication.commentBody}`;
 }
 
 
@@ -46089,6 +46086,9 @@ exports.PUBLICATION_MESSAGE_IDS = Object.freeze([
     'interaction.welcome.greeting',
     'interaction.welcome.capabilities',
     'interaction.welcome.hint',
+    'interaction.translation.summary',
+    'interaction.translation.interpretedRequest',
+    'interaction.translation.originalRequest',
     'interaction.status.heading',
     'interaction.status.repository',
     'interaction.status.target',
@@ -46106,6 +46106,10 @@ exports.PUBLICATION_MESSAGE_IDS = Object.freeze([
     'interaction.status.findings',
     'interaction.status.findingsInvalid',
     'interaction.status.findingCounts',
+    'cli.answer',
+    'cli.steps',
+    'cli.errors',
+    'cli.reminder',
 ]);
 const ENGLISH_MESSAGES = Object.freeze({
     'publication.implementationPlan': 'Implementation plan',
@@ -46153,6 +46157,9 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.welcome.greeting': 'Hi! I’m {bot}, the Copilot assistant for this repository.',
     'interaction.welcome.capabilities': 'I can answer questions, explain the codebase, propose implementation and test plans, review issues and pull requests for potential bugs or security problems, and help authorized maintainers apply changes.',
     'interaction.welcome.hint': 'Try {helpCommand} to see the available commands, or mention {bot} with your question.',
+    'interaction.translation.summary': 'Request interpreted from {sourceLanguage}',
+    'interaction.translation.interpretedRequest': 'Interpreted request',
+    'interaction.translation.originalRequest': 'Original request',
     'interaction.status.heading': 'Copilot status',
     'interaction.status.repository': 'Repository',
     'interaction.status.target': 'Target',
@@ -46170,6 +46177,10 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.status.findings': 'Bugbot findings',
     'interaction.status.findingsInvalid': 'invalid evidence; inspect the workflow result.',
     'interaction.status.findingCounts': '{open} open, {reopened} reopened, {verificationRequired} verification required, {unknown} unknown, {resolved} resolved',
+    'cli.answer': 'Answer',
+    'cli.steps': 'Steps',
+    'cli.errors': 'Errors',
+    'cli.reminder': 'Reminder',
 });
 const SPANISH_MESSAGES = Object.freeze({
     'publication.implementationPlan': 'Plan de implementación',
@@ -46217,6 +46228,9 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.welcome.greeting': 'Hola, soy {bot}, el asistente de Copilot de este repositorio.',
     'interaction.welcome.capabilities': 'Puedo responder preguntas, explicar el código, proponer planes de implementación y pruebas, revisar issues y pull requests y ayudar a los mantenedores autorizados a aplicar cambios.',
     'interaction.welcome.hint': 'Usa {helpCommand} para ver los comandos disponibles o menciona a {bot} con tu pregunta.',
+    'interaction.translation.summary': 'Solicitud interpretada desde {sourceLanguage}',
+    'interaction.translation.interpretedRequest': 'Solicitud interpretada',
+    'interaction.translation.originalRequest': 'Solicitud original',
     'interaction.status.heading': 'Estado de Copilot',
     'interaction.status.repository': 'Repositorio',
     'interaction.status.target': 'Destino',
@@ -46234,6 +46248,10 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.status.findings': 'Hallazgos de Bugbot',
     'interaction.status.findingsInvalid': 'evidencia no válida; revisa el resultado del workflow.',
     'interaction.status.findingCounts': '{open} abiertos, {reopened} reabiertos, {verificationRequired} requieren verificación, {unknown} desconocidos, {resolved} resueltos',
+    'cli.answer': 'Respuesta',
+    'cli.steps': 'Pasos',
+    'cli.errors': 'Errores',
+    'cli.reminder': 'Recordatorio',
 });
 exports.ENGLISH_PUBLICATION_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
@@ -46310,6 +46328,17 @@ function toPublicationCatalog(resolved) {
             heading: message('publication.access.heading'),
             explanation: message('publication.access.explanation'),
             recovery: message('publication.access.recovery'),
+        }),
+        translation: Object.freeze({
+            summary: (sourceLanguage) => message('interaction.translation.summary', { sourceLanguage }),
+            interpretedRequest: message('interaction.translation.interpretedRequest'),
+            originalRequest: message('interaction.translation.originalRequest'),
+        }),
+        cli: Object.freeze({
+            answer: message('cli.answer'),
+            steps: message('cli.steps'),
+            errors: message('cli.errors'),
+            reminder: message('cli.reminder'),
         }),
         render: message,
     });
@@ -46495,6 +46524,7 @@ const publication_identity_policy_1 = __nccwpck_require__(45403);
 const publication_message_catalog_1 = __nccwpck_require__(34223);
 const copilot_interaction_policy_1 = __nccwpck_require__(90108);
 const status_command_policy_1 = __nccwpck_require__(3449);
+const comment_translation_policy_1 = __nccwpck_require__(27150);
 function selectSemanticStatusIntents(context) {
     return Object.freeze(context.results.flatMap(result => {
         if (!result.executed || !result.success)
@@ -46582,7 +46612,7 @@ function renderSemanticReply(intent, catalog = (0, publication_message_catalog_1
         digest: intent.digest,
     });
     const body = intent.projection.kind === 'direct-answer'
-        ? (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(intent.projection.answer).trim()
+        ? renderDirectAnswer(intent.projection, catalog)
         : intent.projection.kind === 'help'
             ? (0, copilot_interaction_policy_1.buildCopilotHelpMessage)(intent.projection.botLogin, intent.locale, catalog)
             : intent.projection.kind === 'welcome'
@@ -46591,6 +46621,13 @@ function renderSemanticReply(intent, catalog = (0, publication_message_catalog_1
                     ? renderAccessPolicyReply(catalog)
                     : (0, status_command_policy_1.formatCopilotStatus)(intent.projection.snapshot, intent.locale, catalog);
     return `${marker}\n\n${body}`;
+}
+function renderDirectAnswer(projection, catalog) {
+    const answer = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(projection.answer).trim();
+    const translation = projection.translation
+        ? (0, comment_translation_policy_1.renderTranslationContext)(projection.translation, catalog)
+        : '';
+    return [answer, translation].filter(Boolean).join('\n\n');
 }
 function renderAccessPolicyReply(messages) {
     return [
@@ -46661,9 +46698,30 @@ function directAnswerProjection(payload) {
         || typeof publication.answer !== 'string'
         || !publication.answer.trim())
         return undefined;
+    const translation = translationProjection(publication.translation);
     return Object.freeze({
         kind: 'direct-answer',
         answer: publication.answer.trim(),
+        ...(translation ? { translation } : {}),
+    });
+}
+function translationProjection(value) {
+    const translation = (0, result_1.getResultPayload)(value);
+    if (!translation
+        || typeof translation.translatedText !== 'string'
+        || !translation.translatedText.trim()
+        || typeof translation.originalText !== 'string'
+        || !translation.originalText.trim()
+        || typeof translation.sourceLocale !== 'string'
+        || !translation.sourceLocale.trim()
+        || typeof translation.targetLocale !== 'string'
+        || !translation.targetLocale.trim())
+        return undefined;
+    return Object.freeze({
+        translatedText: translation.translatedText,
+        originalText: translation.originalText,
+        sourceLocale: translation.sourceLocale,
+        targetLocale: translation.targetLocale,
     });
 }
 function progressIntent(id, payload, locale) {
@@ -58972,7 +59030,6 @@ const project_context_instruction_1 = __nccwpck_require__(63907);
 const agent_answer_policy_1 = __nccwpck_require__(72063);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const application_error_1 = __nccwpck_require__(75999);
-const comment_translation_policy_1 = __nccwpck_require__(27150);
 const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 async function runThinkAnswerWorkflow(param, taskId, request, dependencies) {
     const issueDescription = await loadIssueDescription(request.issueNumberForContext, dependencies.issueDescriptionQueryPort);
@@ -58998,7 +59055,7 @@ async function runThinkAnswerWorkflow(param, taskId, request, dependencies) {
             }),
         ];
     }
-    if (request.destinationNumber <= 0) {
+    if (request.destinationType !== 'local' && (!request.destinationNumber || request.destinationNumber <= 0)) {
         (0, logging_ports_1.logError)('Issue or PR number not available for adding comment.');
         return [
             new result_1.Result({
@@ -59009,9 +59066,23 @@ async function runThinkAnswerWorkflow(param, taskId, request, dependencies) {
             }),
         ];
     }
-    await dependencies.issueNotificationPort.addComment(request.destinationNumber, (0, comment_translation_policy_1.appendTranslationContext)(answer, param.translationPublication));
-    (0, logging_ports_1.logInfo)(`Think response posted to ${request.destinationType} #${request.destinationNumber}.`);
-    return [new result_1.Result({ id: taskId, success: true, executed: true })];
+    (0, logging_ports_1.logInfo)(request.destinationType === 'local'
+        ? 'Think response prepared for local output.'
+        : `Think response prepared for ${request.destinationType} #${request.destinationNumber}.`);
+    return [new result_1.Result({
+            id: taskId,
+            success: true,
+            executed: true,
+            payload: Object.freeze({
+                publication: Object.freeze({
+                    kind: 'direct-answer',
+                    answer,
+                    ...(param.translationPublication
+                        ? { translation: Object.freeze({ ...param.translationPublication }) }
+                        : {}),
+                }),
+            }),
+        })];
 }
 async function loadIssueDescription(issueNumber, repository) {
     if (issueNumber <= 0)
@@ -59083,7 +59154,8 @@ function resolveThinkRequest(param) {
     const command = (0, copilot_command_1.parseCopilotCommand)(commentBody);
     if (command.kind === 'invalid')
         return { kind: 'skip', reason: 'invalid-command', detail: command.reason };
-    if (command.kind === 'none') {
+    const isLocalThink = param.singleAction?.isThinkAction === true;
+    if (command.kind === 'none' && !isLocalThink) {
         if (!param.tokenUser?.trim())
             return { kind: 'skip', reason: 'missing-token' };
         if (!(0, copilot_comment_request_1.containsBotMention)(commentBody, param.tokenUser))
@@ -59091,19 +59163,33 @@ function resolveThinkRequest(param) {
     }
     const question = command.kind === 'command'
         ? buildExplicitCommandQuestion(command.command)
-        : (0, think_input_policy_1.extractMentionQuestion)(commentBody, param.tokenUser ?? '');
+        : isLocalThink
+            ? commentBody.trim()
+            : (0, think_input_policy_1.extractMentionQuestion)(commentBody, param.tokenUser ?? '');
     if (!question)
         return { kind: 'skip', reason: 'empty-question' };
     const isPullRequestTarget = param.isPullRequest;
+    const issueDestination = positiveInteger(param.issue.number) ? param.issue.number : undefined;
+    const destinationType = isPullRequestTarget
+        ? 'PR'
+        : issueDestination
+            ? 'issue'
+            : isLocalThink
+                ? 'local'
+                : 'issue';
+    const destinationNumber = isPullRequestTarget ? param.pullRequest.number : issueDestination;
     return {
         kind: 'ready',
         commentBody,
         question,
         issueNumberForContext: isPullRequestTarget ? param.issueNumber : param.issue.number,
-        destinationNumber: isPullRequestTarget ? param.pullRequest.number : param.issue.number,
-        destinationType: isPullRequestTarget ? 'PR' : 'issue',
+        ...(destinationNumber !== undefined ? { destinationNumber } : {}),
+        destinationType,
         ...(command.kind === 'command' ? { command: command.command } : {}),
     };
+}
+function positiveInteger(value) {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
 }
 function buildExplicitCommandQuestion(command) {
     const suffix = command.arguments.length > 0
@@ -59124,16 +59210,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ThinkUseCase = void 0;
 const think_workflow_1 = __nccwpck_require__(36450);
 class ThinkUseCase {
-    constructor(issueDescriptionQueryPort, issueNotificationPort, aiRepository) {
+    constructor(issueDescriptionQueryPort, aiRepository) {
         this.issueDescriptionQueryPort = issueDescriptionQueryPort;
-        this.issueNotificationPort = issueNotificationPort;
         this.taskId = 'ThinkUseCase';
         this.aiRepository = aiRepository;
     }
     async invoke(param) {
         return (0, think_workflow_1.runThinkWorkflow)(param, this.taskId, {
             issueDescriptionQueryPort: this.issueDescriptionQueryPort,
-            issueNotificationPort: this.issueNotificationPort,
             aiRepository: this.aiRepository,
         });
     }
@@ -59164,7 +59248,7 @@ function projectThinkContext(source) {
     if (request.kind === 'skip') {
         return Object.freeze({ request: Object.freeze({ ...request }), ...(tokenUser ? { tokenUser } : {}) });
     }
-    const agentTask = (0, agent_task_policy_1.resolveThinkAgentTask)(request.command?.name, request.destinationType);
+    const agentTask = (0, agent_task_policy_1.resolveThinkAgentTask)(request.command?.name, request.destinationType === 'PR' ? 'PR' : 'issue');
     return Object.freeze({
         request: Object.freeze({
             ...request,
@@ -59178,7 +59262,9 @@ function projectThinkContext(source) {
         agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration(agentTask) }),
         targetLocale: request.destinationType === 'PR'
             ? source.locale?.pullRequest ?? 'en-US'
-            : source.locale?.issue ?? 'en-US',
+            : request.destinationType === 'local'
+                ? source.locale?.repository ?? 'en-US'
+                : source.locale?.issue ?? 'en-US',
     });
 }
 async function runThinkWorkflow(param, taskId, dependencies) {
@@ -72231,7 +72317,7 @@ function validMessageText(value) {
 }
 function safeDynamicText(value) {
     return validMessageText(value)
-        && !/[\r\n\u202A-\u202E\u2066-\u2069]/u.test(value)
+        && !/[\p{Cc}\u202A-\u202E\u2066-\u2069]/u.test(value)
         && !/<!--|-->|<\/?[A-Za-z]|https?:\/\/|```|[`*_[\]~|]|(^|\s)\/(?:copilot)(?:\s|$)|@[A-Za-z0-9]/iu.test(value);
 }
 function pluralPlaceholderParity(message) {
@@ -73905,7 +73991,7 @@ function createSingleActionUseCaseCompositionRoot(surface, binding) {
         : undefined;
     return new single_action_use_case_1.SingleActionUseCase(repositoryTagPort && repositoryReleasePort
         ? new publish_github_action_use_case_1.PublishGithubActionUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding), (0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding))
-        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, shared_capability_port_binding_1.bindIssueNotification)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncNotification)(issueDescriptionQueryPort, binding), catalogResolver), deploymentOrchestration);
+        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncNotification)(issueDescriptionQueryPort, binding), catalogResolver), deploymentOrchestration);
 }
 function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publication, binding, catalogResolver) {
     const deploymentClient = new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter();
@@ -73933,7 +74019,7 @@ function createIssueCommentUseCaseCompositionRoot(binding) {
     const bugbotGit = new bound_bugbot_git_mutation_adapter_1.BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
     const pullRequestDescription = new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestDescription)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding), (0, shared_capability_port_binding_1.bindOrganizationMembers)((0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
     const branchSync = new sync_branch_use_case_1.SyncBranchUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncWorkspace)(new branch_sync_workspace_adapter_1.BranchSyncWorkspaceAdapter(gitCommit), binding), fixer, (0, push_single_action_capability_port_binding_1.bindAuthenticatedUser)(authenticatedUser, binding), bugbotGit);
-    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(findings, bugbot.scm.context), new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding), (0, shared_capability_port_binding_1.bindIssueNotification)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit), new user_request_use_case_1.DoUserRequestUseCase(fixer, bugbotGit), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), bugbotGit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({
+    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(findings, bugbot.scm.context), new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit), new user_request_use_case_1.DoUserRequestUseCase(fixer, bugbotGit), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), bugbotGit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
@@ -73949,7 +74035,7 @@ function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
     const bugbotGit = new bound_bugbot_git_mutation_adapter_1.BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
     const pullRequestDescription = new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestDescription)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding), (0, shared_capability_port_binding_1.bindOrganizationMembers)((0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
     const branchSync = new sync_branch_use_case_1.SyncBranchUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncWorkspace)(new branch_sync_workspace_adapter_1.BranchSyncWorkspaceAdapter(gitCommit), binding), fixer, (0, push_single_action_capability_port_binding_1.bindAuthenticatedUser)(authenticatedUser, binding), bugbotGit);
-    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(findings, bugbot.scm.context), new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding), (0, shared_capability_port_binding_1.bindIssueNotification)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit), new user_request_use_case_1.DoUserRequestUseCase(fixer, bugbotGit), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), bugbotGit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({
+    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(findings, bugbot.scm.context), new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit), new user_request_use_case_1.DoUserRequestUseCase(fixer, bugbotGit), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), bugbotGit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),

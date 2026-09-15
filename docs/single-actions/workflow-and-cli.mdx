@@ -364,12 +364,15 @@ copilot recommend-steps -i 789
 
 ### `copilot think`
 
-Runs deep code analysis and returns change proposals from the configured agent. The question is required; the issue and branch options provide repository context.
+Runs deep code analysis and prints the configured agent's semantic response under
+a localized `Answer` label. The question is required; issue and branch options
+provide optional repository context. This local command does not create or
+update a GitHub comment.
 
 | Option | Required | Default | Description |
 | --- | --- | --- | --- |
 | `-q, --question <question...>` | Yes | — | Question or prompt. Multiple words may be supplied without shell quoting each word. |
-| `-i, --issue <number>` | No | `1` | Issue number used when the repository has that issue context. |
+| `-i, --issue <number>` | No | none | Optional issue whose description is added to the analysis context. Omitting it never probes or requires issue `#1`. |
 | `-b, --branch <name>` | No | `master` | Branch to use for the analysis context. |
 | `-t, --token <token>` | No | `PERSONAL_ACCESS_TOKEN` | PAT override. |
 | `--ai-ignore-files <patterns>` | No | `node_modules/*,build/*` | Comma-separated file patterns excluded from AI context. |

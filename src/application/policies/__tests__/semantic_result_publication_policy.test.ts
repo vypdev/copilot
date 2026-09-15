@@ -159,6 +159,76 @@ describe('semantic result publication policy', () => {
     expect(body.length).toBeLessThan(12_500);
   });
 
+  it('renders localized translation evidence carried by a direct answer', () => {
+    const [intent] = selectSemanticReplyIntents({
+      locale: 'es-ES',
+      target: { kind: 'issue', number: 7 },
+      correlationId: 'comment:42',
+      results: [new Result({
+        id: 'ThinkUseCase', success: true, executed: true,
+        payload: { publication: {
+          kind: 'direct-answer', answer: 'La respuesta.',
+          translation: {
+            translatedText: '¿Cómo funciona?',
+            originalText: 'How does it work?',
+            sourceLocale: 'en-US',
+            targetLocale: 'es-ES',
+          },
+        } },
+      })],
+    });
+
+    expect(intent.projection).toMatchObject({
+      kind: 'direct-answer',
+      translation: { sourceLocale: 'en-US', targetLocale: 'es-ES' },
+    });
+    const body = renderSemanticReply(intent);
+    expect(body).toContain('La respuesta.');
+    expect(body).toContain('<summary>Solicitud interpretada desde inglés estadounidense</summary>');
+    expect(body).toContain('**Solicitud interpretada**');
+    expect(body).toContain('**Solicitud original**');
+    expect(body).toContain('source="en-US" target="es-ES"');
+  });
+
+  it('publishes a valid answer without malformed optional translation evidence', () => {
+    const [intent] = selectSemanticReplyIntents({
+      locale: 'en-US', target: { kind: 'issue', number: 7 }, correlationId: 'comment:42',
+      results: [new Result({
+        id: 'ThinkUseCase', success: true, executed: true,
+        payload: { publication: {
+          kind: 'direct-answer', answer: 'The answer.',
+          translation: { translatedText: 'question' },
+        } },
+      })],
+    });
+
+    expect(intent.projection).toEqual({ kind: 'direct-answer', answer: 'The answer.' });
+    expect(renderSemanticReply(intent)).not.toContain('<details>');
+  });
+
+  it('keeps an answer plus translation evidence below the GitHub comment limit', () => {
+    const [intent] = selectSemanticReplyIntents({
+      locale: 'en-US', target: { kind: 'issue', number: 7 }, correlationId: 'comment:42',
+      results: [new Result({
+        id: 'ThinkUseCase', success: true, executed: true,
+        payload: { publication: {
+          kind: 'direct-answer', answer: 'a'.repeat(20_000),
+          translation: {
+            translatedText: 'b'.repeat(20_000),
+            originalText: '&'.repeat(65_000),
+            sourceLocale: 'es-ES',
+            targetLocale: 'en-US',
+          },
+        } },
+      })],
+    });
+
+    const rendered = renderSemanticReply(intent);
+    expect(rendered.length).toBeLessThan(65_536);
+    expect(rendered).toContain('[untrusted content truncated]');
+    expect(rendered).toContain('copilot:request-translation');
+  });
+
   it('renders a typed status-command projection in the configured locale', () => {
     const [intent] = selectSemanticReplyIntents({
       locale: 'es-ES', target: { kind: 'pull-request', number: 9 }, correlationId: 'comment:22',

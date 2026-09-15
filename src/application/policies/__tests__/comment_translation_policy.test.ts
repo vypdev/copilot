@@ -1,11 +1,15 @@
 import {
-    appendTranslationContext,
     composeTranslatedComment,
     hasTranslatedCommentMarker,
     prepareLanguageAdaptationInput,
     rebuildAdaptedComment,
+    renderTranslationContext,
     TRANSLATED_COMMENT_MARKER,
 } from '../comment_translation_policy';
+import {
+    ENGLISH_PUBLICATION_CATALOG,
+    SPANISH_PUBLICATION_CATALOG,
+} from '../publication_message_catalog';
 
 describe('comment translation policy', () => {
     it('composes a safe bot comment and preserves the original as escaped data', () => {
@@ -15,11 +19,14 @@ describe('comment translation policy', () => {
         );
 
         expect(result).toBeDefined();
-        expect(result?.commentBody).toContain('Hola @\u200boctocat');
-        expect(result?.commentBody).toContain('\u200b/');
-        expect(result?.commentBody).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
-        expect(result?.commentBody).toContain(TRANSLATED_COMMENT_MARKER);
-        expect(result?.commentBody).not.toContain('<!-- fake marker -->');
+        expect(result?.translatedText).toContain('Hola @\u200boctocat');
+        expect(result?.translatedText).toContain('\u200b/');
+        expect(result?.originalText).toContain('<script>alert(1)</script>');
+        expect(result?.translatedText).not.toContain('<!-- fake marker -->');
+        const rendered = renderTranslationContext(result!, ENGLISH_PUBLICATION_CATALOG);
+        expect(rendered).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+        expect(rendered).not.toContain('<script>');
+        expect(rendered).toContain(TRANSLATED_COMMENT_MARKER);
     });
 
     it('rejects empty, marked, and non-string model output', () => {
@@ -40,8 +47,9 @@ describe('comment translation policy', () => {
         const result = composeTranslatedComment('x'.repeat(12_000), '&'.repeat(65_000));
 
         expect(result).toBeDefined();
-        expect(result!.commentBody.length).toBeLessThan(65_536);
-        expect(result!.commentBody).toContain('[untrusted content truncated]');
+        const rendered = renderTranslationContext(result!, ENGLISH_PUBLICATION_CATALOG);
+        expect(rendered.length).toBeLessThan(65_536);
+        expect(rendered).toContain('[untrusted content truncated]');
     });
 
     it('separates plain, mention, and command prose and reconstructs only trusted control syntax', () => {
@@ -63,29 +71,65 @@ describe('comment translation policy', () => {
         expect(composeTranslatedComment('\u200b', 'original')).toBeUndefined();
     });
 
-    it('appends translation evidence only when an adaptation was published', () => {
+    it('renders translation evidence only at the publication boundary', () => {
         const publication = composeTranslatedComment('translated', 'original');
+        const rendered = renderTranslationContext(publication!, ENGLISH_PUBLICATION_CATALOG);
 
-        expect(appendTranslationContext('answer', undefined)).toBe('answer');
-        expect(appendTranslationContext(' answer ', publication)).toContain('answer\n\n<details>');
-        expect(appendTranslationContext(' answer ', publication)).toContain('\ntranslated\n');
-        expect(appendTranslationContext(' answer ', publication).match(/translated/gu)).toHaveLength(1);
+        expect(rendered).toContain('<details>');
+        expect(rendered).toContain('**Interpreted request**');
+        expect(rendered).toContain('\ntranslated\n');
+        expect(rendered).toContain('**Original request**');
+        expect(rendered).toContain(TRANSLATED_COMMENT_MARKER);
+    });
+
+    it('omits incomplete translation evidence at the publication boundary', () => {
+        expect(renderTranslationContext({
+            translatedText: '   ',
+            originalText: 'original',
+            sourceLocale: 'es-ES',
+            targetLocale: 'en-US',
+        }, ENGLISH_PUBLICATION_CATALOG)).toBe('');
+        expect(renderTranslationContext({
+            translatedText: 'translated',
+            originalText: '   ',
+            sourceLocale: 'es-ES',
+            targetLocale: 'en-US',
+        }, ENGLISH_PUBLICATION_CATALOG)).toBe('');
     });
 
     it.each([
-        ['en-US', 'es-ES', 'Request interpreted from European Spanish'],
-        ['es-ES', 'en-US', 'Solicitud interpretada desde inglés estadounidense'],
-        ['fr-FR', 'es-ES', 'es-ES → fr-FR'],
-        ['ar', 'en', 'en → ar'],
-        ['zh-Hant-TW', undefined, 'und → zh-Hant-TW'],
-    ] as const)('renders safe generic translation provenance for target %s', (targetLocale, sourceLocale, summary) => {
+        ['en-US', 'es-ES', ENGLISH_PUBLICATION_CATALOG, 'Request interpreted from European Spanish'],
+        ['es-ES', 'en-US', SPANISH_PUBLICATION_CATALOG, 'Solicitud interpretada desde inglés estadounidense'],
+    ] as const)('renders localized translation provenance for target %s', (targetLocale, sourceLocale, catalog, summary) => {
         const result = composeTranslatedComment('texte', '@team\n/fix\u202E', { targetLocale, sourceLocale });
+        const rendered = renderTranslationContext(result!, catalog);
         expect(result).toMatchObject({ targetLocale, sourceLocale: sourceLocale ?? 'und' });
-        expect(result?.commentBody).toContain(`<summary>${summary}</summary>`);
-        expect(result?.commentBody).toContain(`source="${sourceLocale ?? 'und'}" target="${targetLocale}"`);
-        expect(result?.commentBody).toContain('@\u200bteam');
-        expect(result?.commentBody).toContain('\u200b/fix');
-        expect(result?.commentBody).not.toContain('\u202E');
+        expect(rendered).toContain(`<summary>${summary}</summary>`);
+        expect(rendered).toContain(`source="${sourceLocale ?? 'und'}" target="${targetLocale}"`);
+        expect(rendered).toContain('@\u200bteam');
+        expect(rendered).toContain('\u200b/fix');
+        expect(rendered).not.toContain('\u202E');
+    });
+
+    it('uses an arbitrary resolved catalog instead of branching on locale names', () => {
+        const publication = composeTranslatedComment('inspectez ceci', 'inspect this', {
+            sourceLocale: 'en-US', targetLocale: 'fr-FR',
+        });
+        const frenchCatalog = Object.freeze({
+            ...ENGLISH_PUBLICATION_CATALOG,
+            locale: 'fr-FR',
+            requestedLocale: 'fr-FR',
+            translation: Object.freeze({
+                summary: (sourceLanguage: string) => `Demande interprétée depuis ${sourceLanguage}`,
+                interpretedRequest: 'Demande interprétée',
+                originalRequest: 'Demande originale',
+            }),
+        });
+
+        const rendered = renderTranslationContext(publication!, frenchCatalog);
+        expect(rendered).toContain('Demande interprétée depuis anglais américain');
+        expect(rendered).toContain('**Demande interprétée**');
+        expect(rendered).toContain('**Demande originale**');
     });
 
     it('falls back to trusted locale defaults when provenance tags are invalid', () => {
@@ -95,7 +139,8 @@ describe('comment translation policy', () => {
         });
 
         expect(result).toMatchObject({ sourceLocale: 'und', targetLocale: 'en-US' });
-        expect(result?.commentBody).toContain('<summary>Request interpreted from und</summary>');
+        expect(renderTranslationContext(result!, ENGLISH_PUBLICATION_CATALOG))
+            .toContain('<summary>Request interpreted from und</summary>');
     });
 
     it('keeps canonical provenance when language display names are unavailable', () => {
@@ -107,7 +152,8 @@ describe('comment translation policy', () => {
                 sourceLocale: 'es-ES',
                 targetLocale: 'en-US',
             });
-            expect(result?.commentBody).toContain('<summary>Request interpreted from es-ES</summary>');
+            expect(renderTranslationContext(result!, ENGLISH_PUBLICATION_CATALOG))
+                .toContain('<summary>Request interpreted from es-ES</summary>');
         } finally {
             displayNames.mockRestore();
         }
@@ -116,10 +162,12 @@ describe('comment translation policy', () => {
     it('uses the canonical source tag when the display-name service returns no label', () => {
         const of = jest.spyOn(Intl.DisplayNames.prototype, 'of').mockReturnValue(undefined);
         try {
-            expect(composeTranslatedComment('translated', 'original', {
+            const result = composeTranslatedComment('translated', 'original', {
                 sourceLocale: 'es-ES',
                 targetLocale: 'en-US',
-            })?.commentBody).toContain('<summary>Request interpreted from es-ES</summary>');
+            });
+            expect(renderTranslationContext(result!, ENGLISH_PUBLICATION_CATALOG))
+                .toContain('<summary>Request interpreted from es-ES</summary>');
         } finally {
             of.mockRestore();
         }

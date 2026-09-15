@@ -7,7 +7,7 @@
       "status": "proposed",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-14",
+      "lastVerified": "2026-09-15",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md"
@@ -44,6 +44,10 @@
         "src/application/usecases/setup/merge_queue_readiness_use_case.ts",
         "src/application/usecases/steps/common/comment_language_translation_workflow.ts",
         "src/application/policies/comment_translation_policy.ts",
+        "src/application/usecases/steps/common/think_request_policy.ts",
+        "src/application/usecases/steps/common/think_workflow.ts",
+        "src/application/usecases/steps/common/think_answer_workflow.ts",
+        "src/application/usecases/steps/common/think_use_case.ts",
         "src/application/usecases/comment_automation_use_case.ts",
         "src/application/usecases/steps/common/publish_resume_workflow.ts",
         "src/domain/github_publication.ts",
@@ -58,6 +62,12 @@
         "src/application/ports/issue_lifecycle_ports.ts",
         "src/application/usecases/steps/common/status_card_publication_workflow.ts",
         "src/application/usecases/steps/common/reply_publication_workflow.ts",
+        "src/actions/local_action.ts",
+        "src/actions/local_action_output.ts",
+        "src/cli/commands/think.ts",
+        "src/cli/commands/think_command_handler.ts",
+        "src/infrastructure/composition/local_action_composition_root.ts",
+        "src/infrastructure/composition/main_run_route_composition_root.ts",
         "src/infrastructure/composition/issue_use_case_composition_root.ts",
         "src/infrastructure/composition/shared_capability_port_binding.ts",
         "src/architecture/github_publication_mutation_baseline.json",
@@ -103,12 +113,19 @@
         "src/application/usecases/steps/commit/bugbot/__tests__/synchronize_bugbot_review_presentation_use_case.test.ts",
         "src/application/policies/__tests__/deployment_presentation_policy.test.ts",
         "src/application/usecases/steps/common/__tests__/comment_language_translation_workflow.test.ts",
+        "src/application/usecases/steps/common/__tests__/think_request_policy.test.ts",
+        "src/application/usecases/steps/common/__tests__/think_use_case.test.ts",
         "src/application/usecases/steps/common/__tests__/publish_resume_use_case.test.ts",
         "src/application/usecases/steps/common/__tests__/status_card_publication_workflow.test.ts",
         "src/application/usecases/steps/common/__tests__/reply_publication_workflow.test.ts",
         "src/application/usecases/steps/issue/__tests__/answer_issue_help_use_case.test.ts",
         "src/application/usecases/__tests__/issue_use_case.test.ts",
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
+        "src/actions/__tests__/local_action.test.ts",
+        "src/__tests__/cli.test.ts",
+        "src/cli/commands/__tests__/think_command_handler.test.ts",
+        "src/infrastructure/composition/__tests__/local_action_composition_root.test.ts",
+        "src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts",
         "src/infrastructure/composition/__tests__/issue_use_case_composition_root.test.ts",
         "src/infrastructure/composition/__tests__/shared_capability_port_binding.test.ts",
         "src/infrastructure/composition/__tests__/pull_request_use_case_composition_root.test.ts",
@@ -148,6 +165,8 @@
         "docs/single-actions/configuration.mdx",
         "docs/single-actions/available-actions.mdx",
         "docs/single-actions/workflow-and-cli.mdx",
+        "docs/single-actions/examples.mdx",
+        "docs/security-operations/security/prompt-injection.mdx",
         "docs/security-operations/operations/verification.mdx",
         "docs/development/architecture.mdx"
       ]
@@ -668,7 +687,7 @@
       "status": "implemented",
       "scope": "Admit only explicit commands or exact mentions, then route them while protecting repository mutations",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-13",
+      "lastVerified": "2026-09-15",
       "specs": [
         "specs/comment-automation-and-authorization.md"
       ],
@@ -699,6 +718,10 @@
         "src/application/usecases/steps/common/comment_language_translation_workflow.ts",
         "src/application/usecases/steps/common/think_request_policy.ts",
         "src/application/usecases/steps/common/think_workflow.ts",
+        "src/application/usecases/steps/common/think_answer_workflow.ts",
+        "src/application/usecases/steps/common/think_use_case.ts",
+        "src/application/policies/semantic_result_publication_policy.ts",
+        "src/application/usecases/steps/common/publish_resume_workflow.ts",
         "src/infrastructure/composition/shared_capability_port_binding.ts",
         "src/data/repository/organization/actor_authorization_repository.ts"
       ],
@@ -719,6 +742,8 @@
         "src/application/usecases/__tests__/pull_request_review_comment_use_case.test.ts",
         "src/application/usecases/steps/issue_comment/__tests__/check_issue_comment_language_use_case.test.ts",
         "src/application/usecases/steps/common/__tests__/think_request_policy.test.ts",
+        "src/application/usecases/steps/common/__tests__/think_use_case.test.ts",
+        "src/application/policies/__tests__/semantic_result_publication_policy.test.ts",
         "src/application/usecases/steps/common/__tests__/shared_capability_context_projection.test.ts",
         "src/infrastructure/composition/__tests__/shared_capability_port_binding.test.ts",
         "src/data/repository/organization/__tests__/actor_authorization_repository.test.ts"
@@ -969,7 +994,7 @@
       "status": "as-built-baseline",
       "scope": "Expose bounded local commands and workflow-dispatched operations through the shared application core",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-11",
+      "lastVerified": "2026-09-15",
       "specs": [
         "specs/cli-and-single-action-execution.md"
       ],
@@ -982,20 +1007,32 @@
       ],
       "code": [
         "src/cli/command_registry.ts",
+        "src/cli/commands/think.ts",
+        "src/cli/commands/think_command_handler.ts",
         "src/data/model/action_types.ts",
         "src/data/model/single_action.ts",
         "src/application/usecases/single_action_workflow.ts",
-        "src/actions/local_action_output.ts"
+        "src/application/usecases/steps/common/think_request_policy.ts",
+        "src/application/usecases/steps/common/think_workflow.ts",
+        "src/application/usecases/steps/common/think_answer_workflow.ts",
+        "src/actions/local_action_output.ts",
+        "src/infrastructure/composition/local_action_composition_root.ts"
       ],
       "tests": [
         "src/cli/__tests__/cli_program.test.ts",
         "src/cli/__tests__/cli_entrypoint_boundaries.test.ts",
+        "src/__tests__/cli.test.ts",
+        "src/cli/commands/__tests__/think_command_handler.test.ts",
         "src/actions/__tests__/local_action.test.ts",
+        "src/application/usecases/steps/common/__tests__/think_request_policy.test.ts",
+        "src/application/usecases/steps/common/__tests__/think_use_case.test.ts",
+        "src/infrastructure/composition/__tests__/local_action_composition_root.test.ts",
         "src/application/usecases/__tests__/single_action_use_case.test.ts"
       ],
       "documentation": [
         "docs/single-actions/available-actions.mdx",
         "docs/single-actions/workflow-and-cli.mdx",
+        "docs/single-actions/examples.mdx",
         "docs/single-actions/configuration.mdx",
         "docs/agents/cli-commands.mdx"
       ]

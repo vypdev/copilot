@@ -1,10 +1,9 @@
 import { runLocalAction } from "../../actions/local_action";
-import { createIssueMetadataCompositionRoot } from "../../infrastructure/composition/issue_metadata_composition_root";
 import { ACTIONS } from '../../data/model/action_types';
 import { INPUT_KEYS } from '../../application/contracts/input_keys';
 import { logError } from "../../utils/logger";
 import { getGitInfo } from "../../cli_context";
-import { cleanCliArgument, joinCliArguments } from "../command_input_policy";
+import { cleanCliArgument, joinCliArguments, parsePositiveCliInteger } from "../command_input_policy";
 
 export interface ThinkCommandOptions {
   issue?: unknown;
@@ -33,12 +32,18 @@ export async function runThinkCommand(options: ThinkCommandOptions): Promise<voi
   }
 
   const branch = cleanCliArgument(options.branch) || "master";
-  const issueNumber = cleanCliArgument(options.issue) || "1";
+  const rawIssueNumber = cleanCliArgument(options.issue);
+  const issueNumber = parsePositiveCliInteger(options.issue);
+  if (rawIssueNumber && issueNumber === undefined) {
+    console.log("❌ --issue must be a positive integer");
+    process.exitCode = 1;
+    return;
+  }
   const token = resolveOption(options.token, "PERSONAL_ACCESS_TOKEN");
   const params: Record<string, unknown> = {
     [INPUT_KEYS.DEBUG]: String(options.debug ?? false),
     [INPUT_KEYS.SINGLE_ACTION]: ACTIONS.THINK,
-    [INPUT_KEYS.SINGLE_ACTION_ISSUE]: parseInt(issueNumber, 10) || 1,
+    ...(issueNumber ? { [INPUT_KEYS.SINGLE_ACTION_ISSUE]: issueNumber } : {}),
     [INPUT_KEYS.TOKEN]: token,
     [INPUT_KEYS.AI_IGNORE_FILES]: resolveOption(options.aiIgnoreFiles, "AI_IGNORE_FILES"),
     [INPUT_KEYS.AI_INCLUDE_REASONING]: resolveOption(options.includeReasoning, "AI_INCLUDE_REASONING"),
@@ -46,12 +51,7 @@ export async function runThinkCommand(options: ThinkCommandOptions): Promise<voi
     commits: { ref: `refs/heads/${branch}` },
   };
 
-  await addIssueContext(params, gitInfo.owner, gitInfo.repo, issueNumber, token, question);
-  params[INPUT_KEYS.WELCOME_TITLE] = "🤔 AI Reasoning Analysis";
-  params[INPUT_KEYS.WELCOME_MESSAGES] = [
-    `Starting deep code analysis for ${gitInfo.owner}/${gitInfo.repo}/${branch}...`,
-    `Question: ${question.substring(0, 100)}${question.length > 100 ? "..." : ""}`,
-  ];
+  addIssueContext(params, issueNumber, question);
   await runLocalAction(params);
 }
 
@@ -59,27 +59,12 @@ function resolveOption(value: unknown, environmentName: string): string | undefi
   return cleanCliArgument(value) || process.env[environmentName];
 }
 
-async function addIssueContext(
+function addIssueContext(
   params: Record<string, unknown>,
-  owner: string,
-  repo: string,
-  issueNumber: string,
-  token: string | undefined,
+  issueNumber: number | undefined,
   question: string,
-): Promise<void> {
-  const parsedIssueNumber = parseInt(issueNumber, 10);
-  if (!(parsedIssueNumber > 0)) {
-    params.eventName = "issue";
-    params.issue = { number: 1 };
-    params.comment = { body: question };
-    return;
-  }
-
-  const issueMetadataRepository = createIssueMetadataCompositionRoot();
-  const isIssue = await issueMetadataRepository.isIssue(owner, repo, parsedIssueNumber, token ?? "");
-  if (!isIssue) return;
-
-  params.eventName = "issue";
-  params.issue = { number: parsedIssueNumber };
+): void {
+  params.eventName = "issue_comment";
+  params.issue = issueNumber ? { number: issueNumber } : {};
   params.comment = { body: question };
 }

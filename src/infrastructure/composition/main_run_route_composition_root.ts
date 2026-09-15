@@ -73,7 +73,6 @@ import { ResolveMessageCatalogUseCase } from '../../application/usecases/localiz
 import type { BugbotScmBinding } from './bugbot_scm_port_factory';
 import {
   bindIssueDescriptionQuery,
-  bindIssueNotification,
   bindOrganizationMembers,
 } from './shared_capability_port_binding';
 import { bindPullRequestDescription } from './lifecycle_capability_port_binding';
@@ -136,7 +135,6 @@ export function createSingleActionUseCaseCompositionRoot(
     repositoryTagPort ? new CreateTagUseCase(bindRepositoryTag(repositoryTagPort, binding)) : undefined,
     new ThinkUseCase(
       bindIssueDescriptionQuery(issueDescriptionQueryPort, binding),
-      bindIssueNotification(createIssueNotificationRepository(), binding),
       createFindingsQueryPort(),
     ),
     createInitialSetupCompositionRoot(binding),
@@ -215,7 +213,6 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
     ),
     new ThinkUseCase(
       bindIssueDescriptionQuery(createIssueContentCompositionRoot(), binding),
-      bindIssueNotification(createIssueNotificationRepository(), binding),
       findings,
     ),
     new BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit),
@@ -271,7 +268,6 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
     ),
     new ThinkUseCase(
       bindIssueDescriptionQuery(createIssueContentCompositionRoot(), binding),
-      bindIssueNotification(createIssueNotificationRepository(), binding),
       findings,
     ),
     new BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit),

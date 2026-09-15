@@ -40,6 +40,9 @@ only for a structured language decision or translation. The workflow:
 - preserves the original comment as escaped inert text;
 - neutralizes mentions, slash commands, and HTML-comment markers in the
   translated publication;
+- carries the bounded interpretation and original as typed data until the shared
+  semantic reply renderer resolves one complete locale catalog, then escapes the
+  original at that final publication boundary;
 - writes a versioned marker only in the bot-owned response so the adaptation context cannot re-enter command routing;
 - never treats translated text as an action request.
 

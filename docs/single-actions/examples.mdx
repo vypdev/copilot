@@ -204,7 +204,12 @@ copilot recommend-steps -i 789
 
 ```bash
 copilot think -q "Where is authentication validated?"
+copilot think -i 123 -q "Summarize the issue and identify the next risk"
 ```
+
+The first form does not probe a default issue. The optional `-i/--issue` form
+adds that issue description to the analysis context. Both print one localized
+`Answer` locally and create no GitHub comment.
 
 ### do (CLI-only, execution role)
 

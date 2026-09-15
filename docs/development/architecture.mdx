@@ -14,10 +14,13 @@ and reply workflows validate exact bot ownership, stable correlation or topic
 identity, and semantic digests before creating or updating a comment. The
 checked-in publication mutation inventory fails CI if a new application use
 case writes a comment or review without an explicit architectural decision.
-Initial issue help follows that rule: the agent step returns an immutable
-`direct-answer` projection and never receives a GitHub mutation port. The shared
-reply reconciler sanitizes and publishes that answer once for the event
-correlation. Issue routing emits a welcome only when an eligible normal issue
+Initial issue help and addressed Think requests follow that rule: each agent
+step returns an immutable `direct-answer` projection and receives no GitHub
+mutation port. The shared reply reconciler sanitizes and publishes the answer
+once for the source-comment or event correlation. Optional translation evidence
+stays typed until this publication boundary; the renderer uses the same resolved
+catalog as the answer and creates the inert, collapsed original-request block.
+Issue routing emits a welcome only when an eligible normal issue
 produces neither a publishable plan nor a direct answer; release and hotfix
 issues leave conversation ownership to their durable dashboard. Before the
 optional fallback is emitted, a read-only comment port checks exact-target,
@@ -53,6 +56,12 @@ options builder, receives `targetLocale`, requires `outputLocale`, and validates
 an exact canonical match before any product mutation. An architecture test
 compares the call sites with that inventory, while strict-schema tests require
 the locale field in every response contract.
+
+Repository-aware local actions reuse that catalog boundary for terminal labels.
+The Think CLI renders its semantic payload under a localized `Answer` label and
+does not need a synthetic GitHub issue or a comment mutation; `--issue` adds
+optional issue-description context only. Machine keys and command names remain
+English.
 
 Language adaptation is separate from catalog resolution. Comment admission,
 command parsing, and authorization establish trusted command identity before at

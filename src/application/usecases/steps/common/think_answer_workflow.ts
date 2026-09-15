@@ -3,7 +3,6 @@ import { AGENT_PLAN } from '../../../../application/policies/agent_task_policy';
 import { THINK_RESPONSE_SCHEMA } from '../../../../application/policies/agent_response_schemas';
 import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
 import type { BoundIssueDescriptionQueryPort } from '../../../ports/issue_description_ports';
-import type { BoundIssueNotificationPort } from '../../../ports/issue_lifecycle_ports';
 import { getThinkPrompt } from '../../../../prompts';
 import { logDebugInfo, logError, logInfo } from '../../../ports/logging_ports';
 import { PROJECT_CONTEXT_INSTRUCTION } from '../../../../utils/project_context_instruction';
@@ -13,13 +12,11 @@ import { sanitizeAgentMarkdown } from '../../../../application/policies/github_c
 import { ApplicationError } from '../../../errors/application_error';
 import type { AgentConfiguration } from '../../../../data/model/agent';
 import type { AgentTask } from '../../../../domain/agent';
-import { appendTranslationContext } from '../../../policies/comment_translation_policy';
 import type { TranslationPublication } from '../../../policies/comment_translation_policy';
 import { productFacingAgentQueryOptions } from '../../../policies/agent_output_locale_policy';
 
 export interface ThinkAnswerDependencies {
     issueDescriptionQueryPort: BoundIssueDescriptionQueryPort;
-    issueNotificationPort: BoundIssueNotificationPort;
     aiRepository: FindingsQueryPort;
 }
 
@@ -72,7 +69,7 @@ export async function runThinkAnswerWorkflow(
             }),
         ];
     }
-    if (request.destinationNumber <= 0) {
+    if (request.destinationType !== 'local' && (!request.destinationNumber || request.destinationNumber <= 0)) {
         logError('Issue or PR number not available for adding comment.');
         return [
             new Result({
@@ -84,14 +81,23 @@ export async function runThinkAnswerWorkflow(
         ];
     }
 
-    await dependencies.issueNotificationPort.addComment(
-        request.destinationNumber,
-        appendTranslationContext(answer, param.translationPublication),
-    );
-    logInfo(
-        `Think response posted to ${request.destinationType} #${request.destinationNumber}.`,
-    );
-    return [new Result({ id: taskId, success: true, executed: true })];
+    logInfo(request.destinationType === 'local'
+        ? 'Think response prepared for local output.'
+        : `Think response prepared for ${request.destinationType} #${request.destinationNumber}.`);
+    return [new Result({
+        id: taskId,
+        success: true,
+        executed: true,
+        payload: Object.freeze({
+            publication: Object.freeze({
+                kind: 'direct-answer' as const,
+                answer,
+                ...(param.translationPublication
+                    ? { translation: Object.freeze({ ...param.translationPublication }) }
+                    : {}),
+            }),
+        }),
+    })];
 }
 
 async function loadIssueDescription(

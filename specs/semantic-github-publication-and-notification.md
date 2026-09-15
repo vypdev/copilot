@@ -954,6 +954,14 @@ is emitted, a read-only comment boundary recognizes only exact-target,
 bot-owned plan, direct-answer, or current/legacy welcome markers; an unavailable history read fails
 closed to operator evidence and does not risk a redundant comment.
 
+Addressed Think requests now use that same `direct-answer` contract. The Think
+application service has only issue-description query and agent-query ports; it
+cannot create or update a GitHub comment. Its optional translation provenance is
+immutable semantic data, rendered only after the shared publisher resolves the
+effective issue or pull-request catalog. Replays therefore reconcile the exact
+source-comment identity, and local CLI execution can render the answer without
+performing any GitHub publication.
+
 No remote product flag is required. Each phase must be independently releasable
 and its compatibility adapter must fail closed to Job Summary, not fall back to
 generic comments.
@@ -1077,6 +1085,10 @@ removed.
     neither workflow cancels the other, Commit retains progress without running
     Bugbot, and the PR event publishes exactly one review projection for the
     head.
+20. Given an addressed Think request, when the agent returns a valid answer,
+    then Think performs no comment mutation and the shared reply boundary creates
+    or reconciles exactly one `direct-answer` for the source-comment identity;
+    local CLI execution prints the same semantic answer without GitHub writes.
 
 ## 17. Requirements traceability
 
