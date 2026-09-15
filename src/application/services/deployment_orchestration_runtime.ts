@@ -25,6 +25,7 @@ import {
 } from "../policies/deployment_message_catalog";
 import {
   blockDeploymentOperation,
+  requiredDeploymentFailure,
   sanitizeDeploymentMessage,
   type DeploymentOperationSnapshot,
   type ReconciliationTargetState,
@@ -422,16 +423,16 @@ export function deploymentSuccess(step: string): Result {
 
 export function blockedDeploymentResult(
   operation: DeploymentOperationSnapshot,
-  fallback: string,
 ): Result {
-  const message = operation.lastFailure?.message ?? fallback;
+  const failure = requiredDeploymentFailure(operation);
+  const message = failure.message;
   return new Result({
     id: DEPLOYMENT_ORCHESTRATION_TASK_ID,
     success: false,
     executed: true,
     steps: [message],
     errors: [new ApplicationError("workflow.failed", message, {
-      retryable: operation.lastFailure?.retryable ?? false,
+      retryable: failure.retryable,
     })],
   });
 }

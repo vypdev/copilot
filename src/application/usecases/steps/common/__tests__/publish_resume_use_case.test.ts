@@ -23,11 +23,15 @@ function recommendation(
     id: 'RecommendStepsUseCase', success: true, executed: true,
     payload: {
       issueNumber: 42,
-      recommendedSteps: steps,
       implementationPlan,
-      recommendationState: { issueDescriptionFingerprint: fingerprint },
+      recommendationState: {
+        issueDescriptionFingerprint: fingerprint,
+        recommendationFingerprint: fingerprint,
+        implementationPlan,
+        implementationPlanLocale: 'en-US',
+      },
     },
-    steps: ['legacy plan wrapper that must never be published'],
+    steps: ['unstructured plan wrapper that must never be published'],
   });
 }
 
@@ -38,7 +42,7 @@ function progress(value = 65, summary = 'Core behavior is implemented.', remaini
       issueNumber: 42, progress: value, summary, remaining,
       branch: 'feature/work', developmentBranch: 'develop', sourceHeadSha: SOURCE_HEAD,
     },
-    steps: ['legacy progress wrapper that must never be published'],
+    steps: ['unstructured progress wrapper that must never be published'],
   });
 }
 
@@ -78,13 +82,13 @@ function publicationSource(...heads: string[]) {
   return { getBranchHeadSha: jest.fn(async () => remaining.shift() ?? SOURCE_HEAD) };
 }
 
-describe('PublishResultUseCase semantic compatibility boundary', () => {
+describe('PublishResultUseCase strict semantic publication boundary', () => {
   it.each([
     new Result({ id: 'metadata', success: true, executed: true, steps: ['Waiting state cleared.'] }),
     new Result({ id: 'failure', success: false, executed: true, errors: [] }),
     new Result({ id: 'reminder', success: true, executed: true, reminders: ['Internal reminder'] }),
     new Result({ id: 'Bugbot', success: true, executed: true, steps: ['Review complete'] }),
-  ])('keeps legacy result evidence out of GitHub conversations', async (result) => {
+  ])('keeps unstructured result evidence out of GitHub conversations', async (result) => {
     const comments = inMemoryComments();
 
     await new PublishResultUseCase(comments).invoke(projectPublishResultContext(source([result])));
@@ -113,7 +117,7 @@ describe('PublishResultUseCase semantic compatibility boundary', () => {
     const comments = inMemoryComments();
     const result = new Result({
       id: 'Comment.Help', success: true, executed: true,
-      steps: ['legacy wrapper'],
+      steps: ['unstructured wrapper'],
       payload: { publication: { kind: 'help', botLogin: 'vypbot' } },
     });
     const value = projectPublishResultContext(source([result], {
@@ -126,7 +130,7 @@ describe('PublishResultUseCase semantic compatibility boundary', () => {
     expect(comments.addComment).toHaveBeenCalledTimes(1);
     expect(comments.values[0].body).toContain('correlation="comment:99"');
     expect(comments.values[0].body).toContain('## Copilot commands');
-    expect(comments.values[0].body).not.toContain('legacy wrapper');
+    expect(comments.values[0].body).not.toContain('unstructured wrapper');
   });
 
   it('publishes an explicit semantic failure once and keeps background failures in operator evidence', async () => {
@@ -170,7 +174,7 @@ describe('PublishResultUseCase semantic compatibility boundary', () => {
     expect(comments.values[0].body).not.toContain('No se pudo completar');
   });
 
-  it('recognizes the transient namespaced issue-comment marker without creating a duplicate', async () => {
+  it('treats a removed namespaced issue-comment marker as inert', async () => {
     const comments = inMemoryComments([{
       id: 7,
       user: { login: 'vypbot' },
@@ -185,9 +189,10 @@ describe('PublishResultUseCase semantic compatibility boundary', () => {
       eventName: 'issue_comment', inputs: { action: 'created', comment: { id: 99 } },
     })));
 
-    expect(comments.addComment).not.toHaveBeenCalled();
+    expect(comments.addComment).toHaveBeenCalledTimes(1);
     expect(comments.updateComment).not.toHaveBeenCalled();
-    expect(comments.values).toHaveLength(1);
+    expect(comments.values).toHaveLength(2);
+    expect(comments.values[1].body).toContain('correlation="comment:99"');
   });
 
   it('namespaces equal numeric comment ids by GitHub transport', () => {
@@ -218,7 +223,7 @@ describe('PublishResultUseCase semantic compatibility boundary', () => {
     expect(first.requestCorrelationId).not.toBe(second.requestCorrelationId);
   });
 
-  it('keeps legacy issue-comment correlation stable regardless of event metadata', () => {
+  it('keeps the exact issue-comment correlation stable regardless of event metadata', () => {
     const context = projectPublishResultContext(source([], {
       eventName: 'unsafe transport\n<!-- marker -->',
       inputs: { action: 'created', comment: { id: 99 } },
@@ -385,7 +390,7 @@ describe('PublishResultUseCase semantic compatibility boundary', () => {
 
     const failure = await new PublishResultUseCase(comments).invoke(context);
 
-    expect(context.results[0].steps).toEqual(['legacy plan wrapper that must never be published']);
+    expect(context.results[0].steps).toEqual(['unstructured plan wrapper that must never be published']);
     expect(failure).toMatchObject({ success: false, executed: true });
     expect(failure?.errors[0]).toMatchObject({ code: 'provider.unavailable' });
   });

@@ -31,6 +31,7 @@ import { countActionableBugbotFindings } from '../domain/bugbot/review_state';
 import type { MessageCatalogResolutionPort } from '../application/ports/message_catalog_ports';
 import type { ApplicationErrorMessageReader } from '../application/policies/application_error_message_catalog';
 import type { BoundPublicationSourceQueryPort } from '../application/ports/publication_freshness_ports';
+import { requiredDeploymentFailure } from '../domain/deployment_operation';
 
 export async function finishGithubAction(
     execution: Execution,
@@ -174,7 +175,7 @@ async function writeActionSummary(
             workflowRunUrl: process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
                 ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
                 : undefined,
-        }, operation.lastFailure?.previousPhase, catalog);
+        }, operation.phase === 'blocked' ? requiredDeploymentFailure(operation).previousPhase : undefined, catalog);
     } else {
         const catalog = await resolveActionSummaryCatalog(
             locale.repository,

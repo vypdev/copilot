@@ -1,6 +1,7 @@
 import { ApplicationError } from "../../../errors/application_error";
 import type { DeploymentOrchestrationContext } from "../../../ports/deployment_orchestration_ports";
 import { Result } from "../../../../data/model/result";
+import { requiredDeploymentFailure } from '../../../../domain/deployment_operation';
 import {
   DEPLOYMENT_ORCHESTRATION_TASK_ID,
   DeploymentOrchestrationRuntime,
@@ -19,6 +20,7 @@ export class RecordFailureHandler {
       );
     }
     if (operation.phase === "blocked") {
+      const failure = requiredDeploymentFailure(operation);
       await this.runtime.publishDashboard(context, operation);
       return new Result({
         id: DEPLOYMENT_ORCHESTRATION_TASK_ID,
@@ -27,12 +29,12 @@ export class RecordFailureHandler {
         steps: [`Deployment ${operation.operationId} remains blocked; its original failure classification was preserved.`],
         errors: [new ApplicationError(
           "workflow.failed",
-          operation.lastFailure?.message ?? "Deployment remains blocked.",
-          { retryable: operation.lastFailure?.retryable ?? false },
+          failure.message,
+          { retryable: failure.retryable },
         )],
       });
     }
-    const category = failureCategory(operation.phase, operation.lastFailure?.category);
+    const category = failureCategory(operation.phase);
     const message = context.singleAction.message
       || `The ${category} workflow failed. Review the linked workflow run before retrying.`;
     return await this.runtime.block(context, operation, category, message, true);
@@ -41,9 +43,8 @@ export class RecordFailureHandler {
 
 function failureCategory(
   phase: string,
-  previous: "promotion" | "publication" | "reconciliation" | "cleanup" | undefined,
 ): "promotion" | "publication" | "reconciliation" | "cleanup" {
   if (phase === "preparing" || phase === "promotion_pr_pending") return "promotion";
   if (phase === "promoted" || phase === "publishing") return "publication";
-  return previous ?? "reconciliation";
+  return "reconciliation";
 }

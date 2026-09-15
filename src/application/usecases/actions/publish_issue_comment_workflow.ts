@@ -1,5 +1,4 @@
 import { Result } from '../../../data/model/result';
-import { stripTrailingCommentWatermarks } from '../../../utils/comment_watermark';
 import type { BoundIssueCommentUpsertPort } from '../../ports/issue_lifecycle_ports';
 import type { IssueCommentActionContext } from '../push_single_action_contexts';
 import { logError } from '../../ports/logging_ports';
@@ -59,6 +58,6 @@ export async function runPublishIssueComment(
 }
 
 function appendCommentContent(previous: string | null, addition: string): string {
-    const existing = stripTrailingCommentWatermarks(previous ?? '');
+    const existing = previous ?? '';
     return existing.length > 0 ? `${existing}\n\n${addition}` : addition;
 }

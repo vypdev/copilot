@@ -419,7 +419,7 @@ function copyDeploymentOperation(operation: DeploymentOperationSnapshot): Deploy
     locale: Object.freeze({ ...operation.locale }),
     reconciliationTargets: Object.freeze((operation.reconciliationTargets ?? []).map(target => Object.freeze({ ...target }))),
     ...(operation.publicationReceipt ? { publicationReceipt: Object.freeze({ ...operation.publicationReceipt }) } : {}),
-    ...(operation.lastFailure ? { lastFailure: Object.freeze({ ...operation.lastFailure }) } : {}),
+    lastFailure: operation.lastFailure ? Object.freeze({ ...operation.lastFailure }) : null,
   });
 }
 

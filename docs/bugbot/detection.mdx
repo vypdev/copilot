@@ -218,6 +218,11 @@ comments, newest 200 thread records, or first 1,000 diff files. Partial analysis
 may still report findings supported by retained evidence, but it never says the
 whole PR is clean, never resolves a prior finding omitted from the prompt, and
 never receives a successful Review Check conclusion.
+Lifecycle presentation is equally conservative: partial coverage replaces any
+stale `state:ready` label with `state:blocked` and
+`state:awaiting-maintainer`. The maintainer can inspect the named omissions or
+reduce the change scope; zero findings in the retained subset is not a ready
+decision.
 
 A GitHub read error is not partial context: the run fails before agent analysis
 or finding mutation. For a cap, inspect the named omitted source, split an

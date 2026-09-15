@@ -47,8 +47,15 @@ export class Config {
         if (input['branchConfiguration'] !== undefined && input['branchConfiguration'] !== null) {
             this.branchConfiguration = new BranchConfiguration(input['branchConfiguration']);
         }
-        this.recommendationState = restoreRecommendationState(input['recommendationState']);
-        if (isDeploymentOperationSnapshot(input['deploymentOrchestration'])) {
+        if (input['recommendationState'] !== undefined) {
+            const recommendationState = restoreRecommendationState(input['recommendationState']);
+            if (!recommendationState) throw new Error('Invalid recommendationState configuration.');
+            this.recommendationState = recommendationState;
+        }
+        if (input['deploymentOrchestration'] !== undefined) {
+            if (!isDeploymentOperationSnapshot(input['deploymentOrchestration'])) {
+                throw new Error('Invalid deploymentOrchestration configuration.');
+            }
             this.deploymentOrchestration = input['deploymentOrchestration'];
         }
     }

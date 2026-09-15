@@ -5,6 +5,7 @@ import {
   selectReconciliationTargetBranches,
 } from "../../../policies/deployment_plan_policy";
 import {
+  requiredDeploymentFailure,
   resumeBlockedDeployment,
   type DeploymentOperationSnapshot,
 } from "../../../../domain/deployment_operation";
@@ -84,7 +85,7 @@ export class ConfirmPublicationHandler {
     context: DeploymentOrchestrationContext,
     operation: DeploymentOperationSnapshot,
   ): Promise<DeploymentOperationSnapshot> {
-    if (operation.phase !== "blocked" || !operation.lastFailure?.retryable) return operation;
+    if (operation.phase !== "blocked" || !requiredDeploymentFailure(operation).retryable) return operation;
     const resumed = resumeBlockedDeployment(operation);
     if (resumed.kind !== "advance") return operation;
     await this.runtime.persist(context, resumed.operation);

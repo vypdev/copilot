@@ -1,6 +1,15 @@
 import { CONFIG_SCHEMA_VERSION, Config } from '../config';
 import { isRecommendationState } from '../recommendation_state';
 
+const VALID_PLAN = Object.freeze({
+  steps: Object.freeze([
+    Object.freeze({ title: 'Define', details: Object.freeze([]) }),
+    Object.freeze({ title: 'Implement', details: Object.freeze([]) }),
+    Object.freeze({ title: 'Verify', details: Object.freeze([]) }),
+  ]),
+  acceptance: 'All relevant checks pass.',
+});
+
 describe('Config', () => {
   it('ignores malformed external data without throwing', () => {
     expect(() => new Config(null)).not.toThrow();
@@ -52,14 +61,16 @@ describe('Config', () => {
       recommendationState: {
         issueDescriptionFingerprint: 'description-hash',
         recommendationFingerprint: 'recommendation-hash',
-        recommendation: '1. Add tests',
+        implementationPlan: VALID_PLAN,
+        implementationPlanLocale: 'en-us',
       },
     });
 
     expect(c.recommendationState).toEqual({
       issueDescriptionFingerprint: 'description-hash',
       recommendationFingerprint: 'recommendation-hash',
-      recommendation: '1. Add tests',
+      implementationPlan: VALID_PLAN,
+      implementationPlanLocale: 'en-US',
     });
     expect(isRecommendationState(c.recommendationState)).toBe(true);
     expect(isRecommendationState({ recommendation: 'incomplete' })).toBe(false);
@@ -69,7 +80,6 @@ describe('Config', () => {
     const input = {
       issueDescriptionFingerprint: 'description-hash',
       recommendationFingerprint: 'recommendation-hash',
-      recommendation: 'Stored compatibility text',
       implementationPlan: {
         steps: [
           { title: ' Define ', details: [' Contract '] },
@@ -98,23 +108,32 @@ describe('Config', () => {
     expect(Object.isFrozen(state?.implementationPlan?.steps[0].details)).toBe(true);
   });
 
-  it('ignores malformed recommendation state', () => {
-    const c = new Config({ recommendationState: { recommendation: 'incomplete' } });
-
-    expect(c.recommendationState).toBeUndefined();
+  it('rejects malformed recommendation state', () => {
+    expect(() => new Config({ recommendationState: { recommendation: 'incomplete' } }))
+      .toThrow('Invalid recommendationState configuration.');
   });
 
-  it('rejects the complete recommendation state when its optional structured plan is malformed', () => {
-    const c = new Config({
+  it('rejects recommendation state when its required structured plan is malformed', () => {
+    expect(() => new Config({
       recommendationState: {
         issueDescriptionFingerprint: 'description-hash',
         recommendationFingerprint: 'recommendation-hash',
-        recommendation: 'Stored compatibility text',
         implementationPlan: { steps: [{ title: 'Too short', details: [] }], acceptance: 'Done.' },
+        implementationPlanLocale: 'en-US',
       },
-    });
+    })).toThrow('Invalid recommendationState configuration.');
+  });
 
-    expect(c.recommendationState).toBeUndefined();
+  it('rejects removed recommendation text instead of silently adopting it', () => {
+    expect(() => new Config({
+      recommendationState: {
+        issueDescriptionFingerprint: 'description-hash',
+        recommendationFingerprint: 'recommendation-hash',
+        recommendation: 'Removed free-form state',
+        implementationPlan: VALID_PLAN,
+        implementationPlanLocale: 'en-US',
+      },
+    })).toThrow('Invalid recommendationState configuration.');
   });
 
   it.each([
@@ -131,17 +150,14 @@ describe('Config', () => {
     },
     { implementationPlanLocale: 'es-MX', implementationPlan: undefined },
   ])('rejects malformed structured-plan locale state %#', ({ implementationPlanLocale, implementationPlan }) => {
-    const c = new Config({
+    expect(() => new Config({
       recommendationState: {
         issueDescriptionFingerprint: 'description-hash',
         recommendationFingerprint: 'recommendation-hash',
-        recommendation: 'Stored compatibility text',
         implementationPlanLocale,
         ...(implementationPlan === undefined ? {} : { implementationPlan }),
       },
-    });
-
-    expect(c.recommendationState).toBeUndefined();
+    })).toThrow('Invalid recommendationState configuration.');
   });
 
   it('uses the current schema and ignores transient result input', () => {

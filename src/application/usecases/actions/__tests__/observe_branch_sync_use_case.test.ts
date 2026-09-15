@@ -1,7 +1,5 @@
 import type { Execution } from "../../../../data/model/execution";
 import {
-  BRANCH_SYNC_ALIGNED_MARKER,
-  BRANCH_SYNC_STALE_MARKER,
   buildAlignedBranchSyncComment,
   buildBranchSyncTransitionIntent,
   buildStaleBranchSyncComment,
@@ -14,6 +12,14 @@ import { resolveStaticBranchSyncCatalog } from '../../../policies/branch_sync_me
 import { renderTransitionNotification } from '../../steps/common/transition_notification_workflow';
 
 const dependency = { issueNumber: 42, parentBranch: "develop", workingBranch: "feature/42" };
+const messages = resolveStaticBranchSyncCatalog('en-US');
+
+function staleBody(aheadBy = 1, behindBy = 2): string {
+  return buildStaleBranchSyncComment({
+    owner: 'org', repository: 'repo', dependency,
+    comparison: { aheadBy, behindBy }, messages,
+  });
+}
 
 function execution(overrides: Record<string, unknown> = {}) {
   return projectBranchObservationContext({
@@ -74,18 +80,18 @@ describe("ObserveBranchSyncUseCase", () => {
 
     expect(context.comparisons.compare).toHaveBeenCalledWith("develop", "feature/42");
     expect(context.notifications.addComment).toHaveBeenCalledWith(
-      42, expect.stringContaining(BRANCH_SYNC_STALE_MARKER),
+      42, expect.stringContaining('topic="branch-sync" target="issue:42"'),
     );
     expect(context.notifications.updateComment).not.toHaveBeenCalled();
     expect(results[0]).toMatchObject({ success: true, payload: { state: "stale", behindBy: 2 } });
   });
 
   it("updates the bot's current recommendation instead of creating notification spam", async () => {
-    const context = setup({ comments: [{ id: 8, body: BRANCH_SYNC_STALE_MARKER, user: { login: "vypbot" } }] });
+    const context = setup({ comments: [{ id: 8, body: staleBody(0, 1), user: { login: "vypbot" } }] });
     await context.useCase.invoke(execution());
 
     expect(context.notifications.updateComment).toHaveBeenCalledWith(
-      42, 8, expect.stringContaining(BRANCH_SYNC_STALE_MARKER),
+      42, 8, expect.stringContaining('topic="branch-sync" target="issue:42"'),
     );
     expect(context.notifications.addComment).not.toHaveBeenCalled();
   });
@@ -124,7 +130,7 @@ describe("ObserveBranchSyncUseCase", () => {
 
     const results = await context.useCase.invoke(execution({ inputs: { after: 'a'.repeat(40) } }));
 
-    expect(context.notifications.updateComment).toHaveBeenCalledWith(42, 8, expect.stringContaining(BRANCH_SYNC_STALE_MARKER));
+    expect(context.notifications.updateComment).toHaveBeenCalledWith(42, 8, expect.stringContaining('topic="branch-sync" target="issue:42"'));
     expect(context.notifications.addComment).toHaveBeenCalledTimes(1);
     expect(context.notifications.addComment).toHaveBeenCalledWith(
       42,
@@ -201,12 +207,12 @@ describe("ObserveBranchSyncUseCase", () => {
   it("resolves the prior warning once the branch is aligned", async () => {
     const context = setup({
       behindBy: 0,
-      comments: [{ id: 8, body: BRANCH_SYNC_STALE_MARKER, user: { login: "vypbot" } }],
+      comments: [{ id: 8, body: staleBody(), user: { login: "vypbot" } }],
     });
     const results = await context.useCase.invoke(execution({ commit: { branch: "feature/42" } }));
 
     expect(context.notifications.updateComment).toHaveBeenCalledWith(
-      42, 8, expect.stringContaining(BRANCH_SYNC_ALIGNED_MARKER),
+      42, 8, expect.stringContaining('source="aligned:'),
     );
     expect(results[0]).toMatchObject({ payload: { state: "aligned" } });
   });

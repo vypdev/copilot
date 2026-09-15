@@ -29,10 +29,6 @@ jest.mock('../../utils/logger', () => ({ logInfo: jest.fn() }));
 const recommendationState = {
     issueDescriptionFingerprint: 'description-hash',
     recommendationFingerprint: 'recommendation-hash',
-    recommendation: '1. Add tests',
-};
-const structuredRecommendationState = {
-    ...recommendationState,
     implementationPlanLocale: 'en-US',
     implementationPlan: {
         steps: [
@@ -43,6 +39,7 @@ const structuredRecommendationState = {
         acceptance: 'All relevant checks pass.',
     },
 };
+const structuredRecommendationState = recommendationState;
 
 function deploymentOperation(): DeploymentOperationSnapshot {
     return {

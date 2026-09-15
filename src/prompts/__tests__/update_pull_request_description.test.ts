@@ -28,7 +28,10 @@ describe('getUpdatePullRequestDescriptionPrompt', () => {
         expect(prompt).toContain('never exceed 12,000 characters');
         expect(prompt).toContain('Never claim a check passed unless the evidence says it did');
         expect(prompt).toContain('Do not infer consumers, compatibility obligations, upgrade steps');
-        expect(prompt).toContain('identifies a concrete affected consumer or required transition');
+        expect(prompt).toContain('no installed users, external consumers, or persisted production state');
+        expect(prompt).toContain('conclusive evidence that removed contracts require no migration note');
+        expect(prompt).toContain('Do not use review notes to restate greenfield removals');
+        expect(prompt).toContain('identifies a concrete affected consumer, required transition, reviewer action, or unresolved risk');
         expect(prompt).toContain('Do not reproduce empty placeholder sections');
         expect(prompt).not.toContain('full filled template');
         expect(prompt).toContain('Do not use emoji, horizontal separators, generic checklists');

@@ -3,6 +3,7 @@ import type {
   DeploymentPhase,
   ReconciliationTargetState,
 } from '../../domain/deployment_operation';
+import { requiredDeploymentFailure } from '../../domain/deployment_operation';
 import { buildManagedPullRequestMarker } from '../../domain/managed_pull_request';
 import {
   deploymentCopy,
@@ -167,6 +168,7 @@ export function renderDeploymentJobSummary(
   catalog: DeploymentMessageCatalog = resolveStaticDeploymentCatalog(context.repositoryLocale),
 ): string {
   const messages = deploymentCopy(catalog);
+  const failure = operation.phase === 'blocked' ? requiredDeploymentFailure(operation) : undefined;
   const externallyPending = operation.phase === 'promotion_pr_pending' || operation.phase === 'reconciliation_pending';
   const result = operation.phase === 'blocked'
     ? messages.workflowFailure
@@ -175,7 +177,7 @@ export function renderDeploymentJobSummary(
     `# ${operation.phase === 'blocked' ? '❌' : externallyPending ? '⏳' : '✅'} ${messages.jobSummary}`, '',
     `> **${messages.result}: ${result}.**`, '',
     `| ${messages.previousPhase} | ${messages.resultingPhase} | ${messages.retryable} |`, '|---|---|---|',
-    `| ${inline(previousPhase ?? operation.phase)} | ${inline(operation.phase)} | ${operation.lastFailure?.retryable ? messages.yes : messages.no} |`, '',
+    `| ${inline(previousPhase ?? operation.phase)} | ${inline(operation.phase)} | ${failure?.retryable ? messages.yes : messages.no} |`, '',
     `- ${messages.operation}: ${inline(operation.operationId)}`,
     `- ${catalog.message('deployment.template.jobState', { version: operation.stateVersion, revision: operation.revision })}`,
     `- ${catalog.message('deployment.template.admissionScope', { issue: context.issue })}`,
@@ -190,7 +192,7 @@ export function renderDeploymentJobSummary(
   if (operation.phase === 'blocked') {
     lines.push(
       `## ${messages.actionRequired}`, '',
-      `${safeText(operation.lastFailure?.message ?? messages.workflowFailure)}. ${operation.lastFailure?.retryable ? messages.retryAfterCorrection : messages.manualIntervention}.`, '',
+      `${safeText(failure!.message)}. ${failure!.retryable ? messages.retryAfterCorrection : messages.manualIntervention}.`, '',
     );
   }
   lines.push(deploymentLinks(operation, context, messages, catalog).join(' · '));
@@ -220,7 +222,7 @@ export function renderDeploymentMilestone(
 }
 
 function progressLines(operation: DeploymentOperationSnapshot, messages: DeploymentCopy): string[] {
-  const phase = operation.phase === 'blocked' ? operation.lastFailure?.previousPhase ?? 'preparing' : operation.phase;
+  const phase = operation.phase === 'blocked' ? requiredDeploymentFailure(operation).previousPhase : operation.phase;
   const reached = (expected: DeploymentPhase): boolean => phaseRank(phase) >= phaseRank(expected);
   return [
     `- [x] ${messages.cut}: ${inline(`${operation.originBranch}@${shortSha(operation.originSha)}`)}`,
@@ -287,11 +289,12 @@ function deploymentAction(operation: DeploymentOperationSnapshot, messages: Depl
     && (operation.phase === 'promotion_pr_pending' || operation.phase === 'reconciliation_pending');
   if (manual) return { required: true, message: `${messages.protectedChecks}: ${messages.reviewManagedPr}.` };
   if (operation.phase !== 'blocked') return { required: false, message: messages.noAction };
+  const failure = requiredDeploymentFailure(operation);
   return {
     required: true,
-    message: operation.lastFailure?.retryable
-      ? `${safeText(operation.lastFailure.message)}. ${messages.retryAfterCorrection}.`
-      : `${safeText(operation.lastFailure?.message ?? messages.workflowFailure)}. ${messages.manualIntervention}.`,
+    message: failure.retryable
+      ? `${safeText(failure.message)}. ${messages.retryAfterCorrection}.`
+      : `${safeText(failure.message)}. ${messages.manualIntervention}.`,
   };
 }
 

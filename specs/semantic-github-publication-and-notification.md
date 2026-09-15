@@ -66,7 +66,7 @@ The result has four product costs:
 ### 2.2 Baseline behavior before rollout
 
 The following sequence was verified in the pre-implementation 2026-09-14
-repository snapshot. It is retained as migration evidence and is not a claim
+repository snapshot. It is retained as historical evidence and is not a claim
 about the implemented product:
 
 1. Use cases append human-readable strings to `Result.steps`, regardless of
@@ -103,7 +103,7 @@ about the implemented product:
   `src/infrastructure/github/github_action_summary_adapter.ts`.
 - Direct comment creation also exists in the issue help/Think, commit notice,
   inactivity, authorization, issue-close, finding, branch-sync, and deployment
-  workflows. These call sites form the migration inventory; removing only the
+  workflows. These call sites form the baseline removal inventory; removing only the
   generic publisher is insufficient.
 - Recommendation state fingerprints the issue description and generated plan,
   but publication still travels through generic results:
@@ -166,7 +166,7 @@ Representative failure modes:
 ### 2.4 Retrospective classification
 
 This SDD began as a prospective behavior change. Section 2 preserves the
-pre-implementation facts that established the migration boundary; sections
+pre-implementation facts that established the cutover boundary; sections
 13–19 record the completed rollout and executable evidence. Baseline behavior
 is not part of the implemented contract.
 
@@ -228,7 +228,7 @@ Terms used normatively:
 
 1. Redesign GitHub's notification settings or guarantee that an edit sends a
    notification.
-2. Delete historic generic comments during migration.
+2. Delete unrelated or historic generic comments during cutover.
 3. Replace line-level Bugbot findings with one summary-only review.
 4. Change release safety, authorization, merge, branch, or agent-execution
    semantics except where their user-facing publication is explicitly covered.
@@ -400,15 +400,14 @@ Action notifications use a distinct immutable envelope:
   `release`, `inactivity`, and `access-policy`.
 - Marker values MUST be generated from trusted domain data, restricted to
   `[A-Za-z0-9._:-]`, and bounded to 128 characters per value.
-- Feature-specific existing markers remain readable. New writes converge on the
-  shared envelope without changing durable feature identity.
-- Reply correlation preserves the established `comment:<issue-comment-id>`
-  identity for `issue_comment` replay compatibility. Review comments use the
-  distinct `comment:pull_request_review_comment:<review-comment-id>` identity;
-  transports MUST NOT share a fallback correlation. Readers MUST also adopt the
-  transient `comment:issue_comment:<issue-comment-id>` form emitted during
-  migration and compact it with the stable identity; new writes MUST NOT use
-  that transient form.
+- Current feature publications use only the shared envelope. Unknown,
+  feature-specific, or removed markers are inert and MUST NOT be adopted,
+  rewritten, or treated as owned state.
+- Reply correlation is exactly `comment:<issue-comment-id>` for
+  `issue_comment`. Review comments use the distinct
+  `comment:pull_request_review_comment:<review-comment-id>` identity.
+  Transports MUST NOT share aliases or fallback correlations; readers compare
+  the complete correlation value exactly.
 - Commit-derived progress MUST snapshot the authoritative remote branch head
   before analysis. An event-provided head that is already stale MUST stop before
   agent execution. The workflow MUST revalidate the snapshot immediately before
@@ -542,8 +541,8 @@ a separate Job Summary/logging route.
   `SemanticDigest`, `NotificationFingerprint`, and per-feature projections are
   readonly and deterministic.
 - **Application contracts:** a capability returns `{ results/evidence,
-  publications }`; `Result` remains temporarily for execution compatibility but
-  is not a conversation DTO.
+  publications }`; `Result` is internal execution evidence and is never a
+  conversation DTO.
 - **Semantic ports:** `OwnedConversationQueryPort`,
   `ConversationMutationPort`, `InlineFindingPublicationPort`,
   `ActionSummaryPort`, and the companion localization port expose no Octokit
@@ -577,8 +576,9 @@ names may follow repository conventions:
 6. a Job Summary projection that includes compact semantic outcomes, stable
    machine evidence, and localized recovery guidance while leaving internal
    result names and step/debug narration in masked logs; and
-7. a temporary compatibility adapter that rejects attempts to publish generic
-   `Result.steps` and records the attempted source in tests/logs.
+7. a strict result-to-intent projection boundary that accepts only current typed
+   outcomes, rejects arbitrary `Result.steps`, and records rejected sources in
+   tests/logs.
 
 The release dashboard and Bugbot reconciliation keep their feature-specific
 state policies. They adopt shared localization, content hierarchy, marker
@@ -633,7 +633,7 @@ are reserved for standalone issue/PR descriptions and Job Summaries.
 
 1. **Introduce semantic publication contracts**
    - Replace arbitrary plan Markdown with bounded structured fields.
-2. **Migrate every user-facing publication path**
+2. **Route every user-facing publication path**
    - Cover plan, progress, lifecycle, branch sync, Bugbot, and release output.
 3. **Verify idempotency, localization, and security**
    - Exercise replay, malformed output, and configured-locale behavior.
@@ -656,19 +656,19 @@ this card does not also get a welcome comment.
 
 ## Progress: 65% — in progress
 
-> **Current status:** Core behavior is implemented; validation and migration remain.
+> **Current status:** Core behavior is implemented; validation remains.
 
 ### Completed
 
 - Semantic publication policy and durable identities
-- Plan and branch-sync card migration
+- Plan and branch-sync card publication
 
 ### Remaining
 
-- Progress/release migration
+- Progress/release validation
 - Documentation and full validation
 
-**Next:** complete the migration tests and rerun the repository validation suite.
+**Next:** complete the contract tests and rerun the repository validation suite.
 
 [Compare changes](https://github.com/example/project/compare/develop...feature/344-publication) · [Latest commit](https://github.com/example/project/commit/abc1234)
 ```
@@ -892,8 +892,8 @@ generic output is left intact.
 5. Job Summaries and logs use existing masking/redaction; publication references
    only stable error codes and random correlation IDs.
 6. Automatic duplicate deletion is allowed only for later bot-owned comments
-   with the same exact valid semantic identity. No human content or legacy
-   generic comment is eligible.
+   with the same exact valid semantic identity. Human content and comments
+   without the current identity are never eligible.
 7. Transition fingerprints exclude attacker-controlled free text after
    normalization, so wording variation cannot bypass deduplication.
 8. Comments quoted in direct replies follow the translation trust boundary in
@@ -921,27 +921,22 @@ generic output is left intact.
   update calls are both zero; for a changing card, creates remain one over the
   full lifecycle.
 
-## 13. Compatibility, migration, rollout, and rollback
+## 13. Compatibility, cutover, rollout, and rollback
 
-### 13.1 Existing comments and state
+### 13.1 Greenfield current-state contract
 
-- Historic generic comments remain untouched.
-- Existing valid release, Bugbot, and branch-sync markers are read as aliases of
-  their shared semantic identity. The next real transition may rewrite the
-  canonical bot-owned card with the new envelope and content hierarchy.
-- Existing recommendation fingerprints are retained. The next plan publication
-  creates or adopts one plan card rather than appending a recommendation.
-- Legacy stored recommendations without structured plan fields remain readable
-  when no agent is configured. The next configured planning run requires a
-  complete structured replacement even when the visible issue description is
-  unchanged; `unchanged` cannot defer that migration.
-- Structured recommendation state records the canonical locale of its
-  human-readable fields. An unchanged-description replay is valid only when that
-  locale equals the current effective issue locale. A missing or different
-  locale requires a complete agent-backed replacement and rejects `unchanged`;
-  without an agent, publication fails closed and leaves the prior card untouched.
-- Existing progress labels remain authoritative during progress-card adoption.
-- Human-authored and third-party comments are never migrated.
+- There are no installed users or production state to migrate.
+- Readers recognize only the current shared publication, reply, and transition
+  envelopes with exact target, key, source, digest/fingerprint, and bot owner.
+  Removed or unknown markers are inert.
+- Recommendation state is one closed object containing the issue-description
+  fingerprint, plan fingerprint, structured implementation plan, and canonical
+  plan locale. Missing fields, removed free-form fields, and additional fields
+  are invalid configuration.
+- An unchanged-description replay is valid only when the stored plan locale
+  equals the current effective issue locale. A different locale requires a
+  complete agent-backed replacement and rejects `unchanged`.
+- Comments without a current owned identity are never rewritten or deleted.
 
 ### 13.2 Greenfield configuration boundary
 
@@ -960,14 +955,14 @@ generic output is left intact.
 2. Route routine lifecycle and completion to `none`; move useful semantic
    evidence to the Job Summary and keep internal step/debug narration in masked
    logs or machine results.
-3. Migrate plan, progress, commit/reopen, closure, inactivity, and access-policy
-   publication.
-4. Adopt the shared marker/localization envelope in branch sync, Bugbot, and
+3. Route plan, progress, commit/reopen, closure, inactivity, and access-policy
+   publication through current typed intents.
+4. Apply the shared marker/localization envelope in branch sync, Bugbot, and
    release without changing their domain behavior.
 5. Remove decorative-media configuration and runtime code, update docs,
    regenerate bundles, and run a controlled GitHub UX acceptance matrix.
-6. Remove the legacy generic renderer after one release with zero observed
-   fallback use.
+6. Remove the generic renderer, obsolete markers, free-form recommendation
+   state, correlation aliases, and watermark rewriting in the same cutover.
 
 The first implementation slices in PRs #367–#372 established semantic
 reply/status publication, removed retired generic conversation chrome from the
@@ -1004,7 +999,7 @@ application mutation inventory records that reduced surface. Replayed unchanged
 recommendations re-project the persisted plan through the status reconciler so
 a deleted card is recreated without a new agent call. Before an optional welcome
 is emitted, a read-only comment boundary recognizes only exact-target,
-bot-owned plan, direct-answer, or current/legacy welcome markers; an unavailable history read fails
+bot-owned plan, direct-answer, or current welcome reply markers; an unavailable history read fails
 closed to operator evidence and does not risk a redundant comment.
 
 The structured-plan slice replaces free-form agent Markdown with an immutable
@@ -1013,12 +1008,11 @@ and one bounded verifiable acceptance criterion. The schema, runtime parser,
 persisted recommendation state, context projection, replay path, semantic
 fingerprint, and renderer share that contract. New output keeps renderer-owned
 numbering and headings, rejects malformed or wrong-locale responses before
-publication, updates the existing plan identity on material issue edits, and
-migrates legacy stored text on the next agent-backed run. Persisted structured
-state carries its canonical output locale; replay requires an exact locale match,
-while repository/issue locale changes force a complete localized replacement and
-make `unchanged` invalid. Compatibility text is retained only for old state and
-does not control new card structure.
+publication, and updates the existing plan identity on material issue edits.
+Persisted structured state carries its canonical output locale; replay requires
+an exact locale match, while repository/issue locale changes force a complete
+localized replacement and make `unchanged` invalid. Removed free-form state is
+rejected rather than read, translated, or converted.
 
 Addressed Think requests now use that same `direct-answer` contract. The Think
 application service has only issue-description query and agent-query ports; it
@@ -1080,10 +1074,10 @@ once, re-lists after creation, keeps the lowest exact bot-owned ID, removes or
 compacts concurrent duplicates, and never rewrites an issued notification when
 copy changes. The generic Job Summary projects only topic, target, effect, and
 fingerprint in the configured repository locale. No feature is considered
-migrated merely because this shared substrate exists; branch-sync adoption is a
-separate rollout slice.
+complete merely because this shared substrate exists; every feature must use
+the current envelope before the cutover is accepted.
 
-Branch-sync now completes that first feature adoption. Its existing bot-owned
+Branch-sync now uses the shared envelope exclusively. Its current bot-owned
 stale/aligned card remains the source of truth: initial stale discovery creates
 only the card, identical stale renders mutate nothing, changed comparisons update
 the card, and alignment resolves it. A later aligned-to-stale transition with a
@@ -1123,10 +1117,11 @@ generic comments.
 
 ### 13.4 Rollback
 
-Code rollback may restore an earlier publisher, but it MUST keep new marker
-readers tolerant and MUST NOT delete or downgrade current cards. Domain actions
-are not rolled back because of presentation failure. If the new publisher is
-disabled during incident response, all nonessential conversation output becomes
+Rollback restores one complete known-good application/schema bundle; it does not
+add tolerant readers, dual writers, or marker aliases. Current cards are left
+untouched because an older or unknown marker is inert. Domain actions are not
+rolled back because of presentation failure. If the publisher is disabled
+during incident response, all nonessential conversation output becomes
 Job-Summary-only; debug-in-comment and generic step dumps remain disabled.
 
 ## 14. Testing strategy and numeric budget
@@ -1148,7 +1143,7 @@ Its files are disjoint from the localization allocation and are enforced by
 | Adapters/provider contracts | 18 | ownership filtering, pagination, create/update/delete, review threads, rate-limit/error mapping, trusted URLs |
 | Workflows/setup/schema | 16 | issue/PR/push/single-action routes, completion omission, setup defaults, doctor warnings, marker/workflow contracts |
 | UI/UX/accessibility/sanitization | 26 | all primary states and topics, narrow Markdown, headings, links, truncation, hostile text, no retired chrome |
-| Integration/security/migration | 12 | end-to-end lifecycles, permissions, forged markers, legacy adoption, rollback, live fixture matrix |
+| Integration/security/cutover | 12 | end-to-end lifecycles, permissions, forged/removed markers, strict rejection, rollback, live fixture matrix |
 | **Total** | **128** | No double counting |
 
 Required quality gates:
@@ -1260,7 +1255,7 @@ per-push commit comments are generated after rollout.
 
 | Requirement | Policy/use case/adapter/presentation | Test or evidence | Documentation |
 |---|---|---|---|
-| §4.3 outcome/evidence split | publication contracts and compatibility adapter | architecture and result-publication rejection tests | architecture guide |
+| §4.3 outcome/evidence split | publication contracts and strict result-to-intent projection | architecture and result-publication rejection tests | architecture guide |
 | §6.1 closed intent union | pure publication decision policy | 26-case domain matrix | feature/notification guide |
 | §6.2 capability behavior | capability outcome adapters/coordinator | route and end-to-end cases | issue/PR/release/Bugbot pages |
 | §6.4 one canonical card | owned query/mutation ports and reconciler | duplicate/race/pagination tests | operator recovery guide |
@@ -1274,7 +1269,7 @@ per-push commit comments are generated after rollout.
 | §10 partial/recovery | error presentation and publication-only retry | failure/partial/irreversible cases | error/troubleshooting pages |
 | §11 trust/ownership | marker parser, sanitizer, authorization | forged marker/mention/secret tests | security operations |
 | §12 evidence/metrics | Job Summary and telemetry ports | summary/metric assertions | quality observability |
-| §13 adoption | marker adoption and greenfield input removal | adoption, rollback, and schema-absence tests | architecture and configuration guides |
+| §13 cutover | exact current markers and greenfield input removal | strict-marker, rollback, and schema-absence tests | architecture and configuration guides |
 | §14 quality budget | coverage scripts and disjoint communication test ledger | 160 allocated semantic cases plus CI coverage evidence | contributor testing guide |
 
 ## 18. Implementation sequence
@@ -1287,12 +1282,12 @@ per-push commit comments are generated after rollout.
    policies, Job Summary evidence, and 100%-covered pure tests.
 4. Implement owned-card query/mutation adapters, reconciliation, stale guards,
    transition deduplication, and provider/race tests.
-5. Migrate routine lifecycle and common completion; make generic `Result.steps`
+5. Route routine lifecycle and common completion; make generic `Result.steps`
    publication impossible and project only stable, useful operator evidence in
    the Job Summary.
-6. Migrate issue onboarding/help, plans, progress, push/reopen, issue close,
+6. Route issue onboarding/help, plans, progress, push/reopen, issue close,
    inactivity, access-policy, and single actions with end-to-end tests.
-7. Adopt shared contracts in branch sync, Bugbot, and release while retaining
+7. Apply shared contracts in branch sync, Bugbot, and release while retaining
    their feature state and safety policies.
 8. Remove image inputs, image runtime code, and random-selection dependencies;
    regenerate action/setup bundles and remove visible watermarks/footers from
@@ -1324,7 +1319,7 @@ per-push commit comments are generated after rollout.
 - [x] Action schema, runtime configuration, setup, CLI, docs, dependencies, and
       generated bundles contain no decorative-image configuration surface.
 - [x] English-default and configured-locale output passes the companion SDD.
-- [x] User, setup, operator, security, migration, and contributor documentation
+- [x] User, setup, operator, security, cutover, and contributor documentation
       is complete, discoverable, fixture-backed, and contains no stale behavior.
 - [x] Failure, partial success, retry, idempotency, security, and cleanup tests
       pass without replaying domain mutations.

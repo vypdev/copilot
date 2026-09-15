@@ -18,7 +18,6 @@ import {
 import {
     buildCopilotHelpMessage,
     buildCopilotWelcomeMessage,
-    COPILOT_WELCOME_MARKER,
 } from './copilot_interaction_policy';
 import { formatCopilotStatus, type CopilotStatusSnapshot } from './status_command_policy';
 import {
@@ -36,9 +35,7 @@ import {
     type ImplementationPlan,
 } from '../../domain/implementation_plan';
 
-export type PlanPublicationProjection =
-    | { readonly kind: 'plan'; readonly plan: ImplementationPlan }
-    | { readonly kind: 'plan'; readonly legacyRecommendation: string };
+export type PlanPublicationProjection = { readonly kind: 'plan'; readonly plan: ImplementationPlan };
 
 export interface ProgressPublicationProjection {
     readonly kind: 'progress';
@@ -154,7 +151,7 @@ export function hasOwnedPrimaryIssuePublication(
         const reply = parsePublicationReplyMarker(comment.body);
         if (reply?.target === expectedTarget
             && (reply.messageKey === 'direct-answer' || reply.messageKey === 'copilot-welcome')) return true;
-        return comment.body?.includes(COPILOT_WELCOME_MARKER) === true;
+        return false;
     });
 }
 
@@ -314,12 +311,8 @@ export function renderSemanticStatus(
 ): string {
     const marker = buildPublicationMarker(intent);
     if (intent.projection.kind === 'plan') {
-        const plan = 'plan' in intent.projection
-            ? renderImplementationPlan(intent.projection.plan)
-            : sanitizeAgentMarkdown(intent.projection.legacyRecommendation, 7_000).trim();
-        const acceptance = 'plan' in intent.projection
-            ? safePlanField(intent.projection.plan.acceptance, 800)
-            : messages.legacyPlanAcceptance;
+        const plan = renderImplementationPlan(intent.projection.plan);
+        const acceptance = safePlanField(intent.projection.plan.acceptance, 800);
         return [
             marker,
             '',
@@ -353,20 +346,13 @@ export function renderSemanticStatus(
 
 function planIntent(id: string, payload: Record<string, unknown>, locale: string): SemanticStatusIntent | undefined {
     if (!isPlanPayload(id, payload)) return undefined;
-    const implementationPlan = parseImplementationPlan(payload.implementationPlan);
-    const legacyRecommendation = typeof payload.recommendedSteps === 'string'
-        ? payload.recommendedSteps.trim()
-        : '';
-    const semanticInput = implementationPlan
-        ? implementationPlanFingerprintInput(implementationPlan)
-        : legacyRecommendation;
+    const implementationPlan = parseImplementationPlan(payload.implementationPlan)!;
+    const semanticInput = implementationPlanFingerprintInput(implementationPlan);
     const state = getResultPayload(payload.recommendationState);
     const issueFingerprint = typeof state?.issueDescriptionFingerprint === 'string'
         ? state.issueDescriptionFingerprint
         : createSemanticDigest(semanticInput);
-    const projection = implementationPlan
-        ? Object.freeze<PlanPublicationProjection>({ kind: 'plan', plan: implementationPlan })
-        : Object.freeze<PlanPublicationProjection>({ kind: 'plan', legacyRecommendation });
+    const projection = Object.freeze<PlanPublicationProjection>({ kind: 'plan', plan: implementationPlan });
     return statusIntent('plan', payload.issueNumber, 'implementation', `issue-body:${safeDigest(issueFingerprint)}`, locale, projection);
 }
 
@@ -374,13 +360,9 @@ function isPlanPayload(
     id: string,
     payload: Record<string, unknown>,
 ): payload is Record<string, unknown> & { readonly issueNumber: number } {
-    const structuredPlan = parseImplementationPlan(payload.implementationPlan);
     return id === 'RecommendStepsUseCase'
         && positiveInteger(payload.issueNumber)
-        && (structuredPlan !== undefined
-            || (payload.implementationPlan === undefined
-                && typeof payload.recommendedSteps === 'string'
-                && Boolean(payload.recommendedSteps.trim())));
+        && parseImplementationPlan(payload.implementationPlan) !== undefined;
 }
 
 function renderImplementationPlan(plan: ImplementationPlan): string {

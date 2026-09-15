@@ -1462,7 +1462,6 @@ exports.buildPublicationReplyMarker = buildPublicationReplyMarker;
 exports.parsePublicationReplyMarker = parsePublicationReplyMarker;
 exports.buildPublicationTransitionMarker = buildPublicationTransitionMarker;
 exports.parsePublicationTransitionMarker = parsePublicationTransitionMarker;
-exports.readablePublicationReplyCorrelationIds = readablePublicationReplyCorrelationIds;
 exports.buildDuplicateMarker = buildDuplicateMarker;
 const node_crypto_1 = __nccwpck_require__(6005);
 const github_publication_1 = __nccwpck_require__(5793);
@@ -1576,16 +1575,6 @@ function parsePublicationTransitionMarker(body) {
         fingerprint: match[5],
         messageKey: match[6],
     });
-}
-/**
- * Reads the stable issue-comment identity plus the short-lived namespaced form
- * emitted during migration. Review-comment identities remain transport-scoped.
- */
-function readablePublicationReplyCorrelationIds(correlationId) {
-    const issueComment = correlationId.match(/^comment:([1-9]\d*)$/u);
-    return Object.freeze(issueComment
-        ? [correlationId, `comment:issue_comment:${issueComment[1]}`]
-        : [correlationId]);
 }
 function buildDuplicateMarker(canonicalCommentId) {
     if (!Number.isSafeInteger(canonicalCommentId) || canonicalCommentId < 1) {
@@ -3766,10 +3755,9 @@ function toSafeOperationMessage(error) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveIssueFinding = resolveIssueFinding;
-const comment_watermark_1 = __nccwpck_require__(3623);
 const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
 async function resolveIssueFinding(repository, resolution, catalog) {
-    const body = (0, comment_watermark_1.stripTrailingCommentWatermarks)(resolution.comment.body);
+    const body = resolution.comment.body;
     const marker = (0, bugbot_finding_marker_policy_1.parseMarker)(body).find((candidate) => candidate.findingId === resolution.findingId);
     if (marker == null || marker.resolved)
         return;
@@ -6194,7 +6182,7 @@ function previousRecommendationInstruction(format) {
     if (format === 'structured-other-locale') {
         return 'Previous structured recommendation from another or unknown locale (return a complete structured replacement in the requested locale; do not return unchanged):';
     }
-    return 'Previous legacy recommendation (return a complete structured replacement; do not return unchanged):';
+    return 'Previous structured recommendation from another or unknown locale (return a complete structured replacement in the requested locale; do not return unchanged):';
 }
 
 
@@ -6255,7 +6243,7 @@ Write every human-readable sentence in {{targetLocale}}. Preserve code identifie
 4. Provide \`overview\` as one to three sentences that state the outcome and why it matters.
 5. Provide \`whatChangedHeading\` as the plain-text {{targetLocale}} equivalent of "What changed" and \`changes\` as two to six short, outcome-oriented items. Do not inventory files, use-case names, internal categories, or every implementation step.
 6. When execution or manual-verification evidence is available, provide \`validationHeading\` as the plain-text {{targetLocale}} equivalent of "Validation" and \`validation\` with only the supported commands, automated checks, or manual scenarios. Never claim a check passed unless the evidence says it did, and never infer that result from the presence of test files or commands. When no verification evidence is available, set both fields to \`null\`; do not add a “not run” placeholder.
-7. Set \`reviewNotesHeading\` and \`reviewNotes\` to \`null\` unless reviewers need material migration, security, performance, compatibility, rollout, manual-verification, risk, or follow-up context. Do not infer consumers, compatibility obligations, upgrade steps, migration work, or rollout requirements merely because code, configuration, inputs, or symbols were removed or named deprecated. Include that context only when the issue, diff, repository documentation, or verification evidence identifies a concrete affected consumer or required transition. Otherwise use the localized plain-text heading and one to four concise items. {{relatedIssueInstruction}}
+7. Set \`reviewNotesHeading\` and \`reviewNotes\` to \`null\` unless reviewers need material security, performance, compatibility, rollout, manual-verification, risk, or follow-up context. Do not infer consumers, compatibility obligations, upgrade steps, migration work, or rollout requirements merely because code, configuration, inputs, state shapes, markers, or symbols were removed, tightened, made fail-closed, or named deprecated or legacy. When repository evidence explicitly says there are no installed users, external consumers, or persisted production state, treat that as conclusive evidence that removed contracts require no migration note. Do not use review notes to restate greenfield removals, strict parsing, rejected old shapes, or the absence of migration work; those are ordinary change outcomes when material. Include a review note only when the issue, diff, repository documentation, or verification evidence identifies a concrete affected consumer, required transition, reviewer action, or unresolved risk. Otherwise use the localized plain-text heading and one to four concise items. {{relatedIssueInstruction}}
 8. Keep the description practical and normally under 4,000 characters. It must never exceed 12,000 characters. Do not use emoji, horizontal separators, generic checklists, empty headings, repeated statements, placeholder text, or unsupported "no impact" claims.
 9. Return one JSON object with exactly \`outputLocale\`, \`overview\`, \`whatChangedHeading\`, \`changes\`, \`validationHeading\`, \`validation\`, \`reviewNotesHeading\`, \`reviewNotes\`, and \`closesLinkedIssue\`. Every content field is plain text except Markdown links, code spans, refs, and commands inside content values. The application renders the Markdown structure; do not include headings, bullet prefixes, a preamble, meta-commentary, or code fence in the values.
 
@@ -6730,25 +6718,6 @@ function normalizedConfidence(value) {
 }
 function format(value) {
     return value.toFixed(3);
-}
-
-
-/***/ }),
-
-/***/ 3623:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.stripTrailingCommentWatermarks = stripTrailingCommentWatermarks;
-const TRAILING_COMMENT_WATERMARK = /\s*<sup>(?:Made with ❤️ by|Written by) \[vypdev\/copilot\]\(https:\/\/github\.com\/marketplace\/actions\/copilot-github-with-super-powers\)[^<]*<\/sup>\s*$/u;
-/** Removes legacy trailing Copilot watermarks before a read-modify-write update. */
-function stripTrailingCommentWatermarks(comment) {
-    let stripped = comment;
-    while (TRAILING_COMMENT_WATERMARK.test(stripped)) {
-        stripped = stripped.replace(TRAILING_COMMENT_WATERMARK, '');
-    }
-    return stripped.trimEnd();
 }
 
 

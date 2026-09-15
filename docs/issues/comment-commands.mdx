@@ -77,8 +77,8 @@ acceptance criterion. For example:
    - Preserve BCP-47 identifiers in stored state.
 2. **Apply the contract at publication boundaries**
    - Keep command names, paths, refs, and error codes unchanged.
-3. **Verify replay and migration behavior**
-   - Cover English defaults, a configured locale, and legacy stored plans.
+3. **Verify replay and strict-state behavior**
+   - Cover English defaults, a configured locale, and rejection of removed state shapes.
 
 **Acceptance:** Replaying the same event creates no additional comment, while a material issue edit updates this card in the configured issue locale.
 
@@ -91,14 +91,14 @@ acceptance text in the effective issue locale. English (`en-US`) is the default;
 any configured valid locale uses the complete resolved catalog or fails back
 atomically to English. A plan with the wrong output locale or an invalid shape
 is rejected before publication. Material issue edits update the existing card;
-equivalent edits and webhook retries are silent. Stored free-form plans remain
-readable when no agent is available and migrate to this structure on the next
-configured planning run. Structured plan state also records the exact effective
-issue locale. A replay is allowed only while that locale still matches. Changing
-the issue or repository locale makes the next configured planning run replace
-the complete plan in the new language; an agent that returns `unchanged` is
-rejected. Without a configured agent, Copilot leaves the existing card untouched
-instead of republishing content whose language is unknown or no longer current.
+equivalent edits and webhook retries are silent. Stored plan state has one closed
+shape: description fingerprint, plan fingerprint, structured plan, and canonical
+effective issue locale. Missing, extra, or removed free-form fields make the
+state invalid. A replay is allowed only while the stored locale still matches.
+Changing the issue or repository locale makes the next configured planning run
+replace the complete plan in the new language; an agent that returns `unchanged`
+is rejected. Without a configured agent, Copilot fails closed instead of
+republishing content in an unverified language.
 
 GitHub delivers a comment in the main PR conversation as an `issue_comment`
 event. Copilot uses GitHub's PR marker and exact PR number to keep that transport
@@ -171,11 +171,12 @@ its direct answer in the configured issue language without a second onboarding
 comment. Event replays reuse the answer's hidden correlation marker instead of
 creating a duplicate; unchanged stored plans are reconciled with their existing
 card and recreated if that card was removed. Before adding a fallback, Copilot
-also checks its own existing plan, direct-answer, and current or legacy welcome markers. If neither plan nor
+also checks its own existing plan, direct-answer, and current welcome reply markers. If neither plan nor
 answer can run, one static welcome explains `/copilot help` and `@vypbot`.
 Release and hotfix issues do not receive this fallback because their durable
 deployment dashboard owns the presentation.
 
-The welcome contains a hidden marker so later workflow changes can recognize it without relying on the visible wording.
+The shared reply publisher adds the same current hidden identity used by other
+correlated replies; the welcome text embeds no separate marker.
 
 See [Bugbot detection](/bugbot/detection), [Autofix](/bugbot/autofix), and [Do user request](/bugbot/do-user-request) for the execution details.

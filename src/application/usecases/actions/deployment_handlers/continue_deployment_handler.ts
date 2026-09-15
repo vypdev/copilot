@@ -4,6 +4,7 @@ import type {
   ManagedPullRequestRecord,
 } from "../../../ports/deployment_orchestration_ports";
 import {
+  requiredDeploymentFailure,
   resumeBlockedDeployment,
   type DeploymentOperationSnapshot,
 } from "../../../../domain/deployment_operation";
@@ -79,12 +80,13 @@ export class ContinueDeploymentHandler {
     | { readonly kind: "result"; readonly result: Result }
   > {
     if (operation.phase !== "blocked") return { kind: "resumed", operation };
+    const failure = requiredDeploymentFailure(operation);
     if (!canResumeEvent(operation, phase)) {
       await this.runtime.publishDashboard(context, operation);
       return {
         kind: "result",
         result: deploymentSuccess(
-          `PR #${pullRequest.number} cannot resume the existing ${operation.lastFailure?.category ?? "deployment"} block; the original diagnosis was preserved.`,
+          `PR #${pullRequest.number} cannot resume the existing ${failure.category} block; the original diagnosis was preserved.`,
         ),
       };
     }
@@ -99,8 +101,10 @@ function canResumeEvent(
   operation: DeploymentOperationSnapshot,
   phase: ManagedPullRequestPhase,
 ): boolean {
-  if (operation.lastFailure?.retryable !== true) return false;
-  const previousPhase = operation.lastFailure.previousPhase;
+  if (operation.phase !== 'blocked') return false;
+  const failure = requiredDeploymentFailure(operation);
+  if (!failure.retryable) return false;
+  const previousPhase = failure.previousPhase;
   return phase === "promotion"
     ? previousPhase === "preparing" || previousPhase === "promotion_pr_pending"
     : previousPhase === "reconciliation_pending";

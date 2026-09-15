@@ -223,6 +223,10 @@ unavailable or invalid dynamic response falls back atomically to English.
 Provider messages are replaced by stable semantic reasons and one concrete
 recovery action rather than echoed or partially translated.
 
+Plan warnings derive only from the validated current setup configuration and
+current readiness facts. Callers cannot inject migration, compatibility, or
+arbitrary warning text into the pure plan builder.
+
 ## 10. Failure, recovery, and cleanup
 
 | Failure | Impact | Retained facts | Retry | Action | Cleanup |

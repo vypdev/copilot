@@ -20,6 +20,15 @@ const mockRecommendStepsInvoke = jest.fn();
 const mockAnswerIssueHelpInvoke = jest.fn();
 const mockListIssueComments = jest.fn();
 
+const implementationPlan = {
+  steps: [
+    { title: 'Define the change', details: [] },
+    { title: 'Implement the change', details: [] },
+    { title: 'Verify the change', details: [] },
+  ],
+  acceptance: 'The requested behavior is verified.',
+};
+
 const workflowSteps = {
   checkPermissions: { taskId: 'check-permissions', invoke: mockCheckPermissionsInvoke },
   closeNotAllowedIssue: { taskId: 'close-not-allowed', invoke: mockCloseNotAllowedInvoke },
@@ -229,7 +238,7 @@ describe("IssueUseCase", () => {
         id: "RecommendStepsUseCase",
         success: true,
         executed: true,
-        payload: { issueNumber: 8, recommendedSteps: '1. Implement the change.' },
+        payload: { issueNumber: 8, implementationPlan },
       })],
     });
     const param = minimalExecution({
@@ -299,13 +308,14 @@ describe("IssueUseCase", () => {
         id: 'RecommendStepsUseCase',
         success: true,
         executed: true,
-        payload: { issueNumber: 8, recommendedSteps: '1. Implement the change.' },
+        payload: { issueNumber: 8, implementationPlan },
       })],
       configurationPatch: {
         recommendationState: {
           issueDescriptionFingerprint: 'description-fingerprint',
           recommendationFingerprint: 'recommendation-fingerprint',
-          recommendation: '1. Implement the change.',
+          implementationPlan,
+          implementationPlanLocale: 'en-US',
         },
       },
     });
@@ -320,7 +330,8 @@ describe("IssueUseCase", () => {
     expect(param.currentConfiguration.recommendationState).toEqual({
       issueDescriptionFingerprint: 'description-fingerprint',
       recommendationFingerprint: 'recommendation-fingerprint',
-      recommendation: '1. Implement the change.',
+      implementationPlan,
+      implementationPlanLocale: 'en-US',
     });
   });
 
@@ -348,9 +359,7 @@ describe("IssueUseCase", () => {
 
     expect(mockRecommendStepsInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8 }));
     expect(results.some((result) => result.id === "CopilotWelcomeUseCase")).toBe(true);
-    expect(results.find((result) => result.id === "CopilotWelcomeUseCase")?.steps[0]).toContain(
-      "<!-- copilot:welcome -->",
-    );
+    expect(results.find((result) => result.id === "CopilotWelcomeUseCase")?.steps[0]).not.toContain('<!-- copilot:');
     expect(results.find((result) => result.id === "CopilotWelcomeUseCase")?.steps[0]).toContain(
       "Hola, soy **@vypbot**",
     );
@@ -415,10 +424,8 @@ describe("IssueUseCase", () => {
     expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(false);
   });
 
-  it.each([
-    ['correlated', '<!-- copilot:reply schema="1" target="issue:8" correlation="event:abcdef12" key="copilot-welcome" digest="abcdef12" -->'],
-    ['legacy', '<!-- copilot:welcome -->'],
-  ])('does not add a welcome when a replay finds an existing bot-owned %s welcome', async (_kind, body) => {
+  it('does not add a welcome when a replay finds an existing bot-owned correlated welcome', async () => {
+    const body = '<!-- copilot:reply schema="1" target="issue:8" correlation="event:abcdef12" key="copilot-welcome" digest="abcdef12" -->';
     mockListIssueComments.mockResolvedValue([{ id: 93, body, user: { login: 'vypbot' } }]);
     const param = minimalExecution({
       tokenUser: 'vypbot',
@@ -431,6 +438,17 @@ describe("IssueUseCase", () => {
 
     expect(mockListIssueComments).toHaveBeenCalledWith(8);
     expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(false);
+  });
+
+  it('treats a removed standalone welcome marker as inert', async () => {
+    mockListIssueComments.mockResolvedValue([{
+      id: 93, body: '<!-- copilot:welcome -->', user: { login: 'vypbot' },
+    }]);
+    const results = await createUseCase().invoke(minimalExecution({
+      tokenUser: 'vypbot', eventName: 'issues', inputs: { action: 'opened' }, issue: { opened: true },
+    }));
+
+    expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(true);
   });
 
   it('omits the optional welcome when historical publication cannot be verified', async () => {

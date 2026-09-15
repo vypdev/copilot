@@ -1,9 +1,9 @@
-import type { DeploymentOperationSnapshot, DeploymentPhase } from "../../domain/deployment_operation";
+import { requiredDeploymentFailure, type DeploymentOperationSnapshot, type DeploymentPhase } from "../../domain/deployment_operation";
 
 /**
  * Rejects forged, stale, or out-of-order workflow continuations before a
- * publication-side mutation is attempted. There is intentionally no standalone
- * or compatibility path: every publication command belongs to a durable operation.
+ * publication-side mutation is attempted. Every publication command belongs to
+ * one current, durable operation contract.
  */
 export function validateDeploymentContinuation(
   operation: DeploymentOperationSnapshot | undefined,
@@ -20,9 +20,8 @@ export function validateDeploymentContinuation(
   if (expectedVersion !== operation.version) {
     return `Deployment version mismatch: expected ${operation.version}, received ${expectedVersion}.`;
   }
-  const effectivePhase = operation.phase === "blocked" && operation.lastFailure?.retryable
-    ? operation.lastFailure.previousPhase
-    : operation.phase;
+  const blockedFailure = operation.phase === 'blocked' ? requiredDeploymentFailure(operation) : undefined;
+  const effectivePhase = blockedFailure?.retryable ? blockedFailure.previousPhase : operation.phase;
   if (!allowedPhases.includes(effectivePhase)) {
     return `Deployment operation ${operation.operationId} cannot continue publication from phase ${operation.phase}.`;
   }

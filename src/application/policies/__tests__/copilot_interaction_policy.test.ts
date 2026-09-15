@@ -2,7 +2,6 @@ import {
     buildCopilotHelpMessage,
     buildCopilotWelcomeMessage,
     buildCopilotWelcomeResult,
-    COPILOT_WELCOME_MARKER,
     normalizeCopilotBotUsername,
 } from '../copilot_interaction_policy';
 
@@ -28,9 +27,9 @@ describe('Copilot interaction policy', () => {
         expect(buildCopilotWelcomeMessage('vypbot', 'es-ES')).toContain('Hola, soy **@vypbot**');
     });
 
-    it('renders a marked one-time issue welcome message', () => {
+    it('renders welcome copy without embedding publication identity', () => {
         const welcome = buildCopilotWelcomeMessage('vypbot');
-        expect(welcome.startsWith(COPILOT_WELCOME_MARKER)).toBe(true);
+        expect(welcome).not.toContain('<!-- copilot:');
         expect(welcome).toContain('Hi! I’m **@vypbot**');
         expect(welcome).toContain('/copilot help');
     });

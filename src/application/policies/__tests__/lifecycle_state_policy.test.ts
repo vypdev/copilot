@@ -54,6 +54,29 @@ describe('lifecycle state policy', () => {
         })).toBe('ready');
     });
 
+    it('blocks a partial-coverage review instead of declaring zero findings ready', () => {
+        expect(resolveLifecycleState({
+            eventName: 'pull_request',
+            action: 'synchronize',
+            isIssue: false,
+            isPullRequest: true,
+            issueOpened: false,
+            issueDescriptionEdited: false,
+            pullRequestMerged: false,
+            pullRequestClosed: false,
+            results: [{ ...result('DetectPotentialProblemsUseCase'), payload: {
+                findingStates: findingStates(),
+                bugbotTelemetry: {
+                    schemaVersion: 1,
+                    outcome: 'partial',
+                    elapsedMs: 10,
+                    configuredEffort: 'smart',
+                    headSha: 'sha-123',
+                },
+            } }],
+        })).toBe('blocked');
+    });
+
     it('maps verification-required to changes-requested and unknown to blocked', () => {
         const base = {
             eventName: 'pull_request', action: 'synchronize', isIssue: false, isPullRequest: true,
