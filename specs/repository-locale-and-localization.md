@@ -3,9 +3,9 @@
 - Status: Implemented — automated gates and controlled pull-request UX evidence complete
 - Date: 2026-09-14
 - Catalog capability ID: github-communication-experience
-- Last verified: 2026-09-15; implementation is on `develop` through PR #389,
-  with the executable disjoint test-budget and multilingual fixture closure
-  verified in PR #390
+- Last verified: 2026-09-15 against the merged implementation and the
+  executable disjoint test-budget and multilingual fixture evidence described
+  in §13
 - Owners: Copilot maintainers
 - Scope: Define one English-default repository locale profile and apply it generically to deterministic UI, agent-generated content, and safe interpretation of addressed comments.
 - Related issues/PRs: [issue #334](https://github.com/vypdev/copilot/issues/334), [PR #366](https://github.com/vypdev/copilot/pull/366) through [PR #390](https://github.com/vypdev/copilot/pull/390)

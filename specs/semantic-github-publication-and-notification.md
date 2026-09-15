@@ -3,9 +3,8 @@
 - Status: Implemented — automated gates and controlled pull-request UX evidence complete
 - Date: 2026-09-14
 - Catalog capability ID: github-communication-experience
-- Last verified: 2026-09-15; implementation is on `develop` through PR #389,
-  with the executable concurrency and disjoint test-budget closure verified in
-  PR #390
+- Last verified: 2026-09-15 against the merged implementation and the
+  executable concurrency and disjoint test-budget evidence described in §13
 - Owners: Copilot maintainers
 - Scope: Replace generic step-dump comments with bounded, semantic, idempotent GitHub messages across issues, pull requests, reviews, pushes, and single actions.
 - Related issues/PRs: [issue #334](https://github.com/vypdev/copilot/issues/334), [issue #344](https://github.com/vypdev/copilot/issues/344), [issue #355](https://github.com/vypdev/copilot/issues/355), [PR #366](https://github.com/vypdev/copilot/pull/366) through [PR #390](https://github.com/vypdev/copilot/pull/390)
