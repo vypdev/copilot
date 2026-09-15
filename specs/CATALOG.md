@@ -13,15 +13,15 @@ debt or convert unknown historic intent into a design decision.
 | `github-communication-experience` | Implemented | English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces | [Semantic GitHub communication and repository localization](./semantic-github-publication-and-notification.md) + 1 companion | 209 paths · 2026-09-16 |
 | `release-orchestration` | Implemented | Release and hotfix promotion, publication, reconciliation, and durable recovery | [Configurable production-first release orchestration](./configurable-release-orchestration.md) + 2 companion | 52 paths · 2026-09-16 |
 | `merge-queue-readiness` | Implemented | Fail-closed validation of required checks and merge-group workflow support | [Merge queue readiness and effective target rules](./merge-queue-readiness.md) | 24 paths · 2026-09-15 |
-| `bugbot-review-state-reconciliation` | Implemented | Reconcile review snapshots, findings, threads, comments, and check conclusions | [Bugbot review-state reconciliation](./bugbot-review-state-reconciliation.md) | 56 paths · 2026-09-15 |
-| `execution-lifecycle` | Implemented | Shared GitHub Action lifecycle from event admission through durable user-facing results | [Execution admission, queueing, routing, and result publication](./execution-admission-queue-and-publication.md) + 3 companion | 84 paths · 2026-09-15 |
+| `bugbot-review-state-reconciliation` | Implemented | Reconcile review snapshots, findings, threads, comments, and check conclusions | [Bugbot review-state reconciliation](./bugbot-review-state-reconciliation.md) | 56 paths · 2026-09-16 |
+| `execution-lifecycle` | Implemented | Shared GitHub Action lifecycle from event admission through durable user-facing results | [Execution admission, queueing, routing, and result publication](./execution-admission-queue-and-publication.md) + 3 companion | 84 paths · 2026-09-16 |
 | `architecture-quality-hardening` | Implemented | Close verified concurrency, error-contract, context-coupling, fan-out, setup/doctor, and provider-policy risks in dependency order | [Architecture quality and scalability hardening](./architecture-quality-and-scalability-hardening.md) + 1 companion | 72 paths · 2026-09-16 |
 | `setup-and-doctor` | Implemented | Plan, validate, provision, and audit a repository installation without exposing credentials | [Setup, configuration, credentials, and doctor](./setup-configuration-credentials-and-doctor.md) + 1 companion | 53 paths · 2026-09-16 |
 | `managed-issue-lifecycle` | As-built baseline | Convert typed issues into traceable work branches, project state, and lifecycle state | [Managed issue and branch lifecycle](./managed-issue-and-branch-lifecycle.md) | 31 paths · 2026-09-16 |
 | `comment-automation` | Implemented | Admit only explicit commands or exact mentions, then route them while protecting repository mutations | [Comment automation and authorization](./comment-automation-and-authorization.md) | 52 paths · 2026-09-16 |
 | `bugbot-analysis-and-autofix` | Implemented | Select one canonical PR, analyze bounded evidence, publish stable findings, and apply authorized verified fixes | [Bugbot analysis, finding publication, and autofix](./bugbot-analysis-publication-and-autofix.md) + 1 companion | 63 paths · 2026-09-16 |
 | `branch-synchronization` | Implemented | Observe parent drift with one localized status card and transition-only notifications, then safely merge a parent branch into a linked working branch | [Branch synchronization and conflict recovery](./branch-synchronization-and-conflict-recovery.md) | 30 paths · 2026-09-16 |
-| `pull-request-lifecycle` | Implemented | Enrich linked and unlinked pull requests with safe issue linkage, projects, metadata, reviewers, concise descriptions, and distinct workflow evidence | [Pull request lifecycle and enrichment](./pull-request-lifecycle-and-enrichment.md) | 48 paths · 2026-09-15 |
+| `pull-request-lifecycle` | Implemented | Enrich linked and unlinked pull requests with safe issue linkage, projects, metadata, reviewers, concise descriptions, and distinct workflow evidence | [Pull request lifecycle and enrichment](./pull-request-lifecycle-and-enrichment.md) | 48 paths · 2026-09-16 |
 | `agent-runtime` | Implemented | Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run | [Agent runtime, provider, model, and role routing](./agent-runtime-provider-and-model-routing.md) + 1 companion | 51 paths · 2026-09-12 |
 | `cli-and-single-actions` | As-built baseline | Expose bounded local commands and workflow-dispatched operations through the shared application core | [CLI and single-action execution](./cli-and-single-action-execution.md) | 33 paths · 2026-09-16 |
 
@@ -63,7 +63,7 @@ debt or convert unknown historic intent into a design decision.
 ### `bugbot-review-state-reconciliation` — Bugbot review-state reconciliation
 
 - Owner: Copilot maintainers
-- Last verified: 2026-09-15
+- Last verified: 2026-09-16
 - Specifications: [`specs/bugbot-review-state-reconciliation.md`](./bugbot-review-state-reconciliation.md)
 - Workflows: [`.github/workflows/copilot_commit.yml`](../.github/workflows/copilot_commit.yml) · [`.github/workflows/copilot_pull_request.yml`](../.github/workflows/copilot_pull_request.yml) · [`.github/workflows/copilot_pull_request_comment.yml`](../.github/workflows/copilot_pull_request_comment.yml)
 - Entrypoints: [`src/application/usecases/steps/commit/detect_potential_problems_workflow.ts`](../src/application/usecases/steps/commit/detect_potential_problems_workflow.ts) · [`src/application/usecases/steps/commit/bugbot/reconcile_bugbot_review_state_use_case.ts`](../src/application/usecases/steps/commit/bugbot/reconcile_bugbot_review_state_use_case.ts) · [`src/actions/github_action_completion.ts`](../src/actions/github_action_completion.ts) · [`src/api.ts`](../src/api.ts)
@@ -74,7 +74,7 @@ debt or convert unknown historic intent into a design decision.
 ### `execution-lifecycle` — Execution admission, queueing, routing, and result publication
 
 - Owner: Copilot maintainers
-- Last verified: 2026-09-15
+- Last verified: 2026-09-16
 - Specifications: [`specs/execution-admission-queue-and-publication.md`](./execution-admission-queue-and-publication.md) · [`specs/execution-error-and-context-hardening.md`](./execution-error-and-context-hardening.md) · [`specs/execution-boundary-closure-audit.md`](./execution-boundary-closure-audit.md) · [`specs/push-and-single-action-context-hardening.md`](./push-and-single-action-context-hardening.md)
 - Workflows: [`.github/workflows/copilot_issue.yml`](../.github/workflows/copilot_issue.yml) · [`.github/workflows/copilot_issue_comment.yml`](../.github/workflows/copilot_issue_comment.yml) · [`.github/workflows/copilot_pull_request.yml`](../.github/workflows/copilot_pull_request.yml) · [`.github/workflows/copilot_pull_request_comment.yml`](../.github/workflows/copilot_pull_request_comment.yml) · [`.github/workflows/copilot_commit.yml`](../.github/workflows/copilot_commit.yml)
 - Entrypoints: [`src/actions/github_action.ts`](../src/actions/github_action.ts) · [`src/actions/common_action.ts`](../src/actions/common_action.ts)
@@ -151,7 +151,7 @@ debt or convert unknown historic intent into a design decision.
 ### `pull-request-lifecycle` — Pull request lifecycle and enrichment
 
 - Owner: Copilot maintainers
-- Last verified: 2026-09-15
+- Last verified: 2026-09-16
 - Specifications: [`specs/pull-request-lifecycle-and-enrichment.md`](./pull-request-lifecycle-and-enrichment.md)
 - Workflows: [`.github/workflows/copilot_pull_request.yml`](../.github/workflows/copilot_pull_request.yml) · [`.github/workflows/copilot_pull_request_merge_queue.yml`](../.github/workflows/copilot_pull_request_merge_queue.yml) · [`setup/workflows/copilot_pull_request.yml`](../setup/workflows/copilot_pull_request.yml) · [`setup/workflows/copilot_pull_request_merge_queue.yml`](../setup/workflows/copilot_pull_request_merge_queue.yml)
 - Entrypoints: [`src/application/usecases/pull_request_use_case.ts`](../src/application/usecases/pull_request_use_case.ts) · [`src/actions/common_action.ts`](../src/actions/common_action.ts)

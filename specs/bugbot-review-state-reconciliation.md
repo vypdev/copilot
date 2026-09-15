@@ -3,7 +3,7 @@
 - Status: Implemented
 - Date: 2026-09-11
 - Catalog capability ID: `bugbot-review-state-reconciliation`
-- Last verified: 2026-09-15 on `develop` plus PR workflow UX implementation branch
+- Last verified: 2026-09-16 on `develop` plus PR #394 live UX iteration
 - Owners: `vypdev/copilot` product and engineering maintainers
 - Scope: make every Bugbot pull-request surface present one coherent, current,
   recoverable finding state without erasing the historical review record.
@@ -13,7 +13,8 @@
   [current Check Run](https://github.com/vypdev/copilot/runs/103074383528),
   [PR #363 concurrency evidence](https://github.com/vypdev/copilot/pull/363),
   [PR #378 workflow-noise evidence](https://github.com/vypdev/copilot/pull/378),
-  and [PR #393 partial-coverage copy evidence](https://github.com/vypdev/copilot/pull/393)
+  [PR #393 partial-coverage copy evidence](https://github.com/vypdev/copilot/pull/393),
+  and [PR #394 lifecycle-label evidence](https://github.com/vypdev/copilot/pull/394)
 - Required review gates: product UX, architecture, testing, documentation,
   security/operations
 - Open decisions blocking readiness: none
@@ -367,6 +368,10 @@ Terms:
     review-triggered analysis.
 17. Review evidence eligibility MUST be a pure application policy over semantic
     Result payloads; it MUST NOT query, copy, or merge a previous provider Check.
+18. A valid `partial` Bugbot outcome MUST NOT project `state:ready`, even when
+    all observed finding counts are zero. It projects `state:blocked` plus
+    `state:awaiting-maintainer` because omitted evidence requires a maintainer
+    decision; only complete current-head evidence may project ready.
 
 ## 5. Current versus proposed product journey
 
@@ -1135,13 +1140,13 @@ counted across rows.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain lifecycle, transition planning, and projection | 31 | every state, resolver precedence, fixed/obsolete/dismissed/reopened, per-destination projection, conservative cross-destination fold, canonical result shape, required-outcome absence, telemetry set validity, invalid numeric bounds, overflow, aggregate counts, deterministic digests |
+| Domain lifecycle, transition planning, and projection | 32 | every state, resolver precedence, fixed/obsolete/dismissed/reopened, partial-coverage blocking, per-destination projection, conservative cross-destination fold, canonical result shape, required-outcome absence, telemetry set validity, invalid numeric bounds, overflow, aggregate counts, deterministic digests |
 | Application ordering, idempotency, replay, cancellation, and races | 35 | active-before-resolution, mutation head guards, double snapshot head guard, read-after-write, per-surface completeness, missing durable evidence, resolved omission, duplicate same-head, newer-head supersession, partial mutations, retry convergence, PR close/reopen, metadata-during-review ordering |
 | Adapters and provider error mapping | 18 | pagination, parent review id/URL, resolver identity, create/update review, status-card upsert, 401/403/404/409/422, malformed response, rate limit |
 | Workflow, composition, public API, and schema contracts | 13 | shared concurrency key, conditional metadata non-preemption in active/setup copies, malformed-sibling telemetry cardinality, negative unconditional-cancel fixture, bot guard, permissions, trigger contract, strict finding/resolution schema, composition wiring, API declarations, package exports |
 | UI/UX, localization, accessibility, links, and sanitization | 22 | pending, active, clean, failed, partial, skipped, superseded, metadata-only Check/generic-comment omission, missing/invalid summary and status output, every non-clean count, historical snapshot, en/es/fallback, narrow content, markers, mentions, unsafe Markdown |
-| Integration, security, migration, and live-shaped replay | 14 | PR #358 replay, new PR lifecycle, multiple reviews, overflow/unanchored, manual resolve/unresolve, identity rotation, duplicate card repair, dry-run/fork trust, missing-state completion fail-closed, latest-by-name PR #363 replay |
-| **Total** | **133** | No double counting |
+| Integration, security, greenfield cutover, and live-shaped replay | 14 | PR #358 replay, new PR lifecycle, multiple reviews, overflow/unanchored, manual resolve/unresolve, identity rotation, duplicate card repair, dry-run/fork trust, missing-state completion fail-closed, latest-by-name PR #363 replay |
+| **Total** | **134** | No double counting |
 
 Coverage requirements:
 
@@ -1355,6 +1360,10 @@ examples should reuse the same fixtures as presentation tests where practical.
 41. Given bounded context omission, then the canonical card names
     **Incomplete coverage**, requires manual inspection, and does not suggest
     changing fixed safety limits or rerunning unchanged evidence.
+42. Given valid `partial` telemetry and canonical zero finding counts, then the
+    lifecycle reconciliation replaces any stale `state:ready` label with
+    `state:blocked` and retains exactly `state:awaiting-maintainer`; the neutral
+    Review Check and incomplete status card cannot coexist with a ready claim.
 
 ## 17. Requirements traceability
 
@@ -1476,7 +1485,7 @@ evidence.
 - [x] Human resolve/unresolve, bot repair, missing resolver, stale head,
       cancellation, duplicate events, and PR close/reopen are covered.
 - [x] Architecture boundaries and workflow contracts are executable and pass.
-- [x] The 133-case minimum and changed-module coverage requirements pass; the
+- [x] The 134-case minimum and changed-module coverage requirements pass; the
       two shared result-projection policies are 100% covered in every metric.
 - [x] Metadata-only PR runs cannot overwrite the latest Review Check, and the
       incomplete-outcome conclusion matrix is enforced by pure tests.

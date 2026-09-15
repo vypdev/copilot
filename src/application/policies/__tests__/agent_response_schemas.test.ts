@@ -47,6 +47,8 @@ describe('production agent response schemas', () => {
         });
         expect(PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA.properties.validationHeading)
             .toMatchObject({ type: ['string', 'null'] });
+        expect(PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA.properties.reviewNotes.description)
+            .toContain('null for routine greenfield removals');
         expect(PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA.required).toContain('closesLinkedIssue');
     });
 

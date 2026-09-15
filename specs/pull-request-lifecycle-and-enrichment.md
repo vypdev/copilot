@@ -2,10 +2,10 @@
 
 - Status: Implemented
 - Date: 2026-09-15
-- Last verified: 2026-09-15 on `develop` plus PR UX implementation branch
+- Last verified: 2026-09-16 on `develop` plus PR #394 live UX iteration
 - Owners: Copilot maintainers
 - Scope: PR-to-issue/project linkage, assignments, metadata, size/progress, description ownership, review integration, and merge closure
-- Related issues/PRs: managed issue lifecycle and Bugbot SDDs; live UX evidence from [PR #378](https://github.com/vypdev/copilot/pull/378), [PR #379](https://github.com/vypdev/copilot/pull/379), and [PR #393](https://github.com/vypdev/copilot/pull/393)
+- Related issues/PRs: managed issue lifecycle and Bugbot SDDs; live UX evidence from [PR #378](https://github.com/vypdev/copilot/pull/378), [PR #379](https://github.com/vypdev/copilot/pull/379), [PR #393](https://github.com/vypdev/copilot/pull/393), and [PR #394](https://github.com/vypdev/copilot/pull/394)
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none
 
@@ -72,7 +72,9 @@ descriptions can also overwrite human content unless ownership is explicit.
   generated-description quality is probabilistic; live responsive UX evidence
   remains required for every shipped workflow change.
 - Unknown rationale: `replace` is the current default, but historic selection evidence is unavailable.
-- Proposed improvements: changing the recommended default requires migration and user study.
+- Proposed improvements: changing the recommended default requires an explicit
+  product decision and live UX study. There is no installed-user state to
+  migrate before adoption, so no compatibility layer is permitted.
 - Live iteration: PR #379's first run displayed a skipped merge-group job beside
   the active PR job under the same check name. Merge-group compatibility moved
   to a dedicated workflow so subsequent normal PR runs expose only the relevant
@@ -81,6 +83,12 @@ descriptions can also overwrite human content unless ownership is explicit.
   remain absent from an immediate board listing. Re-querying after a fixed
   delay incorrectly failed the workflow even though the PR was already linked.
   The mutation-returned item ID now drives the status mutation directly.
+- Live iteration: PR #394 showed that removal vocabulary could still make the
+  description agent invent a `Review notes` migration recap even though the
+  repository explicitly documents zero installed users, external consumers,
+  and persisted production state. That evidence now requires the optional
+  section to remain absent unless a concrete reviewer action or unresolved
+  material risk exists.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -107,6 +115,11 @@ body ownership. “Enrichment” is metadata mutation that does not merge code.
    inventories or template completeness.
 6. Generated descriptions MUST NOT invent consumers, compatibility duties,
    upgrade steps, or migration work from removal/deprecation wording alone.
+7. Explicit greenfield evidence (no installed users, external consumers, or
+   persisted production state) MUST suppress migration/compatibility review
+   notes for removed contracts. Strict parsing, fail-closed behavior, and
+   rejected old shapes belong in material changes only when useful; they are
+   not reviewer actions by themselves.
 
 ### 4.2 Non-goals
 
@@ -282,6 +295,11 @@ Removal or a symbol being named deprecated is not evidence of an active consumer
 or transition obligation. Compatibility, migration, upgrade, and rollout notes
 appear only when the issue, diff, repository documentation, or verification
 evidence identifies a concrete affected consumer or required transition.
+When repository evidence explicitly establishes a greenfield system with no
+installed users, external consumers, or persisted production state, the
+renderer request must omit migration notes for removed contracts. A review-note
+section remains valid only for an evidence-backed reviewer action or unresolved
+material risk.
 
 | Trigger | Visible behavior | Must not appear |
 |---|---|---|
@@ -350,15 +368,18 @@ distinct check name, while normal PR analysis and merge-queue admission share
 the exact required-check context deliberately in separate workflows; their run
 names provide the human-visible distinction without a skipped duplicate.
 
-## 13. Compatibility, migration, rollout, and rollback
+## 13. Greenfield cutover, rollout, and rollback
 
 Existing unmarked bodies are preserved in append/preserve/disabled and replaced
 only in replace. Existing marked append sections are updated in place. Mode
 changes are prospective: moving away from replace cannot recover overwritten
 historic prose. Existing large templates remain valid inputs, but generated
-output omits empty boilerplate. Repositories relying on title normalization from
-`pull_request: edited` must move that policy to a separate workflow before
-rollout; this deliberate compatibility change prevents body-edit recursion.
+output omits empty boilerplate. This repository has no installed users,
+external consumers, or persisted production setup state. No compatibility
+parser, retired configuration alias, or migration-only path is retained. A
+future adopter that independently adds title normalization on
+`pull_request: edited` must isolate that policy in a separate workflow to
+prevent body-edit recursion.
 Rollback restores body through GitHub history/manual edit and may restore the
 edited trigger; issue closure is reversible by reopening, while merged code is
 not altered.
@@ -371,9 +392,9 @@ not altered.
 | Orchestration/idempotency | 20 | order, unlinked route, replay, partial, merge closure |
 | Provider/agent adapters | 14 | link/project/reviewer/body/errors |
 | Workflow/config contracts | 14 | event exclusion, identity, forks, permissions, inputs |
-| PR UX/localization/sanitization | 14 | concise body/status/links/template/output |
-| Integration/security/migration | 12 | PR→issue close, mode changes, stale head |
-| **Total** | **100** | no double counting |
+| PR UX/localization/sanitization | 15 | concise body/status/links/template/output, evidence-backed optional notes |
+| Integration/security/greenfield cutover | 12 | PR→issue close, mode changes, stale head |
+| **Total** | **101** | no double counting |
 
 Global thresholds remain; description/marker policy SHOULD reach 100% branch
 coverage. The P2-E context/orchestration path enforces 95% lines/statements and
@@ -423,6 +444,10 @@ body mutation that produces no follow-up PR workflow.
     existing item and creates no duplicate.
 16. Removing unused or deprecated configuration without evidence of consumers
     produces no invented compatibility, upgrade, or migration note.
+17. Repository evidence that there are no installed users, external consumers,
+    or persisted production state keeps `reviewNotesHeading` and `reviewNotes`
+    null for removed state/configuration contracts, even when the diff uses
+    `legacy`, `deprecated`, migration, strict-reader, or fail-closed wording.
 
 ## 17. Requirements traceability
 
@@ -445,14 +470,14 @@ body mutation that produces no follow-up PR workflow.
 1. Update event/body policies and exhaustive tests.
 2. Update PR workflow/use cases and replay/partial tests.
 3. Update adapters/composition/workflows and contract tests.
-4. Update PR presentation/docs/catalog and migration guidance.
+4. Update PR presentation, docs, catalog, and greenfield cutover guidance.
 5. Run all gates and capture human PR UX evidence.
 
 ## 19. Definition of Done
 
-- [ ] The 100-case budget, coverage, architecture, and workflow gates pass.
+- [ ] The 101-case budget, coverage, architecture, and workflow gates pass.
 - [ ] Event order, replay, partial state, stale head, and merge closure are proven.
-- [ ] All body modes preserve their documented ownership and migration behavior.
+- [ ] All body modes preserve their documented ownership without compatibility-only paths.
 - [ ] UI states, accessibility, localization, sanitization, and noise pass.
 - [ ] An unlinked PR and Copilot-authored description edit pass live UX verification without self-linkage or a follow-up PR workflow.
 - [ ] PR docs, Bugbot links, and catalog are current.

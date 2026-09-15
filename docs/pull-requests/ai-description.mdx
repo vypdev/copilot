@@ -38,6 +38,13 @@ symbol named “deprecated” does not by itself prove that consumers exist or t
 an upgrade, migration, compatibility, or rollout step is required. Copilot adds
 those notes only when the issue, diff, repository documentation, or verification
 evidence identifies a concrete affected consumer or transition.
+If repository evidence explicitly states that there are no installed users,
+external consumers, or persisted production state, Copilot treats removed
+contracts as a greenfield cutover: it does not add migration notes merely to
+repeat strict parsing, fail-closed behavior, rejected old shapes, or the absence
+of compatibility work. Those facts belong under **What changed** only when they
+help review the outcome. **Review notes** still appear for a concrete reviewer
+action or unresolved material risk.
 
 <Info>
   **Recommendation:** Keep the template short. Ask for the outcome, material changes, validation evidence, and conditional reviewer notes. The setup template follows this contract.

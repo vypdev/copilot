@@ -358,7 +358,7 @@
       "status": "implemented",
       "scope": "Reconcile review snapshots, findings, threads, comments, and check conclusions",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-15",
+      "lastVerified": "2026-09-16",
       "specs": [
         "specs/bugbot-review-state-reconciliation.md"
       ],
@@ -435,7 +435,7 @@
       "status": "implemented",
       "scope": "Shared GitHub Action lifecycle from event admission through durable user-facing results",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-15",
+      "lastVerified": "2026-09-16",
       "specs": [
         "specs/execution-admission-queue-and-publication.md",
         "specs/execution-error-and-context-hardening.md",
@@ -973,7 +973,7 @@
       "status": "implemented",
       "scope": "Enrich linked and unlinked pull requests with safe issue linkage, projects, metadata, reviewers, concise descriptions, and distinct workflow evidence",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-15",
+      "lastVerified": "2026-09-16",
       "specs": [
         "specs/pull-request-lifecycle-and-enrichment.md"
       ],

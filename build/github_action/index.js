@@ -42128,6 +42128,7 @@ exports.PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA = {
             minItems: 1,
             maxItems: 4,
             items: { type: 'string', minLength: 1, maxLength: 1000 },
+            description: 'Only evidence-backed reviewer actions or unresolved material risks; null for routine greenfield removals, strict parsing, or unsupported migration claims.',
         },
         closesLinkedIssue: {
             type: 'boolean',
@@ -46033,6 +46034,7 @@ exports.resolveLifecycleState = resolveLifecycleState;
 exports.readLifecycleExternalEvidence = readLifecycleExternalEvidence;
 const result_1 = __nccwpck_require__(73817);
 const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
+const bugbot_telemetry_projection_policy_1 = __nccwpck_require__(43244);
 const review_state_1 = __nccwpck_require__(79200);
 /** Resolves the next lifecycle state from application facts, never from labels or API responses. */
 function resolveLifecycleState(input) {
@@ -46050,6 +46052,10 @@ function resolveLifecycleState(input) {
         const findingState = (0, bugbot_result_finding_state_projection_policy_1.projectBugbotResultFindingStates)(input.results);
         if (findingState.status === 'invalid')
             return 'blocked';
+        const reviewTelemetry = (0, bugbot_telemetry_projection_policy_1.projectBugbotResultTelemetry)(input.results);
+        if (reviewTelemetry.status === 'valid' && reviewTelemetry.telemetry.outcome === 'partial') {
+            return 'blocked';
+        }
         if (findingState.status === 'valid' && findingState.counts.unknown > 0)
             return 'blocked';
         if (findingState.status === 'valid' && (0, review_state_1.countActionableBugbotFindings)(findingState.counts) > 0)
@@ -78066,7 +78072,7 @@ Write every human-readable sentence in {{targetLocale}}. Preserve code identifie
 4. Provide \`overview\` as one to three sentences that state the outcome and why it matters.
 5. Provide \`whatChangedHeading\` as the plain-text {{targetLocale}} equivalent of "What changed" and \`changes\` as two to six short, outcome-oriented items. Do not inventory files, use-case names, internal categories, or every implementation step.
 6. When execution or manual-verification evidence is available, provide \`validationHeading\` as the plain-text {{targetLocale}} equivalent of "Validation" and \`validation\` with only the supported commands, automated checks, or manual scenarios. Never claim a check passed unless the evidence says it did, and never infer that result from the presence of test files or commands. When no verification evidence is available, set both fields to \`null\`; do not add a “not run” placeholder.
-7. Set \`reviewNotesHeading\` and \`reviewNotes\` to \`null\` unless reviewers need material migration, security, performance, compatibility, rollout, manual-verification, risk, or follow-up context. Do not infer consumers, compatibility obligations, upgrade steps, migration work, or rollout requirements merely because code, configuration, inputs, or symbols were removed or named deprecated. Include that context only when the issue, diff, repository documentation, or verification evidence identifies a concrete affected consumer or required transition. Otherwise use the localized plain-text heading and one to four concise items. {{relatedIssueInstruction}}
+7. Set \`reviewNotesHeading\` and \`reviewNotes\` to \`null\` unless reviewers need material security, performance, compatibility, rollout, manual-verification, risk, or follow-up context. Do not infer consumers, compatibility obligations, upgrade steps, migration work, or rollout requirements merely because code, configuration, inputs, state shapes, markers, or symbols were removed, tightened, made fail-closed, or named deprecated or legacy. When repository evidence explicitly says there are no installed users, external consumers, or persisted production state, treat that as conclusive evidence that removed contracts require no migration note. Do not use review notes to restate greenfield removals, strict parsing, rejected old shapes, or the absence of migration work; those are ordinary change outcomes when material. Include a review note only when the issue, diff, repository documentation, or verification evidence identifies a concrete affected consumer, required transition, reviewer action, or unresolved risk. Otherwise use the localized plain-text heading and one to four concise items. {{relatedIssueInstruction}}
 8. Keep the description practical and normally under 4,000 characters. It must never exceed 12,000 characters. Do not use emoji, horizontal separators, generic checklists, empty headings, repeated statements, placeholder text, or unsupported "no impact" claims.
 9. Return one JSON object with exactly \`outputLocale\`, \`overview\`, \`whatChangedHeading\`, \`changes\`, \`validationHeading\`, \`validation\`, \`reviewNotesHeading\`, \`reviewNotes\`, and \`closesLinkedIssue\`. Every content field is plain text except Markdown links, code spans, refs, and commands inside content values. The application renders the Markdown structure; do not include headings, bullet prefixes, a preamble, meta-commentary, or code fence in the values.
 

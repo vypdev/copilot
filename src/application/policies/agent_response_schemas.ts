@@ -120,6 +120,7 @@ export const PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA = {
             minItems: 1,
             maxItems: 4,
             items: { type: 'string', minLength: 1, maxLength: 1_000 },
+            description: 'Only evidence-backed reviewer actions or unresolved material risks; null for routine greenfield removals, strict parsing, or unsupported migration claims.',
         },
         closesLinkedIssue: {
             type: 'boolean',

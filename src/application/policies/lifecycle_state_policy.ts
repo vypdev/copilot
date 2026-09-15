@@ -2,6 +2,7 @@ import type { CopilotLifecycleState } from '../../domain/copilot_lifecycle';
 import { getResultPayload } from '../../data/model/result';
 import type { ApplicationError } from '../../data/model/application_error';
 import { projectBugbotResultFindingStates } from './bugbot_result_finding_state_projection_policy';
+import { projectBugbotResultTelemetry } from './bugbot_telemetry_projection_policy';
 import { countActionableBugbotFindings } from '../../domain/bugbot/review_state';
 
 export type LifecycleChecksEvidence = 'pending' | 'success' | 'failure';
@@ -61,6 +62,10 @@ export function resolveLifecycleState(
         if (input.externalEvidence?.review === 'changes-requested') return 'changes-requested';
         const findingState = projectBugbotResultFindingStates(input.results);
         if (findingState.status === 'invalid') return 'blocked';
+        const reviewTelemetry = projectBugbotResultTelemetry(input.results);
+        if (reviewTelemetry.status === 'valid' && reviewTelemetry.telemetry.outcome === 'partial') {
+            return 'blocked';
+        }
         if (findingState.status === 'valid' && findingState.counts.unknown > 0) return 'blocked';
         if (findingState.status === 'valid' && countActionableBugbotFindings(findingState.counts) > 0) return 'changes-requested';
         if (findingState.status === 'valid') return 'ready';

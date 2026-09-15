@@ -54,6 +54,12 @@ resolution events, finding-state observations, and estimated tokens. State
 observations are snapshots, not unique user-feedback events. Use those trends
 with benchmark results; latency alone is not a quality measure.
 
+A valid partial snapshot remains neutral in the Review Check but blocks the PR
+lifecycle with `state:blocked` and `state:awaiting-maintainer`; it never projects
+`state:ready` from zero observed findings. These surfaces express different
+facts—Check completeness versus the next human decision—without contradicting
+the incomplete status card.
+
 ## Programmatic API
 
 The npm package exports `@vypdev/copilot/bugbot`. `BugbotReviewService` accepts

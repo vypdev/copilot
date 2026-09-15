@@ -130,6 +130,42 @@ describe('SynchronizeLifecycleStateUseCase', () => {
         );
     });
 
+    it('replaces a stale ready label when Bugbot coverage is partial', async () => {
+        const dependencies = ports(['state:ready', 'state:awaiting-maintainer']);
+        const useCase = new SynchronizeLifecycleStateUseCase(dependencies.labels, dependencies.head);
+        await useCase.invoke({
+            context: context({
+                eventName: 'pull_request',
+                action: 'synchronize',
+                target: { kind: 'pull-request', number: 11, labels: [], merged: false, closed: false },
+            }),
+            results: [{
+                id: 'DetectPotentialProblemsUseCase',
+                success: true,
+                executed: true,
+                steps: [],
+                errors: [],
+                payload: {
+                    findingStates: {
+                        open: 0, reopened: 0, fixed: 0, obsolete: 0, dismissed: 0,
+                        'verification-required': 0, unknown: 0,
+                    },
+                    bugbotTelemetry: {
+                        schemaVersion: 1,
+                        outcome: 'partial',
+                        elapsedMs: 10,
+                        configuredEffort: 'smart',
+                        headSha: 'sha-123',
+                    },
+                },
+            } as never],
+        });
+        expect(dependencies.labels.setLabels).toHaveBeenCalledWith(
+            11,
+            ['state:blocked', 'state:awaiting-maintainer'],
+        );
+    });
+
     it('clears waiting state for a pull-request conversation comment', async () => {
         const dependencies = ports(['state:changes-requested', 'state:awaiting-issue-author']);
         const useCase = new SynchronizeLifecycleStateUseCase(dependencies.labels, dependencies.head);

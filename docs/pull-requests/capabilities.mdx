@@ -95,9 +95,11 @@ configuration for adding it.
 ## Review state and evidence
 
 The PR workflow maintains one durable lifecycle label (`state:reviewing`,
-`state:changes-requested`, or `state:ready`) while preserving normal business
+`state:changes-requested`, `state:ready`, or `state:blocked`) while preserving normal business
 labels. Active findings also set `state:awaiting-issue-author`; a clean review
-sets `state:awaiting-maintainer`. While the reviewer is running,
+sets `state:awaiting-maintainer`. Partial context coverage cannot prove a clean
+review: it sets `state:blocked` with `state:awaiting-maintainer`, never
+`state:ready`, until complete current-head evidence is available. While the reviewer is running,
 `state:ai-processing` may coexist with these labels and is removed at the end.
 
 Each run writes a bounded Job Summary. The supplied workflow grants
