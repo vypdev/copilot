@@ -99,7 +99,6 @@ describe("main run route composition root", () => {
     );
     expect(ThinkUseCase).toHaveBeenCalledWith(
       expect.anything(),
-      expect.anything(),
       mockFindings,
     );
 

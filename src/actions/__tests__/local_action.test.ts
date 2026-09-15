@@ -128,6 +128,55 @@ describe('runLocalAction', () => {
     expect(boxen.mock.calls[0][0]).toContain('Reminder 1');
   });
 
+  it('renders a semantic Think response as an answer instead of generic steps', async () => {
+    const boxen = require('boxen');
+    mockMainRun.mockResolvedValue([{
+      executed: true,
+      steps: [],
+      errors: [],
+      reminders: [],
+      payload: { publication: { kind: 'direct-answer', answer: 'Use the repository locale setting.' } },
+    }]);
+
+    await runLocalAction({
+      [INPUT_KEYS.TOKEN]: 't',
+      [INPUT_KEYS.SINGLE_ACTION]: 'think',
+      repo: { owner: 'o', repo: 'r' },
+      eventName: 'issue',
+      issue: { number: 1 },
+      comment: { body: '/copilot explain locale' },
+    });
+
+    const content = boxen.mock.calls[0][0];
+    expect(content).toContain('Answer:');
+    expect(content).toContain('Use the repository locale setting.');
+    expect(content).not.toContain('Steps:');
+  });
+
+  it('uses the configured repository locale for local result labels', async () => {
+    const boxen = require('boxen');
+    mockMainRun.mockResolvedValue([{
+      executed: true,
+      steps: [],
+      errors: [],
+      reminders: [],
+      payload: { publication: { kind: 'direct-answer', answer: 'Usa el locale del repositorio.' } },
+    }]);
+
+    await runLocalAction({
+      [INPUT_KEYS.TOKEN]: 't',
+      [INPUT_KEYS.SINGLE_ACTION]: 'think_action',
+      [INPUT_KEYS.REPOSITORY_LOCALE]: 'es-ES',
+      repo: { owner: 'o', repo: 'r' },
+      eventName: 'issue_comment',
+      issue: {},
+      comment: { body: '/copilot explain locale' },
+    });
+
+    expect(boxen.mock.calls[0][0]).toContain('Respuesta:');
+    expect(boxen.mock.calls[0][0]).not.toContain('Answer:');
+  });
+
   it('calls getProjectDetail for each project id when PROJECT_IDS is set', async () => {
     mockGetProjectDetail
       .mockResolvedValueOnce({ id: 'proj-1', title: 'P1', url: 'https://x.com/1' })

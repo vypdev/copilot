@@ -192,6 +192,41 @@ describe('finishGithubAction', () => {
         expect(mockStoreInvoke).not.toHaveBeenCalled();
     });
 
+    it('routes a Think answer through the shared correlated publication boundary', async () => {
+        const action = Object.assign(execution(), {
+            eventName: 'issue_comment',
+            tokenUser: 'vypbot',
+            inputs: { action: 'created', comment: { id: 42 } },
+        });
+        const answer = new Result({
+            id: 'ThinkUseCase', success: true, executed: true,
+            payload: { publication: {
+                kind: 'direct-answer', answer: 'Use the documented setting.',
+                translation: {
+                    translatedText: 'use the setting',
+                    originalText: 'usa el ajuste',
+                    sourceLocale: 'es-ES',
+                    targetLocale: 'en-US',
+                },
+            } },
+        });
+
+        await finishGithubAction(action, [answer], {} as never, {} as never);
+
+        expect(mockPublishInvoke).toHaveBeenCalledWith(expect.objectContaining({
+            target: { kind: 'issue', number: 11 },
+            requestCorrelationId: 'comment:42',
+            results: [expect.objectContaining({
+                id: 'ThinkUseCase',
+                payload: expect.objectContaining({ publication: expect.objectContaining({
+                    kind: 'direct-answer',
+                    answer: 'Use the documented setting.',
+                    translation: expect.objectContaining({ sourceLocale: 'es-ES' }),
+                }) }),
+            })],
+        }));
+    });
+
     it('persists configuration for the recommendation single action', async () => {
         const action = singleActionExecution(true);
 

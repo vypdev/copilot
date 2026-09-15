@@ -198,7 +198,7 @@ function validMessageText(value: unknown): value is string {
 
 function safeDynamicText(value: string): boolean {
     return validMessageText(value)
-        && !/[\r\n\u202A-\u202E\u2066-\u2069]/u.test(value)
+        && !/[\p{Cc}\u202A-\u202E\u2066-\u2069]/u.test(value)
         && !/<!--|-->|<\/?[A-Za-z]|https?:\/\/|```|[`*_[\]~|]|(^|\s)\/(?:copilot)(?:\s|$)|@[A-Za-z0-9]/iu.test(value);
 }
 

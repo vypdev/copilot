@@ -55,6 +55,9 @@ export const PUBLICATION_MESSAGE_IDS = Object.freeze([
     'interaction.welcome.greeting',
     'interaction.welcome.capabilities',
     'interaction.welcome.hint',
+    'interaction.translation.summary',
+    'interaction.translation.interpretedRequest',
+    'interaction.translation.originalRequest',
     'interaction.status.heading',
     'interaction.status.repository',
     'interaction.status.target',
@@ -72,6 +75,10 @@ export const PUBLICATION_MESSAGE_IDS = Object.freeze([
     'interaction.status.findings',
     'interaction.status.findingsInvalid',
     'interaction.status.findingCounts',
+    'cli.answer',
+    'cli.steps',
+    'cli.errors',
+    'cli.reminder',
 ] as const);
 
 export type PublicationMessageId = typeof PUBLICATION_MESSAGE_IDS[number];
@@ -95,6 +102,17 @@ export interface PublicationMessageCatalog {
     readonly duplicateReply: string;
     readonly viewOriginalResponse: string;
     readonly access: Readonly<{ heading: string; explanation: string; recovery: string }>;
+    readonly translation: Readonly<{
+        summary: (sourceLanguage: string) => string;
+        interpretedRequest: string;
+        originalRequest: string;
+    }>;
+    readonly cli: Readonly<{
+        answer: string;
+        steps: string;
+        errors: string;
+        reminder: string;
+    }>;
     readonly render: (id: PublicationMessageId, variables?: Readonly<Record<string, string | number>>) => string;
 }
 
@@ -144,6 +162,9 @@ const ENGLISH_MESSAGES: Readonly<Record<PublicationMessageId, string>> = Object.
     'interaction.welcome.greeting': 'Hi! I’m {bot}, the Copilot assistant for this repository.',
     'interaction.welcome.capabilities': 'I can answer questions, explain the codebase, propose implementation and test plans, review issues and pull requests for potential bugs or security problems, and help authorized maintainers apply changes.',
     'interaction.welcome.hint': 'Try {helpCommand} to see the available commands, or mention {bot} with your question.',
+    'interaction.translation.summary': 'Request interpreted from {sourceLanguage}',
+    'interaction.translation.interpretedRequest': 'Interpreted request',
+    'interaction.translation.originalRequest': 'Original request',
     'interaction.status.heading': 'Copilot status',
     'interaction.status.repository': 'Repository',
     'interaction.status.target': 'Target',
@@ -161,6 +182,10 @@ const ENGLISH_MESSAGES: Readonly<Record<PublicationMessageId, string>> = Object.
     'interaction.status.findings': 'Bugbot findings',
     'interaction.status.findingsInvalid': 'invalid evidence; inspect the workflow result.',
     'interaction.status.findingCounts': '{open} open, {reopened} reopened, {verificationRequired} verification required, {unknown} unknown, {resolved} resolved',
+    'cli.answer': 'Answer',
+    'cli.steps': 'Steps',
+    'cli.errors': 'Errors',
+    'cli.reminder': 'Reminder',
 });
 
 const SPANISH_MESSAGES: Readonly<Record<PublicationMessageId, string>> = Object.freeze({
@@ -209,6 +234,9 @@ const SPANISH_MESSAGES: Readonly<Record<PublicationMessageId, string>> = Object.
     'interaction.welcome.greeting': 'Hola, soy {bot}, el asistente de Copilot de este repositorio.',
     'interaction.welcome.capabilities': 'Puedo responder preguntas, explicar el código, proponer planes de implementación y pruebas, revisar issues y pull requests y ayudar a los mantenedores autorizados a aplicar cambios.',
     'interaction.welcome.hint': 'Usa {helpCommand} para ver los comandos disponibles o menciona a {bot} con tu pregunta.',
+    'interaction.translation.summary': 'Solicitud interpretada desde {sourceLanguage}',
+    'interaction.translation.interpretedRequest': 'Solicitud interpretada',
+    'interaction.translation.originalRequest': 'Solicitud original',
     'interaction.status.heading': 'Estado de Copilot',
     'interaction.status.repository': 'Repositorio',
     'interaction.status.target': 'Destino',
@@ -226,6 +254,10 @@ const SPANISH_MESSAGES: Readonly<Record<PublicationMessageId, string>> = Object.
     'interaction.status.findings': 'Hallazgos de Bugbot',
     'interaction.status.findingsInvalid': 'evidencia no válida; revisa el resultado del workflow.',
     'interaction.status.findingCounts': '{open} abiertos, {reopened} reabiertos, {verificationRequired} requieren verificación, {unknown} desconocidos, {resolved} resueltos',
+    'cli.answer': 'Respuesta',
+    'cli.steps': 'Pasos',
+    'cli.errors': 'Errores',
+    'cli.reminder': 'Recordatorio',
 });
 
 export const ENGLISH_PUBLICATION_DEFINITION: MessageCatalogDefinition<PublicationMessageId> = Object.freeze({
@@ -319,6 +351,17 @@ export function toPublicationCatalog(
             heading: message('publication.access.heading'),
             explanation: message('publication.access.explanation'),
             recovery: message('publication.access.recovery'),
+        }),
+        translation: Object.freeze({
+            summary: (sourceLanguage: string) => message('interaction.translation.summary', { sourceLanguage }),
+            interpretedRequest: message('interaction.translation.interpretedRequest'),
+            originalRequest: message('interaction.translation.originalRequest'),
+        }),
+        cli: Object.freeze({
+            answer: message('cli.answer'),
+            steps: message('cli.steps'),
+            errors: message('cli.errors'),
+            reminder: message('cli.reminder'),
         }),
         render: message,
     });

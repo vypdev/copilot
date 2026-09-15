@@ -29,6 +29,8 @@ describe('publication message catalog', () => {
     expect(Object.keys(ENGLISH_PUBLICATION_CATALOG.progressState)).toEqual(Object.keys(SPANISH_PUBLICATION_CATALOG.progressState));
     expect(Object.isFrozen(ENGLISH_PUBLICATION_CATALOG)).toBe(true);
     expect(Object.isFrozen(SPANISH_PUBLICATION_CATALOG.progressState)).toBe(true);
+    expect(Object.isFrozen(SPANISH_PUBLICATION_CATALOG.translation)).toBe(true);
+    expect(Object.isFrozen(SPANISH_PUBLICATION_CATALOG.cli)).toBe(true);
   });
 
   it('keeps both manifests complete and every translated placeholder identical', () => {
@@ -58,6 +60,10 @@ describe('publication message catalog', () => {
   it('projects a dynamically resolved slice into the typed publication view', async () => {
     const messages = { ...ENGLISH_PUBLICATION_DEFINITION.messages };
     messages['publication.currentStatus'] = 'État actuel';
+    messages['interaction.translation.summary'] = 'Demande interprétée depuis {sourceLanguage}';
+    messages['interaction.translation.interpretedRequest'] = 'Demande interprétée';
+    messages['interaction.translation.originalRequest'] = 'Demande originale';
+    messages['cli.answer'] = 'Réponse';
     const resolve = jest.fn().mockResolvedValue({
       requestedLocale: 'fr-FR',
       resolvedLocale: 'fr-FR',
@@ -68,6 +74,10 @@ describe('publication message catalog', () => {
     const catalog = await resolvePublicationCatalog('fr-FR', { provider: 'codex', model: 'model' }, { resolve });
 
     expect(catalog.currentStatus).toBe('État actuel');
+    expect(catalog.translation.summary('anglais')).toBe('Demande interprétée depuis anglais');
+    expect(catalog.translation.interpretedRequest).toBe('Demande interprétée');
+    expect(catalog.translation.originalRequest).toBe('Demande originale');
+    expect(catalog.cli.answer).toBe('Réponse');
     expect(catalog.render('interaction.status.repository')).toBe('Repository');
     expect(resolve).toHaveBeenCalledWith(expect.objectContaining({
       targetLocale: 'fr-FR',

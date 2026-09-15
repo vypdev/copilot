@@ -3,7 +3,6 @@ import type { AgentConfiguration } from '../../../../data/model/agent';
 import { Result } from '../../../../data/model/result';
 import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
 import type { BoundIssueDescriptionQueryPort } from '../../../ports/issue_description_ports';
-import type { BoundIssueNotificationPort } from '../../../ports/issue_lifecycle_ports';
 import { logError, logInfo } from '../../../ports/logging_ports';
 import { resolveThinkRequest } from './think_request_policy';
 import type { ThinkRequestDecision } from './think_request_policy';
@@ -16,7 +15,6 @@ import type { TranslationPublication } from '../../../policies/comment_translati
 
 export interface ThinkWorkflowDependencies {
     issueDescriptionQueryPort: BoundIssueDescriptionQueryPort;
-    issueNotificationPort: BoundIssueNotificationPort;
     aiRepository: FindingsQueryPort;
 }
 
@@ -36,7 +34,7 @@ export type ThinkContext =
 
 export interface ThinkContextSource extends ThinkRequestSource {
     readonly ai: { getAgentConfiguration(task: AgentTask): AgentConfiguration };
-    readonly locale?: { readonly issue?: string; readonly pullRequest?: string };
+    readonly locale?: { readonly repository?: string; readonly issue?: string; readonly pullRequest?: string };
 }
 
 export function projectThinkContext(source: ThinkContextSource): ThinkContext {
@@ -45,7 +43,10 @@ export function projectThinkContext(source: ThinkContextSource): ThinkContext {
     if (request.kind === 'skip') {
         return Object.freeze({ request: Object.freeze({ ...request }), ...(tokenUser ? { tokenUser } : {}) });
     }
-    const agentTask = resolveThinkAgentTask(request.command?.name, request.destinationType);
+    const agentTask = resolveThinkAgentTask(
+        request.command?.name,
+        request.destinationType === 'PR' ? 'PR' : 'issue',
+    );
     return Object.freeze({
         request: Object.freeze({
             ...request,
@@ -59,7 +60,9 @@ export function projectThinkContext(source: ThinkContextSource): ThinkContext {
         agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration(agentTask) }),
         targetLocale: request.destinationType === 'PR'
             ? source.locale?.pullRequest ?? 'en-US'
-            : source.locale?.issue ?? 'en-US',
+            : request.destinationType === 'local'
+                ? source.locale?.repository ?? 'en-US'
+                : source.locale?.issue ?? 'en-US',
     });
 }
 

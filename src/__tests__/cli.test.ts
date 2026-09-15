@@ -135,9 +135,14 @@ describe('CLI', () => {
       expect(runLocalAction).toHaveBeenCalledTimes(1);
       const params = (runLocalAction as jest.Mock).mock.calls[0][0];
       expect(params[INPUT_KEYS.SINGLE_ACTION]).toBe(ACTIONS.THINK);
-      expect(params[INPUT_KEYS.WELCOME_TITLE]).toContain('AI Reasoning');
+      expect(params).not.toHaveProperty(INPUT_KEYS.SINGLE_ACTION_ISSUE);
+      expect(params).not.toHaveProperty(INPUT_KEYS.WELCOME_TITLE);
       expect(params.repo).toEqual({ owner: 'test-owner', repo: 'test-repo' });
-      expect(params.comment?.body || params.eventName).toBeDefined();
+      expect(params).toMatchObject({
+        eventName: 'issue_comment',
+        issue: {},
+        comment: { body: 'how does X work?' },
+      });
     });
 
     it('exits with error when getGitInfo fails', async () => {

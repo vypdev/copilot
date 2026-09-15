@@ -46,9 +46,9 @@ describe('CommentLanguageTranslationWorkflow', () => {
             status: 'translated', sourceLocale: 'es-ES', targetLocale: 'en-US',
         });
         expect(payload?.interpretedComment).toContain('@vypbot inspect @\u200boctocat');
-        expect(payload?.publication?.commentBody).toContain('Request interpreted from European Spanish');
-        expect(payload?.publication?.commentBody).toContain('&lt;script&gt;');
-        expect(payload?.publication?.commentBody).toContain('copilot:request-translation');
+        expect(payload?.publication?.translatedText).toContain('inspect @\u200boctocat');
+        expect(payload?.publication?.originalText).toContain('<script>');
+        expect(payload?.publication).toMatchObject({ sourceLocale: 'es-ES', targetLocale: 'en-US' });
     });
 
     it('preserves a deterministic command while adapting only its arguments', async () => {

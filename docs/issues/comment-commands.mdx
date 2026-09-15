@@ -54,10 +54,10 @@ resolved. If the stored workflow result owns malformed finding-state evidence,
 the command says that evidence is invalid and directs you to the workflow
 result; it never substitutes zero or a clean state.
 
-`/copilot help` and `/copilot status` use correlated reply markers. A webhook
-retry with the same source comment does not create another response. These
-explicit replies contain only their requested content; they are never wrapped
-in an “Automatic Actions” summary.
+Every explicit answer uses a correlated reply marker. A webhook retry with the
+same source comment updates or reuses that response instead of creating another.
+These replies contain only their requested content; they are never wrapped in an
+“Automatic Actions” summary or a list of internal steps.
 
 GitHub delivers a comment in the main PR conversation as an `issue_comment`
 event. Copilot uses GitHub's PR marker and exact PR number to keep that transport
@@ -84,7 +84,13 @@ The first three are read-only requests. The last one may be classified as a gene
 
 Language detection and translation apply only after this same explicit
 command-or-mention boundary. Copilot does not passively translate ordinary
-conversation or machine-authored status comments.
+conversation or machine-authored status comments. When an addressed request is
+translated, its one useful answer ends with a collapsed, localized block named
+“Interpreted request” and “Original request” in the effective issue or PR
+locale. The human comment is never edited, and a translation never creates its
+own timeline comment. English is used when no locale is configured; any valid
+configured BCP-47 locale uses its complete resolved catalog or an atomic English
+fallback.
 
 ## Authorization and safety
 

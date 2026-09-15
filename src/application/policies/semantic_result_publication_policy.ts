@@ -17,6 +17,10 @@ import {
     COPILOT_WELCOME_MARKER,
 } from './copilot_interaction_policy';
 import { formatCopilotStatus, type CopilotStatusSnapshot } from './status_command_policy';
+import {
+    renderTranslationContext,
+    type TranslationPublication,
+} from './comment_translation_policy';
 
 export interface PlanPublicationProjection {
     readonly kind: 'plan';
@@ -38,7 +42,11 @@ export type SemanticStatusIntent = StatusPublicationIntent<SemanticStatusProject
 export type SemanticReplyProjection =
     | { readonly kind: 'help'; readonly botLogin: string }
     | { readonly kind: 'welcome'; readonly botLogin: string }
-    | { readonly kind: 'direct-answer'; readonly answer: string }
+    | {
+        readonly kind: 'direct-answer';
+        readonly answer: string;
+        readonly translation?: TranslationPublication;
+    }
     | { readonly kind: 'access-policy' }
     | { readonly kind: 'status-command'; readonly snapshot: CopilotStatusSnapshot };
 export type SemanticReplyIntent = ReplyPublicationIntent<SemanticReplyProjection>;
@@ -144,7 +152,7 @@ export function renderSemanticReply(
         digest: intent.digest,
     });
     const body = intent.projection.kind === 'direct-answer'
-        ? sanitizeAgentMarkdown(intent.projection.answer).trim()
+        ? renderDirectAnswer(intent.projection, catalog)
         : intent.projection.kind === 'help'
             ? buildCopilotHelpMessage(intent.projection.botLogin, intent.locale, catalog)
             : intent.projection.kind === 'welcome'
@@ -153,6 +161,17 @@ export function renderSemanticReply(
                     ? renderAccessPolicyReply(catalog)
                     : formatCopilotStatus(intent.projection.snapshot, intent.locale, catalog);
     return `${marker}\n\n${body}`;
+}
+
+function renderDirectAnswer(
+    projection: Extract<SemanticReplyProjection, { readonly kind: 'direct-answer' }>,
+    catalog: PublicationMessageCatalog,
+): string {
+    const answer = sanitizeAgentMarkdown(projection.answer).trim();
+    const translation = projection.translation
+        ? renderTranslationContext(projection.translation, catalog)
+        : '';
+    return [answer, translation].filter(Boolean).join('\n\n');
 }
 
 function renderAccessPolicyReply(messages: PublicationMessageCatalog): string {
@@ -231,9 +250,30 @@ function directAnswerProjection(payload: Record<string, unknown>): SemanticReply
     if (publication?.kind !== 'direct-answer'
         || typeof publication.answer !== 'string'
         || !publication.answer.trim()) return undefined;
+    const translation = translationProjection(publication.translation);
     return Object.freeze({
         kind: 'direct-answer' as const,
         answer: publication.answer.trim(),
+        ...(translation ? { translation } : {}),
+    });
+}
+
+function translationProjection(value: unknown): TranslationPublication | undefined {
+    const translation = getResultPayload(value);
+    if (!translation
+        || typeof translation.translatedText !== 'string'
+        || !translation.translatedText.trim()
+        || typeof translation.originalText !== 'string'
+        || !translation.originalText.trim()
+        || typeof translation.sourceLocale !== 'string'
+        || !translation.sourceLocale.trim()
+        || typeof translation.targetLocale !== 'string'
+        || !translation.targetLocale.trim()) return undefined;
+    return Object.freeze({
+        translatedText: translation.translatedText,
+        originalText: translation.originalText,
+        sourceLocale: translation.sourceLocale,
+        targetLocale: translation.targetLocale,
     });
 }
 
