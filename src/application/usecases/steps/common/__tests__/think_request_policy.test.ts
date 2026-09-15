@@ -56,6 +56,19 @@ describe('think request policy', () => {
         });
     });
 
+    it('normalizes a missing runtime issue number before the answer workflow boundary', () => {
+        expect(resolveThinkRequest(baseParam({
+            issue: { isIssueComment: true, commentBody: 'explain locale', number: undefined },
+            issueNumber: undefined,
+            tokenUser: undefined,
+            singleAction: { isThinkAction: true, issue: 0 },
+        }))).toMatchObject({
+            kind: 'ready',
+            issueNumberForContext: -1,
+            destinationType: 'local',
+        });
+    });
+
     it('keeps command routing deterministic and specialist-specific', () => {
         expect(resolveThinkAgentTask('plan', 'issue')).toBe('planner');
         expect(resolveThinkAgentTask('test-plan', 'issue')).toBe('tester');

@@ -75,7 +75,9 @@ export function resolveThinkRequest(
         kind: 'ready',
         commentBody,
         question,
-        issueNumberForContext: isPullRequestTarget ? param.issueNumber : param.issue.number,
+        issueNumberForContext: isPullRequestTarget
+            ? (positiveInteger(param.issueNumber) ? param.issueNumber : -1)
+            : (issueDestination ?? -1),
         ...(destinationNumber !== undefined ? { destinationNumber } : {}),
         destinationType,
         ...(command.kind === 'command' ? { command: command.command } : {}),

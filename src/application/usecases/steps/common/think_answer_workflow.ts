@@ -104,7 +104,7 @@ async function loadIssueDescription(
     issueNumber: number,
     repository: BoundIssueDescriptionQueryPort,
 ): Promise<string> {
-    if (issueNumber <= 0) return '';
+    if (!Number.isSafeInteger(issueNumber) || issueNumber <= 0) return '';
     const description = await repository.getDescription(
         issueNumber,
     );

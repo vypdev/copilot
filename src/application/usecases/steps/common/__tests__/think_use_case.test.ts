@@ -131,6 +131,25 @@ describe('ThinkUseCase', () => {
     });
   });
 
+  it('does not query an issue when the local event payload omits its number', async () => {
+    mockAskAgent.mockResolvedValue({ answer: 'No issue context was needed.' });
+    const context = projectThinkContext(baseParam({
+      issueNumber: undefined,
+      tokenUser: '',
+      issue: { ...baseParam().issue, commentBody: 'explain the repository', number: undefined },
+      singleAction: { isThinkAction: true, issue: 0 },
+    }));
+
+    const results = await useCase.invoke(context);
+
+    expect(context).toMatchObject({
+      request: { kind: 'ready', issueNumberForContext: -1, destinationType: 'local' },
+    });
+    expect(mockGetDescription).not.toHaveBeenCalled();
+    expect(mockAskAgent).toHaveBeenCalledTimes(1);
+    expect(results[0]).toMatchObject({ success: true, executed: true });
+  });
+
   it('skips an invalid explicit command before invoking the agent', async () => {
     const results = await invoke(baseParam({
       issue: { ...baseParam().issue, commentBody: '/copilot unknown' },

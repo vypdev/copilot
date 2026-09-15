@@ -27,7 +27,7 @@ describe('runThinkCommand', () => {
     expect(mockRunLocalAction).toHaveBeenCalledWith(expect.objectContaining({
       [INPUT_KEYS.SINGLE_ACTION]: ACTIONS.THINK,
       eventName: 'issue_comment',
-      issue: {},
+      issue: { number: -1 },
       comment: { body: 'explain the locale system' },
       repo: { owner: 'acme', repo: 'widgets' },
     }));

@@ -59085,7 +59085,7 @@ async function runThinkAnswerWorkflow(param, taskId, request, dependencies) {
         })];
 }
 async function loadIssueDescription(issueNumber, repository) {
-    if (issueNumber <= 0)
+    if (!Number.isSafeInteger(issueNumber) || issueNumber <= 0)
         return '';
     const description = await repository.getDescription(issueNumber);
     return description?.trim() ?? '';
@@ -59182,7 +59182,9 @@ function resolveThinkRequest(param) {
         kind: 'ready',
         commentBody,
         question,
-        issueNumberForContext: isPullRequestTarget ? param.issueNumber : param.issue.number,
+        issueNumberForContext: isPullRequestTarget
+            ? (positiveInteger(param.issueNumber) ? param.issueNumber : -1)
+            : (issueDestination ?? -1),
         ...(destinationNumber !== undefined ? { destinationNumber } : {}),
         destinationType,
         ...(command.kind === 'command' ? { command: command.command } : {}),

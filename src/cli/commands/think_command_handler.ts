@@ -65,6 +65,6 @@ function addIssueContext(
   question: string,
 ): void {
   params.eventName = "issue_comment";
-  params.issue = issueNumber ? { number: issueNumber } : {};
+  params.issue = { number: issueNumber ?? -1 };
   params.comment = { body: question };
 }
