@@ -155,6 +155,7 @@
         "src/application/usecases/steps/common/__tests__/reply_publication_workflow.test.ts",
         "src/application/usecases/steps/common/__tests__/duplicate_comment_cleanup_workflow.test.ts",
         "src/data/repository/issue/__tests__/issue_content_repository.test.ts",
+        "src/data/repository/deployment/__tests__/deployment_presentation_repository.test.ts",
         "src/data/repository/__tests__/github_error_policy.test.ts",
         "src/application/usecases/steps/issue/__tests__/answer_issue_help_use_case.test.ts",
         "src/application/usecases/__tests__/issue_use_case.test.ts",
