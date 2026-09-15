@@ -1,6 +1,7 @@
 import { execSync } from 'child_process';
 import { realpathSync } from 'node:fs';
 import { ERRORS } from './cli/cli_errors';
+import { canonicalGitObjectId } from './domain/git_object_id';
 
 export type GitInfo = { owner: string; repo: string } | { error: string };
 
@@ -26,6 +27,15 @@ export function getCurrentBranch(): string {
     return execSync('git rev-parse --abbrev-ref HEAD').toString().trim() || 'main';
   } catch {
     return 'main';
+  }
+}
+
+/** Returns the canonical object ID for the workspace revision being analyzed. */
+export function getCurrentHeadSha(): string | undefined {
+  try {
+    return canonicalGitObjectId(execSync('git rev-parse HEAD').toString().trim());
+  } catch {
+    return undefined;
   }
 }
 

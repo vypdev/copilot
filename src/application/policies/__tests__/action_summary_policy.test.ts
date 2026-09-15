@@ -200,6 +200,23 @@ describe('action summary policy', () => {
         expect(rejected).not.toContain('Internal rejection detail.');
     });
 
+    it('explains stale-source suppression without exposing object IDs', () => {
+        const summary = buildActionSummary({
+            owner: 'owner', repository: 'repo', eventName: 'push', issueNumber: 7, pullRequestNumber: -1,
+            results: [new Result({
+                id: 'CheckProgressUseCase', success: true, executed: false,
+                payload: { publicationOutcome: {
+                    reason: 'stale-source', branch: 'feature/7-work', sourceHeadSha: 'a'.repeat(40),
+                } },
+            })],
+        });
+
+        expect(summary).toContain('| Status | ⏭️ Skipped |');
+        expect(summary).toContain('| Source freshness | Stale result suppressed; branch HEAD changed during the run |');
+        expect(summary).not.toContain('feature/7-work');
+        expect(summary).not.toContain('a'.repeat(40));
+    });
+
     it('reports active findings as a warning unless fail-on-unresolved is enabled', () => {
         const summary = buildActionSummary({
             owner: 'owner',

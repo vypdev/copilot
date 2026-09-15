@@ -25,6 +25,9 @@ const mockSetLabels = jest.fn();
 const mockGetListOfBranches = jest.fn();
 
 const mockGetOpenPullRequestNumbersByHeadBranch = jest.fn();
+const mockGetBranchHeadSha = jest.fn();
+const SOURCE_HEAD = 'a'.repeat(40);
+const NEWER_HEAD = 'b'.repeat(40);
 
 
 const mockAskAgent = jest.fn();
@@ -69,6 +72,7 @@ describe('CheckProgressUseCase', () => {
       { getListOfBranches: mockGetListOfBranches },
       { getOpenPullRequestNumbersByHeadBranch: mockGetOpenPullRequestNumbersByHeadBranch },
       { query: localizedProgress },
+      { getBranchHeadSha: mockGetBranchHeadSha },
     );
     invoke = (param) => useCase.invoke(projectProgressContext(param));
     mockGetDescription.mockReset();
@@ -77,6 +81,8 @@ describe('CheckProgressUseCase', () => {
     mockSetLabels.mockReset();
     mockGetListOfBranches.mockReset();
     mockGetOpenPullRequestNumbersByHeadBranch.mockReset();
+    mockGetBranchHeadSha.mockReset();
+    mockGetBranchHeadSha.mockResolvedValue(SOURCE_HEAD);
     mockAskAgent.mockReset();
   });
 
@@ -256,6 +262,65 @@ describe('CheckProgressUseCase', () => {
       99,
       expect.arrayContaining(['feature', '75%']),
     );
+  });
+
+  it('carries the canonical source head and revalidates it before changing labels', async () => {
+    mockGetDescription.mockResolvedValue('Issue body');
+    mockAskAgent.mockResolvedValue({ progress: 75, summary: 'Current source' });
+    mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([]);
+
+    const results = await invoke(baseParam({ inputs: { after: SOURCE_HEAD.toUpperCase() } }));
+
+    expect(mockGetBranchHeadSha).toHaveBeenCalledWith('feature/123-add-feature');
+    expect(mockSetProgressLabel).toHaveBeenCalledWith(123, 75);
+    expect(results[0].payload).toMatchObject({ sourceHeadSha: SOURCE_HEAD });
+  });
+
+  it('suppresses an event that is already stale before agent work starts', async () => {
+    mockGetDescription.mockResolvedValue('Issue body');
+    mockAskAgent.mockResolvedValue({ progress: 75, summary: 'Outdated source' });
+    mockGetBranchHeadSha.mockResolvedValue(NEWER_HEAD);
+
+    const results = await invoke(baseParam({ inputs: { after: SOURCE_HEAD } }));
+
+    expect(results[0]).toMatchObject({
+      success: true,
+      executed: false,
+      payload: { publicationOutcome: { reason: 'stale-source', branch: 'feature/123-add-feature', sourceHeadSha: SOURCE_HEAD } },
+    });
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockSetProgressLabel).not.toHaveBeenCalled();
+    expect(mockGetLabels).not.toHaveBeenCalled();
+    expect(mockSetLabels).not.toHaveBeenCalled();
+  });
+
+  it('suppresses native and conversational state when the branch advances during analysis', async () => {
+    mockGetDescription.mockResolvedValue('Issue body');
+    mockAskAgent.mockResolvedValue({ progress: 75, summary: 'Outdated source' });
+    mockGetBranchHeadSha.mockResolvedValueOnce(SOURCE_HEAD).mockResolvedValueOnce(NEWER_HEAD);
+
+    const results = await invoke(baseParam());
+
+    expect(results[0]).toMatchObject({
+      success: true,
+      executed: false,
+      payload: { publicationOutcome: { reason: 'stale-source', branch: 'feature/123-add-feature', sourceHeadSha: SOURCE_HEAD } },
+    });
+    expect(mockAskAgent).toHaveBeenCalledTimes(1);
+    expect(mockSetProgressLabel).not.toHaveBeenCalled();
+    expect(mockSetLabels).not.toHaveBeenCalled();
+  });
+
+  it('maps authoritative source lookup failures without mutating labels', async () => {
+    mockGetDescription.mockResolvedValue('Issue body');
+    mockAskAgent.mockResolvedValue({ progress: 75, summary: 'Current source' });
+    mockGetBranchHeadSha.mockRejectedValue(new Error('secret provider detail'));
+
+    const results = await invoke(baseParam({ inputs: { after: SOURCE_HEAD } }));
+
+    expect(results[0].errors[0]).toMatchObject({ code: 'workflow.failed' });
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockSetProgressLabel).not.toHaveBeenCalled();
   });
 
   it('uses default summary when AI response has no summary', async () => {

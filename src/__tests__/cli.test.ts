@@ -91,7 +91,11 @@ describe('CLI', () => {
     process.env.AGENT_MODEL_PROVIDER = 'openai';
     process.env.OPENAI_API_KEY = 'test-key';
     exitSpy = jest.spyOn(process, 'exit').mockImplementation((() => {}) as () => never);
-    (execSync as jest.Mock).mockReturnValue(Buffer.from('https://github.com/test-owner/test-repo.git'));
+    (execSync as jest.Mock).mockImplementation((command: string) => Buffer.from(
+      command === 'git rev-parse HEAD'
+        ? 'a'.repeat(40)
+        : 'https://github.com/test-owner/test-repo.git',
+    ));
     (runLocalAction as jest.Mock).mockResolvedValue(undefined);
     mockIsIssue.mockResolvedValue(true);
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -279,6 +283,7 @@ describe('CLI', () => {
       expect(params[INPUT_KEYS.SINGLE_ACTION]).toBe(ACTIONS.CHECK_PROGRESS);
       expect(params[INPUT_KEYS.SINGLE_ACTION_ISSUE]).toBe(99);
       expect(params.issue?.number).toBe(99);
+      expect(params.after).toBe('a'.repeat(40));
       expect(params[INPUT_KEYS.WELCOME_TITLE]).toContain('Progress');
     });
 
@@ -320,6 +325,20 @@ describe('CLI', () => {
       expect(runLocalAction).toHaveBeenCalledTimes(1);
       const params = (runLocalAction as jest.Mock).mock.calls[0][0];
       expect(params.commits?.ref).toBe('refs/heads/feature/foo');
+    });
+
+    it('fails closed before local execution when the workspace revision is unavailable', async () => {
+      (execSync as jest.Mock).mockImplementation((command: string) => {
+        if (command === 'git rev-parse HEAD') throw new Error('missing head');
+        return Buffer.from('https://github.com/test-owner/test-repo.git');
+      });
+      const { logError } = require('../utils/logger');
+
+      await program.parseAsync(['node', 'cli', 'check-progress', '-i', '5']);
+
+      expect(logError).toHaveBeenCalledWith('Unable to resolve the current Git revision for progress analysis.');
+      expect(runLocalAction).not.toHaveBeenCalled();
+      expect(process.exitCode).toBe(1);
     });
 
     it('omits the correlation reference outside debug mode for check-progress failures', async () => {

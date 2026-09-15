@@ -24,6 +24,9 @@ import { runAtApplicationErrorBoundary } from '../application/errors/application
 import { toApplicationError } from '../application/errors/application_error';
 import { renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
 import { bindIssueCommentPublication } from '../infrastructure/composition/push_single_action_capability_port_binding';
+import { bindPublicationSourceQuery } from '../infrastructure/composition/shared_capability_port_binding';
+import { GithubPublicationSourceRepository } from '../data/repository/github_publication_source_repository';
+import { createBranchClient } from '../infrastructure/composition/github_branch_client_factory';
 import { createLanguageQueryPort } from '../infrastructure/composition/agent_capability_composition_root';
 import { ResolveMessageCatalogUseCase } from '../application/usecases/localization/resolve_message_catalog_use_case';
 import { readGithubActionLocaleInputs } from './github_action_locale_inputs';
@@ -136,6 +139,10 @@ export async function runGitHubAction(): Promise<void> {
         createGithubActionSummaryCompositionRoot(),
         new ResolveMessageCatalogUseCase(
             agentRuntimeAuthorized ? createLanguageQueryPort() : undefined,
+        ),
+        bindPublicationSourceQuery(
+            new GithubPublicationSourceRepository(createBranchClient()),
+            repositoryBinding,
         ),
     );
 }

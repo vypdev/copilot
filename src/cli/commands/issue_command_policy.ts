@@ -24,6 +24,7 @@ export function parseIssueNumber(value: unknown): number | undefined {
 export function buildCheckProgressParams(
   options: IssueCommandOptions,
   gitInfo: GitInfo,
+  sourceHeadSha: string,
 ): Record<string, unknown> | undefined {
   if ('error' in gitInfo) return undefined;
   const issueNumber = parseIssueNumber(options.issue);
@@ -36,6 +37,7 @@ export function buildCheckProgressParams(
     [INPUT_KEYS.AI_IGNORE_FILES]: process.env.AI_IGNORE_FILES || 'build/*,dist/*,node_modules/*,*.d.ts',
     repo: { owner: gitInfo.owner, repo: gitInfo.repo },
     issue: { number: issueNumber },
+    after: sourceHeadSha,
     ...(branch ? { commits: { ref: `refs/heads/${branch}` } } : {}),
     [INPUT_KEYS.WELCOME_TITLE]: '📊 Progress Check',
     [INPUT_KEYS.WELCOME_MESSAGES]: [`Checking progress for issue #${issueNumber} in ${gitInfo.owner}/${gitInfo.repo}...`],

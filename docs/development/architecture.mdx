@@ -28,6 +28,17 @@ bot-owned plan, direct-answer, and current or legacy welcome markers. An unavail
 closed by omitting the welcome. An unchanged stored recommendation is projected
 again so the status reconciler can adopt, preserve, or recreate its plan card.
 
+Commit-derived progress crosses an additional source-freshness boundary. A
+provider-neutral application port reads the authoritative branch `HEAD`; the
+progress workflow snapshots it before agent analysis and checks it again
+immediately before changing issue or PR labels. The status-card reconciler
+rechecks that same expected object ID before every create or update. A push
+event or CLI workspace whose source is already old is discarded before agent work. A branch that
+advances during the run produces a successful, skipped `stale-source` outcome,
+leaves native state and conversation state untouched, and is explained only in
+the Job Summary. Git object-ID validation accepts canonical SHA-1 and SHA-256
+forms; Octokit and credentials remain confined to the data/composition layers.
+
 Repository-facing language follows the same boundary. Entrypoints build one
 canonical, frozen locale profile: `repository-locale` defaults to `en-US`, and
 empty issue or pull-request overrides inherit it. Presentation policies request

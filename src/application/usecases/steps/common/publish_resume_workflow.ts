@@ -10,6 +10,8 @@ import { reconcileStatusCard } from './status_card_publication_workflow';
 import type { AgentConfiguration } from '../../../../domain/agent';
 import type { MessageCatalogResolutionPort } from '../../../ports/message_catalog_ports';
 import { resolvePublicationCatalog } from '../../../policies/publication_message_catalog';
+import type { BoundPublicationSourceQueryPort } from '../../../ports/publication_freshness_ports';
+import { buildStaleSourcePublicationPayload } from '../../../policies/publication_outcome_policy';
 
 export interface PublishResultContext {
     readonly owner: string;
@@ -67,6 +69,7 @@ export async function runPublishResume(
     taskId: string,
     comments: BoundIssueCommentPublicationPort,
     catalogResolver?: MessageCatalogResolutionPort,
+    sourceQuery?: BoundPublicationSourceQueryPort,
 ): Promise<Result | undefined> {
     try {
         const semanticContext = {
@@ -91,6 +94,7 @@ export async function runPublishResume(
             param.languageConfiguration,
             catalogResolver,
         );
+        let staleSourceEvidence: Readonly<{ branch: string; sha: string }> | undefined;
         for (const intent of replies) {
             const outcome = await reconcileReply({
                 owner: param.owner,
@@ -108,10 +112,30 @@ export async function runPublishResume(
                 botLogin: param.botLogin,
                 intent,
                 catalog,
-            }, comments);
-            logInfo(`Semantic ${intent.identity.topic} publication ${outcome.effect}; duplicates compacted=${outcome.duplicatesCompacted}.`);
+            }, comments, sourceQuery);
+            logInfo(
+                `Semantic ${intent.identity.topic} publication ${outcome.effect}; `
+                + `reason=${outcome.reason ?? 'current'}; duplicates compacted=${outcome.duplicatesCompacted}.`,
+            );
+            if (outcome.reason === 'stale-source') {
+                const sourceGuard = intent.sourceGuard;
+                if (!sourceGuard) {
+                    throw new Error('Stale-source publication outcome requires a source guard.');
+                }
+                staleSourceEvidence ??= Object.freeze({ branch: sourceGuard.branch, sha: sourceGuard.sha });
+            }
         }
-        return undefined;
+        return staleSourceEvidence
+            ? new Result({
+                id: taskId,
+                success: true,
+                executed: false,
+                payload: buildStaleSourcePublicationPayload(
+                    staleSourceEvidence.branch,
+                    staleSourceEvidence.sha,
+                ),
+            })
+            : undefined;
     } catch (error) {
         const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to publish semantic GitHub status.');
         logError(semanticError);

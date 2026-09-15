@@ -9,6 +9,8 @@ import {
   selectSemanticStatusIntents,
 } from '../semantic_result_publication_policy';
 
+const SOURCE_HEAD = 'a'.repeat(40);
+
 describe('semantic result publication policy', () => {
   it('recognizes only bot-owned primary markers for the exact issue', () => {
     const plan = '<!-- copilot:publication schema="1" topic="plan" target="issue:7" key="implementation" source="issue-body:abcdef12" digest="abcdef12" -->';
@@ -51,7 +53,7 @@ describe('semantic result publication policy', () => {
   it('selects only successful, executed, validated plan and progress payloads', () => {
     const results = [
       new Result({ id: 'RecommendStepsUseCase', success: true, executed: true, payload: { issueNumber: 7, recommendedSteps: '1. Build', recommendationState: { issueDescriptionFingerprint: 'abc' } } }),
-      new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 7, progress: 101.2, summary: ' Done ', remaining: '', branch: '', developmentBranch: ' develop ' } }),
+      new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 7, progress: 101.2, summary: ' Done ', remaining: '', branch: ' feature/work ', developmentBranch: ' develop ', sourceHeadSha: SOURCE_HEAD.toUpperCase() } }),
       new Result({ id: 'RecommendStepsUseCase', success: false, executed: true, payload: { issueNumber: 7, recommendedSteps: 'ignored' } }),
       new Result({ id: 'CheckProgressUseCase', success: true, executed: false, payload: { issueNumber: 7, progress: 20, summary: 'ignored' } }),
       new Result({ id: 'Other', success: true, executed: true, payload: { issueNumber: 7, progress: 20, summary: 'ignored' } }),
@@ -61,9 +63,14 @@ describe('semantic result publication policy', () => {
 
     expect(intents).toHaveLength(2);
     expect(intents[0]).toMatchObject({ kind: 'status', identity: { topic: 'plan', key: 'implementation' }, projection: { kind: 'plan' } });
-    expect(intents[1]).toMatchObject({ identity: { topic: 'progress', key: 'work' }, projection: { progress: 100, summary: 'Done', developmentBranch: 'develop' } });
+    expect(intents[1]).toMatchObject({
+      identity: { topic: 'progress', key: 'work' },
+      sourceVersion: `head:${SOURCE_HEAD}`,
+      sourceGuard: { kind: 'branch-head', branch: 'feature/work', sha: SOURCE_HEAD },
+      projection: { progress: 100, summary: 'Done', branch: 'feature/work', developmentBranch: 'develop' },
+    });
     expect(intents[1].projection).not.toHaveProperty('remaining');
-    expect(intents[1].projection).not.toHaveProperty('branch');
+    expect(Object.isFrozen(intents[1].sourceGuard)).toBe(true);
     expect(renderSemanticStatus(intents[1])).toContain('No action required.');
   });
 
@@ -71,8 +78,12 @@ describe('semantic result publication policy', () => {
     new Result({ id: 'RecommendStepsUseCase', success: true, executed: true, payload: null }),
     new Result({ id: 'RecommendStepsUseCase', success: true, executed: true, payload: { issueNumber: 0, recommendedSteps: 'x' } }),
     new Result({ id: 'RecommendStepsUseCase', success: true, executed: true, payload: { issueNumber: 1, recommendedSteps: ' ' } }),
-    new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 1, progress: '10', summary: 'x' } }),
-    new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 1, progress: 10, summary: 1 } }),
+    new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 1, progress: '10', summary: 'x', branch: 'feature/work', sourceHeadSha: SOURCE_HEAD } }),
+    new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 1, progress: 10, summary: 1, branch: 'feature/work', sourceHeadSha: SOURCE_HEAD } }),
+    new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 1, progress: 10, summary: 'x', branch: '', sourceHeadSha: SOURCE_HEAD } }),
+    new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 1, progress: 10, summary: 'x', branch: 'feature/work' } }),
+    new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 1, progress: 10, summary: 'x', branch: 'feature/work', sourceHeadSha: 'not-a-sha' } }),
+    new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 1, progress: 10, summary: 'x', branch: 'feature/work', sourceHeadSha: '0'.repeat(40) } }),
   ])('rejects malformed compatibility payloads', (result) => {
     expect(selectSemanticStatusIntents({ locale: 'en-US', results: [result] })).toEqual([]);
   });
@@ -84,7 +95,7 @@ describe('semantic result publication policy', () => {
     });
     const [progress] = selectSemanticStatusIntents({
       locale: 'en-US',
-      results: [new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 2, progress: -4, summary: '@attacker', remaining: '/fix' } })],
+      results: [new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 2, progress: -4, summary: '@attacker', remaining: '/fix', branch: 'feature/work', sourceHeadSha: SOURCE_HEAD } })],
     });
 
     const planBody = renderSemanticStatus(plan);
@@ -99,7 +110,7 @@ describe('semantic result publication policy', () => {
   it('omits the next section for incomplete progress without remaining work', () => {
     const [intent] = selectSemanticStatusIntents({
       locale: 'en-US',
-      results: [new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 2, progress: 50, summary: '' } })],
+      results: [new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 2, progress: 50, summary: '', branch: 'feature/work', sourceHeadSha: SOURCE_HEAD } })],
     });
     const body = renderSemanticStatus(intent);
     expect(body).toContain('Progress was assessed without a summary.');

@@ -21,11 +21,29 @@ import type {
 } from '../../application/ports/project_board_link_ports';
 import type { IssueIdentityQueryPort } from '../../application/ports/issue_identity_ports';
 import { ProjectDetail } from '../../data/model/project_detail';
+import type {
+  BoundPublicationSourceQueryPort,
+  PublicationSourceQueryPort,
+} from '../../application/ports/publication_freshness_ports';
 
 export interface RepositoryCredentialBinding {
   readonly owner: string;
   readonly repository: string;
   readonly token: string;
+}
+
+export function bindPublicationSourceQuery(
+  port: PublicationSourceQueryPort,
+  binding: RepositoryCredentialBinding,
+): BoundPublicationSourceQueryPort {
+  return Object.freeze({
+    getBranchHeadSha: (branch: string) => port.getBranchHeadSha(
+      binding.owner,
+      binding.repository,
+      branch,
+      binding.token,
+    ),
+  });
 }
 
 export function bindOrganizationMembers(

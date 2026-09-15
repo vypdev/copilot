@@ -5,6 +5,8 @@ import type { BoundIssueCommentPublicationPort, IssueCommentPublicationTarget } 
 import { buildDuplicateMarker, parsePublicationMarker } from '../../../policies/publication_identity_policy';
 import { resolveStaticPublicationCatalog, type PublicationMessageCatalog } from '../../../policies/publication_message_catalog';
 import { renderSemanticStatus, type SemanticStatusIntent } from '../../../policies/semantic_result_publication_policy';
+import type { BoundPublicationSourceQueryPort } from '../../../ports/publication_freshness_ports';
+import { ApplicationError } from '../../../errors/application_error';
 
 export interface StatusCardPublicationContext {
     readonly owner: string;
@@ -18,18 +20,22 @@ export interface StatusCardPublicationOutcome {
     readonly effect: 'created' | 'updated' | 'unchanged';
     readonly canonicalCommentId?: number;
     readonly duplicatesCompacted: number;
+    readonly reason?: 'stale-source';
 }
 
 export async function reconcileStatusCard(
     context: StatusCardPublicationContext,
     comments: BoundIssueCommentPublicationPort,
+    sourceQuery?: BoundPublicationSourceQueryPort,
 ): Promise<StatusCardPublicationOutcome> {
     if (!context.botLogin.trim()) return Object.freeze({ effect: 'unchanged', duplicatesCompacted: 0 });
+    if (!await sourceIsCurrent(context.intent, sourceQuery)) return staleSourceOutcome();
     const target = context.intent.identity.target;
     const rendered = renderSemanticStatus(context.intent, context.catalog);
     let owned = ownedCards(await comments.listIssueComments(target.number), context.intent.identity, context.botLogin);
     let effect: StatusCardPublicationOutcome['effect'] = 'unchanged';
     if (owned.length === 0) {
+        if (!await sourceIsCurrent(context.intent, sourceQuery)) return staleSourceOutcome();
         await comments.addComment(target.number, rendered);
         effect = 'created';
         owned = ownedCards(await comments.listIssueComments(target.number), context.intent.identity, context.botLogin);
@@ -39,16 +45,52 @@ export async function reconcileStatusCard(
     const [canonical, ...duplicates] = owned.sort((left, right) => left.id - right.id);
     const canonicalMarker = parsePublicationMarker(canonical.body);
     if (canonicalMarker?.digest !== context.intent.digest) {
+        if (!await sourceIsCurrent(context.intent, sourceQuery)) {
+            return staleSourceOutcome(canonical.id);
+        }
         await comments.updateComment(target.number, canonical.id, rendered);
         effect = effect === 'created' ? 'created' : 'updated';
     }
+    let duplicatesCompacted = 0;
     for (const duplicate of duplicates) {
+        if (!await sourceIsCurrent(context.intent, sourceQuery)) {
+            return staleSourceOutcome(canonical.id, effect, duplicatesCompacted);
+        }
         await comments.updateComment(target.number, duplicate.id, duplicatePointer(context, canonical.id));
+        duplicatesCompacted += 1;
     }
     return Object.freeze({
         effect,
         canonicalCommentId: canonical.id,
-        duplicatesCompacted: duplicates.length,
+        duplicatesCompacted,
+    });
+}
+
+async function sourceIsCurrent(
+    intent: SemanticStatusIntent,
+    sourceQuery: BoundPublicationSourceQueryPort | undefined,
+): Promise<boolean> {
+    const guard = intent.sourceGuard;
+    if (!guard) return true;
+    if (!sourceQuery) {
+        throw new ApplicationError(
+            'configuration.unsupported',
+            'Commit-derived status publication requires an authoritative source query.',
+        );
+    }
+    return await sourceQuery.getBranchHeadSha(guard.branch) === guard.sha;
+}
+
+function staleSourceOutcome(
+    canonicalCommentId?: number,
+    effect: StatusCardPublicationOutcome['effect'] = 'unchanged',
+    duplicatesCompacted = 0,
+): StatusCardPublicationOutcome {
+    return Object.freeze({
+        effect,
+        ...(canonicalCommentId === undefined ? {} : { canonicalCommentId }),
+        duplicatesCompacted,
+        reason: 'stale-source',
     });
 }
 

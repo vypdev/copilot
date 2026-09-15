@@ -5,12 +5,20 @@ import {
   bindIssueNotification,
   bindIssueTitle,
   bindOrganizationMembers,
+  bindPublicationSourceQuery,
   bindProjectContent,
 } from '../shared_capability_port_binding';
 
 const binding = { owner: 'acme', repository: 'demo', token: 'secret' };
 
 describe('shared capability repository bindings', () => {
+  it('binds authoritative publication source lookups without exposing credentials', async () => {
+    const getBranchHeadSha = jest.fn().mockResolvedValue('a'.repeat(40));
+    await expect(bindPublicationSourceQuery({ getBranchHeadSha }, binding).getBranchHeadSha('feature/work'))
+      .resolves.toBe('a'.repeat(40));
+    expect(getBranchHeadSha).toHaveBeenCalledWith('acme', 'demo', 'feature/work', 'secret');
+  });
+
   it('binds organization, description, notification, and comment credentials once', async () => {
     const getAllMembers = jest.fn().mockResolvedValue(['alice']);
     const getDescription = jest.fn().mockResolvedValue('body');

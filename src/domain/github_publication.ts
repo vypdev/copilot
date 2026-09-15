@@ -53,6 +53,11 @@ export interface StatusPublicationIntent<TProjection = unknown> {
     readonly digest: string;
     readonly locale: string;
     readonly projection: Readonly<TProjection>;
+    readonly sourceGuard?: Readonly<{
+        readonly kind: 'branch-head';
+        readonly branch: string;
+        readonly sha: string;
+    }>;
 }
 
 export interface TransitionPublicationIntent {

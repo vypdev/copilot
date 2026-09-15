@@ -16,6 +16,7 @@ import type {
 } from '../ports/issue_management_ports';
 import type { IssueCommentPublicationRequest } from '../policies/issue_comment_publication_policy';
 import { resolveIssueCommentPublicationRequest } from '../policies/issue_comment_publication_policy';
+import { canonicalGitObjectId } from '../../domain/git_object_id';
 
 export interface DeploymentPublicationContext {
   readonly requestedOperationId: string;
@@ -31,6 +32,7 @@ export interface ProgressContext {
   readonly agentConfiguration: Readonly<AgentConfiguration>;
   readonly includeReasoning: boolean;
   readonly targetLocale: string;
+  readonly sourceHeadSha?: string;
 }
 
 export interface RecommendStepsContext {
@@ -270,6 +272,7 @@ export function projectDeploymentOrchestrationContext(
 }
 
 export function projectProgressContext(source: PushSingleActionContextSource): ProgressContext {
+  const sourceHeadSha = canonicalGitObjectId(source.inputs?.after);
   return Object.freeze({
     issueNumber: source.issueNumber,
     pushedBranch: source.commit.branch,
@@ -285,6 +288,7 @@ export function projectProgressContext(source: PushSingleActionContextSource): P
     agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('findings') }),
     includeReasoning: source.ai.getAiIncludeReasoning(),
     targetLocale: source.locale?.issue ?? 'en-US',
+    ...(sourceHeadSha ? { sourceHeadSha } : {}),
   });
 }
 
