@@ -38,7 +38,7 @@ When the workflow runs on `issues` (opened, edited, labeled, unlabeled, etc.):
 | **Issue type** | Sets the GitHub issue type (Task, Bug, Feature, Documentation, etc.) from labels. |
 | **Emoji titles** | Optionally adds emojis to issue titles based on labels (`emoji-labeled-title`). |
 | **Size labels** | Assigns size labels (XS–XXL) and checks size thresholds (lines, files, commits) for prioritization. |
-| **Planning guidance** | When planning is requested, maintains one bounded plan card with the outcome and next action. Internal execution steps and Git-Flow reminders stay in the Job Summary. |
+| **Planning guidance** | When planning is requested, maintains one bounded plan card with the outcome and next action. The Job Summary keeps only compact operator state; internal execution narration remains machine/log evidence. |
 | **Lifecycle labels** | Maintains an exclusive durable `state:*` phase, an optional `state:ai-processing` activity marker, and an optional human-waiting label. Activity can coexist with the durable phase and is removed when the agent run finishes. |
 
 ### 2. Pull request events (`on: pull_request`)
@@ -52,7 +52,7 @@ or `closed`):
 | **Project linking** | Adds the PR to the configured GitHub Projects and moves it to the configured column. |
 | **Reviewers** | Assigns up to `desired-reviewers-count` reviewers. |
 | **Priority & size** | Applies priority and size checks (labels and thresholds). |
-| **AI PR description** | When `ai-pull-request-description-mode` is `replace`, `append`, or `preserve`, the selected agent CLI writes a concise outcome, material changes, and validation from the optional issue context and branch diff. `disabled` turns the feature off. See [Pull Requests → AI-generated PR description](/pull-requests/ai-description). |
+| **AI PR description** | When `ai-pull-request-description-mode` is `replace`, `append`, or `preserve`, the selected agent CLI writes a concise outcome and material changes from the optional issue context and branch diff. Validation appears only when supported by evidence; `disabled` turns the feature off. See [Pull Requests → AI-generated PR description](/pull-requests/ai-description). |
 | **Conversation UX** | Publishes only purpose-specific replies and durable status cards. It does not add a generic action recap or decorative image. |
 | **Bugbot review** | Reviews the full PR on open/reopen and the new commit range on synchronize; publishes historical review snapshots and stable line findings, then reconciles native threads, review status blocks, one current PR card, and the Check from a provider-verified projection. |
 
@@ -148,7 +148,9 @@ mentions receive at most one correlated reply.
 
 Routine labels, assignees, project moves, title normalization, PR linkage,
 description refreshes, pushes, reopens, merges, and closes do not create a
-generic roll-up. Detailed steps and errors remain in the Job Summary and logs.
+generic roll-up. The Job Summary keeps aggregate result counts and expands only
+safe error recovery evidence; internal result names, step narration, and arbitrary
+error text remain in logs.
 Hidden markers provide stable identity and are trusted only when the comment is
 authored by the configured bot. Decorative image inputs default to `false` and
 are deprecated.

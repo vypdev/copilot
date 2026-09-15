@@ -41143,8 +41143,9 @@ const SIMPLE_MESSAGE_KEYS = Object.freeze([
     'resultDetails', 'localization', 'repositoryLocale', 'issueLocale',
     'pullRequestLocale', 'catalogResolution', 'descriptors', 'reason', 'failure',
     'findings', 'partial', 'superseded', 'skipped', 'dryRun', 'success', 'invalid',
-    'none', 'noResult', 'unnamedResult', 'impact', 'cause', 'action',
-    'retainedState', 'reference',
+    'none', 'impact', 'cause', 'action',
+    'retainedState', 'reference', 'retryable', 'yes', 'no',
+    'resultSucceeded', 'resultFailed', 'resultSkipped',
 ]);
 const TEMPLATE_MESSAGE_IDS = Object.freeze([
     'summary.target.pullRequest',
@@ -41156,10 +41157,15 @@ const FINDING_STATE_KEYS = Object.freeze([
     'open', 'reopened', 'fixed', 'obsolete', 'dismissed',
     'verification-required', 'unknown',
 ]);
+const ERROR_KIND_KEYS = Object.freeze([
+    'configuration', 'authorization', 'provider', 'agent', 'validation', 'workflow', 'unknown',
+]);
+const ERROR_FIELD_KEYS = Object.freeze(['impact', 'action', 'retainedState']);
 exports.ACTION_SUMMARY_MESSAGE_IDS = Object.freeze([
     ...SIMPLE_MESSAGE_KEYS.map(key => `summary.${key}`),
     ...TEMPLATE_MESSAGE_IDS,
     ...FINDING_STATE_KEYS.map(key => `summary.findingState.${key}`),
+    ...ERROR_KIND_KEYS.flatMap(kind => ERROR_FIELD_KEYS.map(field => `summary.error.${kind}.${field}`)),
 ]);
 const ENGLISH_SIMPLE = Object.freeze({
     heading: 'Copilot execution',
@@ -41174,7 +41180,7 @@ const ENGLISH_SIMPLE = Object.freeze({
     results: 'Results',
     findingStates: 'Finding states',
     bugbotReview: 'Bugbot review',
-    resultDetails: 'Result details',
+    resultDetails: 'Failure details',
     localization: 'Localization',
     repositoryLocale: 'Repository locale',
     issueLocale: 'Issue locale',
@@ -41191,13 +41197,17 @@ const ENGLISH_SIMPLE = Object.freeze({
     success: 'Success',
     invalid: 'invalid',
     none: 'none',
-    noResult: 'No application result was produced.',
-    unnamedResult: 'Unnamed result',
     impact: 'Impact',
-    cause: 'Cause',
+    cause: 'Error code',
     action: 'Action',
     retainedState: 'Retained state',
     reference: 'Reference',
+    retryable: 'Retryable',
+    yes: 'Yes',
+    no: 'No',
+    resultSucceeded: 'Succeeded',
+    resultFailed: 'Failed',
+    resultSkipped: 'Skipped',
 });
 const SPANISH_SIMPLE = Object.freeze({
     heading: 'Ejecución de Copilot',
@@ -41212,7 +41222,7 @@ const SPANISH_SIMPLE = Object.freeze({
     results: 'Resultados',
     findingStates: 'Estados de los hallazgos',
     bugbotReview: 'Revisión de Bugbot',
-    resultDetails: 'Detalles del resultado',
+    resultDetails: 'Detalles del fallo',
     localization: 'Localización',
     repositoryLocale: 'Locale del repositorio',
     issueLocale: 'Locale de la issue',
@@ -41229,13 +41239,17 @@ const SPANISH_SIMPLE = Object.freeze({
     success: 'Correcto',
     invalid: 'no válido',
     none: 'ninguno',
-    noResult: 'No se ha producido ningún resultado de aplicación.',
-    unnamedResult: 'Resultado sin nombre',
     impact: 'Impacto',
-    cause: 'Causa',
+    cause: 'Código de error',
     action: 'Acción',
     retainedState: 'Estado conservado',
     reference: 'Referencia',
+    retryable: 'Reintentable',
+    yes: 'Sí',
+    no: 'No',
+    resultSucceeded: 'Completado',
+    resultFailed: 'Fallido',
+    resultSkipped: 'Omitido',
 });
 const ENGLISH_TEMPLATES = Object.freeze({
     'summary.target.pullRequest': 'PR #{number}',
@@ -41267,24 +41281,102 @@ const SPANISH_FINDING_STATES = Object.freeze({
     'verification-required': 'requieren verificación',
     unknown: 'desconocidos',
 });
-function catalogMessages(simple, templates, findingStates) {
+const ENGLISH_ERRORS = Object.freeze({
+    configuration: Object.freeze({
+        impact: 'The operation could not use the configured values.',
+        action: 'Correct the configuration or choose a supported capability before retrying.',
+        retainedState: 'No new state or external effect was created.',
+    }),
+    authorization: Object.freeze({
+        impact: 'The operation could not authenticate or access a required resource.',
+        action: 'Correct the credential or grant the documented permission before retrying.',
+        retainedState: 'No new state or external effect was created.',
+    }),
+    provider: Object.freeze({
+        impact: 'A provider operation did not complete.',
+        action: 'Inspect the error code and retry only when the provider state or availability has changed.',
+        retainedState: 'Existing state and completed external effects remain in place.',
+    }),
+    agent: Object.freeze({
+        impact: 'The configured agent did not produce usable product content.',
+        action: 'Inspect the sanitized agent status and retry with a compatible provider or model.',
+        retainedState: 'Existing state remains in place; rejected content was not published.',
+    }),
+    validation: Object.freeze({
+        impact: 'The supplied input was rejected before the operation could continue.',
+        action: 'Correct the input and retry.',
+        retainedState: 'No new state or external effect was created.',
+    }),
+    workflow: Object.freeze({
+        impact: 'The workflow could not complete the requested operation.',
+        action: 'Inspect the current state and retry only if the operation is still required.',
+        retainedState: 'Existing state and confirmed completed effects remain in place.',
+    }),
+    unknown: Object.freeze({
+        impact: 'An unexpected failure was handled safely.',
+        action: 'Use the reference to investigate before retrying.',
+        retainedState: 'Existing state and confirmed completed effects remain in place.',
+    }),
+});
+const SPANISH_ERRORS = Object.freeze({
+    configuration: Object.freeze({
+        impact: 'La operación no pudo usar los valores configurados.',
+        action: 'Corrige la configuración o elige una capacidad compatible antes de reintentarlo.',
+        retainedState: 'No se creó ningún estado ni efecto externo nuevo.',
+    }),
+    authorization: Object.freeze({
+        impact: 'La operación no pudo autenticarse o acceder a un recurso necesario.',
+        action: 'Corrige la credencial o concede el permiso documentado antes de reintentarlo.',
+        retainedState: 'No se creó ningún estado ni efecto externo nuevo.',
+    }),
+    provider: Object.freeze({
+        impact: 'Una operación del proveedor no se completó.',
+        action: 'Revisa el código de error y reinténtalo solo cuando haya cambiado el estado o la disponibilidad del proveedor.',
+        retainedState: 'El estado existente y los efectos externos completados se mantienen.',
+    }),
+    agent: Object.freeze({
+        impact: 'El agente configurado no produjo contenido de producto utilizable.',
+        action: 'Revisa el estado saneado del agente y reinténtalo con un proveedor o modelo compatible.',
+        retainedState: 'El estado existente se mantiene y el contenido rechazado no se publicó.',
+    }),
+    validation: Object.freeze({
+        impact: 'La entrada suministrada se rechazó antes de continuar la operación.',
+        action: 'Corrige la entrada y reinténtalo.',
+        retainedState: 'No se creó ningún estado ni efecto externo nuevo.',
+    }),
+    workflow: Object.freeze({
+        impact: 'El workflow no pudo completar la operación solicitada.',
+        action: 'Revisa el estado actual y reinténtalo solo si la operación sigue siendo necesaria.',
+        retainedState: 'El estado existente y los efectos completados y confirmados se mantienen.',
+    }),
+    unknown: Object.freeze({
+        impact: 'Un fallo inesperado se gestionó de forma segura.',
+        action: 'Usa la referencia para investigar antes de reintentarlo.',
+        retainedState: 'El estado existente y los efectos completados y confirmados se mantienen.',
+    }),
+});
+function catalogMessages(simple, templates, findingStates, errors) {
     return Object.freeze({
         ...Object.fromEntries(SIMPLE_MESSAGE_KEYS.map(key => [`summary.${key}`, simple[key]])),
         ...templates,
         ...Object.fromEntries(FINDING_STATE_KEYS.map(key => [`summary.findingState.${key}`, findingStates[key]])),
+        ...Object.fromEntries(ERROR_KIND_KEYS.flatMap(kind => ERROR_FIELD_KEYS.map(field => [
+            `summary.error.${kind}.${field}`,
+            errors[kind][field],
+        ]))),
     });
 }
 exports.ENGLISH_ACTION_SUMMARY_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
     locale: 'en-US',
     compatibleBaseLanguage: 'en',
-    messages: catalogMessages(ENGLISH_SIMPLE, ENGLISH_TEMPLATES, ENGLISH_FINDING_STATES),
+    messages: catalogMessages(ENGLISH_SIMPLE, ENGLISH_TEMPLATES, ENGLISH_FINDING_STATES, ENGLISH_ERRORS),
 });
 exports.SPANISH_ACTION_SUMMARY_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
     locale: 'es-ES',
     compatibleBaseLanguage: 'es',
-    messages: catalogMessages(SPANISH_SIMPLE, SPANISH_TEMPLATES, SPANISH_FINDING_STATES),
+    messages: catalogMessages(SPANISH_SIMPLE, SPANISH_TEMPLATES, SPANISH_FINDING_STATES, SPANISH_ERRORS),
 });
 exports.ACTION_SUMMARY_CATALOG_DEFINITIONS = Object.freeze([
     exports.ENGLISH_ACTION_SUMMARY_DEFINITION,
@@ -41310,7 +41402,6 @@ exports.buildActionSummary = buildActionSummary;
 exports.actionSummaryLocalizationLabels = actionSummaryLocalizationLabels;
 exports.renderLocalizationSummarySection = renderLocalizationSummarySection;
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
-const application_error_presentation_policy_1 = __nccwpck_require__(95067);
 const bugbot_telemetry_projection_policy_1 = __nccwpck_require__(43244);
 const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
 const review_state_1 = __nccwpck_require__(79200);
@@ -41328,7 +41419,7 @@ const ENGLISH_LOCALIZATION_SUMMARY_LABELS = Object.freeze({
 });
 /** Builds one bounded, publication-safe, repository-locale GitHub Actions Job Summary. */
 function buildActionSummary(context, catalog = (0, action_summary_message_catalog_1.resolveStaticActionSummaryCatalog)(context.locale?.repository ?? 'en-US')) {
-    const failures = context.results.filter(result => !result.success && result.executed);
+    const failures = context.results.filter(resultFailed);
     const findingStateProjection = (0, bugbot_result_finding_state_projection_policy_1.projectBugbotResultFindingStates)(context.results);
     const findingStates = findingStateProjection.status === 'valid' ? findingStateProjection.counts : undefined;
     const telemetryProjection = (0, bugbot_telemetry_projection_policy_1.projectBugbotResultTelemetry)(context.results);
@@ -41341,6 +41432,7 @@ function buildActionSummary(context, catalog = (0, action_summary_message_catalo
         hasActionableFindings,
         failOnUnresolvedFindings: context.failOnUnresolvedFindings === true,
         bugbotTelemetry,
+        allResultsSkipped: context.results.length > 0 && context.results.every(result => !result.executed),
     }, catalog);
     const target = resolveActionSummaryTarget(context, catalog);
     const lifecycle = context.lifecycleState ? `\`${(0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(context.lifecycleState, 100)}\`` : '—';
@@ -41350,7 +41442,7 @@ function buildActionSummary(context, catalog = (0, action_summary_message_catalo
         `| ${catalogText(catalog, 'summary.target')} | ${escapeTable(target)} |`,
         `| ${catalogText(catalog, 'summary.lifecycle')} | ${lifecycle} |`,
         `| ${catalogText(catalog, 'summary.descriptionPolicy')} | ${escapeTable(context.pullRequestDescriptionMode ?? '—')} |`,
-        `| ${catalogText(catalog, 'summary.results')} | ${context.results.length} |`,
+        `| ${catalogText(catalog, 'summary.results')} | ${formatResultCounts(context.results, catalog)} |`,
         `| ${catalogText(catalog, 'summary.findingStates')} | ${formatFindingStates(findingStateProjection, catalog)} |`,
         `| ${catalogText(catalog, 'summary.bugbotReview')} | ${formatBugbotTelemetry(telemetryProjection, catalog)} |`,
     ];
@@ -41363,12 +41455,13 @@ function buildActionSummary(context, catalog = (0, action_summary_message_catalo
         `| ${catalogText(catalog, 'summary.property')} | ${catalogText(catalog, 'summary.value')} |`,
         '| --- | --- |',
         ...rows,
-        '',
-        `## ${catalogText(catalog, 'summary.resultDetails')}`,
-        '',
-        renderResults(context.results, catalog),
-        '',
-        localization,
+        ...(failures.length > 0 ? [
+            '',
+            `## ${catalogText(catalog, 'summary.resultDetails')}`,
+            '',
+            renderFailures(failures, catalog),
+        ] : []),
+        ...(localization ? ['', localization] : []),
     ].join('\n');
 }
 function actionSummaryLocalizationLabels(catalog) {
@@ -41426,6 +41519,8 @@ function resolveActionSummaryStatus(input, catalog) {
         return `❌ ${catalogText(catalog, 'summary.failure')}`;
     if (input.hasActionableFindings)
         return `⚠️ ${catalogText(catalog, 'summary.findings')}`;
+    if (input.allResultsSkipped)
+        return `⏭️ ${catalogText(catalog, 'summary.skipped')}`;
     switch (input.bugbotTelemetry?.outcome) {
         case 'partial': return `⚠️ ${catalogText(catalog, 'summary.partial')}`;
         case 'superseded': return `⏭️ ${catalogText(catalog, 'summary.superseded')}`;
@@ -41463,27 +41558,46 @@ function formatFindingStates(projection, catalog) {
         .map(([state, value]) => `${catalogText(catalog, `summary.findingState.${state}`)}=${value}`)
         .join(', ') || catalogText(catalog, 'summary.none');
 }
-function renderResults(results, catalog) {
-    if (results.length === 0)
-        return `_${catalogText(catalog, 'summary.noResult')}_`;
+function formatResultCounts(results, catalog) {
+    const counts = results.reduce((current, result) => {
+        if (resultFailed(result))
+            current.failed += 1;
+        else if (!result.executed)
+            current.skipped += 1;
+        else
+            current.succeeded += 1;
+        return current;
+    }, { succeeded: 0, failed: 0, skipped: 0 });
+    return [
+        `${catalogText(catalog, 'summary.resultSucceeded')}: ${counts.succeeded}`,
+        `${catalogText(catalog, 'summary.resultFailed')}: ${counts.failed}`,
+        `${catalogText(catalog, 'summary.resultSkipped')}: ${counts.skipped}`,
+    ].join(' · ');
+}
+function resultFailed(result) {
+    return result.errors.length > 0 || (!result.success && result.executed);
+}
+function renderFailures(results, catalog) {
     return results.map(result => {
-        const icon = result.success ? '✅' : '❌';
-        const details = result.steps
-            .filter(step => step.trim())
-            .map(step => `  - ${(0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(step, 1000)}`);
         const errors = result.errors
             .flatMap((error) => {
-            const view = (0, application_error_presentation_policy_1.buildApplicationErrorPresentation)(error);
             return [
-                `  - **${catalogText(catalog, 'summary.impact')}:** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(view.impact)}`,
-                `    - **${catalogText(catalog, 'summary.cause')} (\`${view.code}\`):** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(view.cause)}`,
-                `    - **${catalogText(catalog, 'summary.action')}:** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(view.action)}`,
-                `    - **${catalogText(catalog, 'summary.retainedState')}:** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(view.retainedState)}`,
-                `    - **${catalogText(catalog, 'summary.reference')}:** \`${view.reference}\``,
+                `  - **${catalogText(catalog, 'summary.impact')}:** ${errorCatalogText(catalog, error.kind, 'impact')}`,
+                `    - **${catalogText(catalog, 'summary.cause')}:** \`${error.code}\``,
+                `    - **${catalogText(catalog, 'summary.action')}:** ${errorCatalogText(catalog, error.kind, 'action')}`,
+                `    - **${catalogText(catalog, 'summary.retainedState')}:** ${errorCatalogText(catalog, error.kind, 'retainedState')}`,
+                `    - **${catalogText(catalog, 'summary.retryable')}:** ${catalogText(catalog, error.retryable ? 'summary.yes' : 'summary.no')}`,
+                `    - **${catalogText(catalog, 'summary.reference')}:** \`${error.correlationId}\``,
             ];
         });
-        return [`- ${icon} **${escapeTable(result.id || catalogText(catalog, 'summary.unnamedResult'))}**`, ...details, ...errors].join('\n');
+        return [
+            `- ❌ **${catalogText(catalog, 'summary.resultFailed')}**`,
+            ...errors,
+        ].join('\n');
     }).join('\n');
+}
+function errorCatalogText(catalog, kind, field) {
+    return catalogText(catalog, `summary.error.${kind}.${field}`);
 }
 function catalogText(catalog, id, variables = {}) {
     return escapeMarkdownText(catalog.message(id, variables));
@@ -42281,9 +42395,9 @@ exports.PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA = {
             maxItems: 6,
             items: { type: 'string', minLength: 1, maxLength: 1000 },
         },
-        validationHeading: { type: 'string', minLength: 1, maxLength: 100 },
+        validationHeading: { type: ['string', 'null'], minLength: 1, maxLength: 100 },
         validation: {
-            type: 'array',
+            type: ['array', 'null'],
             minItems: 1,
             maxItems: 8,
             items: { type: 'string', minLength: 1, maxLength: 1000 },
@@ -46588,9 +46702,9 @@ function renderPullRequestDescriptionContent(payload, targetLocale, linkedIssueN
     const rawContent = [
         parsed.overview,
         parsed.whatChangedHeading,
-        parsed.validationHeading,
+        ...(parsed.validationHeading ? [parsed.validationHeading] : []),
         ...parsed.changes,
-        ...parsed.validation,
+        ...(parsed.validation ?? []),
         ...(parsed.reviewNotesHeading ? [parsed.reviewNotesHeading] : []),
         ...(parsed.reviewNotes ?? []),
     ];
@@ -46599,9 +46713,11 @@ function renderPullRequestDescriptionContent(payload, targetLocale, linkedIssueN
     }
     const overview = sanitizeBlock(parsed.overview);
     const whatChangedHeading = sanitizeInline(parsed.whatChangedHeading);
-    const validationHeading = sanitizeInline(parsed.validationHeading);
+    const validationHeading = parsed.validationHeading === null
+        ? null
+        : sanitizeInline(parsed.validationHeading);
     const changes = parsed.changes.map(sanitizeInline);
-    const validation = parsed.validation.map(sanitizeInline);
+    const validation = parsed.validation?.map(sanitizeInline) ?? null;
     const reviewNotesHeading = parsed.reviewNotesHeading === null
         ? null
         : sanitizeInline(parsed.reviewNotesHeading);
@@ -46609,9 +46725,9 @@ function renderPullRequestDescriptionContent(payload, targetLocale, linkedIssueN
     const allContent = [
         overview,
         whatChangedHeading,
-        validationHeading,
+        ...(validationHeading ? [validationHeading] : []),
         ...changes,
-        ...validation,
+        ...(validation ?? []),
         ...(reviewNotesHeading ? [reviewNotesHeading] : []),
         ...(reviewNotes ?? []),
     ];
@@ -46622,15 +46738,17 @@ function renderPullRequestDescriptionContent(payload, targetLocale, linkedIssueN
         return { kind: 'invalid', reason: 'sentence-count' };
     }
     if (hasDuplicates(changes, targetLocale)
-        || hasDuplicates(validation, targetLocale)
+        || (validation !== null && hasDuplicates(validation, targetLocale))
         || (reviewNotes && hasDuplicates(reviewNotes, targetLocale))) {
         return { kind: 'invalid', reason: 'duplicate-item' };
     }
     const sections = [
         overview,
         `## ${whatChangedHeading}\n\n${renderList(changes)}`,
-        `## ${validationHeading}\n\n${renderList(validation)}`,
     ];
+    if (validationHeading && validation) {
+        sections.push(`## ${validationHeading}\n\n${renderList(validation)}`);
+    }
     if (reviewNotesHeading && reviewNotes) {
         sections.push(`## ${reviewNotesHeading}\n\n${renderList(reviewNotes)}`);
     }
@@ -46649,17 +46767,30 @@ function parseContent(payload) {
         return undefined;
     }
     const changes = stringArray(payload.changes, 2, 6);
-    const validation = stringArray(payload.validation, 1, 8);
     if (typeof payload.overview !== 'string'
         || payload.overview.length > 1500
         || typeof payload.whatChangedHeading !== 'string'
         || payload.whatChangedHeading.length > 100
-        || typeof payload.validationHeading !== 'string'
-        || payload.validationHeading.length > 100
         || !changes
-        || !validation
         || typeof payload.closesLinkedIssue !== 'boolean') {
         return undefined;
+    }
+    let validation;
+    let validationHeading;
+    if (payload.validation === null) {
+        if (payload.validationHeading !== null)
+            return undefined;
+        validation = null;
+        validationHeading = null;
+    }
+    else {
+        const parsedValidation = stringArray(payload.validation, 1, 8);
+        if (!parsedValidation
+            || typeof payload.validationHeading !== 'string'
+            || payload.validationHeading.length > 100)
+            return undefined;
+        validation = parsedValidation;
+        validationHeading = payload.validationHeading;
     }
     let reviewNotes;
     let reviewNotesHeading;
@@ -46682,7 +46813,7 @@ function parseContent(payload) {
         overview: payload.overview,
         whatChangedHeading: payload.whatChangedHeading,
         changes,
-        validationHeading: payload.validationHeading,
+        validationHeading,
         validation,
         reviewNotesHeading,
         reviewNotes,
@@ -76821,7 +76952,7 @@ Write every human-readable sentence in {{targetLocale}}. Preserve code identifie
 3. Use the issue description below for context and intent.
 4. Provide \`overview\` as one to three sentences that state the outcome and why it matters.
 5. Provide \`whatChangedHeading\` as the plain-text {{targetLocale}} equivalent of "What changed" and \`changes\` as two to six short, outcome-oriented items. Do not inventory files, use-case names, internal categories, or every implementation step.
-6. Provide \`validationHeading\` as the plain-text {{targetLocale}} equivalent of "Validation" and \`validation\` with only commands, automated checks, or manual scenarios supported by available evidence. Never claim a check passed unless the evidence says it did, and never infer that result from the presence of test files or commands. When no execution evidence is available, say concisely in {{targetLocale}} that validation was not run or was not available.
+6. When execution or manual-verification evidence is available, provide \`validationHeading\` as the plain-text {{targetLocale}} equivalent of "Validation" and \`validation\` with only the supported commands, automated checks, or manual scenarios. Never claim a check passed unless the evidence says it did, and never infer that result from the presence of test files or commands. When no verification evidence is available, set both fields to \`null\`; do not add a “not run” placeholder.
 7. Set \`reviewNotesHeading\` and \`reviewNotes\` to \`null\` unless reviewers need material migration, security, performance, compatibility, rollout, manual-verification, risk, or follow-up context. Otherwise use the localized plain-text heading and one to four concise items. {{relatedIssueInstruction}}
 8. Keep the description practical and normally under 4,000 characters. It must never exceed 12,000 characters. Do not use emoji, horizontal separators, generic checklists, empty headings, repeated statements, placeholder text, or unsupported "no impact" claims.
 9. Return one JSON object with exactly \`outputLocale\`, \`overview\`, \`whatChangedHeading\`, \`changes\`, \`validationHeading\`, \`validation\`, \`reviewNotesHeading\`, \`reviewNotes\`, and \`closesLinkedIssue\`. Every content field is plain text except Markdown links, code spans, refs, and commands inside content values. The application renders the Markdown structure; do not include headings, bullet prefixes, a preamble, meta-commentary, or code fence in the values.

@@ -546,7 +546,9 @@ names may follow repository conventions:
 4. one coordinator for status-card reconciliation and transition deduplication;
 5. feature renderers for plan, progress, branch sync, Bugbot, release, access,
    inactivity, command replies, and failures;
-6. a Job Summary projection that includes all former step/debug evidence; and
+6. a Job Summary projection that includes compact semantic outcomes, stable
+   machine evidence, and localized recovery guidance while leaving internal
+   result names and step/debug narration in masked logs; and
 7. a temporary compatibility adapter that rejects attempts to publish generic
    `Result.steps` and records the attempted source in tests/logs.
 
@@ -915,8 +917,9 @@ generic output is left intact.
 
 1. Land contracts, characterization tests, metrics, and conversation string/call
    inventories with no behavior change.
-2. Route routine lifecycle and completion to `none`; move all former step/debug
-   evidence to Job Summary.
+2. Route routine lifecycle and completion to `none`; move useful semantic
+   evidence to the Job Summary and keep internal step/debug narration in masked
+   logs or machine results.
 3. Migrate plan, progress, commit/reopen, closure, inactivity, and access-policy
    publication.
 4. Adopt the shared marker/localization envelope in branch sync, Bugbot, and
@@ -936,8 +939,10 @@ machine markers, and bounded English-default/localized renderers. The executable
 mutation inventory, locale-branch ratchet, and pseudo-plural ratchet protect
 these boundaries. Subsequent deployment and setup-doctor slices cover their
 feature-owned views, and the generic Job Summary slice resolves repository-
-locale copy atomically, retains sanitized operator steps, and renders one
-localization evidence section instead of two. Other capability rows and the
+locale copy atomically, renders aggregate result counts and expands only safe
+category-localized error recovery, excludes internal result names, steps, and
+arbitrary error messages, and renders
+one localization evidence section instead of two. Other capability rows and the
 global numeric budget remain open and are not claimed complete by this milestone.
 
 The initial-issue slice now enforces the §6.2 matrix at the route boundary. A
@@ -1133,7 +1138,8 @@ removed.
 4. Implement owned-card query/mutation adapters, reconciliation, stale guards,
    transition deduplication, and provider/race tests.
 5. Migrate routine lifecycle and common completion; make generic `Result.steps`
-   publication impossible and move its evidence to Job Summary.
+   publication impossible and project only stable, useful operator evidence in
+   the Job Summary.
 6. Migrate issue onboarding/help, plans, progress, push/reopen, issue close,
    inactivity, access-policy, and single actions with end-to-end tests.
 7. Adopt shared contracts in branch sync, Bugbot, and release while retaining

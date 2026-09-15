@@ -43,9 +43,12 @@ describe('production agent response schemas', () => {
             maxItems: 6,
         });
         expect(PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA.properties.validation).toMatchObject({
+            type: ['array', 'null'],
             minItems: 1,
             maxItems: 8,
         });
+        expect(PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA.properties.validationHeading)
+            .toMatchObject({ type: ['string', 'null'] });
         expect(PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA.required).toContain('closesLinkedIssue');
     });
 });

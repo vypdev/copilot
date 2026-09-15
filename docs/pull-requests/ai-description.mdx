@@ -13,7 +13,7 @@ description: How the configured agent writes a concise pull request description 
    - Reads the repository's **pull request template** as content guidance and constraints.
    - Computes the merge-base **diff** between base and head (`git diff base...head`) to understand what changed.
    - Uses the **issue description** (when the PR branch is linked to an issue) as context; otherwise it infers intent from the PR metadata and diff.
-3. The agent returns bounded semantic fields for one short outcome paragraph, two to six changes, validation evidence, and optional review notes. The action validates and sanitizes those fields, then renders the fixed Markdown hierarchy; the model does not control arbitrary sections or closing-reference syntax.
+3. The agent returns bounded semantic fields for one short outcome paragraph, two to six changes, optional verified validation evidence, and optional review notes. The action validates and sanitizes those fields, then renders the fixed Markdown hierarchy; the model does not control arbitrary sections or closing-reference syntax.
 4. The request carries the effective PR locale (`pull-requests-locale`, otherwise `repository-locale`, otherwise `en-US`). The response must echo that exact canonical tag in `outputLocale`; a mismatch stops before the body changes.
 5. The action writes the validated result to the PR body according to the configured ownership mode.
 
@@ -28,7 +28,9 @@ The AI reads your repository's **pull request template** for team-specific guida
 The generated body is normally under 4,000 characters and can never exceed
 12,000. It excludes emoji, separators, empty headings, generic checklists,
 file-by-file inventories, repeated statements, and unsupported claims that a
-test passed or a change has no impact. A template can add useful constraints,
+test passed or a change has no impact. When no verification evidence is
+available, both validation fields are `null` and the entire section is omitted;
+Copilot does not add a “not run” placeholder. A template can add useful constraints,
 but it cannot force the agent to reproduce empty boilerplate.
 
 <Info>

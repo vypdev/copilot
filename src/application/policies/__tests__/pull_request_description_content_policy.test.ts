@@ -44,6 +44,18 @@ describe('pull request description content policy', () => {
         expect(result.kind === 'valid' && result.markdown).toContain('Closes #42');
     });
 
+    it('omits validation entirely when no verified evidence is available', () => {
+        const result = renderPullRequestDescriptionContent(content({
+            validationHeading: null,
+            validation: null,
+        }), 'en-US');
+
+        expect(result).toMatchObject({ kind: 'valid' });
+        expect(result.kind === 'valid' && result.markdown).not.toContain('Validation');
+        expect(result.kind === 'valid' && result.markdown).not.toContain('not run');
+        expect(result.kind === 'valid' && result.markdown).toContain('## What changed');
+    });
+
     it.each([
         ['missing fields', { validation: undefined }, 'shape'],
         ['additional fields', { untrusted: 'value' }, 'shape'],
@@ -51,6 +63,8 @@ describe('pull request description content policy', () => {
         ['blank content', { changes: [' ', 'Material change.'] }, 'unsafe-markdown'],
         ['notes without heading', { reviewNotes: ['Risk.'], reviewNotesHeading: null }, 'shape'],
         ['heading without notes', { reviewNotes: null, reviewNotesHeading: 'Review notes' }, 'shape'],
+        ['validation without heading', { validation: ['`pnpm test`'], validationHeading: null }, 'shape'],
+        ['validation heading without evidence', { validation: null, validationHeading: 'Validation' }, 'shape'],
         ['closing without issue', { closesLinkedIssue: true }, 'shape'],
         ['more than three overview sentences', { overview: 'One. Two. Three. Four.' }, 'sentence-count'],
         ['more than three Japanese overview sentences', { overview: '一つです。二つです。三つです。四つです。' }, 'sentence-count'],

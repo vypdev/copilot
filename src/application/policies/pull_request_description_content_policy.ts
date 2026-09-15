@@ -19,8 +19,8 @@ export type PullRequestDescriptionContent = {
     readonly overview: string;
     readonly whatChangedHeading: string;
     readonly changes: readonly string[];
-    readonly validationHeading: string;
-    readonly validation: readonly string[];
+    readonly validationHeading: string | null;
+    readonly validation: readonly string[] | null;
     readonly reviewNotesHeading: string | null;
     readonly reviewNotes: readonly string[] | null;
     readonly closesLinkedIssue: boolean;
@@ -52,9 +52,9 @@ export function renderPullRequestDescriptionContent(
     const rawContent = [
         parsed.overview,
         parsed.whatChangedHeading,
-        parsed.validationHeading,
+        ...(parsed.validationHeading ? [parsed.validationHeading] : []),
         ...parsed.changes,
-        ...parsed.validation,
+        ...(parsed.validation ?? []),
         ...(parsed.reviewNotesHeading ? [parsed.reviewNotesHeading] : []),
         ...(parsed.reviewNotes ?? []),
     ];
@@ -64,9 +64,11 @@ export function renderPullRequestDescriptionContent(
 
     const overview = sanitizeBlock(parsed.overview);
     const whatChangedHeading = sanitizeInline(parsed.whatChangedHeading);
-    const validationHeading = sanitizeInline(parsed.validationHeading);
+    const validationHeading = parsed.validationHeading === null
+        ? null
+        : sanitizeInline(parsed.validationHeading);
     const changes = parsed.changes.map(sanitizeInline);
-    const validation = parsed.validation.map(sanitizeInline);
+    const validation = parsed.validation?.map(sanitizeInline) ?? null;
     const reviewNotesHeading = parsed.reviewNotesHeading === null
         ? null
         : sanitizeInline(parsed.reviewNotesHeading);
@@ -75,9 +77,9 @@ export function renderPullRequestDescriptionContent(
     const allContent = [
         overview,
         whatChangedHeading,
-        validationHeading,
+        ...(validationHeading ? [validationHeading] : []),
         ...changes,
-        ...validation,
+        ...(validation ?? []),
         ...(reviewNotesHeading ? [reviewNotesHeading] : []),
         ...(reviewNotes ?? []),
     ];
@@ -88,7 +90,7 @@ export function renderPullRequestDescriptionContent(
         return { kind: 'invalid', reason: 'sentence-count' };
     }
     if (hasDuplicates(changes, targetLocale)
-        || hasDuplicates(validation, targetLocale)
+        || (validation !== null && hasDuplicates(validation, targetLocale))
         || (reviewNotes && hasDuplicates(reviewNotes, targetLocale))) {
         return { kind: 'invalid', reason: 'duplicate-item' };
     }
@@ -96,8 +98,10 @@ export function renderPullRequestDescriptionContent(
     const sections = [
         overview,
         `## ${whatChangedHeading}\n\n${renderList(changes)}`,
-        `## ${validationHeading}\n\n${renderList(validation)}`,
     ];
+    if (validationHeading && validation) {
+        sections.push(`## ${validationHeading}\n\n${renderList(validation)}`);
+    }
     if (reviewNotesHeading && reviewNotes) {
         sections.push(`## ${reviewNotesHeading}\n\n${renderList(reviewNotes)}`);
     }
@@ -118,17 +122,27 @@ function parseContent(payload: Readonly<Record<string, unknown>>): PullRequestDe
         return undefined;
     }
     const changes = stringArray(payload.changes, 2, 6);
-    const validation = stringArray(payload.validation, 1, 8);
     if (typeof payload.overview !== 'string'
         || payload.overview.length > 1_500
         || typeof payload.whatChangedHeading !== 'string'
         || payload.whatChangedHeading.length > 100
-        || typeof payload.validationHeading !== 'string'
-        || payload.validationHeading.length > 100
         || !changes
-        || !validation
         || typeof payload.closesLinkedIssue !== 'boolean') {
         return undefined;
+    }
+    let validation: readonly string[] | null;
+    let validationHeading: string | null;
+    if (payload.validation === null) {
+        if (payload.validationHeading !== null) return undefined;
+        validation = null;
+        validationHeading = null;
+    } else {
+        const parsedValidation = stringArray(payload.validation, 1, 8);
+        if (!parsedValidation
+            || typeof payload.validationHeading !== 'string'
+            || payload.validationHeading.length > 100) return undefined;
+        validation = parsedValidation;
+        validationHeading = payload.validationHeading;
     }
     let reviewNotes: readonly string[] | null;
     let reviewNotesHeading: string | null;
@@ -148,7 +162,7 @@ function parseContent(payload: Readonly<Record<string, unknown>>): PullRequestDe
         overview: payload.overview,
         whatChangedHeading: payload.whatChangedHeading,
         changes,
-        validationHeading: payload.validationHeading,
+        validationHeading,
         validation,
         reviewNotesHeading,
         reviewNotes,
