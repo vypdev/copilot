@@ -637,16 +637,19 @@ are reserved for standalone issue/PR descriptions and Job Summaries.
 
 ## Implementation plan
 
-> **Status:** Ready to start. No action is required from maintainers before implementation.
+> **Current status:** Ready to start. No action is required from maintainers before implementation.
 
-1. Introduce semantic publication contracts and remove the generic result renderer.
-2. Migrate plan, progress, lifecycle, branch-sync, Bugbot, and release output.
-3. Add idempotency, localization, security, and workflow contract tests.
-4. Update configuration, migration, and troubleshooting documentation.
+1. **Introduce semantic publication contracts**
+   - Replace arbitrary plan Markdown with bounded structured fields.
+2. **Migrate every user-facing publication path**
+   - Cover plan, progress, lifecycle, branch sync, Bugbot, and release output.
+3. **Verify idempotency, localization, and security**
+   - Exercise replay, malformed output, and configured-locale behavior.
+4. **Update user and contributor documentation**
 
 **Acceptance:** Repeated equivalent events create no new comments, and operator details remain available in the workflow run.
 
-[View workflow run](https://github.com/example/project/actions/runs/123)
+Need something else? Mention the bot with a question or use `/copilot help`.
 ```
 
 The plan MUST contain three to eight ordered steps, at most two short sub-bullets
@@ -937,6 +940,15 @@ generic output is left intact.
   canonical bot-owned card with the new envelope and content hierarchy.
 - Existing recommendation fingerprints are retained. The next plan publication
   creates or adopts one plan card rather than appending a recommendation.
+- Legacy stored recommendations without structured plan fields remain readable
+  when no agent is configured. The next configured planning run requires a
+  complete structured replacement even when the visible issue description is
+  unchanged; `unchanged` cannot defer that migration.
+- Structured recommendation state records the canonical locale of its
+  human-readable fields. An unchanged-description replay is valid only when that
+  locale equals the current effective issue locale. A missing or different
+  locale requires a complete agent-backed replacement and rejects `unchanged`;
+  without an agent, publication fails closed and leaves the prior card untouched.
 - Existing progress labels remain authoritative during progress-card adoption.
 - Human-authored and third-party comments are never migrated.
 
@@ -1002,6 +1014,19 @@ a deleted card is recreated without a new agent call. Before an optional welcome
 is emitted, a read-only comment boundary recognizes only exact-target,
 bot-owned plan, direct-answer, or current/legacy welcome markers; an unavailable history read fails
 closed to operator evidence and does not risk a redundant comment.
+
+The structured-plan slice replaces free-form agent Markdown with an immutable
+domain contract: three to eight steps, zero to two single-line details per step,
+and one bounded verifiable acceptance criterion. The schema, runtime parser,
+persisted recommendation state, context projection, replay path, semantic
+fingerprint, and renderer share that contract. New output keeps renderer-owned
+numbering and headings, rejects malformed or wrong-locale responses before
+publication, updates the existing plan identity on material issue edits, and
+migrates legacy stored text on the next agent-backed run. Persisted structured
+state carries its canonical output locale; replay requires an exact locale match,
+while repository/issue locale changes force a complete localized replacement and
+make `unchanged` invalid. Compatibility text is retained only for old state and
+does not control new card structure.
 
 Addressed Think requests now use that same `direct-answer` contract. The Think
 application service has only issue-description query and agent-query ports; it

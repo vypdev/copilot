@@ -8,12 +8,23 @@ import { ApplicationError } from '../../../../errors/application_error';
 const SOURCE_HEAD = 'a'.repeat(40);
 const NEWER_HEAD = 'b'.repeat(40);
 
-function recommendation(steps = '1. Add the policy\n2. Add tests', fingerprint = 'a'.repeat(16)): Result {
+function recommendation(
+  steps = '1. Define the policy\n2. Implement the policy\n3. Test the policy',
+  fingerprint = 'a'.repeat(16),
+  acceptance = 'The policy works and all relevant checks pass.',
+): Result {
+  const titles = steps.split('\n').map(line => line.replace(/^\d+\.\s*/u, '').trim()).filter(Boolean);
+  while (titles.length < 3) titles.push('Verify the requested behavior');
+  const implementationPlan = {
+    steps: titles.map(title => ({ title, details: [] })),
+    acceptance,
+  };
   return new Result({
     id: 'RecommendStepsUseCase', success: true, executed: true,
     payload: {
       issueNumber: 42,
       recommendedSteps: steps,
+      implementationPlan,
       recommendationState: { issueDescriptionFingerprint: fingerprint },
     },
     steps: ['legacy plan wrapper that must never be published'],
@@ -92,7 +103,9 @@ describe('PublishResultUseCase semantic compatibility boundary', () => {
     expect(comments.values).toHaveLength(1);
     expect(comments.values[0].body).toContain('topic="plan" target="issue:42"');
     expect(comments.values[0].body).toContain('## Implementation plan');
-    expect(comments.values[0].body).toContain('1. Add the policy');
+    expect(comments.values[0].body).toContain('1. **Define the policy**');
+    expect(comments.values[0].body).toContain('**Acceptance:** The policy works and all relevant checks pass.');
+    expect(comments.values[0].body).not.toContain('No action required');
     expect(comments.values[0].body).not.toMatch(/Automatic Actions|Feature Actions|Debug log|Happy coding|giphy|Made with/u);
   });
 
@@ -306,7 +319,11 @@ describe('PublishResultUseCase semantic compatibility boundary', () => {
         'publication.noActionRequired': 'Aucune action requise.',
       }),
     }));
-    const context = projectPublishResultContext(source([recommendation()], {
+    const context = projectPublishResultContext(source([recommendation(
+      '1. Définir la politique\n2. Implémenter la politique\n3. Tester la politique',
+      'a'.repeat(16),
+      'La politique fonctionne et tous les contrôles pertinents réussissent.',
+    )], {
       locale: { issue: 'fr-FR', pullRequest: 'fr-FR' },
       ai: { getAgentConfiguration: () => ({ provider: 'codex', model: 'model' }) },
     }));
@@ -315,7 +332,8 @@ describe('PublishResultUseCase semantic compatibility boundary', () => {
 
     expect(resolve).toHaveBeenCalledTimes(1);
     expect(comments.values[0].body).toContain('## Plan de mise en œuvre');
-    expect(comments.values[0].body).toContain('**Acceptation:** Aucune action requise.');
+    expect(comments.values[0].body).toContain('1. **Définir la politique**');
+    expect(comments.values[0].body).toContain('**Acceptation:** La politique fonctionne et tous les contrôles pertinents réussissent.');
     expect(comments.values[0].body).not.toContain('## Implementation plan');
     expect(context.languageConfiguration).toEqual({ provider: 'codex', model: 'model' });
     expect(Object.isFrozen(context.languageConfiguration)).toBe(true);

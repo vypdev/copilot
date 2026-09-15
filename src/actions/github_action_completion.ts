@@ -2,7 +2,7 @@ import * as core from '@actions/core';
 import type { Execution } from '../data/model/execution';
 import { renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
 import { getResultPayload, type Result } from '../data/model/result';
-import { isRecommendationState } from '../data/model/recommendation_state';
+import { restoreRecommendationState } from '../data/model/recommendation_state';
 import type { ConfigurationStorePort } from '../application/ports/configuration_store_ports';
 import { PublishResultUseCase } from '../application/usecases/steps/common/publish_resume_use_case';
 import { StoreConfigurationUseCase } from '../application/usecases/steps/common/store_configuration_use_case';
@@ -279,7 +279,8 @@ function bugbotCompletionError(
 function commitPublishedRecommendationState(execution: Execution, results: Result[]): void {
     const pendingState = results
         .map((result) => getResultPayload(result.payload)?.recommendationState)
-        .find(isRecommendationState);
+        .map(restoreRecommendationState)
+        .find((state) => state !== undefined);
     if (!pendingState) return;
 
     const publicationFailed = execution.currentConfiguration.results.some(

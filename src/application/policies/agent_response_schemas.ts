@@ -64,12 +64,32 @@ export const RECOMMEND_STEPS_RESPONSE_SCHEMA = {
             description: 'Whether a recommendation is present or the previous recommendation remains valid.',
         },
         steps: {
+            type: ['array', 'null'],
+            minItems: 3,
+            maxItems: 8,
+            items: {
+                type: 'object',
+                properties: {
+                    title: { type: 'string', minLength: 1, maxLength: 200 },
+                    details: {
+                        type: 'array',
+                        maxItems: 2,
+                        items: { type: 'string', minLength: 1, maxLength: 300 },
+                    },
+                },
+                required: ['title', 'details'],
+                additionalProperties: false,
+            },
+            description: 'Three to eight ordered implementation steps; null when status is unchanged.',
+        },
+        acceptance: {
             type: ['string', 'null'],
-            maxLength: 12_000,
-            description: 'Markdown implementation steps for recommendation; null when status is unchanged.',
+            minLength: 1,
+            maxLength: 800,
+            description: 'One verifiable completion criterion; null when status is unchanged.',
         },
     },
-    required: ['outputLocale', 'status', 'steps'],
+    required: ['outputLocale', 'status', 'steps', 'acceptance'],
     additionalProperties: false,
 } as const;
 

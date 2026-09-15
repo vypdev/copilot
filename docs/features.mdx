@@ -38,7 +38,7 @@ When the workflow runs on `issues` (opened, edited, labeled, unlabeled, etc.):
 | **Issue type** | Sets the GitHub issue type (Task, Bug, Feature, Documentation, etc.) from labels. |
 | **Emoji titles** | Optionally adds emojis to issue titles based on labels (`emoji-labeled-title`). |
 | **Size labels** | Assigns size labels (XS–XXL) and checks size thresholds (lines, files, commits) for prioritization. |
-| **Planning guidance** | When planning is requested, maintains one bounded plan card with the outcome and next action. The Job Summary keeps only compact operator state; internal execution narration remains machine/log evidence. |
+| **Planning guidance** | When planning is requested, maintains one bounded card with 3–8 ordered steps, at most 2 short details per step, and a verifiable acceptance criterion. Copilot owns the layout; the issue locale defaults to English. Equivalent reruns are silent, while a material issue edit updates the same card. The Job Summary keeps only compact operator state. |
 | **Lifecycle labels** | Maintains an exclusive durable `state:*` phase, an optional `state:ai-processing` activity marker, and an optional human-waiting label. Activity can coexist with the durable phase and is removed when the agent run finishes. |
 
 ### 2. Pull request events (`on: pull_request`)

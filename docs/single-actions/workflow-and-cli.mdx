@@ -378,7 +378,22 @@ copilot detect-potential-problems -i 456 --dry-run --output json --effort high
 
 ### `copilot recommend-steps`
 
-Uses the configured analysis agent to recommend implementation steps from an issue and posts the recommendation as an issue comment.
+Uses the configured analysis agent to create or update one bounded implementation-plan
+card from an issue. The agent returns structured content: three to eight ordered
+steps, zero to two details per step, and one verifiable acceptance criterion.
+Copilot owns the Markdown layout, so model-generated headings or generic
+“Automatic Actions” wrappers cannot become the presentation.
+
+The plan uses the effective issue locale, defaulting to English (`en-US`). Paths,
+commands, refs, and code identifiers remain unchanged. A mismatched locale or
+malformed plan fails before publication. Re-running against an unchanged issue
+reconciles the existing card without creating a new comment; a material issue
+edit updates that card. Legacy free-form stored plans remain readable without an
+agent and migrate on the next configured run. Structured state records the exact
+plan locale: when the effective issue locale changes, the next agent-backed run
+must return a complete replacement in that locale and cannot answer `unchanged`.
+If no agent is configured, Copilot does not replay a structured plan whose locale
+is missing or different, so it cannot knowingly republish mixed-language UI.
 
 | Option | Required | Description |
 | --- | --- | --- |

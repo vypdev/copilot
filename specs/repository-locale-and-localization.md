@@ -989,6 +989,22 @@ Local Think prints the semantic answer with repository-locale labels, does not
 write GitHub, and treats `--issue` as optional description context rather than
 silently requiring issue `#1`.
 
+The structured-plan slice requires every step title, optional detail, and the
+acceptance criterion to be produced in the exact effective issue locale. The
+agent response echoes that canonical BCP-47 tag; a mismatch is rejected before
+state or comment publication. Numbering, headings, status copy, acceptance
+label, and command hint remain renderer-owned catalog messages. With no
+configuration the complete card is English (`en-US`); any valid configured
+locale resolves one atomic catalog, while paths, commands, refs, and code
+identifiers remain unchanged. Legacy free-form state stays readable and is
+regenerated through the same locale contract on the next configured planning
+run. New structured state persists the canonical locale alongside the bounded
+plan. Replays require an exact match with the current effective issue locale; a
+locale change or older structured state without locale evidence requires a
+complete agent-backed replacement, and `unchanged` is rejected. If no agent is
+available, the old card is left untouched rather than being reprojected with new
+catalog chrome around plan content in an unverified language.
+
 The inactivity-closure slice removes the last feature-local `en`/`es` branch
 from its public path. It resolves complete issue-locale and repository-summary
 catalog slices before the scan, reusing one slice when both scopes match. Each

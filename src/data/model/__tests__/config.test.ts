@@ -1,4 +1,5 @@
 import { CONFIG_SCHEMA_VERSION, Config } from '../config';
+import { isRecommendationState } from '../recommendation_state';
 
 describe('Config', () => {
   it('ignores malformed external data without throwing', () => {
@@ -60,10 +61,85 @@ describe('Config', () => {
       recommendationFingerprint: 'recommendation-hash',
       recommendation: '1. Add tests',
     });
+    expect(isRecommendationState(c.recommendationState)).toBe(true);
+    expect(isRecommendationState({ recommendation: 'incomplete' })).toBe(false);
+  });
+
+  it('deep-restores and freezes a structured implementation plan', () => {
+    const input = {
+      issueDescriptionFingerprint: 'description-hash',
+      recommendationFingerprint: 'recommendation-hash',
+      recommendation: 'Stored compatibility text',
+      implementationPlan: {
+        steps: [
+          { title: ' Define ', details: [' Contract '] },
+          { title: 'Implement', details: [] },
+          { title: 'Verify', details: ['Tests', 'Documentation'] },
+        ],
+        acceptance: ' All relevant checks pass. ',
+      },
+      implementationPlanLocale: 'es_MX',
+    };
+
+    const state = new Config({ recommendationState: input }).recommendationState;
+
+    expect(state?.implementationPlan).toEqual({
+      steps: [
+        { title: 'Define', details: ['Contract'] },
+        { title: 'Implement', details: [] },
+        { title: 'Verify', details: ['Tests', 'Documentation'] },
+      ],
+      acceptance: 'All relevant checks pass.',
+    });
+    expect(state?.implementationPlanLocale).toBe('es-MX');
+    expect(Object.isFrozen(state)).toBe(true);
+    expect(Object.isFrozen(state?.implementationPlan)).toBe(true);
+    expect(Object.isFrozen(state?.implementationPlan?.steps)).toBe(true);
+    expect(Object.isFrozen(state?.implementationPlan?.steps[0].details)).toBe(true);
   });
 
   it('ignores malformed recommendation state', () => {
     const c = new Config({ recommendationState: { recommendation: 'incomplete' } });
+
+    expect(c.recommendationState).toBeUndefined();
+  });
+
+  it('rejects the complete recommendation state when its optional structured plan is malformed', () => {
+    const c = new Config({
+      recommendationState: {
+        issueDescriptionFingerprint: 'description-hash',
+        recommendationFingerprint: 'recommendation-hash',
+        recommendation: 'Stored compatibility text',
+        implementationPlan: { steps: [{ title: 'Too short', details: [] }], acceptance: 'Done.' },
+      },
+    });
+
+    expect(c.recommendationState).toBeUndefined();
+  });
+
+  it.each([
+    {
+      implementationPlanLocale: 'not a locale',
+      implementationPlan: {
+        steps: [
+          { title: 'Define', details: [] },
+          { title: 'Implement', details: [] },
+          { title: 'Verify', details: [] },
+        ],
+        acceptance: 'All checks pass.',
+      },
+    },
+    { implementationPlanLocale: 'es-MX', implementationPlan: undefined },
+  ])('rejects malformed structured-plan locale state %#', ({ implementationPlanLocale, implementationPlan }) => {
+    const c = new Config({
+      recommendationState: {
+        issueDescriptionFingerprint: 'description-hash',
+        recommendationFingerprint: 'recommendation-hash',
+        recommendation: 'Stored compatibility text',
+        implementationPlanLocale,
+        ...(implementationPlan === undefined ? {} : { implementationPlan }),
+      },
+    });
 
     expect(c.recommendationState).toBeUndefined();
   });

@@ -20,6 +20,7 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'publication.implementationPlan',
     'publication.planReady',
     'publication.planAcceptance',
+    'publication.legacyPlanAcceptance',
     'publication.commandsHint',
     'publication.progress',
     'publication.progress.notStarted',
@@ -120,6 +121,7 @@ export interface PublicationMessageCatalog {
     readonly implementationPlan: string;
     readonly planReady: string;
     readonly planAcceptance: string;
+    readonly legacyPlanAcceptance: string;
     readonly commandsHint: string;
     readonly progress: string;
     readonly progressState: Readonly<Record<'not-started' | 'in-progress' | 'complete', string>>;
@@ -154,6 +156,7 @@ const ENGLISH_MESSAGES: Readonly<Record<PublicationMessageId, CatalogMessage>> =
     'publication.implementationPlan': 'Implementation plan',
     'publication.planReady': 'Ready to start. No action is required from maintainers before implementation.',
     'publication.planAcceptance': 'Acceptance',
+    'publication.legacyPlanAcceptance': 'Complete the listed work and verify the behavior requested by the issue.',
     'publication.commandsHint': 'Need something else? Mention the bot with a question or use {helpCommand}.',
     'publication.progress': 'Progress',
     'publication.progress.notStarted': 'not started',
@@ -252,6 +255,7 @@ const SPANISH_MESSAGES: Readonly<Record<PublicationMessageId, CatalogMessage>> =
     'publication.implementationPlan': 'Plan de implementación',
     'publication.planReady': 'Listo para comenzar. No se requiere ninguna acción de mantenimiento antes de la implementación.',
     'publication.planAcceptance': 'Aceptación',
+    'publication.legacyPlanAcceptance': 'Completa el trabajo indicado y verifica el comportamiento solicitado por la issue.',
     'publication.commandsHint': '¿Necesitas algo más? Menciona al bot con una pregunta o usa {helpCommand}.',
     'publication.progress': 'Progreso',
     'publication.progress.notStarted': 'sin iniciar',
@@ -422,6 +426,7 @@ export function toPublicationCatalog(
         implementationPlan: message('publication.implementationPlan'),
         planReady: message('publication.planReady'),
         planAcceptance: message('publication.planAcceptance'),
+        legacyPlanAcceptance: message('publication.legacyPlanAcceptance'),
         commandsHint: message('publication.commandsHint', { helpCommand: '`/copilot help`' }),
         progress: message('publication.progress'),
         progressState: Object.freeze({

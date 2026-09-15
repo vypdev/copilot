@@ -1,5 +1,5 @@
 import {BranchConfiguration} from "./branch_configuration";
-import {isRecommendationState, RecommendationState} from "./recommendation_state";
+import {restoreRecommendationState, RecommendationState} from "./recommendation_state";
 import {Result} from "./result";
 import { asModelInput, readOptionalString, readString } from './model_input';
 import { isDeploymentOperationSnapshot, type DeploymentOperationSnapshot } from '../../domain/deployment_operation';
@@ -47,9 +47,7 @@ export class Config {
         if (input['branchConfiguration'] !== undefined && input['branchConfiguration'] !== null) {
             this.branchConfiguration = new BranchConfiguration(input['branchConfiguration']);
         }
-        if (isRecommendationState(input['recommendationState'])) {
-            this.recommendationState = input['recommendationState'];
-        }
+        this.recommendationState = restoreRecommendationState(input['recommendationState']);
         if (isDeploymentOperationSnapshot(input['deploymentOrchestration'])) {
             this.deploymentOrchestration = input['deploymentOrchestration'];
         }
