@@ -4,7 +4,7 @@
     {
       "id": "github-communication-experience",
       "title": "Semantic GitHub communication and repository localization",
-      "status": "proposed",
+      "status": "implemented",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-09-15",
@@ -30,10 +30,13 @@
         "src/cli/commands/check_progress.ts",
         "src/cli/commands/issue_command_policy.ts",
         "src/api.ts",
-        "src/cli.ts"
+        "src/cli.ts",
+        "package.json"
       ],
     "code": [
       "scripts/coverage-budgets.json",
+      "scripts/validate-github-communication-test-budget.cjs",
+      "src/architecture/github_communication_test_budget.json",
       "src/domain/implementation_plan.ts",
       "src/domain/locale.ts",
         "src/domain/message_catalog.ts",
@@ -179,8 +182,10 @@
         "src/infrastructure/composition/__tests__/issue_use_case_composition_root.test.ts",
         "src/infrastructure/composition/__tests__/shared_capability_port_binding.test.ts",
         "src/infrastructure/composition/__tests__/pull_request_use_case_composition_root.test.ts",
-        "src/architecture/__tests__/github_publication_boundaries.test.ts",
-        "src/tooling/__tests__/validate_workflow_contract.test.ts",
+      "src/architecture/__tests__/github_publication_boundaries.test.ts",
+      "src/application/usecases/steps/common/__tests__/publication_concurrency.integration.test.ts",
+      "src/tooling/__tests__/validate_github_communication_test_budget.test.ts",
+      "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/application/usecases/actions/__tests__/recommend_steps_use_case.test.ts",
         "src/application/usecases/actions/__tests__/check_progress_use_case.test.ts",
         "src/application/usecases/__tests__/comment_automation_use_case.test.ts"
@@ -218,7 +223,8 @@
         "docs/single-actions/examples.mdx",
         "docs/security-operations/security/prompt-injection.mdx",
         "docs/security-operations/operations/verification.mdx",
-        "docs/development/architecture.mdx"
+        "docs/development/architecture.mdx",
+        "docs/development/testing.mdx"
       ]
     },
     {
