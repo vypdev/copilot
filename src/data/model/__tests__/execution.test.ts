@@ -36,7 +36,6 @@ import { Emoji } from '../emoji';
 import type { LatestTagQueryPort } from '../../../application/ports/branch_tag_ports';
 import { Execution } from '../execution';
 import { Hotfix } from '../hotfix';
-import { Images } from '../images';
 import { Issue } from '../issue';
 import { IssueTypes } from '../issue_types';
 import { Labels } from '../labels';
@@ -106,36 +105,6 @@ function makeBranches(): Branches {
   );
 }
 
-function makeImages(): Images {
-  const empty: string[] = [];
-  return new Images(
-    false,
-    false,
-    false,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-  );
-}
-
 function makeIssueTypes(): IssueTypes {
   return new IssueTypes(
     'Task',
@@ -195,7 +164,6 @@ function buildExecution(inputs?: Record<string, unknown>, overrides?: Partial<{
     issue: overrides?.issue ?? makeIssue(inputs),
     pullRequest: overrides?.pullRequest ?? makePullRequest(inputs),
     emoji: new Emoji(false, ''),
-    images: makeImages(),
     tokens: new Tokens('token'),
     ai: new Ai('http://localhost', 'model', false, [], false, 'High', 10, []),
     labels,
@@ -436,7 +404,6 @@ describe('Execution', () => {
         issue,
         pullRequest,
         emoji,
-        images: makeImages(),
         tokens,
         ai,
         labels,

@@ -1,6 +1,5 @@
 import { Emoji } from '../data/model/emoji';
 import { Issue } from '../data/model/issue';
-import { Images } from '../data/model/images';
 import { IssueTypes } from '../data/model/issue_types';
 import { Labels } from '../data/model/labels';
 import { Locale } from '../data/model/locale';
@@ -11,25 +10,6 @@ import { Tokens } from '../data/model/tokens';
 import { Workflows } from '../data/model/workflows';
 import type { ExecutionInputs } from '../data/model/execution_inputs';
 import type { CopilotLifecycleLabels } from '../domain/copilot_lifecycle';
-
-export interface ImageScopeValues {
-    automatic: string[];
-    feature: string[];
-    bugfix: string[];
-    release: string[];
-    hotfix: string[];
-    docs: string[];
-    chore: string[];
-}
-
-export interface ImageConfigurationValues {
-    onIssue: boolean;
-    onPullRequest: boolean;
-    onCommit: boolean;
-    issue: ImageScopeValues;
-    pullRequest: ImageScopeValues;
-    commit: ImageScopeValues;
-}
 
 export interface LabelValues {
     branching: { launcher: string };
@@ -131,34 +111,5 @@ export function buildIssueTypes(values: IssueTypeConfigurationValues): IssueType
         values.release.name, values.release.description, values.release.color,
         values.question.name, values.question.description, values.question.color,
         values.help.name, values.help.description, values.help.color,
-    );
-}
-
-export function buildImages(values: ImageConfigurationValues): Images {
-    return new Images(
-        values.onIssue,
-        values.onPullRequest,
-        values.onCommit,
-        values.issue.automatic,
-        values.issue.feature,
-        values.issue.bugfix,
-        values.issue.docs,
-        values.issue.chore,
-        values.issue.release,
-        values.issue.hotfix,
-        values.pullRequest.automatic,
-        values.pullRequest.feature,
-        values.pullRequest.bugfix,
-        values.pullRequest.release,
-        values.pullRequest.hotfix,
-        values.pullRequest.docs,
-        values.pullRequest.chore,
-        values.commit.automatic,
-        values.commit.feature,
-        values.commit.bugfix,
-        values.commit.release,
-        values.commit.hotfix,
-        values.commit.docs,
-        values.commit.chore,
     );
 }

@@ -105,45 +105,6 @@ stable fallback reason without storing message bodies.
 - `desired-assignees-count`: Number of assignees desired for the issue (default: "1", max: 10)
 - `desired-reviewers-count`: Number of reviewers desired for pull requests (default: "1", max: 15)
 
-#### Deprecated Image Compatibility
-- `images-on-issue`: Deprecated compatibility toggle (default: `false`)
-- `images-on-pull-request`: Deprecated compatibility toggle (default: `false`)
-- `images-on-commit`: Deprecated compatibility toggle (default: `false`)
-
-Semantic comments and cards do not render decorative images. The following URL
-pools remain accepted during the compatibility window, but new workflows should
-omit them.
-
-##### Deprecated issue image pools
-- `images-issue-automatic`
-- `images-issue-feature`
-- `images-issue-bugfix`
-- `images-issue-docs`
-- `images-issue-chore`
-- `images-issue-hotfix`
-- `images-issue-release`
-
-##### Deprecated pull-request image pools
-- `images-pull-request-automatic`
-- `images-pull-request-feature`
-- `images-pull-request-bugfix`
-- `images-pull-request-docs`
-- `images-pull-request-chore`
-- `images-pull-request-hotfix`
-- `images-pull-request-release`
-
-##### Deprecated commit image pools
-- `images-commit-automatic`
-- `images-commit-feature`
-- `images-commit-bugfix`
-- `images-commit-docs`
-- `images-commit-chore`
-- `images-commit-hotfix`
-- `images-commit-release`
-
-All URL-pool inputs above are ignored by semantic publication. They remain in
-the action schema only so an existing workflow does not fail while migrating.
-
 #### AI agent selection
 The workflow can select one provider for both findings and fixer operations. The selected transport is resolved before execution; unsupported combinations fail instead of silently falling back to OpenCode.
 

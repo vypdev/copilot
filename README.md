@@ -21,7 +21,7 @@ Full documentation: **[docs.page/vypdev/copilot](https://docs.page/vypdev/copilo
 | [How to use](https://docs.page/vypdev/copilot/how-to-use) | Step-by-step setup: PAT, `copilot setup`, workflows |
 | [Features & capabilities](https://docs.page/vypdev/copilot/features) | Workflow triggers, single actions, agent execution, and concurrency |
 | [Authentication](https://docs.page/vypdev/copilot/authentication) | PAT setup, permissions, token best practices |
-| [Configuration](https://docs.page/vypdev/copilot/configuration) | All inputs: branches, labels, projects, images, etc. |
+| [Configuration](https://docs.page/vypdev/copilot/configuration) | All inputs: branches, labels, projects, locale, agents, and more |
 | [Release orchestration](https://docs.page/vypdev/copilot/issues/deployment-orchestration) | Production-first release/hotfix flow, npm OIDC, reconciliation, and recovery |
 | [Agents](https://docs.page/vypdev/copilot/agents) | Runtime, model, CLI, policy, and failure behavior |
 | [Security & Operations](https://docs.page/vypdev/copilot/security-operations) | Credentials, trust boundaries, provisioning, verification, upgrades, and rollback |

@@ -10,7 +10,6 @@ import { loadProjectDetails } from './project_details_loader';
 import { parseBoundedPositiveIntegerInput, parseIntegerInput } from './input_number_policy';
 import { parseDelimitedValues } from './input_values_policy';
 import { buildAgentTasksFromValues } from './agent_input_builder';
-import { buildImageConfiguration } from './image_configuration_builder';
 import { normalizePullRequestDescriptionMode } from '../domain/pull_request_description';
 import { DEFAULT_INACTIVITY_THRESHOLD_HOURS, MAX_INACTIVITY_THRESHOLD_HOURS } from '../domain/issue_inactivity';
 import { normalizeBugbotReviewEffort, parseBugbotOrganizationRules } from '../domain/bugbot/review_configuration';
@@ -265,7 +264,6 @@ export function readLocalWorkflowConfiguration(
         read(INPUT_KEYS.PULL_REQUESTS_LOCALE) || '',
     );
     return {
-        imageConfiguration: buildImageConfiguration((key) => additionalParams[key] ?? actionInputs[key]),
         releaseWorkflow: read(INPUT_KEYS.RELEASE_WORKFLOW),
         hotfixWorkflow: read(INPUT_KEYS.HOTFIX_WORKFLOW),
         titleEmoji: read(INPUT_KEYS.EMOJI_LABELED_TITLE) === 'true',

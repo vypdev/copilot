@@ -1,4 +1,4 @@
-import { buildEmoji, buildImages, buildIssue, buildIssueTypes, buildLabels, buildLocale, buildProjects, buildPullRequest, buildTokens, buildWorkflows } from '../configuration_builders';
+import { buildEmoji, buildIssue, buildIssueTypes, buildLabels, buildLocale, buildProjects, buildPullRequest, buildTokens, buildWorkflows } from '../configuration_builders';
 
 describe('configuration builders', () => {
     it('builds locale and workflows', () => {
@@ -37,25 +37,6 @@ describe('configuration builders', () => {
     it('builds emoji and token configuration', () => {
         expect(buildEmoji(true, 'branch')).toMatchObject({ emojiLabeledTitle: true, branchManagementEmoji: 'branch' });
         expect(buildTokens('token')).toMatchObject({ token: 'token' });
-    });
-
-    it('maps image configuration by scope without positional ambiguity', () => {
-        const scope = (prefix: string) => ({
-            automatic: [`${prefix}-automatic`],
-            feature: [`${prefix}-feature`],
-            bugfix: [`${prefix}-bugfix`],
-            release: [`${prefix}-release`],
-            hotfix: [`${prefix}-hotfix`],
-            docs: [`${prefix}-docs`],
-            chore: [`${prefix}-chore`],
-        });
-        const images = buildImages({ onIssue: true, onPullRequest: false, onCommit: true, issue: scope('issue'), pullRequest: scope('pr'), commit: scope('commit') });
-
-        expect(images.imagesOnIssue).toBe(true);
-        expect(images.imagesOnPullRequest).toBe(false);
-        expect(images.issueFeatureGifs).toEqual(['issue-feature']);
-        expect(images.pullRequestAutomaticActions).toEqual(['pr-automatic']);
-        expect(images.commitChoreGifs).toEqual(['commit-chore']);
     });
 
     it('maps labels by branching, workflow, priority, and size groups', () => {

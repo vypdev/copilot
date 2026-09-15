@@ -7,7 +7,6 @@ import type {
   SetupCredentialCollection,
   SetupRemoteConfiguration,
 } from '../../domain/setup';
-import type { EventCommitPayload } from '../../data/model/execution_inputs';
 import { restoreRecommendationState, type RecommendationState } from '../../data/model/recommendation_state';
 import type { ProjectReference } from '../ports/project_board_link_ports';
 import type {
@@ -90,13 +89,7 @@ export interface BranchSyncContext {
 
 export interface CommitNotificationContext {
   readonly issueNumber: number;
-  readonly branch: string;
-  readonly commits: readonly Readonly<EventCommitPayload>[];
-  readonly commitPrefixBuilder: string;
   readonly reopenOnPush: boolean;
-  readonly theme: 'release' | 'hotfix' | 'bugfix' | 'feature' | 'docs' | 'chore' | 'automatic';
-  readonly imagesOnCommit: boolean;
-  readonly themeImages: readonly string[];
 }
 
 export interface ChangeSizeThreshold {
@@ -162,7 +155,7 @@ export interface PushSingleActionContextSource {
     readonly setupRemoteConfiguration?: unknown;
     readonly setupWorkflowUpdates?: unknown;
   };
-  readonly commit: { readonly branch: string; readonly commits: readonly EventCommitPayload[] };
+  readonly commit: { readonly branch: string };
   readonly currentConfiguration: {
     readonly parentBranch?: string;
     readonly deploymentOrchestration?: DeploymentOperationSnapshot;
@@ -210,23 +203,6 @@ export interface PushSingleActionContextSource {
   readonly project: { getProjects(): readonly ProjectReference[] };
   readonly issue: { readonly number: number; readonly reopenOnPush: boolean };
   readonly pullRequest: { readonly number: number };
-  readonly release: { readonly active: boolean };
-  readonly hotfix: { readonly active: boolean };
-  readonly images: {
-    readonly imagesOnCommit: boolean;
-    readonly commitAutomaticActions: readonly string[];
-    readonly commitFeatureGifs: readonly string[];
-    readonly commitBugfixGifs: readonly string[];
-    readonly commitReleaseGifs: readonly string[];
-    readonly commitHotfixGifs: readonly string[];
-    readonly commitDocsGifs: readonly string[];
-    readonly commitChoreGifs: readonly string[];
-  };
-  readonly isBugfix: boolean;
-  readonly isFeature: boolean;
-  readonly isDocs: boolean;
-  readonly isChore: boolean;
-  readonly commitPrefixBuilder: string;
   readonly issueTypes: InitialIssueTypeConfiguration;
 }
 
@@ -355,19 +331,9 @@ export function projectBranchSyncContext(source: PushSingleActionContextSource):
 }
 
 export function projectCommitNotificationContext(source: PushSingleActionContextSource): CommitNotificationContext {
-  const theme = commitTheme(source);
   return Object.freeze({
     issueNumber: source.issueNumber,
-    branch: source.commit.branch,
-    commits: Object.freeze(source.commit.commits.map(commit => Object.freeze({
-      ...commit,
-      ...(commit.author ? { author: Object.freeze({ ...commit.author }) } : {}),
-    }))),
-    commitPrefixBuilder: source.commitPrefixBuilder,
     reopenOnPush: source.issue.reopenOnPush,
-    theme: theme.kind,
-    imagesOnCommit: source.images.imagesOnCommit,
-    themeImages: Object.freeze([...theme.images]),
   });
 }
 
@@ -431,16 +397,6 @@ export function projectAgentActivityContext(source: PushSingleActionContextSourc
     } : {}),
     activityLabel: source.labels.lifecycle.aiProcessing,
   });
-}
-
-function commitTheme(source: PushSingleActionContextSource): { kind: CommitNotificationContext['theme']; images: readonly string[] } {
-  if (source.release.active) return { kind: 'release', images: source.images.commitReleaseGifs };
-  if (source.hotfix.active) return { kind: 'hotfix', images: source.images.commitHotfixGifs };
-  if (source.isBugfix) return { kind: 'bugfix', images: source.images.commitBugfixGifs };
-  if (source.isFeature) return { kind: 'feature', images: source.images.commitFeatureGifs };
-  if (source.isDocs) return { kind: 'docs', images: source.images.commitDocsGifs };
-  if (source.isChore) return { kind: 'chore', images: source.images.commitChoreGifs };
-  return { kind: 'automatic', images: source.images.commitAutomaticActions };
 }
 
 function copyInitialLabels(source: PushSingleActionContextSource['labels']): InitialLabelConfiguration {

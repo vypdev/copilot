@@ -50,27 +50,6 @@ function expectDataOnly(value: unknown): void {
   expect(JSON.stringify(value)).not.toContain('secret-value');
 }
 
-function images() {
-  return {
-    imagesOnIssue: true,
-    issueAutomaticActions: ['issue.gif'],
-    issueFeatureGifs: [],
-    issueBugfixGifs: [],
-    issueReleaseGifs: [],
-    issueHotfixGifs: [],
-    issueDocsGifs: [],
-    issueChoreGifs: [],
-    imagesOnPullRequest: true,
-    pullRequestAutomaticActions: ['pull-request.gif'],
-    pullRequestFeatureGifs: [],
-    pullRequestBugfixGifs: [],
-    pullRequestReleaseGifs: [],
-    pullRequestHotfixGifs: [],
-    pullRequestDocsGifs: [],
-    pullRequestChoreGifs: [],
-  };
-}
-
 describe('P2-D shared capability context projections', () => {
   it('projects immutable issue permission facts without repository authority', () => {
     const labels = ['feature'];
@@ -332,7 +311,6 @@ describe('P2-D shared capability context projections', () => {
 
   it('snapshots result publication data and semantic errors without retaining credentials', () => {
     const results = [new Result({ id: 'step', success: true, executed: true, steps: ['Done'] })];
-    const publicationImages = images();
     const context = projectPublishResultContext({
       debug: false,
       isSingleAction: false,
@@ -351,7 +329,6 @@ describe('P2-D shared capability context projections', () => {
       locale: { issue: 'en-US', pullRequest: 'en-US' },
       release: { active: false },
       hotfix: { active: false },
-      images: publicationImages,
       currentConfiguration: { results },
       tokens: { token: 'secret-value' },
     } as never);

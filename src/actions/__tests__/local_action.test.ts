@@ -368,28 +368,6 @@ describe('runLocalAction', () => {
     expect(content).not.toContain('El proveedor no estaba disponible');
   });
 
-  it('uses custom image URLs when provided so default image arrays are not pushed', async () => {
-    const params: Record<string, unknown> = {
-      [INPUT_KEYS.TOKEN]: 't',
-      [INPUT_KEYS.IMAGES_ISSUE_AUTOMATIC]: 'https://custom-auto.example.com',
-      [INPUT_KEYS.IMAGES_ISSUE_FEATURE]: 'https://custom-feature.example.com',
-      [INPUT_KEYS.IMAGES_ISSUE_BUGFIX]: 'https://custom-bugfix.example.com',
-      [INPUT_KEYS.IMAGES_ISSUE_DOCS]: 'https://custom-docs.example.com',
-      repo: { owner: 'o', repo: 'r' },
-      eventName: 'push',
-      commits: { ref: 'refs/heads/main' },
-    };
-
-    await runLocalAction(params);
-
-    const execution = mockMainRun.mock.calls[0][0];
-    expect(execution.images).toBeDefined();
-    expect(execution.images.issueAutomaticActions).toContain('https://custom-auto.example.com');
-    expect(execution.images.issueFeatureGifs).toContain('https://custom-feature.example.com');
-    expect(execution.images.issueBugfixGifs).toContain('https://custom-bugfix.example.com');
-    expect(execution.images.issueDocsGifs).toContain('https://custom-docs.example.com');
-  });
-
   it('uses actionInputs when additionalParams omit token and opencode url', async () => {
     mockGetActionInputsWithDefaults.mockReturnValue({
       ...minimalActionInputs(),

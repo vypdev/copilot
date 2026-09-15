@@ -62,7 +62,7 @@ export function projectPublishResultContext(source: PublishResultContextSource):
 
 /**
  * Semantic publication boundary. Only explicitly mapped payloads may reach
- * GitHub; steps, reminders, errors, images, and debug logs remain operator
+ * GitHub; steps, reminders, errors, and debug logs remain operator
  * evidence in the Job Summary and logs.
  */
 export async function runPublishResume(
