@@ -25,6 +25,19 @@ describe('GitHub publication domain', () => {
     expect(publicationTargetToken(target)).toBe(expected);
   });
 
+  it.each([0, -1, Number.NaN, Number.MAX_SAFE_INTEGER + 1])(
+    'rejects invalid publication target number %p before serialization',
+    (number) => {
+      expect(() => publicationTargetToken({ kind: 'issue', number }))
+        .toThrow('positive safe integer');
+    },
+  );
+
+  it('rejects an unknown runtime target kind', () => {
+    expect(() => publicationTargetToken({ kind: 'repository' as never, number: 7 }))
+      .toThrow('must be issue or pull-request');
+  });
+
   it('keeps the publication union closed and discriminated', () => {
     const intents: PublicationIntent[] = [
       { kind: 'none', reason: 'routine' },

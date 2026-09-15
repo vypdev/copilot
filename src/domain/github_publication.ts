@@ -94,5 +94,11 @@ export function publicationIdentityEquals(left: PublicationIdentity, right: Publ
 }
 
 export function publicationTargetToken(target: PublicationTarget): string {
+    if (target.kind !== 'issue' && target.kind !== 'pull-request') {
+        throw new Error('Publication target kind must be issue or pull-request.');
+    }
+    if (!Number.isSafeInteger(target.number) || target.number < 1) {
+        throw new Error('Publication target number must be a positive safe integer.');
+    }
     return `${target.kind === 'pull-request' ? 'pr' : 'issue'}:${target.number}`;
 }

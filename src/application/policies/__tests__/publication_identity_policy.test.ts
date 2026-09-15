@@ -137,6 +137,9 @@ describe('publication identity policy', () => {
     })).toThrow('unsafe identity');
     expect(() => buildPublicationTransitionMarker({ ...transition, fingerprint: 'invalid' }))
       .toThrow('invalid fingerprint');
+    expect(() => buildPublicationTransitionMarker({
+      ...transition, identity: { ...transition.identity, target: { kind: 'issue', number: 0 } },
+    })).toThrow('positive safe integer');
   });
 
   it('derives stable transition fingerprints from closed trusted facts', () => {
@@ -152,5 +155,8 @@ describe('publication identity policy', () => {
       .toThrow('unsafe identity');
     expect(() => createTransitionFingerprint(identity, 'unknown' as never, 'head:abc1234'))
       .toThrow('unknown action');
+    expect(() => createTransitionFingerprint({
+      ...identity, target: { kind: 'issue', number: Number.NaN },
+    }, 'branch-sync-required', 'head:abc1234')).toThrow('positive safe integer');
   });
 });
