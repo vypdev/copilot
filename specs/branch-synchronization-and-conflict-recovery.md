@@ -5,7 +5,7 @@
 - Last verified: 2026-09-15
 - Owners: Copilot maintainers
 - Scope: all-branch drift observation and authorized parent-to-working-branch synchronization
-- Related issues/PRs: managed issue lifecycle, semantic GitHub publication, and agent runtime SDDs
+- Related issues/PRs: [PR #387](https://github.com/vypdev/copilot/pull/387), managed issue lifecycle, semantic GitHub publication, and agent runtime SDDs
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none
 
