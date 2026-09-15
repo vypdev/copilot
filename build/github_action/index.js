@@ -44448,8 +44448,21 @@ exports.LEGACY_TRANSLATED_COMMENT_MARKER = '<!-- copilot:translated-comment:v2 -
 exports.TRANSLATED_COMMENT_MARKER = '<!-- copilot:request-translation schema="3"';
 const MAX_TRANSLATED_COMMENT_LENGTH = untrusted_content_1.DEFAULT_UNTRUSTED_CONTENT_LIMIT;
 const MAX_ESCAPED_ORIGINAL_LENGTH = 40000;
-const PROTECTED_OPERAND_PATTERN = /`[^`\r\n]+`|https?:\/\/[^\s<>()]+|"(?:\\.|[^"\\\r\n])+"|'(?:\\.|[^'\\\r\n])+'|(?<![\p{L}\p{N}_])--?[A-Za-z0-9][A-Za-z0-9-]*(?:=[^\s]+)?|(?<![\p{L}\p{N}_<])(?:\.{0,2}\/|[A-Za-z0-9_.-]+\/)[A-Za-z0-9_./-]+|(?<![0-9A-Fa-f])[0-9A-Fa-f]{7,64}(?![0-9A-Fa-f])/gu;
-const GENERATED_OPERAND_PATTERN = /`[^`\r\n]+`|https?:\/\/[^\s<>()]+|"(?:\\.|[^"\\\r\n])+"|'(?:\\.|[^'\\\r\n])+'|(?<![\p{L}\p{N}_])--?[A-Za-z0-9][A-Za-z0-9-]*(?:=[^\s]+)?|(?<![\p{L}\p{N}_<])(?:\.{0,2}\/|[A-Za-z0-9_.-]+\/)[A-Za-z0-9_./-]+|(?<![0-9A-Fa-f])[0-9A-Fa-f]{7,64}(?![0-9A-Fa-f])/gu;
+const TECHNICAL_OPERAND_PATTERNS = Object.freeze([
+    /`[^`\r\n]+`/u.source,
+    /https?:\/\/[^\s<>()]+/u.source,
+    /"(?:\\.|[^"\\\r\n])+"/u.source,
+    /'(?:\\.|[^'\\\r\n])+'/u.source,
+    /(?<![\p{L}\p{N}_])--?[A-Za-z0-9][A-Za-z0-9-]*(?:=[^\s]+)?/u.source,
+    /(?<![\p{L}\p{N}_<])(?:\.{0,2}\/|[A-Za-z0-9_.-]+\/)[A-Za-z0-9_./-]+/u.source,
+    /(?<![\p{L}\p{N}_./-])(?:\.[A-Za-z0-9][A-Za-z0-9_.-]*|[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+|Dockerfile|Makefile|Gemfile|Procfile)(?![\p{L}\p{N}_./-])/u.source,
+    /(?<![\p{L}\p{N}_#-])(?:#\d+|GH-\d+)(?![\p{L}\p{N}_-])/u.source,
+    /(?<![\p{L}\p{N}_-])(?:HEAD(?:[~^]\d*)?|main|master|develop|development|trunk)(?![\p{L}\p{N}_-])/u.source,
+    /(?<![\p{L}\p{N}_])v?\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?(?![\p{L}\p{N}_.-])/u.source,
+    /(?<![0-9A-Fa-f])[0-9A-Fa-f]{7,64}(?![0-9A-Fa-f])/u.source,
+]);
+const PROTECTED_OPERAND_PATTERN = technicalOperandPattern();
+const GENERATED_OPERAND_PATTERN = technicalOperandPattern();
 const OPERAND_PLACEHOLDER_PATTERN = /COPILOT_OPERAND_\d+_TOKEN/gu;
 const OPERAND_ADJACENCY_PATTERN = /[\p{L}\p{N}_./:@#%+?=&-]/u;
 function prepareLanguageAdaptationInput(commentBody, trustedBotLogin) {
@@ -44459,7 +44472,7 @@ function prepareLanguageAdaptationInput(commentBody, trustedBotLogin) {
             kind: 'command',
             prose: parsed.command.arguments.join(' ').trim(),
             commandName: parsed.command.name,
-        });
+        }, !(0, copilot_command_1.copilotCommandAcceptsAdaptableProse)(parsed.command.name));
     }
     if (trustedBotLogin.trim()) {
         const normalizedBotLogin = trustedBotLogin.trim().replace(/^@/u, '');
@@ -44473,22 +44486,35 @@ function prepareLanguageAdaptationInput(commentBody, trustedBotLogin) {
 }
 function restoreLanguageAdaptationOutput(input, adaptedText) {
     const operands = input.protectedOperands ?? [];
+    const commandProtectsEveryToken = input.kind === 'command'
+        && input.commandName !== undefined
+        && !(0, copilot_command_1.copilotCommandAcceptsAdaptableProse)(input.commandName);
+    if (operands.some((operand, index) => (operand.placeholder !== `COPILOT_OPERAND_${index}_TOKEN`
+        || !operand.value
+        || (!commandProtectsEveryToken && !isTechnicalOperand(operand.value)))))
+        return undefined;
     if (matches(OPERAND_PLACEHOLDER_PATTERN, adaptedText)
         && operands.length === 0)
         return undefined;
     if (matches(GENERATED_OPERAND_PATTERN, adaptedText))
         return undefined;
     let restored = adaptedText;
+    let previousPlaceholderIndex = -1;
     for (const operand of operands) {
-        if (!hasExactPlaceholderBoundary(restored, operand.placeholder))
+        const placeholderIndex = exactPlaceholderIndex(restored, operand.placeholder);
+        if (placeholderIndex === undefined || placeholderIndex <= previousPlaceholderIndex)
             return undefined;
+        previousPlaceholderIndex = placeholderIndex;
         restored = restored.replace(operand.placeholder, operand.value);
     }
     if (matches(OPERAND_PLACEHOLDER_PATTERN, restored))
         return undefined;
     const restoredOperands = matchingValues(PROTECTED_OPERAND_PATTERN, restored);
-    if (restoredOperands.length !== operands.length
-        || restoredOperands.some((value, index) => value !== operands[index].value))
+    const expectedTechnicalOperands = operands
+        .map(operand => operand.value)
+        .filter(isTechnicalOperand);
+    if (restoredOperands.length !== expectedTechnicalOperands.length
+        || restoredOperands.some((value, index) => value !== expectedTechnicalOperands[index]))
         return undefined;
     return restored;
 }
@@ -44505,14 +44531,15 @@ function rebuildAdaptedComment(input, adaptedText) {
     }
     return safeText;
 }
-function languageAdaptationInput(input) {
+function languageAdaptationInput(input, protectEveryToken = false) {
     const operands = [];
-    const prose = input.prose.replace(PROTECTED_OPERAND_PATTERN, value => {
+    const pattern = protectEveryToken ? /\S+/gu : PROTECTED_OPERAND_PATTERN;
+    const prose = input.prose.replace(pattern, value => {
         const placeholder = `COPILOT_OPERAND_${operands.length}_TOKEN`;
         operands.push(Object.freeze({ placeholder, value }));
         return placeholder;
     });
-    PROTECTED_OPERAND_PATTERN.lastIndex = 0;
+    pattern.lastIndex = 0;
     return Object.freeze({
         ...input,
         prose,
@@ -44525,20 +44552,30 @@ function matches(pattern, value) {
     pattern.lastIndex = 0;
     return matched;
 }
-function hasExactPlaceholderBoundary(value, placeholder) {
+function exactPlaceholderIndex(value, placeholder) {
     const index = value.indexOf(placeholder);
     if (index < 0 || index !== value.lastIndexOf(placeholder))
-        return false;
+        return undefined;
     const before = index > 0 ? value[index - 1] : '';
     const afterIndex = index + placeholder.length;
     const after = afterIndex < value.length ? value[afterIndex] : '';
-    return !OPERAND_ADJACENCY_PATTERN.test(before) && !OPERAND_ADJACENCY_PATTERN.test(after);
+    return !OPERAND_ADJACENCY_PATTERN.test(before) && !OPERAND_ADJACENCY_PATTERN.test(after)
+        ? index
+        : undefined;
 }
 function matchingValues(pattern, value) {
     pattern.lastIndex = 0;
     const values = [...value.matchAll(pattern)].map(match => match[0]);
     pattern.lastIndex = 0;
     return values;
+}
+function isTechnicalOperand(value) {
+    const pattern = technicalOperandPattern(true);
+    return pattern.test(value);
+}
+function technicalOperandPattern(anchored = false) {
+    const source = TECHNICAL_OPERAND_PATTERNS.join('|');
+    return new RegExp(anchored ? `^(?:${source})$` : source, anchored ? 'u' : 'gu');
 }
 function hasTranslatedCommentMarker(body) {
     return typeof body === 'string'
@@ -52393,9 +52430,6 @@ const branch_sync_command_1 = __nccwpck_require__(51114);
 const branch_sync_comment_command_1 = __nccwpck_require__(4643);
 const comment_automation_context_1 = __nccwpck_require__(37055);
 const comment_language_translation_workflow_1 = __nccwpck_require__(72770);
-const COMMANDS_WITH_ADAPTABLE_PROSE = new Set([
-    'plan', 'clarify', 'estimate', 'test-plan', 'explain', 'diagnose', 'fix', 'implement',
-]);
 async function runCommentAutomation(initialParam, options, actorAuthorizationPort) {
     (0, logging_ports_1.logInfo)(`${options.taskId} started.`);
     let languageResults = [];
@@ -52417,7 +52451,7 @@ async function runCommentAutomation(initialParam, options, actorAuthorizationPor
         }
         const commandHasAdaptableProse = command.kind === 'command'
             && command.command.arguments.length > 0
-            && COMMANDS_WITH_ADAPTABLE_PROSE.has(command.command.name);
+            && (0, copilot_command_1.copilotCommandAcceptsAdaptableProse)(command.command.name);
         if (command.kind === 'command' && !commandHasAdaptableProse) {
             const explicitResults = await (0, comment_automation_command_workflow_1.runExplicitCommentCommand)(param, options, command.command, actorAuthorizationPort);
             if (explicitResults)
@@ -72043,6 +72077,7 @@ function hasVisibleCommentContent(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.COPILOT_COMMAND_NAMES = void 0;
+exports.copilotCommandAcceptsAdaptableProse = copilotCommandAcceptsAdaptableProse;
 exports.parseCopilotCommand = parseCopilotCommand;
 /** Explicit commands are the safe, deterministic entry point for mutations. */
 exports.COPILOT_COMMAND_NAMES = [
@@ -72065,6 +72100,20 @@ exports.COPILOT_COMMAND_NAMES = [
     'implement',
     'sync-branch',
 ];
+const COPILOT_COMMANDS_WITH_ADAPTABLE_PROSE = new Set([
+    'plan',
+    'clarify',
+    'estimate',
+    'test-plan',
+    'explain',
+    'diagnose',
+    'fix',
+    'implement',
+]);
+/** Commands whose arguments may contain human prose that benefits from locale adaptation. */
+function copilotCommandAcceptsAdaptableProse(name) {
+    return COPILOT_COMMANDS_WITH_ADAPTABLE_PROSE.has(name);
+}
 const COMMAND_PREFIX = /^\/copilot(?:\s+|$)/iu;
 const MAX_COMMAND_LENGTH = 2000;
 const MAX_ARGUMENTS = 20;

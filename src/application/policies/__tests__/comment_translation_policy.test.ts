@@ -99,6 +99,41 @@ describe('comment translation policy', () => {
     });
 
     it.each([
+        ['/copilot fix README.md', ['README.md']],
+        ['/copilot explain package.json', ['package.json']],
+        ['/copilot diagnose .github', ['.github']],
+        ['/copilot fix Dockerfile', ['Dockerfile']],
+        ['/copilot explain failure in #123 and GH-456', ['#123', 'GH-456']],
+        ['/copilot diagnose main at HEAD~2 for v1.2.3-rc.1', ['main', 'HEAD~2', 'v1.2.3-rc.1']],
+    ])('protects bare repository operands in adaptable command prose: %s', (comment, expected) => {
+        const input = prepareLanguageAdaptationInput(comment, 'vypbot');
+
+        expect(input.protectedOperands?.map(operand => operand.value)).toEqual(expected);
+        expect(restoreLanguageAdaptationOutput(input, input.prose)).toBe(
+            comment.replace(/^\/copilot\s+\S+\s*/u, ''),
+        );
+    });
+
+    it('protects every argument of commands whose grammar does not accept adaptable prose', () => {
+        const input = prepareLanguageAdaptationInput('/copilot sync-branch --from main', 'vypbot');
+
+        expect(input).toMatchObject({
+            kind: 'command',
+            commandName: 'sync-branch',
+            prose: 'COPILOT_OPERAND_0_TOKEN COPILOT_OPERAND_1_TOKEN',
+            protectedOperands: [
+                { placeholder: 'COPILOT_OPERAND_0_TOKEN', value: '--from' },
+                { placeholder: 'COPILOT_OPERAND_1_TOKEN', value: 'main' },
+            ],
+        });
+        expect(rebuildAdaptedComment(input, input.prose)).toBe('/copilot sync-branch --from main');
+
+        const arbitraryIdentifier = prepareLanguageAdaptationInput('/copilot dismiss finding-one', 'vypbot');
+        expect(rebuildAdaptedComment(arbitraryIdentifier, arbitraryIdentifier.prose))
+            .toBe('/copilot dismiss finding-one');
+    });
+
+    it.each([
         'translated without the required placeholder',
         'translated COPILOT_OPERAND_0_TOKEN COPILOT_OPERAND_0_TOKEN',
         'translated COPILOT_OPERAND_9_TOKEN',
@@ -107,6 +142,9 @@ describe('comment translation policy', () => {
         'translated COPILOT_OPERAND_0_TOKEN src/other.ts',
         'translated COPILOT_OPERAND_0_TOKEN https://attacker.example',
         'translated COPILOT_OPERAND_0_TOKEN "different literal"',
+        'translated COPILOT_OPERAND_0_TOKEN README.md',
+        'translated COPILOT_OPERAND_0_TOKEN #999',
+        'translated COPILOT_OPERAND_0_TOKEN main',
         'translated COPILOT_OPERAND_0_TOKENx',
         'translated xCOPILOT_OPERAND_0_TOKEN',
         'translated COPILOT_OPERAND_0_TOKEN.tsx',
@@ -134,6 +172,12 @@ describe('comment translation policy', () => {
             kind: 'plain',
             prose: 'COPILOT_OPERAND_0_TOKEN',
             protectedOperands: [{ placeholder: 'COPILOT_OPERAND_0_TOKEN', value: 'not-an-operand' }],
+        }, 'COPILOT_OPERAND_0_TOKEN')).toBeUndefined();
+        expect(restoreLanguageAdaptationOutput({
+            kind: 'command',
+            commandName: 'dismiss',
+            prose: 'COPILOT_OPERAND_0_TOKEN',
+            protectedOperands: [{ placeholder: 'COPILOT_OPERAND_0_TOKEN', value: 'prefix/ref:suffix' }],
         }, 'COPILOT_OPERAND_0_TOKEN')).toBeUndefined();
     });
 

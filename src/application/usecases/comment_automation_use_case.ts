@@ -4,7 +4,7 @@ import { isCopilotCommentRequest } from '../../domain/copilot_comment_request';
 import type { BoundActorAuthorizationPort } from '../ports/actor_authorization_ports';
 import type { CommentAutomationOptions } from './comment_automation_contracts';
 import type { CommentAutomationContext } from './comment_automation_context';
-import { parseCopilotCommand } from '../../domain/copilot_command';
+import { copilotCommandAcceptsAdaptableProse, parseCopilotCommand } from '../../domain/copilot_command';
 import { invalidCommentCommandResult, runExplicitCommentCommand } from './comment_automation_command_workflow';
 import { runNaturalLanguageCommentAutomation } from './comment_automation_natural_language_workflow';
 import { ApplicationError } from '../errors/application_error';
@@ -12,11 +12,6 @@ import { isNaturalLanguageBranchSyncRequest } from '../../domain/branch_sync_com
 import { runBranchSyncCommand } from './branch_sync/branch_sync_comment_command';
 import { withCommentLanguageAdaptation } from './comment_automation_context';
 import { getCommentLanguageAdaptationPayload } from './steps/common/comment_language_translation_workflow';
-import type { CopilotCommandName } from '../../domain/copilot_command';
-
-const COMMANDS_WITH_ADAPTABLE_PROSE: ReadonlySet<CopilotCommandName> = new Set([
-    'plan', 'clarify', 'estimate', 'test-plan', 'explain', 'diagnose', 'fix', 'implement',
-]);
 
 export type { CommentAutomationOptions } from "./comment_automation_contracts";
 
@@ -45,7 +40,7 @@ export async function runCommentAutomation(
     }
     const commandHasAdaptableProse = command.kind === 'command'
       && command.command.arguments.length > 0
-      && COMMANDS_WITH_ADAPTABLE_PROSE.has(command.command.name);
+      && copilotCommandAcceptsAdaptableProse(command.command.name);
     if (command.kind === 'command' && !commandHasAdaptableProse) {
       const explicitResults = await runExplicitCommentCommand(param, options, command.command, actorAuthorizationPort);
       if (explicitResults) return explicitResults;

@@ -1004,11 +1004,14 @@ scans ignore closed issues, preserves the confirmed close, and supplies a
 localized manual-recovery action.
 
 The explicit-request/local-result slice makes technical-operand preservation an
-application invariant instead of a prompt convention. Code spans, paths, refs,
-URLs, quoted literals, option flags, and commit IDs are replaced with opaque
-placeholders before language adaptation; a response must return every
-placeholder exactly once and introduce no new operand before the original values
-are restored. Invalid output fails before the requested mutation. Explicit
+application invariant instead of a prompt convention. Code spans, slash paths,
+bare filenames, recognizable refs/versions, issue or PR references, URLs,
+quoted literals, option flags, and commit IDs are replaced with opaque
+placeholders before language adaptation. Commands whose grammar contains no
+adaptable prose protect every argument, including arbitrary branch, tag, or
+finding identifiers. A response must return every placeholder exactly once and
+in source order and introduce no new operand before the original values are
+restored. Invalid output fails before the requested mutation. Explicit
 request failures now reconcile one semantic error reply for the source-comment
 identity, while background failures remain Check/Job-Summary-only and
 translation failures use an atomic English reply. Repository-aware local action
@@ -1217,8 +1220,10 @@ tags and never imply that fallback is a successful translation.
 - [ ] Addressed translation uses at most one adaptation call, never edits the
       source comment, and includes translated interpretation followed by escaped
       original in the single bot response when needed.
-- [ ] Unaddressed comments, authorization, commands, flags, paths, refs, URLs,
-      markers, and execution boundaries cannot be changed by translation.
+- [ ] Unaddressed comments, authorization, commands, flags, slash paths, bare
+      filenames, refs, versions, issue/PR references, URLs, markers, and
+      execution boundaries cannot be changed by translation; non-prose command
+      grammars preserve every argument byte-for-byte.
 - [ ] Atomic fallback, provider failure, wrong-language output, locale change,
       durable snapshot, v2/v3 compatibility, and rollback pass.
 - [ ] RTL, CJK, expansion, plural, narrow-width, descriptive-link, sanitization,
