@@ -65,6 +65,7 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.translation.summary',
     'interaction.translation.interpretedRequest',
     'interaction.translation.originalRequest',
+    'interaction.error.heading',
     'interaction.status.heading',
     'interaction.status.repository',
     'interaction.status.target',
@@ -83,9 +84,17 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.status.findingsInvalid',
     'interaction.status.findingCounts',
     'cli.answer',
-    'cli.steps',
+    'cli.outcome',
+    'cli.status',
+    'cli.status.succeeded',
+    'cli.status.partial',
+    'cli.status.failed',
+    'cli.status.noChanges',
+    'cli.completed',
+    'cli.skipped',
+    'cli.failed',
+    'cli.operatorReminders',
     'cli.errors',
-    'cli.reminder',
 ] as const);
 
 type PublicationSurfaceMessageId = typeof PUBLICATION_SURFACE_MESSAGE_IDS[number];
@@ -122,9 +131,14 @@ export interface PublicationMessageCatalog {
     }>;
     readonly cli: Readonly<{
         answer: string;
-        steps: string;
+        outcome: string;
+        status: string;
+        statusValue: Readonly<Record<'succeeded' | 'partial' | 'failed' | 'no-changes', string>>;
+        completed: string;
+        skipped: string;
+        failed: string;
+        operatorReminders: string;
         errors: string;
-        reminder: string;
     }>;
     readonly render: (id: PublicationMessageId, variables?: Readonly<Record<string, string | number>>) => string;
 }
@@ -178,6 +192,7 @@ const ENGLISH_MESSAGES: Readonly<Record<PublicationMessageId, CatalogMessage>> =
     'interaction.translation.summary': 'Request interpreted from {sourceLanguage}',
     'interaction.translation.interpretedRequest': 'Interpreted request',
     'interaction.translation.originalRequest': 'Original request',
+    'interaction.error.heading': 'Request could not be completed',
     'interaction.status.heading': 'Copilot status',
     'interaction.status.repository': 'Repository',
     'interaction.status.target': 'Target',
@@ -196,9 +211,17 @@ const ENGLISH_MESSAGES: Readonly<Record<PublicationMessageId, CatalogMessage>> =
     'interaction.status.findingsInvalid': 'invalid evidence; inspect the workflow result.',
     'interaction.status.findingCounts': '{open} open, {reopened} reopened, {verificationRequired} verification required, {unknown} unknown, {resolved} resolved',
     'cli.answer': 'Answer',
-    'cli.steps': 'Steps',
+    'cli.outcome': 'Outcome',
+    'cli.status': 'Status',
+    'cli.status.succeeded': 'Succeeded',
+    'cli.status.partial': 'Partially completed',
+    'cli.status.failed': 'Failed',
+    'cli.status.noChanges': 'No changes',
+    'cli.completed': 'Completed operations',
+    'cli.skipped': 'Skipped operations',
+    'cli.failed': 'Failed operations',
+    'cli.operatorReminders': 'Operator reminders recorded',
     'cli.errors': 'Errors',
-    'cli.reminder': 'Reminder',
     ...ENGLISH_APPLICATION_ERROR_MESSAGES,
 });
 
@@ -251,6 +274,7 @@ const SPANISH_MESSAGES: Readonly<Record<PublicationMessageId, CatalogMessage>> =
     'interaction.translation.summary': 'Solicitud interpretada desde {sourceLanguage}',
     'interaction.translation.interpretedRequest': 'Solicitud interpretada',
     'interaction.translation.originalRequest': 'Solicitud original',
+    'interaction.error.heading': 'No se pudo completar la solicitud',
     'interaction.status.heading': 'Estado de Copilot',
     'interaction.status.repository': 'Repositorio',
     'interaction.status.target': 'Destino',
@@ -269,9 +293,17 @@ const SPANISH_MESSAGES: Readonly<Record<PublicationMessageId, CatalogMessage>> =
     'interaction.status.findingsInvalid': 'evidencia no válida; revisa el resultado del workflow.',
     'interaction.status.findingCounts': '{open} abiertos, {reopened} reabiertos, {verificationRequired} requieren verificación, {unknown} desconocidos, {resolved} resueltos',
     'cli.answer': 'Respuesta',
-    'cli.steps': 'Pasos',
+    'cli.outcome': 'Resultado',
+    'cli.status': 'Estado',
+    'cli.status.succeeded': 'Completado',
+    'cli.status.partial': 'Completado parcialmente',
+    'cli.status.failed': 'Fallido',
+    'cli.status.noChanges': 'Sin cambios',
+    'cli.completed': 'Operaciones completadas',
+    'cli.skipped': 'Operaciones omitidas',
+    'cli.failed': 'Operaciones fallidas',
+    'cli.operatorReminders': 'Recordatorios de operación registrados',
     'cli.errors': 'Errores',
-    'cli.reminder': 'Recordatorio',
     ...SPANISH_APPLICATION_ERROR_MESSAGES,
 });
 
@@ -374,9 +406,19 @@ export function toPublicationCatalog(
         }),
         cli: Object.freeze({
             answer: message('cli.answer'),
-            steps: message('cli.steps'),
+            outcome: message('cli.outcome'),
+            status: message('cli.status'),
+            statusValue: Object.freeze({
+                succeeded: message('cli.status.succeeded'),
+                partial: message('cli.status.partial'),
+                failed: message('cli.status.failed'),
+                'no-changes': message('cli.status.noChanges'),
+            }),
+            completed: message('cli.completed'),
+            skipped: message('cli.skipped'),
+            failed: message('cli.failed'),
+            operatorReminders: message('cli.operatorReminders'),
             errors: message('cli.errors'),
-            reminder: message('cli.reminder'),
         }),
         render: message,
     });

@@ -1,4 +1,7 @@
-import type { ApplicationError } from '../../data/model/application_error';
+import type {
+    ApplicationErrorCode,
+    ApplicationErrorRecovery,
+} from '../../data/model/application_error';
 import {
     readEnglishApplicationErrorMessage,
     type ApplicationErrorMessageReader,
@@ -13,9 +16,16 @@ export interface ApplicationErrorPresentation {
     readonly reference: string;
 }
 
+export interface ApplicationErrorPresentationSource {
+    readonly code: ApplicationErrorCode;
+    readonly retryable: boolean;
+    readonly correlationId: string;
+    readonly recovery?: ApplicationErrorRecovery;
+}
+
 /** Shared semantic view model for terminal, GitHub, and API presentation. */
 export function buildApplicationErrorPresentation(
-    error: ApplicationError,
+    error: ApplicationErrorPresentationSource,
     message: ApplicationErrorMessageReader = readEnglishApplicationErrorMessage,
 ): ApplicationErrorPresentation {
     const descriptor = error.recovery
@@ -33,7 +43,7 @@ export function buildApplicationErrorPresentation(
 }
 
 export function renderApplicationErrorText(
-    error: ApplicationError,
+    error: ApplicationErrorPresentationSource,
     message: ApplicationErrorMessageReader = readEnglishApplicationErrorMessage,
 ): string {
     const view = buildApplicationErrorPresentation(error, message);
@@ -44,5 +54,26 @@ export function renderApplicationErrorText(
         `${message('error.label.retainedState')}: ${view.retainedState}`,
         `${message('error.label.retryable')}: ${view.retryable}`,
         `${message('error.label.reference')}: ${view.reference}`,
+    ].join('\n');
+}
+
+/** Renders the same safe semantic failure as compact GitHub Markdown. */
+export function renderApplicationErrorMarkdown(
+    error: ApplicationErrorPresentationSource,
+    message: ApplicationErrorMessageReader = readEnglishApplicationErrorMessage,
+): string {
+    const view = buildApplicationErrorPresentation(error, message);
+    return [
+        `> **${message('error.label.impact')}:** ${view.impact}`,
+        '',
+        `**${message('error.label.action')}:** ${view.action}`,
+        '',
+        `**${message('error.label.retainedState')}:** ${view.retainedState}`,
+        '',
+        `**${message('error.label.errorCode')}:** \`${view.code}\``,
+        '',
+        `**${message('error.label.retryable')}:** ${view.retryable}`,
+        '',
+        `**${message('error.label.reference')}:** \`${view.reference}\``,
     ].join('\n');
 }

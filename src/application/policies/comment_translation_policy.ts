@@ -26,7 +26,12 @@ export type LanguageAdaptationInput = {
     readonly prose: string;
     readonly commandName?: CopilotCommandName;
     readonly trustedBotLogin?: string;
+    readonly protectedOperands?: readonly Readonly<{ placeholder: string; value: string }>[];
 };
+
+const PROTECTED_OPERAND_PATTERN = /`[^`\r\n]+`|https?:\/\/[^\s<>()]+|"(?:\\.|[^"\\\r\n])+"|'(?:\\.|[^'\\\r\n])+'|(?<![\p{L}\p{N}_])--?[A-Za-z0-9][A-Za-z0-9-]*(?:=[^\s]+)?|(?<![\p{L}\p{N}_<])(?:\.{0,2}\/|[A-Za-z0-9_.-]+\/)[A-Za-z0-9_./-]+|(?<![0-9A-Fa-f])[0-9A-Fa-f]{7,64}(?![0-9A-Fa-f])/gu;
+const GENERATED_OPERAND_PATTERN = /`[^`\r\n]+`|https?:\/\/[^\s<>()]+|"(?:\\.|[^"\\\r\n])+"|'(?:\\.|[^'\\\r\n])+'|(?<![\p{L}\p{N}_])--?[A-Za-z0-9][A-Za-z0-9-]*(?:=[^\s]+)?|(?<![\p{L}\p{N}_<])(?:\.{0,2}\/|[A-Za-z0-9_.-]+\/)[A-Za-z0-9_./-]+|(?<![0-9A-Fa-f])[0-9A-Fa-f]{7,64}(?![0-9A-Fa-f])/gu;
+const OPERAND_PLACEHOLDER_PATTERN = /COPILOT_OPERAND_\d+_TOKEN/gu;
 
 export function prepareLanguageAdaptationInput(
     commentBody: string,
@@ -34,7 +39,7 @@ export function prepareLanguageAdaptationInput(
 ): LanguageAdaptationInput {
     const parsed = parseCopilotCommand(commentBody);
     if (parsed.kind === 'command') {
-        return Object.freeze({
+        return languageAdaptationInput({
             kind: 'command',
             prose: parsed.command.arguments.join(' ').trim(),
             commandName: parsed.command.name,
@@ -42,17 +47,37 @@ export function prepareLanguageAdaptationInput(
     }
     if (trustedBotLogin.trim()) {
         const normalizedBotLogin = trustedBotLogin.trim().replace(/^@/u, '');
-        return Object.freeze({
+        return languageAdaptationInput({
             kind: 'mention',
             prose: extractMentionQuestion(commentBody, normalizedBotLogin),
             trustedBotLogin: normalizedBotLogin,
         });
     }
-    return Object.freeze({ kind: 'plain', prose: commentBody.trim() });
+    return languageAdaptationInput({ kind: 'plain', prose: commentBody.trim() });
 }
 
-export function rebuildAdaptedComment(input: LanguageAdaptationInput, adaptedText: string): string {
-    const safeText = sanitizeAgentMarkdown(adaptedText, MAX_TRANSLATED_COMMENT_LENGTH).trim();
+export function restoreLanguageAdaptationOutput(
+    input: LanguageAdaptationInput,
+    adaptedText: string,
+): string | undefined {
+    const operands = input.protectedOperands ?? [];
+    if (matches(OPERAND_PLACEHOLDER_PATTERN, adaptedText)
+        && operands.length === 0) return undefined;
+    if (matches(GENERATED_OPERAND_PATTERN, adaptedText)) return undefined;
+
+    let restored = adaptedText;
+    for (const operand of operands) {
+        if (restored.split(operand.placeholder).length !== 2) return undefined;
+        restored = restored.replace(operand.placeholder, operand.value);
+    }
+    if (matches(OPERAND_PLACEHOLDER_PATTERN, restored)) return undefined;
+    return restored;
+}
+
+export function rebuildAdaptedComment(input: LanguageAdaptationInput, adaptedText: string): string | undefined {
+    const restored = restoreLanguageAdaptationOutput(input, adaptedText);
+    if (restored === undefined) return undefined;
+    const safeText = sanitizeAgentMarkdown(restored, MAX_TRANSLATED_COMMENT_LENGTH).trim();
     if (input.kind === 'command' && input.commandName) {
         return `/copilot ${input.commandName}${safeText ? ` ${safeText}` : ''}`;
     }
@@ -60,6 +85,30 @@ export function rebuildAdaptedComment(input: LanguageAdaptationInput, adaptedTex
         return `@${input.trustedBotLogin}${safeText ? ` ${safeText}` : ''}`;
     }
     return safeText;
+}
+
+function languageAdaptationInput(
+    input: Omit<LanguageAdaptationInput, 'protectedOperands'>,
+): LanguageAdaptationInput {
+    const operands: Array<Readonly<{ placeholder: string; value: string }>> = [];
+    const prose = input.prose.replace(PROTECTED_OPERAND_PATTERN, value => {
+        const placeholder = `COPILOT_OPERAND_${operands.length}_TOKEN`;
+        operands.push(Object.freeze({ placeholder, value }));
+        return placeholder;
+    });
+    PROTECTED_OPERAND_PATTERN.lastIndex = 0;
+    return Object.freeze({
+        ...input,
+        prose,
+        ...(operands.length > 0 ? { protectedOperands: Object.freeze(operands) } : {}),
+    });
+}
+
+function matches(pattern: RegExp, value: string): boolean {
+    pattern.lastIndex = 0;
+    const matched = pattern.test(value);
+    pattern.lastIndex = 0;
+    return matched;
 }
 
 export function hasTranslatedCommentMarker(body: string | null | undefined): boolean {

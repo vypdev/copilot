@@ -7,6 +7,7 @@ import {
 } from '../../errors/application_error';
 import {
     buildApplicationErrorPresentation,
+    renderApplicationErrorMarkdown,
     renderApplicationErrorText,
 } from '../application_error_presentation_policy';
 import { resolveStaticApplicationErrorCatalog } from '../application_error_message_catalog';
@@ -119,5 +120,20 @@ describe('application error presentation policy', () => {
     it('covers every closed recovery variant exactly once', () => {
         expect(RECOVERY_CASES.map(({ recovery }) => recovery.id).sort())
             .toEqual([...APPLICATION_ERROR_RECOVERY_IDS].sort());
+    });
+
+    it('renders compact GitHub Markdown from semantic fields without producer prose', () => {
+        const error = new ApplicationError('provider.unavailable', 'Raw provider detail.', {
+            correlationId: CORRELATION_ID,
+        });
+        const markdown = renderApplicationErrorMarkdown(
+            error,
+            resolveStaticApplicationErrorCatalog('es-ES').message,
+        );
+
+        expect(markdown).toContain('> **Impacto:** El proveedor no estaba disponible temporalmente.');
+        expect(markdown).toContain('**Código de error:** `provider.unavailable`');
+        expect(markdown).toContain(`**Referencia:** \`${CORRELATION_ID}\``);
+        expect(markdown).not.toContain('Raw provider detail.');
     });
 });

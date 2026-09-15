@@ -561,6 +561,11 @@ When a partial operation needs more detail than its broad error code can convey,
 it selects one closed recovery descriptor with validated variables. The entire
 descriptor is translated with the surrounding catalog, so a retained branch or
 issue number is preserved without mixing English prose into another locale.
+An explicitly addressed issue or pull-request request that fails is projected
+once through the shared reply identity and uses this same semantic view; a
+background failure remains Job-Summary/Check-only. Translation failures use the
+complete English fallback reply because the requested locale could not be
+established safely.
 
 ## 10. Failure, recovery, and cleanup
 

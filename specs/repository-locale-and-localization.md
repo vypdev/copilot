@@ -3,9 +3,10 @@
 - Status: In implementation
 - Date: 2026-09-14
 - Catalog capability ID: github-communication-experience
-- Last verified: 2026-09-14 for the delivered foundation, shared publication,
-  branch-sync, Bugbot, deployment-presentation, setup-doctor, and generic Job
-  Summary slices; remaining clauses are prospective
+- Last verified: 2026-09-15 for the delivered foundation, shared publication,
+  branch-sync, Bugbot, deployment-presentation, setup-doctor, generic Job
+  Summary, application-error, explicit-request, and local-result slices;
+  remaining clauses are prospective
 - Owners: Copilot maintainers
 - Scope: Define one English-default repository locale profile and apply it generically to deterministic UI, agent-generated content, and safe interpretation of addressed comments.
 - Related issues/PRs: [issue #334](https://github.com/vypdev/copilot/issues/334), [PR #363](https://github.com/vypdev/copilot/pull/363), [PR #365](https://github.com/vypdev/copilot/pull/365)
@@ -1001,6 +1002,19 @@ eligible, closed, commented, skipped, and failed counts without localizing the
 stable keys. That partial publication state narrows retryability because later
 scans ignore closed issues, preserves the confirmed close, and supplies a
 localized manual-recovery action.
+
+The explicit-request/local-result slice makes technical-operand preservation an
+application invariant instead of a prompt convention. Code spans, paths, refs,
+URLs, quoted literals, option flags, and commit IDs are replaced with opaque
+placeholders before language adaptation; a response must return every
+placeholder exactly once and introduce no new operand before the original values
+are restored. Invalid output fails before the requested mutation. Explicit
+request failures now reconcile one semantic error reply for the source-comment
+identity, while background failures remain Check/Job-Summary-only and
+translation failures use an atomic English reply. Repository-aware local action
+text reports localized semantic status and result counts without replaying
+internal step or reminder prose. Catalog version 3 owns the added reply and CLI
+descriptors.
 
 ### 13.5 Rollback
 

@@ -11,6 +11,7 @@ import {
     hasTranslatedCommentMarker,
     prepareLanguageAdaptationInput,
     rebuildAdaptedComment,
+    restoreLanguageAdaptationOutput,
     type TranslationPublication,
 } from '../../../policies/comment_translation_policy';
 import { canonicalizeLocaleTag } from '../../../../domain/locale';
@@ -91,7 +92,16 @@ export class CommentLanguageTranslationWorkflow {
             }
             const adaptedText = this.stringProperty(response, 'adaptedText');
             const sourceLocale = this.optionalStringProperty(response, 'sourceLocale');
-            const publication = composeTranslatedComment(adaptedText, context.commentBody, {
+            const restoredProse = restoreLanguageAdaptationOutput(input, adaptedText);
+            const interpretedComment = rebuildAdaptedComment(input, adaptedText);
+            if (restoredProse === undefined || interpretedComment === undefined) {
+                return [failedAdaptation(
+                    context,
+                    targetLocale,
+                    'The language adapter changed or introduced a protected technical operand.',
+                )];
+            }
+            const publication = composeTranslatedComment(restoredProse, context.commentBody, {
                 sourceLocale,
                 targetLocale,
             });
@@ -102,7 +112,7 @@ export class CommentLanguageTranslationWorkflow {
                 context,
                 targetLocale,
                 'translated',
-                rebuildAdaptedComment(input, publication.translatedText),
+                interpretedComment,
                 sourceLocale,
                 reasonCode,
                 publication,

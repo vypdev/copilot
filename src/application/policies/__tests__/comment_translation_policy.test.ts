@@ -4,6 +4,7 @@ import {
     prepareLanguageAdaptationInput,
     rebuildAdaptedComment,
     renderTranslationContext,
+    restoreLanguageAdaptationOutput,
     TRANSLATED_COMMENT_MARKER,
 } from '../comment_translation_policy';
 import {
@@ -63,8 +64,55 @@ describe('comment translation policy', () => {
         expect(rebuildAdaptedComment(plain, ' translated ')).toBe('translated');
         expect(rebuildAdaptedComment(mention, '')).toBe('@vypbot');
         expect(rebuildAdaptedComment(mention, 'translated')).toBe('@vypbot translated');
+        expect(rebuildAdaptedComment({ kind: 'mention', prose: 'plain' }, 'translated')).toBe('translated');
         expect(rebuildAdaptedComment(command, '')).toBe('/copilot explain');
         expect(rebuildAdaptedComment(command, 'translated')).toBe('/copilot explain translated');
+    });
+
+    it('protects technical operands from translation and restores them only after exact validation', () => {
+        const input = prepareLanguageAdaptationInput(
+            '/copilot explain por qué falla `src/cache.ts` en feature/cache --verbose https://example.com/log a1b2c3d',
+            'vypbot',
+        );
+
+        expect(input.prose).toBe(
+            'por qué falla COPILOT_OPERAND_0_TOKEN en COPILOT_OPERAND_1_TOKEN COPILOT_OPERAND_2_TOKEN COPILOT_OPERAND_3_TOKEN COPILOT_OPERAND_4_TOKEN',
+        );
+        expect(input.protectedOperands?.map(operand => operand.value)).toEqual([
+            '`src/cache.ts`', 'feature/cache', '--verbose', 'https://example.com/log', 'a1b2c3d',
+        ]);
+        expect(Object.isFrozen(input.protectedOperands)).toBe(true);
+        expect(input.protectedOperands?.every(Object.isFrozen)).toBe(true);
+
+        const translated = 'why COPILOT_OPERAND_0_TOKEN fails on COPILOT_OPERAND_1_TOKEN COPILOT_OPERAND_2_TOKEN COPILOT_OPERAND_3_TOKEN COPILOT_OPERAND_4_TOKEN';
+        expect(restoreLanguageAdaptationOutput(input, translated)).toBe(
+            'why `src/cache.ts` fails on feature/cache --verbose https://example.com/log a1b2c3d',
+        );
+        expect(rebuildAdaptedComment(input, translated)).toContain(
+            '/copilot explain why `src/cache.ts` fails on feature/cache --verbose',
+        );
+    });
+
+    it.each([
+        'translated without the required placeholder',
+        'translated COPILOT_OPERAND_0_TOKEN COPILOT_OPERAND_0_TOKEN',
+        'translated COPILOT_OPERAND_9_TOKEN',
+        'translated COPILOT_OPERAND_0_TOKEN COPILOT_OPERAND_9_TOKEN',
+        'translated COPILOT_OPERAND_0_TOKEN --force',
+        'translated COPILOT_OPERAND_0_TOKEN src/other.ts',
+        'translated COPILOT_OPERAND_0_TOKEN https://attacker.example',
+        'translated COPILOT_OPERAND_0_TOKEN "different literal"',
+    ])('rejects missing, duplicated, unknown, or generated technical operands: %s', (translated) => {
+        const input = prepareLanguageAdaptationInput('/copilot explain src/cache.ts', 'vypbot');
+
+        expect(restoreLanguageAdaptationOutput(input, translated)).toBeUndefined();
+        expect(rebuildAdaptedComment(input, translated)).toBeUndefined();
+    });
+
+    it('rejects an operand placeholder invented for prose that had no protected values', () => {
+        const input = prepareLanguageAdaptationInput('@vypbot explica esto', 'vypbot');
+
+        expect(restoreLanguageAdaptationOutput(input, 'explain COPILOT_OPERAND_0_TOKEN')).toBeUndefined();
     });
 
     it('rejects text that becomes empty after unsafe format controls are removed', () => {

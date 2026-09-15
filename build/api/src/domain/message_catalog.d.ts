@@ -1,4 +1,4 @@
-export declare const MESSAGE_CATALOG_VERSION = "2";
+export declare const MESSAGE_CATALOG_VERSION = "3";
 export type CatalogResolutionSource = 'exact' | 'base' | 'dynamic' | 'fallback';
 export type CatalogFallbackReason = 'dynamic-provider-unavailable' | 'dynamic-response-invalid' | 'dynamic-request-failed';
 export declare const CATALOG_PLURAL_CATEGORIES: readonly ["zero", "one", "two", "few", "many", "other"];

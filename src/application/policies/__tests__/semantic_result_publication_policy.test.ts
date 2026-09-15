@@ -1,4 +1,5 @@
 import { Result } from '../../../data/model/result';
+import { ApplicationError } from '../../errors/application_error';
 import {
   hasOwnedPrimaryIssuePublication,
   hasPrimaryIssuePublication,
@@ -258,6 +259,82 @@ describe('semantic result publication policy', () => {
     expect(body).toContain('Issue cerrada: se requiere acceso de colaborador');
     expect(body).toContain('contacta con un mantenedor');
     expect(body).not.toContain('banned');
+  });
+
+  it('publishes one localized semantic error for an explicit request without producer prose', () => {
+    const [intent] = selectSemanticReplyIntents({
+      locale: 'es-ES', target: { kind: 'issue', number: 8 }, correlationId: 'comment:81',
+      results: [new Result({
+        id: 'Comment.Command', success: false, executed: false,
+        errors: [new ApplicationError('validation.invalid-input', 'Raw parser detail.')],
+      })],
+    });
+
+    expect(intent).toMatchObject({ messageKey: 'application-error', projection: {
+      kind: 'application-error', error: { code: 'validation.invalid-input' },
+    } });
+    const body = renderSemanticReply(intent);
+    expect(body).toContain('## No se pudo completar la solicitud');
+    expect(body).toContain('**Código de error:** `validation.invalid-input`');
+    expect(body).toContain('**Acción:** Corrige la entrada');
+    expect(body).not.toContain('Raw parser detail.');
+  });
+
+  it('uses the atomic English fallback for a request-translation failure', () => {
+    const [intent] = selectSemanticReplyIntents({
+      locale: 'es-ES', target: { kind: 'pull-request', number: 8 }, correlationId: 'comment:82',
+      results: [new Result({
+        id: 'Comment.Language', success: false, executed: true,
+        errors: [new ApplicationError('locale.translation-failed', 'Provider detail.')],
+      })],
+    });
+
+    const body = renderSemanticReply(intent);
+    expect(body).toContain('## Request could not be completed');
+    expect(body).toContain('**Error code:** `locale.translation-failed`');
+    expect(body).toContain('Rephrase the request');
+    expect(body).not.toContain('No se pudo completar');
+    expect(body).not.toContain('Provider detail.');
+  });
+
+  it('keeps background failures quiet and gives a successful explicit reply precedence', () => {
+    const failure = new Result({
+      id: 'Failure', success: false, executed: true,
+      errors: [new ApplicationError('workflow.failed', 'Producer detail.')],
+    });
+    expect(selectSemanticReplyIntents({
+      locale: 'en-US', target: { kind: 'issue', number: 8 }, correlationId: 'event:abc12345',
+      results: [failure],
+    })).toEqual([]);
+
+    const replies = selectSemanticReplyIntents({
+      locale: 'en-US', target: { kind: 'issue', number: 8 }, correlationId: 'comment:83',
+      results: [failure, new Result({
+        id: 'Help', success: true, executed: true,
+        payload: { publication: { kind: 'help', botLogin: 'vypbot' } },
+      })],
+    });
+    expect(replies).toHaveLength(1);
+    expect(replies[0].messageKey).toBe('copilot-help');
+  });
+
+  it('selects at most one primary reply when several legacy results are publishable', () => {
+    const replies = selectSemanticReplyIntents({
+      locale: 'en-US', target: { kind: 'issue', number: 8 }, correlationId: 'comment:84',
+      results: [
+        new Result({
+          id: 'Help', success: true, executed: true,
+          payload: { publication: { kind: 'help', botLogin: 'vypbot' } },
+        }),
+        new Result({
+          id: 'Answer', success: true, executed: true,
+          payload: { publication: { kind: 'direct-answer', answer: 'Second answer.' } },
+        }),
+      ],
+    });
+
+    expect(replies).toHaveLength(1);
+    expect(replies[0].messageKey).toBe('copilot-help');
   });
 
   it('renders the English access-policy fallback', () => {
