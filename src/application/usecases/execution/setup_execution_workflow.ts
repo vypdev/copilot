@@ -33,7 +33,9 @@ export async function runSetupExecution(
     setGlobalLoggerDebug(context.debug, context.local);
     const tokenUser = await loadTokenUser(context, dependencies.organizationSetupPort);
     const issueResolution = await resolveExecutionIssueNumber(context, dependencies.issueSetupPort);
-    if (issueResolution.issueNumber === undefined) {
+    const canConfigureUnlinkedPullRequest = context.isPullRequest
+        && positiveIssueNumberOrUndefined(context.pullRequest.number) !== undefined;
+    if (issueResolution.issueNumber === undefined && !canConfigureUnlinkedPullRequest) {
         return { status: 'issue-unresolved', tokenUser, issueResolution };
     }
 
@@ -42,11 +44,13 @@ export async function runSetupExecution(
         issueResolution.issueNumber,
         dependencies.configurationPort,
     );
-    const currentIssueLabels = await loadIssueLabels(
-        context,
-        issueResolution.issueNumber,
-        dependencies.issueSetupPort,
-    );
+    const currentIssueLabels = issueResolution.issueNumber === undefined
+        ? []
+        : await loadIssueLabels(
+            context,
+            issueResolution.issueNumber,
+            dependencies.issueSetupPort,
+        );
     let release: SetupReleaseState = {
         ...context.release,
         active: currentIssueLabels.includes(context.labelNames.release),
@@ -86,7 +90,7 @@ export async function runSetupExecution(
     };
     let currentPullRequestLabels = [...context.currentPullRequestLabels];
 
-    if (context.isIssue && !context.isSingleAction) {
+    if (context.isIssue && !context.isSingleAction && issueResolution.issueNumber !== undefined) {
         const resolution = await dependencies.branchVersionResolver.resolve({
             issueNumber: issueResolution.issueNumber,
             release,
@@ -163,7 +167,7 @@ async function loadTokenUser(
 
 async function loadPreviousConfiguration(
     context: SetupExecutionContext,
-    resolvedIssueNumber: number,
+    resolvedIssueNumber: number | undefined,
     configurationPort: SetupConfigurationQueryPort,
 ) {
     const issueNumber = configurationIssueNumber(context, resolvedIssueNumber);
@@ -186,7 +190,7 @@ async function loadIssueLabels(
 
 function configurationIssueNumber(
     context: SetupExecutionContext,
-    resolvedIssueNumber: number,
+    resolvedIssueNumber: number | undefined,
 ): number | undefined {
     if (context.isSingleAction || context.isPush) return positiveIssueNumberOrUndefined(resolvedIssueNumber);
     if (context.isIssue) return positiveIssueNumberOrUndefined(context.issue.number);
@@ -229,6 +233,6 @@ function setupState(
     };
 }
 
-function positiveIssueNumberOrUndefined(value: number): number | undefined {
-    return value > 0 && Number.isSafeInteger(value) ? value : undefined;
+function positiveIssueNumberOrUndefined(value: unknown): number | undefined {
+    return typeof value === 'number' && value > 0 && Number.isSafeInteger(value) ? value : undefined;
 }

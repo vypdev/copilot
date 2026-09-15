@@ -1,9 +1,9 @@
 /**
- * Prompt for generating PR description from issue and diff (UpdatePullRequestDescriptionUseCase).
+ * Prompt for generating a concise PR description from an optional issue and the diff.
  */
 import { fillTemplate } from './fill';
 
-const TEMPLATE = `You are in the repository workspace. Your task is to produce a pull request description by filling the project's PR template with information from the branch diff and the issue.
+const TEMPLATE = `You are in the repository workspace. Your task is to write a concise, review-ready pull request description from the branch diff and any linked issue.
 
 Write every human-readable sentence in {{targetLocale}}. Preserve code identifiers, paths, refs, commands, URLs, issue/PR references, and conventional title prefixes verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
 
@@ -14,20 +14,15 @@ Write every human-readable sentence in {{targetLocale}}. Preserve code identifie
 - **Head (source) branch:** \`{{headBranch}}\`
 
 **Instructions:**
-1. Read the pull request template file: \`.github/pull_request_template.md\`. Use its structure (headings, bullet lists, separators) as the skeleton for your output. The checkboxes in the template are **indicative only**: you may check the ones that apply based on the project and the diff, define different or fewer checkboxes if that fits better, or omit a section entirely if it does not apply.
-2. Get the full diff by running: \`git diff {{baseBranch}}..{{headBranch}}\` (or \`git diff {{baseBranch}}...{{headBranch}}\` for merge-base). Use the diff to understand what changed.
+1. Read \`.github/pull_request_template.md\` as content guidance and repository-specific constraints. Do not reproduce empty placeholder sections or treat every heading as mandatory.
+2. Get the full merge-base diff with \`git diff {{baseBranch}}...{{headBranch}}\`. Use it to understand the behavior and contracts that changed.
 3. Use the issue description below for context and intent.
-4. Fill each section of the template with concrete content derived from the diff and the issue. Keep the same markdown structure (headings, horizontal rules). For checkbox sections (e.g. Test Coverage, Deployment Notes, Security): use the template's options as guidance; check or add only the items that apply, or skip the section if it does not apply.
-   - **Summary:** brief explanation of what the PR does and why (intent, not implementation details).
-   - **Related Issues:** {{relatedIssueInstruction}}
-   - **Scope of Changes:** use Added / Updated / Removed / Refactored with short bullet points (high level, not file-by-file).
-   - **Technical Details:** important decisions, trade-offs, or non-obvious aspects.
-   - **How to Test:** steps a reviewer can follow (infer from the changes when possible).
-   - **Test Coverage / Deployment / Security / Performance / Checklist:** treat checkboxes as indicative; check the ones that apply from the diff and project context, or omit the section if it does not apply.
-   - **Breaking Changes:** list any, or "None".
-   - **Notes for Reviewers / Additional Context:** fill only if useful; otherwise a short placeholder or omit.
-5. Do not output a single compact paragraph. Output the full filled template so the PR description is well-structured and easy to scan. Preserve the template's formatting (headings with # and ##, horizontal rules). Use checkboxes \`- [ ]\` / \`- [x]\` only where they add value; you may simplify or drop a section if it does not apply.
-6. **Output format:** Return one JSON object with \`outputLocale\` and \`description\`. Put only the filled template content in \`description\`; do not add any preamble, meta-commentary, or framing phrases (e.g. "Based on my analysis...", "After reviewing the diff...", "Here is the description..."). Start \`description\` directly with the first heading of the template (e.g. # Summary). Do not wrap it in code blocks.
+4. Provide \`overview\` as one to three sentences that state the outcome and why it matters.
+5. Provide \`whatChangedHeading\` as the plain-text {{targetLocale}} equivalent of "What changed" and \`changes\` as two to six short, outcome-oriented items. Do not inventory files, use-case names, internal categories, or every implementation step.
+6. Provide \`validationHeading\` as the plain-text {{targetLocale}} equivalent of "Validation" and \`validation\` with only commands, automated checks, or manual scenarios supported by available evidence. Never claim a check passed unless the evidence says it did, and never infer that result from the presence of test files or commands. When no execution evidence is available, say concisely in {{targetLocale}} that validation was not run or was not available.
+7. Set \`reviewNotesHeading\` and \`reviewNotes\` to \`null\` unless reviewers need material migration, security, performance, compatibility, rollout, manual-verification, risk, or follow-up context. Otherwise use the localized plain-text heading and one to four concise items. {{relatedIssueInstruction}}
+8. Keep the description practical and normally under 4,000 characters. It must never exceed 12,000 characters. Do not use emoji, horizontal separators, generic checklists, empty headings, repeated statements, placeholder text, or unsupported "no impact" claims.
+9. Return one JSON object with exactly \`outputLocale\`, \`overview\`, \`whatChangedHeading\`, \`changes\`, \`validationHeading\`, \`validation\`, \`reviewNotesHeading\`, \`reviewNotes\`, and \`closesLinkedIssue\`. Every content field is plain text except Markdown links, code spans, refs, and commands inside content values. The application renders the Markdown structure; do not include headings, bullet prefixes, a preamble, meta-commentary, or code fence in the values.
 
 **Issue description:**
 {{issueDescription}}

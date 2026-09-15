@@ -73,7 +73,7 @@ export async function mainRun(
         return runTrackedRoute(execution, 'single-action', () => runTokenExecution(execution, routeHandlers), undefined, agentActivityUseCase);
     }
 
-    if (execution.issueNumber === -1) {
+    if (execution.issueNumber === -1 && !execution.isPullRequest) {
         return runTrackedRoute(execution, 'single-action', () => runNoIssueExecution(execution, routeHandlers), undefined, agentActivityUseCase);
     }
 

@@ -19,9 +19,9 @@ describe('setup configuration policy', () => {
         const configuration = createDefaultSetupConfiguration();
         const plan = buildSetupPlan(configuration);
 
-        expect(plan.workflowFiles).toHaveLength(11);
+        expect(plan.workflowFiles).toHaveLength(13);
         expect(plan.issueTemplateFiles).toHaveLength(8);
-        expect(plan.selectedFiles).toHaveLength(20);
+        expect(plan.selectedFiles).toHaveLength(22);
         expect(plan.variables).toEqual(expect.arrayContaining([
             { name: 'AGENT_PROVIDER', value: 'codex' },
             { name: 'AGENT_ALLOWED_MODELS', value: 'openai/gpt-5.6-luna' },
@@ -88,11 +88,13 @@ describe('setup configuration policy', () => {
         expect(plan.workflowFiles).toEqual(expect.arrayContaining([
             'copilot_issue.yml',
             'copilot_pull_request.yml',
+            'copilot_pull_request_review_state.yml',
+            'copilot_pull_request_merge_queue.yml',
             'copilot_commit.yml',
             'copilot_branch_sync.yml',
         ]));
         expect(plan.workflowFiles).not.toContain('release_workflow.yml');
-        expect(plan.selectedFiles).toHaveLength(7);
+        expect(plan.selectedFiles).toHaveLength(9);
     });
 
     it('keeps inactivity closure opt-in and wires its threshold when enabled', () => {

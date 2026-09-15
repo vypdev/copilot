@@ -13,18 +13,19 @@ Example `.github/workflows/copilot_pull_request.yml` with common inputs:
 
 ```yaml
 name: Copilot - Pull Request
+run-name: Copilot PR · ${{ github.event_name }}:${{ github.event.action }}
 
 on:
   pull_request:
-    types: [opened, reopened, edited, closed, synchronize]
+    types: [opened, reopened, closed, synchronize]
 
 jobs:
   copilot-pull-requests:
     name: Copilot - Pull Request
     runs-on: ubuntu-latest
     concurrency:
-      group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}
-      cancel-in-progress: ${{ github.event_name != 'pull_request' || github.event.action != 'edited' }}
+      group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-analysis
+      cancel-in-progress: true
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5
@@ -59,11 +60,69 @@ jobs:
           debug: ${{ vars.DEBUG }}
 ```
 
+Keep review-state observation in the shipped
+`copilot_pull_request_review_state.yml` companion. Its fixed workflow and job
+name remains readable even when a bot-authored review is skipped before the job
+starts:
+
+```yaml
+name: Copilot - Pull Request Review State
+run-name: Copilot PR review · ${{ github.event_name }}:${{ github.event.action }}
+
+on:
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+
+jobs:
+  copilot-pull-request-review-state:
+    name: Copilot - Pull Request Review State
+    runs-on: ubuntu-latest
+    concurrency:
+      group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-review-state
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: vypdev/copilot@v3
+        with:
+          token: ${{ secrets.PAT }}
+```
+
 - **`token`** is required. Use a fine-grained PAT with repo and project permissions.
 - **`project-ids`**: Comma-separated project IDs so PRs are linked and moved to the right column.
 - **`project-column-*`**: Column names in your GitHub Project (must match exactly).
 - **`desired-reviewers-count`**: Number of reviewers to assign (e.g. 1).
 - **`commit-prefix-transforms`**: Transforms for commit prefix derived from branch name (e.g. `replace-slash` for `feature/123` → `feature-123`).
+
+## Merge queue companion workflow
+
+When branch protection requires `Copilot - Pull Request`, keep merge-group
+support in a separate file so normal PR runs do not show a skipped duplicate:
+
+```yaml
+name: Copilot - Pull Request Merge Queue
+run-name: Copilot PR · ${{ github.event_name }}:${{ github.event.action }}
+
+on:
+  merge_group:
+    types: [checks_requested]
+
+jobs:
+  copilot-pull-request-required-check:
+    name: Copilot - Pull Request
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
+    steps:
+      - name: Confirm merge-group compatibility
+        run: echo "Copilot PR analysis already ran on each constituent pull request."
+```
+
+The workflow name and run name make the merge-group event recognizable. The job
+name deliberately matches normal PR analysis because GitHub required checks use
+that exact context.
 
 ## Example: AI PR description only
 
@@ -92,7 +151,7 @@ jobs:
           agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
 ```
 
-A linked issue with a non-empty description enriches the generated result, but it is **optional**. PRs without a linked issue are supported; the branch diff and repository template still provide the description context. See [AI PR description](/pull-requests/ai-description).
+A linked issue description enriches the generated result when present, but it is **optional**. Empty issue descriptions and PRs without a linked issue are supported; the PR metadata, branch diff, and repository template still provide context. See [AI PR description](/pull-requests/ai-description).
 
 ## Example: Project columns and reviewers
 

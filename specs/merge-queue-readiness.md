@@ -4,7 +4,7 @@
   complete; clean-tree bundle validation and controlled live queue validation
   remain external completion gates
 - Date: 2026-09-10
-- Last updated: 2026-09-14
+- Last updated: 2026-09-15
 - Owners: `vypdev/copilot` product and engineering maintainers
 - Scope: discover the effective merge policy of every deployment target and
   prevent a managed pull request from entering an unusable merge queue.
@@ -102,6 +102,10 @@ longer exhibit these behaviors.
 - A local YAML contract spike mapped those contexts uniquely to
   `.github/workflows/ci_check.yml` and `.github/workflows/repowise.yml`; both
   explicitly declare `merge_group: checks_requested`.
+- Copilot's own required PR context is produced for merge groups by the
+  dedicated `copilot_pull_request_merge_queue.yml` workflow. Keeping that
+  lightweight producer separate avoids a skipped duplicate check on every
+  normal PR while retaining the exact `Copilot - Pull Request` context.
 - `master` has no effective `merge_queue` rule and `develop` currently has no
   effective rules. Consequently PR #358 is not presently exposed to this
   failure, although the implementation defect remains real for configured

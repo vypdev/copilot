@@ -525,6 +525,26 @@ describe('Execution', () => {
       expect(mockConfigGet).toHaveBeenCalledWith(314);
     });
 
+    it('configures an unlinked pull request without using the PR as its own issue', async () => {
+      const pullRequest = makePullRequest({
+        eventName: 'pull_request',
+        repo: { owner: 'owner', repo: 'repository' },
+        pull_request: { number: 314, head: { ref: 'codex/pr-enrichment-ux' }, base: { ref: 'develop' } },
+      } as never);
+      const e = buildExecution({
+        eventName: 'pull_request',
+        repo: { owner: 'owner', repo: 'repository' },
+        pull_request: { number: 314, head: { ref: 'codex/pr-enrichment-ux' }, base: { ref: 'develop' } },
+      } as never, { pullRequest });
+
+      await setupExecution(e);
+
+      expect(e.issueNumber).toBe(-1);
+      expect(mockConfigGet).toHaveBeenCalledWith(314);
+      expect(mockGetLabels).toHaveBeenCalledTimes(1);
+      expect(mockGetLabels).toHaveBeenCalledWith(314);
+    });
+
     it('sets up a PR conversation comment from its exact payload number', async () => {
       const e = buildExecution({
         eventName: 'issue_comment',

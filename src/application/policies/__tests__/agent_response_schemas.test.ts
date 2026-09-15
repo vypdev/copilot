@@ -32,4 +32,20 @@ describe('production agent response schemas', () => {
         expect(schema.required).toContain('outputLocale');
         expect(schema.properties.outputLocale).toMatchObject({ type: 'string', maxLength: 255 });
     });
+
+    it('bounds pull-request descriptions as structured reviewer content', () => {
+        expect(PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA.properties.overview).toMatchObject({
+            minLength: 1,
+            maxLength: 1_500,
+        });
+        expect(PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA.properties.changes).toMatchObject({
+            minItems: 2,
+            maxItems: 6,
+        });
+        expect(PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA.properties.validation).toMatchObject({
+            minItems: 1,
+            maxItems: 8,
+        });
+        expect(PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA.required).toContain('closesLinkedIssue');
+    });
 });

@@ -1,11 +1,13 @@
 # Execution Admission, Queueing, Routing, and Result Publication
 
 - Status: As-built baseline with implemented review-evidence ownership hardening
-- Date: 2026-09-11
+- Date: 2026-09-15
+- Last verified: 2026-09-15 on `develop` plus PR workflow UX implementation branch
 - Owners: Copilot maintainers
 - Scope: the shared GitHub Action lifecycle from an incoming event to visible results and persisted execution state
 - Related issues/PRs: architecture quality and scalability hardening SDD;
-  [PR #363](https://github.com/vypdev/copilot/pull/363); historic motivation
+  [PR #363](https://github.com/vypdev/copilot/pull/363);
+  [PR #378](https://github.com/vypdev/copilot/pull/378); historic motivation
   before that live evidence is not recoverable from repository evidence
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none for the baseline; see known debt and limitations
@@ -55,8 +57,9 @@ create inconsistent authorization and failure behavior.
 6. Results reconcile lifecycle/activity labels and are published to the target,
    Job Summary, optional semantic Check Run, and configuration marker as
    applicable. A PR result without exact-head Bugbot telemetry publishes no
-   `Copilot / Review` Check. A `pull_request: edited` result uses the native
-   workflow and Job Summary only, never a generic conversation comment.
+   `Copilot / Review` Check. The supplied PR workflow does not subscribe to
+   metadata-only `pull_request: edited`, so an automated body update cannot
+   create another admission/publication cycle.
 7. The first executed result error, malformed canonical finding-state evidence,
    an unknown Bugbot state, or configured unresolved findings marks the Action
    failed.

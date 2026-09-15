@@ -5,6 +5,7 @@ import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
 import { toApplicationError } from "../../../errors/application_error";
 import type { CloseIssueAfterMergeContext } from '../../issue_workflow_context';
+import { parsePositiveSafeInteger } from '../../../../domain/positive_integer_policy';
 
 export class CloseIssueAfterMergingUseCase implements ParamUseCase<CloseIssueAfterMergeContext, Result[]> {
     taskId: string = 'CloseIssueAfterMergingUseCase';
@@ -15,7 +16,8 @@ export class CloseIssueAfterMergingUseCase implements ParamUseCase<CloseIssueAft
         logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`)
 
         const result: Result[] = []
-        if (param.issueNumber <= 0) {
+        const linkedIssueNumber = parsePositiveSafeInteger(param.issueNumber);
+        if (!linkedIssueNumber || linkedIssueNumber === param.pullRequestNumber) {
             logDebugInfo('CloseIssueAfterMerging: no issue was inferred from the pull-request branch; skipping issue closure.');
             return [new Result({
                 id: this.taskId,
@@ -25,21 +27,21 @@ export class CloseIssueAfterMergingUseCase implements ParamUseCase<CloseIssueAft
             })];
         }
         try {
-            const closed = await this.issueRepository.closeIssue(param.issueNumber);
+            const closed = await this.issueRepository.closeIssue(linkedIssueNumber);
             if (closed) {
-                logInfo(`Issue #${param.issueNumber} closed after merging PR #${param.pullRequestNumber}.`);
+                logInfo(`Issue #${linkedIssueNumber} closed after merging PR #${param.pullRequestNumber}.`);
                 result.push(
                     new Result({
                         id: this.taskId,
                         success: true,
                         executed: true,
                         steps: [
-                            `#${param.issueNumber} was automatically closed after merging this pull request.`
+                            `#${linkedIssueNumber} was automatically closed after merging this pull request.`
                         ]
                     })
                 );
             } else {
-                logDebugInfo(`Issue #${param.issueNumber} was already closed or close failed after merge.`);
+                logDebugInfo(`Issue #${linkedIssueNumber} was already closed or close failed after merge.`);
                 result.push(
                     new Result({
                         id: this.taskId,
@@ -50,7 +52,7 @@ export class CloseIssueAfterMergingUseCase implements ParamUseCase<CloseIssueAft
             }
 
         } catch (error) {
-            const semanticError = toApplicationError(error, 'provider.unavailable', `Unable to close issue #${param.issueNumber}.`);
+            const semanticError = toApplicationError(error, 'provider.unavailable', `Unable to close issue #${linkedIssueNumber}.`);
             logError(semanticError);
             result.push(
                 new Result({
@@ -58,7 +60,7 @@ export class CloseIssueAfterMergingUseCase implements ParamUseCase<CloseIssueAft
                     success: false,
                     executed: true,
                     steps: [
-                        `Tried to close issue #${param.issueNumber}, but there was a problem.`,
+                        `Tried to close issue #${linkedIssueNumber}, but there was a problem.`,
                     ],
                     errors: [semanticError],
                 })

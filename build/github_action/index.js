@@ -38921,7 +38921,7 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, c
     if (execution.runnedByToken) {
         return runTrackedRoute(execution, 'single-action', () => (0, main_run_lifecycle_1.runTokenExecution)(execution, routeHandlers), undefined, agentActivityUseCase);
     }
-    if (execution.issueNumber === -1) {
+    if (execution.issueNumber === -1 && !execution.isPullRequest) {
         return runTrackedRoute(execution, 'single-action', () => (0, main_run_lifecycle_1.runNoIssueExecution)(execution, routeHandlers), undefined, agentActivityUseCase);
     }
     (0, main_run_lifecycle_1.logWelcomeMessage)(execution);
@@ -42268,14 +42268,49 @@ exports.PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA = {
     type: 'object',
     properties: {
         outputLocale: agent_output_locale_policy_1.AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
-        description: {
+        overview: {
             type: 'string',
             minLength: 1,
-            maxLength: 60000,
-            description: 'The complete Markdown pull-request description body.',
+            maxLength: 1500,
+            description: 'One to three sentences describing the outcome and why it matters.',
+        },
+        whatChangedHeading: { type: 'string', minLength: 1, maxLength: 100 },
+        changes: {
+            type: 'array',
+            minItems: 2,
+            maxItems: 6,
+            items: { type: 'string', minLength: 1, maxLength: 1000 },
+        },
+        validationHeading: { type: 'string', minLength: 1, maxLength: 100 },
+        validation: {
+            type: 'array',
+            minItems: 1,
+            maxItems: 8,
+            items: { type: 'string', minLength: 1, maxLength: 1000 },
+        },
+        reviewNotesHeading: { type: ['string', 'null'], minLength: 1, maxLength: 100 },
+        reviewNotes: {
+            type: ['array', 'null'],
+            minItems: 1,
+            maxItems: 4,
+            items: { type: 'string', minLength: 1, maxLength: 1000 },
+        },
+        closesLinkedIssue: {
+            type: 'boolean',
+            description: 'Whether this PR fully resolves the separate linked issue supplied by the application.',
         },
     },
-    required: ['outputLocale', 'description'],
+    required: [
+        'outputLocale',
+        'overview',
+        'whatChangedHeading',
+        'changes',
+        'validationHeading',
+        'validation',
+        'reviewNotesHeading',
+        'reviewNotes',
+        'closesLinkedIssue',
+    ],
     additionalProperties: false,
 };
 /** @deprecated Retained for API compatibility; runtime adaptation uses one combined schema. */
@@ -46349,6 +46384,189 @@ exports.ENGLISH_PUBLICATION_CATALOG = toPublicationCatalog(Object.freeze({
 exports.SPANISH_PUBLICATION_CATALOG = toPublicationCatalog(Object.freeze({
     requestedLocale: 'es-ES', resolvedLocale: 'es-ES', source: 'exact', messages: SPANISH_MESSAGES,
 }));
+
+
+/***/ }),
+
+/***/ 43268:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MAX_PULL_REQUEST_DESCRIPTION_LENGTH = void 0;
+exports.renderPullRequestDescriptionContent = renderPullRequestDescriptionContent;
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+exports.MAX_PULL_REQUEST_DESCRIPTION_LENGTH = 12000;
+const CONTENT_KEYS = Object.freeze([
+    'outputLocale',
+    'overview',
+    'whatChangedHeading',
+    'changes',
+    'validationHeading',
+    'validation',
+    'reviewNotesHeading',
+    'reviewNotes',
+    'closesLinkedIssue',
+]);
+const SORTED_CONTENT_KEYS = Object.freeze([...CONTENT_KEYS].sort());
+/** Turns structured, untrusted agent content into one predictable review surface. */
+function renderPullRequestDescriptionContent(payload, targetLocale, linkedIssueNumber) {
+    const parsed = parseContent(payload);
+    if (!parsed)
+        return { kind: 'invalid', reason: 'shape' };
+    const safeLinkedIssueNumber = typeof linkedIssueNumber === 'number'
+        && Number.isSafeInteger(linkedIssueNumber)
+        && linkedIssueNumber > 0
+        ? linkedIssueNumber
+        : undefined;
+    if (parsed.closesLinkedIssue && safeLinkedIssueNumber === undefined) {
+        return { kind: 'invalid', reason: 'shape' };
+    }
+    const rawContent = [
+        parsed.overview,
+        parsed.whatChangedHeading,
+        parsed.validationHeading,
+        ...parsed.changes,
+        ...parsed.validation,
+        ...(parsed.reviewNotesHeading ? [parsed.reviewNotesHeading] : []),
+        ...(parsed.reviewNotes ?? []),
+    ];
+    if (rawContent.some(hasForbiddenMarkdown)) {
+        return { kind: 'invalid', reason: 'unsafe-markdown' };
+    }
+    const overview = sanitizeBlock(parsed.overview);
+    const whatChangedHeading = sanitizeInline(parsed.whatChangedHeading);
+    const validationHeading = sanitizeInline(parsed.validationHeading);
+    const changes = parsed.changes.map(sanitizeInline);
+    const validation = parsed.validation.map(sanitizeInline);
+    const reviewNotesHeading = parsed.reviewNotesHeading === null
+        ? null
+        : sanitizeInline(parsed.reviewNotesHeading);
+    const reviewNotes = parsed.reviewNotes?.map(sanitizeInline) ?? null;
+    const allContent = [
+        overview,
+        whatChangedHeading,
+        validationHeading,
+        ...changes,
+        ...validation,
+        ...(reviewNotesHeading ? [reviewNotesHeading] : []),
+        ...(reviewNotes ?? []),
+    ];
+    if (allContent.some(value => !value || hasForbiddenMarkdown(value))) {
+        return { kind: 'invalid', reason: 'unsafe-markdown' };
+    }
+    if (sentenceCount(overview, targetLocale) > 3) {
+        return { kind: 'invalid', reason: 'sentence-count' };
+    }
+    if (hasDuplicates(changes, targetLocale)
+        || hasDuplicates(validation, targetLocale)
+        || (reviewNotes && hasDuplicates(reviewNotes, targetLocale))) {
+        return { kind: 'invalid', reason: 'duplicate-item' };
+    }
+    const sections = [
+        overview,
+        `## ${whatChangedHeading}\n\n${renderList(changes)}`,
+        `## ${validationHeading}\n\n${renderList(validation)}`,
+    ];
+    if (reviewNotesHeading && reviewNotes) {
+        sections.push(`## ${reviewNotesHeading}\n\n${renderList(reviewNotes)}`);
+    }
+    if (parsed.closesLinkedIssue && safeLinkedIssueNumber !== undefined) {
+        sections.push(`Closes #${safeLinkedIssueNumber}`);
+    }
+    const markdown = sections.join('\n\n');
+    return markdown.length <= exports.MAX_PULL_REQUEST_DESCRIPTION_LENGTH
+        ? { kind: 'valid', markdown }
+        : { kind: 'invalid', reason: 'body-too-long' };
+}
+function parseContent(payload) {
+    const keys = Object.keys(payload).sort();
+    if (keys.length !== CONTENT_KEYS.length
+        || keys.some((key, index) => key !== SORTED_CONTENT_KEYS[index])) {
+        return undefined;
+    }
+    const changes = stringArray(payload.changes, 2, 6);
+    const validation = stringArray(payload.validation, 1, 8);
+    if (typeof payload.overview !== 'string'
+        || payload.overview.length > 1500
+        || typeof payload.whatChangedHeading !== 'string'
+        || payload.whatChangedHeading.length > 100
+        || typeof payload.validationHeading !== 'string'
+        || payload.validationHeading.length > 100
+        || !changes
+        || !validation
+        || typeof payload.closesLinkedIssue !== 'boolean') {
+        return undefined;
+    }
+    let reviewNotes;
+    let reviewNotesHeading;
+    if (payload.reviewNotes === null) {
+        if (payload.reviewNotesHeading !== null)
+            return undefined;
+        reviewNotes = null;
+        reviewNotesHeading = null;
+    }
+    else {
+        const parsedReviewNotes = stringArray(payload.reviewNotes, 1, 4);
+        if (!parsedReviewNotes
+            || typeof payload.reviewNotesHeading !== 'string'
+            || payload.reviewNotesHeading.length > 100)
+            return undefined;
+        reviewNotes = parsedReviewNotes;
+        reviewNotesHeading = payload.reviewNotesHeading;
+    }
+    return {
+        overview: payload.overview,
+        whatChangedHeading: payload.whatChangedHeading,
+        changes,
+        validationHeading: payload.validationHeading,
+        validation,
+        reviewNotesHeading,
+        reviewNotes,
+        closesLinkedIssue: payload.closesLinkedIssue,
+    };
+}
+function stringArray(value, minimum, maximum) {
+    return Array.isArray(value)
+        && value.length >= minimum
+        && value.length <= maximum
+        && value.every(item => typeof item === 'string' && item.length <= 1000)
+        ? value
+        : undefined;
+}
+function sanitizeBlock(value) {
+    return (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(value, 1500).trim().replace(/\s*\n\s*/gu, ' ');
+}
+function sanitizeInline(value) {
+    return (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(value, 1000)
+        .trim()
+        .replace(/^[-*+]\s+/u, '')
+        .replace(/\s+/gu, ' ');
+}
+function hasForbiddenMarkdown(value) {
+    return /\p{Extended_Pictographic}/u.test(value)
+        || /(^|\n)\s*#{1,6}\s/u.test(value)
+        || /(^|\n)\s*(?:-{3,}|\*{3,}|_{3,})\s*($|\n)/u.test(value)
+        || /(^|\n)\s*(?:[-*+]\s+)?\[[ xX]\]\s/u.test(value);
+}
+function sentenceCount(value, locale) {
+    const Segmenter = Intl.Segmenter;
+    if (Segmenter) {
+        return Array.from(new Segmenter(locale, { granularity: 'sentence' }).segment(value))
+            .filter(part => part.segment.trim().length > 0)
+            .length;
+    }
+    const terminalGroups = value.match(/[.!?。！？]+(?=\s|$)/gu)?.length ?? 0;
+    return Math.max(1, terminalGroups);
+}
+function hasDuplicates(values, locale) {
+    const normalized = values.map(value => value.toLocaleLowerCase(locale).trim());
+    return new Set(normalized).size !== normalized.length;
+}
+function renderList(values) {
+    return values.map(value => `- ${value}`).join('\n');
+}
 
 
 /***/ }),
@@ -51814,6 +52032,11 @@ function resolveEventIssueNumber(context) {
         if (['check_suite', 'workflow_run'].includes(context.eventName)) {
             issueNumber = positiveIssueNumberOrUndefined(context.pullRequest.number);
         }
+        else if (['pull_request', 'pull_request_review'].includes(context.eventName)) {
+            const pullRequestNumber = positiveIssueNumberOrUndefined(context.pullRequest.number);
+            const branchIssueNumber = positiveIssueNumberOrUndefined((0, title_utils_1.extractIssueNumberFromBranch)(context.pullRequest.head));
+            issueNumber = branchIssueNumber === pullRequestNumber ? undefined : branchIssueNumber;
+        }
         else {
             issueNumber = positiveIssueNumberOrUndefined((0, title_utils_1.extractIssueNumberFromBranch)(context.pullRequest.head))
                 ?? positiveIssueNumberOrUndefined(context.pullRequest.number);
@@ -51993,11 +52216,15 @@ async function runSetupExecution(context, dependencies) {
     (0, logging_ports_1.setGlobalLoggerDebug)(context.debug, context.local);
     const tokenUser = await loadTokenUser(context, dependencies.organizationSetupPort);
     const issueResolution = await (0, resolve_execution_issue_number_1.resolveExecutionIssueNumber)(context, dependencies.issueSetupPort);
-    if (issueResolution.issueNumber === undefined) {
+    const canConfigureUnlinkedPullRequest = context.isPullRequest
+        && positiveIssueNumberOrUndefined(context.pullRequest.number) !== undefined;
+    if (issueResolution.issueNumber === undefined && !canConfigureUnlinkedPullRequest) {
         return { status: 'issue-unresolved', tokenUser, issueResolution };
     }
     const previousConfiguration = await loadPreviousConfiguration(context, issueResolution.issueNumber, dependencies.configurationPort);
-    const currentIssueLabels = await loadIssueLabels(context, issueResolution.issueNumber, dependencies.issueSetupPort);
+    const currentIssueLabels = issueResolution.issueNumber === undefined
+        ? []
+        : await loadIssueLabels(context, issueResolution.issueNumber, dependencies.issueSetupPort);
     let release = {
         ...context.release,
         active: currentIssueLabels.includes(context.labelNames.release),
@@ -52031,7 +52258,7 @@ async function runSetupExecution(context, dependencies) {
         hotfixBranch: restored.hotfixBranch,
     };
     let currentPullRequestLabels = [...context.currentPullRequestLabels];
-    if (context.isIssue && !context.isSingleAction) {
+    if (context.isIssue && !context.isSingleAction && issueResolution.issueNumber !== undefined) {
         const resolution = await dependencies.branchVersionResolver.resolve({
             issueNumber: issueResolution.issueNumber,
             release,
@@ -52124,7 +52351,7 @@ function setupState(previousConfiguration, currentIssueLabels, currentPullReques
     };
 }
 function positiveIssueNumberOrUndefined(value) {
-    return value > 0 && Number.isSafeInteger(value) ? value : undefined;
+    return typeof value === 'number' && value > 0 && Number.isSafeInteger(value) ? value : undefined;
 }
 
 
@@ -59369,6 +59596,7 @@ exports.runPullRequestTitleUpdate = runPullRequestTitleUpdate;
 exports.titleUpdateFailure = titleUpdateFailure;
 const result_1 = __nccwpck_require__(73817);
 const application_error_1 = __nccwpck_require__(75999);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
 function projectUpdateTitleContext(source) {
     if (source.isIssue) {
         return Object.freeze({
@@ -59417,14 +59645,18 @@ async function runIssueTitleUpdate(param, taskId, issueRepository) {
 async function runPullRequestTitleUpdate(param, taskId, issueRepository) {
     if (!param.enabled)
         return [skippedResult(taskId)];
-    const issueTitle = await issueRepository.getTitle(param.issueNumber);
+    const linkedIssueNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(param.issueNumber);
+    if (!linkedIssueNumber || linkedIssueNumber === param.pullRequestNumber) {
+        return [skippedResult(taskId)];
+    }
+    const issueTitle = await issueRepository.getTitle(linkedIssueNumber);
     if (issueTitle === undefined) {
         return [new result_1.Result({ id: taskId, success: false, executed: true, steps: ['Tried to update title, but there was a problem.'] })];
     }
     const title = await issueRepository.updatePullRequestTitle({
         pullRequestTitle: param.pullRequestTitle,
         issueTitle,
-        issueNumber: param.issueNumber,
+        issueNumber: linkedIssueNumber,
         pullRequestNumber: param.pullRequestNumber,
         labelFacts: param.labelFacts,
     });
@@ -59874,6 +60106,7 @@ const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const application_error_1 = __nccwpck_require__(75999);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
 class CloseIssueAfterMergingUseCase {
     constructor(issueRepository) {
         this.issueRepository = issueRepository;
@@ -59882,7 +60115,8 @@ class CloseIssueAfterMergingUseCase {
     async invoke(param) {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
-        if (param.issueNumber <= 0) {
+        const linkedIssueNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(param.issueNumber);
+        if (!linkedIssueNumber || linkedIssueNumber === param.pullRequestNumber) {
             (0, logging_ports_1.logDebugInfo)('CloseIssueAfterMerging: no issue was inferred from the pull-request branch; skipping issue closure.');
             return [new result_1.Result({
                     id: this.taskId,
@@ -59892,20 +60126,20 @@ class CloseIssueAfterMergingUseCase {
                 })];
         }
         try {
-            const closed = await this.issueRepository.closeIssue(param.issueNumber);
+            const closed = await this.issueRepository.closeIssue(linkedIssueNumber);
             if (closed) {
-                (0, logging_ports_1.logInfo)(`Issue #${param.issueNumber} closed after merging PR #${param.pullRequestNumber}.`);
+                (0, logging_ports_1.logInfo)(`Issue #${linkedIssueNumber} closed after merging PR #${param.pullRequestNumber}.`);
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: true,
                     executed: true,
                     steps: [
-                        `#${param.issueNumber} was automatically closed after merging this pull request.`
+                        `#${linkedIssueNumber} was automatically closed after merging this pull request.`
                     ]
                 }));
             }
             else {
-                (0, logging_ports_1.logDebugInfo)(`Issue #${param.issueNumber} was already closed or close failed after merge.`);
+                (0, logging_ports_1.logDebugInfo)(`Issue #${linkedIssueNumber} was already closed or close failed after merge.`);
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: true,
@@ -59914,14 +60148,14 @@ class CloseIssueAfterMergingUseCase {
             }
         }
         catch (error) {
-            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to close issue #${param.issueNumber}.`);
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to close issue #${linkedIssueNumber}.`);
             (0, logging_ports_1.logError)(semanticError);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
                 steps: [
-                    `Tried to close issue #${param.issueNumber}, but there was a problem.`,
+                    `Tried to close issue #${linkedIssueNumber}, but there was a problem.`,
                 ],
                 errors: [semanticError],
             }));
@@ -60974,15 +61208,31 @@ exports.PullRequestIssueLinkOperationError = PullRequestIssueLinkOperationError;
  * from the same immutable webhook payload without trusting an event URL.
  */
 async function runLinkPullRequestIssue(param, taskId, port, delay) {
-    if (!(0, positive_integer_policy_1.parsePositiveSafeInteger)(param.pullRequestNumber)
-        || !(0, positive_integer_policy_1.parsePositiveSafeInteger)(param.issueNumber)
-        || !(0, deployment_configuration_1.isSafeBranchTree)(param.originalBaseBranch)
+    const pullRequestNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(param.pullRequestNumber);
+    const issueNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(param.issueNumber);
+    if (!pullRequestNumber) {
+        return [new result_1.Result({
+                id: taskId,
+                success: false,
+                executed: false,
+                steps: ['Pull-request linkage requires a positive pull-request number.'],
+            })];
+    }
+    if (!issueNumber || issueNumber === pullRequestNumber) {
+        return [new result_1.Result({
+                id: taskId,
+                success: true,
+                executed: false,
+                steps: ['No separate linked issue was inferred; pull-request linkage was skipped.'],
+            })];
+    }
+    if (!(0, deployment_configuration_1.isSafeBranchTree)(param.originalBaseBranch)
         || !(0, deployment_configuration_1.isSafeBranchTree)(param.defaultBranch)) {
         return [new result_1.Result({
                 id: taskId,
                 success: false,
                 executed: false,
-                steps: ['Pull-request linkage requires positive issue/PR numbers and safe non-empty base branches.'],
+                steps: ['Pull-request linkage requires a positive issue number and safe non-empty base branches.'],
             })];
     }
     const pendingMarker = buildPendingMarker(param);
@@ -61151,6 +61401,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const sync_size_and_progress_labels_policy_1 = __nccwpck_require__(65676);
 const application_error_1 = __nccwpck_require__(75999);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
 /**
  * Copies size and progress labels from the linked issue to the PR.
  * Used when a PR is opened so it gets the same size/progress as the issue (corner case:
@@ -61165,7 +61416,8 @@ class SyncSizeAndProgressLabelsFromIssueToPrUseCase {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         try {
-            if (param.issueNumber === -1) {
+            const linkedIssueNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(param.issueNumber);
+            if (!linkedIssueNumber || linkedIssueNumber === param.pullRequestNumber) {
                 (0, logging_ports_1.logDebugInfo)('No issue linked to this PR. Skipping sync of size/progress labels.');
                 result.push(new result_1.Result({
                     id: this.taskId,
@@ -61175,10 +61427,10 @@ class SyncSizeAndProgressLabelsFromIssueToPrUseCase {
                 }));
                 return result;
             }
-            const issueLabels = await this.issueLabelsPort.getLabels(param.issueNumber);
+            const issueLabels = await this.issueLabelsPort.getLabels(linkedIssueNumber);
             const sizeAndProgressFromIssue = (0, sync_size_and_progress_labels_policy_1.selectSizeAndProgressLabels)(issueLabels, param.sizeLabels);
             if (sizeAndProgressFromIssue.length === 0) {
-                (0, logging_ports_1.logDebugInfo)(`Issue #${param.issueNumber} has no size or progress labels. Nothing to sync.`);
+                (0, logging_ports_1.logDebugInfo)(`Issue #${linkedIssueNumber} has no size or progress labels. Nothing to sync.`);
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: true,
@@ -61191,7 +61443,7 @@ class SyncSizeAndProgressLabelsFromIssueToPrUseCase {
             const prLabels = await this.issueLabelsPort.getLabels(prNumber);
             const nextPrLabels = (0, sync_size_and_progress_labels_policy_1.mergeSizeAndProgressLabels)(prLabels, sizeAndProgressFromIssue, param.sizeLabels);
             await this.issueLabelsPort.setLabels(prNumber, nextPrLabels);
-            (0, logging_ports_1.logDebugInfo)(`Synced size/progress labels from issue #${param.issueNumber} to PR #${prNumber}: ${sizeAndProgressFromIssue.join(', ')}`);
+            (0, logging_ports_1.logDebugInfo)(`Synced size/progress labels from issue #${linkedIssueNumber} to PR #${prNumber}: ${sizeAndProgressFromIssue.join(', ')}`);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: true,
@@ -61283,12 +61535,12 @@ const prompts_1 = __nccwpck_require__(69518);
 const logging_ports_1 = __nccwpck_require__(6152);
 const project_context_instruction_1 = __nccwpck_require__(63907);
 const task_emoji_1 = __nccwpck_require__(46103);
-const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const pull_request_description_1 = __nccwpck_require__(45315);
 const application_error_1 = __nccwpck_require__(75999);
 const positive_integer_policy_1 = __nccwpck_require__(19879);
 const agent_response_schemas_1 = __nccwpck_require__(25603);
 const agent_output_locale_policy_1 = __nccwpck_require__(30601);
+const pull_request_description_content_policy_1 = __nccwpck_require__(43268);
 /** Generates and publishes a PR description from an immutable, capability-scoped request. */
 async function runUpdatePullRequestDescriptionWorkflow(request, taskId, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId} (AI PR description).`);
@@ -61311,12 +61563,13 @@ async function runUpdatePullRequestDescriptionWorkflow(request, taskId, dependen
                 })];
         }
         (0, logging_ports_1.logDebugInfo)(`PR description will be generated from workspace diff: base "${branches.baseBranch}", head "${branches.headBranch}" (configured agent will run git diff).`);
-        const issueDescription = context.issueNumber > 0
-            ? (await dependencies.issueDescriptionQueryPort.getDescription(context.issueNumber)) ?? ''
+        const inferredIssueNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(context.issueNumber);
+        const linkedIssueNumber = inferredIssueNumber !== context.pullRequest.number
+            ? inferredIssueNumber
+            : undefined;
+        const issueDescription = linkedIssueNumber
+            ? (await dependencies.issueDescriptionQueryPort.getDescription(linkedIssueNumber)) ?? ''
             : '';
-        if (context.issueNumber > 0 && issueDescription.length === 0) {
-            return skipped(taskId, 'No issue description found. Skipping update pull request description.');
-        }
         const currentProjectMembers = await dependencies.organizationMembersPort.getAllMembers();
         const creatorIsTeamMember = context.pullRequest.creator.length > 0
             && currentProjectMembers.includes(context.pullRequest.creator);
@@ -61327,11 +61580,11 @@ async function runUpdatePullRequestDescriptionWorkflow(request, taskId, dependen
             projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
             baseBranch: branches.baseBranch,
             headBranch: branches.headBranch,
-            issueNumber: context.issueNumber > 0 ? String(context.issueNumber) : 'not linked',
+            issueNumber: linkedIssueNumber ? String(linkedIssueNumber) : 'not linked',
             issueDescription: issueDescription || 'No linked issue description is available. Infer intent from the pull request title, body, and diff.',
-            relatedIssueInstruction: context.issueNumber > 0
-                ? `Include \`Closes #${context.issueNumber}\` and "Related to #" only if relevant.`
-                : 'Do not add a Closes line because this pull request has no linked issue.',
+            relatedIssueInstruction: linkedIssueNumber
+                ? `Set \`closesLinkedIssue\` to true only when this PR fully resolves issue #${linkedIssueNumber}; otherwise set it to false. Do not put the closing reference in another field.`
+                : 'Set `closesLinkedIssue` to false because this pull request has no separate linked issue.',
             targetLocale: context.targetLocale,
         });
         (0, logging_ports_1.logDebugInfo)(`UpdatePullRequestDescription: prompt length=${prompt.length}, issue description length=${issueDescription.length}. Calling configured agent.`);
@@ -61341,15 +61594,7 @@ async function runUpdatePullRequestDescriptionWorkflow(request, taskId, dependen
             prompt,
             options: (0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('pull-request-description', agent_response_schemas_1.PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA),
         });
-        const generatedDescription = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(extractDescription(response, context.targetLocale));
-        if (!generatedDescription.trim()) {
-            return [new result_1.Result({
-                    id: taskId,
-                    success: false,
-                    executed: true,
-                    steps: ['Configured agent did not return a PR description.'],
-                })];
-        }
+        const generatedDescription = extractDescription(response, context.targetLocale, linkedIssueNumber);
         const currentBody = details?.body ?? context.pullRequest.body;
         const pullRequestBody = context.mode === 'replace'
             ? generatedDescription
@@ -61389,14 +61634,19 @@ async function loadPullRequestDetails(context, dependencies, trigger) {
         ? dependencies.pullRequestDescriptionCommandPort.getDetails(context.pullRequest.number)
         : undefined;
 }
-function extractDescription(response, targetLocale) {
-    if (response == null)
-        return '';
+function extractDescription(response, targetLocale, linkedIssueNumber) {
+    if (response == null) {
+        throw new application_error_1.ApplicationError('agent.failed', 'Configured agent did not return PR description content. Existing body retained.');
+    }
     const validation = (0, agent_output_locale_policy_1.validateAgentOutputLocale)(response, targetLocale);
     if (validation.kind === 'invalid') {
         throw new application_error_1.ApplicationError('locale.output-invalid', (0, agent_output_locale_policy_1.agentOutputLocaleFailureMessage)(validation));
     }
-    return typeof validation.payload.description === 'string' ? validation.payload.description : '';
+    const rendered = (0, pull_request_description_content_policy_1.renderPullRequestDescriptionContent)(validation.payload, targetLocale, linkedIssueNumber);
+    if (rendered.kind === 'invalid') {
+        throw new application_error_1.ApplicationError('agent.failed', `Configured agent returned PR content that failed the concise description contract (${rendered.reason}). Existing body retained.`);
+    }
+    return rendered.markdown;
 }
 function skipped(taskId, step) {
     return [new result_1.Result({ id: taskId, success: false, executed: false, steps: [step] })];
@@ -72560,6 +72810,8 @@ exports.isSetupWorkflowEnabled = isSetupWorkflowEnabled;
 const SETUP_WORKFLOWS = [
     { file: 'copilot_issue.yml', feature: 'issues' },
     { file: 'copilot_pull_request.yml', feature: 'pullRequests' },
+    { file: 'copilot_pull_request_review_state.yml', feature: 'pullRequests' },
+    { file: 'copilot_pull_request_merge_queue.yml', feature: 'pullRequests' },
     { file: 'copilot_commit.yml', feature: 'commits' },
     { file: 'copilot_branch_sync.yml', feature: 'commits' },
     { file: 'copilot_issue_comment.yml', feature: 'issueComments' },
@@ -76371,10 +76623,10 @@ function getThinkPrompt(params) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getUpdatePullRequestDescriptionPrompt = getUpdatePullRequestDescriptionPrompt;
 /**
- * Prompt for generating PR description from issue and diff (UpdatePullRequestDescriptionUseCase).
+ * Prompt for generating a concise PR description from an optional issue and the diff.
  */
 const fill_1 = __nccwpck_require__(2559);
-const TEMPLATE = `You are in the repository workspace. Your task is to produce a pull request description by filling the project's PR template with information from the branch diff and the issue.
+const TEMPLATE = `You are in the repository workspace. Your task is to write a concise, review-ready pull request description from the branch diff and any linked issue.
 
 Write every human-readable sentence in {{targetLocale}}. Preserve code identifiers, paths, refs, commands, URLs, issue/PR references, and conventional title prefixes verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
 
@@ -76385,20 +76637,15 @@ Write every human-readable sentence in {{targetLocale}}. Preserve code identifie
 - **Head (source) branch:** \`{{headBranch}}\`
 
 **Instructions:**
-1. Read the pull request template file: \`.github/pull_request_template.md\`. Use its structure (headings, bullet lists, separators) as the skeleton for your output. The checkboxes in the template are **indicative only**: you may check the ones that apply based on the project and the diff, define different or fewer checkboxes if that fits better, or omit a section entirely if it does not apply.
-2. Get the full diff by running: \`git diff {{baseBranch}}..{{headBranch}}\` (or \`git diff {{baseBranch}}...{{headBranch}}\` for merge-base). Use the diff to understand what changed.
+1. Read \`.github/pull_request_template.md\` as content guidance and repository-specific constraints. Do not reproduce empty placeholder sections or treat every heading as mandatory.
+2. Get the full merge-base diff with \`git diff {{baseBranch}}...{{headBranch}}\`. Use it to understand the behavior and contracts that changed.
 3. Use the issue description below for context and intent.
-4. Fill each section of the template with concrete content derived from the diff and the issue. Keep the same markdown structure (headings, horizontal rules). For checkbox sections (e.g. Test Coverage, Deployment Notes, Security): use the template's options as guidance; check or add only the items that apply, or skip the section if it does not apply.
-   - **Summary:** brief explanation of what the PR does and why (intent, not implementation details).
-   - **Related Issues:** {{relatedIssueInstruction}}
-   - **Scope of Changes:** use Added / Updated / Removed / Refactored with short bullet points (high level, not file-by-file).
-   - **Technical Details:** important decisions, trade-offs, or non-obvious aspects.
-   - **How to Test:** steps a reviewer can follow (infer from the changes when possible).
-   - **Test Coverage / Deployment / Security / Performance / Checklist:** treat checkboxes as indicative; check the ones that apply from the diff and project context, or omit the section if it does not apply.
-   - **Breaking Changes:** list any, or "None".
-   - **Notes for Reviewers / Additional Context:** fill only if useful; otherwise a short placeholder or omit.
-5. Do not output a single compact paragraph. Output the full filled template so the PR description is well-structured and easy to scan. Preserve the template's formatting (headings with # and ##, horizontal rules). Use checkboxes \`- [ ]\` / \`- [x]\` only where they add value; you may simplify or drop a section if it does not apply.
-6. **Output format:** Return one JSON object with \`outputLocale\` and \`description\`. Put only the filled template content in \`description\`; do not add any preamble, meta-commentary, or framing phrases (e.g. "Based on my analysis...", "After reviewing the diff...", "Here is the description..."). Start \`description\` directly with the first heading of the template (e.g. # Summary). Do not wrap it in code blocks.
+4. Provide \`overview\` as one to three sentences that state the outcome and why it matters.
+5. Provide \`whatChangedHeading\` as the plain-text {{targetLocale}} equivalent of "What changed" and \`changes\` as two to six short, outcome-oriented items. Do not inventory files, use-case names, internal categories, or every implementation step.
+6. Provide \`validationHeading\` as the plain-text {{targetLocale}} equivalent of "Validation" and \`validation\` with only commands, automated checks, or manual scenarios supported by available evidence. Never claim a check passed unless the evidence says it did, and never infer that result from the presence of test files or commands. When no execution evidence is available, say concisely in {{targetLocale}} that validation was not run or was not available.
+7. Set \`reviewNotesHeading\` and \`reviewNotes\` to \`null\` unless reviewers need material migration, security, performance, compatibility, rollout, manual-verification, risk, or follow-up context. Otherwise use the localized plain-text heading and one to four concise items. {{relatedIssueInstruction}}
+8. Keep the description practical and normally under 4,000 characters. It must never exceed 12,000 characters. Do not use emoji, horizontal separators, generic checklists, empty headings, repeated statements, placeholder text, or unsupported "no impact" claims.
+9. Return one JSON object with exactly \`outputLocale\`, \`overview\`, \`whatChangedHeading\`, \`changes\`, \`validationHeading\`, \`validation\`, \`reviewNotesHeading\`, \`reviewNotes\`, and \`closesLinkedIssue\`. Every content field is plain text except Markdown links, code spans, refs, and commands inside content values. The application renders the Markdown structure; do not include headings, bullet prefixes, a preamble, meta-commentary, or code fence in the values.
 
 **Issue description:**
 {{issueDescription}}

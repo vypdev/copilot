@@ -6,6 +6,7 @@ import { ParamUseCase } from "../../base/param_usecase";
 import { mergeSizeAndProgressLabels, selectSizeAndProgressLabels } from './sync_size_and_progress_labels_policy';
 import { toApplicationError } from '../../../errors/application_error';
 import type { SyncPullRequestLabelsContext } from '../../pull_request_workflow_context';
+import { parsePositiveSafeInteger } from '../../../../domain/positive_integer_policy';
 
 /**
  * Copies size and progress labels from the linked issue to the PR.
@@ -22,7 +23,8 @@ export class SyncSizeAndProgressLabelsFromIssueToPrUseCase implements ParamUseCa
 
         const result: Result[] = [];
         try {
-            if (param.issueNumber === -1) {
+            const linkedIssueNumber = parsePositiveSafeInteger(param.issueNumber);
+            if (!linkedIssueNumber || linkedIssueNumber === param.pullRequestNumber) {
                 logDebugInfo('No issue linked to this PR. Skipping sync of size/progress labels.');
                 result.push(
                     new Result({
@@ -35,10 +37,10 @@ export class SyncSizeAndProgressLabelsFromIssueToPrUseCase implements ParamUseCa
                 return result;
             }
 
-            const issueLabels = await this.issueLabelsPort.getLabels(param.issueNumber);
+            const issueLabels = await this.issueLabelsPort.getLabels(linkedIssueNumber);
             const sizeAndProgressFromIssue = selectSizeAndProgressLabels(issueLabels, param.sizeLabels);
             if (sizeAndProgressFromIssue.length === 0) {
-                logDebugInfo(`Issue #${param.issueNumber} has no size or progress labels. Nothing to sync.`);
+                logDebugInfo(`Issue #${linkedIssueNumber} has no size or progress labels. Nothing to sync.`);
                 result.push(
                     new Result({
                         id: this.taskId,
@@ -55,7 +57,7 @@ export class SyncSizeAndProgressLabelsFromIssueToPrUseCase implements ParamUseCa
             const nextPrLabels = mergeSizeAndProgressLabels(prLabels, sizeAndProgressFromIssue, param.sizeLabels);
 
             await this.issueLabelsPort.setLabels(prNumber, nextPrLabels);
-            logDebugInfo(`Synced size/progress labels from issue #${param.issueNumber} to PR #${prNumber}: ${sizeAndProgressFromIssue.join(', ')}`);
+            logDebugInfo(`Synced size/progress labels from issue #${linkedIssueNumber} to PR #${prNumber}: ${sizeAndProgressFromIssue.join(', ')}`);
 
             result.push(
                 new Result({

@@ -129,14 +129,13 @@ describe('workflow contract validator', () => {
           jobs: Record<string, { concurrency?: unknown }>;
         };
         expect(workflow.concurrency).toBeUndefined();
-        if (['copilot_commit.yml', 'copilot_pull_request.yml'].includes(manifest.file)) {
+        if (['copilot_commit.yml', 'copilot_pull_request.yml', 'copilot_pull_request_review_state.yml'].includes(manifest.file)) {
+          const expectedGroup = manifest.file === 'copilot_commit.yml'
+            ? 'copilot-push-${{ github.repository }}-${{ github.ref_name }}'
+            : `copilot-pr-${'${{ github.repository }}'}-${'${{ github.event.pull_request.head.ref || github.ref_name }}'}-${manifest.file === 'copilot_pull_request.yml' ? 'analysis' : 'review-state'}`;
           expect(workflow.jobs[manifest.jobId].concurrency).toEqual({
-            group: manifest.file === 'copilot_pull_request.yml'
-              ? 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}'
-              : 'copilot-push-${{ github.repository }}-${{ github.ref_name }}',
-            'cancel-in-progress': manifest.file === 'copilot_pull_request.yml'
-              ? "${{ github.event_name != 'pull_request' || github.event.action != 'edited' }}"
-              : true,
+            group: expectedGroup,
+            'cancel-in-progress': true,
           });
         } else {
           expect(workflow.jobs[manifest.jobId].concurrency).toBeUndefined();
@@ -146,22 +145,24 @@ describe('workflow contract validator', () => {
     }
   });
 
-  it.each(['.github/workflows', 'setup/workflows'])(
-    'rejects pull-request metadata events that can preempt an active review in %s',
-    (directory) => {
-      const file = path.join(process.cwd(), directory, 'copilot_pull_request.yml');
+  it.each(['.github/workflows', 'setup/workflows'].flatMap(directory => [
+    [directory, 'copilot_pull_request.yml', 'copilot-pull-requests'],
+    [directory, 'copilot_pull_request_review_state.yml', 'copilot-pull-request-review-state'],
+  ]))(
+    'rejects pull-request workflows that do not cancel superseded events in %s/%s',
+    (directory, fileName, jobId) => {
+      const file = path.join(process.cwd(), directory, fileName);
       const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
-      workflow.jobs['copilot-pull-requests'].concurrency['cancel-in-progress'] = true;
+      workflow.jobs[jobId].concurrency['cancel-in-progress'] = false;
 
-      expect(() => validateWorkflow(file, workflow)).toThrow(
-        'queue pull_request edited events without preempting an active review',
-      );
+      expect(() => validateWorkflow(file, workflow)).toThrow('cancel superseded runs');
     },
   );
 
   it.each([
     ['copilot_commit.yml', 'copilot-commits', 'copilot-pr-${{ github.repository }}-${{ github.ref_name }}'],
     ['copilot_pull_request.yml', 'copilot-pull-requests', 'copilot-push-${{ github.repository }}-${{ github.ref_name }}'],
+    ['copilot_pull_request_review_state.yml', 'copilot-pull-request-review-state', 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-analysis'],
   ])(
     'rejects a cross-workflow concurrency group in %s',
     (workflowFile, jobId, sharedGroup) => {
@@ -169,7 +170,19 @@ describe('workflow contract validator', () => {
       const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
       workflow.jobs[jobId].concurrency.group = sharedGroup;
 
-      expect(() => validateWorkflow(file, workflow)).toThrow('avoid cross-canceling the other event owner');
+      expect(() => validateWorkflow(file, workflow)).toThrow('avoid cross-canceling another event owner');
+    },
+  );
+
+  it.each(['.github/workflows', 'setup/workflows'])(
+    'rejects a PR group that lets review-state events cancel active analysis in %s',
+    (directory) => {
+      const file = path.join(process.cwd(), directory, 'copilot_pull_request.yml');
+      const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+      workflow.jobs['copilot-pull-requests'].concurrency.group =
+        'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}';
+
+      expect(() => validateWorkflow(file, workflow)).toThrow('avoid cross-canceling another event owner');
     },
   );
 
@@ -191,31 +204,82 @@ describe('workflow contract validator', () => {
     },
   );
 
-  it.each(['copilot_pull_request.yml', 'copilot_pull_request_comment.yml'])(
+  it.each(['copilot_pull_request.yml', 'copilot_pull_request_review_state.yml', 'copilot_pull_request_comment.yml'])(
     'requires same-repository PR gating for %s',
     (fileName) => {
       for (const directory of ['.github/workflows', 'setup/workflows']) {
         const file = path.join(process.cwd(), directory, fileName);
         const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
-        const job = workflow.jobs['copilot-pull-requests'];
+        const jobId = fileName === 'copilot_pull_request_review_state.yml'
+          ? 'copilot-pull-request-review-state'
+          : 'copilot-pull-requests';
+        const job = workflow.jobs[jobId];
         job.if = "${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}";
         expect(() => validateWorkflow(file, workflow)).toThrow('same-repository PR gate');
       }
     },
   );
 
-  it('rejects workflow_run and requires direct PR/review events in both distributed variants', () => {
+  it('rejects workflow_run and keeps PR analysis separate from review-state events', () => {
     for (const directory of ['.github/workflows', 'setup/workflows']) {
-      const file = path.join(process.cwd(), directory, 'copilot_pull_request.yml');
-      const workflow = yaml.load(readFileSync(file, 'utf8')) as Record<string, any>;
-      expect(() => assertDirectEventTriggers(file, workflow)).not.toThrow();
-      workflow.on.workflow_run = { types: ['completed'] };
-      expect(() => assertDirectEventTriggers(file, workflow)).toThrow('must not define workflow_run');
-      delete workflow.on.workflow_run;
-      delete workflow.on.pull_request_review;
-      expect(() => assertDirectEventTriggers(file, workflow)).toThrow('direct pull_request and pull_request_review');
+      const analysisFile = path.join(process.cwd(), directory, 'copilot_pull_request.yml');
+      const analysis = yaml.load(readFileSync(analysisFile, 'utf8')) as Record<string, any>;
+      expect(() => assertDirectEventTriggers(analysisFile, analysis)).not.toThrow();
+      analysis.on.pull_request_review = { types: ['submitted'] };
+      expect(() => assertDirectEventTriggers(analysisFile, analysis)).toThrow('only direct pull_request');
+
+      const reviewFile = path.join(process.cwd(), directory, 'copilot_pull_request_review_state.yml');
+      const review = yaml.load(readFileSync(reviewFile, 'utf8')) as Record<string, any>;
+      expect(() => assertDirectEventTriggers(reviewFile, review)).not.toThrow();
+      review.on.workflow_run = { types: ['completed'] };
+      expect(() => assertDirectEventTriggers(reviewFile, review)).toThrow('must not define workflow_run');
+      delete review.on.workflow_run;
+      review.on.pull_request = { types: ['synchronize'] };
+      expect(() => assertDirectEventTriggers(reviewFile, review)).toThrow('only direct pull_request_review');
     }
   });
+
+  it.each(['.github/workflows', 'setup/workflows'])(
+    'rejects metadata-only PR triggers, embedded merge checks, and unsafe PR check identities in %s',
+    (directory) => {
+      const file = path.join(process.cwd(), directory, 'copilot_pull_request.yml');
+      const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+
+      workflow.on.pull_request.types.push('edited');
+      expect(() => assertDirectEventTriggers(file, workflow)).toThrow('metadata-only edited events');
+
+      workflow.on.pull_request.types = workflow.on.pull_request.types.filter((type: string) => type !== 'edited');
+      workflow.on.merge_group = { types: ['checks_requested'] };
+      expect(() => assertDirectEventTriggers(file, workflow)).toThrow('dedicated pull-request merge-queue workflow');
+
+      delete workflow.on.merge_group;
+      workflow.jobs['copilot-pull-requests'].name = 'Unsafe dynamic identity';
+      expect(() => assertDirectEventTriggers(file, workflow)).toThrow('normal PR analysis check identity');
+    },
+  );
+
+  it.each(['.github/workflows', 'setup/workflows'])(
+    'rejects a non-fixed review-state identity in %s',
+    (directory) => {
+      const file = path.join(process.cwd(), directory, 'copilot_pull_request_review_state.yml');
+      const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+      workflow.jobs['copilot-pull-request-review-state'].name = '${{ github.event.action }}';
+
+      expect(() => assertDirectEventTriggers(file, workflow)).toThrow('review-state workflow and check identity');
+    },
+  );
+
+  it.each(['.github/workflows', 'setup/workflows'])(
+    'keeps merge-queue required checks isolated, exact, and lightweight in %s',
+    (directory) => {
+      const file = path.join(process.cwd(), directory, 'copilot_pull_request_merge_queue.yml');
+      const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+
+      expect(() => validateWorkflow(file, workflow)).not.toThrow();
+      workflow.jobs['copilot-pull-request-required-check'].name = 'Copilot - Merge Queue';
+      expect(() => validateWorkflow(file, workflow)).toThrow('required-check identity');
+    },
+  );
 
   it.each(['.github/workflows', 'setup/workflows'])('requires the exact push review range fetch in %s', (directory) => {
     const file = path.join(process.cwd(), directory, 'copilot_commit.yml');
@@ -295,8 +359,8 @@ describe('workflow contract validator', () => {
   it.each([
     '.github/workflows/ci_check.yml',
     '.github/workflows/repowise.yml',
-    '.github/workflows/copilot_pull_request.yml',
-    'setup/workflows/copilot_pull_request.yml',
+    '.github/workflows/copilot_pull_request_merge_queue.yml',
+    'setup/workflows/copilot_pull_request_merge_queue.yml',
   ])('requires merge-group checks in %s', (relativeFile) => {
     const file = path.join(process.cwd(), relativeFile);
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;

@@ -30,15 +30,31 @@ export async function runLinkPullRequestIssue(
     port: BoundPullRequestIssueLinkPort,
     delay: EventualConsistencyDelayPort,
 ): Promise<Result[]> {
-    if (!parsePositiveSafeInteger(param.pullRequestNumber)
-        || !parsePositiveSafeInteger(param.issueNumber)
-        || !isSafeBranchTree(param.originalBaseBranch)
+    const pullRequestNumber = parsePositiveSafeInteger(param.pullRequestNumber);
+    const issueNumber = parsePositiveSafeInteger(param.issueNumber);
+    if (!pullRequestNumber) {
+        return [new Result({
+            id: taskId,
+            success: false,
+            executed: false,
+            steps: ['Pull-request linkage requires a positive pull-request number.'],
+        })];
+    }
+    if (!issueNumber || issueNumber === pullRequestNumber) {
+        return [new Result({
+            id: taskId,
+            success: true,
+            executed: false,
+            steps: ['No separate linked issue was inferred; pull-request linkage was skipped.'],
+        })];
+    }
+    if (!isSafeBranchTree(param.originalBaseBranch)
         || !isSafeBranchTree(param.defaultBranch)) {
         return [new Result({
             id: taskId,
             success: false,
             executed: false,
-            steps: ['Pull-request linkage requires positive issue/PR numbers and safe non-empty base branches.'],
+            steps: ['Pull-request linkage requires a positive issue number and safe non-empty base branches.'],
         })];
     }
     const pendingMarker = buildPendingMarker(param);
