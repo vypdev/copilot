@@ -41141,7 +41141,8 @@ const SIMPLE_MESSAGE_KEYS = Object.freeze([
     'heading', 'repository', 'property', 'value', 'status', 'event', 'target',
     'lifecycle', 'descriptionPolicy', 'results', 'findingStates', 'bugbotReview',
     'sourceFreshness', 'staleSourceSuppressed',
-    'duplicateCleanup',
+    'duplicateCleanup', 'actionNotifications', 'actionNotificationCreated',
+    'actionNotificationReused',
     'resultDetails', 'localization', 'repositoryLocale', 'issueLocale',
     'pullRequestLocale', 'catalogResolution', 'descriptors', 'reason', 'failure',
     'findings', 'partial', 'superseded', 'skipped', 'dryRun', 'success', 'invalid',
@@ -41155,6 +41156,7 @@ const TEMPLATE_MESSAGE_IDS = Object.freeze([
     'summary.duplicateCleanup.single',
     'summary.duplicateCleanup.multiple',
     'summary.duplicateCleanup.bounded',
+    'summary.actionNotification.entry',
 ]);
 const FINDING_STATE_KEYS = Object.freeze([
     'open', 'reopened', 'fixed', 'obsolete', 'dismissed',
@@ -41182,6 +41184,9 @@ const ENGLISH_SIMPLE = Object.freeze({
     sourceFreshness: 'Source freshness',
     staleSourceSuppressed: 'Stale result suppressed; branch HEAD changed during the run',
     duplicateCleanup: 'Duplicate cleanup',
+    actionNotifications: 'Action notifications',
+    actionNotificationCreated: 'created',
+    actionNotificationReused: 'reused',
     resultDetails: 'Failure details',
     localization: 'Localization',
     repositoryLocale: 'Repository locale',
@@ -41219,6 +41224,9 @@ const SPANISH_SIMPLE = Object.freeze({
     sourceFreshness: 'Vigencia del origen',
     staleSourceSuppressed: 'Resultado obsoleto omitido; el HEAD de la rama cambió durante la ejecución',
     duplicateCleanup: 'Limpieza de duplicados',
+    actionNotifications: 'Notificaciones de acción',
+    actionNotificationCreated: 'creada',
+    actionNotificationReused: 'reutilizada',
     resultDetails: 'Detalles del fallo',
     localization: 'Localización',
     repositoryLocale: 'Locale del repositorio',
@@ -41248,6 +41256,7 @@ const ENGLISH_TEMPLATES = Object.freeze({
     'summary.duplicateCleanup.single': 'Deletion was forbidden; retained a compact pointer for comment {ids}',
     'summary.duplicateCleanup.multiple': 'Deletion was forbidden; retained compact pointers for {count} comments (IDs: {ids})',
     'summary.duplicateCleanup.bounded': 'Deletion was forbidden; retained compact pointers for {count} comments (first {reported} IDs: {ids})',
+    'summary.actionNotification.entry': '{topic} on {target}: {effect} (fingerprint {fingerprint})',
 });
 const SPANISH_TEMPLATES = Object.freeze({
     'summary.target.pullRequest': 'PR n.º {number}',
@@ -41257,6 +41266,7 @@ const SPANISH_TEMPLATES = Object.freeze({
     'summary.duplicateCleanup.single': 'Se denegó el borrado; se conservó un enlace compacto para el comentario {ids}',
     'summary.duplicateCleanup.multiple': 'Se denegó el borrado; se conservaron enlaces compactos para {count} comentarios (ID: {ids})',
     'summary.duplicateCleanup.bounded': 'Se denegó el borrado; se conservaron enlaces compactos para {count} comentarios (primeros {reported} ID: {ids})',
+    'summary.actionNotification.entry': '{topic} en {target}: {effect} (huella {fingerprint})',
 });
 const ENGLISH_FINDING_STATES = Object.freeze({
     open: 'open',
@@ -41346,6 +41356,7 @@ function buildActionSummary(context, catalog = (0, action_summary_message_catalo
     const bugbotTelemetry = telemetryProjection.status === 'valid' ? telemetryProjection.telemetry : undefined;
     const staleSourceSuppressed = (0, publication_outcome_policy_1.hasStaleSourcePublicationOutcome)(context.results);
     const duplicateCompactions = (0, publication_outcome_policy_1.duplicateCompactionPublicationOutcomes)(context.results);
+    const transitions = (0, publication_outcome_policy_1.transitionPublicationOutcomes)(context.results);
     const hasActionableFindings = findingStates ? (0, review_state_1.countActionableBugbotFindings)(findingStates) > 0 : false;
     const hasUnknownFindings = findingStateProjection.status === 'invalid' || (findingStates?.unknown ?? 0) > 0;
     const status = resolveActionSummaryStatus({
@@ -41373,6 +41384,9 @@ function buildActionSummary(context, catalog = (0, action_summary_message_catalo
         ...(duplicateCompactions.length > 0 ? [
             `| ${catalogText(catalog, 'summary.duplicateCleanup')} | ${formatDuplicateCompactions(duplicateCompactions, catalog)} |`,
         ] : []),
+        ...(transitions.length > 0 ? [
+            `| ${catalogText(catalog, 'summary.actionNotifications')} | ${formatTransitionPublications(transitions, catalog)} |`,
+        ] : []),
     ];
     const localization = renderLocalizationSummarySection(context.locale, context.catalogResolutions, actionSummaryLocalizationLabels(catalog));
     return [
@@ -41391,6 +41405,16 @@ function buildActionSummary(context, catalog = (0, action_summary_message_catalo
         ] : []),
         ...(localization ? ['', localization] : []),
     ].join('\n');
+}
+function formatTransitionPublications(outcomes, catalog) {
+    return outcomes.map(outcome => catalogText(catalog, 'summary.actionNotification.entry', {
+        topic: outcome.topic,
+        target: outcome.target,
+        effect: catalog.message(outcome.effect === 'created'
+            ? 'summary.actionNotificationCreated'
+            : 'summary.actionNotificationReused'),
+        fingerprint: outcome.fingerprint,
+    })).join('; ');
 }
 function formatDuplicateCompactions(outcomes, catalog) {
     const count = outcomes.reduce((total, outcome) => total + outcome.compactedCount, 0);
@@ -46555,12 +46579,15 @@ function progressPercentToColor(percent) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PUBLICATION_REPLY_MARKER_PREFIX = exports.PUBLICATION_DUPLICATE_MARKER_PREFIX = exports.PUBLICATION_MARKER_PREFIX = exports.PUBLICATION_SCHEMA = void 0;
+exports.TRANSITION_FINGERPRINT_ACTIONS = exports.PUBLICATION_TRANSITION_MARKER_PREFIX = exports.PUBLICATION_REPLY_MARKER_PREFIX = exports.PUBLICATION_DUPLICATE_MARKER_PREFIX = exports.PUBLICATION_MARKER_PREFIX = exports.PUBLICATION_SCHEMA = void 0;
 exports.createSemanticDigest = createSemanticDigest;
+exports.createTransitionFingerprint = createTransitionFingerprint;
 exports.buildPublicationMarker = buildPublicationMarker;
 exports.parsePublicationMarker = parsePublicationMarker;
 exports.buildPublicationReplyMarker = buildPublicationReplyMarker;
 exports.parsePublicationReplyMarker = parsePublicationReplyMarker;
+exports.buildPublicationTransitionMarker = buildPublicationTransitionMarker;
+exports.parsePublicationTransitionMarker = parsePublicationTransitionMarker;
 exports.readablePublicationReplyCorrelationIds = readablePublicationReplyCorrelationIds;
 exports.buildDuplicateMarker = buildDuplicateMarker;
 const node_crypto_1 = __nccwpck_require__(6005);
@@ -46569,10 +46596,30 @@ exports.PUBLICATION_SCHEMA = '1';
 exports.PUBLICATION_MARKER_PREFIX = 'copilot:publication';
 exports.PUBLICATION_DUPLICATE_MARKER_PREFIX = 'copilot:publication-duplicate';
 exports.PUBLICATION_REPLY_MARKER_PREFIX = 'copilot:reply';
+exports.PUBLICATION_TRANSITION_MARKER_PREFIX = 'copilot:transition';
+exports.TRANSITION_FINGERPRINT_ACTIONS = Object.freeze([
+    'branch-sync-required',
+]);
 const SAFE_VALUE = /^[A-Za-z0-9._:-]{1,128}$/u;
 const DIGEST = /^[a-f0-9]{8,64}$/u;
 function createSemanticDigest(value) {
     return (0, node_crypto_1.createHash)('sha256').update(stableSerialize(value), 'utf8').digest('hex').slice(0, 16);
+}
+/** Derives a notification identity exclusively from trusted, bounded transition facts. */
+function createTransitionFingerprint(identity, action, sourceVersion) {
+    const target = (0, github_publication_1.publicationTargetToken)(identity.target);
+    for (const value of [identity.topic, target, identity.key, action, sourceVersion]) {
+        if (!SAFE_VALUE.test(value))
+            throw new Error('Transition fingerprint contains an unsafe identity value.');
+    }
+    if (!exports.TRANSITION_FINGERPRINT_ACTIONS.includes(action)) {
+        throw new Error('Transition fingerprint contains an unknown action.');
+    }
+    return createSemanticDigest({
+        action,
+        identity: { key: identity.key, target, topic: identity.topic },
+        sourceVersion,
+    });
 }
 function buildPublicationMarker(marker) {
     const target = (0, github_publication_1.publicationTargetToken)(marker.identity.target);
@@ -46622,6 +46669,39 @@ function parsePublicationReplyMarker(body) {
     if (!match)
         return undefined;
     return Object.freeze({ target: match[1], correlationId: match[2], messageKey: match[3], digest: match[4] });
+}
+function buildPublicationTransitionMarker(intent) {
+    const target = (0, github_publication_1.publicationTargetToken)(intent.identity.target);
+    for (const value of [intent.identity.topic, target, intent.identity.key, intent.messageKey]) {
+        if (!SAFE_VALUE.test(value))
+            throw new Error('Publication transition marker contains an unsafe identity value.');
+    }
+    if (!DIGEST.test(intent.fingerprint)) {
+        throw new Error('Publication transition marker contains an invalid fingerprint.');
+    }
+    return `<!-- ${exports.PUBLICATION_TRANSITION_MARKER_PREFIX} schema="${exports.PUBLICATION_SCHEMA}" topic="${intent.identity.topic}" target="${target}" key="${intent.identity.key}" fingerprint="${intent.fingerprint}" message="${intent.messageKey}" -->`;
+}
+function parsePublicationTransitionMarker(body) {
+    if (typeof body !== 'string')
+        return undefined;
+    const match = body.match(/<!-- copilot:transition schema="1" topic="([A-Za-z0-9._:-]{1,128})" target="(issue|pr):(\d+)" key="([A-Za-z0-9._:-]{1,128})" fingerprint="([a-f0-9]{8,64})" message="([A-Za-z0-9._:-]{1,128})" -->/u);
+    if (!match)
+        return undefined;
+    const topic = match[1];
+    if (!github_publication_1.PUBLICATION_TOPICS.includes(topic))
+        return undefined;
+    const number = Number(match[3]);
+    if (!Number.isSafeInteger(number) || number < 1)
+        return undefined;
+    return Object.freeze({
+        identity: Object.freeze({
+            topic,
+            target: Object.freeze({ kind: match[2] === 'pr' ? 'pull-request' : 'issue', number }),
+            key: match[4],
+        }),
+        fingerprint: match[5],
+        messageKey: match[6],
+    });
 }
 /**
  * Reads the stable issue-comment identity plus the short-lived namespaced form
@@ -47032,8 +47112,12 @@ exports.buildStaleSourcePublicationPayload = buildStaleSourcePublicationPayload;
 exports.hasStaleSourcePublicationOutcome = hasStaleSourcePublicationOutcome;
 exports.buildDuplicateCompactionPublicationPayload = buildDuplicateCompactionPublicationPayload;
 exports.duplicateCompactionPublicationOutcomes = duplicateCompactionPublicationOutcomes;
+exports.buildTransitionPublicationPayload = buildTransitionPublicationPayload;
+exports.transitionPublicationOutcomes = transitionPublicationOutcomes;
 const result_1 = __nccwpck_require__(73817);
+const github_publication_1 = __nccwpck_require__(35793);
 const MAX_REPORTED_COMMENT_IDS = 20;
+const MAX_REPORTED_TRANSITIONS = 20;
 /** Builds bounded evidence for a commit-derived result that was intentionally suppressed. */
 function buildStaleSourcePublicationPayload(branch, sourceHeadSha) {
     return Object.freeze({
@@ -47082,6 +47166,48 @@ function duplicateCompactionPublicationOutcomes(results) {
                 compactedCount: cleanup.compactedCount,
             })];
     }));
+}
+/** Builds content-free, bounded evidence for one action-notification decision. */
+function buildTransitionPublicationPayload(intent, effect) {
+    return Object.freeze({
+        publicationTransition: Object.freeze({
+            topic: intent.identity.topic,
+            target: (0, github_publication_1.publicationTargetToken)(intent.identity.target),
+            effect,
+            fingerprint: intent.fingerprint,
+        }),
+    });
+}
+function transitionPublicationOutcomes(results) {
+    return Object.freeze(results.flatMap(result => {
+        if (!result.success || !result.executed)
+            return [];
+        const payload = (0, result_1.getResultPayload)(result.payload);
+        const transition = (0, result_1.getResultPayload)(payload?.publicationTransition);
+        if (!transition
+            || typeof transition.topic !== 'string'
+            || !github_publication_1.PUBLICATION_TOPICS.includes(transition.topic)
+            || typeof transition.target !== 'string'
+            || !isPublicationTargetToken(transition.target)
+            || transition.effect !== 'created' && transition.effect !== 'unchanged'
+            || typeof transition.fingerprint !== 'string'
+            || !/^[a-f0-9]{8,64}$/u.test(transition.fingerprint)) {
+            return [];
+        }
+        return [Object.freeze({
+                topic: transition.topic,
+                target: transition.target,
+                effect: transition.effect,
+                fingerprint: transition.fingerprint,
+            })];
+    }).slice(0, MAX_REPORTED_TRANSITIONS));
+}
+function isPublicationTargetToken(value) {
+    const match = value.match(/^(?:issue|pr):([1-9]\d*)$/u);
+    if (!match)
+        return false;
+    const number = Number(match[1]);
+    return Number.isSafeInteger(number) && number > 0;
 }
 function isPositiveInteger(value) {
     return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
@@ -73204,6 +73330,12 @@ function publicationIdentityEquals(left, right) {
         && left.key === right.key;
 }
 function publicationTargetToken(target) {
+    if (target.kind !== 'issue' && target.kind !== 'pull-request') {
+        throw new Error('Publication target kind must be issue or pull-request.');
+    }
+    if (!Number.isSafeInteger(target.number) || target.number < 1) {
+        throw new Error('Publication target number must be a positive safe integer.');
+    }
     return `${target.kind === 'pull-request' ? 'pr' : 'issue'}:${target.number}`;
 }
 

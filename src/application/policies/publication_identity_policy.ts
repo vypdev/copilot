@@ -4,12 +4,18 @@ import {
     publicationTargetToken,
     type PublicationIdentity,
     type PublicationTopic,
+    type TransitionPublicationIntent,
 } from '../../domain/github_publication';
 
 export const PUBLICATION_SCHEMA = '1';
 export const PUBLICATION_MARKER_PREFIX = 'copilot:publication';
 export const PUBLICATION_DUPLICATE_MARKER_PREFIX = 'copilot:publication-duplicate';
 export const PUBLICATION_REPLY_MARKER_PREFIX = 'copilot:reply';
+export const PUBLICATION_TRANSITION_MARKER_PREFIX = 'copilot:transition';
+export const TRANSITION_FINGERPRINT_ACTIONS = Object.freeze([
+    'branch-sync-required',
+] as const);
+export type TransitionFingerprintAction = typeof TRANSITION_FINGERPRINT_ACTIONS[number];
 const SAFE_VALUE = /^[A-Za-z0-9._:-]{1,128}$/u;
 const DIGEST = /^[a-f0-9]{8,64}$/u;
 
@@ -26,8 +32,34 @@ export interface PublicationReplyMarker {
     readonly digest: string;
 }
 
+export interface PublicationTransitionMarker {
+    readonly identity: PublicationIdentity;
+    readonly fingerprint: string;
+    readonly messageKey: string;
+}
+
 export function createSemanticDigest(value: unknown): string {
     return createHash('sha256').update(stableSerialize(value), 'utf8').digest('hex').slice(0, 16);
+}
+
+/** Derives a notification identity exclusively from trusted, bounded transition facts. */
+export function createTransitionFingerprint(
+    identity: PublicationIdentity,
+    action: TransitionFingerprintAction,
+    sourceVersion: string,
+): string {
+    const target = publicationTargetToken(identity.target);
+    for (const value of [identity.topic, target, identity.key, action, sourceVersion]) {
+        if (!SAFE_VALUE.test(value)) throw new Error('Transition fingerprint contains an unsafe identity value.');
+    }
+    if (!TRANSITION_FINGERPRINT_ACTIONS.includes(action)) {
+        throw new Error('Transition fingerprint contains an unknown action.');
+    }
+    return createSemanticDigest({
+        action,
+        identity: { key: identity.key, target, topic: identity.topic },
+        sourceVersion,
+    });
 }
 
 export function buildPublicationMarker(marker: PublicationMarker): string {
@@ -71,6 +103,40 @@ export function parsePublicationReplyMarker(body: string | null | undefined): Pu
     const match = body.match(/<!-- copilot:reply schema="1" target="((?:issue|pr):\d+)" correlation="([A-Za-z0-9._:-]{1,128})" key="([A-Za-z0-9._:-]{1,128})" digest="([a-f0-9]{8,64})" -->/u);
     if (!match) return undefined;
     return Object.freeze({ target: match[1], correlationId: match[2], messageKey: match[3], digest: match[4] });
+}
+
+export function buildPublicationTransitionMarker(
+    intent: Pick<TransitionPublicationIntent, 'identity' | 'fingerprint' | 'messageKey'>,
+): string {
+    const target = publicationTargetToken(intent.identity.target);
+    for (const value of [intent.identity.topic, target, intent.identity.key, intent.messageKey]) {
+        if (!SAFE_VALUE.test(value)) throw new Error('Publication transition marker contains an unsafe identity value.');
+    }
+    if (!DIGEST.test(intent.fingerprint)) {
+        throw new Error('Publication transition marker contains an invalid fingerprint.');
+    }
+    return `<!-- ${PUBLICATION_TRANSITION_MARKER_PREFIX} schema="${PUBLICATION_SCHEMA}" topic="${intent.identity.topic}" target="${target}" key="${intent.identity.key}" fingerprint="${intent.fingerprint}" message="${intent.messageKey}" -->`;
+}
+
+export function parsePublicationTransitionMarker(
+    body: string | null | undefined,
+): PublicationTransitionMarker | undefined {
+    if (typeof body !== 'string') return undefined;
+    const match = body.match(/<!-- copilot:transition schema="1" topic="([A-Za-z0-9._:-]{1,128})" target="(issue|pr):(\d+)" key="([A-Za-z0-9._:-]{1,128})" fingerprint="([a-f0-9]{8,64})" message="([A-Za-z0-9._:-]{1,128})" -->/u);
+    if (!match) return undefined;
+    const topic = match[1] as PublicationTopic;
+    if (!PUBLICATION_TOPICS.includes(topic)) return undefined;
+    const number = Number(match[3]);
+    if (!Number.isSafeInteger(number) || number < 1) return undefined;
+    return Object.freeze({
+        identity: Object.freeze({
+            topic,
+            target: Object.freeze({ kind: match[2] === 'pr' ? 'pull-request' : 'issue', number }),
+            key: match[4],
+        }),
+        fingerprint: match[5],
+        messageKey: match[6],
+    });
 }
 
 /**

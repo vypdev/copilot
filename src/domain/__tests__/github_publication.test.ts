@@ -25,12 +25,25 @@ describe('GitHub publication domain', () => {
     expect(publicationTargetToken(target)).toBe(expected);
   });
 
+  it.each([0, -1, Number.NaN, Number.MAX_SAFE_INTEGER + 1])(
+    'rejects invalid publication target number %p before serialization',
+    (number) => {
+      expect(() => publicationTargetToken({ kind: 'issue', number }))
+        .toThrow('positive safe integer');
+    },
+  );
+
+  it('rejects an unknown runtime target kind', () => {
+    expect(() => publicationTargetToken({ kind: 'repository' as never, number: 7 }))
+      .toThrow('must be issue or pull-request');
+  });
+
   it('keeps the publication union closed and discriminated', () => {
     const intents: PublicationIntent[] = [
       { kind: 'none', reason: 'routine' },
       { kind: 'reply', target: identity.target, correlationId: 'request-1', messageKey: 'done', locale: 'en-US', digest: '12345678', projection: {} },
       { kind: 'status', identity, sourceVersion: 'head:abc', digest: '12345678', locale: 'en-US', projection: {} },
-      { kind: 'transition', identity, fingerprint: '12345678', messageKey: 'action', values: {} },
+      { kind: 'transition', identity, fingerprint: '12345678', messageKey: 'action', locale: 'en-US', values: {} },
       { kind: 'inline-finding', identity: 'finding-1', path: 'src/a.ts', line: 1, severity: 'high', title: 'Unsafe input', evidence: 'Untrusted value reaches SQL.' },
     ];
 

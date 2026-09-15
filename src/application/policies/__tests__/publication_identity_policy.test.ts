@@ -2,9 +2,12 @@ import {
   buildDuplicateMarker,
   buildPublicationMarker,
   buildPublicationReplyMarker,
+  buildPublicationTransitionMarker,
   createSemanticDigest,
+  createTransitionFingerprint,
   parsePublicationMarker,
   parsePublicationReplyMarker,
+  parsePublicationTransitionMarker,
   readablePublicationReplyCorrelationIds,
 } from '../publication_identity_policy';
 
@@ -93,5 +96,67 @@ describe('publication identity policy', () => {
     expect(readablePublicationReplyCorrelationIds('event:0123abcd')).toEqual([
       'event:0123abcd',
     ]);
+  });
+
+  it('round-trips strict issue and pull-request transition markers', () => {
+    const transition = {
+      identity: { topic: 'branch-sync' as const, target: { kind: 'issue' as const, number: 42 }, key: 'develop:feature-42' },
+      fingerprint: '0123abcd',
+      messageKey: 'branch-sync-action-required',
+    };
+    expect(parsePublicationTransitionMarker(buildPublicationTransitionMarker(transition))).toEqual(transition);
+
+    const pullRequest = {
+      ...transition,
+      identity: { ...transition.identity, target: { kind: 'pull-request' as const, number: 9 } },
+    };
+    expect(parsePublicationTransitionMarker(buildPublicationTransitionMarker(pullRequest))?.identity.target)
+      .toEqual({ kind: 'pull-request', number: 9 });
+  });
+
+  it.each([
+    undefined,
+    null,
+    '',
+    '<!-- copilot:transition schema="2" topic="branch-sync" target="issue:42" key="sync" fingerprint="0123abcd" message="action" -->',
+    '<!-- copilot:transition schema="1" topic="unknown" target="issue:42" key="sync" fingerprint="0123abcd" message="action" -->',
+    '<!-- copilot:transition schema="1" topic="branch-sync" target="issue:0" key="sync" fingerprint="0123abcd" message="action" -->',
+    '<!-- copilot:transition schema="1" topic="branch-sync" target="issue:42" key="sync" fingerprint="invalid" message="action" -->',
+  ])('treats malformed transition markers as inert: %p', (body) => {
+    expect(parsePublicationTransitionMarker(body)).toBeUndefined();
+  });
+
+  it('rejects unsafe transition-marker construction', () => {
+    const transition = {
+      identity: { topic: 'branch-sync' as const, target: { kind: 'issue' as const, number: 42 }, key: 'sync' },
+      fingerprint: '0123abcd',
+      messageKey: 'action',
+    };
+    expect(() => buildPublicationTransitionMarker({
+      ...transition, identity: { ...transition.identity, key: 'unsafe key' },
+    })).toThrow('unsafe identity');
+    expect(() => buildPublicationTransitionMarker({ ...transition, fingerprint: 'invalid' }))
+      .toThrow('invalid fingerprint');
+    expect(() => buildPublicationTransitionMarker({
+      ...transition, identity: { ...transition.identity, target: { kind: 'issue', number: 0 } },
+    })).toThrow('positive safe integer');
+  });
+
+  it('derives stable transition fingerprints from closed trusted facts', () => {
+    const identity = { topic: 'branch-sync' as const, target: { kind: 'issue' as const, number: 42 }, key: 'develop:feature-42' };
+    const fingerprint = createTransitionFingerprint(identity, 'branch-sync-required', 'head:abc1234');
+
+    expect(fingerprint).toHaveLength(16);
+    expect(createTransitionFingerprint(identity, 'branch-sync-required', 'head:abc1234')).toBe(fingerprint);
+    expect(createTransitionFingerprint(identity, 'branch-sync-required', 'head:def5678')).not.toBe(fingerprint);
+    expect(createTransitionFingerprint({ ...identity, key: 'develop:feature-43' }, 'branch-sync-required', 'head:abc1234'))
+      .not.toBe(fingerprint);
+    expect(() => createTransitionFingerprint(identity, 'branch-sync-required', 'unsafe/source'))
+      .toThrow('unsafe identity');
+    expect(() => createTransitionFingerprint(identity, 'unknown' as never, 'head:abc1234'))
+      .toThrow('unknown action');
+    expect(() => createTransitionFingerprint({
+      ...identity, target: { kind: 'issue', number: Number.NaN },
+    }, 'branch-sync-required', 'head:abc1234')).toThrow('positive safe integer');
   });
 });

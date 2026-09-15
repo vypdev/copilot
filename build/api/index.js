@@ -1453,12 +1453,15 @@ function neutralizeGithubControls(value) {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PUBLICATION_REPLY_MARKER_PREFIX = exports.PUBLICATION_DUPLICATE_MARKER_PREFIX = exports.PUBLICATION_MARKER_PREFIX = exports.PUBLICATION_SCHEMA = void 0;
+exports.TRANSITION_FINGERPRINT_ACTIONS = exports.PUBLICATION_TRANSITION_MARKER_PREFIX = exports.PUBLICATION_REPLY_MARKER_PREFIX = exports.PUBLICATION_DUPLICATE_MARKER_PREFIX = exports.PUBLICATION_MARKER_PREFIX = exports.PUBLICATION_SCHEMA = void 0;
 exports.createSemanticDigest = createSemanticDigest;
+exports.createTransitionFingerprint = createTransitionFingerprint;
 exports.buildPublicationMarker = buildPublicationMarker;
 exports.parsePublicationMarker = parsePublicationMarker;
 exports.buildPublicationReplyMarker = buildPublicationReplyMarker;
 exports.parsePublicationReplyMarker = parsePublicationReplyMarker;
+exports.buildPublicationTransitionMarker = buildPublicationTransitionMarker;
+exports.parsePublicationTransitionMarker = parsePublicationTransitionMarker;
 exports.readablePublicationReplyCorrelationIds = readablePublicationReplyCorrelationIds;
 exports.buildDuplicateMarker = buildDuplicateMarker;
 const node_crypto_1 = __nccwpck_require__(6005);
@@ -1467,10 +1470,30 @@ exports.PUBLICATION_SCHEMA = '1';
 exports.PUBLICATION_MARKER_PREFIX = 'copilot:publication';
 exports.PUBLICATION_DUPLICATE_MARKER_PREFIX = 'copilot:publication-duplicate';
 exports.PUBLICATION_REPLY_MARKER_PREFIX = 'copilot:reply';
+exports.PUBLICATION_TRANSITION_MARKER_PREFIX = 'copilot:transition';
+exports.TRANSITION_FINGERPRINT_ACTIONS = Object.freeze([
+    'branch-sync-required',
+]);
 const SAFE_VALUE = /^[A-Za-z0-9._:-]{1,128}$/u;
 const DIGEST = /^[a-f0-9]{8,64}$/u;
 function createSemanticDigest(value) {
     return (0, node_crypto_1.createHash)('sha256').update(stableSerialize(value), 'utf8').digest('hex').slice(0, 16);
+}
+/** Derives a notification identity exclusively from trusted, bounded transition facts. */
+function createTransitionFingerprint(identity, action, sourceVersion) {
+    const target = (0, github_publication_1.publicationTargetToken)(identity.target);
+    for (const value of [identity.topic, target, identity.key, action, sourceVersion]) {
+        if (!SAFE_VALUE.test(value))
+            throw new Error('Transition fingerprint contains an unsafe identity value.');
+    }
+    if (!exports.TRANSITION_FINGERPRINT_ACTIONS.includes(action)) {
+        throw new Error('Transition fingerprint contains an unknown action.');
+    }
+    return createSemanticDigest({
+        action,
+        identity: { key: identity.key, target, topic: identity.topic },
+        sourceVersion,
+    });
 }
 function buildPublicationMarker(marker) {
     const target = (0, github_publication_1.publicationTargetToken)(marker.identity.target);
@@ -1520,6 +1543,39 @@ function parsePublicationReplyMarker(body) {
     if (!match)
         return undefined;
     return Object.freeze({ target: match[1], correlationId: match[2], messageKey: match[3], digest: match[4] });
+}
+function buildPublicationTransitionMarker(intent) {
+    const target = (0, github_publication_1.publicationTargetToken)(intent.identity.target);
+    for (const value of [intent.identity.topic, target, intent.identity.key, intent.messageKey]) {
+        if (!SAFE_VALUE.test(value))
+            throw new Error('Publication transition marker contains an unsafe identity value.');
+    }
+    if (!DIGEST.test(intent.fingerprint)) {
+        throw new Error('Publication transition marker contains an invalid fingerprint.');
+    }
+    return `<!-- ${exports.PUBLICATION_TRANSITION_MARKER_PREFIX} schema="${exports.PUBLICATION_SCHEMA}" topic="${intent.identity.topic}" target="${target}" key="${intent.identity.key}" fingerprint="${intent.fingerprint}" message="${intent.messageKey}" -->`;
+}
+function parsePublicationTransitionMarker(body) {
+    if (typeof body !== 'string')
+        return undefined;
+    const match = body.match(/<!-- copilot:transition schema="1" topic="([A-Za-z0-9._:-]{1,128})" target="(issue|pr):(\d+)" key="([A-Za-z0-9._:-]{1,128})" fingerprint="([a-f0-9]{8,64})" message="([A-Za-z0-9._:-]{1,128})" -->/u);
+    if (!match)
+        return undefined;
+    const topic = match[1];
+    if (!github_publication_1.PUBLICATION_TOPICS.includes(topic))
+        return undefined;
+    const number = Number(match[3]);
+    if (!Number.isSafeInteger(number) || number < 1)
+        return undefined;
+    return Object.freeze({
+        identity: Object.freeze({
+            topic,
+            target: Object.freeze({ kind: match[2] === 'pr' ? 'pull-request' : 'issue', number }),
+            key: match[4],
+        }),
+        fingerprint: match[5],
+        messageKey: match[6],
+    });
 }
 /**
  * Reads the stable issue-comment identity plus the short-lived namespaced form
@@ -5239,6 +5295,12 @@ function publicationIdentityEquals(left, right) {
         && left.key === right.key;
 }
 function publicationTargetToken(target) {
+    if (target.kind !== 'issue' && target.kind !== 'pull-request') {
+        throw new Error('Publication target kind must be issue or pull-request.');
+    }
+    if (!Number.isSafeInteger(target.number) || target.number < 1) {
+        throw new Error('Publication target number must be a positive safe integer.');
+    }
     return `${target.kind === 'pull-request' ? 'pr' : 'issue'}:${target.number}`;
 }
 

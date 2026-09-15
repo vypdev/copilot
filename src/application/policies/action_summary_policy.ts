@@ -21,6 +21,7 @@ import type { ApplicationErrorMessageReader } from './application_error_message_
 import {
     duplicateCompactionPublicationOutcomes,
     hasStaleSourcePublicationOutcome,
+    transitionPublicationOutcomes,
 } from './publication_outcome_policy';
 
 export interface ActionSummaryContext {
@@ -73,6 +74,7 @@ export function buildActionSummary(
     const bugbotTelemetry = telemetryProjection.status === 'valid' ? telemetryProjection.telemetry : undefined;
     const staleSourceSuppressed = hasStaleSourcePublicationOutcome(context.results);
     const duplicateCompactions = duplicateCompactionPublicationOutcomes(context.results);
+    const transitions = transitionPublicationOutcomes(context.results);
     const hasActionableFindings = findingStates ? countActionableBugbotFindings(findingStates) > 0 : false;
     const hasUnknownFindings = findingStateProjection.status === 'invalid' || (findingStates?.unknown ?? 0) > 0;
     const status = resolveActionSummaryStatus({
@@ -100,6 +102,9 @@ export function buildActionSummary(
         ...(duplicateCompactions.length > 0 ? [
             `| ${catalogText(catalog, 'summary.duplicateCleanup')} | ${formatDuplicateCompactions(duplicateCompactions, catalog)} |`,
         ] : []),
+        ...(transitions.length > 0 ? [
+            `| ${catalogText(catalog, 'summary.actionNotifications')} | ${formatTransitionPublications(transitions, catalog)} |`,
+        ] : []),
     ];
     const localization = renderLocalizationSummarySection(
         context.locale,
@@ -123,6 +128,22 @@ export function buildActionSummary(
         ] : []),
         ...(localization ? ['', localization] : []),
     ].join('\n');
+}
+
+function formatTransitionPublications(
+    outcomes: ReturnType<typeof transitionPublicationOutcomes>,
+    catalog: ActionSummaryMessageCatalog,
+): string {
+    return outcomes.map(outcome => catalogText(catalog, 'summary.actionNotification.entry', {
+        topic: outcome.topic,
+        target: outcome.target,
+        effect: catalog.message(
+            outcome.effect === 'created'
+                ? 'summary.actionNotificationCreated'
+                : 'summary.actionNotificationReused',
+        ),
+        fingerprint: outcome.fingerprint,
+    })).join('; ');
 }
 
 function formatDuplicateCompactions(

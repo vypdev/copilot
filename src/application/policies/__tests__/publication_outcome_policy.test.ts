@@ -2,8 +2,10 @@ import { Result } from '../../../data/model/result';
 import {
     buildDuplicateCompactionPublicationPayload,
     buildStaleSourcePublicationPayload,
+    buildTransitionPublicationPayload,
     duplicateCompactionPublicationOutcomes,
     hasStaleSourcePublicationOutcome,
+    transitionPublicationOutcomes,
 } from '../publication_outcome_policy';
 
 describe('publication outcome policy', () => {
@@ -82,5 +84,63 @@ describe('publication outcome policy', () => {
         expect(projected).toEqual([valid?.publicationCleanup]);
         expect(Object.isFrozen(projected)).toBe(true);
         expect(Object.isFrozen(projected[0])).toBe(true);
+    });
+
+    it('builds immutable, content-free transition evidence', () => {
+        const payload = buildTransitionPublicationPayload({
+            kind: 'transition',
+            identity: { topic: 'branch-sync', target: { kind: 'pull-request', number: 12 }, key: 'develop:feature-12' },
+            fingerprint: '0123abcd',
+            messageKey: 'branch-sync-action-required',
+            locale: 'en-US',
+            values: { ignoredPublicCopy: 'never projected' },
+        }, 'created');
+
+        expect(payload).toEqual({ publicationTransition: {
+            topic: 'branch-sync', target: 'pr:12', effect: 'created', fingerprint: '0123abcd',
+        } });
+        expect(JSON.stringify(payload)).not.toContain('ignoredPublicCopy');
+        expect(Object.isFrozen(payload)).toBe(true);
+        expect(Object.isFrozen(payload.publicationTransition)).toBe(true);
+    });
+
+    it('projects only strict transition evidence', () => {
+        const valid = { publicationTransition: {
+            topic: 'branch-sync', target: 'issue:7', effect: 'unchanged', fingerprint: '0123abcd',
+        } };
+        const malformed = [
+            null,
+            'invalid',
+            { topic: 'unknown', target: 'issue:7', effect: 'created', fingerprint: '0123abcd' },
+            { topic: 'branch-sync', target: 'repository:7', effect: 'created', fingerprint: '0123abcd' },
+            { topic: 'branch-sync', target: 'issue:0', effect: 'created', fingerprint: '0123abcd' },
+            { topic: 'branch-sync', target: `issue:${Number.MAX_SAFE_INTEGER}0`, effect: 'created', fingerprint: '0123abcd' },
+            { topic: 'branch-sync', target: 'issue:7', effect: 'updated', fingerprint: '0123abcd' },
+            { topic: 'branch-sync', target: 'issue:7', effect: 'created', fingerprint: 'invalid' },
+        ];
+        const projected = transitionPublicationOutcomes([
+            new Result({ id: 'valid', success: true, executed: true, payload: valid }),
+            new Result({ id: 'failed', success: false, executed: true, payload: valid }),
+            new Result({ id: 'skipped', success: true, executed: false, payload: valid }),
+            ...malformed.map((publicationTransition, index) => new Result({
+                id: `invalid-${index}`, success: true, executed: true, payload: { publicationTransition },
+            })),
+        ]);
+
+        expect(projected).toEqual([valid.publicationTransition]);
+        expect(Object.isFrozen(projected)).toBe(true);
+        expect(Object.isFrozen(projected[0])).toBe(true);
+    });
+
+    it('bounds transition evidence projected into operator UX', () => {
+        const results = Array.from({ length: 25 }, (_, index) => new Result({
+            id: `transition-${index}`, success: true, executed: true,
+            payload: { publicationTransition: {
+                topic: 'branch-sync', target: `issue:${index + 1}`,
+                effect: 'created', fingerprint: index.toString(16).padStart(8, '0'),
+            } },
+        }));
+
+        expect(transitionPublicationOutcomes(results)).toHaveLength(20);
     });
 });

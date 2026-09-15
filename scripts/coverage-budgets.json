@@ -246,6 +246,7 @@
       "rules": [
         {
           "files": [
+            "src/application/policies/publication_identity_policy.ts",
             "src/application/usecases/steps/common/duplicate_comment_cleanup_workflow.ts"
           ],
           "mode": "each",
@@ -255,6 +256,7 @@
           "files": [
             "src/application/usecases/steps/common/reply_publication_workflow.ts",
             "src/application/usecases/steps/common/status_card_publication_workflow.ts",
+            "src/application/usecases/steps/common/transition_notification_workflow.ts",
             "src/data/repository/github/github_error_policy.ts",
             "src/data/repository/issue/issue_content_repository.ts",
             "src/infrastructure/composition/push_single_action_capability_port_binding.ts"
@@ -263,7 +265,7 @@
           "thresholdProfile": "default"
         }
       ],
-      "successMessage": "semantic duplicate reconciliation coverage: PASS (cleanup workflow 100%; guarded publication path 95% lines/statements, 90% branches/functions)"
+      "successMessage": "semantic duplicate reconciliation coverage: PASS (identity/cleanup policies 100%; guarded publication path 95% lines/statements, 90% branches/functions)"
     },
     {
       "name": "Semantic publication freshness",
