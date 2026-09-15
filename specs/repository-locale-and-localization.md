@@ -4,11 +4,11 @@
 - Date: 2026-09-14
 - Catalog capability ID: github-communication-experience
 - Last verified: 2026-09-15; implementation is on `develop` through PR #389,
-  with the executable disjoint test-budget and multilingual fixture closure in
-  this specification revision
+  with the executable disjoint test-budget and multilingual fixture closure
+  verified in PR #390
 - Owners: Copilot maintainers
 - Scope: Define one English-default repository locale profile and apply it generically to deterministic UI, agent-generated content, and safe interpretation of addressed comments.
-- Related issues/PRs: [issue #334](https://github.com/vypdev/copilot/issues/334), [PR #366](https://github.com/vypdev/copilot/pull/366) through [PR #389](https://github.com/vypdev/copilot/pull/389)
+- Related issues/PRs: [issue #334](https://github.com/vypdev/copilot/issues/334), [PR #366](https://github.com/vypdev/copilot/pull/366) through [PR #390](https://github.com/vypdev/copilot/pull/390)
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none
 
@@ -1049,7 +1049,8 @@ ledger counts each parameterized declaration once and is enforced by
 `validate:specifications`, alongside exhaustive locale/catalog coverage and the
 closed product-facing agent inventory. Controlled PRs #366–#389 verify the
 English default, stable machine names, atomic Check/card updates, and honest
-partial states in GitHub. Bundled Spanish, arbitrary dynamic locales, fallback,
+partial states in GitHub; PR #390 closes the executable concurrency and
+disjoint-budget evidence. Bundled Spanish, arbitrary dynamic locales, fallback,
 right-to-left, CJK, 200% expansion, bidi neutralization, and narrow terminals
 remain deterministic fixtures; the audit intentionally does not change the live
 repository locale merely to manufacture evidence.
