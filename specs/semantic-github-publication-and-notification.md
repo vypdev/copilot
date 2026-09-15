@@ -1078,6 +1078,13 @@ through the generic semantic publication port, and content-free transition and
 cleanup evidence feeds the repository-locale Job Summary. A publication-only
 failure preserves the updated stale card and cannot replay branch work.
 
+Native Check and branch-sync command feedback close two additional surface
+gaps. Check names remain stable machine contracts, while their title and summary
+resolve atomically in the effective issue, pull-request, or repository locale.
+An explicitly addressed `sync-branch` request produces one source-correlated
+semantic reply for aligned, dry-run, and successful merge outcomes; replay
+reuses the reply and never exposes the command's internal `Result.steps`.
+
 No remote product flag is required. Each phase must be independently releasable
 and its compatibility adapter must fail closed to Job Summary, not fall back to
 generic comments.

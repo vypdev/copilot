@@ -44265,6 +44265,13 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.translation.interpretedRequest',
     'interaction.translation.originalRequest',
     'interaction.error.heading',
+    'interaction.branchSync.heading',
+    'interaction.branchSync.alreadyAligned',
+    'interaction.branchSync.dryRunClean',
+    'interaction.branchSync.dryRunConflicted',
+    'interaction.branchSync.merged',
+    'interaction.branchSync.agentResolution',
+    'interaction.branchSync.verification',
     'interaction.status.heading',
     'interaction.status.repository',
     'interaction.status.target',
@@ -44349,6 +44356,22 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.translation.interpretedRequest': 'Interpreted request',
     'interaction.translation.originalRequest': 'Original request',
     'interaction.error.heading': 'Request could not be completed',
+    'interaction.branchSync.heading': 'Branch synchronized',
+    'interaction.branchSync.alreadyAligned': 'No changes were needed — {workingBranch} already contains {parentBranch}.',
+    'interaction.branchSync.dryRunClean': 'Dry run complete — {parentBranch} can be merged into {workingBranch} without conflicts. Nothing was pushed.',
+    'interaction.branchSync.dryRunConflicted': Object.freeze({
+        one: 'Dry run complete — merging {parentBranch} into {workingBranch} has {count} conflict. Nothing was pushed and no agent was invoked.',
+        other: 'Dry run complete — merging {parentBranch} into {workingBranch} has {count} conflicts. Nothing was pushed and no agent was invoked.',
+    }),
+    'interaction.branchSync.merged': '{parentBranch} was merged into {workingBranch} and pushed as {commitSha}.',
+    'interaction.branchSync.agentResolution': Object.freeze({
+        one: 'The fixer resolved {count} conflicted file.',
+        other: 'The fixer resolved {count} conflicted files.',
+    }),
+    'interaction.branchSync.verification': Object.freeze({
+        one: '{count} verification check passed.',
+        other: '{count} verification checks passed.',
+    }),
     'interaction.status.heading': 'Copilot status',
     'interaction.status.repository': 'Repository',
     'interaction.status.target': 'Target',
@@ -44430,6 +44453,25 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.translation.interpretedRequest': 'Solicitud interpretada',
     'interaction.translation.originalRequest': 'Solicitud original',
     'interaction.error.heading': 'No se pudo completar la solicitud',
+    'interaction.branchSync.heading': 'Rama sincronizada',
+    'interaction.branchSync.alreadyAligned': 'No fue necesario hacer cambios: {workingBranch} ya contiene {parentBranch}.',
+    'interaction.branchSync.dryRunClean': 'Simulación completada: {parentBranch} se puede integrar en {workingBranch} sin conflictos. No se envió ningún cambio.',
+    'interaction.branchSync.dryRunConflicted': Object.freeze({
+        one: 'Simulación completada: integrar {parentBranch} en {workingBranch} produce {count} conflicto. No se envió ningún cambio ni se invocó al agente.',
+        many: 'Simulación completada: integrar {parentBranch} en {workingBranch} produce {count} conflictos. No se envió ningún cambio ni se invocó al agente.',
+        other: 'Simulación completada: integrar {parentBranch} en {workingBranch} produce {count} conflictos. No se envió ningún cambio ni se invocó al agente.',
+    }),
+    'interaction.branchSync.merged': '{parentBranch} se integró en {workingBranch} y se envió como {commitSha}.',
+    'interaction.branchSync.agentResolution': Object.freeze({
+        one: 'El agente de corrección resolvió {count} archivo con conflictos.',
+        many: 'El agente de corrección resolvió {count} archivos con conflictos.',
+        other: 'El agente de corrección resolvió {count} archivos con conflictos.',
+    }),
+    'interaction.branchSync.verification': Object.freeze({
+        one: 'Se superó {count} comprobación de verificación.',
+        many: 'Se superaron {count} comprobaciones de verificación.',
+        other: 'Se superaron {count} comprobaciones de verificación.',
+    }),
     'interaction.status.heading': 'Estado de Copilot',
     'interaction.status.repository': 'Repositorio',
     'interaction.status.target': 'Destino',
@@ -45118,10 +45160,15 @@ function selectSemanticReplyIntents(context) {
         return [];
     const correlationId = safeMarkerToken(context.correlationId);
     const replies = context.results.flatMap(result => {
-        if (!result.executed || !result.success)
+        if (!result.success)
             return [];
         const payload = (0, result_1.getResultPayload)(result.payload);
         if (!payload)
+            return [];
+        const branchSync = branchSyncResultProjection(result.id, payload, context.correlationId);
+        if (branchSync)
+            return [replyIntent(context, correlationId, 'branch-sync-result', branchSync)];
+        if (!result.executed)
             return [];
         const directAnswer = directAnswerProjection(payload);
         if (directAnswer)
@@ -45197,7 +45244,37 @@ function renderReplyBody(intent, catalog) {
             (0, application_error_presentation_policy_1.renderApplicationErrorMarkdown)(intent.projection.error, messages.render),
         ].join('\n');
     }
+    if (intent.projection.kind === 'branch-sync-result') {
+        return renderBranchSyncResult(intent.projection, catalog);
+    }
     return (0, status_command_policy_1.formatCopilotStatus)(intent.projection.snapshot, intent.locale, catalog);
+}
+function renderBranchSyncResult(projection, catalog) {
+    const values = {
+        parentBranch: inlineRef(projection.parentBranch),
+        workingBranch: inlineRef(projection.workingBranch),
+    };
+    if (projection.outcome === 'already-aligned') {
+        return safeCatalogSentence(catalog.render('interaction.branchSync.alreadyAligned', values));
+    }
+    if (projection.outcome === 'dry-run-clean') {
+        return safeCatalogSentence(catalog.render('interaction.branchSync.dryRunClean', values));
+    }
+    if (projection.outcome === 'dry-run-conflicted') {
+        return safeCatalogSentence(catalog.render('interaction.branchSync.dryRunConflicted', { ...values, count: projection.conflictCount }));
+    }
+    const details = [
+        safeCatalogSentence(catalog.render('interaction.branchSync.merged', {
+            ...values,
+            commitSha: inlineRef(projection.commitSha),
+        })),
+        ...(projection.outcome === 'merged-with-agent' ? [
+            safeCatalogSentence(catalog.render('interaction.branchSync.agentResolution', { count: projection.conflictCount })),
+        ] : []),
+        safeCatalogSentence(catalog.render('interaction.branchSync.verification', { count: projection.verificationCount })),
+    ];
+    return [`## ${safeCatalogSentence(catalog.render('interaction.branchSync.heading'))}`, '', ...details]
+        .join('\n\n');
 }
 function renderDirectAnswer(projection, catalog) {
     const answer = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(projection.answer).trim();
@@ -45282,6 +45359,39 @@ function directAnswerProjection(payload) {
         ...(translation ? { translation } : {}),
     });
 }
+function branchSyncResultProjection(resultId, payload, correlationId) {
+    const outcomes = [
+        'already-aligned',
+        'dry-run-clean',
+        'dry-run-conflicted',
+        'merged-cleanly',
+        'merged-with-agent',
+    ];
+    if (resultId !== 'SyncBranchUseCase'
+        || !correlationId?.startsWith('comment:')
+        || !outcomes.includes(payload.outcome)
+        || typeof payload.parentBranch !== 'string'
+        || !payload.parentBranch.trim()
+        || typeof payload.workingBranch !== 'string'
+        || !payload.workingBranch.trim())
+        return undefined;
+    const commitSha = (0, git_object_id_1.canonicalGitObjectId)(payload.commitSha);
+    const outcome = payload.outcome;
+    if ((outcome === 'merged-cleanly' || outcome === 'merged-with-agent') && !commitSha)
+        return undefined;
+    const conflictPaths = Array.isArray(payload.conflictPaths) ? payload.conflictPaths : [];
+    const verificationCount = positiveCount(payload.verificationCount);
+    const common = {
+        kind: 'branch-sync-result',
+        parentBranch: payload.parentBranch.trim(),
+        workingBranch: payload.workingBranch.trim(),
+        conflictCount: conflictPaths.length,
+        verificationCount,
+    };
+    return outcome === 'merged-cleanly' || outcome === 'merged-with-agent'
+        ? Object.freeze({ ...common, outcome, commitSha: commitSha })
+        : Object.freeze({ ...common, outcome });
+}
 function translationProjection(value) {
     const translation = (0, result_1.getResultPayload)(value);
     if (!translation
@@ -45341,6 +45451,15 @@ function statusIntent(topic, issueNumber, key, sourceVersion, locale, projection
 }
 function positiveInteger(value) {
     return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+}
+function positiveCount(value) {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : 0;
+}
+function inlineRef(value) {
+    return `\`${value.replace(/[\r\n`<>]/gu, '').replace(/@/gu, '@\u200b').slice(0, 255)}\``;
+}
+function safeCatalogSentence(value) {
+    return (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(value, 700).replace(/[\r\n]+/gu, ' ').trim();
 }
 function replyIntent(context, correlationId, messageKey, projection) {
     return Object.freeze({

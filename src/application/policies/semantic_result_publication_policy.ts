@@ -48,6 +48,41 @@ export interface ProgressPublicationProjection {
 export type SemanticStatusProjection = PlanPublicationProjection | ProgressPublicationProjection;
 export type SemanticStatusIntent = StatusPublicationIntent<SemanticStatusProjection>;
 
+type BranchSyncReplyProjection =
+    | {
+        readonly kind: 'branch-sync-result';
+        readonly outcome: 'already-aligned';
+        readonly parentBranch: string;
+        readonly workingBranch: string;
+        readonly conflictCount: number;
+        readonly verificationCount: number;
+    }
+    | {
+        readonly kind: 'branch-sync-result';
+        readonly outcome: 'dry-run-clean';
+        readonly parentBranch: string;
+        readonly workingBranch: string;
+        readonly conflictCount: number;
+        readonly verificationCount: number;
+    }
+    | {
+        readonly kind: 'branch-sync-result';
+        readonly outcome: 'dry-run-conflicted';
+        readonly parentBranch: string;
+        readonly workingBranch: string;
+        readonly conflictCount: number;
+        readonly verificationCount: number;
+    }
+    | {
+        readonly kind: 'branch-sync-result';
+        readonly outcome: 'merged-cleanly' | 'merged-with-agent';
+        readonly parentBranch: string;
+        readonly workingBranch: string;
+        readonly conflictCount: number;
+        readonly verificationCount: number;
+        readonly commitSha: string;
+    };
+
 export type SemanticReplyProjection =
     | { readonly kind: 'help'; readonly botLogin: string }
     | { readonly kind: 'welcome'; readonly botLogin: string }
@@ -57,6 +92,7 @@ export type SemanticReplyProjection =
         readonly translation?: TranslationPublication;
     }
     | { readonly kind: 'application-error'; readonly error: ApplicationErrorPresentationSource }
+    | BranchSyncReplyProjection
     | { readonly kind: 'access-policy' }
     | { readonly kind: 'status-command'; readonly snapshot: CopilotStatusSnapshot };
 export type SemanticReplyIntent = ReplyPublicationIntent<SemanticReplyProjection>;
@@ -122,9 +158,12 @@ export function selectSemanticReplyIntents(context: SemanticPublicationContext):
     if (!context.target || !positiveInteger(context.target.number) || !context.correlationId?.trim()) return [];
     const correlationId = safeMarkerToken(context.correlationId);
     const replies = context.results.flatMap(result => {
-        if (!result.executed || !result.success) return [];
+        if (!result.success) return [];
         const payload = getResultPayload(result.payload);
         if (!payload) return [];
+        const branchSync = branchSyncResultProjection(result.id, payload, context.correlationId);
+        if (branchSync) return [replyIntent(context, correlationId, 'branch-sync-result', branchSync)];
+        if (!result.executed) return [];
         const directAnswer = directAnswerProjection(payload);
         if (directAnswer) return [replyIntent(context, correlationId, 'direct-answer', directAnswer)];
         const publication = getResultPayload(payload.publication);
@@ -198,7 +237,50 @@ function renderReplyBody(intent: SemanticReplyIntent, catalog: PublicationMessag
             renderApplicationErrorMarkdown(intent.projection.error, messages.render),
         ].join('\n');
     }
+    if (intent.projection.kind === 'branch-sync-result') {
+        return renderBranchSyncResult(intent.projection, catalog);
+    }
     return formatCopilotStatus(intent.projection.snapshot, intent.locale, catalog);
+}
+
+function renderBranchSyncResult(
+    projection: BranchSyncReplyProjection,
+    catalog: PublicationMessageCatalog,
+): string {
+    const values = {
+        parentBranch: inlineRef(projection.parentBranch),
+        workingBranch: inlineRef(projection.workingBranch),
+    };
+    if (projection.outcome === 'already-aligned') {
+        return safeCatalogSentence(catalog.render('interaction.branchSync.alreadyAligned', values));
+    }
+    if (projection.outcome === 'dry-run-clean') {
+        return safeCatalogSentence(catalog.render('interaction.branchSync.dryRunClean', values));
+    }
+    if (projection.outcome === 'dry-run-conflicted') {
+        return safeCatalogSentence(catalog.render(
+            'interaction.branchSync.dryRunConflicted',
+            { ...values, count: projection.conflictCount },
+        ));
+    }
+    const details = [
+        safeCatalogSentence(catalog.render('interaction.branchSync.merged', {
+            ...values,
+            commitSha: inlineRef(projection.commitSha),
+        })),
+        ...(projection.outcome === 'merged-with-agent' ? [
+            safeCatalogSentence(catalog.render(
+                'interaction.branchSync.agentResolution',
+                { count: projection.conflictCount },
+            )),
+        ] : []),
+        safeCatalogSentence(catalog.render(
+            'interaction.branchSync.verification',
+            { count: projection.verificationCount },
+        )),
+    ];
+    return [`## ${safeCatalogSentence(catalog.render('interaction.branchSync.heading'))}`, '', ...details]
+        .join('\n\n');
 }
 
 function renderDirectAnswer(
@@ -296,6 +378,42 @@ function directAnswerProjection(payload: Record<string, unknown>): SemanticReply
     });
 }
 
+function branchSyncResultProjection(
+    resultId: string,
+    payload: Record<string, unknown>,
+    correlationId: string | undefined,
+): BranchSyncReplyProjection | undefined {
+    const outcomes = [
+        'already-aligned',
+        'dry-run-clean',
+        'dry-run-conflicted',
+        'merged-cleanly',
+        'merged-with-agent',
+    ] as const;
+    if (resultId !== 'SyncBranchUseCase'
+        || !correlationId?.startsWith('comment:')
+        || !outcomes.includes(payload.outcome as typeof outcomes[number])
+        || typeof payload.parentBranch !== 'string'
+        || !payload.parentBranch.trim()
+        || typeof payload.workingBranch !== 'string'
+        || !payload.workingBranch.trim()) return undefined;
+    const commitSha = canonicalGitObjectId(payload.commitSha);
+    const outcome = payload.outcome as typeof outcomes[number];
+    if ((outcome === 'merged-cleanly' || outcome === 'merged-with-agent') && !commitSha) return undefined;
+    const conflictPaths = Array.isArray(payload.conflictPaths) ? payload.conflictPaths : [];
+    const verificationCount = positiveCount(payload.verificationCount);
+    const common = {
+        kind: 'branch-sync-result',
+        parentBranch: payload.parentBranch.trim(),
+        workingBranch: payload.workingBranch.trim(),
+        conflictCount: conflictPaths.length,
+        verificationCount,
+    } as const;
+    return outcome === 'merged-cleanly' || outcome === 'merged-with-agent'
+        ? Object.freeze({ ...common, outcome, commitSha: commitSha as string })
+        : Object.freeze({ ...common, outcome });
+}
+
 function translationProjection(value: unknown): TranslationPublication | undefined {
     const translation = getResultPayload(value);
     if (!translation
@@ -363,6 +481,18 @@ function statusIntent(
 
 function positiveInteger(value: unknown): value is number {
     return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+}
+
+function positiveCount(value: unknown): number {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : 0;
+}
+
+function inlineRef(value: string): string {
+    return `\`${value.replace(/[\r\n`<>]/gu, '').replace(/@/gu, '@\u200b').slice(0, 255)}\``;
+}
+
+function safeCatalogSentence(value: string): string {
+    return sanitizeAgentMarkdown(value, 700).replace(/[\r\n]+/gu, ' ').trim();
 }
 
 function replyIntent(

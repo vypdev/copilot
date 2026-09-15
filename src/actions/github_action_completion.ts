@@ -13,8 +13,10 @@ import { logInfo } from '../utils/logger';
 import {
     buildActionSummary,
     renderLocalizationSummarySection,
+    type ActionSummaryContext,
     type LocalizationSummaryLabels,
 } from '../application/policies/action_summary_policy';
+import type { CatalogResolutionObservation } from '../domain/message_catalog';
 import { resolveActionSummaryCatalog } from '../application/policies/action_summary_message_catalog';
 import { lifecycleStateFromLabels } from '../domain/copilot_lifecycle';
 import type { CopilotEvidencePort } from '../application/ports/copilot_evidence_ports';
@@ -73,7 +75,13 @@ export async function finishGithubAction(
         logInfo('Configuration persistence skipped: this single action does not modify execution configuration.');
     }
     const summary = await writeActionSummary(execution, summaryPort, catalogResolver);
-    if (!dryRun) await publishCopilotEvidence(execution, results, summary.text, evidencePort);
+    if (!dryRun) await publishCopilotEvidence(
+        execution,
+        results,
+        summary.text,
+        evidencePort,
+        catalogResolver,
+    );
     const completionError = firstApplicationError(results)
         ?? bugbotCompletionError(execution, results, dryRun);
     if (completionError) core.setFailed(renderApplicationErrorText(completionError, summary.errorMessage));
@@ -82,6 +90,35 @@ export async function finishGithubAction(
 interface WrittenActionSummary {
     readonly text: string;
     readonly errorMessage: ApplicationErrorMessageReader;
+}
+
+function actionSummaryContext(
+    execution: Execution,
+    catalogResolutions: readonly CatalogResolutionObservation[],
+): ActionSummaryContext {
+    const locale = execution.locale ?? { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' };
+    return Object.freeze({
+        owner: execution.owner,
+        repository: execution.repo,
+        eventName: execution.eventName,
+        issueNumber: execution.issue?.number ?? -1,
+        pullRequestNumber: execution.pullRequest?.number ?? -1,
+        lifecycleState: lifecycleStateFromLabels(
+            execution.isPullRequest
+                ? execution.labels?.currentPullRequestLabels ?? []
+                : execution.labels?.currentIssueLabels ?? [],
+            execution.labels?.lifecycle,
+        ),
+        pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode(),
+        failOnUnresolvedFindings: execution.ai.getBugbotReviewConfiguration().failOnUnresolved,
+        locale: Object.freeze({
+            repository: locale.repository,
+            issue: locale.issue,
+            pullRequest: locale.pullRequest,
+        }),
+        catalogResolutions,
+        results: execution.currentConfiguration.results,
+    });
 }
 
 function extractBugbotTelemetry(results: readonly Result[]): unknown[] {
@@ -145,28 +182,10 @@ async function writeActionSummary(
             catalogResolver,
         );
         errorMessage = (id, variables) => catalog.message(id, variables);
-        body = buildActionSummary({
-            owner: execution.owner,
-            repository: execution.repo,
-            eventName: execution.eventName,
-            issueNumber: execution.issue?.number ?? -1,
-            pullRequestNumber: execution.pullRequest?.number ?? -1,
-            lifecycleState: lifecycleStateFromLabels(
-                execution.isPullRequest
-                    ? execution.labels?.currentPullRequestLabels ?? []
-                    : execution.labels?.currentIssueLabels ?? [],
-                execution.labels?.lifecycle,
-            ),
-            pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode(),
-            failOnUnresolvedFindings: execution.ai.getBugbotReviewConfiguration().failOnUnresolved,
-            locale: {
-                repository: locale.repository,
-                issue: locale.issue,
-                pullRequest: locale.pullRequest,
-            },
-            catalogResolutions: catalogResolver?.observations?.() ?? [],
-            results: execution.currentConfiguration.results,
-        }, catalog);
+        body = buildActionSummary(
+            actionSummaryContext(execution, catalogResolver?.observations?.() ?? []),
+            catalog,
+        );
     }
     const localizationEvidence = appendLocalizationEvidence
         ? renderLocalizationSummarySection({
@@ -190,16 +209,39 @@ async function publishCopilotEvidence(
     results: Result[],
     summary: string,
     evidencePort: CopilotEvidencePort | undefined,
+    catalogResolver?: MessageCatalogResolutionPort,
 ): Promise<void> {
     if (!evidencePort) return;
     const headSha = execution.inputs?.pull_request?.head?.sha
         || (execution.isPush ? process.env.GITHUB_SHA : undefined);
-    const evidence = buildCopilotEvidence({
+    const evidenceInput = {
         eventName: execution.eventName,
         headSha,
         summary,
         results,
         failOnUnresolvedFindings: execution.ai.getBugbotReviewConfiguration().failOnUnresolved,
+    };
+    if (!buildCopilotEvidence(evidenceInput)) return;
+    const locale = execution.locale ?? { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' };
+    const surfaceLocale = execution.isPullRequest
+        ? locale.pullRequest
+        : execution.isIssue ? locale.issue : locale.repository;
+    const catalog = await resolveActionSummaryCatalog(
+        surfaceLocale,
+        execution.ai.getAgentConfiguration('planner'),
+        catalogResolver,
+    );
+    const evidenceSummary = surfaceLocale === locale.repository
+        ? summary
+        : buildActionSummary(
+            actionSummaryContext(execution, catalogResolver?.observations?.() ?? []),
+            catalog,
+        );
+    const evidence = buildCopilotEvidence({
+        ...evidenceInput,
+        summary: evidenceSummary,
+        locale: surfaceLocale,
+        catalog,
     });
     if (!evidence) return;
     try {

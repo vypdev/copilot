@@ -273,6 +273,107 @@ describe('semantic result publication policy', () => {
     expect(body).not.toContain('banned');
   });
 
+  it.each([
+    ['already-aligned', 'No changes were needed', undefined],
+    ['dry-run-clean', 'Dry run complete', undefined],
+    ['dry-run-conflicted', '2 conflicts', undefined],
+    ['merged-cleanly', '## Branch synchronized', SOURCE_HEAD],
+    ['merged-with-agent', 'The fixer resolved 2 conflicted files.', SOURCE_HEAD],
+  ] as const)('renders the explicit branch-sync %s outcome as one correlated reply', (outcome, expected, commitSha) => {
+    const [intent] = selectSemanticReplyIntents({
+      locale: 'en-US', target: { kind: 'issue', number: 8 }, correlationId: 'comment:81',
+      results: [new Result({
+        id: 'SyncBranchUseCase', success: true, executed: outcome !== 'already-aligned',
+        steps: ['legacy branch-sync prose'],
+        payload: {
+          outcome,
+          parentBranch: 'develop',
+          workingBranch: 'feature/8-sync',
+          conflictPaths: outcome === 'dry-run-conflicted' || outcome === 'merged-with-agent' ? ['a.ts', 'b.ts'] : [],
+          verificationCount: 2,
+          ...(commitSha ? { commitSha } : {}),
+        },
+      })],
+    });
+
+    expect(intent).toMatchObject({ messageKey: 'branch-sync-result', projection: { kind: 'branch-sync-result', outcome } });
+    const body = renderSemanticReply(intent);
+    expect(body).toContain(expected);
+    expect(body).not.toContain('legacy branch-sync prose');
+    expect(body.length).toBeLessThan(800);
+  });
+
+  it('renders branch-sync outcomes in the configured issue locale and keeps refs inert', () => {
+    const [intent] = selectSemanticReplyIntents({
+      locale: 'es-ES', target: { kind: 'issue', number: 8 }, correlationId: 'comment:81',
+      results: [new Result({
+        id: 'SyncBranchUseCase', success: true, executed: false,
+        payload: {
+          outcome: 'already-aligned',
+          parentBranch: 'develop@team',
+          workingBranch: 'feature/`<unsafe>',
+          conflictPaths: [], verificationCount: 0,
+        },
+      })],
+    });
+
+    const body = renderSemanticReply(intent);
+    expect(body).toContain('No fue necesario hacer cambios');
+    expect(body).toContain('@\u200bteam');
+    expect(body).not.toContain('<unsafe>');
+  });
+
+  it.each([
+    ['background event', 'event:abc12345', SOURCE_HEAD, 'merged-cleanly'],
+    ['missing commit identity', 'comment:81', undefined, 'merged-cleanly'],
+    ['unknown outcome', 'comment:81', SOURCE_HEAD, 'unknown'],
+  ] as const)('does not publish a malformed or %s branch-sync success', (_label, correlationId, commitSha, outcome) => {
+    expect(selectSemanticReplyIntents({
+      locale: 'en-US', target: { kind: 'issue', number: 8 }, correlationId,
+      results: [new Result({
+        id: 'SyncBranchUseCase', success: true, executed: true,
+        payload: {
+          outcome, parentBranch: 'develop', workingBranch: 'feature/8',
+          conflictPaths: [], verificationCount: 1, ...(commitSha ? { commitSha } : {}),
+        },
+      })],
+    })).toEqual([]);
+  });
+
+  it.each([
+    ['wrong result', 'OtherUseCase', 'develop', 'feature/8'],
+    ['non-string parent', 'SyncBranchUseCase', 42, 'feature/8'],
+    ['blank parent', 'SyncBranchUseCase', '  ', 'feature/8'],
+    ['non-string working branch', 'SyncBranchUseCase', 'develop', 42],
+    ['blank working branch', 'SyncBranchUseCase', 'develop', '  '],
+  ] as const)('rejects a branch-sync payload with %s', (_label, id, parentBranch, workingBranch) => {
+    expect(selectSemanticReplyIntents({
+      locale: 'en-US', target: { kind: 'issue', number: 8 }, correlationId: 'comment:81',
+      results: [new Result({
+        id, success: true, executed: true,
+        payload: {
+          outcome: 'already-aligned', parentBranch, workingBranch,
+          conflictPaths: [], verificationCount: 0,
+        },
+      })],
+    })).toEqual([]);
+  });
+
+  it.each(['invalid', -1, 1.5] as const)('normalizes an invalid branch-sync verification count (%s)', verificationCount => {
+    const [intent] = selectSemanticReplyIntents({
+      locale: 'en-US', target: { kind: 'issue', number: 8 }, correlationId: 'comment:81',
+      results: [new Result({
+        id: 'SyncBranchUseCase', success: true, executed: true,
+        payload: {
+          outcome: 'dry-run-conflicted', parentBranch: 'develop', workingBranch: 'feature/8',
+          conflictPaths: 'not-an-array', verificationCount,
+        },
+      })],
+    });
+
+    expect(intent.projection).toMatchObject({ kind: 'branch-sync-result', conflictCount: 0, verificationCount: 0 });
+  });
+
   it('publishes one localized semantic error for an explicit request without producer prose', () => {
     const [intent] = selectSemanticReplyIntents({
       locale: 'es-ES', target: { kind: 'issue', number: 8 }, correlationId: 'comment:81',

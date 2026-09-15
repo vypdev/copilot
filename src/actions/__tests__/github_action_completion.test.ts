@@ -493,6 +493,175 @@ describe('finishGithubAction', () => {
         );
     });
 
+    it('renders a PR Check title and summary in the pull-request locale while the Job Summary stays in the repository locale', async () => {
+        const action = Object.assign(execution(), {
+            eventName: 'pull_request',
+            isIssue: false,
+            isPullRequest: true,
+            pullRequest: { number: 12, action: 'synchronize' },
+            locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'es-ES' },
+            inputs: { pull_request: { head: { sha: 'abc1234' } } },
+        });
+        const results = [new Result({
+            id: 'DetectPotentialProblemsUseCase',
+            success: true,
+            executed: true,
+            payload: {
+                bugbotTelemetry: {
+                    schemaVersion: 1,
+                    outcome: 'no-findings',
+                    elapsedMs: 12,
+                    configuredEffort: 'smart',
+                    headSha: 'abc1234',
+                },
+                findingStates: completeFindingStates(),
+            },
+        })];
+
+        await finishGithubAction(
+            action,
+            results,
+            {} as never,
+            {} as never,
+            { publish: mockEvidencePublish },
+            { publish: mockSummaryPublish },
+            new ResolveMessageCatalogUseCase(),
+        );
+
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('# Copilot execution'));
+        expect(mockEvidencePublish).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name: 'Copilot / Review',
+                title: 'Copilot terminó correctamente',
+                summary: expect.stringContaining('# Ejecución de Copilot'),
+            }),
+            'test-owner',
+            'test-repo',
+            'product-pat',
+        );
+        const evidence = mockEvidencePublish.mock.calls[0][0];
+        expect(evidence.summary).not.toContain('# Copilot execution');
+    });
+
+    it('uses the repository locale for a push Check without changing its stable name', async () => {
+        const previousSha = process.env.GITHUB_SHA;
+        process.env.GITHUB_SHA = 'push-sha';
+        const action = Object.assign(execution(), {
+            eventName: 'push',
+            isIssue: false,
+            isPullRequest: false,
+            isPush: true,
+            locale: { repository: 'es-ES', issue: 'en-US', pullRequest: 'en-US' },
+        });
+        try {
+            await finishGithubAction(
+                action,
+                [new Result({ id: 'VerifyUseCase', success: true, executed: true })],
+                {} as never,
+                {} as never,
+                { publish: mockEvidencePublish },
+                { publish: mockSummaryPublish },
+                new ResolveMessageCatalogUseCase(),
+            );
+        } finally {
+            if (previousSha === undefined) delete process.env.GITHUB_SHA;
+            else process.env.GITHUB_SHA = previousSha;
+        }
+
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('# Ejecución de Copilot'));
+        expect(mockEvidencePublish).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name: 'Copilot / Verification',
+                headSha: 'push-sha',
+                title: 'Copilot terminó correctamente',
+                summary: expect.stringContaining('# Ejecución de Copilot'),
+            }),
+            'test-owner',
+            'test-repo',
+            'product-pat',
+        );
+    });
+
+    it('defaults legacy push completion without locale or conversation targets to English', async () => {
+        const previousSha = process.env.GITHUB_SHA;
+        process.env.GITHUB_SHA = 'legacy-push-sha';
+        const action = Object.assign(execution(), {
+            eventName: 'push',
+            isIssue: false,
+            isPullRequest: false,
+            isPush: true,
+        });
+        const legacyShape = action as unknown as {
+            locale?: Execution['locale'];
+            issue?: Execution['issue'];
+            pullRequest?: Execution['pullRequest'];
+        };
+        delete legacyShape.locale;
+        delete legacyShape.issue;
+        delete legacyShape.pullRequest;
+        try {
+            await finishGithubAction(
+                action,
+                [new Result({ id: 'VerifyUseCase', success: true, executed: true })],
+                {} as never,
+                {} as never,
+                { publish: mockEvidencePublish },
+                { publish: mockSummaryPublish },
+            );
+        } finally {
+            if (previousSha === undefined) delete process.env.GITHUB_SHA;
+            else process.env.GITHUB_SHA = previousSha;
+        }
+
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('# Copilot execution'));
+        expect(mockEvidencePublish).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name: 'Copilot / Verification',
+                headSha: 'legacy-push-sha',
+                title: 'Copilot completed successfully',
+                summary: expect.stringContaining('# Copilot execution'),
+            }),
+            'test-owner',
+            'test-repo',
+            'product-pat',
+        );
+    });
+
+    it('keeps optional summary and Check provider failures non-blocking', async () => {
+        mockSummaryPublish.mockRejectedValueOnce(new Error('summary unavailable'));
+        mockEvidencePublish.mockRejectedValueOnce(new Error('checks unavailable'));
+        const action = Object.assign(execution(), {
+            eventName: 'pull_request',
+            isIssue: false,
+            isPullRequest: true,
+            pullRequest: { number: 12, action: 'synchronize' },
+            inputs: { pull_request: { head: { sha: 'abc1234' } } },
+        });
+        const results = [new Result({
+            id: 'DetectPotentialProblemsUseCase', success: true, executed: true,
+            payload: {
+                bugbotTelemetry: {
+                    schemaVersion: 1, outcome: 'no-findings', elapsedMs: 12,
+                    configuredEffort: 'smart', headSha: 'abc1234',
+                },
+                findingStates: completeFindingStates(),
+            },
+        })];
+
+        await expect(finishGithubAction(
+            action,
+            results,
+            {} as never,
+            {} as never,
+            { publish: mockEvidencePublish },
+            { publish: mockSummaryPublish },
+        )).resolves.toBeUndefined();
+
+        expect(mockSummaryPublish).toHaveBeenCalledTimes(1);
+        expect(mockEvidencePublish).toHaveBeenCalledTimes(1);
+        expect(core.setFailed).not.toHaveBeenCalled();
+    });
+
     it('keeps metadata-only PR completion out of the stable Review Check', async () => {
         const action = Object.assign(execution(), {
             owner: 'test-owner',

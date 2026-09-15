@@ -3,6 +3,11 @@ import type { CopilotEvidence } from '../ports/copilot_evidence_ports';
 import { projectBugbotResultTelemetry, type BugbotTelemetryProjection } from './bugbot_telemetry_projection_policy';
 import { projectBugbotResultFindingStates } from './bugbot_result_finding_state_projection_policy';
 import { countActionableBugbotFindings } from '../../domain/bugbot/review_state';
+import { sanitizeAgentMarkdown } from './github_comment_publication_policy';
+import {
+    resolveStaticActionSummaryCatalog,
+    type ActionSummaryMessageCatalog,
+} from './action_summary_message_catalog';
 
 export interface CopilotEvidenceContext {
     readonly eventName: string;
@@ -10,6 +15,8 @@ export interface CopilotEvidenceContext {
     readonly summary: string;
     readonly results: readonly Result[];
     readonly failOnUnresolvedFindings?: boolean;
+    readonly locale?: string;
+    readonly catalog?: ActionSummaryMessageCatalog;
 }
 
 /** Creates a stable native Check Run projection without performing GitHub I/O. */
@@ -33,11 +40,18 @@ export function buildCopilotEvidence(context: CopilotEvidenceContext): CopilotEv
         hasResults: context.results.length > 0,
         bugbotTelemetry,
     });
+    const catalog = context.catalog ?? resolveStaticActionSummaryCatalog(context.locale ?? 'en-US');
     return {
         name: resolveEvidenceName(context.eventName, isReviewEvent),
         headSha,
         conclusion,
-        title: resolveEvidenceTitle(conclusion, failures, hasActionableFindings, bugbotTelemetry),
+        title: safeEvidenceTitle(resolveEvidenceTitle(
+            conclusion,
+            failures,
+            hasActionableFindings,
+            bugbotTelemetry,
+            catalog,
+        )),
         summary: context.summary.slice(0, 20_000),
     };
 }
@@ -88,20 +102,32 @@ function resolveEvidenceTitle(
     failureCount: number,
     hasActionableFindings: boolean,
     telemetry: BugbotTelemetryProjection | undefined,
+    catalog: ActionSummaryMessageCatalog,
 ): string {
-    if (hasActionableFindings && failureCount === 0) return 'Copilot found actionable findings';
-    if (conclusion === 'failure') return 'Copilot found actionable failures';
-    const incompleteTitle = incompleteReviewTitle(telemetry);
+    if (hasActionableFindings && failureCount === 0) return catalog.message('summary.evidenceActionableFindings');
+    if (conclusion === 'failure') return catalog.message('summary.evidenceActionableFailures');
+    const incompleteTitle = incompleteReviewTitle(telemetry, catalog);
     if (incompleteTitle) return incompleteTitle;
-    if (conclusion === 'neutral') return 'Copilot review produced no actionable result';
-    return 'Copilot completed successfully';
+    if (conclusion === 'neutral') return catalog.message('summary.evidenceNoActionableResult');
+    return catalog.message('summary.evidenceCompleted');
 }
 
-function incompleteReviewTitle(telemetry: BugbotTelemetryProjection | undefined): string | undefined {
+function incompleteReviewTitle(
+    telemetry: BugbotTelemetryProjection | undefined,
+    catalog: ActionSummaryMessageCatalog = resolveStaticActionSummaryCatalog('en-US'),
+): string | undefined {
     switch (telemetry?.outcome) {
-        case 'partial': return 'Copilot review has partial coverage';
-        case 'superseded': return 'Copilot review was superseded';
-        case 'skipped': return 'Copilot review was skipped';
+        case 'partial': return catalog.message('summary.evidencePartialCoverage');
+        case 'superseded': return catalog.message('summary.evidenceSuperseded');
+        case 'skipped': return catalog.message('summary.evidenceSkipped');
         default: return undefined;
     }
+}
+
+function safeEvidenceTitle(value: string): string {
+    return sanitizeAgentMarkdown(value, 255)
+        .replace(/[\r\n]+/gu, ' ')
+        .trim()
+        .slice(0, 255)
+        || 'Copilot result';
 }

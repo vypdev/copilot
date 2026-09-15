@@ -39661,11 +39661,33 @@ async function finishGithubAction(execution, results, issueNotificationPort, con
     }
     const summary = await writeActionSummary(execution, summaryPort, catalogResolver);
     if (!dryRun)
-        await publishCopilotEvidence(execution, results, summary.text, evidencePort);
+        await publishCopilotEvidence(execution, results, summary.text, evidencePort, catalogResolver);
     const completionError = firstApplicationError(results)
         ?? bugbotCompletionError(execution, results, dryRun);
     if (completionError)
         core.setFailed((0, application_error_presentation_policy_1.renderApplicationErrorText)(completionError, summary.errorMessage));
+}
+function actionSummaryContext(execution, catalogResolutions) {
+    const locale = execution.locale ?? { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' };
+    return Object.freeze({
+        owner: execution.owner,
+        repository: execution.repo,
+        eventName: execution.eventName,
+        issueNumber: execution.issue?.number ?? -1,
+        pullRequestNumber: execution.pullRequest?.number ?? -1,
+        lifecycleState: (0, copilot_lifecycle_1.lifecycleStateFromLabels)(execution.isPullRequest
+            ? execution.labels?.currentPullRequestLabels ?? []
+            : execution.labels?.currentIssueLabels ?? [], execution.labels?.lifecycle),
+        pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode(),
+        failOnUnresolvedFindings: execution.ai.getBugbotReviewConfiguration().failOnUnresolved,
+        locale: Object.freeze({
+            repository: locale.repository,
+            issue: locale.issue,
+            pullRequest: locale.pullRequest,
+        }),
+        catalogResolutions,
+        results: execution.currentConfiguration.results,
+    });
 }
 function extractBugbotTelemetry(results) {
     return results.flatMap((result) => {
@@ -39716,25 +39738,7 @@ async function writeActionSummary(execution, summaryPort, catalogResolver) {
     else {
         const catalog = await (0, action_summary_message_catalog_1.resolveActionSummaryCatalog)(locale.repository, execution.ai.getAgentConfiguration('planner'), catalogResolver);
         errorMessage = (id, variables) => catalog.message(id, variables);
-        body = (0, action_summary_policy_1.buildActionSummary)({
-            owner: execution.owner,
-            repository: execution.repo,
-            eventName: execution.eventName,
-            issueNumber: execution.issue?.number ?? -1,
-            pullRequestNumber: execution.pullRequest?.number ?? -1,
-            lifecycleState: (0, copilot_lifecycle_1.lifecycleStateFromLabels)(execution.isPullRequest
-                ? execution.labels?.currentPullRequestLabels ?? []
-                : execution.labels?.currentIssueLabels ?? [], execution.labels?.lifecycle),
-            pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode(),
-            failOnUnresolvedFindings: execution.ai.getBugbotReviewConfiguration().failOnUnresolved,
-            locale: {
-                repository: locale.repository,
-                issue: locale.issue,
-                pullRequest: locale.pullRequest,
-            },
-            catalogResolutions: catalogResolver?.observations?.() ?? [],
-            results: execution.currentConfiguration.results,
-        }, catalog);
+        body = (0, action_summary_policy_1.buildActionSummary)(actionSummaryContext(execution, catalogResolver?.observations?.() ?? []), catalog);
     }
     const localizationEvidence = appendLocalizationEvidence
         ? (0, action_summary_policy_1.renderLocalizationSummarySection)({
@@ -39754,17 +39758,33 @@ async function writeActionSummary(execution, summaryPort, catalogResolver) {
     }
     return { text: summaryText, errorMessage };
 }
-async function publishCopilotEvidence(execution, results, summary, evidencePort) {
+async function publishCopilotEvidence(execution, results, summary, evidencePort, catalogResolver) {
     if (!evidencePort)
         return;
     const headSha = execution.inputs?.pull_request?.head?.sha
         || (execution.isPush ? process.env.GITHUB_SHA : undefined);
-    const evidence = (0, copilot_evidence_policy_1.buildCopilotEvidence)({
+    const evidenceInput = {
         eventName: execution.eventName,
         headSha,
         summary,
         results,
         failOnUnresolvedFindings: execution.ai.getBugbotReviewConfiguration().failOnUnresolved,
+    };
+    if (!(0, copilot_evidence_policy_1.buildCopilotEvidence)(evidenceInput))
+        return;
+    const locale = execution.locale ?? { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' };
+    const surfaceLocale = execution.isPullRequest
+        ? locale.pullRequest
+        : execution.isIssue ? locale.issue : locale.repository;
+    const catalog = await (0, action_summary_message_catalog_1.resolveActionSummaryCatalog)(surfaceLocale, execution.ai.getAgentConfiguration('planner'), catalogResolver);
+    const evidenceSummary = surfaceLocale === locale.repository
+        ? summary
+        : (0, action_summary_policy_1.buildActionSummary)(actionSummaryContext(execution, catalogResolver?.observations?.() ?? []), catalog);
+    const evidence = (0, copilot_evidence_policy_1.buildCopilotEvidence)({
+        ...evidenceInput,
+        summary: evidenceSummary,
+        locale: surfaceLocale,
+        catalog,
     });
     if (!evidence)
         return;
@@ -41147,6 +41167,9 @@ const SIMPLE_MESSAGE_KEYS = Object.freeze([
     'pullRequestLocale', 'catalogResolution', 'descriptors', 'reason', 'failure',
     'findings', 'partial', 'superseded', 'skipped', 'dryRun', 'success', 'invalid',
     'none', 'resultSucceeded', 'resultFailed', 'resultSkipped',
+    'evidenceActionableFindings', 'evidenceActionableFailures',
+    'evidencePartialCoverage', 'evidenceSuperseded', 'evidenceSkipped',
+    'evidenceNoActionableResult', 'evidenceCompleted',
 ]);
 const TEMPLATE_MESSAGE_IDS = Object.freeze([
     'summary.target.pullRequest',
@@ -41207,6 +41230,13 @@ const ENGLISH_SIMPLE = Object.freeze({
     resultSucceeded: 'Succeeded',
     resultFailed: 'Failed',
     resultSkipped: 'Skipped',
+    evidenceActionableFindings: 'Copilot found actionable findings',
+    evidenceActionableFailures: 'Copilot found actionable failures',
+    evidencePartialCoverage: 'Copilot review has partial coverage',
+    evidenceSuperseded: 'Copilot review was superseded',
+    evidenceSkipped: 'Copilot review was skipped',
+    evidenceNoActionableResult: 'Copilot review produced no actionable result',
+    evidenceCompleted: 'Copilot completed successfully',
 });
 const SPANISH_SIMPLE = Object.freeze({
     heading: 'Ejecución de Copilot',
@@ -41247,6 +41277,13 @@ const SPANISH_SIMPLE = Object.freeze({
     resultSucceeded: 'Completado',
     resultFailed: 'Fallido',
     resultSkipped: 'Omitido',
+    evidenceActionableFindings: 'Copilot encontró hallazgos que requieren atención',
+    evidenceActionableFailures: 'Copilot encontró fallos que requieren atención',
+    evidencePartialCoverage: 'La revisión de Copilot tiene cobertura parcial',
+    evidenceSuperseded: 'La revisión de Copilot fue sustituida',
+    evidenceSkipped: 'La revisión de Copilot fue omitida',
+    evidenceNoActionableResult: 'La revisión de Copilot no produjo resultados que requieran atención',
+    evidenceCompleted: 'Copilot terminó correctamente',
 });
 const ENGLISH_TEMPLATES = Object.freeze({
     'summary.target.pullRequest': 'PR #{number}',
@@ -44829,6 +44866,8 @@ exports.buildCopilotEvidence = buildCopilotEvidence;
 const bugbot_telemetry_projection_policy_1 = __nccwpck_require__(43244);
 const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
 const review_state_1 = __nccwpck_require__(79200);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const action_summary_message_catalog_1 = __nccwpck_require__(61544);
 /** Creates a stable native Check Run projection without performing GitHub I/O. */
 function buildCopilotEvidence(context) {
     const headSha = context.headSha?.trim();
@@ -44852,11 +44891,12 @@ function buildCopilotEvidence(context) {
         hasResults: context.results.length > 0,
         bugbotTelemetry,
     });
+    const catalog = context.catalog ?? (0, action_summary_message_catalog_1.resolveStaticActionSummaryCatalog)(context.locale ?? 'en-US');
     return {
         name: resolveEvidenceName(context.eventName, isReviewEvent),
         headSha,
         conclusion,
-        title: resolveEvidenceTitle(conclusion, failures, hasActionableFindings, bugbotTelemetry),
+        title: safeEvidenceTitle(resolveEvidenceTitle(conclusion, failures, hasActionableFindings, bugbotTelemetry, catalog)),
         summary: context.summary.slice(0, 20000),
     };
 }
@@ -44896,25 +44936,32 @@ function resolveEvidenceName(eventName, isReviewEvent) {
         return 'Copilot / Plan';
     return 'Copilot / Verification';
 }
-function resolveEvidenceTitle(conclusion, failureCount, hasActionableFindings, telemetry) {
+function resolveEvidenceTitle(conclusion, failureCount, hasActionableFindings, telemetry, catalog) {
     if (hasActionableFindings && failureCount === 0)
-        return 'Copilot found actionable findings';
+        return catalog.message('summary.evidenceActionableFindings');
     if (conclusion === 'failure')
-        return 'Copilot found actionable failures';
-    const incompleteTitle = incompleteReviewTitle(telemetry);
+        return catalog.message('summary.evidenceActionableFailures');
+    const incompleteTitle = incompleteReviewTitle(telemetry, catalog);
     if (incompleteTitle)
         return incompleteTitle;
     if (conclusion === 'neutral')
-        return 'Copilot review produced no actionable result';
-    return 'Copilot completed successfully';
+        return catalog.message('summary.evidenceNoActionableResult');
+    return catalog.message('summary.evidenceCompleted');
 }
-function incompleteReviewTitle(telemetry) {
+function incompleteReviewTitle(telemetry, catalog = (0, action_summary_message_catalog_1.resolveStaticActionSummaryCatalog)('en-US')) {
     switch (telemetry?.outcome) {
-        case 'partial': return 'Copilot review has partial coverage';
-        case 'superseded': return 'Copilot review was superseded';
-        case 'skipped': return 'Copilot review was skipped';
+        case 'partial': return catalog.message('summary.evidencePartialCoverage');
+        case 'superseded': return catalog.message('summary.evidenceSuperseded');
+        case 'skipped': return catalog.message('summary.evidenceSkipped');
         default: return undefined;
     }
+}
+function safeEvidenceTitle(value) {
+    return (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(value, 255)
+        .replace(/[\r\n]+/gu, ' ')
+        .trim()
+        .slice(0, 255)
+        || 'Copilot result';
 }
 
 
@@ -46861,6 +46908,13 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.translation.interpretedRequest',
     'interaction.translation.originalRequest',
     'interaction.error.heading',
+    'interaction.branchSync.heading',
+    'interaction.branchSync.alreadyAligned',
+    'interaction.branchSync.dryRunClean',
+    'interaction.branchSync.dryRunConflicted',
+    'interaction.branchSync.merged',
+    'interaction.branchSync.agentResolution',
+    'interaction.branchSync.verification',
     'interaction.status.heading',
     'interaction.status.repository',
     'interaction.status.target',
@@ -46945,6 +46999,22 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.translation.interpretedRequest': 'Interpreted request',
     'interaction.translation.originalRequest': 'Original request',
     'interaction.error.heading': 'Request could not be completed',
+    'interaction.branchSync.heading': 'Branch synchronized',
+    'interaction.branchSync.alreadyAligned': 'No changes were needed — {workingBranch} already contains {parentBranch}.',
+    'interaction.branchSync.dryRunClean': 'Dry run complete — {parentBranch} can be merged into {workingBranch} without conflicts. Nothing was pushed.',
+    'interaction.branchSync.dryRunConflicted': Object.freeze({
+        one: 'Dry run complete — merging {parentBranch} into {workingBranch} has {count} conflict. Nothing was pushed and no agent was invoked.',
+        other: 'Dry run complete — merging {parentBranch} into {workingBranch} has {count} conflicts. Nothing was pushed and no agent was invoked.',
+    }),
+    'interaction.branchSync.merged': '{parentBranch} was merged into {workingBranch} and pushed as {commitSha}.',
+    'interaction.branchSync.agentResolution': Object.freeze({
+        one: 'The fixer resolved {count} conflicted file.',
+        other: 'The fixer resolved {count} conflicted files.',
+    }),
+    'interaction.branchSync.verification': Object.freeze({
+        one: '{count} verification check passed.',
+        other: '{count} verification checks passed.',
+    }),
     'interaction.status.heading': 'Copilot status',
     'interaction.status.repository': 'Repository',
     'interaction.status.target': 'Target',
@@ -47026,6 +47096,25 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.translation.interpretedRequest': 'Solicitud interpretada',
     'interaction.translation.originalRequest': 'Solicitud original',
     'interaction.error.heading': 'No se pudo completar la solicitud',
+    'interaction.branchSync.heading': 'Rama sincronizada',
+    'interaction.branchSync.alreadyAligned': 'No fue necesario hacer cambios: {workingBranch} ya contiene {parentBranch}.',
+    'interaction.branchSync.dryRunClean': 'Simulación completada: {parentBranch} se puede integrar en {workingBranch} sin conflictos. No se envió ningún cambio.',
+    'interaction.branchSync.dryRunConflicted': Object.freeze({
+        one: 'Simulación completada: integrar {parentBranch} en {workingBranch} produce {count} conflicto. No se envió ningún cambio ni se invocó al agente.',
+        many: 'Simulación completada: integrar {parentBranch} en {workingBranch} produce {count} conflictos. No se envió ningún cambio ni se invocó al agente.',
+        other: 'Simulación completada: integrar {parentBranch} en {workingBranch} produce {count} conflictos. No se envió ningún cambio ni se invocó al agente.',
+    }),
+    'interaction.branchSync.merged': '{parentBranch} se integró en {workingBranch} y se envió como {commitSha}.',
+    'interaction.branchSync.agentResolution': Object.freeze({
+        one: 'El agente de corrección resolvió {count} archivo con conflictos.',
+        many: 'El agente de corrección resolvió {count} archivos con conflictos.',
+        other: 'El agente de corrección resolvió {count} archivos con conflictos.',
+    }),
+    'interaction.branchSync.verification': Object.freeze({
+        one: 'Se superó {count} comprobación de verificación.',
+        many: 'Se superaron {count} comprobaciones de verificación.',
+        other: 'Se superaron {count} comprobaciones de verificación.',
+    }),
     'interaction.status.heading': 'Estado de Copilot',
     'interaction.status.repository': 'Repositorio',
     'interaction.status.target': 'Destino',
@@ -47714,10 +47803,15 @@ function selectSemanticReplyIntents(context) {
         return [];
     const correlationId = safeMarkerToken(context.correlationId);
     const replies = context.results.flatMap(result => {
-        if (!result.executed || !result.success)
+        if (!result.success)
             return [];
         const payload = (0, result_1.getResultPayload)(result.payload);
         if (!payload)
+            return [];
+        const branchSync = branchSyncResultProjection(result.id, payload, context.correlationId);
+        if (branchSync)
+            return [replyIntent(context, correlationId, 'branch-sync-result', branchSync)];
+        if (!result.executed)
             return [];
         const directAnswer = directAnswerProjection(payload);
         if (directAnswer)
@@ -47793,7 +47887,37 @@ function renderReplyBody(intent, catalog) {
             (0, application_error_presentation_policy_1.renderApplicationErrorMarkdown)(intent.projection.error, messages.render),
         ].join('\n');
     }
+    if (intent.projection.kind === 'branch-sync-result') {
+        return renderBranchSyncResult(intent.projection, catalog);
+    }
     return (0, status_command_policy_1.formatCopilotStatus)(intent.projection.snapshot, intent.locale, catalog);
+}
+function renderBranchSyncResult(projection, catalog) {
+    const values = {
+        parentBranch: inlineRef(projection.parentBranch),
+        workingBranch: inlineRef(projection.workingBranch),
+    };
+    if (projection.outcome === 'already-aligned') {
+        return safeCatalogSentence(catalog.render('interaction.branchSync.alreadyAligned', values));
+    }
+    if (projection.outcome === 'dry-run-clean') {
+        return safeCatalogSentence(catalog.render('interaction.branchSync.dryRunClean', values));
+    }
+    if (projection.outcome === 'dry-run-conflicted') {
+        return safeCatalogSentence(catalog.render('interaction.branchSync.dryRunConflicted', { ...values, count: projection.conflictCount }));
+    }
+    const details = [
+        safeCatalogSentence(catalog.render('interaction.branchSync.merged', {
+            ...values,
+            commitSha: inlineRef(projection.commitSha),
+        })),
+        ...(projection.outcome === 'merged-with-agent' ? [
+            safeCatalogSentence(catalog.render('interaction.branchSync.agentResolution', { count: projection.conflictCount })),
+        ] : []),
+        safeCatalogSentence(catalog.render('interaction.branchSync.verification', { count: projection.verificationCount })),
+    ];
+    return [`## ${safeCatalogSentence(catalog.render('interaction.branchSync.heading'))}`, '', ...details]
+        .join('\n\n');
 }
 function renderDirectAnswer(projection, catalog) {
     const answer = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(projection.answer).trim();
@@ -47878,6 +48002,39 @@ function directAnswerProjection(payload) {
         ...(translation ? { translation } : {}),
     });
 }
+function branchSyncResultProjection(resultId, payload, correlationId) {
+    const outcomes = [
+        'already-aligned',
+        'dry-run-clean',
+        'dry-run-conflicted',
+        'merged-cleanly',
+        'merged-with-agent',
+    ];
+    if (resultId !== 'SyncBranchUseCase'
+        || !correlationId?.startsWith('comment:')
+        || !outcomes.includes(payload.outcome)
+        || typeof payload.parentBranch !== 'string'
+        || !payload.parentBranch.trim()
+        || typeof payload.workingBranch !== 'string'
+        || !payload.workingBranch.trim())
+        return undefined;
+    const commitSha = (0, git_object_id_1.canonicalGitObjectId)(payload.commitSha);
+    const outcome = payload.outcome;
+    if ((outcome === 'merged-cleanly' || outcome === 'merged-with-agent') && !commitSha)
+        return undefined;
+    const conflictPaths = Array.isArray(payload.conflictPaths) ? payload.conflictPaths : [];
+    const verificationCount = positiveCount(payload.verificationCount);
+    const common = {
+        kind: 'branch-sync-result',
+        parentBranch: payload.parentBranch.trim(),
+        workingBranch: payload.workingBranch.trim(),
+        conflictCount: conflictPaths.length,
+        verificationCount,
+    };
+    return outcome === 'merged-cleanly' || outcome === 'merged-with-agent'
+        ? Object.freeze({ ...common, outcome, commitSha: commitSha })
+        : Object.freeze({ ...common, outcome });
+}
 function translationProjection(value) {
     const translation = (0, result_1.getResultPayload)(value);
     if (!translation
@@ -47937,6 +48094,15 @@ function statusIntent(topic, issueNumber, key, sourceVersion, locale, projection
 }
 function positiveInteger(value) {
     return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+}
+function positiveCount(value) {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : 0;
+}
+function inlineRef(value) {
+    return `\`${value.replace(/[\r\n`<>]/gu, '').replace(/@/gu, '@\u200b').slice(0, 255)}\``;
+}
+function safeCatalogSentence(value) {
+    return (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(value, 700).replace(/[\r\n]+/gu, ' ').trim();
 }
 function replyIntent(context, correlationId, messageKey, projection) {
     return Object.freeze({

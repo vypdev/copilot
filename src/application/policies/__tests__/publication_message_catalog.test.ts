@@ -37,8 +37,10 @@ describe('publication message catalog', () => {
     expect(validateCatalogDefinition(ENGLISH_PUBLICATION_DEFINITION, PUBLICATION_MESSAGE_IDS)).toEqual([]);
     expect(validateCatalogDefinition(SPANISH_PUBLICATION_DEFINITION, PUBLICATION_MESSAGE_IDS)).toEqual([]);
     for (const id of PUBLICATION_MESSAGE_IDS) {
-      expect(catalogPlaceholders(SPANISH_PUBLICATION_DEFINITION.messages[id]))
-        .toEqual(catalogPlaceholders(ENGLISH_PUBLICATION_DEFINITION.messages[id]));
+      const english = ENGLISH_PUBLICATION_DEFINITION.messages[id];
+      const spanish = SPANISH_PUBLICATION_DEFINITION.messages[id];
+      expect(catalogPlaceholders(typeof spanish === 'string' ? spanish : spanish.other))
+        .toEqual(catalogPlaceholders(typeof english === 'string' ? english : english.other));
     }
   });
 
