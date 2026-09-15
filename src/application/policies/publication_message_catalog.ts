@@ -2,14 +2,21 @@ import {
     MESSAGE_CATALOG_VERSION,
     renderCatalogMessage,
     selectBundledMessageCatalog,
+    type CatalogMessage,
     type MessageCatalogDefinition,
     type ResolvedMessageCatalog,
 } from '../../domain/message_catalog';
 import { canonicalizeLocaleTag, DEFAULT_REPOSITORY_LOCALE } from '../../domain/locale';
 import type { AgentConfiguration } from '../../domain/agent';
 import type { MessageCatalogResolutionPort } from '../ports/message_catalog_ports';
+import {
+    APPLICATION_ERROR_MESSAGE_IDS,
+    ENGLISH_APPLICATION_ERROR_MESSAGES,
+    SPANISH_APPLICATION_ERROR_MESSAGES,
+    type ApplicationErrorMessageId,
+} from './application_error_message_catalog';
 
-export const PUBLICATION_MESSAGE_IDS = Object.freeze([
+const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'publication.implementationPlan',
     'publication.planReady',
     'publication.planAcceptance',
@@ -81,7 +88,13 @@ export const PUBLICATION_MESSAGE_IDS = Object.freeze([
     'cli.reminder',
 ] as const);
 
-export type PublicationMessageId = typeof PUBLICATION_MESSAGE_IDS[number];
+type PublicationSurfaceMessageId = typeof PUBLICATION_SURFACE_MESSAGE_IDS[number];
+export type PublicationMessageId = PublicationSurfaceMessageId | ApplicationErrorMessageId;
+
+export const PUBLICATION_MESSAGE_IDS: readonly PublicationMessageId[] = Object.freeze([
+    ...PUBLICATION_SURFACE_MESSAGE_IDS,
+    ...APPLICATION_ERROR_MESSAGE_IDS,
+]);
 
 export interface PublicationMessageCatalog {
     readonly locale: string;
@@ -116,7 +129,7 @@ export interface PublicationMessageCatalog {
     readonly render: (id: PublicationMessageId, variables?: Readonly<Record<string, string | number>>) => string;
 }
 
-const ENGLISH_MESSAGES: Readonly<Record<PublicationMessageId, string>> = Object.freeze({
+const ENGLISH_MESSAGES: Readonly<Record<PublicationMessageId, CatalogMessage>> = Object.freeze({
     'publication.implementationPlan': 'Implementation plan',
     'publication.planReady': 'Ready to start. No action is required from maintainers before implementation.',
     'publication.planAcceptance': 'Acceptance',
@@ -186,9 +199,10 @@ const ENGLISH_MESSAGES: Readonly<Record<PublicationMessageId, string>> = Object.
     'cli.steps': 'Steps',
     'cli.errors': 'Errors',
     'cli.reminder': 'Reminder',
+    ...ENGLISH_APPLICATION_ERROR_MESSAGES,
 });
 
-const SPANISH_MESSAGES: Readonly<Record<PublicationMessageId, string>> = Object.freeze({
+const SPANISH_MESSAGES: Readonly<Record<PublicationMessageId, CatalogMessage>> = Object.freeze({
     'publication.implementationPlan': 'Plan de implementación',
     'publication.planReady': 'Listo para comenzar. No se requiere ninguna acción de mantenimiento antes de la implementación.',
     'publication.planAcceptance': 'Aceptación',
@@ -258,6 +272,7 @@ const SPANISH_MESSAGES: Readonly<Record<PublicationMessageId, string>> = Object.
     'cli.steps': 'Pasos',
     'cli.errors': 'Errores',
     'cli.reminder': 'Recordatorio',
+    ...SPANISH_APPLICATION_ERROR_MESSAGES,
 });
 
 export const ENGLISH_PUBLICATION_DEFINITION: MessageCatalogDefinition<PublicationMessageId> = Object.freeze({

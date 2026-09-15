@@ -143,10 +143,17 @@ closed `ApplicationError` contract: one of 20 semantic codes, a derived
 category and retry decision, impact, recommended action, retained-state
 summary, and request correlation UUID. A raw cause is ECMAScript-private,
 never serialized or logged, and cannot enter `Result.errors`. The generic Job
-Summary projects the stable kind/code/retry/reference through its repository-
-locale catalog and does not replay producer error prose. CLI and early boundary
-failures retain the safe default English error view until repository-aware
-presentation is available.
+Summary, repository-aware CLI, deployment completion, and ordinary Action
+completion project one shared code-specific error catalog. Stable codes and
+references remain machine-readable; labels, impact, action, retained state, and
+retry guidance follow `repository-locale`, and producer error prose is not
+replayed. The pre-repository CLI boundary uses English; the early GitHub Action
+boundary can use bundled English or Spanish from its validated input and falls
+back atomically to English when dynamic localization is not yet available.
+Partial operations select a closed recovery descriptor with only validated
+branch-name or issue-number variables. This preserves exact rollback and
+retained-state guidance in every locale without permitting feature code to
+override presentation with arbitrary strings.
 
 The main-run setup path follows that rule end to end. Its action boundary copies
 and freezes a `SetupExecutionContext`, setup returns a discriminated result, and
@@ -371,5 +378,5 @@ machine event/state/error values stable, and projects routine results as compact
 localized aggregate counts. Only failed results receive an expanded diagnostic
 section. Internal result names, `Result.steps`, and arbitrary error messages remain
 in logs or machine evidence; they are never replayed into the summary. Failures
-show category-localized impact, action, and retained-state guidance beside the
-stable code, retry decision, and correlation reference.
+show code-specific localized impact, action, and retained-state guidance beside
+the stable code, retry decision, and correlation reference.

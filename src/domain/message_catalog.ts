@@ -1,6 +1,6 @@
 import { baseLanguage, canonicalizeLocaleTag, DEFAULT_REPOSITORY_LOCALE } from './locale';
 
-export const MESSAGE_CATALOG_VERSION = '1';
+export const MESSAGE_CATALOG_VERSION = '2';
 
 export type CatalogResolutionSource = 'exact' | 'base' | 'dynamic' | 'fallback';
 export type CatalogFallbackReason =

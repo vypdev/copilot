@@ -61,6 +61,37 @@ describe('ApplicationError', () => {
         })).toThrow('Retryability cannot be broadened');
     });
 
+    it('preserves only closed, immutable recovery descriptors with bounded variables', () => {
+        const error = new ApplicationError('provider.unavailable', 'Enrichment failed.', {
+            correlationId: CORRELATION_ID,
+            recovery: {
+                id: 'managed-branch-enrichment-failed',
+                variables: { branchName: 'feature/42-add-login' },
+            },
+        });
+
+        expect(error.recovery).toEqual({
+            id: 'managed-branch-enrichment-failed',
+            variables: { branchName: 'feature/42-add-login' },
+        });
+        expect(Object.isFrozen(error.recovery)).toBe(true);
+        expect(Object.isFrozen(error.recovery?.variables)).toBe(true);
+        expect(error.toJSON()).toMatchObject({ recovery: error.recovery });
+    });
+
+    it.each([
+        { id: 'managed-branch-enrichment-failed', variables: { branchName: '`forged`' } },
+        { id: 'managed-branch-enrichment-failed', variables: {} },
+        { id: 'inactivity-explanation-failed', variables: { issueNumber: 0 } },
+        { id: 'pull-request-link-restored', variables: { unexpected: 'value' } },
+        { id: 'not-supported', variables: {} },
+    ])('rejects an invalid recovery descriptor: $id $variables', recovery => {
+        expect(() => new ApplicationError('provider.unavailable', 'Failed.', {
+            correlationId: CORRELATION_ID,
+            recovery: recovery as never,
+        })).toThrow('Application error recovery');
+    });
+
     it('creates and validates lowercase UUID v4 correlation IDs', () => {
         expect(new ApplicationError('unexpected', 'Unexpected.').correlationId).toMatch(
             /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,

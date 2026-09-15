@@ -20,6 +20,12 @@ import {
   SPANISH_MERGE_QUEUE_MESSAGES,
   type MergeQueueMessageId,
 } from './merge_queue_message_catalog';
+import {
+  APPLICATION_ERROR_MESSAGE_IDS,
+  ENGLISH_APPLICATION_ERROR_MESSAGES,
+  SPANISH_APPLICATION_ERROR_MESSAGES,
+  type ApplicationErrorMessageId,
+} from './application_error_message_catalog';
 
 const SIMPLE_MESSAGE_KEYS = Object.freeze([
   'release', 'hotfix', 'currentStatus', 'noAction', 'actionRequired', 'progress',
@@ -82,7 +88,8 @@ export type DeploymentMessageId =
   | PhaseMessageId
   | DiagramMessageId
   | TemplateMessageId
-  | MergeQueueMessageId;
+  | MergeQueueMessageId
+  | ApplicationErrorMessageId;
 export type DeploymentMessageCatalog = ResolvedMessageCatalogView<DeploymentMessageId>;
 
 export interface DeploymentCopy extends Readonly<Record<SimpleMessageKey, string>> {
@@ -96,6 +103,7 @@ export const DEPLOYMENT_MESSAGE_IDS: readonly DeploymentMessageId[] = Object.fre
   ...DIAGRAM_KEYS.map(key => `deployment.diagram.${key}` as const),
   ...TEMPLATE_MESSAGE_IDS,
   ...MERGE_QUEUE_MESSAGE_IDS,
+  ...APPLICATION_ERROR_MESSAGE_IDS,
 ]);
 
 const ENGLISH_SIMPLE: Readonly<Record<SimpleMessageKey, string>> = Object.freeze({
@@ -244,6 +252,7 @@ function catalogMessages(
   diagram: Readonly<Record<DiagramKey, string>>,
   templates: Readonly<Record<TemplateMessageId, CatalogMessage>>,
   mergeQueue: Readonly<Record<MergeQueueMessageId, CatalogMessage>>,
+  errorMessages: Readonly<Record<ApplicationErrorMessageId, CatalogMessage>>,
 ): Readonly<Record<DeploymentMessageId, CatalogMessage>> {
   return Object.freeze({
     ...Object.fromEntries(SIMPLE_MESSAGE_KEYS.map(key => [`deployment.${key}`, simple[key]])),
@@ -251,6 +260,7 @@ function catalogMessages(
     ...Object.fromEntries(DIAGRAM_KEYS.map(key => [`deployment.diagram.${key}`, diagram[key]])),
     ...templates,
     ...mergeQueue,
+    ...errorMessages,
   }) as Readonly<Record<DeploymentMessageId, CatalogMessage>>;
 }
 
@@ -264,6 +274,7 @@ export const ENGLISH_DEPLOYMENT_DEFINITION: MessageCatalogDefinition<DeploymentM
     ENGLISH_DIAGRAM,
     ENGLISH_TEMPLATES,
     ENGLISH_MERGE_QUEUE_MESSAGES,
+    ENGLISH_APPLICATION_ERROR_MESSAGES,
   ),
 });
 
@@ -277,6 +288,7 @@ export const SPANISH_DEPLOYMENT_DEFINITION: MessageCatalogDefinition<DeploymentM
     SPANISH_DIAGRAM,
     SPANISH_TEMPLATES,
     SPANISH_MERGE_QUEUE_MESSAGES,
+    SPANISH_APPLICATION_ERROR_MESSAGES,
   ),
 });
 

@@ -1,8 +1,7 @@
-import * as core from '@actions/core';
 import chalk from 'chalk';
 import boxen from 'boxen';
 import type { Execution } from '../data/model/execution';
-import type { Result } from '../data/model/result';
+import { Result } from '../data/model/result';
 import { TITLE } from '../application/contracts/product_identity';
 import { logError, logInfo } from '../utils/logger';
 import { dispatchMainRunRoute } from './main_run_dispatcher';
@@ -12,7 +11,6 @@ import { resolveWorkflowIdentifier } from './workflow_context';
 import { createWaitForPreviousWorkflowRunsUseCase } from '../infrastructure/composition/workflow_queue_composition_root';
 import type { PreviousWorkflowRunsQuery } from '../application/ports/workflow_run_ports';
 import { toApplicationError } from '../application/errors/application_error';
-import { renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
 
 export const WORKFLOW_QUEUE_FAILURE_MESSAGE =
     'Workflow queue check failed; sequential execution was not bypassed.';
@@ -117,9 +115,18 @@ export async function runMainRoute(
     try {
         let results: Result[];
         if (route === 'unhandled') {
-            logError(`Action not handled. Event: ${execution.eventName}.`);
-            core.setFailed('Action not handled.');
-            results = [];
+            const semanticError = toApplicationError(
+                undefined,
+                'workflow.invalid-event',
+                'Action not handled.',
+            );
+            logError(semanticError);
+            results = [new Result({
+                id: 'MainRunRoute',
+                success: false,
+                executed: false,
+                errors: [semanticError],
+            })];
         } else {
             results = await dispatchMainRunRoute(route, execution, routeHandlers);
         }
@@ -130,7 +137,11 @@ export async function runMainRoute(
     } catch (error: unknown) {
         const semanticError = toApplicationError(error, 'workflow.failed', 'Main run failed.');
         logError(semanticError);
-        core.setFailed(renderApplicationErrorText(semanticError));
-        return [];
+        return [new Result({
+            id: 'MainRunRoute',
+            success: false,
+            executed: true,
+            errors: [semanticError],
+        })];
     }
 }

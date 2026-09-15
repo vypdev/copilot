@@ -2,1214 +2,6 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 94361:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.issueCommand = issueCommand;
-exports.issue = issue;
-const os = __importStar(__nccwpck_require__(22037));
-const utils_1 = __nccwpck_require__(15206);
-/**
- * Issues a command to the GitHub Actions runner
- *
- * @param command - The command name to issue
- * @param properties - Additional properties for the command (key-value pairs)
- * @param message - The message to include with the command
- * @remarks
- * This function outputs a specially formatted string to stdout that the Actions
- * runner interprets as a command. These commands can control workflow behavior,
- * set outputs, create annotations, mask values, and more.
- *
- * Command Format:
- *   ::name key=value,key=value::message
- *
- * @example
- * ```typescript
- * // Issue a warning annotation
- * issueCommand('warning', {}, 'This is a warning message');
- * // Output: ::warning::This is a warning message
- *
- * // Set an environment variable
- * issueCommand('set-env', { name: 'MY_VAR' }, 'some value');
- * // Output: ::set-env name=MY_VAR::some value
- *
- * // Add a secret mask
- * issueCommand('add-mask', {}, 'secretValue123');
- * // Output: ::add-mask::secretValue123
- * ```
- *
- * @internal
- * This is an internal utility function that powers the public API functions
- * such as setSecret, warning, error, and exportVariable.
- */
-function issueCommand(command, properties, message) {
-    const cmd = new Command(command, properties, message);
-    process.stdout.write(cmd.toString() + os.EOL);
-}
-function issue(name, message = '') {
-    issueCommand(name, {}, message);
-}
-const CMD_STRING = '::';
-class Command {
-    constructor(command, properties, message) {
-        if (!command) {
-            command = 'missing.command';
-        }
-        this.command = command;
-        this.properties = properties;
-        this.message = message;
-    }
-    toString() {
-        let cmdStr = CMD_STRING + this.command;
-        if (this.properties && Object.keys(this.properties).length > 0) {
-            cmdStr += ' ';
-            let first = true;
-            for (const key in this.properties) {
-                if (this.properties.hasOwnProperty(key)) {
-                    const val = this.properties[key];
-                    if (val) {
-                        if (first) {
-                            first = false;
-                        }
-                        else {
-                            cmdStr += ',';
-                        }
-                        cmdStr += `${key}=${escapeProperty(val)}`;
-                    }
-                }
-            }
-        }
-        cmdStr += `${CMD_STRING}${escapeData(this.message)}`;
-        return cmdStr;
-    }
-}
-function escapeData(s) {
-    return (0, utils_1.toCommandValue)(s)
-        .replace(/%/g, '%25')
-        .replace(/\r/g, '%0D')
-        .replace(/\n/g, '%0A');
-}
-function escapeProperty(s) {
-    return (0, utils_1.toCommandValue)(s)
-        .replace(/%/g, '%25')
-        .replace(/\r/g, '%0D')
-        .replace(/\n/g, '%0A')
-        .replace(/:/g, '%3A')
-        .replace(/,/g, '%2C');
-}
-//# sourceMappingURL=command.js.map
-
-/***/ }),
-
-/***/ 75855:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.platform = exports.toPlatformPath = exports.toWin32Path = exports.toPosixPath = exports.markdownSummary = exports.summary = exports.ExitCode = void 0;
-exports.exportVariable = exportVariable;
-exports.setSecret = setSecret;
-exports.addPath = addPath;
-exports.getInput = getInput;
-exports.getMultilineInput = getMultilineInput;
-exports.getBooleanInput = getBooleanInput;
-exports.setOutput = setOutput;
-exports.setCommandEcho = setCommandEcho;
-exports.setFailed = setFailed;
-exports.isDebug = isDebug;
-exports.debug = debug;
-exports.error = error;
-exports.warning = warning;
-exports.notice = notice;
-exports.info = info;
-exports.startGroup = startGroup;
-exports.endGroup = endGroup;
-exports.group = group;
-exports.saveState = saveState;
-exports.getState = getState;
-exports.getIDToken = getIDToken;
-const command_1 = __nccwpck_require__(94361);
-const file_command_1 = __nccwpck_require__(31618);
-const utils_1 = __nccwpck_require__(15206);
-const os = __importStar(__nccwpck_require__(22037));
-const path = __importStar(__nccwpck_require__(71017));
-const oidc_utils_1 = __nccwpck_require__(88247);
-/**
- * The code to exit an action
- */
-var ExitCode;
-(function (ExitCode) {
-    /**
-     * A code indicating that the action was successful
-     */
-    ExitCode[ExitCode["Success"] = 0] = "Success";
-    /**
-     * A code indicating that the action was a failure
-     */
-    ExitCode[ExitCode["Failure"] = 1] = "Failure";
-})(ExitCode || (exports.ExitCode = ExitCode = {}));
-//-----------------------------------------------------------------------
-// Variables
-//-----------------------------------------------------------------------
-/**
- * Sets env variable for this action and future actions in the job
- * @param name the name of the variable to set
- * @param val the value of the variable. Non-string values will be converted to a string via JSON.stringify
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function exportVariable(name, val) {
-    const convertedVal = (0, utils_1.toCommandValue)(val);
-    process.env[name] = convertedVal;
-    const filePath = process.env['GITHUB_ENV'] || '';
-    if (filePath) {
-        return (0, file_command_1.issueFileCommand)('ENV', (0, file_command_1.prepareKeyValueMessage)(name, val));
-    }
-    (0, command_1.issueCommand)('set-env', { name }, convertedVal);
-}
-/**
- * Registers a secret which will get masked from logs
- *
- * @param secret - Value of the secret to be masked
- * @remarks
- * This function instructs the Actions runner to mask the specified value in any
- * logs produced during the workflow run. Once registered, the secret value will
- * be replaced with asterisks (***) whenever it appears in console output, logs,
- * or error messages.
- *
- * This is useful for protecting sensitive information such as:
- * - API keys
- * - Access tokens
- * - Authentication credentials
- * - URL parameters containing signatures (SAS tokens)
- *
- * Note that masking only affects future logs; any previous appearances of the
- * secret in logs before calling this function will remain unmasked.
- *
- * @example
- * ```typescript
- * // Register an API token as a secret
- * const apiToken = "abc123xyz456";
- * setSecret(apiToken);
- *
- * // Now any logs containing this value will show *** instead
- * console.log(`Using token: ${apiToken}`); // Outputs: "Using token: ***"
- * ```
- */
-function setSecret(secret) {
-    (0, command_1.issueCommand)('add-mask', {}, secret);
-}
-/**
- * Prepends inputPath to the PATH (for this action and future actions)
- * @param inputPath
- */
-function addPath(inputPath) {
-    const filePath = process.env['GITHUB_PATH'] || '';
-    if (filePath) {
-        (0, file_command_1.issueFileCommand)('PATH', inputPath);
-    }
-    else {
-        (0, command_1.issueCommand)('add-path', {}, inputPath);
-    }
-    process.env['PATH'] = `${inputPath}${path.delimiter}${process.env['PATH']}`;
-}
-/**
- * Gets the value of an input.
- * Unless trimWhitespace is set to false in InputOptions, the value is also trimmed.
- * Returns an empty string if the value is not defined.
- *
- * @param     name     name of the input to get
- * @param     options  optional. See InputOptions.
- * @returns   string
- */
-function getInput(name, options) {
-    const val = process.env[`INPUT_${name.replace(/ /g, '_').toUpperCase()}`] || '';
-    if (options && options.required && !val) {
-        throw new Error(`Input required and not supplied: ${name}`);
-    }
-    if (options && options.trimWhitespace === false) {
-        return val;
-    }
-    return val.trim();
-}
-/**
- * Gets the values of an multiline input.  Each value is also trimmed.
- *
- * @param     name     name of the input to get
- * @param     options  optional. See InputOptions.
- * @returns   string[]
- *
- */
-function getMultilineInput(name, options) {
-    const inputs = getInput(name, options)
-        .split('\n')
-        .filter(x => x !== '');
-    if (options && options.trimWhitespace === false) {
-        return inputs;
-    }
-    return inputs.map(input => input.trim());
-}
-/**
- * Gets the input value of the boolean type in the YAML 1.2 "core schema" specification.
- * Support boolean input list: `true | True | TRUE | false | False | FALSE` .
- * The return value is also in boolean type.
- * ref: https://yaml.org/spec/1.2/spec.html#id2804923
- *
- * @param     name     name of the input to get
- * @param     options  optional. See InputOptions.
- * @returns   boolean
- */
-function getBooleanInput(name, options) {
-    const trueValue = ['true', 'True', 'TRUE'];
-    const falseValue = ['false', 'False', 'FALSE'];
-    const val = getInput(name, options);
-    if (trueValue.includes(val))
-        return true;
-    if (falseValue.includes(val))
-        return false;
-    throw new TypeError(`Input does not meet YAML 1.2 "Core Schema" specification: ${name}\n` +
-        `Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
-}
-/**
- * Sets the value of an output.
- *
- * @param     name     name of the output to set
- * @param     value    value to store. Non-string values will be converted to a string via JSON.stringify
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function setOutput(name, value) {
-    const filePath = process.env['GITHUB_OUTPUT'] || '';
-    if (filePath) {
-        return (0, file_command_1.issueFileCommand)('OUTPUT', (0, file_command_1.prepareKeyValueMessage)(name, value));
-    }
-    process.stdout.write(os.EOL);
-    (0, command_1.issueCommand)('set-output', { name }, (0, utils_1.toCommandValue)(value));
-}
-/**
- * Enables or disables the echoing of commands into stdout for the rest of the step.
- * Echoing is disabled by default if ACTIONS_STEP_DEBUG is not set.
- *
- */
-function setCommandEcho(enabled) {
-    (0, command_1.issue)('echo', enabled ? 'on' : 'off');
-}
-//-----------------------------------------------------------------------
-// Results
-//-----------------------------------------------------------------------
-/**
- * Sets the action status to failed.
- * When the action exits it will be with an exit code of 1
- * @param message add error issue message
- */
-function setFailed(message) {
-    process.exitCode = ExitCode.Failure;
-    error(message);
-}
-//-----------------------------------------------------------------------
-// Logging Commands
-//-----------------------------------------------------------------------
-/**
- * Gets whether Actions Step Debug is on or not
- */
-function isDebug() {
-    return process.env['RUNNER_DEBUG'] === '1';
-}
-/**
- * Writes debug message to user log
- * @param message debug message
- */
-function debug(message) {
-    (0, command_1.issueCommand)('debug', {}, message);
-}
-/**
- * Adds an error issue
- * @param message error issue message. Errors will be converted to string via toString()
- * @param properties optional properties to add to the annotation.
- */
-function error(message, properties = {}) {
-    (0, command_1.issueCommand)('error', (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
-}
-/**
- * Adds a warning issue
- * @param message warning issue message. Errors will be converted to string via toString()
- * @param properties optional properties to add to the annotation.
- */
-function warning(message, properties = {}) {
-    (0, command_1.issueCommand)('warning', (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
-}
-/**
- * Adds a notice issue
- * @param message notice issue message. Errors will be converted to string via toString()
- * @param properties optional properties to add to the annotation.
- */
-function notice(message, properties = {}) {
-    (0, command_1.issueCommand)('notice', (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
-}
-/**
- * Writes info to log with console.log.
- * @param message info message
- */
-function info(message) {
-    process.stdout.write(message + os.EOL);
-}
-/**
- * Begin an output group.
- *
- * Output until the next `groupEnd` will be foldable in this group
- *
- * @param name The name of the output group
- */
-function startGroup(name) {
-    (0, command_1.issue)('group', name);
-}
-/**
- * End an output group.
- */
-function endGroup() {
-    (0, command_1.issue)('endgroup');
-}
-/**
- * Wrap an asynchronous function call in a group.
- *
- * Returns the same type as the function itself.
- *
- * @param name The name of the group
- * @param fn The function to wrap in the group
- */
-function group(name, fn) {
-    return __awaiter(this, void 0, void 0, function* () {
-        startGroup(name);
-        let result;
-        try {
-            result = yield fn();
-        }
-        finally {
-            endGroup();
-        }
-        return result;
-    });
-}
-//-----------------------------------------------------------------------
-// Wrapper action state
-//-----------------------------------------------------------------------
-/**
- * Saves state for current action, the state can only be retrieved by this action's post job execution.
- *
- * @param     name     name of the state to store
- * @param     value    value to store. Non-string values will be converted to a string via JSON.stringify
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function saveState(name, value) {
-    const filePath = process.env['GITHUB_STATE'] || '';
-    if (filePath) {
-        return (0, file_command_1.issueFileCommand)('STATE', (0, file_command_1.prepareKeyValueMessage)(name, value));
-    }
-    (0, command_1.issueCommand)('save-state', { name }, (0, utils_1.toCommandValue)(value));
-}
-/**
- * Gets the value of an state set by this action's main execution.
- *
- * @param     name     name of the state to get
- * @returns   string
- */
-function getState(name) {
-    return process.env[`STATE_${name}`] || '';
-}
-function getIDToken(aud) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return yield oidc_utils_1.OidcClient.getIDToken(aud);
-    });
-}
-/**
- * Summary exports
- */
-var summary_1 = __nccwpck_require__(91785);
-Object.defineProperty(exports, "summary", ({ enumerable: true, get: function () { return summary_1.summary; } }));
-/**
- * @deprecated use core.summary
- */
-var summary_2 = __nccwpck_require__(91785);
-Object.defineProperty(exports, "markdownSummary", ({ enumerable: true, get: function () { return summary_2.markdownSummary; } }));
-/**
- * Path exports
- */
-var path_utils_1 = __nccwpck_require__(14520);
-Object.defineProperty(exports, "toPosixPath", ({ enumerable: true, get: function () { return path_utils_1.toPosixPath; } }));
-Object.defineProperty(exports, "toWin32Path", ({ enumerable: true, get: function () { return path_utils_1.toWin32Path; } }));
-Object.defineProperty(exports, "toPlatformPath", ({ enumerable: true, get: function () { return path_utils_1.toPlatformPath; } }));
-/**
- * Platform utilities exports
- */
-exports.platform = __importStar(__nccwpck_require__(34525));
-//# sourceMappingURL=core.js.map
-
-/***/ }),
-
-/***/ 31618:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-// For internal use, subject to change.
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.issueFileCommand = issueFileCommand;
-exports.prepareKeyValueMessage = prepareKeyValueMessage;
-// We use any as a valid input type
-/* eslint-disable @typescript-eslint/no-explicit-any */
-const crypto = __importStar(__nccwpck_require__(6113));
-const fs = __importStar(__nccwpck_require__(57147));
-const os = __importStar(__nccwpck_require__(22037));
-const utils_1 = __nccwpck_require__(15206);
-function issueFileCommand(command, message) {
-    const filePath = process.env[`GITHUB_${command}`];
-    if (!filePath) {
-        throw new Error(`Unable to find environment variable for file command ${command}`);
-    }
-    if (!fs.existsSync(filePath)) {
-        throw new Error(`Missing file at path: ${filePath}`);
-    }
-    fs.appendFileSync(filePath, `${(0, utils_1.toCommandValue)(message)}${os.EOL}`, {
-        encoding: 'utf8'
-    });
-}
-function prepareKeyValueMessage(key, value) {
-    const delimiter = `ghadelimiter_${crypto.randomUUID()}`;
-    const convertedValue = (0, utils_1.toCommandValue)(value);
-    // These should realistically never happen, but just in case someone finds a
-    // way to exploit uuid generation let's not allow keys or values that contain
-    // the delimiter.
-    if (key.includes(delimiter)) {
-        throw new Error(`Unexpected input: name should not contain the delimiter "${delimiter}"`);
-    }
-    if (convertedValue.includes(delimiter)) {
-        throw new Error(`Unexpected input: value should not contain the delimiter "${delimiter}"`);
-    }
-    return `${key}<<${delimiter}${os.EOL}${convertedValue}${os.EOL}${delimiter}`;
-}
-//# sourceMappingURL=file-command.js.map
-
-/***/ }),
-
-/***/ 88247:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.OidcClient = void 0;
-const http_client_1 = __nccwpck_require__(75784);
-const auth_1 = __nccwpck_require__(57281);
-const core_1 = __nccwpck_require__(75855);
-class OidcClient {
-    static createHttpClient(allowRetry = true, maxRetry = 10) {
-        const requestOptions = {
-            allowRetries: allowRetry,
-            maxRetries: maxRetry
-        };
-        return new http_client_1.HttpClient('actions/oidc-client', [new auth_1.BearerCredentialHandler(OidcClient.getRequestToken())], requestOptions);
-    }
-    static getRequestToken() {
-        const token = process.env['ACTIONS_ID_TOKEN_REQUEST_TOKEN'];
-        if (!token) {
-            throw new Error('Unable to get ACTIONS_ID_TOKEN_REQUEST_TOKEN env variable');
-        }
-        return token;
-    }
-    static getIDTokenUrl() {
-        const runtimeUrl = process.env['ACTIONS_ID_TOKEN_REQUEST_URL'];
-        if (!runtimeUrl) {
-            throw new Error('Unable to get ACTIONS_ID_TOKEN_REQUEST_URL env variable');
-        }
-        return runtimeUrl;
-    }
-    static getCall(id_token_url) {
-        return __awaiter(this, void 0, void 0, function* () {
-            var _a;
-            const httpclient = OidcClient.createHttpClient();
-            const res = yield httpclient
-                .getJson(id_token_url)
-                .catch(error => {
-                throw new Error(`Failed to get ID Token. \n
-        Error Code : ${error.statusCode}\n
-        Error Message: ${error.message}`);
-            });
-            const id_token = (_a = res.result) === null || _a === void 0 ? void 0 : _a.value;
-            if (!id_token) {
-                throw new Error('Response json body do not have ID Token field');
-            }
-            return id_token;
-        });
-    }
-    static getIDToken(audience) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                // New ID Token is requested from action service
-                let id_token_url = OidcClient.getIDTokenUrl();
-                if (audience) {
-                    const encodedAudience = encodeURIComponent(audience);
-                    id_token_url = `${id_token_url}&audience=${encodedAudience}`;
-                }
-                (0, core_1.debug)(`ID token url is ${id_token_url}`);
-                const id_token = yield OidcClient.getCall(id_token_url);
-                (0, core_1.setSecret)(id_token);
-                return id_token;
-            }
-            catch (error) {
-                throw new Error(`Error message: ${error.message}`);
-            }
-        });
-    }
-}
-exports.OidcClient = OidcClient;
-//# sourceMappingURL=oidc-utils.js.map
-
-/***/ }),
-
-/***/ 14520:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.toPosixPath = toPosixPath;
-exports.toWin32Path = toWin32Path;
-exports.toPlatformPath = toPlatformPath;
-const path = __importStar(__nccwpck_require__(71017));
-/**
- * toPosixPath converts the given path to the posix form. On Windows, \\ will be
- * replaced with /.
- *
- * @param pth. Path to transform.
- * @return string Posix path.
- */
-function toPosixPath(pth) {
-    return pth.replace(/[\\]/g, '/');
-}
-/**
- * toWin32Path converts the given path to the win32 form. On Linux, / will be
- * replaced with \\.
- *
- * @param pth. Path to transform.
- * @return string Win32 path.
- */
-function toWin32Path(pth) {
-    return pth.replace(/[/]/g, '\\');
-}
-/**
- * toPlatformPath converts the given path to a platform-specific path. It does
- * this by replacing instances of / and \ with the platform-specific path
- * separator.
- *
- * @param pth The path to platformize.
- * @return string The platform-specific path.
- */
-function toPlatformPath(pth) {
-    return pth.replace(/[/\\]/g, path.sep);
-}
-//# sourceMappingURL=path-utils.js.map
-
-/***/ }),
-
-/***/ 34525:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isLinux = exports.isMacOS = exports.isWindows = exports.arch = exports.platform = void 0;
-exports.getDetails = getDetails;
-const os_1 = __importDefault(__nccwpck_require__(22037));
-const exec = __importStar(__nccwpck_require__(18538));
-const getWindowsInfo = () => __awaiter(void 0, void 0, void 0, function* () {
-    const { stdout: version } = yield exec.getExecOutput('powershell -command "(Get-CimInstance -ClassName Win32_OperatingSystem).Version"', undefined, {
-        silent: true
-    });
-    const { stdout: name } = yield exec.getExecOutput('powershell -command "(Get-CimInstance -ClassName Win32_OperatingSystem).Caption"', undefined, {
-        silent: true
-    });
-    return {
-        name: name.trim(),
-        version: version.trim()
-    };
-});
-const getMacOsInfo = () => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c, _d;
-    const { stdout } = yield exec.getExecOutput('sw_vers', undefined, {
-        silent: true
-    });
-    const version = (_b = (_a = stdout.match(/ProductVersion:\s*(.+)/)) === null || _a === void 0 ? void 0 : _a[1]) !== null && _b !== void 0 ? _b : '';
-    const name = (_d = (_c = stdout.match(/ProductName:\s*(.+)/)) === null || _c === void 0 ? void 0 : _c[1]) !== null && _d !== void 0 ? _d : '';
-    return {
-        name,
-        version
-    };
-});
-const getLinuxInfo = () => __awaiter(void 0, void 0, void 0, function* () {
-    const { stdout } = yield exec.getExecOutput('lsb_release', ['-i', '-r', '-s'], {
-        silent: true
-    });
-    const [name, version] = stdout.trim().split('\n');
-    return {
-        name,
-        version
-    };
-});
-exports.platform = os_1.default.platform();
-exports.arch = os_1.default.arch();
-exports.isWindows = exports.platform === 'win32';
-exports.isMacOS = exports.platform === 'darwin';
-exports.isLinux = exports.platform === 'linux';
-function getDetails() {
-    return __awaiter(this, void 0, void 0, function* () {
-        return Object.assign(Object.assign({}, (yield (exports.isWindows
-            ? getWindowsInfo()
-            : exports.isMacOS
-                ? getMacOsInfo()
-                : getLinuxInfo()))), { platform: exports.platform,
-            arch: exports.arch,
-            isWindows: exports.isWindows,
-            isMacOS: exports.isMacOS,
-            isLinux: exports.isLinux });
-    });
-}
-//# sourceMappingURL=platform.js.map
-
-/***/ }),
-
-/***/ 91785:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.summary = exports.markdownSummary = exports.SUMMARY_DOCS_URL = exports.SUMMARY_ENV_VAR = void 0;
-const os_1 = __nccwpck_require__(22037);
-const fs_1 = __nccwpck_require__(57147);
-const { access, appendFile, writeFile } = fs_1.promises;
-exports.SUMMARY_ENV_VAR = 'GITHUB_STEP_SUMMARY';
-exports.SUMMARY_DOCS_URL = 'https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary';
-class Summary {
-    constructor() {
-        this._buffer = '';
-    }
-    /**
-     * Finds the summary file path from the environment, rejects if env var is not found or file does not exist
-     * Also checks r/w permissions.
-     *
-     * @returns step summary file path
-     */
-    filePath() {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (this._filePath) {
-                return this._filePath;
-            }
-            const pathFromEnv = process.env[exports.SUMMARY_ENV_VAR];
-            if (!pathFromEnv) {
-                throw new Error(`Unable to find environment variable for $${exports.SUMMARY_ENV_VAR}. Check if your runtime environment supports job summaries.`);
-            }
-            try {
-                yield access(pathFromEnv, fs_1.constants.R_OK | fs_1.constants.W_OK);
-            }
-            catch (_a) {
-                throw new Error(`Unable to access summary file: '${pathFromEnv}'. Check if the file has correct read/write permissions.`);
-            }
-            this._filePath = pathFromEnv;
-            return this._filePath;
-        });
-    }
-    /**
-     * Wraps content in an HTML tag, adding any HTML attributes
-     *
-     * @param {string} tag HTML tag to wrap
-     * @param {string | null} content content within the tag
-     * @param {[attribute: string]: string} attrs key-value list of HTML attributes to add
-     *
-     * @returns {string} content wrapped in HTML element
-     */
-    wrap(tag, content, attrs = {}) {
-        const htmlAttrs = Object.entries(attrs)
-            .map(([key, value]) => ` ${key}="${value}"`)
-            .join('');
-        if (!content) {
-            return `<${tag}${htmlAttrs}>`;
-        }
-        return `<${tag}${htmlAttrs}>${content}</${tag}>`;
-    }
-    /**
-     * Writes text in the buffer to the summary buffer file and empties buffer. Will append by default.
-     *
-     * @param {SummaryWriteOptions} [options] (optional) options for write operation
-     *
-     * @returns {Promise<Summary>} summary instance
-     */
-    write(options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const overwrite = !!(options === null || options === void 0 ? void 0 : options.overwrite);
-            const filePath = yield this.filePath();
-            const writeFunc = overwrite ? writeFile : appendFile;
-            yield writeFunc(filePath, this._buffer, { encoding: 'utf8' });
-            return this.emptyBuffer();
-        });
-    }
-    /**
-     * Clears the summary buffer and wipes the summary file
-     *
-     * @returns {Summary} summary instance
-     */
-    clear() {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this.emptyBuffer().write({ overwrite: true });
-        });
-    }
-    /**
-     * Returns the current summary buffer as a string
-     *
-     * @returns {string} string of summary buffer
-     */
-    stringify() {
-        return this._buffer;
-    }
-    /**
-     * If the summary buffer is empty
-     *
-     * @returns {boolen} true if the buffer is empty
-     */
-    isEmptyBuffer() {
-        return this._buffer.length === 0;
-    }
-    /**
-     * Resets the summary buffer without writing to summary file
-     *
-     * @returns {Summary} summary instance
-     */
-    emptyBuffer() {
-        this._buffer = '';
-        return this;
-    }
-    /**
-     * Adds raw text to the summary buffer
-     *
-     * @param {string} text content to add
-     * @param {boolean} [addEOL=false] (optional) append an EOL to the raw text (default: false)
-     *
-     * @returns {Summary} summary instance
-     */
-    addRaw(text, addEOL = false) {
-        this._buffer += text;
-        return addEOL ? this.addEOL() : this;
-    }
-    /**
-     * Adds the operating system-specific end-of-line marker to the buffer
-     *
-     * @returns {Summary} summary instance
-     */
-    addEOL() {
-        return this.addRaw(os_1.EOL);
-    }
-    /**
-     * Adds an HTML codeblock to the summary buffer
-     *
-     * @param {string} code content to render within fenced code block
-     * @param {string} lang (optional) language to syntax highlight code
-     *
-     * @returns {Summary} summary instance
-     */
-    addCodeBlock(code, lang) {
-        const attrs = Object.assign({}, (lang && { lang }));
-        const element = this.wrap('pre', this.wrap('code', code), attrs);
-        return this.addRaw(element).addEOL();
-    }
-    /**
-     * Adds an HTML list to the summary buffer
-     *
-     * @param {string[]} items list of items to render
-     * @param {boolean} [ordered=false] (optional) if the rendered list should be ordered or not (default: false)
-     *
-     * @returns {Summary} summary instance
-     */
-    addList(items, ordered = false) {
-        const tag = ordered ? 'ol' : 'ul';
-        const listItems = items.map(item => this.wrap('li', item)).join('');
-        const element = this.wrap(tag, listItems);
-        return this.addRaw(element).addEOL();
-    }
-    /**
-     * Adds an HTML table to the summary buffer
-     *
-     * @param {SummaryTableCell[]} rows table rows
-     *
-     * @returns {Summary} summary instance
-     */
-    addTable(rows) {
-        const tableBody = rows
-            .map(row => {
-            const cells = row
-                .map(cell => {
-                if (typeof cell === 'string') {
-                    return this.wrap('td', cell);
-                }
-                const { header, data, colspan, rowspan } = cell;
-                const tag = header ? 'th' : 'td';
-                const attrs = Object.assign(Object.assign({}, (colspan && { colspan })), (rowspan && { rowspan }));
-                return this.wrap(tag, data, attrs);
-            })
-                .join('');
-            return this.wrap('tr', cells);
-        })
-            .join('');
-        const element = this.wrap('table', tableBody);
-        return this.addRaw(element).addEOL();
-    }
-    /**
-     * Adds a collapsable HTML details element to the summary buffer
-     *
-     * @param {string} label text for the closed state
-     * @param {string} content collapsable content
-     *
-     * @returns {Summary} summary instance
-     */
-    addDetails(label, content) {
-        const element = this.wrap('details', this.wrap('summary', label) + content);
-        return this.addRaw(element).addEOL();
-    }
-    /**
-     * Adds an HTML image tag to the summary buffer
-     *
-     * @param {string} src path to the image you to embed
-     * @param {string} alt text description of the image
-     * @param {SummaryImageOptions} options (optional) addition image attributes
-     *
-     * @returns {Summary} summary instance
-     */
-    addImage(src, alt, options) {
-        const { width, height } = options || {};
-        const attrs = Object.assign(Object.assign({}, (width && { width })), (height && { height }));
-        const element = this.wrap('img', null, Object.assign({ src, alt }, attrs));
-        return this.addRaw(element).addEOL();
-    }
-    /**
-     * Adds an HTML section heading element
-     *
-     * @param {string} text heading text
-     * @param {number | string} [level=1] (optional) the heading level, default: 1
-     *
-     * @returns {Summary} summary instance
-     */
-    addHeading(text, level) {
-        const tag = `h${level}`;
-        const allowedTag = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)
-            ? tag
-            : 'h1';
-        const element = this.wrap(allowedTag, text);
-        return this.addRaw(element).addEOL();
-    }
-    /**
-     * Adds an HTML thematic break (<hr>) to the summary buffer
-     *
-     * @returns {Summary} summary instance
-     */
-    addSeparator() {
-        const element = this.wrap('hr', null);
-        return this.addRaw(element).addEOL();
-    }
-    /**
-     * Adds an HTML line break (<br>) to the summary buffer
-     *
-     * @returns {Summary} summary instance
-     */
-    addBreak() {
-        const element = this.wrap('br', null);
-        return this.addRaw(element).addEOL();
-    }
-    /**
-     * Adds an HTML blockquote to the summary buffer
-     *
-     * @param {string} text quote text
-     * @param {string} cite (optional) citation url
-     *
-     * @returns {Summary} summary instance
-     */
-    addQuote(text, cite) {
-        const attrs = Object.assign({}, (cite && { cite }));
-        const element = this.wrap('blockquote', text, attrs);
-        return this.addRaw(element).addEOL();
-    }
-    /**
-     * Adds an HTML anchor tag to the summary buffer
-     *
-     * @param {string} text link text/content
-     * @param {string} href hyperlink
-     *
-     * @returns {Summary} summary instance
-     */
-    addLink(text, href) {
-        const element = this.wrap('a', text, { href });
-        return this.addRaw(element).addEOL();
-    }
-}
-const _summary = new Summary();
-/**
- * @deprecated use `core.summary`
- */
-exports.markdownSummary = _summary;
-exports.summary = _summary;
-//# sourceMappingURL=summary.js.map
-
-/***/ }),
-
-/***/ 15206:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-// We use any as a valid input type
-/* eslint-disable @typescript-eslint/no-explicit-any */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.toCommandValue = toCommandValue;
-exports.toCommandProperties = toCommandProperties;
-/**
- * Sanitizes an input into a string so it can be passed into issueCommand safely
- * @param input input to sanitize into a string
- */
-function toCommandValue(input) {
-    if (input === null || input === undefined) {
-        return '';
-    }
-    else if (typeof input === 'string' || input instanceof String) {
-        return input;
-    }
-    return JSON.stringify(input);
-}
-/**
- *
- * @param annotationProperties
- * @returns The command properties to send with the actual annotation command
- * See IssueCommandProperties: https://github.com/actions/runner/blob/main/src/Runner.Worker/ActionCommandManager.cs#L646
- */
-function toCommandProperties(annotationProperties) {
-    if (!Object.keys(annotationProperties).length) {
-        return {};
-    }
-    return {
-        title: annotationProperties.title,
-        file: annotationProperties.file,
-        line: annotationProperties.startLine,
-        endLine: annotationProperties.endLine,
-        col: annotationProperties.startColumn,
-        endColumn: annotationProperties.endColumn
-    };
-}
-//# sourceMappingURL=utils.js.map
-
-/***/ }),
-
 /***/ 18538:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -2245,94 +1037,6 @@ function getOctokitOptions(token, options) {
     return opts;
 }
 //# sourceMappingURL=utils.js.map
-
-/***/ }),
-
-/***/ 57281:
-/***/ (function(__unused_webpack_module, exports) {
-
-"use strict";
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PersonalAccessTokenCredentialHandler = exports.BearerCredentialHandler = exports.BasicCredentialHandler = void 0;
-class BasicCredentialHandler {
-    constructor(username, password) {
-        this.username = username;
-        this.password = password;
-    }
-    prepareRequest(options) {
-        if (!options.headers) {
-            throw Error('The request has no headers');
-        }
-        options.headers['Authorization'] = `Basic ${Buffer.from(`${this.username}:${this.password}`).toString('base64')}`;
-    }
-    // This handler cannot handle 401
-    canHandleAuthentication() {
-        return false;
-    }
-    handleAuthentication() {
-        return __awaiter(this, void 0, void 0, function* () {
-            throw new Error('not implemented');
-        });
-    }
-}
-exports.BasicCredentialHandler = BasicCredentialHandler;
-class BearerCredentialHandler {
-    constructor(token) {
-        this.token = token;
-    }
-    // currently implements pre-authorization
-    // TODO: support preAuth = false where it hooks on 401
-    prepareRequest(options) {
-        if (!options.headers) {
-            throw Error('The request has no headers');
-        }
-        options.headers['Authorization'] = `Bearer ${this.token}`;
-    }
-    // This handler cannot handle 401
-    canHandleAuthentication() {
-        return false;
-    }
-    handleAuthentication() {
-        return __awaiter(this, void 0, void 0, function* () {
-            throw new Error('not implemented');
-        });
-    }
-}
-exports.BearerCredentialHandler = BearerCredentialHandler;
-class PersonalAccessTokenCredentialHandler {
-    constructor(token) {
-        this.token = token;
-    }
-    // currently implements pre-authorization
-    // TODO: support preAuth = false where it hooks on 401
-    prepareRequest(options) {
-        if (!options.headers) {
-            throw Error('The request has no headers');
-        }
-        options.headers['Authorization'] = `Basic ${Buffer.from(`PAT:${this.token}`).toString('base64')}`;
-    }
-    // This handler cannot handle 401
-    canHandleAuthentication() {
-        return false;
-    }
-    handleAuthentication() {
-        return __awaiter(this, void 0, void 0, function* () {
-            throw new Error('not implemented');
-        });
-    }
-}
-exports.PersonalAccessTokenCredentialHandler = PersonalAccessTokenCredentialHandler;
-//# sourceMappingURL=auth.js.map
 
 /***/ }),
 
@@ -39904,7 +38608,9 @@ function renderLocalActionResults(results, catalog = publication_message_catalog
     }
     const errorsContent = results
         .filter(result => result.errors.length > 0)
-        .map(result => chalk_1.default.gray(result.errors.map(application_error_presentation_policy_1.renderApplicationErrorText).join('\n\n'))).join('\n');
+        .map(result => chalk_1.default.gray(result.errors
+        .map(error => (0, application_error_presentation_policy_1.renderApplicationErrorText)(error, catalog.render))
+        .join('\n\n'))).join('\n');
     if (errorsContent.length > 0) {
         content += '\n' + chalk_1.default.red(`${catalog.cli.errors}:`) + '\n' + errorsContent;
     }
@@ -39976,39 +38682,6 @@ async function dispatchMainRunRoute(route, execution, handlers) {
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -40020,16 +38693,15 @@ exports.logWelcomeMessage = logWelcomeMessage;
 exports.runTokenExecution = runTokenExecution;
 exports.runNoIssueExecution = runNoIssueExecution;
 exports.runMainRoute = runMainRoute;
-const core = __importStar(__nccwpck_require__(75855));
 const chalk_1 = __importDefault(__nccwpck_require__(8578));
 const boxen_1 = __importDefault(__nccwpck_require__(11652));
+const result_1 = __nccwpck_require__(73817);
 const product_identity_1 = __nccwpck_require__(18739);
 const logger_1 = __nccwpck_require__(91151);
 const main_run_dispatcher_1 = __nccwpck_require__(28586);
 const workflow_context_1 = __nccwpck_require__(55224);
 const workflow_queue_composition_root_1 = __nccwpck_require__(21598);
 const application_error_1 = __nccwpck_require__(75999);
-const application_error_presentation_policy_1 = __nccwpck_require__(95067);
 exports.WORKFLOW_QUEUE_FAILURE_MESSAGE = 'Workflow queue check failed; sequential execution was not bypassed.';
 /**
  * Keeps provider diagnostics out of the action's externally visible failure
@@ -40104,9 +38776,14 @@ async function runMainRoute(execution, route, routeHandlers) {
     try {
         let results;
         if (route === 'unhandled') {
-            (0, logger_1.logError)(`Action not handled. Event: ${execution.eventName}.`);
-            core.setFailed('Action not handled.');
-            results = [];
+            const semanticError = (0, application_error_1.toApplicationError)(undefined, 'workflow.invalid-event', 'Action not handled.');
+            (0, logger_1.logError)(semanticError);
+            results = [new result_1.Result({
+                    id: 'MainRunRoute',
+                    success: false,
+                    executed: false,
+                    errors: [semanticError],
+                })];
         }
         else {
             results = await (0, main_run_dispatcher_1.dispatchMainRunRoute)(route, execution, routeHandlers);
@@ -40118,8 +38795,12 @@ async function runMainRoute(execution, route, routeHandlers) {
     catch (error) {
         const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Main run failed.');
         (0, logger_1.logError)(semanticError);
-        core.setFailed((0, application_error_presentation_policy_1.renderApplicationErrorText)(semanticError));
-        return [];
+        return [new result_1.Result({
+                id: 'MainRunRoute',
+                success: false,
+                executed: true,
+                errors: [semanticError],
+            })];
     }
 }
 
@@ -40623,12 +39304,13 @@ exports.TITLE = 'Copilot';
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = void 0;
+exports.ApplicationError = exports.APPLICATION_ERROR_RECOVERY_IDS = exports.APPLICATION_ERROR_METADATA = void 0;
 exports.toApplicationError = toApplicationError;
 const application_error_1 = __nccwpck_require__(97790);
 const application_error_context_1 = __nccwpck_require__(4034);
 var application_error_2 = __nccwpck_require__(97790);
 Object.defineProperty(exports, "APPLICATION_ERROR_METADATA", ({ enumerable: true, get: function () { return application_error_2.APPLICATION_ERROR_METADATA; } }));
+Object.defineProperty(exports, "APPLICATION_ERROR_RECOVERY_IDS", ({ enumerable: true, get: function () { return application_error_2.APPLICATION_ERROR_RECOVERY_IDS; } }));
 /** Creates a semantic error and owns correlation identity outside the pure model. */
 class ApplicationError extends application_error_1.ApplicationError {
     constructor(code, message, options = {}) {
@@ -41534,33 +40216,298 @@ function resolveThinkAgentTask(commandName, destinationType) {
 
 /***/ }),
 
+/***/ 64809:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readEnglishApplicationErrorMessage = exports.APPLICATION_ERROR_CATALOG_DEFINITIONS = exports.SPANISH_APPLICATION_ERROR_DEFINITION = exports.ENGLISH_APPLICATION_ERROR_DEFINITION = exports.SPANISH_APPLICATION_ERROR_MESSAGES = exports.ENGLISH_APPLICATION_ERROR_MESSAGES = exports.APPLICATION_ERROR_MESSAGE_IDS = exports.APPLICATION_ERROR_CODES = void 0;
+exports.resolveStaticApplicationErrorCatalog = resolveStaticApplicationErrorCatalog;
+exports.resolveApplicationErrorCatalog = resolveApplicationErrorCatalog;
+const application_error_1 = __nccwpck_require__(97790);
+const message_catalog_1 = __nccwpck_require__(27097);
+const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
+const LABEL_KEYS = Object.freeze([
+    'impact', 'errorCode', 'action', 'retainedState', 'retryable', 'yes', 'no', 'reference',
+]);
+const CONTENT_FIELDS = Object.freeze(['impact', 'action', 'retainedState']);
+exports.APPLICATION_ERROR_CODES = Object.freeze(Object.keys(application_error_1.APPLICATION_ERROR_METADATA));
+exports.APPLICATION_ERROR_MESSAGE_IDS = Object.freeze([
+    ...LABEL_KEYS.map(key => `error.label.${key}`),
+    ...exports.APPLICATION_ERROR_CODES.flatMap(code => CONTENT_FIELDS.map(field => `error.${code}.${field}`)),
+    ...application_error_1.APPLICATION_ERROR_RECOVERY_IDS.flatMap(id => CONTENT_FIELDS
+        .map(field => `error.recovery.${id}.${field}`)),
+]);
+const ENGLISH_LABELS = Object.freeze({
+    impact: 'Impact',
+    errorCode: 'Error code',
+    action: 'Action',
+    retainedState: 'Retained state',
+    retryable: 'Retryable',
+    yes: 'Yes',
+    no: 'No',
+    reference: 'Reference',
+});
+const SPANISH_LABELS = Object.freeze({
+    impact: 'Impacto',
+    errorCode: 'Código de error',
+    action: 'Acción',
+    retainedState: 'Estado conservado',
+    retryable: 'Reintentable',
+    yes: 'Sí',
+    no: 'No',
+    reference: 'Referencia',
+});
+const ENGLISH_CONTENT = Object.freeze(Object.fromEntries(exports.APPLICATION_ERROR_CODES.map(code => [code, Object.freeze({
+        impact: application_error_1.APPLICATION_ERROR_METADATA[code].impact,
+        action: application_error_1.APPLICATION_ERROR_METADATA[code].action,
+        retainedState: application_error_1.APPLICATION_ERROR_METADATA[code].retainedState,
+    })])));
+const UNCHANGED_STATE_ES = 'No se creó ningún estado ni efecto externo nuevo.';
+const PRESERVED_STATE_ES = 'Se conservaron el estado persistente existente y los efectos externos completados.';
+const SPANISH_CONTENT = Object.freeze({
+    'configuration.invalid': Object.freeze({
+        impact: 'La operación no pudo usar los valores configurados.',
+        action: 'Corrige la configuración no válida y reinténtalo.',
+        retainedState: UNCHANGED_STATE_ES,
+    }),
+    'configuration.unsupported': Object.freeze({
+        impact: 'La capacidad solicitada no es compatible con esta instalación.',
+        action: 'Usa una configuración compatible o actualiza la instalación.',
+        retainedState: UNCHANGED_STATE_ES,
+    }),
+    'authorization.denied': Object.freeze({
+        impact: 'La operación no pudo acceder al recurso necesario.',
+        action: 'Concede el permiso documentado y reinténtalo.',
+        retainedState: UNCHANGED_STATE_ES,
+    }),
+    'authorization.credential-invalid': Object.freeze({
+        impact: 'La operación no pudo autenticarse con el proveedor necesario.',
+        action: 'Sustituye o configura la credencial necesaria y reinténtalo.',
+        retainedState: UNCHANGED_STATE_ES,
+    }),
+    'provider.not-found': Object.freeze({
+        impact: 'No se encontró un recurso necesario del proveedor.',
+        action: 'Verifica el recurso de destino y reintenta la operación.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+    'provider.conflict': Object.freeze({
+        impact: 'El proveedor rechazó un estado actual conflictivo.',
+        action: 'Vuelve a cargar el estado actual y reinténtalo si la operación sigue siendo necesaria.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+    'provider.rate-limited': Object.freeze({
+        impact: 'El proveedor limitó temporalmente la operación.',
+        action: 'Reinténtalo cuando se restablezca el límite del proveedor.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+    'provider.unavailable': Object.freeze({
+        impact: 'El proveedor no estaba disponible temporalmente.',
+        action: 'Reinténtalo cuando el proveedor esté disponible.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+    'provider.contract-invalid': Object.freeze({
+        impact: 'La respuesta del proveedor no se pudo interpretar de forma segura.',
+        action: 'Revisa la integración del proveedor antes de reintentarlo.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+    'agent.policy-rejected': Object.freeze({
+        impact: 'El agente configurado no se inició.',
+        action: 'Usa una configuración de agente permitida y reinténtalo.',
+        retainedState: UNCHANGED_STATE_ES,
+    }),
+    'agent.failed': Object.freeze({
+        impact: 'El agente admitido no produjo un resultado utilizable.',
+        action: 'Revisa el estado saneado del agente y reinténtalo si procede.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+    'locale.output-invalid': Object.freeze({
+        impact: 'El contenido de producto generado por el agente se rechazó antes de publicarse porque su contrato de locale no era válido.',
+        action: 'Reinténtalo con un proveedor compatible con el locale configurado del repositorio.',
+        retainedState: UNCHANGED_STATE_ES,
+    }),
+    'locale.translation-failed': Object.freeze({
+        impact: 'La solicitud no se pudo interpretar de forma segura en el idioma configurado del repositorio.',
+        action: 'Reformula la solicitud o reinténtalo cuando esté disponible el proveedor de idioma configurado.',
+        retainedState: UNCHANGED_STATE_ES,
+    }),
+    'validation.invalid-input': Object.freeze({
+        impact: 'La operación no aceptó la entrada suministrada.',
+        action: 'Corrige la entrada y reinténtalo.',
+        retainedState: UNCHANGED_STATE_ES,
+    }),
+    'workflow.invalid-event': Object.freeze({
+        impact: 'El evento no puede iniciar el workflow solicitado.',
+        action: 'Inicia la operación desde un evento o superficie compatible.',
+        retainedState: UNCHANGED_STATE_ES,
+    }),
+    'workflow.stale': Object.freeze({
+        impact: 'Un estado más reciente sustituyó esta ejecución del workflow.',
+        action: 'Revisa el estado actual e inicia una nueva ejecución solo si es necesario.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+    'workflow.cancelled': Object.freeze({
+        impact: 'El workflow se detuvo antes de completarse.',
+        action: 'Inicia una nueva ejecución si la operación sigue siendo necesaria.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+    'workflow.failed': Object.freeze({
+        impact: 'El workflow no pudo completar la operación solicitada.',
+        action: 'Revisa el estado actual y reintenta el paso fallido.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+    timeout: Object.freeze({
+        impact: 'La operación superó su tiempo de ejecución limitado.',
+        action: 'Verifica el estado actual antes de reintentarlo.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+    unexpected: Object.freeze({
+        impact: 'La operación se detuvo porque un fallo inesperado se gestionó de forma segura.',
+        action: 'Usa el ID de correlación para investigar antes de reintentarlo.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+});
+const ENGLISH_RECOVERY_CONTENT = Object.freeze({
+    'pull-request-link-restored': Object.freeze({
+        impact: 'The pull request could not be linked to its issue.',
+        action: 'Rerun the workflow; no temporary pull-request state needs manual recovery.',
+        retainedState: 'The original pull-request base and description were restored.',
+    }),
+    'pull-request-link-base-retained': Object.freeze({
+        impact: 'The pull request could not be linked to its issue.',
+        action: 'Restore the temporary default base branch, then rerun the workflow.',
+        retainedState: 'The temporary default base branch remains; the original description was restored.',
+    }),
+    'pull-request-link-reference-retained': Object.freeze({
+        impact: 'The pull request could not be linked to its issue.',
+        action: 'Remove the temporary issue reference from the description, then rerun the workflow.',
+        retainedState: 'The original base branch was restored; the temporary issue reference remains in the description.',
+    }),
+    'pull-request-link-base-and-reference-retained': Object.freeze({
+        impact: 'The pull request could not be linked to its issue.',
+        action: 'Restore the temporary default base branch and remove the temporary issue reference, then rerun the workflow.',
+        retainedState: 'The temporary default base branch and issue reference remain.',
+    }),
+    'managed-branch-enrichment-failed': Object.freeze({
+        impact: 'The linked branch exists, but later issue metadata may be incomplete.',
+        action: 'Continue on {branchName} and rerun issue enrichment.',
+        retainedState: 'Branch {branchName} and its configuration patch were preserved.',
+    }),
+    'inactivity-explanation-failed': Object.freeze({
+        impact: 'Issue #{issueNumber} was closed without its terminal inactivity explanation.',
+        action: 'Inspect issue #{issueNumber} and add the explanation manually if the missing context matters.',
+        retainedState: 'Issue #{issueNumber} remains closed; the completed close will not be repeated.',
+    }),
+});
+const SPANISH_RECOVERY_CONTENT = Object.freeze({
+    'pull-request-link-restored': Object.freeze({
+        impact: 'No se pudo vincular la pull request con su issue.',
+        action: 'Vuelve a ejecutar el workflow; ningún estado temporal de la pull request requiere recuperación manual.',
+        retainedState: 'Se restauraron la rama base y la descripción originales de la pull request.',
+    }),
+    'pull-request-link-base-retained': Object.freeze({
+        impact: 'No se pudo vincular la pull request con su issue.',
+        action: 'Restaura la rama base predeterminada temporal y vuelve a ejecutar el workflow.',
+        retainedState: 'La rama base predeterminada temporal permanece; se restauró la descripción original.',
+    }),
+    'pull-request-link-reference-retained': Object.freeze({
+        impact: 'No se pudo vincular la pull request con su issue.',
+        action: 'Elimina la referencia temporal a la issue de la descripción y vuelve a ejecutar el workflow.',
+        retainedState: 'Se restauró la rama base original; la referencia temporal a la issue permanece en la descripción.',
+    }),
+    'pull-request-link-base-and-reference-retained': Object.freeze({
+        impact: 'No se pudo vincular la pull request con su issue.',
+        action: 'Restaura la rama base predeterminada temporal, elimina la referencia temporal a la issue y vuelve a ejecutar el workflow.',
+        retainedState: 'La rama base predeterminada temporal y la referencia a la issue permanecen.',
+    }),
+    'managed-branch-enrichment-failed': Object.freeze({
+        impact: 'La rama vinculada existe, pero los metadatos posteriores de la issue pueden estar incompletos.',
+        action: 'Continúa en {branchName} y vuelve a ejecutar el enriquecimiento de la issue.',
+        retainedState: 'Se conservaron la rama {branchName} y su parche de configuración.',
+    }),
+    'inactivity-explanation-failed': Object.freeze({
+        impact: 'La issue #{issueNumber} se cerró sin su explicación final sobre la inactividad.',
+        action: 'Revisa la issue #{issueNumber} y añade la explicación manualmente si falta contexto importante.',
+        retainedState: 'La issue #{issueNumber} permanece cerrada; el cierre completado no se repetirá.',
+    }),
+});
+function catalogMessages(labels, content, recoveryContent) {
+    return Object.freeze({
+        ...Object.fromEntries(LABEL_KEYS.map(key => [`error.label.${key}`, labels[key]])),
+        ...Object.fromEntries(exports.APPLICATION_ERROR_CODES.flatMap(code => CONTENT_FIELDS.map(field => [
+            `error.${code}.${field}`,
+            content[code][field],
+        ]))),
+        ...Object.fromEntries(application_error_1.APPLICATION_ERROR_RECOVERY_IDS.flatMap(id => CONTENT_FIELDS.map(field => [
+            `error.recovery.${id}.${field}`,
+            recoveryContent[id][field],
+        ]))),
+    });
+}
+exports.ENGLISH_APPLICATION_ERROR_MESSAGES = catalogMessages(ENGLISH_LABELS, ENGLISH_CONTENT, ENGLISH_RECOVERY_CONTENT);
+exports.SPANISH_APPLICATION_ERROR_MESSAGES = catalogMessages(SPANISH_LABELS, SPANISH_CONTENT, SPANISH_RECOVERY_CONTENT);
+exports.ENGLISH_APPLICATION_ERROR_DEFINITION = Object.freeze({
+    version: message_catalog_1.MESSAGE_CATALOG_VERSION,
+    locale: 'en-US',
+    compatibleBaseLanguage: 'en',
+    messages: exports.ENGLISH_APPLICATION_ERROR_MESSAGES,
+});
+exports.SPANISH_APPLICATION_ERROR_DEFINITION = Object.freeze({
+    version: message_catalog_1.MESSAGE_CATALOG_VERSION,
+    locale: 'es-ES',
+    compatibleBaseLanguage: 'es',
+    messages: exports.SPANISH_APPLICATION_ERROR_MESSAGES,
+});
+exports.APPLICATION_ERROR_CATALOG_DEFINITIONS = Object.freeze([
+    exports.ENGLISH_APPLICATION_ERROR_DEFINITION,
+    exports.SPANISH_APPLICATION_ERROR_DEFINITION,
+]);
+function resolveStaticApplicationErrorCatalog(locale) {
+    return (0, resolved_message_catalog_policy_1.resolveStaticMessageCatalogView)(locale, exports.ENGLISH_APPLICATION_ERROR_DEFINITION, exports.APPLICATION_ERROR_CATALOG_DEFINITIONS);
+}
+function resolveApplicationErrorCatalog(locale, configuration, resolver) {
+    return (0, resolved_message_catalog_policy_1.resolveMessageCatalogView)(locale, exports.APPLICATION_ERROR_MESSAGE_IDS, exports.ENGLISH_APPLICATION_ERROR_DEFINITION, exports.APPLICATION_ERROR_CATALOG_DEFINITIONS, configuration, resolver);
+}
+const readEnglishApplicationErrorMessage = (id, variables = {}) => (0, message_catalog_1.renderCatalogMessage)(exports.ENGLISH_APPLICATION_ERROR_MESSAGES[id], variables, 'en-US');
+exports.readEnglishApplicationErrorMessage = readEnglishApplicationErrorMessage;
+
+
+/***/ }),
+
 /***/ 95067:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildApplicationErrorPresentation = buildApplicationErrorPresentation;
 exports.renderApplicationErrorText = renderApplicationErrorText;
+const application_error_message_catalog_1 = __nccwpck_require__(64809);
 /** Shared semantic view model for terminal, GitHub, and API presentation. */
-function buildApplicationErrorPresentation(error) {
+function buildApplicationErrorPresentation(error, message = application_error_message_catalog_1.readEnglishApplicationErrorMessage) {
+    const descriptor = error.recovery
+        ? `error.recovery.${error.recovery.id}`
+        : `error.${error.code}`;
+    const variables = error.recovery?.variables;
     return {
-        impact: error.impact,
-        cause: error.message,
+        impact: message(`${descriptor}.impact`, variables),
         code: error.code,
-        action: error.action,
-        retainedState: error.retainedState,
+        action: message(`${descriptor}.action`, variables),
+        retainedState: message(`${descriptor}.retainedState`, variables),
+        retryable: message(error.retryable ? 'error.label.yes' : 'error.label.no'),
         reference: error.correlationId,
     };
 }
-function renderApplicationErrorText(error) {
-    const view = buildApplicationErrorPresentation(error);
+function renderApplicationErrorText(error, message = application_error_message_catalog_1.readEnglishApplicationErrorMessage) {
+    const view = buildApplicationErrorPresentation(error, message);
     return [
-        `Impact: ${view.impact}`,
-        `Cause (${view.code}): ${view.cause}`,
-        `Action: ${view.action}`,
-        `Retained state: ${view.retainedState}`,
-        `Reference: ${view.reference}`,
+        `${message('error.label.impact')}: ${view.impact}`,
+        `${message('error.label.errorCode')}: ${view.code}`,
+        `${message('error.label.action')}: ${view.action}`,
+        `${message('error.label.retainedState')}: ${view.retainedState}`,
+        `${message('error.label.retryable')}: ${view.retryable}`,
+        `${message('error.label.reference')}: ${view.reference}`,
     ].join('\n');
 }
 
@@ -43565,6 +42512,7 @@ const deployment_operation_1 = __nccwpck_require__(92730);
 const message_catalog_1 = __nccwpck_require__(27097);
 const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
 const merge_queue_message_catalog_1 = __nccwpck_require__(56033);
+const application_error_message_catalog_1 = __nccwpck_require__(64809);
 const SIMPLE_MESSAGE_KEYS = Object.freeze([
     'release', 'hotfix', 'currentStatus', 'noAction', 'actionRequired', 'progress',
     'currentTransition', 'whatNext', 'links', 'technical', 'alreadyPublished',
@@ -43617,6 +42565,7 @@ exports.DEPLOYMENT_MESSAGE_IDS = Object.freeze([
     ...DIAGRAM_KEYS.map(key => `deployment.diagram.${key}`),
     ...TEMPLATE_MESSAGE_IDS,
     ...merge_queue_message_catalog_1.MERGE_QUEUE_MESSAGE_IDS,
+    ...application_error_message_catalog_1.APPLICATION_ERROR_MESSAGE_IDS,
 ]);
 const ENGLISH_SIMPLE = Object.freeze({
     release: 'Release', hotfix: 'Hotfix', currentStatus: 'Current status',
@@ -43750,26 +42699,27 @@ const SPANISH_TEMPLATES = Object.freeze({
     'deployment.milestone.reconciliationBlocked': '❌ Despliegue bloqueado: {reason}',
     'deployment.milestone.complete': '✅ El despliegue {tag} y todos los destinos de reconciliación configurados se han completado.',
 });
-function catalogMessages(simple, phases, diagram, templates, mergeQueue) {
+function catalogMessages(simple, phases, diagram, templates, mergeQueue, errorMessages) {
     return Object.freeze({
         ...Object.fromEntries(SIMPLE_MESSAGE_KEYS.map(key => [`deployment.${key}`, simple[key]])),
         ...Object.fromEntries(deployment_operation_1.DEPLOYMENT_PHASES.map(phase => [`deployment.phase.${phase}`, phases[phase]])),
         ...Object.fromEntries(DIAGRAM_KEYS.map(key => [`deployment.diagram.${key}`, diagram[key]])),
         ...templates,
         ...mergeQueue,
+        ...errorMessages,
     });
 }
 exports.ENGLISH_DEPLOYMENT_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
     locale: 'en-US',
     compatibleBaseLanguage: 'en',
-    messages: catalogMessages(ENGLISH_SIMPLE, ENGLISH_PHASES, ENGLISH_DIAGRAM, ENGLISH_TEMPLATES, merge_queue_message_catalog_1.ENGLISH_MERGE_QUEUE_MESSAGES),
+    messages: catalogMessages(ENGLISH_SIMPLE, ENGLISH_PHASES, ENGLISH_DIAGRAM, ENGLISH_TEMPLATES, merge_queue_message_catalog_1.ENGLISH_MERGE_QUEUE_MESSAGES, application_error_message_catalog_1.ENGLISH_APPLICATION_ERROR_MESSAGES),
 });
 exports.SPANISH_DEPLOYMENT_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
     locale: 'es-ES',
     compatibleBaseLanguage: 'es',
-    messages: catalogMessages(SPANISH_SIMPLE, SPANISH_PHASES, SPANISH_DIAGRAM, SPANISH_TEMPLATES, merge_queue_message_catalog_1.SPANISH_MERGE_QUEUE_MESSAGES),
+    messages: catalogMessages(SPANISH_SIMPLE, SPANISH_PHASES, SPANISH_DIAGRAM, SPANISH_TEMPLATES, merge_queue_message_catalog_1.SPANISH_MERGE_QUEUE_MESSAGES, application_error_message_catalog_1.SPANISH_APPLICATION_ERROR_MESSAGES),
 });
 exports.DEPLOYMENT_CATALOG_DEFINITIONS = Object.freeze([
     exports.ENGLISH_DEPLOYMENT_DEFINITION,
@@ -44390,9 +43340,6 @@ exports.INACTIVITY_MESSAGE_IDS = Object.freeze([
     'inactivity.error.revalidate',
     'inactivity.error.close',
     'inactivity.error.comment',
-    'inactivity.error.commentImpact',
-    'inactivity.error.commentAction',
-    'inactivity.error.commentRetainedState',
 ]);
 const ENGLISH_MESSAGES = Object.freeze({
     'inactivity.closure.heading': 'Issue closed after inactivity',
@@ -44418,9 +43365,6 @@ const ENGLISH_MESSAGES = Object.freeze({
     'inactivity.error.revalidate': 'Unable to recheck issue #{issueNumber} before inactivity closure.',
     'inactivity.error.close': 'Unable to close issue #{issueNumber} after inactivity.',
     'inactivity.error.comment': 'Issue #{issueNumber} was closed, but its inactivity explanation could not be published.',
-    'inactivity.error.commentImpact': 'Issue #{issueNumber} was closed without its terminal inactivity explanation.',
-    'inactivity.error.commentAction': 'Inspect issue #{issueNumber} and add the explanation manually if the missing context matters.',
-    'inactivity.error.commentRetainedState': 'Issue #{issueNumber} remains closed; the completed close will not be repeated.',
 });
 const SPANISH_MESSAGES = Object.freeze({
     'inactivity.closure.heading': 'Issue cerrada por inactividad',
@@ -44450,9 +43394,6 @@ const SPANISH_MESSAGES = Object.freeze({
     'inactivity.error.revalidate': 'No se pudo volver a comprobar la issue #{issueNumber} antes de cerrarla por inactividad.',
     'inactivity.error.close': 'No se pudo cerrar la issue #{issueNumber} por inactividad.',
     'inactivity.error.comment': 'La issue #{issueNumber} se cerró, pero no se pudo publicar la explicación sobre su inactividad.',
-    'inactivity.error.commentImpact': 'La issue #{issueNumber} se cerró sin su explicación final sobre la inactividad.',
-    'inactivity.error.commentAction': 'Revisa la issue #{issueNumber} y añade la explicación manualmente si falta contexto importante.',
-    'inactivity.error.commentRetainedState': 'La issue #{issueNumber} permanece cerrada; el cierre completado no se repetirá.',
 });
 exports.ENGLISH_INACTIVITY_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
@@ -45021,7 +43962,8 @@ exports.resolvePublicationCatalog = resolvePublicationCatalog;
 exports.toPublicationCatalog = toPublicationCatalog;
 const message_catalog_1 = __nccwpck_require__(27097);
 const locale_1 = __nccwpck_require__(15386);
-exports.PUBLICATION_MESSAGE_IDS = Object.freeze([
+const application_error_message_catalog_1 = __nccwpck_require__(64809);
+const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'publication.implementationPlan',
     'publication.planReady',
     'publication.planAcceptance',
@@ -45091,6 +44033,10 @@ exports.PUBLICATION_MESSAGE_IDS = Object.freeze([
     'cli.steps',
     'cli.errors',
     'cli.reminder',
+]);
+exports.PUBLICATION_MESSAGE_IDS = Object.freeze([
+    ...PUBLICATION_SURFACE_MESSAGE_IDS,
+    ...application_error_message_catalog_1.APPLICATION_ERROR_MESSAGE_IDS,
 ]);
 const ENGLISH_MESSAGES = Object.freeze({
     'publication.implementationPlan': 'Implementation plan',
@@ -45162,6 +44108,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'cli.steps': 'Steps',
     'cli.errors': 'Errors',
     'cli.reminder': 'Reminder',
+    ...application_error_message_catalog_1.ENGLISH_APPLICATION_ERROR_MESSAGES,
 });
 const SPANISH_MESSAGES = Object.freeze({
     'publication.implementationPlan': 'Plan de implementación',
@@ -45233,6 +44180,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'cli.steps': 'Pasos',
     'cli.errors': 'Errores',
     'cli.reminder': 'Recordatorio',
+    ...application_error_message_catalog_1.SPANISH_APPLICATION_ERROR_MESSAGES,
 });
 exports.ENGLISH_PUBLICATION_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
@@ -48538,13 +47486,10 @@ async function runCloseInactiveIssuesWorkflow(param, dependencies) {
                 errors.push(new application_error_1.ApplicationError('provider.unavailable', message, {
                     cause: error,
                     retryable: false,
-                    impact: resultMessages.message('inactivity.error.commentImpact', {
-                        issueNumber: candidate.number,
-                    }),
-                    action: resultMessages.message('inactivity.error.commentAction', {
-                        issueNumber: candidate.number,
-                    }),
-                    retainedState: resultMessages.message('inactivity.error.commentRetainedState', { issueNumber: candidate.number }),
+                    recovery: {
+                        id: 'inactivity-explanation-failed',
+                        variables: { issueNumber: candidate.number },
+                    },
                 }));
             }
         }
@@ -60733,9 +59678,10 @@ async function prepareManagedBranch(param, issueTitle, branches, taskId, depende
     }
     catch (error) {
         const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'The branch was created, but its linked issue state could not be synchronized.', {
-            impact: 'The linked branch exists, but later issue metadata may be incomplete.',
-            action: 'Continue on the retained branch and rerun issue enrichment.',
-            retainedState: `The branch ${branchPayload.newBranchName} and its configuration patch were preserved.`,
+            recovery: {
+                id: 'managed-branch-enrichment-failed',
+                variables: { branchName: branchPayload.newBranchName },
+            },
         });
         result.push(new result_1.Result({
             id: taskId,
@@ -61248,8 +60194,7 @@ class LinkPullRequestIssueUseCase {
         catch (error) {
             const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to link the pull request to its issue.', error instanceof link_pull_request_issue_workflow_1.PullRequestIssueLinkOperationError
                 ? {
-                    action: 'Restore any named temporary PR state, then rerun the workflow.',
-                    retainedState: describeRetainedState(error),
+                    recovery: pullRequestLinkRecovery(error),
                 }
                 : {});
             (0, logging_ports_1.logError)(semanticError);
@@ -61267,14 +60212,15 @@ class LinkPullRequestIssueUseCase {
     }
 }
 exports.LinkPullRequestIssueUseCase = LinkPullRequestIssueUseCase;
-function describeRetainedState(error) {
-    if (!error.retainedBaseBranch && !error.retainedIssueReference) {
-        return 'The original pull-request base and description were restored.';
-    }
-    return [
-        error.retainedBaseBranch ? 'The temporary default base branch remains.' : 'The original base branch was restored.',
-        error.retainedIssueReference ? 'The temporary issue reference remains in the description.' : 'The original description was restored.',
-    ].join(' ');
+function pullRequestLinkRecovery(error) {
+    const id = error.retainedBaseBranch
+        ? error.retainedIssueReference
+            ? 'pull-request-link-base-and-reference-retained'
+            : 'pull-request-link-base-retained'
+        : error.retainedIssueReference
+            ? 'pull-request-link-reference-retained'
+            : 'pull-request-link-restored';
+    return { id, variables: {} };
 }
 function describeRecovery(error) {
     const retainedState = [
@@ -64328,8 +63274,16 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
 };
 var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = void 0;
+exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
+    'pull-request-link-restored',
+    'pull-request-link-base-retained',
+    'pull-request-link-reference-retained',
+    'pull-request-link-base-and-reference-retained',
+    'managed-branch-enrichment-failed',
+    'inactivity-explanation-failed',
+]);
 const PRESERVED_STATE = 'Existing persisted state and completed external effects were preserved.';
 const UNCHANGED_STATE = 'No new state or external effect was created.';
 exports.APPLICATION_ERROR_METADATA = {
@@ -64477,10 +63431,11 @@ class ApplicationError extends Error {
         this.code = code;
         this.kind = metadata.kind;
         this.retryable = options.retryable ?? metadata.retryable;
-        this.impact = options.impact ?? metadata.impact;
-        this.action = options.action ?? metadata.action;
-        this.retainedState = options.retainedState ?? metadata.retainedState;
+        this.impact = metadata.impact;
+        this.action = metadata.action;
+        this.retainedState = metadata.retainedState;
         this.correlationId = correlationId;
+        this.recovery = normalizeApplicationErrorRecovery(options.recovery);
         __classPrivateFieldSet(this, _ApplicationError_cause, options.cause, "f");
     }
     toJSON() {
@@ -64494,11 +63449,49 @@ class ApplicationError extends Error {
             action: this.action,
             retainedState: this.retainedState,
             correlationId: this.correlationId,
+            ...(this.recovery ? { recovery: this.recovery } : {}),
         };
     }
 }
 exports.ApplicationError = ApplicationError;
 _ApplicationError_cause = new WeakMap();
+const RECOVERY_VARIABLE_KEYS = Object.freeze({
+    'pull-request-link-restored': Object.freeze([]),
+    'pull-request-link-base-retained': Object.freeze([]),
+    'pull-request-link-reference-retained': Object.freeze([]),
+    'pull-request-link-base-and-reference-retained': Object.freeze([]),
+    'managed-branch-enrichment-failed': Object.freeze(['branchName']),
+    'inactivity-explanation-failed': Object.freeze(['issueNumber']),
+});
+function normalizeApplicationErrorRecovery(recovery) {
+    if (!recovery)
+        return undefined;
+    if (!exports.APPLICATION_ERROR_RECOVERY_IDS.includes(recovery.id)) {
+        throw new TypeError('Application error recovery ID is invalid.');
+    }
+    const variables = recovery.variables;
+    const actualKeys = Object.keys(variables).sort();
+    const expectedKeys = [...RECOVERY_VARIABLE_KEYS[recovery.id]].sort();
+    if (actualKeys.length !== expectedKeys.length
+        || actualKeys.some((key, index) => key !== expectedKeys[index])) {
+        throw new TypeError(`Application error recovery variables are invalid for ${recovery.id}.`);
+    }
+    if (recovery.id === 'managed-branch-enrichment-failed'
+        && (typeof variables.branchName !== 'string'
+            || !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,254}$/u.test(variables.branchName))) {
+        throw new TypeError('Application error recovery branch name is invalid.');
+    }
+    if (recovery.id === 'inactivity-explanation-failed'
+        && (typeof variables.issueNumber !== 'number'
+            || !Number.isSafeInteger(variables.issueNumber)
+            || variables.issueNumber < 1)) {
+        throw new TypeError('Application error recovery issue number is invalid.');
+    }
+    return Object.freeze({
+        id: recovery.id,
+        variables: Object.freeze({ ...variables }),
+    });
+}
 
 
 /***/ }),
@@ -74732,7 +73725,7 @@ exports.renderCatalogMessage = renderCatalogMessage;
 exports.catalogPlaceholders = catalogPlaceholders;
 exports.catalogPluralCategories = catalogPluralCategories;
 const locale_1 = __nccwpck_require__(15386);
-exports.MESSAGE_CATALOG_VERSION = '1';
+exports.MESSAGE_CATALOG_VERSION = '2';
 exports.CATALOG_PLURAL_CATEGORIES = Object.freeze([
     'zero',
     'one',
@@ -80274,6 +79267,7 @@ function logError(message, metadata) {
                 action: message.action,
                 retainedState: message.retainedState,
                 correlationId: message.correlationId,
+                ...(message.recovery ? { recovery: message.recovery } : {}),
             },
         });
     emitLog({ level: 'error', message: sanitized, timestamp: Date.now(), metadata: safeMetadata }, console.error);

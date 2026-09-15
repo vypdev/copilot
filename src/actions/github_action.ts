@@ -28,6 +28,10 @@ import { createLanguageQueryPort } from '../infrastructure/composition/agent_cap
 import { ResolveMessageCatalogUseCase } from '../application/usecases/localization/resolve_message_catalog_use_case';
 import { readGithubActionLocaleInputs } from './github_action_locale_inputs';
 import { publicationLocaleNeedsDynamicCatalog } from '../application/policies/publication_message_catalog';
+import {
+    resolveStaticApplicationErrorCatalog,
+    type ApplicationErrorMessageReader,
+} from '../application/policies/application_error_message_catalog';
 
 export async function runGitHubAction(): Promise<void> {
     const eventInputs = buildGithubActionEventInputs({
@@ -153,12 +157,22 @@ export async function runGitHubActionEntry(
         } catch (cause: unknown) {
             const semanticError = toApplicationError(cause, 'workflow.failed', 'GitHub Action execution failed.');
             logError(semanticError);
-            core.setFailed(renderApplicationErrorText(semanticError));
+            core.setFailed(renderApplicationErrorText(semanticError, earlyGithubActionErrorMessage()));
         }
     });
 }
 
+function earlyGithubActionErrorMessage(): ApplicationErrorMessageReader {
+    try {
+        const locale = readGithubActionLocaleInputs(getGithubActionInput).repository;
+        return resolveStaticApplicationErrorCatalog(locale).message;
+    } catch {
+        return resolveStaticApplicationErrorCatalog('en-US').message;
+    }
+}
+
 // Only auto-run when executed as the action entry (not when imported by tests)
+/* istanbul ignore next -- the bundled production entry is covered by the Action smoke path. */
 if (typeof process.env.JEST_WORKER_ID === 'undefined') {
     void runGitHubActionEntry();
 }

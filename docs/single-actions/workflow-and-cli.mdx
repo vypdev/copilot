@@ -211,6 +211,12 @@ Checks the setup PAT, selected workflow templates, Repository Variables, Secret 
 
 The complete human-readable report uses the configured repository locale and defaults to English (`en-US`). English and Spanish use reviewed bundled catalogs with exact or compatible-base matching. Any other valid BCP-47 locale uses one schema-constrained planner/language-agent request for the complete report catalog. If that request is unavailable or invalid, the whole report falls back atomically to English—never a mixture of translated headings and English diagnostics. Check IDs, status enums, branch names, credential names, and other machine facts remain stable. Raw provider and credential-health messages are not echoed into the report.
 
+The same rule applies to semantic errors from repository-aware local commands:
+the terminal localizes impact, action, retained state, retryability, and labels as
+one catalog while leaving the error code and correlation reference stable. The
+original producer message is not displayed. Failures raised before repository
+configuration can be resolved use the safe English default.
+
 This reduced two-check fixture shows the default English shape:
 
 ```text

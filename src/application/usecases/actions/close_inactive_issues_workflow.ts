@@ -134,16 +134,10 @@ export async function runCloseInactiveIssuesWorkflow(
                 errors.push(new ApplicationError('provider.unavailable', message, {
                     cause: error,
                     retryable: false,
-                    impact: resultMessages.message('inactivity.error.commentImpact', {
-                        issueNumber: candidate.number,
-                    }),
-                    action: resultMessages.message('inactivity.error.commentAction', {
-                        issueNumber: candidate.number,
-                    }),
-                    retainedState: resultMessages.message(
-                        'inactivity.error.commentRetainedState',
-                        { issueNumber: candidate.number },
-                    ),
+                    recovery: {
+                        id: 'inactivity-explanation-failed',
+                        variables: { issueNumber: candidate.number },
+                    },
                 }));
             }
         }

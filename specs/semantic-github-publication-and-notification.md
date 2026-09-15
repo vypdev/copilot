@@ -940,10 +940,18 @@ mutation inventory, locale-branch ratchet, and pseudo-plural ratchet protect
 these boundaries. Subsequent deployment and setup-doctor slices cover their
 feature-owned views, and the generic Job Summary slice resolves repository-
 locale copy atomically, renders aggregate result counts and expands only safe
-category-localized error recovery, excludes internal result names, steps, and
+code-specific localized error recovery, excludes internal result names, steps, and
 arbitrary error messages, and renders
 one localization evidence section instead of two. Other capability rows and the
 global numeric budget remain open and are not claimed complete by this milestone.
+
+The shared error-presentation slice replaces route-local Action termination with
+semantic results and one final locale-aware conclusion boundary. Generic and
+deployment summaries, Action completion, and repository-aware CLI output
+compose the same complete code-specific descriptors; stable codes and references
+remain language-independent, and raw producer messages are never published.
+Closed recovery variants preserve specific partial-operation context through
+validated variables without introducing feature-owned presentation prose.
 
 The initial-issue slice now enforces the §6.2 matrix at the route boundary. A
 normal issue with a publishable plan emits no welcome; a help/question issue

@@ -124,7 +124,23 @@ describe('GitHub conversation publication boundaries', () => {
 
     expect(presentation).not.toMatch(/result\.steps/u);
     expect(presentation).not.toMatch(/result\.id/u);
-    expect(presentation).not.toContain('buildApplicationErrorPresentation');
+    expect(presentation).toContain('buildApplicationErrorPresentation');
+  });
+
+  it('keeps semantic failure presentation at one locale-aware completion boundary', () => {
+    const lifecycle = readFileSync(join(root, 'src/actions/main_run_lifecycle.ts'), 'utf8');
+    const completion = readFileSync(join(root, 'src/actions/github_action_completion.ts'), 'utf8');
+    const localOutput = readFileSync(join(root, 'src/actions/local_action_output.ts'), 'utf8');
+    const presentation = readFileSync(
+      join(root, 'src/application/policies/application_error_presentation_policy.ts'),
+      'utf8',
+    );
+
+    expect(lifecycle).not.toContain('core.setFailed');
+    expect(completion.match(/core\.setFailed/gu)).toHaveLength(1);
+    expect(completion).toContain('core.setFailed(renderApplicationErrorText(completionError, summary.errorMessage))');
+    expect(localOutput).toContain('renderApplicationErrorText(error, catalog.render)');
+    expect(presentation).not.toMatch(/error\.message/u);
   });
 
   it('keeps Bugbot public presentation free of pseudo-plural copy', () => {

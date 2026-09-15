@@ -39377,6 +39377,7 @@ const agent_capability_composition_root_1 = __nccwpck_require__(85079);
 const resolve_message_catalog_use_case_1 = __nccwpck_require__(99961);
 const github_action_locale_inputs_1 = __nccwpck_require__(58893);
 const publication_message_catalog_1 = __nccwpck_require__(34223);
+const application_error_message_catalog_1 = __nccwpck_require__(64809);
 async function runGitHubAction() {
     const eventInputs = (0, github_event_inputs_1.buildGithubActionEventInputs)({
         payload: github.context.payload,
@@ -39465,11 +39466,21 @@ async function runGitHubActionEntry(run = runGitHubAction) {
         catch (cause) {
             const semanticError = (0, application_error_1.toApplicationError)(cause, 'workflow.failed', 'GitHub Action execution failed.');
             (0, logger_1.logError)(semanticError);
-            core.setFailed((0, application_error_presentation_policy_1.renderApplicationErrorText)(semanticError));
+            core.setFailed((0, application_error_presentation_policy_1.renderApplicationErrorText)(semanticError, earlyGithubActionErrorMessage()));
         }
     });
 }
+function earlyGithubActionErrorMessage() {
+    try {
+        const locale = (0, github_action_locale_inputs_1.readGithubActionLocaleInputs)(github_action_input_1.getGithubActionInput).repository;
+        return (0, application_error_message_catalog_1.resolveStaticApplicationErrorCatalog)(locale).message;
+    }
+    catch {
+        return (0, application_error_message_catalog_1.resolveStaticApplicationErrorCatalog)('en-US').message;
+    }
+}
 // Only auto-run when executed as the action entry (not when imported by tests)
+/* istanbul ignore next -- the bundled production entry is covered by the Action smoke path. */
 if (typeof process.env.JEST_WORKER_ID === 'undefined') {
     void runGitHubActionEntry();
 }
@@ -39647,9 +39658,11 @@ async function finishGithubAction(execution, results, issueNotificationPort, con
     }
     const summary = await writeActionSummary(execution, summaryPort, catalogResolver);
     if (!dryRun)
-        await publishCopilotEvidence(execution, results, summary, evidencePort);
-    failActionForUnresolvedFindingsIfConfigured(execution, results, dryRun);
-    setFirstErrorIfExists(results);
+        await publishCopilotEvidence(execution, results, summary.text, evidencePort);
+    const completionError = firstApplicationError(results)
+        ?? bugbotCompletionError(execution, results, dryRun);
+    if (completionError)
+        core.setFailed((0, application_error_presentation_policy_1.renderApplicationErrorText)(completionError, summary.errorMessage));
 }
 function extractBugbotTelemetry(results) {
     return results.flatMap((result) => {
@@ -39666,10 +39679,12 @@ async function writeActionSummary(execution, summaryPort, catalogResolver) {
     let body;
     let localizationLabels;
     let appendLocalizationEvidence = false;
+    let errorMessage;
     if (execution.singleAction.isDeploymentOrchestrationAction && operation) {
         const effectiveLocale = operation.locale ?? locale;
         const catalog = await (0, deployment_message_catalog_1.resolveDeploymentCatalog)(effectiveLocale.repository, execution.ai.getAgentConfiguration('planner'), catalogResolver);
         const messages = (0, deployment_message_catalog_1.deploymentCopy)(catalog);
+        errorMessage = (id, variables) => catalog.message(id, variables);
         localizationLabels = {
             heading: messages.localization,
             property: messages.property,
@@ -39697,6 +39712,7 @@ async function writeActionSummary(execution, summaryPort, catalogResolver) {
     }
     else {
         const catalog = await (0, action_summary_message_catalog_1.resolveActionSummaryCatalog)(locale.repository, execution.ai.getAgentConfiguration('planner'), catalogResolver);
+        errorMessage = (id, variables) => catalog.message(id, variables);
         body = (0, action_summary_policy_1.buildActionSummary)({
             owner: execution.owner,
             repository: execution.repo,
@@ -39726,14 +39742,14 @@ async function writeActionSummary(execution, summaryPort, catalogResolver) {
         : '';
     const summaryText = [body, localizationEvidence].filter(Boolean).join('\n\n');
     if (!summaryPort)
-        return summaryText;
+        return { text: summaryText, errorMessage };
     try {
         await summaryPort.publish(summaryText);
     }
     catch (error) {
         (0, logger_1.logInfo)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Could not write the GitHub Actions summary.').message);
     }
-    return summaryText;
+    return { text: summaryText, errorMessage };
 }
 async function publishCopilotEvidence(execution, results, summary, evidencePort) {
     if (!evidencePort)
@@ -39758,23 +39774,23 @@ async function publishCopilotEvidence(execution, results, summary, evidencePort)
         (0, logger_1.logInfo)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Could not publish the optional GitHub Check Run.').message);
     }
 }
-function failActionForUnresolvedFindingsIfConfigured(execution, results, dryRun) {
+function bugbotCompletionError(execution, results, dryRun) {
     if (dryRun)
-        return;
+        return undefined;
     const projection = (0, bugbot_result_finding_state_projection_policy_1.projectBugbotResultFindingStates)(results);
     if (projection.status === 'invalid') {
-        core.setFailed('Bugbot finding-state evidence is malformed.');
-        return;
+        return new application_error_1.ApplicationError('provider.contract-invalid', 'Bugbot finding-state evidence is malformed.');
     }
     if (projection.status === 'absent')
-        return;
+        return undefined;
     if (projection.counts.unknown > 0) {
-        core.setFailed(`Bugbot could not verify ${projection.counts.unknown} finding state(s).`);
+        return new application_error_1.ApplicationError('provider.contract-invalid', 'Bugbot finding-state evidence could not be verified.');
     }
-    else if (execution.ai.getBugbotReviewConfiguration().failOnUnresolved
+    if (execution.ai.getBugbotReviewConfiguration().failOnUnresolved
         && (0, review_state_1.countActionableBugbotFindings)(projection.counts) > 0) {
-        core.setFailed(`Bugbot found ${(0, review_state_1.countActionableBugbotFindings)(projection.counts)} unresolved actionable finding(s).`);
+        return new application_error_1.ApplicationError('workflow.failed', 'Bugbot found unresolved actionable findings.');
     }
+    return undefined;
 }
 function commitPublishedRecommendationState(execution, results) {
     const pendingState = results
@@ -39787,13 +39803,13 @@ function commitPublishedRecommendationState(execution, results) {
         execution.currentConfiguration.recommendationState = pendingState;
     }
 }
-function setFirstErrorIfExists(results) {
+function firstApplicationError(results) {
     for (const result of results) {
         if (result.errors && result.errors.length > 0) {
-            core.setFailed((0, application_error_presentation_policy_1.renderApplicationErrorText)(result.errors[0]));
-            return;
+            return result.errors[0];
         }
     }
+    return undefined;
 }
 
 
@@ -40416,39 +40432,6 @@ async function dispatchMainRunRoute(route, execution, handlers) {
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -40460,16 +40443,15 @@ exports.logWelcomeMessage = logWelcomeMessage;
 exports.runTokenExecution = runTokenExecution;
 exports.runNoIssueExecution = runNoIssueExecution;
 exports.runMainRoute = runMainRoute;
-const core = __importStar(__nccwpck_require__(75855));
 const chalk_1 = __importDefault(__nccwpck_require__(8578));
 const boxen_1 = __importDefault(__nccwpck_require__(11652));
+const result_1 = __nccwpck_require__(73817);
 const product_identity_1 = __nccwpck_require__(18739);
 const logger_1 = __nccwpck_require__(91151);
 const main_run_dispatcher_1 = __nccwpck_require__(28586);
 const workflow_context_1 = __nccwpck_require__(55224);
 const workflow_queue_composition_root_1 = __nccwpck_require__(21598);
 const application_error_1 = __nccwpck_require__(75999);
-const application_error_presentation_policy_1 = __nccwpck_require__(95067);
 exports.WORKFLOW_QUEUE_FAILURE_MESSAGE = 'Workflow queue check failed; sequential execution was not bypassed.';
 /**
  * Keeps provider diagnostics out of the action's externally visible failure
@@ -40544,9 +40526,14 @@ async function runMainRoute(execution, route, routeHandlers) {
     try {
         let results;
         if (route === 'unhandled') {
-            (0, logger_1.logError)(`Action not handled. Event: ${execution.eventName}.`);
-            core.setFailed('Action not handled.');
-            results = [];
+            const semanticError = (0, application_error_1.toApplicationError)(undefined, 'workflow.invalid-event', 'Action not handled.');
+            (0, logger_1.logError)(semanticError);
+            results = [new result_1.Result({
+                    id: 'MainRunRoute',
+                    success: false,
+                    executed: false,
+                    errors: [semanticError],
+                })];
         }
         else {
             results = await (0, main_run_dispatcher_1.dispatchMainRunRoute)(route, execution, routeHandlers);
@@ -40558,8 +40545,12 @@ async function runMainRoute(execution, route, routeHandlers) {
     catch (error) {
         const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Main run failed.');
         (0, logger_1.logError)(semanticError);
-        core.setFailed((0, application_error_presentation_policy_1.renderApplicationErrorText)(semanticError));
-        return [];
+        return [new result_1.Result({
+                id: 'MainRunRoute',
+                success: false,
+                executed: true,
+                errors: [semanticError],
+            })];
     }
 }
 
@@ -41063,12 +41054,13 @@ exports.TITLE = 'Copilot';
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = void 0;
+exports.ApplicationError = exports.APPLICATION_ERROR_RECOVERY_IDS = exports.APPLICATION_ERROR_METADATA = void 0;
 exports.toApplicationError = toApplicationError;
 const application_error_1 = __nccwpck_require__(97790);
 const application_error_context_1 = __nccwpck_require__(4034);
 var application_error_2 = __nccwpck_require__(97790);
 Object.defineProperty(exports, "APPLICATION_ERROR_METADATA", ({ enumerable: true, get: function () { return application_error_2.APPLICATION_ERROR_METADATA; } }));
+Object.defineProperty(exports, "APPLICATION_ERROR_RECOVERY_IDS", ({ enumerable: true, get: function () { return application_error_2.APPLICATION_ERROR_RECOVERY_IDS; } }));
 /** Creates a semantic error and owns correlation identity outside the pure model. */
 class ApplicationError extends application_error_1.ApplicationError {
     constructor(code, message, options = {}) {
@@ -41137,15 +41129,14 @@ exports.resolveStaticActionSummaryCatalog = resolveStaticActionSummaryCatalog;
 exports.resolveActionSummaryCatalog = resolveActionSummaryCatalog;
 const message_catalog_1 = __nccwpck_require__(27097);
 const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
+const application_error_message_catalog_1 = __nccwpck_require__(64809);
 const SIMPLE_MESSAGE_KEYS = Object.freeze([
     'heading', 'repository', 'property', 'value', 'status', 'event', 'target',
     'lifecycle', 'descriptionPolicy', 'results', 'findingStates', 'bugbotReview',
     'resultDetails', 'localization', 'repositoryLocale', 'issueLocale',
     'pullRequestLocale', 'catalogResolution', 'descriptors', 'reason', 'failure',
     'findings', 'partial', 'superseded', 'skipped', 'dryRun', 'success', 'invalid',
-    'none', 'impact', 'cause', 'action',
-    'retainedState', 'reference', 'retryable', 'yes', 'no',
-    'resultSucceeded', 'resultFailed', 'resultSkipped',
+    'none', 'resultSucceeded', 'resultFailed', 'resultSkipped',
 ]);
 const TEMPLATE_MESSAGE_IDS = Object.freeze([
     'summary.target.pullRequest',
@@ -41157,15 +41148,11 @@ const FINDING_STATE_KEYS = Object.freeze([
     'open', 'reopened', 'fixed', 'obsolete', 'dismissed',
     'verification-required', 'unknown',
 ]);
-const ERROR_KIND_KEYS = Object.freeze([
-    'configuration', 'authorization', 'provider', 'agent', 'validation', 'workflow', 'unknown',
-]);
-const ERROR_FIELD_KEYS = Object.freeze(['impact', 'action', 'retainedState']);
 exports.ACTION_SUMMARY_MESSAGE_IDS = Object.freeze([
     ...SIMPLE_MESSAGE_KEYS.map(key => `summary.${key}`),
     ...TEMPLATE_MESSAGE_IDS,
     ...FINDING_STATE_KEYS.map(key => `summary.findingState.${key}`),
-    ...ERROR_KIND_KEYS.flatMap(kind => ERROR_FIELD_KEYS.map(field => `summary.error.${kind}.${field}`)),
+    ...application_error_message_catalog_1.APPLICATION_ERROR_MESSAGE_IDS,
 ]);
 const ENGLISH_SIMPLE = Object.freeze({
     heading: 'Copilot execution',
@@ -41197,14 +41184,6 @@ const ENGLISH_SIMPLE = Object.freeze({
     success: 'Success',
     invalid: 'invalid',
     none: 'none',
-    impact: 'Impact',
-    cause: 'Error code',
-    action: 'Action',
-    retainedState: 'Retained state',
-    reference: 'Reference',
-    retryable: 'Retryable',
-    yes: 'Yes',
-    no: 'No',
     resultSucceeded: 'Succeeded',
     resultFailed: 'Failed',
     resultSkipped: 'Skipped',
@@ -41239,14 +41218,6 @@ const SPANISH_SIMPLE = Object.freeze({
     success: 'Correcto',
     invalid: 'no válido',
     none: 'ninguno',
-    impact: 'Impacto',
-    cause: 'Código de error',
-    action: 'Acción',
-    retainedState: 'Estado conservado',
-    reference: 'Referencia',
-    retryable: 'Reintentable',
-    yes: 'Sí',
-    no: 'No',
     resultSucceeded: 'Completado',
     resultFailed: 'Fallido',
     resultSkipped: 'Omitido',
@@ -41281,102 +41252,25 @@ const SPANISH_FINDING_STATES = Object.freeze({
     'verification-required': 'requieren verificación',
     unknown: 'desconocidos',
 });
-const ENGLISH_ERRORS = Object.freeze({
-    configuration: Object.freeze({
-        impact: 'The operation could not use the configured values.',
-        action: 'Correct the configuration or choose a supported capability before retrying.',
-        retainedState: 'No new state or external effect was created.',
-    }),
-    authorization: Object.freeze({
-        impact: 'The operation could not authenticate or access a required resource.',
-        action: 'Correct the credential or grant the documented permission before retrying.',
-        retainedState: 'No new state or external effect was created.',
-    }),
-    provider: Object.freeze({
-        impact: 'A provider operation did not complete.',
-        action: 'Inspect the error code and retry only when the provider state or availability has changed.',
-        retainedState: 'Existing state and completed external effects remain in place.',
-    }),
-    agent: Object.freeze({
-        impact: 'The configured agent did not produce usable product content.',
-        action: 'Inspect the sanitized agent status and retry with a compatible provider or model.',
-        retainedState: 'Existing state remains in place; rejected content was not published.',
-    }),
-    validation: Object.freeze({
-        impact: 'The supplied input was rejected before the operation could continue.',
-        action: 'Correct the input and retry.',
-        retainedState: 'No new state or external effect was created.',
-    }),
-    workflow: Object.freeze({
-        impact: 'The workflow could not complete the requested operation.',
-        action: 'Inspect the current state and retry only if the operation is still required.',
-        retainedState: 'Existing state and confirmed completed effects remain in place.',
-    }),
-    unknown: Object.freeze({
-        impact: 'An unexpected failure was handled safely.',
-        action: 'Use the reference to investigate before retrying.',
-        retainedState: 'Existing state and confirmed completed effects remain in place.',
-    }),
-});
-const SPANISH_ERRORS = Object.freeze({
-    configuration: Object.freeze({
-        impact: 'La operación no pudo usar los valores configurados.',
-        action: 'Corrige la configuración o elige una capacidad compatible antes de reintentarlo.',
-        retainedState: 'No se creó ningún estado ni efecto externo nuevo.',
-    }),
-    authorization: Object.freeze({
-        impact: 'La operación no pudo autenticarse o acceder a un recurso necesario.',
-        action: 'Corrige la credencial o concede el permiso documentado antes de reintentarlo.',
-        retainedState: 'No se creó ningún estado ni efecto externo nuevo.',
-    }),
-    provider: Object.freeze({
-        impact: 'Una operación del proveedor no se completó.',
-        action: 'Revisa el código de error y reinténtalo solo cuando haya cambiado el estado o la disponibilidad del proveedor.',
-        retainedState: 'El estado existente y los efectos externos completados se mantienen.',
-    }),
-    agent: Object.freeze({
-        impact: 'El agente configurado no produjo contenido de producto utilizable.',
-        action: 'Revisa el estado saneado del agente y reinténtalo con un proveedor o modelo compatible.',
-        retainedState: 'El estado existente se mantiene y el contenido rechazado no se publicó.',
-    }),
-    validation: Object.freeze({
-        impact: 'La entrada suministrada se rechazó antes de continuar la operación.',
-        action: 'Corrige la entrada y reinténtalo.',
-        retainedState: 'No se creó ningún estado ni efecto externo nuevo.',
-    }),
-    workflow: Object.freeze({
-        impact: 'El workflow no pudo completar la operación solicitada.',
-        action: 'Revisa el estado actual y reinténtalo solo si la operación sigue siendo necesaria.',
-        retainedState: 'El estado existente y los efectos completados y confirmados se mantienen.',
-    }),
-    unknown: Object.freeze({
-        impact: 'Un fallo inesperado se gestionó de forma segura.',
-        action: 'Usa la referencia para investigar antes de reintentarlo.',
-        retainedState: 'El estado existente y los efectos completados y confirmados se mantienen.',
-    }),
-});
-function catalogMessages(simple, templates, findingStates, errors) {
+function catalogMessages(simple, templates, findingStates, errorMessages) {
     return Object.freeze({
         ...Object.fromEntries(SIMPLE_MESSAGE_KEYS.map(key => [`summary.${key}`, simple[key]])),
         ...templates,
         ...Object.fromEntries(FINDING_STATE_KEYS.map(key => [`summary.findingState.${key}`, findingStates[key]])),
-        ...Object.fromEntries(ERROR_KIND_KEYS.flatMap(kind => ERROR_FIELD_KEYS.map(field => [
-            `summary.error.${kind}.${field}`,
-            errors[kind][field],
-        ]))),
+        ...errorMessages,
     });
 }
 exports.ENGLISH_ACTION_SUMMARY_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
     locale: 'en-US',
     compatibleBaseLanguage: 'en',
-    messages: catalogMessages(ENGLISH_SIMPLE, ENGLISH_TEMPLATES, ENGLISH_FINDING_STATES, ENGLISH_ERRORS),
+    messages: catalogMessages(ENGLISH_SIMPLE, ENGLISH_TEMPLATES, ENGLISH_FINDING_STATES, application_error_message_catalog_1.ENGLISH_APPLICATION_ERROR_MESSAGES),
 });
 exports.SPANISH_ACTION_SUMMARY_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
     locale: 'es-ES',
     compatibleBaseLanguage: 'es',
-    messages: catalogMessages(SPANISH_SIMPLE, SPANISH_TEMPLATES, SPANISH_FINDING_STATES, SPANISH_ERRORS),
+    messages: catalogMessages(SPANISH_SIMPLE, SPANISH_TEMPLATES, SPANISH_FINDING_STATES, application_error_message_catalog_1.SPANISH_APPLICATION_ERROR_MESSAGES),
 });
 exports.ACTION_SUMMARY_CATALOG_DEFINITIONS = Object.freeze([
     exports.ENGLISH_ACTION_SUMMARY_DEFINITION,
@@ -41406,6 +41300,7 @@ const bugbot_telemetry_projection_policy_1 = __nccwpck_require__(43244);
 const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
 const review_state_1 = __nccwpck_require__(79200);
 const action_summary_message_catalog_1 = __nccwpck_require__(61544);
+const application_error_presentation_policy_1 = __nccwpck_require__(95067);
 const ENGLISH_LOCALIZATION_SUMMARY_LABELS = Object.freeze({
     heading: 'Localization',
     property: 'Property',
@@ -41578,16 +41473,18 @@ function resultFailed(result) {
     return result.errors.length > 0 || (!result.success && result.executed);
 }
 function renderFailures(results, catalog) {
+    const message = (id, variables) => catalogText(catalog, id, variables);
     return results.map(result => {
         const errors = result.errors
             .flatMap((error) => {
+            const view = (0, application_error_presentation_policy_1.buildApplicationErrorPresentation)(error, message);
             return [
-                `  - **${catalogText(catalog, 'summary.impact')}:** ${errorCatalogText(catalog, error.kind, 'impact')}`,
-                `    - **${catalogText(catalog, 'summary.cause')}:** \`${error.code}\``,
-                `    - **${catalogText(catalog, 'summary.action')}:** ${errorCatalogText(catalog, error.kind, 'action')}`,
-                `    - **${catalogText(catalog, 'summary.retainedState')}:** ${errorCatalogText(catalog, error.kind, 'retainedState')}`,
-                `    - **${catalogText(catalog, 'summary.retryable')}:** ${catalogText(catalog, error.retryable ? 'summary.yes' : 'summary.no')}`,
-                `    - **${catalogText(catalog, 'summary.reference')}:** \`${error.correlationId}\``,
+                `  - **${message('error.label.impact')}:** ${view.impact}`,
+                `    - **${message('error.label.errorCode')}:** \`${view.code}\``,
+                `    - **${message('error.label.action')}:** ${view.action}`,
+                `    - **${message('error.label.retainedState')}:** ${view.retainedState}`,
+                `    - **${message('error.label.retryable')}:** ${view.retryable}`,
+                `    - **${message('error.label.reference')}:** \`${view.reference}\``,
             ];
         });
         return [
@@ -41595,9 +41492,6 @@ function renderFailures(results, catalog) {
             ...errors,
         ].join('\n');
     }).join('\n');
-}
-function errorCatalogText(catalog, kind, field) {
-    return catalogText(catalog, `summary.error.${kind}.${field}`);
 }
 function catalogText(catalog, id, variables = {}) {
     return escapeMarkdownText(catalog.message(id, variables));
@@ -42591,33 +42485,298 @@ function resolveThinkAgentTask(commandName, destinationType) {
 
 /***/ }),
 
+/***/ 64809:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readEnglishApplicationErrorMessage = exports.APPLICATION_ERROR_CATALOG_DEFINITIONS = exports.SPANISH_APPLICATION_ERROR_DEFINITION = exports.ENGLISH_APPLICATION_ERROR_DEFINITION = exports.SPANISH_APPLICATION_ERROR_MESSAGES = exports.ENGLISH_APPLICATION_ERROR_MESSAGES = exports.APPLICATION_ERROR_MESSAGE_IDS = exports.APPLICATION_ERROR_CODES = void 0;
+exports.resolveStaticApplicationErrorCatalog = resolveStaticApplicationErrorCatalog;
+exports.resolveApplicationErrorCatalog = resolveApplicationErrorCatalog;
+const application_error_1 = __nccwpck_require__(97790);
+const message_catalog_1 = __nccwpck_require__(27097);
+const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
+const LABEL_KEYS = Object.freeze([
+    'impact', 'errorCode', 'action', 'retainedState', 'retryable', 'yes', 'no', 'reference',
+]);
+const CONTENT_FIELDS = Object.freeze(['impact', 'action', 'retainedState']);
+exports.APPLICATION_ERROR_CODES = Object.freeze(Object.keys(application_error_1.APPLICATION_ERROR_METADATA));
+exports.APPLICATION_ERROR_MESSAGE_IDS = Object.freeze([
+    ...LABEL_KEYS.map(key => `error.label.${key}`),
+    ...exports.APPLICATION_ERROR_CODES.flatMap(code => CONTENT_FIELDS.map(field => `error.${code}.${field}`)),
+    ...application_error_1.APPLICATION_ERROR_RECOVERY_IDS.flatMap(id => CONTENT_FIELDS
+        .map(field => `error.recovery.${id}.${field}`)),
+]);
+const ENGLISH_LABELS = Object.freeze({
+    impact: 'Impact',
+    errorCode: 'Error code',
+    action: 'Action',
+    retainedState: 'Retained state',
+    retryable: 'Retryable',
+    yes: 'Yes',
+    no: 'No',
+    reference: 'Reference',
+});
+const SPANISH_LABELS = Object.freeze({
+    impact: 'Impacto',
+    errorCode: 'Código de error',
+    action: 'Acción',
+    retainedState: 'Estado conservado',
+    retryable: 'Reintentable',
+    yes: 'Sí',
+    no: 'No',
+    reference: 'Referencia',
+});
+const ENGLISH_CONTENT = Object.freeze(Object.fromEntries(exports.APPLICATION_ERROR_CODES.map(code => [code, Object.freeze({
+        impact: application_error_1.APPLICATION_ERROR_METADATA[code].impact,
+        action: application_error_1.APPLICATION_ERROR_METADATA[code].action,
+        retainedState: application_error_1.APPLICATION_ERROR_METADATA[code].retainedState,
+    })])));
+const UNCHANGED_STATE_ES = 'No se creó ningún estado ni efecto externo nuevo.';
+const PRESERVED_STATE_ES = 'Se conservaron el estado persistente existente y los efectos externos completados.';
+const SPANISH_CONTENT = Object.freeze({
+    'configuration.invalid': Object.freeze({
+        impact: 'La operación no pudo usar los valores configurados.',
+        action: 'Corrige la configuración no válida y reinténtalo.',
+        retainedState: UNCHANGED_STATE_ES,
+    }),
+    'configuration.unsupported': Object.freeze({
+        impact: 'La capacidad solicitada no es compatible con esta instalación.',
+        action: 'Usa una configuración compatible o actualiza la instalación.',
+        retainedState: UNCHANGED_STATE_ES,
+    }),
+    'authorization.denied': Object.freeze({
+        impact: 'La operación no pudo acceder al recurso necesario.',
+        action: 'Concede el permiso documentado y reinténtalo.',
+        retainedState: UNCHANGED_STATE_ES,
+    }),
+    'authorization.credential-invalid': Object.freeze({
+        impact: 'La operación no pudo autenticarse con el proveedor necesario.',
+        action: 'Sustituye o configura la credencial necesaria y reinténtalo.',
+        retainedState: UNCHANGED_STATE_ES,
+    }),
+    'provider.not-found': Object.freeze({
+        impact: 'No se encontró un recurso necesario del proveedor.',
+        action: 'Verifica el recurso de destino y reintenta la operación.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+    'provider.conflict': Object.freeze({
+        impact: 'El proveedor rechazó un estado actual conflictivo.',
+        action: 'Vuelve a cargar el estado actual y reinténtalo si la operación sigue siendo necesaria.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+    'provider.rate-limited': Object.freeze({
+        impact: 'El proveedor limitó temporalmente la operación.',
+        action: 'Reinténtalo cuando se restablezca el límite del proveedor.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+    'provider.unavailable': Object.freeze({
+        impact: 'El proveedor no estaba disponible temporalmente.',
+        action: 'Reinténtalo cuando el proveedor esté disponible.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+    'provider.contract-invalid': Object.freeze({
+        impact: 'La respuesta del proveedor no se pudo interpretar de forma segura.',
+        action: 'Revisa la integración del proveedor antes de reintentarlo.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+    'agent.policy-rejected': Object.freeze({
+        impact: 'El agente configurado no se inició.',
+        action: 'Usa una configuración de agente permitida y reinténtalo.',
+        retainedState: UNCHANGED_STATE_ES,
+    }),
+    'agent.failed': Object.freeze({
+        impact: 'El agente admitido no produjo un resultado utilizable.',
+        action: 'Revisa el estado saneado del agente y reinténtalo si procede.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+    'locale.output-invalid': Object.freeze({
+        impact: 'El contenido de producto generado por el agente se rechazó antes de publicarse porque su contrato de locale no era válido.',
+        action: 'Reinténtalo con un proveedor compatible con el locale configurado del repositorio.',
+        retainedState: UNCHANGED_STATE_ES,
+    }),
+    'locale.translation-failed': Object.freeze({
+        impact: 'La solicitud no se pudo interpretar de forma segura en el idioma configurado del repositorio.',
+        action: 'Reformula la solicitud o reinténtalo cuando esté disponible el proveedor de idioma configurado.',
+        retainedState: UNCHANGED_STATE_ES,
+    }),
+    'validation.invalid-input': Object.freeze({
+        impact: 'La operación no aceptó la entrada suministrada.',
+        action: 'Corrige la entrada y reinténtalo.',
+        retainedState: UNCHANGED_STATE_ES,
+    }),
+    'workflow.invalid-event': Object.freeze({
+        impact: 'El evento no puede iniciar el workflow solicitado.',
+        action: 'Inicia la operación desde un evento o superficie compatible.',
+        retainedState: UNCHANGED_STATE_ES,
+    }),
+    'workflow.stale': Object.freeze({
+        impact: 'Un estado más reciente sustituyó esta ejecución del workflow.',
+        action: 'Revisa el estado actual e inicia una nueva ejecución solo si es necesario.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+    'workflow.cancelled': Object.freeze({
+        impact: 'El workflow se detuvo antes de completarse.',
+        action: 'Inicia una nueva ejecución si la operación sigue siendo necesaria.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+    'workflow.failed': Object.freeze({
+        impact: 'El workflow no pudo completar la operación solicitada.',
+        action: 'Revisa el estado actual y reintenta el paso fallido.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+    timeout: Object.freeze({
+        impact: 'La operación superó su tiempo de ejecución limitado.',
+        action: 'Verifica el estado actual antes de reintentarlo.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+    unexpected: Object.freeze({
+        impact: 'La operación se detuvo porque un fallo inesperado se gestionó de forma segura.',
+        action: 'Usa el ID de correlación para investigar antes de reintentarlo.',
+        retainedState: PRESERVED_STATE_ES,
+    }),
+});
+const ENGLISH_RECOVERY_CONTENT = Object.freeze({
+    'pull-request-link-restored': Object.freeze({
+        impact: 'The pull request could not be linked to its issue.',
+        action: 'Rerun the workflow; no temporary pull-request state needs manual recovery.',
+        retainedState: 'The original pull-request base and description were restored.',
+    }),
+    'pull-request-link-base-retained': Object.freeze({
+        impact: 'The pull request could not be linked to its issue.',
+        action: 'Restore the temporary default base branch, then rerun the workflow.',
+        retainedState: 'The temporary default base branch remains; the original description was restored.',
+    }),
+    'pull-request-link-reference-retained': Object.freeze({
+        impact: 'The pull request could not be linked to its issue.',
+        action: 'Remove the temporary issue reference from the description, then rerun the workflow.',
+        retainedState: 'The original base branch was restored; the temporary issue reference remains in the description.',
+    }),
+    'pull-request-link-base-and-reference-retained': Object.freeze({
+        impact: 'The pull request could not be linked to its issue.',
+        action: 'Restore the temporary default base branch and remove the temporary issue reference, then rerun the workflow.',
+        retainedState: 'The temporary default base branch and issue reference remain.',
+    }),
+    'managed-branch-enrichment-failed': Object.freeze({
+        impact: 'The linked branch exists, but later issue metadata may be incomplete.',
+        action: 'Continue on {branchName} and rerun issue enrichment.',
+        retainedState: 'Branch {branchName} and its configuration patch were preserved.',
+    }),
+    'inactivity-explanation-failed': Object.freeze({
+        impact: 'Issue #{issueNumber} was closed without its terminal inactivity explanation.',
+        action: 'Inspect issue #{issueNumber} and add the explanation manually if the missing context matters.',
+        retainedState: 'Issue #{issueNumber} remains closed; the completed close will not be repeated.',
+    }),
+});
+const SPANISH_RECOVERY_CONTENT = Object.freeze({
+    'pull-request-link-restored': Object.freeze({
+        impact: 'No se pudo vincular la pull request con su issue.',
+        action: 'Vuelve a ejecutar el workflow; ningún estado temporal de la pull request requiere recuperación manual.',
+        retainedState: 'Se restauraron la rama base y la descripción originales de la pull request.',
+    }),
+    'pull-request-link-base-retained': Object.freeze({
+        impact: 'No se pudo vincular la pull request con su issue.',
+        action: 'Restaura la rama base predeterminada temporal y vuelve a ejecutar el workflow.',
+        retainedState: 'La rama base predeterminada temporal permanece; se restauró la descripción original.',
+    }),
+    'pull-request-link-reference-retained': Object.freeze({
+        impact: 'No se pudo vincular la pull request con su issue.',
+        action: 'Elimina la referencia temporal a la issue de la descripción y vuelve a ejecutar el workflow.',
+        retainedState: 'Se restauró la rama base original; la referencia temporal a la issue permanece en la descripción.',
+    }),
+    'pull-request-link-base-and-reference-retained': Object.freeze({
+        impact: 'No se pudo vincular la pull request con su issue.',
+        action: 'Restaura la rama base predeterminada temporal, elimina la referencia temporal a la issue y vuelve a ejecutar el workflow.',
+        retainedState: 'La rama base predeterminada temporal y la referencia a la issue permanecen.',
+    }),
+    'managed-branch-enrichment-failed': Object.freeze({
+        impact: 'La rama vinculada existe, pero los metadatos posteriores de la issue pueden estar incompletos.',
+        action: 'Continúa en {branchName} y vuelve a ejecutar el enriquecimiento de la issue.',
+        retainedState: 'Se conservaron la rama {branchName} y su parche de configuración.',
+    }),
+    'inactivity-explanation-failed': Object.freeze({
+        impact: 'La issue #{issueNumber} se cerró sin su explicación final sobre la inactividad.',
+        action: 'Revisa la issue #{issueNumber} y añade la explicación manualmente si falta contexto importante.',
+        retainedState: 'La issue #{issueNumber} permanece cerrada; el cierre completado no se repetirá.',
+    }),
+});
+function catalogMessages(labels, content, recoveryContent) {
+    return Object.freeze({
+        ...Object.fromEntries(LABEL_KEYS.map(key => [`error.label.${key}`, labels[key]])),
+        ...Object.fromEntries(exports.APPLICATION_ERROR_CODES.flatMap(code => CONTENT_FIELDS.map(field => [
+            `error.${code}.${field}`,
+            content[code][field],
+        ]))),
+        ...Object.fromEntries(application_error_1.APPLICATION_ERROR_RECOVERY_IDS.flatMap(id => CONTENT_FIELDS.map(field => [
+            `error.recovery.${id}.${field}`,
+            recoveryContent[id][field],
+        ]))),
+    });
+}
+exports.ENGLISH_APPLICATION_ERROR_MESSAGES = catalogMessages(ENGLISH_LABELS, ENGLISH_CONTENT, ENGLISH_RECOVERY_CONTENT);
+exports.SPANISH_APPLICATION_ERROR_MESSAGES = catalogMessages(SPANISH_LABELS, SPANISH_CONTENT, SPANISH_RECOVERY_CONTENT);
+exports.ENGLISH_APPLICATION_ERROR_DEFINITION = Object.freeze({
+    version: message_catalog_1.MESSAGE_CATALOG_VERSION,
+    locale: 'en-US',
+    compatibleBaseLanguage: 'en',
+    messages: exports.ENGLISH_APPLICATION_ERROR_MESSAGES,
+});
+exports.SPANISH_APPLICATION_ERROR_DEFINITION = Object.freeze({
+    version: message_catalog_1.MESSAGE_CATALOG_VERSION,
+    locale: 'es-ES',
+    compatibleBaseLanguage: 'es',
+    messages: exports.SPANISH_APPLICATION_ERROR_MESSAGES,
+});
+exports.APPLICATION_ERROR_CATALOG_DEFINITIONS = Object.freeze([
+    exports.ENGLISH_APPLICATION_ERROR_DEFINITION,
+    exports.SPANISH_APPLICATION_ERROR_DEFINITION,
+]);
+function resolveStaticApplicationErrorCatalog(locale) {
+    return (0, resolved_message_catalog_policy_1.resolveStaticMessageCatalogView)(locale, exports.ENGLISH_APPLICATION_ERROR_DEFINITION, exports.APPLICATION_ERROR_CATALOG_DEFINITIONS);
+}
+function resolveApplicationErrorCatalog(locale, configuration, resolver) {
+    return (0, resolved_message_catalog_policy_1.resolveMessageCatalogView)(locale, exports.APPLICATION_ERROR_MESSAGE_IDS, exports.ENGLISH_APPLICATION_ERROR_DEFINITION, exports.APPLICATION_ERROR_CATALOG_DEFINITIONS, configuration, resolver);
+}
+const readEnglishApplicationErrorMessage = (id, variables = {}) => (0, message_catalog_1.renderCatalogMessage)(exports.ENGLISH_APPLICATION_ERROR_MESSAGES[id], variables, 'en-US');
+exports.readEnglishApplicationErrorMessage = readEnglishApplicationErrorMessage;
+
+
+/***/ }),
+
 /***/ 95067:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildApplicationErrorPresentation = buildApplicationErrorPresentation;
 exports.renderApplicationErrorText = renderApplicationErrorText;
+const application_error_message_catalog_1 = __nccwpck_require__(64809);
 /** Shared semantic view model for terminal, GitHub, and API presentation. */
-function buildApplicationErrorPresentation(error) {
+function buildApplicationErrorPresentation(error, message = application_error_message_catalog_1.readEnglishApplicationErrorMessage) {
+    const descriptor = error.recovery
+        ? `error.recovery.${error.recovery.id}`
+        : `error.${error.code}`;
+    const variables = error.recovery?.variables;
     return {
-        impact: error.impact,
-        cause: error.message,
+        impact: message(`${descriptor}.impact`, variables),
         code: error.code,
-        action: error.action,
-        retainedState: error.retainedState,
+        action: message(`${descriptor}.action`, variables),
+        retainedState: message(`${descriptor}.retainedState`, variables),
+        retryable: message(error.retryable ? 'error.label.yes' : 'error.label.no'),
         reference: error.correlationId,
     };
 }
-function renderApplicationErrorText(error) {
-    const view = buildApplicationErrorPresentation(error);
+function renderApplicationErrorText(error, message = application_error_message_catalog_1.readEnglishApplicationErrorMessage) {
+    const view = buildApplicationErrorPresentation(error, message);
     return [
-        `Impact: ${view.impact}`,
-        `Cause (${view.code}): ${view.cause}`,
-        `Action: ${view.action}`,
-        `Retained state: ${view.retainedState}`,
-        `Reference: ${view.reference}`,
+        `${message('error.label.impact')}: ${view.impact}`,
+        `${message('error.label.errorCode')}: ${view.code}`,
+        `${message('error.label.action')}: ${view.action}`,
+        `${message('error.label.retainedState')}: ${view.retainedState}`,
+        `${message('error.label.retryable')}: ${view.retryable}`,
+        `${message('error.label.reference')}: ${view.reference}`,
     ].join('\n');
 }
 
@@ -44748,6 +44907,7 @@ const deployment_operation_1 = __nccwpck_require__(92730);
 const message_catalog_1 = __nccwpck_require__(27097);
 const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
 const merge_queue_message_catalog_1 = __nccwpck_require__(56033);
+const application_error_message_catalog_1 = __nccwpck_require__(64809);
 const SIMPLE_MESSAGE_KEYS = Object.freeze([
     'release', 'hotfix', 'currentStatus', 'noAction', 'actionRequired', 'progress',
     'currentTransition', 'whatNext', 'links', 'technical', 'alreadyPublished',
@@ -44800,6 +44960,7 @@ exports.DEPLOYMENT_MESSAGE_IDS = Object.freeze([
     ...DIAGRAM_KEYS.map(key => `deployment.diagram.${key}`),
     ...TEMPLATE_MESSAGE_IDS,
     ...merge_queue_message_catalog_1.MERGE_QUEUE_MESSAGE_IDS,
+    ...application_error_message_catalog_1.APPLICATION_ERROR_MESSAGE_IDS,
 ]);
 const ENGLISH_SIMPLE = Object.freeze({
     release: 'Release', hotfix: 'Hotfix', currentStatus: 'Current status',
@@ -44933,26 +45094,27 @@ const SPANISH_TEMPLATES = Object.freeze({
     'deployment.milestone.reconciliationBlocked': '❌ Despliegue bloqueado: {reason}',
     'deployment.milestone.complete': '✅ El despliegue {tag} y todos los destinos de reconciliación configurados se han completado.',
 });
-function catalogMessages(simple, phases, diagram, templates, mergeQueue) {
+function catalogMessages(simple, phases, diagram, templates, mergeQueue, errorMessages) {
     return Object.freeze({
         ...Object.fromEntries(SIMPLE_MESSAGE_KEYS.map(key => [`deployment.${key}`, simple[key]])),
         ...Object.fromEntries(deployment_operation_1.DEPLOYMENT_PHASES.map(phase => [`deployment.phase.${phase}`, phases[phase]])),
         ...Object.fromEntries(DIAGRAM_KEYS.map(key => [`deployment.diagram.${key}`, diagram[key]])),
         ...templates,
         ...mergeQueue,
+        ...errorMessages,
     });
 }
 exports.ENGLISH_DEPLOYMENT_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
     locale: 'en-US',
     compatibleBaseLanguage: 'en',
-    messages: catalogMessages(ENGLISH_SIMPLE, ENGLISH_PHASES, ENGLISH_DIAGRAM, ENGLISH_TEMPLATES, merge_queue_message_catalog_1.ENGLISH_MERGE_QUEUE_MESSAGES),
+    messages: catalogMessages(ENGLISH_SIMPLE, ENGLISH_PHASES, ENGLISH_DIAGRAM, ENGLISH_TEMPLATES, merge_queue_message_catalog_1.ENGLISH_MERGE_QUEUE_MESSAGES, application_error_message_catalog_1.ENGLISH_APPLICATION_ERROR_MESSAGES),
 });
 exports.SPANISH_DEPLOYMENT_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
     locale: 'es-ES',
     compatibleBaseLanguage: 'es',
-    messages: catalogMessages(SPANISH_SIMPLE, SPANISH_PHASES, SPANISH_DIAGRAM, SPANISH_TEMPLATES, merge_queue_message_catalog_1.SPANISH_MERGE_QUEUE_MESSAGES),
+    messages: catalogMessages(SPANISH_SIMPLE, SPANISH_PHASES, SPANISH_DIAGRAM, SPANISH_TEMPLATES, merge_queue_message_catalog_1.SPANISH_MERGE_QUEUE_MESSAGES, application_error_message_catalog_1.SPANISH_APPLICATION_ERROR_MESSAGES),
 });
 exports.DEPLOYMENT_CATALOG_DEFINITIONS = Object.freeze([
     exports.ENGLISH_DEPLOYMENT_DEFINITION,
@@ -45599,9 +45761,6 @@ exports.INACTIVITY_MESSAGE_IDS = Object.freeze([
     'inactivity.error.revalidate',
     'inactivity.error.close',
     'inactivity.error.comment',
-    'inactivity.error.commentImpact',
-    'inactivity.error.commentAction',
-    'inactivity.error.commentRetainedState',
 ]);
 const ENGLISH_MESSAGES = Object.freeze({
     'inactivity.closure.heading': 'Issue closed after inactivity',
@@ -45627,9 +45786,6 @@ const ENGLISH_MESSAGES = Object.freeze({
     'inactivity.error.revalidate': 'Unable to recheck issue #{issueNumber} before inactivity closure.',
     'inactivity.error.close': 'Unable to close issue #{issueNumber} after inactivity.',
     'inactivity.error.comment': 'Issue #{issueNumber} was closed, but its inactivity explanation could not be published.',
-    'inactivity.error.commentImpact': 'Issue #{issueNumber} was closed without its terminal inactivity explanation.',
-    'inactivity.error.commentAction': 'Inspect issue #{issueNumber} and add the explanation manually if the missing context matters.',
-    'inactivity.error.commentRetainedState': 'Issue #{issueNumber} remains closed; the completed close will not be repeated.',
 });
 const SPANISH_MESSAGES = Object.freeze({
     'inactivity.closure.heading': 'Issue cerrada por inactividad',
@@ -45659,9 +45815,6 @@ const SPANISH_MESSAGES = Object.freeze({
     'inactivity.error.revalidate': 'No se pudo volver a comprobar la issue #{issueNumber} antes de cerrarla por inactividad.',
     'inactivity.error.close': 'No se pudo cerrar la issue #{issueNumber} por inactividad.',
     'inactivity.error.comment': 'La issue #{issueNumber} se cerró, pero no se pudo publicar la explicación sobre su inactividad.',
-    'inactivity.error.commentImpact': 'La issue #{issueNumber} se cerró sin su explicación final sobre la inactividad.',
-    'inactivity.error.commentAction': 'Revisa la issue #{issueNumber} y añade la explicación manualmente si falta contexto importante.',
-    'inactivity.error.commentRetainedState': 'La issue #{issueNumber} permanece cerrada; el cierre completado no se repetirá.',
 });
 exports.ENGLISH_INACTIVITY_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
@@ -46351,7 +46504,8 @@ exports.resolvePublicationCatalog = resolvePublicationCatalog;
 exports.toPublicationCatalog = toPublicationCatalog;
 const message_catalog_1 = __nccwpck_require__(27097);
 const locale_1 = __nccwpck_require__(15386);
-exports.PUBLICATION_MESSAGE_IDS = Object.freeze([
+const application_error_message_catalog_1 = __nccwpck_require__(64809);
+const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'publication.implementationPlan',
     'publication.planReady',
     'publication.planAcceptance',
@@ -46421,6 +46575,10 @@ exports.PUBLICATION_MESSAGE_IDS = Object.freeze([
     'cli.steps',
     'cli.errors',
     'cli.reminder',
+]);
+exports.PUBLICATION_MESSAGE_IDS = Object.freeze([
+    ...PUBLICATION_SURFACE_MESSAGE_IDS,
+    ...application_error_message_catalog_1.APPLICATION_ERROR_MESSAGE_IDS,
 ]);
 const ENGLISH_MESSAGES = Object.freeze({
     'publication.implementationPlan': 'Implementation plan',
@@ -46492,6 +46650,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'cli.steps': 'Steps',
     'cli.errors': 'Errors',
     'cli.reminder': 'Reminder',
+    ...application_error_message_catalog_1.ENGLISH_APPLICATION_ERROR_MESSAGES,
 });
 const SPANISH_MESSAGES = Object.freeze({
     'publication.implementationPlan': 'Plan de implementación',
@@ -46563,6 +46722,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'cli.steps': 'Pasos',
     'cli.errors': 'Errores',
     'cli.reminder': 'Recordatorio',
+    ...application_error_message_catalog_1.SPANISH_APPLICATION_ERROR_MESSAGES,
 });
 exports.ENGLISH_PUBLICATION_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
@@ -49036,13 +49196,10 @@ async function runCloseInactiveIssuesWorkflow(param, dependencies) {
                 errors.push(new application_error_1.ApplicationError('provider.unavailable', message, {
                     cause: error,
                     retryable: false,
-                    impact: resultMessages.message('inactivity.error.commentImpact', {
-                        issueNumber: candidate.number,
-                    }),
-                    action: resultMessages.message('inactivity.error.commentAction', {
-                        issueNumber: candidate.number,
-                    }),
-                    retainedState: resultMessages.message('inactivity.error.commentRetainedState', { issueNumber: candidate.number }),
+                    recovery: {
+                        id: 'inactivity-explanation-failed',
+                        variables: { issueNumber: candidate.number },
+                    },
                 }));
             }
         }
@@ -60934,9 +61091,10 @@ async function prepareManagedBranch(param, issueTitle, branches, taskId, depende
     }
     catch (error) {
         const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'The branch was created, but its linked issue state could not be synchronized.', {
-            impact: 'The linked branch exists, but later issue metadata may be incomplete.',
-            action: 'Continue on the retained branch and rerun issue enrichment.',
-            retainedState: `The branch ${branchPayload.newBranchName} and its configuration patch were preserved.`,
+            recovery: {
+                id: 'managed-branch-enrichment-failed',
+                variables: { branchName: branchPayload.newBranchName },
+            },
         });
         result.push(new result_1.Result({
             id: taskId,
@@ -61449,8 +61607,7 @@ class LinkPullRequestIssueUseCase {
         catch (error) {
             const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to link the pull request to its issue.', error instanceof link_pull_request_issue_workflow_1.PullRequestIssueLinkOperationError
                 ? {
-                    action: 'Restore any named temporary PR state, then rerun the workflow.',
-                    retainedState: describeRetainedState(error),
+                    recovery: pullRequestLinkRecovery(error),
                 }
                 : {});
             (0, logging_ports_1.logError)(semanticError);
@@ -61468,14 +61625,15 @@ class LinkPullRequestIssueUseCase {
     }
 }
 exports.LinkPullRequestIssueUseCase = LinkPullRequestIssueUseCase;
-function describeRetainedState(error) {
-    if (!error.retainedBaseBranch && !error.retainedIssueReference) {
-        return 'The original pull-request base and description were restored.';
-    }
-    return [
-        error.retainedBaseBranch ? 'The temporary default base branch remains.' : 'The original base branch was restored.',
-        error.retainedIssueReference ? 'The temporary issue reference remains in the description.' : 'The original description was restored.',
-    ].join(' ');
+function pullRequestLinkRecovery(error) {
+    const id = error.retainedBaseBranch
+        ? error.retainedIssueReference
+            ? 'pull-request-link-base-and-reference-retained'
+            : 'pull-request-link-base-retained'
+        : error.retainedIssueReference
+            ? 'pull-request-link-reference-retained'
+            : 'pull-request-link-restored';
+    return { id, variables: {} };
 }
 function describeRecovery(error) {
     const retainedState = [
@@ -62257,8 +62415,16 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
 };
 var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = void 0;
+exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
+    'pull-request-link-restored',
+    'pull-request-link-base-retained',
+    'pull-request-link-reference-retained',
+    'pull-request-link-base-and-reference-retained',
+    'managed-branch-enrichment-failed',
+    'inactivity-explanation-failed',
+]);
 const PRESERVED_STATE = 'Existing persisted state and completed external effects were preserved.';
 const UNCHANGED_STATE = 'No new state or external effect was created.';
 exports.APPLICATION_ERROR_METADATA = {
@@ -62406,10 +62572,11 @@ class ApplicationError extends Error {
         this.code = code;
         this.kind = metadata.kind;
         this.retryable = options.retryable ?? metadata.retryable;
-        this.impact = options.impact ?? metadata.impact;
-        this.action = options.action ?? metadata.action;
-        this.retainedState = options.retainedState ?? metadata.retainedState;
+        this.impact = metadata.impact;
+        this.action = metadata.action;
+        this.retainedState = metadata.retainedState;
         this.correlationId = correlationId;
+        this.recovery = normalizeApplicationErrorRecovery(options.recovery);
         __classPrivateFieldSet(this, _ApplicationError_cause, options.cause, "f");
     }
     toJSON() {
@@ -62423,11 +62590,49 @@ class ApplicationError extends Error {
             action: this.action,
             retainedState: this.retainedState,
             correlationId: this.correlationId,
+            ...(this.recovery ? { recovery: this.recovery } : {}),
         };
     }
 }
 exports.ApplicationError = ApplicationError;
 _ApplicationError_cause = new WeakMap();
+const RECOVERY_VARIABLE_KEYS = Object.freeze({
+    'pull-request-link-restored': Object.freeze([]),
+    'pull-request-link-base-retained': Object.freeze([]),
+    'pull-request-link-reference-retained': Object.freeze([]),
+    'pull-request-link-base-and-reference-retained': Object.freeze([]),
+    'managed-branch-enrichment-failed': Object.freeze(['branchName']),
+    'inactivity-explanation-failed': Object.freeze(['issueNumber']),
+});
+function normalizeApplicationErrorRecovery(recovery) {
+    if (!recovery)
+        return undefined;
+    if (!exports.APPLICATION_ERROR_RECOVERY_IDS.includes(recovery.id)) {
+        throw new TypeError('Application error recovery ID is invalid.');
+    }
+    const variables = recovery.variables;
+    const actualKeys = Object.keys(variables).sort();
+    const expectedKeys = [...RECOVERY_VARIABLE_KEYS[recovery.id]].sort();
+    if (actualKeys.length !== expectedKeys.length
+        || actualKeys.some((key, index) => key !== expectedKeys[index])) {
+        throw new TypeError(`Application error recovery variables are invalid for ${recovery.id}.`);
+    }
+    if (recovery.id === 'managed-branch-enrichment-failed'
+        && (typeof variables.branchName !== 'string'
+            || !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,254}$/u.test(variables.branchName))) {
+        throw new TypeError('Application error recovery branch name is invalid.');
+    }
+    if (recovery.id === 'inactivity-explanation-failed'
+        && (typeof variables.issueNumber !== 'number'
+            || !Number.isSafeInteger(variables.issueNumber)
+            || variables.issueNumber < 1)) {
+        throw new TypeError('Application error recovery issue number is invalid.');
+    }
+    return Object.freeze({
+        id: recovery.id,
+        variables: Object.freeze({ ...variables }),
+    });
+}
 
 
 /***/ }),
@@ -72749,7 +72954,7 @@ exports.renderCatalogMessage = renderCatalogMessage;
 exports.catalogPlaceholders = catalogPlaceholders;
 exports.catalogPluralCategories = catalogPluralCategories;
 const locale_1 = __nccwpck_require__(15386);
-exports.MESSAGE_CATALOG_VERSION = '1';
+exports.MESSAGE_CATALOG_VERSION = '2';
 exports.CATALOG_PLURAL_CATEGORIES = Object.freeze([
     'zero',
     'one',
@@ -77239,6 +77444,7 @@ function logError(message, metadata) {
                 action: message.action,
                 retainedState: message.retainedState,
                 correlationId: message.correlationId,
+                ...(message.recovery ? { recovery: message.recovery } : {}),
             },
         });
     emitLog({ level: 'error', message: sanitized, timestamp: Date.now(), metadata: safeMetadata }, console.error);

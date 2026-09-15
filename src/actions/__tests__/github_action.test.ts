@@ -330,7 +330,8 @@ describe('runGitHubAction', () => {
     await runGitHubAction();
 
     expect(mockPublishInvoke).toHaveBeenCalled();
-    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Cause (workflow.failed): First error'));
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: workflow.failed'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('First error'));
   });
 
   it('calls logError when INPUT_VARS_JSON is invalid JSON', async () => {
@@ -372,7 +373,33 @@ describe('runGitHubActionEntry', () => {
   it('converts an unhandled rejection into an action failure without forcing process exit', async () => {
     await runGitHubActionEntry(jest.fn().mockRejectedValue(new Error('entry failed')));
 
-    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Cause (workflow.failed): GitHub Action execution failed.'));
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: workflow.failed'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('GitHub Action execution failed.'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('entry failed'));
+  });
+
+  it('uses a bundled repository locale for failures before execution is available', async () => {
+    (core.getInput as jest.Mock).mockImplementation((key: string) =>
+      key === INPUT_KEYS.REPOSITORY_LOCALE ? 'es-MX' : '');
+
+    await runGitHubActionEntry(jest.fn().mockRejectedValue(new Error('entry failed')));
+
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Impacto:'));
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Código de error: workflow.failed'));
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Reintentable: Sí'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('Impact:'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('entry failed'));
+  });
+
+  it('falls back atomically to English when the early locale input is invalid', async () => {
+    (core.getInput as jest.Mock).mockImplementation((key: string) =>
+      key === INPUT_KEYS.REPOSITORY_LOCALE ? 'not a locale' : '');
+
+    await runGitHubActionEntry(jest.fn().mockRejectedValue(new Error('entry failed')));
+
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Impact:'));
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: workflow.failed'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('Impacto:'));
     expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('entry failed'));
   });
 });

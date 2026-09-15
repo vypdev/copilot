@@ -33,9 +33,6 @@ const germanMessages = Object.freeze({
   'inactivity.error.revalidate': 'Issue #{issueNumber} konnte vor dem Schließen nicht erneut geprüft werden.',
   'inactivity.error.close': 'Issue #{issueNumber} konnte nicht wegen Inaktivität geschlossen werden.',
   'inactivity.error.comment': 'Issue #{issueNumber} wurde geschlossen, aber die Erklärung konnte nicht veröffentlicht werden.',
-  'inactivity.error.commentImpact': 'Issue #{issueNumber} wurde ohne abschließende Erklärung geschlossen.',
-  'inactivity.error.commentAction': 'Prüfen Sie Issue #{issueNumber} und ergänzen Sie die Erklärung bei Bedarf manuell.',
-  'inactivity.error.commentRetainedState': 'Issue #{issueNumber} bleibt geschlossen; der Abschluss wird nicht wiederholt.',
 });
 
 describe('inactivity message catalog', () => {

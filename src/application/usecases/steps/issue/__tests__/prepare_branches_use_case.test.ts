@@ -541,7 +541,10 @@ describe("PrepareBranchesUseCase", () => {
       executed: true,
       errors: [expect.objectContaining({
         code: 'provider.unavailable',
-        retainedState: 'The branch feature/42-add-login-feature and its configuration patch were preserved.',
+        recovery: {
+          id: 'managed-branch-enrichment-failed',
+          variables: { branchName: 'feature/42-add-login-feature' },
+        },
       })],
     });
     expect(mockMoveIssueInvoke).not.toHaveBeenCalled();
