@@ -118,6 +118,7 @@ export function transitionPublicationOutcomes(
     results: readonly Result[],
 ): readonly TransitionPublicationOutcome[] {
     return Object.freeze(results.flatMap(result => {
+        if (!result.success || !result.executed) return [];
         const payload = getResultPayload(result.payload);
         const transition = getResultPayload(payload?.publicationTransition);
         if (!transition

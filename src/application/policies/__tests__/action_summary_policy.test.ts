@@ -273,6 +273,15 @@ describe('action summary policy', () => {
             locale: { repository: 'es-ES', issue: 'es-ES', pullRequest: 'es-ES' },
         }, resolveStaticActionSummaryCatalog('es-ES')))
             .toContain('| Notificaciones de acción | branch-sync en issue:7: reutilizada (huella 0123abcd) |');
+
+        const failed = buildActionSummary({
+            owner: 'owner', repository: 'repo', eventName: 'push', issueNumber: 7,
+            pullRequestNumber: -1, results: [new Result({
+                id: 'FailedPublication', success: false, executed: true,
+                payload: result.payload,
+            })],
+        });
+        expect(failed).not.toContain('Action notifications');
     });
 
     it('reports active findings as a warning unless fail-on-unresolved is enabled', () => {

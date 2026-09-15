@@ -120,6 +120,8 @@ describe('publication outcome policy', () => {
         ];
         const projected = transitionPublicationOutcomes([
             new Result({ id: 'valid', success: true, executed: true, payload: valid }),
+            new Result({ id: 'failed', success: false, executed: true, payload: valid }),
+            new Result({ id: 'skipped', success: true, executed: false, payload: valid }),
             ...malformed.map((publicationTransition, index) => new Result({
                 id: `invalid-${index}`, success: true, executed: true, payload: { publicationTransition },
             })),

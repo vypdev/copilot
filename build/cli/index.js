@@ -44584,6 +44584,8 @@ function buildTransitionPublicationPayload(intent, effect) {
 }
 function transitionPublicationOutcomes(results) {
     return Object.freeze(results.flatMap(result => {
+        if (!result.success || !result.executed)
+            return [];
         const payload = (0, result_1.getResultPayload)(result.payload);
         const transition = (0, result_1.getResultPayload)(payload?.publicationTransition);
         if (!transition
