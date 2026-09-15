@@ -7,7 +7,7 @@
       "status": "implemented",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-15",
+      "lastVerified": "2026-09-16",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md"
@@ -65,13 +65,17 @@
         "src/domain/github_publication.ts",
         "src/domain/git_object_id.ts",
         "src/application/ports/publication_freshness_ports.ts",
-        "src/application/policies/publication_identity_policy.ts",
+      "src/application/policies/publication_identity_policy.ts",
+      "src/application/policies/copilot_interaction_policy.ts",
+      "src/application/policies/recommendation_policy.ts",
         "src/application/policies/publication_outcome_policy.ts",
       "src/application/policies/publication_message_catalog.ts",
       "src/application/policies/semantic_result_publication_policy.ts",
       "src/application/policies/agent_response_schemas.ts",
       "src/application/usecases/actions/recommend_steps_result_policy.ts",
+      "src/application/usecases/actions/publish_issue_comment_workflow.ts",
       "src/data/model/recommendation_state.ts",
+      "src/data/model/config.ts",
       "src/prompts/recommend_steps.ts",
         "src/application/usecases/issue_use_case.ts",
         "src/application/usecases/issue_workflow.ts",
@@ -106,6 +110,7 @@
         "src/application/policies/bugbot_review_presentation_policy.ts",
         "src/application/usecases/steps/commit/detect_potential_problems_workflow.ts",
         "src/application/usecases/steps/commit/bugbot/publish_pr_review_comments.ts",
+        "src/application/usecases/steps/commit/bugbot/resolve_issue_finding.ts",
         "src/application/usecases/steps/commit/bugbot/synchronize_bugbot_review_presentation_use_case.ts",
         "src/application/policies/deployment_presentation_policy.ts",
         "src/application/usecases/actions/recommend_steps_workflow.ts",
@@ -233,7 +238,7 @@
       "status": "implemented",
       "scope": "Release and hotfix promotion, publication, reconciliation, and durable recovery",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-14",
+      "lastVerified": "2026-09-16",
       "specs": [
         "specs/configurable-release-orchestration.md",
         "specs/configurable-release-orchestration-traceability.md",
@@ -538,7 +543,7 @@
       "status": "implemented",
       "scope": "Close verified concurrency, error-contract, context-coupling, fan-out, setup/doctor, and provider-policy risks in dependency order",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-15",
+      "lastVerified": "2026-09-16",
       "specs": [
         "specs/architecture-quality-and-scalability-hardening.md",
         "specs/issue-and-pull-request-context-hardening.md"
@@ -632,7 +637,7 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-14",
+      "lastVerified": "2026-09-16",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md"
@@ -650,6 +655,7 @@
         "src/domain/setup_questionnaire.ts",
         "src/application/ports/setup_terminal_ports.ts",
         "src/application/policies/setup_questionnaire_policy.ts",
+        "src/application/policies/setup_configuration_plan.ts",
         "src/application/policies/setup_doctor_message_catalog.ts",
         "src/application/policies/setup_doctor_report_policy.ts",
         "src/application/usecases/setup/setup_wizard_use_case.ts",
@@ -673,6 +679,7 @@
       ],
       "tests": [
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
+        "src/application/policies/__tests__/setup_configuration_policy.test.ts",
         "src/application/policies/__tests__/setup_doctor_message_catalog.test.ts",
         "src/application/policies/__tests__/setup_doctor_report_policy.test.ts",
         "src/application/usecases/setup/__tests__/setup_questionnaire_controller.test.ts",
@@ -705,7 +712,7 @@
       "status": "as-built-baseline",
       "scope": "Convert typed issues into traceable work branches, project state, and lifecycle state",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-15",
+      "lastVerified": "2026-09-16",
       "specs": [
         "specs/managed-issue-and-branch-lifecycle.md"
       ],
@@ -757,7 +764,7 @@
       "status": "implemented",
       "scope": "Admit only explicit commands or exact mentions, then route them while protecting repository mutations",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-15",
+      "lastVerified": "2026-09-16",
       "specs": [
         "specs/comment-automation-and-authorization.md"
       ],
@@ -830,7 +837,7 @@
       "status": "implemented",
       "scope": "Select one canonical PR, analyze bounded evidence, publish stable findings, and apply authorized verified fixes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-15",
+      "lastVerified": "2026-09-16",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md"
@@ -915,7 +922,7 @@
       "status": "implemented",
       "scope": "Observe parent drift with one localized status card and transition-only notifications, then safely merge a parent branch into a linked working branch",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-15",
+      "lastVerified": "2026-09-16",
       "specs": [
         "specs/branch-synchronization-and-conflict-recovery.md"
       ],
@@ -1108,7 +1115,7 @@
       "status": "as-built-baseline",
       "scope": "Expose bounded local commands and workflow-dispatched operations through the shared application core",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-15",
+      "lastVerified": "2026-09-16",
       "specs": [
         "specs/cli-and-single-action-execution.md"
       ],

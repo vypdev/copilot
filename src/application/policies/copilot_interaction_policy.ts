@@ -6,7 +6,6 @@ import {
 } from './publication_message_catalog';
 
 export const DEFAULT_COPILOT_BOT_USERNAME = 'vypbot';
-export const COPILOT_WELCOME_MARKER = '<!-- copilot:welcome -->';
 
 const SAFE_GITHUB_USERNAME = /^[A-Za-z0-9-]+$/u;
 
@@ -77,8 +76,6 @@ export function buildCopilotWelcomeMessage(
     const bot = normalizeCopilotBotUsername(username);
     const botDisplay = `**@${bot}**`;
     return [
-        COPILOT_WELCOME_MARKER,
-        '',
         catalog.render('interaction.welcome.greeting', { bot: botDisplay }),
         '',
         catalog.render('interaction.welcome.capabilities'),

@@ -88,9 +88,8 @@ keeps logging behavior replaceable and prevents application code from knowing
 about the process/GitHub logger.
 
 Application may use only the following side-effect-free shared utilities:
-`comment_watermark`, `content_utils`, `list_utils`,
-`project_context_instruction`, `secret_redaction`, `task_emoji`, and
-`title_utils`. Action input keys and product constants belong to their owning
+`content_utils`, `project_context_instruction`, `secret_redaction`, `task_emoji`,
+and `title_utils`. Action input keys and product constants belong to their owning
 application/data contracts rather than a generic utility module. New reusable
 application behavior belongs in an application policy or port rather than in
 the generic utility directory.

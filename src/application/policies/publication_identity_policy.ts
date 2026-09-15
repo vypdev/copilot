@@ -139,19 +139,6 @@ export function parsePublicationTransitionMarker(
     });
 }
 
-/**
- * Reads the stable issue-comment identity plus the short-lived namespaced form
- * emitted during migration. Review-comment identities remain transport-scoped.
- */
-export function readablePublicationReplyCorrelationIds(
-    correlationId: string,
-): readonly string[] {
-    const issueComment = correlationId.match(/^comment:([1-9]\d*)$/u);
-    return Object.freeze(issueComment
-        ? [correlationId, `comment:issue_comment:${issueComment[1]}`]
-        : [correlationId]);
-}
-
 export function buildDuplicateMarker(canonicalCommentId: number): string {
     if (!Number.isSafeInteger(canonicalCommentId) || canonicalCommentId < 1) {
         throw new Error('Canonical comment id must be a positive integer.');

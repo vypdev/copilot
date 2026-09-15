@@ -64,9 +64,9 @@ describe('setup configuration policy', () => {
         });
     });
 
-    it('adds explicit operational warnings to the setup plan', () => {
-        const plan = buildSetupPlan(createDefaultSetupConfiguration(), [], ['Confirm protected branch readiness.']);
-        expect(plan.warnings[0]).toBe('Confirm protected branch readiness.');
+    it('derives operational warnings only from the current setup configuration', () => {
+        const plan = buildSetupPlan(createDefaultSetupConfiguration());
+        expect(plan.warnings).toContain('Release and hotfix workflows require the workflow PAT Secret and a writable token.');
     });
 
     it('removes optional files while retaining core setup resources', () => {

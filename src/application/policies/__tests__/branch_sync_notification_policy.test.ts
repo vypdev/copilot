@@ -1,6 +1,4 @@
 import {
-  BRANCH_SYNC_ALIGNED_MARKER,
-  BRANCH_SYNC_STALE_MARKER,
   branchSyncPublicationIdentity,
   buildAlignedBranchSyncComment,
   buildBranchSyncDuplicatePointer,
@@ -40,14 +38,29 @@ describe("branch sync notification policy", () => {
   });
 
   it("only selects the latest marker comment authored by the authenticated bot", () => {
+    const stale = buildStaleBranchSyncComment({
+      owner: 'org', repository: 'repo', dependency,
+      comparison: { aheadBy: 1, behindBy: 2 }, messages: english,
+    });
+    const aligned = buildAlignedBranchSyncComment(dependency, english);
     const comments = [
-      { id: 1, body: BRANCH_SYNC_STALE_MARKER, user: { login: "vypbot" } },
-      { id: 2, body: BRANCH_SYNC_STALE_MARKER, user: { login: "mallory" } },
-      { id: 3, body: BRANCH_SYNC_ALIGNED_MARKER, user: { login: "VYPBOT" } },
+      { id: 1, body: stale, user: { login: "vypbot" } },
+      { id: 2, body: stale, user: { login: "mallory" } },
+      { id: 3, body: aligned, user: { login: "VYPBOT" } },
     ];
     expect(findLatestBranchSyncComment(comments, "vypbot")).toEqual(comments[2]);
     expect(findLatestBranchSyncComment(comments, "other")).toBeUndefined();
     expect(findLatestBranchSyncComment(comments)).toBeUndefined();
+  });
+
+  it('treats removed branch-sync markers as inert', () => {
+    const comments = [
+      { id: 1, body: '<!-- copilot-branch-sync:stale -->', user: { login: 'vypbot' } },
+      { id: 2, body: '<!-- copilot-branch-sync:aligned -->', user: { login: 'vypbot' } },
+    ];
+
+    expect(findLatestBranchSyncComment(comments, 'vypbot')).toBeUndefined();
+    expect(isStaleBranchSyncComment(comments[0].body)).toBe(false);
   });
 
   it("keeps notification state independent for multiple branches on one issue", () => {
@@ -73,7 +86,7 @@ describe("branch sync notification policy", () => {
       comparison: { aheadBy: 2, behindBy: 3 },
       messages: english,
     });
-    expect(stale).toContain(BRANCH_SYNC_STALE_MARKER);
+    expect(stale).toContain('<!-- copilot:publication schema="1"');
     expect(stale).toContain('topic="branch-sync" target="issue:42"');
     expect(stale).toContain("3 commits behind");
     expect(stale).toContain("2 commits not present");
@@ -82,7 +95,7 @@ describe("branch sync notification policy", () => {
     expect(isStaleBranchSyncComment(stale)).toBe(true);
 
     const aligned = buildAlignedBranchSyncComment(dependency, english);
-    expect(aligned).toContain(BRANCH_SYNC_ALIGNED_MARKER);
+    expect(aligned).toContain('<!-- copilot:publication schema="1"');
     expect(aligned).toContain("now contains");
     expect(isStaleBranchSyncComment(aligned)).toBe(false);
   });

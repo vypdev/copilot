@@ -35,21 +35,6 @@ describe('getRecommendStepsPrompt', () => {
         expect(prompt).toContain('Reuse the existing auth service.');
     });
 
-    it('requires migration when the previous recommendation is legacy free-form text', () => {
-        const prompt = getRecommendStepsPrompt({
-            projectContextInstruction: '',
-            issueNumber: '7',
-            issueDescription: 'Implement OAuth flow.',
-            previousRecommendation: '1. Reuse the existing auth service.',
-            previousRecommendationFormat: 'legacy',
-            targetLocale: 'en-US',
-        });
-
-        expect(prompt).toContain('Previous legacy recommendation');
-        expect(prompt).toContain('complete structured replacement');
-        expect(prompt).toContain('do not return unchanged');
-    });
-
     it('requires a complete replacement when a structured plan uses another or unknown locale', () => {
         const prompt = getRecommendStepsPrompt({
             projectContextInstruction: '',

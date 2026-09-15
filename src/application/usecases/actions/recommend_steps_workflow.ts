@@ -16,7 +16,7 @@ import { buildRecommendationResult } from './recommend_steps_result_policy';
 import { ApplicationError, toApplicationError } from '../../errors/application_error';
 import { RECOMMEND_STEPS_RESPONSE_SCHEMA } from '../../policies/agent_response_schemas';
 import { productFacingAgentQueryOptions } from '../../policies/agent_output_locale_policy';
-import { parseImplementationPlan } from '../../../domain/implementation_plan';
+import { implementationPlanFingerprintInput } from '../../../domain/implementation_plan';
 
 export interface RecommendStepsWorkflowDependencies {
     issueDescriptionQueryPort: BoundIssueDescriptionQueryPort;
@@ -57,17 +57,13 @@ export async function runRecommendStepsWorkflow(
 
         const issueDescriptionFingerprint = createIssueDescriptionFingerprint(issueDescription);
         const matchingPreviousRecommendation = previousRecommendation?.issueDescriptionFingerprint === issueDescriptionFingerprint;
-        const structuredPlanUsesTargetLocale = previousRecommendation?.implementationPlan !== undefined
-            && previousRecommendation.implementationPlanLocale === param.targetLocale;
-        if (matchingPreviousRecommendation && (structuredPlanUsesTargetLocale
-            || (!previousRecommendation.implementationPlan && !agentReady))) {
+        const structuredPlanUsesTargetLocale = previousRecommendation?.implementationPlanLocale === param.targetLocale;
+        if (matchingPreviousRecommendation && structuredPlanUsesTargetLocale) {
             logInfo('RecommendSteps: issue description is unchanged; reconciling the existing plan.');
             return replayExistingPlan(taskId, issueNumber, previousRecommendation);
         }
         if (matchingPreviousRecommendation) {
-            logInfo(previousRecommendation.implementationPlan
-                ? 'RecommendSteps: regenerating the matching structured plan in the configured issue locale.'
-                : 'RecommendSteps: migrating the matching legacy recommendation to the structured plan contract.');
+            logInfo('RecommendSteps: regenerating the matching structured plan in the configured issue locale.');
         }
         if (!agentReady) {
             return outcome([failure(taskId, 'Missing agent model or executable.', 'configuration.invalid')]);
@@ -77,10 +73,12 @@ export async function runRecommendStepsWorkflow(
             projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
             issueNumber: String(issueNumber),
             issueDescription,
-            previousRecommendation: previousRecommendation?.recommendation,
-            previousRecommendationFormat: previousRecommendation?.implementationPlan
-                ? (structuredPlanUsesTargetLocale ? 'structured' : 'structured-other-locale')
-                : 'legacy',
+            previousRecommendation: previousRecommendation
+                ? implementationPlanFingerprintInput(previousRecommendation.implementationPlan)
+                : undefined,
+            previousRecommendationFormat: structuredPlanUsesTargetLocale
+                ? 'structured'
+                : 'structured-other-locale',
             targetLocale: param.targetLocale,
         });
         logDebugInfo(
@@ -114,15 +112,13 @@ function replayExistingPlan(
     issueNumber: number,
     recommendationState: Readonly<NonNullable<RecommendStepsContext['previousRecommendation']>>,
 ): RecommendStepsOutcome {
-    const implementationPlan = parseImplementationPlan(recommendationState.implementationPlan);
     return outcome([new Result({
         id: taskId,
         success: true,
         executed: true,
         payload: Object.freeze({
             issueNumber,
-            recommendedSteps: recommendationState.recommendation,
-            ...(implementationPlan ? { implementationPlan } : {}),
+            implementationPlan: recommendationState.implementationPlan,
             recommendationState: Object.freeze({ ...recommendationState }),
         }),
     })]);

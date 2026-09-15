@@ -349,7 +349,7 @@ Allowed values:
 `milestones` MUST publish at most four additional lifecycle comments for one
 operation. Duplicate event delivery cannot create duplicate comments.
 
-### 6.4 Existing configuration retained
+### 6.4 Current configuration contract
 
 The following inputs retain their current meaning:
 
@@ -366,11 +366,10 @@ The following inputs retain their current meaning:
 - `pull-requests-locale`, an optional override for managed PR titles and
   descriptions; empty inherits `repository-locale`
 
-New operations snapshot the complete canonical locale profile with the branch
+Every operation snapshots the complete canonical locale profile with the branch
 and strategy facts, so changing repository Variables cannot switch language
-mid-operation. Existing version-1 state created before this field was introduced
-remains valid and uses the current effective profile until it completes; it is
-not rewritten solely to add locale metadata.
+mid-operation. State without that profile is invalid and cannot be resumed,
+inferred, or rewritten.
 
 ### 6.5 Project publication timing
 
@@ -452,9 +451,9 @@ latest production tag
 
 ## 8. Durable orchestration state
 
-The issue configuration schema MUST be incremented and gain a typed
-`deploymentOrchestration` object. Unknown fields and future schema versions MUST
-continue to round-trip safely.
+The issue configuration schema contains one typed `deploymentOrchestration`
+object. Missing, unknown, removed, and future fields or schema versions are
+rejected; they are not round-tripped, inferred, or converted.
 
 Minimum persisted shape:
 
@@ -462,30 +461,46 @@ Minimum persisted shape:
 {
   "schemaVersion": 3,
   "deploymentOrchestration": {
-    "operationId": "uuid",
+    "stateVersion": 1,
+    "revision": 4,
+    "operationId": "operation-12345678",
+    "locale": {
+      "repository": "en-US",
+      "issue": "en-US",
+      "pullRequest": "en-US"
+    },
     "kind": "release",
     "version": "3.4.0",
+    "title": "Release 3.4.0",
+    "changelog": "Release changes",
     "phase": "promotion_pr_pending",
     "strategy": "production-lineage",
     "prMode": "auto",
     "backmergeMode": "auto",
+    "hotfixActiveReleasePolicy": "prefer-release",
     "cleanup": "all",
     "issueCompletion": "close",
+    "presentationMode": "guided",
+    "diagrams": true,
+    "commentMode": "update",
     "sourceBranch": "release/3.4.0",
-    "sourceSha": "release-head-after-build",
+    "sourceSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "originBranch": "develop",
-    "originSha": "develop-head-at-cut",
+    "originSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "productionBranch": "master",
     "developmentBranch": "develop",
+    "reconciliationTree": "sync",
     "promotionPullRequest": 123,
-    "productionSha": "accepted-merge-commit",
     "tag": "v3.4.0",
+    "publicationWorkflow": "release_workflow.yml",
     "publicationVerified": false,
     "reconciliationTargets": [
       {
         "targetBranch": "develop",
         "sourceBranch": "master",
+        "sourceSha": "cccccccccccccccccccccccccccccccccccccccc",
         "syncBranch": "sync/release-3.4.0-to-develop-abcd1234",
+        "syncSha": "dddddddddddddddddddddddddddddddddddddddd",
         "pullRequest": 124,
         "status": "pending"
       }
@@ -520,6 +535,12 @@ blocked
 Each transition MUST be monotonic and compare the stored operation ID and
 expected phase before writing. Duplicate or out-of-order events MUST be no-ops
 with an observable result.
+
+`lastFailure` is mandatory in every snapshot. It is exactly `null` in every
+non-blocked phase. A blocked snapshot must contain one closed failure object
+with `category`, bounded safe `message`, `retryable`, and the exact non-blocked
+`previousPhase`. Generic transitions cannot enter `blocked`; only the dedicated
+failure-bearing transition may do so.
 
 ## 9. Event-driven orchestration
 

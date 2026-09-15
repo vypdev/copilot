@@ -122,15 +122,12 @@ describe("deployment presentation policy", () => {
     expect(body).toContain("Production updated");
   });
 
-  it("renders safe fallback guidance when legacy blocked state has no failure payload", () => {
+  it("rejects blocked presentation state without a failure payload", () => {
     const blocked = operation("blocked", { lastFailure: null });
-    const dashboard = renderDeploymentDashboard(blocked, context);
-    const summary = renderDeploymentJobSummary(blocked, context);
-
-    expect(dashboard).toContain("Workflow failed");
-    expect(dashboard).toContain("Manual intervention is required");
-    expect(dashboard).not.toContain("### What happens next");
-    expect(summary).toContain("Workflow failed. Manual intervention is required.");
+    expect(() => renderDeploymentDashboard(blocked, context))
+      .toThrow('Blocked deployment state requires a valid failure payload.');
+    expect(() => renderDeploymentJobSummary(blocked, context))
+      .toThrow('Blocked deployment state requires a valid failure payload.');
   });
 
   it("distinguishes published-but-not-reconciled state", () => {

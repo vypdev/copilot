@@ -150,6 +150,12 @@ against the previously read operation ID, phase, and revision. A stale delivery
 is a successful no-op. A missing, malformed, unversioned, future, or conflicting
 snapshot fails closed and is not converted or rewritten.
 
+Every snapshot includes `lastFailure`. It is exactly `null` in a non-blocked
+phase. A blocked snapshot instead requires one closed failure record containing
+its category, safe message, retryability, and exact prior non-blocked phase.
+Missing, extra, or contradictory fields are invalid; only the dedicated failure
+transition can enter `blocked`.
+
 There is deliberately no legacy or standalone deployment-publication path.
 `create_tag`, `create_release`, `publish_github_action`, and all orchestration
 continuations run only inside the serialized GitHub workflow for a durable

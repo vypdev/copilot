@@ -30,7 +30,6 @@ const ISSUE_TEMPLATE_FILES = [
 export function buildSetupPlan(
     configuration: SetupConfiguration,
     mergeQueueReadiness: readonly DoctorCheck[] = [],
-    migrationWarnings: readonly string[] = [],
 ): SetupPlan {
     const workflowFiles = enabledSetupWorkflowFiles(configuration.features);
     const issueTemplateFiles = configuration.features.issueTemplates === false
@@ -55,7 +54,7 @@ export function buildSetupPlan(
             .map(requirement => requirement.name),
         credentialRequirements,
         mergeQueueReadiness: [...mergeQueueReadiness],
-        warnings: [...migrationWarnings, ...buildSetupWarnings(configuration)],
+        warnings: buildSetupWarnings(configuration),
     };
 }
 

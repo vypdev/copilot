@@ -10,13 +10,10 @@ import {
   buildPublicationMarker,
   createSemanticDigest,
   createTransitionFingerprint,
+  parsePublicationMarker,
 } from './publication_identity_policy';
 import type { BranchSyncMessageCatalog } from './branch_sync_message_catalog';
 import { sanitizeAgentMarkdown } from './github_comment_publication_policy';
-
-export const BRANCH_SYNC_STALE_MARKER = '<!-- copilot-branch-sync:stale -->';
-export const BRANCH_SYNC_ALIGNED_MARKER = '<!-- copilot-branch-sync:aligned -->';
-const BRANCH_SYNC_KEY_MARKER = '<!-- copilot-branch-sync-key:';
 
 export function selectBranchDependenciesForPush(
   dependencies: readonly BranchDependency[],
@@ -110,7 +107,9 @@ export function buildBranchSyncStatusCommentUrl(
 }
 
 export function isStaleBranchSyncComment(body: string | null | undefined): boolean {
-  return body?.includes(BRANCH_SYNC_STALE_MARKER) === true;
+  const marker = parsePublicationMarker(body);
+  return marker?.identity.topic === 'branch-sync'
+    && marker.sourceVersion.startsWith('comparison:');
 }
 
 export function buildStaleBranchSyncComment(input: {
@@ -131,8 +130,6 @@ export function buildStaleBranchSyncComment(input: {
     ? ` ${input.messages.message('branchSync.stale.ahead', { count: comparison.aheadBy }, comparison.aheadBy)}`
     : '';
   return `${buildSharedBranchSyncMarker(dependency, `comparison:${createSemanticDigest(comparison)}`, createSemanticDigest({ state: 'stale', comparison }))}
-${BRANCH_SYNC_STALE_MARKER}
-${buildDependencyMarker(dependency)}
 
 ## ${input.messages.message('branchSync.stale.heading')}
 
@@ -152,8 +149,6 @@ export function buildAlignedBranchSyncComment(
   messages: BranchSyncMessageCatalog,
 ): string {
   return `${buildSharedBranchSyncMarker(dependency, `aligned:${createSemanticDigest(dependency)}`, createSemanticDigest({ state: 'aligned', dependency }))}
-${BRANCH_SYNC_ALIGNED_MARKER}
-${buildDependencyMarker(dependency)}
 
 ## ${messages.message('branchSync.aligned.heading')}
 
@@ -178,20 +173,20 @@ function buildSharedBranchSyncMarker(
 }
 
 function isBranchSyncComment(body: string | null): boolean {
-  return body?.includes(BRANCH_SYNC_STALE_MARKER) === true
-    || body?.includes(BRANCH_SYNC_ALIGNED_MARKER) === true;
-}
-
-function buildDependencyMarker(dependency: BranchDependency): string {
-  return `${BRANCH_SYNC_KEY_MARKER}${encodeURIComponent(dependency.parentBranch)}:${encodeURIComponent(dependency.workingBranch)} -->`;
+  return parsePublicationMarker(body)?.identity.topic === 'branch-sync';
 }
 
 function matchesDependency(
   body: string | null,
   dependency: BranchDependency | undefined,
 ): boolean {
-  if (!dependency || !body?.includes(BRANCH_SYNC_KEY_MARKER)) return true;
-  return body.includes(buildDependencyMarker(dependency));
+  if (!dependency) return true;
+  const actual = parsePublicationMarker(body)?.identity;
+  const expected = branchSyncPublicationIdentity(dependency);
+  return actual?.topic === expected.topic
+    && actual.target.kind === expected.target.kind
+    && actual.target.number === expected.target.number
+    && actual.key === expected.key;
 }
 
 function buildCompareUrl(

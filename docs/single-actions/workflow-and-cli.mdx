@@ -388,12 +388,12 @@ The plan uses the effective issue locale, defaulting to English (`en-US`). Paths
 commands, refs, and code identifiers remain unchanged. A mismatched locale or
 malformed plan fails before publication. Re-running against an unchanged issue
 reconciles the existing card without creating a new comment; a material issue
-edit updates that card. Legacy free-form stored plans remain readable without an
-agent and migrate on the next configured run. Structured state records the exact
-plan locale: when the effective issue locale changes, the next agent-backed run
-must return a complete replacement in that locale and cannot answer `unchanged`.
-If no agent is configured, Copilot does not replay a structured plan whose locale
-is missing or different, so it cannot knowingly republish mixed-language UI.
+edit updates that card. Stored state accepts only the current closed structured
+plan shape and its exact canonical locale; removed free-form or missing-locale
+state is invalid. When the effective issue locale changes, the next agent-backed
+run must return a complete replacement in that locale and cannot answer
+`unchanged`. If no agent is configured, Copilot fails closed, so it cannot
+knowingly republish mixed-language UI.
 
 | Option | Required | Description |
 | --- | --- | --- |

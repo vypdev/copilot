@@ -4,7 +4,6 @@ import type { BoundIssueCommentPublicationPort, IssueCommentPublicationTarget } 
 import {
     buildDuplicateMarker,
     parsePublicationReplyMarker,
-    readablePublicationReplyCorrelationIds,
 } from '../../../policies/publication_identity_policy';
 import { resolveStaticPublicationCatalog, type PublicationMessageCatalog } from '../../../policies/publication_message_catalog';
 import { renderSemanticReply, type SemanticReplyIntent } from '../../../policies/semantic_result_publication_policy';
@@ -83,13 +82,10 @@ function matchingReplies(
     context: ReplyPublicationContext,
 ): IssueCommentPublicationTarget[] {
     const expectedTarget = publicationTargetToken(context.intent.target);
-    const readableCorrelations = new Set(
-        readablePublicationReplyCorrelationIds(context.intent.correlationId),
-    );
     return comments.filter(comment => {
         const marker = parsePublicationReplyMarker(comment.body);
         return marker?.target === expectedTarget
-            && readableCorrelations.has(marker.correlationId)
+            && marker.correlationId === context.intent.correlationId
             && marker.messageKey === context.intent.messageKey
             && githubUsersMatch(comment.user?.login ?? '', context.botLogin);
     });

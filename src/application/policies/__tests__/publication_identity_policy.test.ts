@@ -8,7 +8,6 @@ import {
   parsePublicationMarker,
   parsePublicationReplyMarker,
   parsePublicationTransitionMarker,
-  readablePublicationReplyCorrelationIds,
 } from '../publication_identity_policy';
 
 const marker = {
@@ -67,6 +66,19 @@ describe('publication identity policy', () => {
     expect(parsePublicationReplyMarker(buildPublicationReplyMarker(reply))).toEqual(reply);
   });
 
+  it('keeps reply correlation identities exact without namespace aliases', () => {
+    const current = parsePublicationReplyMarker(buildPublicationReplyMarker({
+      target: 'issue:42', correlationId: 'comment:99', messageKey: 'copilot-help', digest: '0123abcd',
+    }));
+    const differentNamespace = parsePublicationReplyMarker(buildPublicationReplyMarker({
+      target: 'issue:42', correlationId: 'comment:issue_comment:99', messageKey: 'copilot-help', digest: '0123abcd',
+    }));
+
+    expect(current?.correlationId).toBe('comment:99');
+    expect(differentNamespace?.correlationId).toBe('comment:issue_comment:99');
+    expect(differentNamespace?.correlationId).not.toBe(current?.correlationId);
+  });
+
   it.each([
     '<!-- copilot:reply schema="2" target="issue:42" correlation="comment:99" key="copilot-help" digest="0123abcd" -->',
     '<!-- copilot:reply schema="1" target="repo:42" correlation="comment:99" key="copilot-help" digest="0123abcd" -->',
@@ -83,19 +95,6 @@ describe('publication identity policy', () => {
       target: 'issue:42', correlationId: 'comment:99', messageKey: 'copilot-help', digest: 'invalid',
     })).toThrow('invalid digest');
     expect(parsePublicationReplyMarker(null)).toBeUndefined();
-  });
-
-  it('reads the transient issue-comment namespace without widening review correlations', () => {
-    expect(readablePublicationReplyCorrelationIds('comment:99')).toEqual([
-      'comment:99',
-      'comment:issue_comment:99',
-    ]);
-    expect(readablePublicationReplyCorrelationIds(
-      'comment:pull_request_review_comment:99',
-    )).toEqual(['comment:pull_request_review_comment:99']);
-    expect(readablePublicationReplyCorrelationIds('event:0123abcd')).toEqual([
-      'event:0123abcd',
-    ]);
   });
 
   it('round-trips strict issue and pull-request transition markers', () => {

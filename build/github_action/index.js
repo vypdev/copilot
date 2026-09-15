@@ -39435,6 +39435,7 @@ const deployment_presentation_policy_1 = __nccwpck_require__(83221);
 const deployment_message_catalog_1 = __nccwpck_require__(79364);
 const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
 const review_state_1 = __nccwpck_require__(79200);
+const deployment_operation_1 = __nccwpck_require__(92730);
 async function finishGithubAction(execution, results, issueNotificationPort, configurationStorePort, evidencePort, summaryPort, catalogResolver, publicationSourceQuery) {
     const stepCount = results.reduce((acc, result) => acc + (result.steps?.length ?? 0), 0);
     const errorCount = results.reduce((acc, result) => acc + (result.errors?.length ?? 0), 0);
@@ -39542,7 +39543,7 @@ async function writeActionSummary(execution, summaryPort, catalogResolver) {
             workflowRunUrl: process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
                 ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
                 : undefined,
-        }, operation.lastFailure?.previousPhase, catalog);
+        }, operation.phase === 'blocked' ? (0, deployment_operation_1.requiredDeploymentFailure)(operation).previousPhase : undefined, catalog);
     }
     else {
         const catalog = await (0, action_summary_message_catalog_1.resolveActionSummaryCatalog)(locale.repository, execution.ai.getAgentConfiguration('planner'), catalogResolver);
@@ -42827,7 +42828,6 @@ async function resolveBranchSyncCatalog(locale, configuration, resolver) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.BRANCH_SYNC_ALIGNED_MARKER = exports.BRANCH_SYNC_STALE_MARKER = void 0;
 exports.selectBranchDependenciesForPush = selectBranchDependenciesForPush;
 exports.findLatestBranchSyncComment = findLatestBranchSyncComment;
 exports.branchSyncPublicationIdentity = branchSyncPublicationIdentity;
@@ -42842,9 +42842,6 @@ const github_user_policy_1 = __nccwpck_require__(84403);
 const git_object_id_1 = __nccwpck_require__(88623);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
-exports.BRANCH_SYNC_STALE_MARKER = '<!-- copilot-branch-sync:stale -->';
-exports.BRANCH_SYNC_ALIGNED_MARKER = '<!-- copilot-branch-sync:aligned -->';
-const BRANCH_SYNC_KEY_MARKER = '<!-- copilot-branch-sync-key:';
 function selectBranchDependenciesForPush(dependencies, pushedBranch) {
     const selected = dependencies.filter((dependency) => dependency.parentBranch === pushedBranch
         || dependency.workingBranch === pushedBranch);
@@ -42902,7 +42899,9 @@ function buildBranchSyncStatusCommentUrl(owner, repository, issueNumber, comment
     return `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/issues/${issueNumber}#issuecomment-${commentId}`;
 }
 function isStaleBranchSyncComment(body) {
-    return body?.includes(exports.BRANCH_SYNC_STALE_MARKER) === true;
+    const marker = (0, publication_identity_policy_1.parsePublicationMarker)(body);
+    return marker?.identity.topic === 'branch-sync'
+        && marker.sourceVersion.startsWith('comparison:');
 }
 function buildStaleBranchSyncComment(input) {
     const { dependency, comparison } = input;
@@ -42911,8 +42910,6 @@ function buildStaleBranchSyncComment(input) {
         ? ` ${input.messages.message('branchSync.stale.ahead', { count: comparison.aheadBy }, comparison.aheadBy)}`
         : '';
     return `${buildSharedBranchSyncMarker(dependency, `comparison:${(0, publication_identity_policy_1.createSemanticDigest)(comparison)}`, (0, publication_identity_policy_1.createSemanticDigest)({ state: 'stale', comparison }))}
-${exports.BRANCH_SYNC_STALE_MARKER}
-${buildDependencyMarker(dependency)}
 
 ## ${input.messages.message('branchSync.stale.heading')}
 
@@ -42928,8 +42925,6 @@ ${input.messages.message('branchSync.stale.instructions', { command: '`/copilot 
 }
 function buildAlignedBranchSyncComment(dependency, messages) {
     return `${buildSharedBranchSyncMarker(dependency, `aligned:${(0, publication_identity_policy_1.createSemanticDigest)(dependency)}`, (0, publication_identity_policy_1.createSemanticDigest)({ state: 'aligned', dependency }))}
-${exports.BRANCH_SYNC_ALIGNED_MARKER}
-${buildDependencyMarker(dependency)}
 
 ## ${messages.message('branchSync.aligned.heading')}
 
@@ -42948,16 +42943,17 @@ function buildSharedBranchSyncMarker(dependency, sourceVersion, digest) {
     });
 }
 function isBranchSyncComment(body) {
-    return body?.includes(exports.BRANCH_SYNC_STALE_MARKER) === true
-        || body?.includes(exports.BRANCH_SYNC_ALIGNED_MARKER) === true;
-}
-function buildDependencyMarker(dependency) {
-    return `${BRANCH_SYNC_KEY_MARKER}${encodeURIComponent(dependency.parentBranch)}:${encodeURIComponent(dependency.workingBranch)} -->`;
+    return (0, publication_identity_policy_1.parsePublicationMarker)(body)?.identity.topic === 'branch-sync';
 }
 function matchesDependency(body, dependency) {
-    if (!dependency || !body?.includes(BRANCH_SYNC_KEY_MARKER))
+    if (!dependency)
         return true;
-    return body.includes(buildDependencyMarker(dependency));
+    const actual = (0, publication_identity_policy_1.parsePublicationMarker)(body)?.identity;
+    const expected = branchSyncPublicationIdentity(dependency);
+    return actual?.topic === expected.topic
+        && actual.target.kind === expected.target.kind
+        && actual.target.number === expected.target.number
+        && actual.key === expected.key;
 }
 function buildCompareUrl(owner, repository, parentBranch, workingBranch) {
     return `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/compare/${encodeURIComponent(parentBranch)}...${encodeURIComponent(workingBranch)}`;
@@ -44685,7 +44681,7 @@ function safeEvidenceTitle(value) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.COPILOT_WELCOME_MARKER = exports.DEFAULT_COPILOT_BOT_USERNAME = void 0;
+exports.DEFAULT_COPILOT_BOT_USERNAME = void 0;
 exports.normalizeCopilotBotUsername = normalizeCopilotBotUsername;
 exports.buildCopilotHelpMessage = buildCopilotHelpMessage;
 exports.buildCopilotWelcomeMessage = buildCopilotWelcomeMessage;
@@ -44693,7 +44689,6 @@ exports.buildCopilotWelcomeResult = buildCopilotWelcomeResult;
 const result_1 = __nccwpck_require__(73817);
 const publication_message_catalog_1 = __nccwpck_require__(34223);
 exports.DEFAULT_COPILOT_BOT_USERNAME = 'vypbot';
-exports.COPILOT_WELCOME_MARKER = '<!-- copilot:welcome -->';
 const SAFE_GITHUB_USERNAME = /^[A-Za-z0-9-]+$/u;
 const READ_ONLY_COMMANDS = Object.freeze([
     ['/copilot help', 'interaction.help.command.help'],
@@ -44750,8 +44745,6 @@ function buildCopilotWelcomeMessage(username, locale = 'en-US', catalog = (0, pu
     const bot = normalizeCopilotBotUsername(username);
     const botDisplay = `**@${bot}**`;
     return [
-        exports.COPILOT_WELCOME_MARKER,
-        '',
         catalog.render('interaction.welcome.greeting', { bot: botDisplay }),
         '',
         catalog.render('interaction.welcome.capabilities'),
@@ -44830,16 +44823,17 @@ function sanitizeTitle(title) {
 /***/ }),
 
 /***/ 1779:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validateDeploymentContinuation = validateDeploymentContinuation;
+const deployment_operation_1 = __nccwpck_require__(92730);
 /**
  * Rejects forged, stale, or out-of-order workflow continuations before a
- * publication-side mutation is attempted. There is intentionally no standalone
- * or compatibility path: every publication command belongs to a durable operation.
+ * publication-side mutation is attempted. Every publication command belongs to
+ * one current, durable operation contract.
  */
 function validateDeploymentContinuation(operation, expectedOperationId, allowedPhases, expectedVersion) {
     if (!operation)
@@ -44854,9 +44848,8 @@ function validateDeploymentContinuation(operation, expectedOperationId, allowedP
     if (expectedVersion !== operation.version) {
         return `Deployment version mismatch: expected ${operation.version}, received ${expectedVersion}.`;
     }
-    const effectivePhase = operation.phase === "blocked" && operation.lastFailure?.retryable
-        ? operation.lastFailure.previousPhase
-        : operation.phase;
+    const blockedFailure = operation.phase === 'blocked' ? (0, deployment_operation_1.requiredDeploymentFailure)(operation) : undefined;
+    const effectivePhase = blockedFailure?.retryable ? blockedFailure.previousPhase : operation.phase;
     if (!allowedPhases.includes(effectivePhase)) {
         return `Deployment operation ${operation.operationId} cannot continue publication from phase ${operation.phase}.`;
     }
@@ -45339,6 +45332,7 @@ exports.renderPromotionPullRequest = renderPromotionPullRequest;
 exports.renderReconciliationPullRequest = renderReconciliationPullRequest;
 exports.renderDeploymentJobSummary = renderDeploymentJobSummary;
 exports.renderDeploymentMilestone = renderDeploymentMilestone;
+const deployment_operation_1 = __nccwpck_require__(92730);
 const managed_pull_request_1 = __nccwpck_require__(95914);
 const deployment_message_catalog_1 = __nccwpck_require__(79364);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
@@ -45450,6 +45444,7 @@ function renderReconciliationPullRequest(operation, target, context, catalog = (
 }
 function renderDeploymentJobSummary(operation, context, previousPhase, catalog = (0, deployment_message_catalog_1.resolveStaticDeploymentCatalog)(context.repositoryLocale)) {
     const messages = (0, deployment_message_catalog_1.deploymentCopy)(catalog);
+    const failure = operation.phase === 'blocked' ? (0, deployment_operation_1.requiredDeploymentFailure)(operation) : undefined;
     const externallyPending = operation.phase === 'promotion_pr_pending' || operation.phase === 'reconciliation_pending';
     const result = operation.phase === 'blocked'
         ? messages.workflowFailure
@@ -45458,7 +45453,7 @@ function renderDeploymentJobSummary(operation, context, previousPhase, catalog =
         `# ${operation.phase === 'blocked' ? '❌' : externallyPending ? '⏳' : '✅'} ${messages.jobSummary}`, '',
         `> **${messages.result}: ${result}.**`, '',
         `| ${messages.previousPhase} | ${messages.resultingPhase} | ${messages.retryable} |`, '|---|---|---|',
-        `| ${inline(previousPhase ?? operation.phase)} | ${inline(operation.phase)} | ${operation.lastFailure?.retryable ? messages.yes : messages.no} |`, '',
+        `| ${inline(previousPhase ?? operation.phase)} | ${inline(operation.phase)} | ${failure?.retryable ? messages.yes : messages.no} |`, '',
         `- ${messages.operation}: ${inline(operation.operationId)}`,
         `- ${catalog.message('deployment.template.jobState', { version: operation.stateVersion, revision: operation.revision })}`,
         `- ${catalog.message('deployment.template.admissionScope', { issue: context.issue })}`,
@@ -45471,7 +45466,7 @@ function renderDeploymentJobSummary(operation, context, previousPhase, catalog =
             : messages.absent}`, '',
     ];
     if (operation.phase === 'blocked') {
-        lines.push(`## ${messages.actionRequired}`, '', `${safeText(operation.lastFailure?.message ?? messages.workflowFailure)}. ${operation.lastFailure?.retryable ? messages.retryAfterCorrection : messages.manualIntervention}.`, '');
+        lines.push(`## ${messages.actionRequired}`, '', `${safeText(failure.message)}. ${failure.retryable ? messages.retryAfterCorrection : messages.manualIntervention}.`, '');
     }
     lines.push(deploymentLinks(operation, context, messages, catalog).join(' · '));
     return lines.join('\n');
@@ -45495,7 +45490,7 @@ function renderDeploymentMilestone(milestone, catalog) {
     }
 }
 function progressLines(operation, messages) {
-    const phase = operation.phase === 'blocked' ? operation.lastFailure?.previousPhase ?? 'preparing' : operation.phase;
+    const phase = operation.phase === 'blocked' ? (0, deployment_operation_1.requiredDeploymentFailure)(operation).previousPhase : operation.phase;
     const reached = (expected) => phaseRank(phase) >= phaseRank(expected);
     return [
         `- [x] ${messages.cut}: ${inline(`${operation.originBranch}@${shortSha(operation.originSha)}`)}`,
@@ -45557,11 +45552,12 @@ function deploymentAction(operation, messages) {
         return { required: true, message: `${messages.protectedChecks}: ${messages.reviewManagedPr}.` };
     if (operation.phase !== 'blocked')
         return { required: false, message: messages.noAction };
+    const failure = (0, deployment_operation_1.requiredDeploymentFailure)(operation);
     return {
         required: true,
-        message: operation.lastFailure?.retryable
-            ? `${safeText(operation.lastFailure.message)}. ${messages.retryAfterCorrection}.`
-            : `${safeText(operation.lastFailure?.message ?? messages.workflowFailure)}. ${messages.manualIntervention}.`,
+        message: failure.retryable
+            ? `${safeText(failure.message)}. ${messages.retryAfterCorrection}.`
+            : `${safeText(failure.message)}. ${messages.manualIntervention}.`,
     };
 }
 function deploymentLinks(operation, context, messages, catalog) {
@@ -46412,7 +46408,6 @@ exports.buildPublicationReplyMarker = buildPublicationReplyMarker;
 exports.parsePublicationReplyMarker = parsePublicationReplyMarker;
 exports.buildPublicationTransitionMarker = buildPublicationTransitionMarker;
 exports.parsePublicationTransitionMarker = parsePublicationTransitionMarker;
-exports.readablePublicationReplyCorrelationIds = readablePublicationReplyCorrelationIds;
 exports.buildDuplicateMarker = buildDuplicateMarker;
 const node_crypto_1 = __nccwpck_require__(6005);
 const github_publication_1 = __nccwpck_require__(35793);
@@ -46527,16 +46522,6 @@ function parsePublicationTransitionMarker(body) {
         messageKey: match[6],
     });
 }
-/**
- * Reads the stable issue-comment identity plus the short-lived namespaced form
- * emitted during migration. Review-comment identities remain transport-scoped.
- */
-function readablePublicationReplyCorrelationIds(correlationId) {
-    const issueComment = correlationId.match(/^comment:([1-9]\d*)$/u);
-    return Object.freeze(issueComment
-        ? [correlationId, `comment:issue_comment:${issueComment[1]}`]
-        : [correlationId]);
-}
 function buildDuplicateMarker(canonicalCommentId) {
     if (!Number.isSafeInteger(canonicalCommentId) || canonicalCommentId < 1) {
         throw new Error('Canonical comment id must be a positive integer.');
@@ -46574,7 +46559,6 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'publication.implementationPlan',
     'publication.planReady',
     'publication.planAcceptance',
-    'publication.legacyPlanAcceptance',
     'publication.commandsHint',
     'publication.progress',
     'publication.progress.notStarted',
@@ -46666,7 +46650,6 @@ const ENGLISH_MESSAGES = Object.freeze({
     'publication.implementationPlan': 'Implementation plan',
     'publication.planReady': 'Ready to start. No action is required from maintainers before implementation.',
     'publication.planAcceptance': 'Acceptance',
-    'publication.legacyPlanAcceptance': 'Complete the listed work and verify the behavior requested by the issue.',
     'publication.commandsHint': 'Need something else? Mention the bot with a question or use {helpCommand}.',
     'publication.progress': 'Progress',
     'publication.progress.notStarted': 'not started',
@@ -46764,7 +46747,6 @@ const SPANISH_MESSAGES = Object.freeze({
     'publication.implementationPlan': 'Plan de implementación',
     'publication.planReady': 'Listo para comenzar. No se requiere ninguna acción de mantenimiento antes de la implementación.',
     'publication.planAcceptance': 'Aceptación',
-    'publication.legacyPlanAcceptance': 'Completa el trabajo indicado y verifica el comportamiento solicitado por la issue.',
     'publication.commandsHint': '¿Necesitas algo más? Menciona al bot con una pregunta o usa {helpCommand}.',
     'publication.progress': 'Progreso',
     'publication.progress.notStarted': 'sin iniciar',
@@ -46918,7 +46900,6 @@ function toPublicationCatalog(resolved) {
         implementationPlan: message('publication.implementationPlan'),
         planReady: message('publication.planReady'),
         planAcceptance: message('publication.planAcceptance'),
-        legacyPlanAcceptance: message('publication.legacyPlanAcceptance'),
         commandsHint: message('publication.commandsHint', { helpCommand: '`/copilot help`' }),
         progress: message('publication.progress'),
         progressState: Object.freeze({
@@ -47303,15 +47284,10 @@ function renderList(values) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.MAX_STORED_RECOMMENDATION_LENGTH = exports.NO_NEW_RECOMMENDATIONS = void 0;
 exports.getVisibleIssueDescription = getVisibleIssueDescription;
 exports.createIssueDescriptionFingerprint = createIssueDescriptionFingerprint;
 exports.createRecommendationFingerprint = createRecommendationFingerprint;
-exports.isNoNewRecommendation = isNoNewRecommendation;
-exports.limitStoredRecommendation = limitStoredRecommendation;
 const node_crypto_1 = __nccwpck_require__(6005);
-exports.NO_NEW_RECOMMENDATIONS = 'NO_NEW_RECOMMENDATIONS';
-exports.MAX_STORED_RECOMMENDATION_LENGTH = 12000;
 /**
  * Copilot keeps internal state in hidden HTML blocks in the issue body. That
  * state is operational metadata, not part of the issue to be analysed.
@@ -47325,19 +47301,6 @@ function createIssueDescriptionFingerprint(description) {
 }
 function createRecommendationFingerprint(recommendation) {
     return createSha256(normalizeForFingerprint(recommendation));
-}
-function isNoNewRecommendation(response) {
-    const withoutCodeFence = response
-        .trim()
-        .replace(/^```(?:markdown|text)?\s*/i, '')
-        .replace(/\s*```$/i, '')
-        .trim();
-    return withoutCodeFence.toUpperCase() === exports.NO_NEW_RECOMMENDATIONS;
-}
-function limitStoredRecommendation(recommendation) {
-    if (recommendation.length <= exports.MAX_STORED_RECOMMENDATION_LENGTH)
-        return recommendation;
-    return `${recommendation.slice(0, exports.MAX_STORED_RECOMMENDATION_LENGTH)}\n\n[Recommendation truncated for issue metadata storage.]`;
 }
 function normalizeForFingerprint(value) {
     return value
@@ -47512,7 +47475,7 @@ function hasOwnedPrimaryIssuePublication(comments, issueNumber, botLogin) {
         if (reply?.target === expectedTarget
             && (reply.messageKey === 'direct-answer' || reply.messageKey === 'copilot-welcome'))
             return true;
-        return comment.body?.includes(copilot_interaction_policy_1.COPILOT_WELCOME_MARKER) === true;
+        return false;
     });
 }
 function selectSemanticReplyIntents(context) {
@@ -47655,12 +47618,8 @@ function renderAccessPolicyReply(messages) {
 function renderSemanticStatus(intent, messages = (0, publication_message_catalog_1.resolveStaticPublicationCatalog)(intent.locale).catalog) {
     const marker = (0, publication_identity_policy_1.buildPublicationMarker)(intent);
     if (intent.projection.kind === 'plan') {
-        const plan = 'plan' in intent.projection
-            ? renderImplementationPlan(intent.projection.plan)
-            : (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(intent.projection.legacyRecommendation, 7000).trim();
-        const acceptance = 'plan' in intent.projection
-            ? safePlanField(intent.projection.plan.acceptance, 800)
-            : messages.legacyPlanAcceptance;
+        const plan = renderImplementationPlan(intent.projection.plan);
+        const acceptance = safePlanField(intent.projection.plan.acceptance, 800);
         return [
             marker,
             '',
@@ -47696,29 +47655,18 @@ function planIntent(id, payload, locale) {
     if (!isPlanPayload(id, payload))
         return undefined;
     const implementationPlan = (0, implementation_plan_1.parseImplementationPlan)(payload.implementationPlan);
-    const legacyRecommendation = typeof payload.recommendedSteps === 'string'
-        ? payload.recommendedSteps.trim()
-        : '';
-    const semanticInput = implementationPlan
-        ? (0, implementation_plan_1.implementationPlanFingerprintInput)(implementationPlan)
-        : legacyRecommendation;
+    const semanticInput = (0, implementation_plan_1.implementationPlanFingerprintInput)(implementationPlan);
     const state = (0, result_1.getResultPayload)(payload.recommendationState);
     const issueFingerprint = typeof state?.issueDescriptionFingerprint === 'string'
         ? state.issueDescriptionFingerprint
         : (0, publication_identity_policy_1.createSemanticDigest)(semanticInput);
-    const projection = implementationPlan
-        ? Object.freeze({ kind: 'plan', plan: implementationPlan })
-        : Object.freeze({ kind: 'plan', legacyRecommendation });
+    const projection = Object.freeze({ kind: 'plan', plan: implementationPlan });
     return statusIntent('plan', payload.issueNumber, 'implementation', `issue-body:${safeDigest(issueFingerprint)}`, locale, projection);
 }
 function isPlanPayload(id, payload) {
-    const structuredPlan = (0, implementation_plan_1.parseImplementationPlan)(payload.implementationPlan);
     return id === 'RecommendStepsUseCase'
         && positiveInteger(payload.issueNumber)
-        && (structuredPlan !== undefined
-            || (payload.implementationPlan === undefined
-                && typeof payload.recommendedSteps === 'string'
-                && Boolean(payload.recommendedSteps.trim())));
+        && (0, implementation_plan_1.parseImplementationPlan)(payload.implementationPlan) !== undefined;
 }
 function renderImplementationPlan(plan) {
     return plan.steps.flatMap((step, index) => [
@@ -48096,7 +48044,7 @@ const ISSUE_TEMPLATE_FILES = [
     'hotfix.yml',
     'release.yml',
 ];
-function buildSetupPlan(configuration, mergeQueueReadiness = [], migrationWarnings = []) {
+function buildSetupPlan(configuration, mergeQueueReadiness = []) {
     const workflowFiles = (0, setup_workflow_catalog_1.enabledSetupWorkflowFiles)(configuration.features);
     const issueTemplateFiles = configuration.features.issueTemplates === false
         ? []
@@ -48120,7 +48068,7 @@ function buildSetupPlan(configuration, mergeQueueReadiness = [], migrationWarnin
             .map(requirement => requirement.name),
         credentialRequirements,
         mergeQueueReadiness: [...mergeQueueReadiness],
-        warnings: [...migrationWarnings, ...buildSetupWarnings(configuration)],
+        warnings: buildSetupWarnings(configuration),
     };
 }
 function buildSetupRepositoryVariables(configuration) {
@@ -49196,15 +49144,16 @@ function deploymentSuccess(step) {
         steps: [step],
     });
 }
-function blockedDeploymentResult(operation, fallback) {
-    const message = operation.lastFailure?.message ?? fallback;
+function blockedDeploymentResult(operation) {
+    const failure = (0, deployment_operation_1.requiredDeploymentFailure)(operation);
+    const message = failure.message;
     return new result_1.Result({
         id: exports.DEPLOYMENT_ORCHESTRATION_TASK_ID,
         success: false,
         executed: true,
         steps: [message],
         errors: [new application_error_1.ApplicationError("workflow.failed", message, {
-                retryable: operation.lastFailure?.retryable ?? false,
+                retryable: failure.retryable,
             })],
     });
 }
@@ -50008,7 +49957,7 @@ class ConfirmPublicationHandler {
         return await this.beginReconciliation(context, published);
     }
     async resumeRetryableBlock(context, operation) {
-        if (operation.phase !== "blocked" || !operation.lastFailure?.retryable)
+        if (operation.phase !== "blocked" || !(0, deployment_operation_1.requiredDeploymentFailure)(operation).retryable)
             return operation;
         const resumed = (0, deployment_operation_1.resumeBlockedDeployment)(operation);
         if (resumed.kind !== "advance")
@@ -50104,11 +50053,12 @@ class ContinueDeploymentHandler {
     async resumeBlockedEvent(context, operation, pullRequest, phase) {
         if (operation.phase !== "blocked")
             return { kind: "resumed", operation };
+        const failure = (0, deployment_operation_1.requiredDeploymentFailure)(operation);
         if (!canResumeEvent(operation, phase)) {
             await this.runtime.publishDashboard(context, operation);
             return {
                 kind: "result",
-                result: (0, deployment_orchestration_runtime_1.deploymentSuccess)(`PR #${pullRequest.number} cannot resume the existing ${operation.lastFailure?.category ?? "deployment"} block; the original diagnosis was preserved.`),
+                result: (0, deployment_orchestration_runtime_1.deploymentSuccess)(`PR #${pullRequest.number} cannot resume the existing ${failure.category} block; the original diagnosis was preserved.`),
             };
         }
         const resumed = (0, deployment_operation_1.resumeBlockedDeployment)(operation);
@@ -50120,9 +50070,12 @@ class ContinueDeploymentHandler {
 }
 exports.ContinueDeploymentHandler = ContinueDeploymentHandler;
 function canResumeEvent(operation, phase) {
-    if (operation.lastFailure?.retryable !== true)
+    if (operation.phase !== 'blocked')
         return false;
-    const previousPhase = operation.lastFailure.previousPhase;
+    const failure = (0, deployment_operation_1.requiredDeploymentFailure)(operation);
+    if (!failure.retryable)
+        return false;
+    const previousPhase = failure.previousPhase;
     return phase === "promotion"
         ? previousPhase === "preparing" || previousPhase === "promotion_pr_pending"
         : previousPhase === "reconciliation_pending";
@@ -50167,7 +50120,7 @@ class PreparePromotionHandler {
         }
         if (isBlockedOutsidePreparation(existing)) {
             await this.runtime.publishDashboard(context, existing);
-            return (0, deployment_orchestration_runtime_1.blockedDeploymentResult)(existing, "The prepare mode cannot resume this blocked deployment phase.");
+            return (0, deployment_orchestration_runtime_1.blockedDeploymentResult)(existing);
         }
         const operation = await this.resumeBlockedPreparation(context, existing);
         if (operation.phase === "preparing" || operation.phase === "promotion_pr_pending") {
@@ -50249,9 +50202,10 @@ class PreparePromotionHandler {
 }
 exports.PreparePromotionHandler = PreparePromotionHandler;
 function isBlockedOutsidePreparation(operation) {
-    return operation.phase === "blocked"
-        && (!operation.lastFailure?.retryable
-            || !["preparing", "promotion_pr_pending"].includes(operation.lastFailure.previousPhase));
+    if (operation.phase !== 'blocked')
+        return false;
+    const failure = (0, deployment_operation_1.requiredDeploymentFailure)(operation);
+    return !failure.retryable || !["preparing", "promotion_pr_pending"].includes(failure.previousPhase);
 }
 function selectOriginBranch(context, kind) {
     return kind === "release"
@@ -50460,6 +50414,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RecordFailureHandler = void 0;
 const application_error_1 = __nccwpck_require__(75999);
 const result_1 = __nccwpck_require__(73817);
+const deployment_operation_1 = __nccwpck_require__(92730);
 const deployment_orchestration_runtime_1 = __nccwpck_require__(77658);
 class RecordFailureHandler {
     constructor(runtime) {
@@ -50471,28 +50426,29 @@ class RecordFailureHandler {
             return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Deployment ${operation.operationId} is already complete; a stale failure report was ignored.`);
         }
         if (operation.phase === "blocked") {
+            const failure = (0, deployment_operation_1.requiredDeploymentFailure)(operation);
             await this.runtime.publishDashboard(context, operation);
             return new result_1.Result({
                 id: deployment_orchestration_runtime_1.DEPLOYMENT_ORCHESTRATION_TASK_ID,
                 success: false,
                 executed: true,
                 steps: [`Deployment ${operation.operationId} remains blocked; its original failure classification was preserved.`],
-                errors: [new application_error_1.ApplicationError("workflow.failed", operation.lastFailure?.message ?? "Deployment remains blocked.", { retryable: operation.lastFailure?.retryable ?? false })],
+                errors: [new application_error_1.ApplicationError("workflow.failed", failure.message, { retryable: failure.retryable })],
             });
         }
-        const category = failureCategory(operation.phase, operation.lastFailure?.category);
+        const category = failureCategory(operation.phase);
         const message = context.singleAction.message
             || `The ${category} workflow failed. Review the linked workflow run before retrying.`;
         return await this.runtime.block(context, operation, category, message, true);
     }
 }
 exports.RecordFailureHandler = RecordFailureHandler;
-function failureCategory(phase, previous) {
+function failureCategory(phase) {
     if (phase === "preparing" || phase === "promotion_pr_pending")
         return "promotion";
     if (phase === "promoted" || phase === "publishing")
         return "publication";
-    return previous ?? "reconciliation";
+    return "reconciliation";
 }
 
 
@@ -51356,7 +51312,6 @@ exports.PublishIssueCommentUseCase = PublishIssueCommentUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runPublishIssueComment = runPublishIssueComment;
 const result_1 = __nccwpck_require__(73817);
-const comment_watermark_1 = __nccwpck_require__(23623);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
 async function runPublishIssueComment(param, taskId, issueCommentPort) {
@@ -51400,7 +51355,7 @@ async function runPublishIssueComment(param, taskId, issueCommentPort) {
     }
 }
 function appendCommentContent(previous, addition) {
-    const existing = (0, comment_watermark_1.stripTrailingCommentWatermarks)(previous ?? '');
+    const existing = previous ?? '';
     return existing.length > 0 ? `${existing}\n\n${addition}` : addition;
 }
 
@@ -51429,35 +51384,29 @@ function buildRecommendationResult(param, taskId, response, issueDescriptionFing
         if (!previousRecommendation) {
             return recommendationFailure(taskId, 'The configured agent returned unchanged without a previous recommendation.');
         }
-        if (!previousRecommendation.implementationPlan) {
-            return recommendationFailure(taskId, 'The configured agent returned unchanged for a legacy plan that requires structured migration.');
-        }
         if (previousRecommendation.implementationPlanLocale !== extracted.locale) {
-            return recommendationFailure(taskId, 'The configured agent returned unchanged for a plan that requires locale migration.');
+            return recommendationFailure(taskId, 'The configured agent returned unchanged for a plan in a different locale.');
         }
         return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'agent found no material change');
     }
-    const recommendation = implementationPlanContextText(extracted.plan);
     (0, logging_ports_1.logDebugInfo)(`RecommendSteps: structured agent response received. Step count=${extracted.plan.steps.length}.`);
     const recommendationFingerprint = (0, recommendation_policy_1.createRecommendationFingerprint)((0, implementation_plan_1.implementationPlanFingerprintInput)(extracted.plan));
     if (previousRecommendation?.recommendationFingerprint === recommendationFingerprint
         && previousRecommendation.implementationPlanLocale === extracted.locale) {
         return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'recommendation is unchanged');
     }
-    const recommendationState = {
+    const recommendationState = Object.freeze({
         issueDescriptionFingerprint,
         recommendationFingerprint,
-        recommendation: (0, recommendation_policy_1.limitStoredRecommendation)(recommendation),
         implementationPlan: extracted.plan,
         implementationPlanLocale: extracted.locale,
-    };
+    });
     return recommendationOutcome([new result_1.Result({
             id: taskId,
             success: true,
             executed: true,
             payload: {
                 issueNumber,
-                recommendedSteps: recommendation,
                 implementationPlan: extracted.plan,
                 recommendationState,
             },
@@ -51507,13 +51456,6 @@ function extractImplementationPlan(response, targetLocale) {
 function hasOnlyResponseKeys(payload) {
     const allowed = ['outputLocale', 'status', 'steps', 'acceptance'];
     return Object.keys(payload).every(key => allowed.includes(key));
-}
-function implementationPlanContextText(plan) {
-    const steps = plan.steps.flatMap((step, index) => [
-        `${index + 1}. ${step.title}`,
-        ...step.details.map(detail => `   - ${detail}`),
-    ]);
-    return [...steps, '', `Acceptance: ${plan.acceptance}`].join('\n');
 }
 
 
@@ -51589,17 +51531,13 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
         }
         const issueDescriptionFingerprint = (0, recommendation_policy_1.createIssueDescriptionFingerprint)(issueDescription);
         const matchingPreviousRecommendation = previousRecommendation?.issueDescriptionFingerprint === issueDescriptionFingerprint;
-        const structuredPlanUsesTargetLocale = previousRecommendation?.implementationPlan !== undefined
-            && previousRecommendation.implementationPlanLocale === param.targetLocale;
-        if (matchingPreviousRecommendation && (structuredPlanUsesTargetLocale
-            || (!previousRecommendation.implementationPlan && !agentReady))) {
+        const structuredPlanUsesTargetLocale = previousRecommendation?.implementationPlanLocale === param.targetLocale;
+        if (matchingPreviousRecommendation && structuredPlanUsesTargetLocale) {
             (0, logging_ports_1.logInfo)('RecommendSteps: issue description is unchanged; reconciling the existing plan.');
             return replayExistingPlan(taskId, issueNumber, previousRecommendation);
         }
         if (matchingPreviousRecommendation) {
-            (0, logging_ports_1.logInfo)(previousRecommendation.implementationPlan
-                ? 'RecommendSteps: regenerating the matching structured plan in the configured issue locale.'
-                : 'RecommendSteps: migrating the matching legacy recommendation to the structured plan contract.');
+            (0, logging_ports_1.logInfo)('RecommendSteps: regenerating the matching structured plan in the configured issue locale.');
         }
         if (!agentReady) {
             return outcome([failure(taskId, 'Missing agent model or executable.', 'configuration.invalid')]);
@@ -51608,10 +51546,12 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
             projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
             issueNumber: String(issueNumber),
             issueDescription,
-            previousRecommendation: previousRecommendation?.recommendation,
-            previousRecommendationFormat: previousRecommendation?.implementationPlan
-                ? (structuredPlanUsesTargetLocale ? 'structured' : 'structured-other-locale')
-                : 'legacy',
+            previousRecommendation: previousRecommendation
+                ? (0, implementation_plan_1.implementationPlanFingerprintInput)(previousRecommendation.implementationPlan)
+                : undefined,
+            previousRecommendationFormat: structuredPlanUsesTargetLocale
+                ? 'structured'
+                : 'structured-other-locale',
             targetLocale: param.targetLocale,
         });
         (0, logging_ports_1.logDebugInfo)(`RecommendSteps: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`);
@@ -51638,15 +51578,13 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
     }
 }
 function replayExistingPlan(taskId, issueNumber, recommendationState) {
-    const implementationPlan = (0, implementation_plan_1.parseImplementationPlan)(recommendationState.implementationPlan);
     return outcome([new result_1.Result({
             id: taskId,
             success: true,
             executed: true,
             payload: Object.freeze({
                 issueNumber,
-                recommendedSteps: recommendationState.recommendation,
-                ...(implementationPlan ? { implementationPlan } : {}),
+                implementationPlan: recommendationState.implementationPlan,
                 recommendationState: Object.freeze({ ...recommendationState }),
             }),
         })]);
@@ -54383,7 +54321,7 @@ function copyDeploymentOperation(operation) {
         locale: Object.freeze({ ...operation.locale }),
         reconciliationTargets: Object.freeze((operation.reconciliationTargets ?? []).map(target => Object.freeze({ ...target }))),
         ...(operation.publicationReceipt ? { publicationReceipt: Object.freeze({ ...operation.publicationReceipt }) } : {}),
-        ...(operation.lastFailure ? { lastFailure: Object.freeze({ ...operation.lastFailure }) } : {}),
+        lastFailure: operation.lastFailure ? Object.freeze({ ...operation.lastFailure }) : null,
     });
 }
 function asObject(value) {
@@ -57699,10 +57637,9 @@ exports.RememberBugbotRuleUseCase = RememberBugbotRuleUseCase;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveIssueFinding = resolveIssueFinding;
-const comment_watermark_1 = __nccwpck_require__(23623);
 const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
 async function resolveIssueFinding(repository, resolution, catalog) {
-    const body = (0, comment_watermark_1.stripTrailingCommentWatermarks)(resolution.comment.body);
+    const body = resolution.comment.body;
     const marker = (0, bugbot_finding_marker_policy_1.parseMarker)(body).find((candidate) => candidate.findingId === resolution.findingId);
     if (marker == null || marker.resolved)
         return;
@@ -60111,11 +60048,10 @@ function unchangedOutcome() {
 }
 function matchingReplies(comments, context) {
     const expectedTarget = (0, github_publication_1.publicationTargetToken)(context.intent.target);
-    const readableCorrelations = new Set((0, publication_identity_policy_1.readablePublicationReplyCorrelationIds)(context.intent.correlationId));
     return comments.filter(comment => {
         const marker = (0, publication_identity_policy_1.parsePublicationReplyMarker)(comment.body);
         return marker?.target === expectedTarget
-            && readableCorrelations.has(marker.correlationId)
+            && marker.correlationId === context.intent.correlationId
             && marker.messageKey === context.intent.messageKey
             && (0, github_user_policy_1.githubUsersMatch)(comment.user?.login ?? '', context.botLogin);
     });
@@ -63530,8 +63466,16 @@ class Config {
         if (input['branchConfiguration'] !== undefined && input['branchConfiguration'] !== null) {
             this.branchConfiguration = new branch_configuration_1.BranchConfiguration(input['branchConfiguration']);
         }
-        this.recommendationState = (0, recommendation_state_1.restoreRecommendationState)(input['recommendationState']);
-        if ((0, deployment_operation_1.isDeploymentOperationSnapshot)(input['deploymentOrchestration'])) {
+        if (input['recommendationState'] !== undefined) {
+            const recommendationState = (0, recommendation_state_1.restoreRecommendationState)(input['recommendationState']);
+            if (!recommendationState)
+                throw new Error('Invalid recommendationState configuration.');
+            this.recommendationState = recommendationState;
+        }
+        if (input['deploymentOrchestration'] !== undefined) {
+            if (!(0, deployment_operation_1.isDeploymentOperationSnapshot)(input['deploymentOrchestration'])) {
+                throw new Error('Invalid deploymentOrchestration configuration.');
+            }
             this.deploymentOrchestration = input['deploymentOrchestration'];
         }
     }
@@ -64419,36 +64363,36 @@ function restoreRecommendationState(value) {
     if (typeof value !== 'object' || value === null)
         return undefined;
     const candidate = value;
-    const legacyFieldsValid = typeof candidate.issueDescriptionFingerprint === 'string'
+    const allowedKeys = new Set([
+        'issueDescriptionFingerprint',
+        'recommendationFingerprint',
+        'implementationPlan',
+        'implementationPlanLocale',
+    ]);
+    if (Object.keys(candidate).some(key => !allowedKeys.has(key)))
+        return undefined;
+    const scalarFieldsValid = typeof candidate.issueDescriptionFingerprint === 'string'
         && candidate.issueDescriptionFingerprint.length > 0
         && typeof candidate.recommendationFingerprint === 'string'
         && candidate.recommendationFingerprint.length > 0
-        && typeof candidate.recommendation === 'string'
-        && candidate.recommendation.length > 0;
-    if (!legacyFieldsValid)
+        && typeof candidate.implementationPlanLocale === 'string';
+    if (!scalarFieldsValid)
         return undefined;
-    const implementationPlan = candidate.implementationPlan === undefined
-        ? undefined
-        : (0, implementation_plan_1.parseImplementationPlan)(candidate.implementationPlan);
-    if (candidate.implementationPlan !== undefined && !implementationPlan)
+    const implementationPlan = (0, implementation_plan_1.parseImplementationPlan)(candidate.implementationPlan);
+    if (!implementationPlan)
         return undefined;
     let implementationPlanLocale;
-    if (candidate.implementationPlanLocale !== undefined) {
-        if (!implementationPlan || typeof candidate.implementationPlanLocale !== 'string')
-            return undefined;
-        try {
-            implementationPlanLocale = (0, locale_1.canonicalizeLocaleTag)(candidate.implementationPlanLocale);
-        }
-        catch {
-            return undefined;
-        }
+    try {
+        implementationPlanLocale = (0, locale_1.canonicalizeLocaleTag)(candidate.implementationPlanLocale);
+    }
+    catch {
+        return undefined;
     }
     return Object.freeze({
         issueDescriptionFingerprint: candidate.issueDescriptionFingerprint,
         recommendationFingerprint: candidate.recommendationFingerprint,
-        recommendation: candidate.recommendation,
-        ...(implementationPlan ? { implementationPlan } : {}),
-        ...(implementationPlanLocale ? { implementationPlanLocale } : {}),
+        implementationPlan,
+        implementationPlanLocale,
     });
 }
 
@@ -73076,6 +73020,7 @@ exports.resumeBlockedDeployment = resumeBlockedDeployment;
 exports.completeReconciliationTarget = completeReconciliationTarget;
 exports.sanitizeDeploymentMessage = sanitizeDeploymentMessage;
 exports.isDeploymentOperationSnapshot = isDeploymentOperationSnapshot;
+exports.requiredDeploymentFailure = requiredDeploymentFailure;
 const deployment_configuration_1 = __nccwpck_require__(22495);
 const locale_1 = __nccwpck_require__(15386);
 exports.DEPLOYMENT_PHASES = [
@@ -73106,7 +73051,7 @@ function transitionDeploymentOperation(operation, expectedPhase, nextPhase) {
         return { kind: "noop", operation, reason: `Expected ${expectedPhase}, found ${operation.phase}.` };
     }
     if (nextPhase === "blocked") {
-        return { kind: "advance", operation: { ...operation, phase: nextPhase } };
+        return { kind: "invalid", operation, reason: "Blocked state requires an explicit deployment failure." };
     }
     if (expectedPhase === "blocked" || !NORMAL_TRANSITIONS[expectedPhase].includes(nextPhase)) {
         return { kind: "invalid", operation, reason: `Transition ${expectedPhase} -> ${nextPhase} is not allowed.` };
@@ -73117,7 +73062,7 @@ function blockDeploymentOperation(operation, category, message, retryable) {
     if (operation.phase === "completed")
         return operation;
     const previousPhase = operation.phase === "blocked"
-        ? operation.lastFailure?.previousPhase ?? "preparing"
+        ? requiredDeploymentFailure(operation).previousPhase
         : operation.phase;
     return {
         ...operation,
@@ -73126,12 +73071,15 @@ function blockDeploymentOperation(operation, category, message, retryable) {
     };
 }
 function resumeBlockedDeployment(operation) {
-    if (operation.phase !== "blocked" || !operation.lastFailure?.retryable) {
+    if (operation.phase !== "blocked") {
         return { kind: "invalid", operation, reason: "Operation is not retryable from blocked state." };
     }
+    const failure = requiredDeploymentFailure(operation);
+    if (!failure.retryable)
+        return { kind: "invalid", operation, reason: "Operation is not retryable from blocked state." };
     return {
         kind: "advance",
-        operation: { ...operation, phase: operation.lastFailure.previousPhase, lastFailure: null },
+        operation: { ...operation, phase: failure.previousPhase, lastFailure: null },
     };
 }
 function completeReconciliationTarget(operation, pullRequest) {
@@ -73153,6 +73101,15 @@ function sanitizeDeploymentMessage(value) {
 function isDeploymentOperationSnapshot(value) {
     if (!value || typeof value !== "object" || Array.isArray(value))
         return false;
+    if (!hasOnlyKeys(value, [
+        'stateVersion', 'revision', 'operationId', 'locale', 'kind', 'version', 'title', 'changelog',
+        'phase', 'strategy', 'prMode', 'selectedPrMode', 'backmergeMode', 'hotfixActiveReleasePolicy',
+        'cleanup', 'issueCompletion', 'presentationMode', 'diagrams', 'commentMode', 'sourceBranch',
+        'sourceSha', 'originBranch', 'originSha', 'productionBranch', 'developmentBranch',
+        'reconciliationTree', 'promotionPullRequest', 'productionSha', 'tag', 'publicationWorkflow',
+        'publicationVerified', 'publicationReceipt', 'reconciliationTargets', 'lastFailure',
+    ]))
+        return false;
     const operation = value;
     return operation.stateVersion === exports.DEPLOYMENT_STATE_VERSION
         && typeof operation.revision === "number"
@@ -73160,6 +73117,7 @@ function isDeploymentOperationSnapshot(value) {
         && operation.revision > 0
         && typeof operation.operationId === "string"
         && /^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(operation.operationId)
+        && hasOnlyKeys(operation.locale, ['repository', 'issue', 'pullRequest', 'issueOverride', 'pullRequestOverride'])
         && (0, locale_1.isLocaleProfile)(operation.locale)
         && (operation.kind === "release" || operation.kind === "hotfix")
         && typeof operation.version === "string" && /^[0-9]+\.[0-9]+\.[0-9]+$/.test(operation.version)
@@ -73192,13 +73150,23 @@ function isDeploymentOperationSnapshot(value) {
         && isPublicationReceiptConsistent(operation)
         && Array.isArray(operation.reconciliationTargets)
         && operation.reconciliationTargets.every(isReconciliationTarget)
-        && (operation.lastFailure === undefined || operation.lastFailure === null || isDeploymentFailure(operation.lastFailure));
+        && (operation.phase === "blocked"
+            ? isDeploymentFailure(operation.lastFailure)
+            : operation.lastFailure === null);
+}
+/** Returns the failure required by the sole valid blocked-state contract. */
+function requiredDeploymentFailure(operation) {
+    if (operation.phase !== "blocked" || !isDeploymentFailure(operation.lastFailure)) {
+        throw new Error("Blocked deployment state requires a valid failure payload.");
+    }
+    return operation.lastFailure;
 }
 function isPublicationReceiptConsistent(operation) {
     const receipt = operation.publicationReceipt;
     if (!receipt)
         return operation.publicationVerified === false;
-    return operation.publicationVerified === true
+    return hasOnlyKeys(receipt, ['tag', 'productionSha', 'operationId', 'releaseUrl'])
+        && operation.publicationVerified === true
         && receipt.tag === operation.tag
         && receipt.operationId === operation.operationId
         && receipt.productionSha === operation.productionSha
@@ -73228,6 +73196,8 @@ function isSafeWorkflowName(value) {
 function isReconciliationTarget(value) {
     if (!value || typeof value !== "object" || Array.isArray(value))
         return false;
+    if (!hasOnlyKeys(value, ['targetBranch', 'sourceBranch', 'sourceSha', 'syncBranch', 'syncSha', 'pullRequest', 'status']))
+        return false;
     const target = value;
     return isSafePersistedRef(target.targetBranch)
         && isSafePersistedRef(target.sourceBranch)
@@ -73241,6 +73211,8 @@ function isReconciliationTarget(value) {
 function isDeploymentFailure(value) {
     if (!value || typeof value !== "object" || Array.isArray(value))
         return false;
+    if (!hasOnlyKeys(value, ['category', 'message', 'retryable', 'previousPhase']))
+        return false;
     const failure = value;
     return ["promotion", "publication", "reconciliation", "cleanup"].includes(failure.category)
         && typeof failure.message === "string"
@@ -73248,6 +73220,11 @@ function isDeploymentFailure(value) {
         && typeof failure.retryable === "boolean"
         && ["preparing", "promotion_pr_pending", "promoted", "publishing", "published", "reconciliation_pending", "completed"]
             .includes(failure.previousPhase);
+}
+function hasOnlyKeys(value, allowed) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    return Object.keys(value).every(key => allowed.includes(key));
 }
 
 
@@ -78026,7 +78003,7 @@ function previousRecommendationInstruction(format) {
     if (format === 'structured-other-locale') {
         return 'Previous structured recommendation from another or unknown locale (return a complete structured replacement in the requested locale; do not return unchanged):';
     }
-    return 'Previous legacy recommendation (return a complete structured replacement; do not return unchanged):';
+    return 'Previous structured recommendation from another or unknown locale (return a complete structured replacement in the requested locale; do not return unchanged):';
 }
 
 
@@ -78143,26 +78120,6 @@ const TEMPLATE = `You are in the repository workspace. The user has asked you to
 3. Reply briefly confirming what you did.`;
 function getUserRequestPrompt(params) {
     return (0, fill_1.fillTemplate)(TEMPLATE, params);
-}
-
-
-/***/ }),
-
-/***/ 23623:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.stripTrailingCommentWatermarks = stripTrailingCommentWatermarks;
-const TRAILING_COMMENT_WATERMARK = /\s*<sup>(?:Made with ❤️ by|Written by) \[vypdev\/copilot\]\(https:\/\/github\.com\/marketplace\/actions\/copilot-github-with-super-powers\)[^<]*<\/sup>\s*$/u;
-/** Removes legacy trailing Copilot watermarks before a read-modify-write update. */
-function stripTrailingCommentWatermarks(comment) {
-    let stripped = comment;
-    while (TRAILING_COMMENT_WATERMARK.test(stripped)) {
-        stripped = stripped.replace(TRAILING_COMMENT_WATERMARK, '');
-    }
-    return stripped.trimEnd();
 }
 
 

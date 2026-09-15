@@ -1,6 +1,6 @@
 import { Result } from '../../../data/model/result';
 import type { RecommendationState } from '../../../data/model/recommendation_state';
-import { createRecommendationFingerprint, limitStoredRecommendation } from '../../../application/policies/recommendation_policy';
+import { createRecommendationFingerprint } from '../../../application/policies/recommendation_policy';
 import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
 import { ApplicationError } from '../../errors/application_error';
 import type { RecommendStepsContext, RecommendStepsOutcome } from '../push_single_action_contexts';
@@ -30,15 +30,11 @@ export function buildRecommendationResult(
         if (!previousRecommendation) {
             return recommendationFailure(taskId, 'The configured agent returned unchanged without a previous recommendation.');
         }
-        if (!previousRecommendation.implementationPlan) {
-            return recommendationFailure(taskId, 'The configured agent returned unchanged for a legacy plan that requires structured migration.');
-        }
         if (previousRecommendation.implementationPlanLocale !== extracted.locale) {
-            return recommendationFailure(taskId, 'The configured agent returned unchanged for a plan that requires locale migration.');
+            return recommendationFailure(taskId, 'The configured agent returned unchanged for a plan in a different locale.');
         }
         return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'agent found no material change');
     }
-    const recommendation = implementationPlanContextText(extracted.plan);
     logDebugInfo(`RecommendSteps: structured agent response received. Step count=${extracted.plan.steps.length}.`);
     const recommendationFingerprint = createRecommendationFingerprint(
         implementationPlanFingerprintInput(extracted.plan),
@@ -47,20 +43,18 @@ export function buildRecommendationResult(
         && previousRecommendation.implementationPlanLocale === extracted.locale) {
         return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'recommendation is unchanged');
     }
-    const recommendationState: RecommendationState = {
+    const recommendationState: RecommendationState = Object.freeze({
         issueDescriptionFingerprint,
         recommendationFingerprint,
-        recommendation: limitStoredRecommendation(recommendation),
         implementationPlan: extracted.plan,
         implementationPlanLocale: extracted.locale,
-    };
+    });
     return recommendationOutcome([new Result({
         id: taskId,
         success: true,
         executed: true,
         payload: {
             issueNumber,
-            recommendedSteps: recommendation,
             implementationPlan: extracted.plan,
             recommendationState,
         },
@@ -119,12 +113,4 @@ function extractImplementationPlan(
 function hasOnlyResponseKeys(payload: Readonly<Record<string, unknown>>): boolean {
     const allowed = ['outputLocale', 'status', 'steps', 'acceptance'];
     return Object.keys(payload).every(key => allowed.includes(key));
-}
-
-function implementationPlanContextText(plan: ImplementationPlan): string {
-    const steps = plan.steps.flatMap((step, index) => [
-        `${index + 1}. ${step.title}`,
-        ...step.details.map(detail => `   - ${detail}`),
-    ]);
-    return [...steps, '', `Acceptance: ${plan.acceptance}`].join('\n');
 }

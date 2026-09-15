@@ -261,7 +261,17 @@ describe('status card publication workflow', () => {
       locale: 'en-US',
       results: [new Result({
         id: 'RecommendStepsUseCase', success: true, executed: true,
-        payload: { issueNumber: 7, recommendedSteps: '1. Implement' },
+        payload: {
+          issueNumber: 7,
+          implementationPlan: {
+            steps: [
+              { title: 'Define the behavior', details: [] },
+              { title: 'Implement the behavior', details: [] },
+              { title: 'Verify the behavior', details: [] },
+            ],
+            acceptance: 'The requested behavior is verified.',
+          },
+        },
       })],
     });
     const repository = ports();

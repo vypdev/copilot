@@ -92,7 +92,7 @@ describe('reply publication workflow', () => {
     expect(repository.removeComment).toHaveBeenCalledWith(7, 9);
   });
 
-  it('adopts and compacts the transient issue-comment correlation namespace', async () => {
+  it('treats a removed correlation namespace as inert', async () => {
     const seeded = ports();
     await reconcileReply(context(), seeded);
     const currentBody = seeded.comments[0].body as string;
@@ -106,11 +106,12 @@ describe('reply publication workflow', () => {
     ]);
 
     await expect(reconcileReply(context(), repository)).resolves.toEqual({
-      effect: 'unchanged', canonicalCommentId: 3,
-      duplicatesRemoved: 1, duplicatesCompacted: 0, compactedCommentIds: [],
+      effect: 'unchanged', canonicalCommentId: 8,
+      duplicatesRemoved: 0, duplicatesCompacted: 0, compactedCommentIds: [],
     });
     expect(repository.addComment).not.toHaveBeenCalled();
-    expect(repository.comments.find(comment => comment.id === 8)).toBeUndefined();
+    expect(repository.removeComment).not.toHaveBeenCalled();
+    expect(repository.comments.map(comment => comment.id)).toEqual([8, 3]);
   });
 
   it('does no provider work without a trusted bot identity', async () => {

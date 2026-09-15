@@ -23,7 +23,7 @@ export type RecommendStepsParams = {
     issueNumber: string;
     issueDescription: string;
     previousRecommendation?: string;
-    previousRecommendationFormat?: 'structured' | 'structured-other-locale' | 'legacy';
+    previousRecommendationFormat?: 'structured' | 'structured-other-locale';
     targetLocale: string;
 };
 
@@ -48,5 +48,5 @@ function previousRecommendationInstruction(
     if (format === 'structured-other-locale') {
         return 'Previous structured recommendation from another or unknown locale (return a complete structured replacement in the requested locale; do not return unchanged):';
     }
-    return 'Previous legacy recommendation (return a complete structured replacement; do not return unchanged):';
+    return 'Previous structured recommendation from another or unknown locale (return a complete structured replacement in the requested locale; do not return unchanged):';
 }

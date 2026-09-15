@@ -36,9 +36,9 @@ Issue routing emits a welcome only when an eligible normal issue
 produces neither a publishable plan nor a direct answer; release and hotfix
 issues leave conversation ownership to their durable dashboard. Before the
 optional fallback is emitted, a read-only comment port checks exact-target,
-bot-owned plan, direct-answer, and current or legacy welcome markers. An unavailable history read fails
+bot-owned plan, direct-answer, and current welcome reply markers. An unavailable history read fails
 closed by omitting the welcome. An unchanged stored recommendation is projected
-again so the status reconciler can adopt, preserve, or recreate its plan card.
+again so the status reconciler can preserve or recreate its current plan card.
 
 Commit-derived progress crosses an additional source-freshness boundary. A
 provider-neutral application port reads the authoritative branch `HEAD`; the
@@ -381,6 +381,11 @@ preparing -> promotion_pr_pending -> promoted -> publishing
 
 any non-terminal phase -> blocked -> previous safe phase after correction
 ```
+
+Every durable snapshot has one exact failure invariant: `lastFailure` is `null`
+outside `blocked`, and a blocked snapshot contains a closed failure object with
+the exact previous non-blocked phase. Unknown state fields and blocked snapshots
+without that evidence fail before presentation or continuation.
 
 `deployment_configuration.ts`, `deployment_operation.ts`, and the pure planning,
 lifecycle, continuation-guard, and presentation policies own bounded values and

@@ -53,7 +53,7 @@ describe('PublishIssueCommentUseCase', () => {
         expect(updateComment).toHaveBeenCalledWith(42, 101, 'Deployment failed.');
     });
 
-    it('appends after existing content without duplicating its Copilot watermark', async () => {
+    it('appends after the exact existing content without rewriting it', async () => {
         listIssueComments.mockResolvedValue([{
             id: 101,
             body: 'Deployment started.\n\n<sup>Made with ❤️ by [vypdev/copilot](https://github.com/marketplace/actions/copilot-github-with-super-powers)</sup>',
@@ -65,7 +65,7 @@ describe('PublishIssueCommentUseCase', () => {
         expect(updateComment).toHaveBeenCalledWith(
             42,
             101,
-            'Deployment started.\n\nDeployment failed.',
+            'Deployment started.\n\n<sup>Made with ❤️ by [vypdev/copilot](https://github.com/marketplace/actions/copilot-github-with-super-powers)</sup>\n\nDeployment failed.',
         );
     });
 

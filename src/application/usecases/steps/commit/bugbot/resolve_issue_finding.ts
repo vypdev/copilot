@@ -1,5 +1,4 @@
 import type { BoundBugbotIssueCommentUpdatePort } from "../../../../../application/ports/bugbot_issue_write_ports";
-import { stripTrailingCommentWatermarks } from "../../../../../utils/comment_watermark";
 import {
   buildMarker,
   buildResolvedFindingNote,
@@ -21,7 +20,7 @@ export async function resolveIssueFinding(
   resolution: IssueFindingResolution,
   catalog?: BugbotMessageCatalog,
 ): Promise<void> {
-  const body = stripTrailingCommentWatermarks(resolution.comment.body);
+  const body = resolution.comment.body;
   const marker = parseMarker(body).find(
     (candidate) => candidate.findingId === resolution.findingId,
   );

@@ -116,7 +116,9 @@ describe('RecommendStepsUseCase', () => {
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
     expect(results[0].steps).toEqual([]);
-    expect(getResultPayload(results[0].payload)?.recommendedSteps).toContain('1. Add auth module');
+    expect(getResultPayload(results[0].payload)?.implementationPlan).toMatchObject({
+      steps: expect.arrayContaining([expect.objectContaining({ title: 'Add auth module' })]),
+    });
     const prompt = mockAskAgent.mock.calls[0][2];
     expect(prompt).toContain('42');
     expect(prompt).toContain('Implement login feature.');
@@ -133,7 +135,64 @@ describe('RecommendStepsUseCase', () => {
     const param = baseParam();
     const results = await invoke(param);
     expect(results[0].success).toBe(true);
-    expect(getResultPayload(results[0].payload)?.recommendedSteps).toContain('1. Reproduce');
+    expect(getResultPayload(results[0].payload)?.implementationPlan).toMatchObject({
+      steps: expect.arrayContaining([expect.objectContaining({ title: 'Reproduce' })]),
+    });
+  });
+
+  it('emits only the current recommendation-state fields', async () => {
+    mockGetDescription.mockResolvedValue('Implement login feature.');
+    mockAskAgent.mockResolvedValue('1. Define authentication\n2. Implement authentication\n3. Verify authentication');
+
+    const results = await invoke(baseParam());
+    const state = getResultPayload(results[0].payload)?.recommendationState as Record<string, unknown>;
+
+    expect(Object.keys(state).sort()).toEqual([
+      'implementationPlan',
+      'implementationPlanLocale',
+      'issueDescriptionFingerprint',
+      'recommendationFingerprint',
+    ]);
+  });
+
+  it('canonicalizes the configured locale in persisted recommendation state', async () => {
+    mockGetDescription.mockResolvedValue('Implementa el acceso.');
+    mockAskAgent.mockResolvedValue({
+      outputLocale: 'es-MX', status: 'recommendation', ...planFromText('Definir\nImplementar\nVerificar'),
+    });
+
+    const results = await invoke(baseParam({
+      locale: { repository: 'en-US', issue: 'es-mx', pullRequest: 'en-US' },
+    }));
+
+    expect(getResultPayload(results[0].payload)?.recommendationState).toMatchObject({
+      implementationPlanLocale: 'es-MX',
+    });
+  });
+
+  it('freezes the structured plan persisted by the workflow', async () => {
+    mockGetDescription.mockResolvedValue('Implement login feature.');
+    mockAskAgent.mockResolvedValue('1. Define authentication\n2. Implement authentication\n3. Verify authentication');
+
+    const results = await invoke(baseParam());
+    const state = getResultPayload(results[0].payload)?.recommendationState as {
+      implementationPlan: { steps: readonly { details: readonly string[] }[] };
+    };
+
+    expect(Object.isFrozen(state)).toBe(true);
+    expect(Object.isFrozen(state.implementationPlan)).toBe(true);
+    expect(Object.isFrozen(state.implementationPlan.steps[0].details)).toBe(true);
+  });
+
+  it('does not expose a parallel free-form recommendation payload', async () => {
+    mockGetDescription.mockResolvedValue('Implement login feature.');
+    mockAskAgent.mockResolvedValue('1. Define authentication\n2. Implement authentication\n3. Verify authentication');
+
+    const results = await invoke(baseParam());
+    const payload = getResultPayload(results[0].payload);
+
+    expect(payload).not.toHaveProperty('recommendedSteps');
+    expect(payload?.recommendationState).not.toHaveProperty('recommendation');
   });
 
   it('keeps onboarding inside the single semantic plan card instead of result steps', async () => {
@@ -149,7 +208,6 @@ describe('RecommendStepsUseCase', () => {
     const results = await invoke(param);
 
     expect(results[0].steps).toEqual([]);
-    expect(getResultPayload(results[0].payload)?.recommendedSteps).toContain('1. Add auth module');
     expect(getResultPayload(results[0].payload)?.implementationPlan).toMatchObject({
       steps: expect.arrayContaining([expect.objectContaining({ title: 'Add auth module' })]),
       acceptance: DEFAULT_ACCEPTANCE,
@@ -186,7 +244,8 @@ describe('RecommendStepsUseCase', () => {
       recommendationState: {
         issueDescriptionFingerprint: 'unused',
         recommendationFingerprint: 'unused',
-        recommendation: '1. Add auth module',
+        implementationPlan: planFromText('1. Add auth module'),
+        implementationPlanLocale: 'en-US',
       },
     });
     const firstParam = baseParam({ previousConfiguration });
@@ -205,7 +264,6 @@ describe('RecommendStepsUseCase', () => {
     expect(results[0]).toMatchObject({ id: 'RecommendStepsUseCase', success: true, executed: true });
     expect(getResultPayload(results[0].payload)).toMatchObject({
       issueNumber: 42,
-      recommendedSteps: expect.stringContaining('1. Add auth module'),
       implementationPlan: expect.objectContaining({ acceptance: DEFAULT_ACCEPTANCE }),
       recommendationState: { issueDescriptionFingerprint: fingerprint },
     });
@@ -215,7 +273,9 @@ describe('RecommendStepsUseCase', () => {
       previousConfiguration: matchingParam.previousConfiguration,
     }));
     expect(unconfiguredResults).toHaveLength(1);
-    expect(getResultPayload(unconfiguredResults[0].payload)?.recommendedSteps).toContain('1. Add auth module');
+    expect(getResultPayload(unconfiguredResults[0].payload)?.implementationPlan).toMatchObject({
+      steps: expect.arrayContaining([expect.objectContaining({ title: 'Add auth module' })]),
+    });
   });
 
   it('fails without calling the agent when a stored plan is stale and the agent is no longer configured', async () => {
@@ -224,7 +284,8 @@ describe('RecommendStepsUseCase', () => {
       recommendationState: {
         issueDescriptionFingerprint: 'stale-description',
         recommendationFingerprint: 'existing-recommendation',
-        recommendation: '1. Keep the existing plan',
+        implementationPlan: planFromText('1. Keep the existing plan'),
+        implementationPlanLocale: 'en-US',
       },
     });
 
@@ -242,29 +303,6 @@ describe('RecommendStepsUseCase', () => {
     });
   });
 
-  it('keeps a matching legacy plan readable when no agent is configured', async () => {
-    mockGetDescription.mockResolvedValue('Implement login feature.');
-    const previousConfiguration = new Config({
-      recommendationState: {
-        issueDescriptionFingerprint: createIssueDescriptionFingerprint('Implement login feature.'),
-        recommendationFingerprint: 'legacy-recommendation',
-        recommendation: '1. Keep the existing plan',
-      },
-    });
-
-    const results = await invoke(baseParam({
-      ai: new Ai('', '', false, [], false, 'low', 20),
-      previousConfiguration,
-    }));
-
-    expect(mockAskAgent).not.toHaveBeenCalled();
-    expect(results[0]).toMatchObject({ success: true, executed: true });
-    expect(getResultPayload(results[0].payload)).toMatchObject({
-      recommendedSteps: '1. Keep the existing plan',
-    });
-    expect(getResultPayload(results[0].payload)).not.toHaveProperty('implementationPlan');
-  });
-
   it('does not publish a duplicate recommendation when the agent returns the sentinel', async () => {
     mockGetDescription.mockResolvedValue('Implement login feature with more detail.');
     mockAskAgent.mockResolvedValue('NO_NEW_RECOMMENDATIONS');
@@ -272,7 +310,6 @@ describe('RecommendStepsUseCase', () => {
       recommendationState: {
         issueDescriptionFingerprint: 'old-description',
         recommendationFingerprint: 'old-recommendation',
-        recommendation: '1. Add auth module',
         implementationPlan: planFromText('1. Add auth module\n2. Add tests'),
         implementationPlanLocale: 'en-US',
       },
@@ -282,7 +319,9 @@ describe('RecommendStepsUseCase', () => {
     const results = await invoke(param);
 
     expect(results).toEqual([]);
-    expect(lastOutcome?.configurationPatch?.recommendationState.recommendation).toBe('1. Add auth module');
+    expect(lastOutcome?.configurationPatch?.recommendationState.implementationPlan).toEqual(
+      previous.recommendationState?.implementationPlan,
+    );
     expect(lastOutcome?.configurationPatch?.recommendationState.issueDescriptionFingerprint).not.toBe('old-description');
   });
 
@@ -332,7 +371,8 @@ describe('RecommendStepsUseCase', () => {
       recommendationState: {
         issueDescriptionFingerprint: 'old-description',
         recommendationFingerprint: 'old-recommendation',
-        recommendation: '1. Add auth module\n2. Add tests',
+        implementationPlan: planFromText('1. Add auth module\n2. Add tests'),
+        implementationPlanLocale: 'en-US',
       },
     });
     const param = baseParam({ previousConfiguration: previous });
@@ -437,7 +477,6 @@ describe('RecommendStepsUseCase', () => {
       recommendationState: {
         issueDescriptionFingerprint: createIssueDescriptionFingerprint('Implement login feature.'),
         recommendationFingerprint: 'english-plan',
-        recommendation: '1. Define the contract\n2. Implement the flow\n3. Verify behavior',
         implementationPlan: planFromText('Define the contract\nImplement the flow\nVerify behavior'),
         implementationPlanLocale: 'en-US',
       },
@@ -458,7 +497,7 @@ describe('RecommendStepsUseCase', () => {
     });
   });
 
-  it('rejects unchanged output when a matching structured plan requires locale migration', async () => {
+  it('rejects unchanged output when a matching structured plan uses another locale', async () => {
     mockGetDescription.mockResolvedValue('Implement login feature.');
     mockAskAgent.mockResolvedValue({
       outputLocale: 'es-MX', status: 'unchanged', steps: null, acceptance: null,
@@ -467,7 +506,6 @@ describe('RecommendStepsUseCase', () => {
       recommendationState: {
         issueDescriptionFingerprint: createIssueDescriptionFingerprint('Implement login feature.'),
         recommendationFingerprint: 'english-plan',
-        recommendation: '1. Define the contract\n2. Implement the flow\n3. Verify behavior',
         implementationPlan: planFromText('Define the contract\nImplement the flow\nVerify behavior'),
         implementationPlanLocale: 'en-US',
       },
@@ -480,32 +518,9 @@ describe('RecommendStepsUseCase', () => {
 
     expect(results[0].errors[0]).toMatchObject({
       code: 'agent.failed',
-      message: 'The configured agent returned unchanged for a plan that requires locale migration.',
+      message: 'The configured agent returned unchanged for a plan in a different locale.',
     });
     expect(lastOutcome?.configurationPatch).toBeUndefined();
-  });
-
-  it('does not replay a structured plan with an unverified locale when no agent is configured', async () => {
-    mockGetDescription.mockResolvedValue('Implement login feature.');
-    const previousConfiguration = new Config({
-      recommendationState: {
-        issueDescriptionFingerprint: createIssueDescriptionFingerprint('Implement login feature.'),
-        recommendationFingerprint: 'pre-locale-plan',
-        recommendation: '1. Define the contract\n2. Implement the flow\n3. Verify behavior',
-        implementationPlan: planFromText('Define the contract\nImplement the flow\nVerify behavior'),
-      },
-    });
-
-    const results = await invoke(baseParam({
-      ai: new Ai('', '', false, [], false, 'low', 20),
-      previousConfiguration,
-    }));
-
-    expect(mockAskAgent).not.toHaveBeenCalled();
-    expect(results[0].errors[0]).toMatchObject({
-      code: 'configuration.invalid',
-      message: 'Missing agent model or executable.',
-    });
   });
 
   it.each([
@@ -524,39 +539,4 @@ describe('RecommendStepsUseCase', () => {
     expect(results[0].errors[0].message).toBe('The configured agent returned an invalid implementation plan.');
   });
 
-  it('migrates a matching legacy plan when the agent is configured', async () => {
-    mockGetDescription.mockResolvedValue('Implement login feature.');
-    mockAskAgent.mockResolvedValue('1. Define authentication\n2. Implement authentication\n3. Test authentication');
-    const matchingLegacy = new Config({
-      recommendationState: {
-        issueDescriptionFingerprint: createIssueDescriptionFingerprint('Implement login feature.'),
-        recommendationFingerprint: 'legacy',
-        recommendation: 'Old free-form plan',
-      },
-    });
-    mockAskAgent.mockClear();
-
-    const results = await invoke(baseParam({ previousConfiguration: matchingLegacy }));
-
-    expect(mockAskAgent).toHaveBeenCalledTimes(1);
-    expect(mockAskAgent.mock.calls[0][2]).toContain('Previous legacy recommendation');
-    expect(mockAskAgent.mock.calls[0][2]).toContain('do not return unchanged');
-    expect(getResultPayload(results[0].payload)?.implementationPlan).toBeDefined();
-  });
-
-  it('rejects unchanged while a legacy plan still requires migration', async () => {
-    mockGetDescription.mockResolvedValue('Implement login feature.');
-    mockAskAgent.mockResolvedValue('NO_NEW_RECOMMENDATIONS');
-    const legacy = new Config({
-      recommendationState: {
-        issueDescriptionFingerprint: createIssueDescriptionFingerprint('Implement login feature.'),
-        recommendationFingerprint: 'legacy',
-        recommendation: 'Old free-form plan',
-      },
-    });
-
-    const results = await invoke(baseParam({ previousConfiguration: legacy }));
-
-    expect(results[0].errors[0].message).toBe('The configured agent returned unchanged for a legacy plan that requires structured migration.');
-  });
 });

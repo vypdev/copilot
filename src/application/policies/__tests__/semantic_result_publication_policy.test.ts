@@ -33,14 +33,14 @@ describe('semantic result publication policy', () => {
     const plan = '<!-- copilot:publication schema="1" topic="plan" target="issue:7" key="implementation" source="issue-body:abcdef12" digest="abcdef12" -->';
     const answer = '<!-- copilot:reply schema="1" target="issue:7" correlation="event:abcdef12" key="direct-answer" digest="abcdef12" -->';
     const welcome = '<!-- copilot:reply schema="1" target="issue:7" correlation="event:abcdef12" key="copilot-welcome" digest="abcdef12" -->';
-    const legacyWelcome = '<!-- copilot:welcome -->';
+    const removedWelcomeMarker = '<!-- copilot:welcome -->';
 
     expect(hasOwnedPrimaryIssuePublication([{ body: plan, user: { login: 'VypBot' } }], 7, 'vypbot')).toBe(true);
     expect(hasOwnedPrimaryIssuePublication([{ body: answer, user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(true);
     expect(hasOwnedPrimaryIssuePublication([{ body: welcome, user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(true);
-    expect(hasOwnedPrimaryIssuePublication([{ body: legacyWelcome, user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(true);
+    expect(hasOwnedPrimaryIssuePublication([{ body: removedWelcomeMarker, user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(false);
     expect(hasOwnedPrimaryIssuePublication([{ body: plan, user: { login: 'human' } }], 7, 'vypbot')).toBe(false);
-    expect(hasOwnedPrimaryIssuePublication([{ body: legacyWelcome, user: { login: 'human' } }], 7, 'vypbot')).toBe(false);
+    expect(hasOwnedPrimaryIssuePublication([{ body: removedWelcomeMarker, user: { login: 'human' } }], 7, 'vypbot')).toBe(false);
     expect(hasOwnedPrimaryIssuePublication([{ body: plan.replace('issue:7', 'issue:8'), user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(false);
     expect(hasOwnedPrimaryIssuePublication([{ body: welcome.replace('issue:7', 'issue:8'), user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(false);
     expect(hasOwnedPrimaryIssuePublication([{ body: answer.replace('direct-answer', 'copilot-help'), user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(false);
@@ -164,7 +164,7 @@ describe('semantic result publication policy', () => {
     new Result({ id: 'RecommendStepsUseCase', success: true, executed: true, payload: { issueNumber: 0, recommendedSteps: 'x' } }),
     new Result({ id: 'RecommendStepsUseCase', success: true, executed: true, payload: { issueNumber: 1, recommendedSteps: ' ' } }),
     new Result({ id: 'RecommendStepsUseCase', success: true, executed: true, payload: { issueNumber: 1, implementationPlan: { steps: [], acceptance: 'Done.' } } }),
-    new Result({ id: 'RecommendStepsUseCase', success: true, executed: true, payload: { issueNumber: 1, implementationPlan: { steps: [], acceptance: 'Done.' }, recommendedSteps: 'legacy fallback must not bypass malformed structured state' } }),
+    new Result({ id: 'RecommendStepsUseCase', success: true, executed: true, payload: { issueNumber: 1, implementationPlan: { steps: [], acceptance: 'Done.' }, recommendedSteps: 'removed fallback must not bypass malformed structured state' } }),
     new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 1, progress: '10', summary: 'x', branch: 'feature/work', sourceHeadSha: SOURCE_HEAD } }),
     new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 1, progress: 10, summary: 1, branch: 'feature/work', sourceHeadSha: SOURCE_HEAD } }),
     new Result({ id: 'CheckProgressUseCase', success: true, executed: true, payload: { issueNumber: 1, progress: 10, summary: 'x', branch: '', sourceHeadSha: SOURCE_HEAD } }),
@@ -175,10 +175,20 @@ describe('semantic result publication policy', () => {
     expect(selectSemanticStatusIntents({ locale: 'en-US', results: [result] })).toEqual([]);
   });
 
-  it('bounds and sanitizes plan and progress presentation', () => {
+  it('sanitizes plan and progress presentation', () => {
     const [plan] = selectSemanticStatusIntents({
       locale: 'en-US',
-      results: [new Result({ id: 'RecommendStepsUseCase', success: true, executed: true, payload: { issueNumber: 2, recommendedSteps: `# Unsafe\n@attacker\n/fix\n${'x'.repeat(10_000)}` } })],
+      results: [new Result({ id: 'RecommendStepsUseCase', success: true, executed: true, payload: {
+        issueNumber: 2,
+        implementationPlan: {
+          steps: [
+            { title: '# Unsafe @attacker', details: ['/fix'] },
+            { title: 'Implement the behavior', details: [] },
+            { title: 'Verify the result', details: [] },
+          ],
+          acceptance: 'The requested behavior is verified.',
+        },
+      } })],
     });
     const [progress] = selectSemanticStatusIntents({
       locale: 'en-US',
@@ -187,7 +197,6 @@ describe('semantic result publication policy', () => {
 
     const planBody = renderSemanticStatus(plan);
     const progressBody = renderSemanticStatus(progress);
-    expect(planBody.length).toBeLessThan(9_000);
     expect(planBody).toContain('@\u200battacker');
     expect(planBody).toContain('\u200b/fix');
     expect(progressBody).toContain('## Progress: 0% — not started');
@@ -594,7 +603,16 @@ describe('semantic result publication policy', () => {
     const [plan] = selectSemanticStatusIntents({
       locale: 'en-US', results: [new Result({
         id: 'RecommendStepsUseCase', success: true, executed: true,
-        payload: { issueNumber: 8, recommendedSteps: '1. Implement', recommendationState: { issueDescriptionFingerprint: 'abcdef12' } },
+        payload: {
+          issueNumber: 8,
+          implementationPlan: implementationPlan(),
+          recommendationState: {
+            issueDescriptionFingerprint: 'abcdef12',
+            recommendationFingerprint: '12345678',
+            implementationPlan: implementationPlan(),
+            implementationPlanLocale: 'en-US',
+          },
+        },
       })],
     });
 

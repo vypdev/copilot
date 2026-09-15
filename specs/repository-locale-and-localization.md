@@ -266,7 +266,7 @@ Normative terms:
 | Addressed foreign-language input | two calls, then edit source comment | one internal adaptation; preserve source; quote under bot response | authorship and intent stay clear |
 | Explicit command arguments | bypass common translation | command token parsed first; prose argument uses common adaptation | command behavior is language-independent |
 | Missing locale catalog | feature-specific English fallback, possibly mixed | one atomic English artifact and observable fallback reason | no mixed-language status |
-| Locale change | unrelated feature behavior | future/updated bot cards rerender; history remains | safe forward migration |
+| Locale change | unrelated feature behavior | future/updated bot cards rerender; history remains | predictable next-update behavior |
 
 ```mermaid
 flowchart LR
@@ -638,7 +638,7 @@ With no locale inputs:
 
 1. Add the locale profile and typed message catalog.
 2. Route addressed comments through safe internal adaptation.
-3. Migrate all generated GitHub surfaces and documentation.
+3. Route all generated GitHub surfaces through the locale contract.
 
 **Next:** implementation may begin from this plan.
 ```
@@ -916,9 +916,9 @@ configuration errors under the action schema.
 1. Add locale value objects/profile, action/setup cutover, catalog manifest,
    English/Spanish catalogs, validation, and observability without changing
    source comments.
-2. Migrate deterministic common errors, welcome/help, Job Summary, Check
+2. Route deterministic common errors, welcome/help, Job Summary, Check
    title/summary, plan/progress, and branch sync.
-3. Migrate Bugbot and release presentation; remove local en/es checks.
+3. Route Bugbot and release presentation; remove local en/es checks.
 4. Add target/output locale to every product-facing agent task and schema.
 5. Switch addressed input to one non-mutating adaptation workflow and bot-owned
    translation context.
@@ -983,14 +983,13 @@ state or comment publication. Numbering, headings, status copy, acceptance
 label, and command hint remain renderer-owned catalog messages. With no
 configuration the complete card is English (`en-US`); any valid configured
 locale resolves one atomic catalog, while paths, commands, refs, and code
-identifiers remain unchanged. Legacy free-form state stays readable and is
-regenerated through the same locale contract on the next configured planning
-run. New structured state persists the canonical locale alongside the bounded
-plan. Replays require an exact match with the current effective issue locale; a
-locale change or older structured state without locale evidence requires a
-complete agent-backed replacement, and `unchanged` is rejected. If no agent is
-available, the old card is left untouched rather than being reprojected with new
-catalog chrome around plan content in an unverified language.
+identifiers remain unchanged. Recommendation state is accepted only as the
+closed current shape containing the bounded structured plan and its canonical
+locale; free-form, missing-locale, and additional-field variants are invalid.
+Replays require an exact match with the current effective issue locale. A locale
+change requires a complete agent-backed replacement, and `unchanged` is
+rejected. If no agent is available, the operation fails closed without
+publishing plan content in an unverified language.
 
 The inactivity-closure slice removes the last feature-local `en`/`es` branch
 from its public path. It resolves complete issue-locale and repository-summary
@@ -1182,11 +1181,12 @@ hyphenated tags and never imply that fallback is a successful translation.
 22. Given implementation completion, then related SDDs, catalog, action/setup
     defaults, generated bundles, 136-case budget, coverage, documentation, and
     all repository validations agree without stale en/es conditionals.
-23. Given an unchanged issue whose stored structured plan was produced in a
-    different or unknown locale, when planning runs in the current effective
-    issue locale, then replay is forbidden, a configured agent must return a
-    complete replacement with the exact target locale, `unchanged` is rejected,
-    and an unconfigured run leaves the previous card untouched.
+23. Given an unchanged issue whose valid current plan was produced in a
+    different locale, when planning runs in the current effective issue locale,
+    then replay is forbidden, a configured agent must return a complete
+    replacement with the exact target locale, `unchanged` is rejected, and an
+    unconfigured run fails closed. State with a missing or invalid locale is
+    rejected during configuration restoration before planning begins.
 
 ## 17. Requirements traceability
 
@@ -1221,7 +1221,7 @@ hyphenated tags and never imply that fallback is a successful translation.
    renderer contracts.
 4. Bind static/dynamic catalog and language-adaptation ports with strict schemas,
    per-run cache, safe error mapping, telemetry, and provider tests.
-5. Migrate common deterministic messages, semantic publication renderers, Job
+5. Route common deterministic messages, semantic publication renderers, Job
    Summary, Check prose, and repository-aware CLI output; keep machine names
    stable.
 6. Add target/output locale to every product-facing agent prompt and response
@@ -1229,7 +1229,7 @@ hyphenated tags and never imply that fallback is a successful translation.
 7. Replace source-comment mutation and the two-call language workflow with one
    non-mutating addressed-request adaptation across mention and explicit-command
    arguments.
-8. Migrate Bugbot, deployment, merge readiness, branch sync, plans, progress,
+8. Route Bugbot, deployment, merge readiness, branch sync, plans, progress,
    lifecycle explanations, and remaining local en/es branches.
 9. Add setup/doctor diagnostics, strict underscore rejection, current response
    markers, and controlled rollback behavior with no alternate reader.
@@ -1240,7 +1240,7 @@ hyphenated tags and never imply that fallback is a successful translation.
 ## 19. Definition of Done
 
 - [x] `repository-locale` defaults to `en-US`; issue/PR overrides inherit when
-      empty; explicit existing values migrate without loss.
+      empty; explicit current values are preserved exactly.
 - [x] Any accepted BCP-47 target follows one canonical validation and atomic
       exact/base/dynamic/English fallback contract.
 - [x] Authoritative English and reviewed Spanish catalogs are complete, typed,

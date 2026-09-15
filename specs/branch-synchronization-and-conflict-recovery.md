@@ -62,7 +62,7 @@ while blind automated merges can overwrite concurrent work or expose credentials
   relationships without durable configuration need an open PR; no live large-repo
   performance evidence is checked in.
 - Unknown rationale: the original polling/GraphQL query shape is not a permanent API contract.
-- Proposed improvements: indexed durable dependency storage needs a separate migration design.
+- Proposed improvements: indexed durable dependency storage requires a separate current-state design.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -252,13 +252,14 @@ outcome, branches, initial SHAs, conflicts, verification count, and commit SHA.
 Failures say “no push completed” when true. Workflow contracts ensure bot pushes
 remain observable and downstream relationships can update.
 
-## 13. Compatibility, migration, rollout, and rollback
+## 13. Compatibility, cutover, rollout, and rollback
 
-Durable configuration is preferred; existing linked branches/PR references and
-legacy stale/aligned markers are fallback-compatible. New transition writes use
-the shared semantic envelope; unknown, malformed, human-authored, and third-party
-markers are inert. Installing or removing the observer does not change branch
-history. Rollback disables transition creation with the observer or workflow;
+There are no installed users or production marker state to migrate. Linked
+branches and PR references use the current durable dependency contract. Stale
+and aligned cards use only the shared semantic publication envelope; removed,
+unknown, malformed, human-authored, and third-party markers are inert and are
+never adopted or rewritten. Installing or removing the observer does not change
+branch history. Rollback restores one complete known-good code/schema bundle;
 existing cards and immutable notifications remain ordinary GitHub comments, and
 any completed merge remains an auditable commit reverted normally if necessary.
 
@@ -271,7 +272,7 @@ any completed merge remains an auditable commit reverted normally if necessary.
 | Use cases/workspace | 22 | clean/conflict/dry-run/verify/push |
 | Adapters/workflow contracts | 16 | pagination, git states, all-branch/no-agent |
 | UX/localization/sanitization | 14 | cards, transition/pointers, arbitrary locale, refs, translated controls, errors |
-| Integration/security/migration | 16 | observe→sync→resolve→stale, credentials, semantic/legacy fallback |
+| Integration/security/cutover | 16 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection |
 | **Total** | **116** | no double counting |
 
 Global thresholds remain; dependency/eligibility policies SHOULD reach 95%

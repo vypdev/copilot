@@ -63,7 +63,6 @@ function source(): DeepMutable<PushSingleActionContextSource> {
       recommendationState: {
         issueDescriptionFingerprint: 'description',
         recommendationFingerprint: 'recommendation',
-        recommendation: 'Do this',
         implementationPlan: {
           steps: [
             { title: 'Define', details: ['Contract'] },
@@ -72,6 +71,7 @@ function source(): DeepMutable<PushSingleActionContextSource> {
           ],
           acceptance: 'All relevant checks pass.',
         },
+        implementationPlanLocale: 'en-US',
       },
     },
     branches: {
