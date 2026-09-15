@@ -135,5 +135,8 @@ describe('application error presentation policy', () => {
         expect(markdown).toContain('**Código de error:** `provider.unavailable`');
         expect(markdown).toContain(`**Referencia:** \`${CORRELATION_ID}\``);
         expect(markdown).not.toContain('Raw provider detail.');
+        expect(renderApplicationErrorMarkdown(error)).toContain(
+            '> **Impact:** The provider was temporarily unavailable.',
+        );
     });
 });

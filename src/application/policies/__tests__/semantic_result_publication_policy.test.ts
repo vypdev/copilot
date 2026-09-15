@@ -64,6 +64,7 @@ describe('semantic result publication policy', () => {
     expect(intents[1]).toMatchObject({ identity: { topic: 'progress', key: 'work' }, projection: { progress: 100, summary: 'Done', developmentBranch: 'develop' } });
     expect(intents[1].projection).not.toHaveProperty('remaining');
     expect(intents[1].projection).not.toHaveProperty('branch');
+    expect(renderSemanticStatus(intents[1])).toContain('No action required.');
   });
 
   it.each([
