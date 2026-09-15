@@ -214,7 +214,7 @@ describe('workflow contract validator', () => {
   });
 
   it.each(['.github/workflows', 'setup/workflows'])(
-    'rejects metadata-only PR triggers and unsafe PR check identities in %s',
+    'rejects metadata-only PR triggers, embedded merge checks, and unsafe PR check identities in %s',
     (directory) => {
       const file = path.join(process.cwd(), directory, 'copilot_pull_request.yml');
       const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
@@ -223,12 +223,24 @@ describe('workflow contract validator', () => {
       expect(() => assertDirectEventTriggers(file, workflow)).toThrow('metadata-only edited events');
 
       workflow.on.pull_request.types = workflow.on.pull_request.types.filter((type: string) => type !== 'edited');
+      workflow.on.merge_group = { types: ['checks_requested'] };
+      expect(() => assertDirectEventTriggers(file, workflow)).toThrow('dedicated pull-request merge-queue workflow');
+
+      delete workflow.on.merge_group;
       workflow.jobs['copilot-pull-requests'].name = 'Copilot - Pull Request';
       expect(() => assertDirectEventTriggers(file, workflow)).toThrow('review-state events');
+    },
+  );
 
-      workflow.jobs['copilot-pull-requests'].name = "${{ github.event_name == 'pull_request_review' && 'Copilot - Pull Request Review State' || 'Copilot - Pull Request' }}";
-      workflow.jobs['copilot-merge-group'].name = 'Copilot - Merge Queue';
-      expect(() => assertDirectEventTriggers(file, workflow)).toThrow('required-check identity');
+  it.each(['.github/workflows', 'setup/workflows'])(
+    'keeps merge-queue required checks isolated, exact, and lightweight in %s',
+    (directory) => {
+      const file = path.join(process.cwd(), directory, 'copilot_pull_request_merge_queue.yml');
+      const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+
+      expect(() => validateWorkflow(file, workflow)).not.toThrow();
+      workflow.jobs['copilot-pull-request-required-check'].name = 'Copilot - Merge Queue';
+      expect(() => validateWorkflow(file, workflow)).toThrow('required-check identity');
     },
   );
 
@@ -310,8 +322,8 @@ describe('workflow contract validator', () => {
   it.each([
     '.github/workflows/ci_check.yml',
     '.github/workflows/repowise.yml',
-    '.github/workflows/copilot_pull_request.yml',
-    'setup/workflows/copilot_pull_request.yml',
+    '.github/workflows/copilot_pull_request_merge_queue.yml',
+    'setup/workflows/copilot_pull_request_merge_queue.yml',
   ])('requires merge-group checks in %s', (relativeFile) => {
     const file = path.join(process.cwd(), relativeFile);
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;

@@ -6,24 +6,8 @@ on:
     types: [opened, reopened, closed, synchronize]
   pull_request_review:
     types: [submitted, edited, dismissed]
-  merge_group:
-    types: [checks_requested]
 
 jobs:
-  copilot-merge-group:
-    if: ${{ github.event_name == 'merge_group' }}
-    # Keep the same required-check context as normal PR analysis. The run name
-    # above distinguishes merge_group:checks_requested in the Actions UI.
-    name: Copilot - Pull Request
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      checks: write
-      contents: read
-    steps:
-      - name: Confirm merge-group compatibility
-        run: echo "Copilot PR analysis already ran on each constituent pull request."
-
   copilot-pull-requests:
     if: ${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}
     name: ${{ github.event_name == 'pull_request_review' && 'Copilot - Pull Request Review State' || 'Copilot - Pull Request' }}

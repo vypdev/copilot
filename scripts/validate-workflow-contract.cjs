@@ -394,19 +394,50 @@ function assertDirectEventTriggers(file, workflow) {
     || ['opened', 'reopened', 'closed', 'synchronize'].some(type => !pullRequestTypes.includes(type))) {
     throw new Error(`${relativeFile} must handle code/lifecycle PR events without subscribing to metadata-only edited events.`);
   }
+  if (triggers.merge_group || workflow.jobs?.['copilot-merge-group']) {
+    throw new Error(`${relativeFile} must keep merge-group compatibility in the dedicated pull-request merge-queue workflow so normal PR runs do not show a skipped duplicate check.`);
+  }
   if (typeof workflow['run-name'] !== 'string'
     || !workflow['run-name'].includes('github.event_name')
     || !workflow['run-name'].includes('github.event.action')) {
     throw new Error(`${relativeFile} must expose the event kind and action in its run identity.`);
   }
   const pullRequestJobName = workflow.jobs?.['copilot-pull-requests']?.name;
-  const mergeQueueJobName = workflow.jobs?.['copilot-merge-group']?.name;
   const expectedPullRequestJobName = "${{ github.event_name == 'pull_request_review' && 'Copilot - Pull Request Review State' || 'Copilot - Pull Request' }}";
   if (pullRequestJobName !== expectedPullRequestJobName) {
     throw new Error(`${relativeFile} must give review-state events their exact distinct check identity while preserving the normal PR analysis identity.`);
   }
-  if (mergeQueueJobName !== 'Copilot - Pull Request') {
-    throw new Error(`${relativeFile} must preserve the Copilot - Pull Request required-check identity for merge-group runs; the run name provides event distinction.`);
+}
+
+function assertPullRequestMergeQueueWorkflow(file, workflow) {
+  const relativeFile = relativeWorkflow(file);
+  if (!relativeFile.endsWith('/copilot_pull_request_merge_queue.yml')) return;
+  const triggers = workflow.on ?? {};
+  const job = workflow.jobs?.['copilot-pull-request-required-check'];
+  if (workflow.name !== 'Copilot - Pull Request Merge Queue'
+    || triggers.pull_request
+    || triggers.pull_request_review
+    || !Array.isArray(triggers.merge_group?.types)
+    || !triggers.merge_group.types.includes('checks_requested')) {
+    throw new Error(`${relativeFile} must support merge_group checks_requested in a dedicated workflow.`);
+  }
+  if (typeof workflow['run-name'] !== 'string'
+    || !workflow['run-name'].includes('github.event_name')
+    || !workflow['run-name'].includes('github.event.action')) {
+    throw new Error(`${relativeFile} must expose the merge-group event and action in its run identity.`);
+  }
+  if (!job || job.name !== 'Copilot - Pull Request') {
+    throw new Error(`${relativeFile} must preserve the Copilot - Pull Request required-check identity for merge-group runs.`);
+  }
+  if (Object.keys(workflow.jobs ?? {}).length !== 1
+    || job['timeout-minutes'] !== 10
+    || job.permissions?.checks !== 'write'
+    || job.permissions?.contents !== 'read'
+    || (job.steps ?? []).length !== 1
+    || job.steps[0]?.name !== 'Confirm merge-group compatibility'
+    || typeof job.steps[0]?.run !== 'string'
+    || (job.steps ?? []).some(isCopilotAction)) {
+    throw new Error(`${relativeFile} must remain a single lightweight, least-privilege merge-group check.`);
   }
 }
 
@@ -818,8 +849,8 @@ function assertMergeQueueWorkflowSupport(file, workflow) {
   const required = new Set([
     '.github/workflows/ci_check.yml',
     '.github/workflows/repowise.yml',
-    '.github/workflows/copilot_pull_request.yml',
-    'setup/workflows/copilot_pull_request.yml',
+    '.github/workflows/copilot_pull_request_merge_queue.yml',
+    'setup/workflows/copilot_pull_request_merge_queue.yml',
   ]);
   if (!required.has(relativeFile)) return;
   const types = workflow.on?.merge_group?.types;
@@ -895,6 +926,7 @@ function assertSequentialMutationWorkflow(file, workflow) {
 function validateWorkflow(file, workflow) {
   if (!workflow || typeof workflow !== 'object') throw new Error('workflow document is empty.');
   assertDirectEventTriggers(file, workflow);
+  assertPullRequestMergeQueueWorkflow(file, workflow);
   assertRunner(file, workflow);
   assertSequentialMutationWorkflow(file, workflow);
   assertAgentInputs(file, workflow);

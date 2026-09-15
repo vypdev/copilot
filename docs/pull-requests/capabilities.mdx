@@ -114,6 +114,9 @@ without opening logs. Review-state events use the distinct
 `Copilot - Pull Request Review State` check. Normal analysis and merge-group
 runs intentionally share `Copilot - Pull Request`, preserving the exact
 required-check context that GitHub branch protection and merge queues expect.
+The merge-group producer lives in the separate
+`copilot_pull_request_merge_queue.yml` workflow, so normal PR runs do not show a
+second skipped check.
 Metadata-only body/title edits do not start the PR workflow; new commits and
 lifecycle changes still do.
 

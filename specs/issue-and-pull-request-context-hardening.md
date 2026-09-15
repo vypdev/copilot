@@ -43,7 +43,9 @@ A newer PR or review-state event MAY cancel an obsolete PR run. PR analysis,
 review-state observation, and merge-queue admission MUST expose distinct run
 identities; review state MUST also use its own job/check name. Normal PR and
 merge-group jobs MUST share the configured required-check name so GitHub can
-satisfy the same branch-protection rule in both contexts. The `Copilot / Review`
+satisfy the same branch-protection rule in both contexts. The merge-group job
+MUST live in its own workflow so PR runs do not expose a skipped duplicate
+check. The `Copilot / Review`
 Check name is reserved for a result
 carrying exactly one current-schema Bugbot review telemetry snapshot for the
 exact head.

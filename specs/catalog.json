@@ -252,14 +252,15 @@
       "status": "implemented",
       "scope": "Fail-closed validation of required checks and merge-group workflow support",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-14",
+      "lastVerified": "2026-09-15",
       "specs": [
         "specs/merge-queue-readiness.md"
       ],
       "workflows": [
         ".github/workflows/ci_check.yml",
         ".github/workflows/repowise.yml",
-        ".github/workflows/copilot_pull_request.yml",
+        ".github/workflows/copilot_pull_request_merge_queue.yml",
+        "setup/workflows/copilot_pull_request_merge_queue.yml",
         ".github/workflows/copilot_deployment_orchestration.yml"
       ],
       "entrypoints": [
@@ -487,6 +488,7 @@
       "workflows": [
         ".github/workflows/copilot_commit.yml",
         ".github/workflows/copilot_pull_request.yml",
+        ".github/workflows/copilot_pull_request_merge_queue.yml",
         ".github/workflows/release_workflow.yml",
         ".github/workflows/hotfix_workflow.yml",
         ".github/workflows/copilot_deployment_orchestration.yml"
@@ -887,7 +889,9 @@
       ],
       "workflows": [
         ".github/workflows/copilot_pull_request.yml",
-        "setup/workflows/copilot_pull_request.yml"
+        ".github/workflows/copilot_pull_request_merge_queue.yml",
+        "setup/workflows/copilot_pull_request.yml",
+        "setup/workflows/copilot_pull_request_merge_queue.yml"
       ],
       "entrypoints": [
         "src/application/usecases/pull_request_use_case.ts",

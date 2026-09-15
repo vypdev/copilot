@@ -236,10 +236,11 @@ PR #378 exposed the final workflow-level noise: Copilot's own description update
 still emitted redundant skipped `pull_request: edited` runs, and analysis,
 review-state, and merge-queue jobs shared an ambiguous visible name. The current
 contract excludes metadata-only edited events from the supplied PR workflow and
-uses event/action run names plus a distinct review-state job identity. Normal PR
-and merge-group jobs intentionally retain the same required-check context so
-branch protection continues to resolve it. The quiet application publication
-mode remains defense in depth for direct/API invocation.
+uses event/action run names plus a distinct review-state job identity. A
+dedicated merge-group workflow removes the skipped duplicate from normal PR
+runs while intentionally retaining the same required-check context so branch
+protection continues to resolve it. The quiet application publication mode
+remains defense in depth for direct/API invocation.
 
 ## 3. Actors, surfaces, and terminology
 

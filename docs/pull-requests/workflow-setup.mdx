@@ -92,9 +92,11 @@ jobs:
   for the exact head owns the `Copilot / Review` Check; partial, skipped, and
   superseded reviews are neutral rather than successful.
 - If the repository uses a merge queue, also keep the shipped
-  `merge_group: checks_requested` job named `Copilot - Pull Request`. Its run
-  name identifies the merge-group event while its unchanged job name satisfies
-  the same required-check rule as normal PR analysis.
+  `copilot_pull_request_merge_queue.yml` workflow. Its only
+  `merge_group: checks_requested` job is named `Copilot - Pull Request`, so the
+  event-specific run remains separate while the unchanged job name satisfies
+  the same required-check rule as normal PR analysis. Keeping it separate also
+  avoids a skipped duplicate check on every normal PR run.
 
 
 ## What runs when

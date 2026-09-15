@@ -5,7 +5,7 @@
 - Last verified: 2026-09-15 on `develop` plus PR UX implementation branch
 - Owners: Copilot maintainers
 - Scope: PR-to-issue/project linkage, assignments, metadata, size/progress, description ownership, review integration, and merge closure
-- Related issues/PRs: managed issue lifecycle and Bugbot SDDs; live UX evidence from [PR #378](https://github.com/vypdev/copilot/pull/378)
+- Related issues/PRs: managed issue lifecycle and Bugbot SDDs; live UX evidence from [PR #378](https://github.com/vypdev/copilot/pull/378) and [PR #379](https://github.com/vypdev/copilot/pull/379)
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none
 
@@ -53,8 +53,9 @@ descriptions can also overwrite human content unless ownership is explicit.
 6. Metadata-only edited events do not start the supplied workflow. Merged PRs
    close only a distinct linked issue.
 7. Runs expose event/action identity and review-state events use a distinct job
-   name. Normal PR and merge-group jobs intentionally share the required-check
-   name so branch protection resolves the same context in both event paths.
+   name. A separate merge-group workflow avoids a skipped duplicate while its
+   job intentionally shares the normal PR required-check name so branch
+   protection resolves the same context in both event paths.
    Result publication, lifecycle labels, Job Summary, and optional Check Run
    expose state.
 
@@ -70,6 +71,10 @@ descriptions can also overwrite human content unless ownership is explicit.
   remains required for every shipped workflow change.
 - Unknown rationale: `replace` is the current default, but historic selection evidence is unavailable.
 - Proposed improvements: changing the recommended default requires migration and user study.
+- Live iteration: PR #379's first run displayed a skipped merge-group job beside
+  the active PR job under the same check name. Merge-group compatibility moved
+  to a dedicated workflow so subsequent normal PR runs expose only the relevant
+  analysis/review-state job while merge groups retain the required context.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -260,7 +265,7 @@ repeated copy, and unverified test/no-impact claims are forbidden.
 | synchronize | refresh owned body and exact-head review | duplicate card or stale review |
 | metadata edit | no supplied Copilot PR run | body-edit cascade or title rewrite |
 | review submitted/edited/dismissed | review-state job with distinct identity | full analysis masquerading under same check name |
-| merge queue | event-specific run name plus lightweight required check | a renamed check that cannot satisfy branch protection |
+| merge queue | separate event-specific run plus lightweight required check | skipped duplicate on normal PRs or a renamed check that cannot satisfy branch protection |
 | merged with distinct issue | close that issue | closure of the PR's own number |
 
 The PR body follows configured ownership; append uses one stable section.
@@ -317,8 +322,8 @@ Optional capability absence is a visible skip; provider failure is not hidden as
 successful enrichment. Replays should not increase comment/body-section count.
 The Actions run name includes event and action. Review-state observation has a
 distinct check name, while normal PR analysis and merge-queue admission share
-the exact required-check context deliberately; their run names provide the
-human-visible distinction.
+the exact required-check context deliberately in separate workflows; their run
+names provide the human-visible distinction without a skipped duplicate.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
@@ -385,7 +390,8 @@ body mutation that produces no follow-up PR workflow.
 13. Copilot's own PR body update creates zero follow-up PR workflow runs.
 14. Actions distinguish PR analysis, review-state observation, and merge-queue
     admission without requiring log inspection; review state uses a distinct
-    check and merge queue preserves the normal PR required-check context.
+    check and a separate merge-queue workflow preserves the normal PR
+    required-check context without adding a skipped duplicate.
 
 ## 17. Requirements traceability
 
