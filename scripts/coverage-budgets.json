@@ -250,6 +250,8 @@
             "src/domain/message_catalog.ts",
             "src/application/policies/action_summary_message_catalog.ts",
             "src/application/policies/comment_translation_policy.ts",
+            "src/application/policies/inactivity_message_catalog.ts",
+            "src/application/policies/inactivity_notification_policy.ts",
             "src/application/policies/merge_queue_message_catalog.ts",
             "src/application/policies/publication_message_catalog.ts",
             "src/application/policies/setup_doctor_message_catalog.ts",
@@ -268,6 +270,8 @@
             "src/application/policies/action_summary_message_catalog.ts",
             "src/application/policies/comment_translation_policy.ts",
             "src/application/policies/copilot_interaction_policy.ts",
+            "src/application/policies/inactivity_message_catalog.ts",
+            "src/application/policies/inactivity_notification_policy.ts",
             "src/application/policies/publication_message_catalog.ts",
             "src/application/policies/semantic_result_publication_policy.ts",
             "src/application/policies/merge_queue_message_catalog.ts",
@@ -277,6 +281,8 @@
             "src/application/policies/setup_doctor_report_policy.ts",
             "src/application/policies/status_command_policy.ts",
             "src/application/usecases/localization/resolve_message_catalog_use_case.ts",
+            "src/application/usecases/actions/close_inactive_issues_use_case.ts",
+            "src/application/usecases/actions/close_inactive_issues_workflow.ts",
             "src/application/usecases/setup/doctor_use_case.ts",
             "src/application/usecases/setup/merge_queue_readiness_use_case.ts",
             "src/application/usecases/setup/setup_wizard_use_case.ts",
@@ -288,7 +294,8 @@
             "src/cli/setup_doctor_presenter.ts",
             "src/cli/setup_prompt_rendering.ts",
             "src/domain/locale.ts",
-            "src/domain/message_catalog.ts"
+            "src/domain/message_catalog.ts",
+            "src/infrastructure/composition/issue_inactivity_composition_root.ts"
           ],
           "mode": "aggregate",
           "thresholdProfile": "default"

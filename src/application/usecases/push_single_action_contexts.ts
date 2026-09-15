@@ -57,6 +57,8 @@ export interface InactivityContext {
   readonly activityLabel: string;
   readonly thresholdHours: number;
   readonly locale: string;
+  readonly repositoryLocale: string;
+  readonly agentConfiguration: Readonly<AgentConfiguration>;
 }
 
 export interface BranchObservationContext {
@@ -308,6 +310,8 @@ export function projectInactivityContext(source: PushSingleActionContextSource):
     activityLabel: source.labels.lifecycle.aiProcessing,
     thresholdHours: source.inactivityThresholdHours,
     locale: source.locale?.issue ?? 'en-US',
+    repositoryLocale: source.locale?.repository ?? 'en-US',
+    agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
   });
 }
 

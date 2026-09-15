@@ -977,6 +977,18 @@ Local Think prints the semantic answer with repository-locale labels, does not
 write GitHub, and treats `--issue` as optional description context rather than
 silently requiring issue `#1`.
 
+The inactivity-closure slice removes the last feature-local `en`/`es` branch
+from its public path. It resolves complete issue-locale and repository-summary
+catalog slices before the scan, reusing one slice when both scopes match. Each
+slice uses reviewed English and Spanish catalogs or the shared bounded dynamic
+resolver for any other valid BCP-47 locale, and falls back atomically to
+English. One pure renderer owns the terminal explanation and locale-aware
+summary plurals. Read, close, and explanation-publication failures remain
+distinct; a closed issue is never reported as a failed close merely because its
+explanation comment could not be published. Payload evidence records scanned,
+eligible, closed, commented, skipped, and failed counts without localizing the
+stable keys.
+
 ### 13.5 Rollback
 
 Rollback MUST preserve the new input inheritance reader and legacy/new marker
