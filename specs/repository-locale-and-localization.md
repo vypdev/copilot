@@ -962,8 +962,9 @@ keeps raw provider and credential-health diagnostics out of UI. Setup itself
 remains one authoritative English artifact while it creates the repository
 profile. The generic Actions Job Summary now resolves one complete catalog in
 the repository locale, localizes its headings and explanatory labels, preserves
-machine values, projects compact localized result states and error recovery by
-stable error category, omits internal step narration and arbitrary error text,
+machine values, projects compact localized aggregate result counts and expands
+only error recovery by stable error category, omits internal result names, step
+narration, and arbitrary error text,
 and emits localization evidence once instead of duplicating it inside and below
 the main table. Lifecycle and the remaining public surfaces are
 not claimed complete by this evidence.

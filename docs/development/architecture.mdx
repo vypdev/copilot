@@ -367,8 +367,9 @@ The generic GitHub Actions Job Summary follows the same boundary. One complete
 typed catalog is resolved for `repository-locale`; bundled English and Spanish,
 arbitrary dynamic locales, and atomic English fallback share the repository
 localization resolver. The summary renders localization evidence once, keeps
-machine event/state/error values stable, and projects each result as a compact
-localized outcome. Internal `Result.steps` and arbitrary error messages remain
+machine event/state/error values stable, and projects routine results as compact
+localized aggregate counts. Only failed results receive an expanded diagnostic
+section. Internal result names, `Result.steps`, and arbitrary error messages remain
 in logs or machine evidence; they are never replayed into the summary. Failures
 show category-localized impact, action, and retained-state guidance beside the
 stable code, retry decision, and correlation reference.

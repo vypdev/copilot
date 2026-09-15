@@ -148,8 +148,9 @@ mentions receive at most one correlated reply.
 
 Routine labels, assignees, project moves, title normalization, PR linkage,
 description refreshes, pushes, reopens, merges, and closes do not create a
-generic roll-up. The Job Summary keeps compact result states and safe error
-recovery evidence; internal step narration and arbitrary error text remain in logs.
+generic roll-up. The Job Summary keeps aggregate result counts and expands only
+safe error recovery evidence; internal result names, step narration, and arbitrary
+error text remain in logs.
 Hidden markers provide stable identity and are trusted only when the comment is
 authored by the configured bot. Decorative image inputs default to `false` and
 are deprecated.

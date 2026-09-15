@@ -547,8 +547,8 @@ names may follow repository conventions:
 5. feature renderers for plan, progress, branch sync, Bugbot, release, access,
    inactivity, command replies, and failures;
 6. a Job Summary projection that includes compact semantic outcomes, stable
-   machine evidence, and localized recovery guidance while leaving step/debug
-   narration in masked logs; and
+   machine evidence, and localized recovery guidance while leaving internal
+   result names and step/debug narration in masked logs; and
 7. a temporary compatibility adapter that rejects attempts to publish generic
    `Result.steps` and records the attempted source in tests/logs.
 
@@ -939,8 +939,9 @@ machine markers, and bounded English-default/localized renderers. The executable
 mutation inventory, locale-branch ratchet, and pseudo-plural ratchet protect
 these boundaries. Subsequent deployment and setup-doctor slices cover their
 feature-owned views, and the generic Job Summary slice resolves repository-
-locale copy atomically, renders compact result states and safe category-localized
-error recovery, excludes internal steps and arbitrary error messages, and renders
+locale copy atomically, renders aggregate result counts and expands only safe
+category-localized error recovery, excludes internal result names, steps, and
+arbitrary error messages, and renders
 one localization evidence section instead of two. Other capability rows and the
 global numeric budget remain open and are not claimed complete by this milestone.
 

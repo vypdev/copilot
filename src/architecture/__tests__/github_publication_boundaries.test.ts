@@ -123,6 +123,7 @@ describe('GitHub conversation publication boundaries', () => {
     );
 
     expect(presentation).not.toMatch(/result\.steps/u);
+    expect(presentation).not.toMatch(/result\.id/u);
     expect(presentation).not.toContain('buildApplicationErrorPresentation');
   });
 

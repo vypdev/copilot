@@ -20,7 +20,9 @@ The workflow Job Summary remains the place for bounded operational state. Its
 headings and explanatory labels use `repository-locale` (English by default),
 while event names, lifecycle values, error codes, and other machine facts remain
 stable. It reports compact per-result outcomes and category-localized recovery
-guidance without replaying internal `Result.steps` or arbitrary provider text.
+guidance for failed results without replaying internal result names,
+`Result.steps`, or arbitrary provider text. Routine successes and skips are
+reported only as aggregate counts.
 It contains one localization section showing the effective issue and PR
 locales plus exact, base-language, dynamic, or English-fallback catalog evidence.
 

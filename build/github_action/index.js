@@ -41143,7 +41143,7 @@ const SIMPLE_MESSAGE_KEYS = Object.freeze([
     'resultDetails', 'localization', 'repositoryLocale', 'issueLocale',
     'pullRequestLocale', 'catalogResolution', 'descriptors', 'reason', 'failure',
     'findings', 'partial', 'superseded', 'skipped', 'dryRun', 'success', 'invalid',
-    'none', 'noResult', 'unnamedResult', 'impact', 'cause', 'action',
+    'none', 'impact', 'cause', 'action',
     'retainedState', 'reference', 'retryable', 'yes', 'no',
     'resultSucceeded', 'resultFailed', 'resultSkipped',
 ]);
@@ -41180,7 +41180,7 @@ const ENGLISH_SIMPLE = Object.freeze({
     results: 'Results',
     findingStates: 'Finding states',
     bugbotReview: 'Bugbot review',
-    resultDetails: 'Result details',
+    resultDetails: 'Failure details',
     localization: 'Localization',
     repositoryLocale: 'Repository locale',
     issueLocale: 'Issue locale',
@@ -41197,8 +41197,6 @@ const ENGLISH_SIMPLE = Object.freeze({
     success: 'Success',
     invalid: 'invalid',
     none: 'none',
-    noResult: 'No application result was produced.',
-    unnamedResult: 'Unnamed result',
     impact: 'Impact',
     cause: 'Error code',
     action: 'Action',
@@ -41224,7 +41222,7 @@ const SPANISH_SIMPLE = Object.freeze({
     results: 'Resultados',
     findingStates: 'Estados de los hallazgos',
     bugbotReview: 'Revisión de Bugbot',
-    resultDetails: 'Detalles del resultado',
+    resultDetails: 'Detalles del fallo',
     localization: 'Localización',
     repositoryLocale: 'Locale del repositorio',
     issueLocale: 'Locale de la issue',
@@ -41241,8 +41239,6 @@ const SPANISH_SIMPLE = Object.freeze({
     success: 'Correcto',
     invalid: 'no válido',
     none: 'ninguno',
-    noResult: 'No se ha producido ningún resultado de aplicación.',
-    unnamedResult: 'Resultado sin nombre',
     impact: 'Impacto',
     cause: 'Código de error',
     action: 'Acción',
@@ -41423,7 +41419,7 @@ const ENGLISH_LOCALIZATION_SUMMARY_LABELS = Object.freeze({
 });
 /** Builds one bounded, publication-safe, repository-locale GitHub Actions Job Summary. */
 function buildActionSummary(context, catalog = (0, action_summary_message_catalog_1.resolveStaticActionSummaryCatalog)(context.locale?.repository ?? 'en-US')) {
-    const failures = context.results.filter(result => result.errors.length > 0 || (!result.success && result.executed));
+    const failures = context.results.filter(resultFailed);
     const findingStateProjection = (0, bugbot_result_finding_state_projection_policy_1.projectBugbotResultFindingStates)(context.results);
     const findingStates = findingStateProjection.status === 'valid' ? findingStateProjection.counts : undefined;
     const telemetryProjection = (0, bugbot_telemetry_projection_policy_1.projectBugbotResultTelemetry)(context.results);
@@ -41446,7 +41442,7 @@ function buildActionSummary(context, catalog = (0, action_summary_message_catalo
         `| ${catalogText(catalog, 'summary.target')} | ${escapeTable(target)} |`,
         `| ${catalogText(catalog, 'summary.lifecycle')} | ${lifecycle} |`,
         `| ${catalogText(catalog, 'summary.descriptionPolicy')} | ${escapeTable(context.pullRequestDescriptionMode ?? '—')} |`,
-        `| ${catalogText(catalog, 'summary.results')} | ${context.results.length} |`,
+        `| ${catalogText(catalog, 'summary.results')} | ${formatResultCounts(context.results, catalog)} |`,
         `| ${catalogText(catalog, 'summary.findingStates')} | ${formatFindingStates(findingStateProjection, catalog)} |`,
         `| ${catalogText(catalog, 'summary.bugbotReview')} | ${formatBugbotTelemetry(telemetryProjection, catalog)} |`,
     ];
@@ -41459,12 +41455,13 @@ function buildActionSummary(context, catalog = (0, action_summary_message_catalo
         `| ${catalogText(catalog, 'summary.property')} | ${catalogText(catalog, 'summary.value')} |`,
         '| --- | --- |',
         ...rows,
-        '',
-        `## ${catalogText(catalog, 'summary.resultDetails')}`,
-        '',
-        renderResults(context.results, catalog),
-        '',
-        localization,
+        ...(failures.length > 0 ? [
+            '',
+            `## ${catalogText(catalog, 'summary.resultDetails')}`,
+            '',
+            renderFailures(failures, catalog),
+        ] : []),
+        ...(localization ? ['', localization] : []),
     ].join('\n');
 }
 function actionSummaryLocalizationLabels(catalog) {
@@ -41561,18 +41558,27 @@ function formatFindingStates(projection, catalog) {
         .map(([state, value]) => `${catalogText(catalog, `summary.findingState.${state}`)}=${value}`)
         .join(', ') || catalogText(catalog, 'summary.none');
 }
-function renderResults(results, catalog) {
-    if (results.length === 0)
-        return `_${catalogText(catalog, 'summary.noResult')}_`;
+function formatResultCounts(results, catalog) {
+    const counts = results.reduce((current, result) => {
+        if (resultFailed(result))
+            current.failed += 1;
+        else if (!result.executed)
+            current.skipped += 1;
+        else
+            current.succeeded += 1;
+        return current;
+    }, { succeeded: 0, failed: 0, skipped: 0 });
+    return [
+        `${catalogText(catalog, 'summary.resultSucceeded')}: ${counts.succeeded}`,
+        `${catalogText(catalog, 'summary.resultFailed')}: ${counts.failed}`,
+        `${catalogText(catalog, 'summary.resultSkipped')}: ${counts.skipped}`,
+    ].join(' · ');
+}
+function resultFailed(result) {
+    return result.errors.length > 0 || (!result.success && result.executed);
+}
+function renderFailures(results, catalog) {
     return results.map(result => {
-        const failed = result.errors.length > 0 || (!result.success && result.executed);
-        const outcome = failed
-            ? { icon: '❌', label: catalogText(catalog, 'summary.resultFailed') }
-            : !result.executed
-                ? { icon: '⏭️', label: catalogText(catalog, 'summary.resultSkipped') }
-                : result.success
-                    ? { icon: '✅', label: catalogText(catalog, 'summary.resultSucceeded') }
-                    : { icon: '❌', label: catalogText(catalog, 'summary.resultFailed') };
         const errors = result.errors
             .flatMap((error) => {
             return [
@@ -41585,7 +41591,7 @@ function renderResults(results, catalog) {
             ];
         });
         return [
-            `- ${outcome.icon} **${escapeTable(result.id || catalogText(catalog, 'summary.unnamedResult'))}** — ${outcome.label}`,
+            `- ❌ **${catalogText(catalog, 'summary.resultFailed')}**`,
             ...errors,
         ].join('\n');
     }).join('\n');

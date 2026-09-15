@@ -308,10 +308,11 @@ describe('finishGithubAction', () => {
         const summary = mockSummaryPublish.mock.calls[0][0] as string;
         expect(summary).toContain('# Ejecución de Copilot');
         expect(summary).toContain('| Estado | ✅ Correcto |');
-        expect(summary).toContain('## Detalles del resultado');
+        expect(summary).toContain('| Resultados | Completado: 1 · Fallido: 0 · Omitido: 0 |');
+        expect(summary).not.toContain('## Detalles del fallo');
         expect(summary).toContain('| Locale del repositorio | `es-ES` |');
         expect(summary.match(/## Localización/gu)).toHaveLength(1);
-        expect(summary).toContain('✅ **MetadataUseCase** — Completado');
+        expect(summary).not.toContain('MetadataUseCase');
         expect(summary).not.toContain('Updated labels.');
         expect(summary).not.toContain('## Localization');
     });
@@ -491,7 +492,10 @@ describe('finishGithubAction', () => {
             { publish: mockSummaryPublish },
         );
 
-        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('UpdateTitleUseCase'));
+        const summary = mockSummaryPublish.mock.calls[0][0] as string;
+        expect(summary).toContain('| Results | Succeeded: 1 · Failed: 0 · Skipped: 0 |');
+        expect(summary).not.toContain('UpdateTitleUseCase');
+        expect(summary).not.toContain('Title normalized');
         expect(mockPublishInvoke).toHaveBeenCalledWith(expect.objectContaining({ locale: 'en-US' }));
         expect(mockEvidencePublish).not.toHaveBeenCalled();
     });

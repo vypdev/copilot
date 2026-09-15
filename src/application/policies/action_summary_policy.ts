@@ -60,7 +60,7 @@ export function buildActionSummary(
     context: ActionSummaryContext,
     catalog: ActionSummaryMessageCatalog = resolveStaticActionSummaryCatalog(context.locale?.repository ?? 'en-US'),
 ): string {
-    const failures = context.results.filter(result => result.errors.length > 0 || (!result.success && result.executed));
+    const failures = context.results.filter(resultFailed);
     const findingStateProjection = projectBugbotResultFindingStates(context.results);
     const findingStates = findingStateProjection.status === 'valid' ? findingStateProjection.counts : undefined;
     const telemetryProjection = projectBugbotResultTelemetry(context.results);
@@ -83,7 +83,7 @@ export function buildActionSummary(
         `| ${catalogText(catalog, 'summary.target')} | ${escapeTable(target)} |`,
         `| ${catalogText(catalog, 'summary.lifecycle')} | ${lifecycle} |`,
         `| ${catalogText(catalog, 'summary.descriptionPolicy')} | ${escapeTable(context.pullRequestDescriptionMode ?? '—')} |`,
-        `| ${catalogText(catalog, 'summary.results')} | ${context.results.length} |`,
+        `| ${catalogText(catalog, 'summary.results')} | ${formatResultCounts(context.results, catalog)} |`,
         `| ${catalogText(catalog, 'summary.findingStates')} | ${formatFindingStates(findingStateProjection, catalog)} |`,
         `| ${catalogText(catalog, 'summary.bugbotReview')} | ${formatBugbotTelemetry(telemetryProjection, catalog)} |`,
     ];
@@ -101,12 +101,13 @@ export function buildActionSummary(
         `| ${catalogText(catalog, 'summary.property')} | ${catalogText(catalog, 'summary.value')} |`,
         '| --- | --- |',
         ...rows,
-        '',
-        `## ${catalogText(catalog, 'summary.resultDetails')}`,
-        '',
-        renderResults(context.results, catalog),
-        '',
-        localization,
+        ...(failures.length > 0 ? [
+            '',
+            `## ${catalogText(catalog, 'summary.resultDetails')}`,
+            '',
+            renderFailures(failures, catalog),
+        ] : []),
+        ...(localization ? ['', localization] : []),
     ].join('\n');
 }
 
@@ -227,17 +228,26 @@ function formatFindingStates(
         .join(', ') || catalogText(catalog, 'summary.none');
 }
 
-function renderResults(results: readonly Result[], catalog: ActionSummaryMessageCatalog): string {
-    if (results.length === 0) return `_${catalogText(catalog, 'summary.noResult')}_`;
+function formatResultCounts(results: readonly Result[], catalog: ActionSummaryMessageCatalog): string {
+    const counts = results.reduce((current, result) => {
+        if (resultFailed(result)) current.failed += 1;
+        else if (!result.executed) current.skipped += 1;
+        else current.succeeded += 1;
+        return current;
+    }, { succeeded: 0, failed: 0, skipped: 0 });
+    return [
+        `${catalogText(catalog, 'summary.resultSucceeded')}: ${counts.succeeded}`,
+        `${catalogText(catalog, 'summary.resultFailed')}: ${counts.failed}`,
+        `${catalogText(catalog, 'summary.resultSkipped')}: ${counts.skipped}`,
+    ].join(' · ');
+}
+
+function resultFailed(result: Result): boolean {
+    return result.errors.length > 0 || (!result.success && result.executed);
+}
+
+function renderFailures(results: readonly Result[], catalog: ActionSummaryMessageCatalog): string {
     return results.map(result => {
-        const failed = result.errors.length > 0 || (!result.success && result.executed);
-        const outcome = failed
-            ? { icon: '❌', label: catalogText(catalog, 'summary.resultFailed') }
-            : !result.executed
-                ? { icon: '⏭️', label: catalogText(catalog, 'summary.resultSkipped') }
-                : result.success
-                    ? { icon: '✅', label: catalogText(catalog, 'summary.resultSucceeded') }
-                    : { icon: '❌', label: catalogText(catalog, 'summary.resultFailed') };
         const errors = result.errors
             .flatMap((error) => {
                 return [
@@ -250,7 +260,7 @@ function renderResults(results: readonly Result[], catalog: ActionSummaryMessage
                 ];
             });
         return [
-            `- ${outcome.icon} **${escapeTable(result.id || catalogText(catalog, 'summary.unnamedResult'))}** — ${outcome.label}`,
+            `- ❌ **${catalogText(catalog, 'summary.resultFailed')}**`,
             ...errors,
         ].join('\n');
     }).join('\n');
