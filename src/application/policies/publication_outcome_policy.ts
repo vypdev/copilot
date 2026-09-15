@@ -1,4 +1,10 @@
 import { getResultPayload, type Result } from '../../data/model/result';
+import {
+    PUBLICATION_TOPICS,
+    publicationTargetToken,
+    type PublicationTopic,
+    type TransitionPublicationIntent,
+} from '../../domain/github_publication';
 
 export interface StaleSourcePublicationOutcome {
     readonly reason: 'stale-source';
@@ -20,7 +26,19 @@ export interface PublicationCleanupPayload {
     readonly publicationCleanup: DuplicateCompactionPublicationOutcome;
 }
 
+export interface TransitionPublicationOutcome {
+    readonly topic: PublicationTopic;
+    readonly target: string;
+    readonly effect: 'created' | 'unchanged';
+    readonly fingerprint: string;
+}
+
+export interface TransitionPublicationPayload {
+    readonly publicationTransition: TransitionPublicationOutcome;
+}
+
 const MAX_REPORTED_COMMENT_IDS = 20;
+const MAX_REPORTED_TRANSITIONS = 20;
 
 /** Builds bounded evidence for a commit-derived result that was intentionally suppressed. */
 export function buildStaleSourcePublicationPayload(
@@ -79,6 +97,53 @@ export function duplicateCompactionPublicationOutcomes(
             compactedCount: cleanup.compactedCount,
         })];
     }));
+}
+
+/** Builds content-free, bounded evidence for one action-notification decision. */
+export function buildTransitionPublicationPayload(
+    intent: TransitionPublicationIntent,
+    effect: TransitionPublicationOutcome['effect'],
+): Readonly<TransitionPublicationPayload> {
+    return Object.freeze({
+        publicationTransition: Object.freeze({
+            topic: intent.identity.topic,
+            target: publicationTargetToken(intent.identity.target),
+            effect,
+            fingerprint: intent.fingerprint,
+        }),
+    });
+}
+
+export function transitionPublicationOutcomes(
+    results: readonly Result[],
+): readonly TransitionPublicationOutcome[] {
+    return Object.freeze(results.flatMap(result => {
+        const payload = getResultPayload(result.payload);
+        const transition = getResultPayload(payload?.publicationTransition);
+        if (!transition
+            || typeof transition.topic !== 'string'
+            || !PUBLICATION_TOPICS.includes(transition.topic as PublicationTopic)
+            || typeof transition.target !== 'string'
+            || !isPublicationTargetToken(transition.target)
+            || transition.effect !== 'created' && transition.effect !== 'unchanged'
+            || typeof transition.fingerprint !== 'string'
+            || !/^[a-f0-9]{8,64}$/u.test(transition.fingerprint)) {
+            return [];
+        }
+        return [Object.freeze({
+            topic: transition.topic as PublicationTopic,
+            target: transition.target,
+            effect: transition.effect,
+            fingerprint: transition.fingerprint,
+        })];
+    }).slice(0, MAX_REPORTED_TRANSITIONS));
+}
+
+function isPublicationTargetToken(value: string): boolean {
+    const match = value.match(/^(?:issue|pr):([1-9]\d*)$/u);
+    if (!match) return false;
+    const number = Number(match[1]);
+    return Number.isSafeInteger(number) && number > 0;
 }
 
 function isPositiveInteger(value: unknown): value is number {

@@ -9,6 +9,7 @@
     { "file": "src/application/usecases/steps/commit/bugbot/synchronize_bugbot_review_presentation_use_case.ts", "addComment": 1, "updateComment": 2, "updatePullRequestReview": 1, "reason": "Reconciles the Bugbot aggregate card, duplicates, and historical review state." },
     { "file": "src/application/usecases/steps/common/duplicate_comment_cleanup_workflow.ts", "updateComment": 1, "removeComment": 1, "reason": "Removes exact bot-owned duplicates or compacts them when deletion is forbidden." },
     { "file": "src/application/usecases/steps/common/reply_publication_workflow.ts", "addComment": 1, "reason": "Publishes one correlated explicit reply and selects exact bot-owned duplicates for cleanup." },
-    { "file": "src/application/usecases/steps/common/status_card_publication_workflow.ts", "addComment": 1, "updateComment": 1, "reason": "Creates or reconciles one canonical semantic status card and selects exact bot-owned duplicates for cleanup." }
+    { "file": "src/application/usecases/steps/common/status_card_publication_workflow.ts", "addComment": 1, "updateComment": 1, "reason": "Creates or reconciles one canonical semantic status card and selects exact bot-owned duplicates for cleanup." },
+    { "file": "src/application/usecases/steps/common/transition_notification_workflow.ts", "addComment": 1, "reason": "Creates one fingerprinted action notification and selects exact bot-owned duplicates for cleanup." }
   ]
 }

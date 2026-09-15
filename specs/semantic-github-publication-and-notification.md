@@ -4,7 +4,8 @@
 - Date: 2026-09-14
 - Catalog capability ID: github-communication-experience
 - Last verified: 2026-09-15 for the delivered shared publication, progress
-  source-freshness, exact-duplicate cleanup, branch-sync,
+  source-freshness, exact-duplicate cleanup, transition-notification substrate,
+  branch-sync,
   review-context, Bugbot, deployment, setup-doctor, generic Job Summary,
   application-error, explicit-request, and local-result slices; remaining
   clauses are prospective
@@ -363,12 +364,36 @@ For a `status` intent the application MUST:
 Historic generic comments and comments without an exact owned marker MUST NOT be
 deleted or rewritten.
 
+For a `transition` intent the application MUST:
+
+1. derive the fingerprint from a closed trusted action, exact semantic identity,
+   and trusted source version—never from visible or model-generated prose;
+2. accept only a non-empty deterministic message no longer than 400 characters
+   with at most two Markdown links and no embedded HTML marker;
+3. list comments matching the exact identity, fingerprint, valid transition
+   marker, and configured bot identity;
+4. create only when no match exists, then re-list to detect concurrent creation;
+5. keep the lowest exact bot-owned comment ID as the immutable notification;
+6. delete later exact duplicates, or replace them with a localized compact
+   pointer when deletion is forbidden; and
+7. report topic, target, `created` or `reused`, fingerprint, and bounded cleanup
+   evidence in the repository-locale Job Summary without copying message bodies.
+
+A renderer or translation change MUST NOT rewrite or recreate an already-issued
+notification for the same fingerprint. Human and third-party markers are inert.
+
 ### 6.5 Stable identity and source freshness
 
 The shared marker format is:
 
 ```html
 <!-- copilot:publication schema="1" topic="progress" target="issue:344" key="work" source="<safe token>" digest="<8-64 hex>" -->
+```
+
+Action notifications use a distinct immutable envelope:
+
+```html
+<!-- copilot:transition schema="1" topic="branch-sync" target="issue:344" key="dependency:<digest>" fingerprint="<8-64 hex>" message="<safe message key>" -->
 ```
 
 - Allowed topics at launch are `plan`, `progress`, `branch-sync`, `bugbot`,
@@ -1030,6 +1055,16 @@ visible as provider failures. The localized Job Summary reports the total and
 up to 20 affected comment IDs. Commit-derived cards revalidate source freshness
 before both deletion and any fallback update. Explicit caller-selected comment
 and deployment ports remain narrower and receive no deletion authority.
+
+The shared transition-notification substrate now adds a strict immutable marker,
+a fingerprint derived only from closed trusted transition facts, and a bounded
+reconciler over the existing semantic issue-comment publication port. It creates
+once, re-lists after creation, keeps the lowest exact bot-owned ID, removes or
+compacts concurrent duplicates, and never rewrites an issued notification when
+copy changes. The generic Job Summary projects only topic, target, effect, and
+fingerprint in the configured repository locale. No feature is considered
+migrated merely because this shared substrate exists; branch-sync adoption is a
+separate rollout slice.
 
 No remote product flag is required. Each phase must be independently releasable
 and its compatibility adapter must fail closed to Job Summary, not fall back to

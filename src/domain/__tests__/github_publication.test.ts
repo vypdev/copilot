@@ -30,7 +30,7 @@ describe('GitHub publication domain', () => {
       { kind: 'none', reason: 'routine' },
       { kind: 'reply', target: identity.target, correlationId: 'request-1', messageKey: 'done', locale: 'en-US', digest: '12345678', projection: {} },
       { kind: 'status', identity, sourceVersion: 'head:abc', digest: '12345678', locale: 'en-US', projection: {} },
-      { kind: 'transition', identity, fingerprint: '12345678', messageKey: 'action', values: {} },
+      { kind: 'transition', identity, fingerprint: '12345678', messageKey: 'action', locale: 'en-US', values: {} },
       { kind: 'inline-finding', identity: 'finding-1', path: 'src/a.ts', line: 1, severity: 'high', title: 'Unsafe input', evidence: 'Untrusted value reaches SQL.' },
     ];
 

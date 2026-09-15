@@ -65,6 +65,7 @@ export interface TransitionPublicationIntent {
     readonly identity: PublicationIdentity;
     readonly fingerprint: string;
     readonly messageKey: string;
+    readonly locale: string;
     readonly values: Readonly<Record<string, string | number>>;
 }
 

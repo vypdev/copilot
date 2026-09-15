@@ -20,6 +20,12 @@ the exact identity and bot owner. The GitHub repository treats an already absent
 comment as idempotently removed, maps a deletion-forbidden response to a
 localized compact-pointer fallback plus bounded Job Summary evidence, and
 propagates every other provider failure.
+Action notifications use a separate immutable transition marker and the same
+publication boundary. A closed trusted action, semantic identity, and source
+version derive the fingerprint; visible prose never participates. The shared
+coordinator creates at most one notification for that fingerprint, re-lists to
+heal concurrent creation, and reports `created` or `reused` with content-free
+identity evidence in the repository-locale Job Summary.
 Initial issue help and addressed Think requests follow that rule: each agent
 step returns an immutable `direct-answer` projection and receives no GitHub
 mutation port. The shared reply reconciler sanitizes and publishes the answer

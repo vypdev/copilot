@@ -249,6 +249,32 @@ describe('action summary policy', () => {
         expect(complete).toContain('retained compact pointers for 2 comments (IDs: 12, 15)');
     });
 
+    it('reports content-free action-notification decisions in the repository locale', () => {
+        const result = new Result({
+            id: 'ObserveBranchSyncUseCase', success: true, executed: true,
+            payload: { publicationTransition: {
+                topic: 'branch-sync', target: 'issue:7', effect: 'created', fingerprint: '0123abcd',
+            } },
+        });
+
+        expect(buildActionSummary({
+            owner: 'owner', repository: 'repo', eventName: 'push', issueNumber: 7,
+            pullRequestNumber: -1, results: [result],
+        })).toContain('| Action notifications | branch-sync on issue:7: created (fingerprint 0123abcd) |');
+
+        expect(buildActionSummary({
+            owner: 'owner', repository: 'repo', eventName: 'push', issueNumber: 7,
+            pullRequestNumber: -1, results: [new Result({
+                id: 'Replay', success: true, executed: true,
+                payload: { publicationTransition: {
+                    topic: 'branch-sync', target: 'issue:7', effect: 'unchanged', fingerprint: '0123abcd',
+                } },
+            })],
+            locale: { repository: 'es-ES', issue: 'es-ES', pullRequest: 'es-ES' },
+        }, resolveStaticActionSummaryCatalog('es-ES')))
+            .toContain('| Notificaciones de acción | branch-sync en issue:7: reutilizada (huella 0123abcd) |');
+    });
+
     it('reports active findings as a warning unless fail-on-unresolved is enabled', () => {
         const summary = buildActionSummary({
             owner: 'owner',
