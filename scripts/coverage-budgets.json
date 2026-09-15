@@ -324,6 +324,7 @@
             "src/application/policies/action_summary_policy.ts",
             "src/application/policies/action_summary_message_catalog.ts",
             "src/application/policies/comment_translation_policy.ts",
+            "src/application/policies/copilot_evidence_policy.ts",
             "src/application/policies/copilot_interaction_policy.ts",
             "src/application/policies/inactivity_message_catalog.ts",
             "src/application/policies/inactivity_notification_policy.ts",

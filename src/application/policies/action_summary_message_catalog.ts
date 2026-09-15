@@ -27,6 +27,9 @@ const SIMPLE_MESSAGE_KEYS = Object.freeze([
   'pullRequestLocale', 'catalogResolution', 'descriptors', 'reason', 'failure',
   'findings', 'partial', 'superseded', 'skipped', 'dryRun', 'success', 'invalid',
   'none', 'resultSucceeded', 'resultFailed', 'resultSkipped',
+  'evidenceActionableFindings', 'evidenceActionableFailures',
+  'evidencePartialCoverage', 'evidenceSuperseded', 'evidenceSkipped',
+  'evidenceNoActionableResult', 'evidenceCompleted',
 ] as const);
 
 const TEMPLATE_MESSAGE_IDS = Object.freeze([
@@ -104,6 +107,13 @@ const ENGLISH_SIMPLE: Readonly<Record<SimpleMessageKey, string>> = Object.freeze
   resultSucceeded: 'Succeeded',
   resultFailed: 'Failed',
   resultSkipped: 'Skipped',
+  evidenceActionableFindings: 'Copilot found actionable findings',
+  evidenceActionableFailures: 'Copilot found actionable failures',
+  evidencePartialCoverage: 'Copilot review has partial coverage',
+  evidenceSuperseded: 'Copilot review was superseded',
+  evidenceSkipped: 'Copilot review was skipped',
+  evidenceNoActionableResult: 'Copilot review produced no actionable result',
+  evidenceCompleted: 'Copilot completed successfully',
 });
 
 const SPANISH_SIMPLE: Readonly<Record<SimpleMessageKey, string>> = Object.freeze({
@@ -145,6 +155,13 @@ const SPANISH_SIMPLE: Readonly<Record<SimpleMessageKey, string>> = Object.freeze
   resultSucceeded: 'Completado',
   resultFailed: 'Fallido',
   resultSkipped: 'Omitido',
+  evidenceActionableFindings: 'Copilot encontró hallazgos que requieren atención',
+  evidenceActionableFailures: 'Copilot encontró fallos que requieren atención',
+  evidencePartialCoverage: 'La revisión de Copilot tiene cobertura parcial',
+  evidenceSuperseded: 'La revisión de Copilot fue sustituida',
+  evidenceSkipped: 'La revisión de Copilot fue omitida',
+  evidenceNoActionableResult: 'La revisión de Copilot no produjo resultados que requieran atención',
+  evidenceCompleted: 'Copilot terminó correctamente',
 });
 
 const ENGLISH_TEMPLATES: Readonly<Record<TemplateMessageId, CatalogMessage>> = Object.freeze({

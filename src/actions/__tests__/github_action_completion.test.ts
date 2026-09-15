@@ -493,6 +493,56 @@ describe('finishGithubAction', () => {
         );
     });
 
+    it('renders a PR Check title and summary in the pull-request locale while the Job Summary stays in the repository locale', async () => {
+        const action = Object.assign(execution(), {
+            eventName: 'pull_request',
+            isIssue: false,
+            isPullRequest: true,
+            pullRequest: { number: 12, action: 'synchronize' },
+            locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'es-ES' },
+            inputs: { pull_request: { head: { sha: 'abc1234' } } },
+        });
+        const results = [new Result({
+            id: 'DetectPotentialProblemsUseCase',
+            success: true,
+            executed: true,
+            payload: {
+                bugbotTelemetry: {
+                    schemaVersion: 1,
+                    outcome: 'no-findings',
+                    elapsedMs: 12,
+                    configuredEffort: 'smart',
+                    headSha: 'abc1234',
+                },
+                findingStates: completeFindingStates(),
+            },
+        })];
+
+        await finishGithubAction(
+            action,
+            results,
+            {} as never,
+            {} as never,
+            { publish: mockEvidencePublish },
+            { publish: mockSummaryPublish },
+            new ResolveMessageCatalogUseCase(),
+        );
+
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('# Copilot execution'));
+        expect(mockEvidencePublish).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name: 'Copilot / Review',
+                title: 'Copilot terminó correctamente',
+                summary: expect.stringContaining('# Ejecución de Copilot'),
+            }),
+            'test-owner',
+            'test-repo',
+            'product-pat',
+        );
+        const evidence = mockEvidencePublish.mock.calls[0][0];
+        expect(evidence.summary).not.toContain('# Copilot execution');
+    });
+
     it('keeps metadata-only PR completion out of the stable Review Check', async () => {
         const action = Object.assign(execution(), {
             owner: 'test-owner',

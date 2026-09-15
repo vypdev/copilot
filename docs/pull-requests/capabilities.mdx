@@ -106,7 +106,10 @@ capability does not make an otherwise successful functional workflow fail.
 The Job Summary uses `repository-locale` for headings and explanatory labels,
 defaults to English, and records one non-duplicated localization section. Stable
 event, lifecycle, finding-state, and error-code values remain suitable for
-operator diagnosis even when the surrounding copy is localized.
+operator diagnosis even when the surrounding copy is localized. The stable
+`Copilot / Review` Check name remains locale-independent for branch protection;
+its human-facing title and summary use `pull-requests-locale` (or the inherited
+repository locale) and fall back atomically to English.
 
 The supplied workflow names runs as `Copilot PR · <event>:<action>`, so normal
 analysis, review-state observation, and merge-queue admission are recognizable

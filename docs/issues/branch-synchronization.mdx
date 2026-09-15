@@ -128,6 +128,18 @@ Every command finishes with a comment in the conversation. The report distinguis
 - merged after fixer-agent conflict resolution; or
 - safely aborted, with a publishable reason and no provider-secret details.
 
+Successful and no-change reports use the issue or pull-request surface locale,
+are correlated to the requesting comment, and are reconciled at most once on
+event replay. For example, an already aligned branch receives one sentence:
+
+```markdown
+No changes were needed — `feature/42` already contains `develop`.
+```
+
+A completed merge names the branches, pushed commit, fixer use when applicable,
+and number of verification checks. It never repeats internal execution steps or
+adds a generic action summary to the conversation.
+
 Successful reports include the parent and working branches, verification count, and merge commit SHA in the structured run result. The subsequent push observer resolves the prior stale-branch card.
 
 ## Why the normal commit workflow remains limited

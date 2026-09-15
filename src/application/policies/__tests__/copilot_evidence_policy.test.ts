@@ -1,5 +1,6 @@
 import { buildCopilotEvidence } from '../copilot_evidence_policy';
 import { Result } from '../../../data/model/result';
+import { resolveStaticActionSummaryCatalog } from '../action_summary_message_catalog';
 
 const telemetry = (outcome: string, headSha = 'sha-123') => ({
     bugbotTelemetry: { schemaVersion: 1, outcome, elapsedMs: 10, configuredEffort: 'smart', headSha },
@@ -205,6 +206,42 @@ describe('buildCopilotEvidence', () => {
             summary: 'summary',
             results: [new Result({ id: 'verification', success: true, executed: true })],
         })).toMatchObject({ name: 'Copilot / Verification', conclusion: 'success' });
+    });
+
+    it('localizes human-facing Check titles while preserving the stable Check name', () => {
+        const evidence = buildCopilotEvidence({
+            eventName: 'issues',
+            headSha: 'sha-123',
+            summary: '# Ejecución de Copilot',
+            results: [new Result({ id: 'plan', success: true, executed: true })],
+            locale: 'es-MX',
+        });
+
+        expect(evidence).toMatchObject({
+            name: 'Copilot / Plan',
+            title: 'Copilot terminó correctamente',
+            summary: '# Ejecución de Copilot',
+        });
+    });
+
+    it('bounds and neutralizes a dynamically resolved Check title', () => {
+        const english = resolveStaticActionSummaryCatalog('en-US');
+        const catalog = {
+            ...english,
+            message: jest.fn((id: string) => id === 'summary.evidenceCompleted'
+                ? `@team\n::notice:: ${'x'.repeat(400)}`
+                : english.message(id as Parameters<typeof english.message>[0])),
+        } as typeof english;
+
+        const evidence = buildCopilotEvidence({
+            eventName: 'push', headSha: 'sha-123', summary: 'summary', catalog,
+            results: [new Result({ id: 'verify', success: true, executed: true })],
+        });
+
+        expect(evidence?.title.length).toBeLessThanOrEqual(255);
+        expect(evidence?.title).toContain('@\u200bteam');
+        expect(evidence?.title).toContain(':\u200b:notice');
+        expect(evidence?.title).not.toContain('\n');
     });
 
     it.each([

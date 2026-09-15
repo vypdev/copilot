@@ -1019,6 +1019,13 @@ text reports localized semantic status and result counts without replaying
 internal step or reminder prose. Catalog version 3 owns the added reply and CLI
 descriptors.
 
+Native Check presentation now follows the surface-locale row in §6.1. The
+branch-protection Check name remains stable, while its bounded title and summary
+resolve from one complete issue, pull-request, or repository catalog. The same
+publication catalog renders source-correlated `sync-branch` outcomes in the
+requesting conversation's effective locale; branch names, commit IDs, command
+identity, markers, and correlation remain locale-independent.
+
 ### 13.5 Rollback
 
 Rollback MUST preserve the new input inheritance reader and legacy/new marker
