@@ -28,9 +28,10 @@ on:
 
 Do not subscribe the supplied PR workflow to `pull_request: edited`. Copilot
 updates the PR body itself, so that metadata event would create redundant runs.
-Human title/body edits do not trigger Copilot. Title normalization still runs
-on open/reopen; subsequent synchronize events affect the body only according to
-the configured AI description ownership mode.
+Human title/body edits do not trigger Copilot. Issue-derived title normalization
+still runs on open/reopen when a distinct issue exists; an unlinked PR keeps its
+title. Subsequent synchronize events affect the body only according to the
+configured AI description ownership mode.
 
 For **first-time setup**, at least **`opened`** and **`synchronize`** are useful so that new PRs get full treatment and updates when the branch changes.
 

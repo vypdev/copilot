@@ -75,6 +75,23 @@ describe('UpdateTitleUseCase', () => {
     expect(results[0].executed).toBe(false);
   });
 
+  it.each([-1, 2, Number.MAX_SAFE_INTEGER + 1])(
+    'preserves an unlinked PR title without issue-provider I/O: %s',
+    async (issueNumber) => {
+      const param = baseParam({
+        isPullRequest: true,
+        issueNumber,
+        emoji: { emojiLabeledTitle: true, branchManagementEmoji: '' },
+      });
+
+      const results = await invoke(param);
+
+      expect(results[0]).toMatchObject({ success: true, executed: false });
+      expect(mockGetTitle).not.toHaveBeenCalled();
+      expect(mockUpdateTitlePullRequestFormat).not.toHaveBeenCalled();
+    },
+  );
+
   it('returns success executed true when isIssue, emojiLabeledTitle, and updateTitleIssueFormat returns new title', async () => {
     mockGetTitle.mockResolvedValue('Old title');
     mockUpdateTitleIssueFormat.mockResolvedValue('v1.0.0 Old title');

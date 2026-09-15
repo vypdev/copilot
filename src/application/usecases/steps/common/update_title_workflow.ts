@@ -4,6 +4,7 @@ import type {
     TitleLabelFacts,
 } from '../../../../application/ports/issue_title_ports';
 import { toApplicationError } from '../../../errors/application_error';
+import { parsePositiveSafeInteger } from '../../../../domain/positive_integer_policy';
 
 export type UpdateTitleContext =
     | {
@@ -98,14 +99,18 @@ export async function runPullRequestTitleUpdate(
     issueRepository: BoundIssueTitlePort,
 ): Promise<Result[]> {
     if (!param.enabled) return [skippedResult(taskId)];
-    const issueTitle = await issueRepository.getTitle(param.issueNumber);
+    const linkedIssueNumber = parsePositiveSafeInteger(param.issueNumber);
+    if (!linkedIssueNumber || linkedIssueNumber === param.pullRequestNumber) {
+        return [skippedResult(taskId)];
+    }
+    const issueTitle = await issueRepository.getTitle(linkedIssueNumber);
     if (issueTitle === undefined) {
         return [new Result({ id: taskId, success: false, executed: true, steps: ['Tried to update title, but there was a problem.'] })];
     }
     const title = await issueRepository.updatePullRequestTitle({
         pullRequestTitle: param.pullRequestTitle,
         issueTitle,
-        issueNumber: param.issueNumber,
+        issueNumber: linkedIssueNumber,
         pullRequestNumber: param.pullRequestNumber,
         labelFacts: param.labelFacts,
     });

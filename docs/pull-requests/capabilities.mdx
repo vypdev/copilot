@@ -30,7 +30,7 @@ compensated failure says that the original body and base were restored.
 If a newer event sees a different current base, Copilot stops without writing;
 restore the base named by the failed run or start again from the current PR state.
 
-The branch name must follow the pattern that includes the issue number (e.g. `<tree>/<issue-number>-<slug>`). If it does not, the PR still receives PR-native enrichment such as title normalization on open/reopen, assignee and reviewer selection, project linking, description, and review where configured. Issue-derived priority, size, and progress synchronization and merge closure are skipped because those policies need a separate issue. Copilot never uses the PR number itself as fallback linkage and never creates `Closes #<same-pr-number>`. See [Issues → Branch management](/issues/branch-management) for naming conventions.
+The branch name must follow the pattern that includes the issue number (e.g. `<tree>/<issue-number>-<slug>`). If it does not, the PR still receives PR-native enrichment such as assignee and reviewer selection, project linking, description, and review where configured. Issue-derived title normalization, priority, size, and progress synchronization and merge closure are skipped because those policies need a separate issue. Copilot never uses the PR number itself as fallback linkage and never creates `Closes #<same-pr-number>`. See [Issues → Branch management](/issues/branch-management) for naming conventions.
 
 ## Project linking
 

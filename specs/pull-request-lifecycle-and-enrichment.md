@@ -134,8 +134,8 @@ link mutations are compensated on every edge, and partial cleanup is explicit.
 ### 6.1 Happy path
 
 1. Same-repository PR opens; its managed branch may contain a distinct issue identity.
-2. Copilot enriches PR-native title, people, projects, description, and review;
-   it adds issue linkage and issue-derived priority/size/progress synchronization
+2. Copilot enriches PR-native people, projects, description, and review; it adds
+   issue linkage and issue-derived title/priority/size/progress synchronization
    only when a distinct issue exists.
 3. Review result updates current status/lifecycle.
 4. Synchronize reruns only refreshable content and review.
@@ -143,9 +143,10 @@ link mutations are compensated on every edge, and partial cleanup is explicit.
 
 ### 6.2 Alternative paths
 
-- No linked issue still permits title/assignee/reviewer/project/review enrichment
-  and a description inferred from PR metadata/diff, without an issue-provider
-  call, issue-derived label synchronization, or false `Closes` line.
+- No linked issue preserves the PR title and still permits
+  assignee/reviewer/project/review enrichment and a description inferred from PR
+  metadata/diff, without an issue-provider call, issue-derived label
+  synchronization, or false `Closes` line.
 - A distinct linked issue with an empty description remains valid optional
   context; description generation continues from PR metadata and diff.
 - A branch number equal to the PR number is unlinked rather than self-linked.
