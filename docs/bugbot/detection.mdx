@@ -146,7 +146,7 @@ When there are more findings than the limit:
 
 - The action publishes the first N findings as individual issue comments for issue-only work, or as inline comments in one PR review.
 - Overflow is added to the same PR review summary. When no PR exists, one extra issue comment summarizes it.
-- On a PR, the canonical **Bugbot status** accounts for every accepted current finding, including overflow. Overflow rows have no thread link because they were deliberately not published individually. Increase the configured limit or reduce the PR scope; rerun only after changing the relevant scope, limit, access, or code. A historical review's mutable block reports its individually tracked findings and explicitly flags historical overflow instead of claiming that untracked entries are resolved.
+- On a PR, the canonical **Bugbot status** accounts for every accepted current finding, including overflow. Overflow rows have no thread link because they were deliberately not published individually. Inspect overflow manually; reduce the relevant scope or restore provider access before rerunning. Fixed context safety limits are not configuration knobs, and rerunning unchanged capped evidence cannot improve coverage. A historical review's mutable block reports its individually tracked findings and explicitly flags historical overflow instead of claiming that untracked entries are resolved.
 
 So a PR analysis creates one review batch instead of N unrelated reviews and N duplicated conversation comments.
 

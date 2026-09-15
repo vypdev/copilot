@@ -121,12 +121,34 @@ export async function setProjectBoardSingleSelectField(
         logDebugInfo(`Field '${fieldName}' is already set to '${fieldValue}'. No update needed.`);
         return false;
     }
+    return updateProjectBoardSingleSelectField(client, project, contentId, target);
+}
 
+/** Updates a ProjectV2 item returned by the link mutation without waiting for list propagation. */
+export async function setProjectBoardSingleSelectFieldByItemId(
+    graphqlClient: GithubClientPort<GithubGraphqlTransportClient>,
+    project: ProjectDetail,
+    projectItemId: string,
+    fieldName: string,
+    fieldValue: string,
+    token: string,
+): Promise<boolean> {
+    const client = graphqlClient.getClient(token);
+    const target = await findFieldOption(client, project, fieldName, fieldValue);
+    return updateProjectBoardSingleSelectField(client, project, projectItemId, target);
+}
+
+async function updateProjectBoardSingleSelectField(
+    client: GithubGraphqlTransportClient,
+    project: ProjectDetail,
+    projectItemId: string,
+    target: FieldOption,
+): Promise<boolean> {
     const mutationResult = await client.graphql<{
         updateProjectV2ItemFieldValue?: { projectV2Item?: { id: string } } | null;
     }>(UPDATE_FIELD_MUTATION, {
         projectId: project.id,
-        itemId: contentId,
+        itemId: projectItemId,
         fieldId: target.fieldId,
         optionId: target.optionId,
     });

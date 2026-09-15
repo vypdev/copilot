@@ -130,8 +130,8 @@ describe('Bugbot review presentation', () => {
     expect(body).toContain('issue-comments: partial; retained=200, omitted=1');
     expect(body).toContain('truncated=2');
     expect(body).toContain('provider page limit reached');
-    expect(body).toContain('Inspect the omitted items or reduce the pull request scope');
-    expect(body).toContain('Rerun the review only after changing');
+    expect(body).toContain('Do not treat this review as complete');
+    expect(body).toContain('rerun only after reducing the relevant scope or restoring provider access');
     expect(body).not.toContain('Run `/copilot recheck`');
     expect(body).not.toContain('No active findings');
     expect(body).not.toContain('No action required');
@@ -142,7 +142,8 @@ describe('Bugbot review presentation', () => {
       findings: [],
     }), 'es-ES', links);
     expect(spanish).toContain('## Bugbot: revisión incompleta');
-    expect(spanish).toContain('Repite la revisión solo después de cambiar');
+    expect(spanish).toContain('No consideres completa esta revisión');
+    expect(spanish).toContain('repite la revisión solo después de reducir el alcance relevante');
     expect(spanish).toContain('<summary>Cobertura incompleta</summary>');
   });
 

@@ -67,12 +67,12 @@ export async function getProjectItemId(
   return projectItemId;
 }
 
-export async function isProjectContentLinked(
+export async function getProjectItemIdByContentId(
   graphqlClient: GithubGraphqlTransportClient,
   project: ProjectDetail,
   contentId: string,
-): Promise<boolean> {
-  return Boolean(await findProjectItemId(graphqlClient, project, contentId));
+): Promise<string | undefined> {
+  return findProjectItemId(graphqlClient, project, contentId);
 }
 
 async function findProjectItemId(

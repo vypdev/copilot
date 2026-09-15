@@ -8,14 +8,7 @@ jest.mock('../../../../../utils/logger', () => ({
 }));
 
 const mockLinkContentId = jest.fn();
-const mockMoveIssueToColumn = jest.fn();
-const mockWait = jest.fn((milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds)));
-jest.mock('../../../../../data/repository/project/project_board_query_repository', () => ({
-  ProjectBoardQueryRepository: jest.fn().mockImplementation(() => ({
-    linkContentId: mockLinkContentId,
-    moveIssueToColumn: mockMoveIssueToColumn,
-  })),
-}));
+const mockMoveContent = jest.fn();
 
 function baseParam(overrides: Record<string, unknown> = {}) {
   return {
@@ -32,60 +25,46 @@ describe('LinkPullRequestProjectUseCase', () => {
   let useCase: LinkPullRequestProjectUseCase;
 
   beforeEach(() => {
-    jest.useFakeTimers();
-    useCase = new LinkPullRequestProjectUseCase(
-      {
-        resolveIssueContentId: jest.fn(),
-        linkContentId: mockLinkContentId,
-        moveContent: mockMoveIssueToColumn,
-      },
-      { wait: mockWait },
-    );
-    mockLinkContentId.mockResolvedValue(true);
-    mockMoveIssueToColumn.mockResolvedValue(true);
-    mockWait.mockClear();
+    jest.clearAllMocks();
+    useCase = new LinkPullRequestProjectUseCase({
+      resolveIssueContentId: jest.fn(),
+      linkContentId: mockLinkContentId,
+      moveContent: mockMoveContent,
+    });
+    mockLinkContentId.mockResolvedValue('project-item-1');
+    mockMoveContent.mockResolvedValue(true);
   });
 
-  afterEach(() => {
-    jest.useRealTimers();
-  });
+  it('uses the authoritative project item ID to set the configured status immediately', async () => {
+    const results = await useCase.invoke(baseParam());
 
-  it('links PR to project and moves to column', async () => {
-    const param = baseParam();
-    const promise = useCase.invoke(param);
-    await jest.advanceTimersByTimeAsync(10000);
-    const results = await promise;
     expect(mockLinkContentId).toHaveBeenCalledWith(expect.any(Object), 'pr-node-1');
-    expect(mockMoveIssueToColumn).toHaveBeenCalledWith(expect.any(Object), 10, 'To Do');
-    expect(results.some((r) => r.success && r.steps?.some((s) => s.includes('Backlog')))).toBe(true);
+    expect(mockMoveContent).toHaveBeenCalledWith(expect.any(Object), 'project-item-1', 'To Do');
+    expect(results).toEqual([expect.objectContaining({
+      success: true,
+      executed: true,
+      steps: [expect.stringContaining('with status `To Do`')],
+    })]);
   });
 
-  it('returns failure when moveIssueToColumn returns false', async () => {
-    mockMoveIssueToColumn.mockResolvedValue(false);
-    const param = baseParam();
-    const promise = useCase.invoke(param);
-    await jest.advanceTimersByTimeAsync(10000);
-    const results = await promise;
-    expect(results.some((r) => r.success === false && r.steps?.some((s) => s.includes('error moving')))).toBe(true);
+  it('reports the retained link when setting the project status fails', async () => {
+    mockMoveContent.mockResolvedValue(false);
+
+    const results = await useCase.invoke(baseParam());
+
+    expect(results).toEqual([expect.objectContaining({
+      success: false,
+      executed: true,
+      steps: [expect.stringContaining('status could not be set')],
+    })]);
   });
 
-  it('pushes no result when linkContentId returns false', async () => {
-    mockLinkContentId.mockReset();
-    mockLinkContentId.mockResolvedValue(false);
-    mockMoveIssueToColumn.mockClear();
-    const param = baseParam();
-    const promise = useCase.invoke(param);
-    await jest.advanceTimersByTimeAsync(10000);
-    const results = await promise;
-    expect(mockLinkContentId).toHaveBeenCalled();
-    expect(mockMoveIssueToColumn).not.toHaveBeenCalled();
-    expect(results).toHaveLength(0);
-  });
+  it('returns a failure when linking does not yield a usable project item', async () => {
+    mockLinkContentId.mockRejectedValue(new Error('GitHub returned no item'));
 
-  it('returns failure on error', async () => {
-    mockLinkContentId.mockRejectedValue(new Error('API error'));
-    const param = baseParam();
-    const results = await useCase.invoke(param);
-    expect(results.some((r) => r.success === false)).toBe(true);
+    const results = await useCase.invoke(baseParam());
+
+    expect(mockMoveContent).not.toHaveBeenCalled();
+    expect(results).toEqual([expect.objectContaining({ success: false, executed: true })]);
   });
 });

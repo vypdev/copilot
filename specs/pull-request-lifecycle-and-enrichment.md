@@ -5,7 +5,7 @@
 - Last verified: 2026-09-15 on `develop` plus PR UX implementation branch
 - Owners: Copilot maintainers
 - Scope: PR-to-issue/project linkage, assignments, metadata, size/progress, description ownership, review integration, and merge closure
-- Related issues/PRs: managed issue lifecycle and Bugbot SDDs; live UX evidence from [PR #378](https://github.com/vypdev/copilot/pull/378) and [PR #379](https://github.com/vypdev/copilot/pull/379)
+- Related issues/PRs: managed issue lifecycle and Bugbot SDDs; live UX evidence from [PR #378](https://github.com/vypdev/copilot/pull/378), [PR #379](https://github.com/vypdev/copilot/pull/379), and [PR #393](https://github.com/vypdev/copilot/pull/393)
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none
 
@@ -44,7 +44,9 @@ descriptions can also overwrite human content unless ownership is explicit.
 2. On open/reopen, the route snapshots separate immutable step requests; the
    sequential workflow updates title, assigns assignee and reviewers, links
    projects/issue, syncs size/progress labels, and checks priority size through
-   repository- and credential-bound ports.
+   repository- and credential-bound ports. Project linking uses the ProjectV2
+   item ID returned by GitHub's add mutation as the authority for the immediate
+   status update; it does not sleep and re-list the board.
 3. `replace` or `append` automatically generates a sanitized, bounded
    description from the merge-base diff and optional distinct issue context.
 4. `replace` owns the body; `append` upserts a marker-bounded Copilot section;
@@ -75,6 +77,10 @@ descriptions can also overwrite human content unless ownership is explicit.
   the active PR job under the same check name. Merge-group compatibility moved
   to a dedicated workflow so subsequent normal PR runs expose only the relevant
   analysis/review-state job while merge groups retain the required context.
+- Live iteration: PR #393 proved that a successful ProjectV2 add mutation can
+  remain absent from an immediate board listing. Re-querying after a fixed
+  delay incorrectly failed the workflow even though the PR was already linked.
+  The mutation-returned item ID now drives the status mutation directly.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -99,6 +105,8 @@ body ownership. “Enrichment” is metadata mutation that does not merge code.
    a synthetic issue number.
 5. Generated descriptions MUST optimize for reviewer decisions, not execution
    inventories or template completeness.
+6. Generated descriptions MUST NOT invent consumers, compatibility duties,
+   upgrade steps, or migration work from removal/deprecation wording alone.
 
 ### 4.2 Non-goals
 
@@ -154,6 +162,9 @@ link mutations are compensated on every edge, and partial cleanup is explicit.
 - `disabled` skips both automatic and explicit body generation.
 - Non-member creators are skipped for AI description when `ai-members-only=true`.
 - Missing optional review composition does not prevent deterministic enrichment.
+- A newly linked project item is moved by the item ID returned from the same
+  mutation. A replay first resolves an existing item ID and updates that item;
+  neither path depends on list propagation or a timer.
 - PR-to-issue linkage reads the current body for the exact bound PR, temporarily
   adds an owned closing reference and default base, waits through the injected
   observation boundary, then restores the exact original body and base.
@@ -228,6 +239,11 @@ The agent returns bounded semantic fields, not arbitrary body Markdown. A pure
 application presentation policy validates cardinality, sentence count,
 duplicates, optional notes, trusted linkage, unsafe Markdown controls, and the
 hard body budget before rendering and before any provider write.
+The project-link port returns one required ProjectV2 item ID. The adapter obtains
+it from either the existing-item query or the add mutation; an add response
+without an item ID is a provider failure, never an ambiguous no-op. The command
+port accepts that item ID directly, preventing an eventual-consistency read from
+becoming part of application orchestration.
 
 ## 9. UI/UX and content contract
 
@@ -262,6 +278,10 @@ distinct `Closes #…` reference appear only when supported. The normal target i
 4,000 characters and the schema rejects more than 12,000. Empty template
 sections, emoji, separators, generic checklists, file/use-case inventories,
 repeated copy, and unverified test/no-impact claims are forbidden.
+Removal or a symbol being named deprecated is not evidence of an active consumer
+or transition obligation. Compatibility, migration, upgrade, and rollout notes
+appear only when the issue, diff, repository documentation, or verification
+evidence identifies a concrete affected consumer or required transition.
 
 | Trigger | Visible behavior | Must not appear |
 |---|---|---|
@@ -304,6 +324,7 @@ success comments that merely repeat native GitHub metadata.
 | linkage propagation fails, compensation succeeds | link may be incomplete | exact original body/base restored | yes | rerun | none |
 | linkage compensation is partial | PR may retain default base and/or temporary reference | result names each retained mutation | recovery-first rerun/manual | restore named state, rerun | never claim full restoration |
 | metadata provider fail | partial enrichment | successful fields | yes | rerun | idempotent upsert |
+| project linked, status update fails | Project membership is retained; configured status is not confirmed | authoritative ProjectV2 item ID and link | yes | rerun project enrichment | never remove the valid item implicitly |
 | description failure | body retained per mode | metadata/review may exist | yes | fix agent/context | no blank overwrite |
 | stale review/head | no stale findings | new head | automatic/retry | wait | discard stale result |
 | merge closure fail | code merged, issue open | merge fact | yes | rerun/close issue | never undo merge |
@@ -397,6 +418,11 @@ body mutation that produces no follow-up PR workflow.
     admission without requiring log inspection; review state uses a distinct
     check and a separate merge-queue workflow preserves the normal PR
     required-check context without adding a skipped duplicate.
+15. A successful ProjectV2 add response is moved to the configured status by its
+    returned item ID without a timer or board-list read; replay reuses the
+    existing item and creates no duplicate.
+16. Removing unused or deprecated configuration without evidence of consumers
+    produces no invented compatibility, upgrade, or migration note.
 
 ## 17. Requirements traceability
 
@@ -407,6 +433,7 @@ body mutation that produces no follow-up PR workflow.
 | body ownership | description domain/workflow | description tests | AI description |
 | concise content | description prompt/schema/template | prompt/schema semantic tests and live PR body | AI description |
 | enrichment ports | PR/project/reviewer adapters | repository tests | configuration |
+| authoritative project item | project link workflow and ProjectV2 adapters | direct-ID, replay, incomplete-response, and no-list-read tests | capabilities |
 | review integration | Bugbot contracts | Bugbot E2E | Bugbot docs |
 | run/check identity and no edit churn | workflow template/validator | distributed workflow contract tests and live PR runs | features/Bugbot docs |
 | fork safety | workflow guards | workflow tests | workflow setup/security |

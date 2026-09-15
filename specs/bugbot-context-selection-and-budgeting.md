@@ -2,9 +2,9 @@
 
 - Status: Implemented
 - Date: 2026-09-11
-- Last updated: 2026-09-13
+- Last updated: 2026-09-15
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-09-12 against `develop` at `9fc07632ca39fce585b762b1cc08bde1e797f76a`
+- Last verified: 2026-09-15 on PR #393 implementation branch
 - Owners: Copilot and Bugbot maintainers
 - Scope: resolve exactly one canonical pull request, bound every provider read
   and prompt section, and make incomplete context visible and safe
@@ -306,7 +306,9 @@ are explicit:
 **Status:** Findings below are based on the retained portion of PR #412 at `9ad6…`.
 **Impact:** This run cannot declare the whole pull request clean.
 **Coverage:** 1,000 files inspected; 37 file records and 18 older discussion items omitted by fixed limits.
-**Action:** Inspect omitted files locally or split the pull request, then run `/copilot recheck`.
+**Action:** Do not treat this review as complete. Review the sources under
+**Incomplete coverage** and manually inspect omitted items; rerun only after
+reducing the relevant scope or restoring provider access.
 
 [Open pull request](...) · [Open workflow run](...)
 ```
@@ -410,8 +412,9 @@ and catalog evidence in the implementation slice.
 6. No more than two provider detail requests run concurrently and raw page caps hold.
 7. Newest discussion is retained and rendered chronologically within all caps.
 8. A required source failure causes no model call or finding-state mutation.
-9. Fixed truncation marks partial, prevents whole-PR clean, and limits resolution
-   to included prior IDs with current evidence.
+9. Fixed truncation marks partial, prevents whole-PR clean, limits resolution
+   to included prior IDs with current evidence, names each incomplete source,
+   and tells the reviewer what must change before a rerun can improve coverage.
 10. A head SHA change discards generated output before publication.
 11. Issue-only supported flow never invokes a PR port.
 

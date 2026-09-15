@@ -43355,7 +43355,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'bugbot.status.syncFailure': 'Bugbot could not fully synchronize the state of {commit}.',
     'bugbot.status.clean': 'No active findings on {commit}.',
     'bugbot.status.attention': Object.freeze({ one: '{count} finding requires attention on {commit}.', other: '{count} findings require attention on {commit}.' }),
-    'bugbot.status.action.partial': 'Inspect the omitted items or reduce the pull request scope. Rerun the review only after changing the scope, limits, or access.',
+    'bugbot.status.action.partial': 'Do not treat this review as complete. Review the sources under Incomplete coverage and manually inspect omitted items; rerun only after reducing the relevant scope or restoring provider access.',
     'bugbot.status.action.recheck': 'Correct the reported cause, then run {command} once.',
     'bugbot.status.action.findings': 'Review the linked threads or comment {command}.',
     'bugbot.status.findingsHeading': 'Findings',
@@ -43444,7 +43444,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'bugbot.status.syncFailure': 'Bugbot no pudo sincronizar por completo el estado de {commit}.',
     'bugbot.status.clean': 'No hay hallazgos activos en {commit}.',
     'bugbot.status.attention': Object.freeze({ one: '{count} hallazgo requiere atención en {commit}.', many: '{count} hallazgos requieren atención en {commit}.', other: '{count} hallazgos requieren atención en {commit}.' }),
-    'bugbot.status.action.partial': 'Revisa los elementos omitidos o reduce el alcance del pull request. Repite la revisión solo después de cambiar el alcance, los límites o el acceso.',
+    'bugbot.status.action.partial': 'No consideres completa esta revisión. Revisa las fuentes en Cobertura incompleta e inspecciona manualmente los elementos omitidos; repite la revisión solo después de reducir el alcance relevante o restaurar el acceso al proveedor.',
     'bugbot.status.action.recheck': 'Corrige la causa indicada y ejecuta {command} una vez.',
     'bugbot.status.action.findings': 'Revisa los hilos enlazados o comenta {command}.',
     'bugbot.status.findingsHeading': 'Hallazgos',
@@ -59788,8 +59788,8 @@ function projectIssueContentLinkContext(source) {
 function projectPullRequestContentLinkContext(source) {
     return projectContext(source, 'pull request', source.pullRequest.number, source.project.getProjectColumnPullRequestCreated(), source.pullRequest.id);
 }
-/** Links issue-like content to each configured project and moves it after propagation. */
-async function runProjectContentLinkWorkflow(param, taskId, port, waitForPropagation) {
+/** Links issue-like content to each configured project and updates the returned item directly. */
+async function runProjectContentLinkWorkflow(param, taskId, port) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId}.`);
     if (param.projects.length === 0) {
         (0, logging_ports_1.logDebugInfo)(`Link${capitalize(param.contentType)}: no projects configured; skipping.`);
@@ -59799,20 +59799,15 @@ async function runProjectContentLinkWorkflow(param, taskId, port, waitForPropaga
         const contentId = param.contentId ?? await port.resolveIssueContentId(param.contentNumber);
         const results = [];
         for (const project of param.projects) {
-            const linked = await port.linkContentId(project, contentId);
-            if (!linked) {
-                (0, logging_ports_1.logDebugInfo)(`Link${capitalize(param.contentType)}: ${param.contentType} already linked to project "${project.title}" or link failed.`);
-                continue;
-            }
-            await waitForPropagation();
-            const moved = await port.moveContent(project, param.contentNumber, param.columnName);
+            const projectItemId = await port.linkContentId(project, contentId);
+            const moved = await port.moveContent(project, projectItemId, param.columnName);
             if (moved) {
                 results.push(new result_1.Result({
                     id: taskId,
                     success: true,
                     executed: true,
                     steps: [
-                        `The ${param.contentType} was linked to [**${project.title}**](${project.url}) and moved to the column \`${param.columnName}\`.`,
+                        `The ${param.contentType} is linked to [**${project.title}**](${project.url}) with status \`${param.columnName}\`.`,
                     ],
                 }));
             }
@@ -59852,14 +59847,11 @@ function projectContext(source, contentType, contentNumber, columnName, contentI
     });
 }
 function moveFailureResult(context, taskId, project) {
-    if (context.contentType === 'issue') {
-        return new result_1.Result({ id: taskId, success: true, executed: false, steps: [] });
-    }
     return new result_1.Result({
         id: taskId,
         success: false,
         executed: true,
-        steps: [`The ${context.contentType} was linked to [**${project.title}**](${project.url}) but there was an error moving it to the column \`${context.columnName}\`.`],
+        steps: [`The ${context.contentType} is linked to [**${project.title}**](${project.url}), but its status could not be set to \`${context.columnName}\`.`],
     });
 }
 function capitalize(value) {
@@ -61530,13 +61522,12 @@ exports.LinkIssueProjectUseCase = void 0;
 const project_content_link_workflow_1 = __nccwpck_require__(89064);
 /** Application boundary for linking issues to configured ProjectV2 boards. */
 class LinkIssueProjectUseCase {
-    constructor(projectContentPort, eventualConsistencyDelayPort) {
+    constructor(projectContentPort) {
         this.projectContentPort = projectContentPort;
-        this.eventualConsistencyDelayPort = eventualConsistencyDelayPort;
         this.taskId = 'LinkIssueProjectUseCase';
     }
     async invoke(param) {
-        return (0, project_content_link_workflow_1.runProjectContentLinkWorkflow)(param, this.taskId, this.projectContentPort, () => this.eventualConsistencyDelayPort.wait(10000));
+        return (0, project_content_link_workflow_1.runProjectContentLinkWorkflow)(param, this.taskId, this.projectContentPort);
     }
 }
 exports.LinkIssueProjectUseCase = LinkIssueProjectUseCase;
@@ -62587,13 +62578,12 @@ exports.LinkPullRequestProjectUseCase = void 0;
 const project_content_link_workflow_1 = __nccwpck_require__(89064);
 /** Application boundary for linking pull requests to configured ProjectV2 boards. */
 class LinkPullRequestProjectUseCase {
-    constructor(projectContentPort, eventualConsistencyDelayPort) {
+    constructor(projectContentPort) {
         this.projectContentPort = projectContentPort;
-        this.eventualConsistencyDelayPort = eventualConsistencyDelayPort;
         this.taskId = 'LinkPullRequestProjectUseCase';
     }
     async invoke(param) {
-        return (0, project_content_link_workflow_1.runProjectContentLinkWorkflow)(param, this.taskId, this.projectContentPort, () => this.eventualConsistencyDelayPort.wait(10000));
+        return (0, project_content_link_workflow_1.runProjectContentLinkWorkflow)(param, this.taskId, this.projectContentPort);
     }
 }
 exports.LinkPullRequestProjectUseCase = LinkPullRequestProjectUseCase;
@@ -69595,6 +69585,7 @@ class ProjectBoardCommandRepository {
         this.setTaskPriority = (project, owner, repo, issueOrPullRequestNumber, priorityLabel, token) => this.setField(project, owner, repo, issueOrPullRequestNumber, this.priorityField, priorityLabel, token);
         this.setTaskSize = (project, owner, repo, issueOrPullRequestNumber, sizeLabel, token) => this.setField(project, owner, repo, issueOrPullRequestNumber, this.sizeField, sizeLabel, token);
         this.moveIssueToColumn = (project, owner, repo, issueOrPullRequestNumber, columnName, token) => this.setField(project, owner, repo, issueOrPullRequestNumber, this.statusField, columnName, token);
+        this.moveProjectItemToColumn = (project, projectItemId, columnName, token) => (0, project_board_field_update_1.setProjectBoardSingleSelectFieldByItemId)(this.graphqlClient, project, projectItemId, this.statusField, columnName, token);
     }
     setField(project, owner, repo, issueOrPullRequestNumber, fieldName, fieldValue, token) {
         return (0, project_board_field_update_1.setProjectBoardSingleSelectField)(this.projectBoardContentQueryPort, this.graphqlClient, project, owner, repo, issueOrPullRequestNumber, fieldName, fieldValue, token);
@@ -69685,6 +69676,7 @@ function validateProjectId(projectId) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.setProjectBoardSingleSelectField = setProjectBoardSingleSelectField;
+exports.setProjectBoardSingleSelectFieldByItemId = setProjectBoardSingleSelectFieldByItemId;
 const project_board_provider_limits_1 = __nccwpck_require__(96997);
 const logger_1 = __nccwpck_require__(91151);
 const github_pagination_adapter_1 = __nccwpck_require__(2761);
@@ -69755,9 +69747,18 @@ async function setProjectBoardSingleSelectField(contentQueryPort, graphqlClient,
         (0, logger_1.logDebugInfo)(`Field '${fieldName}' is already set to '${fieldValue}'. No update needed.`);
         return false;
     }
+    return updateProjectBoardSingleSelectField(client, project, contentId, target);
+}
+/** Updates a ProjectV2 item returned by the link mutation without waiting for list propagation. */
+async function setProjectBoardSingleSelectFieldByItemId(graphqlClient, project, projectItemId, fieldName, fieldValue, token) {
+    const client = graphqlClient.getClient(token);
+    const target = await findFieldOption(client, project, fieldName, fieldValue);
+    return updateProjectBoardSingleSelectField(client, project, projectItemId, target);
+}
+async function updateProjectBoardSingleSelectField(client, project, projectItemId, target) {
     const mutationResult = await client.graphql(UPDATE_FIELD_MUTATION, {
         projectId: project.id,
-        itemId: contentId,
+        itemId: projectItemId,
         fieldId: target.fieldId,
         optionId: target.optionId,
     });
@@ -69825,7 +69826,7 @@ async function findProjectItem(client, project, itemId, fieldName) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getProjectItemId = getProjectItemId;
-exports.isProjectContentLinked = isProjectContentLinked;
+exports.getProjectItemIdByContentId = getProjectItemIdByContentId;
 const project_board_provider_limits_1 = __nccwpck_require__(96997);
 const logger_1 = __nccwpck_require__(91151);
 const github_pagination_adapter_1 = __nccwpck_require__(2761);
@@ -69871,8 +69872,8 @@ async function getProjectItemId(graphqlClient, project, owner, repo, issueOrPull
     }
     return projectItemId;
 }
-async function isProjectContentLinked(graphqlClient, project, contentId) {
-    return Boolean(await findProjectItemId(graphqlClient, project, contentId));
+async function getProjectItemIdByContentId(graphqlClient, project, contentId) {
+    return findProjectItemId(graphqlClient, project, contentId);
 }
 async function findProjectItemId(client, project, contentId) {
     for await (const page of (0, github_pagination_adapter_1.paginateCursor)(async (after) => {
@@ -69911,19 +69912,19 @@ class ProjectBoardLinkRepository {
         this.projectBoardQueryPort = projectBoardQueryPort;
         this.graphqlClient = graphqlClient;
         this.linkContentId = async (project, contentId, token) => {
-            if (await this.projectBoardQueryPort.isContentLinked(project, contentId, token)) {
+            const existingItemId = await this.projectBoardQueryPort.getLinkedContentItemId(project, contentId, token);
+            if (existingItemId) {
                 (0, logger_1.logDebugInfo)(`Content ${contentId} is already linked to project ${project.id}.`);
-                return false;
+                return existingItemId;
             }
             const linkMutation = `mutation($projectId: ID!, $contentId: ID!) { addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) { item { id } } }`;
             const linkResult = await this.graphqlClient.getClient(token).graphql(linkMutation, { projectId: project.id, contentId });
             const linkedItemId = linkResult.addProjectV2ItemById?.item?.id;
             if (!linkedItemId) {
-                (0, logger_1.logDebugInfo)(`Project link mutation returned no item for content ${contentId} and project ${project.id}.`);
-                return false;
+                throw new Error(`GitHub did not return the project item created for content ${contentId} in project ${project.id}.`);
             }
             (0, logger_1.logDebugInfo)(`Linked ${contentId} with id ${linkedItemId} to project ${project.id}`);
-            return true;
+            return linkedItemId;
         };
     }
 }
@@ -69947,7 +69948,7 @@ class ProjectBoardQueryRepository {
         this.graphqlClient = graphqlClient;
         this.getProjectDetail = (projectId, owner, token) => (0, project_board_detail_query_1.getProjectBoardDetail)(this.ownerTypeClient, this.graphqlClient, projectId, owner, token);
         this.getProjectItemId = async (project, owner, repo, issueOrPullRequestNumber, token) => (0, project_board_item_query_1.getProjectItemId)(this.graphqlClient.getClient(token), project, owner, repo, issueOrPullRequestNumber);
-        this.isContentLinked = async (project, contentId, token) => (0, project_board_item_query_1.isProjectContentLinked)(this.graphqlClient.getClient(token), project, contentId);
+        this.getLinkedContentItemId = async (project, contentId, token) => (0, project_board_item_query_1.getProjectItemIdByContentId)(this.graphqlClient.getClient(token), project, contentId);
     }
 }
 exports.ProjectBoardQueryRepository = ProjectBoardQueryRepository;
@@ -75407,7 +75408,6 @@ const issue_title_repository_1 = __nccwpck_require__(10121);
 const issue_type_assignment_repository_1 = __nccwpck_require__(19118);
 const workflow_dispatch_repository_1 = __nccwpck_require__(29509);
 const timer_branch_propagation_delay_adapter_1 = __nccwpck_require__(20846);
-const timer_delay_adapter_1 = __nccwpck_require__(71942);
 const agent_capability_composition_root_1 = __nccwpck_require__(85079);
 const issue_use_case_composition_1 = __nccwpck_require__(21239);
 const organization_members_composition_root_1 = __nccwpck_require__(50603);
@@ -75425,7 +75425,6 @@ function createIssueUseCaseCompositionRoot(binding) {
     const gitCli = new git_cli_repository_1.GitCliRepository();
     const linkedBranch = new linked_branch_repository_1.LinkedBranchRepository((0, github_project_client_factory_1.createGraphqlTransportClient)());
     const branchPropagationDelay = new timer_branch_propagation_delay_adapter_1.TimerBranchPropagationDelayAdapter();
-    const eventualConsistencyDelay = new timer_delay_adapter_1.TimerDelayAdapter();
     const projectBoard = (0, project_board_composition_root_1.createProjectBoardCompositionRoot)();
     const issueAssignee = new issue_assignment_repository_1.IssueAssignmentRepository((0, github_issue_client_factory_1.createIssueAssignmentClient)());
     const issueClosure = new issue_closure_repository_1.IssueClosureRepository(issueLifecycle, issueContent);
@@ -75445,7 +75444,7 @@ function createIssueUseCaseCompositionRoot(binding) {
         assignMemberToIssue: new assign_members_to_issue_use_case_1.AssignMemberToIssueUseCase(boundIssueAssignee, boundOrganizationMembers),
         updateTitle: new update_title_use_case_1.UpdateTitleUseCase((0, shared_capability_port_binding_1.bindIssueTitle)(issueTitle, binding)),
         updateIssueType: new update_issue_type_use_case_1.UpdateIssueTypeUseCase((0, lifecycle_capability_port_binding_1.bindIssueTypeAssignment)(issueTypeAssignment, binding)),
-        linkIssueProject: new link_issue_project_use_case_1.LinkIssueProjectUseCase(projectContent, eventualConsistencyDelay),
+        linkIssueProject: new link_issue_project_use_case_1.LinkIssueProjectUseCase(projectContent),
         checkPriorityIssueSize: new check_priority_issue_size_use_case_1.CheckPriorityIssueSizeUseCase(boundProjectBoard),
         prepareBranches: new prepare_branches_use_case_1.PrepareBranchesUseCase(boundBranchLifecycle, branchName, gitCli, gitCli, boundLinkedBranch, branchPropagationDelay, moveIssueToInProgress),
         removeNotNeededBranches: new remove_not_needed_branches_use_case_1.RemoveNotNeededBranchesUseCase(boundBranchLifecycle, branchName),
@@ -75922,7 +75921,7 @@ function createPullRequestUseCaseCompositionRoot(binding) {
         updateTitle: new update_title_use_case_1.UpdateTitleUseCase((0, shared_capability_port_binding_1.bindIssueTitle)(issueTitle, binding)),
         assignMemberToIssue: new assign_members_to_issue_use_case_1.AssignMemberToIssueUseCase(boundIssueAssignee, boundOrganizationSelection),
         assignReviewersToIssue: new assign_reviewers_to_issue_use_case_1.AssignReviewersToIssueUseCase(boundIssueAssignee, (0, lifecycle_capability_port_binding_1.bindPullRequestReviewer)(pullRequestReviewer, binding), boundOrganizationSelection),
-        linkPullRequestProject: new link_pull_request_project_use_case_1.LinkPullRequestProjectUseCase(projectContent, eventualConsistencyDelay),
+        linkPullRequestProject: new link_pull_request_project_use_case_1.LinkPullRequestProjectUseCase(projectContent),
         linkPullRequestIssue: new link_pull_request_issue_use_case_1.LinkPullRequestIssueUseCase(boundPullRequestLifecycle, eventualConsistencyDelay),
         syncSizeAndProgressLabels: new sync_size_and_progress_labels_from_issue_to_pr_use_case_1.SyncSizeAndProgressLabelsFromIssueToPrUseCase((0, lifecycle_capability_port_binding_1.bindIssueLabels)(pullRequestLabels, binding)),
         checkPriorityPullRequestSize: new check_priority_pull_request_size_use_case_1.CheckPriorityPullRequestSizeUseCase(boundProjectBoard),
@@ -76214,7 +76213,7 @@ function bindProjectContent(identity, commands, links, binding) {
     return {
         resolveIssueContentId: (issueNumber) => identity.getId(binding.owner, binding.repository, issueNumber, binding.token),
         linkContentId: (project, contentId) => links.linkContentId(toProjectDetail(project), contentId, binding.token),
-        moveContent: (project, contentNumber, columnName) => commands.moveIssueToColumn(toProjectDetail(project), binding.owner, binding.repository, contentNumber, columnName, binding.token),
+        moveContent: (project, projectItemId, columnName) => commands.moveProjectItemToColumn(toProjectDetail(project), projectItemId, columnName, binding.token),
     };
 }
 function toProjectDetail(project) {
@@ -78090,7 +78089,7 @@ Write every human-readable sentence in {{targetLocale}}. Preserve code identifie
 4. Provide \`overview\` as one to three sentences that state the outcome and why it matters.
 5. Provide \`whatChangedHeading\` as the plain-text {{targetLocale}} equivalent of "What changed" and \`changes\` as two to six short, outcome-oriented items. Do not inventory files, use-case names, internal categories, or every implementation step.
 6. When execution or manual-verification evidence is available, provide \`validationHeading\` as the plain-text {{targetLocale}} equivalent of "Validation" and \`validation\` with only the supported commands, automated checks, or manual scenarios. Never claim a check passed unless the evidence says it did, and never infer that result from the presence of test files or commands. When no verification evidence is available, set both fields to \`null\`; do not add a “not run” placeholder.
-7. Set \`reviewNotesHeading\` and \`reviewNotes\` to \`null\` unless reviewers need material migration, security, performance, compatibility, rollout, manual-verification, risk, or follow-up context. Otherwise use the localized plain-text heading and one to four concise items. {{relatedIssueInstruction}}
+7. Set \`reviewNotesHeading\` and \`reviewNotes\` to \`null\` unless reviewers need material migration, security, performance, compatibility, rollout, manual-verification, risk, or follow-up context. Do not infer consumers, compatibility obligations, upgrade steps, migration work, or rollout requirements merely because code, configuration, inputs, or symbols were removed or named deprecated. Include that context only when the issue, diff, repository documentation, or verification evidence identifies a concrete affected consumer or required transition. Otherwise use the localized plain-text heading and one to four concise items. {{relatedIssueInstruction}}
 8. Keep the description practical and normally under 4,000 characters. It must never exceed 12,000 characters. Do not use emoji, horizontal separators, generic checklists, empty headings, repeated statements, placeholder text, or unsupported "no impact" claims.
 9. Return one JSON object with exactly \`outputLocale\`, \`overview\`, \`whatChangedHeading\`, \`changes\`, \`validationHeading\`, \`validation\`, \`reviewNotesHeading\`, \`reviewNotes\`, and \`closesLinkedIssue\`. Every content field is plain text except Markdown links, code spans, refs, and commands inside content values. The application renders the Markdown structure; do not include headings, bullet prefixes, a preamble, meta-commentary, or code fence in the values.
 

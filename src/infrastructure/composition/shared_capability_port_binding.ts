@@ -169,11 +169,9 @@ export function bindProjectContent(
       contentId,
       binding.token,
     ),
-    moveContent: (project, contentNumber, columnName) => commands.moveIssueToColumn(
+    moveContent: (project, projectItemId, columnName) => commands.moveProjectItemToColumn(
       toProjectDetail(project),
-      binding.owner,
-      binding.repository,
-      contentNumber,
+      projectItemId,
       columnName,
       binding.token,
     ),

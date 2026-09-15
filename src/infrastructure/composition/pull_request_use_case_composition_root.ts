@@ -99,10 +99,7 @@ export function createPullRequestUseCaseCompositionRoot(binding: BugbotScmBindin
       bindPullRequestReviewer(pullRequestReviewer, binding),
       boundOrganizationSelection,
     ),
-    linkPullRequestProject: new LinkPullRequestProjectUseCase(
-      projectContent,
-      eventualConsistencyDelay,
-    ),
+    linkPullRequestProject: new LinkPullRequestProjectUseCase(projectContent),
     linkPullRequestIssue: new LinkPullRequestIssueUseCase(
       boundPullRequestLifecycle,
       eventualConsistencyDelay,

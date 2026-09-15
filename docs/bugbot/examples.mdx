@@ -269,8 +269,10 @@ review with work remaining looks conceptually like this:
 `verification-required` need attention. `unknown` and a partial/failed
 projection fail closed and expose bounded recovery details. A provider or state
 error can recommend one `/copilot recheck` after its cause is corrected. Fixed
-coverage limits instead tell the reader to change scope, limits, or access;
-repeating the same command against unchanged capped evidence is not useful.
+coverage limits instead require manual inspection of omitted items; reduce the
+relevant scope or restore provider access before rerunning. The limits are not
+configuration knobs, and repeating the same command against unchanged capped
+evidence is not useful.
 A superseded run does not edit this card; the newer head owns the next update.
 
 ---

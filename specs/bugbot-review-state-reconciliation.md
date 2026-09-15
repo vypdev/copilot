@@ -12,7 +12,8 @@
   [successful reconciliation run](https://github.com/vypdev/copilot/actions/runs/34537613448),
   [current Check Run](https://github.com/vypdev/copilot/runs/103074383528),
   [PR #363 concurrency evidence](https://github.com/vypdev/copilot/pull/363),
-  and [PR #378 workflow-noise evidence](https://github.com/vypdev/copilot/pull/378)
+  [PR #378 workflow-noise evidence](https://github.com/vypdev/copilot/pull/378),
+  and [PR #393 partial-coverage copy evidence](https://github.com/vypdev/copilot/pull/393)
 - Required review gates: product UX, architecture, testing, documentation,
   security/operations
 - Open decisions blocking readiness: none
@@ -918,6 +919,13 @@ and reported 1 active finding.
 [Resolved thread](...) · [Failed operation](...)
 ```
 
+Bounded context coverage uses a different, equally explicit action: it MUST say
+that the review is incomplete, point to the named sources under **Incomplete
+coverage**, require manual inspection of omitted items, and permit a rerun only
+after the relevant scope is reduced or provider access is restored. Fixed
+safety limits are not presented as user-configurable, and an unchanged
+`/copilot recheck` is never offered as if it could recover omitted evidence.
+
 ### 9.7 Superseded and canceled runs
 
 - A superseded run's own Job Summary/Check says that a newer head owns the
@@ -1344,6 +1352,9 @@ examples should reuse the same fixtures as presentation tests where practical.
     telemetry, then the telemetry-set and finding-state projections are invalid.
     No Review Check is emitted; Action exit fails, lifecycle blocks, and
     Summary/status identify invalid evidence instead of reporting clean.
+41. Given bounded context omission, then the canonical card names
+    **Incomplete coverage**, requires manual inspection, and does not suggest
+    changing fixed safety limits or rerunning unchanged evidence.
 
 ## 17. Requirements traceability
 

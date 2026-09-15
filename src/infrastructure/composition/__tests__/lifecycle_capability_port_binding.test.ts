@@ -83,7 +83,12 @@ describe('lifecycle capability repository bindings', () => {
     const remove = jest.fn().mockResolvedValue(true);
     const create = jest.fn().mockResolvedValue([]);
     const execute = jest.fn().mockResolvedValue(undefined);
-    const projects = bindProjectBoardCommands({ setTaskPriority, moveIssueToColumn, setTaskSize: jest.fn() }, binding);
+    const projects = bindProjectBoardCommands({
+      setTaskPriority,
+      moveIssueToColumn,
+      moveProjectItemToColumn: jest.fn(),
+      setTaskSize: jest.fn(),
+    }, binding);
     await projects.setTaskPriority(project, 7, 'P0');
     await projects.moveIssueToColumn(project, 7, 'In progress');
     const branches = bindBranchLifecycle({ getListOfBranches: list, removeBranch: remove }, binding);

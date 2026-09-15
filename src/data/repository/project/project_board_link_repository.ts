@@ -10,21 +10,19 @@ export class ProjectBoardLinkRepository implements ProjectBoardLinkPort {
         private readonly projectBoardQueryPort: ProjectBoardQueryPort,
         private readonly graphqlClient: GithubClientPort<GithubGraphqlTransportClient>,
     ) {}
-
-
-    linkContentId = async (project: ProjectDetail, contentId: string, token: string): Promise<boolean> => {
-        if (await this.projectBoardQueryPort.isContentLinked(project, contentId, token)) {
+    linkContentId = async (project: ProjectDetail, contentId: string, token: string): Promise<string> => {
+        const existingItemId = await this.projectBoardQueryPort.getLinkedContentItemId(project, contentId, token);
+        if (existingItemId) {
             logDebugInfo(`Content ${contentId} is already linked to project ${project.id}.`);
-            return false;
+            return existingItemId;
         }
         const linkMutation = `mutation($projectId: ID!, $contentId: ID!) { addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) { item { id } } }`;
         const linkResult = await this.graphqlClient.getClient(token).graphql<{ addProjectV2ItemById?: { item?: { id: string } } }>(linkMutation, { projectId: project.id, contentId });
         const linkedItemId = linkResult.addProjectV2ItemById?.item?.id;
         if (!linkedItemId) {
-            logDebugInfo(`Project link mutation returned no item for content ${contentId} and project ${project.id}.`);
-            return false;
+            throw new Error(`GitHub did not return the project item created for content ${contentId} in project ${project.id}.`);
         }
         logDebugInfo(`Linked ${contentId} with id ${linkedItemId} to project ${project.id}`);
-        return true;
+        return linkedItemId;
     };
 }

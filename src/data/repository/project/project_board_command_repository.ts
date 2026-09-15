@@ -3,7 +3,10 @@ import type { ProjectBoardContentQueryPort } from '../../../application/ports/pr
 import type { GithubClientPort } from '../../../infrastructure/github/ports/github_client_provider_port';
 import type { GithubGraphqlTransportClient } from '../../../infrastructure/github/ports/github_graphql_transport_port';
 import type { ProjectDetail } from '../../model/project_detail';
-import { setProjectBoardSingleSelectField } from './project_board_field_update';
+import {
+    setProjectBoardSingleSelectField,
+    setProjectBoardSingleSelectFieldByItemId,
+} from './project_board_field_update';
 
 /** GitHub GraphQL adapter for ProjectV2 field mutations. */
 export class ProjectBoardCommandRepository implements ProjectBoardCommandPort {
@@ -62,6 +65,20 @@ export class ProjectBoardCommandRepository implements ProjectBoardCommandPort {
         owner,
         repo,
         issueOrPullRequestNumber,
+        this.statusField,
+        columnName,
+        token,
+    );
+
+    moveProjectItemToColumn = (
+        project: ProjectDetail,
+        projectItemId: string,
+        columnName: string,
+        token: string,
+    ): Promise<boolean> => setProjectBoardSingleSelectFieldByItemId(
+        this.graphqlClient,
+        project,
+        projectItemId,
         this.statusField,
         columnName,
         token,
