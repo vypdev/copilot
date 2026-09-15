@@ -136,6 +136,9 @@ describe('CloseInactiveIssuesUseCase', () => {
             'inactivity.error.revalidate': 'Issue #{issueNumber} konnte nicht erneut geprüft werden.',
             'inactivity.error.close': 'Issue #{issueNumber} konnte nicht geschlossen werden.',
             'inactivity.error.comment': 'Issue #{issueNumber} wurde geschlossen, aber die Erklärung fehlt.',
+            'inactivity.error.commentImpact': 'Issue #{issueNumber} wurde ohne Erklärung geschlossen.',
+            'inactivity.error.commentAction': 'Issue #{issueNumber} manuell prüfen.',
+            'inactivity.error.commentRetainedState': 'Issue #{issueNumber} bleibt geschlossen.',
         };
         const query = jest.fn().mockResolvedValue({ targetLocale: 'de-DE', messages });
 
@@ -226,6 +229,12 @@ describe('CloseInactiveIssuesUseCase', () => {
         expect(result.errors[0].message).toBe(
             'Issue #42 was closed, but its inactivity explanation could not be published.',
         );
+        expect(result.errors[0]).toMatchObject({
+            retryable: false,
+            impact: 'Issue #42 was closed without its terminal inactivity explanation.',
+            action: 'Inspect issue #42 and add the explanation manually if the missing context matters.',
+            retainedState: 'Issue #42 remains closed; the completed close will not be repeated.',
+        });
         expect(result.payload).toMatchObject({
             closed: 1, commented: 0, commentFailures: 1, failures: 1,
         });

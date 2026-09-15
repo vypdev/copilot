@@ -131,7 +131,20 @@ export async function runCloseInactiveIssuesWorkflow(
                     issueNumber: candidate.number,
                 });
                 logError(message);
-                errors.push(new ApplicationError('provider.unavailable', message, { cause: error }));
+                errors.push(new ApplicationError('provider.unavailable', message, {
+                    cause: error,
+                    retryable: false,
+                    impact: resultMessages.message('inactivity.error.commentImpact', {
+                        issueNumber: candidate.number,
+                    }),
+                    action: resultMessages.message('inactivity.error.commentAction', {
+                        issueNumber: candidate.number,
+                    }),
+                    retainedState: resultMessages.message(
+                        'inactivity.error.commentRetainedState',
+                        { issueNumber: candidate.number },
+                    ),
+                }));
             }
         }
 

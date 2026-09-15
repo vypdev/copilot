@@ -987,7 +987,9 @@ summary plurals. Read, close, and explanation-publication failures remain
 distinct; a closed issue is never reported as a failed close merely because its
 explanation comment could not be published. Payload evidence records scanned,
 eligible, closed, commented, skipped, and failed counts without localizing the
-stable keys.
+stable keys. That partial publication state narrows retryability because later
+scans ignore closed issues, preserves the confirmed close, and supplies a
+localized manual-recovery action.
 
 ### 13.5 Rollback
 

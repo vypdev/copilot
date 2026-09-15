@@ -45485,6 +45485,9 @@ exports.INACTIVITY_MESSAGE_IDS = Object.freeze([
     'inactivity.error.revalidate',
     'inactivity.error.close',
     'inactivity.error.comment',
+    'inactivity.error.commentImpact',
+    'inactivity.error.commentAction',
+    'inactivity.error.commentRetainedState',
 ]);
 const ENGLISH_MESSAGES = Object.freeze({
     'inactivity.closure.heading': 'Issue closed after inactivity',
@@ -45510,6 +45513,9 @@ const ENGLISH_MESSAGES = Object.freeze({
     'inactivity.error.revalidate': 'Unable to recheck issue #{issueNumber} before inactivity closure.',
     'inactivity.error.close': 'Unable to close issue #{issueNumber} after inactivity.',
     'inactivity.error.comment': 'Issue #{issueNumber} was closed, but its inactivity explanation could not be published.',
+    'inactivity.error.commentImpact': 'Issue #{issueNumber} was closed without its terminal inactivity explanation.',
+    'inactivity.error.commentAction': 'Inspect issue #{issueNumber} and add the explanation manually if the missing context matters.',
+    'inactivity.error.commentRetainedState': 'Issue #{issueNumber} remains closed; the completed close will not be repeated.',
 });
 const SPANISH_MESSAGES = Object.freeze({
     'inactivity.closure.heading': 'Issue cerrada por inactividad',
@@ -45539,6 +45545,9 @@ const SPANISH_MESSAGES = Object.freeze({
     'inactivity.error.revalidate': 'No se pudo volver a comprobar la issue #{issueNumber} antes de cerrarla por inactividad.',
     'inactivity.error.close': 'No se pudo cerrar la issue #{issueNumber} por inactividad.',
     'inactivity.error.comment': 'La issue #{issueNumber} se cerró, pero no se pudo publicar la explicación sobre su inactividad.',
+    'inactivity.error.commentImpact': 'La issue #{issueNumber} se cerró sin su explicación final sobre la inactividad.',
+    'inactivity.error.commentAction': 'Revisa la issue #{issueNumber} y añade la explicación manualmente si falta contexto importante.',
+    'inactivity.error.commentRetainedState': 'La issue #{issueNumber} permanece cerrada; el cierre completado no se repetirá.',
 });
 exports.ENGLISH_INACTIVITY_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
@@ -48893,7 +48902,17 @@ async function runCloseInactiveIssuesWorkflow(param, dependencies) {
                     issueNumber: candidate.number,
                 });
                 (0, logging_ports_1.logError)(message);
-                errors.push(new application_error_1.ApplicationError('provider.unavailable', message, { cause: error }));
+                errors.push(new application_error_1.ApplicationError('provider.unavailable', message, {
+                    cause: error,
+                    retryable: false,
+                    impact: resultMessages.message('inactivity.error.commentImpact', {
+                        issueNumber: candidate.number,
+                    }),
+                    action: resultMessages.message('inactivity.error.commentAction', {
+                        issueNumber: candidate.number,
+                    }),
+                    retainedState: resultMessages.message('inactivity.error.commentRetainedState', { issueNumber: candidate.number }),
+                }));
             }
         }
         (0, logging_ports_1.logDebugInfo)(`${TASK_ID}: scanned=${candidates.length}, eligible=${eligibleCount}, closed=${closedCount}, skipped=${skippedCount}.`);

@@ -88,6 +88,9 @@ The workflow Job Summary reports locale-aware scanned, closed, and skipped
 counts. Provider failures identify whether Copilot could not recheck the issue,
 could not close it, or closed it successfully but could not publish the terminal
 explanation. That last partial failure never claims that the close itself failed.
+Because a later scan ignores closed issues, this partial state is marked
+non-retryable and directs the operator to add the explanation manually only when
+the missing context matters.
 
 ## Summary
 

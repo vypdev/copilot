@@ -23,6 +23,9 @@ export const INACTIVITY_MESSAGE_IDS = Object.freeze([
   'inactivity.error.revalidate',
   'inactivity.error.close',
   'inactivity.error.comment',
+  'inactivity.error.commentImpact',
+  'inactivity.error.commentAction',
+  'inactivity.error.commentRetainedState',
 ] as const);
 
 export type InactivityMessageId = typeof INACTIVITY_MESSAGE_IDS[number];
@@ -52,6 +55,9 @@ const ENGLISH_MESSAGES: Readonly<Record<InactivityMessageId, CatalogMessage>> = 
   'inactivity.error.revalidate': 'Unable to recheck issue #{issueNumber} before inactivity closure.',
   'inactivity.error.close': 'Unable to close issue #{issueNumber} after inactivity.',
   'inactivity.error.comment': 'Issue #{issueNumber} was closed, but its inactivity explanation could not be published.',
+  'inactivity.error.commentImpact': 'Issue #{issueNumber} was closed without its terminal inactivity explanation.',
+  'inactivity.error.commentAction': 'Inspect issue #{issueNumber} and add the explanation manually if the missing context matters.',
+  'inactivity.error.commentRetainedState': 'Issue #{issueNumber} remains closed; the completed close will not be repeated.',
 });
 
 const SPANISH_MESSAGES: Readonly<Record<InactivityMessageId, CatalogMessage>> = Object.freeze({
@@ -82,6 +88,9 @@ const SPANISH_MESSAGES: Readonly<Record<InactivityMessageId, CatalogMessage>> = 
   'inactivity.error.revalidate': 'No se pudo volver a comprobar la issue #{issueNumber} antes de cerrarla por inactividad.',
   'inactivity.error.close': 'No se pudo cerrar la issue #{issueNumber} por inactividad.',
   'inactivity.error.comment': 'La issue #{issueNumber} se cerró, pero no se pudo publicar la explicación sobre su inactividad.',
+  'inactivity.error.commentImpact': 'La issue #{issueNumber} se cerró sin su explicación final sobre la inactividad.',
+  'inactivity.error.commentAction': 'Revisa la issue #{issueNumber} y añade la explicación manualmente si falta contexto importante.',
+  'inactivity.error.commentRetainedState': 'La issue #{issueNumber} permanece cerrada; el cierre completado no se repetirá.',
 });
 
 export const ENGLISH_INACTIVITY_DEFINITION: MessageCatalogDefinition<InactivityMessageId> = Object.freeze({
