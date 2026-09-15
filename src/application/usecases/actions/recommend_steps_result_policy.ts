@@ -33,6 +33,9 @@ export function buildRecommendationResult(
         if (!previousRecommendation.implementationPlan) {
             return recommendationFailure(taskId, 'The configured agent returned unchanged for a legacy plan that requires structured migration.');
         }
+        if (previousRecommendation.implementationPlanLocale !== extracted.locale) {
+            return recommendationFailure(taskId, 'The configured agent returned unchanged for a plan that requires locale migration.');
+        }
         return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'agent found no material change');
     }
     const recommendation = implementationPlanContextText(extracted.plan);
@@ -40,12 +43,16 @@ export function buildRecommendationResult(
     const recommendationFingerprint = createRecommendationFingerprint(
         implementationPlanFingerprintInput(extracted.plan),
     );
-    if (previousRecommendation?.recommendationFingerprint === recommendationFingerprint) return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'recommendation is unchanged');
+    if (previousRecommendation?.recommendationFingerprint === recommendationFingerprint
+        && previousRecommendation.implementationPlanLocale === extracted.locale) {
+        return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'recommendation is unchanged');
+    }
     const recommendationState: RecommendationState = {
         issueDescriptionFingerprint,
         recommendationFingerprint,
         recommendation: limitStoredRecommendation(recommendation),
         implementationPlan: extracted.plan,
+        implementationPlanLocale: extracted.locale,
     };
     return recommendationOutcome([new Result({
         id: taskId,
@@ -83,8 +90,8 @@ function recommendationFailure(taskId: string, message: string): RecommendStepsO
 }
 
 type ExtractedImplementationPlan =
-    | { readonly kind: 'unchanged' }
-    | { readonly kind: 'recommendation'; readonly plan: ImplementationPlan };
+    | { readonly kind: 'unchanged'; readonly locale: string }
+    | { readonly kind: 'recommendation'; readonly locale: string; readonly plan: ImplementationPlan };
 
 function extractImplementationPlan(
     response: string | Record<string, unknown> | undefined,
@@ -98,7 +105,7 @@ function extractImplementationPlan(
     if (!hasOnlyResponseKeys(validation.payload)) return undefined;
     if (validation.payload.status === 'unchanged') {
         return validation.payload.steps === null && validation.payload.acceptance === null
-            ? Object.freeze({ kind: 'unchanged' })
+            ? Object.freeze({ kind: 'unchanged', locale: validation.expectedLocale })
             : undefined;
     }
     if (validation.payload.status !== 'recommendation') return undefined;
@@ -106,7 +113,7 @@ function extractImplementationPlan(
         steps: validation.payload.steps,
         acceptance: validation.payload.acceptance,
     });
-    return plan ? Object.freeze({ kind: 'recommendation', plan }) : undefined;
+    return plan ? Object.freeze({ kind: 'recommendation', locale: validation.expectedLocale, plan }) : undefined;
 }
 
 function hasOnlyResponseKeys(payload: Readonly<Record<string, unknown>>): boolean {

@@ -23,7 +23,7 @@ export type RecommendStepsParams = {
     issueNumber: string;
     issueDescription: string;
     previousRecommendation?: string;
-    previousRecommendationFormat?: 'structured' | 'legacy';
+    previousRecommendationFormat?: 'structured' | 'structured-other-locale' | 'legacy';
     targetLocale: string;
 };
 
@@ -34,9 +34,19 @@ export function getRecommendStepsPrompt(params: RecommendStepsParams): string {
         issueDescription: params.issueDescription,
         targetLocale: params.targetLocale,
         previousRecommendation: params.previousRecommendation
-            ? `${params.previousRecommendationFormat === 'structured'
-                ? 'Previous structured recommendation (use only to detect whether the current plan is still valid):'
-                : 'Previous legacy recommendation (return a complete structured replacement; do not return unchanged):'}\n<previous-recommendation>\n${params.previousRecommendation}\n</previous-recommendation>`
+            ? `${previousRecommendationInstruction(params.previousRecommendationFormat)}\n<previous-recommendation>\n${params.previousRecommendation}\n</previous-recommendation>`
             : 'There is no previous recommendation for this issue.',
     });
+}
+
+function previousRecommendationInstruction(
+    format: RecommendStepsParams['previousRecommendationFormat'],
+): string {
+    if (format === 'structured') {
+        return 'Previous structured recommendation (use only to detect whether the current plan is still valid):';
+    }
+    if (format === 'structured-other-locale') {
+        return 'Previous structured recommendation from another or unknown locale (return a complete structured replacement in the requested locale; do not return unchanged):';
+    }
+    return 'Previous legacy recommendation (return a complete structured replacement; do not return unchanged):';
 }

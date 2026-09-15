@@ -944,6 +944,11 @@ generic output is left intact.
   when no agent is configured. The next configured planning run requires a
   complete structured replacement even when the visible issue description is
   unchanged; `unchanged` cannot defer that migration.
+- Structured recommendation state records the canonical locale of its
+  human-readable fields. An unchanged-description replay is valid only when that
+  locale equals the current effective issue locale. A missing or different
+  locale requires a complete agent-backed replacement and rejects `unchanged`;
+  without an agent, publication fails closed and leaves the prior card untouched.
 - Existing progress labels remain authoritative during progress-card adoption.
 - Human-authored and third-party comments are never migrated.
 
@@ -1017,8 +1022,11 @@ persisted recommendation state, context projection, replay path, semantic
 fingerprint, and renderer share that contract. New output keeps renderer-owned
 numbering and headings, rejects malformed or wrong-locale responses before
 publication, updates the existing plan identity on material issue edits, and
-migrates legacy stored text on the next agent-backed run. Compatibility text is
-retained only for old state and does not control new card structure.
+migrates legacy stored text on the next agent-backed run. Persisted structured
+state carries its canonical output locale; replay requires an exact locale match,
+while repository/issue locale changes force a complete localized replacement and
+make `unchanged` invalid. Compatibility text is retained only for old state and
+does not control new card structure.
 
 Addressed Think requests now use that same `direct-answer` contract. The Think
 application service has only issue-description query and agent-query ports; it

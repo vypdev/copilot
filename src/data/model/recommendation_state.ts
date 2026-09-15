@@ -1,10 +1,12 @@
 import { parseImplementationPlan, type ImplementationPlan } from '../../domain/implementation_plan';
+import { canonicalizeLocaleTag } from '../../domain/locale';
 
 export interface RecommendationState {
     readonly issueDescriptionFingerprint: string;
     readonly recommendationFingerprint: string;
     readonly recommendation: string;
     readonly implementationPlan?: ImplementationPlan;
+    readonly implementationPlanLocale?: string;
 }
 
 export function isRecommendationState(value: unknown): value is RecommendationState {
@@ -26,10 +28,20 @@ export function restoreRecommendationState(value: unknown): RecommendationState 
         ? undefined
         : parseImplementationPlan(candidate.implementationPlan);
     if (candidate.implementationPlan !== undefined && !implementationPlan) return undefined;
+    let implementationPlanLocale: string | undefined;
+    if (candidate.implementationPlanLocale !== undefined) {
+        if (!implementationPlan || typeof candidate.implementationPlanLocale !== 'string') return undefined;
+        try {
+            implementationPlanLocale = canonicalizeLocaleTag(candidate.implementationPlanLocale);
+        } catch {
+            return undefined;
+        }
+    }
     return Object.freeze({
         issueDescriptionFingerprint: candidate.issueDescriptionFingerprint as string,
         recommendationFingerprint: candidate.recommendationFingerprint as string,
         recommendation: candidate.recommendation as string,
         ...(implementationPlan ? { implementationPlan } : {}),
+        ...(implementationPlanLocale ? { implementationPlanLocale } : {}),
     });
 }

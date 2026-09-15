@@ -998,7 +998,12 @@ configuration the complete card is English (`en-US`); any valid configured
 locale resolves one atomic catalog, while paths, commands, refs, and code
 identifiers remain unchanged. Legacy free-form state stays readable and is
 regenerated through the same locale contract on the next configured planning
-run.
+run. New structured state persists the canonical locale alongside the bounded
+plan. Replays require an exact match with the current effective issue locale; a
+locale change or older structured state without locale evidence requires a
+complete agent-backed replacement, and `unchanged` is rejected. If no agent is
+available, the old card is left untouched rather than being reprojected with new
+catalog chrome around plan content in an unverified language.
 
 The inactivity-closure slice removes the last feature-local `en`/`es` branch
 from its public path. It resolves complete issue-locale and repository-summary

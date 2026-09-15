@@ -57,12 +57,17 @@ export async function runRecommendStepsWorkflow(
 
         const issueDescriptionFingerprint = createIssueDescriptionFingerprint(issueDescription);
         const matchingPreviousRecommendation = previousRecommendation?.issueDescriptionFingerprint === issueDescriptionFingerprint;
-        if (matchingPreviousRecommendation && (previousRecommendation.implementationPlan || !agentReady)) {
+        const structuredPlanUsesTargetLocale = previousRecommendation?.implementationPlan !== undefined
+            && previousRecommendation.implementationPlanLocale === param.targetLocale;
+        if (matchingPreviousRecommendation && (structuredPlanUsesTargetLocale
+            || (!previousRecommendation.implementationPlan && !agentReady))) {
             logInfo('RecommendSteps: issue description is unchanged; reconciling the existing plan.');
             return replayExistingPlan(taskId, issueNumber, previousRecommendation);
         }
         if (matchingPreviousRecommendation) {
-            logInfo('RecommendSteps: migrating the matching legacy recommendation to the structured plan contract.');
+            logInfo(previousRecommendation.implementationPlan
+                ? 'RecommendSteps: regenerating the matching structured plan in the configured issue locale.'
+                : 'RecommendSteps: migrating the matching legacy recommendation to the structured plan contract.');
         }
         if (!agentReady) {
             return outcome([failure(taskId, 'Missing agent model or executable.', 'configuration.invalid')]);
@@ -73,7 +78,9 @@ export async function runRecommendStepsWorkflow(
             issueNumber: String(issueNumber),
             issueDescription,
             previousRecommendation: previousRecommendation?.recommendation,
-            previousRecommendationFormat: previousRecommendation?.implementationPlan ? 'structured' : 'legacy',
+            previousRecommendationFormat: previousRecommendation?.implementationPlan
+                ? (structuredPlanUsesTargetLocale ? 'structured' : 'structured-other-locale')
+                : 'legacy',
             targetLocale: param.targetLocale,
         });
         logDebugInfo(

@@ -49,4 +49,19 @@ describe('getRecommendStepsPrompt', () => {
         expect(prompt).toContain('complete structured replacement');
         expect(prompt).toContain('do not return unchanged');
     });
+
+    it('requires a complete replacement when a structured plan uses another or unknown locale', () => {
+        const prompt = getRecommendStepsPrompt({
+            projectContextInstruction: '',
+            issueNumber: '7',
+            issueDescription: 'Implement OAuth flow.',
+            previousRecommendation: '1. Definir el contrato.',
+            previousRecommendationFormat: 'structured-other-locale',
+            targetLocale: 'en-US',
+        });
+
+        expect(prompt).toContain('Previous structured recommendation from another or unknown locale');
+        expect(prompt).toContain('complete structured replacement in the requested locale');
+        expect(prompt).toContain('do not return unchanged');
+    });
 });

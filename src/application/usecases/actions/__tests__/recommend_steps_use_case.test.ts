@@ -273,6 +273,7 @@ describe('RecommendStepsUseCase', () => {
         recommendationFingerprint: 'old-recommendation',
         recommendation: '1. Add auth module',
         implementationPlan: planFromText('1. Add auth module\n2. Add tests'),
+        implementationPlanLocale: 'en-US',
       },
     });
     const param = baseParam({ previousConfiguration: previous });
@@ -415,7 +416,95 @@ describe('RecommendStepsUseCase', () => {
       ],
       acceptance: 'El flujo funciona y todas las pruebas relevantes pasan.',
     });
+    expect(payload?.recommendationState).toMatchObject({ implementationPlanLocale: 'es-MX' });
     expect(mockAskAgent.mock.calls[0][2]).toContain('outputLocale` exactly as `es-MX');
+  });
+
+  it('regenerates a matching structured plan when the configured issue locale changes', async () => {
+    mockGetDescription.mockResolvedValue('Implement login feature.');
+    mockAskAgent.mockResolvedValue({
+      outputLocale: 'es-MX',
+      status: 'recommendation',
+      steps: [
+        { title: 'Definir el contrato', details: [] },
+        { title: 'Implementar el flujo', details: [] },
+        { title: 'Verificar el comportamiento', details: [] },
+      ],
+      acceptance: 'El flujo funciona y todas las pruebas relevantes pasan.',
+    });
+    const previousConfiguration = new Config({
+      recommendationState: {
+        issueDescriptionFingerprint: createIssueDescriptionFingerprint('Implement login feature.'),
+        recommendationFingerprint: 'english-plan',
+        recommendation: '1. Define the contract\n2. Implement the flow\n3. Verify behavior',
+        implementationPlan: planFromText('Define the contract\nImplement the flow\nVerify behavior'),
+        implementationPlanLocale: 'en-US',
+      },
+    });
+
+    const results = await invoke(baseParam({
+      locale: { repository: 'en-US', issue: 'es-MX', pullRequest: 'en-US' },
+      previousConfiguration,
+    }));
+    const payload = getResultPayload(results[0].payload);
+
+    expect(mockAskAgent).toHaveBeenCalledTimes(1);
+    expect(mockAskAgent.mock.calls[0][2]).toContain('Previous structured recommendation from another or unknown locale');
+    expect(mockAskAgent.mock.calls[0][2]).toContain('do not return unchanged');
+    expect(payload?.recommendationState).toMatchObject({ implementationPlanLocale: 'es-MX' });
+    expect(payload?.implementationPlan).toMatchObject({
+      steps: expect.arrayContaining([expect.objectContaining({ title: 'Definir el contrato' })]),
+    });
+  });
+
+  it('rejects unchanged output when a matching structured plan requires locale migration', async () => {
+    mockGetDescription.mockResolvedValue('Implement login feature.');
+    mockAskAgent.mockResolvedValue({
+      outputLocale: 'es-MX', status: 'unchanged', steps: null, acceptance: null,
+    });
+    const previousConfiguration = new Config({
+      recommendationState: {
+        issueDescriptionFingerprint: createIssueDescriptionFingerprint('Implement login feature.'),
+        recommendationFingerprint: 'english-plan',
+        recommendation: '1. Define the contract\n2. Implement the flow\n3. Verify behavior',
+        implementationPlan: planFromText('Define the contract\nImplement the flow\nVerify behavior'),
+        implementationPlanLocale: 'en-US',
+      },
+    });
+
+    const results = await invoke(baseParam({
+      locale: { repository: 'en-US', issue: 'es-MX', pullRequest: 'en-US' },
+      previousConfiguration,
+    }));
+
+    expect(results[0].errors[0]).toMatchObject({
+      code: 'agent.failed',
+      message: 'The configured agent returned unchanged for a plan that requires locale migration.',
+    });
+    expect(lastOutcome?.configurationPatch).toBeUndefined();
+  });
+
+  it('does not replay a structured plan with an unverified locale when no agent is configured', async () => {
+    mockGetDescription.mockResolvedValue('Implement login feature.');
+    const previousConfiguration = new Config({
+      recommendationState: {
+        issueDescriptionFingerprint: createIssueDescriptionFingerprint('Implement login feature.'),
+        recommendationFingerprint: 'pre-locale-plan',
+        recommendation: '1. Define the contract\n2. Implement the flow\n3. Verify behavior',
+        implementationPlan: planFromText('Define the contract\nImplement the flow\nVerify behavior'),
+      },
+    });
+
+    const results = await invoke(baseParam({
+      ai: new Ai('', '', false, [], false, 'low', 20),
+      previousConfiguration,
+    }));
+
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(results[0].errors[0]).toMatchObject({
+      code: 'configuration.invalid',
+      message: 'Missing agent model or executable.',
+    });
   });
 
   it.each([

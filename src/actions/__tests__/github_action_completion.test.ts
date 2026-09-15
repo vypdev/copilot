@@ -33,6 +33,7 @@ const recommendationState = {
 };
 const structuredRecommendationState = {
     ...recommendationState,
+    implementationPlanLocale: 'en-US',
     implementationPlan: {
         steps: [
             { title: 'Define', details: ['Contract'] },

@@ -93,7 +93,12 @@ atomically to English. A plan with the wrong output locale or an invalid shape
 is rejected before publication. Material issue edits update the existing card;
 equivalent edits and webhook retries are silent. Stored free-form plans remain
 readable when no agent is available and migrate to this structure on the next
-configured planning run.
+configured planning run. Structured plan state also records the exact effective
+issue locale. A replay is allowed only while that locale still matches. Changing
+the issue or repository locale makes the next configured planning run replace
+the complete plan in the new language; an agent that returns `unchanged` is
+rejected. Without a configured agent, Copilot leaves the existing card untouched
+instead of republishing content whose language is unknown or no longer current.
 
 GitHub delivers a comment in the main PR conversation as an `issue_comment`
 event. Copilot uses GitHub's PR marker and exact PR number to keep that transport
