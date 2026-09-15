@@ -51754,18 +51754,24 @@ function buildRecommendationResult(param, taskId, response, issueDescriptionFing
         if (!previousRecommendation.implementationPlan) {
             return recommendationFailure(taskId, 'The configured agent returned unchanged for a legacy plan that requires structured migration.');
         }
+        if (previousRecommendation.implementationPlanLocale !== extracted.locale) {
+            return recommendationFailure(taskId, 'The configured agent returned unchanged for a plan that requires locale migration.');
+        }
         return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'agent found no material change');
     }
     const recommendation = implementationPlanContextText(extracted.plan);
     (0, logging_ports_1.logDebugInfo)(`RecommendSteps: structured agent response received. Step count=${extracted.plan.steps.length}.`);
     const recommendationFingerprint = (0, recommendation_policy_1.createRecommendationFingerprint)((0, implementation_plan_1.implementationPlanFingerprintInput)(extracted.plan));
-    if (previousRecommendation?.recommendationFingerprint === recommendationFingerprint)
+    if (previousRecommendation?.recommendationFingerprint === recommendationFingerprint
+        && previousRecommendation.implementationPlanLocale === extracted.locale) {
         return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'recommendation is unchanged');
+    }
     const recommendationState = {
         issueDescriptionFingerprint,
         recommendationFingerprint,
         recommendation: (0, recommendation_policy_1.limitStoredRecommendation)(recommendation),
         implementationPlan: extracted.plan,
+        implementationPlanLocale: extracted.locale,
     };
     return recommendationOutcome([new result_1.Result({
             id: taskId,
@@ -51809,7 +51815,7 @@ function extractImplementationPlan(response, targetLocale) {
         return undefined;
     if (validation.payload.status === 'unchanged') {
         return validation.payload.steps === null && validation.payload.acceptance === null
-            ? Object.freeze({ kind: 'unchanged' })
+            ? Object.freeze({ kind: 'unchanged', locale: validation.expectedLocale })
             : undefined;
     }
     if (validation.payload.status !== 'recommendation')
@@ -51818,7 +51824,7 @@ function extractImplementationPlan(response, targetLocale) {
         steps: validation.payload.steps,
         acceptance: validation.payload.acceptance,
     });
-    return plan ? Object.freeze({ kind: 'recommendation', plan }) : undefined;
+    return plan ? Object.freeze({ kind: 'recommendation', locale: validation.expectedLocale, plan }) : undefined;
 }
 function hasOnlyResponseKeys(payload) {
     const allowed = ['outputLocale', 'status', 'steps', 'acceptance'];
@@ -51905,12 +51911,17 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
         }
         const issueDescriptionFingerprint = (0, recommendation_policy_1.createIssueDescriptionFingerprint)(issueDescription);
         const matchingPreviousRecommendation = previousRecommendation?.issueDescriptionFingerprint === issueDescriptionFingerprint;
-        if (matchingPreviousRecommendation && (previousRecommendation.implementationPlan || !agentReady)) {
+        const structuredPlanUsesTargetLocale = previousRecommendation?.implementationPlan !== undefined
+            && previousRecommendation.implementationPlanLocale === param.targetLocale;
+        if (matchingPreviousRecommendation && (structuredPlanUsesTargetLocale
+            || (!previousRecommendation.implementationPlan && !agentReady))) {
             (0, logging_ports_1.logInfo)('RecommendSteps: issue description is unchanged; reconciling the existing plan.');
             return replayExistingPlan(taskId, issueNumber, previousRecommendation);
         }
         if (matchingPreviousRecommendation) {
-            (0, logging_ports_1.logInfo)('RecommendSteps: migrating the matching legacy recommendation to the structured plan contract.');
+            (0, logging_ports_1.logInfo)(previousRecommendation.implementationPlan
+                ? 'RecommendSteps: regenerating the matching structured plan in the configured issue locale.'
+                : 'RecommendSteps: migrating the matching legacy recommendation to the structured plan contract.');
         }
         if (!agentReady) {
             return outcome([failure(taskId, 'Missing agent model or executable.', 'configuration.invalid')]);
@@ -51920,7 +51931,9 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
             issueNumber: String(issueNumber),
             issueDescription,
             previousRecommendation: previousRecommendation?.recommendation,
-            previousRecommendationFormat: previousRecommendation?.implementationPlan ? 'structured' : 'legacy',
+            previousRecommendationFormat: previousRecommendation?.implementationPlan
+                ? (structuredPlanUsesTargetLocale ? 'structured' : 'structured-other-locale')
+                : 'legacy',
             targetLocale: param.targetLocale,
         });
         (0, logging_ports_1.logDebugInfo)(`RecommendSteps: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`);
@@ -64793,6 +64806,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.isRecommendationState = isRecommendationState;
 exports.restoreRecommendationState = restoreRecommendationState;
 const implementation_plan_1 = __nccwpck_require__(77001);
+const locale_1 = __nccwpck_require__(15386);
 function isRecommendationState(value) {
     return restoreRecommendationState(value) !== undefined;
 }
@@ -64813,11 +64827,23 @@ function restoreRecommendationState(value) {
         : (0, implementation_plan_1.parseImplementationPlan)(candidate.implementationPlan);
     if (candidate.implementationPlan !== undefined && !implementationPlan)
         return undefined;
+    let implementationPlanLocale;
+    if (candidate.implementationPlanLocale !== undefined) {
+        if (!implementationPlan || typeof candidate.implementationPlanLocale !== 'string')
+            return undefined;
+        try {
+            implementationPlanLocale = (0, locale_1.canonicalizeLocaleTag)(candidate.implementationPlanLocale);
+        }
+        catch {
+            return undefined;
+        }
+    }
     return Object.freeze({
         issueDescriptionFingerprint: candidate.issueDescriptionFingerprint,
         recommendationFingerprint: candidate.recommendationFingerprint,
         recommendation: candidate.recommendation,
         ...(implementationPlan ? { implementationPlan } : {}),
+        ...(implementationPlanLocale ? { implementationPlanLocale } : {}),
     });
 }
 
@@ -78393,11 +78419,18 @@ function getRecommendStepsPrompt(params) {
         issueDescription: params.issueDescription,
         targetLocale: params.targetLocale,
         previousRecommendation: params.previousRecommendation
-            ? `${params.previousRecommendationFormat === 'structured'
-                ? 'Previous structured recommendation (use only to detect whether the current plan is still valid):'
-                : 'Previous legacy recommendation (return a complete structured replacement; do not return unchanged):'}\n<previous-recommendation>\n${params.previousRecommendation}\n</previous-recommendation>`
+            ? `${previousRecommendationInstruction(params.previousRecommendationFormat)}\n<previous-recommendation>\n${params.previousRecommendation}\n</previous-recommendation>`
             : 'There is no previous recommendation for this issue.',
     });
+}
+function previousRecommendationInstruction(format) {
+    if (format === 'structured') {
+        return 'Previous structured recommendation (use only to detect whether the current plan is still valid):';
+    }
+    if (format === 'structured-other-locale') {
+        return 'Previous structured recommendation from another or unknown locale (return a complete structured replacement in the requested locale; do not return unchanged):';
+    }
+    return 'Previous legacy recommendation (return a complete structured replacement; do not return unchanged):';
 }
 
 
