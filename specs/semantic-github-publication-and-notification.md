@@ -962,6 +962,17 @@ effective issue or pull-request catalog. Replays therefore reconcile the exact
 source-comment identity, and local CLI execution can render the answer without
 performing any GitHub publication.
 
+Scheduled inactivity closure now emits exactly one terminal policy explanation
+after a successful native close. Its fixed structure contains only outcome,
+threshold reason, and reopen guidance; internal scan steps and provider details
+remain in the Job Summary and errors. The issue-locale catalog supplies complete
+plural messages for the run summary, while stable ownership markers and payload
+keys remain machine-readable. Revalidation, close, and comment-publication
+failures are classified separately so a partial publication failure cannot
+rewrite the already-completed domain outcome. Because a later scan cannot replay
+the missing comment for an already-closed issue, that state is explicitly
+non-retryable and gives the operator a localized manual recovery action.
+
 No remote product flag is required. Each phase must be independently releasable
 and its compatibility adapter must fail closed to Job Summary, not fall back to
 generic comments.

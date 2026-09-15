@@ -5,13 +5,21 @@ import type { BoundIssueInactivityQueryPort, IssueInactivityClockPort } from '..
 import type { InactivityContext } from '../push_single_action_contexts';
 import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
 import { ApplicationError, toApplicationError } from '../../errors/application_error';
-import { baseLanguage } from '../../../domain/locale';
-import { buildPublicationMarker, createSemanticDigest } from '../../policies/publication_identity_policy';
+import type { MessageCatalogResolutionPort } from '../../ports/message_catalog_ports';
+import {
+    resolveInactivityCatalog,
+    resolveStaticInactivityCatalog,
+} from '../../policies/inactivity_message_catalog';
+import {
+    buildInactivityClosureComment,
+    buildInactivitySummarySteps,
+} from '../../policies/inactivity_notification_policy';
 
 export interface CloseInactiveIssuesWorkflowDependencies {
     readonly issueQueryPort: BoundIssueInactivityQueryPort;
     readonly issueClosurePort: BoundIssueClosurePort;
     readonly clock: IssueInactivityClockPort;
+    readonly catalogResolver?: MessageCatalogResolutionPort;
 }
 
 const TASK_ID = 'CloseInactiveIssuesUseCase';
@@ -26,11 +34,26 @@ export async function runCloseInactiveIssuesWorkflow(
     const activityLabel = param.activityLabel;
     const nowMilliseconds = dependencies.clock.nowMilliseconds();
     const thresholdHours = param.thresholdHours;
+    let resultMessages = resolveStaticInactivityCatalog(param.repositoryLocale);
 
     try {
+        const commentMessages = await resolveInactivityCatalog(
+            param.locale,
+            param.agentConfiguration,
+            dependencies.catalogResolver,
+        );
+        resultMessages = param.repositoryLocale === param.locale
+            ? commentMessages
+            : await resolveInactivityCatalog(
+                param.repositoryLocale,
+                param.agentConfiguration,
+                dependencies.catalogResolver,
+            );
         const candidates = await listCandidates(param, waitingLabels, dependencies.issueQueryPort);
         let eligibleCount = 0;
         let closedCount = 0;
+        let commentedCount = 0;
+        let commentFailureCount = 0;
         let skippedCount = 0;
         const errors: ApplicationError[] = [];
 
@@ -48,41 +71,80 @@ export async function runCloseInactiveIssuesWorkflow(
             }
             eligibleCount++;
 
+            let current: IssueActivitySnapshot | undefined;
             try {
                 // Re-read both labels and updated_at immediately before the
                 // mutation so a comment or state transition during the scan
                 // invalidates the stale list snapshot.
-                const current = await dependencies.issueQueryPort.getOpenIssue(
+                current = await dependencies.issueQueryPort.getOpenIssue(
                     candidate.number,
                 );
-                if (!current || evaluateIssueInactivity({
-                    issue: current,
-                    waitingLabels,
-                    agentActivityLabel: activityLabel,
-                    thresholdHours,
-                    nowMilliseconds: dependencies.clock.nowMilliseconds(),
-                }).kind !== 'close') {
-                    skippedCount++;
-                    continue;
-                }
+            } catch (error) {
+                const message = resultMessages.message('inactivity.error.revalidate', {
+                    issueNumber: candidate.number,
+                });
+                logError(message);
+                errors.push(new ApplicationError('provider.unavailable', message, { cause: error }));
+                continue;
+            }
+            if (!current || evaluateIssueInactivity({
+                issue: current,
+                waitingLabels,
+                agentActivityLabel: activityLabel,
+                thresholdHours,
+                nowMilliseconds: dependencies.clock.nowMilliseconds(),
+            }).kind !== 'close') {
+                skippedCount++;
+                continue;
+            }
 
-                const closed = await dependencies.issueClosurePort.closeIssue(
-                    candidate.number,
-                );
+            try {
+                const closed = await dependencies.issueClosurePort.closeIssue(candidate.number);
                 if (!closed) {
                     skippedCount++;
                     continue;
                 }
                 closedCount++;
+            } catch (error) {
+                const message = resultMessages.message('inactivity.error.close', {
+                    issueNumber: candidate.number,
+                });
+                logError(message);
+                errors.push(new ApplicationError('provider.unavailable', message, { cause: error }));
+                continue;
+            }
+
+            try {
                 await dependencies.issueClosurePort.addComment(
                     candidate.number,
-                    buildInactivityExplanation(candidate, thresholdHours, param.locale),
+                    buildInactivityClosureComment({
+                        candidate,
+                        thresholdHours,
+                        messages: commentMessages,
+                    }),
                 );
+                commentedCount++;
                 logInfo(`Issue #${candidate.number} closed after inactivity.`);
             } catch (error) {
-                const message = `Unable to close issue #${candidate.number} after inactivity.`;
+                commentFailureCount++;
+                const message = resultMessages.message('inactivity.error.comment', {
+                    issueNumber: candidate.number,
+                });
                 logError(message);
-                errors.push(new ApplicationError('provider.unavailable', `${message} ${safeErrorMessage(error)}`, { cause: error }));
+                errors.push(new ApplicationError('provider.unavailable', message, {
+                    cause: error,
+                    retryable: false,
+                    impact: resultMessages.message('inactivity.error.commentImpact', {
+                        issueNumber: candidate.number,
+                    }),
+                    action: resultMessages.message('inactivity.error.commentAction', {
+                        issueNumber: candidate.number,
+                    }),
+                    retainedState: resultMessages.message(
+                        'inactivity.error.commentRetainedState',
+                        { issueNumber: candidate.number },
+                    ),
+                }));
             }
         }
 
@@ -93,59 +155,34 @@ export async function runCloseInactiveIssuesWorkflow(
             id: TASK_ID,
             success: errors.length === 0,
             executed: closedCount > 0 || eligibleCount > 0,
-            steps: buildSteps(candidates.length, closedCount, skippedCount),
+            steps: buildInactivitySummarySteps({
+                scanned: candidates.length,
+                closed: closedCount,
+                skipped: skippedCount,
+                messages: resultMessages,
+            }),
             payload: {
                 scanned: candidates.length,
                 eligible: eligibleCount,
                 closed: closedCount,
+                commented: commentedCount,
+                commentFailures: commentFailureCount,
+                failures: errors.length,
                 skipped: skippedCount,
             },
             errors,
         })];
     } catch (error) {
-        const message = 'Unable to scan issues for inactivity closure.';
+        const message = resultMessages.message('inactivity.error.scan');
         logError(message);
         return [new Result({
             id: TASK_ID,
             success: false,
             executed: true,
             steps: [message],
-            errors: [toApplicationError(error, 'provider.unavailable', `${message} ${safeErrorMessage(error)}`)],
+            errors: [toApplicationError(error, 'provider.unavailable', message)],
         })];
     }
-}
-
-function buildInactivityExplanation(
-    candidate: IssueActivitySnapshot,
-    thresholdHours: number,
-    locale: string,
-): string {
-    const digest = createSemanticDigest({ updatedAt: candidate.updatedAt, thresholdHours });
-    const marker = buildPublicationMarker({
-        identity: { topic: 'inactivity', target: { kind: 'issue', number: candidate.number }, key: 'closure' },
-        sourceVersion: `policy:${digest}`,
-        digest,
-    });
-    if (baseLanguage(locale) === 'es') {
-        return [
-            marker,
-            '',
-            '## Issue cerrada por inactividad',
-            '',
-            `No se detectó actividad durante al menos **${thresholdHours} horas** mientras esta issue esperaba una respuesta.`,
-            '',
-            'Si todavía necesita atención, vuelve a abrirla y añade un comentario con el contexto actualizado.',
-        ].join('\n');
-    }
-    return [
-        marker,
-        '',
-        '## Issue closed after inactivity',
-        '',
-        `No activity was detected for at least **${thresholdHours} hours** while this issue was waiting for a response.`,
-        '',
-        'If it still needs attention, reopen it and add a comment with the current context.',
-    ].join('\n');
 }
 
 async function listCandidates(
@@ -163,18 +200,6 @@ async function listCandidates(
     return [...uniqueCandidates.values()];
 }
 
-function buildSteps(scanned: number, closed: number, skipped: number): string[] {
-    const steps = [`Scanned ${scanned} open issue(s) waiting for a response.`];
-    if (closed > 0) steps.push(`Closed ${closed} issue(s) after the inactivity threshold.`);
-    if (skipped > 0) steps.push(`Skipped ${skipped} candidate(s) because they were no longer eligible.`);
-    if (closed === 0) steps.push('No issue was closed for inactivity.');
-    return steps;
-}
-
 function unique(values: readonly string[]): string[] {
     return [...new Set(values.map(value => value.trim()).filter(Boolean))];
-}
-
-function safeErrorMessage(_error: unknown): string {
-    return 'The issue provider request failed.';
 }

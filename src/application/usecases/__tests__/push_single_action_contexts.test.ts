@@ -203,6 +203,8 @@ describe('push and single-action context projection', () => {
       activityLabel: 'state:ai-processing',
       thresholdHours: 168,
       locale: 'en-US',
+      repositoryLocale: 'en-US',
+      agentConfiguration: { provider: 'codex', model: 'planner-model' },
     });
   });
 

@@ -144,7 +144,7 @@ export function createSingleActionUseCaseCompositionRoot(
       bindIssueDescriptionQuery(issueDescriptionQueryPort, binding),
       createFindingsQueryPort(),
     ),
-    createCloseInactiveIssuesUseCase(binding),
+    createCloseInactiveIssuesUseCase(binding, catalogResolver),
     createActorAuthorizationRepository(),
     new PublishIssueCommentUseCase(bindIssueCommentPublication(issueDescriptionQueryPort, binding)),
     new ObserveBranchSyncUseCase(

@@ -65,6 +65,33 @@ repositories do not change behavior until `copilot setup` enables the
 - **Default threshold:** 168 hours (7 days), configurable with `inactivity-threshold-hours` or the `INACTIVITY_THRESHOLD_HOURS` Repository Variable. Valid values are 1–8760 hours.
 - **Safety:** the issue is fetched again immediately before closing. If its state, waiting label, activity timestamp, or processing marker changed, it is left open. One terminal explanation records the threshold and reopening path; it uses a stable semantic marker and the configured issue locale.
 
+With the default `en-US` issue locale, that terminal message is intentionally
+short:
+
+```markdown
+## Issue closed after inactivity
+
+No activity was detected for at least 168 hours while this issue was waiting for a response.
+
+If it still needs attention, reopen it and add a comment with the current context.
+```
+
+`issues-locale` inherits `repository-locale`, which defaults to `en-US`. Reviewed
+English and Spanish copy is bundled. Any other valid BCP-47 locale uses one
+bounded catalog-localization request per distinct effective locale in the run;
+the result is reused when issue and repository scopes match. If a request is
+unavailable or invalid, its complete artifact falls back to English. Commands,
+labels, issue numbers, hidden ownership markers, error codes, and result payload
+keys are never translated.
+
+The workflow Job Summary reports locale-aware scanned, closed, and skipped
+counts. Provider failures identify whether Copilot could not recheck the issue,
+could not close it, or closed it successfully but could not publish the terminal
+explanation. That last partial failure never claims that the close itself failed.
+Because a later scan ignores closed issues, this partial state is marked
+non-retryable and directs the operator to add the explanation manually only when
+the missing context matters.
+
 ## Summary
 
 | Behavior | Controlled by | Where it runs |

@@ -45462,6 +45462,168 @@ function resolveGithubExecutionAdmission(input) {
 
 /***/ }),
 
+/***/ 74902:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.INACTIVITY_CATALOG_DEFINITIONS = exports.SPANISH_INACTIVITY_DEFINITION = exports.ENGLISH_INACTIVITY_DEFINITION = exports.INACTIVITY_MESSAGE_IDS = void 0;
+exports.resolveStaticInactivityCatalog = resolveStaticInactivityCatalog;
+exports.resolveInactivityCatalog = resolveInactivityCatalog;
+const message_catalog_1 = __nccwpck_require__(27097);
+const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
+exports.INACTIVITY_MESSAGE_IDS = Object.freeze([
+    'inactivity.closure.heading',
+    'inactivity.closure.reason',
+    'inactivity.closure.reopen',
+    'inactivity.summary.scanned',
+    'inactivity.summary.closed',
+    'inactivity.summary.skipped',
+    'inactivity.summary.none',
+    'inactivity.error.scan',
+    'inactivity.error.revalidate',
+    'inactivity.error.close',
+    'inactivity.error.comment',
+    'inactivity.error.commentImpact',
+    'inactivity.error.commentAction',
+    'inactivity.error.commentRetainedState',
+]);
+const ENGLISH_MESSAGES = Object.freeze({
+    'inactivity.closure.heading': 'Issue closed after inactivity',
+    'inactivity.closure.reason': Object.freeze({
+        one: 'No activity was detected for at least {count} hour while this issue was waiting for a response.',
+        other: 'No activity was detected for at least {count} hours while this issue was waiting for a response.',
+    }),
+    'inactivity.closure.reopen': 'If it still needs attention, reopen it and add a comment with the current context.',
+    'inactivity.summary.scanned': Object.freeze({
+        one: 'Scanned {count} open issue waiting for a response.',
+        other: 'Scanned {count} open issues waiting for a response.',
+    }),
+    'inactivity.summary.closed': Object.freeze({
+        one: 'Closed {count} issue after the inactivity threshold.',
+        other: 'Closed {count} issues after the inactivity threshold.',
+    }),
+    'inactivity.summary.skipped': Object.freeze({
+        one: 'Skipped {count} candidate because it was no longer eligible.',
+        other: 'Skipped {count} candidates because they were no longer eligible.',
+    }),
+    'inactivity.summary.none': 'No issue was closed for inactivity.',
+    'inactivity.error.scan': 'Unable to scan issues for inactivity closure.',
+    'inactivity.error.revalidate': 'Unable to recheck issue #{issueNumber} before inactivity closure.',
+    'inactivity.error.close': 'Unable to close issue #{issueNumber} after inactivity.',
+    'inactivity.error.comment': 'Issue #{issueNumber} was closed, but its inactivity explanation could not be published.',
+    'inactivity.error.commentImpact': 'Issue #{issueNumber} was closed without its terminal inactivity explanation.',
+    'inactivity.error.commentAction': 'Inspect issue #{issueNumber} and add the explanation manually if the missing context matters.',
+    'inactivity.error.commentRetainedState': 'Issue #{issueNumber} remains closed; the completed close will not be repeated.',
+});
+const SPANISH_MESSAGES = Object.freeze({
+    'inactivity.closure.heading': 'Issue cerrada por inactividad',
+    'inactivity.closure.reason': Object.freeze({
+        one: 'No se detectó actividad durante al menos {count} hora mientras esta issue esperaba una respuesta.',
+        many: 'No se detectó actividad durante al menos {count} horas mientras esta issue esperaba una respuesta.',
+        other: 'No se detectó actividad durante al menos {count} horas mientras esta issue esperaba una respuesta.',
+    }),
+    'inactivity.closure.reopen': 'Si todavía necesita atención, vuelve a abrirla y añade un comentario con el contexto actualizado.',
+    'inactivity.summary.scanned': Object.freeze({
+        one: 'Se revisó {count} issue abierta que esperaba una respuesta.',
+        many: 'Se revisaron {count} issues abiertas que esperaban una respuesta.',
+        other: 'Se revisaron {count} issues abiertas que esperaban una respuesta.',
+    }),
+    'inactivity.summary.closed': Object.freeze({
+        one: 'Se cerró {count} issue tras superar el límite de inactividad.',
+        many: 'Se cerraron {count} issues tras superar el límite de inactividad.',
+        other: 'Se cerraron {count} issues tras superar el límite de inactividad.',
+    }),
+    'inactivity.summary.skipped': Object.freeze({
+        one: 'Se omitió {count} candidata porque ya no cumplía los requisitos.',
+        many: 'Se omitieron {count} candidatas porque ya no cumplían los requisitos.',
+        other: 'Se omitieron {count} candidatas porque ya no cumplían los requisitos.',
+    }),
+    'inactivity.summary.none': 'No se cerró ninguna issue por inactividad.',
+    'inactivity.error.scan': 'No se pudieron revisar las issues para aplicar el cierre por inactividad.',
+    'inactivity.error.revalidate': 'No se pudo volver a comprobar la issue #{issueNumber} antes de cerrarla por inactividad.',
+    'inactivity.error.close': 'No se pudo cerrar la issue #{issueNumber} por inactividad.',
+    'inactivity.error.comment': 'La issue #{issueNumber} se cerró, pero no se pudo publicar la explicación sobre su inactividad.',
+    'inactivity.error.commentImpact': 'La issue #{issueNumber} se cerró sin su explicación final sobre la inactividad.',
+    'inactivity.error.commentAction': 'Revisa la issue #{issueNumber} y añade la explicación manualmente si falta contexto importante.',
+    'inactivity.error.commentRetainedState': 'La issue #{issueNumber} permanece cerrada; el cierre completado no se repetirá.',
+});
+exports.ENGLISH_INACTIVITY_DEFINITION = Object.freeze({
+    version: message_catalog_1.MESSAGE_CATALOG_VERSION,
+    locale: 'en-US',
+    compatibleBaseLanguage: 'en',
+    messages: ENGLISH_MESSAGES,
+});
+exports.SPANISH_INACTIVITY_DEFINITION = Object.freeze({
+    version: message_catalog_1.MESSAGE_CATALOG_VERSION,
+    locale: 'es-ES',
+    compatibleBaseLanguage: 'es',
+    messages: SPANISH_MESSAGES,
+});
+exports.INACTIVITY_CATALOG_DEFINITIONS = Object.freeze([
+    exports.ENGLISH_INACTIVITY_DEFINITION,
+    exports.SPANISH_INACTIVITY_DEFINITION,
+]);
+function resolveStaticInactivityCatalog(locale) {
+    return (0, resolved_message_catalog_policy_1.resolveStaticMessageCatalogView)(locale, exports.ENGLISH_INACTIVITY_DEFINITION, exports.INACTIVITY_CATALOG_DEFINITIONS);
+}
+async function resolveInactivityCatalog(locale, configuration, resolver) {
+    return (0, resolved_message_catalog_policy_1.resolveMessageCatalogView)(locale, exports.INACTIVITY_MESSAGE_IDS, exports.ENGLISH_INACTIVITY_DEFINITION, exports.INACTIVITY_CATALOG_DEFINITIONS, configuration, resolver);
+}
+
+
+/***/ }),
+
+/***/ 1572:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildInactivityClosureComment = buildInactivityClosureComment;
+exports.buildInactivitySummarySteps = buildInactivitySummarySteps;
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+function buildInactivityClosureComment(input) {
+    const digest = (0, publication_identity_policy_1.createSemanticDigest)({
+        updatedAt: input.candidate.updatedAt,
+        thresholdHours: input.thresholdHours,
+    });
+    const marker = (0, publication_identity_policy_1.buildPublicationMarker)({
+        identity: {
+            topic: 'inactivity',
+            target: { kind: 'issue', number: input.candidate.number },
+            key: 'closure',
+        },
+        sourceVersion: `policy:${digest}`,
+        digest,
+    });
+    return [
+        marker,
+        '',
+        `## ${input.messages.message('inactivity.closure.heading')}`,
+        '',
+        input.messages.message('inactivity.closure.reason', { count: input.thresholdHours }, input.thresholdHours),
+        '',
+        input.messages.message('inactivity.closure.reopen'),
+    ].join('\n');
+}
+function buildInactivitySummarySteps(input) {
+    const steps = [input.messages.message('inactivity.summary.scanned', { count: input.scanned }, input.scanned)];
+    if (input.closed > 0) {
+        steps.push(input.messages.message('inactivity.summary.closed', { count: input.closed }, input.closed));
+    }
+    if (input.skipped > 0) {
+        steps.push(input.messages.message('inactivity.summary.skipped', { count: input.skipped }, input.skipped));
+    }
+    if (input.closed === 0)
+        steps.push(input.messages.message('inactivity.summary.none'));
+    return steps;
+}
+
+
+/***/ }),
+
 /***/ 73160:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -48615,10 +48777,11 @@ exports.CloseInactiveIssuesUseCase = void 0;
 const close_inactive_issues_workflow_1 = __nccwpck_require__(86288);
 /** Application boundary for the scheduled inactivity-maintenance action. */
 class CloseInactiveIssuesUseCase {
-    constructor(issueQueryPort, issueClosurePort, clock) {
+    constructor(issueQueryPort, issueClosurePort, clock, catalogResolver) {
         this.issueQueryPort = issueQueryPort;
         this.issueClosurePort = issueClosurePort;
         this.clock = clock;
+        this.catalogResolver = catalogResolver;
         this.taskId = 'CloseInactiveIssuesUseCase';
     }
     async invoke(param) {
@@ -48626,6 +48789,7 @@ class CloseInactiveIssuesUseCase {
             issueQueryPort: this.issueQueryPort,
             issueClosurePort: this.issueClosurePort,
             clock: this.clock,
+            catalogResolver: this.catalogResolver,
         });
     }
 }
@@ -48645,8 +48809,8 @@ const result_1 = __nccwpck_require__(73817);
 const issue_inactivity_1 = __nccwpck_require__(38572);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
-const locale_1 = __nccwpck_require__(15386);
-const publication_identity_policy_1 = __nccwpck_require__(45403);
+const inactivity_message_catalog_1 = __nccwpck_require__(74902);
+const inactivity_notification_policy_1 = __nccwpck_require__(1572);
 const TASK_ID = 'CloseInactiveIssuesUseCase';
 /** Scans waiting issues and closes only candidates that remain inactive. */
 async function runCloseInactiveIssuesWorkflow(param, dependencies) {
@@ -48656,10 +48820,17 @@ async function runCloseInactiveIssuesWorkflow(param, dependencies) {
     const activityLabel = param.activityLabel;
     const nowMilliseconds = dependencies.clock.nowMilliseconds();
     const thresholdHours = param.thresholdHours;
+    let resultMessages = (0, inactivity_message_catalog_1.resolveStaticInactivityCatalog)(param.repositoryLocale);
     try {
+        const commentMessages = await (0, inactivity_message_catalog_1.resolveInactivityCatalog)(param.locale, param.agentConfiguration, dependencies.catalogResolver);
+        resultMessages = param.repositoryLocale === param.locale
+            ? commentMessages
+            : await (0, inactivity_message_catalog_1.resolveInactivityCatalog)(param.repositoryLocale, param.agentConfiguration, dependencies.catalogResolver);
         const candidates = await listCandidates(param, waitingLabels, dependencies.issueQueryPort);
         let eligibleCount = 0;
         let closedCount = 0;
+        let commentedCount = 0;
+        let commentFailureCount = 0;
         let skippedCount = 0;
         const errors = [];
         for (const candidate of candidates) {
@@ -48675,34 +48846,73 @@ async function runCloseInactiveIssuesWorkflow(param, dependencies) {
                 continue;
             }
             eligibleCount++;
+            let current;
             try {
                 // Re-read both labels and updated_at immediately before the
                 // mutation so a comment or state transition during the scan
                 // invalidates the stale list snapshot.
-                const current = await dependencies.issueQueryPort.getOpenIssue(candidate.number);
-                if (!current || (0, issue_inactivity_1.evaluateIssueInactivity)({
-                    issue: current,
-                    waitingLabels,
-                    agentActivityLabel: activityLabel,
-                    thresholdHours,
-                    nowMilliseconds: dependencies.clock.nowMilliseconds(),
-                }).kind !== 'close') {
-                    skippedCount++;
-                    continue;
-                }
+                current = await dependencies.issueQueryPort.getOpenIssue(candidate.number);
+            }
+            catch (error) {
+                const message = resultMessages.message('inactivity.error.revalidate', {
+                    issueNumber: candidate.number,
+                });
+                (0, logging_ports_1.logError)(message);
+                errors.push(new application_error_1.ApplicationError('provider.unavailable', message, { cause: error }));
+                continue;
+            }
+            if (!current || (0, issue_inactivity_1.evaluateIssueInactivity)({
+                issue: current,
+                waitingLabels,
+                agentActivityLabel: activityLabel,
+                thresholdHours,
+                nowMilliseconds: dependencies.clock.nowMilliseconds(),
+            }).kind !== 'close') {
+                skippedCount++;
+                continue;
+            }
+            try {
                 const closed = await dependencies.issueClosurePort.closeIssue(candidate.number);
                 if (!closed) {
                     skippedCount++;
                     continue;
                 }
                 closedCount++;
-                await dependencies.issueClosurePort.addComment(candidate.number, buildInactivityExplanation(candidate, thresholdHours, param.locale));
+            }
+            catch (error) {
+                const message = resultMessages.message('inactivity.error.close', {
+                    issueNumber: candidate.number,
+                });
+                (0, logging_ports_1.logError)(message);
+                errors.push(new application_error_1.ApplicationError('provider.unavailable', message, { cause: error }));
+                continue;
+            }
+            try {
+                await dependencies.issueClosurePort.addComment(candidate.number, (0, inactivity_notification_policy_1.buildInactivityClosureComment)({
+                    candidate,
+                    thresholdHours,
+                    messages: commentMessages,
+                }));
+                commentedCount++;
                 (0, logging_ports_1.logInfo)(`Issue #${candidate.number} closed after inactivity.`);
             }
             catch (error) {
-                const message = `Unable to close issue #${candidate.number} after inactivity.`;
+                commentFailureCount++;
+                const message = resultMessages.message('inactivity.error.comment', {
+                    issueNumber: candidate.number,
+                });
                 (0, logging_ports_1.logError)(message);
-                errors.push(new application_error_1.ApplicationError('provider.unavailable', `${message} ${safeErrorMessage(error)}`, { cause: error }));
+                errors.push(new application_error_1.ApplicationError('provider.unavailable', message, {
+                    cause: error,
+                    retryable: false,
+                    impact: resultMessages.message('inactivity.error.commentImpact', {
+                        issueNumber: candidate.number,
+                    }),
+                    action: resultMessages.message('inactivity.error.commentAction', {
+                        issueNumber: candidate.number,
+                    }),
+                    retainedState: resultMessages.message('inactivity.error.commentRetainedState', { issueNumber: candidate.number }),
+                }));
             }
         }
         (0, logging_ports_1.logDebugInfo)(`${TASK_ID}: scanned=${candidates.length}, eligible=${eligibleCount}, closed=${closedCount}, skipped=${skippedCount}.`);
@@ -48710,55 +48920,35 @@ async function runCloseInactiveIssuesWorkflow(param, dependencies) {
                 id: TASK_ID,
                 success: errors.length === 0,
                 executed: closedCount > 0 || eligibleCount > 0,
-                steps: buildSteps(candidates.length, closedCount, skippedCount),
+                steps: (0, inactivity_notification_policy_1.buildInactivitySummarySteps)({
+                    scanned: candidates.length,
+                    closed: closedCount,
+                    skipped: skippedCount,
+                    messages: resultMessages,
+                }),
                 payload: {
                     scanned: candidates.length,
                     eligible: eligibleCount,
                     closed: closedCount,
+                    commented: commentedCount,
+                    commentFailures: commentFailureCount,
+                    failures: errors.length,
                     skipped: skippedCount,
                 },
                 errors,
             })];
     }
     catch (error) {
-        const message = 'Unable to scan issues for inactivity closure.';
+        const message = resultMessages.message('inactivity.error.scan');
         (0, logging_ports_1.logError)(message);
         return [new result_1.Result({
                 id: TASK_ID,
                 success: false,
                 executed: true,
                 steps: [message],
-                errors: [(0, application_error_1.toApplicationError)(error, 'provider.unavailable', `${message} ${safeErrorMessage(error)}`)],
+                errors: [(0, application_error_1.toApplicationError)(error, 'provider.unavailable', message)],
             })];
     }
-}
-function buildInactivityExplanation(candidate, thresholdHours, locale) {
-    const digest = (0, publication_identity_policy_1.createSemanticDigest)({ updatedAt: candidate.updatedAt, thresholdHours });
-    const marker = (0, publication_identity_policy_1.buildPublicationMarker)({
-        identity: { topic: 'inactivity', target: { kind: 'issue', number: candidate.number }, key: 'closure' },
-        sourceVersion: `policy:${digest}`,
-        digest,
-    });
-    if ((0, locale_1.baseLanguage)(locale) === 'es') {
-        return [
-            marker,
-            '',
-            '## Issue cerrada por inactividad',
-            '',
-            `No se detectó actividad durante al menos **${thresholdHours} horas** mientras esta issue esperaba una respuesta.`,
-            '',
-            'Si todavía necesita atención, vuelve a abrirla y añade un comentario con el contexto actualizado.',
-        ].join('\n');
-    }
-    return [
-        marker,
-        '',
-        '## Issue closed after inactivity',
-        '',
-        `No activity was detected for at least **${thresholdHours} hours** while this issue was waiting for a response.`,
-        '',
-        'If it still needs attention, reopen it and add a comment with the current context.',
-    ].join('\n');
 }
 async function listCandidates(_param, waitingLabels, queryPort) {
     const candidates = [];
@@ -48770,21 +48960,8 @@ async function listCandidates(_param, waitingLabels, queryPort) {
         uniqueCandidates.set(candidate.number, candidate);
     return [...uniqueCandidates.values()];
 }
-function buildSteps(scanned, closed, skipped) {
-    const steps = [`Scanned ${scanned} open issue(s) waiting for a response.`];
-    if (closed > 0)
-        steps.push(`Closed ${closed} issue(s) after the inactivity threshold.`);
-    if (skipped > 0)
-        steps.push(`Skipped ${skipped} candidate(s) because they were no longer eligible.`);
-    if (closed === 0)
-        steps.push('No issue was closed for inactivity.');
-    return steps;
-}
 function unique(values) {
     return [...new Set(values.map(value => value.trim()).filter(Boolean))];
-}
-function safeErrorMessage(_error) {
-    return 'The issue provider request failed.';
 }
 
 
@@ -53277,6 +53454,8 @@ function projectInactivityContext(source) {
         activityLabel: source.labels.lifecycle.aiProcessing,
         thresholdHours: source.inactivityThresholdHours,
         locale: source.locale?.issue ?? 'en-US',
+        repositoryLocale: source.locale?.repository ?? 'en-US',
+        agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
     });
 }
 function projectBranchObservationContext(source) {
@@ -73861,8 +74040,8 @@ const github_issue_client_factory_1 = __nccwpck_require__(95883);
 const issue_interaction_composition_root_1 = __nccwpck_require__(92503);
 const lifecycle_capability_port_binding_1 = __nccwpck_require__(85785);
 const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
-function createCloseInactiveIssuesUseCase(binding) {
-    return new close_inactive_issues_use_case_1.CloseInactiveIssuesUseCase((0, push_single_action_capability_port_binding_1.bindIssueInactivityQuery)(new issue_inactivity_repository_1.IssueInactivityRepository((0, github_issue_client_factory_1.createIssueInactivityClient)()), binding), (0, lifecycle_capability_port_binding_1.bindIssueClosure)((0, issue_interaction_composition_root_1.createIssueClosureRepository)(), binding), new system_issue_inactivity_clock_adapter_1.SystemIssueInactivityClockAdapter());
+function createCloseInactiveIssuesUseCase(binding, catalogResolver) {
+    return new close_inactive_issues_use_case_1.CloseInactiveIssuesUseCase((0, push_single_action_capability_port_binding_1.bindIssueInactivityQuery)(new issue_inactivity_repository_1.IssueInactivityRepository((0, github_issue_client_factory_1.createIssueInactivityClient)()), binding), (0, lifecycle_capability_port_binding_1.bindIssueClosure)((0, issue_interaction_composition_root_1.createIssueClosureRepository)(), binding), new system_issue_inactivity_clock_adapter_1.SystemIssueInactivityClockAdapter(), catalogResolver);
 }
 
 
@@ -74245,7 +74424,7 @@ function createSingleActionUseCaseCompositionRoot(surface, binding) {
         : undefined;
     return new single_action_use_case_1.SingleActionUseCase(repositoryTagPort && repositoryReleasePort
         ? new publish_github_action_use_case_1.PublishGithubActionUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding), (0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding))
-        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncNotification)(issueDescriptionQueryPort, binding), catalogResolver), deploymentOrchestration);
+        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding, catalogResolver), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncNotification)(issueDescriptionQueryPort, binding), catalogResolver), deploymentOrchestration);
 }
 function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publication, binding, catalogResolver) {
     const deploymentClient = new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter();
