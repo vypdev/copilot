@@ -16,6 +16,7 @@
         ".github/workflows/copilot_issue.yml",
         ".github/workflows/copilot_issue_comment.yml",
         ".github/workflows/copilot_pull_request.yml",
+        ".github/workflows/copilot_pull_request_review_state.yml",
         ".github/workflows/copilot_pull_request_comment.yml",
         ".github/workflows/copilot_commit.yml",
         ".github/workflows/copilot_deployment_orchestration.yml"

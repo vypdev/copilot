@@ -232,11 +232,15 @@ reported through its native workflow and Job Summary. Generic publication now
 uses one explicit mode: `pull_request: edited` is `omit-metadata-only`, a real
 Bugbot result is `omit-feature-owned`, and other routes remain `publish`.
 
-PR #378 exposed the final workflow-level noise: Copilot's own description update
-still emitted redundant skipped `pull_request: edited` runs, and analysis,
-review-state, and merge-queue jobs shared an ambiguous visible name. The current
-contract excludes metadata-only edited events from the supplied PR workflow and
-uses event/action run names plus a distinct review-state job identity. A
+PR #378 exposed workflow-level noise: Copilot's own description update still
+emitted redundant skipped `pull_request: edited` runs, and analysis, review-state,
+and merge-queue jobs shared an ambiguous visible name. The contract excludes
+metadata-only edited events from the supplied PR analysis workflow and uses
+event/action run names plus a distinct review-state identity. Live PR #379 then
+showed that a dynamic job name can appear as its unevaluated expression when a
+bot-authored review is skipped before job admission. Review-state observation
+therefore has a dedicated workflow and fixed job name as well as its own
+concurrency lane. A
 dedicated merge-group workflow removes the skipped duplicate from normal PR
 runs while intentionally retaining the same required-check context so branch
 protection continues to resolve it. The quiet application publication mode
@@ -483,9 +487,10 @@ readiness. `unknown` is a system failure and fails the review regardless of
   updated again.
 - A run whose analyzed head is no longer the PR head MUST return superseded and
   MUST NOT mutate findings or current-state projections.
-- Shipped Commit and Pull Request workflows MUST use distinct branch-scoped
-  concurrency groups. Pull Request code/lifecycle and review-state events MUST
-  also use separate lane suffixes. Each uses cancel-in-progress semantics only
+- Shipped Commit, Pull Request analysis, and Pull Request review-state workflows
+  MUST use distinct branch-scoped concurrency groups. Pull Request code/lifecycle
+  and review-state events MUST use separate lane suffixes and dedicated workflow
+  files with fixed job names. Each uses cancel-in-progress semantics only
   for its own replaceable revisions, so review-state observation cannot cancel
   code analysis. On push, a read-only exact-head preflight MUST validate
   any open same-repository PR before Bugbot loads review context or invokes the
@@ -741,9 +746,10 @@ presentation pattern:
 - Existing bot-owned review bodies are adoptable only when ownership is proven
   by current bot author plus trusted child finding markers or trusted
   review-level finding markers.
-- Shipped PR and commit workflows use distinct normalized repository/branch
-  concurrency keys. PR code/lifecycle and review-state events cancel obsolete
-  PR-lane work; metadata-only `pull_request: edited` is not subscribed. The
+- Shipped PR analysis, PR review-state, and commit workflows use distinct
+  normalized repository/branch concurrency keys. Code/lifecycle and review-state
+  events cancel obsolete work only in their respective lanes; metadata-only
+  `pull_request: edited` is not subscribed. The
   application still performs remote head checks.
 - The Review Check is single-purpose evidence. Metadata-only PR lifecycle runs
   publish no same-name Check and therefore cannot supersede the latest analyzed

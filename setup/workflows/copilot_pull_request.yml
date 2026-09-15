@@ -4,17 +4,15 @@ run-name: Copilot PR · ${{ github.event_name }}:${{ github.event.action }}
 on:
   pull_request:
     types: [opened, reopened, closed, synchronize]
-  pull_request_review:
-    types: [submitted, edited, dismissed]
 
 jobs:
   copilot-pull-requests:
     if: ${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}
-    name: ${{ github.event_name == 'pull_request_review' && 'Copilot - Pull Request Review State' || 'Copilot - Pull Request' }}
+    name: Copilot - Pull Request
     runs-on: ubuntu-latest
     timeout-minutes: 120
     concurrency:
-      group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.event_name == 'pull_request_review' && 'review-state' || 'analysis' }}
+      group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-analysis
       cancel-in-progress: true
     permissions:
       checks: write

@@ -30,8 +30,8 @@ requests. That operation MUST use a repository-owned URL/query, a durable hidden
 marker, ordered compensation, and truthful partial-state results. Event-provided
 URLs MUST never be fetched.
 
-PR code/lifecycle and review-state events MUST share the PR-specific branch
-serialization boundary. The supplied workflow MUST NOT subscribe to
+PR code/lifecycle and review-state events MUST use separate, PR-specific branch
+serialization lanes and dedicated workflows. The supplied analysis workflow MUST NOT subscribe to
 metadata-only `pull_request: edited`, because Copilot's own description update
 would create a redundant run; human metadata edits remain untouched. Commit
 uses a distinct push-specific boundary. Its Bugbot path MUST perform a provider-backed,
@@ -39,9 +39,10 @@ exact-head, same-repository preflight and stop before review-context loading or
 agent invocation when that selection proves an open PR exists. It MUST NOT infer
 PR ownership from the push payload. PR synchronization then exclusively owns
 review for that head.
-A newer PR or review-state event MAY cancel an obsolete PR run. PR analysis,
-review-state observation, and merge-queue admission MUST expose distinct run
-identities; review state MUST also use its own job/check name. Normal PR and
+A newer event MAY cancel an obsolete run only within its own lane. PR analysis,
+review-state observation, and merge-queue admission MUST expose distinct,
+fixed run identities; review state MUST also use its own workflow and job/check
+name. Normal PR and
 merge-group jobs MUST share the configured required-check name so GitHub can
 satisfy the same branch-protection rule in both contexts. The merge-group job
 MUST live in its own workflow so PR runs do not expose a skipped duplicate
@@ -370,7 +371,7 @@ review cannot cancel code analysis. The supplied PR workflow excludes
 `pull_request: edited`, preventing body/title-only mutations from entering either
 lane. Application head guards remain mandatory.
 
-This rule is identical in the repository workflow and the shipped setup copy.
+These rules are identical in the repository workflows and the shipped setup copies.
 It is not configurable because admitting self-generated metadata events creates
 noise and can obscure code analysis.
 

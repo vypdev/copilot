@@ -9,12 +9,16 @@ To run Copilot on **pull request** events, add a workflow that uses the `pull_re
 
 ## Trigger events
 
-Use the `pull_request` trigger with the types you need. Common setup:
+Use separate workflows for code/lifecycle analysis and review-state observation:
 
 ```yaml
 on:
   pull_request:
     types: [opened, reopened, closed, synchronize]
+```
+
+```yaml
+on:
   pull_request_review:
     types: [submitted, edited, dismissed]
 ```
@@ -25,6 +29,7 @@ on:
 | `reopened` | A closed PR is reopened | Re-apply linking and labels. |
 | `synchronize` | New commits are pushed to the PR branch | Update the AI description when enabled and review the new commit range while reconciling open findings. |
 | `closed` | PR is closed or merged | Update project state. |
+| `pull_request_review` | A review is submitted, edited, or dismissed | Reconcile lifecycle labels without invoking the review agent. |
 
 Do not subscribe the supplied PR workflow to `pull_request: edited`. Copilot
 updates the PR body itself, so that metadata event would create redundant runs.
@@ -46,15 +51,13 @@ run-name: Copilot PR · ${{ github.event_name }}:${{ github.event.action }}
 on:
   pull_request:
     types: [opened, reopened, closed, synchronize]
-  pull_request_review:
-    types: [submitted, edited, dismissed]
 
 jobs:
   copilot-pull-requests:
-    name: ${{ github.event_name == 'pull_request_review' && 'Copilot - Pull Request Review State' || 'Copilot - Pull Request' }}
+    name: Copilot - Pull Request
     runs-on: ubuntu-latest
     concurrency:
-      group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.event_name == 'pull_request_review' && 'review-state' || 'analysis' }}
+      group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-analysis
       cancel-in-progress: true
     steps:
       - name: Checkout Repository
@@ -80,14 +83,20 @@ jobs:
           project-ids: ${{ vars.PROJECT_IDS }}
 ```
 
+Install the shipped `copilot_pull_request_review_state.yml` alongside it. That
+workflow listens only to `pull_request_review`, uses the fixed
+`Copilot - Pull Request Review State` workflow/job name, and uses the same
+branch key with a `review-state` suffix.
+
 - **`token`** is required (use a fine-grained PAT with repo and project permissions; see [Authentication](/authentication)).
 - **`project-ids`** is optional but needed if you want PRs linked to GitHub Project boards and moved to columns (e.g. "In Progress").
 - The conditional fetch downloads only the two commit objects needed by the incremental reviewer. Keep it when `synchronize` is enabled; a full-history checkout is not required.
-- Keep the PR-specific concurrency group and cancellation policy exactly as
-  shown. A newer PR/review-state event cancels an obsolete run. The Commit
+- Keep both PR-specific concurrency groups and cancellation policies exactly as
+  shown. A newer code/lifecycle event cancels only obsolete analysis; a newer
+  review event cancels only obsolete review-state observation. The Commit
   workflow uses its own `copilot-push-…` group, so a paired `push` event cannot
-  cancel this workflow (or be canceled by it).
-- Keep the event/action run name and distinct review-state job name. They make
+  cancel either workflow (or be canceled by them).
+- Keep the event/action run names and fixed job names. They make
   the Actions and Checks views understandable without opening logs. Only a
   result with exactly one validated, current-schema Bugbot telemetry snapshot
   for the exact head owns the `Copilot / Review` Check; partial, skipped, and
@@ -120,7 +129,7 @@ jobs:
 
 8. **Bugbot review:** On `opened` and `reopened`, the reviewer role analyzes the full PR. On `synchronize`, this workflow exclusively owns Bugbot for the new commit range and reconciles every open finding against current code; the paired Commit run still updates issue progress but skips its Bugbot pass. Metadata-only edits do not invoke the agent. Active findings move the PR to `state:changes-requested` and `state:awaiting-issue-author`; a clean review moves it to `state:ready` and `state:awaiting-maintainer`. During the run, `state:ai-processing` may coexist with those labels and is removed when the agent finishes. Configure `reviewer-provider`, `reviewer-model-provider`, `reviewer-model`, `reviewer-effort`, and `reviewer-executable` only when the reviewer should differ from the base agent.
 
-9. **External lifecycle evidence:** `pull_request_review` updates only the managed lifecycle label. A requested change marks the PR as changes requested, and an approved review can mark it ready. This event does not invoke an agent pipeline. If you add private workflows for external checks, wire and scope those triggers in your own repository.
+9. **External lifecycle evidence:** The dedicated `copilot_pull_request_review_state.yml` workflow updates only the managed lifecycle label. A requested change marks the PR as changes requested, and an approved review can mark it ready. This event does not invoke an agent pipeline. If you add private workflows for external checks, wire and scope those triggers in your own repository.
 
 ## Next steps
 

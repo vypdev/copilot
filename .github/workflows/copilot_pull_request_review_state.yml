@@ -1,18 +1,18 @@
-name: Copilot - Pull Request
-run-name: Copilot PR · ${{ github.event_name }}:${{ github.event.action }}
+name: Copilot - Pull Request Review State
+run-name: Copilot PR review · ${{ github.event_name }}:${{ github.event.action }}
 
 on:
-  pull_request:
-    types: [opened, reopened, closed, synchronize]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
 
 jobs:
-  copilot-pull-requests:
+  copilot-pull-request-review-state:
     if: ${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}
-    name: Copilot - Pull Request
+    name: Copilot - Pull Request Review State
     runs-on: [self-hosted, codex]
     timeout-minutes: 120
     concurrency:
-      group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-analysis
+      group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-review-state
       cancel-in-progress: true
     permissions:
       checks: write
@@ -28,17 +28,6 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: '24.x'
-
-      - name: Fetch incremental review range
-        if: github.event.action == 'synchronize'
-        env:
-          BEFORE_SHA: ${{ github.event.before }}
-          AFTER_SHA: ${{ github.event.after }}
-        run: |
-          git cat-file -e "${AFTER_SHA}^{commit}"
-          if ! git cat-file -e "${BEFORE_SHA}^{commit}"; then
-            echo "::notice::The previous PR commit is unavailable; Bugbot will use the canonical pull-request diff."
-          fi
 
       # Exercise the Action implementation from this PR so regressions are caught before merge.
       - uses: ./

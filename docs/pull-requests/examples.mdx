@@ -18,15 +18,13 @@ run-name: Copilot PR · ${{ github.event_name }}:${{ github.event.action }}
 on:
   pull_request:
     types: [opened, reopened, closed, synchronize]
-  pull_request_review:
-    types: [submitted, edited, dismissed]
 
 jobs:
   copilot-pull-requests:
-    name: ${{ github.event_name == 'pull_request_review' && 'Copilot - Pull Request Review State' || 'Copilot - Pull Request' }}
+    name: Copilot - Pull Request
     runs-on: ubuntu-latest
     concurrency:
-      group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.event_name == 'pull_request_review' && 'review-state' || 'analysis' }}
+      group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-analysis
       cancel-in-progress: true
     steps:
       - name: Checkout Repository
@@ -60,6 +58,35 @@ jobs:
           agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
           ai-ignore-files: build/*
           debug: ${{ vars.DEBUG }}
+```
+
+Keep review-state observation in the shipped
+`copilot_pull_request_review_state.yml` companion. Its fixed workflow and job
+name remains readable even when a bot-authored review is skipped before the job
+starts:
+
+```yaml
+name: Copilot - Pull Request Review State
+run-name: Copilot PR review · ${{ github.event_name }}:${{ github.event.action }}
+
+on:
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+
+jobs:
+  copilot-pull-request-review-state:
+    name: Copilot - Pull Request Review State
+    runs-on: ubuntu-latest
+    concurrency:
+      group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-review-state
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: vypdev/copilot@v3
+        with:
+          token: ${{ secrets.PAT }}
 ```
 
 - **`token`** is required. Use a fine-grained PAT with repo and project permissions.

@@ -25,7 +25,8 @@ const DISTRIBUTED_COPILOT_ACTION = 'vypdev/copilot@v3';
 const CHECKOUT_ACTION = 'actions/checkout@v5';
 const SETUP_NODE_ACTION = 'actions/setup-node@v7';
 const PUSH_BRANCH_CONCURRENCY_GROUP = 'copilot-push-${{ github.repository }}-${{ github.ref_name }}';
-const PULL_REQUEST_BRANCH_CONCURRENCY_GROUP = "copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.event_name == 'pull_request_review' && 'review-state' || 'analysis' }}";
+const PULL_REQUEST_ANALYSIS_CONCURRENCY_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-analysis';
+const PULL_REQUEST_REVIEW_STATE_CONCURRENCY_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-review-state';
 const BUGBOT_CONCURRENCY_JOBS = Object.freeze({
   'copilot_commit.yml': Object.freeze({
     jobId: 'copilot-commits',
@@ -34,7 +35,12 @@ const BUGBOT_CONCURRENCY_JOBS = Object.freeze({
   }),
   'copilot_pull_request.yml': Object.freeze({
     jobId: 'copilot-pull-requests',
-    group: PULL_REQUEST_BRANCH_CONCURRENCY_GROUP,
+    group: PULL_REQUEST_ANALYSIS_CONCURRENCY_GROUP,
+    cancelInProgress: true,
+  }),
+  'copilot_pull_request_review_state.yml': Object.freeze({
+    jobId: 'copilot-pull-request-review-state',
+    group: PULL_REQUEST_REVIEW_STATE_CONCURRENCY_GROUP,
     cancelInProgress: true,
   }),
 });
@@ -54,6 +60,7 @@ const QUEUE_WORKFLOW_MANIFEST = Object.freeze([
   ['copilot_issue.yml', 'Copilot - Issue', 'copilot-issues'],
   ['copilot_issue_comment.yml', 'Copilot - Issue Comment', 'copilot-issues'],
   ['copilot_pull_request.yml', 'Copilot - Pull Request', 'copilot-pull-requests'],
+  ['copilot_pull_request_review_state.yml', 'Copilot - Pull Request Review State', 'copilot-pull-request-review-state'],
   ['copilot_pull_request_comment.yml', 'Copilot - Pull Request Comment', 'copilot-pull-requests'],
   ['copilot_close_inactive_issues.yml', 'Copilot - Close Inactive Issues', 'copilot-inactive-issues'],
 ].map(([file, workflowName, jobId]) => ({ file, workflowName, jobId })));
@@ -68,12 +75,14 @@ const BOT_GATED_WORKFLOW_FILES = new Set([
   'copilot_issue.yml',
   'copilot_issue_comment.yml',
   'copilot_pull_request.yml',
+  'copilot_pull_request_review_state.yml',
   'copilot_pull_request_comment.yml',
 ]);
 const BOT_GATE_EXPRESSION = "${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}";
 const FORK_SAFE_BOT_GATE_EXPRESSION = "${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}";
 const FORK_GATED_WORKFLOW_FILES = new Set([
   'copilot_pull_request.yml',
+  'copilot_pull_request_review_state.yml',
   'copilot_pull_request_comment.yml',
 ]);
 const ZERO_OBJECT_ID = '0000000000000000000000000000000000000000';
@@ -89,6 +98,7 @@ const AGENT_ROLE_INPUTS = Object.freeze(Object.fromEntries(
 const WORKFLOW_AGENT_ROLES = Object.freeze({
   'copilot_issue.yml': ['planner'],
   'copilot_pull_request.yml': ['planner', 'reviewer'],
+  'copilot_pull_request_review_state.yml': ['planner', 'reviewer'],
   'copilot_commit.yml': ['findings'],
   'copilot_issue_comment.yml': ['findings', 'fixer', 'planner', 'reviewer', 'tester'],
   'copilot_pull_request_comment.yml': ['findings', 'fixer', 'planner', 'reviewer', 'tester'],
@@ -103,6 +113,7 @@ const REPOSITORY_BUGBOT_WORKFLOW_FILES = new Set([
   'copilot_issue.yml',
   'copilot_issue_comment.yml',
   'copilot_pull_request.yml',
+  'copilot_pull_request_review_state.yml',
   'copilot_pull_request_comment.yml',
 ]);
 
@@ -281,7 +292,7 @@ function assertNoJobLevelSecrets(file, workflow) {
 function assertAgentWorkflowPermissions(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (!WORKFLOW_AGENT_ROLES[path.basename(file)]) return;
-  const expectedPermissions = path.basename(file) === 'copilot_pull_request.yml'
+  const expectedPermissions = ['copilot_pull_request.yml', 'copilot_pull_request_review_state.yml'].includes(path.basename(file))
     ? { checks: 'write', contents: 'read' }
     : { contents: 'read' };
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
@@ -384,28 +395,40 @@ function assertDirectEventTriggers(file, workflow) {
   if (triggers && typeof triggers === 'object' && Object.prototype.hasOwnProperty.call(triggers, 'workflow_run')) {
     throw new Error(`${relativeFile} must use direct event triggers and must not define workflow_run.`);
   }
-  if (!relativeFile.endsWith('/copilot_pull_request.yml')) return;
-  if (!triggers.pull_request || !triggers.pull_request_review) {
-    throw new Error(`${relativeFile} must define direct pull_request and pull_request_review triggers.`);
-  }
-  const pullRequestTypes = triggers.pull_request.types;
-  if (!Array.isArray(pullRequestTypes)
-    || pullRequestTypes.includes('edited')
-    || ['opened', 'reopened', 'closed', 'synchronize'].some(type => !pullRequestTypes.includes(type))) {
-    throw new Error(`${relativeFile} must handle code/lifecycle PR events without subscribing to metadata-only edited events.`);
-  }
-  if (triggers.merge_group || workflow.jobs?.['copilot-merge-group']) {
-    throw new Error(`${relativeFile} must keep merge-group compatibility in the dedicated pull-request merge-queue workflow so normal PR runs do not show a skipped duplicate check.`);
+  if (relativeFile.endsWith('/copilot_pull_request.yml')) {
+    if (!triggers.pull_request || triggers.pull_request_review) {
+      throw new Error(`${relativeFile} must define only direct pull_request code/lifecycle triggers.`);
+    }
+    const pullRequestTypes = triggers.pull_request.types;
+    if (!Array.isArray(pullRequestTypes)
+      || pullRequestTypes.includes('edited')
+      || ['opened', 'reopened', 'closed', 'synchronize'].some(type => !pullRequestTypes.includes(type))) {
+      throw new Error(`${relativeFile} must handle code/lifecycle PR events without subscribing to metadata-only edited events.`);
+    }
+    if (triggers.merge_group || workflow.jobs?.['copilot-merge-group']) {
+      throw new Error(`${relativeFile} must keep merge-group compatibility in the dedicated pull-request merge-queue workflow so normal PR runs do not show a skipped duplicate check.`);
+    }
+    if (workflow.jobs?.['copilot-pull-requests']?.name !== 'Copilot - Pull Request') {
+      throw new Error(`${relativeFile} must preserve the exact normal PR analysis check identity.`);
+    }
+  } else if (relativeFile.endsWith('/copilot_pull_request_review_state.yml')) {
+    const reviewTypes = triggers.pull_request_review?.types;
+    if (triggers.pull_request
+      || !Array.isArray(reviewTypes)
+      || ['submitted', 'edited', 'dismissed'].some(type => !reviewTypes.includes(type))) {
+      throw new Error(`${relativeFile} must define only direct pull_request_review state triggers.`);
+    }
+    if (workflow.name !== 'Copilot - Pull Request Review State'
+      || workflow.jobs?.['copilot-pull-request-review-state']?.name !== 'Copilot - Pull Request Review State') {
+      throw new Error(`${relativeFile} must preserve the exact review-state workflow and check identity.`);
+    }
+  } else {
+    return;
   }
   if (typeof workflow['run-name'] !== 'string'
     || !workflow['run-name'].includes('github.event_name')
     || !workflow['run-name'].includes('github.event.action')) {
     throw new Error(`${relativeFile} must expose the event kind and action in its run identity.`);
-  }
-  const pullRequestJobName = workflow.jobs?.['copilot-pull-requests']?.name;
-  const expectedPullRequestJobName = "${{ github.event_name == 'pull_request_review' && 'Copilot - Pull Request Review State' || 'Copilot - Pull Request' }}";
-  if (pullRequestJobName !== expectedPullRequestJobName) {
-    throw new Error(`${relativeFile} must give review-state events their exact distinct check identity while preserving the normal PR analysis identity.`);
   }
 }
 
