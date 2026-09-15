@@ -7,12 +7,13 @@
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = void 0;
+exports.ApplicationError = exports.APPLICATION_ERROR_RECOVERY_IDS = exports.APPLICATION_ERROR_METADATA = void 0;
 exports.toApplicationError = toApplicationError;
 const application_error_1 = __nccwpck_require__(7790);
 const application_error_context_1 = __nccwpck_require__(4034);
 var application_error_2 = __nccwpck_require__(7790);
 Object.defineProperty(exports, "APPLICATION_ERROR_METADATA", ({ enumerable: true, get: function () { return application_error_2.APPLICATION_ERROR_METADATA; } }));
+Object.defineProperty(exports, "APPLICATION_ERROR_RECOVERY_IDS", ({ enumerable: true, get: function () { return application_error_2.APPLICATION_ERROR_RECOVERY_IDS; } }));
 /** Creates a semantic error and owns correlation identity outside the pure model. */
 class ApplicationError extends application_error_1.ApplicationError {
     constructor(code, message, options = {}) {
@@ -4528,8 +4529,16 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
 };
 var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = void 0;
+exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
+    'pull-request-link-restored',
+    'pull-request-link-base-retained',
+    'pull-request-link-reference-retained',
+    'pull-request-link-base-and-reference-retained',
+    'managed-branch-enrichment-failed',
+    'inactivity-explanation-failed',
+]);
 const PRESERVED_STATE = 'Existing persisted state and completed external effects were preserved.';
 const UNCHANGED_STATE = 'No new state or external effect was created.';
 exports.APPLICATION_ERROR_METADATA = {
@@ -4677,10 +4686,11 @@ class ApplicationError extends Error {
         this.code = code;
         this.kind = metadata.kind;
         this.retryable = options.retryable ?? metadata.retryable;
-        this.impact = options.impact ?? metadata.impact;
-        this.action = options.action ?? metadata.action;
-        this.retainedState = options.retainedState ?? metadata.retainedState;
+        this.impact = metadata.impact;
+        this.action = metadata.action;
+        this.retainedState = metadata.retainedState;
         this.correlationId = correlationId;
+        this.recovery = normalizeApplicationErrorRecovery(options.recovery);
         __classPrivateFieldSet(this, _ApplicationError_cause, options.cause, "f");
     }
     toJSON() {
@@ -4694,11 +4704,49 @@ class ApplicationError extends Error {
             action: this.action,
             retainedState: this.retainedState,
             correlationId: this.correlationId,
+            ...(this.recovery ? { recovery: this.recovery } : {}),
         };
     }
 }
 exports.ApplicationError = ApplicationError;
 _ApplicationError_cause = new WeakMap();
+const RECOVERY_VARIABLE_KEYS = Object.freeze({
+    'pull-request-link-restored': Object.freeze([]),
+    'pull-request-link-base-retained': Object.freeze([]),
+    'pull-request-link-reference-retained': Object.freeze([]),
+    'pull-request-link-base-and-reference-retained': Object.freeze([]),
+    'managed-branch-enrichment-failed': Object.freeze(['branchName']),
+    'inactivity-explanation-failed': Object.freeze(['issueNumber']),
+});
+function normalizeApplicationErrorRecovery(recovery) {
+    if (!recovery)
+        return undefined;
+    if (!exports.APPLICATION_ERROR_RECOVERY_IDS.includes(recovery.id)) {
+        throw new TypeError('Application error recovery ID is invalid.');
+    }
+    const variables = recovery.variables;
+    const actualKeys = Object.keys(variables).sort();
+    const expectedKeys = [...RECOVERY_VARIABLE_KEYS[recovery.id]].sort();
+    if (actualKeys.length !== expectedKeys.length
+        || actualKeys.some((key, index) => key !== expectedKeys[index])) {
+        throw new TypeError(`Application error recovery variables are invalid for ${recovery.id}.`);
+    }
+    if (recovery.id === 'managed-branch-enrichment-failed'
+        && (typeof variables.branchName !== 'string'
+            || !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,254}$/u.test(variables.branchName))) {
+        throw new TypeError('Application error recovery branch name is invalid.');
+    }
+    if (recovery.id === 'inactivity-explanation-failed'
+        && (typeof variables.issueNumber !== 'number'
+            || !Number.isSafeInteger(variables.issueNumber)
+            || variables.issueNumber < 1)) {
+        throw new TypeError('Application error recovery issue number is invalid.');
+    }
+    return Object.freeze({
+        id: recovery.id,
+        variables: Object.freeze({ ...variables }),
+    });
+}
 
 
 /***/ }),
@@ -5338,7 +5386,7 @@ exports.renderCatalogMessage = renderCatalogMessage;
 exports.catalogPlaceholders = catalogPlaceholders;
 exports.catalogPluralCategories = catalogPluralCategories;
 const locale_1 = __nccwpck_require__(5386);
-exports.MESSAGE_CATALOG_VERSION = '1';
+exports.MESSAGE_CATALOG_VERSION = '2';
 exports.CATALOG_PLURAL_CATEGORIES = Object.freeze([
     'zero',
     'one',

@@ -34,6 +34,7 @@ jest.mock('../../data/repository/project/project_board_query_repository', () => 
 
 import { runLocalAction } from '../local_action';
 import { INPUT_KEYS } from '../../application/contracts/input_keys';
+import { ApplicationError } from '../../application/errors/application_error';
 
 /** Minimal defaults so local_action can run (avoids .split on undefined). */
 function minimalActionInputs(): Record<string, string> {
@@ -227,7 +228,7 @@ describe('runLocalAction', () => {
   it('includes errors and reminders in boxen content when results have errors and reminders', async () => {
     const boxen = require('boxen');
     mockMainRun.mockResolvedValue([
-      { executed: false, steps: [], errors: [new Error('Error one')], reminders: [] },
+      { executed: false, steps: [], errors: [new ApplicationError('provider.unavailable', 'Provider detail.')], reminders: [] },
       { executed: true, steps: [], errors: [], reminders: ['Reminder text'] },
     ]);
     const params: Record<string, unknown> = {
@@ -240,14 +241,15 @@ describe('runLocalAction', () => {
     await runLocalAction(params);
 
     const content = boxen.mock.calls[0][0];
-    expect(content).toContain('Error one');
+    expect(content).toContain('Error code: provider.unavailable');
+    expect(content).not.toContain('Provider detail.');
     expect(content).toContain('Reminder text');
   });
 
   it('renders errors even when the failed operation was executed', async () => {
     const boxen = require('boxen');
     mockMainRun.mockResolvedValue([
-      { executed: true, steps: ['Attempted operation'], errors: [new Error('Executed operation failed')], reminders: [] },
+      { executed: true, steps: ['Attempted operation'], errors: [new ApplicationError('workflow.failed', 'Executed operation failed.')], reminders: [] },
     ]);
     const params: Record<string, unknown> = {
       [INPUT_KEYS.TOKEN]: 't',
@@ -258,7 +260,64 @@ describe('runLocalAction', () => {
 
     await runLocalAction(params);
 
-    expect(boxen.mock.calls[0][0]).toContain('Executed operation failed');
+    expect(boxen.mock.calls[0][0]).toContain('Error code: workflow.failed');
+    expect(boxen.mock.calls[0][0]).not.toContain('Executed operation failed.');
+  });
+
+  it('renders one complete error view in the configured repository locale', async () => {
+    const boxen = require('boxen');
+    mockMainRun.mockResolvedValue([{
+      executed: true,
+      steps: [],
+      errors: [new ApplicationError('provider.rate-limited', 'English provider message.')],
+      reminders: [],
+    }]);
+
+    await runLocalAction({
+      [INPUT_KEYS.TOKEN]: 't',
+      [INPUT_KEYS.REPOSITORY_LOCALE]: 'es-MX',
+      repo: { owner: 'o', repo: 'r' },
+      eventName: 'push',
+      commits: { ref: 'refs/heads/main' },
+    });
+
+    const content = boxen.mock.calls[0][0] as string;
+    expect(content).toContain('Errores:');
+    expect(content).toContain('Impacto: El proveedor limitó temporalmente la operación.');
+    expect(content).toContain('Código de error: provider.rate-limited');
+    expect(content).toContain('Acción: Reinténtalo cuando se restablezca el límite del proveedor.');
+    expect(content).toContain('Reintentable: Sí');
+    expect(content).not.toContain('English provider message.');
+    expect(content).not.toContain('Impact:');
+  });
+
+  it('renders validated partial-state recovery without losing its safe identifier', async () => {
+    const boxen = require('boxen');
+    mockMainRun.mockResolvedValue([{
+      executed: true,
+      steps: [],
+      errors: [new ApplicationError('provider.unavailable', 'Producer message.', {
+        recovery: {
+          id: 'inactivity-explanation-failed',
+          variables: { issueNumber: 42 },
+        },
+      })],
+      reminders: [],
+    }]);
+
+    await runLocalAction({
+      [INPUT_KEYS.TOKEN]: 't',
+      [INPUT_KEYS.REPOSITORY_LOCALE]: 'es-ES',
+      repo: { owner: 'o', repo: 'r' },
+      eventName: 'push',
+      commits: { ref: 'refs/heads/main' },
+    });
+
+    const content = boxen.mock.calls[0][0] as string;
+    expect(content).toContain('Impacto: La issue #42 se cerró sin su explicación final');
+    expect(content).toContain('Estado conservado: La issue #42 permanece cerrada');
+    expect(content).not.toContain('Producer message.');
+    expect(content).not.toContain('El proveedor no estaba disponible');
   });
 
   it('uses custom image URLs when provided so default image arrays are not pushed', async () => {

@@ -20,13 +20,14 @@ import { lifecycleStateFromLabels } from '../domain/copilot_lifecycle';
 import type { CopilotEvidencePort } from '../application/ports/copilot_evidence_ports';
 import { buildCopilotEvidence } from '../application/policies/copilot_evidence_policy';
 import type { ActionSummaryPort } from '../application/ports/action_summary_ports';
-import { toApplicationError } from '../application/errors/application_error';
+import { ApplicationError, toApplicationError } from '../application/errors/application_error';
 import { shouldPersistConfiguration } from '../application/policies/configuration_persistence_policy';
 import { renderDeploymentJobSummary } from '../application/policies/deployment_presentation_policy';
 import { deploymentCopy, resolveDeploymentCatalog } from '../application/policies/deployment_message_catalog';
 import { projectBugbotResultFindingStates } from '../application/policies/bugbot_result_finding_state_projection_policy';
 import { countActionableBugbotFindings } from '../domain/bugbot/review_state';
 import type { MessageCatalogResolutionPort } from '../application/ports/message_catalog_ports';
+import type { ApplicationErrorMessageReader } from '../application/policies/application_error_message_catalog';
 
 export async function finishGithubAction(
     execution: Execution,
@@ -69,9 +70,15 @@ export async function finishGithubAction(
         logInfo('Configuration persistence skipped: this single action does not modify execution configuration.');
     }
     const summary = await writeActionSummary(execution, summaryPort, catalogResolver);
-    if (!dryRun) await publishCopilotEvidence(execution, results, summary, evidencePort);
-    failActionForUnresolvedFindingsIfConfigured(execution, results, dryRun);
-    setFirstErrorIfExists(results);
+    if (!dryRun) await publishCopilotEvidence(execution, results, summary.text, evidencePort);
+    const completionError = firstApplicationError(results)
+        ?? bugbotCompletionError(execution, results, dryRun);
+    if (completionError) core.setFailed(renderApplicationErrorText(completionError, summary.errorMessage));
+}
+
+interface WrittenActionSummary {
+    readonly text: string;
+    readonly errorMessage: ApplicationErrorMessageReader;
 }
 
 function extractBugbotTelemetry(results: readonly Result[]): unknown[] {
@@ -85,7 +92,7 @@ async function writeActionSummary(
     execution: Execution,
     summaryPort?: ActionSummaryPort,
     catalogResolver?: MessageCatalogResolutionPort,
-): Promise<string> {
+): Promise<WrittenActionSummary> {
     const operation = execution.currentConfiguration.deploymentOrchestration;
     const locale = execution.locale ?? { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' };
     const summaryLocale = execution.singleAction.isDeploymentOrchestrationAction && operation?.locale
@@ -94,6 +101,7 @@ async function writeActionSummary(
     let body: string;
     let localizationLabels: LocalizationSummaryLabels | undefined;
     let appendLocalizationEvidence = false;
+    let errorMessage: ApplicationErrorMessageReader;
     if (execution.singleAction.isDeploymentOrchestrationAction && operation) {
         const effectiveLocale = operation.locale ?? locale;
         const catalog = await resolveDeploymentCatalog(
@@ -102,6 +110,7 @@ async function writeActionSummary(
             catalogResolver,
         );
         const messages = deploymentCopy(catalog);
+        errorMessage = (id, variables) => catalog.message(id, variables);
         localizationLabels = {
             heading: messages.localization,
             property: messages.property,
@@ -132,6 +141,7 @@ async function writeActionSummary(
             execution.ai.getAgentConfiguration('planner'),
             catalogResolver,
         );
+        errorMessage = (id, variables) => catalog.message(id, variables);
         body = buildActionSummary({
             owner: execution.owner,
             repository: execution.repo,
@@ -163,13 +173,13 @@ async function writeActionSummary(
         }, catalogResolver?.observations?.() ?? [], localizationLabels)
         : '';
     const summaryText = [body, localizationEvidence].filter(Boolean).join('\n\n');
-    if (!summaryPort) return summaryText;
+    if (!summaryPort) return { text: summaryText, errorMessage };
     try {
         await summaryPort.publish(summaryText);
     } catch (error) {
         logInfo(toApplicationError(error, 'provider.unavailable', 'Could not write the GitHub Actions summary.').message);
     }
-    return summaryText;
+    return { text: summaryText, errorMessage };
 }
 
 async function publishCopilotEvidence(
@@ -198,26 +208,27 @@ async function publishCopilotEvidence(
     }
 }
 
-function failActionForUnresolvedFindingsIfConfigured(
+function bugbotCompletionError(
     execution: Execution,
     results: readonly Result[],
     dryRun: boolean,
-): void {
-    if (dryRun) return;
+): ApplicationError | undefined {
+    if (dryRun) return undefined;
     const projection = projectBugbotResultFindingStates(results);
     if (projection.status === 'invalid') {
-        core.setFailed('Bugbot finding-state evidence is malformed.');
-        return;
+        return new ApplicationError('provider.contract-invalid', 'Bugbot finding-state evidence is malformed.');
     }
-    if (projection.status === 'absent') return;
+    if (projection.status === 'absent') return undefined;
     if (projection.counts.unknown > 0) {
-        core.setFailed(`Bugbot could not verify ${projection.counts.unknown} finding state(s).`);
-    } else if (
+        return new ApplicationError('provider.contract-invalid', 'Bugbot finding-state evidence could not be verified.');
+    }
+    if (
         execution.ai.getBugbotReviewConfiguration().failOnUnresolved
         && countActionableBugbotFindings(projection.counts) > 0
     ) {
-        core.setFailed(`Bugbot found ${countActionableBugbotFindings(projection.counts)} unresolved actionable finding(s).`);
+        return new ApplicationError('workflow.failed', 'Bugbot found unresolved actionable findings.');
     }
+    return undefined;
 }
 
 function commitPublishedRecommendationState(execution: Execution, results: Result[]): void {
@@ -234,11 +245,11 @@ function commitPublishedRecommendationState(execution: Execution, results: Resul
     }
 }
 
-function setFirstErrorIfExists(results: Result[]): void {
+function firstApplicationError(results: readonly Result[]): Result['errors'][number] | undefined {
     for (const result of results) {
         if (result.errors && result.errors.length > 0) {
-            core.setFailed(renderApplicationErrorText(result.errors[0]));
-            return;
+            return result.errors[0];
         }
     }
+    return undefined;
 }

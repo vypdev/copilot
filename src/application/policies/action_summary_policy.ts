@@ -16,6 +16,8 @@ import {
     type ActionSummaryFindingState,
     type ActionSummaryMessageCatalog,
 } from './action_summary_message_catalog';
+import { buildApplicationErrorPresentation } from './application_error_presentation_policy';
+import type { ApplicationErrorMessageReader } from './application_error_message_catalog';
 
 export interface ActionSummaryContext {
     readonly owner: string;
@@ -247,16 +249,18 @@ function resultFailed(result: Result): boolean {
 }
 
 function renderFailures(results: readonly Result[], catalog: ActionSummaryMessageCatalog): string {
+    const message: ApplicationErrorMessageReader = (id, variables) => catalogText(catalog, id, variables);
     return results.map(result => {
         const errors = result.errors
             .flatMap((error) => {
+                const view = buildApplicationErrorPresentation(error, message);
                 return [
-                    `  - **${catalogText(catalog, 'summary.impact')}:** ${errorCatalogText(catalog, error.kind, 'impact')}`,
-                    `    - **${catalogText(catalog, 'summary.cause')}:** \`${error.code}\``,
-                    `    - **${catalogText(catalog, 'summary.action')}:** ${errorCatalogText(catalog, error.kind, 'action')}`,
-                    `    - **${catalogText(catalog, 'summary.retainedState')}:** ${errorCatalogText(catalog, error.kind, 'retainedState')}`,
-                    `    - **${catalogText(catalog, 'summary.retryable')}:** ${catalogText(catalog, error.retryable ? 'summary.yes' : 'summary.no')}`,
-                    `    - **${catalogText(catalog, 'summary.reference')}:** \`${error.correlationId}\``,
+                    `  - **${message('error.label.impact')}:** ${view.impact}`,
+                    `    - **${message('error.label.errorCode')}:** \`${view.code}\``,
+                    `    - **${message('error.label.action')}:** ${view.action}`,
+                    `    - **${message('error.label.retainedState')}:** ${view.retainedState}`,
+                    `    - **${message('error.label.retryable')}:** ${view.retryable}`,
+                    `    - **${message('error.label.reference')}:** \`${view.reference}\``,
                 ];
             });
         return [
@@ -264,14 +268,6 @@ function renderFailures(results: readonly Result[], catalog: ActionSummaryMessag
             ...errors,
         ].join('\n');
     }).join('\n');
-}
-
-function errorCatalogText(
-    catalog: ActionSummaryMessageCatalog,
-    kind: Result['errors'][number]['kind'],
-    field: 'impact' | 'action' | 'retainedState',
-): string {
-    return catalogText(catalog, `summary.error.${kind}.${field}`);
 }
 
 function catalogText(

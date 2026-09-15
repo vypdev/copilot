@@ -656,7 +656,7 @@ describe('mainRun', () => {
     expect(execution.labels.currentIssueLabels).toEqual(['state:ready']);
   });
 
-  it('calls core.setFailed when action not handled', async () => {
+  it('returns a semantic failure when the action route is not handled', async () => {
     const execution = mockExecution({
       isIssue: false,
       isPullRequest: false,
@@ -665,19 +665,23 @@ describe('mainRun', () => {
 
     const results = await runMain(execution);
 
-    expect(core.setFailed).toHaveBeenCalledWith('Action not handled.');
-    expect(logInfo).toHaveBeenCalledWith('Main run finished. Results: 0, total steps: 0.');
-    expect(results).toEqual([]);
+    expect(core.setFailed).not.toHaveBeenCalled();
+    expect(logInfo).toHaveBeenCalledWith('Main run finished. Results: 1, total steps: 0.');
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ success: false, executed: false });
+    expect(results[0].errors[0]).toMatchObject({ code: 'workflow.invalid-event' });
   });
 
-  it('calls core.setFailed and returns [] when use case throws', async () => {
+  it('returns a semantic failure when a use case throws', async () => {
     const execution = mockExecution({ isPush: true });
     mockCommitInvoke.mockRejectedValue(new Error('Commit failed'));
 
     const results = await runMain(execution);
 
-    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Cause (workflow.failed): Main run failed.'));
-    expect(results).toEqual([]);
+    expect(core.setFailed).not.toHaveBeenCalled();
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ success: false, executed: true });
+    expect(results[0].errors[0]).toMatchObject({ code: 'workflow.failed', message: 'Main run failed.' });
   });
 
   it('does not expose a non-Error thrown value in the action failure', async () => {
@@ -686,9 +690,10 @@ describe('mainRun', () => {
 
     const results = await runMain(execution);
 
-    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Cause (workflow.failed): Main run failed.'));
-    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('plain string error'));
-    expect(results).toEqual([]);
+    expect(core.setFailed).not.toHaveBeenCalled();
+    expect(results).toHaveLength(1);
+    expect(results[0].errors[0]).toMatchObject({ code: 'workflow.failed', message: 'Main run failed.' });
+    expect(results[0].errors[0].message).not.toContain('plain string error');
   });
 
   it('propagates a canonical queue failure without exposing provider diagnostics', async () => {

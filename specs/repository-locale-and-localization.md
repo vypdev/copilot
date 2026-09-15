@@ -963,11 +963,19 @@ remains one authoritative English artifact while it creates the repository
 profile. The generic Actions Job Summary now resolves one complete catalog in
 the repository locale, localizes its headings and explanatory labels, preserves
 machine values, projects compact localized aggregate result counts and expands
-only error recovery by stable error category, omits internal result names, step
+only code-specific error recovery, omits internal result names, step
 narration, and arbitrary error text,
 and emits localization evidence once instead of duplicating it inside and below
-the main table. Lifecycle and the remaining public surfaces are
-not claimed complete by this evidence.
+the main table. Repository-aware local failures, generic and deployment Job
+Summaries, and final Action completion compose that same versioned descriptor
+set into the complete surface catalog. Labels and recovery guidance localize;
+codes and references remain stable; arbitrary producer messages never appear.
+Closed recovery variants carry only validated branch-name or issue-number
+variables, preserving operation-specific partial-state guidance in the same
+atomic catalog locale.
+Failures before repository/agent resolution use a deterministic complete
+bundled or English-default catalog. Other lifecycle surfaces are not claimed
+complete by this evidence.
 
 The addressed-Think follow-up removes its feature-owned comment mutation and
 returns the same typed `direct-answer` projection as initial issue help. GitHub

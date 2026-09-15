@@ -7,9 +7,12 @@ import { createApplicationErrorCorrelationId, getApplicationErrorCorrelationId }
 
 export {
     APPLICATION_ERROR_METADATA,
+    APPLICATION_ERROR_RECOVERY_IDS,
     type ApplicationErrorCode,
     type ApplicationErrorKind,
     type ApplicationErrorPublicRecord,
+    type ApplicationErrorRecovery,
+    type ApplicationErrorRecoveryId,
 } from '../../data/model/application_error';
 
 export interface ApplicationErrorOptions extends Omit<SemanticApplicationErrorOptions, 'correlationId'> {

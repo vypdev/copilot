@@ -254,14 +254,15 @@ declared architectural progress.
 The exact contract is owned by
 [`execution-error-and-context-hardening.md`](./execution-error-and-context-hardening.md).
 
-1. Define its closed 18-value `ApplicationErrorCode` union, derived kind and
+1. Define its closed 20-value `ApplicationErrorCode` union, derived kind and
    retryability, safe public message, impact, recommended action, retained-state
    summary, UUID correlation ID, and ECMAScript-private non-serializable cause.
 2. Change `Result.errors` to a readonly semantic error contract. Boundary
    helpers MUST map expected provider failures and normalize unexpected failures
    without interpolating the raw value.
 3. Adapters map provider-specific status into semantic codes. Application use
-   cases may add product impact/action but may not inspect provider DTOs.
+   cases may select a closed recovery descriptor with bounded safe variables,
+   but may not inject presentation prose or inspect provider DTOs.
 4. Structured logs accept only allowlisted semantic fields and a correlation
    identifier. Raw exceptions are not a logging escape hatch.
 5. Add AST-based architecture checks for raw caught values in results/logs and
@@ -274,9 +275,9 @@ The exact contract is owned by
    adapter, alias, overload, or deprecation period is implemented.
 
 Exit criteria: zero production `errors: [error]` patterns; every failure code
-has presentation and retry semantics; the error policy has 100% enumerated
-branch coverage; public/log fixtures contain no raw provider diagnostics; the
-aggregate-import baseline is checked in and non-increasing.
+and recovery descriptor has presentation and retry semantics; the error policy
+has 100% enumerated branch coverage; public/log fixtures contain no raw provider
+diagnostics; the aggregate-import baseline is checked in and non-increasing.
 
 ### 6.4 P0-B — deployment correctness and decomposition
 

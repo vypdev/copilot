@@ -526,7 +526,9 @@ describe('finishGithubAction', () => {
         expect(mockPublishInvoke).toHaveBeenCalledWith(expect.objectContaining({ locale: 'en-US' }));
         expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('`provider.unavailable`'));
         expect(mockSummaryPublish).toHaveBeenCalledWith(expect.not.stringContaining('Title normalization failed.'));
-        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Title normalization failed.'));
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: provider.unavailable'));
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Action: Retry when the provider is available.'));
+        expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('Title normalization failed.'));
     });
 
     it('fails the action for unresolved findings only when the generic policy is enabled', async () => {
@@ -546,7 +548,7 @@ describe('finishGithubAction', () => {
             ai: new Ai('', 'model', false, [], false, 'low', 20, [], undefined, undefined, { failOnUnresolved: true }),
         });
         await finishGithubAction(blocking, [findingResult], {} as never, {} as never);
-        expect(core.setFailed).toHaveBeenCalledWith('Bugbot found 3 unresolved actionable finding(s).');
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: workflow.failed'));
     });
 
     it('fails every workflow that reports an application error', async () => {
@@ -559,9 +561,62 @@ describe('finishGithubAction', () => {
 
         await finishGithubAction(execution(), [failed], {} as never, {} as never);
 
-        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Cause (agent.failed): Agent execution failed.'));
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: agent.failed'));
         expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Action: Inspect the sanitized agent status'));
+        expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('Agent execution failed.'));
         expect(core.setFailed).toHaveBeenCalledWith(expect.stringMatching(/Reference: [0-9a-f-]{36}/));
+    });
+
+    it('renders the complete failure atomically in the repository locale', async () => {
+        const action = Object.assign(execution(), {
+            locale: { repository: 'es-MX', issue: 'es-MX', pullRequest: 'es-MX' },
+        });
+        const failed = new Result({
+            id: 'AgentBackedFeature',
+            success: false,
+            executed: true,
+            errors: [new ApplicationError('provider.rate-limited', 'English provider message.')],
+        });
+
+        await finishGithubAction(action, [failed], {} as never, {} as never);
+
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Impacto: El proveedor limitó temporalmente la operación.'));
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Código de error: provider.rate-limited'));
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Reintentable: Sí'));
+        expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('English provider message.'));
+        expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('Impact:'));
+    });
+
+    it('preserves operation-specific recovery context in the same catalog locale', async () => {
+        const action = Object.assign(execution(), {
+            locale: { repository: 'es-ES', issue: 'es-ES', pullRequest: 'es-ES' },
+        });
+        const failed = new Result({
+            id: 'PrepareManagedBranchUseCase',
+            success: false,
+            executed: true,
+            errors: [new ApplicationError('provider.unavailable', 'Producer message.', {
+                recovery: {
+                    id: 'managed-branch-enrichment-failed',
+                    variables: { branchName: 'feature/42-localized-errors' },
+                },
+            })],
+        });
+
+        await finishGithubAction(
+            action,
+            [failed],
+            {} as never,
+            {} as never,
+            undefined,
+            { publish: mockSummaryPublish },
+        );
+
+        const expected = 'Se conservaron la rama feature/42-localized-errors y su parche de configuración.';
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining(expected));
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining(expected));
+        expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('Producer message.'));
+        expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('El proveedor no estaba disponible'));
     });
 
     it('always fails unknown finding state and applies the configured policy to verification-required', async () => {
@@ -569,14 +624,14 @@ describe('finishGithubAction', () => {
             id: 'DetectPotentialProblemsUseCase', success: true, executed: true, payload: { findingStates },
         });
         await finishGithubAction(execution(), [resultWith(completeFindingStates({ unknown: 1 }))], {} as never, {} as never);
-        expect(core.setFailed).toHaveBeenCalledWith('Bugbot could not verify 1 finding state(s).');
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: provider.contract-invalid'));
 
         jest.mocked(core.setFailed).mockClear();
         const blocking = Object.assign(execution(), {
             ai: new Ai('', 'model', false, [], false, 'low', 20, [], undefined, undefined, { failOnUnresolved: true }),
         });
         await finishGithubAction(blocking, [resultWith(completeFindingStates({ 'verification-required': 2 }))], {} as never, {} as never);
-        expect(core.setFailed).toHaveBeenCalledWith('Bugbot found 2 unresolved actionable finding(s).');
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: workflow.failed'));
     });
 
     it('fails closed when owned finding-state evidence is malformed', async () => {
@@ -589,7 +644,7 @@ describe('finishGithubAction', () => {
 
         await finishGithubAction(execution(), [malformed], {} as never, {} as never);
 
-        expect(core.setFailed).toHaveBeenCalledWith('Bugbot finding-state evidence is malformed.');
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: provider.contract-invalid'));
     });
 
     it('fails closed when review telemetry requires but omits finding-state evidence', async () => {
@@ -610,7 +665,7 @@ describe('finishGithubAction', () => {
 
         await finishGithubAction(execution(), [missing], {} as never, {} as never);
 
-        expect(core.setFailed).toHaveBeenCalledWith('Bugbot finding-state evidence is malformed.');
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: provider.contract-invalid'));
     });
 
     it('fails closed when valid review state coexists with malformed telemetry', async () => {
@@ -638,7 +693,7 @@ describe('finishGithubAction', () => {
 
         await finishGithubAction(execution(), [valid, malformed], {} as never, {} as never);
 
-        expect(core.setFailed).toHaveBeenCalledWith('Bugbot finding-state evidence is malformed.');
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: provider.contract-invalid'));
     });
 });
 

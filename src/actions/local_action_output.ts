@@ -44,7 +44,9 @@ export function renderLocalActionResults(
 
     const errorsContent = results
         .filter(result => result.errors.length > 0)
-        .map(result => chalk.gray(result.errors.map(renderApplicationErrorText).join('\n\n'))).join('\n');
+        .map(result => chalk.gray(result.errors
+            .map(error => renderApplicationErrorText(error, catalog.render))
+            .join('\n\n'))).join('\n');
 
     if (errorsContent.length > 0) {
         content += '\n' + chalk.red(`${catalog.cli.errors}:`) + '\n' + errorsContent;

@@ -252,6 +252,12 @@ description-query and agent-query ports and returns immutable `direct-answer`
 data. GitHub publication is source-correlated by the shared reply reconciler;
 the CLI renders the same semantic answer locally using English-default,
 reviewed-Spanish, arbitrary dynamic, or atomic-English-fallback catalog labels.
+Repository-aware local failures now use the same code-specific descriptor
+catalog as GitHub completion and Job Summaries: labels and recovery guidance use
+the effective repository locale, while error codes and references remain stable
+machine values and producer exception prose is omitted. Argument parsing and
+other failures before a repository profile can be resolved remain English by
+default.
 
 ## 14. Testing strategy and numeric budget
 
