@@ -59509,6 +59509,7 @@ exports.runPullRequestTitleUpdate = runPullRequestTitleUpdate;
 exports.titleUpdateFailure = titleUpdateFailure;
 const result_1 = __nccwpck_require__(73817);
 const application_error_1 = __nccwpck_require__(75999);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
 function projectUpdateTitleContext(source) {
     if (source.isIssue) {
         return Object.freeze({
@@ -59557,14 +59558,18 @@ async function runIssueTitleUpdate(param, taskId, issueRepository) {
 async function runPullRequestTitleUpdate(param, taskId, issueRepository) {
     if (!param.enabled)
         return [skippedResult(taskId)];
-    const issueTitle = await issueRepository.getTitle(param.issueNumber);
+    const linkedIssueNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(param.issueNumber);
+    if (!linkedIssueNumber || linkedIssueNumber === param.pullRequestNumber) {
+        return [skippedResult(taskId)];
+    }
+    const issueTitle = await issueRepository.getTitle(linkedIssueNumber);
     if (issueTitle === undefined) {
         return [new result_1.Result({ id: taskId, success: false, executed: true, steps: ['Tried to update title, but there was a problem.'] })];
     }
     const title = await issueRepository.updatePullRequestTitle({
         pullRequestTitle: param.pullRequestTitle,
         issueTitle,
-        issueNumber: param.issueNumber,
+        issueNumber: linkedIssueNumber,
         pullRequestNumber: param.pullRequestNumber,
         labelFacts: param.labelFacts,
     });
