@@ -707,6 +707,54 @@
       ]
     },
     {
+      "id": "issue-start-and-sdd-readiness",
+      "title": "Uniform issue start and pre-branch SDD readiness",
+      "status": "proposed",
+      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work",
+      "owner": "Copilot maintainers",
+      "lastVerified": "2026-09-17",
+      "specs": [
+        "specs/issue-start-and-branch-readiness.md",
+        "specs/pre-branch-sdd-gate.md"
+      ],
+      "workflows": [
+        ".github/workflows/copilot_issue.yml",
+        ".github/workflows/copilot_issue_comment.yml",
+        ".github/workflows/copilot_commit.yml"
+      ],
+      "entrypoints": [
+        "action.yml",
+        "src/actions/common_action.ts",
+        "src/actions/github_action.ts"
+      ],
+      "code": [
+        "src/domain/issue_workflow_runtime_policy.ts",
+        "src/domain/copilot_lifecycle.ts",
+        "src/data/model/execution.ts",
+        "src/application/usecases/issue_workflow.ts",
+        "src/application/usecases/steps/issue/prepare_branches_use_case.ts",
+        "src/application/policies/setup_issue_workflow_policy.ts",
+        "src/application/policies/lifecycle_state_policy.ts",
+        "src/application/usecases/actions/synchronize_lifecycle_state_use_case.ts",
+        "src/infrastructure/git_commit_adapter.ts",
+        "scripts/validate-specification-catalog.cjs"
+      ],
+      "tests": [
+        "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
+        "src/data/model/__tests__/execution.test.ts",
+        "src/application/usecases/__tests__/issue_use_case.test.ts",
+        "src/application/usecases/steps/issue/__tests__/prepare_branches_use_case.test.ts",
+        "src/application/policies/__tests__/lifecycle_state_policy.test.ts",
+        "src/tooling/__tests__/validate_specification_catalog.test.ts"
+      ],
+      "documentation": [
+        "docs/issues/branch-management.mdx",
+        "docs/issues/workflow-setup.mdx",
+        "docs/issues/comment-commands.mdx",
+        "docs/development/specifications.mdx"
+      ]
+    },
+    {
       "id": "managed-issue-lifecycle",
       "title": "Managed issue and branch lifecycle",
       "status": "as-built-baseline",
