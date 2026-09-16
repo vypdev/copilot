@@ -20,7 +20,8 @@ describe('setup configuration policy', () => {
 
         expect(plan.workflowFiles).toHaveLength(13);
         expect(plan.issueTemplateFiles).toHaveLength(8);
-        expect(plan.selectedFiles).toHaveLength(22);
+        expect(plan.selectedFiles).toHaveLength(27);
+        expect(plan.selectedFiles).toContain('AGENTS.md (managed pointer only)');
         expect(plan.variables).toEqual(expect.arrayContaining([
             { name: 'AGENT_PROVIDER', value: 'codex' },
             { name: 'AGENT_ALLOWED_MODELS', value: 'openai/gpt-5.6-luna' },
@@ -90,7 +91,7 @@ describe('setup configuration policy', () => {
             'copilot_branch_sync.yml',
         ]));
         expect(plan.workflowFiles).not.toContain('release_workflow.yml');
-        expect(plan.selectedFiles).toHaveLength(9);
+        expect(plan.selectedFiles).toHaveLength(14);
     });
 
     it('keeps inactivity closure opt-in and wires its threshold when enabled', () => {

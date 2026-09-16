@@ -39,6 +39,7 @@ jobs:
           docs-tree: ${{ vars.DOCS_TREE || 'docs' }}
           chore-tree: ${{ vars.CHORE_TREE || 'chore' }}
           branch-management-always: ${{ vars.BRANCH_MANAGEMENT_ALWAYS || 'false' }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
           reopen-issue-on-push: ${{ vars.REOPEN_ISSUE_ON_PUSH || 'true' }}
           desired-assignees-count: ${{ vars.DESIRED_ASSIGNEES_COUNT || '1' }}
           desired-reviewers-count: ${{ vars.DESIRED_REVIEWERS_COUNT || '1' }}

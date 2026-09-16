@@ -31,6 +31,10 @@ import {
     runTokenExecution,
     waitForPreviousWorkflowRuns,
 } from './main_run_lifecycle';
+import { decideIssueWorkflowRuntime } from '../domain/issue_workflow_runtime_policy';
+import { ApplicationError } from '../application/errors/application_error';
+
+export type PrepareExecutionRuntime = (execution: Execution) => Promise<void> | void;
 
 export async function mainRun(
     execution: Execution,
@@ -39,6 +43,7 @@ export async function mainRun(
     compositionSurface: MainRunCompositionSurface,
     lifecycleStateUseCase?: SynchronizeLifecycleStateUseCase,
     agentActivityUseCase?: SynchronizeAgentActivityUseCase,
+    prepareRuntime?: PrepareExecutionRuntime,
 ): Promise<Result[]> {
     configureApplicationLogger(createLoggerAdapter());
     setGlobalLoggerDebug(execution.debug, execution.inputs === undefined);
@@ -67,6 +72,21 @@ export async function mainRun(
 
     logDebugInfo(`Setup done. Issue number: ${execution.issueNumber}, isSingleAction: ${execution.isSingleAction}, isIssue: ${execution.isIssue}, isPullRequest: ${execution.isPullRequest}, isPush: ${execution.isPush}`);
 
+    const runtimeDecision = decideIssueWorkflowRuntime({
+        admission: execution.currentIssueWorkflowAdmission,
+        unlinkedPullRequest: execution.isPullRequest && execution.issueNumber < 1,
+        route: issueWorkflowRoute(execution),
+        explicit: isExplicitIssueWorkflowIntent(execution),
+        singleAction: execution.singleAction.currentSingleAction,
+        hasManagedState: hasManagedIssueWorkflowState(execution),
+        hasDurableOperation: execution.previousConfiguration?.deploymentOrchestration !== undefined,
+    });
+    execution.issueWorkflowRuntimeMode = runtimeDecision.mode;
+    if (runtimeDecision.mode === 'noop' || runtimeDecision.mode === 'block') {
+        return [issueWorkflowAdmissionResult(runtimeDecision.mode, runtimeDecision.message)];
+    }
+    await prepareRuntime?.(execution);
+
     const routeHandlers = createMainRunRouteCompositionRoot(projectBoardCommandPort, compositionSurface);
     
     if (execution.runnedByToken) {
@@ -94,6 +114,52 @@ export async function mainRun(
         lifecycleStateUseCase,
         agentActivityUseCase,
     );
+}
+
+function issueWorkflowRoute(execution: Execution): 'issue' | 'pull-request' | 'push' | 'single-action' | 'other' {
+    if (execution.isSingleAction) return 'single-action';
+    if (execution.isPullRequest) return 'pull-request';
+    if (execution.isPush) return 'push';
+    if (execution.isIssue) return 'issue';
+    return 'other';
+}
+
+function isExplicitIssueWorkflowIntent(execution: Execution): boolean {
+    if (execution.isSingleAction && execution.issueNumber > 0) return true;
+    if (execution.issue.isIssueComment) return true;
+    if (!execution.issue.labeled) return false;
+    return [execution.labels.branchManagementLauncherLabel, execution.labels.deploy]
+        .includes(execution.issue.labelAdded);
+}
+
+function hasManagedIssueWorkflowState(execution: Execution): boolean {
+    const previous = execution.previousConfiguration;
+    return previous !== undefined && [
+        previous.issueWorkflowKind,
+        previous.branchType,
+        previous.parentBranch,
+        previous.workingBranch,
+        previous.releaseBranch,
+        previous.hotfixBranch,
+    ].some(value => typeof value === 'string' && value.length > 0);
+}
+
+function issueWorkflowAdmissionResult(mode: 'noop' | 'block', message = 'Issue workflow admission stopped this run.'): Result {
+    if (mode === 'noop') {
+        return new Result({
+            id: 'IssueWorkflowAdmission',
+            success: true,
+            executed: false,
+            steps: [`⏭️ ${message}`],
+        });
+    }
+    return new Result({
+        id: 'IssueWorkflowAdmission',
+        success: false,
+        executed: false,
+        steps: [`🛑 ${message}`],
+        errors: [new ApplicationError('configuration.invalid', message)],
+    });
 }
 
 async function runTrackedRoute(

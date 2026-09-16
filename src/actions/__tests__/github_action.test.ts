@@ -100,7 +100,11 @@ describe('runGitHubAction', () => {
       return '';
     });
     mockGetProjectDetail.mockResolvedValue({ id: 'p1', title: 'Board', url: 'https://example.com' });
-    mockMainRun.mockResolvedValue([]);
+    mockMainRun.mockImplementation(async (...args: unknown[]) => {
+      const prepareRuntime = args[6] as ((execution: unknown) => Promise<void>) | undefined;
+      if (prepareRuntime) await prepareRuntime(args[0]);
+      return [];
+    });
     mockPublishInvoke.mockResolvedValue(undefined);
     mockStoreInvoke.mockResolvedValue([]);
     mockConfigurationUpdate.mockResolvedValue(undefined);
@@ -164,6 +168,44 @@ describe('runGitHubAction', () => {
     expect(mockIsActorAllowedToModifyFiles).not.toHaveBeenCalled();
     expect(mockMainRun).not.toHaveBeenCalled();
     expect(finishActionSpy).not.toHaveBeenCalled();
+  });
+
+  it('delegates unmanaged live-state admission to mainRun without preparing early', async () => {
+    github.context.eventName = 'issues';
+    github.context.payload = {
+      action: 'opened',
+      issue: { number: 42, labels: [{ name: 'priority: high' }] },
+    };
+
+    mockMainRun.mockResolvedValueOnce([]);
+    await runGitHubAction();
+
+    expect(executionBuilderSpy).toHaveBeenCalled();
+    expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(mockCreateLanguageQueryPort).not.toHaveBeenCalled();
+    expect(mockMainRun).toHaveBeenCalled();
+    expect(mockMainRun.mock.calls[0][6]).toEqual(expect.any(Function));
+  });
+
+  it('passes a disabled profile to live-state admission without event-payload preflight', async () => {
+    github.context.eventName = 'issues';
+    github.context.payload = {
+      action: 'opened',
+      issue: { number: 42, labels: [{ name: 'bug' }] },
+    };
+    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
+      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'fake-token';
+      if (key === INPUT_KEYS.ISSUE_WORKFLOW_PROFILE) return '{"schemaVersion":1,"enabled":["feature"]}';
+      return '';
+    });
+
+    mockMainRun.mockResolvedValueOnce([]);
+    await runGitHubAction();
+
+    expect(projectCompositionSpy).toHaveBeenCalled();
+    expect(executionBuilderSpy).toHaveBeenCalled();
+    expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(mockMainRun.mock.calls[0][0].issueWorkflowProfile.enabled).toEqual(['feature']);
   });
 
   it('passes a valid single action through admission and the normal lifecycle', async () => {
@@ -232,7 +274,7 @@ describe('runGitHubAction', () => {
     expect(mockCreateLanguageQueryPort).not.toHaveBeenCalled();
     expect(mockMainRun).toHaveBeenCalledTimes(1);
     expect(mockMainRun.mock.calls[0][0].ai.getAgentConfiguration('planner')).toEqual(expect.objectContaining({
-      model: '',
+      model: 'gpt-5.6-luna',
     }));
     expect(mockMainRun.mock.calls[0][0].ai.getAgentConfiguration('planner')).not.toHaveProperty('command');
   });

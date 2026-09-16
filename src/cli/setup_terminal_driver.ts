@@ -87,6 +87,70 @@ export class NodeTerminalDriver implements TerminalDriver {
     });
   }
 
+  async readMultiSelect(
+    prompt: string,
+    choices: readonly string[],
+    selected: readonly string[],
+  ): Promise<TerminalReadResult> {
+    if (this.closed) return { kind: 'end-of-input' };
+    const input = stdin as typeof stdin & { setRawMode?: (mode: boolean) => void };
+    if (!input.setRawMode) {
+      return this.readText(`${prompt}\nEnter comma-separated IDs (or "all"): `);
+    }
+    stdout.write(`${prompt}\n`);
+    input.setRawMode(true);
+    input.resume();
+    return new Promise<TerminalReadResult>((resolve) => {
+      let index = 0;
+      let value = new Set(selected.filter(item => item !== 'all'));
+      let settled = false;
+      let rendered = false;
+      const render = () => {
+        const lines = choices.map((choice, choiceIndex) => {
+          const id = choice === 'All' ? 'all' : choice.split(' — ')[0];
+          const checked = id === 'all' ? value.size === choices.length - 1 : value.has(id);
+          return `${choiceIndex === index ? '❯' : ' '} ${checked ? '●' : '○'} ${choice}`;
+        });
+        stdout.write(`${rendered ? `\x1b[${choices.length}A\x1b[0J` : ''}${lines.join('\n')}\n`);
+        rendered = true;
+      };
+      const finish = (result: TerminalReadResult) => {
+        if (settled) return;
+        settled = true;
+        input.off('data', onData);
+        input.off('end', onEnd);
+        input.setRawMode?.(false);
+        input.pause();
+        if (result.kind === 'value') stdout.write('\n');
+        resolve(result);
+      };
+      const onEnd = () => finish({ kind: 'end-of-input' });
+      const onData = (chunk: Buffer | string) => {
+        const data = chunk.toString();
+        for (let offset = 0; offset < data.length; offset += 1) {
+          const character = data[offset];
+          if (data.startsWith('\u001b[A', offset)) { index = Math.max(0, index - 1); offset += 2; render(); continue; }
+          if (data.startsWith('\u001b[B', offset)) { index = Math.min(choices.length - 1, index + 1); offset += 2; render(); continue; }
+          if (character === '\u0003') { finish({ kind: 'cancel' }); return; }
+          if (character === '\u0004') { finish({ kind: 'end-of-input' }); return; }
+          if (character === ' ') {
+            const id = choices[index] === 'All' ? 'all' : choices[index].split(' — ')[0];
+            if (id === 'all') value = value.size === choices.length - 1 ? new Set() : new Set(choices.slice(1).map(choice => choice.split(' — ')[0]));
+            else if (value.has(id)) value.delete(id);
+            else value.add(id);
+            render();
+          } else if (character === '\r' || character === '\n') {
+            finish({ kind: 'value', value: [...value].join(',') });
+            return;
+          }
+        }
+      };
+      input.on('data', onData);
+      input.once('end', onEnd);
+      render();
+    });
+  }
+
   close(): void {
     if (this.closed) return;
     this.closed = true;

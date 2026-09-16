@@ -86,5 +86,6 @@ jobs:
           single-action: continue_deployment_action
           single-action-issue: ${{ needs.resolve-operation.outputs.issue }}
           single-action-operation-id: ${{ needs.resolve-operation.outputs.operation-id }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
           merge-queue-check-attestations: ${{ vars.MERGE_QUEUE_CHECK_ATTESTATIONS || '[]' }}
           token: ${{ secrets.PAT }}

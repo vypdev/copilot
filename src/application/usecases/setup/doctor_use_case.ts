@@ -15,6 +15,7 @@ import {
   setupResourceExists,
   usesOrganizationStorage,
   validateSetupConfiguration,
+  effectiveIssueWorkflowFeatures,
 } from '../../policies/setup_configuration_policy';
 import {
   buildDoctorReport,
@@ -79,6 +80,7 @@ export class SetupDoctorUseCase {
       ...buildLocaleDoctorChecks(request.configuration, catalog),
       repositoryRootCheck(this.dependencies.workspace, catalog),
       ...workflowChecks(request.configuration, configurationErrors, this.dependencies.workspace, catalog),
+      ...agentGuidanceChecks(request.configuration, this.dependencies.workspace),
     ];
 
     const pat = await this.validatePat(request, catalog);
@@ -271,7 +273,7 @@ function workflowChecks(
     )];
   }
   try {
-    return [...workspace.compareWorkflows(configuration.features)]
+    return [...workspace.compareWorkflows(effectiveIssueWorkflowFeatures(configuration))]
       .sort((left, right) => left.destination.localeCompare(right.destination))
       .map((comparison) => doctorCheck({
         id: `workflow.${normalizedDoctorPathId(comparison.destination)}`,
@@ -288,6 +290,31 @@ function workflowChecks(
       status: 'fail',
       summary: catalog.message('doctor.workflow.unverified'),
       action: catalog.message('doctor.workflow.unverifiedAction'),
+    })];
+  }
+}
+
+function agentGuidanceChecks(
+  configuration: SetupConfiguration,
+  workspace: SetupDoctorWorkspaceQueryPort,
+): DoctorCheck[] {
+  if (!workspace.inspectAgentGuidance) return [];
+  try {
+    return workspace.inspectAgentGuidance(configuration).map(check => doctorCheck({
+      id: check.id,
+      status: check.status,
+      summary: check.summary,
+      ...(check.status === 'pass' || check.status === 'skipped'
+        ? {}
+        : { action: 'Run copilot setup to reconcile repository agent guidance, preserving any reported drift.' }),
+      evidence: check.path ? { path: check.path } : {},
+    }));
+  } catch {
+    return [doctorCheck({
+      id: 'agent-guidance-manifest',
+      status: 'fail',
+      summary: 'Repository agent guidance could not be inspected.',
+      action: 'Run copilot setup after checking local file permissions.',
     })];
   }
 }

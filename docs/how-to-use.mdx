@@ -121,6 +121,8 @@ The complete command reference, including every supported option, is in [Workflo
 
     In automation, `--non-interactive` creates no terminal. `--yes` approves only the final plan: it does not supply a missing setup PAT, workflow credential, provider credential, target, or organization prerequisite.
 
+    Repository agent guidance remains enabled by default in automation, but the root pointer uses the safe `create-if-missing` policy unless `--agent-guidance prompt` (or the equivalent config value) explicitly authorizes a bounded update to an existing `AGENTS.md`.
+
     `copilot setup` will:
     - Create `.github/`, `.github/workflows/`, and `.github/ISSUE_TEMPLATE/` if they do not exist.
     - Copy only the selected files from the Copilot `setup/` folder into your repo (workflows, issue templates, pull request template). Existing files are **not** overwritten unless you approve an update.

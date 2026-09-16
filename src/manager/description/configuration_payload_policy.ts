@@ -18,6 +18,8 @@ export function buildConfigurationPayload(execution: ConfigurationPayloadContext
         deploymentOrchestration: current.deploymentOrchestration,
         branchConfiguration: current.branchConfiguration,
         recommendationState: current.recommendationState,
+        issueWorkflowKind: current.issueWorkflowKind,
+        issueWorkflowProfileDigest: current.issueWorkflowProfileDigest,
     };
     mergeMissingValues(payload, stored);
     return JSON.stringify(payload, null, 4);

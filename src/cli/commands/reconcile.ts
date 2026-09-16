@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { getGitInfo, isInsideGitRepo } from '../../cli_context';
-import { createDefaultSetupConfiguration, mergeSetupConfiguration } from '../../application/policies/setup_configuration_policy';
+import { createDefaultSetupConfiguration, effectiveIssueWorkflowFeatures, mergeSetupConfiguration } from '../../application/policies/setup_configuration_policy';
 import { loadSetupConfigurationOverrides } from '../setup_config_file';
 import { SetupReconcileWorkspaceAdapter } from '../../infrastructure/setup_workspace_adapter';
 import type { SetupDoctorWorkspaceQueryPort, SetupWorkspacePort, SetupWorkspaceResult } from '../../application/ports/setup_workspace_ports';
@@ -33,7 +33,7 @@ export function runReconcileCommand(
 
     const overrides = options.config ? loadSetupConfigurationOverrides(options.config) : {};
     const configuration = mergeSetupConfiguration(createDefaultSetupConfiguration(), overrides);
-    const comparisons = [...workspace.compareWorkflows(configuration.features)];
+    const comparisons = [...workspace.compareWorkflows(effectiveIssueWorkflowFeatures(configuration))];
     const drift = comparisons.filter(comparison => comparison.status !== 'unchanged');
     const report = {
         repository: `${gitInfo.owner}/${gitInfo.repo}`,

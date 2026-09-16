@@ -1,5 +1,6 @@
 import type { Config } from '../../../data/model/config';
 import type { DeploymentOperationSnapshot } from '../../../domain/deployment_operation';
+import type { IssueWorkflowAdmission, IssueWorkflowProfile } from '../../../domain/issue_workflow_profile';
 
 export interface SetupExecutionContext {
     readonly debug: boolean;
@@ -14,6 +15,7 @@ export interface SetupExecutionContext {
     readonly isPush: boolean;
     readonly issue: {
         readonly number: number;
+        readonly body?: string;
     };
     readonly pullRequest: {
         readonly number: number;
@@ -49,6 +51,8 @@ export interface SetupExecutionContext {
         readonly documentation: string;
         readonly chore: string;
         readonly maintenance: string;
+        readonly question?: string;
+        readonly help?: string;
     };
     readonly currentPullRequestLabels: readonly string[];
     readonly release: {
@@ -64,6 +68,8 @@ export interface SetupExecutionContext {
         readonly baseBranch?: string;
         readonly branch?: string;
     };
+    readonly issueWorkflowProfile?: IssueWorkflowProfile;
+    readonly issueWorkflowProfileLegacy?: boolean;
 }
 
 export interface ResolvedSingleActionState {
@@ -112,6 +118,8 @@ export interface SetupExecutionState {
     readonly release: SetupReleaseState;
     readonly hotfix: SetupHotfixState;
     readonly configuration: SetupConfigurationPatch;
+    readonly liveIssueBody?: string;
+    readonly issueWorkflowAdmission?: IssueWorkflowAdmission;
 }
 
 interface SetupExecutionBaseResult {

@@ -3,6 +3,7 @@ import {restoreRecommendationState, RecommendationState} from "./recommendation_
 import {Result} from "./result";
 import { asModelInput, readOptionalString, readString } from './model_input';
 import { isDeploymentOperationSnapshot, type DeploymentOperationSnapshot } from '../../domain/deployment_operation';
+import { ISSUE_WORKFLOW_KINDS, type IssueWorkflowKind } from '../../domain/issue_workflow_profile';
 
 /** Version of the durable configuration contract stored in issue/PR content. */
 export const CONFIG_SCHEMA_VERSION = 3;
@@ -28,6 +29,8 @@ export class Config {
     releaseOriginSha: string | undefined;
     hotfixOriginSha: string | undefined;
     deploymentOrchestration: DeploymentOperationSnapshot | undefined;
+    issueWorkflowKind: IssueWorkflowKind | undefined;
+    issueWorkflowProfileDigest: string | undefined;
     results: Result[] = [];
     branchConfiguration: BranchConfiguration | undefined;
     recommendationState: RecommendationState | undefined;
@@ -44,6 +47,16 @@ export class Config {
         this.hotfixOriginSha = readOptionalString(input, 'hotfixOriginSha');
         this.parentBranch = readOptionalString(input, 'parentBranch');
         this.workingBranch = readOptionalString(input, 'workingBranch');
+        const issueWorkflowKind = readOptionalString(input, 'issueWorkflowKind');
+        if (issueWorkflowKind !== undefined && !ISSUE_WORKFLOW_KINDS.includes(issueWorkflowKind as IssueWorkflowKind)) {
+            throw new Error('Invalid issueWorkflowKind configuration.');
+        }
+        this.issueWorkflowKind = issueWorkflowKind as IssueWorkflowKind | undefined;
+        const profileDigest = readOptionalString(input, 'issueWorkflowProfileDigest');
+        if (profileDigest !== undefined && !/^[a-f0-9]{64}$/u.test(profileDigest)) {
+            throw new Error('Invalid issueWorkflowProfileDigest configuration.');
+        }
+        this.issueWorkflowProfileDigest = profileDigest;
         if (input['branchConfiguration'] !== undefined && input['branchConfiguration'] !== null) {
             this.branchConfiguration = new BranchConfiguration(input['branchConfiguration']);
         }

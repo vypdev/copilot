@@ -58,6 +58,26 @@ jobs:
 - **`token`** is required (use a fine-grained PAT with repo and project permissions; see [Authentication](/authentication)).
 - **`project-ids`** is optional but needed if you want issues (and PRs) linked to GitHub Project boards.
 
+`copilot setup` installs the selected Issue Forms and writes the selected
+workflow profile to `COPILOT_ISSUE_WORKFLOW_PROFILE`. The corresponding Action
+input is `issue-workflow-profile`; manually wired workflows should pass the
+same JSON value, for example:
+
+```yaml
+- uses: vypdev/copilot@v3
+  with:
+    token: ${{ secrets.PAT }}
+    issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
+```
+
+The setup selector defaults to `All`, then lets the operator toggle `feature`,
+`bugfix`, `documentation`, `chore`, `help`, `hotfix`, and `release` with
+`Space` and confirm with `Enter`. Only selected forms are installed. A blank
+issue, an issue without a recognized enabled type label, or a conflict between
+type labels is not converted into a Feature; the Action reports a no-op or a
+configuration block. Release and hotfix issues are admitted only when the
+required form headings and values are present.
+
 Add other inputs as needed: `branch-management-launcher-label`, `desired-assignees-count`, `main-branch`, `development-branch`, etc. See [Configuration](/issues/configuration) and [Examples](/issues/examples).
 
 ## What runs when
@@ -66,13 +86,15 @@ Add other inputs as needed: `branch-management-launcher-label`, `desired-assigne
 
    Set the optional Repository Variable `COPILOT_BOT_LOGIN` to the PAT bot's login to apply the same generic check at job admission. Event workflows triggered by that actor then consume no runner at all. If the variable is absent, the in-Action authenticated check remains fail-safe. Manual single-action workflows are intentionally separate and are not gated this way.
 
-2. **Project linking:** If `project-ids` is set and the token has access, the issue is linked to those projects and moved to the configured column (e.g. "Todo" or "In Progress").
+2. **Issue workflow admission:** Before preparing an agent or mutating the repository, Copilot validates the profile, the live issue labels, and release/hotfix form structure. Disabled or conflicting workflows fail closed; unmanaged issues are left untouched.
 
-3. **Assignees:** If `desired-assignees-count` is set, the action assigns up to that many members (issue creator first if they belong to the org/repo, then additional members). See [Assignees and projects](/issues/assignees-and-projects).
+3. **Project linking:** If `project-ids` is set and the token has access, the issue is linked to those projects and moved to the configured column (e.g. "Todo" or "In Progress").
 
-4. **Branch creation:** When the issue has a **branch type** label (feature, bugfix, docs, chore, hotfix, release) and either the **launcher label** (e.g. `branched`) is present or `branch-management-always: true`, the action creates the branch (with hotfix/release restrictions for non-members). See [Branch management](/issues/branch-management).
+4. **Assignees:** If `desired-assignees-count` is set, the action assigns up to that many members (issue creator first if they belong to the org/repo, then additional members). See [Assignees and projects](/issues/assignees-and-projects).
 
-5. **Deploy trigger:** When the `deploy` label is added to an issue that has a release or hotfix type, the action **dispatches** the workflow named in `release-workflow` or `hotfix-workflow` (e.g. `release_workflow.yml`, `hotfix_workflow.yml`). Filenames must match exactly.
+5. **Branch creation:** When the admitted issue has a **branch type** label (feature, bugfix, docs, chore, hotfix, release) and either the **launcher label** (e.g. `branched`) is present or `branch-management-always: true`, the action creates the branch (with hotfix/release restrictions for non-members). See [Branch management](/issues/branch-management).
+
+6. **Deploy trigger:** When the `deploy` label is added to an issue that has a release or hotfix type, the action **dispatches** the workflow named in `release-workflow` or `hotfix-workflow` (e.g. `release_workflow.yml`, `hotfix_workflow.yml`). Filenames must match exactly.
 
 ## Scheduled inactivity cleanup
 

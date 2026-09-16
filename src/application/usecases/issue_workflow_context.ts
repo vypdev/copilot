@@ -2,6 +2,7 @@ import type { AgentConfiguration } from '../../domain/agent';
 import type { ProjectReference } from '../ports/project_board_link_ports';
 import type { SelectedIssueType } from '../ports/issue_management_ports';
 import type { Result } from '../../data/model/result';
+import type { IssueWorkflowKind } from '../../domain/issue_workflow_profile';
 
 export interface AssignmentContext {
   readonly target: 'issue' | 'pull request';
@@ -157,6 +158,7 @@ export interface IssueWorkflowContextSource {
   readonly eventName: string;
   readonly tokenUser?: string;
   readonly managementBranch: string;
+  readonly issueWorkflowKind?: IssueWorkflowKind;
   readonly issue: {
     readonly number: number;
     readonly title: string;
@@ -357,7 +359,14 @@ export function copyProjects(projects: readonly ProjectSource[]): readonly Proje
 }
 
 function selectIssueType(source: IssueWorkflowContextSource): SelectedIssueType {
-  const name: IssueTypeName = source.labels.isHotfix ? 'hotfix'
+  const name: IssueTypeName = source.issueWorkflowKind === 'bugfix' ? 'bug'
+    : source.issueWorkflowKind === 'documentation' ? 'documentation'
+      : source.issueWorkflowKind === 'chore' ? 'maintenance'
+        : source.issueWorkflowKind === 'help' ? 'help'
+          : source.issueWorkflowKind === 'hotfix' ? 'hotfix'
+            : source.issueWorkflowKind === 'release' ? 'release'
+              : source.issueWorkflowKind === 'feature' ? 'feature'
+                : source.labels.isHotfix ? 'hotfix'
     : source.labels.isRelease ? 'release'
       : source.labels.isDocs || source.labels.isDocumentation ? 'documentation'
         : source.labels.isChore || source.labels.isMaintenance ? 'maintenance'

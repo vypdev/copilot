@@ -15,6 +15,7 @@ import type {
 import { DEFAULT_INACTIVITY_THRESHOLD_HOURS } from '../../domain/issue_inactivity';
 import { DEFAULT_DEPLOYMENT_CONFIGURATION } from '../../domain/deployment_configuration';
 import { resolveLocaleProfile } from '../../domain/locale';
+import { ISSUE_WORKFLOW_KINDS, type IssueWorkflowKind } from '../../domain/issue_workflow_profile';
 
 export const SETUP_AGENT_TASKS: readonly AgentTask[] = [
     'planner',
@@ -137,6 +138,8 @@ export function createDefaultSetupConfiguration(): SetupConfiguration {
         manageRepositorySecrets: true,
         actionInputs: {},
         storage: createDefaultSetupStorageConfiguration(),
+        issueWorkflows: { enabled: [...ISSUE_WORKFLOW_KINDS] },
+        repositoryAgentGuidance: { enabled: true, agentsPointer: 'prompt' },
     };
 }
 
@@ -154,19 +157,38 @@ export type SetupConfigurationOverrides = {
         secrets?: Partial<SetupResourceStoragePolicy>;
         variables?: Partial<SetupResourceStoragePolicy>;
     };
+    issueWorkflows?: { enabled?: readonly IssueWorkflowKind[] };
+    repositoryAgentGuidance?: Partial<SetupConfiguration['repositoryAgentGuidance']>;
 };
 
 export function mergeSetupConfiguration(
     base: SetupConfiguration,
     overrides: SetupConfigurationOverrides = {},
 ): SetupConfiguration {
+    if (overrides.issueWorkflows?.enabled) {
+        for (const kind of ['release', 'hotfix'] as const) {
+            const legacy = overrides.features?.[kind];
+            if (legacy !== undefined && legacy !== overrides.issueWorkflows.enabled.includes(kind)) {
+                throw new Error(`features.${kind} contradicts issueWorkflows.enabled.`);
+            }
+        }
+    }
     const agents = { ...base.agents } as SetupAgentConfiguration;
     for (const task of SETUP_AGENT_TASKS) {
         agents[task] = { ...base.agents[task], ...(overrides.agents?.[task] ?? {}) };
     }
+    const features = { ...base.features, ...(overrides.features ?? {}) } as SetupFeatures;
+    const enabledIssueWorkflows = overrides.issueWorkflows?.enabled
+        ?? base.issueWorkflows.enabled
+            .filter(kind => kind !== 'release' || features.release !== false)
+            .filter(kind => kind !== 'hotfix' || features.hotfix !== false);
+    if (overrides.issueWorkflows?.enabled) {
+        features.release = enabledIssueWorkflows.includes('release');
+        features.hotfix = enabledIssueWorkflows.includes('hotfix');
+    }
     return {
         ...base,
-        features: { ...base.features, ...(overrides.features ?? {}) } as SetupFeatures,
+        features,
         agents,
         repository: { ...base.repository, ...(overrides.repository ?? {}) },
         ai: { ...base.ai, ...(overrides.ai ?? {}) },
@@ -192,6 +214,13 @@ export function mergeSetupConfiguration(
                     ...(overrides.storage?.variables?.overrides ?? {}),
                 },
             },
+        },
+        issueWorkflows: {
+            enabled: enabledIssueWorkflows,
+        },
+        repositoryAgentGuidance: {
+            ...base.repositoryAgentGuidance,
+            ...(overrides.repositoryAgentGuidance ?? {}),
         },
     };
 }

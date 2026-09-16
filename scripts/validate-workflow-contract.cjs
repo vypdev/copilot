@@ -85,6 +85,17 @@ const FORK_GATED_WORKFLOW_FILES = new Set([
   'copilot_pull_request_review_state.yml',
   'copilot_pull_request_comment.yml',
 ]);
+const ISSUE_WORKFLOW_PROFILE_FILES = new Set([
+  'copilot_issue.yml',
+  'copilot_issue_comment.yml',
+  'copilot_commit.yml',
+  'copilot_pull_request.yml',
+  'copilot_pull_request_review_state.yml',
+  'copilot_pull_request_comment.yml',
+  'copilot_deployment_orchestration.yml',
+  'release_workflow.yml',
+  'hotfix_workflow.yml',
+]);
 const ZERO_OBJECT_ID = '0000000000000000000000000000000000000000';
 const MAJOR_ACTION_REFERENCE = /^[^/\s]+\/[^@\s]+@v[1-9]\d*$/;
 const currentCopilotManifest = yaml.load(readFileSync(path.join(repositoryRoot, 'action.yml'), 'utf8'));
@@ -946,6 +957,18 @@ function assertSequentialMutationWorkflow(file, workflow) {
   assertReviewConcurrency(relativeFile, workflow);
 }
 
+function assertIssueWorkflowProfileInput(file, workflow) {
+  if (!ISSUE_WORKFLOW_PROFILE_FILES.has(path.basename(file))) return;
+  const relativeFile = relativeWorkflow(file);
+  const expectedAction = relativeFile.startsWith('setup/workflows/') ? DISTRIBUTED_COPILOT_ACTION : './';
+  const actionSteps = Object.values(workflow.jobs ?? {}).flatMap(job => job?.steps ?? [])
+    .filter(step => step?.uses === expectedAction);
+  if (actionSteps.length === 0 || actionSteps.some(step =>
+    step.with?.['issue-workflow-profile'] !== "${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}")) {
+    throw new Error(`${relativeFile} must pass COPILOT_ISSUE_WORKFLOW_PROFILE to every issue-bound Copilot action step.`);
+  }
+}
+
 function validateWorkflow(file, workflow) {
   if (!workflow || typeof workflow !== 'object') throw new Error('workflow document is empty.');
   assertDirectEventTriggers(file, workflow);
@@ -965,6 +988,7 @@ function validateWorkflow(file, workflow) {
   assertQueueWorkflow(file, workflow);
   assertMajorActionReferences(file, workflow);
   assertCopilotActionInputs(file, workflow);
+  assertIssueWorkflowProfileInput(file, workflow);
 }
 
 function main() {
@@ -1004,6 +1028,7 @@ module.exports = {
   FORK_SAFE_BOT_GATE_EXPRESSION,
   assertMajorActionReferences,
   assertCopilotActionInputs,
+  assertIssueWorkflowProfileInput,
   assertAgentInputs,
   assertRepositoryLocaleInputs,
   assertRepositoryBugbotContextExclusions,

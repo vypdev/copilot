@@ -5,9 +5,43 @@ import { validateStorageConfiguration } from './setup_configuration_storage_poli
 import { MAX_INACTIVITY_THRESHOLD_HOURS } from '../../domain/issue_inactivity';
 import { validateDeploymentConfiguration } from '../../domain/deployment_configuration';
 import { canonicalizeLocaleTag } from '../../domain/locale';
+import { ISSUE_WORKFLOW_KINDS } from '../../domain/issue_workflow_profile';
+import { effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
 
 export function validateSetupConfiguration(configuration: SetupConfiguration): string[] {
     const errors: string[] = [];
+    const enabledWorkflows = configuration.issueWorkflows?.enabled ?? ISSUE_WORKFLOW_KINDS;
+    const unknownWorkflows = enabledWorkflows.filter(kind => !ISSUE_WORKFLOW_KINDS.includes(kind));
+    if (unknownWorkflows.length > 0) errors.push(`Unknown issue workflow(s): ${unknownWorkflows.join(', ')}.`);
+    if (new Set(enabledWorkflows).size !== enabledWorkflows.length) errors.push('Issue workflow selection cannot contain duplicates.');
+    for (const kind of ['release', 'hotfix'] as const) {
+        if ((configuration.features[kind] !== false) !== enabledWorkflows.includes(kind)) {
+            errors.push(`features.${kind} must match issueWorkflows.enabled; use the issue workflow selector as the source of truth.`);
+        }
+    }
+    if (configuration.features.issues !== false && effectiveIssueWorkflowProfile(configuration).enabled.length === 0) {
+        errors.push('At least one issue workflow must be enabled when issue automation is enabled.');
+    }
+    if (!configuration.repositoryAgentGuidance || !['prompt', 'create-if-missing', 'disabled'].includes(configuration.repositoryAgentGuidance.agentsPointer)) {
+        errors.push('Repository agent guidance pointer must be prompt, create-if-missing, or disabled.');
+    }
+    for (const key of [
+        'branch-management-launcher-label', 'bug-label', 'bugfix-label', 'hotfix-label',
+        'enhancement-label', 'feature-label', 'release-label', 'question-label', 'help-label',
+        'deploy-label', 'deployed-label', 'docs-label', 'documentation-label', 'chore-label',
+        'maintenance-label', 'priority-high-label', 'priority-medium-label', 'priority-low-label',
+    ]) {
+        const value = configuration.actionInputs[key];
+        if (value !== undefined && (!value.trim() || value.length > 50 || /[\r\n]/u.test(value))) {
+            errors.push(`Action input ${key} must be a non-empty single-line label of at most 50 characters.`);
+        }
+    }
+    for (const key of ['release-workflow', 'hotfix-workflow']) {
+        const value = configuration.actionInputs[key];
+        if (value !== undefined && !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$/u.test(value)) {
+            errors.push(`Action input ${key} must be a safe workflow file name.`);
+        }
+    }
     const nonEmpty = [
         ['main branch', configuration.repository.mainBranch],
         ['development branch', configuration.repository.developmentBranch],

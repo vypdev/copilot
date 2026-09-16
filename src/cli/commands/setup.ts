@@ -7,12 +7,13 @@ import { getGitInfo, isInsideGitRepo } from '../../cli_context';
 import { buildSetupParams } from './setup_policy';
 import { loadSetupConfigurationOverrides } from '../setup_config_file';
 import { SetupQuestionnaireController, SetupWizardUseCase } from '../../application/usecases/setup';
-import { SETUP_FEATURE_DESCRIPTIONS, buildSetupCredentialRequirements } from '../../application/policies/setup_configuration_policy';
+import { SETUP_FEATURE_DESCRIPTIONS, buildSetupCredentialRequirements, effectiveIssueWorkflowFeatures } from '../../application/policies/setup_configuration_policy';
 import type { SetupConfigurationOverrides } from '../../application/policies/setup_configuration_policy';
 import { createSetupCredentialsUseCase, createSetupRemoteConfigurationReadPort } from '../../infrastructure/composition/setup_credentials_composition_root';
 import { createSetupMergeQueueReadinessUseCase } from '../../infrastructure/composition/setup_doctor_composition_root';
 import { SetupDoctorWorkspaceQueryAdapter } from '../../infrastructure/setup_workspace_adapter';
 import type { SetupResourceScope } from '../../domain/setup';
+import { ISSUE_WORKFLOW_KINDS, type IssueWorkflowKind } from '../../domain/issue_workflow_profile';
 import { toApplicationError } from '../../application/errors/application_error';
 import { createInteractiveTerminalDriver } from '../setup_terminal_driver';
 import { ConsoleSetupQuestionRenderer } from '../setup_question_renderer';
@@ -29,6 +30,8 @@ export function registerSetupCommand(program: Command): void {
     .option('-t, --token <token>', 'Personal access token (or PERSONAL_ACCESS_TOKEN from the environment)')
     .option('--agent <provider>', 'Use one agent runtime for every setup task (codex|opencode|cursor)')
     .option('--features <features>', 'Comma-separated setup features, or "all" (for non-interactive setup)')
+    .option('--issue-workflows <types>', 'Comma-separated issue workflow types, or "all" (for non-interactive setup)')
+    .option('--agent-guidance <mode>', 'Generated agent guidance mode (prompt|create-if-missing|disabled)')
     .option('--config <path>', 'YAML or JSON file with setup overrides')
     .option('--non-interactive', 'Use defaults and config-file values without prompting', false)
     .option('--yes', 'Apply the plan without the final confirmation prompt', false)
@@ -112,7 +115,7 @@ export function registerSetupCommand(program: Command): void {
           return;
         }
         const { configuration, remoteConfiguration } = result;
-        const workflowComparisons = new SetupDoctorWorkspaceQueryAdapter().compareWorkflows(configuration.features);
+        const workflowComparisons = new SetupDoctorWorkspaceQueryAdapter().compareWorkflows(effectiveIssueWorkflowFeatures(configuration));
         const updateWorkflows = await workflowPrompt.confirmWorkflowUpdates(workflowComparisons, Boolean(options.updateWorkflows));
         const approvedWorkflowFiles = updateWorkflows
           ? workflowComparisons.filter(comparison => comparison.status === 'changed').map(comparison => comparison.file)
@@ -169,6 +172,8 @@ function loadSetupOverrides(options: {
   config?: string;
   agent?: string;
   features?: string;
+  issueWorkflows?: string;
+  agentGuidance?: string;
   variablesScope?: string;
   secretsScope?: string;
   variablesVisibility?: string;
@@ -195,6 +200,19 @@ function loadSetupOverrides(options: {
       if (unknown.length > 0) throw new Error(`Unknown setup feature(s): ${unknown.join(', ')}.`);
       fromFlags.features = Object.fromEntries(Object.keys(SETUP_FEATURE_DESCRIPTIONS).map(feature => [feature, requested.includes(feature)]));
     }
+  }
+  if (options.issueWorkflows) {
+    const raw = options.issueWorkflows.trim().toLowerCase();
+    const requested = raw === 'all' ? [...ISSUE_WORKFLOW_KINDS] : raw.split(',').map(item => item.trim()).filter(Boolean);
+    const unknown = requested.filter(item => !ISSUE_WORKFLOW_KINDS.includes(item as IssueWorkflowKind));
+    if (unknown.length > 0) throw new Error(`Unknown issue workflow(s): ${unknown.join(', ')}.`);
+    if (new Set(requested).size !== requested.length) throw new Error('Issue workflow selection cannot contain duplicates.');
+    fromFlags.issueWorkflows = { enabled: requested as IssueWorkflowKind[] };
+  }
+  if (options.agentGuidance) {
+    const mode = options.agentGuidance.trim().toLowerCase();
+    if (!['prompt', 'create-if-missing', 'disabled'].includes(mode)) throw new Error('--agent-guidance must be prompt, create-if-missing, or disabled.');
+    fromFlags.repositoryAgentGuidance = { agentsPointer: mode as 'prompt' | 'create-if-missing' | 'disabled', enabled: mode !== 'disabled' };
   }
   const storage: NonNullable<SetupConfigurationOverrides['storage']> = {};
   if (options.variablesScope || options.variablesVisibility || Object.keys(options.variableScope ?? {}).length > 0) {
@@ -227,6 +245,8 @@ function mergeSetupOverrides(
     repository: { ...fileOverrides.repository, ...flagOverrides.repository },
     ai: { ...fileOverrides.ai, ...flagOverrides.ai },
     projects: { ...fileOverrides.projects, ...flagOverrides.projects },
+    issueWorkflows: { ...fileOverrides.issueWorkflows, ...flagOverrides.issueWorkflows },
+    repositoryAgentGuidance: { ...fileOverrides.repositoryAgentGuidance, ...flagOverrides.repositoryAgentGuidance },
     storage: {
       ...fileOverrides.storage,
       ...flagOverrides.storage,

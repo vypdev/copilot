@@ -171,6 +171,7 @@ jobs:
         with:
           single-action: prepare_deployment_action
           single-action-issue: ${{ inputs.issue }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
           single-action-version: ${{ inputs.version }}
           single-action-title: ${{ inputs.title }}
           single-action-changelog: ${{ inputs.changelog }}
@@ -216,6 +217,7 @@ jobs:
         with:
           single-action: create_tag
           single-action-issue: ${{ inputs.issue }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
           single-action-operation-id: ${{ inputs.operation-id }}
           single-action-version: ${{ inputs.version }}
           token: ${{ secrets.PAT }}
@@ -318,6 +320,7 @@ jobs:
         with:
           single-action: create_release
           single-action-issue: ${{ inputs.issue }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
           single-action-operation-id: ${{ inputs.operation-id }}
           single-action-version: ${{ inputs.version }}
           token: ${{ secrets.PAT }}
@@ -326,6 +329,7 @@ jobs:
         with:
           single-action: publish_github_action
           single-action-issue: ${{ inputs.issue }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
           single-action-operation-id: ${{ inputs.operation-id }}
           single-action-version: ${{ inputs.version }}
           token: ${{ secrets.PAT }}
@@ -334,6 +338,7 @@ jobs:
         with:
           single-action: published_deployment_action
           single-action-issue: ${{ inputs.issue }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
           single-action-operation-id: ${{ inputs.operation-id }}
           single-action-version: ${{ inputs.version }}
           token: ${{ secrets.PAT }}
@@ -357,6 +362,7 @@ jobs:
         with:
           single-action: failed_deployment_action
           single-action-issue: ${{ inputs.issue }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
           single-action-operation-id: ${{ inputs.operation-id }}
           single-action-version: ${{ inputs.version }}
           single-action-message: Publication failed. Review ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} before retrying.
@@ -367,6 +373,7 @@ jobs:
         with:
           single-action: publish_issue_comment
           single-action-issue: ${{ inputs.issue }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
           single-action-message: |
             ## ❌ Hotfix orchestration needs attention
 

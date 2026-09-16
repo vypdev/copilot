@@ -68,10 +68,20 @@ export class SetupWizardUseCase {
   constructor(private readonly dependencies: SetupWizardDependencies) {}
 
   async execute(request: SetupWizardRequest): Promise<SetupWizardResult> {
+    const effectiveOverrides = request.mode === 'non-interactive'
+      && request.overrides?.repositoryAgentGuidance?.agentsPointer === undefined
+      ? {
+          ...request.overrides,
+          repositoryAgentGuidance: {
+            ...request.overrides?.repositoryAgentGuidance,
+            agentsPointer: 'create-if-missing' as const,
+          },
+        }
+      : request.overrides;
     const defaults = mergeSetupConfiguration(
       createDefaultSetupConfiguration(),
       {
-        ...request.overrides,
+        ...effectiveOverrides,
         ...(request.skipRepositoryVariables ? { manageRepositoryVariables: false } : {}),
         ...(request.skipRepositorySecrets ? { manageRepositorySecrets: false } : {}),
       },

@@ -16,6 +16,7 @@ import type { Welcome } from './welcome';
 import type { Workflows } from './workflows';
 import type { ExecutionInputs } from './execution_inputs';
 import type { DeploymentConfigurationValues } from '../../domain/deployment_configuration';
+import type { IssueWorkflowAdmission, IssueWorkflowProfile } from '../../domain/issue_workflow_profile';
 
 /** Immutable construction contract for the runtime execution aggregate. */
 export interface ExecutionComponents {
@@ -41,4 +42,8 @@ export interface ExecutionComponents {
     welcome?: Welcome;
     inactivityThresholdHours?: number;
     inputs?: ExecutionInputs;
+    issueWorkflowProfile?: IssueWorkflowProfile;
+    issueWorkflowProfileLegacy?: boolean;
+    issueWorkflowProfileDigest?: string;
+    issueWorkflowAdmission?: IssueWorkflowAdmission;
 }

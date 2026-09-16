@@ -1,4 +1,4 @@
-import type { SetupFeatures, SetupWorkflowComparison } from '../../domain/setup';
+import type { SetupConfiguration, SetupFeatures, SetupWorkflowComparison } from '../../domain/setup';
 
 export interface SetupWorkspaceResult {
     copied: number;
@@ -9,6 +9,7 @@ export interface SetupWorkspaceSelection {
     features?: SetupFeatures;
     updateExistingWorkflows?: boolean;
     approvedWorkflowFiles?: readonly string[];
+    setupConfiguration?: Readonly<SetupConfiguration>;
 }
 
 export interface SetupWorkspacePort {
@@ -25,4 +26,10 @@ export interface BoundSetupWorkspacePort {
 export interface SetupDoctorWorkspaceQueryPort {
     isRepositoryRoot(): boolean;
     compareWorkflows(features?: SetupFeatures): readonly SetupWorkflowComparison[];
+    inspectAgentGuidance?(configuration: Readonly<SetupConfiguration>): readonly {
+        id: string;
+        status: 'pass' | 'warn' | 'fail' | 'skipped';
+        summary: string;
+        path?: string;
+    }[];
 }

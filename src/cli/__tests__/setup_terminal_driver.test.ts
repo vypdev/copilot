@@ -116,6 +116,18 @@ describe('NodeTerminalDriver', () => {
     expect(mockStdout.write).toHaveBeenCalledWith('\n');
   });
 
+  it('supports Space/Enter multi-select navigation', async () => {
+    const pending = new NodeTerminalDriver().readMultiSelect(
+      'Issue workflows',
+      ['All', 'feature — Feature', 'help — Help'],
+      ['feature', 'help'],
+    );
+    mockInputHandlers.get('data')?.(Buffer.from(' \u001b[B \n'));
+    await expect(pending).resolves.toEqual({ kind: 'value', value: 'feature' });
+    expect(mockStdin.setRawMode).toHaveBeenNthCalledWith(1, true);
+    expect(mockStdin.setRawMode).toHaveBeenLastCalledWith(false);
+  });
+
   it.each([
     ['data', '\u0003', 'cancel'],
     ['data', '\u0004', 'end-of-input'],

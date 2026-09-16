@@ -10,7 +10,6 @@ import { getGithubActionInput } from './github_action_input';
 import { parseBoundedPositiveIntegerInput, parseIntegerInput } from './input_number_policy';
 import { parseDelimitedValues } from './input_values_policy';
 import { readGithubActionAiInputs } from './github_action_ai_inputs';
-import { prepareGithubAgentRuntime } from './github_action_runtime';
 import { readGithubActionLocaleInputs } from './github_action_locale_inputs';
 import { buildSizeThresholds } from './size_threshold_builder';
 import { readGithubActionThresholdInputs } from './github_action_threshold_inputs';
@@ -28,6 +27,8 @@ import { DEFAULT_INACTIVITY_THRESHOLD_HOURS, MAX_INACTIVITY_THRESHOLD_HOURS } fr
 import { activeAgentTasks } from '../application/policies/agent_task_activation_policy';
 import type { AgentTaskConfiguration } from '../domain/agent';
 import { readDeploymentConfiguration } from './deployment_configuration_builder';
+import { parseIssueWorkflowProfile } from '../domain/issue_workflow_profile';
+import { issueWorkflowProfileDigest } from '../utils/issue_workflow_profile_digest';
 
 export interface GithubActionExecutionInput {
     readonly getInput: typeof getGithubActionInput;
@@ -46,7 +47,9 @@ export interface GithubActionExecutionInput {
 export async function buildGithubActionExecution(
     input: GithubActionExecutionInput,
 ): Promise<Execution> {
-    const { getInput, eventInputs, projectQuery, debug, singleAction, token } = input;
+    const { getInput, eventInputs, debug, singleAction, token } = input;
+    const parsedIssueWorkflowProfile = parseIssueWorkflowProfile(getInput(INPUT_KEYS.ISSUE_WORKFLOW_PROFILE));
+    if ('error' in parsedIssueWorkflowProfile) throw new Error(parsedIssueWorkflowProfile.error);
     // Locale is trusted configuration. Validate it before agent provisioning or
     // any provider/domain mutation can begin.
     const localeInputs = input.localeInputs ?? readGithubActionLocaleInputs(getInput);
@@ -54,26 +57,7 @@ export async function buildGithubActionExecution(
     const agentTasks = input.agentRuntimeAuthorized === false
         ? disableAgentTasks(aiInputs.requestedAgentTasks)
         : aiInputs.requestedAgentTasks;
-    const runtimeTasks = input.activeAgentTasks ?? activeAgentTasks(
-        eventInputs,
-        singleAction,
-        input.tokenUser,
-        aiInputs.pullRequestDescriptionMode !== 'disabled',
-    );
-    if (!singleAction.isCloseInactiveIssuesAction && runtimeTasks.length > 0) {
-        prepareGithubAgentRuntime(
-            agentTasks,
-            runtimeTasks,
-        );
-    }
-
-    const projects = await loadProjectDetails(
-        projectQuery,
-        parseDelimitedValues(getInput(INPUT_KEYS.PROJECT_IDS)),
-        eventInputs.repo.owner,
-        token,
-    );
-    const projectInputs = readGithubActionProjectInputs(getInput, projects);
+    const projectInputs = readGithubActionProjectInputs(getInput, []);
     const workflowInputs = readGithubActionWorkflowInputs(getInput);
     const labelInputs = readGithubActionLabelInputs(getInput);
     const issueTypeInputs = readGithubActionIssueTypeInputs(getInput);
@@ -140,7 +124,24 @@ export async function buildGithubActionExecution(
         projects: buildProjects(projectInputs),
         tokenUser: input.tokenUser,
         inputs: eventInputs,
+        issueWorkflowProfile: parsedIssueWorkflowProfile.profile,
+        issueWorkflowProfileLegacy: parsedIssueWorkflowProfile.legacy,
+        issueWorkflowProfileDigest: issueWorkflowProfileDigest(parsedIssueWorkflowProfile.profile),
     });
+}
+
+/** Loads provider-backed project facts only after live issue admission succeeds. */
+export async function hydrateGithubActionExecutionProjects(
+    execution: Execution,
+    input: Pick<GithubActionExecutionInput, 'getInput' | 'projectQuery' | 'token'>,
+): Promise<void> {
+    const projects = await loadProjectDetails(
+        input.projectQuery,
+        parseDelimitedValues(input.getInput(INPUT_KEYS.PROJECT_IDS)),
+        execution.owner,
+        input.token,
+    );
+    execution.project = buildProjects(readGithubActionProjectInputs(input.getInput, projects));
 }
 
 function disableAgentTasks(tasks: AgentTaskConfiguration): AgentTaskConfiguration {

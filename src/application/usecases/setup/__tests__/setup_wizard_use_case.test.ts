@@ -37,10 +37,33 @@ describe('SetupWizardUseCase', () => {
     expect(deps.confirmation.confirm).toHaveBeenCalledTimes(1);
     if (result.status === 'completed') {
       const defaults = createDefaultSetupConfiguration();
-      expect(result.configuration).toEqual(defaults);
+      expect(result.configuration).toEqual({
+        ...defaults,
+        repositoryAgentGuidance: { enabled: true, agentsPointer: 'create-if-missing' },
+      });
       expect(result.configuration).not.toBe(defaults);
       expect(result.configuration.agents).not.toBe(defaults.agents);
     }
+  });
+
+  it('honors an explicit non-interactive pointer policy', async () => {
+    const result = await new SetupWizardUseCase(dependencies()).execute({
+      mode: 'non-interactive',
+      overrides: { repositoryAgentGuidance: { agentsPointer: 'prompt' } },
+    });
+
+    expect(result.status === 'completed' && result.configuration.repositoryAgentGuidance.agentsPointer)
+      .toBe('prompt');
+  });
+
+  it('keeps guidance disabled while applying the safe non-interactive pointer default', async () => {
+    const result = await new SetupWizardUseCase(dependencies()).execute({
+      mode: 'non-interactive',
+      overrides: { repositoryAgentGuidance: { enabled: false } },
+    });
+
+    expect(result.status === 'completed' && result.configuration.repositoryAgentGuidance)
+      .toEqual({ enabled: false, agentsPointer: 'create-if-missing' });
   });
 
   it('enforces explicit skip flags after merging overrides', async () => {

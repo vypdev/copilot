@@ -6,7 +6,7 @@ import type {
 } from '../../ports/setup_execution_ports';
 import { shouldSkipInitialLabelsFetch } from '../../../data/model/initial_labels_policy';
 import { restorePreviousBranchState } from '../../../data/model/previous_branch_state_policy';
-import { typesForIssue } from '../../../data/model/label_branch_policy';
+import { ALL_ISSUE_WORKFLOWS, classifyIssueWorkflow } from '../../../domain/issue_workflow_profile';
 import { logDebugInfo, setGlobalLoggerDebug } from '../../ports/logging_ports';
 import type { ExecutionBranchVersionResolution } from './execution_branch_version_resolver';
 import { resolveExecutionIssueNumber } from './resolve_execution_issue_number';
@@ -51,6 +51,20 @@ export async function runSetupExecution(
             issueResolution.issueNumber,
             dependencies.issueSetupPort,
         );
+    const liveIssueBody = issueResolution.issueNumber === undefined
+        ? undefined
+        : await dependencies.issueSetupPort.getDescription(issueResolution.issueNumber);
+    const issueAdmission = issueResolution.issueNumber !== undefined
+        ? classifyIssueWorkflow(currentIssueLabels, context.issueWorkflowProfile ?? ALL_ISSUE_WORKFLOWS, {
+            feature: [context.labelNames.feature, context.labelNames.enhancement],
+            bugfix: [context.labelNames.bugfix, context.labelNames.bug],
+            documentation: [context.labelNames.documentation, context.labelNames.docs],
+            chore: [context.labelNames.chore, context.labelNames.maintenance],
+            help: [context.labelNames.help ?? 'help', context.labelNames.question ?? 'question'],
+            hotfix: [context.labelNames.hotfix],
+            release: [context.labelNames.release],
+        }, liveIssueBody ?? '', context.issueWorkflowProfile !== undefined && !context.issueWorkflowProfileLegacy)
+        : undefined;
     let release: SetupReleaseState = {
         ...context.release,
         active: currentIssueLabels.includes(context.labelNames.release),
@@ -90,7 +104,7 @@ export async function runSetupExecution(
     };
     let currentPullRequestLabels = [...context.currentPullRequestLabels];
 
-    if (context.isIssue && !context.isSingleAction && issueResolution.issueNumber !== undefined) {
+    if (context.isIssue && !context.isSingleAction && issueResolution.issueNumber !== undefined && issueAdmission?.status === 'eligible') {
         const resolution = await dependencies.branchVersionResolver.resolve({
             issueNumber: issueResolution.issueNumber,
             release,
@@ -116,6 +130,8 @@ export async function runSetupExecution(
                     release,
                     hotfix,
                     configuration,
+                    liveIssueBody,
+                    issueAdmission,
                 ),
             };
         }
@@ -141,7 +157,9 @@ export async function runSetupExecution(
         status: 'configured',
         tokenUser,
         issueResolution,
-        branchType: resolveIssueType(context, currentIssueLabels),
+        branchType: issueAdmission && issueAdmission.status !== 'eligible'
+            ? ''
+            : resolveIssueType(context, issueAdmission),
         state: setupState(
             previousConfiguration,
             currentIssueLabels,
@@ -149,6 +167,8 @@ export async function runSetupExecution(
             release,
             hotfix,
             configuration,
+            liveIssueBody,
+            issueAdmission,
         ),
     };
 }
@@ -198,21 +218,19 @@ function configurationIssueNumber(
     return undefined;
 }
 
-function resolveIssueType(context: SetupExecutionContext, currentIssueLabels: readonly string[]): string {
-    return typesForIssue(
-        { branches: context.branches },
-        [...currentIssueLabels],
-        context.labelNames.feature,
-        context.labelNames.enhancement,
-        context.labelNames.bugfix,
-        context.labelNames.bug,
-        context.labelNames.hotfix,
-        context.labelNames.release,
-        context.labelNames.docs,
-        context.labelNames.documentation,
-        context.labelNames.chore,
-        context.labelNames.maintenance,
-    );
+function resolveIssueType(
+    context: SetupExecutionContext,
+    admission: SetupExecutionState['issueWorkflowAdmission'],
+): string {
+    if (!admission || admission.status !== 'eligible' || admission.kind === 'help') return '';
+    return ({
+        feature: context.branches.featureTree,
+        bugfix: context.branches.bugfixTree,
+        documentation: context.branches.docsTree,
+        chore: context.branches.choreTree,
+        hotfix: context.branches.hotfixTree,
+        release: context.branches.releaseTree,
+    })[admission.kind];
 }
 
 function setupState(
@@ -222,6 +240,8 @@ function setupState(
     release: SetupReleaseState,
     hotfix: SetupHotfixState,
     configuration: SetupConfigurationPatch,
+    liveIssueBody?: string,
+    issueWorkflowAdmission?: SetupExecutionState['issueWorkflowAdmission'],
 ): SetupExecutionState {
     return {
         previousConfiguration,
@@ -230,6 +250,8 @@ function setupState(
         release: { ...release },
         hotfix: { ...hotfix },
         configuration: { ...configuration },
+        liveIssueBody,
+        issueWorkflowAdmission,
     };
 }
 

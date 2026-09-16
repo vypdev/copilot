@@ -6,6 +6,7 @@ export class Issue {
     branchManagementAlways: boolean;
     desiredAssigneesCount: number;
     inputs: ExecutionInputs | undefined = undefined;
+    liveBody: string | undefined;
 
     get title(): string {
         return this.inputs?.issue?.title ?? '';
@@ -24,7 +25,7 @@ export class Issue {
     }
 
     get body(): string {
-        return this.inputs?.issue?.body ?? '';
+        return this.liveBody ?? this.inputs?.issue?.body ?? '';
     }
 
     get opened(): boolean {

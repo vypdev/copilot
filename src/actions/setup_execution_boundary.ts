@@ -5,6 +5,8 @@ import type {
     SetupExecutionResult,
     SetupExecutionState,
 } from '../application/usecases/execution/setup_execution_contracts';
+import type { IssueWorkflowProfile } from '../domain/issue_workflow_profile';
+import type { IssueWorkflowAdmission } from '../domain/issue_workflow_profile';
 
 export interface SetupExecutionSource {
     readonly debug: boolean;
@@ -16,7 +18,7 @@ export interface SetupExecutionSource {
     readonly isIssue: boolean;
     readonly isPullRequest: boolean;
     readonly isPush: boolean;
-    readonly issue: { readonly number: number };
+    readonly issue: { readonly number: number; readonly body?: string };
     readonly pullRequest: {
         readonly number: number;
         readonly head: string;
@@ -49,6 +51,8 @@ export interface SetupExecutionSource {
         readonly documentation: string;
         readonly chore: string;
         readonly maintenance: string;
+        readonly question?: string;
+        readonly help?: string;
         readonly currentPullRequestLabels: readonly string[];
     };
     readonly release: {
@@ -64,6 +68,8 @@ export interface SetupExecutionSource {
         readonly baseBranch?: string;
         readonly branch?: string;
     };
+    readonly issueWorkflowProfile?: IssueWorkflowProfile;
+    readonly issueWorkflowProfileLegacy?: boolean;
 }
 
 export interface SetupExecutionTarget {
@@ -79,6 +85,10 @@ export interface SetupExecutionTarget {
         currentIssueLabels: string[];
         currentPullRequestLabels: string[];
     };
+    issue: {
+        liveBody?: string;
+    };
+    currentIssueWorkflowAdmission?: IssueWorkflowAdmission;
     release: {
         active: boolean;
         type?: string;
@@ -95,6 +105,8 @@ export interface SetupExecutionTarget {
     previousConfiguration: SetupExecutionState['previousConfiguration'];
     currentConfiguration: {
         branchType: string;
+        issueWorkflowKind?: import('../domain/issue_workflow_profile').IssueWorkflowKind;
+        issueWorkflowProfileDigest?: string;
         deploymentOrchestration: SetupConfigurationPatch['deploymentOrchestration'];
         releaseOriginBranch?: string;
         releaseOriginSha?: string;
@@ -120,7 +132,7 @@ export function projectSetupExecutionContext(source: SetupExecutionSource): Setu
         isIssue: source.isIssue,
         isPullRequest: source.isPullRequest,
         isPush: source.isPush,
-        issue: Object.freeze({ number: source.issue.number }),
+        issue: Object.freeze({ number: source.issue.number, body: source.issue.body }),
         pullRequest: Object.freeze({
             number: source.pullRequest.number,
             head: source.pullRequest.head,
@@ -153,6 +165,8 @@ export function projectSetupExecutionContext(source: SetupExecutionSource): Setu
             documentation: source.labels.documentation,
             chore: source.labels.chore,
             maintenance: source.labels.maintenance,
+            question: source.labels.question,
+            help: source.labels.help,
         }),
         currentPullRequestLabels: Object.freeze([...source.labels.currentPullRequestLabels]),
         release: Object.freeze({
@@ -168,6 +182,8 @@ export function projectSetupExecutionContext(source: SetupExecutionSource): Setu
             baseBranch: source.hotfix.baseBranch,
             branch: source.hotfix.branch,
         }),
+        issueWorkflowProfile: source.issueWorkflowProfile,
+        issueWorkflowProfileLegacy: source.issueWorkflowProfileLegacy,
     });
 }
 
@@ -190,6 +206,8 @@ function applySetupState(target: SetupExecutionTarget, state: SetupExecutionStat
     target.previousConfiguration = state.previousConfiguration;
     target.labels.currentIssueLabels = [...state.currentIssueLabels];
     target.labels.currentPullRequestLabels = [...state.currentPullRequestLabels];
+    target.issue.liveBody = state.liveIssueBody;
+    target.currentIssueWorkflowAdmission = state.issueWorkflowAdmission;
     target.release.active = state.release.active;
     target.release.type = state.release.type;
     target.release.version = state.release.version;
@@ -208,6 +226,9 @@ function applySetupState(target: SetupExecutionTarget, state: SetupExecutionStat
     target.currentConfiguration.releaseBranch = state.configuration.releaseBranch;
     target.currentConfiguration.hotfixOriginBranch = state.configuration.hotfixOriginBranch;
     target.currentConfiguration.hotfixBranch = state.configuration.hotfixBranch;
+    if (state.issueWorkflowAdmission?.status === 'eligible') {
+        target.currentConfiguration.issueWorkflowKind = state.issueWorkflowAdmission.kind;
+    }
 }
 
 function readConfiguredIssue(inputs: unknown): string | number | undefined {

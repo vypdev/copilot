@@ -211,6 +211,7 @@ export const INPUT_KEYS = {
     RELEASE_TREE: 'release-tree',
     DOCS_TREE: 'docs-tree',
     CHORE_TREE: 'chore-tree',
+    ISSUE_WORKFLOW_PROFILE: 'issue-workflow-profile',
 
     // Commit
     COMMIT_PREFIX_TRANSFORMS: 'commit-prefix-transforms',

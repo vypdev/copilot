@@ -18,7 +18,7 @@ export const SETUP_QUESTIONNAIRE_STATE_ORDER = [
 ] as const;
 
 export type SetupQuestionnaireStateId = (typeof SETUP_QUESTIONNAIRE_STATE_ORDER)[number];
-export type SetupQuestionKind = 'boolean' | 'number' | 'text' | 'choice' | 'scope-overrides';
+export type SetupQuestionKind = 'boolean' | 'number' | 'text' | 'choice' | 'multi-select' | 'scope-overrides';
 
 export interface SetupQuestion {
   readonly stateId: Exclude<SetupQuestionnaireStateId, 'review' | 'confirmation' | 'completed' | 'cancelled'>;

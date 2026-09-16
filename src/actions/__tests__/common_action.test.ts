@@ -65,6 +65,28 @@ function unresolvedSetupResult(context: {
   };
 }
 
+function configuredSetupResult(
+  context: Parameters<typeof unresolvedSetupResult>[0],
+  admission: unknown,
+  previousConfiguration?: Record<string, unknown>,
+) {
+  return {
+    ...unresolvedSetupResult(context),
+    status: 'configured',
+    branchType: '',
+    state: {
+      previousConfiguration,
+      currentIssueLabels: [],
+      currentPullRequestLabels: [],
+      release: { active: false },
+      hotfix: { active: false },
+      configuration: {},
+      issueWorkflowAdmission: admission,
+      liveIssueBody: '',
+    },
+  };
+}
+
 jest.mock('../../infrastructure/composition/main_run_route_composition_root', () => ({
   createMainRunRouteCompositionRoot: jest.fn().mockImplementation(() => ({
     'single-action': mockSingleActionInvoke,
@@ -626,6 +648,90 @@ describe('mainRun', () => {
 
     expect(mockCommitInvoke).toHaveBeenCalledWith(execution);
     expect(results).toEqual(expected);
+  });
+
+  it('returns a successful no-op for passive disabled work before runtime or route mutation', async () => {
+    const execution = mockExecution({
+      eventName: 'issues',
+      isIssue: true,
+      issue: { number: 42, isIssue: true, isIssueComment: false, labeled: false },
+    });
+    mockSetupExecutionInvoke.mockImplementation(async context => configuredSetupResult(
+      context,
+      { status: 'disabled', kind: 'bugfix' },
+    ));
+    const prepareRuntime = jest.fn();
+
+    const results = await productionMainRun(
+      execution,
+      projectBoardCommandPort,
+      latestTagQueryPort,
+      'github-workflow',
+      undefined,
+      undefined,
+      prepareRuntime,
+    );
+
+    expect(results).toEqual([expect.objectContaining({ id: 'IssueWorkflowAdmission', success: true, executed: false })]);
+    expect(prepareRuntime).not.toHaveBeenCalled();
+    expect(mockIssueInvoke).not.toHaveBeenCalled();
+    expect(createMainRunRouteCompositionRoot).not.toHaveBeenCalled();
+  });
+
+  it('returns a blocking result for explicit unmanaged work before runtime or route mutation', async () => {
+    const execution = mockExecution({
+      eventName: 'issue_comment',
+      isIssue: true,
+      issue: { number: 42, isIssue: false, isIssueComment: true, labeled: false },
+    });
+    mockSetupExecutionInvoke.mockImplementation(async context => configuredSetupResult(
+      context,
+      { status: 'unmanaged', reason: 'no-recognized-kind' },
+    ));
+    const prepareRuntime = jest.fn();
+
+    const results = await productionMainRun(
+      execution,
+      projectBoardCommandPort,
+      latestTagQueryPort,
+      'github-workflow',
+      undefined,
+      undefined,
+      prepareRuntime,
+    );
+
+    expect(results[0]).toMatchObject({ id: 'IssueWorkflowAdmission', success: false, executed: false });
+    expect(results[0].errors[0]).toMatchObject({ code: 'configuration.invalid' });
+    expect(prepareRuntime).not.toHaveBeenCalled();
+    expect(mockIssueCommentInvoke).not.toHaveBeenCalled();
+  });
+
+  it('allows a disabled managed pull request to continue without agent preparation', async () => {
+    const execution = mockExecution({
+      eventName: 'pull_request',
+      isPullRequest: true,
+      pullRequest: { number: 77, head: 'feature/42-work', base: 'develop', isPullRequest: true, isPullRequestReviewComment: false },
+    });
+    mockSetupExecutionInvoke.mockImplementation(async context => configuredSetupResult(
+      context,
+      { status: 'disabled', kind: 'feature' },
+      { branchType: 'feature', workingBranch: 'feature/42-work' },
+    ));
+    const prepareRuntime = jest.fn();
+
+    await productionMainRun(
+      execution,
+      projectBoardCommandPort,
+      latestTagQueryPort,
+      'github-workflow',
+      undefined,
+      undefined,
+      prepareRuntime,
+    );
+
+    expect(execution.issueWorkflowRuntimeMode).toBe('continuation-only');
+    expect(prepareRuntime).toHaveBeenCalledWith(execution);
+    expect(mockPullRequestInvoke).toHaveBeenCalledWith(execution);
   });
 
   it('tracks agent activity around an agent-backed route', async () => {

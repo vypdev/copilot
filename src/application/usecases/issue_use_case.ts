@@ -1,5 +1,6 @@
 import type { Execution } from "../../data/model/execution";
 import { Result } from "../../data/model/result";
+import { ApplicationError } from '../errors/application_error';
 import { logInfo } from "../ports/logging_ports";
 import { getTaskEmoji } from "../../utils/task_emoji";
 import { ParamUseCase } from "./base/param_usecase";
@@ -34,6 +35,10 @@ export class IssueUseCase implements ParamUseCase<Execution, Result[]> {
 
   async invoke(param: Execution): Promise<Result[]> {
     logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`);
+  const admission = param.issueWorkflowAdmission;
+    if (param.isIssue && admission && admission.status !== 'eligible') {
+      return [buildIssueWorkflowAdmissionResult(this.taskId, admission)];
+    }
     const outcome = await runIssueWorkflow(projectIssueWorkflowRouteContext(param), this.taskId, {
       recommendStepsUseCase: this.recommendStepsUseCase,
       answerIssueHelpUseCase: this.answerIssueHelpUseCase,
@@ -53,6 +58,36 @@ export class IssueUseCase implements ParamUseCase<Execution, Result[]> {
     }
     return [...outcome.results];
   }
+}
+
+function buildIssueWorkflowAdmissionResult(
+  taskId: string,
+  admission: NonNullable<Execution['issueWorkflowAdmission']>,
+): Result {
+  if (admission.status === 'unmanaged') {
+    return new Result({
+      id: taskId,
+      success: true,
+      executed: false,
+      steps: ['⏭️ Issue is unmanaged: no recognized enabled issue workflow label was found.'],
+    });
+  }
+  const message = admission.status === 'disabled'
+    ? `Issue workflow "${admission.kind}" is disabled in the repository profile.`
+    : admission.status === 'conflict'
+      ? `Issue has conflicting workflow labels: ${admission.kinds.join(', ')}.`
+      : admission.status === 'invalid'
+        ? `The ${admission.kind} Issue Form is incomplete; ${admission.missingHeadings.length > 0
+          ? `missing headings: ${admission.missingHeadings.join(', ')}`
+          : `invalid fields: ${admission.invalidFields?.join(', ') ?? 'unknown'}`}.`
+        : 'Issue workflow admission failed.';
+  return new Result({
+    id: taskId,
+    success: false,
+    executed: true,
+    steps: [`🛑 ${message}`],
+    errors: [new ApplicationError('configuration.invalid', message)],
+  });
 }
 
 function projectIssueWorkflowRouteContext(param: Execution): IssueWorkflowRouteContext {

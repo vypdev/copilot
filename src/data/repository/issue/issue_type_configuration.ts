@@ -18,5 +18,5 @@ export function configuredIssueTypes(issueTypes: InitialIssueTypeConfiguration):
         { name: issueTypes.release, description: issueTypes.releaseDescription, color: issueTypes.releaseColor },
         { name: issueTypes.question, description: issueTypes.questionDescription, color: issueTypes.questionColor },
         { name: issueTypes.help, description: issueTypes.helpDescription, color: issueTypes.helpColor },
-    ];
+    ].filter(type => type.name.trim().length > 0);
 }

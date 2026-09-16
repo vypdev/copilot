@@ -15,6 +15,8 @@ export type TerminalReadResult =
 export interface TerminalDriver {
   isInteractive(): boolean;
   readText(prompt: string): Promise<TerminalReadResult>;
+  /** Optional raw-mode selector. Drivers without it fall back to text parsing. */
+  readMultiSelect?(prompt: string, choices: readonly string[], selected: readonly string[]): Promise<TerminalReadResult>;
   readSecret(prompt: string): Promise<TerminalReadResult>;
   close(): void;
 }

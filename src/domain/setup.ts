@@ -12,6 +12,7 @@ import type {
     ReconciliationPullRequestMode,
     ReconciliationStrategy,
 } from './deployment_configuration';
+import type { IssueWorkflowKind } from './issue_workflow_profile';
 
 export type SetupFeature =
     | 'issues'
@@ -115,6 +116,15 @@ export interface SetupConfiguration {
     actionInputs: Record<string, string>;
     /** Independent storage policies for non-sensitive variables and secrets. */
     storage: SetupStorageConfiguration;
+    /** Issue Forms/workflows that the action is allowed to process. */
+    issueWorkflows: {
+        enabled: readonly IssueWorkflowKind[];
+    };
+    /** Generated repository guidance for human and agent collaborators. */
+    repositoryAgentGuidance: {
+        enabled: boolean;
+        agentsPointer: 'prompt' | 'create-if-missing' | 'disabled';
+    };
 }
 
 export type SetupResourceScope = 'repository' | 'organization';

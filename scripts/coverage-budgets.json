@@ -406,6 +406,31 @@
         }
       ],
       "successMessage": "branch synchronization presentation coverage: PASS (catalog/policy 100%; observer/publication path 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Configurable issue workflows and repository agent guidance",
+      "missingEntryLabel": "issue workflow and repository guidance",
+      "rules": [
+        {
+          "files": [
+            "src/domain/issue_workflow_profile.ts",
+            "src/domain/issue_workflow_runtime_policy.ts",
+            "src/application/policies/repository_agent_guidance_policy.ts",
+            "src/application/policies/setup_issue_resource_policy.ts",
+            "src/application/policies/setup_issue_workflow_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/utils/repository_agent_guidance.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "issue workflow and repository guidance coverage: PASS (domain/setup/rendering policies 100%; ownership reconciler 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

@@ -6,6 +6,7 @@ import type {
     SetupWorkspaceSelection,
 } from '../application/ports/setup_workspace_ports';
 import { isGitRepositoryRoot } from '../cli_context';
+import { inspectRepositoryAgentGuidance } from '../utils/repository_agent_guidance';
 
 export class SetupWorkspaceMutationAdapter implements SetupWorkspacePort {
     prepare(selection?: SetupWorkspaceSelection): SetupWorkspaceResult {
@@ -15,6 +16,7 @@ export class SetupWorkspaceMutationAdapter implements SetupWorkspacePort {
         return copySetupFiles(workspace, undefined, selection?.features, {
             updateExistingWorkflows: selection?.updateExistingWorkflows,
             approvedWorkflowFiles: selection?.approvedWorkflowFiles,
+            setupConfiguration: selection?.setupConfiguration,
         });
     }
 
@@ -33,6 +35,10 @@ export class SetupDoctorWorkspaceQueryAdapter implements SetupDoctorWorkspaceQue
 
     compareWorkflows(features?: Parameters<typeof compareSetupWorkflows>[1]): ReturnType<typeof compareSetupWorkflows> {
         return compareSetupWorkflows(process.cwd(), features);
+    }
+
+    inspectAgentGuidance(configuration: Parameters<typeof inspectRepositoryAgentGuidance>[1]): ReturnType<typeof inspectRepositoryAgentGuidance> {
+        return inspectRepositoryAgentGuidance(process.cwd(), configuration);
     }
 }
 
@@ -55,5 +61,9 @@ export class SetupReconcileWorkspaceAdapter implements SetupWorkspacePort, Setup
 
     compareWorkflows(features?: Parameters<typeof compareSetupWorkflows>[1]): ReturnType<typeof compareSetupWorkflows> {
         return this.query.compareWorkflows(features);
+    }
+
+    inspectAgentGuidance(configuration: Parameters<SetupDoctorWorkspaceQueryAdapter['inspectAgentGuidance']>[0]): ReturnType<SetupDoctorWorkspaceQueryAdapter['inspectAgentGuidance']> {
+        return this.query.inspectAgentGuidance(configuration);
     }
 }

@@ -7,7 +7,7 @@ import { createProjectBoardCompositionRoot } from '../infrastructure/composition
 import { finishGithubAction } from './github_action_completion';
 import { getGithubActionInput } from './github_action_input';
 import { isEnabledInput } from './input_boolean_policy';
-import { buildGithubActionExecution, readGithubActionSingleAction } from './github_action_execution';
+import { buildGithubActionExecution, hydrateGithubActionExecutionProjects, readGithubActionSingleAction } from './github_action_execution';
 import { buildGithubActionEventInputs } from './github_event_inputs';
 import { mainRun } from './common_action';
 import { INPUT_KEYS } from '../application/contracts/input_keys';
@@ -35,6 +35,7 @@ import {
     resolveStaticApplicationErrorCatalog,
     type ApplicationErrorMessageReader,
 } from '../application/policies/application_error_message_catalog';
+import { prepareGithubAgentRuntime } from './github_action_runtime';
 
 export async function runGitHubAction(): Promise<void> {
     const eventInputs = buildGithubActionEventInputs({
@@ -78,17 +79,7 @@ export async function runGitHubAction(): Promise<void> {
         ...([localeInputs.repository, localeInputs.issue, localeInputs.pullRequest]
             .some(publicationLocaleNeedsDynamicCatalog) ? ['planner' as const] : []),
     ])];
-    const agentRuntimeAuthorized = !aiInputs.membersOnly
-        || requestedActiveAgentTasks.length === 0
-        || await createActorAuthorizationRepository().isActorAllowedToModifyFiles(
-            eventInputs.repo.owner,
-            eventInputs.repo.repo,
-            eventInputs.actor,
-            token,
-        );
-    if (!agentRuntimeAuthorized) {
-        logInfo('Skipping agent runtime preparation because ai-members-only is enabled and the actor is not authorized.');
-    }
+    let languageRuntimeAvailable = false;
 
     const projectBoard = createProjectBoardCompositionRoot();
 
@@ -101,8 +92,7 @@ export async function runGitHubAction(): Promise<void> {
         tokenUser: admission.tokenUser,
         singleAction,
         aiInputs,
-        activeAgentTasks: agentRuntimeAuthorized ? requestedActiveAgentTasks : [],
-        agentRuntimeAuthorized,
+        activeAgentTasks: requestedActiveAgentTasks,
         localeInputs,
     });
     logDebugInfo(
@@ -122,6 +112,30 @@ export async function runGitHubAction(): Promise<void> {
         'github-workflow',
         createSynchronizeLifecycleStateUseCase(repositoryBinding),
         createSynchronizeAgentActivityUseCase(repositoryBinding),
+        async (admittedExecution) => {
+            await hydrateGithubActionExecutionProjects(admittedExecution, {
+                getInput: getGithubActionInput,
+                projectQuery: projectBoard.query,
+                token,
+            });
+            if (admittedExecution.issueWorkflowRuntimeMode !== 'execute') return;
+            const agentRuntimeAuthorized = !aiInputs.membersOnly
+                || requestedActiveAgentTasks.length === 0
+                || await createActorAuthorizationRepository().isActorAllowedToModifyFiles(
+                    eventInputs.repo.owner,
+                    eventInputs.repo.repo,
+                    eventInputs.actor,
+                    token,
+                );
+            if (!agentRuntimeAuthorized) {
+                logInfo('Skipping agent runtime preparation because ai-members-only is enabled and the actor is not authorized.');
+                return;
+            }
+            if (!singleAction.isCloseInactiveIssuesAction && requestedActiveAgentTasks.length > 0) {
+                prepareGithubAgentRuntime(aiInputs.requestedAgentTasks, requestedActiveAgentTasks);
+                languageRuntimeAvailable = requestedActiveAgentTasks.includes('planner');
+            }
+        },
     );
     const issueContentPort = createIssueContentCompositionRoot();
     const configurationHandler = new ConfigurationHandler(issueContentPort);
@@ -138,7 +152,7 @@ export async function runGitHubAction(): Promise<void> {
         createCopilotEvidenceCompositionRoot(),
         createGithubActionSummaryCompositionRoot(),
         new ResolveMessageCatalogUseCase(
-            agentRuntimeAuthorized ? createLanguageQueryPort() : undefined,
+            languageRuntimeAvailable ? createLanguageQueryPort() : undefined,
         ),
         bindPublicationSourceQuery(
             new GithubPublicationSourceRepository(createBranchClient()),

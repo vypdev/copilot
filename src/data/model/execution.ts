@@ -1,5 +1,4 @@
 
-import { branchesForManagement, typesForIssue } from './label_branch_policy';
 import { Ai } from "./ai";
 import { Branches } from "./branches";
 import { Commit } from "./commit";
@@ -23,6 +22,9 @@ import type { ExecutionInputs } from './execution_inputs';
 import type { ExecutionComponents } from './execution_components';
 import { DEFAULT_INACTIVITY_THRESHOLD_HOURS } from '../../domain/issue_inactivity';
 import { DEFAULT_DEPLOYMENT_CONFIGURATION, type DeploymentConfigurationValues } from '../../domain/deployment_configuration';
+import { ALL_ISSUE_WORKFLOWS, classifyIssueWorkflow, type IssueWorkflowAdmission, type IssueWorkflowProfile } from '../../domain/issue_workflow_profile';
+import type { IssueWorkflowKind } from '../../domain/issue_workflow_profile';
+import type { IssueWorkflowRuntimeMode } from '../../domain/issue_workflow_runtime_policy';
 
 
 export class Execution {
@@ -57,6 +59,11 @@ export class Execution {
     tokenUser: string | undefined;
     inactivityThresholdHours: number;
     inputs: ExecutionInputs | undefined;
+    readonly issueWorkflowProfile: IssueWorkflowProfile;
+    readonly issueWorkflowProfileLegacy: boolean;
+    readonly issueWorkflowProfileDigest?: string;
+    currentIssueWorkflowAdmission?: IssueWorkflowAdmission;
+    issueWorkflowRuntimeMode: IssueWorkflowRuntimeMode = 'execute';
 
     get eventName(): string {
         return this.inputs?.eventName ?? '';
@@ -109,9 +116,35 @@ export class Execution {
     }
 
     get isBranched(): boolean {
+        const admission = this.issueWorkflowAdmission;
+        if (admission.status === 'eligible' && admission.kind === 'help') return false;
+        if (admission.status !== 'eligible' && this.isIssue) return false;
         return this.issue.branchManagementAlways ||
             this.labels.containsBranchedLabel ||
             this.labels.isMandatoryBranchedLabel;
+    }
+
+    get issueWorkflowAdmission(): IssueWorkflowAdmission {
+        return this.currentIssueWorkflowAdmission ?? classifyIssueWorkflow(
+            this.labels.currentIssueLabels,
+            this.issueWorkflowProfile,
+            {
+                feature: [this.labels.feature, this.labels.enhancement],
+                bugfix: [this.labels.bugfix, this.labels.bug],
+                documentation: [this.labels.documentation, this.labels.docs],
+                chore: [this.labels.chore, this.labels.maintenance],
+                help: [this.labels.help, this.labels.question],
+                hotfix: [this.labels.hotfix],
+                release: [this.labels.release],
+            },
+            this.issue.body,
+            !this.issueWorkflowProfileLegacy,
+        );
+    }
+
+    get issueWorkflowKind(): IssueWorkflowKind | undefined {
+        const admission = this.issueWorkflowAdmission;
+        return admission.status === 'eligible' ? admission.kind : undefined;
     }
 
     get issueNotBranched(): boolean {
@@ -119,37 +152,11 @@ export class Execution {
     }
 
     get managementBranch(): string {
-        return branchesForManagement(
-            this,
-            this.labels.currentIssueLabels,
-            this.labels.feature,
-            this.labels.enhancement,
-            this.labels.bugfix,
-            this.labels.bug,
-            this.labels.hotfix,
-            this.labels.release,
-            this.labels.docs,
-            this.labels.documentation,
-            this.labels.chore,
-            this.labels.maintenance,
-        );
+        return issueWorkflowBranch(this.issueWorkflowKind, this.branches);
     }
 
     get issueType(): string {
-        return typesForIssue(
-            this,
-            this.labels.currentIssueLabels,
-            this.labels.feature,
-            this.labels.enhancement,
-            this.labels.bugfix,
-            this.labels.bug,
-            this.labels.hotfix,
-            this.labels.release,
-            this.labels.docs,
-            this.labels.documentation,
-            this.labels.chore,
-            this.labels.maintenance,
-        );
+        return issueWorkflowBranch(this.issueWorkflowKind, this.branches);
     }
 
     get cleanIssueBranches(): boolean {
@@ -190,6 +197,23 @@ export class Execution {
         this.currentConfiguration = new Config({});
         this.inputs = components.inputs;
         this.welcome = components.welcome;
+        this.issueWorkflowProfile = components.issueWorkflowProfile ?? ALL_ISSUE_WORKFLOWS;
+        this.issueWorkflowProfileLegacy = components.issueWorkflowProfileLegacy ?? components.issueWorkflowProfile === undefined;
+        this.issueWorkflowProfileDigest = components.issueWorkflowProfileDigest;
+        this.currentIssueWorkflowAdmission = components.issueWorkflowAdmission;
+        this.currentConfiguration.issueWorkflowProfileDigest = components.issueWorkflowProfileDigest;
     }
 
+}
+
+function issueWorkflowBranch(kind: IssueWorkflowKind | undefined, branches: Branches): string {
+    if (!kind || kind === 'help') return '';
+    return ({
+        feature: branches.featureTree,
+        bugfix: branches.bugfixTree,
+        documentation: branches.docsTree,
+        chore: branches.choreTree,
+        hotfix: branches.hotfixTree,
+        release: branches.releaseTree,
+    })[kind];
 }

@@ -46,10 +46,18 @@ The global installation makes the CLI and the setup templates available; it does
 not install an Action into GitHub. `copilot setup` is the canonical initialization
 flow and will, according to the selected features:
 
-- copy the required workflows, issue templates, and pull request template into the repository;
+- copy the selected workflows, Issue Forms, pull request template, and repository agent guidance into the repository;
 - create the labels and issue types used by the workflows;
 - configure non-sensitive Repository Variables; and
 - validate or provision the workflow PAT and provider credentials at the selected scope.
+
+The wizard selects issue workflow kinds with a Space/Enter multi-select; `All`
+is the default. It also generates `.copilot/repository-profile.json`,
+`.copilot/AGENT_GUIDE.md`, and the Codex skill
+`.agents/skills/copilot-repository-workflow/SKILL.md` by default. The generated
+guidance makes clear that the Action owns remote branch lifecycle: agents work
+on the exact existing branch and push normal commits, but do not create, rename,
+delete, replace, or force-push managed branches.
 
 The setup PAT entered by the operator is separate from the workflow `PAT` Secret.
 Use `copilot setup --dry-run` to inspect the plan before making local or remote

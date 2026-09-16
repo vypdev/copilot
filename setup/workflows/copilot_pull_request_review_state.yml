@@ -34,6 +34,7 @@ jobs:
           repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
           issues-locale: ${{ vars.ISSUES_LOCALE || '' }}
           pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || '' }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
           ai-ignore-files: ${{ vars.AI_IGNORE_FILES || 'build/*' }}
           debug: ${{ vars.DEBUG }}
           main-branch: ${{ vars.MAIN_BRANCH || 'master' }}

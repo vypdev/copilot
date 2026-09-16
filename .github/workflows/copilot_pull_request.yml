@@ -46,6 +46,7 @@ jobs:
           repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
           issues-locale: ${{ vars.ISSUES_LOCALE || '' }}
           pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || '' }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
           ai-ignore-files: build/*,specs/CATALOG.md
           bugbot-severity: ${{ vars.BUGBOT_SEVERITY || 'low' }}
           bugbot-comment-limit: ${{ vars.BUGBOT_COMMENT_LIMIT || '20' }}

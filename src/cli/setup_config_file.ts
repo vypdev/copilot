@@ -6,6 +6,7 @@ import {
     type SetupConfigurationOverrides,
 } from '../application/policies/setup_configuration_policy';
 import { normalizeMergeQueueCheckAttestations } from '../domain/merge_queue_readiness';
+import { ISSUE_WORKFLOW_KINDS, type IssueWorkflowKind } from '../domain/issue_workflow_profile';
 
 const SETUP_OVERRIDE_KEYS = new Set([
     'features',
@@ -18,6 +19,8 @@ const SETUP_OVERRIDE_KEYS = new Set([
     'manageRepositorySecrets',
     'actionInputs',
     'storage',
+    'issueWorkflows',
+    'repositoryAgentGuidance',
 ]);
 const AGENT_OVERRIDE_KEYS = new Set(['provider', 'modelProvider', 'model', 'effort', 'executable']);
 const REPOSITORY_STRING_KEYS = new Set([
@@ -59,6 +62,7 @@ const PROJECT_KEYS = new Set([
 ]);
 const STORAGE_KEYS = new Set(['secrets', 'variables']);
 const STORAGE_POLICY_KEYS = new Set(['defaultScope', 'organizationVisibility', 'preserveExisting', 'overrides']);
+const GUIDANCE_KEYS = new Set(['enabled', 'agentsPointer']);
 
 /** Loads a non-secret setup override file. JSON and YAML are supported. */
 export function loadSetupConfigurationOverrides(filePath: string): SetupConfigurationOverrides {
@@ -110,7 +114,34 @@ export function loadSetupConfigurationOverrides(filePath: string): SetupConfigur
     validateOptionalObject(raw.actionInputs, 'actionInputs');
     if (raw.actionInputs !== undefined) validateStringValues(raw.actionInputs as Record<string, unknown>, 'actionInputs');
     validateStorage(raw.storage);
+    validateIssueWorkflows(raw.issueWorkflows);
+    validateGuidance(raw.repositoryAgentGuidance);
     return raw as SetupConfigurationOverrides;
+}
+
+function validateIssueWorkflows(value: unknown): void {
+    if (value === undefined) return;
+    validateObject(value, 'issueWorkflows');
+    const section = value as Record<string, unknown>;
+    validateObjectKeys(section, new Set(['enabled']), 'issueWorkflows');
+    if (!Array.isArray(section.enabled) || section.enabled.some(item => typeof item !== 'string')) {
+        throw new Error('issueWorkflows.enabled must be an array of workflow IDs.');
+    }
+    const enabled = section.enabled as string[];
+    const unknown = enabled.filter(item => !ISSUE_WORKFLOW_KINDS.includes(item as IssueWorkflowKind));
+    if (unknown.length > 0) throw new Error(`Unknown issue workflow(s): ${unknown.join(', ')}.`);
+    if (new Set(enabled).size !== enabled.length) throw new Error('issueWorkflows.enabled cannot contain duplicates.');
+}
+
+function validateGuidance(value: unknown): void {
+    if (value === undefined) return;
+    validateObject(value, 'repositoryAgentGuidance');
+    const section = value as Record<string, unknown>;
+    validateObjectKeys(section, GUIDANCE_KEYS, 'repositoryAgentGuidance');
+    if (section.enabled !== undefined && typeof section.enabled !== 'boolean') throw new Error('repositoryAgentGuidance.enabled must be a boolean.');
+    if (section.agentsPointer !== undefined && !['prompt', 'create-if-missing', 'disabled'].includes(String(section.agentsPointer))) {
+        throw new Error('repositoryAgentGuidance.agentsPointer must be prompt, create-if-missing, or disabled.');
+    }
 }
 
 function validateStorage(value: unknown): void {
