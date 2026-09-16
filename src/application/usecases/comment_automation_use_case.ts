@@ -4,22 +4,25 @@ import { isCopilotCommentRequest } from '../../domain/copilot_comment_request';
 import type { BoundActorAuthorizationPort } from '../ports/actor_authorization_ports';
 import type { CommentAutomationOptions } from './comment_automation_contracts';
 import type { CommentAutomationContext } from './comment_automation_context';
-import { parseCopilotCommand } from '../../domain/copilot_command';
+import { copilotCommandAcceptsAdaptableProse, parseCopilotCommand } from '../../domain/copilot_command';
 import { invalidCommentCommandResult, runExplicitCommentCommand } from './comment_automation_command_workflow';
 import { runNaturalLanguageCommentAutomation } from './comment_automation_natural_language_workflow';
 import { ApplicationError } from '../errors/application_error';
 import { isNaturalLanguageBranchSyncRequest } from '../../domain/branch_sync_command';
 import { runBranchSyncCommand } from './branch_sync/branch_sync_comment_command';
+import { withCommentLanguageAdaptation } from './comment_automation_context';
+import { getCommentLanguageAdaptationPayload } from './steps/common/comment_language_translation_workflow';
 
 export type { CommentAutomationOptions } from "./comment_automation_contracts";
 
 export async function runCommentAutomation(
-  param: CommentAutomationContext,
+  initialParam: CommentAutomationContext,
   options: CommentAutomationOptions,
   actorAuthorizationPort: BoundActorAuthorizationPort,
 ): Promise<Result[]> {
   logInfo(`${options.taskId} started.`);
   let languageResults: Result[] = [];
+  let param = initialParam;
   try {
     const command = parseCopilotCommand(param.userComment);
     if (!isCopilotCommentRequest(param.userComment, param.trustedBotLogin)) {
@@ -35,17 +38,25 @@ export async function runCommentAutomation(
       logInfo('Skipping agent automation because ai-members-only is enabled and the actor is not authorized.');
       return [new Result({ id: options.taskId, success: true, executed: false })];
     }
-    if (command.kind === 'command') {
+    const commandHasAdaptableProse = command.kind === 'command'
+      && command.command.arguments.length > 0
+      && copilotCommandAcceptsAdaptableProse(command.command.name);
+    if (command.kind === 'command' && !commandHasAdaptableProse) {
       const explicitResults = await runExplicitCommentCommand(param, options, command.command, actorAuthorizationPort);
       if (explicitResults) return explicitResults;
-      // Explicit fix/implement commands are already mention-gated by their
-      // deterministic prefix and still flow through structured intent parsing.
-      return runNaturalLanguageCommentAutomation(param, options, actorAuthorizationPort, []);
     }
     if (isNaturalLanguageBranchSyncRequest(param.userComment, param.trustedBotLogin)) {
       return runBranchSyncCommand(param, options, [], actorAuthorizationPort);
     }
     languageResults = await options.languageUseCase.invoke(param.language);
+    const adaptation = languageResults.map(getCommentLanguageAdaptationPayload).find(Boolean);
+    if (adaptation?.status === 'failed') return languageResults;
+    if (adaptation) param = withCommentLanguageAdaptation(param, adaptation);
+    const adaptedCommand = parseCopilotCommand(param.userComment);
+    if (adaptedCommand.kind === 'command') {
+      const explicitResults = await runExplicitCommentCommand(param, options, adaptedCommand.command, actorAuthorizationPort);
+      if (explicitResults) return [...languageResults, ...explicitResults];
+    }
     return await runNaturalLanguageCommentAutomation(param, options, actorAuthorizationPort, languageResults);
   } catch (cause) {
     const semanticError = new ApplicationError('workflow.failed', "Comment automation failed.", { cause });

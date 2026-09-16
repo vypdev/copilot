@@ -35,6 +35,12 @@ description: Required checks before enabling Copilot automation.
 
 ## Setup and diagnosis
 
+- [ ] `repository-locale` is a canonical BCP-47 target or intentionally omitted for the `en-US` default.
+- [ ] Empty `issues-locale` and `pull-requests-locale` values intentionally inherit the repository locale; explicit overrides are documented.
+- [ ] Every non-bundled target locale has an available planner/language agent, or operators accept the observable atomic English fallback.
+- [ ] `copilot doctor` reports the effective repository, issue, and pull-request locales plus `exact`, `base`, `dynamic`, or `fallback` catalog paths.
+- [ ] Doctor headings, summaries, states, and actions use one repository-locale catalog; raw PAT, credential-health, rule, and workflow-provider prose is absent, and any dynamic-catalog failure produces a complete English report.
+- [ ] Every configured locale is a valid hyphenated BCP-47 tag such as `pt-BR`; underscore forms such as `pt_BR` are rejected before setup planning.
 - [ ] Unattended setup uses `--non-interactive --yes` plus every required external credential; `--yes` is treated only as plan approval.
 - [ ] Cancellation (`Ctrl-C` or EOF) has been observed to exit 130 with no writes; declining the final plan exits 0 with no writes.
 - [ ] Setup review lists Secret names only and no secret value appears in config, plan, logs, errors, reports, fixtures, or backups.

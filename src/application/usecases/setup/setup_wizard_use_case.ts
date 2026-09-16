@@ -15,6 +15,7 @@ import {
   buildSetupPlan,
   createDefaultSetupConfiguration,
   mergeSetupConfiguration,
+  normalizeSetupConfigurationLocales,
   validateSetupStorageAgainstRemote,
   validateSetupConfiguration,
   type SetupConfigurationOverrides,
@@ -26,6 +27,7 @@ import {
   finishSetupQuestionnaire,
 } from '../../policies/setup_questionnaire_policy';
 import { cloneSetupConfiguration } from '../../policies/setup_configuration_clone_policy';
+import { resolveStaticSetupDoctorCatalog } from '../../policies/setup_doctor_message_catalog';
 
 export interface SetupWizardRequest {
   mode: 'interactive' | 'non-interactive';
@@ -81,6 +83,13 @@ export class SetupWizardUseCase {
           request.remoteTarget.token,
         )
       : undefined;
+    const defaultValidationErrors = validateSetupConfiguration(defaults);
+    if (defaultValidationErrors.length > 0) {
+      throw new ApplicationError(
+        'configuration.invalid',
+        `Invalid setup configuration:\n${defaultValidationErrors.map((error) => `- ${error}`).join('\n')}`,
+      );
+    }
     const context = {
       ...(remoteConfiguration ? { remote: remoteConfiguration } : {}),
       variableNames: buildSetupRepositoryVariables(defaults).map((variable) => variable.name),
@@ -98,8 +107,11 @@ export class SetupWizardUseCase {
       };
     }
 
-    const configuration = cloneSetupConfiguration(questionnaire.draft);
-    const validationErrors = validateSetupConfiguration(configuration);
+    const collectedConfiguration = cloneSetupConfiguration(questionnaire.draft);
+    const validationErrors = validateSetupConfiguration(collectedConfiguration);
+    const configuration = validationErrors.length === 0
+      ? normalizeSetupConfigurationLocales(collectedConfiguration)
+      : collectedConfiguration;
     if (remoteConfiguration) {
       validationErrors.push(...validateSetupStorageAgainstRemote(configuration, remoteConfiguration));
     }
@@ -116,6 +128,9 @@ export class SetupWizardUseCase {
           repository: request.remoteTarget.repository,
           token: request.remoteTarget.token,
           configuration,
+          // Setup is the profile-creation surface, so its one artifact remains
+          // authoritative English until the repository profile is installed.
+          catalog: resolveStaticSetupDoctorCatalog(),
         })
       : [];
     const plan = buildSetupPlan(configuration, readiness);
@@ -134,7 +149,7 @@ export class SetupWizardUseCase {
     return {
       status: 'completed',
       exitCode: 0,
-      configuration: cloneSetupConfiguration(completed.draft),
+      configuration: cloneSetupConfiguration(configuration),
       plan,
       ...(remoteConfiguration ? { remoteConfiguration } : {}),
     };

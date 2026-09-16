@@ -7,7 +7,7 @@ import type { GithubGraphqlTransportClient } from "../../../infrastructure/githu
 import type { GithubOwnerTypeClient } from "../../../infrastructure/github/ports/github_identity_provider_ports";
 import { ProjectDetail } from "../../model/project_detail";
 import { getProjectBoardDetail } from "./project_board_detail_query";
-import { getProjectItemId, isProjectContentLinked } from "./project_board_item_query";
+import { getProjectItemId, getProjectItemIdByContentId } from "./project_board_item_query";
 
 export class ProjectBoardQueryRepository
   implements ProjectBoardQueryPort, ProjectBoardContentQueryPort
@@ -39,10 +39,10 @@ export class ProjectBoardQueryRepository
       issueOrPullRequestNumber,
     );
 
-  isContentLinked = async (
+  getLinkedContentItemId = async (
     project: ProjectDetail,
     contentId: string,
     token: string,
-  ): Promise<boolean> =>
-    isProjectContentLinked(this.graphqlClient.getClient(token), project, contentId);
+  ): Promise<string | undefined> =>
+    getProjectItemIdByContentId(this.graphqlClient.getClient(token), project, contentId);
 }

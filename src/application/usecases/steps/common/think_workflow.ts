@@ -3,7 +3,6 @@ import type { AgentConfiguration } from '../../../../data/model/agent';
 import { Result } from '../../../../data/model/result';
 import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
 import type { BoundIssueDescriptionQueryPort } from '../../../ports/issue_description_ports';
-import type { BoundIssueNotificationPort } from '../../../ports/issue_lifecycle_ports';
 import { logError, logInfo } from '../../../ports/logging_ports';
 import { resolveThinkRequest } from './think_request_policy';
 import type { ThinkRequestDecision } from './think_request_policy';
@@ -12,10 +11,11 @@ import { resolveThinkAgentTask } from '../../../../application/policies/agent_ta
 import type { AgentTask } from '../../../../domain/agent';
 import { ApplicationError, toApplicationError } from '../../../errors/application_error';
 import type { ThinkRequestSource } from './think_request_policy';
+import type { TranslationPublication } from '../../../policies/comment_translation_policy';
+import { canonicalizeLocaleTag } from '../../../../domain/locale';
 
 export interface ThinkWorkflowDependencies {
     issueDescriptionQueryPort: BoundIssueDescriptionQueryPort;
-    issueNotificationPort: BoundIssueNotificationPort;
     aiRepository: FindingsQueryPort;
 }
 
@@ -29,10 +29,13 @@ export type ThinkContext =
         readonly tokenUser?: string;
         readonly agentTask: AgentTask;
         readonly agentConfiguration: Readonly<AgentConfiguration>;
+        readonly translationPublication?: TranslationPublication;
+        readonly targetLocale: string;
     };
 
 export interface ThinkContextSource extends ThinkRequestSource {
     readonly ai: { getAgentConfiguration(task: AgentTask): AgentConfiguration };
+    readonly locale: { readonly repository: string; readonly issue: string; readonly pullRequest: string };
 }
 
 export function projectThinkContext(source: ThinkContextSource): ThinkContext {
@@ -41,7 +44,10 @@ export function projectThinkContext(source: ThinkContextSource): ThinkContext {
     if (request.kind === 'skip') {
         return Object.freeze({ request: Object.freeze({ ...request }), ...(tokenUser ? { tokenUser } : {}) });
     }
-    const agentTask = resolveThinkAgentTask(request.command?.name, request.destinationType);
+    const agentTask = resolveThinkAgentTask(
+        request.command?.name,
+        request.destinationType === 'PR' ? 'PR' : 'issue',
+    );
     return Object.freeze({
         request: Object.freeze({
             ...request,
@@ -53,6 +59,11 @@ export function projectThinkContext(source: ThinkContextSource): ThinkContext {
         ...(tokenUser ? { tokenUser } : {}),
         agentTask,
         agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration(agentTask) }),
+        targetLocale: request.destinationType === 'PR'
+            ? source.locale.pullRequest
+            : request.destinationType === 'local'
+                ? source.locale.repository
+                : source.locale.issue,
     });
 }
 
@@ -72,6 +83,10 @@ export async function runThinkWorkflow(
         if (!('agentConfiguration' in param)) {
             throw new ApplicationError('provider.contract-invalid', 'Ready Think context is missing its selected agent configuration.');
         }
+        if (!('targetLocale' in param)) {
+            throw new ApplicationError('provider.contract-invalid', 'Ready Think context is missing its target locale.');
+        }
+        canonicalizeLocaleTag(param.targetLocale);
         if (!isAgentConfigurationReady(param.agentConfiguration)) {
             return [
                 new Result({

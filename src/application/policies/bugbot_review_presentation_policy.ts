@@ -8,18 +8,22 @@ import {
 } from '../../domain/bugbot/review_state';
 import { sanitizeAgentMarkdown } from './github_comment_publication_policy';
 import type { BugbotReviewNavigation } from '../ports/bugbot_review_navigation_ports';
+import { buildPublicationMarker } from './publication_identity_policy';
+import {
+  resolveStaticBugbotCatalog,
+  type BugbotMessageCatalog,
+} from './bugbot_message_catalog';
 
 export const BUGBOT_STATUS_MARKER_PREFIX = 'copilot-bugbot-status';
 export const BUGBOT_REVIEW_MARKER_PREFIX = 'copilot-bugbot-review';
 export const BUGBOT_REVIEW_STATUS_START = '<!-- copilot-bugbot-review-status:start';
 export const BUGBOT_REVIEW_STATUS_END = '<!-- copilot-bugbot-review-status:end -->';
-
-type SupportedLocale = 'en-US' | 'es-ES';
+export const BUGBOT_REVIEW_OVERFLOW_MARKER = '<!-- copilot-bugbot-review-overflow schema="1" -->';
 
 export type BugbotPresentationLinks = BugbotReviewNavigation;
 
-export function normalizeBugbotPresentationLocale(locale: string): SupportedLocale {
-  return locale.trim().toLowerCase() === 'es-es' ? 'es-ES' : 'en-US';
+export function normalizeBugbotPresentationLocale(locale: string): string {
+  return resolveStaticBugbotCatalog(locale).locale;
 }
 
 export function buildBugbotStatusMarker(projection: BugbotReviewProjection): string {
@@ -36,173 +40,141 @@ export function isBugbotStatusComment(body: string | null): boolean {
 
 export function renderBugbotStatusCard(
   projection: BugbotReviewProjection,
-  locale: string,
+  catalogOrLocale: BugbotMessageCatalog | string,
   links: BugbotPresentationLinks,
 ): string {
-  const language = normalizeBugbotPresentationLocale(locale);
+  const catalog = presentationCatalog(catalogOrLocale);
   const actionable = projection.findings.filter((finding) =>
     isBugbotActionableState(finding.state),
   );
   const unknown = projection.counts.unknown;
   const partialCoverage = projection.coverage.status === 'partial';
   const shortHead = projection.verifiedHeadSha.slice(0, 7);
-  const heading = language === 'es-ES' ? '## 🤖 Estado de Bugbot' : '## 🤖 Bugbot status';
-  const status = partialCoverage
-    ? language === 'es-ES'
-      ? `La revisión de \`${shortHead}\` tiene cobertura parcial; no puede declarar limpio el pull request completo.`
-      : `The review of \`${shortHead}\` has partial coverage and cannot declare the whole pull request clean.`
-    : unknown > 0
-    ? language === 'es-ES'
-      ? `${unknown} hallazgo(s) tienen un estado desconocido en \`${shortHead}\`.`
-      : `${unknown} finding(s) have unknown state on \`${shortHead}\`.`
-    : projection.outcome === 'partial' || projection.outcome === 'failed'
-      ? language === 'es-ES'
-        ? `Bugbot no pudo sincronizar por completo el estado de \`${shortHead}\`.`
-        : `Bugbot could not fully synchronize the state of \`${shortHead}\`.`
+  const heading = partialCoverage
+    ? catalog.message('bugbot.status.heading.partial')
+    : projection.outcome === 'partial' || projection.outcome === 'failed' || unknown > 0
+      ? catalog.message('bugbot.status.heading.verification')
       : actionable.length === 0
-        ? language === 'es-ES'
-          ? `No hay hallazgos activos en \`${shortHead}\`.`
-          : `No active findings on \`${shortHead}\`.`
-        : language === 'es-ES'
-          ? `${actionable.length} hallazgo(s) requieren atención en \`${shortHead}\`.`
-          : `${actionable.length} finding(s) require attention on \`${shortHead}\`.`;
-  const action = projection.outcome === 'partial' || projection.outcome === 'failed' || unknown > 0
-    ? language === 'es-ES'
-      ? 'Ejecuta `/copilot recheck`; los detalles técnicos indican qué quedó pendiente.'
-      : 'Run `/copilot recheck`; the technical details identify what remains pending.'
-    : actionable.length === 0
-      ? language === 'es-ES' ? 'No se requiere ninguna acción.' : 'No action required.'
-      : language === 'es-ES'
-        ? 'Revisa los threads enlazados o comenta `/copilot fix all`.'
-        : 'Review the linked threads or comment `/copilot fix all`.';
-  const stateHeading = language === 'es-ES' ? '### Estado actual' : '### Current state';
-  const findingsHeading = language === 'es-ES' ? '### Hallazgos' : '### Findings';
-  const coverageHeading = language === 'es-ES' ? '### Cobertura' : '### Coverage';
-  const stateColumn = language === 'es-ES' ? 'Estado' : 'State';
-  const countColumn = language === 'es-ES' ? 'Cantidad' : 'Count';
-  const rows = [
-    ['Open / reopened', projection.counts.open + projection.counts.reopened],
-    ['Verification required', projection.counts['verification-required']],
-    ['Fixed', projection.counts.fixed],
-    ['Obsolete', projection.counts.obsolete],
-    ['Dismissed', projection.counts.dismissed],
-    ['Unknown', projection.counts.unknown],
-  ].map(([state, count]) => `| ${state} | ${count} |`);
-  const findingRows = projection.findings.length === 0
-    ? [language === 'es-ES' ? '- No hay hallazgos registrados.' : '- No findings recorded.']
-    : projection.findings.slice(0, 20).map((finding) => renderFindingRow(finding));
-  if (projection.findings.length > 20) {
+        ? catalog.message('bugbot.status.heading.complete')
+        : catalog.message('bugbot.status.heading.attention', { count: actionable.length }, actionable.length);
+  const status = partialCoverage
+    ? catalog.message('bugbot.status.partial', { commit: `\`${shortHead}\`` })
+    : unknown > 0
+    ? catalog.message('bugbot.status.unknown', { count: unknown, commit: `\`${shortHead}\`` }, unknown)
+    : projection.outcome === 'partial' || projection.outcome === 'failed'
+      ? catalog.message('bugbot.status.syncFailure', { commit: `\`${shortHead}\`` })
+      : actionable.length === 0
+        ? catalog.message('bugbot.status.clean', { commit: `\`${shortHead}\`` })
+        : catalog.message('bugbot.status.attention', { count: actionable.length, commit: `\`${shortHead}\`` }, actionable.length);
+  const action = partialCoverage
+    ? catalog.message('bugbot.status.action.partial')
+    : projection.outcome === 'partial' || projection.outcome === 'failed' || unknown > 0
+    ? catalog.message('bugbot.status.action.recheck', { command: '`/copilot recheck`' })
+    : actionable.length > 0
+      ? catalog.message('bugbot.status.action.findings', { command: '`/copilot fix all`' })
+      : undefined;
+  const findingsHeading = `### ${catalog.message('bugbot.status.findingsHeading')}`;
+  const visibleFindings = projection.findings.filter((finding) =>
+    isBugbotActionableState(finding.state) || finding.state === 'unknown',
+  );
+  const findingRows = visibleFindings.slice(0, 20).map((finding) => renderFindingRow(finding));
+  if (visibleFindings.length > 20) {
     findingRows.push(
-      language === 'es-ES'
-        ? `- …y ${projection.findings.length - 20} más.`
-        : `- …and ${projection.findings.length - 20} more.`,
+      `- …${catalog.message('bugbot.common.more', { count: visibleFindings.length - 20 }, visibleFindings.length - 20)}`,
     );
   }
   const navigation = [
-    `[Pull request](${links.pullRequestUrl})`,
-    `[${language === 'es-ES' ? 'Commit verificado' : 'Verified commit'}](${links.commitUrl})`,
+    `[${catalog.message('bugbot.status.nav.pullRequest')}](${links.pullRequestUrl})`,
+    `[${catalog.message('bugbot.status.nav.verifiedCommit')}](${links.commitUrl})`,
     ...(links.runUrl
-      ? [`[${language === 'es-ES' ? 'Ejecución' : 'Workflow run'}](${links.runUrl})`]
+      ? [`[${catalog.message('bugbot.status.nav.workflowRun')}](${links.runUrl})`]
       : []),
   ].join(' · ');
   const coverageRows = projection.coverage.sources.map((source) => {
-    const omitted = source.omittedItems > 0 ? `, omitted=${source.omittedItems}` : '';
-    const truncated = source.truncatedItems > 0 ? `, truncated=${source.truncatedItems}` : '';
-    const capped = source.providerLimitReached ? ', provider page limit reached; additional older records are uncounted' : '';
-    return `- ${source.source}: ${source.status}; retained=${source.itemsRetained}${omitted}${truncated}${capped}`;
+    const facts = [catalog.message('bugbot.coverage.retained', { count: source.itemsRetained })];
+    if (source.omittedItems > 0) facts.push(catalog.message('bugbot.coverage.omitted', { count: source.omittedItems }));
+    if (source.truncatedItems > 0) facts.push(catalog.message('bugbot.coverage.truncated', { count: source.truncatedItems }));
+    if (source.providerLimitReached) facts.push(catalog.message('bugbot.coverage.providerLimit'));
+    return `- ${source.source}: ${source.status}; ${facts.join(', ')}`;
   });
-  const details = projection.errors.length === 0
-    ? (language === 'es-ES' ? 'Ninguna operación pendiente.' : 'No pending operations.')
-    : projection.errors
-        .slice(0, 10)
-        .map((error) => `- ${sanitizeAgentMarkdown(error, 500)}`)
-        .join('\n');
-  return [
+  const lines = [
+    buildPublicationMarker({
+      identity: { topic: 'bugbot', target: { kind: 'pull-request', number: projection.pullRequestNumber }, key: 'aggregate' },
+      sourceVersion: `head:${projection.verifiedHeadSha}`,
+      digest: projection.digest,
+    }),
     buildBugbotStatusMarker(projection),
-    heading,
+    `## ${heading}`,
     '',
-    `> **${language === 'es-ES' ? 'Estado actual' : 'Current status'}:** ${status}`,
-    '>',
-    `> **${language === 'es-ES' ? 'Acción requerida' : 'Action required'}:** ${action}`,
-    '',
-    stateHeading,
-    '',
-    `| ${stateColumn} | ${countColumn} |`,
-    '| --- | ---: |',
-    ...rows,
-    '',
-    findingsHeading,
-    '',
-    ...findingRows,
-    '',
-    coverageHeading,
-    '',
-    ...(coverageRows.length > 0
-      ? coverageRows
-      : [language === 'es-ES' ? '- Cobertura completa; ningún límite alcanzado.' : '- Complete coverage; no limit reached.']),
-    '',
-    navigation,
-    '',
-    '<details>',
-    `<summary>${language === 'es-ES' ? 'Detalles técnicos' : 'Technical details'}</summary>`,
-    '',
-    `Projection: ${projection.outcome} · Analyzed head: ${projection.analyzedHeadSha} · Digest: ${projection.digest}`,
-    '',
-    details,
-    '',
-    '</details>',
-  ].join('\n');
+    `> **${catalog.message('bugbot.status.currentStatus')}:** ${status}`,
+  ];
+  if (action) lines.push('>', `> **${catalog.message('bugbot.status.actionLabel')}:** ${action}`);
+  if (findingRows.length > 0) lines.push('', findingsHeading, '', ...findingRows);
+  if (partialCoverage) {
+    lines.push(
+      '',
+      '<details>',
+      `<summary>${catalog.message('bugbot.status.coverageSummary')}</summary>`,
+      '',
+      ...coverageRows,
+      '',
+      '</details>',
+    );
+  }
+  if (projection.errors.length > 0) {
+    lines.push(
+      '',
+      '<details>',
+      `<summary>${catalog.message('bugbot.status.recoverySummary')}</summary>`,
+      '',
+      ...projection.errors.slice(0, 10).map((error) => `- ${sanitizeAgentMarkdown(error, 500)}`),
+      '',
+      '</details>',
+    );
+  }
+  lines.push('', navigation);
+  return lines.join('\n');
 }
+
+type BugbotReviewSnapshotInput = {
+  readonly reviewIdentity: string;
+  readonly analyzedHeadSha: string;
+  readonly currentHeadSha: string;
+  readonly projectionDigest: string;
+  readonly coverageStatus: 'complete' | 'partial';
+  readonly findings: readonly BugbotProjectedFinding[];
+  readonly statusUrl: string;
+} & (
+  | { readonly catalog: BugbotMessageCatalog; readonly locale?: never }
+  | { readonly locale: string; readonly catalog?: never }
+);
 
 export function renderBugbotReviewSnapshot(
   originalBody: string | null,
-  input: {
-    readonly reviewIdentity: string;
-    readonly analyzedHeadSha: string;
-    readonly currentHeadSha: string;
-    readonly projectionDigest: string;
-    readonly coverageStatus: 'complete' | 'partial';
-    readonly findings: readonly BugbotProjectedFinding[];
-    readonly locale: string;
-    readonly statusUrl: string;
-  },
+  input: BugbotReviewSnapshotInput,
 ): string {
-  const language = normalizeBugbotPresentationLocale(input.locale);
-  const hasUntrackedOverflow = /### Additional findings omitted by the comment limit/u.test(
-    originalBody ?? '',
-  );
-  const normalized = normalizeHistoricalSnapshot(originalBody ?? '', input.analyzedHeadSha, language);
+  const catalog = presentationCatalog(input.catalog ?? input.locale);
+  const hasUntrackedOverflow = /copilot-bugbot-review-overflow|### (?:Additional findings omitted by the comment limit|Hallazgos adicionales omitidos por el límite de comentarios)/u.test(originalBody ?? '');
+  const normalized = normalizeHistoricalSnapshot(originalBody ?? '', input.analyzedHeadSha, catalog);
   const actionable = input.findings.filter((finding) => isBugbotActionableState(finding.state)).length;
   const unknown = input.findings.filter((finding) => finding.state === 'unknown').length;
   const status = input.coverageStatus === 'partial'
-    ? language === 'es-ES'
-      ? 'La cobertura global es parcial; este snapshot no demuestra que todos sus hallazgos estén resueltos.'
-      : 'Overall coverage is partial; this snapshot does not prove that all of its findings are resolved.'
+    ? catalog.message('bugbot.snapshot.partial')
     : unknown > 0
-    ? language === 'es-ES'
-      ? `No se pudo verificar el estado de ${unknown} hallazgo(s) de este review.`
-      : `The state of ${unknown} finding(s) from this review could not be verified.`
+    ? catalog.message('bugbot.snapshot.unknown', { count: unknown }, unknown)
     : actionable === 0 && hasUntrackedOverflow
-      ? language === 'es-ES'
-        ? 'Ningún hallazgo con seguimiento individual de este review requiere atención. El snapshot también contiene overflow histórico sin thread individual; consulta el estado agregado.'
-        : 'No individually tracked finding from this review requires attention. The snapshot also contains historical overflow without individual threads; see the aggregate status.'
+      ? catalog.message('bugbot.snapshot.cleanTrackedOverflow')
       : actionable === 0
-      ? language === 'es-ES'
-        ? 'Todos los hallazgos originados en este review están resueltos.'
-        : 'All findings originating in this review are resolved.'
+      ? catalog.message('bugbot.snapshot.clean')
       : hasUntrackedOverflow
-        ? language === 'es-ES'
-          ? `${actionable} hallazgo(s) con seguimiento individual de este review requieren atención. El snapshot también contiene overflow histórico sin thread individual.`
-          : `${actionable} individually tracked finding(s) from this review require attention. The snapshot also contains historical overflow without individual threads.`
-      : language === 'es-ES'
-        ? `${actionable} hallazgo(s) originados en este review requieren atención.`
-        : `${actionable} finding(s) originating in this review require attention.`;
-  const linkLabel = language === 'es-ES' ? 'Ver estado agregado de Bugbot' : 'See aggregate Bugbot status';
+        ? catalog.message('bugbot.snapshot.attentionTrackedOverflow', { count: actionable }, actionable)
+        : catalog.message('bugbot.snapshot.attention', { count: actionable }, actionable);
+  const linkLabel = catalog.message('bugbot.snapshot.aggregateLink');
   return [
     `<!-- ${BUGBOT_REVIEW_MARKER_PREFIX} schema="1" review="${input.reviewIdentity}" analyzed_head="${input.analyzedHeadSha}" -->`,
     `${BUGBOT_REVIEW_STATUS_START} digest="${input.projectionDigest}" -->`,
-    `> **${language === 'es-ES' ? 'Estado actual' : 'Current status'}:** ${status}`,
-    `> ${language === 'es-ES' ? 'Última reconciliación en' : 'Last reconciled on'} \`${input.currentHeadSha.slice(0, 7)}\`. [${linkLabel}](${input.statusUrl}).`,
+    `> **${catalog.message('bugbot.snapshot.currentStatus')}:** ${status}`,
+    `> ${catalog.message('bugbot.snapshot.lastReconciled', { commit: `\`${input.currentHeadSha.slice(0, 7)}\`` })} [${linkLabel}](${input.statusUrl}).`,
     BUGBOT_REVIEW_STATUS_END,
     '',
     normalized,
@@ -213,33 +185,36 @@ export function buildNewBugbotReviewSnapshotHeader(
   analyzedHeadSha: string,
   findingCount: number,
   inlineCount: number,
-  locale: string,
+  catalogOrLocale: BugbotMessageCatalog | string,
 ): string {
-  const language = normalizeBugbotPresentationLocale(locale);
+  const catalog = presentationCatalog(catalogOrLocale);
+  const commit = `\`${analyzedHeadSha.slice(0, 7)}\``;
   return [
     `<!-- ${BUGBOT_REVIEW_MARKER_PREFIX} schema="1" analyzed_head="${analyzedHeadSha}" -->`,
     `${BUGBOT_REVIEW_STATUS_START} digest="pending" -->`,
-    `> **${language === 'es-ES' ? 'Estado actual' : 'Current status'}:** ${findingCount} ${language === 'es-ES' ? 'hallazgo(s) requieren atención' : 'finding(s) require attention'}.`,
+    `> **${catalog.message('bugbot.snapshot.currentStatus')}:** ${catalog.message('bugbot.snapshot.attention', { count: findingCount }, findingCount)}`,
     BUGBOT_REVIEW_STATUS_END,
     '',
-    language === 'es-ES' ? '## 🤖 Snapshot del review de Bugbot' : '## 🤖 Bugbot review snapshot',
-    language === 'es-ES'
-      ? `Bugbot reportó **${findingCount}** problema(s) potencial(es) cuando se analizó el commit \`${analyzedHeadSha.slice(0, 7)}\`. Este snapshot es histórico; usa el bloque de estado superior para conocer el estado actual. ${inlineCount} hallazgo(s) están enlazados al código modificado.`
-      : `Bugbot reported **${findingCount}** potential problem(s) when commit \`${analyzedHeadSha.slice(0, 7)}\` was analyzed. This snapshot is historical; use the status block above for current state. ${inlineCount} finding(s) are linked to changed code.`,
+    `## 🤖 ${catalog.message('bugbot.snapshot.heading')}`,
+    [
+      catalog.message('bugbot.snapshot.reported', { count: `**${findingCount}**`, commit }, findingCount),
+      catalog.message('bugbot.snapshot.historical'),
+      catalog.message('bugbot.snapshot.inline', { count: inlineCount }, inlineCount),
+    ].join(' '),
   ].join('\n');
 }
 
 function normalizeHistoricalSnapshot(
   originalBody: string,
   analyzedHeadSha: string,
-  locale: SupportedLocale,
+  catalog: BugbotMessageCatalog,
 ): string {
   let body = originalBody
     .replace(new RegExp(`<!--\\s*${BUGBOT_REVIEW_MARKER_PREFIX}\\s+schema="1"[^>]*-->\\s*`, 'gu'), '')
     .replace(new RegExp(`${escapeRegExp(BUGBOT_REVIEW_STATUS_START)}[\\s\\S]*?${escapeRegExp(BUGBOT_REVIEW_STATUS_END)}\\s*`, 'gu'), '')
     .trim();
-  if (!/^## 🤖 (?:Bugbot review snapshot|Snapshot del review de Bugbot)$/mu.test(body)) {
-    const heading = locale === 'es-ES' ? '## 🤖 Snapshot del review de Bugbot' : '## 🤖 Bugbot review snapshot';
+  if (!/^## 🤖 .+$/mu.test(body)) {
+    const heading = `## 🤖 ${catalog.message('bugbot.snapshot.heading')}`;
     body = `${heading}\n\n${body}`;
   }
   return body;
@@ -254,10 +229,13 @@ function renderFindingRow(finding: BugbotProjectedFinding): string {
 }
 
 function stateLabel(state: BugbotFindingState): string {
-  if (state === 'fixed' || state === 'obsolete' || state === 'dismissed') return `[x] ${state}`;
   return `[ ] ${state}`;
 }
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function presentationCatalog(value: BugbotMessageCatalog | string): BugbotMessageCatalog {
+  return typeof value === 'string' ? resolveStaticBugbotCatalog(value) : value;
 }

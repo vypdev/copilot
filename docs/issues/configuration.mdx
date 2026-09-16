@@ -11,6 +11,18 @@ The following parameters can be configured in the workflow:
 
 ### Optional Parameters
 
+#### Language
+
+- `repository-locale`: Repository-wide BCP-47 target locale (default: `en-US`).
+- `issues-locale`: Optional issue-surface override; empty inherits `repository-locale`.
+
+Setup canonicalizes valid tag casing such as `pt-br` to `pt-BR` and rejects
+underscore forms such as `pt_BR`. English and Spanish are reviewed bundled catalogs;
+other valid locales use one schema-constrained dynamic catalog when the language
+agent is available, otherwise the complete artifact falls back to English. The
+Job Summary records the requested locale, resolved locale, resolution path, and
+stable fallback reason without storing message bodies.
+
 #### Action Control
 - `single-action`: Launch single actions
 - `single-action-issue`: Issue target for executing single action
@@ -92,38 +104,6 @@ The following parameters can be configured in the workflow:
 - `reopen-issue-on-push`: Reopens a closed issue when changes are pushed to the branch (default: "true")
 - `desired-assignees-count`: Number of assignees desired for the issue (default: "1", max: 10)
 - `desired-reviewers-count`: Number of reviewers desired for pull requests (default: "1", max: 15)
-
-#### Image Configuration
-- `images-on-issue`: Include images in issue comments (default: "true")
-- `images-on-pull-request`: Include images in pull request comments (default: "true")
-- `images-on-commit`: Include images in commit comments (default: "true")
-
-##### Issue Images
-- `images-issue-automatic`: Image URLs to display in automatic action issue comments
-- `images-issue-feature`: Image URLs to display in feature action issue comments
-- `images-issue-bugfix`: Image URLs to display in bugfix action issue comments
-- `images-issue-docs`: Image URLs to display in docs action issue comments
-- `images-issue-chore`: Image URLs to display in chore action issue comments
-- `images-issue-hotfix`: Image URLs to display in hotfix action issue comments
-- `images-issue-release`: Image URLs to display in release action issue comments
-
-##### Pull Request Images
-- `images-pull-request-automatic`: Image URLs to display in automatic action pull request comments
-- `images-pull-request-feature`: Image URLs to display in feature action pull request comments
-- `images-pull-request-bugfix`: Image URLs to display in bugfix action pull request comments
-- `images-pull-request-docs`: Image URLs to display in docs action pull request comments
-- `images-pull-request-chore`: Image URLs to display in chore action pull request comments
-- `images-pull-request-hotfix`: Image URLs to display in hotfix action pull request comments
-- `images-pull-request-release`: Image URLs to display in release action pull request comments
-
-##### Commit Images
-- `images-commit-automatic`: Image URLs to display in automatic action commit comments
-- `images-commit-feature`: Image URLs to display in feature action commit comments
-- `images-commit-bugfix`: Image URLs to display in bugfix action commit comments
-- `images-commit-docs`: Image URLs to display in docs action commit comments
-- `images-commit-chore`: Image URLs to display in chore action commit comments
-- `images-commit-hotfix`: Image URLs to display in hotfix action commit comments
-- `images-commit-release`: Image URLs to display in release action commit comments
 
 #### AI agent selection
 The workflow can select one provider for both findings and fixer operations. The selected transport is resolved before execution; unsupported combinations fail instead of silently falling back to OpenCode.

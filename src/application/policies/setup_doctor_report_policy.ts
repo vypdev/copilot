@@ -1,4 +1,13 @@
 import type { DoctorCheck, DoctorCheckStatus, DoctorReport } from '../../domain/setup';
+import type { SetupConfiguration } from '../../domain/setup';
+import { resolveLocaleProfile } from '../../domain/locale';
+import { selectBundledMessageCatalog } from '../../domain/message_catalog';
+import { isAgentConfigurationReady } from '../../domain/agent';
+import {
+  resolveStaticSetupDoctorCatalog,
+  SETUP_DOCTOR_CATALOG_DEFINITIONS,
+  type SetupDoctorMessageCatalog,
+} from './setup_doctor_message_catalog';
 
 const EMPTY_TOTALS: Readonly<Record<DoctorCheckStatus, number>> = {
   pass: 0,
@@ -59,4 +68,94 @@ export function normalizedDoctorPathId(path: string): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, 120);
   return normalized || 'unknown';
+}
+
+export function buildLocaleDoctorChecks(
+  configuration: SetupConfiguration,
+  catalog: SetupDoctorMessageCatalog = resolveStaticSetupDoctorCatalog(),
+): readonly DoctorCheck[] {
+  try {
+    const profile = resolveLocaleProfile(
+      configuration.repository.repositoryLocale,
+      configuration.repository.issueLocale,
+      configuration.repository.pullRequestLocale,
+    );
+    const dynamicReady = isAgentConfigurationReady(configuration.agents.planner);
+    const repositoryCatalogSource = catalog.requestedLocale === profile.repository
+      ? catalog.resolutionSource
+      : undefined;
+    const inheritedCatalogSource = (configured: string) => configured.trim()
+      ? undefined
+      : repositoryCatalogSource;
+    return Object.freeze([
+      localeDoctorCheck(
+        'repository',
+        configuration.repository.repositoryLocale,
+        profile.repository,
+        false,
+        dynamicReady,
+        catalog,
+        repositoryCatalogSource,
+      ),
+      localeDoctorCheck(
+        'issue',
+        configuration.repository.issueLocale,
+        profile.issue,
+        true,
+        dynamicReady,
+        catalog,
+        inheritedCatalogSource(configuration.repository.issueLocale),
+      ),
+      localeDoctorCheck(
+        'pull-request',
+        configuration.repository.pullRequestLocale,
+        profile.pullRequest,
+        true,
+        dynamicReady,
+        catalog,
+        inheritedCatalogSource(configuration.repository.pullRequestLocale),
+      ),
+    ]);
+  } catch {
+    return Object.freeze([
+      skippedDoctorCheck(
+        'locale.profile',
+        ['configuration.valid'],
+        catalog.message('doctor.locale.invalid'),
+        catalog.message('doctor.locale.invalidAction'),
+      ),
+    ]);
+  }
+}
+
+function localeDoctorCheck(
+  scope: 'repository' | 'issue' | 'pull-request',
+  configured: string,
+  effective: string,
+  inheritedWhenEmpty: boolean,
+  dynamicReady: boolean,
+  catalog: SetupDoctorMessageCatalog,
+  resolvedCatalogSource?: 'exact' | 'base' | 'dynamic' | 'fallback',
+): DoctorCheck {
+  const bundled = selectBundledMessageCatalog(effective, SETUP_DOCTOR_CATALOG_DEFINITIONS);
+  const catalogSource = resolvedCatalogSource ?? bundled?.source ?? (dynamicReady ? 'dynamic' : 'fallback');
+  const fallback = catalogSource === 'fallback';
+  const status: DoctorCheckStatus = fallback ? 'warn' : 'pass';
+  const inherited = inheritedWhenEmpty && !configured.trim();
+  return doctorCheck({
+    id: `locale.${scope}`,
+    status,
+    summary: fallback
+      ? catalog.message(inherited ? 'doctor.locale.fallbackInherited' : 'doctor.locale.fallback', { locale: effective })
+      : catalog.message(inherited ? 'doctor.locale.resolvedInherited' : 'doctor.locale.resolved', {
+          locale: effective,
+          source: catalogSource,
+        }),
+    ...(fallback ? { action: catalog.message('doctor.locale.dynamicAction') } : {}),
+    evidence: {
+      configured: configured || '(inherit)',
+      effective,
+      catalogSource,
+    },
+  });
 }

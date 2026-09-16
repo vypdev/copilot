@@ -54,6 +54,52 @@ resolved. If the stored workflow result owns malformed finding-state evidence,
 the command says that evidence is invalid and directs you to the workflow
 result; it never substitutes zero or a clean state.
 
+Every explicit answer uses a correlated reply marker. A webhook retry with the
+same source comment updates or reuses that response instead of creating another.
+These replies contain only their requested content; they are never wrapped in an
+“Automatic Actions” summary or a list of internal steps.
+
+### Implementation-plan response
+
+`/copilot plan` returns one implementation-plan card. The same card is also the
+planning surface used when a normal issue is opened with the planner configured,
+or when `recommend_steps_action` is invoked. It contains three to eight ordered
+steps, no more than two short details per step, and one specific, verifiable
+acceptance criterion. For example:
+
+```markdown
+## Implementation plan
+
+> **Current status:** Ready to start. No action is required from maintainers before implementation.
+
+1. **Define the locale contract**
+   - Add the repository default and issue/PR inheritance rules.
+   - Preserve BCP-47 identifiers in stored state.
+2. **Apply the contract at publication boundaries**
+   - Keep command names, paths, refs, and error codes unchanged.
+3. **Verify replay and strict-state behavior**
+   - Cover English defaults, a configured locale, and rejection of removed state shapes.
+
+**Acceptance:** Replaying the same event creates no additional comment, while a material issue edit updates this card in the configured issue locale.
+
+Need something else? Mention the bot with a question or use `/copilot help`.
+```
+
+This visible structure is owned by Copilot rather than generated as arbitrary
+Markdown by the agent. The agent supplies only bounded titles, details, and the
+acceptance text in the effective issue locale. English (`en-US`) is the default;
+any configured valid locale uses the complete resolved catalog or fails back
+atomically to English. A plan with the wrong output locale or an invalid shape
+is rejected before publication. Material issue edits update the existing card;
+equivalent edits and webhook retries are silent. Stored plan state has one closed
+shape: description fingerprint, plan fingerprint, structured plan, and canonical
+effective issue locale. Missing, extra, or removed free-form fields make the
+state invalid. A replay is allowed only while the stored locale still matches.
+Changing the issue or repository locale makes the next configured planning run
+replace the complete plan in the new language; an agent that returns `unchanged`
+is rejected. Without a configured agent, Copilot fails closed instead of
+republishing content in an unverified language.
+
 GitHub delivers a comment in the main PR conversation as an `issue_comment`
 event. Copilot uses GitHub's PR marker and exact PR number to keep that transport
 detail from changing the target: read-only commands such as `/copilot recheck`
@@ -79,7 +125,30 @@ The first three are read-only requests. The last one may be classified as a gene
 
 Language detection and translation apply only after this same explicit
 command-or-mention boundary. Copilot does not passively translate ordinary
-conversation or machine-authored status comments.
+conversation or machine-authored status comments. When an addressed request is
+translated, its one useful answer ends with a collapsed, localized block named
+“Interpreted request” and “Original request” in the effective issue or PR
+locale. The human comment is never edited, and a translation never creates its
+own timeline comment. English is used when no locale is configured; any valid
+configured BCP-47 locale uses its complete resolved catalog or an atomic English
+fallback.
+
+Before the language provider receives an addressed request, Copilot replaces
+code spans, paths (including bare names such as `README.md`), recognizable Git
+refs and versions, issue or PR references, URLs, quoted literals, option flags,
+and commit IDs with opaque operands. Commands whose grammar has no translatable
+prose protect every argument, including an arbitrary value passed to `--from`.
+The provider must return every operand exactly once. Copilot restores them only
+after validating that none was removed, duplicated, reordered, changed, or
+introduced, so a translation cannot turn `src/cache.ts` into another path or add
+`--force`. A failed validation performs no requested repository change.
+
+An explicit command or mention that fails receives one correlated semantic
+error reply with impact, recovery action, retained state, stable error code,
+retryability, and reference. It never exposes parser, provider, or exception
+text. Background failures remain in the Check and Job Summary instead of
+creating timeline noise. If the request itself could not be translated safely,
+that reply uses the complete English fallback so it cannot mix languages.
 
 ## Authorization and safety
 
@@ -96,8 +165,18 @@ conversation or machine-authored status comments.
 
 ## New-issue welcome
 
-When a new issue is opened, Copilot adds one contextual welcome message. For question/help issues it is combined with the initial answer; for other issue types it is combined with the recommendation when available. If no recommendation can run, the static welcome still explains how to use `/copilot help` and `@vypbot`.
+When a new normal issue has a generated plan, that single plan card includes a
+one-line command hint and no separate welcome. A question/help issue receives
+its direct answer in the configured issue language without a second onboarding
+comment. Event replays reuse the answer's hidden correlation marker instead of
+creating a duplicate; unchanged stored plans are reconciled with their existing
+card and recreated if that card was removed. Before adding a fallback, Copilot
+also checks its own existing plan, direct-answer, and current welcome reply markers. If neither plan nor
+answer can run, one static welcome explains `/copilot help` and `@vypbot`.
+Release and hotfix issues do not receive this fallback because their durable
+deployment dashboard owns the presentation.
 
-The welcome contains a hidden marker so later workflow changes can recognize it without relying on the visible wording.
+The shared reply publisher adds the same current hidden identity used by other
+correlated replies; the welcome text embeds no separate marker.
 
 See [Bugbot detection](/bugbot/detection), [Autofix](/bugbot/autofix), and [Do user request](/bugbot/do-user-request) for the execution details.

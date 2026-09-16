@@ -1,5 +1,5 @@
 import {BranchConfiguration} from "./branch_configuration";
-import {isRecommendationState, RecommendationState} from "./recommendation_state";
+import {restoreRecommendationState, RecommendationState} from "./recommendation_state";
 import {Result} from "./result";
 import { asModelInput, readOptionalString, readString } from './model_input';
 import { isDeploymentOperationSnapshot, type DeploymentOperationSnapshot } from '../../domain/deployment_operation';
@@ -47,10 +47,15 @@ export class Config {
         if (input['branchConfiguration'] !== undefined && input['branchConfiguration'] !== null) {
             this.branchConfiguration = new BranchConfiguration(input['branchConfiguration']);
         }
-        if (isRecommendationState(input['recommendationState'])) {
-            this.recommendationState = input['recommendationState'];
+        if (input['recommendationState'] !== undefined) {
+            const recommendationState = restoreRecommendationState(input['recommendationState']);
+            if (!recommendationState) throw new Error('Invalid recommendationState configuration.');
+            this.recommendationState = recommendationState;
         }
-        if (isDeploymentOperationSnapshot(input['deploymentOrchestration'])) {
+        if (input['deploymentOrchestration'] !== undefined) {
+            if (!isDeploymentOperationSnapshot(input['deploymentOrchestration'])) {
+                throw new Error('Invalid deploymentOrchestration configuration.');
+            }
             this.deploymentOrchestration = input['deploymentOrchestration'];
         }
     }

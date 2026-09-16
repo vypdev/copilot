@@ -100,7 +100,7 @@ export async function runDetectBugbotFixIntentWorkflow(
       id: TASK_ID,
       success: true,
       executed: true,
-      steps: [`Explicit fix command selected ${requestedIds.length} unresolved finding(s) without model intent detection.`],
+      steps: [`Explicit fix command selected ${requestedIds.length} unresolved ${requestedIds.length === 1 ? 'finding' : 'findings'} without model intent detection.`],
       payload: {
         isFixRequest: requestedIds.length > 0,
         isDoRequest: false,

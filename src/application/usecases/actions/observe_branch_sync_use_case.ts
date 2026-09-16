@@ -1,6 +1,10 @@
 import { Result } from "../../../data/model/result";
 import {
   buildAlignedBranchSyncComment,
+  buildBranchSyncDuplicatePointer,
+  buildBranchSyncStatusCommentUrl,
+  buildBranchSyncTransitionIntent,
+  buildBranchSyncTransitionNotification,
   buildStaleBranchSyncComment,
   findLatestBranchSyncComment,
   isStaleBranchSyncComment,
@@ -10,12 +14,22 @@ import type {
   BranchDependency,
   BoundBranchDependencyQueryPort,
   BoundBranchSyncComparisonPort,
-  BoundBranchSyncNotificationPort,
 } from "../../ports/branch_sync_ports";
+import type { BoundIssueCommentPublicationPort } from '../../ports/issue_lifecycle_ports';
 import type { BranchObservationContext } from '../push_single_action_contexts';
 import { logError, logInfo } from "../../ports/logging_ports";
 import type { ParamUseCase } from "../base/param_usecase";
 import { toApplicationError } from "../../errors/application_error";
+import type { MessageCatalogResolutionPort } from '../../ports/message_catalog_ports';
+import {
+  resolveBranchSyncCatalog,
+  type BranchSyncMessageCatalog,
+} from '../../policies/branch_sync_message_catalog';
+import { reconcileTransitionNotification } from '../steps/common/transition_notification_workflow';
+import {
+  buildDuplicateCompactionPublicationPayload,
+  buildTransitionPublicationPayload,
+} from '../../policies/publication_outcome_policy';
 
 const TASK_ID = "ObserveBranchSyncUseCase";
 
@@ -29,7 +43,8 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
   constructor(
     private readonly dependencies: BoundBranchDependencyQueryPort,
     private readonly comparisons: BoundBranchSyncComparisonPort,
-    private readonly notifications: BoundBranchSyncNotificationPort,
+    private readonly notifications: BoundIssueCommentPublicationPort,
+    private readonly catalogResolver?: MessageCatalogResolutionPort,
   ) {}
 
   async invoke(context: BranchObservationContext): Promise<Result[]> {
@@ -46,9 +61,14 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
         return [];
       }
 
+      const messages = await resolveBranchSyncCatalog(
+        context.locale,
+        context.agentConfiguration,
+        this.catalogResolver,
+      );
       const results: Result[] = [];
       for (const dependency of dependencies) {
-        results.push(await this.reconcileDependency(context, dependency));
+        results.push(await this.reconcileDependency(context, dependency, messages));
       }
       return results;
     } catch (cause) {
@@ -60,6 +80,7 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
   private async reconcileDependency(
     context: BranchObservationContext,
     dependency: BranchDependency,
+    messages: BranchSyncMessageCatalog,
   ): Promise<Result> {
     try {
       const comparison = await this.comparisons.compare(
@@ -77,27 +98,66 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
           repository: context.repository.name,
           dependency,
           comparison,
+          messages,
         });
-        if (latest && isStaleBranchSyncComment(latest.body)) {
+        if (!latest) {
+          await this.notifications.addComment(
+            dependency.issueNumber,
+            comment,
+          );
+          return success(dependency, comparison.behindBy, "stale");
+        }
+
+        const transitionedFromAligned = !isStaleBranchSyncComment(latest.body);
+        if (latest.body !== comment) {
           await this.notifications.updateComment(
             dependency.issueNumber,
             latest.id,
             comment,
           );
-        } else {
-          await this.notifications.addComment(
-            dependency.issueNumber,
-            comment,
+        }
+        if (!transitionedFromAligned || !context.sourceHeadSha || !context.trustedBotLogin) {
+          return success(dependency, comparison.behindBy, "stale");
+        }
+
+        const intent = buildBranchSyncTransitionIntent(dependency, context.sourceHeadSha, context.locale);
+        try {
+          const transition = await reconcileTransitionNotification({
+            owner: context.repository.owner,
+            repository: context.repository.name,
+            botLogin: context.trustedBotLogin,
+            intent,
+            message: buildBranchSyncTransitionNotification(
+              dependency,
+              messages,
+              buildBranchSyncStatusCommentUrl(
+                context.repository.owner,
+                context.repository.name,
+                dependency.issueNumber,
+                latest.id,
+              ),
+            ),
+            duplicatePointer: canonicalUrl => buildBranchSyncDuplicatePointer(messages, canonicalUrl),
+          }, this.notifications);
+          const cleanup = buildDuplicateCompactionPublicationPayload(transition.compactedCommentIds);
+          return success(dependency, comparison.behindBy, "stale", {
+            ...buildTransitionPublicationPayload(intent, transition.effect),
+            ...(cleanup ?? {}),
+          });
+        } catch (cause) {
+          return failure(
+            `Branch status was updated for issue #${dependency.issueNumber}, but its action notification could not be published.`,
+            cause,
+            { ...dependency, behindBy: comparison.behindBy, state: 'stale', statusUpdated: true },
           );
         }
-        return success(dependency, comparison.behindBy, "stale");
       }
 
       if (latest && isStaleBranchSyncComment(latest.body)) {
         await this.notifications.updateComment(
           dependency.issueNumber,
           latest.id,
-          buildAlignedBranchSyncComment(dependency),
+          buildAlignedBranchSyncComment(dependency, messages),
         );
       }
       return success(dependency, 0, "aligned");
@@ -117,6 +177,7 @@ function success(
   dependency: BranchDependency,
   behindBy: number,
   state: "stale" | "aligned",
+  evidence: Readonly<Record<string, unknown>> = {},
 ): Result {
   return new Result({
     id: TASK_ID,
@@ -127,16 +188,17 @@ function success(
         ? `Issue #${dependency.issueNumber}: ${dependency.workingBranch} is ${behindBy} commit(s) behind ${dependency.parentBranch}.`
         : `Issue #${dependency.issueNumber}: ${dependency.workingBranch} is aligned with ${dependency.parentBranch}.`,
     ],
-    payload: { ...dependency, behindBy, state },
+    payload: { ...dependency, behindBy, state, ...evidence },
   });
 }
 
-function failure(message: string, cause: unknown): Result {
+function failure(message: string, cause: unknown, payload?: Readonly<Record<string, unknown>>): Result {
   return new Result({
     id: TASK_ID,
     success: false,
     executed: true,
     steps: [message],
     errors: [toApplicationError(cause, 'provider.unavailable', message)],
+    ...(payload ? { payload } : {}),
   });
 }

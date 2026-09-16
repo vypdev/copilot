@@ -9,6 +9,7 @@ import type {
     SetupResourceTarget,
     SetupRemoteConfiguration,
 } from '../../domain/setup';
+import type { SetupDoctorMessageCatalog } from '../policies/setup_doctor_message_catalog';
 
 export interface SetupRemoteConfigurationReadPort {
     inspect(owner: string, repository: string, token: string): Promise<SetupRemoteConfiguration>;
@@ -52,6 +53,8 @@ export interface SetupMergeQueueReadinessRequest {
     repository: string;
     token: string;
     configuration: SetupConfiguration;
+    /** Reuse the artifact catalog when doctor already resolved it. */
+    catalog?: SetupDoctorMessageCatalog;
 }
 
 export interface SetupMergeQueueReadinessPort {

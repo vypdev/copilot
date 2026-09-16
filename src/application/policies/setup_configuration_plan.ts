@@ -12,6 +12,7 @@ import {
 } from './setup_configuration_defaults';
 import { usesOrganizationStorage } from './setup_configuration_storage_policy';
 import { buildSetupCredentialRequirements } from './setup_credential_requirement_policy';
+import { resolveLocaleProfile } from '../../domain/locale';
 
 export { buildSetupCredentialRequirements };
 
@@ -26,7 +27,10 @@ const ISSUE_TEMPLATE_FILES = [
     'release.yml',
 ];
 
-export function buildSetupPlan(configuration: SetupConfiguration, mergeQueueReadiness: readonly DoctorCheck[] = []): SetupPlan {
+export function buildSetupPlan(
+    configuration: SetupConfiguration,
+    mergeQueueReadiness: readonly DoctorCheck[] = [],
+): SetupPlan {
     const workflowFiles = enabledSetupWorkflowFiles(configuration.features);
     const issueTemplateFiles = configuration.features.issueTemplates === false
         ? []
@@ -79,6 +83,11 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
         add(`${prefix}_EXECUTABLE`, agent.executable);
     }
     const repository = configuration.repository;
+    const locale = resolveLocaleProfile(
+        repository.repositoryLocale,
+        repository.issueLocale,
+        repository.pullRequestLocale,
+    );
     add('MAIN_BRANCH', repository.mainBranch);
     add('DEVELOPMENT_BRANCH', repository.developmentBranch);
     add('FEATURE_TREE', repository.featureTree);
@@ -94,8 +103,9 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
     if (configuration.features.inactiveIssueClosure !== false) {
         add('INACTIVITY_THRESHOLD_HOURS', repository.inactivityThresholdHours);
     }
-    add('ISSUES_LOCALE', repository.issueLocale);
-    add('PULL_REQUESTS_LOCALE', repository.pullRequestLocale);
+    add('REPOSITORY_LOCALE', locale.repository);
+    add('ISSUES_LOCALE', locale.issueOverride);
+    add('PULL_REQUESTS_LOCALE', locale.pullRequestOverride);
     add('COMMIT_PREFIX_TRANSFORMS', repository.commitPrefixTransforms);
     add('RELEASE_RECONCILIATION_STRATEGY', repository.releaseReconciliationStrategy);
     add('HOTFIX_RECONCILIATION_STRATEGY', repository.hotfixReconciliationStrategy);
@@ -134,6 +144,11 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
 
 export function buildSetupActionInputs(configuration: SetupConfiguration): Record<string, string> {
     const repository = configuration.repository;
+    const locale = resolveLocaleProfile(
+        repository.repositoryLocale,
+        repository.issueLocale,
+        repository.pullRequestLocale,
+    );
     const ai = configuration.ai;
     const projects = configuration.projects;
     return {
@@ -150,8 +165,9 @@ export function buildSetupActionInputs(configuration: SetupConfiguration): Recor
         'desired-assignees-count': String(repository.desiredAssigneesCount),
         'desired-reviewers-count': String(repository.desiredReviewersCount),
         'inactivity-threshold-hours': String(repository.inactivityThresholdHours),
-        'issues-locale': repository.issueLocale,
-        'pull-requests-locale': repository.pullRequestLocale,
+        'repository-locale': locale.repository,
+        'issues-locale': locale.issueOverride ?? '',
+        'pull-requests-locale': locale.pullRequestOverride ?? '',
         'commit-prefix-transforms': repository.commitPrefixTransforms,
         'release-reconciliation-strategy': repository.releaseReconciliationStrategy,
         'hotfix-reconciliation-strategy': repository.hotfixReconciliationStrategy,

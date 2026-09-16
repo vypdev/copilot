@@ -9,7 +9,10 @@ import {
     PullRequestIssueLinkOperationError,
     runLinkPullRequestIssue,
 } from './link_pull_request_issue_workflow';
-import { toApplicationError } from '../../../errors/application_error';
+import {
+    toApplicationError,
+    type ApplicationErrorOptions,
+} from '../../../errors/application_error';
 
 export class LinkPullRequestIssueUseCase implements ParamUseCase<LinkPullRequestIssueContext, Result[]> {
     taskId = 'LinkPullRequestIssueUseCase';
@@ -35,8 +38,7 @@ export class LinkPullRequestIssueUseCase implements ParamUseCase<LinkPullRequest
                 'Unable to link the pull request to its issue.',
                 error instanceof PullRequestIssueLinkOperationError
                     ? {
-                        action: 'Restore any named temporary PR state, then rerun the workflow.',
-                        retainedState: describeRetainedState(error),
+                        recovery: pullRequestLinkRecovery(error),
                     }
                     : {},
             );
@@ -55,14 +57,17 @@ export class LinkPullRequestIssueUseCase implements ParamUseCase<LinkPullRequest
     }
 }
 
-function describeRetainedState(error: PullRequestIssueLinkOperationError): string {
-    if (!error.retainedBaseBranch && !error.retainedIssueReference) {
-        return 'The original pull-request base and description were restored.';
-    }
-    return [
-        error.retainedBaseBranch ? 'The temporary default base branch remains.' : 'The original base branch was restored.',
-        error.retainedIssueReference ? 'The temporary issue reference remains in the description.' : 'The original description was restored.',
-    ].join(' ');
+function pullRequestLinkRecovery(
+    error: PullRequestIssueLinkOperationError,
+): NonNullable<ApplicationErrorOptions['recovery']> {
+    const id = error.retainedBaseBranch
+        ? error.retainedIssueReference
+            ? 'pull-request-link-base-and-reference-retained'
+            : 'pull-request-link-base-retained'
+        : error.retainedIssueReference
+            ? 'pull-request-link-reference-retained'
+            : 'pull-request-link-restored';
+    return { id, variables: {} };
 }
 
 function describeRecovery(error: PullRequestIssueLinkOperationError): string {

@@ -69,6 +69,7 @@ function minimalExecution(singleAction: {
     actor: 'alice',
     eventName: 'workflow_dispatch',
     tokens: { token: 'token' },
+    locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
     ai: new Ai('', 'model', false, [], false, 'low', 20),
     issueNumber: 12,
     tokenUser: 'bot',
@@ -96,13 +97,7 @@ function minimalExecution(singleAction: {
     inactivityThresholdHours: 48,
     sizeThresholds: Object.fromEntries(['xxl', 'xl', 'l', 'm', 's', 'xs'].map(key => [key, { lines: 1, files: 1, commits: 1 }])),
     project: { getProjects: () => [] },
-    release: { active: false }, hotfix: { active: false },
-    images: {
-      imagesOnCommit: false, commitAutomaticActions: [], commitFeatureGifs: [], commitBugfixGifs: [],
-      commitReleaseGifs: [], commitHotfixGifs: [], commitDocsGifs: [], commitChoreGifs: [],
-    },
-    isBugfix: false, isFeature: true, isDocs: false, isChore: false,
-    commitPrefixBuilder: '', issueTypes: {},
+    issueTypes: {},
     singleAction: {
       validSingleAction: singleAction.validSingleAction,
       currentSingleAction: singleAction.currentSingleAction,

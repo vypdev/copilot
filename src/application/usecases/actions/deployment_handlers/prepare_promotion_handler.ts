@@ -3,8 +3,10 @@ import type { DeploymentOrchestrationContext } from "../../../ports/deployment_o
 import {
   buildInitialDeploymentOperation,
   validateInitialDeploymentInput,
+  type InitialDeploymentOperation,
 } from "../../../policies/deployment_plan_policy";
 import {
+  requiredDeploymentFailure,
   resumeBlockedDeployment,
   transitionDeploymentOperation,
   type DeploymentOperationSnapshot,
@@ -45,7 +47,7 @@ export class PreparePromotionHandler {
     }
     if (isBlockedOutsidePreparation(existing)) {
       await this.runtime.publishDashboard(context, existing);
-      return blockedDeploymentResult(existing, "The prepare mode cannot resume this blocked deployment phase.");
+      return blockedDeploymentResult(existing);
     }
     const operation = await this.resumeBlockedPreparation(context, existing);
     if (operation.phase === "preparing" || operation.phase === "promotion_pr_pending") {
@@ -103,6 +105,7 @@ export class PreparePromotionHandler {
     );
     const operation = buildInitialDeploymentOperation({
       operationId: this.runtime.dependencies.operationId(),
+      locale: context.locale,
       kind,
       version: context.singleAction.version,
       title: context.singleAction.title,
@@ -172,9 +175,9 @@ export class PreparePromotionHandler {
 }
 
 function isBlockedOutsidePreparation(operation: DeploymentOperationSnapshot): boolean {
-  return operation.phase === "blocked"
-    && (!operation.lastFailure?.retryable
-      || !["preparing", "promotion_pr_pending"].includes(operation.lastFailure.previousPhase));
+  if (operation.phase !== 'blocked') return false;
+  const failure = requiredDeploymentFailure(operation);
+  return !failure.retryable || !["preparing", "promotion_pr_pending"].includes(failure.previousPhase);
 }
 
 function selectOriginBranch(
@@ -190,10 +193,11 @@ function selectOriginBranch(
 
 function validateOperation(
   context: DeploymentOrchestrationContext,
-  operation: DeploymentOperationSnapshot,
+  operation: InitialDeploymentOperation,
 ): void {
   const errors = validateInitialDeploymentInput({
     operationId: operation.operationId,
+    locale: operation.locale,
     kind: operation.kind,
     version: operation.version,
     title: operation.title,

@@ -7,6 +7,7 @@ import { SetupDoctorPresenter, renderDoctorReport, doctorCheckLabel } from '../s
 import { ConsoleSetupPlanPresenter, renderSetupPlan } from '../setup_plan_presenter';
 import { ConsoleSetupQuestionRenderer } from '../setup_question_renderer';
 import { SetupWorkflowUpdatePromptAdapter } from '../setup_workflow_update_prompt_adapter';
+import { resolveStaticSetupDoctorCatalog } from '../../application/policies/setup_doctor_message_catalog';
 
 function terminal(results: readonly TerminalReadResult[]): jest.Mocked<TerminalDriver> {
   let index = 0;
@@ -42,6 +43,31 @@ describe('setup presenters and prompt-specific adapters', () => {
     log.mockRestore();
   });
 
+  it('renders every doctor presentation label in the resolved repository locale', () => {
+    const catalog = resolveStaticSetupDoctorCatalog('es-ES');
+    const rendered = renderDoctorReport(buildDoctorReport([
+      doctorCheck({
+        id: 'credentials.setup-pat',
+        status: 'fail',
+        summary: catalog.message('doctor.setupPat.invalid'),
+        action: catalog.message('doctor.setupPat.replaceAction'),
+      }),
+      skippedDoctorCheck(
+        'github.variables',
+        ['credentials.setup-pat'],
+        catalog.message('doctor.skipped.variables'),
+      ),
+    ]), catalog);
+
+    expect(rendered).toContain('Diagnóstico de Copilot — diagnóstico parcial');
+    expect(rendered).toContain('FALLO');
+    expect(rendered).toContain('OMITIDO');
+    expect(rendered).toContain('Bloqueado por: credentials.setup-pat');
+    expect(rendered).toContain('Acción: Sustituye el PAT de setup');
+    expect(rendered).toContain('No se ha cambiado la configuración del repositorio.');
+    expect(doctorCheckLabel('locale.repository', catalog)).toBe('Locale del repositorio');
+  });
+
   it.each([
     ['configuration.valid', 'Configuration'],
     ['workspace.repository-root', 'Repository root'],
@@ -50,6 +76,10 @@ describe('setup presenters and prompt-specific adapters', () => {
     ['github.secret-names', 'Repository Secrets'],
     ['github.variables', 'Repository Variables'],
     ['github.merge-queue', 'Merge queue'],
+    ['locale.profile', 'Locale profile'],
+    ['locale.repository', 'Repository locale'],
+    ['locale.issue', 'Issue locale'],
+    ['locale.pull-request', 'Pull-request locale'],
     ['workflow.release-yml', 'Workflow release-yml'],
     ['github.variables.agent-provider', 'Variable AGENT_PROVIDER'],
     ['credential.openai-api-key', 'Credential OPENAI_API_KEY'],

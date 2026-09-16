@@ -1,6 +1,11 @@
 import { Result } from '../../data/model/result';
 import type { CopilotLifecycleLabels } from '../../domain/copilot_lifecycle';
 import { projectBugbotResultFindingStates } from './bugbot_result_finding_state_projection_policy';
+import {
+    resolveStaticPublicationCatalog,
+    type PublicationMessageCatalog,
+    type PublicationMessageId,
+} from './publication_message_catalog';
 
 export interface CopilotStatusExecutionContext {
     readonly owner: string;
@@ -117,23 +122,28 @@ export function buildCopilotStatusResult(snapshot: CopilotStatusSnapshot, taskId
     });
 }
 
-export function formatCopilotStatus(snapshot: CopilotStatusSnapshot): string {
+export function formatCopilotStatus(
+    snapshot: CopilotStatusSnapshot,
+    locale = 'en-US',
+    catalog: PublicationMessageCatalog = resolveStaticPublicationCatalog(locale).catalog,
+): string {
+    const label = (id: PublicationMessageId, value: string) => `- **${catalog.render(id)}:** ${value}`;
     const lines = [
-        '## Copilot status',
-        `- **Repository:** ${snapshot.owner}/${snapshot.repository}`,
-        `- **Target:** ${snapshot.target}${snapshot.issueNumber ? ` #${snapshot.issueNumber}` : ''}${snapshot.pullRequestNumber ? ` / PR #${snapshot.pullRequestNumber}` : ''}`,
-        `- **Event:** ${snapshot.event}${snapshot.action ? ` (${snapshot.action})` : ''}`,
-        `- **Branch:** ${snapshot.branch ?? 'unknown'}`,
-        `- **Lifecycle:** ${snapshot.lifecycle ?? 'not set'}`,
-        `- **Waiting for:** ${snapshot.waitingFor ?? 'no pending human response'}`,
-        `- **PR description policy:** ${snapshot.pullRequestDescriptionMode}`,
-        `- **Issue labels:** ${snapshot.issueLabels.length > 0 ? snapshot.issueLabels.join(', ') : 'none'}`,
-        `- **PR labels:** ${snapshot.pullRequestLabels.length > 0 ? snapshot.pullRequestLabels.join(', ') : 'none'}`,
+        `## ${catalog.render('interaction.status.heading')}`,
+        label('interaction.status.repository', `${snapshot.owner}/${snapshot.repository}`),
+        label('interaction.status.target', `${snapshot.target}${snapshot.issueNumber ? ` #${snapshot.issueNumber}` : ''}${snapshot.pullRequestNumber ? ` / PR #${snapshot.pullRequestNumber}` : ''}`),
+        label('interaction.status.event', `${snapshot.event}${snapshot.action ? ` (${snapshot.action})` : ''}`),
+        label('interaction.status.branch', snapshot.branch ?? catalog.render('interaction.status.unknown')),
+        label('interaction.status.lifecycle', snapshot.lifecycle ?? catalog.render('interaction.status.notSet')),
+        label('interaction.status.waitingFor', snapshot.waitingFor ?? catalog.render('interaction.status.noPendingResponse')),
+        label('interaction.status.descriptionPolicy', snapshot.pullRequestDescriptionMode),
+        label('interaction.status.issueLabels', snapshot.issueLabels.length > 0 ? snapshot.issueLabels.join(', ') : catalog.render('interaction.status.none')),
+        label('interaction.status.pullRequestLabels', snapshot.pullRequestLabels.length > 0 ? snapshot.pullRequestLabels.join(', ') : catalog.render('interaction.status.none')),
     ];
     if (snapshot.findingStateEvidence === 'invalid') {
-        lines.push('- **Bugbot findings:** invalid evidence; inspect the workflow result.');
+        lines.push(label('interaction.status.findings', catalog.render('interaction.status.findingsInvalid')));
     } else if (snapshot.findingStates) {
-        lines.push(`- **Bugbot findings:** ${snapshot.findingStates.open} open, ${snapshot.findingStates.reopened} reopened, ${snapshot.findingStates.verificationRequired} verification required, ${snapshot.findingStates.unknown} unknown, ${snapshot.findingStates.resolved} resolved`);
+        lines.push(label('interaction.status.findings', catalog.render('interaction.status.findingCounts', snapshot.findingStates)));
     }
     return lines.join('\n');
 }

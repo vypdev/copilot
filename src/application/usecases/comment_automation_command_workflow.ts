@@ -106,6 +106,7 @@ function runHelpCommand(
         executed: true,
         stepFormat: 'markdown',
         steps: [buildCopilotHelpMessage(param.trustedBotLogin)],
+        payload: Object.freeze({ publication: Object.freeze({ kind: 'help', botLogin: param.trustedBotLogin }) }),
     })];
 }
 

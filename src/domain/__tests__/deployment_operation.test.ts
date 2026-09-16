@@ -12,6 +12,7 @@ const operation = (phase: DeploymentPhase = "preparing", overrides: Partial<Depl
   stateVersion: 1,
   revision: 1,
   operationId: "operation-12345678",
+  locale: { repository: "en-US", issue: "en-US", pullRequest: "en-US" },
   kind: "release",
   version: "3.4.0",
   title: "Release",
@@ -68,8 +69,9 @@ describe("deployment operation state machine", () => {
     expect(transitionDeploymentOperation(operation("published"), "published", "promoted").kind).toBe("invalid");
   });
 
-  it("permits blocking a non-terminal state", () => {
-    expect(transitionDeploymentOperation(operation("publishing"), "publishing", "blocked").operation.phase).toBe("blocked");
+  it("requires the dedicated failure-bearing transition when blocking", () => {
+    const decision = transitionDeploymentOperation(operation("publishing"), "publishing", "blocked");
+    expect(decision).toMatchObject({ kind: 'invalid', operation: { phase: 'publishing', lastFailure: null } });
   });
 
   it("records the exact safe phase when blocking", () => {
@@ -132,6 +134,36 @@ describe("deployment operation state machine", () => {
     expect(isDeploymentOperationSnapshot(operation())).toBe(true);
   });
 
+  it('requires one exact failure payload only while blocked', () => {
+    const failure = { category: 'publication' as const, message: 'Registry unavailable', retryable: true, previousPhase: 'publishing' as const };
+    expect(isDeploymentOperationSnapshot(operation('blocked', { lastFailure: failure }))).toBe(true);
+    expect(isDeploymentOperationSnapshot(operation('blocked', { lastFailure: null }))).toBe(false);
+    expect(isDeploymentOperationSnapshot(operation('publishing', { lastFailure: failure }))).toBe(false);
+    const { lastFailure: _lastFailure, ...missingFailureField } = operation();
+    expect(isDeploymentOperationSnapshot(missingFailureField)).toBe(false);
+  });
+
+  it("requires a canonical locale snapshot", () => {
+    expect(isDeploymentOperationSnapshot(operation())).toBe(true);
+    expect(isDeploymentOperationSnapshot(operation("preparing", {
+      locale: {
+        repository: "fr-FR",
+        issue: "es-ES",
+        pullRequest: "de-DE",
+        issueOverride: "es-ES",
+        pullRequestOverride: "de-DE",
+      },
+    }))).toBe(true);
+    expect(isDeploymentOperationSnapshot(operation("preparing", {
+      locale: { repository: "en-us", issue: "en-US", pullRequest: "en-US" },
+    }))).toBe(false);
+    expect(isDeploymentOperationSnapshot(operation("preparing", {
+      locale: { repository: "en-US", issue: "es-ES", pullRequest: "en-US" },
+    }))).toBe(false);
+    const { locale: _locale, ...missingLocale } = operation();
+    expect(isDeploymentOperationSnapshot(missingLocale)).toBe(false);
+  });
+
   it("requires an exact provider receipt when publication is verified", () => {
     expect(isDeploymentOperationSnapshot(operation("published", {
       productionSha: "c".repeat(40),
@@ -160,6 +192,18 @@ describe("deployment operation state machine", () => {
     { ...operation(), phase: "unknown" },
     { ...operation(), publicationWorkflow: undefined },
     { ...operation(), reconciliationTargets: {} },
+    { ...operation(), removedField: 'not accepted' },
+    { ...operation(), locale: { ...operation().locale, removedField: 'not accepted' } },
+    { ...operation(), reconciliationTargets: [{
+      targetBranch: 'develop', sourceBranch: 'master', sourceSha: 'c'.repeat(40),
+      status: 'pending', removedField: 'not accepted',
+    }] },
+    { ...operation('blocked', {
+      lastFailure: {
+        category: 'publication', message: 'Unavailable', retryable: true,
+        previousPhase: 'publishing', removedField: 'not accepted',
+      } as never,
+    }) },
   ])("rejects malformed persisted operation %#", (value) => {
     expect(isDeploymentOperationSnapshot(value)).toBe(false);
   });

@@ -127,6 +127,26 @@ describe('Bugbot public API', () => {
   });
 
   it.each([
+    [{ issue: 'not a locale' }, 'Bugbot locale configuration contains an invalid BCP-47 tag.'],
+    [{ repository: 'en-US' }, 'Bugbot locale configuration must contain only issue and pullRequest BCP-47 tags.'],
+    ['es-ES', 'Bugbot locale configuration must contain only issue and pullRequest BCP-47 tags.'],
+  ])('rejects malformed locale configuration at the public boundary', async (locale, message) => {
+    const service = new BugbotReviewService(
+      { query: jest.fn() },
+      { repository: { owner: 'acme', name: 'repo' } } as BugbotScmGateway,
+    );
+
+    await expect(service.review({
+      target: { kind: 'branch', branch: 'feature/review' },
+      agent: { provider: 'codex', model: 'model' },
+      locale,
+    } as unknown as BugbotReviewRequest)).rejects.toMatchObject({
+      code: 'configuration.invalid',
+      message,
+    });
+  });
+
+  it.each([
     [undefined, 'Bound repository owner is missing or invalid.'],
     [{}, 'Bound repository owner is missing or invalid.'],
     [{ repository: { owner: 'acme' } }, 'Bound repository name is missing or invalid.'],

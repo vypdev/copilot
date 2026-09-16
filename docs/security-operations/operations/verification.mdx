@@ -13,3 +13,5 @@ node scripts/verify-agent-clis.cjs
 The verifier MUST report the selected binary, version/help result, credential-reference status, and failures without secret values. A successful binary check does not prove a successful model request.
 
 For a provider smoke test, use a bounded prompt that requests exactly `READY`, read-only workspace permissions, and the explicit qualified model. Record exit status and sanitized diagnostics only.
+
+Run `copilot doctor --config <setup.yml>` to verify repository configuration and locale behavior without changing repository configuration. The human report uses `repository-locale` (`en-US` by default); issue and pull-request locale overrides appear as diagnosed facts but do not select terminal language. A non-bundled valid locale requires a ready planner/language agent and otherwise produces one complete English fallback report. Verify that stable check IDs and enums remain unchanged and that no raw provider response or credential value appears.

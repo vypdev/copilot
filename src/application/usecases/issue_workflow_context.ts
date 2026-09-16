@@ -129,8 +129,7 @@ export interface AnswerIssueHelpContext extends IssueNumberContext {
   readonly questionOrHelp: boolean;
   readonly description: string;
   readonly agentConfiguration: Readonly<AgentConfiguration>;
-  readonly newIssue: boolean;
-  readonly tokenUser?: string;
+  readonly locale: string;
 }
 
 export interface IssueWorkflowStepContexts {
@@ -224,6 +223,7 @@ export interface IssueWorkflowContextSource {
     getProjectColumnIssueInProgress(): string;
   };
   readonly ai: { getAgentConfiguration(task: 'planner'): AgentConfiguration };
+  readonly locale: { readonly issue: string };
   readonly inputs?: { readonly action?: string };
 }
 
@@ -326,8 +326,7 @@ export function projectIssueWorkflowStepContexts(source: IssueWorkflowContextSou
       questionOrHelp: source.labels.isQuestion || source.labels.isHelp,
       description: (source.issue.body ?? '').trim(),
       agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
-      newIssue: source.eventName === 'issues' && source.inputs?.action === 'opened',
-      ...(source.tokenUser?.trim() ? { tokenUser: source.tokenUser.trim() } : {}),
+      locale: source.locale.issue,
     }),
   });
 }

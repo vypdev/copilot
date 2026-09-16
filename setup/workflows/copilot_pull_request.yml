@@ -1,34 +1,19 @@
 name: Copilot - Pull Request
+run-name: Copilot PR · ${{ github.event_name }}:${{ github.event.action }}
 
 on:
   pull_request:
-    types: [opened, reopened, edited, closed, synchronize]
-  pull_request_review:
-    types: [submitted, edited, dismissed]
-  merge_group:
-    types: [checks_requested]
+    types: [opened, reopened, closed, synchronize]
 
 jobs:
-  copilot-merge-group:
-    if: ${{ github.event_name == 'merge_group' }}
-    name: Copilot - Pull Request
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      checks: write
-      contents: read
-    steps:
-      - name: Confirm merge-group compatibility
-        run: echo "Copilot PR analysis already ran on each constituent pull request."
-
   copilot-pull-requests:
     if: ${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}
     name: Copilot - Pull Request
     runs-on: ubuntu-latest
     timeout-minutes: 120
     concurrency:
-      group: copilot-bugbot-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}
-      cancel-in-progress: ${{ github.event_name != 'pull_request' || github.event.action != 'edited' }}
+      group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-analysis
+      cancel-in-progress: true
     permissions:
       checks: write
       contents: read
@@ -57,6 +42,9 @@ jobs:
 
       - uses: vypdev/copilot@v3
         with:
+          repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
+          issues-locale: ${{ vars.ISSUES_LOCALE || '' }}
+          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || '' }}
           ai-ignore-files: ${{ vars.AI_IGNORE_FILES || 'build/*' }}
           debug: ${{ vars.DEBUG }}
           main-branch: ${{ vars.MAIN_BRANCH || 'master' }}
@@ -71,8 +59,6 @@ jobs:
           reopen-issue-on-push: ${{ vars.REOPEN_ISSUE_ON_PUSH || 'true' }}
           desired-assignees-count: ${{ vars.DESIRED_ASSIGNEES_COUNT || '1' }}
           desired-reviewers-count: ${{ vars.DESIRED_REVIEWERS_COUNT || '1' }}
-          issues-locale: ${{ vars.ISSUES_LOCALE || 'en-US' }}
-          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || 'en-US' }}
           commit-prefix-transforms: ${{ vars.COMMIT_PREFIX_TRANSFORMS || 'replace-slash' }}
           ai-pull-request-description-mode: ${{ vars.AI_PULL_REQUEST_DESCRIPTION_MODE || 'replace' }}
           ai-members-only: ${{ vars.AI_MEMBERS_ONLY || 'false' }}

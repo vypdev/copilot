@@ -1,9 +1,10 @@
 import type { DeploymentOperationSnapshot, DeploymentPhase } from "../../../domain/deployment_operation";
+import { resolveStaticDeploymentCatalog } from "../deployment_message_catalog";
 import {
   deploymentDashboardMarker,
-  normalizeLocale,
   renderDeploymentDashboard,
   renderDeploymentJobSummary,
+  renderDeploymentMilestone,
   renderPromotionPullRequest,
   renderReconciliationPullRequest,
 } from "../deployment_presentation_policy";
@@ -42,12 +43,14 @@ const operation = (phase: DeploymentPhase = "promotion_pr_pending", overrides: P
   reconciliationTargets: [],
   lastFailure: null,
   ...overrides,
+  locale: overrides.locale ?? { repository: "en-US", issue: "en-US", pullRequest: "en-US" },
 });
 
 const context = {
   owner: "vypdev",
   repository: "copilot",
   issue: 355,
+  repositoryLocale: "en-US",
   issueLocale: "en-US",
   pullRequestLocale: "en-US",
   workflowRunUrl: "https://github.com/vypdev/copilot/actions/runs/1",
@@ -62,8 +65,8 @@ describe("deployment presentation policy", () => {
 
   it("orders guided status before progress and technical detail", () => {
     const body = renderDeploymentDashboard(operation(), context);
-    expect(body.indexOf("Current status")).toBeLessThan(body.indexOf("## Progress"));
-    expect(body.indexOf("## Progress")).toBeLessThan(body.indexOf("Technical details"));
+    expect(body.indexOf("Current status")).toBeLessThan(body.indexOf("### Progress"));
+    expect(body.indexOf("### Progress")).toBeLessThan(body.indexOf("Technical details"));
   });
 
   it("renders a fixed-label Mermaid diagram plus text fallback", () => {
@@ -98,7 +101,7 @@ describe("deployment presentation policy", () => {
   it("suppresses secondary sections in quiet mode but preserves state", () => {
     const body = renderDeploymentDashboard(operation("publishing", { presentationMode: "quiet" }), context);
     expect(body).toContain("publishing artifacts");
-    expect(body).not.toContain("## Progress");
+    expect(body).not.toContain("### Progress");
     expect(body).toContain("Technical details");
   });
 
@@ -115,8 +118,16 @@ describe("deployment presentation policy", () => {
     expect(body).toContain("❌");
     expect(body).toContain("needs attention");
     expect(body).toContain("PR was closed");
-    expect(body.indexOf("## Action required")).toBeLessThan(body.indexOf("## Progress"));
+    expect(body.indexOf("### Action required")).toBeLessThan(body.indexOf("### Progress"));
     expect(body).toContain("Production updated");
+  });
+
+  it("rejects blocked presentation state without a failure payload", () => {
+    const blocked = operation("blocked", { lastFailure: null });
+    expect(() => renderDeploymentDashboard(blocked, context))
+      .toThrow('Blocked deployment state requires a valid failure payload.');
+    expect(() => renderDeploymentJobSummary(blocked, context))
+      .toThrow('Blocked deployment state requires a valid failure payload.');
   });
 
   it("distinguishes published-but-not-reconciled state", () => {
@@ -156,14 +167,15 @@ describe("deployment presentation policy", () => {
     expect(dashboard).toContain("Reconciliación con desarrollo");
     expect(promotion.body).toContain("Listo antes de revisar");
     expect(promotion.body).toContain("Después del merge");
+    expect(promotion.title).toBe("release(3.4.0): promover a master");
   });
 
-  it("falls unsupported locales back to English", () => {
-    expect(normalizeLocale("fr-FR")).toBe("en-US");
+  it("falls unsupported static locales back to English", () => {
+    expect(renderDeploymentDashboard(operation(), { ...context, issueLocale: "fr-FR" })).toContain("Current status");
   });
 
-  it("normalizes regional Spanish locales", () => {
-    expect(normalizeLocale("es-MX")).toBe("es-ES");
+  it("uses the bundled base-language catalog for regional Spanish locales", () => {
+    expect(renderDeploymentDashboard(operation(), { ...context, issueLocale: "es-MX" })).toContain("Estado actual");
   });
 
   it("renders a deterministic promotion PR with ownership marker", () => {
@@ -171,6 +183,7 @@ describe("deployment presentation policy", () => {
     expect(value.title).toBe("release(3.4.0): promote to master");
     expect(value.body).toContain('phase="promotion" issue="355"');
     expect(value.body).toContain("After merge");
+    expect(value.body.match(/After merge, Copilot will tag and publish the accepted production commit\./gu)).toHaveLength(1);
   });
 
   it("renders a reconciliation PR that cannot republish", () => {
@@ -179,6 +192,23 @@ describe("deployment presentation policy", () => {
     expect(value.title).toBe("release(3.4.0): reconcile master into develop");
     expect(value.body).toContain("cannot publish the package again");
     expect(value.body).toContain('phase="reconciliation" issue="355"');
+  });
+
+  it("uses the target source fact and preserves an open launcher issue when production is pending", () => {
+    const target = {
+      targetBranch: "develop",
+      sourceBranch: "master",
+      sourceSha: "d".repeat(40),
+      status: "pending" as const,
+    };
+    const value = renderReconciliationPullRequest(
+      operation("reconciliation_pending", { issueCompletion: "keep-open", productionSha: undefined }),
+      target,
+      context,
+    );
+
+    expect(value.body).toMatch(/`v3\.4\.0@\u200bddddddd`/u);
+    expect(value.body).toContain("Keep issue open");
   });
 
   it("localizes the reconciliation PR and explains a sync branch", () => {
@@ -215,31 +245,67 @@ describe("deployment presentation policy", () => {
     expect(body).toContain("/compare/");
   });
 
+  it("replaces an untrusted workflow URL with the safe GitHub root", () => {
+    const body = renderDeploymentDashboard(operation(), {
+      ...context,
+      workflowRunUrl: "https://example.com/@team\nunsafe",
+    });
+
+    expect(body).toContain("[Workflow run](https://github.com)");
+    expect(body).not.toContain("example.com");
+  });
+
   it("renders a pending external transition as a successful wait in the Job Summary", () => {
-    const summary = renderDeploymentJobSummary(operation(), context, "preparing", ["Created promotion PR #401"]);
+    const summary = renderDeploymentJobSummary(operation(), context, "preparing");
     expect(summary).toContain("Waiting externally");
     expect(summary).not.toContain("Workflow failed");
-    expect(summary).toContain("Created promotion PR #401");
+    expect(summary).not.toContain("Created promotion PR #401");
   });
 
   it("renders blocked retryability and sanitizes Job Summary operations", () => {
     const summary = renderDeploymentJobSummary(operation("blocked", {
       lastFailure: { category: "publication", message: "bad", retryable: true, previousPhase: "publishing" },
-    }), context, "publishing", ["::error:: @team\n# forged"]);
+    }), context, "publishing");
     expect(summary).toContain("Workflow failed");
     expect(summary).toContain("| `publishing` | `blocked` | Yes |");
     expect(summary).toContain("## Action required");
     expect(summary).toContain("bad. Retry after correcting the cause.");
-    expect(summary).not.toContain("::error::");
-    expect(summary).not.toContain("@team");
   });
 
   it("renders equivalent Spanish recovery guidance in dashboards and Job Summaries", () => {
     const blocked = operation("blocked", {
       lastFailure: { category: "promotion", message: "Falta merge_group", retryable: true, previousPhase: "preparing" },
     });
-    const localized = { ...context, issueLocale: "es-ES" };
+    const localized = { ...context, repositoryLocale: "es-ES", issueLocale: "es-ES" };
     expect(renderDeploymentDashboard(blocked, localized)).toContain("Vuelve a intentarlo después de corregir la causa");
     expect(renderDeploymentJobSummary(blocked, localized)).toContain("## Acción necesaria");
+  });
+
+  it("localizes semantic milestones without exposing workflow step logs", () => {
+    const catalog = resolveStaticDeploymentCatalog("es-ES");
+    expect(renderDeploymentMilestone({
+      kind: "promotion-merged",
+      pullRequest: 401,
+      productionSha: "c".repeat(40),
+    }, catalog)).toContain("La PR de promoción #401 se ha mergeado");
+    expect(renderDeploymentMilestone({
+      kind: "publication-complete",
+      tag: "v3.4.0",
+      productionSha: "c".repeat(40),
+    }, catalog)).toContain("se ha publicado desde el SHA de producción aceptado");
+    expect(renderDeploymentMilestone({
+      kind: "reconciliation-blocked",
+      reason: "No se puede reconciliar",
+    }, catalog)).toBe("❌ Despliegue bloqueado: No se puede reconciliar");
+    expect(renderDeploymentMilestone({
+      kind: "orchestration-complete",
+      tag: "v3.4.0",
+    }, catalog)).toContain("todos los destinos de reconciliación configurados");
+  });
+
+  it("bounds managed PR titles after catalog rendering", () => {
+    const long = "x".repeat(500);
+    const value = renderPromotionPullRequest(operation(undefined, { productionBranch: long }), context);
+    expect(value.title).toHaveLength(240);
   });
 });

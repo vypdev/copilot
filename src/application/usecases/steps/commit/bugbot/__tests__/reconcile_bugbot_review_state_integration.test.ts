@@ -158,7 +158,7 @@ async function reconcileBugbotReviewState(input: {
       ...(input.execution.tokenUser
         ? { trustedAuthorLogin: input.execution.tokenUser }
         : {}),
-      locale: input.execution.locale?.pullRequest ?? 'en-US',
+      locale: input.execution.locale.pullRequest,
     },
     loadedContext: input.loadedContext,
     activeFindings: input.activeFindings,
@@ -410,7 +410,7 @@ describe('Bugbot review reconciliation integration', () => {
       }),
     ]));
     expect(report?.errors.map((error) => error.message)).toEqual([
-      'The final provider snapshot omitted 2 previously observed unresolved or unverified Bugbot finding(s).',
+      'The final provider snapshot omitted 2 previously observed unresolved or unverified Bugbot findings.',
     ]);
     expect(test.updatePullRequestReview).toHaveBeenCalledWith(
       'org',
@@ -424,7 +424,7 @@ describe('Bugbot review reconciliation integration', () => {
       'org',
       'repo',
       358,
-      expect.stringContaining('Unknown | 2'),
+      expect.stringContaining('2 findings have unknown state'),
       'token',
       { commitSha: head },
     );
@@ -457,7 +457,7 @@ describe('Bugbot review reconciliation integration', () => {
       expect.objectContaining({ id: 'finding-1', state: 'unknown', title: 'Unsafe retry' }),
     ]);
     expect(report?.errors.map((error) => error.message)).toEqual([
-      'The final provider snapshot omitted 1 previously observed unresolved or unverified Bugbot finding(s).',
+      'The final provider snapshot omitted 1 previously observed unresolved or unverified Bugbot finding.',
     ]);
   });
 
@@ -644,7 +644,7 @@ describe('Bugbot review reconciliation integration', () => {
     expect(report?.projection.outcome).toBe('partial');
     expect(report?.errors.map((error) => error.message)).toEqual(expect.arrayContaining([
       'Unable to re-read linked issue finding comments.',
-      'The final provider snapshot omitted 1 previously observed unresolved or unverified Bugbot finding(s).',
+      'The final provider snapshot omitted 1 previously observed unresolved or unverified Bugbot finding.',
     ]));
     expect(report?.errors.map((error) => error.message).join(' ')).not.toContain(
       'private provider detail',
@@ -784,7 +784,7 @@ describe('Bugbot review reconciliation integration', () => {
     expect(report?.projection.actionableCount).toBe(0);
     expect(report?.projection.findings[0]?.id).toBe('malformed-comment-PRRC_malformed');
     expect(test.addComment).toHaveBeenCalledWith(
-      'org', 'repo', 358, expect.stringContaining('Unknown | 1'), 'token', { commitSha: head },
+      'org', 'repo', 358, expect.stringContaining('1 finding has unknown state'), 'token', { commitSha: head },
     );
   });
 
@@ -1014,7 +1014,7 @@ describe('Bugbot review reconciliation integration', () => {
     expect(report?.statusCardOperation).toBe('updated');
     expect(test.updateComment).toHaveBeenCalledTimes(2);
     expect(test.updateComment).toHaveBeenCalledWith(
-      'org', 'repo', 358, 11, expect.stringContaining('no longer current'), 'token', { commitSha: head },
+      'org', 'repo', 358, 11, expect.stringContaining('superseded by the canonical card'), 'token', { commitSha: head },
     );
   });
 
@@ -1258,7 +1258,10 @@ describe('Bugbot review reconciliation integration', () => {
 
     expect(report?.projection.outcome).toBe('failed');
     expect(report?.errors[0]?.message).toHaveLength(500);
-    expect(report?.projection.errors[0]).toHaveLength(500);
+    expect(report?.projection.errors).toEqual([
+      'Bugbot could not complete one or more finding mutations.',
+    ]);
+    expect(report?.projection.errors.join(' ')).not.toContain(privateSuffix);
   });
 
   it('falls back to the durable id when a missing finding has no stored title', async () => {

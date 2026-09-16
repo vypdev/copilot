@@ -5,6 +5,7 @@ import type {
 } from "../ports/deployment_orchestration_ports";
 import {
   mergeQueueReadinessFailureMessage,
+  pullRequestModeDecisionMessage,
   selectPullRequestMode,
   type PullRequestModeDecision,
   type TargetMergeCapabilities,
@@ -12,12 +13,20 @@ import {
 import {
   deploymentDashboardMarker,
   renderDeploymentDashboard,
+  renderDeploymentMilestone,
   renderPromotionPullRequest,
   renderReconciliationPullRequest,
+  type DeploymentMilestone,
   type DeploymentPresentationContext,
 } from "../policies/deployment_presentation_policy";
 import {
+  resolveDeploymentCatalog,
+  type DeploymentMessageCatalog,
+} from "../policies/deployment_message_catalog";
+import {
   blockDeploymentOperation,
+  requiredDeploymentFailure,
+  sanitizeDeploymentMessage,
   type DeploymentOperationSnapshot,
   type ReconciliationTargetState,
 } from "../../domain/deployment_operation";
@@ -32,6 +41,8 @@ import { DeploymentStateBoundary } from "./deployment_state_boundary";
 export const DEPLOYMENT_ORCHESTRATION_TASK_ID = "DeploymentOrchestrationUseCase";
 
 export class DeploymentOrchestrationRuntime {
+  private readonly presentationCatalogs = new Map<string, Promise<DeploymentMessageCatalog>>();
+
   constructor(
     readonly dependencies: DeploymentOrchestrationDependencies,
     readonly stateBoundary: DeploymentStateBoundary,
@@ -53,21 +64,21 @@ export class DeploymentOrchestrationRuntime {
     retryable: boolean,
     semanticError?: ApplicationError,
   ): Promise<Result> {
-    const blocked = blockDeploymentOperation(operation, category, message, retryable);
+    const sanitizedMessage = sanitizeDeploymentMessage(message);
+    const blocked = blockDeploymentOperation(operation, category, sanitizedMessage, retryable);
     await this.persist(context, blocked);
     await this.publishDashboard(context, blocked);
     await this.publishMilestone(
       context,
       blocked,
-      "reconciliation-blocked",
-      `❌ Deployment blocked: ${blocked.lastFailure?.message}`,
+      { kind: "reconciliation-blocked", reason: sanitizedMessage },
     );
     return new Result({
       id: DEPLOYMENT_ORCHESTRATION_TASK_ID,
       success: false,
       executed: true,
-      steps: [message],
-      errors: [semanticError ?? new ApplicationError("workflow.failed", message, { retryable })],
+      steps: [sanitizedMessage],
+      errors: [semanticError ?? new ApplicationError("workflow.failed", sanitizedMessage, { retryable })],
     });
   }
 
@@ -76,7 +87,8 @@ export class DeploymentOrchestrationRuntime {
     operation: DeploymentOperationSnapshot,
   ): Promise<void> {
     const marker = deploymentDashboardMarker(operation.operationId, context.singleAction.issue);
-    const body = renderDeploymentDashboard(operation, presentationContext(context));
+    const catalog = await this.presentationCatalog("issue", context, operation);
+    const body = renderDeploymentDashboard(operation, presentationContext(context, operation), catalog);
     const current = await this.dependencies.presentation.findDashboard(
       context.singleAction.issue,
       marker,
@@ -98,15 +110,15 @@ export class DeploymentOrchestrationRuntime {
   async publishMilestone(
     context: DeploymentOrchestrationContext,
     operation: DeploymentOperationSnapshot,
-    name: string,
-    body: string,
+    milestone: DeploymentMilestone,
   ): Promise<void> {
     if (operation.commentMode !== "milestones") return;
-    const marker = `<!-- copilot-deployment-milestone operation-id="${operation.operationId}" name="${name}" -->`;
+    const marker = `<!-- copilot-deployment-milestone operation-id="${operation.operationId}" name="${milestone.kind}" -->`;
+    const catalog = await this.presentationCatalog("issue", context, operation);
     await this.dependencies.presentation.publishMilestone(
       context.singleAction.issue,
       marker,
-      body,
+      renderDeploymentMilestone(milestone, catalog),
     );
   }
 
@@ -133,10 +145,11 @@ export class DeploymentOrchestrationRuntime {
       );
     }
     if (existing[0]) return existing[0];
-    const presentation = presentationContext(context);
+    const presentation = presentationContext(context, operation);
+    const catalog = await this.presentationCatalog("pull-request", context, operation);
     const content = phase === "promotion"
-      ? renderPromotionPullRequest(operation, presentation)
-      : renderReconciliationPullRequest(operation, requireTarget(target), presentation);
+      ? renderPromotionPullRequest(operation, presentation, catalog)
+      : renderReconciliationPullRequest(operation, requireTarget(target), presentation, catalog);
     return await this.dependencies.pullRequests.createManagedPullRequest({ ...query, ...content });
   }
 
@@ -195,7 +208,7 @@ export class DeploymentOrchestrationRuntime {
     );
     const decision = selectPullRequestMode(operation.prMode, capabilities);
     if (decision.kind === "unsupported") {
-      return this.unsupportedMergeBehavior(context, targetRole, targetBranch, capabilities, decision);
+      return this.unsupportedMergeBehavior(context, operation, targetRole, targetBranch, capabilities, decision);
     }
     if (decision.mode === "merge-queue") {
       const readiness = evaluateMergeQueueReadiness({
@@ -207,9 +220,10 @@ export class DeploymentOrchestrationRuntime {
         attestations: context.deployment.mergeQueueCheckAttestations,
       });
       if (readiness.verdict !== "ready") {
+        const catalog = await this.presentationCatalog('issue', context, operation);
         return {
           kind: "blocked",
-          reason: mergeQueueReadinessFailureMessage(readiness, context.locale.issue),
+          reason: mergeQueueReadinessFailureMessage(readiness, catalog),
         };
       }
     }
@@ -291,15 +305,17 @@ export class DeploymentOrchestrationRuntime {
     }
   }
 
-  private unsupportedMergeBehavior(
+  private async unsupportedMergeBehavior(
     context: DeploymentOrchestrationContext,
+    operation: DeploymentOperationSnapshot,
     targetRole: MergeQueueTargetRole,
     targetBranch: string,
     capabilities: TargetMergeCapabilities,
     decision: Extract<PullRequestModeDecision, { readonly kind: "unsupported" }>,
-  ): { readonly kind: "blocked"; readonly reason: string } {
+  ): Promise<{ readonly kind: "blocked"; readonly reason: string }> {
+    const catalog = await this.presentationCatalog('issue', context, operation);
     if (capabilities.mergeQueueObservationProblems.length === 0) {
-      return { kind: "blocked", reason: decision.reason };
+      return { kind: "blocked", reason: pullRequestModeDecisionMessage(decision, catalog) };
     }
     const readiness = evaluateMergeQueueReadiness({
       queueRequired: true,
@@ -311,8 +327,27 @@ export class DeploymentOrchestrationRuntime {
     });
     return {
       kind: "blocked",
-      reason: mergeQueueReadinessFailureMessage(readiness, context.locale.issue),
+      reason: mergeQueueReadinessFailureMessage(readiness, catalog),
     };
+  }
+
+  private presentationCatalog(
+    scope: "issue" | "pull-request",
+    context: DeploymentOrchestrationContext,
+    operation: DeploymentOperationSnapshot,
+  ): Promise<DeploymentMessageCatalog> {
+    const locale = effectiveLocale(context, operation);
+    const targetLocale = scope === "issue" ? locale.issue : locale.pullRequest;
+    const key = `${scope}:${targetLocale}`;
+    const existing = this.presentationCatalogs.get(key);
+    if (existing) return existing;
+    const resolution = resolveDeploymentCatalog(
+      targetLocale,
+      context.agentConfiguration,
+      this.dependencies.catalogResolver,
+    );
+    this.presentationCatalogs.set(key, resolution);
+    return resolution;
   }
 
   private async cleanupSyncBranches(
@@ -388,16 +423,16 @@ export function deploymentSuccess(step: string): Result {
 
 export function blockedDeploymentResult(
   operation: DeploymentOperationSnapshot,
-  fallback: string,
 ): Result {
-  const message = operation.lastFailure?.message ?? fallback;
+  const failure = requiredDeploymentFailure(operation);
+  const message = failure.message;
   return new Result({
     id: DEPLOYMENT_ORCHESTRATION_TASK_ID,
     success: false,
     executed: true,
     steps: [message],
     errors: [new ApplicationError("workflow.failed", message, {
-      retryable: operation.lastFailure?.retryable ?? false,
+      retryable: failure.retryable,
     })],
   });
 }
@@ -412,15 +447,27 @@ export function semanticCleanupError(error: unknown): ApplicationError {
   return toApplicationError(error, "workflow.failed", "Deployment cleanup failed.");
 }
 
-function presentationContext(context: DeploymentOrchestrationContext): DeploymentPresentationContext {
+function presentationContext(
+  context: DeploymentOrchestrationContext,
+  operation: DeploymentOperationSnapshot,
+): DeploymentPresentationContext {
+  const locale = effectiveLocale(context, operation);
   return {
     owner: context.owner,
     repository: context.repo,
     issue: context.singleAction.issue,
-    issueLocale: context.locale.issue,
-    pullRequestLocale: context.locale.pullRequest,
+    repositoryLocale: locale.repository,
+    issueLocale: locale.issue,
+    pullRequestLocale: locale.pullRequest,
     packageName: context.owner === "vypdev" && context.repo === "copilot" ? "@vypdev/copilot" : undefined,
   };
+}
+
+function effectiveLocale(
+  _context: DeploymentOrchestrationContext,
+  operation: DeploymentOperationSnapshot,
+): DeploymentOrchestrationContext["locale"] {
+  return operation.locale;
 }
 
 function requireTarget(target: ReconciliationTargetState | undefined): ReconciliationTargetState {

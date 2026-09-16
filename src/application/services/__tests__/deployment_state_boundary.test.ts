@@ -35,6 +35,7 @@ const operation = (operationId = "operation-12345678"): DeploymentOperationSnaps
   publicationVerified: false,
   reconciliationTargets: [],
   lastFailure: null,
+  locale: { repository: "en-US", issue: "en-US", pullRequest: "en-US" },
 });
 
 function context(value: DeploymentOperationSnapshot) {

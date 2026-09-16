@@ -4,11 +4,13 @@
  */
 
 import { MAX_FINDING_ID_LENGTH } from '../../../../policies/bugbot_finding_marker_policy';
+import { AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY } from '../../../../policies/agent_output_locale_policy';
 
 /** Detection returns findings and explicit lifecycle changes for prior finding IDs. */
 export const BUGBOT_RESPONSE_SCHEMA = {
     type: 'object',
     properties: {
+        outputLocale: AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
         findings: {
             type: 'array',
             maxItems: 200,
@@ -67,7 +69,7 @@ export const BUGBOT_RESPONSE_SCHEMA = {
             description: 'Retained previous findings that are now fixed or obsolete; use an empty array when none are resolved.',
         },
     },
-    required: ['findings', 'resolved_findings'],
+    required: ['outputLocale', 'findings', 'resolved_findings'],
     additionalProperties: false,
 } as const;
 

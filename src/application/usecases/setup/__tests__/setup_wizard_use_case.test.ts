@@ -55,6 +55,15 @@ describe('SetupWizardUseCase', () => {
     expect(result.status === 'completed' && result.configuration.manageRepositorySecrets).toBe(false);
   });
 
+  it('rejects underscore-separated locale tags without a migration path', async () => {
+    const deps = dependencies();
+    await expect(new SetupWizardUseCase(deps).execute({
+      mode: 'non-interactive',
+      overrides: { repository: { repositoryLocale: 'pt_BR', issueLocale: 'es_MX', pullRequestLocale: '' } },
+    })).rejects.toMatchObject({ code: 'configuration.invalid' });
+    expect(deps.planPresenter.present).not.toHaveBeenCalled();
+  });
+
   it('returns exit zero and no configuration when confirmation is declined', async () => {
     const result = await new SetupWizardUseCase(dependencies({
       confirmation: { confirm: jest.fn().mockResolvedValue({ kind: 'declined' }) },
@@ -131,7 +140,11 @@ describe('SetupWizardUseCase', () => {
       remoteTarget: { owner: 'owner', repository: 'repo', token: 'token' },
     });
 
-    expect(readiness.inspect).toHaveBeenCalledWith(expect.objectContaining({ owner: 'owner', repository: 'repo' }));
+    expect(readiness.inspect).toHaveBeenCalledWith(expect.objectContaining({
+      owner: 'owner',
+      repository: 'repo',
+      catalog: expect.objectContaining({ locale: 'en-US', resolutionSource: 'exact' }),
+    }));
     expect(deps.planPresenter.present).toHaveBeenCalledWith(expect.objectContaining({ mergeQueueReadiness: [check] }));
   });
 

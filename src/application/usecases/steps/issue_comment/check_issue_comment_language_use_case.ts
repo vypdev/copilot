@@ -12,6 +12,7 @@ export interface IssueCommentLanguageSource {
     readonly pullRequest: { readonly number: number };
     readonly locale: { readonly issue: string; readonly pullRequest: string };
     readonly ai: { getAgentConfiguration(task: 'findings'): CommentLanguageRequest['configuration'] };
+    readonly tokenUser?: string;
 }
 
 export function projectIssueCommentLanguageRequest(source: IssueCommentLanguageSource): CommentLanguageRequest {
@@ -20,6 +21,7 @@ export function projectIssueCommentLanguageRequest(source: IssueCommentLanguageS
         locale: source.isPullRequest ? source.locale.pullRequest : source.locale.issue,
         issueNumber: source.isPullRequest ? source.pullRequest.number : source.issue.number,
         commentId: source.issue.commentId,
+        trustedBotLogin: source.tokenUser,
         configuration: source.ai.getAgentConfiguration('findings'),
     });
 }

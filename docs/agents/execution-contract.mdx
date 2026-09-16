@@ -33,6 +33,15 @@ All roles deny agent-tool network, approval escalation, MCP, plugins, subagents,
 
 The hard maxima are 15 minutes, 512 KiB of prompt bytes, and 4 MiB of combined process output. Structured tasks declare a JSON Schema. Before Codex starts, Copilot requires a closed object schema in which every property is required, optional values are nullable, nested objects reject additional properties, and arrays define their items. Copilot then validates the returned response locally as well. An incompatible contract, invalid or oversized output, and prose-wrapped JSON are rejected; removed response shapes have no legacy conversion path.
 
+Every product-facing read-only task also receives the canonical effective
+`targetLocale` and must return the exact same tag in required `outputLocale`
+metadata. This covers Think and help answers, recommendations, progress,
+pull-request descriptions, and Bugbot findings. A missing, malformed,
+non-canonical, or different output locale is rejected before a comment, review,
+description, label, or recommendation state can change. There is no
+best-effort mixed-language publication. Technical paths, refs, commands, links,
+identifiers, and structured facts remain locale-independent.
+
 Each invocation emits bounded lifecycle observations for plan start, admitted
 preflight, and terminal execution. They include only provider, capability,
 manifest/version, workspace and output modes, artifact hashes, duration, byte

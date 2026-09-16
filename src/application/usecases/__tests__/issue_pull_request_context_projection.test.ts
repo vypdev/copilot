@@ -23,6 +23,7 @@ function issueSource() {
   return {
     owner: 'acme', repo: 'demo', issueNumber: 42, isIssue: true, isPullRequest: false,
     eventName: 'issues', tokenUser: 'copilot-bot', managementBranch: 'feature',
+    locale: { issue: 'en-US' },
     issue: {
       number: 42, title: 'Ship context boundary', body: 'Body', creator: 'alice',
       opened: true, labeled: true, labelAdded: 'deploy', desiredAssigneesCount: 10,
@@ -63,6 +64,7 @@ function pullRequestSource() {
       creator: 'bob', desiredAssigneesCount: 1, desiredReviewersCount: 15,
     },
     branches: { defaultBranch: 'main' },
+    locale: { pullRequest: 'en-US' },
     labels: {
       sizeLabels: ['size: S', 'size: M'], priorityLabelOnIssue: 'priority: medium',
       priorityLabelOnIssueProcessable: true, priorityHigh: 'priority: high',
@@ -88,7 +90,9 @@ describe('P2-E issue and pull-request context projections', () => {
     });
     expect(contexts.prepareBranches.repositoryWebUrl).toBe('https://github.com/acme/demo');
     expect(contexts.issueType.issueType).toEqual({ name: 'Feature', description: 'Feature issue', color: 'GREEN' });
-    expect(contexts.answerHelp).toMatchObject({ newIssue: true, issueNumber: 42 });
+    expect(contexts.answerHelp).toMatchObject({ issueNumber: 42, locale: 'en-US' });
+    expect(contexts.answerHelp).not.toHaveProperty('newIssue');
+    expect(contexts.answerHelp).not.toHaveProperty('tokenUser');
     expectDataOnly(contexts);
     expect(Object.isFrozen(contexts)).toBe(true);
     expect(Object.isFrozen(contexts.prepareBranches.branches.managedTypes)).toBe(true);

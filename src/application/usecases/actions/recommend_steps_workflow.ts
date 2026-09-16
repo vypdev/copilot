@@ -14,6 +14,9 @@ import { PROJECT_CONTEXT_INSTRUCTION } from '../../../utils/project_context_inst
 import { getTaskEmoji } from '../../../utils/task_emoji';
 import { buildRecommendationResult } from './recommend_steps_result_policy';
 import { ApplicationError, toApplicationError } from '../../errors/application_error';
+import { RECOMMEND_STEPS_RESPONSE_SCHEMA } from '../../policies/agent_response_schemas';
+import { productFacingAgentQueryOptions } from '../../policies/agent_output_locale_policy';
+import { implementationPlanFingerprintInput } from '../../../domain/implementation_plan';
 
 export interface RecommendStepsWorkflowDependencies {
     issueDescriptionQueryPort: BoundIssueDescriptionQueryPort;
@@ -30,7 +33,9 @@ export async function runRecommendStepsWorkflow(
 
     try {
         const configuration = param.agentConfiguration;
-        if (!isAgentConfigurationReady(configuration)) {
+        const previousRecommendation = param.previousRecommendation;
+        const agentReady = isAgentConfigurationReady(configuration);
+        if (!agentReady && !previousRecommendation) {
             return outcome([failure(taskId, 'Missing agent model or executable.', 'configuration.invalid')]);
         }
 
@@ -50,18 +55,31 @@ export async function runRecommendStepsWorkflow(
             return outcome([failure(taskId, `No description found for issue #${issueNumber}.`, 'provider.not-found')]);
         }
 
-        const previousRecommendation = param.previousRecommendation;
         const issueDescriptionFingerprint = createIssueDescriptionFingerprint(issueDescription);
-        if (previousRecommendation?.issueDescriptionFingerprint === issueDescriptionFingerprint) {
-            logInfo('RecommendSteps: issue description is unchanged; skipping recommendation.');
-            return outcome([]);
+        const matchingPreviousRecommendation = previousRecommendation?.issueDescriptionFingerprint === issueDescriptionFingerprint;
+        const structuredPlanUsesTargetLocale = previousRecommendation?.implementationPlanLocale === param.targetLocale;
+        if (matchingPreviousRecommendation && structuredPlanUsesTargetLocale) {
+            logInfo('RecommendSteps: issue description is unchanged; reconciling the existing plan.');
+            return replayExistingPlan(taskId, issueNumber, previousRecommendation);
+        }
+        if (matchingPreviousRecommendation) {
+            logInfo('RecommendSteps: regenerating the matching structured plan in the configured issue locale.');
+        }
+        if (!agentReady) {
+            return outcome([failure(taskId, 'Missing agent model or executable.', 'configuration.invalid')]);
         }
 
         const prompt = getRecommendStepsPrompt({
             projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
             issueNumber: String(issueNumber),
             issueDescription,
-            previousRecommendation: previousRecommendation?.recommendation,
+            previousRecommendation: previousRecommendation
+                ? implementationPlanFingerprintInput(previousRecommendation.implementationPlan)
+                : undefined,
+            previousRecommendationFormat: structuredPlanUsesTargetLocale
+                ? 'structured'
+                : 'structured-other-locale',
+            targetLocale: param.targetLocale,
         });
         logDebugInfo(
             `RecommendSteps: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`,
@@ -72,6 +90,7 @@ export async function runRecommendStepsWorkflow(
             configuration,
             agentId: AGENT_PLAN,
             prompt,
+            options: productFacingAgentQueryOptions('recommend-steps', RECOMMEND_STEPS_RESPONSE_SCHEMA),
         });
         return buildRecommendationResult(param, taskId, response, issueDescriptionFingerprint, previousRecommendation, issueNumber);
     } catch (error) {
@@ -86,6 +105,23 @@ export async function runRecommendStepsWorkflow(
             }),
         ]);
     }
+}
+
+function replayExistingPlan(
+    taskId: string,
+    issueNumber: number,
+    recommendationState: Readonly<NonNullable<RecommendStepsContext['previousRecommendation']>>,
+): RecommendStepsOutcome {
+    return outcome([new Result({
+        id: taskId,
+        success: true,
+        executed: true,
+        payload: Object.freeze({
+            issueNumber,
+            implementationPlan: recommendationState.implementationPlan,
+            recommendationState: Object.freeze({ ...recommendationState }),
+        }),
+    })]);
 }
 
 function outcome(results: readonly Result[]): RecommendStepsOutcome {

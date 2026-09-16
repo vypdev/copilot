@@ -27,12 +27,13 @@ its findings as line comments on the current diff.
 
 ### 2. On every push (commit workflow)
 
-When you push to a branch that is **linked to an issue** (e.g. a feature or bugfix branch created by Copilot), the **Commit** workflow runs. If an agent CLI is configured, the action runs **DetectPotentialProblemsUseCase**: it fetches and reviews the exact event `before..after` range, loads existing finding context, and then publishes new findings and updates or marks as resolved any previous findings that no longer apply. The bounded fetch includes `after` and its parent. New-branch pushes, whose `before` value is GitHub's all-zero sentinel, and force-pushes whose previous object is no longer reachable can therefore fall back to the current commit parent without aborting the workflow or downloading full history.
+When you push to a branch that is **linked to an issue** (e.g. a feature or bugfix branch created by Copilot), the **Commit** workflow runs. If an agent CLI is configured and there is no open PR, the action runs **DetectPotentialProblemsUseCase**: it fetches and reviews the exact event `before..after` range, loads existing finding context, and then publishes new findings and updates or marks as resolved any previous findings that no longer apply. The bounded fetch includes `after` and its parent. New-branch pushes, whose `before` value is GitHub's all-zero sentinel, and force-pushes whose previous object is no longer reachable can therefore fall back to the current commit parent without aborting the workflow or downloading full history. When an open same-repository PR exists, Commit keeps issue progress current but skips Bugbot because the paired PR `synchronize` event owns review for that head.
 
 **Requirements:**
 
 - The push must be to a branch that has an associated issue (the action resolves the issue number from the branch name or from project/linking).
 - The Commit workflow must include the Copilot step (see [Examples → Push workflow](/bugbot/examples#push-workflow-with-bugbot)).
+- No open PR may own review for the branch; otherwise the PR synchronization workflow runs Bugbot.
 
 If the branch is not linked to an issue (e.g. `issueNumber === -1`), detection is skipped.
 
@@ -92,13 +93,33 @@ Each child comment is attached to an exact line/range confirmed from the current
 
 The action checks the PR head before invoking the reviewer, before mutation, after finding mutations, and before projecting current state. If a newer revision owns the PR, the old run is recorded as superseded and does not overwrite current-state surfaces.
 
+Finding titles, descriptions, evidence, and suggestions use the effective
+surface locale: `issues-locale` for issue-only publication and
+`pull-requests-locale` for a verified PR, with both inheriting
+`repository-locale` (`en-US` by default). The status card, historical snapshot,
+section labels, overflow summary, fallback-anchor note, and resolution note use
+the same atomically resolved catalog. Reviewed English and Spanish catalogs are
+bundled; another valid BCP-47 locale is resolved dynamically once per run with
+all cardinal plural categories required by that locale, or the whole artifact
+falls back to English. Paths, line numbers, symbols, code,
+severities, categories, IDs, commands, links, state values, and hidden markers
+remain structured and unchanged. The findings response must echo the exact
+canonical locale in `outputLocale`; a missing or different tag rejects the
+whole analysis before any finding or review is published.
+
 When the configured agent later reports a finding as **resolved** (e.g. after you or the bot fixed the code), the action:
 
 - **Updates** every existing stored destination so the marker shows `resolved: true`.
 - **Marks the PR review thread as resolved** after the marker update succeeds.
 - **Re-reads GitHub** and refreshes the originating review's status block.
 
-One stable **Bugbot status** comment in the PR conversation is the easiest aggregate view: it shows the verified head, counts by state, links to findings, the required next action, and bounded technical recovery details. The durable per-finding authority is the trusted hidden marker together with the native thread facts; the review snapshot is history, not the sole source of current truth.
+One stable **Bugbot status** comment in the PR conversation is the aggregate
+view. It leads with the outcome, lists only findings that need attention or
+verification, and shows recovery details only when the review is incomplete.
+Full-coverage clean runs have no empty count table, no “action required” block,
+and no technical disclosure. The durable per-finding authority is the trusted
+hidden marker together with native thread facts; the review snapshot is history,
+not the sole source of current truth.
 
 ---
 
@@ -125,7 +146,7 @@ When there are more findings than the limit:
 
 - The action publishes the first N findings as individual issue comments for issue-only work, or as inline comments in one PR review.
 - Overflow is added to the same PR review summary. When no PR exists, one extra issue comment summarizes it.
-- On a PR, the canonical **Bugbot status** counts every accepted current finding, including overflow. Overflow rows have no thread link because they were deliberately not published individually; increase the limit or run `/copilot recheck` after addressing them. A historical review's mutable block reports its individually tracked findings and explicitly flags historical overflow instead of claiming that untracked entries are resolved.
+- On a PR, the canonical **Bugbot status** accounts for every accepted current finding, including overflow. Overflow rows have no thread link because they were deliberately not published individually. Inspect overflow manually; reduce the relevant scope or restore provider access before rerunning. Fixed context safety limits are not configuration knobs, and rerunning unchanged capped evidence cannot improve coverage. A historical review's mutable block reports its individually tracked findings and explicitly flags historical overflow instead of claiming that untracked entries are resolved.
 
 So a PR analysis creates one review batch instead of N unrelated reviews and N duplicated conversation comments.
 
@@ -197,6 +218,11 @@ comments, newest 200 thread records, or first 1,000 diff files. Partial analysis
 may still report findings supported by retained evidence, but it never says the
 whole PR is clean, never resolves a prior finding omitted from the prompt, and
 never receives a successful Review Check conclusion.
+Lifecycle presentation is equally conservative: partial coverage replaces any
+stale `state:ready` label with `state:blocked` and
+`state:awaiting-maintainer`. The maintainer can inspect the named omissions or
+reduce the change scope; zero findings in the retained subset is not a ready
+decision.
 
 A GitHub read error is not partial context: the run fails before agent analysis
 or finding mutation. For a cap, inspect the named omitted source, split an

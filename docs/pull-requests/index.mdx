@@ -5,20 +5,20 @@ description: How Copilot handles pull requests: linking, projects, reviewers, si
 
 # Pull Request Management
 
-When your workflow runs on **`pull_request`** events (e.g. opened, edited, labeled), Copilot performs a set of actions so that PRs stay linked to issues, projects, and team workflows. It can link the PR to the issue, add it to project boards, assign reviewers, apply size and priority labels, and optionally generate the PR description with AI.
+When your workflow runs on **`pull_request`** code and lifecycle events, Copilot keeps PRs connected to projects and team workflows. It can link a distinct branch issue when one exists, add the PR to project boards, assign reviewers, apply size and priority policy, and optionally generate a concise PR description with AI. Unlinked PRs remain supported and are never linked to themselves.
 
 <CardGroup cols={2}>
   <Card title="Workflow setup" icon="play" href="/pull-requests/workflow-setup">
     Enable the action for pull_request events and minimal workflow YAML.
   </Card>
   <Card title="Capabilities" icon="list" href="/pull-requests/capabilities">
-    PR–issue linking, project linking, reviewers, size and priority, AI description, comments and images.
+    PR–issue linking, projects, reviewers, size and priority, AI description, and semantic messages.
   </Card>
   <Card title="AI PR description" icon="file-lines" href="/pull-requests/ai-description">
-    How the configured agent fills your PR template from the issue and branch diff.
+    How the configured agent writes a concise body from optional issue context and the branch diff.
   </Card>
   <Card title="Configuration" icon="gear" href="/pull-requests/configuration">
-    PR-specific inputs: project columns, reviewers, images, AI.
+    PR-specific inputs: project columns, reviewers, locale, and AI.
   </Card>
   <Card title="Examples" icon="file-code" href="/pull-requests/examples">
     Full workflow YAML and common configurations.
@@ -29,12 +29,12 @@ When your workflow runs on **`pull_request`** events (e.g. opened, edited, label
 
 | What happens | What Copilot does |
 |--------------|-------------------|
-| A **PR is opened or reopened** | Links the PR to its issue and projects, assigns reviewers, applies size/priority policy, optionally generates its description, and runs a full Bugbot review. |
+| A **PR is opened or reopened** | Links a distinct branch issue when present, enriches the PR, optionally generates its description, and runs a full Bugbot review. |
 | New commits **synchronize** the PR | Optionally refreshes the AI description and reviews only the new commit range while reconciling every open finding. |
-| PR metadata is **edited** | Normalizes the title without invoking an agent or replaying creation-time mutations. |
-| **Push** to the PR branch | Commit workflow runs; Bugbot can post findings as review comments and update/sync with the issue. You can ask the bot to fix findings from a comment. See [Bugbot](/bugbot). |
+| PR metadata is **edited** | The supplied workflow does not run, preventing automatic body updates from creating workflow noise and leaving that human edit untouched. |
+| **Push** to the PR branch | Commit workflow updates issue progress while the paired PR `synchronize` event exclusively owns Bugbot review for that head. You can ask the bot to fix findings from a comment. See [Bugbot](/bugbot). |
 
-**Bugbot** (potential problems) runs on PR code-change events, on **push** to an issue-linked branch, or on demand. When a PR is available, each analysis publishes one review summary with its new findings attached as inline comments; it does not duplicate those findings as independent PR conversation comments. For full details, see [Bugbot](/bugbot).
+**Bugbot** (potential problems) runs on PR code-change events, on **push** to an issue-linked branch that has no open PR, or on demand. When a PR is available, its PR event publishes one review summary with new findings attached as inline comments; it does not duplicate the review from the paired push or publish findings as independent PR conversation comments. For full details, see [Bugbot](/bugbot).
 
 ## Next steps
 

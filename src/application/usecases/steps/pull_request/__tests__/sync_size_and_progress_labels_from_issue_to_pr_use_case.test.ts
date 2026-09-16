@@ -30,8 +30,8 @@ describe('SyncSizeAndProgressLabelsFromIssueToPrUseCase', () => {
     mockSetLabels.mockReset();
   });
 
-  it('returns executed false when no issue linked', async () => {
-    const param = baseParam({ issueNumber: -1 });
+  it.each([-1, 100, Number.MAX_SAFE_INTEGER + 1, Number.NaN])('returns executed false when no separate safe issue is linked: %s', async (issueNumber) => {
+    const param = baseParam({ issueNumber });
 
     const results = await useCase.invoke(param);
 

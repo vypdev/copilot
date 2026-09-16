@@ -12,6 +12,10 @@ import type {
   BugbotFindingResolution,
 } from "../../domain/bugbot/finding";
 import { sanitizeAgentMarkdown } from "./github_comment_publication_policy";
+import {
+  resolveStaticBugbotCatalog,
+  type BugbotMessageCatalog,
+} from './bugbot_message_catalog';
 
 /** Maximum lossless finding identity accepted by the marker contract. */
 export const MAX_FINDING_ID_LENGTH = 200;
@@ -143,35 +147,36 @@ export function buildCommentBody(
   finding: BugbotFinding,
   resolved: boolean,
   resolution?: BugbotFindingResolution,
-  options: { includeSuggestedChange?: boolean } = {},
+  options: { includeSuggestedChange?: boolean; catalog?: BugbotMessageCatalog } = {},
 ): string {
-  const safeTitle = sanitizeAgentMarkdown(finding.title, 500) || "Potential problem";
-  const safeDescription = sanitizeAgentMarkdown(finding.description, 8_000) || "No description provided.";
+  const catalog = options.catalog ?? resolveStaticBugbotCatalog('en-US');
+  const safeTitle = sanitizeAgentMarkdown(finding.title, 500) || catalog.message('bugbot.finding.defaultTitle');
+  const safeDescription = sanitizeAgentMarkdown(finding.description, 8_000) || catalog.message('bugbot.finding.defaultDescription');
   const safeSeverity = sanitizeAgentMarkdown(finding.severity, 32);
   const safeFile = sanitizeAgentMarkdown(finding.file, 500).replace(/`/g, "\\`");
   const safeSuggestion = sanitizeAgentMarkdown(finding.suggestion, 8_000);
   const safeEvidence = sanitizeAgentMarkdown(finding.evidence, 8_000);
   const safeCategory = sanitizeAgentMarkdown(finding.category, 32);
   const severity = safeSeverity
-    ? `**Severity:** ${safeSeverity}\n\n`
+    ? `**${catalog.message('bugbot.finding.severity')}:** ${safeSeverity}\n\n`
     : "";
   const fileLine =
     safeFile
-      ? `**Location:** \`${safeFile}${finding.line != null ? `:${finding.line}${finding.endLine != null && finding.endLine > finding.line ? `-${finding.endLine}` : ''}` : ""}\`\n\n`
+      ? `**${catalog.message('bugbot.finding.location')}:** \`${safeFile}${finding.line != null ? `:${finding.line}${finding.endLine != null && finding.endLine > finding.line ? `-${finding.endLine}` : ''}` : ""}\`\n\n`
       : "";
   const metadata = [
-    safeCategory ? `**Category:** ${safeCategory}` : '',
-    finding.confidence !== undefined ? `**Confidence:** ${Math.round(finding.confidence * 100)}%` : '',
+    safeCategory ? `**${catalog.message('bugbot.finding.category')}:** ${safeCategory}` : '',
+    finding.confidence !== undefined ? `**${catalog.message('bugbot.finding.confidence')}:** ${Math.round(finding.confidence * 100)}%` : '',
   ].filter(Boolean).join(' · ');
-  const evidence = safeEvidence ? `**Evidence:**\n${safeEvidence}\n\n` : '';
+  const evidence = safeEvidence ? `**${catalog.message('bugbot.finding.evidence')}:**\n${safeEvidence}\n\n` : '';
   const suggestion = safeSuggestion
-    ? `**Suggested fix:**\n${safeSuggestion}\n\n`
+    ? `**${catalog.message('bugbot.finding.suggestedFix')}:**\n${safeSuggestion}\n\n`
     : "";
   const suggestedChange = options.includeSuggestedChange && finding.suggestedCode
-    ? `**Apply this change:**\n\n\`\`\`suggestion\n${finding.suggestedCode}\n\`\`\`\n\n`
+    ? `**${catalog.message('bugbot.finding.applyChange')}:**\n\n\`\`\`suggestion\n${finding.suggestedCode}\n\`\`\`\n\n`
     : '';
   const resolvedNote = resolved
-    ? "\n\n---\n**Resolved** (no longer reported in latest analysis).\n"
+    ? `\n\n---\n**${catalog.message('bugbot.finding.resolvedLabel')}:** ${catalog.message('bugbot.finding.resolved.latest')}\n`
     : "";
   if (!finding.fingerprint || !finding.semanticFingerprint) {
     throw new ApplicationError('validation.invalid-input', 'Prepared finding is missing its local identity.');
@@ -182,4 +187,21 @@ export function buildCommentBody(
 ${severity}${metadata ? `${metadata}\n\n` : ''}${fileLine}${safeDescription}
 ${evidence}
 ${suggestion}${suggestedChange}${resolvedNote}${marker}`;
+}
+
+export function buildResolvedFindingNote(
+  resolution: BugbotFindingResolution,
+  catalog: BugbotMessageCatalog = resolveStaticBugbotCatalog('en-US'),
+): string {
+  const id = resolution === 'dismissed'
+    ? 'bugbot.finding.dismissed'
+    : resolution === 'obsolete'
+      ? 'bugbot.finding.resolved.obsolete'
+      : 'bugbot.finding.resolved.fixed';
+  const label = catalog.message(
+    resolution === 'dismissed'
+      ? 'bugbot.finding.dismissedLabel'
+      : 'bugbot.finding.resolvedLabel',
+  );
+  return `\n\n---\n**${label}:** ${catalog.message(id)}\n`;
 }

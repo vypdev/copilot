@@ -68,6 +68,7 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
     eventName: 'pull_request',
     tokens: { token: 'token' },
     tokenUser: 'bot',
+    locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
     commit: { branch: 'feature/review' },
     currentConfiguration: { parentBranch: 'develop' },
     branches: { development: 'develop', defaultBranch: 'main' },

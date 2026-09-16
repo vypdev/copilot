@@ -15,6 +15,15 @@ counts. It does not mirror findings as independent pull-request conversation
 comments. One separate, stable status card in the PR conversation presents the
 current aggregate projection.
 
+All deterministic Bugbot copy uses one catalog for the whole operation. The
+effective locale is the issue locale for issue-only work and the pull-request
+locale for a verified PR; both inherit the repository locale, which defaults to
+English (`en-US`). English and Spanish are bundled. Another valid BCP-47 locale
+uses a complete schema-validated dynamic catalog or falls back atomically to
+English. Paths, line numbers, commands, marker fields, states, and URLs are
+never translated. Finding titles and descriptions produced by the reviewer are
+validated against the same effective output locale.
+
 Each line comment is anchored to a location proved addressable by the canonical GitHub diff. When only the file can be proved, Bugbot uses a file-level review comment. When the reported file is outside the pull-request diff, it uses the first changed file and explains the fallback. The PR head SHA is revalidated immediately before publication.
 
 When the agent supplies an exact replacement, Bugbot renders a native GitHub suggested change only for a newly proved RIGHT-side line or range. It never guesses an anchor and never adds a suggestion while merely refreshing an older comment whose current anchor cannot be re-proved.

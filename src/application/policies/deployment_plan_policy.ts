@@ -10,10 +10,16 @@ import type {
   MergeQueueProducerEvidence,
   MergeQueueReadiness,
 } from "../../domain/merge_queue_readiness";
-import { redactSensitiveText } from "../../domain/security/sensitive_text";
+import type { LocaleProfile } from '../../domain/locale';
+import {
+  renderMergeQueueReadinessFailure,
+  type MergeQueueMessageId,
+  type MergeQueueMessageView,
+} from './merge_queue_message_catalog';
 
 export interface InitialDeploymentOperationInput {
   readonly operationId: string;
+  readonly locale: LocaleProfile;
   readonly kind: DeploymentKind;
   readonly version: string;
   readonly title: string;
@@ -28,9 +34,13 @@ export interface InitialDeploymentOperationInput {
   readonly publicationWorkflow: string;
 }
 
+export type InitialDeploymentOperation = DeploymentOperationSnapshot & {
+  readonly locale: LocaleProfile;
+};
+
 export function buildInitialDeploymentOperation(
   input: InitialDeploymentOperationInput,
-): DeploymentOperationSnapshot {
+): InitialDeploymentOperation {
   const strategy = input.kind === "release"
     ? input.configuration.releaseReconciliationStrategy
     : input.configuration.hotfixReconciliationStrategy;
@@ -38,6 +48,7 @@ export function buildInitialDeploymentOperation(
     stateVersion: DEPLOYMENT_STATE_VERSION,
     revision: 0,
     operationId: input.operationId,
+    locale: Object.freeze({ ...input.locale }),
     kind: input.kind,
     version: input.version,
     title: input.title,
@@ -76,79 +87,87 @@ export interface TargetMergeCapabilities {
   readonly mergeQueueObservationProblems: readonly MergeQueueObservationProblem[];
 }
 
+export type PullRequestModeDecisionReason =
+  | 'explicit-create-only'
+  | 'policy-observation-failed'
+  | 'auto-merge-rejected'
+  | 'queue-required'
+  | 'queue-not-exposed'
+  | 'auto-merge-configured'
+  | 'auto-merge-disabled'
+  | 'immediately-mergeable'
+  | 'auto-merge-available'
+  | 'create-only-required';
+
+type PullRequestModeDecisionContext = {
+  readonly reasonCode: PullRequestModeDecisionReason;
+};
+
 export type PullRequestModeDecision =
-  | { readonly kind: "mode"; readonly mode: Exclude<ReconciliationPullRequestMode, "auto">; readonly reason: string }
-  | { readonly kind: "unsupported"; readonly reason: string };
+  | (PullRequestModeDecisionContext & {
+      readonly kind: "mode";
+      readonly mode: Exclude<ReconciliationPullRequestMode, "auto">;
+    })
+  | (PullRequestModeDecisionContext & { readonly kind: "unsupported" });
 
 export function selectPullRequestMode(
   configured: ReconciliationPullRequestMode,
   capabilities: TargetMergeCapabilities,
 ): PullRequestModeDecision {
   if (configured === "create-only") {
-    return { kind: "mode", mode: configured, reason: "Explicitly configured." };
+    return { kind: "mode", mode: configured, reasonCode: 'explicit-create-only' };
   }
   if (capabilities.mergeQueueObservationProblems.length > 0) {
     return {
       kind: "unsupported",
-      reason: `The target merge policy could not be verified: ${boundedDiagnostic(capabilities.mergeQueueObservationProblems[0].message)}`,
+      reasonCode: 'policy-observation-failed',
     };
   }
   if (capabilities.mergeQueueRequired) {
     return configured === "auto-merge"
-      ? { kind: "unsupported", reason: "Auto-merge mode was selected, but the target requires its merge queue." }
-      : { kind: "mode", mode: "merge-queue", reason: "The target requires its merge queue." };
+      ? { kind: "unsupported", reasonCode: 'auto-merge-rejected' }
+      : { kind: "mode", mode: "merge-queue", reasonCode: 'queue-required' };
   }
   if (configured === "merge-queue") {
-    return { kind: "unsupported", reason: "The target does not expose a required merge queue." };
+    return { kind: "unsupported", reasonCode: 'queue-not-exposed' };
   }
   if (configured === "auto-merge") {
     return capabilities.autoMergeAllowed
-      ? { kind: "mode", mode: "auto-merge", reason: "Native auto-merge was explicitly configured." }
-      : { kind: "unsupported", reason: "Native auto-merge is disabled for this repository." };
+      ? { kind: "mode", mode: "auto-merge", reasonCode: 'auto-merge-configured' }
+      : { kind: "unsupported", reasonCode: 'auto-merge-disabled' };
   }
   if (capabilities.immediatelyMergeable) {
-    return { kind: "mode", mode: "auto-merge", reason: "GitHub reports the PR ready; native auto-merge preserves branch protection." };
+    return { kind: "mode", mode: "auto-merge", reasonCode: 'immediately-mergeable' };
   }
   return capabilities.autoMergeAllowed
-    ? { kind: "mode", mode: "auto-merge", reason: "GitHub will merge after checks and reviews complete." }
-    : { kind: "mode", mode: "create-only", reason: "Repository auto-merge is unavailable; maintainer merge is required." };
+    ? { kind: "mode", mode: "auto-merge", reasonCode: 'auto-merge-available' }
+    : { kind: "mode", mode: "create-only", reasonCode: 'create-only-required' };
 }
 
-export function mergeQueueReadinessFailureMessage(readiness: MergeQueueReadiness, locale: string = "en-US"): string {
-  const spanish = locale.toLowerCase().startsWith("es");
-  const failed = readiness.producers.filter((producer) =>
-    producer.verdict === "unsupported" || producer.verdict === "unknown");
-  const producerDetails = failed.slice(0, 5)
-    .map((producer) => `${boundedDiagnostic(producer.name)} [${producer.verdict}]: ${boundedDiagnostic(producer.reason)}`)
-    .join("; ");
-  const problemDetails = readiness.problems.slice(0, 3)
-    .map((problem) => `${problem.area}: ${boundedDiagnostic(problem.message)}`)
-    .join("; ");
-  const details = [producerDetails, problemDetails].filter(Boolean).join("; ");
-  const hasUnsupportedProducer = failed.some((producer) => producer.verdict === "unsupported");
-  const hasObservationProblem = readiness.problems.length > 0;
-  if (spanish) {
-    const action = hasUnsupportedProducer
-      ? "Añade merge_group: checks_requested al workflow requerido y vuelve a intentarlo."
-      : hasObservationProblem
-        ? "Restaura el acceso de lectura y una respuesta válida para la política y los workflows del destino, y vuelve a intentarlo."
-        : "Haz que el productor requerido soporte merge groups o añade una atestación exacta revisada y vuelve a intentarlo.";
-    return `La preparación de la merge queue está en estado ${readiness.verdict} para el destino ${readiness.targetRole} ${boundedDiagnostic(readiness.targetBranch)}. ${details || "La evidencia del productor requerido está incompleta."} ${action}`;
-  }
-  const action = hasUnsupportedProducer
-    ? "Add merge_group: checks_requested to the required workflow, then retry."
-    : hasObservationProblem
-      ? "Restore read access and a valid response for the target policy and workflows, then retry."
-      : "Make the required producer support merge groups or add an exact reviewed check attestation, then retry.";
-  return `Merge queue readiness is ${readiness.verdict} for ${readiness.targetRole} target ${boundedDiagnostic(readiness.targetBranch)}. ${details || "Required producer evidence is incomplete."} ${action}`;
+export function pullRequestModeDecisionMessage(
+  decision: PullRequestModeDecision,
+  catalog: MergeQueueMessageView,
+): string {
+  const ids: Readonly<Record<PullRequestModeDecisionReason, MergeQueueMessageId>> = {
+    'explicit-create-only': 'mergeQueue.decision.explicitCreateOnly',
+    'policy-observation-failed': 'mergeQueue.decision.policyObservationFailed',
+    'auto-merge-rejected': 'mergeQueue.decision.autoMergeRejected',
+    'queue-required': 'mergeQueue.decision.queueRequired',
+    'queue-not-exposed': 'mergeQueue.decision.queueNotExposed',
+    'auto-merge-configured': 'mergeQueue.decision.autoMergeConfigured',
+    'auto-merge-disabled': 'mergeQueue.decision.autoMergeDisabled',
+    'immediately-mergeable': 'mergeQueue.decision.immediatelyMergeable',
+    'auto-merge-available': 'mergeQueue.decision.autoMergeAvailable',
+    'create-only-required': 'mergeQueue.decision.createOnlyRequired',
+  };
+  return catalog.message(ids[decision.reasonCode]);
 }
 
-function boundedDiagnostic(value: string): string {
-  return redactSensitiveText(value)
-    .replace(/[\r\n<>]/g, " ")
-    .replace(/::/g, "﹕﹕")
-    .replace(/@/g, "@\u200b")
-    .slice(0, 500);
+export function mergeQueueReadinessFailureMessage(
+  readiness: MergeQueueReadiness,
+  catalog: MergeQueueMessageView,
+): string {
+  return renderMergeQueueReadinessFailure(readiness, catalog);
 }
 
 export type BackmergeModeDecision =

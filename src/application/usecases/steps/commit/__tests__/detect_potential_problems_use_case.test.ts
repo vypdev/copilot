@@ -51,6 +51,8 @@ const mockListPullRequestReviews = jest.fn();
 const mockUpdatePullRequestReview = jest.fn();
 
 const mockAskAgent = jest.fn();
+const mockPublishTelemetry = jest.fn();
+const mockResolveCatalog = jest.fn();
 let issueCoverageOverride: BugbotSourceCoverage | undefined;
 
 function completeCoverage(source: BugbotContextSource, items: number) {
@@ -82,6 +84,7 @@ function baseParam(overrides: Record<string, unknown> = {}): Execution {
     issueNumber: 42,
     tokenUser: "bot",
     tokens: { token: "token" },
+    locale: { repository: "en-US", issue: "en-US", pullRequest: "en-US" },
     commit: { branch: "feature/42-add-feature" },
     currentConfiguration: { parentBranch: "develop" },
     branches: { development: "develop" },
@@ -238,12 +241,14 @@ describe("DetectPotentialProblemsUseCase", () => {
           prompt: string;
           options?: unknown;
         }) =>
-          mockAskAgent(
+          Promise.resolve(mockAskAgent(
             request.configuration,
             request.agentId,
             request.prompt,
             request.options,
-          ),
+          )).then((response) => response && typeof response === 'object' && !Array.isArray(response)
+            ? { outputLocale: 'en-US', ...response }
+            : response),
       },
       {
         context,
@@ -286,6 +291,8 @@ describe("DetectPotentialProblemsUseCase", () => {
           },
         },
       },
+      { publish: mockPublishTelemetry },
+      { resolve: (request) => mockResolveCatalog(request) },
     );
     mockListIssueComments.mockReset();
     mockAddComment.mockReset();
@@ -313,6 +320,13 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockListPullRequestReviews.mockReset().mockResolvedValue([]);
     mockUpdatePullRequestReview.mockReset().mockResolvedValue(undefined);
     mockAskAgent.mockReset();
+    mockPublishTelemetry.mockReset();
+    mockResolveCatalog.mockReset().mockImplementation(async (request) => ({
+      requestedLocale: request.targetLocale,
+      resolvedLocale: request.targetLocale,
+      source: 'exact',
+      messages: request.sourceCatalog.messages,
+    }));
     issueCoverageOverride = undefined;
 
     mockListIssueComments.mockResolvedValue([]);
@@ -337,6 +351,22 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(results).toHaveLength(0);
     expect(mockListIssueComments).not.toHaveBeenCalled();
     expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockResolveCatalog).not.toHaveBeenCalled();
+  });
+
+  it('does not resolve presentation copy or mutate SCM in dry-run mode', async () => {
+    mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
+    const param = baseParam();
+
+    const results = await param.ai.withBugbotReviewConfiguration(
+      { publicationMode: 'dry-run' },
+      () => invokeUseCase(useCase, param),
+    );
+
+    expect(results[0].payload).toEqual(expect.objectContaining({ dryRun: true }));
+    expect(mockResolveCatalog).not.toHaveBeenCalled();
+    expect(mockAddComment).not.toHaveBeenCalled();
+    expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
   });
 
   it("returns empty results when OpenCode is not configured (no model)", async () => {
@@ -368,6 +398,33 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(mockAskAgent).not.toHaveBeenCalled();
   });
 
+  it('lets the PR event own review when a push preflight discovers an exact-head open PR', async () => {
+    mockFindExactHeadCandidateNumbers.mockResolvedValue([17]);
+    mockGetPullRequestHeadSha.mockResolvedValue('a'.repeat(40));
+    const param = baseParam({
+      eventName: 'push',
+      inputs: { before: 'b'.repeat(40), after: 'a'.repeat(40) },
+    });
+
+    const results = await invokeUseCase(useCase, param);
+
+    expect(results).toEqual([]);
+    expect(mockFindExactHeadCandidateNumbers).toHaveBeenCalledWith('feature/42-add-feature');
+    expect(mockListIssueComments).not.toHaveBeenCalled();
+    expect(mockListPullRequestReviewComments).not.toHaveBeenCalled();
+    expect(mockGetReviewDiffSnapshot).not.toHaveBeenCalled();
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockPublishTelemetry).toHaveBeenCalledWith(expect.objectContaining({
+      outcome: 'skipped',
+      errorCategory: 'pull_request_ownership',
+      pullRequestNumber: 17,
+      contextSelectionReason: 'exact-head',
+      contextCandidateBucket: '1',
+      contextLogicalProviderReads: 1,
+      contextRawProviderRequests: 1,
+    }));
+  });
+
   it('skips draft pull requests when draft reviews are disabled', async () => {
     const results = await invokeUseCase(useCase, baseParam({
       issueNumber: -1,
@@ -385,10 +442,15 @@ describe("DetectPotentialProblemsUseCase", () => {
 
   it('runs issue-only analysis without inferring a pull request branch', async () => {
     mockFindExactHeadCandidateNumbers.mockResolvedValue([]);
-    mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
+    mockAskAgent.mockResolvedValue({
+      outputLocale: 'fr-FR',
+      findings: [{ id: 'src/a.ts:1:test', title: 'Défaut', description: 'Description' }],
+      resolved_findings: [],
+    });
     const param = baseParam({
       eventName: 'issue_comment',
       commit: { branch: '' },
+      locale: { issue: 'fr-FR', pullRequest: 'es-ES' },
       inputs: { eventName: 'issue_comment', repo: { owner: 'owner', repo: 'repo' } },
     });
 
@@ -396,6 +458,9 @@ describe("DetectPotentialProblemsUseCase", () => {
 
     expect(results[0].success).toBe(true);
     expect(mockAskAgent).toHaveBeenCalledTimes(1);
+    expect(mockAskAgent.mock.calls[0][2]).toContain('fr-FR');
+    expect(mockResolveCatalog).toHaveBeenCalledWith(expect.objectContaining({ targetLocale: 'fr-FR' }));
+    expect(mockAddComment).toHaveBeenCalledTimes(1);
   });
 
   it("returns a failure when askAgent returns null", async () => {
@@ -432,7 +497,33 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(mockAddComment).not.toHaveBeenCalled();
   });
 
-  it('returns success with "no new findings, no resolved" when findings and resolved_findings are empty', async () => {
+  it("rejects a mismatched output locale before publishing or resolving findings", async () => {
+    mockAskAgent.mockResolvedValue({
+      outputLocale: "fr-FR",
+      findings: [{
+        id: "src/foo.ts:10:possible-null",
+        title: "Déréférencement nul possible",
+        description: "La variable peut être nulle.",
+      }],
+      resolved_findings: ["existing-finding"],
+    });
+
+    const results = await invokeUseCase(useCase, baseParam());
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toEqual(expect.objectContaining({ success: false, executed: true }));
+    expect(results[0].errors[0]).toEqual(expect.objectContaining({
+      code: "locale.output-invalid",
+    }));
+    expect(mockAddComment).not.toHaveBeenCalled();
+    expect(mockUpdateComment).not.toHaveBeenCalled();
+    expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+    expect(mockUpdatePullRequestReviewComment).not.toHaveBeenCalled();
+    expect(mockResolvePullRequestReviewThread).not.toHaveBeenCalled();
+    expect(mockUnresolvePullRequestReviewThread).not.toHaveBeenCalled();
+  });
+
+  it('does not resolve presentation copy for a branch review with no publication', async () => {
     mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
 
     const results = await invokeUseCase(useCase, baseParam());
@@ -443,6 +534,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(results[0].steps?.[0]).toContain("no new findings, no resolved");
     expect(mockAddComment).not.toHaveBeenCalled();
     expect(mockUpdateComment).not.toHaveBeenCalled();
+    expect(mockResolveCatalog).not.toHaveBeenCalled();
   });
 
   it('completes bounded partial analysis without claiming the target is clean', async () => {
@@ -497,7 +589,7 @@ describe("DetectPotentialProblemsUseCase", () => {
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
-    expect(results[0].steps?.[0]).toContain("1 new/current finding(s)");
+    expect(results[0].steps?.[0]).toContain("1 new/current finding");
     expect(mockAddComment).toHaveBeenCalledTimes(1);
     expect(mockAddComment).toHaveBeenCalledWith(
       "owner",
@@ -525,7 +617,16 @@ describe("DetectPotentialProblemsUseCase", () => {
       file: "src/bar.ts",
       line: 5,
     };
-    mockAskAgent.mockResolvedValue({ findings: [finding] });
+    mockAskAgent.mockResolvedValue({ outputLocale: 'fr-FR', findings: [finding] });
+    mockResolveCatalog.mockImplementation(async (request) => ({
+      requestedLocale: request.targetLocale,
+      resolvedLocale: request.targetLocale,
+      source: 'dynamic',
+      messages: {
+        ...request.sourceCatalog.messages,
+        'bugbot.snapshot.heading': 'Revue Bugbot',
+      },
+    }));
     mockFindExactHeadCandidateNumbers.mockResolvedValue([100]);
     mockGetPullRequestHeadSha.mockResolvedValue("abc123");
     mockGetChangedFiles.mockResolvedValue([
@@ -539,7 +640,9 @@ describe("DetectPotentialProblemsUseCase", () => {
     ]);
     mockListPullRequestReviewComments.mockResolvedValue([]);
 
-    await invokeUseCase(useCase, baseParam());
+    await invokeUseCase(useCase, baseParam({
+      locale: { issue: 'es-ES', pullRequest: 'fr-FR' },
+    }));
 
     expect(mockCreateReviewWithComments).toHaveBeenCalledTimes(1);
     expect(mockCreateReviewWithComments).toHaveBeenCalledWith(
@@ -547,7 +650,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       "repo",
       100,
       "abc123",
-      expect.stringContaining("## 🤖 Bugbot review"),
+      expect.stringContaining("## 🤖 Revue Bugbot"),
       expect.arrayContaining([
         expect.objectContaining({
           path: "src/bar.ts",
@@ -557,6 +660,9 @@ describe("DetectPotentialProblemsUseCase", () => {
       ]),
       "token",
     );
+    expect(mockAskAgent.mock.calls[0][2]).toContain('fr-FR');
+    expect(mockResolveCatalog).toHaveBeenCalledTimes(1);
+    expect(mockResolveCatalog).toHaveBeenCalledWith(expect.objectContaining({ targetLocale: 'fr-FR' }));
   });
 
   it("fails presentation closed when an open PR has no trusted author bound", async () => {
@@ -981,6 +1087,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       },
     );
     mockAskAgent.mockResolvedValue({
+      outputLocale: 'en-US',
       findings: [
         {
           id: "f1",
@@ -1033,7 +1140,7 @@ describe("DetectPotentialProblemsUseCase", () => {
 
     expect(results[0].success).toBe(true);
     expect(results[0].steps?.[0]).toMatch(
-      /1 new\/current finding\(s\).*1 marked as resolved/,
+      /1 new\/current finding.*1 marked as resolved/,
     );
   });
 
@@ -1075,7 +1182,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       'owner',
       'repo',
       200,
-      expect.stringContaining('Bugbot status'),
+      expect.stringContaining('Bugbot: review needs verification'),
       'token',
       { commitSha: 'sha1' },
     );
@@ -1220,7 +1327,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       const updatedBody = mockUpdateComment.mock.calls[0][4];
       expect(updatedBody).toContain("resolved:true");
       expect(updatedBody).toContain(
-          "**Resolved** (configured agent confirmed fixed in latest analysis)",
+          "**Resolved:** The configured agent confirmed it was fixed in the latest analysis.",
       );
       expect(updatedBody).toContain("copilot-bugbot");
     });
@@ -1422,11 +1529,10 @@ describe("DetectPotentialProblemsUseCase", () => {
       const bodies = mockAddComment.mock.calls.map((c) => c[3] as string);
       const overflowComment = bodies.find(
         (b) =>
-          b.includes("More findings (comment limit)") ||
-          b.includes("more finding(s)"),
+          b.includes("More findings (comment limit)"),
       );
       expect(overflowComment).toBeDefined();
-      expect(overflowComment).toContain("more finding(s)");
+      expect(overflowComment).toContain("more findings");
       const findingComments = bodies.filter(
         (b) => b.includes("copilot-bugbot") && b.includes("finding_id"),
       );

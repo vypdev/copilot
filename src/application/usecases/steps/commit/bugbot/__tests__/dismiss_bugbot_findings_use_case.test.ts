@@ -11,7 +11,7 @@ jest.mock('../mark_findings_resolved_workflow', () => ({
     markFindingsResolved: (...args: unknown[]) => mockMarkFindingsResolved(...args),
 }));
 
-function operation(): BugbotContextSelectionContext {
+function operation(): BugbotContextSelectionContext & { readonly locale: { readonly issue: string; readonly pullRequest: string } } {
     return {
         repository: { owner: 'owner', name: 'repo' },
         target: {
@@ -27,6 +27,7 @@ function operation(): BugbotContextSelectionContext {
         trigger: { kind: 'issue_comment', headOwner: 'owner' },
         ignorePatterns: [],
         organizationRules: [],
+        locale: { issue: 'en-US', pullRequest: 'en-US' },
     };
 }
 
@@ -62,6 +63,84 @@ describe('DismissBugbotFindingsUseCase', () => {
         expect(results[0]).toMatchObject({ success: true, executed: true });
     });
 
+    it('uses the issue locale for the durable dismissal note', async () => {
+        const useCase = new DismissBugbotFindingsUseCase({
+            contextPorts: {} as never,
+            resolutionPorts: {} as never,
+        });
+
+        await useCase.invoke({
+            operation: {
+                ...operation(),
+                locale: { issue: 'es-MX', pullRequest: 'fr-FR' },
+                agentConfiguration: { provider: 'codex', model: 'model' },
+            },
+            findingIds: ['finding-1'],
+        });
+
+        const catalog = mockMarkFindingsResolved.mock.calls[0][0].catalog;
+        expect(catalog).toMatchObject({ resolutionSource: 'base', locale: 'es-ES' });
+        expect(catalog.message('bugbot.finding.dismissedLabel')).toBe('Descartado');
+    });
+
+    it('uses the PR locale and reports every failed dismissal mutation', async () => {
+        mockLoadBugbotContext.mockResolvedValueOnce({
+            existingByFindingId: {
+                'finding-1': { issue: { commentId: 10, resolved: false } },
+                'finding-2': { issue: { commentId: 11, resolved: false } },
+            },
+            issueComments: [],
+            canonicalPullRequest: null,
+            selectionReason: 'none',
+            coverage: { status: 'complete', sources: [] },
+            eligibleResolutionIds: new Set(['finding-1', 'finding-2']),
+            previousFindingsBlock: '',
+            prContext: null,
+            unresolvedFindingsWithBody: [],
+        });
+        mockMarkFindingsResolved.mockResolvedValueOnce([new Error('provider detail')]);
+        const useCase = new DismissBugbotFindingsUseCase({
+            contextPorts: {} as never,
+            resolutionPorts: {} as never,
+        });
+        const request = operation();
+
+        const results = await useCase.invoke({
+            operation: {
+                ...request,
+                target: { ...request.target, isPullRequest: true, pullRequestNumber: 17 },
+                locale: { issue: 'fr-FR', pullRequest: 'es-MX' },
+            },
+            findingIds: ['finding-1', 'finding-2'],
+        });
+
+        expect(mockMarkFindingsResolved.mock.calls[0][0].catalog)
+            .toMatchObject({ resolutionSource: 'base', locale: 'es-ES' });
+        expect(results[0].steps[0]).toContain('Dismissed 2 Bugbot findings');
+        expect(results[0].errors).toHaveLength(1);
+        expect(results[0].errors[0].message).toBe('A Bugbot finding could not be dismissed.');
+    });
+
+    it('uses the required PR locale for dismissal presentation', async () => {
+        const useCase = new DismissBugbotFindingsUseCase({
+            contextPorts: {} as never,
+            resolutionPorts: {} as never,
+        });
+        const request = operation();
+
+        await useCase.invoke({
+            operation: {
+                ...request,
+                target: { ...request.target, isPullRequest: true, pullRequestNumber: 17 },
+                locale: { issue: 'fr-FR', pullRequest: 'es-ES' },
+            },
+            findingIds: ['finding-1'],
+        });
+
+        expect(mockMarkFindingsResolved.mock.calls[0][0].catalog)
+            .toMatchObject({ resolutionSource: 'exact', locale: 'es-ES' });
+    });
+
     it('is an idempotent no-op when no requested finding exists', async () => {
         const useCase = new DismissBugbotFindingsUseCase({
             contextPorts: {} as never,
@@ -80,7 +159,7 @@ describe('DismissBugbotFindingsUseCase', () => {
             resolutionPorts: {} as never,
         });
         const request = operation();
-        const fallbackOperation: BugbotContextSelectionContext = {
+        const fallbackOperation = {
             ...request,
             target: {
                 ...request.target,
@@ -108,7 +187,7 @@ describe('DismissBugbotFindingsUseCase', () => {
             resolutionPorts: {} as never,
         });
         const request = operation();
-        const branchlessOperation: BugbotContextSelectionContext = {
+        const branchlessOperation = {
             ...request,
             target: {
                 ...request.target,

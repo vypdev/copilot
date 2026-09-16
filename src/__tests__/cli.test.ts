@@ -32,6 +32,7 @@ jest.mock('../data/repository/issue/issue_metadata_repository', () => ({
 const mockFix = jest.fn();
 jest.mock('../infrastructure/composition/agent_capability_composition_root', () => ({
   createFixerQueryPort: () => ({ fix: mockFix }),
+  createLanguageQueryPort: () => ({ query: jest.fn() }),
 }));
 
 const mockGetSetupToken = jest.fn();
@@ -44,6 +45,20 @@ jest.mock('../utils/setup_files', () => {
     setupEnvFileExists: (...args: unknown[]) => mockSetupEnvFileExists(...args),
   };
 });
+
+const mockDoctorExecute = jest.fn();
+const mockDoctorPresent = jest.fn();
+const mockDoctorPresenter = jest.fn();
+jest.mock('../infrastructure/composition/setup_doctor_composition_root', () => ({
+  createSetupDoctorUseCase: () => ({ execute: mockDoctorExecute }),
+  createSetupMergeQueueReadinessUseCase: () => ({ inspect: jest.fn().mockResolvedValue([]) }),
+}));
+jest.mock('../cli/setup_doctor_presenter', () => ({
+  SetupDoctorPresenter: jest.fn().mockImplementation((...args: unknown[]) => {
+    mockDoctorPresenter(...args);
+    return { present: mockDoctorPresent };
+  }),
+}));
 
 jest.mock('../infrastructure/composition/setup_credentials_composition_root', () => ({
   createSetupCredentialsUseCase: () => ({ collect: jest.fn().mockResolvedValue({ collection: { apiKeys: [] }, checks: [], existingSecretNames: [] }) }),
@@ -76,7 +91,11 @@ describe('CLI', () => {
     process.env.AGENT_MODEL_PROVIDER = 'openai';
     process.env.OPENAI_API_KEY = 'test-key';
     exitSpy = jest.spyOn(process, 'exit').mockImplementation((() => {}) as () => never);
-    (execSync as jest.Mock).mockReturnValue(Buffer.from('https://github.com/test-owner/test-repo.git'));
+    (execSync as jest.Mock).mockImplementation((command: string) => Buffer.from(
+      command === 'git rev-parse HEAD'
+        ? 'a'.repeat(40)
+        : 'https://github.com/test-owner/test-repo.git',
+    ));
     (runLocalAction as jest.Mock).mockResolvedValue(undefined);
     mockIsIssue.mockResolvedValue(true);
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -86,6 +105,10 @@ describe('CLI', () => {
       override?.trim() && override.trim().length >= 20 ? override.trim() : undefined
     );
     mockSetupEnvFileExists.mockReturnValue(false);
+    mockDoctorExecute.mockResolvedValue({
+      catalog: { locale: 'en-US', message: jest.fn() },
+      report: { healthy: true, checks: [], totals: { pass: 0, warn: 0, fail: 0, skipped: 0 } },
+    });
   });
 
   afterEach(() => {
@@ -116,9 +139,14 @@ describe('CLI', () => {
       expect(runLocalAction).toHaveBeenCalledTimes(1);
       const params = (runLocalAction as jest.Mock).mock.calls[0][0];
       expect(params[INPUT_KEYS.SINGLE_ACTION]).toBe(ACTIONS.THINK);
-      expect(params[INPUT_KEYS.WELCOME_TITLE]).toContain('AI Reasoning');
+      expect(params).not.toHaveProperty(INPUT_KEYS.SINGLE_ACTION_ISSUE);
+      expect(params).not.toHaveProperty(INPUT_KEYS.WELCOME_TITLE);
       expect(params.repo).toEqual({ owner: 'test-owner', repo: 'test-repo' });
-      expect(params.comment?.body || params.eventName).toBeDefined();
+      expect(params).toMatchObject({
+        eventName: 'issue_comment',
+        issue: {},
+        comment: { body: 'how does X work?' },
+      });
     });
 
     it('exits with error when getGitInfo fails', async () => {
@@ -140,6 +168,32 @@ describe('CLI', () => {
       await program.parseAsync(['node', 'cli', 'think', '-q', 'hello']);
 
       expect(logError).toHaveBeenCalled();
+      expect(process.exitCode).toBe(1);
+    });
+  });
+
+  describe('doctor', () => {
+    it('presents the report with its resolved catalog and returns a failing exit code when unhealthy', async () => {
+      const catalog = { locale: 'es-ES', message: jest.fn() };
+      const report = { healthy: false, checks: [], totals: { pass: 0, warn: 0, fail: 1, skipped: 0 } };
+      mockDoctorExecute.mockResolvedValueOnce({ catalog, report });
+
+      await program.parseAsync([
+        'node',
+        'cli',
+        'doctor',
+        '--non-interactive',
+        '--token',
+        'github_pat_doctor_test_token',
+      ]);
+
+      expect(mockDoctorExecute).toHaveBeenCalledWith(expect.objectContaining({
+        owner: 'test-owner',
+        repository: 'test-repo',
+        setupToken: 'github_pat_doctor_test_token',
+      }));
+      expect(mockDoctorPresenter).toHaveBeenCalledWith(catalog);
+      expect(mockDoctorPresent).toHaveBeenCalledWith(report);
       expect(process.exitCode).toBe(1);
     });
   });
@@ -229,6 +283,7 @@ describe('CLI', () => {
       expect(params[INPUT_KEYS.SINGLE_ACTION]).toBe(ACTIONS.CHECK_PROGRESS);
       expect(params[INPUT_KEYS.SINGLE_ACTION_ISSUE]).toBe(99);
       expect(params.issue?.number).toBe(99);
+      expect(params.after).toBe('a'.repeat(40));
       expect(params[INPUT_KEYS.WELCOME_TITLE]).toContain('Progress');
     });
 
@@ -270,6 +325,20 @@ describe('CLI', () => {
       expect(runLocalAction).toHaveBeenCalledTimes(1);
       const params = (runLocalAction as jest.Mock).mock.calls[0][0];
       expect(params.commits?.ref).toBe('refs/heads/feature/foo');
+    });
+
+    it('fails closed before local execution when the workspace revision is unavailable', async () => {
+      (execSync as jest.Mock).mockImplementation((command: string) => {
+        if (command === 'git rev-parse HEAD') throw new Error('missing head');
+        return Buffer.from('https://github.com/test-owner/test-repo.git');
+      });
+      const { logError } = require('../utils/logger');
+
+      await program.parseAsync(['node', 'cli', 'check-progress', '-i', '5']);
+
+      expect(logError).toHaveBeenCalledWith('Unable to resolve the current Git revision for progress analysis.');
+      expect(runLocalAction).not.toHaveBeenCalled();
+      expect(process.exitCode).toBe(1);
     });
 
     it('omits the correlation reference outside debug mode for check-progress failures', async () => {

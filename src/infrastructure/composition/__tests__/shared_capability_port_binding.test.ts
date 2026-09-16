@@ -1,20 +1,30 @@
 import {
+  bindIssueCommentQuery,
   bindIssueCommentUpdate,
   bindIssueDescriptionQuery,
   bindIssueNotification,
   bindIssueTitle,
   bindOrganizationMembers,
+  bindPublicationSourceQuery,
   bindProjectContent,
 } from '../shared_capability_port_binding';
 
 const binding = { owner: 'acme', repository: 'demo', token: 'secret' };
 
 describe('shared capability repository bindings', () => {
-  it('binds organization, description, notification, and comment-update credentials once', async () => {
+  it('binds authoritative publication source lookups without exposing credentials', async () => {
+    const getBranchHeadSha = jest.fn().mockResolvedValue('a'.repeat(40));
+    await expect(bindPublicationSourceQuery({ getBranchHeadSha }, binding).getBranchHeadSha('feature/work'))
+      .resolves.toBe('a'.repeat(40));
+    expect(getBranchHeadSha).toHaveBeenCalledWith('acme', 'demo', 'feature/work', 'secret');
+  });
+
+  it('binds organization, description, notification, and comment credentials once', async () => {
     const getAllMembers = jest.fn().mockResolvedValue(['alice']);
     const getDescription = jest.fn().mockResolvedValue('body');
     const addComment = jest.fn().mockResolvedValue(undefined);
     const updateComment = jest.fn().mockResolvedValue(undefined);
+    const listIssueComments = jest.fn().mockResolvedValue([{ id: 1, body: 'answer' }]);
 
     await expect(bindOrganizationMembers({ getAllMembers } as never, binding).getAllMembers())
       .resolves.toEqual(['alice']);
@@ -22,11 +32,14 @@ describe('shared capability repository bindings', () => {
       .resolves.toBe('body');
     await bindIssueNotification({ addComment } as never, binding).addComment(7, 'done');
     await bindIssueCommentUpdate({ updateComment } as never, binding).updateComment(7, 70, 'translated');
+    await expect(bindIssueCommentQuery({ listIssueComments }, binding).listIssueComments(7))
+      .resolves.toEqual([{ id: 1, body: 'answer' }]);
 
     expect(getAllMembers).toHaveBeenCalledWith('acme', 'secret');
     expect(getDescription).toHaveBeenCalledWith('acme', 'demo', 7, 'secret');
     expect(addComment).toHaveBeenCalledWith('acme', 'demo', 7, 'done', 'secret');
     expect(updateComment).toHaveBeenCalledWith('acme', 'demo', 7, 70, 'translated', 'secret');
+    expect(listIssueComments).toHaveBeenCalledWith('acme', 'demo', 7, 'secret');
   });
 
   it('binds every issue-title operation without exposing credentials to the use case', async () => {
@@ -78,8 +91,8 @@ describe('shared capability repository bindings', () => {
 
   it('rehydrates project references only inside the bound project adapter', async () => {
     const getId = jest.fn().mockResolvedValue('ISSUE_10');
-    const linkContentId = jest.fn().mockResolvedValue(true);
-    const moveIssueToColumn = jest.fn().mockResolvedValue(true);
+    const linkContentId = jest.fn().mockResolvedValue('PVTI_1');
+    const moveProjectItemToColumn = jest.fn().mockResolvedValue(true);
     const project = {
       id: 'PVT_1',
       title: 'Delivery',
@@ -90,19 +103,19 @@ describe('shared capability repository bindings', () => {
     };
     const port = bindProjectContent(
       { getId } as never,
-      { moveIssueToColumn } as never,
+      { moveProjectItemToColumn } as never,
       { linkContentId } as never,
       binding,
     );
 
     await port.resolveIssueContentId(10);
     await port.linkContentId(project, 'ISSUE_10');
-    await port.moveContent(project, 10, 'In progress');
+    await port.moveContent(project, 'PVTI_1', 'In progress');
 
     expect(getId).toHaveBeenCalledWith('acme', 'demo', 10, 'secret');
     expect(linkContentId).toHaveBeenCalledWith(expect.objectContaining(project), 'ISSUE_10', 'secret');
-    expect(moveIssueToColumn).toHaveBeenCalledWith(
-      expect.objectContaining(project), 'acme', 'demo', 10, 'In progress', 'secret',
+    expect(moveProjectItemToColumn).toHaveBeenCalledWith(
+      expect.objectContaining(project), 'PVTI_1', 'In progress', 'secret',
     );
   });
 });

@@ -6,7 +6,6 @@ import { Commit } from "./commit";
 import { Config } from "./config";
 import { Emoji } from "./emoji";
 import { Hotfix } from "./hotfix";
-import { Images } from "./images";
 import { Issue } from "./issue";
 import { IssueTypes } from "./issue_types";
 import { Labels } from "./labels";
@@ -39,7 +38,6 @@ export class Execution {
     singleAction: SingleAction;
     commitPrefixBuilder: string;
     emoji: Emoji;
-    images: Images;
     tokens: Tokens;
     ai: Ai;
     labels: Labels;
@@ -174,7 +172,6 @@ export class Execution {
         this.commitPrefixBuilder = components.commitPrefixBuilder;
         this.issue = components.issue;
         this.pullRequest = components.pullRequest;
-        this.images = components.images;
         this.tokens = components.tokens;
         this.ai = components.ai;
         this.emoji = components.emoji;

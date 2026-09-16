@@ -169,6 +169,7 @@ function scmPorts(provider: InMemoryReviewProvider) {
 function execution(mode: 'publish' | 'dry-run' = 'publish'): Execution {
   return {
     owner: 'org', repo: 'repo', issueNumber: -1, tokenUser: 'bot', tokens: { token: 'token' },
+    locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
     isPullRequest: true,
     inputs: { eventName: 'pull_request', pull_request: { head: { sha: 'a'.repeat(40) } } },
     pullRequest: { number: 7, head: 'feature/review', action: 'opened' },
@@ -188,7 +189,10 @@ function finding(id = 'unchecked-token', file = 'src/auth.ts') {
 describe('Bugbot review lifecycle E2E contract', () => {
   it('publishes one native review and durably suppresses a manually dismissed moved finding', async () => {
     const provider = new InMemoryReviewProvider();
-    const responses = [{ findings: [finding()] }, { findings: [finding('renamed-id', 'src/security/auth.ts')] }];
+    const responses = [
+      { outputLocale: 'en-US', findings: [finding()], resolved_findings: [] },
+      { outputLocale: 'en-US', findings: [finding('renamed-id', 'src/security/auth.ts')], resolved_findings: [] },
+    ];
     const telemetry: unknown[] = [];
     const useCase = new DetectPotentialProblemsUseCase(
       { query: jest.fn(async () => responses.shift()) },
@@ -214,7 +218,7 @@ describe('Bugbot review lifecycle E2E contract', () => {
   it('executes analysis in dry-run mode without any provider mutation', async () => {
     const provider = new InMemoryReviewProvider();
     const useCase = new DetectPotentialProblemsUseCase(
-      { query: jest.fn(async () => ({ findings: [finding()] })) },
+      { query: jest.fn(async () => ({ outputLocale: 'en-US', findings: [finding()], resolved_findings: [] })) },
       scmPorts(provider),
     );
 

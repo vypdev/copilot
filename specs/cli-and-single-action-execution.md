@@ -1,7 +1,7 @@
 # CLI and Single-Action Execution
 
 - Status: As-built baseline
-- Date: 2026-09-11
+- Date: 2026-09-15
 - Owners: Copilot maintainers
 - Scope: the published `copilot` CLI, local action adapter, and bounded GitHub Action single-action dispatch
 - Related issues/PRs: setup, execution lifecycle, Bugbot, and release orchestration SDDs
@@ -48,6 +48,9 @@ unmaintainable interfaces.
 7. Durable deployment continuation/publication/failure actions require operation
    identity and remain workflow-owned.
 8. CLI update checks are bounded/advisory; upgrade is an explicit command.
+9. Think returns a semantic `direct-answer`: GitHub uses the shared correlated
+   reply publisher, while local execution renders it under a repository-locale
+   label and performs no GitHub comment mutation.
 
 ### 2.3 Evidence and contract classification
 
@@ -106,7 +109,9 @@ not a user-facing generic primitive, owns required sequencing and identity.
 | Internal ops | publicly callable stages | workflow-owned identity | safe sequencing |
 | Output | logs only | results + text/JSON/summary | automation and humans |
 
-No legacy compatibility layer exists and no behavior change is proposed.
+No legacy command alias layer exists. The current as-built Think contract fixes
+its former implicit issue-`#1` probe: `--issue` is optional context, not a hidden
+prerequisite.
 
 ## 6. Functional behavior and state model
 
@@ -124,6 +129,9 @@ No legacy compatibility layer exists and no behavior change is proposed.
 - Setup dry-run needs no token; doctor is remote read-only; reconcile is local read-only unless `--apply`.
 - `think_action`, initial setup, release creation/publication, inactivity, and
   branch observer are issue-free only where the domain explicitly allows it.
+- Local Think always runs from the addressed-request shape. Without `--issue`,
+  it skips issue-description lookup and prints the answer locally; with
+  `--issue`, that exact description is optional prompt context.
 - `publish_issue_comment` owns its create/replace/append presentation.
 - `copilot do` may modify the local workspace but does not commit/push through a single action.
 
@@ -152,6 +160,7 @@ idempotency contract and durable operation ID where applicable.
 | debug | false | boolean | invocation only |
 | `single-action` | empty | exact `ACTIONS` value | workflow run |
 | issue/version/title/changelog/message | empty | action-specific required values | workflow run |
+| local Think issue | empty | positive safe integer when supplied | invocation only; description context, never publication target |
 | comment mode | inferred create/replace | create/replace/append | workflow run |
 | operation ID | empty | exact durable ID for internal continuation | stored operation + run |
 
@@ -190,12 +199,19 @@ Action required: **`--issue` must be a positive number.** Run `copilot ... --hel
 Blocked: **No GitHub repository was found at this worktree origin.** No remote action ran.
 Partial: **Package/release step succeeded, but follow-up publication failed.** Inspect retained IDs before retrying.
 Complete: **Command completed successfully.** Text/JSON contains the same semantic result.
+Think: **Answer:** Use `repository-locale` to select the default message language.
 ```
 
 Help lists required flags, defaults, side effects, credential source, and examples.
 Errors start with impact and one recovery action; debug adds sanitized detail.
 JSON MUST be machine-readable without ANSI/prose contamination. Text is the
-default and English fallback. Terminal output must wrap/read at narrow widths;
+default and English fallback. Repository-aware labels use the complete resolved
+repository-locale catalog; commands, flags, and machine keys remain English.
+Local single-action text MUST summarize completed, skipped, and failed result
+counts and MUST NOT replay `Result.steps` or reminder prose. Semantic answers
+and code-specific error recovery remain visible; only the reminder count is
+shown when operational reminders exist.
+Terminal output must wrap/read at narrow widths;
 icons are supplemental. Secret values and raw provider responses are never shown.
 
 ## 10. Failure, recovery, and cleanup
@@ -234,6 +250,19 @@ may change only with workflow/action version coordination. Package smoke tests
 verify exports, shebang, Node version, and installed invocation. Rollback pins a
 prior major/patch or restores workflows; irreversible feature effects remain visible.
 
+Implementation evidence as of 2026-09-15: local Think no longer checks whether
+issue `#1` exists when `--issue` is omitted. Its application use case owns only
+description-query and agent-query ports and returns immutable `direct-answer`
+data. GitHub publication is source-correlated by the shared reply reconciler;
+the CLI renders the same semantic answer locally using English-default,
+reviewed-Spanish, arbitrary dynamic, or atomic-English-fallback catalog labels.
+Repository-aware local failures now use the same code-specific descriptor
+catalog as GitHub completion and Job Summaries: labels and recovery guidance use
+the effective repository locale, while error codes and references remain stable
+machine values and producer exception prose is omitted. Argument parsing and
+other failures before a repository profile can be resolved remain English by
+default.
+
 ## 14. Testing strategy and numeric budget
 
 | Area | Minimum cases | Risks |
@@ -271,6 +300,11 @@ installed CLI help/text/JSON, narrow terminal, Action dispatch, and error recove
 7. Text and JSON truthfully distinguish skipped, partial, failed, and complete.
 8. Tokens/provider output/control sequences are absent from public output.
 9. Published package smoke verifies CLI and Action/API artifacts.
+10. `copilot think -q <question>` runs without probing issue `#1`, prints one
+    localized answer, and performs no GitHub comment mutation; `--issue 42`
+    loads only issue `#42` as optional context.
+11. A repository-aware local single action renders a localized semantic outcome
+    and contains none of its internal step or reminder strings.
 
 ## 17. Requirements traceability
 
@@ -281,6 +315,7 @@ installed CLI help/text/JSON, narrow terminal, Action dispatch, and error recove
 | shared dispatch | local adapter/single workflow | local/single-action tests | architecture |
 | durable internal boundary | deployment use case | orchestration/workflow tests | deployment docs |
 | package/output contract | build/render/package scripts | smoke/output tests | install/build docs |
+| semantic Think output | Think workflow/shared publisher/local renderer | request, use-case, completion, CLI output tests | comment commands and workflow & CLI |
 
 ## 18. Maintenance sequence
 

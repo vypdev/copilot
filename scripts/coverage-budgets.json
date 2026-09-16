@@ -15,6 +15,28 @@
       "successMessage": "deployment handler coverage: PASS (95% lines/statements, 90% branches/functions)"
     },
     {
+      "name": "Deployment presentation",
+      "missingEntryLabel": "deployment presentation",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/deployment_message_catalog.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/policies/deployment_presentation_policy.ts",
+            "src/application/services/deployment_orchestration_runtime.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "deployment presentation coverage: PASS (catalog 100%; rendered path 95% lines/statements, 90% branches/functions)"
+    },
+    {
       "name": "Bugbot context",
       "missingEntryLabel": "Bugbot context",
       "rules": [
@@ -53,6 +75,30 @@
         }
       ],
       "successMessage": "bugbot context coverage: PASS (pure policies 100%; changed path 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Bugbot presentation",
+      "missingEntryLabel": "Bugbot presentation",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/bugbot_message_catalog.ts",
+            "src/application/policies/bugbot_reconciliation_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/policies/bugbot_finding_marker_policy.ts",
+            "src/application/policies/bugbot_review_presentation_policy.ts",
+            "src/application/usecases/steps/commit/bugbot/synchronize_bugbot_review_presentation_use_case.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "Bugbot presentation coverage: PASS (catalog/reconciliation 100%; rendered path 95% lines/statements, 90% branches/functions)"
     },
     {
       "name": "Agent execution",
@@ -193,6 +239,173 @@
         }
       ],
       "successMessage": "execution-boundary closure coverage: PASS (changed path 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Semantic duplicate reconciliation",
+      "missingEntryLabel": "semantic duplicate reconciliation",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/publication_identity_policy.ts",
+            "src/application/usecases/steps/common/duplicate_comment_cleanup_workflow.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/usecases/steps/common/reply_publication_workflow.ts",
+            "src/application/usecases/steps/common/status_card_publication_workflow.ts",
+            "src/application/usecases/steps/common/transition_notification_workflow.ts",
+            "src/data/repository/github/github_error_policy.ts",
+            "src/data/repository/issue/issue_content_repository.ts",
+            "src/infrastructure/composition/push_single_action_capability_port_binding.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "semantic duplicate reconciliation coverage: PASS (identity/cleanup policies 100%; guarded publication path 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Semantic publication freshness",
+      "missingEntryLabel": "semantic publication freshness",
+      "rules": [
+        {
+          "files": [
+            "src/domain/git_object_id.ts",
+            "src/application/policies/publication_outcome_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/policies/semantic_result_publication_policy.ts",
+            "src/application/usecases/actions/check_progress_workflow.ts",
+            "src/application/usecases/steps/common/publish_resume_workflow.ts",
+            "src/application/usecases/steps/common/status_card_publication_workflow.ts",
+            "src/data/repository/github_publication_source_repository.ts",
+            "src/infrastructure/composition/shared_capability_port_binding.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "semantic publication freshness coverage: PASS (object-id/outcome policies 100%; guarded path 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Repository localization",
+      "missingEntryLabel": "repository localization",
+      "rules": [
+        {
+          "files": [
+            "src/domain/locale.ts",
+            "src/domain/message_catalog.ts",
+            "src/application/policies/action_summary_message_catalog.ts",
+            "src/application/policies/branch_sync_message_catalog.ts",
+            "src/application/policies/comment_translation_policy.ts",
+            "src/application/policies/inactivity_message_catalog.ts",
+            "src/application/policies/inactivity_notification_policy.ts",
+            "src/application/policies/merge_queue_message_catalog.ts",
+            "src/application/policies/publication_message_catalog.ts",
+            "src/application/policies/setup_doctor_message_catalog.ts",
+            "src/cli/setup_doctor_presenter.ts",
+            "src/application/usecases/localization/resolve_message_catalog_use_case.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/actions/github_action.ts",
+            "src/actions/github_action_completion.ts",
+            "src/actions/github_action_execution.ts",
+            "src/application/policies/action_summary_policy.ts",
+            "src/application/policies/action_summary_message_catalog.ts",
+            "src/application/policies/comment_translation_policy.ts",
+            "src/application/policies/copilot_evidence_policy.ts",
+            "src/application/policies/copilot_interaction_policy.ts",
+            "src/application/policies/inactivity_message_catalog.ts",
+            "src/application/policies/inactivity_notification_policy.ts",
+            "src/application/policies/publication_message_catalog.ts",
+            "src/application/policies/semantic_result_publication_policy.ts",
+            "src/application/policies/merge_queue_message_catalog.ts",
+            "src/application/policies/setup_configuration_defaults.ts",
+            "src/application/policies/setup_configuration_plan.ts",
+            "src/application/policies/setup_doctor_message_catalog.ts",
+            "src/application/policies/setup_doctor_report_policy.ts",
+            "src/application/policies/status_command_policy.ts",
+            "src/application/usecases/localization/resolve_message_catalog_use_case.ts",
+            "src/application/usecases/actions/close_inactive_issues_use_case.ts",
+            "src/application/usecases/actions/close_inactive_issues_workflow.ts",
+            "src/application/usecases/setup/doctor_use_case.ts",
+            "src/application/usecases/setup/merge_queue_readiness_use_case.ts",
+            "src/application/usecases/setup/setup_wizard_use_case.ts",
+            "src/application/usecases/steps/common/comment_language_translation_workflow.ts",
+            "src/application/usecases/steps/common/publish_resume_use_case.ts",
+            "src/application/usecases/steps/common/publish_resume_workflow.ts",
+            "src/application/usecases/steps/common/reply_publication_workflow.ts",
+            "src/application/usecases/steps/common/status_card_publication_workflow.ts",
+            "src/cli/setup_doctor_presenter.ts",
+            "src/cli/setup_prompt_rendering.ts",
+            "src/domain/locale.ts",
+            "src/domain/message_catalog.ts",
+            "src/infrastructure/composition/issue_inactivity_composition_root.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "repository localization coverage: PASS (pure policies 100%; changed path 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Structured implementation plan",
+      "missingEntryLabel": "structured implementation plan",
+      "rules": [
+        {
+          "files": [
+            "src/domain/implementation_plan.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/data/model/recommendation_state.ts",
+            "src/application/policies/agent_response_schemas.ts",
+            "src/application/policies/semantic_result_publication_policy.ts",
+            "src/application/usecases/actions/recommend_steps_result_policy.ts",
+            "src/application/usecases/actions/recommend_steps_workflow.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "structured implementation plan coverage: PASS (domain contract 100%; schema/workflow/publication path 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Branch synchronization presentation",
+      "missingEntryLabel": "branch synchronization presentation",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/branch_sync_message_catalog.ts",
+            "src/application/policies/branch_sync_notification_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/usecases/actions/observe_branch_sync_use_case.ts",
+            "src/application/usecases/steps/common/transition_notification_workflow.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "branch synchronization presentation coverage: PASS (catalog/policy 100%; observer/publication path 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

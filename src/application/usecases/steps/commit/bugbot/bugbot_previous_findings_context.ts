@@ -42,7 +42,7 @@ Return in \`resolved_findings\` only entries from the list above that are now fi
   const selected = [...selectedNewestFirst].reverse();
   const omitted = previousFindings.length - selected.length;
   const omissionNote = omitted > 0
-    ? `\n\n**${omitted} older finding(s) were omitted from this prompt because of the context budget. Do not resolve an omitted finding in this response.**`
+    ? `\n\n**${omitted} older ${omitted === 1 ? 'finding was' : 'findings were'} omitted from this prompt because of the context budget. Do not resolve an omitted finding in this response.**`
     : '';
   return {
     block: `${prefix}${selected.map(formatFinding).join('\n')}${omissionNote}${suffix}`,

@@ -13,7 +13,7 @@ function connection(
           nodes: Array.from({ length: count }, (_, index) => ({
             databaseId: startId + index,
             body: `comment-${startId + index}`,
-            author: { login: 'alice' },
+            author: { login: 'alice', __typename: 'User' },
             createdAt: new Date(Date.UTC(2026, 0, 1, 0, startId + index)).toISOString(),
           })),
           pageInfo: { hasPreviousPage, startCursor },
@@ -64,6 +64,7 @@ describe('BugbotIssueCommentQueryRepository', () => {
       'owner', 'repo', 7, 'token',
     );
     expect(graphql).toHaveBeenCalledTimes(1);
+    expect(graphql.mock.calls[0][0]).toContain('author { login __typename }');
     expect(result.items[0]).toEqual(expect.objectContaining({
       id: 9,
       body: 'comment-9',
@@ -72,6 +73,26 @@ describe('BugbotIssueCommentQueryRepository', () => {
     }));
     expect(result.coverage.status).toBe('complete');
     expect(result.coverage.providerLimitReached).toBeUndefined();
+  });
+
+  it('preserves provider-authenticated bot authorship without login heuristics', async () => {
+    const automated = connection(9, 1, false, null);
+    automated.repository.issueOrPullRequest.comments.nodes[0].author = {
+      login: 'coverage-service',
+      __typename: 'Bot',
+    };
+    const repository = new BugbotIssueCommentQueryRepository({
+      getClient: () => ({ graphql: jest.fn().mockResolvedValue(automated) }),
+    } as never);
+
+    const result = await repository.listBugbotIssueCommentsBounded(
+      'owner', 'repo', 7, 'token',
+    );
+
+    expect(result.items[0]).toEqual(expect.objectContaining({
+      user: { login: 'coverage-service' },
+      isAutomatedAuthor: true,
+    }));
   });
 
   it('accepts an empty connection and normalizes absent optional fields', async () => {

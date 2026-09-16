@@ -10,6 +10,7 @@ const mockUpdate = jest.fn();
 const mockGet = jest.fn();
 const mockCreateComment = jest.fn();
 const mockUpdateComment = jest.fn();
+const mockDeleteComment = jest.fn();
 const mockIterator = jest.fn();
 
 jest.mock('@actions/github', () => ({
@@ -20,6 +21,7 @@ jest.mock('@actions/github', () => ({
                 get: mockGet,
                 createComment: mockCreateComment,
                 updateComment: mockUpdateComment,
+                deleteComment: mockDeleteComment,
                 listComments: jest.fn(),
             },
         },
@@ -54,15 +56,15 @@ describe('IssueContentRepository', () => {
         await expect(repository.getDescription('owner', 'repo', 7, 'token')).rejects.toThrow('Not Found');
     });
 
-    it('preserves the comment watermark contract', async () => {
+    it('publishes exactly the semantic body without a visible branding footer', async () => {
         mockCreateComment.mockResolvedValue(undefined);
         mockUpdateComment.mockResolvedValue(undefined);
 
         await repository.addComment('owner', 'repo', 7, 'comment', 'token');
         await repository.updateComment('owner', 'repo', 7, 12, 'updated', 'token');
 
-        expect(mockCreateComment).toHaveBeenCalledWith(expect.objectContaining({ issue_number: 7 }));
-        expect(mockUpdateComment).toHaveBeenCalledWith(expect.objectContaining({ comment_id: 12 }));
+        expect(mockCreateComment).toHaveBeenCalledWith(expect.objectContaining({ issue_number: 7, body: 'comment' }));
+        expect(mockUpdateComment).toHaveBeenCalledWith(expect.objectContaining({ comment_id: 12, body: 'updated' }));
     });
 
     it.each(['', '   ', '\n<!-- copilot metadata -->\n'])('does not publish an empty comment body: %j', async (comment) => {
@@ -71,6 +73,45 @@ describe('IssueContentRepository', () => {
 
         expect(mockCreateComment).not.toHaveBeenCalled();
         expect(mockUpdateComment).not.toHaveBeenCalled();
+    });
+
+    it('removes an exact duplicate comment', async () => {
+        mockDeleteComment.mockResolvedValue(undefined);
+
+        await expect(repository.removeComment('owner', 'repo', 7, 12, 'token')).resolves.toBe('removed');
+
+        expect(mockDeleteComment).toHaveBeenCalledWith({ owner: 'owner', repo: 'repo', comment_id: 12 });
+    });
+
+    it('treats an already-absent duplicate as removed', async () => {
+        mockDeleteComment.mockRejectedValue({ status: 404 });
+
+        await expect(repository.removeComment('owner', 'repo', 7, 12, 'token')).resolves.toBe('removed');
+    });
+
+    it('requests compact fallback only when deletion is forbidden', async () => {
+        mockDeleteComment.mockRejectedValue({ status: 403, message: 'Resource not accessible by integration' });
+
+        await expect(repository.removeComment('owner', 'repo', 7, 12, 'token'))
+            .resolves.toBe('compaction-required');
+    });
+
+    it('propagates transient duplicate-removal failures', async () => {
+        mockDeleteComment.mockRejectedValue({ status: 503, message: 'unavailable' });
+
+        await expect(repository.removeComment('owner', 'repo', 7, 12, 'token'))
+            .rejects.toMatchObject({ status: 503 });
+    });
+
+    it('propagates rate-limit responses instead of disguising them as permission fallbacks', async () => {
+        mockDeleteComment.mockRejectedValue({
+            status: 403,
+            message: 'Forbidden',
+            response: { headers: { 'x-ratelimit-remaining': '0' } },
+        });
+
+        await expect(repository.removeComment('owner', 'repo', 7, 12, 'token'))
+            .rejects.toMatchObject({ status: 403 });
     });
 
     it('aggregates paginated comments', async () => {

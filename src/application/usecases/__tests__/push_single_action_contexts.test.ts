@@ -46,6 +46,7 @@ function source(): DeepMutable<PushSingleActionContextSource> {
     issueNumber: 42,
     eventName: 'push',
     tokenUser: 'copilot-bot',
+    locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
     inputs: {
       action: 'opened',
       after: '0'.repeat(40),
@@ -56,14 +57,21 @@ function source(): DeepMutable<PushSingleActionContextSource> {
     },
     commit: {
       branch: 'feature/42-contexts',
-      commits: [{ id: 'abc', message: 'feat: context', author: { name: 'A', username: 'a' } }],
     },
     currentConfiguration: { parentBranch: 'develop', deploymentOrchestration: operation },
     previousConfiguration: {
       recommendationState: {
         issueDescriptionFingerprint: 'description',
         recommendationFingerprint: 'recommendation',
-        recommendation: 'Do this',
+        implementationPlan: {
+          steps: [
+            { title: 'Define', details: ['Contract'] },
+            { title: 'Implement', details: [] },
+            { title: 'Verify', details: ['Tests'] },
+          ],
+          acceptance: 'All relevant checks pass.',
+        },
+        implementationPlanLocale: 'en-US',
       },
     },
     branches: {
@@ -104,19 +112,6 @@ function source(): DeepMutable<PushSingleActionContextSource> {
     }] },
     issue: { number: 42, reopenOnPush: true },
     pullRequest: { number: 99 },
-    release: { active: false },
-    hotfix: { active: false },
-    images: {
-      imagesOnCommit: true,
-      commitAutomaticActions: ['automatic.gif'], commitFeatureGifs: ['feature.gif'],
-      commitBugfixGifs: ['bugfix.gif'], commitReleaseGifs: ['release.gif'],
-      commitHotfixGifs: ['hotfix.gif'], commitDocsGifs: ['docs.gif'], commitChoreGifs: ['chore.gif'],
-    },
-    isBugfix: false,
-    isFeature: true,
-    isDocs: false,
-    isChore: false,
-    commitPrefixBuilder: 'replace-slash',
     issueTypes: {} as never,
   };
 }
@@ -165,6 +160,14 @@ describe('push and single-action context projection', () => {
     expect(projected.agentConfiguration.model).toBe('findings-model');
     expect(JSON.stringify(projected)).not.toContain('secret');
     expect(Object.isFrozen(projected.branchTypes)).toBe(true);
+    expect(projected).not.toHaveProperty('sourceHeadSha');
+  });
+
+  it('canonicalizes a valid push head for downstream freshness checks', () => {
+    const input = source();
+    input.inputs!.after = 'A'.repeat(40);
+
+    expect(projectProgressContext(input).sourceHeadSha).toBe('a'.repeat(40));
   });
 
   it('uses the fixed progress branch fallback for an empty development branch', () => {
@@ -175,10 +178,16 @@ describe('push and single-action context projection', () => {
   });
 
   it('projects recommendation event and previous state as frozen facts', () => {
-    const projected = projectRecommendStepsContext(source());
+    const input = source();
+    const projected = projectRecommendStepsContext(input);
+    input.previousConfiguration!.recommendationState!.implementationPlan!.steps[0].details[0] = 'mutated';
 
     expect(projected).toMatchObject({ issueNumber: 42, eventAction: 'opened', tokenUser: 'copilot-bot' });
     expect(Object.isFrozen(projected.previousRecommendation)).toBe(true);
+    expect(projected.previousRecommendation?.implementationPlan?.steps[0].details[0]).toBe('Contract');
+    expect(Object.isFrozen(projected.previousRecommendation?.implementationPlan)).toBe(true);
+    expect(Object.isFrozen(projected.previousRecommendation?.implementationPlan?.steps)).toBe(true);
+    expect(Object.isFrozen(projected.previousRecommendation?.implementationPlan?.steps[0].details)).toBe(true);
     expect(projected.agentConfiguration.model).toBe('planner-model');
   });
 
@@ -193,6 +202,7 @@ describe('push and single-action context projection', () => {
       eventName: 'push',
       eventAction: '',
       agentConfiguration: { provider: 'codex', model: 'planner-model' },
+      targetLocale: 'en-US',
     });
   });
 
@@ -201,6 +211,9 @@ describe('push and single-action context projection', () => {
       waitingLabels: ['state:awaiting-maintainer', 'state:awaiting-issue-author'],
       activityLabel: 'state:ai-processing',
       thresholdHours: 168,
+      locale: 'en-US',
+      repositoryLocale: 'en-US',
+      agentConfiguration: { provider: 'codex', model: 'planner-model' },
     });
   });
 
@@ -211,10 +224,21 @@ describe('push and single-action context projection', () => {
     const input = source();
     input.inputs = { ...input.inputs, after };
 
-    expect(projectBranchObservationContext(input)).toMatchObject({
+    const projected = projectBranchObservationContext(input);
+    expect(projected).toMatchObject({
       pushedBranch: 'feature/42-contexts', deletedPush, trustedBotLogin: 'copilot-bot',
       repository: { owner: 'owner', name: 'repo' },
     });
+    expect(projected.sourceHeadSha).toBe(deletedPush ? undefined : after);
+  });
+
+  it('canonicalizes the branch-observation source head and rejects malformed object ids', () => {
+    const input = source();
+    input.inputs!.after = 'A'.repeat(64);
+    expect(projectBranchObservationContext(input).sourceHeadSha).toBe('a'.repeat(64));
+
+    input.inputs!.after = 'not-a-git-object-id';
+    expect(projectBranchObservationContext(input)).not.toHaveProperty('sourceHeadSha');
   });
 
   it('omits absent branch-observation actor and classifies a missing after SHA as active', () => {
@@ -226,6 +250,8 @@ describe('push and single-action context projection', () => {
       pushedBranch: 'feature/42-contexts',
       deletedPush: false,
       repository: { owner: 'owner', name: 'repo' },
+      locale: 'en-US',
+      agentConfiguration: { provider: 'codex', model: 'planner-model' },
     });
   });
 
@@ -266,48 +292,24 @@ describe('push and single-action context projection', () => {
     expect(Object.isFrozen(projected.verifyCommands)).toBe(true);
   });
 
-  it.each([
-    ['release', { release: true }],
-    ['hotfix', { hotfix: true }],
-    ['bugfix', { bugfix: true }],
-    ['feature', { feature: true }],
-    ['docs', { docs: true }],
-    ['chore', { chore: true }],
-    ['automatic', {}],
-  ] as const)('projects %s commit presentation facts', (theme, flags) => {
-    const input = source();
-    input.release.active = Boolean('release' in flags && flags.release);
-    input.hotfix.active = Boolean('hotfix' in flags && flags.hotfix);
-    input.isBugfix = Boolean('bugfix' in flags && flags.bugfix);
-    input.isFeature = Boolean('feature' in flags && flags.feature);
-    input.isDocs = Boolean('docs' in flags && flags.docs);
-    input.isChore = Boolean('chore' in flags && flags.chore);
-
-    expect(projectCommitNotificationContext(input).theme).toBe(theme);
-  });
-
-  it('deep-copies commits, thresholds, labels, and project facts', () => {
+  it('projects only the facts required to reopen an issue and isolates size facts', () => {
     const input = source();
     const notification = projectCommitNotificationContext(input);
     const size = projectChangeSizeContext(input);
-    input.commit.commits[0].message = 'mutated';
     input.sizeThresholds.xxl.lines = 0;
 
-    expect(notification.commits[0].message).toBe('feat: context');
+    expect(notification).toEqual({ issueNumber: 42, reopenOnPush: true });
     expect(size.thresholds.xxl.lines).toBe(100);
     expect(size.labels).toEqual({ xxl: 'size: XXL', xl: 'size: XL', l: 'size: L', m: 'size: M', s: 'size: S', xs: 'size: XS' });
     expect(Object.isFrozen(size.projects)).toBe(true);
   });
 
-  it('supports commits without author metadata and omits an absent current size', () => {
+  it('omits an absent current size', () => {
     const input = source();
-    input.commit.commits = [{ id: 'abc', message: 'feat: context' }];
     delete input.labels.sizedLabelOnIssue;
 
-    const notification = projectCommitNotificationContext(input);
     const size = projectChangeSizeContext(input);
 
-    expect(notification.commits).toEqual([{ id: 'abc', message: 'feat: context' }]);
     expect(size).not.toHaveProperty('currentSize');
   });
 
@@ -382,7 +384,8 @@ describe('push and single-action context projection', () => {
       owner: 'owner', repo: 'repo', tokens: { token: 'secret-token' },
       branches: { defaultBranch: 'master', development: 'develop', releaseTree: 'release', hotfixTree: 'hotfix' },
       workflows: { release: 'release.yml', hotfix: 'hotfix.yml' },
-      locale: { issue: 'en', pullRequest: 'en' },
+      locale: { repository: 'fr-FR', issue: 'es-ES', pullRequest: 'de-DE', issueOverride: 'es-ES', pullRequestOverride: 'de-DE' },
+      ai: { getAgentConfiguration: () => ({ provider: 'codex', model: 'planner-model' }) },
       labels: { isRelease: true, isHotfix: false, deploy: 'deploy', deployed: 'deployed', lifecycle: DEFAULT_COPILOT_LIFECYCLE_LABELS },
       deployment: { ...DEFAULT_DEPLOYMENT_CONFIGURATION },
       singleAction: {
@@ -395,6 +398,21 @@ describe('push and single-action context projection', () => {
     } as unknown as DeploymentOrchestrationContext;
     const projected = projectDeploymentOrchestrationContext(raw);
     projected.currentConfiguration.releaseBranch = 'release/changed';
+    const explicitConfiguration = projectDeploymentOrchestrationContext({
+      ...raw,
+      agentConfiguration: { provider: 'codex', model: 'explicit-planner' },
+    });
+    const withoutConfiguration = projectDeploymentOrchestrationContext({ ...raw, ai: undefined });
+    const withLocaleSnapshot = projectDeploymentOrchestrationContext({
+      ...raw,
+      currentConfiguration: {
+        ...raw.currentConfiguration,
+        deploymentOrchestration: {
+          ...(operation as unknown as Record<string, unknown>),
+          locale: { repository: 'en-US', issue: 'es-ES', pullRequest: 'de-DE' },
+        } as never,
+      },
+    });
     const withoutOperation = projectDeploymentOrchestrationContext({
       ...raw,
       currentConfiguration: { ...raw.currentConfiguration, deploymentOrchestration: undefined },
@@ -403,6 +421,15 @@ describe('push and single-action context projection', () => {
     expect('tokens' in projected).toBe(false);
     expect(raw.currentConfiguration.releaseBranch).toBe('release/1.2.3');
     expect(Object.isFrozen(projected.branches)).toBe(true);
+    expect(projected.locale).toEqual(raw.locale);
+    expect(Object.isFrozen(projected.locale)).toBe(true);
+    expect(projected.agentConfiguration).toEqual({ provider: 'codex', model: 'planner-model' });
+    expect(Object.isFrozen(projected.agentConfiguration)).toBe(true);
+    expect(explicitConfiguration.agentConfiguration).toEqual({ provider: 'codex', model: 'explicit-planner' });
+    expect(withoutConfiguration).not.toHaveProperty('agentConfiguration');
+    expect(withLocaleSnapshot.currentConfiguration.deploymentOrchestration?.locale)
+      .toEqual({ repository: 'en-US', issue: 'es-ES', pullRequest: 'de-DE' });
+    expect(Object.isFrozen(withLocaleSnapshot.currentConfiguration.deploymentOrchestration?.locale)).toBe(true);
     expect(withoutOperation.currentConfiguration.deploymentOrchestration).toBeUndefined();
   });
 });

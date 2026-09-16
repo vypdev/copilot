@@ -7,7 +7,10 @@ import type { GithubGraphqlTransportClient } from '../../../infrastructure/githu
 interface BugbotIssueCommentNode {
   readonly databaseId?: number | null;
   readonly body?: string | null;
-  readonly author?: { readonly login?: string | null } | null;
+  readonly author?: {
+    readonly login?: string | null;
+    readonly __typename?: string | null;
+  } | null;
   readonly createdAt?: string | null;
 }
 
@@ -51,13 +54,13 @@ export class BugbotIssueCommentQueryRepository {
               issueOrPullRequest(number: $issueNumber) {
                 ... on Issue {
                   comments(last: 100, before: $cursor) {
-                    nodes { databaseId body author { login } createdAt }
+                    nodes { databaseId body author { login __typename } createdAt }
                     pageInfo { hasPreviousPage startCursor }
                   }
                 }
                 ... on PullRequest {
                   comments(last: 100, before: $cursor) {
-                    nodes { databaseId body author { login } createdAt }
+                    nodes { databaseId body author { login __typename } createdAt }
                     pageInfo { hasPreviousPage startCursor }
                   }
                 }
@@ -76,6 +79,7 @@ export class BugbotIssueCommentQueryRepository {
             id: Number(comment.databaseId),
             body: comment.body ?? null,
             ...(comment.author?.login ? { user: { login: comment.author.login } } : {}),
+            ...(comment.author?.__typename === 'Bot' ? { isAutomatedAuthor: true } : {}),
             ...(comment.createdAt ? { createdAt: comment.createdAt } : {}),
           }];
         });

@@ -124,6 +124,10 @@ receipt` is provider evidence that an irreversible action already completed.
    are not configurable.
 7. No state/config compatibility reader, migration handler, dual schema, or
    fallback writer exists because there are no deployed operations to preserve.
+8. Every snapshot carries `lastFailure`: non-blocked phases require exact
+   `null`, while `blocked` requires one closed failure object with category,
+   safe message, retryability, and exact previous non-blocked phase. Unknown or
+   additional operation, locale, receipt, target, or failure fields are invalid.
 
 ## 5. Current versus proposed product journey
 
@@ -419,7 +423,7 @@ This SDD owns at least **28 distinct cases**.
 
 | Area | Minimum cases | Required risks |
 |---|---:|---|
-| Domain/schema/fence | 5 | absent/current/unversioned/future, revision, transition outcomes |
+| Domain/schema/fence | 5 | absent/current/unversioned/future, exact-key rejection, blocked-failure invariant, revision, transition outcomes |
 | State/race/idempotency | 8 | simultaneous barrier, replay, stale, cancellation, unknown effect |
 | Application handlers | 4 | prepare, publish, reconcile, block/complete |
 | Provider adapters | 4 | receipts, conflicts, status/error mapping |

@@ -14,6 +14,7 @@ import type {
 } from '../../domain/setup';
 import { DEFAULT_INACTIVITY_THRESHOLD_HOURS } from '../../domain/issue_inactivity';
 import { DEFAULT_DEPLOYMENT_CONFIGURATION } from '../../domain/deployment_configuration';
+import { resolveLocaleProfile } from '../../domain/locale';
 
 export const SETUP_AGENT_TASKS: readonly AgentTask[] = [
     'planner',
@@ -100,8 +101,9 @@ export function createDefaultSetupConfiguration(): SetupConfiguration {
             desiredAssigneesCount: 1,
             desiredReviewersCount: 1,
             inactivityThresholdHours: DEFAULT_INACTIVITY_THRESHOLD_HOURS,
-            issueLocale: 'en-US',
-            pullRequestLocale: 'en-US',
+            repositoryLocale: 'en-US',
+            issueLocale: '',
+            pullRequestLocale: '',
             commitPrefixTransforms: 'replace-slash',
             ...DEFAULT_DEPLOYMENT_CONFIGURATION,
         },
@@ -190,6 +192,24 @@ export function mergeSetupConfiguration(
                     ...(overrides.storage?.variables?.overrides ?? {}),
                 },
             },
+        },
+    };
+}
+
+/** Returns a copy with only canonical BCP-47 locale values. */
+export function normalizeSetupConfigurationLocales(configuration: SetupConfiguration): SetupConfiguration {
+    const profile = resolveLocaleProfile(
+        configuration.repository.repositoryLocale,
+        configuration.repository.issueLocale,
+        configuration.repository.pullRequestLocale,
+    );
+    return {
+        ...configuration,
+        repository: {
+            ...configuration.repository,
+            repositoryLocale: profile.repository,
+            issueLocale: profile.issueOverride ?? '',
+            pullRequestLocale: profile.pullRequestOverride ?? '',
         },
     };
 }

@@ -10,7 +10,6 @@ import { loadProjectDetails } from './project_details_loader';
 import { parseBoundedPositiveIntegerInput, parseIntegerInput } from './input_number_policy';
 import { parseDelimitedValues } from './input_values_policy';
 import { buildAgentTasksFromValues } from './agent_input_builder';
-import { buildImageConfiguration } from './image_configuration_builder';
 import { normalizePullRequestDescriptionMode } from '../domain/pull_request_description';
 import { DEFAULT_INACTIVITY_THRESHOLD_HOURS, MAX_INACTIVITY_THRESHOLD_HOURS } from '../domain/issue_inactivity';
 import { normalizeBugbotReviewEffort, parseBugbotOrganizationRules } from '../domain/bugbot/review_configuration';
@@ -259,14 +258,19 @@ export function readLocalWorkflowConfiguration(
     const developmentBranch = read(INPUT_KEYS.DEVELOPMENT_BRANCH);
     const releaseTree = read(INPUT_KEYS.RELEASE_TREE);
     const hotfixTree = read(INPUT_KEYS.HOTFIX_TREE);
+    const locale = new Locale(
+        read(INPUT_KEYS.REPOSITORY_LOCALE) || Locale.DEFAULT,
+        read(INPUT_KEYS.ISSUES_LOCALE) || '',
+        read(INPUT_KEYS.PULL_REQUESTS_LOCALE) || '',
+    );
     return {
-        imageConfiguration: buildImageConfiguration((key) => additionalParams[key] ?? actionInputs[key]),
         releaseWorkflow: read(INPUT_KEYS.RELEASE_WORKFLOW),
         hotfixWorkflow: read(INPUT_KEYS.HOTFIX_WORKFLOW),
         titleEmoji: read(INPUT_KEYS.EMOJI_LABELED_TITLE) === 'true',
         branchManagementEmoji: read(INPUT_KEYS.BRANCH_MANAGEMENT_EMOJI),
-        issueLocale: read(INPUT_KEYS.ISSUES_LOCALE) ?? Locale.DEFAULT,
-        pullRequestLocale: read(INPUT_KEYS.PULL_REQUESTS_LOCALE) ?? Locale.DEFAULT,
+        repositoryLocale: locale.repository,
+        issueLocale: locale.issue,
+        pullRequestLocale: locale.pullRequest,
         ...readThresholds(additionalParams, actionInputs),
         mainBranch,
         developmentBranch,

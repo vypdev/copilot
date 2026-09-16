@@ -1,5 +1,5 @@
 import type { Result } from '../../../data/model/result';
-import type { BoundIssueCommentPublicationPort } from '../../ports/issue_lifecycle_ports';
+import type { BoundIssueCommentUpsertPort } from '../../ports/issue_lifecycle_ports';
 import type { IssueCommentActionContext } from '../push_single_action_contexts';
 import { logInfo } from '../../ports/logging_ports';
 import { getTaskEmoji } from '../../../utils/task_emoji';
@@ -10,7 +10,7 @@ import { runPublishIssueComment } from './publish_issue_comment_workflow';
 export class PublishIssueCommentUseCase implements ParamUseCase<IssueCommentActionContext, Result[]> {
     taskId = 'PublishIssueCommentUseCase';
 
-    constructor(private readonly issueCommentPort: BoundIssueCommentPublicationPort) {}
+    constructor(private readonly issueCommentPort: BoundIssueCommentUpsertPort) {}
 
     async invoke(param: IssueCommentActionContext): Promise<Result[]> {
         logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`);

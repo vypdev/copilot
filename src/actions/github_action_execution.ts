@@ -11,7 +11,6 @@ import { parseBoundedPositiveIntegerInput, parseIntegerInput } from './input_num
 import { parseDelimitedValues } from './input_values_policy';
 import { readGithubActionAiInputs } from './github_action_ai_inputs';
 import { prepareGithubAgentRuntime } from './github_action_runtime';
-import { readGithubActionImageInputs } from './github_action_image_inputs';
 import { readGithubActionLocaleInputs } from './github_action_locale_inputs';
 import { buildSizeThresholds } from './size_threshold_builder';
 import { readGithubActionThresholdInputs } from './github_action_threshold_inputs';
@@ -22,7 +21,7 @@ import { readGithubActionWorkflowInputs } from './github_action_workflow_inputs'
 import { readGithubActionIssueTypeInputs } from './github_action_issue_type_inputs';
 import { readGithubActionProjectInputs } from './github_action_project_inputs';
 import { buildExecution } from './execution_builder';
-import { buildEmoji, buildImages, buildIssue, buildIssueTypes, buildLabels, buildLocale, buildProjects, buildPullRequest, buildTokens, buildWorkflows } from './configuration_builders';
+import { buildEmoji, buildIssue, buildIssueTypes, buildLabels, buildLocale, buildProjects, buildPullRequest, buildTokens, buildWorkflows } from './configuration_builders';
 import { loadProjectDetails } from './project_details_loader';
 import type { buildGithubActionEventInputs } from './github_event_inputs';
 import { DEFAULT_INACTIVITY_THRESHOLD_HOURS, MAX_INACTIVITY_THRESHOLD_HOURS } from '../domain/issue_inactivity';
@@ -41,12 +40,16 @@ export interface GithubActionExecutionInput {
     readonly aiInputs?: ReturnType<typeof readGithubActionAiInputs>;
     readonly activeAgentTasks?: ReturnType<typeof activeAgentTasks>;
     readonly agentRuntimeAuthorized?: boolean;
+    readonly localeInputs?: ReturnType<typeof readGithubActionLocaleInputs>;
 }
 
 export async function buildGithubActionExecution(
     input: GithubActionExecutionInput,
 ): Promise<Execution> {
     const { getInput, eventInputs, projectQuery, debug, singleAction, token } = input;
+    // Locale is trusted configuration. Validate it before agent provisioning or
+    // any provider/domain mutation can begin.
+    const localeInputs = input.localeInputs ?? readGithubActionLocaleInputs(getInput);
     const aiInputs = input.aiInputs ?? readGithubActionAiInputs(getInput);
     const agentTasks = input.agentRuntimeAuthorized === false
         ? disableAgentTasks(aiInputs.requestedAgentTasks)
@@ -71,11 +74,9 @@ export async function buildGithubActionExecution(
         token,
     );
     const projectInputs = readGithubActionProjectInputs(getInput, projects);
-    const imageConfiguration = readGithubActionImageInputs(getInput);
     const workflowInputs = readGithubActionWorkflowInputs(getInput);
     const labelInputs = readGithubActionLabelInputs(getInput);
     const issueTypeInputs = readGithubActionIssueTypeInputs(getInput);
-    const localeInputs = readGithubActionLocaleInputs(getInput);
     const sizeThresholdInputs = readGithubActionThresholdInputs(getInput);
     const branchInputs = readGithubActionBranchInputs(getInput);
     const deployment = readDeploymentConfiguration(getInput, {
@@ -109,7 +110,6 @@ export async function buildGithubActionExecution(
             getInput(INPUT_KEYS.EMOJI_LABELED_TITLE) === 'true',
             getInput(INPUT_KEYS.BRANCH_MANAGEMENT_EMOJI),
         ),
-        images: buildImages(imageConfiguration),
         tokens: buildTokens(token),
         ai: new Ai(
             '',
@@ -126,7 +126,11 @@ export async function buildGithubActionExecution(
         ),
         labels: buildLabels(labelInputs),
         issueTypes: buildIssueTypes(issueTypeInputs),
-        locale: buildLocale(localeInputs.issue, localeInputs.pullRequest),
+        locale: buildLocale(
+            localeInputs.repository,
+            localeInputs.issueOverride,
+            localeInputs.pullRequestOverride,
+        ),
         sizeThresholds: buildSizeThresholds(sizeThresholdInputs),
         branches: buildBranches(branchInputs),
         release: new Release(),

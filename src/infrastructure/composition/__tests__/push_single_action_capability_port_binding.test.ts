@@ -4,7 +4,6 @@ import {
   bindBranchComparison,
   bindBranchDependencies,
   bindBranchListQuery,
-  bindBranchSyncNotification,
   bindBranchSyncWorkspace,
   bindDeploymentContinuation,
   bindDeploymentGit,
@@ -17,7 +16,7 @@ import {
   bindIssueCommentPublication,
   bindIssueInactivityQuery,
   bindIssueProgress,
-  bindIssuePushNotification,
+  bindIssueReopen,
   bindIssueTypes,
   bindInitialLabels,
   bindManagedPullRequests,
@@ -59,11 +58,16 @@ describe('push and single-action capability binding', () => {
 
   it('binds issue-comment publication without accepting repository inputs', async () => {
     const addComment = jest.fn().mockResolvedValue(7);
-    const bound = bindIssueCommentPublication({ addComment, updateComment: jest.fn(), listIssueComments: jest.fn() } as never, binding);
+    const removeComment = jest.fn().mockResolvedValue('removed');
+    const bound = bindIssueCommentPublication({
+      addComment, removeComment, updateComment: jest.fn(), listIssueComments: jest.fn(),
+    } as never, binding);
 
     await bound.addComment(42, 'Ready');
+    await bound.removeComment(42, 9);
 
     expect(addComment).toHaveBeenCalledWith('owner', 'repo', 42, 'Ready', 'secret-token');
+    expect(removeComment).toHaveBeenCalledWith('owner', 'repo', 42, 9, 'secret-token');
   });
 
   it('binds branch-sync workspace credentials only on remote operations', async () => {
@@ -220,7 +224,9 @@ describe('push and single-action capability binding', () => {
       updateTag: jest.fn(), createTag: jest.fn(), createOrVerifyTagAtSha: jest.fn(),
     };
     const releasePort = { updateRelease: jest.fn(), createRelease: jest.fn() };
-    const commentPort = { addComment: jest.fn(), updateComment: jest.fn(), listIssueComments: jest.fn() };
+    const commentPort = {
+      addComment: jest.fn(), updateComment: jest.fn(), removeComment: jest.fn(), listIssueComments: jest.fn(),
+    };
     const gitPort = {
       getBranchSha: jest.fn(), getMergeBaseSha: jest.fn(), isCommitReachable: jest.fn(),
       createOrVerifyBranch: jest.fn(), mergeCommitIntoBranch: jest.fn(), deleteBranch: jest.fn(), listBranches: jest.fn(),
@@ -243,6 +249,7 @@ describe('push and single-action capability binding', () => {
     await tags.createOrVerifyTagAtSha('a'.repeat(40), 'v1.2.3');
     await releases.updateRelease('next', 'stable');
     await comments.updateComment(42, 7, 'updated');
+    await comments.removeComment(42, 8);
     await comments.listIssueComments(42);
     await git.getMergeBaseSha('master', 'develop');
     await git.isCommitReachable('master', 'a'.repeat(40));
@@ -265,15 +272,15 @@ describe('push and single-action capability binding', () => {
     expect(presentationPort.publishMilestone).toHaveBeenCalledWith(
       'owner', 'repo', 42, '<!-- milestone -->', 'body', 'secret-token',
     );
+    expect(commentPort.removeComment).toHaveBeenCalledWith('owner', 'repo', 42, 8, 'secret-token');
   });
 
   it('forwards every remaining issue, branch-query, and synchronization operation', async () => {
-    const issuePushPort = { openIssue: jest.fn(), addComment: jest.fn() };
+    const issuePushPort = { openIssue: jest.fn() };
     const inactivityPort = { listOpenIssuesByLabel: jest.fn(), getOpenIssue: jest.fn() };
     const dependencyPort = { listOpenDependencies: jest.fn(), resolveTarget: jest.fn() };
-    const notificationPort = { listIssueComments: jest.fn(), addComment: jest.fn(), updateComment: jest.fn() };
     const defaultBranch = bindRepositoryDefaultBranch({ getDefaultBranch: jest.fn() } as never, binding);
-    const issuePush = bindIssuePushNotification(issuePushPort as never, binding);
+    const issuePush = bindIssueReopen(issuePushPort as never, binding);
     const branches = bindBranchListQuery({ getListOfBranches: jest.fn() } as never, binding);
     const pullRequests = bindPullRequestBranchQuery({ getOpenPullRequestNumbersByHeadBranch: jest.fn() } as never, binding);
     const progress = bindIssueProgress({ setProgressLabel: jest.fn() } as never, binding);
@@ -281,11 +288,9 @@ describe('push and single-action capability binding', () => {
     const size = bindBranchChangeSize({ getSizeCategoryAndReason: jest.fn() } as never, binding);
     const dependencies = bindBranchDependencies(dependencyPort as never, binding);
     const comparison = bindBranchComparison({ compare: jest.fn() } as never, binding);
-    const notifications = bindBranchSyncNotification(notificationPort as never, binding);
 
     await defaultBranch.getDefaultBranch();
     await issuePush.openIssue(42);
-    await issuePush.addComment(42, 'body');
     await branches.getListOfBranches();
     await pullRequests.getOpenPullRequestNumbersByHeadBranch('feature/42');
     await progress.setProgressLabel(42, 75);
@@ -295,13 +300,9 @@ describe('push and single-action capability binding', () => {
     await dependencies.listOpenDependencies();
     await dependencies.resolveTarget(42);
     await comparison.compare('develop', 'feature/42');
-    await notifications.listIssueComments(42);
-    await notifications.addComment(42, 'body');
-    await notifications.updateComment(42, 7, 'updated');
 
     expect(issuePushPort.openIssue).toHaveBeenCalledWith('owner', 'repo', 42, 'secret-token');
     expect(dependencyPort.resolveTarget).toHaveBeenCalledWith('owner', 'repo', 42, 'secret-token');
-    expect(notificationPort.updateComment).toHaveBeenCalledWith('owner', 'repo', 42, 7, 'updated', 'secret-token');
   });
 
   it('forwards setup provisioning and every credential-bearing workspace operation', async () => {

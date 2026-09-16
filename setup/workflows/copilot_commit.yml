@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     concurrency:
-      group: copilot-bugbot-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+      group: copilot-push-${{ github.repository }}-${{ github.ref_name }}
       cancel-in-progress: true
     permissions:
       contents: read
@@ -44,6 +44,9 @@ jobs:
 
       - uses: vypdev/copilot@v3
         with:
+          repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
+          issues-locale: ${{ vars.ISSUES_LOCALE || '' }}
+          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || '' }}
           ai-ignore-files: ${{ vars.AI_IGNORE_FILES || 'build/*' }}
           debug: ${{ vars.DEBUG }}
           main-branch: ${{ vars.MAIN_BRANCH || 'master' }}
@@ -58,8 +61,6 @@ jobs:
           reopen-issue-on-push: ${{ vars.REOPEN_ISSUE_ON_PUSH || 'true' }}
           desired-assignees-count: ${{ vars.DESIRED_ASSIGNEES_COUNT || '1' }}
           desired-reviewers-count: ${{ vars.DESIRED_REVIEWERS_COUNT || '1' }}
-          issues-locale: ${{ vars.ISSUES_LOCALE || 'en-US' }}
-          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || 'en-US' }}
           commit-prefix-transforms: ${{ vars.COMMIT_PREFIX_TRANSFORMS || 'replace-slash' }}
           ai-pull-request-description-mode: ${{ vars.AI_PULL_REQUEST_DESCRIPTION_MODE || 'replace' }}
           ai-members-only: ${{ vars.AI_MEMBERS_ONLY || 'false' }}

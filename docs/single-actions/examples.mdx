@@ -56,7 +56,9 @@ See [Bugbot](/bugbot) for full documentation.
 
 ## Workflow: recommend steps
 
-Get implementation steps for issue `789` and post them as a comment:
+Create or update the single implementation-plan card for issue `789`. The card
+contains 3–8 structured steps plus a verifiable acceptance criterion, uses the
+effective issue locale (English by default), and is reused on later runs:
 
 ```yaml
 - uses: vypdev/copilot@v3
@@ -200,11 +202,19 @@ copilot detect-potential-problems -i 456 -b feature/456-fix-bug --debug
 copilot recommend-steps -i 789
 ```
 
+This creates or updates the same bounded, English-default plan card as
+`recommend_steps_action`; equivalent reruns do not append another comment.
+
 ### think
 
 ```bash
 copilot think -q "Where is authentication validated?"
+copilot think -i 123 -q "Summarize the issue and identify the next risk"
 ```
+
+The first form does not probe a default issue. The optional `-i/--issue` form
+adds that issue description to the analysis context. Both print one localized
+`Answer` locally and create no GitHub comment.
 
 ### do (CLI-only, execution role)
 

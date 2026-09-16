@@ -5,7 +5,10 @@ import type {
   BugbotPullRequestIdentity,
   BugbotSourceCoverage,
 } from '../../../../../../domain/bugbot/context';
-import { loadBugbotContext } from '../load_bugbot_context_use_case';
+import {
+  loadBugbotContext,
+  preflightBugbotContext,
+} from '../load_bugbot_context_use_case';
 import type { BugbotContextRequest } from '../bugbot_context_request';
 
 jest.mock('../../../../../../utils/logger', () => ({ logDebugInfo: jest.fn() }));
@@ -248,7 +251,9 @@ describe('loadBugbotContext', () => {
         filesWithDiffLocations: [],
       }, 'diff')),
     });
-    const pending = loadBugbotContext(request(), reader);
+    const contextRequest = request();
+    const preflight = await preflightBugbotContext(contextRequest, reader);
+    const pending = loadBugbotContext(contextRequest, reader, preflight);
     await Promise.resolve();
     await Promise.resolve();
     expect(maximum).toBe(2);
@@ -303,6 +308,6 @@ describe('loadBugbotContext', () => {
     expect(context.eligibleResolutionIds.has('finding-0')).toBe(false);
     expect(context.eligibleResolutionIds.has('finding-100')).toBe(true);
     expect(context.coverage.status).toBe('partial');
-    expect(context.previousFindingsBlock).toContain('older finding(s) were omitted');
+    expect(context.previousFindingsBlock).toContain('older finding was omitted');
   });
 });

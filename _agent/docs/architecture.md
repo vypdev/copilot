@@ -60,8 +60,8 @@ These lifecycles remain independent and share only provider-neutral contracts.
   that their capability needs.
 - Setup configuration is split into focused defaults, plan, validation, and
   storage policies. Resource provisioning is isolated from setup orchestration.
-- Input keys, Bugbot constants, workflow statuses, image defaults, and CLI
-  errors are owned by their consuming layer instead of a global constants file.
+- Input keys, Bugbot constants, workflow statuses, and CLI errors are owned by
+  their consuming layer instead of a global constants file.
 - Architecture tests verify cycle freedom, import resolution, pure-core
   isolation, application outer-layer isolation, and composition boundaries.
 

@@ -1,25 +1,30 @@
 # Branch Synchronization and Conflict Recovery
 
-- Status: As-built baseline
+- Status: Implemented
 - Date: 2026-09-11
+- Last verified: 2026-09-15
 - Owners: Copilot maintainers
 - Scope: all-branch drift observation and authorized parent-to-working-branch synchronization
-- Related issues/PRs: managed issue lifecycle and agent runtime SDDs
+- Related issues/PRs: [PR #387](https://github.com/vypdev/copilot/pull/387), managed issue lifecycle, semantic GitHub publication, and agent runtime SDDs
 - Required review gates: product UX, architecture, testing, documentation, security/operations
-- Open decisions blocking readiness: none for the baseline
+- Open decisions blocking readiness: none
 
 ## 1. Executive summary
 
 A lightweight all-branch observer finds open parent→working-branch relationships,
-compares them, and maintains one issue notice when a branch falls behind.
+compares them, and maintains one issue status card when a branch falls behind.
+The card itself is the only initial notification. When a previously aligned
+card becomes stale again, one short, source-fingerprinted action notification
+links back to current status; equivalent retries remain silent.
 Authorized users can dry-run or merge the parent into the working branch. Clean
 merges need no agent; eligible conflicts may use the fixer inside a strict path,
 Git-state, verification, credential, and remote-head boundary.
 
 ```text
-push any branch -> resolve dependencies -> compare -> upsert/resolve one notice
+push any branch -> resolve dependencies -> compare -> upsert/resolve one card
+                                             -> aligned-to-stale only: notify once
 authorized sync -> fetch heads -> prepare merge -> clean OR guarded fixer
-                -> verify -> recheck heads -> trusted commit/push -> observer resolves notice
+                -> verify -> recheck heads -> trusted commit/push -> observer resolves card
 ```
 
 ## 2. Problem, current behavior, and evidence
@@ -35,8 +40,10 @@ while blind automated merges can overwrite concurrent work or expose credentials
 1. `copilot_branch_sync.yml` observes every non-deletion push with no agent inputs.
 2. It reads open issues/PRs with pagination and resolves dependencies first from
    durable Copilot configuration, then linked branches and PR base/head facts.
-3. It compares affected relationships and upserts one bot-owned notice; alignment
-   resolves the same notice.
+3. It compares affected relationships and upserts one bot-owned status card;
+   alignment resolves the same card. The initial stale state creates no second
+   comment, while a later aligned-to-stale transition creates one immutable,
+   linked action notification per trusted source head.
 4. `/copilot sync-branch` or a bounded mentioned phrase invokes authorization
    and resolves the conversation target.
 5. `--dry-run`, `--no-agent`, and `--from` alter only documented bounded behavior.
@@ -49,12 +56,13 @@ while blind automated merges can overwrite concurrent work or expose credentials
 - Observed behavior: branch-sync domain, policies, use cases, repositories,
   workspace/time adapters, workflow, and docs.
 - Intentional contract: separate observer, durable-first discovery, sticky
-  notification, clean-merge fast path, conflict boundary, and race-safe push.
+  status card, transition-only notification, clean-merge fast path, conflict
+  boundary, and race-safe push.
 - Known debt and limitations: observation scales with open issue/PR pagination;
   relationships without durable configuration need an open PR; no live large-repo
   performance evidence is checked in.
 - Unknown rationale: the original polling/GraphQL query shape is not a permanent API contract.
-- Proposed improvements: indexed durable dependency storage needs a separate migration design.
+- Proposed improvements: indexed durable dependency storage requires a separate current-state design.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -76,6 +84,7 @@ means the comparison shows no parent commits missing from the working branch.
 1. Parent drift MUST become visible without invoking an agent.
 2. Sync MUST never push work prepared from stale remote heads.
 3. Conflict assistance MUST be path- and state-bounded.
+4. Newly required human action MUST be visible without notifying on every push.
 
 ### 4.2 Non-goals
 
@@ -90,28 +99,34 @@ means the comparison shows no parent commits missing from the working branch.
 3. Sensitive/workflow paths and >20 conflicts MUST not use automated fixing.
 4. Verification runs credential-free; only trusted fetch/push receives credentials.
 5. Both remote heads MUST match preparation immediately before commit/push.
+6. Only an aligned-to-stale transition with a canonical source head MAY create
+   an action notification; a fingerprint replay MUST create none.
 
 ## 5. Current versus proposed product journey
 
 | Stage | Broad/unsafe alternative | As-built contract | Effect |
 |---|---|---|---|
 | Observe | full commit workflow | metadata-only observer | low cost/no model |
-| Notify | comment per push | one updated bot notice | bounded noise |
+| Notify | comment per push | one status card plus transition-only notification | current state stays visible without hiding newly required action |
 | Merge | agent always | clean git merge first | deterministic |
 | Conflict | unrestricted edits | exact conflict-path guard | bounded risk |
 | Push | trust checkout | remote-head compare | race safety |
 
-No behavior change is proposed.
+The implemented product change adds the transition-only notification without
+changing dependency discovery, merge, authorization, or conflict safety.
 
 ## 6. Functional behavior and state model
 
 ### 6.1 Happy path
 
 1. Observer resolves and compares an affected dependency.
-2. It updates a stale notice with branches and next command.
+2. It creates or updates a stale status card with branches and next command.
+   Initial creation is the event's only notification.
 3. Authorized maintainer invokes sync; clean merge is prepared and verified.
 4. Remote heads remain unchanged; trusted code commits/pushes.
-5. The bot-authored push runs the observer and resolves downstream/current notices.
+5. The bot-authored push runs the observer and resolves downstream/current cards.
+6. If a later parent push makes an aligned card stale, the observer updates the
+   card and creates one short notification linked to it.
 
 ### 6.2 Alternative paths
 
@@ -127,14 +142,15 @@ No behavior change is proposed.
 |---|---|---|---|
 | unknown relation | no parent/working fact | observed when linked | create/link PR/config |
 | aligned | no parent drift | stale | parent advances |
-| stale | notice active | preparing/aligned | invoke sync/manual merge |
+| stale | status card active | preparing/aligned | invoke sync/manual merge |
 | preparing | exact heads/merge prepared | conflicted/verifying/aborted | wait |
 | conflicted | git conflicts exist | fixing/aborted | eligible fixer/manual |
 | verifying | merge state/commands checked | pushing/aborted | repair tests |
 | pushing | heads revalidated | aligned/failed | inspect remote |
 | aborted | no push completed | stale | retry latest |
 
-Replays update the same notice. Parent-child chains are reevaluated after bot
+Replays keep the same card and do not repeat a transition fingerprint.
+Parent-child chains are reevaluated after bot
 pushes. Any failure attempts merge abort and reports whether no push occurred.
 
 ## 7. User-facing configuration
@@ -182,25 +198,40 @@ observer and keep git/provider implementations outside application policy.
 Pending: **`feature/B` is 3 commits behind `feature/A`.** No automatic merge is running.
 Action required: **Synchronize the branch.** Run `/copilot sync-branch` in issue #42.
 Blocked: **2 conflicts include `.github/workflows/ci.yml`.** Automated resolution is forbidden; merge manually.
-Partial: **Merge prepared, but verification failed.** Nothing was pushed; the stale notice remains.
-Complete: **Merged `feature/A` into `feature/B` and pushed `abc1234`.** The notice is resolved.
+Partial: **Merge prepared, but verification failed.** Nothing was pushed; the stale card remains.
+Complete: **Merged `feature/A` into `feature/B` and pushed `abc1234`.** The card is resolved.
 ```
 
-One sticky issue notice owns current drift and links parent, working branch,
-issue/PR, and command guidance. Command result names outcome, verification count,
-and commit SHA when present. `--dry-run` explicitly says nothing was pushed.
-English is fallback; visual icons have text; untrusted refs/paths/diagnostics are sanitized.
+One sticky issue card owns current drift and links parent, working branch,
+issue/PR, and command guidance. The first stale observation creates only this
+card. An aligned-to-stale transition may additionally create this default-English
+message:
+
+```markdown
+Branch synchronization needs attention: `feature/B` is behind `feature/A`. [Open the current status](https://github.com/example/project/issues/42#issuecomment-8).
+```
+
+The transition message is at most 400 characters and two links, is immutable
+after publication, and is deduplicated by bot ownership, dependency identity,
+closed action, and canonical push head—not by its wording. Command results name
+outcome, verification count, and commit SHA when present. `--dry-run` explicitly
+says nothing was pushed. English is the default and fallback; the configured
+issue locale supplies one complete catalog for the card, transition, and
+duplicate pointer. Visual icons have text; untrusted refs, translated Markdown,
+paths, and diagnostics are sanitized.
 
 ## 10. Failure, recovery, and cleanup
 
 | Failure | Impact | Retained facts | Retry | Action | Cleanup |
 |---|---|---|---|---|---|
 | relation unavailable | no comparison | issue/PR facts | yes | link PR/config | none |
-| compare/provider error | notice may be stale | prior notice | yes | rerun observer | none |
+| compare/provider error | card may be stale | prior card | yes | rerun observer | none |
 | ineligible conflict | no push | merge aborted | after manual resolution | merge manually | abort |
 | verification/state fail | no push | remote branches | yes | fix command/code | abort |
 | head race | no stale push | new heads | yes | rerun | abort |
-| post-push notice fail | merge exists, notice stale | commit SHA | yes | rerun observer | no commit rollback |
+| post-push card update fails | merge exists, card stale | commit SHA | yes | rerun observer | no commit rollback |
+| action-notification create fails | stale card is current but the timeline alert may be absent | updated stale card and failing result | no domain replay | open the card from the run | later stale runs remain quiet |
+| exact concurrent notification duplicate | duplicate timeline item | oldest exact bot-owned notification | automatic | none | delete duplicate or compact it to a localized pointer |
 
 ## 11. Security, permissions, and privacy
 
@@ -214,41 +245,46 @@ paths, unexpected index/worktree changes, and control sequences fail closed.
 ## 12. Observability and operational UX
 
 Observer logs dependency count/comparison outcomes without agent telemetry.
-Sticky notices expose current stale/aligned fact. Sync result payload includes
+Sticky cards expose current stale/aligned fact. The repository-locale Job
+Summary records transition topic, target, fingerprint, created/reused effect,
+and bounded duplicate-compaction IDs without copying visible prose. Sync result payload includes
 outcome, branches, initial SHAs, conflicts, verification count, and commit SHA.
 Failures say “no push completed” when true. Workflow contracts ensure bot pushes
 remain observable and downstream relationships can update.
 
-## 13. Compatibility, migration, rollout, and rollback
+## 13. Compatibility, cutover, rollout, and rollback
 
-Durable configuration is preferred; existing linked branches/PR references are
-fallback-compatible. Unknown/malformed markers are ignored as dependency
-evidence, not executed. Installing/removing the observer does not change branch
-history. Rollback disables the workflow/command; any completed merge remains an
-ordinary auditable commit and is reverted normally if necessary.
+There are no installed users or production marker state to migrate. Linked
+branches and PR references use the current durable dependency contract. Stale
+and aligned cards use only the shared semantic publication envelope; removed,
+unknown, malformed, human-authored, and third-party markers are inert and are
+never adopted or rewritten. Installing or removing the observer does not change
+branch history. Rollback restores one complete known-good code/schema bundle;
+existing cards and immutable notifications remain ordinary GitHub comments, and
+any completed merge remains an auditable commit reverted normally if necessary.
 
 ## 14. Testing strategy and numeric budget
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
 | Commands/dependency/eligibility | 24 | options, links, limits, sensitive paths |
-| State/idempotency/races | 20 | notice replay, chains, remote heads, abort |
+| State/idempotency/races | 24 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
 | Use cases/workspace | 22 | clean/conflict/dry-run/verify/push |
 | Adapters/workflow contracts | 16 | pagination, git states, all-branch/no-agent |
-| UX/localization/sanitization | 12 | notices/outcomes/refs/errors |
-| Integration/security/migration | 14 | observe→sync→resolve, credentials, fallback |
-| **Total** | **108** | no double counting |
+| UX/localization/sanitization | 14 | cards, transition/pointers, arbitrary locale, refs, translated controls, errors |
+| Integration/security/cutover | 16 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection |
+| **Total** | **116** | no double counting |
 
 Global thresholds remain; dependency/eligibility policies SHOULD reach 95%
 branch coverage. Fake git/GitHub/timers replace live services and waits. Tests
 must exercise interrupted merge states and remote races. Manual evidence covers
-sticky notice updates, chained branches, PR/issue rendering, and conflict guidance.
+sticky card updates, transition notifications, chained branches, PR/issue rendering, and conflict guidance.
 
 ## 15. Documentation and discoverability
 
 | Audience | Artifact | Required content |
 |---|---|---|
-| Contributor | branch synchronization | notice and commands |
+| Contributor | branch synchronization | card, notification lifecycle, and commands |
 | Maintainer | comment commands | authority/options |
 | Operator | troubleshooting/security | abort/race/credentials |
 | Developer | this SDD/architecture | ports and git boundary |
@@ -256,7 +292,8 @@ sticky notice updates, chained branches, PR/issue rendering, and conflict guidan
 ## 16. Acceptance scenarios
 
 1. Any non-deletion branch push checks only affected open dependencies with no agent.
-2. Repeated stale pushes update one notice; alignment resolves it.
+2. An initial stale push creates one card and no second comment; identical stale
+   pushes mutate nothing, while a changed comparison updates only that card.
 3. Dry run reports clean/conflicted and leaves worktree/remote unchanged.
 4. Clean sync verifies and pushes without fixer.
 5. Unauthorized, same-branch, invalid-ref, sensitive, or >20-conflict requests do not push.
@@ -264,13 +301,19 @@ sticky notice updates, chained branches, PR/issue rendering, and conflict guidan
 7. Verification or remote-head race aborts and reports no push.
 8. Bot push triggers observer and updates dependent child relations.
 9. Untrusted paths/refs/output cannot expose credentials or escape commands.
+10. An aligned-to-stale transition with a canonical source head updates the card
+    and creates one localized linked notification; replay creates none.
+11. Concurrent exact transition notifications retain the oldest bot-owned
+    comment and delete or compact later duplicates without touching other users.
+12. A transition-publication failure preserves the already updated stale card,
+    returns a sanitized publication failure, and does not replay branch work.
 
 ## 17. Requirements traceability
 
 | Requirement | Owner | Evidence | Documentation |
 |---|---|---|---|
 | dependency discovery | policy/repository | dependency tests | detection flow |
-| sticky observer | observe use case | observer tests | branch sync |
+| sticky observer and actionable transition | observe use case + shared transition workflow | observer/policy/reconciliation tests | branch sync lifecycle |
 | safe merge | sync use case/workspace | sync/workspace tests | align branch |
 | conflict boundary | eligibility/workspace policies | security/path tests | conflict boundary |
 | workflow separation | workflow validator | contract tests | why separate |
@@ -280,17 +323,18 @@ sticky notice updates, chained branches, PR/issue rendering, and conflict guidan
 1. Update command/dependency/eligibility policies and tests.
 2. Update observer/sync use cases including replay/race cases.
 3. Update GraphQL/git/time adapters and workflow checks.
-4. Update notices/results/docs/catalog.
+4. Update cards, notifications, results, docs, and catalog.
 5. Run full automated and human branch-chain UX validation.
 
 ## 19. Definition of Done
 
-- [ ] The 108-case budget, coverage, architecture, and workflow gates pass.
-- [ ] Clean/conflict/dry-run/replay/race/abort paths retain correct state.
-- [ ] Agent, verify, and credentials remain in separate trust boundaries.
-- [ ] All five UI states, links, localization, accessibility, and noise pass.
-- [ ] Documentation and catalog evidence are current.
-- [ ] Live chained-branch and conflict UX evidence is captured.
+- [x] The 116-case budget, coverage, architecture, and workflow gates pass.
+- [x] Clean/conflict/dry-run/replay/race/abort paths retain correct state.
+- [x] Agent, verify, and credentials remain in separate trust boundaries.
+- [x] Card/transition states, links, localization, accessibility, and noise budgets pass.
+- [x] Documentation and catalog evidence are current.
+- [x] Repository PR checks exercise the observer and publication behavior; live
+      conflict resolution remains covered by the established fake-workspace suite.
 
 ## 20. References and decisions
 

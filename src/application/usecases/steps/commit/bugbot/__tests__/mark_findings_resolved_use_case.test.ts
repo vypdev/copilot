@@ -6,7 +6,6 @@ import type {
   BugbotContext,
 } from "../types";
 import type { ExistingByFindingId } from '../../../../../../domain/bugbot/finding';
-import { getCommentWatermark } from "../../../../../../utils/comment_watermark";
 import { buildMarker } from '../../../../../policies/bugbot_finding_marker_policy';
 import type { BugbotContextSelectionContext } from '../bugbot_review_operation_context';
 
@@ -257,8 +256,8 @@ describe("markFindingsResolved", () => {
     expect(mockUpdateComment).not.toHaveBeenCalled();
   });
 
-  it("updates from the full issue body and removes its old trailing watermark", async () => {
-    const fullBody = `${unresolvedBody}\n\n${"x".repeat(15000)}\n\n${getCommentWatermark()}`;
+  it("updates finding metadata without rewriting unrelated trailing content", async () => {
+    const fullBody = `${unresolvedBody}\n\n${"x".repeat(15000)}\n\n<sup>Made with ❤️ by [vypdev/copilot](https://github.com/marketplace/actions/copilot-github-with-super-powers)</sup>`;
 
     const errors = await markFindingsResolved({
       operation: baseOperation(),
@@ -273,7 +272,7 @@ describe("markFindingsResolved", () => {
     const updatedBody = mockUpdateComment.mock.calls[0][2] as string;
     expect(updatedBody).toContain("x".repeat(15000));
     expect(updatedBody).toMatch(/resolved:true/);
-    expect(updatedBody).not.toContain("Made with ❤️ by");
+    expect(updatedBody).toContain("Made with ❤️ by");
   });
 
   it("retries only the pending issue destination after PR and thread resolution succeeded", async () => {

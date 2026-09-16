@@ -66,7 +66,6 @@ function baseParam(overrides: Record<string, unknown> = {}) {
     commit: {},
     commitPrefixBuilder: '',
     emoji: {},
-    images: {},
     ai: {},
     locale: {},
     sizeThresholds: {},

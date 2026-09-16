@@ -36,7 +36,6 @@ import { Emoji } from '../emoji';
 import type { LatestTagQueryPort } from '../../../application/ports/branch_tag_ports';
 import { Execution } from '../execution';
 import { Hotfix } from '../hotfix';
-import { Images } from '../images';
 import { Issue } from '../issue';
 import { IssueTypes } from '../issue_types';
 import { Labels } from '../labels';
@@ -106,36 +105,6 @@ function makeBranches(): Branches {
   );
 }
 
-function makeImages(): Images {
-  const empty: string[] = [];
-  return new Images(
-    false,
-    false,
-    false,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-  );
-}
-
 function makeIssueTypes(): IssueTypes {
   return new IssueTypes(
     'Task',
@@ -195,7 +164,6 @@ function buildExecution(inputs?: Record<string, unknown>, overrides?: Partial<{
     issue: overrides?.issue ?? makeIssue(inputs),
     pullRequest: overrides?.pullRequest ?? makePullRequest(inputs),
     emoji: new Emoji(false, ''),
-    images: makeImages(),
     tokens: new Tokens('token'),
     ai: new Ai('http://localhost', 'model', false, [], false, 'High', 10, []),
     labels,
@@ -436,7 +404,6 @@ describe('Execution', () => {
         issue,
         pullRequest,
         emoji,
-        images: makeImages(),
         tokens,
         ai,
         labels,
@@ -523,6 +490,26 @@ describe('Execution', () => {
       await setupExecution(e);
       expect(e.issueNumber).toBe(42);
       expect(mockConfigGet).toHaveBeenCalledWith(314);
+    });
+
+    it('configures an unlinked pull request without using the PR as its own issue', async () => {
+      const pullRequest = makePullRequest({
+        eventName: 'pull_request',
+        repo: { owner: 'owner', repo: 'repository' },
+        pull_request: { number: 314, head: { ref: 'codex/pr-enrichment-ux' }, base: { ref: 'develop' } },
+      } as never);
+      const e = buildExecution({
+        eventName: 'pull_request',
+        repo: { owner: 'owner', repo: 'repository' },
+        pull_request: { number: 314, head: { ref: 'codex/pr-enrichment-ux' }, base: { ref: 'develop' } },
+      } as never, { pullRequest });
+
+      await setupExecution(e);
+
+      expect(e.issueNumber).toBe(-1);
+      expect(mockConfigGet).toHaveBeenCalledWith(314);
+      expect(mockGetLabels).toHaveBeenCalledTimes(1);
+      expect(mockGetLabels).toHaveBeenCalledWith(314);
     });
 
     it('sets up a PR conversation comment from its exact payload number', async () => {

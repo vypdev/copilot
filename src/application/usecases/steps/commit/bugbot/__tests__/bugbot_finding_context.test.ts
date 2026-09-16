@@ -19,7 +19,7 @@ describe('Bugbot previous-finding context budget', () => {
     expect(context.selected[0].id).toBe('finding-001');
     expect(context.selected[99].id).toBe('finding-100');
     expect(context.block).not.toContain('body-000');
-    expect(context.block).toContain('1 older finding(s) were omitted');
+    expect(context.block).toContain('1 older finding was omitted');
     expect(context.block.length).toBeLessThanOrEqual(48_000);
   });
 

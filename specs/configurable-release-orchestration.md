@@ -3,7 +3,7 @@
 - Status: Implemented; live rollout, human UX validation, and concurrency
   conformance hardening pending
 - Date: 2026-09-09
-- Last updated: 2026-09-11
+- Last updated: 2026-09-14
 - Owners: Copilot maintainers
 - Scope: release and hotfix promotion, publication, reconciliation, and cleanup
 - Related proposals:
@@ -349,7 +349,7 @@ Allowed values:
 `milestones` MUST publish at most four additional lifecycle comments for one
 operation. Duplicate event delivery cannot create duplicate comments.
 
-### 6.4 Existing configuration retained
+### 6.4 Current configuration contract
 
 The following inputs retain their current meaning:
 
@@ -359,8 +359,17 @@ The following inputs retain their current meaning:
 - `hotfix-tree`
 - `release-workflow`
 - `hotfix-workflow`
-- `issues-locale`, used for the issue control center and issue comments
-- `pull-requests-locale`, used for managed PR titles and descriptions
+- `repository-locale`, default `en-US`, used for repository/run surfaces such as
+  the deployment Job Summary
+- `issues-locale`, an optional override for the issue control center and issue
+  milestones; empty inherits `repository-locale`
+- `pull-requests-locale`, an optional override for managed PR titles and
+  descriptions; empty inherits `repository-locale`
+
+Every operation snapshots the complete canonical locale profile with the branch
+and strategy facts, so changing repository Variables cannot switch language
+mid-operation. State without that profile is invalid and cannot be resumed,
+inferred, or rewritten.
 
 ### 6.5 Project publication timing
 
@@ -442,9 +451,9 @@ latest production tag
 
 ## 8. Durable orchestration state
 
-The issue configuration schema MUST be incremented and gain a typed
-`deploymentOrchestration` object. Unknown fields and future schema versions MUST
-continue to round-trip safely.
+The issue configuration schema contains one typed `deploymentOrchestration`
+object. Missing, unknown, removed, and future fields or schema versions are
+rejected; they are not round-tripped, inferred, or converted.
 
 Minimum persisted shape:
 
@@ -452,30 +461,46 @@ Minimum persisted shape:
 {
   "schemaVersion": 3,
   "deploymentOrchestration": {
-    "operationId": "uuid",
+    "stateVersion": 1,
+    "revision": 4,
+    "operationId": "operation-12345678",
+    "locale": {
+      "repository": "en-US",
+      "issue": "en-US",
+      "pullRequest": "en-US"
+    },
     "kind": "release",
     "version": "3.4.0",
+    "title": "Release 3.4.0",
+    "changelog": "Release changes",
     "phase": "promotion_pr_pending",
     "strategy": "production-lineage",
     "prMode": "auto",
     "backmergeMode": "auto",
+    "hotfixActiveReleasePolicy": "prefer-release",
     "cleanup": "all",
     "issueCompletion": "close",
+    "presentationMode": "guided",
+    "diagrams": true,
+    "commentMode": "update",
     "sourceBranch": "release/3.4.0",
-    "sourceSha": "release-head-after-build",
+    "sourceSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "originBranch": "develop",
-    "originSha": "develop-head-at-cut",
+    "originSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "productionBranch": "master",
     "developmentBranch": "develop",
+    "reconciliationTree": "sync",
     "promotionPullRequest": 123,
-    "productionSha": "accepted-merge-commit",
     "tag": "v3.4.0",
+    "publicationWorkflow": "release_workflow.yml",
     "publicationVerified": false,
     "reconciliationTargets": [
       {
         "targetBranch": "develop",
         "sourceBranch": "master",
+        "sourceSha": "cccccccccccccccccccccccccccccccccccccccc",
         "syncBranch": "sync/release-3.4.0-to-develop-abcd1234",
+        "syncSha": "dddddddddddddddddddddddddddddddddddddddd",
         "pullRequest": 124,
         "status": "pending"
       }
@@ -510,6 +535,12 @@ blocked
 Each transition MUST be monotonic and compare the stored operation ID and
 expected phase before writing. Duplicate or out-of-order events MUST be no-ops
 with an observable result.
+
+`lastFailure` is mandatory in every snapshot. It is exactly `null` in every
+non-blocked phase. A blocked snapshot must contain one closed failure object
+with `category`, bounded safe `message`, `retryable`, and the exact non-blocked
+`previousPhase`. Generic transitions cannot enter `blocked`; only the dedicated
+failure-bearing transition may do so.
 
 ## 9. Event-driven orchestration
 
@@ -802,13 +833,13 @@ The guided presentation follows this information hierarchy:
 ```markdown
 <!-- copilot-deployment-dashboard operation-id="..." issue="355" -->
 
-# 🚀 Release 3.4.0
+## 🚀 Release 3.4.0
 
 > **Current status: waiting for production approval**
 >
 > No action is required while GitHub checks are running.
 
-## Progress
+### Progress
 
 - [x] Release cut from `develop` at [`abc1234`](...)
 - [x] Version files, build, validation, and smoke test
@@ -817,18 +848,18 @@ The guided presentation follows this information hierarchy:
 - [ ] Reconciliation into `develop`
 - [ ] Cleanup and issue completion
 
-## Current transition
+### Current transition
 
 | From | To | State |
 |---|---|---|
 | `release/3.4.0` | `master` | ⏳ Checks and review |
 
-## What happens next
+### What happens next
 
 After [PR #401](...) is merged, Copilot will tag the accepted `master` commit,
 publish `@vypdev/copilot@3.4.0`, and start development reconciliation.
 
-## Links
+### Links
 
 [Promotion PR](...) · [Compare changes](...) · [Workflow run](...)
 
@@ -864,22 +895,22 @@ instruction with a direct link or copyable command.
 A blocked presentation uses the following order:
 
 ```markdown
-# ❌ Release 3.4.0 needs attention
+## ❌ Release 3.4.0 needs attention
 
 > **Published package:** No
 > **Production updated:** No
 > **Development synchronized:** No
 
-## What happened
+### What happened
 
 The production PR was closed without merging, so publication was stopped.
 
-## Action required
+### Action required
 
 Reopen [PR #401](...) or run `/copilot retry-release` after correcting the
 problem.
 
-## What Copilot protected
+### What Copilot protected
 
 No npm version, GitHub Release, or version tag was created.
 
@@ -1036,14 +1067,24 @@ automation. Labels supplement, but never replace, the PR body status.
 
 ### 16.10 Localization
 
-Issue-facing presentation uses `issues-locale`; PR-facing presentation uses
-`pull-requests-locale`.
+Issue-facing presentation uses the effective issue locale; PR-facing
+presentation uses the effective pull-request locale; the Job Summary uses the
+repository locale. Empty issue and PR overrides inherit `repository-locale`,
+whose default is `en-US`.
 
 All orchestration-owned headings, status sentences, instructions, table labels,
 and failure guidance MUST come from a typed message catalog rather than scattered
-string literals. The first implementation MUST provide complete `en-US` and
-`es-ES` catalogs. An unsupported locale falls back to `en-US` and emits one
-visible, non-blocking warning in technical details.
+string literals. The implementation provides complete `en-US` and `es-ES`
+catalogs. Any other valid BCP-47 locale uses one schema-constrained dynamic
+catalog resolution for the required slice. Missing, invalid, unsafe, or
+unavailable dynamic output falls back atomically to `en-US`; fallback is recorded
+in the Job Summary and never creates a second timeline comment or a mixed-language
+artifact.
+
+The localization-evidence heading, table labels, descriptor count, and
+fallback-reason labels in that Job Summary use the same repository-locale
+catalog. Locale tags, catalog source names, descriptor counts, and
+machine-readable fallback reasons remain provider facts and are not translated.
 
 Branch names, package names, tag names, GitHub check names, and copied provider
 facts are not translated.
@@ -1054,9 +1095,8 @@ facts are not translated.
   node style.
 - Images and diagrams have concise alternative text or an adjacent textual
   equivalent.
-- Decorative GIFs are omitted from the durable control center by default; they
-  may appear only outside the operational status block when existing image
-  configuration enables them.
+- Decorative GIFs are omitted from every orchestration surface; no image
+  configuration is exposed.
 - Primary status and required action are never hidden inside `<details>`.
 - Tables use at most four columns and avoid long unbroken full SHAs.
 - Full SHAs and verbose provider facts remain available in technical details.
@@ -1069,16 +1109,23 @@ facts are not translated.
 
 ### 16.12 Job Summary
 
-The Job Summary mirrors the issue's current facts but is optimized for operators:
+The Job Summary projects the operation's current semantic facts for operators;
+it does not replay internal use-case steps:
 
 - result and phase at the top;
 - transition performed by this invocation;
 - verified input/output SHAs;
-- API operations created/reused/skipped;
+- durable operation identity, revision, origin, prepared source, and accepted
+  production fact;
 - publication evidence;
 - pending external dependency;
 - sanitized failure classification and retryability; and
-- a final artifact/PR link table.
+- a final set of descriptive artifact and PR links.
+
+Raw `Result.steps`, provider narration, and duplicate “created/reused/skipped”
+logs remain in machine-searchable logs. They are not copied into the Job Summary
+because the operation state and descriptive links already communicate the useful
+result.
 
 It MUST distinguish `waiting externally` from `workflow failure`. A workflow that
 successfully creates a pending auto-merge PR finishes green and reports the
@@ -1395,8 +1442,9 @@ deviation. Deviations require an explicit update to this specification.
   configuration-controlled fallback.
 - Build every URL from verified repository entities and sanitize all untrusted
   values before Markdown publication.
-- Keep generic `Result.steps` for short generic feedback only; deployment
-  orchestration uses its dedicated structured presentation boundary.
+- Keep `Result.steps` as internal execution evidence; deployment orchestration
+  uses its dedicated structured presentation boundary and never replays those
+  steps into GitHub conversation UI or its Job Summary.
 
 ### 20.6 Documentation
 

@@ -8,6 +8,7 @@ describe('getCheckProgressPrompt', () => {
             baseBranch: 'develop',
             currentBranch: 'feature/wip',
             issueDescription: 'Build the API.',
+            targetLocale: 'pt-BR',
         });
         expect(prompt).toContain('**Context.**');
         expect(prompt).toContain('issue #3');
@@ -16,6 +17,7 @@ describe('getCheckProgressPrompt', () => {
         expect(prompt).toContain('Build the API.');
         expect(prompt).toContain('progress');
         expect(prompt).toContain('remaining');
+        expect(prompt).toContain('"outputLocale": "pt-BR"');
         expect(prompt).not.toContain('{{');
     });
 });

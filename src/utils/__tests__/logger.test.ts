@@ -119,12 +119,18 @@ describe('logger', () => {
       const err = new ApplicationError('provider.unavailable', 'e', {
         correlationId: CORRELATION_ID,
         cause: new Error('raw-provider-secret'),
+        recovery: {
+          id: 'managed-branch-enrichment-failed',
+          variables: { branchName: 'feature/42-safe' },
+        },
       });
       logError(err);
       const call = consoleErrorSpy.mock.calls[0][0] as string;
       expect(call).toMatch(/"level":"error"/);
       expect(call).toMatch(/"message":"e"/);
       expect(call).toContain(`"correlationId":"${CORRELATION_ID}"`);
+      expect(call).toContain('"recovery":{"id":"managed-branch-enrichment-failed"');
+      expect(call).toContain('"branchName":"feature/42-safe"');
       expect(call).not.toMatch(/stack|raw-provider-secret/);
     });
 

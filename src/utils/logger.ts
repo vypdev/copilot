@@ -171,6 +171,7 @@ export function logError(message: string | ApplicationErrorPublicRecord, metadat
                 action: message.action,
                 retainedState: message.retainedState,
                 correlationId: message.correlationId,
+                ...(message.recovery ? { recovery: message.recovery } : {}),
             },
         });
     emitLog(

@@ -28,6 +28,7 @@ const mockProjectBoard = {
   link: { kind: "project-link" },
 };
 const mockFindingsQuery = { kind: "findings-query" };
+const mockLanguageQuery = { kind: "language-query" };
 const mockDescriptionUseCase = { kind: "description-use-case" };
 const mockComposedUseCase = { kind: "pull-request-use-case" };
 const mockBugbot = {
@@ -53,6 +54,7 @@ const mockCreatePullRequestLifecycleClient = jest
   .mockReturnValueOnce(mockPullRequestLifecycleClient)
   .mockReturnValueOnce(secondPullRequestLifecycleClient);
 const mockCreateFindingsQueryPort = jest.fn(() => mockFindingsQuery);
+const mockCreateLanguageQueryPort = jest.fn(() => mockLanguageQuery);
 const mockCreateOrganizationMembersCompositionRoot = jest.fn(
   () => mockOrganizationMembers,
 );
@@ -82,6 +84,7 @@ jest.mock("../github_pull_request_client_factory", () => ({
 
 jest.mock("../agent_capability_composition_root", () => ({
   createFindingsQueryPort: mockCreateFindingsQueryPort,
+  createLanguageQueryPort: mockCreateLanguageQueryPort,
 }));
 
 jest.mock("../organization_members_composition_root", () => ({
@@ -163,6 +166,7 @@ describe("createPullRequestUseCaseCompositionRoot", () => {
     );
     expect(mockCreateProjectBoardCompositionRoot).toHaveBeenCalledTimes(1);
     expect(mockCreateFindingsQueryPort).toHaveBeenCalledTimes(2);
+    expect(mockCreateLanguageQueryPort).toHaveBeenCalledTimes(1);
     expect(mockCreatePullRequestReviewerCompositionRoot).toHaveBeenCalledTimes(
       1,
     );

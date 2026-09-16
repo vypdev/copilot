@@ -54,6 +54,12 @@ resolution events, finding-state observations, and estimated tokens. State
 observations are snapshots, not unique user-feedback events. Use those trends
 with benchmark results; latency alone is not a quality measure.
 
+A valid partial snapshot remains neutral in the Review Check but blocks the PR
+lifecycle with `state:blocked` and `state:awaiting-maintainer`; it never projects
+`state:ready` from zero observed findings. These surfaces express different
+facts—Check completeness versus the next human decision—without contradicting
+the incomplete status card.
+
 ## Programmatic API
 
 The npm package exports `@vypdev/copilot/bugbot`. `BugbotReviewService` accepts
@@ -62,6 +68,12 @@ context, publication, resolution, reconciliation, and optional telemetry
 capabilities. The gateway binds provider credentials before service
 construction and is the sole source of repository identity; neither
 `BugbotReviewRequest` nor any application use case can receive its credentials.
+An optional `MessageCatalogResolutionPort` supplies a complete dynamic catalog
+for valid non-bundled locales. Its schema requires every cardinal plural
+category reported for the target locale. English and Spanish resolve locally;
+unavailable, failed, or invalid dynamic resolution falls back atomically to English. The
+resolver is not called for dry-run, skipped, superseded, or issue-only
+no-mutation publication paths.
 Reconciliation requires semantic review-summary reads and writes
 in addition to inline-comment/thread capabilities, so an adapter cannot
 silently omit final projection support. It also provides trusted PR/commit/run navigation;

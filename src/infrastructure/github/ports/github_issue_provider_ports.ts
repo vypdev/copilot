@@ -43,6 +43,7 @@ export interface GithubIssueContentClient {
             update(parameters: Record<string, unknown>): Promise<unknown>;
             createComment(parameters: Record<string, unknown>): Promise<unknown>;
             updateComment(parameters: Record<string, unknown>): Promise<unknown>;
+            deleteComment(parameters: Record<string, unknown>): Promise<unknown>;
             listComments(parameters: Record<string, unknown>): Promise<{ data: GithubIssueComment[] }>;
         };
     };

@@ -7,6 +7,16 @@ describe('setup workflow catalog', () => {
         expect(files).toEqual(expect.arrayContaining(['copilot_commit.yml', 'copilot_branch_sync.yml']));
     });
 
+    it('keeps PR analysis and merge-queue compatibility under one capability', () => {
+        const files = enabledSetupWorkflowFiles({ pullRequests: true });
+
+        expect(files).toEqual(expect.arrayContaining([
+            'copilot_pull_request.yml',
+            'copilot_pull_request_merge_queue.yml',
+        ]));
+        expect(isSetupWorkflowEnabled('copilot_pull_request_merge_queue.yml', { pullRequests: false })).toBe(false);
+    });
+
     it('disables every workflow owned by a disabled capability', () => {
         expect(isSetupWorkflowEnabled('copilot_commit.yml', { commits: false })).toBe(false);
         expect(isSetupWorkflowEnabled('copilot_branch_sync.yml', { commits: false })).toBe(false);

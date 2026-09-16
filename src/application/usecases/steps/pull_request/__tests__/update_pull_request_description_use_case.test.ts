@@ -4,6 +4,7 @@ import type {
   PullRequestDescriptionContext,
   PullRequestDescriptionRequest,
 } from '../../../pull_request_workflow_context';
+import type { AgentQueryResult } from '../../../../ports/agent_query_ports';
 
 jest.mock('../../../../../utils/logger', () => ({
   logInfo: jest.fn(), logDebugInfo: jest.fn(), logError: jest.fn(),
@@ -14,6 +15,28 @@ const mockGetAllMembers = jest.fn();
 const mockAskAgent = jest.fn();
 const mockUpdateDescription = jest.fn();
 const mockGetDetails = jest.fn();
+
+async function localizedDescription(value: Parameters<typeof mockAskAgent>[0]): Promise<AgentQueryResult> {
+  const response = await mockAskAgent(value);
+  return typeof response === 'string'
+    ? descriptionContent(response)
+    : response;
+}
+
+function descriptionContent(overview = 'PR does X.', overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    outputLocale: 'en-US',
+    overview,
+    whatChangedHeading: 'What changed',
+    changes: ['Kept the useful outcome.', 'Removed redundant workflow noise.'],
+    validationHeading: 'Validation',
+    validation: ['`pnpm test`'],
+    reviewNotesHeading: null,
+    reviewNotes: null,
+    closesLinkedIssue: false,
+    ...overrides,
+  };
+}
 
 function context(overrides: Partial<PullRequestDescriptionContext> = {}): PullRequestDescriptionContext {
   const ai = new Ai('http://localhost:4096', 'model', false, [], false, 'low', 20);
@@ -30,6 +53,7 @@ function context(overrides: Partial<PullRequestDescriptionContext> = {}): PullRe
     mode: 'replace',
     membersOnly: false,
     agentConfiguration: ai.getAgentConfiguration('planner'),
+    targetLocale: 'en-US',
     ...overrides,
   };
 }
@@ -50,11 +74,11 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
       { updateDescription: mockUpdateDescription, getDetails: mockGetDetails },
       { getDescription: mockGetIssueDescription },
       { getAllMembers: mockGetAllMembers },
-      { query: (value) => mockAskAgent(value) },
+      { query: localizedDescription },
     );
     mockGetIssueDescription.mockResolvedValue('Issue description');
     mockGetAllMembers.mockResolvedValue(['alice', 'bob']);
-    mockAskAgent.mockResolvedValue('## Summary\nPR does X.');
+    mockAskAgent.mockResolvedValue('PR does X.');
     mockGetDetails.mockResolvedValue({ body: 'Remote human context', headBranch: 'feature/42-x', baseBranch: 'develop' });
     mockUpdateDescription.mockResolvedValue(undefined);
   });
@@ -131,14 +155,50 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     expect(mockGetIssueDescription).not.toHaveBeenCalled();
   });
 
-  it('skips when the linked issue has no authoritative description', async () => {
+  it('treats a self-number as unlinked and forbids a self-closing reference', async () => {
+    const results = await useCase.invoke(request({ issueNumber: 10 }));
+
+    expect(results[0].success).toBe(true);
+    expect(mockGetIssueDescription).not.toHaveBeenCalled();
+    expect(mockAskAgent.mock.calls[0][0].prompt).toContain('no separate linked issue');
+    expect(mockAskAgent.mock.calls[0][0].prompt).toContain('`closesLinkedIssue` to false');
+    expect(mockAskAgent.mock.calls[0][0].prompt).not.toContain('issue #10');
+  });
+
+  it.each([Number.MAX_SAFE_INTEGER + 1, Number.NaN])(
+    'treats an unsafe issue number as unlinked: %s',
+    async (issueNumber) => {
+      const results = await useCase.invoke(request({ issueNumber }));
+
+      expect(results[0].success).toBe(true);
+      expect(mockGetIssueDescription).not.toHaveBeenCalled();
+      expect(mockAskAgent.mock.calls[0][0].prompt).toContain('no separate linked issue');
+      expect(mockAskAgent.mock.calls[0][0].prompt).toContain('`closesLinkedIssue` to false');
+    },
+  );
+
+  it('uses PR metadata and diff when the linked issue has no description', async () => {
     mockGetIssueDescription.mockResolvedValue(undefined);
 
     const results = await useCase.invoke(request());
 
-    expect(results[0]).toMatchObject({ success: false, executed: false });
-    expect(mockAskAgent).not.toHaveBeenCalled();
-    expect(mockUpdateDescription).not.toHaveBeenCalled();
+    expect(results[0]).toMatchObject({ success: true, executed: true });
+    expect(mockAskAgent.mock.calls[0][0].prompt).toContain('No linked issue description is available');
+    expect(mockAskAgent.mock.calls[0][0].prompt).toContain('issue #42');
+    expect(mockUpdateDescription).toHaveBeenCalled();
+  });
+
+  it('publishes no validation section when the agent has no verified evidence', async () => {
+    mockAskAgent.mockResolvedValue(descriptionContent('PR does X.', {
+      validationHeading: null,
+      validation: null,
+    }));
+
+    const results = await useCase.invoke(request());
+
+    expect(results[0]).toMatchObject({ success: true, executed: true });
+    expect(mockUpdateDescription).toHaveBeenCalledWith(10, expect.not.stringContaining('Validation'));
+    expect(mockUpdateDescription).toHaveBeenCalledWith(10, expect.not.stringContaining('not run'));
   });
 
   it('does not publish blank agent output', async () => {
@@ -146,6 +206,37 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     const results = await useCase.invoke(request());
     expect(results[0]).toMatchObject({ success: false, executed: true });
     expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['null response', null],
+    ['missing structured content', { outputLocale: 'en-US' }],
+  ])('does not publish a %s from the agent', async (_label, response) => {
+    mockAskAgent.mockResolvedValue(response);
+
+    const results = await useCase.invoke(request());
+
+    expect(results[0]).toMatchObject({ success: false, executed: true });
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+
+  it('retains the existing body when structured content violates the concise contract', async () => {
+    mockAskAgent.mockResolvedValue(descriptionContent('One. Two. Three. Four.'));
+
+    const results = await useCase.invoke(request());
+
+    expect(results[0].errors[0]).toMatchObject({ code: 'agent.failed' });
+    expect(results[0].steps[0]).toContain('concise description contract');
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+
+  it('renders a closing reference only from a valid distinct issue decision', async () => {
+    mockAskAgent.mockResolvedValue(descriptionContent('PR does X.', { closesLinkedIssue: true }));
+
+    const results = await useCase.invoke(request({ issueNumber: 42 }));
+
+    expect(results[0].success).toBe(true);
+    expect(mockUpdateDescription).toHaveBeenCalledWith(10, expect.stringContaining('Closes #42'));
   });
 
   it('enforces members-only before invoking the agent', async () => {
@@ -161,5 +252,19 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     expect(results[0]).toMatchObject({ success: false, executed: true });
     expect(mockUpdateDescription).not.toHaveBeenCalled();
     expect(JSON.stringify(results)).not.toContain('secret diagnostic');
+  });
+
+  it('uses the PR locale contract and rejects mismatched output before updating the body', async () => {
+    mockAskAgent.mockResolvedValue({ ...descriptionContent('Résumé.'), outputLocale: 'fr-FR' });
+
+    const results = await useCase.invoke(request({ targetLocale: 'es-ES' }));
+
+    expect(mockAskAgent.mock.calls[0][0].prompt).toContain('outputLocale` exactly as `es-ES');
+    expect(mockAskAgent.mock.calls[0][0].options).toMatchObject({
+      expectJson: true,
+      schemaName: 'pull_request_description_response',
+    });
+    expect(results[0].errors[0]).toMatchObject({ code: 'locale.output-invalid' });
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
   });
 });

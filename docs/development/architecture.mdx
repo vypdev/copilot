@@ -6,6 +6,107 @@ description: Clean Architecture boundaries for agent execution and workflow auto
 
 The repository separates semantic application ports from provider-specific adapters.
 
+GitHub conversation output crosses a closed publication boundary. Capabilities
+produce typed `none`, `reply`, `status`, `transition`, or `inline-finding`
+intents; the publication layer maps only reviewed semantic payloads and can
+never render `Result.steps`, reminders, errors, or debug logs. Status
+and reply workflows validate exact bot ownership, stable correlation or topic
+identity, and semantic digests before creating or updating a comment. The
+checked-in publication mutation inventory fails CI if a new application use
+case writes a comment or review without an explicit architectural decision.
+The same bounded publication port exposes duplicate removal only to semantic
+reconcilers. They select later comments only after paginated discovery verifies
+the exact identity and bot owner. The GitHub repository treats an already absent
+comment as idempotently removed, maps a deletion-forbidden response to a
+localized compact-pointer fallback plus bounded Job Summary evidence, and
+propagates every other provider failure.
+Action notifications use a separate immutable transition marker and the same
+publication boundary. A closed trusted action, semantic identity, and source
+version derive the fingerprint; visible prose never participates. The shared
+coordinator creates at most one notification for that fingerprint, re-lists to
+heal concurrent creation, and reports `created` or `reused` with content-free
+identity evidence in the repository-locale Job Summary.
+Initial issue help and addressed Think requests follow that rule: each agent
+step returns an immutable `direct-answer` projection and receives no GitHub
+mutation port. The shared reply reconciler sanitizes and publishes the answer
+once for the source-comment or event correlation. Optional translation evidence
+stays typed until this publication boundary; the renderer uses the same resolved
+catalog as the answer and creates the inert, collapsed original-request block.
+Issue routing emits a welcome only when an eligible normal issue
+produces neither a publishable plan nor a direct answer; release and hotfix
+issues leave conversation ownership to their durable dashboard. Before the
+optional fallback is emitted, a read-only comment port checks exact-target,
+bot-owned plan, direct-answer, and current welcome reply markers. An unavailable history read fails
+closed by omitting the welcome. An unchanged stored recommendation is projected
+again so the status reconciler can preserve or recreate its current plan card.
+
+Commit-derived progress crosses an additional source-freshness boundary. A
+provider-neutral application port reads the authoritative branch `HEAD`; the
+progress workflow snapshots it before agent analysis and checks it again
+immediately before changing issue or PR labels. The status-card reconciler
+rechecks that same expected object ID before every create or update. A push
+event or CLI workspace whose source is already old is discarded before agent work. A branch that
+advances during the run produces a successful, skipped `stale-source` outcome,
+leaves native state and conversation state untouched, and is explained only in
+the Job Summary. Git object-ID validation accepts canonical SHA-1 and SHA-256
+forms; Octokit and credentials remain confined to the data/composition layers.
+
+Repository-facing language follows the same boundary. Entrypoints build one
+canonical, frozen locale profile: `repository-locale` defaults to `en-US`, and
+empty issue or pull-request overrides inherit it. Presentation policies request
+stable message IDs from a versioned catalog instead of branching on language.
+Reviewed English and Spanish catalogs resolve by exact locale or compatible base
+language; any other valid BCP-47 locale uses one schema-constrained, per-run
+cached language-agent request. A missing or invalid dynamic slice falls back
+atomically to English and records only locale, source, descriptor count, and a
+stable reason in the Job Summary.
+
+`copilot doctor` applies that boundary before constructing any visible check.
+The doctor use case resolves one complete catalog from the repository locale,
+passes the same immutable view into merge-queue readiness, returns it with the
+semantic report, and the CLI presenter uses that exact view. Setup passes an
+explicit English catalog to embedded readiness because setup is still creating
+the profile. Stable check IDs, evidence keys, verdicts, refs, and credential
+names remain machine facts; raw provider and credential-health prose is never
+rendered. Pull-request-mode selection returns reason codes rather than localized
+strings, so neither application use cases nor composition roots branch on `en`
+or `es`.
+
+Product-facing agent calls cross a second closed locale boundary. The fixed
+inventory is Think, initial help, recommendations, progress, pull-request
+descriptions, and Bugbot review. Each call uses the common structured-query
+options builder, receives `targetLocale`, requires `outputLocale`, and validates
+an exact canonical match before any product mutation. An architecture test
+compares the call sites with that inventory, while strict-schema tests require
+the locale field in every response contract.
+
+Repository-aware local actions reuse that catalog boundary for terminal labels.
+The Think CLI renders its semantic payload under a localized `Answer` label and
+does not need a synthetic GitHub issue or a comment mutation; `--issue` adds
+optional issue-description context only. Machine keys and command names remain
+English.
+
+Language adaptation is separate from catalog resolution. Comment admission,
+command parsing, and authorization establish trusted command identity before at
+most one prose adaptation. The language port has no comment-update capability:
+human source comments remain unchanged, while a translated bot response may add
+one collapsed, escaped context block. Commands, flags, refs, URLs, markers,
+Check names, log codes, and machine-readable fields never localize. Architecture
+tests reject feature-local `en`/`es` branches in common presentation and any
+source-comment mutation dependency in the adaptation path.
+
+Technical operands are enforced, not prompt-trusted. The adaptation policy
+replaces code spans, slash and bare-file paths, recognizable refs/versions,
+issue or PR references, URLs, quoted literals, option flags, and commit IDs with
+deterministic placeholders; commands without adaptable prose protect every
+argument. A response is rejected unless each placeholder is returned exactly
+once and in order and no new technical operand appears; only then does the
+application restore the original values. Explicit-request errors
+are projected to one safe `application-error` reply by the shared publisher,
+while background errors stay in operator evidence. Local human output follows
+the same outcome/evidence split: it renders localized aggregate state and
+semantic errors, never raw `Result.steps` or reminder prose.
+
 - Application: use cases, pure policies (agent configuration, reviewer/assignee
   selection, and result publication), and semantic ports.
 - Data/repository: external adapters for agent execution, authentication, provisioning, GitHub, and Git.
@@ -73,12 +174,21 @@ reconciliation use cases receive narrow context contracts containing only the
 facts they need; they do not depend on the complete `Execution` aggregate.
 This keeps pure decisions independently testable and makes new event sources
 less likely to couple unrelated capabilities. Application failures use the
-closed `ApplicationError` contract: one of 18 semantic codes, a derived
+closed `ApplicationError` contract: one of 20 semantic codes, a derived
 category and retry decision, impact, recommended action, retained-state
 summary, and request correlation UUID. A raw cause is ECMAScript-private,
-never serialized or logged, and cannot enter `Result.errors`. CLI output,
-GitHub comments, Job Summaries, and Check failures project the same semantic
-view.
+never serialized or logged, and cannot enter `Result.errors`. The generic Job
+Summary, repository-aware CLI, deployment completion, and ordinary Action
+completion project one shared code-specific error catalog. Stable codes and
+references remain machine-readable; labels, impact, action, retained state, and
+retry guidance follow `repository-locale`, and producer error prose is not
+replayed. The pre-repository CLI boundary uses English; the early GitHub Action
+boundary can use bundled English or Spanish from its validated input and falls
+back atomically to English when dynamic localization is not yet available.
+Partial operations select a closed recovery descriptor with only validated
+branch-name or issue-number variables. This preserves exact rollback and
+retained-state guidance in every locale without permitting feature code to
+override presentation with arbitrary strings.
 
 The main-run setup path follows that rule end to end. Its action boundary copies
 and freezes a `SetupExecutionContext`, setup returns a discriminated result, and
@@ -237,18 +347,28 @@ unit tests.
 
 Branch synchronization has two independent entry points behind the same semantic
 ports. The all-branch push workflow invokes `check_branch_sync_action`, which can
-reach only dependency discovery, branch comparison, and issue notification adapters.
+reach only dependency discovery, branch comparison, and the generic semantic
+issue-publication adapter.
 It has no agent role or agent environment. The comment command resolves one target,
 authorizes the actor, and delegates Git merge ownership to a specialized workspace
 adapter. The fixer capability becomes reachable only after Git reports eligible
 conflicts.
 
 The application use case owns orchestration and publishable results; pure policies
-own command parsing, dependency selection, and notification rendering; repositories
+own command parsing, dependency selection, stable publication identity, source-head
+fingerprints, and localized safe rendering; repositories
 translate GitHub GraphQL/REST responses; and the Git adapter owns transient merge
 state. Verification runs without credentials. The adapter rejects changes to Git
 heads, merge metadata, the non-conflicted index, or the prepared path set, then
 re-fetches both remote heads immediately before the trusted commit/push boundary.
+
+The observer creates only the initial stale status card, skips an identical
+render, updates changed stale/aligned projections in place, and delegates only an
+aligned-to-stale human-action transition to the shared immutable notification
+coordinator. That coordinator reuses the generic issue-comment publication port
+for exact bot ownership, concurrent-create reconciliation, duplicate removal or
+compaction, and content-free Job Summary evidence. Branch-sync defines no parallel
+comment authority.
 
 ## Deployment orchestration boundary
 
@@ -261,6 +381,11 @@ preparing -> promotion_pr_pending -> promoted -> publishing
 
 any non-terminal phase -> blocked -> previous safe phase after correction
 ```
+
+Every durable snapshot has one exact failure invariant: `lastFailure` is `null`
+outside `blocked`, and a blocked snapshot contains a closed failure object with
+the exact previous non-blocked phase. Unknown state fields and blocked snapshots
+without that evidence fail before presentation or continuation.
 
 `deployment_configuration.ts`, `deployment_operation.ts`, and the pure planning,
 lifecycle, continuation-guard, and presentation policies own bounded values and
@@ -294,3 +419,14 @@ and deployment Job Summary. Provider mutations accept those rendered values but
 cannot choose phase transitions. Architecture tests enforce the narrow context,
 provider-neutral port vocabulary, mutation-free renderer, global dependency
 direction, and acyclic production imports.
+
+The generic GitHub Actions Job Summary follows the same boundary. One complete
+typed catalog is resolved for `repository-locale`; bundled English and Spanish,
+arbitrary dynamic locales, and atomic English fallback share the repository
+localization resolver. The summary renders localization evidence once, keeps
+machine event/state/error values stable, and projects routine results as compact
+localized aggregate counts. Only failed results receive an expanded diagnostic
+section. Internal result names, `Result.steps`, and arbitrary error messages remain
+in logs or machine evidence; they are never replayed into the summary. Failures
+show code-specific localized impact, action, and retained-state guidance beside
+the stable code, retry decision, and correlation reference.

@@ -1,9 +1,9 @@
 # Bugbot Pull-Request Review State Reconciliation
 
-- Status: Implemented; local gates pass, PR #363 final review-evidence correction pending controlled live verification
+- Status: Implemented
 - Date: 2026-09-11
 - Catalog capability ID: `bugbot-review-state-reconciliation`
-- Last verified: 2026-09-13 on `develop`
+- Last verified: 2026-09-16 on `develop` plus PR #394 live UX iteration
 - Owners: `vypdev/copilot` product and engineering maintainers
 - Scope: make every Bugbot pull-request surface present one coherent, current,
   recoverable finding state without erasing the historical review record.
@@ -11,7 +11,10 @@
   [original finding](https://github.com/vypdev/copilot/pull/358#discussion_r3972947434),
   [successful reconciliation run](https://github.com/vypdev/copilot/actions/runs/34537613448),
   [current Check Run](https://github.com/vypdev/copilot/runs/103074383528),
-  and [PR #363 concurrency evidence](https://github.com/vypdev/copilot/pull/363)
+  [PR #363 concurrency evidence](https://github.com/vypdev/copilot/pull/363),
+  [PR #378 workflow-noise evidence](https://github.com/vypdev/copilot/pull/378),
+  [PR #393 partial-coverage copy evidence](https://github.com/vypdev/copilot/pull/393),
+  and [PR #394 lifecycle-label evidence](https://github.com/vypdev/copilot/pull/394)
 - Required review gates: product UX, architecture, testing, documentation,
   security/operations
 - Open decisions blocking readiness: none
@@ -150,7 +153,7 @@ review summary does not implement.
   reusable Action therefore cannot promise an immediate run when a person only
   resolves or reopens a native thread.
 
-### 2.6 Verified concurrency regression on PR #363
+### 2.6 Verified concurrency regressions and ownership correction
 
 On three successive PR heads, an `efraespada`-authenticated metadata update
 emitted `pull_request: edited` while the `synchronize` review was starting.
@@ -161,15 +164,29 @@ Sync did not edit the PR in those runs, and bot-authored edits were already
 filtered. The final Check summary exposed `Bugbot review: —`, proving that a
 green job was not evidence that the head had been reviewed.
 
-The correction keeps the shared branch group but makes cancellation
-conditional. Code-change and review events cancel obsolete analysis;
-`pull_request: edited` waits behind the active review. GitHub's bounded pending
+The first correction kept the shared branch group but made cancellation
+conditional. Code-change and review events canceled obsolete analysis;
+`pull_request: edited` waited behind the active review. GitHub's bounded pending
 slot may replace an older waiting metadata event with the newest one, which is
 safe because metadata normalization is idempotent and only the newest event is
 current. Controlled verification on head `70585d9e` started review run
 `34756303262` and then edit run `34756384500`. The edit stayed pending until the
 review completed successfully, then completed itself. Bot-authored follow-ups
 `34756389864` and `34756489001` were skipped by the existing loop guard.
+
+PR #367 exposed the remaining flaw: a paired `pull_request:synchronize` run
+canceled Commit run `34846885692` through the same native group after every job
+step had succeeded, leaving a misleading canceled conclusion. Running Bugbot
+from both event routes also made cancellation necessary only because ownership
+was duplicated. The next correction therefore introduced distinct `copilot-push-…`
+and `copilot-pr-…` branch groups. The Commit route retains issue progress work,
+then Bugbot's read-only exact-head preflight validates whether an open
+same-repository PR owns the pushed branch. A match skips review-context loading
+and agent invocation; the PR synchronization event exclusively owns review for
+that head. This decision uses provider discovery rather than the absent
+`pull_request` field on a push payload. At that stage PR metadata retained
+conditional non-preemption within the PR-specific group, and fork PR execution
+remained excluded by the same-repository workflow gate.
 
 The next head `0e039ae9` proved that ordering alone was insufficient. Review run
 `34756692307` published Check `103722773263` with truthful `partial` Bugbot
@@ -216,6 +233,20 @@ and debug logs. They added permanent noise after the metadata run had already
 reported through its native workflow and Job Summary. Generic publication now
 uses one explicit mode: `pull_request: edited` is `omit-metadata-only`, a real
 Bugbot result is `omit-feature-owned`, and other routes remain `publish`.
+
+PR #378 exposed workflow-level noise: Copilot's own description update still
+emitted redundant skipped `pull_request: edited` runs, and analysis, review-state,
+and merge-queue jobs shared an ambiguous visible name. The contract excludes
+metadata-only edited events from the supplied PR analysis workflow and uses
+event/action run names plus a distinct review-state identity. Live PR #379 then
+showed that a dynamic job name can appear as its unevaluated expression when a
+bot-authored review is skipped before job admission. Review-state observation
+therefore has a dedicated workflow and fixed job name as well as its own
+concurrency lane. A
+dedicated merge-group workflow removes the skipped duplicate from normal PR
+runs while intentionally retaining the same required-check context so branch
+protection continues to resolve it. The quiet application publication mode
+remains defense in depth for direct/API invocation.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -332,18 +363,22 @@ Terms:
 15. Final provider snapshot acquisition MUST verify the same pull-request head
     immediately before and after reading its surfaces. Missing or changed head
     evidence makes the run superseded and MUST produce no presentation writes.
-16. Shipped PR workflows MUST serialize metadata edits on the review branch
-    key without letting those edits cancel an active `opened`, `reopened`,
-    `synchronize`, push, or review-triggered analysis.
+16. Shipped PR workflows MUST exclude metadata-only edited events so they cannot
+    trigger or cancel `opened`, `reopened`, `synchronize`, push, or
+    review-triggered analysis.
 17. Review evidence eligibility MUST be a pure application policy over semantic
     Result payloads; it MUST NOT query, copy, or merge a previous provider Check.
+18. A valid `partial` Bugbot outcome MUST NOT project `state:ready`, even when
+    all observed finding counts are zero. It projects `state:blocked` plus
+    `state:awaiting-maintainer` because omitted evidence requires a maintainer
+    decision; only complete current-head evidence may project ready.
 
 ## 5. Current versus proposed product journey
 
 | Stage | Current | Proposed | User/operator effect |
 |---|---|---|---|
 | Review starts | Native workflow is running | Native workflow remains the pending authority; last verified card remains explicitly historical | Cancellation cannot leave a custom current-state claim stuck in progress |
-| Metadata edit during review | Edit can cancel or later hide analysis with a green metadata run | Edit waits; afterward its workflow/summary update without emitting `Copilot / Review` | Reviewed-head evidence remains latest by name |
+| Metadata edit during review | Edit can cancel, hide, or duplicate analysis | No supplied PR workflow starts; the human/body edit remains visible | Reviewed-head evidence remains latest by name without run noise |
 | Findings detected | One review with “active” findings | One commit-scoped review snapshot plus current status block | History and current state are visually distinct |
 | Existing finding remains | Inline body refreshed | Inline body refreshed; origin review and status card use the same final projection | No counter drift |
 | Finding resolved | Inline marker and thread change | Marker changes first, thread follows, provider state is re-read, all projections update | Partial failures are retryable and visible |
@@ -458,13 +493,19 @@ readiness. `unknown` is a system failure and fails the review regardless of
   updated again.
 - A run whose analyzed head is no longer the PR head MUST return superseded and
   MUST NOT mutate findings or current-state projections.
-- Shipped code-change workflows MUST share a branch-scoped concurrency group.
-  Push, PR code-change, and review events use cancel-in-progress semantics so
-  newer evidence supersedes older analysis. `pull_request: edited` uses the
-  same group with cancellation disabled, so it waits and cannot preempt an
-  active review. Application freshness checks remain mandatory because API
-  consumers and comment-triggered flows are not fully serialized by workflow
-  YAML.
+- Shipped Commit, Pull Request analysis, and Pull Request review-state workflows
+  MUST use distinct branch-scoped concurrency groups. Pull Request code/lifecycle
+  and review-state events MUST use separate lane suffixes and dedicated workflow
+  files with fixed job names. Each uses cancel-in-progress semantics only
+  for its own replaceable revisions, so review-state observation cannot cancel
+  code analysis. On push, a read-only exact-head preflight MUST validate
+  any open same-repository PR before Bugbot loads review context or invokes the
+  agent; a validated match yields to the PR code-change event. The decision MUST
+  NOT read PR identity from the push payload. The shipped PR workflow MUST NOT
+  subscribe to metadata-only `pull_request: edited`, so description/title
+  mutations cannot trigger or preempt review. Application freshness checks
+  remain mandatory because API consumers and comment-triggered flows are not
+  fully serialized by workflow YAML.
 - If cancellation happens after a durable mutation, the next run discovers the
   marker/thread mismatch and converges. The status card still names the last
   completely verified head, so it never turns a canceled attempt into success.
@@ -508,7 +549,7 @@ guarantee, not a preference.
 | `bugbot-fail-on-unresolved` | boolean | `false` | Open/reopened/verification-required states are neutral when false and failing when true; system/unknown/projection errors always fail | read per run |
 | `bugbot-comment-limit` | integer | `20` | Bounds inline findings and active rows; it does not disable the single status card | read per run |
 | `bugbot-dry-run` | boolean | `false` | When true, no review/status/check/label mutation occurs | read per run |
-| `pull-requests-locale` | locale | `en-US` | Selects `en-US` or `es-ES` review/status copy; unsupported locales fall back to English | read per run |
+| `repository-locale`, `pull-requests-locale` | BCP-47 locale | repository `en-US`; PR override empty | Selects the effective PR locale. English and Spanish are bundled; any other valid locale uses one complete dynamic catalog or atomically falls back to English | read once per run before the first publication mutation |
 | `bugbot-telemetry` | boolean | `true` | Controls content-free telemetry only, never user-visible consistency | read per run |
 
 Invalid combinations and fixed rules:
@@ -683,7 +724,10 @@ Add pure Bugbot presentation policies, following the existing deployment
 presentation pattern:
 
 - one view model generated from the final projection;
-- `en-US` and `es-ES` copy with English fallback;
+- one typed catalog resolved for the effective PR locale and reused by every
+  review/status/finding surface in the operation; English and Spanish are
+  bundled, while any other valid BCP-47 locale resolves dynamically with every
+  target-locale cardinal plural category or falls back atomically to English;
 - deterministic review status block, status card, partial/failure details, and
   compact Job/Check summaries;
 - surface-specific watermarks: mutable finding comments say “last reconciled,”
@@ -708,10 +752,11 @@ presentation pattern:
 - Existing bot-owned review bodies are adoptable only when ownership is proven
   by current bot author plus trusted child finding markers or trusted
   review-level finding markers.
-- Shipped PR and commit workflows use the same normalized repository/branch
-  concurrency key. The PR workflow conditionally disables preemption only for
-  `pull_request: edited`; code/review events still cancel obsolete analysis.
-  The application still performs remote head checks.
+- Shipped PR analysis, PR review-state, and commit workflows use distinct
+  normalized repository/branch concurrency keys. Code/lifecycle and review-state
+  events cancel obsolete work only in their respective lanes; metadata-only
+  `pull_request: edited` is not subscribed. The
+  application still performs remote head checks.
 - The Review Check is single-purpose evidence. Metadata-only PR lifecycle runs
   publish no same-name Check and therefore cannot supersede the latest analyzed
   head in GitHub's latest-by-name rollup. Their native workflow check and Job
@@ -879,6 +924,13 @@ and reported 1 active finding.
 [Resolved thread](...) · [Failed operation](...)
 ```
 
+Bounded context coverage uses a different, equally explicit action: it MUST say
+that the review is incomplete, point to the named sources under **Incomplete
+coverage**, require manual inspection of omitted items, and permit a rerun only
+after the relevant scope is reduced or provider access is restored. Fixed
+safety limits are not presented as user-configurable, and an unchanged
+`/copilot recheck` is never offered as if it could recover omitted evidence.
+
 ### 9.7 Superseded and canceled runs
 
 - A superseded run's own Job Summary/Check says that a newer head owns the
@@ -889,8 +941,13 @@ and reported 1 active finding.
 
 ### 9.8 Accessibility, localization, and responsive behavior
 
-- Support `en-US` and `es-ES` through `pull-requests-locale`; fall back to
-  `en-US` for every other value.
+- Use the effective `pull-requests-locale`, inherited from
+  `repository-locale` (`en-US` by default). English and Spanish resolve from
+  reviewed bundled catalogs; another valid BCP-47 locale resolves one complete
+  dynamic catalog or falls back atomically to `en-US`.
+- Reuse that catalog across the mutable status, historical snapshot, inline
+  findings, review-level findings, overflow, and resolution notes. Skipped,
+  superseded, and dry-run paths do not pay for presentation resolution.
 - Status words accompany every emoji and checkbox.
 - Tables contain no essential action that is absent from surrounding prose.
 - Active finding lists remain readable without horizontal scrolling; technical
@@ -1083,13 +1140,13 @@ counted across rows.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain lifecycle, transition planning, and projection | 31 | every state, resolver precedence, fixed/obsolete/dismissed/reopened, per-destination projection, conservative cross-destination fold, canonical result shape, required-outcome absence, telemetry set validity, invalid numeric bounds, overflow, aggregate counts, deterministic digests |
+| Domain lifecycle, transition planning, and projection | 32 | every state, resolver precedence, fixed/obsolete/dismissed/reopened, partial-coverage blocking, per-destination projection, conservative cross-destination fold, canonical result shape, required-outcome absence, telemetry set validity, invalid numeric bounds, overflow, aggregate counts, deterministic digests |
 | Application ordering, idempotency, replay, cancellation, and races | 35 | active-before-resolution, mutation head guards, double snapshot head guard, read-after-write, per-surface completeness, missing durable evidence, resolved omission, duplicate same-head, newer-head supersession, partial mutations, retry convergence, PR close/reopen, metadata-during-review ordering |
 | Adapters and provider error mapping | 18 | pagination, parent review id/URL, resolver identity, create/update review, status-card upsert, 401/403/404/409/422, malformed response, rate limit |
 | Workflow, composition, public API, and schema contracts | 13 | shared concurrency key, conditional metadata non-preemption in active/setup copies, malformed-sibling telemetry cardinality, negative unconditional-cancel fixture, bot guard, permissions, trigger contract, strict finding/resolution schema, composition wiring, API declarations, package exports |
 | UI/UX, localization, accessibility, links, and sanitization | 22 | pending, active, clean, failed, partial, skipped, superseded, metadata-only Check/generic-comment omission, missing/invalid summary and status output, every non-clean count, historical snapshot, en/es/fallback, narrow content, markers, mentions, unsafe Markdown |
-| Integration, security, migration, and live-shaped replay | 14 | PR #358 replay, new PR lifecycle, multiple reviews, overflow/unanchored, manual resolve/unresolve, identity rotation, duplicate card repair, dry-run/fork trust, missing-state completion fail-closed, latest-by-name PR #363 replay |
-| **Total** | **133** | No double counting |
+| Integration, security, greenfield cutover, and live-shaped replay | 14 | PR #358 replay, new PR lifecycle, multiple reviews, overflow/unanchored, manual resolve/unresolve, identity rotation, duplicate card repair, dry-run/fork trust, missing-state completion fail-closed, latest-by-name PR #363 replay |
+| **Total** | **134** | No double counting |
 
 Coverage requirements:
 
@@ -1229,12 +1286,11 @@ examples should reuse the same fixtures as presentation tests where practical.
     superseded and does not update current-state surfaces.
 16. Given cancellation after one durable mutation, then the last verified card
     remains truthful and the next run repairs the discovered drift.
-17. Given duplicate same-head workflows, then shared workflow concurrency and
+17. Given duplicate same-head workflows, then branch-scoped workflow concurrency and
     application idempotency prevent duplicate reviews/comments.
-18. Given a maintainer or external automation emits `pull_request: edited`
-    while a `synchronize` review is active, then the edit waits on the same
-    branch group and the review completes for the current head before metadata
-    normalization continues.
+18. Given a maintainer, external automation, or Copilot body update emits
+    `pull_request: edited`, then the supplied PR workflow starts no run and the
+    active `synchronize` review remains unaffected.
 19. Given a response that omits a required nullable finding property or uses a
     removed resolution field, then strict native/local validation rejects the
     whole response and no finding lifecycle mutation runs.
@@ -1248,8 +1304,10 @@ examples should reuse the same fixtures as presentation tests where practical.
 23. Given a closed/merged PR, then no new review-state mutation occurs and
     historical evidence remains.
 24. Given a reopened PR, then a full review reconstructs the current projection.
-25. Given `es-ES`, every primary status/action string is Spanish; given an
-    unsupported locale, English is used; machine markers remain locale-neutral.
+25. Given `es-ES`, every primary status/action string is Spanish; given any
+    other valid BCP-47 locale, one schema-valid complete catalog is reused or
+    the whole operation falls back to English; machine markers remain
+    locale-neutral.
 26. Given narrow/mobile rendering or no emoji/color perception, status and the
     required action remain unambiguous in text.
 27. Given any active/reopened/verification-required state, then the Check
@@ -1299,6 +1357,13 @@ examples should reuse the same fixtures as presentation tests where practical.
     telemetry, then the telemetry-set and finding-state projections are invalid.
     No Review Check is emitted; Action exit fails, lifecycle blocks, and
     Summary/status identify invalid evidence instead of reporting clean.
+41. Given bounded context omission, then the canonical card names
+    **Incomplete coverage**, requires manual inspection, and does not suggest
+    changing fixed safety limits or rerunning unchanged evidence.
+42. Given valid `partial` telemetry and canonical zero finding counts, then the
+    lifecycle reconciliation replaces any stale `state:ready` label with
+    `state:blocked` and retains exactly `state:awaiting-maintainer`; the neutral
+    Review Check and incomplete status card cannot coexist with a ready claim.
 
 ## 17. Requirements traceability
 
@@ -1310,7 +1375,7 @@ examples should reuse the same fixtures as presentation tests where practical.
 | Safe resolution/reopen order | reconciliation plan/apply use case | every partial mutation boundary | How it works, Failure scenarios |
 | Human dismissal precedence | lifecycle policy + resolver adapter | bot/human/unknown resolver matrix | Concepts, Detection |
 | Freshness and concurrency | head guards + workflow contract | stale, duplicate, canceled, race cases | Workflow setup |
-| Metadata non-preemption | shared branch key + conditional cancellation | active/setup workflow parser, negative unconditional-cancel fixture, PR #363 live evidence | Workflow setup, Configuration, How it works |
+| Review ownership and metadata non-preemption | distinct push/PR branch groups + exact-head push preflight + conditional PR cancellation | active/setup workflow parser, cross-group negative fixtures, ownership policy matrix, push-shaped detection integration, PR #363/#367 live evidence | Workflow setup, Configuration, How it works |
 | Metadata/review publication ownership | result-publication mode + telemetry/evidence policies | metadata generic-comment negative, outcome matrix, completion integration, PR #363 latest-by-name/noise replay | Detection, Workflow setup, How it works, Troubleshooting |
 | Canonical Result evidence | discriminated telemetry-set and finding-state projections + completion/lifecycle/status/summary/Check policies | complete aggregation, malformed/duplicate telemetry siblings, required-outcome absence, missing/extra key, numeric limits, overflow, cross-surface fail-closed cases | Detection, Observability, Comment commands, Failure scenarios |
 | Coherent final snapshot | snapshot loader + explicit surface completeness | before/after head, head-change, missing-head, per-surface failure, shared issue/PR read cases | How it works, Failure scenarios |
@@ -1383,8 +1448,9 @@ goldens pass in both locales.
 
 ### Phase 6 — Workflow and integration hardening
 
-1. Add shared branch concurrency to shipped PR/commit workflows and setup copies;
-   keep code/review cancellation while queueing PR metadata edits.
+1. Add distinct branch concurrency to shipped PR/commit workflows and setup
+   copies; cancel only superseded same-owner runs, queue PR metadata edits, and
+   make PR synchronization the sole Bugbot owner once an open PR exists.
 2. Reserve `Copilot / Review` for valid Bugbot telemetry and make incomplete
    review outcomes neutral; metadata-only completion keeps only workflow/summary
    evidence.
@@ -1419,7 +1485,7 @@ evidence.
 - [x] Human resolve/unresolve, bot repair, missing resolver, stale head,
       cancellation, duplicate events, and PR close/reopen are covered.
 - [x] Architecture boundaries and workflow contracts are executable and pass.
-- [x] The 133-case minimum and changed-module coverage requirements pass; the
+- [x] The 134-case minimum and changed-module coverage requirements pass; the
       two shared result-projection policies are 100% covered in every metric.
 - [x] Metadata-only PR runs cannot overwrite the latest Review Check, and the
       incomplete-outcome conclusion matrix is enforced by pure tests.
@@ -1435,8 +1501,11 @@ evidence.
       introduced.
 - [x] Status card, review block, thread body, labels, Job Summary, Check, and
       telemetry agree in every fixture.
-- [ ] English, Spanish, fallback, narrow/mobile, light/dark, non-color, links,
-      headings, sanitization, and notification budget are reviewed.
+- [ ] English, Spanish, arbitrary-locale atomic fallback, narrow/mobile,
+      light/dark, non-color, links, headings, sanitization, and notification
+      budget are reviewed. Catalog completeness, pluralization, scope selection,
+      one-call reuse, and no-call terminal paths are automated; visual review
+      remains open.
 - [x] User, setup, operator, contributor, API, migration, and troubleshooting
       documentation is complete and discoverable.
 - [x] Permissions, identity trust, fork isolation, secret redaction, abuse
@@ -1481,11 +1550,11 @@ evidence.
    Action.** GitHub exposes the webhook but not a GitHub Actions trigger. The
    product documents native immediate feedback plus bounded convergence on the
    next supported event.
-9. **Use unconditional cancellation for PR metadata edits — rejected.** PR #363
-   demonstrated that a maintainer-authored title/body update can cancel the
-   current-head review and leave a successful metadata-only run. Conditional
-   cancellation preserves one branch mutex without allowing that false-green
-   sequence.
+9. **Queue PR metadata edits in the analysis workflow — rejected.** PR #363
+   demonstrated that unconditional cancellation can hide the current-head
+   review; conditional cancellation fixed correctness but PR #378 showed that
+   automated body updates still created redundant runs. The supplied workflow
+   now excludes `pull_request: edited` entirely.
 10. **Read and merge the previous Review Check into metadata output — rejected.**
     It adds provider reads and a stale read/write race while still allowing a
     non-review run to impersonate review evidence. Metadata runs publish no

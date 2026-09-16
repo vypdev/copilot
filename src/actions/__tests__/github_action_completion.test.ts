@@ -4,6 +4,9 @@ import { Result } from '../../data/model/result';
 import { finishGithubAction } from '../github_action_completion';
 import * as core from '@actions/core';
 import { ApplicationError } from '../../application/errors/application_error';
+import type { DeploymentOperationSnapshot } from '../../domain/deployment_operation';
+import { ResolveMessageCatalogUseCase } from '../../application/usecases/localization/resolve_message_catalog_use_case';
+import { PublishResultUseCase } from '../../application/usecases/steps/common/publish_resume_use_case';
 
 jest.mock('@actions/core', () => ({ setOutput: jest.fn(), setFailed: jest.fn() }));
 
@@ -26,8 +29,54 @@ jest.mock('../../utils/logger', () => ({ logInfo: jest.fn() }));
 const recommendationState = {
     issueDescriptionFingerprint: 'description-hash',
     recommendationFingerprint: 'recommendation-hash',
-    recommendation: '1. Add tests',
+    implementationPlanLocale: 'en-US',
+    implementationPlan: {
+        steps: [
+            { title: 'Define', details: ['Contract'] },
+            { title: 'Implement', details: [] },
+            { title: 'Verify', details: ['Tests'] },
+        ],
+        acceptance: 'All relevant checks pass.',
+    },
 };
+const structuredRecommendationState = recommendationState;
+
+function deploymentOperation(): DeploymentOperationSnapshot {
+    return {
+        stateVersion: 1,
+        revision: 3,
+        operationId: 'operation-12345678',
+        locale: { repository: 'es-ES', issue: 'fr-FR', pullRequest: 'de-DE', issueOverride: 'fr-FR', pullRequestOverride: 'de-DE' },
+        kind: 'release',
+        version: '3.4.0',
+        title: 'Release',
+        changelog: 'Changes',
+        phase: 'promotion_pr_pending',
+        strategy: 'production-lineage',
+        prMode: 'auto',
+        selectedPrMode: 'auto-merge',
+        backmergeMode: 'auto',
+        hotfixActiveReleasePolicy: 'prefer-release',
+        cleanup: 'all',
+        issueCompletion: 'close',
+        presentationMode: 'guided',
+        diagrams: true,
+        commentMode: 'update',
+        sourceBranch: 'release/3.4.0',
+        sourceSha: 'a'.repeat(40),
+        originBranch: 'develop',
+        originSha: 'b'.repeat(40),
+        productionBranch: 'master',
+        developmentBranch: 'develop',
+        reconciliationTree: 'sync',
+        promotionPullRequest: 40,
+        tag: 'v3.4.0',
+        publicationWorkflow: 'release_workflow.yml',
+        publicationVerified: false,
+        reconciliationTargets: [],
+        lastFailure: null,
+    };
+}
 
 function execution(): Execution {
     return {
@@ -47,28 +96,11 @@ function execution(): Execution {
         issueNotBranched: false,
         issue: { number: 11 },
         pullRequest: { number: -1 },
+        locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
         singleAction: { issue: -1, throwError: false },
         release: { active: false },
         hotfix: { active: false },
         debug: false,
-        images: {
-            imagesOnIssue: false,
-            issueAutomaticActions: [],
-            issueFeatureGifs: [],
-            issueBugfixGifs: [],
-            issueReleaseGifs: [],
-            issueHotfixGifs: [],
-            issueDocsGifs: [],
-            issueChoreGifs: [],
-            imagesOnPullRequest: false,
-            pullRequestAutomaticActions: [],
-            pullRequestFeatureGifs: [],
-            pullRequestBugfixGifs: [],
-            pullRequestReleaseGifs: [],
-            pullRequestHotfixGifs: [],
-            pullRequestDocsGifs: [],
-            pullRequestChoreGifs: [],
-        },
         tokens: { token: 'product-pat' },
         ai: new Ai('', 'model', false, [], false, 'low', 20),
     } as unknown as Execution;
@@ -122,6 +154,24 @@ describe('finishGithubAction', () => {
         }));
     });
 
+    it('deep-restores a structured recommendation state before committing it', async () => {
+        const action = execution();
+        const mutableState = structuredClone(structuredRecommendationState);
+        const results = [new Result({
+            id: 'RecommendStepsUseCase',
+            success: true,
+            executed: true,
+            payload: { recommendationState: mutableState },
+        })];
+
+        await finishGithubAction(action, results, {} as never, {} as never);
+        mutableState.implementationPlan.steps[0].details[0] = 'mutated';
+
+        expect(action.currentConfiguration.recommendationState).toEqual(structuredRecommendationState);
+        expect(Object.isFrozen(action.currentConfiguration.recommendationState)).toBe(true);
+        expect(Object.isFrozen(action.currentConfiguration.recommendationState?.implementationPlan?.steps[0].details)).toBe(true);
+    });
+
     it('does not commit a pending recommendation state when publication fails', async () => {
         mockPublishInvoke.mockImplementation(async () => (
             new Result({
@@ -144,12 +194,73 @@ describe('finishGithubAction', () => {
         expect(action.currentConfiguration.recommendationState).toBeUndefined();
     });
 
+    it('passes the source query to publication and records stale suppression in the Job Summary', async () => {
+        const sourceQuery = { getBranchHeadSha: jest.fn() };
+        mockPublishInvoke.mockResolvedValue(new Result({
+            id: 'PublishResultUseCase', success: true, executed: false,
+            payload: { publicationOutcome: {
+                reason: 'stale-source', branch: 'feature/11-work', sourceHeadSha: 'a'.repeat(40),
+            } },
+        }));
+
+        await finishGithubAction(
+            execution(),
+            [],
+            {} as never,
+            {} as never,
+            undefined,
+            { publish: mockSummaryPublish },
+            undefined,
+            sourceQuery,
+        );
+
+        expect(PublishResultUseCase).toHaveBeenCalledWith(expect.anything(), undefined, sourceQuery);
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining(
+            '| Source freshness | Stale result suppressed; branch HEAD changed during the run |',
+        ));
+    });
+
     it('does not persist configuration for a non-stateful single action', async () => {
         const action = singleActionExecution();
 
         await finishGithubAction(action, [], {} as never, {} as never);
 
         expect(mockStoreInvoke).not.toHaveBeenCalled();
+    });
+
+    it('routes a Think answer through the shared correlated publication boundary', async () => {
+        const action = Object.assign(execution(), {
+            eventName: 'issue_comment',
+            tokenUser: 'vypbot',
+            inputs: { action: 'created', comment: { id: 42 } },
+        });
+        const answer = new Result({
+            id: 'ThinkUseCase', success: true, executed: true,
+            payload: { publication: {
+                kind: 'direct-answer', answer: 'Use the documented setting.',
+                translation: {
+                    translatedText: 'use the setting',
+                    originalText: 'usa el ajuste',
+                    sourceLocale: 'es-ES',
+                    targetLocale: 'en-US',
+                },
+            } },
+        });
+
+        await finishGithubAction(action, [answer], {} as never, {} as never);
+
+        expect(mockPublishInvoke).toHaveBeenCalledWith(expect.objectContaining({
+            target: { kind: 'issue', number: 11 },
+            requestCorrelationId: 'comment:42',
+            results: [expect.objectContaining({
+                id: 'ThinkUseCase',
+                payload: expect.objectContaining({ publication: expect.objectContaining({
+                    kind: 'direct-answer',
+                    answer: 'Use the documented setting.',
+                    translation: expect.objectContaining({ sourceLocale: 'es-ES' }),
+                }) }),
+            })],
+        }));
     });
 
     it('persists configuration for the recommendation single action', async () => {
@@ -214,6 +325,141 @@ describe('finishGithubAction', () => {
         expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('test-owner/test-repo'));
     });
 
+    it('uses one repository-locale section in a localized generic summary', async () => {
+        const action = Object.assign(execution(), {
+            locale: { repository: 'es-ES', issue: 'es-ES', pullRequest: 'es-ES' },
+        });
+        const resolver = new ResolveMessageCatalogUseCase();
+
+        await finishGithubAction(
+            action,
+            [new Result({ id: 'MetadataUseCase', success: true, executed: true, steps: ['Updated labels.'] })],
+            {} as never,
+            {} as never,
+            undefined,
+            { publish: mockSummaryPublish },
+            resolver,
+        );
+
+        const summary = mockSummaryPublish.mock.calls[0][0] as string;
+        expect(summary).toContain('# Ejecución de Copilot');
+        expect(summary).toContain('| Estado | ✅ Correcto |');
+        expect(summary).toContain('| Resultados | Completado: 1 · Fallido: 0 · Omitido: 0 |');
+        expect(summary).not.toContain('## Detalles del fallo');
+        expect(summary).toContain('| Locale del repositorio | `es-ES` |');
+        expect(summary.match(/## Localización/gu)).toHaveLength(1);
+        expect(summary).not.toContain('MetadataUseCase');
+        expect(summary).not.toContain('Updated labels.');
+        expect(summary).not.toContain('## Localization');
+    });
+
+    it('uses the durable repository locale for deployment summaries without replaying internal steps', async () => {
+        const action = Object.assign(singleActionExecution(), {
+            singleAction: {
+                ...singleActionExecution().singleAction,
+                issue: 11,
+                isDeploymentOrchestrationAction: true,
+            },
+            currentConfiguration: { results: [], deploymentOrchestration: deploymentOperation() },
+        }) as Execution;
+        const resolver = new ResolveMessageCatalogUseCase();
+        const resolve = jest.spyOn(resolver, 'resolve');
+        const results = [new Result({
+            id: 'DeploymentOrchestrationUseCase',
+            success: true,
+            executed: true,
+            steps: ['Created promotion PR #40'],
+        })];
+
+        await finishGithubAction(
+            action,
+            results,
+            {} as never,
+            {} as never,
+            undefined,
+            { publish: mockSummaryPublish },
+            resolver,
+        );
+
+        const summary = mockSummaryPublish.mock.calls[0][0] as string;
+        expect(summary).toContain('# ⏳ Orquestación del despliegue');
+        expect(summary).not.toContain('Created promotion PR #40');
+        expect(summary).toContain('## Localización');
+        expect(summary).toContain('| Propiedad | Valor |');
+        expect(summary).toContain('| Locale del repositorio | `es-ES` |');
+        expect(summary).not.toContain('## Localization');
+        expect(summary).toContain('`es-ES -> es-ES (exact');
+        expect(resolve).toHaveBeenCalledTimes(1);
+        expect(resolve).toHaveBeenCalledWith(expect.objectContaining({ targetLocale: 'es-ES' }));
+        expect(mockPublishInvoke).not.toHaveBeenCalled();
+    });
+
+    it('links the published package from the first-party deployment summary', async () => {
+        const base = deploymentOperation();
+        const productionSha = 'c'.repeat(40);
+        const action = Object.assign(singleActionExecution(), {
+            owner: 'vypdev',
+            repo: 'copilot',
+            singleAction: {
+                ...singleActionExecution().singleAction,
+                issue: 11,
+                isDeploymentOrchestrationAction: true,
+            },
+            currentConfiguration: {
+                results: [],
+                deploymentOrchestration: {
+                    ...base,
+                    phase: 'published',
+                    productionSha,
+                    publicationVerified: true,
+                    publicationReceipt: {
+                        tag: base.tag,
+                        productionSha,
+                        operationId: base.operationId,
+                        releaseUrl: 'https://github.com/vypdev/copilot/releases/tag/v3.4.0',
+                    },
+                },
+            },
+        }) as Execution;
+
+        await finishGithubAction(
+            action,
+            [new Result({ id: 'DeploymentOrchestrationUseCase', success: true, executed: true })],
+            {} as never,
+            {} as never,
+            undefined,
+            { publish: mockSummaryPublish },
+        );
+
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining(
+            'https://www.npmjs.com/package/%40vypdev%2Fcopilot/v/3.4.0',
+        ));
+    });
+
+    it('uses the locale snapshot captured by the deployment operation', async () => {
+        const operation = deploymentOperation();
+        const action = Object.assign(singleActionExecution(), {
+            locale: { repository: 'es-ES', issue: 'es-ES', pullRequest: 'es-ES' },
+            singleAction: {
+                ...singleActionExecution().singleAction,
+                issue: 11,
+                isDeploymentOrchestrationAction: true,
+            },
+            currentConfiguration: { results: [], deploymentOrchestration: operation },
+        }) as Execution;
+
+        await finishGithubAction(
+            action,
+            [new Result({ id: 'DeploymentOrchestrationUseCase', success: true, executed: true })],
+            {} as never,
+            {} as never,
+            undefined,
+            { publish: mockSummaryPublish },
+        );
+
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('# ⏳ Orquestación del despliegue'));
+    });
+
     it('uses the short-lived evidence token only for the native Check Run', async () => {
         process.env.COPILOT_EVIDENCE_TOKEN = 'github-actions-token';
         const action = Object.assign(execution(), {
@@ -256,6 +502,167 @@ describe('finishGithubAction', () => {
         );
     });
 
+    it('renders a PR Check title and summary in the pull-request locale while the Job Summary stays in the repository locale', async () => {
+        const action = Object.assign(execution(), {
+            eventName: 'pull_request',
+            isIssue: false,
+            isPullRequest: true,
+            pullRequest: { number: 12, action: 'synchronize' },
+            locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'es-ES' },
+            inputs: { pull_request: { head: { sha: 'abc1234' } } },
+        });
+        const results = [new Result({
+            id: 'DetectPotentialProblemsUseCase',
+            success: true,
+            executed: true,
+            payload: {
+                bugbotTelemetry: {
+                    schemaVersion: 1,
+                    outcome: 'no-findings',
+                    elapsedMs: 12,
+                    configuredEffort: 'smart',
+                    headSha: 'abc1234',
+                },
+                findingStates: completeFindingStates(),
+            },
+        })];
+
+        await finishGithubAction(
+            action,
+            results,
+            {} as never,
+            {} as never,
+            { publish: mockEvidencePublish },
+            { publish: mockSummaryPublish },
+            new ResolveMessageCatalogUseCase(),
+        );
+
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('# Copilot execution'));
+        expect(mockEvidencePublish).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name: 'Copilot / Review',
+                title: 'Copilot terminó correctamente',
+                summary: expect.stringContaining('# Ejecución de Copilot'),
+            }),
+            'test-owner',
+            'test-repo',
+            'product-pat',
+        );
+        const evidence = mockEvidencePublish.mock.calls[0][0];
+        expect(evidence.summary).not.toContain('# Copilot execution');
+    });
+
+    it('uses the repository locale for a push Check without changing its stable name', async () => {
+        const previousSha = process.env.GITHUB_SHA;
+        process.env.GITHUB_SHA = 'push-sha';
+        const action = Object.assign(execution(), {
+            eventName: 'push',
+            isIssue: false,
+            isPullRequest: false,
+            isPush: true,
+            locale: { repository: 'es-ES', issue: 'en-US', pullRequest: 'en-US' },
+        });
+        try {
+            await finishGithubAction(
+                action,
+                [new Result({ id: 'VerifyUseCase', success: true, executed: true })],
+                {} as never,
+                {} as never,
+                { publish: mockEvidencePublish },
+                { publish: mockSummaryPublish },
+                new ResolveMessageCatalogUseCase(),
+            );
+        } finally {
+            if (previousSha === undefined) delete process.env.GITHUB_SHA;
+            else process.env.GITHUB_SHA = previousSha;
+        }
+
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('# Ejecución de Copilot'));
+        expect(mockEvidencePublish).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name: 'Copilot / Verification',
+                headSha: 'push-sha',
+                title: 'Copilot terminó correctamente',
+                summary: expect.stringContaining('# Ejecución de Copilot'),
+            }),
+            'test-owner',
+            'test-repo',
+            'product-pat',
+        );
+    });
+
+    it('uses the required execution locale for push completion without conversation targets', async () => {
+        const previousSha = process.env.GITHUB_SHA;
+        process.env.GITHUB_SHA = 'push-sha';
+        const action = Object.assign(execution(), {
+            eventName: 'push',
+            isIssue: false,
+            isPullRequest: false,
+            isPush: true,
+        });
+        try {
+            await finishGithubAction(
+                action,
+                [new Result({ id: 'VerifyUseCase', success: true, executed: true })],
+                {} as never,
+                {} as never,
+                { publish: mockEvidencePublish },
+                { publish: mockSummaryPublish },
+            );
+        } finally {
+            if (previousSha === undefined) delete process.env.GITHUB_SHA;
+            else process.env.GITHUB_SHA = previousSha;
+        }
+
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('# Copilot execution'));
+        expect(mockEvidencePublish).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name: 'Copilot / Verification',
+                headSha: 'push-sha',
+                title: 'Copilot completed successfully',
+                summary: expect.stringContaining('# Copilot execution'),
+            }),
+            'test-owner',
+            'test-repo',
+            'product-pat',
+        );
+    });
+
+    it('keeps optional summary and Check provider failures non-blocking', async () => {
+        mockSummaryPublish.mockRejectedValueOnce(new Error('summary unavailable'));
+        mockEvidencePublish.mockRejectedValueOnce(new Error('checks unavailable'));
+        const action = Object.assign(execution(), {
+            eventName: 'pull_request',
+            isIssue: false,
+            isPullRequest: true,
+            pullRequest: { number: 12, action: 'synchronize' },
+            inputs: { pull_request: { head: { sha: 'abc1234' } } },
+        });
+        const results = [new Result({
+            id: 'DetectPotentialProblemsUseCase', success: true, executed: true,
+            payload: {
+                bugbotTelemetry: {
+                    schemaVersion: 1, outcome: 'no-findings', elapsedMs: 12,
+                    configuredEffort: 'smart', headSha: 'abc1234',
+                },
+                findingStates: completeFindingStates(),
+            },
+        })];
+
+        await expect(finishGithubAction(
+            action,
+            results,
+            {} as never,
+            {} as never,
+            { publish: mockEvidencePublish },
+            { publish: mockSummaryPublish },
+        )).resolves.toBeUndefined();
+
+        expect(mockSummaryPublish).toHaveBeenCalledTimes(1);
+        expect(mockEvidencePublish).toHaveBeenCalledTimes(1);
+        expect(core.setFailed).not.toHaveBeenCalled();
+    });
+
     it('keeps metadata-only PR completion out of the stable Review Check', async () => {
         const action = Object.assign(execution(), {
             owner: 'test-owner',
@@ -282,10 +689,11 @@ describe('finishGithubAction', () => {
             { publish: mockSummaryPublish },
         );
 
-        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('UpdateTitleUseCase'));
-        expect(mockPublishInvoke).toHaveBeenCalledWith(expect.objectContaining({
-            genericCommentMode: 'omit-metadata-only',
-        }));
+        const summary = mockSummaryPublish.mock.calls[0][0] as string;
+        expect(summary).toContain('| Results | Succeeded: 1 · Failed: 0 · Skipped: 0 |');
+        expect(summary).not.toContain('UpdateTitleUseCase');
+        expect(summary).not.toContain('Title normalized');
+        expect(mockPublishInvoke).toHaveBeenCalledWith(expect.objectContaining({ locale: 'en-US' }));
         expect(mockEvidencePublish).not.toHaveBeenCalled();
     });
 
@@ -312,11 +720,12 @@ describe('finishGithubAction', () => {
             { publish: mockSummaryPublish },
         );
 
-        expect(mockPublishInvoke).toHaveBeenCalledWith(expect.objectContaining({
-            genericCommentMode: 'omit-metadata-only',
-        }));
-        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('Title normalization failed.'));
-        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Title normalization failed.'));
+        expect(mockPublishInvoke).toHaveBeenCalledWith(expect.objectContaining({ locale: 'en-US' }));
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('`provider.unavailable`'));
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.not.stringContaining('Title normalization failed.'));
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: provider.unavailable'));
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Action: Retry when the provider is available.'));
+        expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('Title normalization failed.'));
     });
 
     it('fails the action for unresolved findings only when the generic policy is enabled', async () => {
@@ -336,7 +745,7 @@ describe('finishGithubAction', () => {
             ai: new Ai('', 'model', false, [], false, 'low', 20, [], undefined, undefined, { failOnUnresolved: true }),
         });
         await finishGithubAction(blocking, [findingResult], {} as never, {} as never);
-        expect(core.setFailed).toHaveBeenCalledWith('Bugbot found 3 unresolved actionable finding(s).');
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: workflow.failed'));
     });
 
     it('fails every workflow that reports an application error', async () => {
@@ -349,9 +758,62 @@ describe('finishGithubAction', () => {
 
         await finishGithubAction(execution(), [failed], {} as never, {} as never);
 
-        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Cause (agent.failed): Agent execution failed.'));
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: agent.failed'));
         expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Action: Inspect the sanitized agent status'));
+        expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('Agent execution failed.'));
         expect(core.setFailed).toHaveBeenCalledWith(expect.stringMatching(/Reference: [0-9a-f-]{36}/));
+    });
+
+    it('renders the complete failure atomically in the repository locale', async () => {
+        const action = Object.assign(execution(), {
+            locale: { repository: 'es-MX', issue: 'es-MX', pullRequest: 'es-MX' },
+        });
+        const failed = new Result({
+            id: 'AgentBackedFeature',
+            success: false,
+            executed: true,
+            errors: [new ApplicationError('provider.rate-limited', 'English provider message.')],
+        });
+
+        await finishGithubAction(action, [failed], {} as never, {} as never);
+
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Impacto: El proveedor limitó temporalmente la operación.'));
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Código de error: provider.rate-limited'));
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Reintentable: Sí'));
+        expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('English provider message.'));
+        expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('Impact:'));
+    });
+
+    it('preserves operation-specific recovery context in the same catalog locale', async () => {
+        const action = Object.assign(execution(), {
+            locale: { repository: 'es-ES', issue: 'es-ES', pullRequest: 'es-ES' },
+        });
+        const failed = new Result({
+            id: 'PrepareManagedBranchUseCase',
+            success: false,
+            executed: true,
+            errors: [new ApplicationError('provider.unavailable', 'Producer message.', {
+                recovery: {
+                    id: 'managed-branch-enrichment-failed',
+                    variables: { branchName: 'feature/42-localized-errors' },
+                },
+            })],
+        });
+
+        await finishGithubAction(
+            action,
+            [failed],
+            {} as never,
+            {} as never,
+            undefined,
+            { publish: mockSummaryPublish },
+        );
+
+        const expected = 'Se conservaron la rama feature/42-localized-errors y su parche de configuración.';
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining(expected));
+        expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining(expected));
+        expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('Producer message.'));
+        expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('El proveedor no estaba disponible'));
     });
 
     it('always fails unknown finding state and applies the configured policy to verification-required', async () => {
@@ -359,14 +821,14 @@ describe('finishGithubAction', () => {
             id: 'DetectPotentialProblemsUseCase', success: true, executed: true, payload: { findingStates },
         });
         await finishGithubAction(execution(), [resultWith(completeFindingStates({ unknown: 1 }))], {} as never, {} as never);
-        expect(core.setFailed).toHaveBeenCalledWith('Bugbot could not verify 1 finding state(s).');
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: provider.contract-invalid'));
 
         jest.mocked(core.setFailed).mockClear();
         const blocking = Object.assign(execution(), {
             ai: new Ai('', 'model', false, [], false, 'low', 20, [], undefined, undefined, { failOnUnresolved: true }),
         });
         await finishGithubAction(blocking, [resultWith(completeFindingStates({ 'verification-required': 2 }))], {} as never, {} as never);
-        expect(core.setFailed).toHaveBeenCalledWith('Bugbot found 2 unresolved actionable finding(s).');
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: workflow.failed'));
     });
 
     it('fails closed when owned finding-state evidence is malformed', async () => {
@@ -379,7 +841,7 @@ describe('finishGithubAction', () => {
 
         await finishGithubAction(execution(), [malformed], {} as never, {} as never);
 
-        expect(core.setFailed).toHaveBeenCalledWith('Bugbot finding-state evidence is malformed.');
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: provider.contract-invalid'));
     });
 
     it('fails closed when review telemetry requires but omits finding-state evidence', async () => {
@@ -400,7 +862,7 @@ describe('finishGithubAction', () => {
 
         await finishGithubAction(execution(), [missing], {} as never, {} as never);
 
-        expect(core.setFailed).toHaveBeenCalledWith('Bugbot finding-state evidence is malformed.');
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: provider.contract-invalid'));
     });
 
     it('fails closed when valid review state coexists with malformed telemetry', async () => {
@@ -428,7 +890,7 @@ describe('finishGithubAction', () => {
 
         await finishGithubAction(execution(), [valid, malformed], {} as never, {} as never);
 
-        expect(core.setFailed).toHaveBeenCalledWith('Bugbot finding-state evidence is malformed.');
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: provider.contract-invalid'));
     });
 });
 

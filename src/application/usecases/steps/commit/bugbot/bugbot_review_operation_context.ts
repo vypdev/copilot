@@ -33,6 +33,7 @@ export interface BugbotContextSelectionContext {
 
 export interface BugbotReviewOperationContext extends BugbotContextSelectionContext {
   readonly locale: {
+    readonly issue: string;
     readonly pullRequest: string;
   };
   readonly analysis: {
@@ -44,6 +45,7 @@ export interface BugbotReviewOperationContext extends BugbotContextSelectionCont
 }
 
 export interface BugbotFixIntentContext extends BugbotContextSelectionContext {
+  readonly locale: { readonly issue: string; readonly pullRequest: string };
   readonly comment: {
     readonly body: string;
     readonly isPullRequestReviewComment: boolean;
@@ -64,6 +66,7 @@ export interface BugbotCommitContext {
 }
 
 export interface BugbotContextSelectionSource {
+  readonly locale: { readonly issue: string; readonly pullRequest: string };
   readonly owner: string;
   readonly repo: string;
   readonly issueNumber: number;
@@ -99,7 +102,6 @@ export interface BugbotContextSelectionSource {
 }
 
 export interface BugbotReviewOperationSource extends BugbotContextSelectionSource {
-  readonly locale?: { readonly pullRequest?: string };
   readonly ai: BugbotContextSelectionSource['ai'] & {
     getAgentConfiguration(task: AgentTask): AgentConfiguration;
     getBugbotMinSeverity(): string;
@@ -157,7 +159,8 @@ export function projectBugbotReviewOperationContext(
   return Object.freeze({
     ...selection,
     locale: Object.freeze({
-      pullRequest: source.locale?.pullRequest ?? 'en-US',
+      issue: source.locale.issue,
+      pullRequest: source.locale.pullRequest,
     }),
     analysis: Object.freeze({
       agentConfiguration: Object.freeze({ ...agentConfiguration }),
@@ -195,6 +198,10 @@ export function projectBugbotFixIntentContext(
   const parentCommentId = parsePositiveSafeInteger(source.pullRequest.commentInReplyToId);
   return Object.freeze({
     ...selection,
+    locale: Object.freeze({
+      issue: source.locale.issue,
+      pullRequest: source.locale.pullRequest,
+    }),
     comment: Object.freeze({
       body: isPullRequestReviewComment
         ? source.pullRequest.commentBody ?? ''

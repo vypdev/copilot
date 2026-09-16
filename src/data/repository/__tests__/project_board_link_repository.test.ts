@@ -6,7 +6,7 @@ import type { GithubGraphqlTransportClient } from '../../../infrastructure/githu
 
 describe('ProjectBoardLinkRepository', () => {
   const project = new ProjectDetail({ id: 'project-1' });
-  const queryPort = { isContentLinked: jest.fn() } as unknown as ProjectBoardQueryPort;
+  const queryPort = { getLinkedContentItemId: jest.fn() } as unknown as ProjectBoardQueryPort;
   const graphql = jest.fn();
   const graphqlPort = {
     getClient: jest.fn(() => ({ graphql })),
@@ -16,26 +16,28 @@ describe('ProjectBoardLinkRepository', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     repository = new ProjectBoardLinkRepository(queryPort, graphqlPort);
-    (queryPort.isContentLinked as jest.Mock).mockResolvedValue(false);
+    (queryPort.getLinkedContentItemId as jest.Mock).mockResolvedValue(undefined);
   });
 
-  it('returns true only when GitHub returns the created project item id', async () => {
+  it('returns the authoritative item ID from the link mutation', async () => {
     graphql.mockResolvedValue({ addProjectV2ItemById: { item: { id: 'item-1' } } });
 
-    await expect(repository.linkContentId(project, 'content-1', 'token')).resolves.toBe(true);
+    await expect(repository.linkContentId(project, 'content-1', 'token')).resolves.toBe('item-1');
     expect(graphql).toHaveBeenCalledTimes(1);
   });
 
-  it('returns false when the mutation response does not contain a created item', async () => {
+  it('rejects an incomplete mutation response instead of silently skipping status synchronization', async () => {
     graphql.mockResolvedValue({ addProjectV2ItemById: {} });
 
-    await expect(repository.linkContentId(project, 'content-1', 'token')).resolves.toBe(false);
+    await expect(repository.linkContentId(project, 'content-1', 'token')).rejects.toThrow(
+      'GitHub did not return the project item created for content content-1 in project project-1.',
+    );
   });
 
-  it('does not mutate an already linked content item', async () => {
-    (queryPort.isContentLinked as jest.Mock).mockResolvedValue(true);
+  it('returns the existing project item ID without creating a duplicate', async () => {
+    (queryPort.getLinkedContentItemId as jest.Mock).mockResolvedValue('existing-item');
 
-    await expect(repository.linkContentId(project, 'content-1', 'token')).resolves.toBe(false);
+    await expect(repository.linkContentId(project, 'content-1', 'token')).resolves.toBe('existing-item');
     expect(graphql).not.toHaveBeenCalled();
   });
 });

@@ -9,8 +9,9 @@ import { IssueProgressLabelRepository } from "../../data/repository/issue/issue_
 import { IssueProgressTrackingRepository } from "../../data/repository/issue/issue_progress_tracking_repository";
 import { BranchLifecycleRepository } from "../../data/repository/branch_lifecycle_repository";
 import { PullRequestLifecycleRepository } from "../../data/repository/pull_request/pull_request_lifecycle_repository";
+import { GithubPublicationSourceRepository } from '../../data/repository/github_publication_source_repository';
 import type { RepositoryCredentialBinding } from './shared_capability_port_binding';
-import { bindIssueDescriptionQuery } from './shared_capability_port_binding';
+import { bindIssueDescriptionQuery, bindPublicationSourceQuery } from './shared_capability_port_binding';
 import { bindIssueLabels } from './lifecycle_capability_port_binding';
 import { bindBranchListQuery, bindIssueProgress, bindPullRequestBranchQuery } from './push_single_action_capability_port_binding';
 
@@ -28,5 +29,6 @@ export function createCheckProgressCompositionRoot(binding: RepositoryCredential
         bindBranchListQuery(new BranchLifecycleRepository(createBranchClient()), binding),
         bindPullRequestBranchQuery(new PullRequestLifecycleRepository(createPullRequestLifecycleClient()), binding),
         createFindingsQueryPort(),
+        bindPublicationSourceQuery(new GithubPublicationSourceRepository(createBranchClient()), binding),
     );
 }

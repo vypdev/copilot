@@ -3,7 +3,6 @@ import { AGENT_PLAN } from '../../../../application/policies/agent_task_policy';
 import { THINK_RESPONSE_SCHEMA } from '../../../../application/policies/agent_response_schemas';
 import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
 import type { BoundIssueDescriptionQueryPort } from '../../../ports/issue_description_ports';
-import type { BoundIssueNotificationPort } from '../../../ports/issue_lifecycle_ports';
 import { getThinkPrompt } from '../../../../prompts';
 import { logDebugInfo, logError, logInfo } from '../../../ports/logging_ports';
 import { PROJECT_CONTEXT_INSTRUCTION } from '../../../../utils/project_context_instruction';
@@ -13,10 +12,11 @@ import { sanitizeAgentMarkdown } from '../../../../application/policies/github_c
 import { ApplicationError } from '../../../errors/application_error';
 import type { AgentConfiguration } from '../../../../data/model/agent';
 import type { AgentTask } from '../../../../domain/agent';
+import type { TranslationPublication } from '../../../policies/comment_translation_policy';
+import { productFacingAgentQueryOptions } from '../../../policies/agent_output_locale_policy';
 
 export interface ThinkAnswerDependencies {
     issueDescriptionQueryPort: BoundIssueDescriptionQueryPort;
-    issueNotificationPort: BoundIssueNotificationPort;
     aiRepository: FindingsQueryPort;
 }
 
@@ -27,6 +27,8 @@ export interface ThinkAnswerContext {
     readonly tokenUser?: string;
     readonly agentTask: AgentTask;
     readonly agentConfiguration: Readonly<AgentConfiguration>;
+    readonly translationPublication?: TranslationPublication;
+    readonly targetLocale: string;
 }
 
 export async function runThinkAnswerWorkflow(
@@ -48,8 +50,14 @@ export async function runThinkAnswerWorkflow(
         projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
         contextBlock,
         question: request.question,
+        targetLocale: param.targetLocale,
     });
-    const answer = sanitizeAgentMarkdown(await queryThinkAnswer(param, prompt, dependencies.aiRepository));
+    const answer = sanitizeAgentMarkdown(await queryThinkAnswer(
+        param,
+        prompt,
+        dependencies.aiRepository,
+        param.targetLocale,
+    ));
     if (!answer) {
         logError('Configured agent returned no answer for Think.');
         return [
@@ -61,7 +69,7 @@ export async function runThinkAnswerWorkflow(
             }),
         ];
     }
-    if (request.destinationNumber <= 0) {
+    if (request.destinationType !== 'local' && (!request.destinationNumber || request.destinationNumber <= 0)) {
         logError('Issue or PR number not available for adding comment.');
         return [
             new Result({
@@ -73,21 +81,30 @@ export async function runThinkAnswerWorkflow(
         ];
     }
 
-    await dependencies.issueNotificationPort.addComment(
-        request.destinationNumber,
-        answer,
-    );
-    logInfo(
-        `Think response posted to ${request.destinationType} #${request.destinationNumber}.`,
-    );
-    return [new Result({ id: taskId, success: true, executed: true })];
+    logInfo(request.destinationType === 'local'
+        ? 'Think response prepared for local output.'
+        : `Think response prepared for ${request.destinationType} #${request.destinationNumber}.`);
+    return [new Result({
+        id: taskId,
+        success: true,
+        executed: true,
+        payload: Object.freeze({
+            publication: Object.freeze({
+                kind: 'direct-answer' as const,
+                answer,
+                ...(param.translationPublication
+                    ? { translation: Object.freeze({ ...param.translationPublication }) }
+                    : {}),
+            }),
+        }),
+    })];
 }
 
 async function loadIssueDescription(
     issueNumber: number,
     repository: BoundIssueDescriptionQueryPort,
 ): Promise<string> {
-    if (issueNumber <= 0) return '';
+    if (!Number.isSafeInteger(issueNumber) || issueNumber <= 0) return '';
     const description = await repository.getDescription(
         issueNumber,
     );
@@ -98,19 +115,16 @@ async function queryThinkAnswer(
     param: ThinkAnswerContext,
     prompt: string,
     repository: FindingsQueryPort,
+    targetLocale: string,
 ): Promise<string> {
     logDebugInfo(`Think: calling configured agent (prompt length=${prompt.length}).`);
     const response = await repository.query({
         configuration: param.agentConfiguration,
         agentId: AGENT_PLAN,
         prompt,
-        options: {
-            expectJson: true,
-            schema: THINK_RESPONSE_SCHEMA as unknown as Record<string, unknown>,
-            schemaName: 'think_response',
-        },
+        options: productFacingAgentQueryOptions('think', THINK_RESPONSE_SCHEMA),
     });
-    const answer = extractStructuredAnswer(response);
+    const answer = extractStructuredAnswer(response, targetLocale);
     logDebugInfo(`Think: agent response received. Answer length=${answer.length}.`);
     return answer;
 }

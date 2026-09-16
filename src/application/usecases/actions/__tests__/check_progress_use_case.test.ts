@@ -8,6 +8,7 @@ import { CheckProgressUseCase } from '../check_progress_use_case';
 import { Ai } from '../../../../data/model/ai';
 import type { Execution } from '../../../../data/model/execution';
 import { projectProgressContext } from '../../push_single_action_contexts';
+import type { AgentQueryResult } from '../../../ports/agent_query_ports';
 
 jest.mock('../../../../utils/logger', () => ({
   logInfo: jest.fn(),
@@ -24,9 +25,18 @@ const mockSetLabels = jest.fn();
 const mockGetListOfBranches = jest.fn();
 
 const mockGetOpenPullRequestNumbersByHeadBranch = jest.fn();
+const mockGetBranchHeadSha = jest.fn();
+const SOURCE_HEAD = 'a'.repeat(40);
+const NEWER_HEAD = 'b'.repeat(40);
 
 
 const mockAskAgent = jest.fn();
+async function localizedProgress(request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }): Promise<AgentQueryResult> {
+  const response = await mockAskAgent(request.configuration, request.agentId, request.prompt, request.options);
+  return response && typeof response === 'object' && !Array.isArray(response)
+    ? { outputLocale: 'en-US', ...response as Record<string, unknown> }
+    : response;
+}
 function baseParam(overrides: Record<string, unknown> = {}): Execution {
   const branches = {
     main: 'main',
@@ -43,6 +53,7 @@ function baseParam(overrides: Record<string, unknown> = {}): Execution {
     repo: 'repo',
     issueNumber: 123,
     tokens: { token: 'token' },
+    locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
     ai: new Ai('http://localhost:4096', 'opencode/kimi-k2.5', false, [], false, 'low', 20),
     commit: { branch: 'feature/123-add-feature' },
     branches,
@@ -61,7 +72,8 @@ describe('CheckProgressUseCase', () => {
       { setProgressLabel: mockSetProgressLabel },
       { getListOfBranches: mockGetListOfBranches },
       { getOpenPullRequestNumbersByHeadBranch: mockGetOpenPullRequestNumbersByHeadBranch },
-      { query: (request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }) => mockAskAgent(request.configuration, request.agentId, request.prompt, request.options) },
+      { query: localizedProgress },
+      { getBranchHeadSha: mockGetBranchHeadSha },
     );
     invoke = (param) => useCase.invoke(projectProgressContext(param));
     mockGetDescription.mockReset();
@@ -70,6 +82,8 @@ describe('CheckProgressUseCase', () => {
     mockSetLabels.mockReset();
     mockGetListOfBranches.mockReset();
     mockGetOpenPullRequestNumbersByHeadBranch.mockReset();
+    mockGetBranchHeadSha.mockReset();
+    mockGetBranchHeadSha.mockResolvedValue(SOURCE_HEAD);
     mockAskAgent.mockReset();
   });
 
@@ -171,8 +185,20 @@ describe('CheckProgressUseCase', () => {
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
-    expect(results[0].errors?.some((e) => String(e).includes('Progress detection returned 0%'))).toBe(true);
+    expect(results[0].errors[0]).toMatchObject({ code: 'locale.output-invalid' });
     expect(mockAskAgent).toHaveBeenCalledTimes(1);
+    expect(mockSetProgressLabel).not.toHaveBeenCalled();
+  });
+
+  it('rejects a mismatched output locale before changing labels', async () => {
+    mockGetDescription.mockResolvedValue('Issue body');
+    mockAskAgent.mockResolvedValue({ outputLocale: 'fr-FR', progress: 80, summary: 'Terminé', remaining: null });
+
+    const results = await invoke(baseParam());
+
+    expect(results[0].errors[0]).toMatchObject({ code: 'locale.output-invalid' });
+    expect(mockSetProgressLabel).not.toHaveBeenCalled();
+    expect(mockSetLabels).not.toHaveBeenCalled();
   });
 
   it('returns error when progress is 0% (single call; HTTP retries are in the findings adapter)', async () => {
@@ -237,6 +263,65 @@ describe('CheckProgressUseCase', () => {
       99,
       expect.arrayContaining(['feature', '75%']),
     );
+  });
+
+  it('carries the canonical source head and revalidates it before changing labels', async () => {
+    mockGetDescription.mockResolvedValue('Issue body');
+    mockAskAgent.mockResolvedValue({ progress: 75, summary: 'Current source' });
+    mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([]);
+
+    const results = await invoke(baseParam({ inputs: { after: SOURCE_HEAD.toUpperCase() } }));
+
+    expect(mockGetBranchHeadSha).toHaveBeenCalledWith('feature/123-add-feature');
+    expect(mockSetProgressLabel).toHaveBeenCalledWith(123, 75);
+    expect(results[0].payload).toMatchObject({ sourceHeadSha: SOURCE_HEAD });
+  });
+
+  it('suppresses an event that is already stale before agent work starts', async () => {
+    mockGetDescription.mockResolvedValue('Issue body');
+    mockAskAgent.mockResolvedValue({ progress: 75, summary: 'Outdated source' });
+    mockGetBranchHeadSha.mockResolvedValue(NEWER_HEAD);
+
+    const results = await invoke(baseParam({ inputs: { after: SOURCE_HEAD } }));
+
+    expect(results[0]).toMatchObject({
+      success: true,
+      executed: false,
+      payload: { publicationOutcome: { reason: 'stale-source', branch: 'feature/123-add-feature', sourceHeadSha: SOURCE_HEAD } },
+    });
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockSetProgressLabel).not.toHaveBeenCalled();
+    expect(mockGetLabels).not.toHaveBeenCalled();
+    expect(mockSetLabels).not.toHaveBeenCalled();
+  });
+
+  it('suppresses native and conversational state when the branch advances during analysis', async () => {
+    mockGetDescription.mockResolvedValue('Issue body');
+    mockAskAgent.mockResolvedValue({ progress: 75, summary: 'Outdated source' });
+    mockGetBranchHeadSha.mockResolvedValueOnce(SOURCE_HEAD).mockResolvedValueOnce(NEWER_HEAD);
+
+    const results = await invoke(baseParam());
+
+    expect(results[0]).toMatchObject({
+      success: true,
+      executed: false,
+      payload: { publicationOutcome: { reason: 'stale-source', branch: 'feature/123-add-feature', sourceHeadSha: SOURCE_HEAD } },
+    });
+    expect(mockAskAgent).toHaveBeenCalledTimes(1);
+    expect(mockSetProgressLabel).not.toHaveBeenCalled();
+    expect(mockSetLabels).not.toHaveBeenCalled();
+  });
+
+  it('maps authoritative source lookup failures without mutating labels', async () => {
+    mockGetDescription.mockResolvedValue('Issue body');
+    mockAskAgent.mockResolvedValue({ progress: 75, summary: 'Current source' });
+    mockGetBranchHeadSha.mockRejectedValue(new Error('secret provider detail'));
+
+    const results = await invoke(baseParam({ inputs: { after: SOURCE_HEAD } }));
+
+    expect(results[0].errors[0]).toMatchObject({ code: 'workflow.failed' });
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockSetProgressLabel).not.toHaveBeenCalled();
   });
 
   it('uses default summary when AI response has no summary', async () => {

@@ -66,6 +66,42 @@ describe('execution issue number policy', () => {
     expect(result.issueNumber).toBe(91);
   });
 
+  it('does not treat an ordinary pull request as its own linked issue', () => {
+    expect(resolveEventIssueNumber(context({
+      eventName: 'pull_request',
+      isPullRequest: true,
+      pullRequest: { number: 91, head: 'codex/pr-ux', base: 'develop' },
+    })).issueNumber).toBeUndefined();
+
+    expect(resolveEventIssueNumber(context({
+      eventName: 'pull_request',
+      isPullRequest: true,
+      pullRequest: { number: 91, head: 'feature/91-self-reference', base: 'develop' },
+    })).issueNumber).toBeUndefined();
+  });
+
+  it('does not treat a pull-request review-state event as its own linked issue', () => {
+    expect(resolveEventIssueNumber(context({
+      eventName: 'pull_request_review',
+      isPullRequest: true,
+      pullRequest: { number: 91, head: 'codex/pr-ux', base: 'develop' },
+    })).issueNumber).toBeUndefined();
+
+    expect(resolveEventIssueNumber(context({
+      eventName: 'pull_request_review',
+      isPullRequest: true,
+      pullRequest: { number: 91, head: 'feature/42-work', base: 'develop' },
+    })).issueNumber).toBe(42);
+  });
+
+  it('keeps a distinct branch issue as the ordinary pull-request linkage target', () => {
+    expect(resolveEventIssueNumber(context({
+      eventName: 'pull_request',
+      isPullRequest: true,
+      pullRequest: { number: 91, head: 'feature/42-work', base: 'develop' },
+    })).issueNumber).toBe(42);
+  });
+
   it('returns unresolved without provider calls for an invalid configured target', async () => {
     const result = await resolveSingleActionIssueNumber(
       context({ isSingleAction: true, singleAction: {

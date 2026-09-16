@@ -25,7 +25,10 @@ jobs:
 
       - uses: ./
         with:
-          ai-ignore-files: build/*
+          repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
+          issues-locale: ${{ vars.ISSUES_LOCALE || '' }}
+          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || '' }}
+          ai-ignore-files: build/*,specs/CATALOG.md
           bugbot-dry-run: ${{ vars.BUGBOT_DRY_RUN || 'false' }}
           bugbot-effort: ${{ vars.BUGBOT_EFFORT || 'smart' }}
           bugbot-review-drafts: ${{ vars.BUGBOT_REVIEW_DRAFTS || 'false' }}

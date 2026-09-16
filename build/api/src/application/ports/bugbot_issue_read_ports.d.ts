@@ -4,6 +4,8 @@ export interface BugbotIssueComment {
     user?: {
         login?: string;
     };
+    /** Provider-authenticated author classification; never inferred from the login. */
+    isAutomatedAuthor?: boolean;
     createdAt?: string;
 }
 export interface BugbotIssueReadPort {

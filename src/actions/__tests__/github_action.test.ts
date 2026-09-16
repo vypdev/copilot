@@ -41,6 +41,12 @@ jest.mock('../common_action', () => ({
   mainRun: (...args: unknown[]) => mockMainRun(...args),
 }));
 
+const mockLanguageQuery = jest.fn();
+const mockCreateLanguageQueryPort = jest.fn(() => ({ query: mockLanguageQuery }));
+jest.mock('../../infrastructure/composition/agent_capability_composition_root', () => ({
+  createLanguageQueryPort: () => mockCreateLanguageQueryPort(),
+}));
+
 const mockExecutionAdmissionInvoke = jest.fn();
 jest.mock('../../infrastructure/composition/github_execution_admission_composition_root', () => ({
   createGithubExecutionAdmissionUseCase: jest.fn().mockImplementation(() => ({
@@ -133,6 +139,7 @@ describe('runGitHubAction', () => {
     expect(projectCompositionSpy).not.toHaveBeenCalled();
     expect(executionBuilderSpy).not.toHaveBeenCalled();
     expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(mockCreateLanguageQueryPort).not.toHaveBeenCalled();
     expect(mockMainRun).not.toHaveBeenCalled();
     expect(finishActionSpy).not.toHaveBeenCalled();
     expect(mockGetProjectDetail).not.toHaveBeenCalled();
@@ -222,6 +229,7 @@ describe('runGitHubAction', () => {
       'fake-token',
     );
     expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(mockCreateLanguageQueryPort).not.toHaveBeenCalled();
     expect(mockMainRun).toHaveBeenCalledTimes(1);
     expect(mockMainRun.mock.calls[0][0].ai.getAgentConfiguration('planner')).toEqual(expect.objectContaining({
       model: '',
@@ -238,6 +246,36 @@ describe('runGitHubAction', () => {
     expect(executionBuilderSpy).not.toHaveBeenCalled();
     expect(mockMainRun).not.toHaveBeenCalled();
     expect(finishActionSpy).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invalid repository locale before project or agent preparation', async () => {
+    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
+      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'fake-token';
+      if (key === INPUT_KEYS.REPOSITORY_LOCALE) return 'und';
+      return '';
+    });
+
+    await expect(runGitHubAction()).rejects.toThrow('Invalid locale tag');
+    expect(projectCompositionSpy).not.toHaveBeenCalled();
+    expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(mockMainRun).not.toHaveBeenCalled();
+  });
+
+  it('prepares the planner capability when a valid locale needs dynamic product copy', async () => {
+    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
+      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'fake-token';
+      if (key === INPUT_KEYS.REPOSITORY_LOCALE) return 'fr-FR';
+      return '';
+    });
+
+    await runGitHubAction();
+
+    expect(agentProvisioningSpy).toHaveBeenCalledWith(expect.anything(), expect.arrayContaining(['planner']));
+    expect(executionBuilderSpy).toHaveBeenCalledWith(expect.objectContaining({
+      localeInputs: expect.objectContaining({ repository: 'fr-FR', issue: 'fr-FR', pullRequest: 'fr-FR' }),
+      activeAgentTasks: expect.arrayContaining(['planner']),
+    }));
+    expect(mockCreateLanguageQueryPort).toHaveBeenCalledTimes(1);
   });
 
   it('publishes results but skips configuration persistence when no issue target exists', async () => {
@@ -292,7 +330,8 @@ describe('runGitHubAction', () => {
     await runGitHubAction();
 
     expect(mockPublishInvoke).toHaveBeenCalled();
-    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Cause (workflow.failed): First error'));
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: workflow.failed'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('First error'));
   });
 
   it('calls logError when INPUT_VARS_JSON is invalid JSON', async () => {
@@ -334,7 +373,33 @@ describe('runGitHubActionEntry', () => {
   it('converts an unhandled rejection into an action failure without forcing process exit', async () => {
     await runGitHubActionEntry(jest.fn().mockRejectedValue(new Error('entry failed')));
 
-    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Cause (workflow.failed): GitHub Action execution failed.'));
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: workflow.failed'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('GitHub Action execution failed.'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('entry failed'));
+  });
+
+  it('uses a bundled repository locale for failures before execution is available', async () => {
+    (core.getInput as jest.Mock).mockImplementation((key: string) =>
+      key === INPUT_KEYS.REPOSITORY_LOCALE ? 'es-MX' : '');
+
+    await runGitHubActionEntry(jest.fn().mockRejectedValue(new Error('entry failed')));
+
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Impacto:'));
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Código de error: workflow.failed'));
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Reintentable: Sí'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('Impact:'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('entry failed'));
+  });
+
+  it('falls back atomically to English when the early locale input is invalid', async () => {
+    (core.getInput as jest.Mock).mockImplementation((key: string) =>
+      key === INPUT_KEYS.REPOSITORY_LOCALE ? 'not a locale' : '');
+
+    await runGitHubActionEntry(jest.fn().mockRejectedValue(new Error('entry failed')));
+
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Impact:'));
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: workflow.failed'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('Impacto:'));
     expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('entry failed'));
   });
 });

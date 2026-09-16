@@ -4,6 +4,7 @@ import { SUPPORTED_AGENT_PROVIDERS } from './agent_configuration_validation_poli
 import { validateStorageConfiguration } from './setup_configuration_storage_policy';
 import { MAX_INACTIVITY_THRESHOLD_HOURS } from '../../domain/issue_inactivity';
 import { validateDeploymentConfiguration } from '../../domain/deployment_configuration';
+import { canonicalizeLocaleTag } from '../../domain/locale';
 
 export function validateSetupConfiguration(configuration: SetupConfiguration): string[] {
     const errors: string[] = [];
@@ -31,6 +32,9 @@ export function validateSetupConfiguration(configuration: SetupConfiguration): s
         || configuration.repository.inactivityThresholdHours > MAX_INACTIVITY_THRESHOLD_HOURS) {
         errors.push(`Inactivity threshold must be between 1 and ${MAX_INACTIVITY_THRESHOLD_HOURS} hours.`);
     }
+    validateLocale(errors, 'Repository locale', configuration.repository.repositoryLocale, false);
+    validateLocale(errors, 'Issue locale override', configuration.repository.issueLocale, true);
+    validateLocale(errors, 'Pull-request locale override', configuration.repository.pullRequestLocale, true);
     if (configuration.ai.bugbotCommentLimit < 1 || configuration.ai.bugbotCommentLimit > 100) {
         errors.push('Bugbot comment limit must be between 1 and 100.');
     }
@@ -76,4 +80,13 @@ export function validateSetupConfiguration(configuration: SetupConfiguration): s
         if (/\s/.test(agent.model) || /\s/.test(agent.modelProvider)) errors.push(`Model provider and model for ${task} cannot contain whitespace.`);
     }
     return errors;
+}
+
+function validateLocale(errors: string[], label: string, value: string, optional: boolean): void {
+    if (optional && !value.trim()) return;
+    try {
+        canonicalizeLocaleTag(value);
+    } catch {
+        errors.push(`${label} must be a valid BCP-47 language tag${optional ? ' or empty to inherit' : ''}.`);
+    }
 }

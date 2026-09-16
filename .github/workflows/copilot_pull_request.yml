@@ -1,34 +1,19 @@
 name: Copilot - Pull Request
+run-name: Copilot PR · ${{ github.event_name }}:${{ github.event.action }}
 
 on:
   pull_request:
-    types: [opened, reopened, edited, closed, synchronize]
-  pull_request_review:
-    types: [submitted, edited, dismissed]
-  merge_group:
-    types: [checks_requested]
+    types: [opened, reopened, closed, synchronize]
 
 jobs:
-  copilot-merge-group:
-    if: ${{ github.event_name == 'merge_group' }}
-    name: Copilot - Pull Request
-    runs-on: [self-hosted, codex]
-    timeout-minutes: 10
-    permissions:
-      checks: write
-      contents: read
-    steps:
-      - name: Confirm merge-group compatibility
-        run: echo "Copilot PR analysis already ran on each constituent pull request."
-
   copilot-pull-requests:
     if: ${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}
     name: Copilot - Pull Request
     runs-on: [self-hosted, codex]
     timeout-minutes: 120
     concurrency:
-      group: copilot-bugbot-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}
-      cancel-in-progress: ${{ github.event_name != 'pull_request' || github.event.action != 'edited' }}
+      group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-analysis
+      cancel-in-progress: true
     permissions:
       checks: write
       contents: read
@@ -58,7 +43,10 @@ jobs:
       # Exercise the Action implementation from this PR so regressions are caught before merge.
       - uses: ./
         with:
-          ai-ignore-files: build/*
+          repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
+          issues-locale: ${{ vars.ISSUES_LOCALE || '' }}
+          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || '' }}
+          ai-ignore-files: build/*,specs/CATALOG.md
           bugbot-severity: ${{ vars.BUGBOT_SEVERITY || 'low' }}
           bugbot-comment-limit: ${{ vars.BUGBOT_COMMENT_LIMIT || '20' }}
           bugbot-fix-verify-commands: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}
