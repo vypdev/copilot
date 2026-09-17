@@ -220,7 +220,8 @@ ownership.
 5. The only allowed pre-admission repository write is one bounded diagnostic
    reply to an explicit addressed command. Passive events use logs and Job
    Summary only.
-6. Help work MUST remain branchless even when `branch-management-always=true`.
+6. Help work MUST remain branchless even when `issue-managed-branches=true`
+   and after its `in-progress` start.
 7. Release and hotfix bodies MUST distinguish the explicit value `Automatic`
    from missing, duplicated, empty, or invalid values; invalid is never
    reinterpreted as automatic.
@@ -761,8 +762,8 @@ validated against setup forms and profile fixtures.
    then their labels and runtime classification agree exactly.
 5. Given an issue has both bugfix and release aliases, when its event runs, then
    admission fails before every domain mutation and identifies both groups.
-6. Given a help issue and `branch-management-always=true`, when it is admitted,
-   then help handling may run but no branch operation is reachable.
+6. Given a help issue and `issue-managed-branches=true`, when `in-progress`
+   starts it, then help handling may run but no branch operation is reachable.
 7. Given an explicit `Automatic` release version and valid release type, when
    admitted, then automatic version resolution is allowed; given a missing or
    malformed heading, it blocks instead.

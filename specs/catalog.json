@@ -709,7 +709,7 @@
     {
       "id": "issue-start-and-sdd-readiness",
       "title": "Uniform issue start and pre-branch SDD readiness",
-      "status": "proposed",
+      "status": "implemented",
       "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-09-17",
@@ -737,7 +737,15 @@
         "src/application/policies/lifecycle_state_policy.ts",
         "src/application/usecases/actions/synchronize_lifecycle_state_use_case.ts",
         "src/infrastructure/git_commit_adapter.ts",
-        "scripts/validate-specification-catalog.cjs"
+        "scripts/validate-specification-catalog.cjs",
+        "src/domain/issue_start_policy.ts",
+        "src/domain/pre_branch_sdd.ts",
+        "src/application/ports/pre_branch_sdd_ports.ts",
+        "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts",
+        "src/application/usecases/steps/issue/reconcile_branch_readiness_use_case.ts",
+        "src/data/repository/branch/linked_branch_readiness_repository.ts",
+        "src/infrastructure/pre_branch_sdd_workspace_adapter.ts",
+        "src/infrastructure/specification_catalog_validator.cjs"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -745,13 +753,24 @@
         "src/application/usecases/__tests__/issue_use_case.test.ts",
         "src/application/usecases/steps/issue/__tests__/prepare_branches_use_case.test.ts",
         "src/application/policies/__tests__/lifecycle_state_policy.test.ts",
-        "src/tooling/__tests__/validate_specification_catalog.test.ts"
+        "src/tooling/__tests__/validate_specification_catalog.test.ts",
+        "src/domain/__tests__/issue_start_policy.test.ts",
+        "src/domain/__tests__/pre_branch_sdd.test.ts",
+        "src/application/usecases/steps/issue/__tests__/pre_branch_sdd_gate_use_case.test.ts",
+        "src/application/usecases/steps/issue/__tests__/reconcile_branch_readiness_use_case.test.ts",
+        "src/infrastructure/__tests__/pre_branch_sdd_workspace_adapter.test.ts",
+        "src/architecture/__tests__/github_publication_boundaries.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
         "docs/issues/workflow-setup.mdx",
         "docs/issues/comment-commands.mdx",
-        "docs/development/specifications.mdx"
+        "docs/development/specifications.mdx",
+        "docs/issues/pre-branch-sdds.mdx",
+        "docs/issues/index.mdx",
+        "docs/issues/labels-and-branch-types.mdx",
+        "docs/issues/configuration.mdx",
+        "docs/configuration.mdx"
       ]
     },
     {
@@ -760,7 +779,7 @@
       "status": "as-built-baseline",
       "scope": "Convert typed issues into traceable work branches, project state, and lifecycle state",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-16",
+      "lastVerified": "2026-09-17",
       "specs": [
         "specs/managed-issue-and-branch-lifecycle.md"
       ],

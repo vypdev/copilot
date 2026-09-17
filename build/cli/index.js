@@ -79632,6 +79632,8 @@ const git_authentication_environment_1 = __nccwpck_require__(16535);
 const runFile = (0, node_util_1.promisify)(node_child_process_1.execFile);
 const SHA = /^[a-f0-9]{40}$/i;
 const BRANCH = /^[a-zA-Z0-9][a-zA-Z0-9._/-]*$/;
+// The shared catalog validator is CommonJS so the setup CLI and bundled Action use identical rules.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const validator = __nccwpck_require__(29617);
 /** Isolates SDD validation in a detached temporary worktree before the linked branch is created. */
 class PreBranchSddWorkspaceAdapter {

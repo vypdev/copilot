@@ -1,14 +1,14 @@
 # Pre-branch SDD Gate
 
-- Status: Draft — prospective specification; no runtime behavior has changed
+- Status: Implemented — automated verification complete; live provider UX review pending
 - Date: 2026-09-17
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: Not applicable to a prospective specification
+- Last verified: 2026-09-17 on `codex/issue-start-sdd-gate`
 - Owners: Copilot maintainers
 - Scope: clarify, update, validate, and publish the owning SDD before eligible branch-based work
 - Related issues/PRs: none; local design work; companion SDD `issue-start-and-branch-readiness.md`
 - Required review gates: product UX, architecture, testing, documentation, security/operations
-- Open decisions blocking readiness: none in the proposed SDD-only policy; maintainer review remains pending
+- Open decisions blocking readiness: none in the SDD-only policy; live provider review remains pending
 
 ## 1. Executive summary
 
@@ -39,18 +39,18 @@ Only after the blocking answers are recorded does the agent draft the SDD. The
 Action validates it before branch creation and announces readiness after the
 first SDD commit is confirmed remotely.
 
-## 2. Problem, current behavior, and evidence
+## 2. Problem, former behavior, and evidence
 
 ### 2.1 Problem
 
-The current issue-to-branch flow has no SDD readiness gate. The repository
+Before this change, the issue-to-branch flow had no SDD readiness gate. The repository
 already requires an SDD as a shared, testable contract for capability changes,
 but agents can begin branch work while scope, acceptance, or architecture
 questions remain unresolved. Supporting PRDs and ADRs in this first gate would
 also require distinct selection, answer, review, status, schema, and recovery
 rules in the Action, increasing the issue workflow without a demonstrated need.
 
-### 2.2 Current behavior
+### 2.2 Former behavior before this change
 
 1. `specs/README.md` and `specs/_template.md` define the SDD standard.
 2. `specs/catalog.json` identifies capability ownership and SDD paths;
@@ -87,9 +87,8 @@ rules in the Action, increasing the issue workflow without a demonstrated need.
 
 ### 2.4 Retrospective classification (as-built baselines only)
 
-Not applicable. This is a prospective change. The catalogued as-built SDDs
-remain the current contract until implementation; section 2.2 records observed
-behavior rather than implying the gate exists.
+Not applicable. This was a prospective change. Section 2.2 records the prior
+behavior; the current gate contract is defined here and in the companion SDD.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -598,7 +597,7 @@ this feature introduces no PRD/ADR documentation or catalog schema.
 13. Setup rejects an enabled SDD gate without issue-managed branches and
     rejects invalid values; installed forms, profile, guide, and Action input
     agree on the same boolean setting.
-14. Implementation later updates current-behavior SDDs, tests, user docs,
+14. Implementation updates current-behavior SDDs, tests, user docs,
     catalog evidence, and generated outputs together.
 
 ## 17. Requirements traceability
@@ -630,8 +629,8 @@ this feature introduces no PRD/ADR documentation or catalog schema.
    and partial-write recovery.
 6. Update current-behavior SDD owners, catalog evidence, tests, user/setup and
    operator docs, and generated catalog together.
-7. Run automated gates and later controlled live UX evidence. Implementation
-   and dogfooding are outside the current local specification task.
+7. Run automated gates. Controlled live UX evidence and dogfooding require
+   a later GitHub issue and are outside this local implementation task.
 
 ## 19. Definition of Done
 
@@ -659,7 +658,7 @@ this feature introduces no PRD/ADR documentation or catalog schema.
   `specs/configurable-issue-workflows-and-admission.md`,
   `specs/comment-automation-and-authorization.md`, and
   `specs/repository-agent-collaboration-contract.md`.
-- Companion prospective SDD: `issue-start-and-branch-readiness.md`.
+- Companion SDD: `issue-start-and-branch-readiness.md`.
 - Primary provider sources:
   https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows
   and https://docs.github.com/en/actions/concepts/security/github_token.

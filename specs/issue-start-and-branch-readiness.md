@@ -1,9 +1,9 @@
 # Uniform Issue Start and Branch Readiness
 
-- Status: Draft — prospective specification; no runtime behavior has changed
+- Status: Implemented — automated verification complete; live provider UX review pending
 - Date: 2026-09-17
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: Not applicable to a prospective specification
+- Last verified: 2026-09-17 on `codex/issue-start-sdd-gate`
 - Owners: Copilot maintainers
 - Scope: one explicit start signal for every enabled issue kind and a factual branch-ready signal
 - Related issues/PRs: none; local design work; companion SDD `pre-branch-sdd-gate.md`
@@ -31,18 +31,18 @@ Text equivalent: the issue is first admitted and waits. An authorized
 branch-bearing work completes any required SDD gate, creates and
 verifies the linked branch, and only then displays `branched`.
 
-## 2. Problem, current behavior, and evidence
+## 2. Problem, former behavior, and evidence
 
 ### 2.1 Problem
 
-The current `branched` label is both a branch launcher and a statement that a
+Before this change, the `branched` label was both a branch launcher and a statement that a
 branch exists. A reader cannot distinguish intent from a completed fact.
 `branch-management-always` and release/hotfix shortcuts create additional launch
 paths. Those paths would bypass a future SDD gate and make issue kinds
-behave differently. The label `state:in-progress` currently means branch-based
+behave differently. The former label `state:in-progress` meant branch-based
 implementation, so a new start label needs a separate, explicit meaning.
 
-### 2.2 Current behavior
+### 2.2 Former behavior before this change
 
 1. The issue workflow runs on opened, reopened, edited, labeled, unlabeled,
    assigned, and unassigned events.
@@ -87,9 +87,9 @@ implementation, so a new start label needs a separate, explicit meaning.
 
 ### 2.4 Retrospective classification (as-built baselines only)
 
-Not applicable. This is a prospective change. The catalogued as-built SDD
-`managed-issue-and-branch-lifecycle.md` remains the current contract until
-implementation; section 2.2 above is evidence, not a claim of new behavior.
+Not applicable. This was a prospective change. Section 2.2 records the prior
+behavior; the current contract is defined by this SDD and its companion. The
+managed-issue baseline has been updated to point to the new start boundary.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -575,9 +575,9 @@ implementation to reflect the new observed contract.
 - Provider reference: https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows.
 - Accepted product decisions from the user conversation: one start label for all
   kinds, `branched` as output, SDD requires issue-managed branches, no legacy
-  launcher path, help remains branchless, implementation later.
+  launcher path, and help remains branchless.
 - Rejected design: `branched` as an input, mandatory type-specific auto-launch,
   and label-only readiness without provider evidence.
 - Follow-up outside this SDD: SDD selection/generation policy (the companion
-  specification), release promotion, and code implementation. PRD/ADR support
+  specification), release promotion, and later live provider UX review. PRD/ADR support
   would require a separate future design.

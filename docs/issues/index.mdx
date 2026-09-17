@@ -18,7 +18,10 @@ Copilot automates **issue tracking** so that labels, branch creation, project li
     Member assignment and linking issues to GitHub Project boards.
   </Card>
   <Card title="Branch management" icon="code-branch" href="/issues/branch-management">
-    Launcher label, naming conventions, and hotfix/release rules.
+    Start label, verified readiness, naming, and hotfix/release rules.
+  </Card>
+  <Card title="Pre-branch SDDs" icon="file-lines" href="/issues/pre-branch-sdds">
+    Clarify and publish a product contract before implementation.
   </Card>
   <Card title="Notifications and auto-close" icon="bell" href="/issues/notifications-and-auto-close">
     Commit notifications on the issue, reopen on push, and auto-close when merged or inactive.
@@ -38,7 +41,7 @@ Copilot automates **issue tracking** so that labels, branch creation, project li
 
 | What you do | What Copilot can do |
 |-------------|---------------------|
-| Open an issue with a **type label** (e.g. `feature`, `bugfix`) | Link to projects, assign members; when **branch launcher** label is added (e.g. `branched`), create the branch from develop (or main for hotfix). |
+| Open an issue with a **type label** (e.g. `feature`, `bugfix`), then add `in-progress` | Link to projects, assign members, and create a managed branch if configured. The Action adds `branched` after verifying the linked remote branch. |
 | Add **`deploy`** to a release/hotfix issue | Trigger the release or hotfix workflow (e.g. deploy). |
 | Push commits to the issue’s branch | Post commit notifications on the issue; optionally reopen the issue if it was closed. |
 | Merge the branch (e.g. into develop) | Automatically close the issue when the branch is merged. |
@@ -48,14 +51,15 @@ Copilot automates **issue tracking** so that labels, branch creation, project li
 
 ## Lifecycle state labels
 
-During setup, Copilot creates the lifecycle labels once. The durable lifecycle phase is mutually exclusive, while the activity and waiting dimensions are independent. This means labels such as `state:in-progress` and `state:ai-processing` can exist together. Normal business labels such as `feature`, `bugfix`, `priority`, and `branched` are preserved.
+During setup, Copilot creates the lifecycle labels once. The durable lifecycle phase is mutually exclusive, while the activity and waiting dimensions are independent. This means labels such as `state:specifying` and `state:ai-processing` can exist together. `in-progress` is the user start signal; `branched` is a verified Action result.
 
 ### Durable lifecycle phase
 
 | Label | Meaning |
 | --- | --- |
 | `state:planned` | A recommendation or implementation plan is available. |
-| `state:in-progress` | Branch-based implementation has started. |
+| `state:specifying` | A required SDD is being clarified or revised. |
+| `state:working` | Implementation may proceed. |
 | `state:reviewing` | A pull request is being reviewed. |
 | `state:changes-requested` | The review has active findings. |
 | `state:ready` | The latest review has no active findings. |
@@ -70,7 +74,7 @@ During setup, Copilot creates the lifecycle labels once. The durable lifecycle p
 | `state:awaiting-maintainer` | The next action requires a maintainer response, approval, or merge. |
 | `state:awaiting-issue-author` | The next action requires more information or changes from the issue author. |
 
-At most one durable phase and one waiting label are synchronized at a time. The temporary `state:ai-processing` label can coexist with either dimension and is best-effort: a label API failure does not hide the actual agent result. The label names are configurable through the action inputs, and all ten defaults are provisioned by `copilot setup` in the destination repository.
+At most one durable phase and one waiting label are synchronized at a time. The temporary `state:ai-processing` label can coexist with either dimension and is best-effort: a label API failure does not hide the actual agent result. The label names are configurable through the action inputs, and all eleven defaults are provisioned by `copilot setup` in the destination repository.
 
 ## Daily agent workflow
 

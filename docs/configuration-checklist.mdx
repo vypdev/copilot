@@ -35,6 +35,9 @@ description: Required checks before enabling Copilot automation.
 
 ## Setup and diagnosis
 
+- [ ] The selected issue workflows start with `in-progress`; `branched` is treated as an Action-verified result.
+- [ ] `issue-managed-branches` is enabled for release/hotfix and whenever `pre-branch-sdd` is enabled.
+- [ ] Before enabling `pre-branch-sdd`, the repository has a validated SDD catalog, standard, template, and a configured agent that can return structured responses.
 - [ ] `repository-locale` is a canonical BCP-47 target or intentionally omitted for the `en-US` default.
 - [ ] Empty `issues-locale` and `pull-requests-locale` values intentionally inherit the repository locale; explicit overrides are documented.
 - [ ] Every non-bundled target locale has an available planner/language agent, or operators accept the observable atomic English fallback.

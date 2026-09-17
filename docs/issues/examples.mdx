@@ -33,7 +33,8 @@ jobs:
           token: ${{ secrets.PAT }}
           project-ids: ${{ vars.PROJECT_IDS }}
           desired-assignees-count: 1
-          branch-management-launcher-label: branched
+          issue-managed-branches: true
+          pre-branch-sdd: true
           main-branch: main
           development-branch: develop
           feature-tree: feature
@@ -50,47 +51,47 @@ jobs:
 - **`token`** is required. Use a fine-grained PAT with repo and project permissions (see [Authentication](/authentication)).
 - **`project-ids`**: Comma-separated project IDs so issues (and later PRs) are linked to boards.
 - **`desired-assignees-count`**: Number of assignees (e.g. 1).
-- **`branch-management-launcher-label`**: Add this label (e.g. `branched`) to trigger branch creation for feature/bugfix/docs/chore.
+- **`issue-managed-branches`**: Create and verify an issue-linked branch after `in-progress` (default: `true`).
+- **`pre-branch-sdd`**: For eligible features or behavior changes, resolve SDD questions and publish the SDD before implementation (default: `false`).
 - **`main-branch`** / **`development-branch`**: Match your repo (e.g. `main` and `develop`).
 - **`*-tree`**: Branch prefixes (e.g. `feature/123-title`). Omit if you keep defaults.
 
-## Example: branch-management-always
+## Example: branchless help and optional branchless work
 
-Create branches as soon as the issue has a type label (no launcher label):
+A `help` or `question` issue stays branchless after `in-progress`. For other admitted types, set `issue-managed-branches: false` to run without Action-managed branches. Release and hotfix workflows require managed branches, as does `pre-branch-sdd: true`.
 
 ```yaml
 - uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
-    project-ids: ${{ vars.PROJECT_IDS }}
-    branch-management-always: true
+    issue-managed-branches: false
 ```
-
-Then opening an issue with label `feature` creates the branch immediately.
 
 ## Example labels on an issue
 
 | Goal | Labels to add |
 |------|----------------|
-| New feature | `feature` then `branched` (or use `branch-management-always: true` and only `feature`) |
-| Bug fix | `bugfix` then `branched` |
-| Documentation | `docs` or `documentation` then `branched` |
-| Chore / maintenance | `chore` or `maintenance` then `branched` |
-| Hotfix (production) | `hotfix` (branch created from main; add `deploy` to trigger hotfix workflow) |
-| Release | `release` (branch from develop; add `deploy` to trigger release workflow) |
-| Question (no branch) | `question` |
-| Help request (no branch) | `help` |
+| New feature | `feature`, then `in-progress`; the Action adds `SDD` if enabled and later `branched` |
+| Bug fix | `bugfix`, then `in-progress`; add `contract-change` for a behavior change |
+| Documentation | `docs` or `documentation`, then `in-progress` |
+| Chore / maintenance | `chore` or `maintenance`, then `in-progress` |
+| Hotfix (production) | `hotfix`, then `in-progress`; add `deploy` to trigger the hotfix workflow |
+| Release | `release`, then `in-progress`; add `deploy` to trigger the release workflow |
+| Question (no branch) | `question`, then `in-progress` |
+| Help request (no branch) | `help`, then `in-progress` |
 
 ## Example branch names
 
 Assuming defaults (`feature-tree: feature`, `development-branch: develop`):
 
-| Issue | Label(s) | Branch created |
-|-------|----------|-----------------|
-| #42 "Add login page" | `feature`, `branched` | `feature/42-add-login-page` from `develop` |
-| #99 "Fix null in API" | `bugfix`, `branched` | `bugfix/99-fix-null-in-api` from `develop` |
-| #100 "Critical payment bug" | `hotfix` | `hotfix/100-critical-payment-bug` from `main` (at latest tag) |
-| #101 "Release 1.2.0" | `release` | `release/101-release-1-2-0` from `develop` |
+| Issue | Start labels | Branch created |
+|-------|--------------|----------------|
+| #42 "Add login page" | `feature`, `in-progress` | `feature/42-add-login-page` from `develop` |
+| #99 "Fix null in API" | `bugfix`, `in-progress` | `bugfix/99-fix-null-in-api` from `develop` |
+| #100 "Critical payment bug" | `hotfix`, `in-progress` | `hotfix/100-critical-payment-bug` from its selected production tag |
+| #101 "Release 1.2.0" | `release`, `in-progress` | `release/101-release-1-2-0` from `develop` |
+
+`branched` appears only after the Action verifies each linked branch. With the SDD gate, the first branch commit contains the validated specification.
 
 ## Deploy workflow filenames
 
@@ -113,5 +114,5 @@ Your `.github/workflows/` must contain files with these exact names (or pass the
 ## Next steps
 
 - **[Workflow setup](/issues/workflow-setup)** — Events and what runs when.
-- **[Branch management](/issues/branch-management)** — Launcher and naming in detail.
+- **[Branch management](/issues/branch-management)** — Start and verified readiness in detail.
 - **[Configuration](/issues/configuration)** — All issue-related inputs.
