@@ -10,6 +10,10 @@ import { effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
 
 export function validateSetupConfiguration(configuration: SetupConfiguration): string[] {
     const errors: string[] = [];
+    if (typeof configuration.repository.issueManagedBranches !== 'boolean'
+        || typeof configuration.repository.preBranchSdd !== 'boolean') {
+        errors.push('issue-managed-branches and pre-branch-sdd must be boolean values.');
+    }
     if (configuration.repository.preBranchSdd && !configuration.repository.issueManagedBranches) {
         errors.push('pre-branch-sdd requires issue-managed-branches.');
     }
@@ -19,6 +23,10 @@ export function validateSetupConfiguration(configuration: SetupConfiguration): s
         }
     }
     const enabledWorkflows = configuration.issueWorkflows?.enabled ?? ISSUE_WORKFLOW_KINDS;
+    if (!configuration.repository.issueManagedBranches
+        && enabledWorkflows.some(kind => kind === 'release' || kind === 'hotfix')) {
+        errors.push('release and hotfix issue workflows require issue-managed-branches.');
+    }
     const unknownWorkflows = enabledWorkflows.filter(kind => !ISSUE_WORKFLOW_KINDS.includes(kind));
     if (unknownWorkflows.length > 0) errors.push(`Unknown issue workflow(s): ${unknownWorkflows.join(', ')}.`);
     if (new Set(enabledWorkflows).size !== enabledWorkflows.length) errors.push('Issue workflow selection cannot contain duplicates.');

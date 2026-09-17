@@ -22,6 +22,7 @@ import {
 } from './push_single_action_contexts';
 import type { BranchConfigurationPatch } from './issue_workflow_context';
 import { ISSUE_START_LABEL } from '../../domain/issue_start_policy';
+import type { PreBranchSddGateUseCase } from './sdd/pre_branch_sdd_gate_use_case';
 
 export class IssueUseCase implements ParamUseCase<Execution, Result[]> {
   taskId: string = "IssueUseCase";
@@ -32,19 +33,36 @@ export class IssueUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly workflowSteps: IssueWorkflowSteps,
     private readonly issueCommentQueryPort: BoundIssueCommentQueryPort,
     private readonly actorAuthorizationPort?: BoundActorAuthorizationPort,
+    private readonly preBranchSddGate?: PreBranchSddGateUseCase,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
     logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`);
-  const admission = param.issueWorkflowAdmission;
+    if (param.preBranchSdd && !param.issue.issueManagedBranches) {
+      const message = 'pre-branch-sdd requires issue-managed-branches; correct the Action configuration before starting work.';
+      return [new Result({
+        id: this.taskId, success: false, executed: true, steps: [message],
+        errors: [new ApplicationError('configuration.invalid', message)],
+      })];
+    }
+    const admission = param.issueWorkflowAdmission;
     if (param.isIssue && admission && admission.status !== 'eligible') {
       return [buildIssueWorkflowAdmissionResult(this.taskId, admission)];
+    }
+    if (!param.issue.issueManagedBranches && admission?.status === 'eligible'
+      && (admission.kind === 'release' || admission.kind === 'hotfix')) {
+      const message = `${admission.kind} issues require issue-managed-branches before work can start.`;
+      return [new Result({
+        id: this.taskId, success: false, executed: true, steps: [message],
+        errors: [new ApplicationError('configuration.invalid', message)],
+      })];
     }
     const outcome = await runIssueWorkflow(projectIssueWorkflowRouteContext(param), this.taskId, {
       recommendStepsUseCase: this.recommendStepsUseCase,
       answerIssueHelpUseCase: this.answerIssueHelpUseCase,
       workflowSteps: this.workflowSteps,
       actorAuthorizationPort: this.actorAuthorizationPort,
+      preBranchSddGate: this.preBranchSddGate,
       issueCommentQueryPort: this.issueCommentQueryPort,
       sharedContexts: {
         permissions: projectCheckPermissionsContext(param),
@@ -101,12 +119,24 @@ function projectIssueWorkflowRouteContext(param: Execution): IssueWorkflowRouteC
         : param.labels.isQuestion || param.labels.isHelp
           ? 'answer-help' as const
           : 'recommend' as const;
+  const recommendSteps = projectRecommendStepsContext(param);
   return Object.freeze({
     started,
     sddRequired: param.issueStartDecision.sddRequired,
-    sddPublished: false,
     issueNumber: param.issue.number,
     branchName: param.currentConfiguration.workingBranch,
+    sddContext: param.issueStartDecision.sddRequired ? {
+      issueNumber: param.issue.number,
+      issueTitle: param.issue.title,
+      issueBody: param.issue.body,
+      issueAuthor: param.issue.creator,
+      admittedKind: param.issueWorkflowKind ?? 'unknown',
+      profileDigest: param.issueWorkflowProfileDigest,
+      baseBranch: param.labels.isHotfix ? (param.hotfix.baseBranch ?? param.branches.main) : param.branches.development,
+      token: param.tokens.token,
+      tokenUser: param.tokenUser ?? '',
+      agentConfiguration: recommendSteps.agentConfiguration,
+    } : undefined,
     cleanIssueBranches: param.cleanIssueBranches,
     branched: param.isBranched,
     membersOnly: param.ai.getAiMembersOnly(),
@@ -115,7 +145,7 @@ function projectIssueWorkflowRouteContext(param: Execution): IssueWorkflowRouteC
     onboardingEligible: !param.labels.isRelease && !param.labels.isHotfix,
     ...(param.tokenUser ? { tokenUser: param.tokenUser } : {}),
     ...(recommendation ? { recommendation } : {}),
-    recommendSteps: projectRecommendStepsContext(param),
+    recommendSteps,
   });
 }
 

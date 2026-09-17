@@ -28,6 +28,9 @@ import { BranchNameRepository } from "../../data/repository/branch_name_reposito
 import { LinkedBranchRepository } from "../../data/repository/branch/linked_branch_repository";
 import { LinkedBranchReadinessRepository } from "../../data/repository/branch/linked_branch_readiness_repository";
 import { ReconcileBranchReadinessUseCase } from "../../application/usecases/steps/issue/reconcile_branch_readiness_use_case";
+import { PreBranchSddGateUseCase } from "../../application/usecases/sdd/pre_branch_sdd_gate_use_case";
+import { PreBranchSddWorkspaceAdapter } from '../pre_branch_sdd_workspace_adapter';
+import { bindIssueCommentPublication } from './push_single_action_capability_port_binding';
 import { createIssueLabelRepository } from './issue_labels_composition_root';
 import { GitCliRepository } from "../../data/repository/git_cli_repository";
 import { IssueAssignmentRepository } from "../../data/repository/issue/issue_assignment_repository";
@@ -102,6 +105,12 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
   const boundIssueAssignee = bindIssueAssignee(issueAssignee, binding);
   const boundOrganizationMembers = bindOrganizationMemberSelection(organizationMembers, binding);
   const boundLinkedBranch = bindLinkedBranchCommand(linkedBranch, binding);
+  const linkedBranchReadiness = new LinkedBranchReadinessRepository(createGraphqlTransportClient());
+  const boundLinkedBranchReadiness = {
+    getLinkedBranch: (issueNumber: number, branchName: string) => linkedBranchReadiness.getLinkedBranch(
+      binding.owner, binding.repository, issueNumber, branchName, binding.token,
+    ),
+  };
   const moveIssueToInProgress = new MoveIssueToInProgressUseCase(boundProjectBoard);
 
   const workflowSteps = {
@@ -126,11 +135,7 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
       moveIssueToInProgress,
     ),
     reconcileBranchReadiness: new ReconcileBranchReadinessUseCase(
-      {
-        getLinkedBranch: (issueNumber, branchName) => new LinkedBranchReadinessRepository(
-          createGraphqlTransportClient(),
-        ).getLinkedBranch(binding.owner, binding.repository, issueNumber, branchName, binding.token),
-      },
+      boundLinkedBranchReadiness,
       bindIssueLabels(createIssueLabelRepository(), binding),
     ),
     removeNotNeededBranches: new RemoveNotNeededBranchesUseCase(
@@ -149,5 +154,15 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
     workflowSteps,
     bindIssueCommentQuery(issueContent, binding),
     bindActorAuthorization(createActorAuthorizationRepository(), binding),
+    new PreBranchSddGateUseCase(
+      createFindingsQueryPort(),
+      new PreBranchSddWorkspaceAdapter(),
+      bindIssueCommentPublication(issueContent, binding),
+      bindIssueLabels(createIssueLabelRepository(), binding),
+      bindActorAuthorization(createActorAuthorizationRepository(), binding),
+      bindIssueDescriptionQuery(issueContent, binding),
+      bindIssueTitle(issueTitle, binding),
+      boundLinkedBranchReadiness,
+    ),
   );
 }

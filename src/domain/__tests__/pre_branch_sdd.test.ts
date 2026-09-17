@@ -5,6 +5,7 @@ import {
   readSddGateRecord,
   renderSddGateRecord,
   validateSddMarkdown,
+  normalizeSddIssueTitle,
   type SddGateRecord,
 } from '../pre_branch_sdd';
 
@@ -21,6 +22,10 @@ describe('pre-branch SDD policy', () => {
   });
   it('accepts the existing catalog owner', () => {
     expect(parseSddPlan(plan, catalog)).toMatchObject(plan);
+  });
+  it('ignores the Action title decoration while preserving human title changes', () => {
+    expect(normalizeSddIssueTitle('🧑‍💻 - 1.2.3 - Change payments')).toBe('Change payments');
+    expect(normalizeSddIssueTitle('Change refunds')).not.toBe(normalizeSddIssueTitle('Change payments'));
   });
   it('accepts one new companion for an existing owner', () => {
     expect(parseSddPlan({ ...plan, action: 'companion', path: 'specs/payments-risk.md' }, catalog).action).toBe('companion');
@@ -50,7 +55,7 @@ describe('pre-branch SDD policy', () => {
   });
   it('roundtrips a bounded question card and rejects another issue number', () => {
     const record: SddGateRecord = {
-      version: 1, issueNumber: 42, phase: 'awaiting-answer', issueDigest: 'a'.repeat(64),
+      version: 1, issueNumber: 42, phase: 'awaiting-answer', issueDigest: 'a'.repeat(64), baseSha: 'b'.repeat(40), round: 1,
       plan: { ...plan, action: 'update', questions: [{ id: 'Q1', text: 'Which behavior should change?', owner: 'maintainer' }] },
     };
     const body = renderSddGateRecord(record);
@@ -60,7 +65,7 @@ describe('pre-branch SDD policy', () => {
   });
   it('rejects a published marker without a valid commit SHA', () => {
     const record: SddGateRecord = {
-      version: 1, issueNumber: 42, phase: 'published', issueDigest: 'a'.repeat(64),
+      version: 1, issueNumber: 42, phase: 'published', issueDigest: 'a'.repeat(64), baseSha: 'b'.repeat(40), round: 1,
       plan: { ...plan, action: 'update' }, branchName: 'feature/42-change', commitSha: 'invalid',
     };
     expect(readSddGateRecord(renderSddGateRecord(record), 42)).toBeUndefined();

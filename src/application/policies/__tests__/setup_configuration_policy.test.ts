@@ -248,6 +248,28 @@ describe('setup configuration policy', () => {
         expect(buildSetupActionInputs(configuration)['ai-pull-request-description-mode']).toBe('append');
     });
 
+    it('requires Action-managed branches for the SDD gate and release or hotfix workflows', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.repository.issueManagedBranches = false;
+        configuration.repository.preBranchSdd = true;
+        expect(validateSetupConfiguration(configuration)).toEqual(expect.arrayContaining([
+            'pre-branch-sdd requires issue-managed-branches.',
+            'release and hotfix issue workflows require issue-managed-branches.',
+        ]));
+    });
+
+    it('persists the two bounded issue branch settings without a launcher input', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.repository.preBranchSdd = true;
+        expect(validateSetupConfiguration(configuration)).toEqual([]);
+        expect(buildSetupActionInputs(configuration)).toMatchObject({
+            'issue-managed-branches': 'true',
+            'pre-branch-sdd': 'true',
+        });
+        expect(buildSetupActionInputs(configuration)).not.toHaveProperty('branch-management-always');
+        expect(buildSetupActionInputs(configuration)).not.toHaveProperty('branch-management-launcher-label');
+    });
+
     it('keeps independent repository/organization storage policies and mixed overrides', () => {
         const configuration = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
             storage: {

@@ -77,6 +77,8 @@ export function resolveLifecycleState(
         return undefined;
     }
 
+    if (input.results.some(result => result.id === 'ReconcileBranchReadinessUseCase'
+      && result.success && getResultPayload(result.payload)?.branchName)) return 'working';
     if (hasResult(input.results, 'PreBranchSddGateUseCase')) return 'specifying';
     if (hasResult(input.results, 'PrepareBranchesUseCase')) return 'working';
     if (hasSuccessfulResult(input.results, 'RecommendStepsUseCase')) return 'planned';

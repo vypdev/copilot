@@ -281,7 +281,7 @@ export function readLocalWorkflowConfiguration(
         docsTree: read(INPUT_KEYS.DOCS_TREE),
         choreTree: read(INPUT_KEYS.CHORE_TREE),
         commitPrefixBuilder: read(INPUT_KEYS.COMMIT_PREFIX_TRANSFORMS) || 'replace-slash',
-        issueManagedBranches: isEnabledInput(read(INPUT_KEYS.ISSUE_MANAGED_BRANCHES)),
+        issueManagedBranches: isEnabledInput(read(INPUT_KEYS.ISSUE_MANAGED_BRANCHES) || 'true'),
         preBranchSdd: isEnabledInput(read(INPUT_KEYS.PRE_BRANCH_SDD)),
         reopenIssueOnPush: isEnabledInput(read(INPUT_KEYS.REOPEN_ISSUE_ON_PUSH)),
         issueDesiredAssigneesCount: parseIntegerInput(read(INPUT_KEYS.DESIRED_ASSIGNEES_COUNT), 0),

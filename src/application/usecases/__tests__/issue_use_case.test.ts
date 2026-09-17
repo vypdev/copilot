@@ -78,6 +78,7 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
     isIssue: true,
     isPullRequest: false,
     issueNumber: 8,
+    tokens: { token: 'secret' },
     owner: 'org',
     repo: 'repo',
     issue: defaultIssue,
@@ -115,13 +116,17 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
   return base as unknown as Execution;
 }
 
-function createUseCase(actorAuthorizationPort?: ConstructorParameters<typeof IssueUseCase>[4]): IssueUseCase {
+function createUseCase(
+  actorAuthorizationPort?: ConstructorParameters<typeof IssueUseCase>[4],
+  preBranchSddGate?: ConstructorParameters<typeof IssueUseCase>[5],
+): IssueUseCase {
   return new IssueUseCase(
     { taskId: "RecommendStepsUseCase", invoke: mockRecommendStepsInvoke },
     { taskId: "AnswerIssueHelpUseCase", invoke: mockAnswerIssueHelpInvoke },
     workflowSteps,
     { listIssueComments: mockListIssueComments },
     actorAuthorizationPort,
+    preBranchSddGate,
   );
 }
 
@@ -193,6 +198,51 @@ describe("IssueUseCase", () => {
     await createUseCase().invoke(param);
 
     expect(mockPrepareBranchesInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8, issueTitle: 'Issue' }));
+  });
+
+  it('waits for SDD answers without preparing a branch or deployment', async () => {
+    const begin = jest.fn().mockResolvedValue({ status: 'waiting', results: [new Result({ id: 'PreBranchSddGateUseCase', success: true, executed: true })] });
+    const publish = jest.fn();
+    const param = minimalExecution({ issueStartDecision: { started: true, branchRequired: true, sddRequired: true, helpRequired: false } });
+    await createUseCase(undefined, { begin, publish } as never).invoke(param);
+    expect(begin).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8, baseBranch: 'develop', token: 'secret' }));
+    expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
+    expect(mockDeployAddedInvoke).not.toHaveBeenCalled();
+    expect(publish).not.toHaveBeenCalled();
+  });
+
+  it('prepares the linked branch only after SDD validation and then publishes the draft', async () => {
+    const gate = {
+      status: 'drafted', results: [new Result({ id: 'PreBranchSddGateUseCase', success: true, executed: true })],
+      prepared: { plan: { path: 'specs/payments.md' } }, record: { issueNumber: 8 },
+    };
+    const begin = jest.fn().mockResolvedValue(gate);
+    const publish = jest.fn().mockResolvedValue({ status: 'published', branchName: 'feature/8-issue', commitSha: 'a'.repeat(40), results: [] });
+    mockPrepareBranchesInvoke.mockResolvedValue({
+      results: [new Result({ id: 'PrepareBranchesUseCase', success: true, executed: true })],
+      configurationPatch: { workingBranch: 'feature/8-issue' },
+    });
+    const param = minimalExecution({ issueStartDecision: { started: true, branchRequired: true, sddRequired: true, helpRequired: false } });
+    await createUseCase(undefined, { begin, publish } as never).invoke(param);
+    expect(mockPrepareBranchesInvoke).toHaveBeenCalledTimes(1);
+    expect(publish).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8 }), gate, 'feature/8-issue');
+  });
+
+  it('pauses branch-dependent work when SDD publication fails after branch preparation', async () => {
+    const gate = {
+      status: 'drafted', results: [], prepared: { plan: { path: 'specs/payments.md' } }, record: { issueNumber: 8 },
+    };
+    const begin = jest.fn().mockResolvedValue(gate);
+    const publish = jest.fn().mockResolvedValue({ status: 'blocked', results: [new Result({ id: 'PreBranchSddGateUseCase', success: false, executed: true })] });
+    mockPrepareBranchesInvoke.mockResolvedValue({
+      results: [new Result({ id: 'PrepareBranchesUseCase', success: true, executed: true })],
+      configurationPatch: { workingBranch: 'feature/8-issue' },
+    });
+    const param = minimalExecution({ issueStartDecision: { started: true, branchRequired: true, sddRequired: true, helpRequired: false } });
+    await createUseCase(undefined, { begin, publish } as never).invoke(param);
+    expect(mockRemoveNotNeededInvoke).not.toHaveBeenCalled();
+    expect(mockDeployAddedInvoke).not.toHaveBeenCalled();
+    expect(mockRecommendStepsInvoke).not.toHaveBeenCalled();
   });
 
   it('applies only the explicit successful branch configuration patch at the route boundary', async () => {

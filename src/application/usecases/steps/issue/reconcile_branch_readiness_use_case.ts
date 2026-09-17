@@ -22,8 +22,9 @@ export class ReconcileBranchReadinessUseCase {
   ) {}
 
   async invoke(context: BranchReadinessContext): Promise<Result[]> {
+    let current: readonly string[] | undefined;
     try {
-      const current = await this.labels.getLabels(context.issueNumber);
+      current = await this.labels.getLabels(context.issueNumber);
       const started = current.some(label => label.toLowerCase() === ISSUE_START_LABEL);
       const evidence = context.branchName
         ? await this.linkedBranch.getLinkedBranch(context.issueNumber, context.branchName)
@@ -55,6 +56,13 @@ export class ReconcileBranchReadinessUseCase {
       })];
     } catch (error) {
       const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to verify linked branch readiness.');
+      if (current?.some(label => label.toLowerCase() === BRANCH_READY_LABEL)) {
+        try {
+          await this.labels.setLabels(context.issueNumber, current.filter(label => label.toLowerCase() !== BRANCH_READY_LABEL));
+        } catch {
+          // Keep the original verification failure; the retry will reconcile the label.
+        }
+      }
       return [new Result({
         id: this.taskId,
         success: false,

@@ -23,6 +23,7 @@ import type {
   RecommendStepsOutcome,
   RecommendationStatePatch,
 } from './push_single_action_contexts';
+import type { PreBranchSddContext, PreBranchSddGateUseCase } from './sdd/pre_branch_sdd_gate_use_case';
 
 export interface IssueWorkflowRouteContext {
   readonly started: boolean;
@@ -32,6 +33,7 @@ export interface IssueWorkflowRouteContext {
   readonly sddPublished?: boolean;
   readonly branchName?: string;
   readonly issueNumber?: number;
+  readonly sddContext?: PreBranchSddContext;
   readonly membersOnly: boolean;
   readonly actor: string;
   readonly newIssue: boolean;
@@ -60,6 +62,7 @@ export interface IssueWorkflowPorts {
   workflowSteps: IssueWorkflowSteps;
   actorAuthorizationPort?: BoundActorAuthorizationPort;
   issueCommentQueryPort: BoundIssueCommentQueryPort;
+  preBranchSddGate?: PreBranchSddGateUseCase;
   sharedContexts: IssueSharedStepContexts;
 }
 
@@ -94,16 +97,55 @@ export async function runIssueWorkflow(
     return issueWorkflowOutcome(results);
   }
 
-  if (context.started && context.cleanIssueBranches) {
+  if (context.started && context.cleanIssueBranches && !context.sddRequired) {
     results.push(...(await ports.workflowSteps.removeIssueBranches.invoke(ports.sharedContexts.steps.removeIssueBranches)));
   }
 
   results.push(...(await ports.workflowSteps.assignMemberToIssue.invoke(ports.sharedContexts.steps.assignment)));
-  results.push(...(await ports.workflowSteps.updateTitle.invoke(ports.sharedContexts.title)));
   results.push(...(await ports.workflowSteps.updateIssueType.invoke(ports.sharedContexts.steps.issueType)));
   results.push(...(await ports.workflowSteps.linkIssueProject.invoke(ports.sharedContexts.projectLink)));
   results.push(...(await ports.workflowSteps.checkPriorityIssueSize.invoke(ports.sharedContexts.steps.priority)));
-  if (context.started && context.branched && !context.sddRequired) {
+  let sddPublished = false;
+  let sddWaiting = false;
+  if (context.started && context.sddRequired) {
+    if (!ports.preBranchSddGate || !context.sddContext) {
+      results.push(new Result({
+        id: 'PreBranchSddGateUseCase', success: false, executed: true,
+        steps: ['The pre-branch SDD gate is enabled but unavailable in this Action installation.'],
+        errors: [new ApplicationError('configuration.invalid', 'The pre-branch SDD gate is not configured.')],
+      }));
+      sddWaiting = true;
+    } else {
+      const gate = await ports.preBranchSddGate.begin(context.sddContext);
+      results.push(...gate.results);
+      if (gate.status === 'published') {
+        sddPublished = true;
+        branchConfigurationPatch = { workingBranch: gate.branchName };
+      } else if (gate.status === 'drafted') {
+        const existingBranch = gate.record.branchName;
+        const prepared = existingBranch ? undefined
+          : await ports.workflowSteps.prepareBranches.invoke(ports.sharedContexts.steps.prepareBranches);
+        branchConfigurationPatch = existingBranch ? { workingBranch: existingBranch } : prepared?.configurationPatch;
+        if (prepared) results.push(...prepared.results);
+        const branchName = branchConfigurationPatch?.workingBranch;
+        if (branchName && (!prepared || prepared.results.every(result => result.success))) {
+          const published = await ports.preBranchSddGate.publish(context.sddContext, gate, branchName);
+          results.push(...published.results);
+          sddPublished = published.status === 'published';
+          sddWaiting = !sddPublished;
+        } else {
+          sddWaiting = true;
+          results.push(new Result({
+            id: 'PreBranchSddGateUseCase', success: false, executed: true,
+            steps: ['The validated SDD remains unpublished because branch preparation did not complete.'],
+            errors: [new ApplicationError('workflow.failed', 'The linked branch is not ready for its first SDD commit.')],
+          }));
+        }
+      } else {
+        sddWaiting = true;
+      }
+    }
+  } else if (context.started && context.branched) {
     const outcome = await ports.workflowSteps.prepareBranches.invoke(ports.sharedContexts.steps.prepareBranches);
     branchConfigurationPatch = outcome.configurationPatch;
     results.push(...outcome.results);
@@ -114,12 +156,17 @@ export async function runIssueWorkflow(
       issueNumber: context.issueNumber,
       branchName: branchConfigurationPatch?.workingBranch ?? context.branchName,
       sddRequired: context.sddRequired ?? false,
-      sddPublished: context.sddPublished ?? false,
+      sddPublished,
     });
     results.push(...readinessResults);
     branchReady = readinessResults.some(result => result.success && result.payload !== undefined);
   }
-  if (context.started) {
+  const titleContext = ports.sharedContexts.title;
+  const reconciledTitle = titleContext.kind === 'issue' && ports.workflowSteps.reconcileBranchReadiness
+    ? { ...titleContext, labelFacts: { ...titleContext.labelFacts, containsBranchedLabel: branchReady } }
+    : titleContext;
+  results.push(...(await ports.workflowSteps.updateTitle.invoke(reconciledTitle)));
+  if (context.started && !sddWaiting) {
     results.push(...(await ports.workflowSteps.removeNotNeededBranches.invoke(ports.sharedContexts.steps.removeObsoleteBranches)));
     if (!context.branched || branchReady) {
       results.push(...(await ports.workflowSteps.deployAdded.invoke(ports.sharedContexts.steps.deployAdded)));
@@ -130,7 +177,8 @@ export async function runIssueWorkflow(
     ports.actorAuthorizationPort
     && await ports.actorAuthorizationPort.isActorAllowedToModifyFiles(context.actor),
   );
-  const recommendation = context.started && agentAllowed ? context.recommendation : undefined;
+  const recommendation = context.started && !sddWaiting && (!context.sddRequired || branchReady) && agentAllowed
+    ? context.recommendation : undefined;
   if (recommendation) {
     const recommendationOutcome = recommendation === 'answer-help'
       ? { results: await ports.answerIssueHelpUseCase.invoke(ports.sharedContexts.steps.answerHelp) }

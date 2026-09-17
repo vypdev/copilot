@@ -48,6 +48,16 @@ export default defineConfig(
       complexity: ['error', 15],
     },
   },
+  {
+    files: ['src/**/*.cjs'],
+    languageOptions: {
+      globals: {
+        __dirname: 'readonly', module: 'writable', require: 'readonly',
+        process: 'readonly', console: 'readonly',
+      },
+    },
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
   // Tests: allow any, unused vars, and require() for mocks/isolation
   {
     files: ['src/**/*.test.ts', 'src/**/__tests__/**/*.ts'],

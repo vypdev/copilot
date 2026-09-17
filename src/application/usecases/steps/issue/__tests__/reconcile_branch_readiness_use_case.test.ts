@@ -49,4 +49,12 @@ describe('linked branch readiness reconciliation', () => {
     expect(results[0]).toMatchObject({ success: false, executed: true });
     expect(ports.setLabels).not.toHaveBeenCalled();
   });
+
+  it('removes stale branched evidence when the provider becomes unavailable', async () => {
+    const ports = makePorts(['feature', 'branched']);
+    ports.getLinkedBranch.mockRejectedValue(new Error('provider unavailable'));
+    const results = await ports.useCase.invoke({ issueNumber: 42, branchName: 'feature/42-change', sddRequired: false, sddPublished: false });
+    expect(results[0].success).toBe(false);
+    expect(ports.current()).toEqual(['feature']);
+  });
 });
