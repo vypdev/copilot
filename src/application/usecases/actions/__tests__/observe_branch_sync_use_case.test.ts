@@ -10,6 +10,7 @@ import type { MessageCatalogResolutionPort } from '../../../ports/message_catalo
 import { ENGLISH_BRANCH_SYNC_DEFINITION } from '../../../policies/branch_sync_message_catalog';
 import { resolveStaticBranchSyncCatalog } from '../../../policies/branch_sync_message_catalog';
 import { renderTransitionNotification } from '../../steps/common/transition_notification_workflow';
+import { catalogPlaceholders, catalogPluralCategories, type CatalogMessage } from '../../../../domain/message_catalog';
 
 const dependency = { issueNumber: 42, parentBranch: "develop", workingBranch: "feature/42" };
 const messages = resolveStaticBranchSyncCatalog('en-US');
@@ -248,14 +249,20 @@ describe("ObserveBranchSyncUseCase", () => {
   });
 
   it('resolves one complete locale slice before publishing branch-sync copy', async () => {
+    const frenchMessage = (message: CatalogMessage) => {
+      const placeholders = [...new Set(catalogPlaceholders(message))].map(name => `{${name}}`).join(' ');
+      const text = `Texte ${placeholders}`.trim();
+      return typeof message === 'string'
+        ? text
+        : Object.fromEntries(catalogPluralCategories('fr-FR').map(category => [category, text]));
+    };
     const resolve = jest.fn().mockResolvedValue({
       requestedLocale: 'fr-FR',
       resolvedLocale: 'fr-FR',
       source: 'dynamic',
-      messages: {
-        ...ENGLISH_BRANCH_SYNC_DEFINITION.messages,
-        'branchSync.stale.heading': 'Synchronisation requise',
-      },
+      messages: Object.fromEntries(Object.entries(ENGLISH_BRANCH_SYNC_DEFINITION.messages)
+        .map(([id, message]) => [id, id === 'branchSync.stale.heading'
+          ? 'Synchronisation requise' : frenchMessage(message)])),
     });
     const context = setup({ resolver: { resolve } });
 

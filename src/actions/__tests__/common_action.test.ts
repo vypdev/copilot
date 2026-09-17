@@ -590,6 +590,29 @@ describe('mainRun', () => {
     expect(execution.labels.currentPullRequestLabels).toEqual(['state:reviewing']);
   });
 
+  it('still reconciles pull-request lifecycle labels for an edited review event', async () => {
+    const execution = mockExecution({
+      eventName: 'pull_request_review',
+      inputs: { action: 'edited' },
+      isPullRequest: true,
+      pullRequest: { number: 42, isPullRequestReviewComment: false, isPullRequest: true },
+    });
+    mockPullRequestInvoke.mockResolvedValue([]);
+    mockLifecycleStateInvoke.mockResolvedValue({
+      results: [],
+      labelPatch: { target: { kind: 'pull-request', number: 42 }, labels: ['state:reviewing'] },
+    });
+
+    await runMainWithLifecycle(execution);
+
+    expect(mockPullRequestInvoke).toHaveBeenCalledWith(execution);
+    expect(mockLifecycleStateInvoke).toHaveBeenCalledWith({
+      context: expect.objectContaining({ eventName: 'pull_request_review', action: 'edited' }),
+      results: [],
+    });
+    expect(execution.labels.currentPullRequestLabels).toEqual(['state:reviewing']);
+  });
+
   it('leaves both label caches unchanged when lifecycle synchronization returns no patch', async () => {
     const execution = mockExecution({
       eventName: 'issues',

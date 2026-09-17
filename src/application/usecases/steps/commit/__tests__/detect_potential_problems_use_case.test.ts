@@ -16,6 +16,7 @@ import { buildMarker } from '../../../../policies/bugbot_finding_marker_policy';
 import type { BugbotFinding } from '../../../../../domain/bugbot/finding';
 import type { BugbotContextSource, BugbotSourceCoverage } from '../../../../../domain/bugbot/context';
 import { projectBugbotReviewOperationContext } from '../bugbot/bugbot_review_operation_context';
+import { catalogPlaceholders, catalogPluralCategories, type CatalogMessage } from '../../../../../domain/message_catalog';
 
 jest.mock("@actions/github", () => {
   const actual =
@@ -618,15 +619,23 @@ describe("DetectPotentialProblemsUseCase", () => {
       line: 5,
     };
     mockAskAgent.mockResolvedValue({ outputLocale: 'fr-FR', findings: [finding] });
-    mockResolveCatalog.mockImplementation(async (request) => ({
-      requestedLocale: request.targetLocale,
-      resolvedLocale: request.targetLocale,
-      source: 'dynamic',
-      messages: {
-        ...request.sourceCatalog.messages,
-        'bugbot.snapshot.heading': 'Revue Bugbot',
-      },
-    }));
+    mockResolveCatalog.mockImplementation(async request => {
+      const frenchMessage = (message: CatalogMessage) => {
+        const placeholders = [...new Set(catalogPlaceholders(message))].map(name => `{${name}}`).join(' ');
+        const text = `Texte ${placeholders}`.trim();
+        return typeof message === 'string'
+          ? text
+          : Object.fromEntries(catalogPluralCategories('fr-FR').map(category => [category, text]));
+      };
+      return {
+        requestedLocale: request.targetLocale,
+        resolvedLocale: request.targetLocale,
+        source: 'dynamic',
+        messages: Object.fromEntries(Object.entries(request.sourceCatalog.messages)
+          .map(([id, message]) => [id, id === 'bugbot.snapshot.heading'
+            ? 'Revue Bugbot' : frenchMessage(message as CatalogMessage)])),
+      };
+    });
     mockFindExactHeadCandidateNumbers.mockResolvedValue([100]);
     mockGetPullRequestHeadSha.mockResolvedValue("abc123");
     mockGetChangedFiles.mockResolvedValue([

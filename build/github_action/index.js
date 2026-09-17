@@ -47634,26 +47634,56 @@ function toResolvedMessageCatalogView(resolved) {
     });
 }
 function resolveStaticMessageCatalogView(locale, sourceCatalog, bundledCatalogs) {
+    return fallbackMessageCatalogView(locale, sourceCatalog, bundledCatalogs, 'dynamic-provider-unavailable');
+}
+function fallbackMessageCatalogView(locale, sourceCatalog, bundledCatalogs, fallbackReason) {
     const requestedLocale = (0, locale_1.canonicalizeLocaleTag)(locale || locale_1.DEFAULT_REPOSITORY_LOCALE);
     const resolved = (0, message_catalog_1.selectBundledMessageCatalog)(requestedLocale, bundledCatalogs) ?? Object.freeze({
         requestedLocale,
         resolvedLocale: (0, locale_1.canonicalizeLocaleTag)(sourceCatalog.locale),
         source: 'fallback',
         messages: sourceCatalog.messages,
-        fallbackReason: 'dynamic-provider-unavailable',
+        fallbackReason,
     });
     return toResolvedMessageCatalogView(resolved);
 }
 async function resolveMessageCatalogView(locale, ids, sourceCatalog, bundledCatalogs, configuration, resolver) {
     if (!resolver)
         return resolveStaticMessageCatalogView(locale, sourceCatalog, bundledCatalogs);
-    return toResolvedMessageCatalogView(await resolver.resolve({
-        targetLocale: locale || locale_1.DEFAULT_REPOSITORY_LOCALE,
-        ids,
-        sourceCatalog,
-        bundledCatalogs,
-        configuration,
-    }));
+    const requestedLocale = (0, locale_1.canonicalizeLocaleTag)(locale || locale_1.DEFAULT_REPOSITORY_LOCALE);
+    try {
+        const resolved = await resolver.resolve({
+            targetLocale: locale || locale_1.DEFAULT_REPOSITORY_LOCALE,
+            ids,
+            sourceCatalog,
+            bundledCatalogs,
+            configuration,
+        });
+        if (resolved?.requestedLocale === requestedLocale) {
+            if (resolved.source === 'exact' || resolved.source === 'base') {
+                const bundled = (0, message_catalog_1.selectBundledMessageCatalog)(requestedLocale, bundledCatalogs);
+                if (bundled?.source === resolved.source && bundled.resolvedLocale === resolved.resolvedLocale) {
+                    return toResolvedMessageCatalogView(bundled);
+                }
+            }
+            else if (resolved.source === 'dynamic'
+                && resolved.resolvedLocale === requestedLocale
+                && (0, message_catalog_1.validateDynamicCatalogMessages)(resolved.messages, sourceCatalog.messages, ids, requestedLocale)) {
+                return toResolvedMessageCatalogView(resolved);
+            }
+            else if (resolved.source === 'fallback'
+                && resolved.resolvedLocale === (0, locale_1.canonicalizeLocaleTag)(sourceCatalog.locale)
+                && (resolved.fallbackReason === 'dynamic-provider-unavailable'
+                    || resolved.fallbackReason === 'dynamic-response-invalid'
+                    || resolved.fallbackReason === 'dynamic-request-failed')) {
+                return toResolvedMessageCatalogView({ ...resolved, messages: sourceCatalog.messages });
+            }
+        }
+    }
+    catch {
+        return fallbackMessageCatalogView(locale, sourceCatalog, bundledCatalogs, 'dynamic-request-failed');
+    }
+    return fallbackMessageCatalogView(locale, sourceCatalog, bundledCatalogs, 'dynamic-response-invalid');
 }
 
 
@@ -54624,6 +54654,9 @@ class PullRequestUseCase {
     }
     async invoke(param) {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        // Review events only reconcile lifecycle state in the outer tracked route.
+        if (param.eventName === 'pull_request_review')
+            return [];
         return (0, pull_request_workflow_1.runPullRequestWorkflow)(projectPullRequestWorkflowRouteContext(param), this.taskId, {
             updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase,
             reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,

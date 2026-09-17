@@ -27,6 +27,8 @@ export class PullRequestUseCase implements ParamUseCase<Execution, Result[]> {
 
   async invoke(param: Execution): Promise<Result[]> {
     logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`);
+    // Review events only reconcile lifecycle state in the outer tracked route.
+    if (param.eventName === 'pull_request_review') return [];
     return runPullRequestWorkflow(projectPullRequestWorkflowRouteContext(param), this.taskId, {
       updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase,
       reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,

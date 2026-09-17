@@ -220,6 +220,34 @@ describe("PullRequestUseCase", () => {
     expect(mockAssignMemberInvoke).not.toHaveBeenCalled();
   });
 
+  it.each(['submitted', 'edited', 'dismissed'])(
+    'does not run PR mutations for an %s review event',
+    async action => {
+      const useCase = new PullRequestUseCase(
+        { taskId: 'UpdatePullRequestDescriptionUseCase', invoke: mockUpdateDescriptionInvoke },
+        workflowSteps,
+        { taskId: 'DetectPotentialProblemsUseCase', invoke: mockReviewPotentialProblemsInvoke },
+      );
+
+      const results = await useCase.invoke(minimalExecution({
+        eventName: 'pull_request_review',
+        pullRequest: { action, isOpened: false },
+      }));
+
+      expect(results).toEqual([]);
+      expect(mockUpdateTitleInvoke).not.toHaveBeenCalled();
+      expect(mockAssignMemberInvoke).not.toHaveBeenCalled();
+      expect(mockAssignReviewersInvoke).not.toHaveBeenCalled();
+      expect(mockLinkProjectInvoke).not.toHaveBeenCalled();
+      expect(mockLinkIssueInvoke).not.toHaveBeenCalled();
+      expect(mockSyncLabelsInvoke).not.toHaveBeenCalled();
+      expect(mockCheckPriorityInvoke).not.toHaveBeenCalled();
+      expect(mockCloseIssueInvoke).not.toHaveBeenCalled();
+      expect(mockUpdateDescriptionInvoke).not.toHaveBeenCalled();
+      expect(mockReviewPotentialProblemsInvoke).not.toHaveBeenCalled();
+    },
+  );
+
   it("when a PR opens in replace mode, calls UpdatePullRequestDescriptionUseCase", async () => {
     mockUpdateDescriptionInvoke.mockResolvedValue([
       new Result({ id: "desc", success: true, executed: true, steps: [] }),
