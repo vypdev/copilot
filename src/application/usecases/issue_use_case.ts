@@ -139,7 +139,7 @@ function projectIssueWorkflowRouteContext(param: Execution): IssueWorkflowRouteC
       agentConfiguration: recommendSteps.agentConfiguration,
     } : undefined,
     cleanIssueBranches: param.cleanIssueBranches,
-    branched: param.isBranched,
+    branchRequired: param.issueStartDecision.branchRequired,
     membersOnly: param.ai.getAiMembersOnly(),
     actor: param.actor,
     newIssue: param.eventName === 'issues' && param.inputs?.action === 'opened',

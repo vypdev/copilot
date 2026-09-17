@@ -500,12 +500,13 @@ implementation to reflect the new observed contract.
 2. Adding `in-progress` to feature, bugfix, docs, chore, release, or hotfix
    starts exactly one operation; each branch uses its existing semantic base.
 3. Adding `in-progress` to help starts the answer path and never produces a
-   branch or `branched`.
+   branch or `branched`; branch cleanup and deployment are not invoked.
 4. Release/hotfix type labels and form creation without `in-progress` do not
    create a branch or dispatch deployment.
 5. A branch with a required SDD gate gets `branched` only after the
    verified SDD commit; a branch without the gate gets it after
-   exact linked-ref verification.
+   exact linked-ref verification. Obsolete branch cleanup and deployment
+   wait for that verification.
 6. Removing and re-adding start before branch creation resumes safely without
    duplicate branch or SDD work; removal after creation retains facts.
 7. A user-added `branched`, stale webhook, or duplicate run cannot authorize

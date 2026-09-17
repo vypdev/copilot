@@ -52106,7 +52106,7 @@ function projectIssueWorkflowRouteContext(param) {
             agentConfiguration: recommendSteps.agentConfiguration,
         } : undefined,
         cleanIssueBranches: param.cleanIssueBranches,
-        branched: param.isBranched,
+        branchRequired: param.issueStartDecision.branchRequired,
         membersOnly: param.ai.getAiMembersOnly(),
         actor: param.actor,
         newIssue: param.eventName === 'issues' && param.inputs?.action === 'opened',
@@ -52175,7 +52175,7 @@ async function runIssueWorkflow(context, taskId, ports) {
         results.push(...(await ports.workflowSteps.closeNotAllowedIssue.invoke(ports.sharedContexts.steps.closeNotAllowed)));
         return issueWorkflowOutcome(results);
     }
-    if (context.started && context.cleanIssueBranches && !context.sddRequired) {
+    if (context.started && context.branchRequired && context.cleanIssueBranches && !context.sddRequired) {
         results.push(...(await ports.workflowSteps.removeIssueBranches.invoke(ports.sharedContexts.steps.removeIssueBranches)));
     }
     results.push(...(await ports.workflowSteps.assignMemberToIssue.invoke(ports.sharedContexts.steps.assignment)));
@@ -52228,7 +52228,7 @@ async function runIssueWorkflow(context, taskId, ports) {
             }
         }
     }
-    else if (context.started && context.branched) {
+    else if (context.started && context.branchRequired) {
         const outcome = await ports.workflowSteps.prepareBranches.invoke(ports.sharedContexts.steps.prepareBranches);
         branchConfigurationPatch = outcome.configurationPatch;
         results.push(...outcome.results);
@@ -52249,11 +52249,9 @@ async function runIssueWorkflow(context, taskId, ports) {
         ? { ...titleContext, labelFacts: { ...titleContext.labelFacts, containsBranchedLabel: branchReady } }
         : titleContext;
     results.push(...(await ports.workflowSteps.updateTitle.invoke(reconciledTitle)));
-    if (context.started && !sddWaiting) {
+    if (context.started && context.branchRequired && !sddWaiting && branchReady) {
         results.push(...(await ports.workflowSteps.removeNotNeededBranches.invoke(ports.sharedContexts.steps.removeObsoleteBranches)));
-        if (!context.branched || branchReady) {
-            results.push(...(await ports.workflowSteps.deployAdded.invoke(ports.sharedContexts.steps.deployAdded)));
-        }
+        results.push(...(await ports.workflowSteps.deployAdded.invoke(ports.sharedContexts.steps.deployAdded)));
     }
     const agentAllowed = !context.membersOnly || Boolean(ports.actorAuthorizationPort
         && await ports.actorAuthorizationPort.isActorAllowedToModifyFiles(context.actor));

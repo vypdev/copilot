@@ -28,7 +28,7 @@ import type { PreBranchSddContext, PreBranchSddGateUseCase } from './sdd/pre_bra
 export interface IssueWorkflowRouteContext {
   readonly started: boolean;
   readonly cleanIssueBranches: boolean;
-  readonly branched: boolean;
+  readonly branchRequired: boolean;
   readonly sddRequired?: boolean;
   readonly sddPublished?: boolean;
   readonly branchName?: string;
@@ -97,7 +97,7 @@ export async function runIssueWorkflow(
     return issueWorkflowOutcome(results);
   }
 
-  if (context.started && context.cleanIssueBranches && !context.sddRequired) {
+  if (context.started && context.branchRequired && context.cleanIssueBranches && !context.sddRequired) {
     results.push(...(await ports.workflowSteps.removeIssueBranches.invoke(ports.sharedContexts.steps.removeIssueBranches)));
   }
 
@@ -145,7 +145,7 @@ export async function runIssueWorkflow(
         sddWaiting = true;
       }
     }
-  } else if (context.started && context.branched) {
+  } else if (context.started && context.branchRequired) {
     const outcome = await ports.workflowSteps.prepareBranches.invoke(ports.sharedContexts.steps.prepareBranches);
     branchConfigurationPatch = outcome.configurationPatch;
     results.push(...outcome.results);
@@ -166,11 +166,9 @@ export async function runIssueWorkflow(
     ? { ...titleContext, labelFacts: { ...titleContext.labelFacts, containsBranchedLabel: branchReady } }
     : titleContext;
   results.push(...(await ports.workflowSteps.updateTitle.invoke(reconciledTitle)));
-  if (context.started && !sddWaiting) {
+  if (context.started && context.branchRequired && !sddWaiting && branchReady) {
     results.push(...(await ports.workflowSteps.removeNotNeededBranches.invoke(ports.sharedContexts.steps.removeObsoleteBranches)));
-    if (!context.branched || branchReady) {
-      results.push(...(await ports.workflowSteps.deployAdded.invoke(ports.sharedContexts.steps.deployAdded)));
-    }
+    results.push(...(await ports.workflowSteps.deployAdded.invoke(ports.sharedContexts.steps.deployAdded)));
   }
 
   const agentAllowed = !context.membersOnly || Boolean(

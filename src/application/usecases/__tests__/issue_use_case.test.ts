@@ -44,7 +44,7 @@ const workflowSteps = {
 };
 
 function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
-  const defaultIssue = { number: 8, opened: false, creator: 'alice', title: 'Issue', body: '', labeled: false, labelAdded: '', desiredAssigneesCount: 1, issueManagedBranches: false };
+  const defaultIssue = { number: 8, opened: false, creator: 'alice', title: 'Issue', body: '', labeled: false, labelAdded: '', desiredAssigneesCount: 1, issueManagedBranches: true };
   const defaultPullRequest = { number: -1, opened: false, creator: '', title: '', id: '', desiredAssigneesCount: 0 };
   const defaultLabels = {
     isRelease: false,
@@ -74,7 +74,6 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
   const base = {
     cleanIssueBranches: false,
     issueStartDecision: { started: true, branchRequired: true, sddRequired: false, helpRequired: false },
-    isBranched: true,
     isIssue: true,
     isPullRequest: false,
     issueNumber: 8,
@@ -119,11 +118,15 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
 function createUseCase(
   actorAuthorizationPort?: ConstructorParameters<typeof IssueUseCase>[4],
   preBranchSddGate?: ConstructorParameters<typeof IssueUseCase>[5],
+  reconcileBranchReadiness?: jest.Mock,
 ): IssueUseCase {
   return new IssueUseCase(
     { taskId: "RecommendStepsUseCase", invoke: mockRecommendStepsInvoke },
     { taskId: "AnswerIssueHelpUseCase", invoke: mockAnswerIssueHelpInvoke },
-    workflowSteps,
+    reconcileBranchReadiness ? {
+      ...workflowSteps,
+      reconcileBranchReadiness: { taskId: 'ReconcileBranchReadinessUseCase', invoke: reconcileBranchReadiness },
+    } : workflowSteps,
     { listIssueComments: mockListIssueComments },
     actorAuthorizationPort,
     preBranchSddGate,
@@ -192,12 +195,16 @@ describe("IssueUseCase", () => {
     expect(mockRemoveIssueBranchesInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8 }));
   });
 
-  it("prepares branches when branching is enabled", async () => {
-    const param = minimalExecution({ isBranched: true });
+  it('prepares a managed branch when in-progress starts work without a branched label', async () => {
+    const param = minimalExecution({
+      issue: { issueManagedBranches: true, labeled: true, labelAdded: 'in-progress' },
+      labels: { currentIssueLabels: ['feature', 'in-progress'], containsBranchedLabel: false },
+    });
 
     await createUseCase().invoke(param);
 
     expect(mockPrepareBranchesInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8, issueTitle: 'Issue' }));
+    expect(param.labels.currentIssueLabels).not.toContain('branched');
   });
 
   it('waits for SDD answers without preparing a branch or deployment', async () => {
@@ -307,7 +314,7 @@ describe("IssueUseCase", () => {
         hotfixOriginSha: 'def',
       },
     });
-    const param = minimalExecution({ isBranched: true, currentConfiguration: { branchType: 'feature' } });
+    const param = minimalExecution({ currentConfiguration: { branchType: 'feature' } });
 
     const results = await createUseCase().invoke(param);
 
@@ -324,12 +331,45 @@ describe("IssueUseCase", () => {
     expect(results.some((result) => result.id === 'branch')).toBe(true);
   });
 
-  it("never deletes an existing branch when branch management is disabled", async () => {
-    const param = minimalExecution({ isBranched: false });
+  it('ignores a manually applied branched label when branch management is disabled', async () => {
+    const param = minimalExecution({
+      cleanIssueBranches: true,
+      issueStartDecision: { started: true, branchRequired: false, sddRequired: false, helpRequired: false },
+      issue: { issueManagedBranches: false },
+      labels: { currentIssueLabels: ['feature', 'in-progress', 'branched'], containsBranchedLabel: true },
+    });
 
     await createUseCase().invoke(param);
 
+    expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
     expect(mockRemoveIssueBranchesInvoke).not.toHaveBeenCalled();
+    expect(mockRemoveNotNeededInvoke).not.toHaveBeenCalled();
+    expect(mockDeployAddedInvoke).not.toHaveBeenCalled();
+  });
+
+  it('defers branch cleanup and deployment until the exact linked branch is verified', async () => {
+    const reconcile = jest.fn().mockResolvedValue([
+      new Result({ id: 'ReconcileBranchReadinessUseCase', success: true, executed: false }),
+    ]);
+    mockPrepareBranchesInvoke.mockResolvedValue({
+      results: [new Result({ id: 'PrepareBranchesUseCase', success: true, executed: true })],
+      configurationPatch: { workingBranch: 'feature/8-issue' },
+    });
+    const param = minimalExecution({ issue: { issueManagedBranches: true } });
+    await createUseCase(undefined, undefined, reconcile).invoke(param);
+    expect(reconcile).toHaveBeenCalledWith({
+      issueNumber: 8, branchName: 'feature/8-issue', sddRequired: false, sddPublished: false,
+    });
+    expect(mockRemoveNotNeededInvoke).not.toHaveBeenCalled();
+    expect(mockDeployAddedInvoke).not.toHaveBeenCalled();
+
+    reconcile.mockResolvedValue([new Result({
+      id: 'ReconcileBranchReadinessUseCase', success: true, executed: false,
+      payload: { branchName: 'feature/8-issue', branchSha: 'a'.repeat(40) },
+    })]);
+    await createUseCase(undefined, undefined, reconcile).invoke(param);
+    expect(mockRemoveNotNeededInvoke).toHaveBeenCalledTimes(1);
+    expect(mockDeployAddedInvoke).toHaveBeenCalledTimes(1);
   });
 
   it("recommends steps for a newly opened non-release issue", async () => {
