@@ -1,4 +1,4 @@
-import { branchIsReady, BRANCH_READY_LABEL, ISSUE_START_LABEL } from '../../../../domain/issue_start_policy';
+import { branchIsReady, BRANCH_READY_LABEL, ISSUE_START_LABEL, SDD_REQUIRED_LABEL } from '../../../../domain/issue_start_policy';
 import { Result } from '../../../../data/model/result';
 import type { BoundLinkedBranchReadinessPort } from '../../../ports/linked_branch_readiness_ports';
 import type { BoundIssueLabelsPort } from '../../../ports/issue_management_ports';
@@ -36,15 +36,18 @@ export class ReconcileBranchReadinessUseCase {
         revisionPending: context.revisionPending,
       });
       const hasLabel = current.some(label => label.toLowerCase() === BRANCH_READY_LABEL);
-      if (ready !== hasLabel) {
-        const next = current.filter(label => label.toLowerCase() !== BRANCH_READY_LABEL);
+      const hasSddLabel = current.some(label => label.toLowerCase() === SDD_REQUIRED_LABEL.toLowerCase());
+      if (ready !== hasLabel || context.sddRequired !== hasSddLabel) {
+        const next = current.filter(label => label.toLowerCase() !== BRANCH_READY_LABEL
+          && label.toLowerCase() !== SDD_REQUIRED_LABEL.toLowerCase());
         if (ready) next.push(BRANCH_READY_LABEL);
+        if (context.sddRequired) next.push(SDD_REQUIRED_LABEL);
         await this.labels.setLabels(context.issueNumber, next);
       }
       return [new Result({
         id: this.taskId,
         success: true,
-        executed: ready !== hasLabel,
+        executed: ready !== hasLabel || context.sddRequired !== hasSddLabel,
         steps: ready
           ? [`Linked branch ${evidence!.name} is verified at ${evidence!.headSha}; implementation may begin.`]
           : hasLabel
@@ -56,9 +59,11 @@ export class ReconcileBranchReadinessUseCase {
       })];
     } catch (error) {
       const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to verify linked branch readiness.');
-      if (current?.some(label => label.toLowerCase() === BRANCH_READY_LABEL)) {
+      if (current?.some(label => label.toLowerCase() === BRANCH_READY_LABEL
+        || (!context.sddRequired && label.toLowerCase() === SDD_REQUIRED_LABEL.toLowerCase()))) {
         try {
-          await this.labels.setLabels(context.issueNumber, current.filter(label => label.toLowerCase() !== BRANCH_READY_LABEL));
+          await this.labels.setLabels(context.issueNumber, current.filter(label => label.toLowerCase() !== BRANCH_READY_LABEL
+            && (context.sddRequired || label.toLowerCase() !== SDD_REQUIRED_LABEL.toLowerCase())));
         } catch {
           // Keep the original verification failure; the retry will reconcile the label.
         }

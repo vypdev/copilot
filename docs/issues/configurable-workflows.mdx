@@ -57,4 +57,6 @@ An unlinked pull request stays on its PR-native route. Help is always branchless
 ## Migration and diagnosis
 
 Every setup writes an explicit schema-1 profile, including an all-kinds selection. Run `copilot doctor --config <setup.yml>` to detect profile, form, workflow, generated-guide, and manifest drift without changing files.
+An omitted profile in a manually wired workflow selects all seven kinds and
+still applies the same required body checks. Malformed profile JSON blocks.
 When admission blocks, correct the selected setup kind, conflicting live labels, or required issue body. Do not work around admission by inventing a branch or changing the generated profile manually.

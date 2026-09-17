@@ -61,7 +61,6 @@ export class Execution {
     inactivityThresholdHours: number;
     inputs: ExecutionInputs | undefined;
     readonly issueWorkflowProfile: IssueWorkflowProfile;
-    readonly issueWorkflowProfileLegacy: boolean;
     readonly issueWorkflowProfileDigest?: string;
     currentIssueWorkflowAdmission?: IssueWorkflowAdmission;
     issueWorkflowRuntimeMode: IssueWorkflowRuntimeMode = 'execute';
@@ -144,7 +143,6 @@ export class Execution {
                 release: [this.labels.release],
             },
             this.issue.body,
-            !this.issueWorkflowProfileLegacy,
         );
     }
 
@@ -204,7 +202,6 @@ export class Execution {
         this.inputs = components.inputs;
         this.welcome = components.welcome;
         this.issueWorkflowProfile = components.issueWorkflowProfile ?? ALL_ISSUE_WORKFLOWS;
-        this.issueWorkflowProfileLegacy = components.issueWorkflowProfileLegacy ?? components.issueWorkflowProfile === undefined;
         this.issueWorkflowProfileDigest = components.issueWorkflowProfileDigest;
         this.currentIssueWorkflowAdmission = components.issueWorkflowAdmission;
         this.currentConfiguration.issueWorkflowProfileDigest = components.issueWorkflowProfileDigest;

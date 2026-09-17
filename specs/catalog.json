@@ -745,7 +745,9 @@
         "src/application/usecases/steps/issue/reconcile_branch_readiness_use_case.ts",
         "src/data/repository/branch/linked_branch_readiness_repository.ts",
         "src/infrastructure/pre_branch_sdd_workspace_adapter.ts",
-        "src/infrastructure/specification_catalog_validator.cjs"
+        "src/infrastructure/specification_catalog_validator.cjs",
+        "src/actions/input_boolean_policy.ts",
+        "src/domain/issue_workflow_profile.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -759,7 +761,9 @@
         "src/application/usecases/steps/issue/__tests__/pre_branch_sdd_gate_use_case.test.ts",
         "src/application/usecases/steps/issue/__tests__/reconcile_branch_readiness_use_case.test.ts",
         "src/infrastructure/__tests__/pre_branch_sdd_workspace_adapter.test.ts",
-        "src/architecture/__tests__/github_publication_boundaries.test.ts"
+        "src/architecture/__tests__/github_publication_boundaries.test.ts",
+        "src/actions/__tests__/input_boolean_policy.test.ts",
+        "src/domain/__tests__/issue_workflow_profile.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
@@ -770,7 +774,8 @@
         "docs/issues/index.mdx",
         "docs/issues/labels-and-branch-types.mdx",
         "docs/issues/configuration.mdx",
-        "docs/configuration.mdx"
+        "docs/configuration.mdx",
+        "docs/single-actions/workflow-and-cli.mdx"
       ]
     },
     {

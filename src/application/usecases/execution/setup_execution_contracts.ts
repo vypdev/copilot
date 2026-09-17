@@ -69,7 +69,6 @@ export interface SetupExecutionContext {
         readonly branch?: string;
     };
     readonly issueWorkflowProfile?: IssueWorkflowProfile;
-    readonly issueWorkflowProfileLegacy?: boolean;
 }
 
 export interface ResolvedSingleActionState {

@@ -26,13 +26,17 @@ interface Catalog { readonly version: 1; readonly capabilities: readonly SddCata
 
 /** Isolates SDD validation in a detached temporary worktree before the linked branch is created. */
 export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
-  constructor(private readonly repositoryRoot: string = process.cwd()) {}
+  constructor(private readonly repositoryRoot: string = process.cwd(), private readonly token: string = '') {}
 
-  async loadSnapshot(baseBranch: string, token: string): Promise<SddCatalogSnapshot> {
+  async loadSnapshot(baseBranch: string): Promise<SddCatalogSnapshot> {
     assertBranch(baseBranch);
-    await this.git(['fetch', 'origin', baseBranch], this.repositoryRoot, token);
+    await this.git(['fetch', 'origin', baseBranch], this.repositoryRoot, this.token);
     const baseSha = (await this.git(['rev-parse', 'FETCH_HEAD'])).trim();
     assertSha(baseSha);
+    return this.readSnapshotAtSha(baseSha);
+  }
+
+  private async readSnapshotAtSha(baseSha: string): Promise<SddCatalogSnapshot> {
     const raw = await this.git(['show', `${baseSha}:specs/catalog.json`]);
     const catalog = JSON.parse(raw) as Catalog;
     if (catalog.version !== 1 || !Array.isArray(catalog.capabilities)) {
@@ -66,11 +70,14 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
     validateSddMarkdown(markdown);
     const root = await this.addDetachedWorktree(snapshot.baseSha);
     try {
+      assertSpecDirectory(root);
       const target = path.join(root, plan.path);
       if (fs.existsSync(target) !== (plan.action === 'update')) {
         throw new Error('The SDD owner changed since analysis; restart clarification.');
       }
-      fs.writeFileSync(target, markdown, { encoding: 'utf8', flag: plan.action === 'update' ? 'w' : 'wx' });
+      if (plan.action === 'update') assertRegularSpecFile(target);
+      else if (pathExists(target)) throw new Error('The new SDD path is already occupied.');
+      writeSpecFile(target, markdown, plan.action === 'update');
       const catalog: Catalog = {
         version: 1,
         capabilities: snapshot.capabilities.map(capability => ({ ...capability, specs: [...capability.specs] })),
@@ -93,10 +100,12 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
         catalogJson = `${JSON.stringify({ version: 1, capabilities: [...catalog.capabilities, newCapability] }, null, 2)}\n`;
       }
       if (catalogJson) {
-        fs.writeFileSync(path.join(root, 'specs/catalog.json'), catalogJson);
+        assertRegularSpecFile(path.join(root, 'specs/catalog.json'));
+        assertRegularSpecFile(path.join(root, 'specs/CATALOG.md'));
+        writeSpecFile(path.join(root, 'specs/catalog.json'), catalogJson, true);
         const updated = JSON.parse(catalogJson) as Catalog;
         catalogMarkdown = validator.renderCatalog(updated);
-        fs.writeFileSync(path.join(root, 'specs/CATALOG.md'), catalogMarkdown);
+        writeSpecFile(path.join(root, 'specs/CATALOG.md'), catalogMarkdown, true);
       }
       const checked = catalogJson ? JSON.parse(catalogJson) as Catalog : catalog;
       const errors = validator.validateCatalog(root, checked);
@@ -116,21 +125,26 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
     }
   }
 
-  async publish(branchName: string, prepared: SddPreparedDraft, token: string): Promise<string> {
+  async publish(branchName: string, prepared: SddPreparedDraft): Promise<string> {
     assertBranch(branchName);
     assertSha(prepared.baseSha);
     if (!isSafeSddPath(prepared.plan.path)) throw new Error('SDD path is unsafe.');
-    await this.git(['fetch', 'origin', branchName], this.repositoryRoot, token);
+    await this.git(['fetch', 'origin', branchName], this.repositoryRoot, this.token);
     const currentSha = (await this.git(['rev-parse', 'FETCH_HEAD'])).trim();
     if (currentSha !== prepared.baseSha) {
       throw new Error(`Linked branch ${branchName} already contains commits; its first SDD commit cannot be rewritten.`);
     }
     const root = await this.addDetachedWorktree(currentSha);
     try {
-      fs.writeFileSync(path.join(root, prepared.plan.path), prepared.markdown, 'utf8');
+      assertSpecDirectory(root);
+      if (prepared.plan.action === 'update') assertRegularSpecFile(path.join(root, prepared.plan.path));
+      else if (pathExists(path.join(root, prepared.plan.path))) throw new Error('The new SDD path is already occupied.');
+      writeSpecFile(path.join(root, prepared.plan.path), prepared.markdown, prepared.plan.action === 'update');
       if (prepared.catalogJson && prepared.catalogMarkdown) {
-        fs.writeFileSync(path.join(root, 'specs/catalog.json'), prepared.catalogJson);
-        fs.writeFileSync(path.join(root, 'specs/CATALOG.md'), prepared.catalogMarkdown);
+        assertRegularSpecFile(path.join(root, 'specs/catalog.json'));
+        assertRegularSpecFile(path.join(root, 'specs/CATALOG.md'));
+        writeSpecFile(path.join(root, 'specs/catalog.json'), prepared.catalogJson, true);
+        writeSpecFile(path.join(root, 'specs/CATALOG.md'), prepared.catalogMarkdown, true);
       }
       await this.git(['add', '--', ...prepared.changedPaths], root);
       const staged = (await this.git(['diff', '--cached', '--name-only'], root)).trim().split('\n').filter(Boolean);
@@ -144,8 +158,8 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
       ], root);
       const commitSha = (await this.git(['rev-parse', 'HEAD'], root)).trim();
       assertSha(commitSha);
-      await this.git(['push', 'origin', `HEAD:refs/heads/${branchName}`], root, token);
-      const verified = await this.verifyPublication(branchName, prepared.baseSha, commitSha, prepared.plan.path, token);
+      await this.git(['push', 'origin', `HEAD:refs/heads/${branchName}`], root, this.token);
+      const verified = await this.verifyPublication(branchName, prepared.baseSha, commitSha, prepared.plan.path);
       if (!verified) throw new Error('The SDD commit was pushed but could not be verified remotely. Retry on the same branch.');
       return commitSha;
     } finally {
@@ -153,29 +167,48 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
     }
   }
 
-  async recoverPublished(branchName: string, baseSha: string, sddPath: string, token: string): Promise<string | undefined> {
+  async recoverPublished(branchName: string, prepared: SddPreparedDraft): Promise<string | undefined> {
     assertBranch(branchName);
-    assertSha(baseSha);
-    if (!isSafeSddPath(sddPath)) return undefined;
-    await this.git(['fetch', 'origin', branchName], this.repositoryRoot, token);
+    assertSha(prepared.baseSha);
+    if (!isSafeSddPath(prepared.plan.path)) return undefined;
+    await this.git(['fetch', 'origin', branchName], this.repositoryRoot, this.token);
     const remoteSha = (await this.git(['rev-parse', 'FETCH_HEAD'])).trim();
-    if (remoteSha === baseSha) return undefined;
+    if (remoteSha === prepared.baseSha) return undefined;
     let descendants: string[];
     try {
-      descendants = (await this.git(['rev-list', '--reverse', `${baseSha}..${remoteSha}`])).trim().split('\n').filter(Boolean);
+      descendants = (await this.git(['rev-list', '--reverse', `${prepared.baseSha}..${remoteSha}`])).trim().split('\n').filter(Boolean);
     } catch {
       return undefined;
     }
     const first = descendants[0];
-    return first && await this.verifyPublication(branchName, baseSha, first, sddPath, token) ? first : undefined;
+    if (!first || !await this.verifyPublication(branchName, prepared.baseSha, first, prepared.plan.path)) return undefined;
+    const [author, subject] = await Promise.all([
+      this.git(['show', '-s', '--format=%ae', first]),
+      this.git(['show', '-s', '--format=%s', first]),
+    ]);
+    if (author.trim() !== '41898282+github-actions[bot]@users.noreply.github.com'
+      || subject.trim() !== `docs(sdd): specify issue contract in ${prepared.plan.path}`) return undefined;
+    const content = await this.git(['show', `${first}:${prepared.plan.path}`]);
+    const snapshot = await this.readSnapshotAtSha(prepared.baseSha);
+    let newCapability: SddCatalogCapability | undefined;
+    if (prepared.plan.action === 'new') {
+      const raw = await this.git(['show', `${first}:specs/catalog.json`]);
+      newCapability = (JSON.parse(raw) as Catalog).capabilities.find(capability => capability.id === prepared.plan.capabilityId);
+    }
+    const recovered = await this.validateDraft(snapshot, prepared.plan, content, newCapability);
+    const committedPaths = (await this.git(['diff-tree', '--no-commit-id', '--name-only', '-r', first])).trim().split('\n').filter(Boolean).sort();
+    if (committedPaths.join('\n') !== recovered.changedPaths.join('\n')) return undefined;
+    if (recovered.catalogJson && await this.git(['show', `${first}:specs/catalog.json`]) !== recovered.catalogJson) return undefined;
+    if (recovered.catalogMarkdown && await this.git(['show', `${first}:specs/CATALOG.md`]) !== recovered.catalogMarkdown) return undefined;
+    return first;
   }
 
-  async verifyPublication(branchName: string, baseSha: string, commitSha: string, sddPath: string, token: string): Promise<boolean> {
+  async verifyPublication(branchName: string, baseSha: string, commitSha: string, sddPath: string): Promise<boolean> {
     assertBranch(branchName);
     assertSha(baseSha);
     assertSha(commitSha);
     if (!isSafeSddPath(sddPath)) return false;
-    await this.git(['fetch', 'origin', branchName], this.repositoryRoot, token);
+    await this.git(['fetch', 'origin', branchName], this.repositoryRoot, this.token);
     const remoteSha = (await this.git(['rev-parse', 'FETCH_HEAD'])).trim();
     const parent = (await this.git(['rev-parse', `${commitSha}^`])).trim();
     if (parent !== baseSha) return false;
@@ -236,4 +269,30 @@ function assertBranch(value: string): void {
   if (!BRANCH.test(value) || value.includes('..') || value.includes('//') || value.endsWith('.lock')) {
     throw new Error('The configured branch name is unsafe.');
   }
+}
+
+function assertSpecDirectory(root: string): void {
+  const directory = path.join(root, 'specs');
+  if (!fs.lstatSync(directory).isDirectory()
+    || fs.realpathSync(directory) !== path.join(fs.realpathSync(root), 'specs')) {
+    throw new Error('The specification directory is not a real directory inside the detached worktree.');
+  }
+}
+
+function assertRegularSpecFile(target: string): void {
+  if (!fs.lstatSync(target).isFile()) throw new Error('A specification or catalog path is not a regular file.');
+}
+
+function pathExists(target: string): boolean {
+  try { fs.lstatSync(target); return true; } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+    throw error;
+  }
+}
+
+function writeSpecFile(target: string, content: string, exists: boolean): void {
+  const flags = fs.constants.O_WRONLY | fs.constants.O_NOFOLLOW
+    | (exists ? fs.constants.O_TRUNC : fs.constants.O_CREAT | fs.constants.O_EXCL);
+  const descriptor = fs.openSync(target, flags, 0o644);
+  try { fs.writeFileSync(descriptor, content, 'utf8'); } finally { fs.closeSync(descriptor); }
 }

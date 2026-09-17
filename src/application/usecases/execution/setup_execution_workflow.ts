@@ -63,7 +63,7 @@ export async function runSetupExecution(
             help: [context.labelNames.help ?? 'help', context.labelNames.question ?? 'question'],
             hotfix: [context.labelNames.hotfix],
             release: [context.labelNames.release],
-        }, liveIssueBody ?? '', context.issueWorkflowProfile !== undefined && !context.issueWorkflowProfileLegacy)
+        }, liveIssueBody ?? '')
         : undefined;
     let release: SetupReleaseState = {
         ...context.release,

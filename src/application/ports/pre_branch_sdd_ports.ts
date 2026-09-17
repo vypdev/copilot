@@ -33,10 +33,10 @@ export interface SddPreparedDraft {
 
 /** The Action owns all Git and file writes; the drafting agent has read-only structured access. */
 export interface PreBranchSddWorkspacePort {
-  loadSnapshot(baseBranch: string, token: string): Promise<SddCatalogSnapshot>;
+  loadSnapshot(baseBranch: string): Promise<SddCatalogSnapshot>;
   readSdd(baseSha: string, path: string): Promise<string | undefined>;
   validateDraft(snapshot: SddCatalogSnapshot, plan: SddPlan, markdown: string, newCapability?: SddCatalogCapability): Promise<SddPreparedDraft>;
-  publish(branchName: string, prepared: SddPreparedDraft, token: string): Promise<string>;
-  recoverPublished(branchName: string, preparedBaseSha: string, path: string, token: string): Promise<string | undefined>;
-  verifyPublication(branchName: string, preparedBaseSha: string, commitSha: string, path: string, token: string): Promise<boolean>;
+  publish(branchName: string, prepared: SddPreparedDraft): Promise<string>;
+  recoverPublished(branchName: string, prepared: SddPreparedDraft): Promise<string | undefined>;
+  verifyPublication(branchName: string, preparedBaseSha: string, commitSha: string, path: string): Promise<boolean>;
 }

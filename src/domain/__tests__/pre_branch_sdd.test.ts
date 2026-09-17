@@ -62,6 +62,18 @@ describe('pre-branch SDD policy', () => {
     expect(body).toContain('SDD Q1: your answer');
     expect(readSddGateRecord(body, 42)).toEqual(record);
     expect(readSddGateRecord(body, 43)).toBeUndefined();
+    expect(renderSddGateRecord(record, 'es-ES')).toContain('Estado del SDD');
+    expect(renderSddGateRecord(record, 'es-ES')).toContain('SDD Q1: tu respuesta');
+  });
+  it('escapes untrusted question markup and mentions in the status card', () => {
+    const record: SddGateRecord = {
+      version: 1, issueNumber: 42, phase: 'awaiting-answer', issueDigest: 'a'.repeat(64), baseSha: 'b'.repeat(40), round: 1,
+      plan: { ...plan, action: 'update', questions: [{ id: 'Q1', text: 'Should @team use <script> and [unsafe](https://example.test)?', owner: 'maintainer' }] },
+    };
+    const rendered = renderSddGateRecord(record);
+    expect(rendered).toContain('@\u200Bteam');
+    expect(rendered).toContain('&lt;script&gt;');
+    expect(rendered).toContain('\\[unsafe\\]');
   });
   it('rejects a published marker without a valid commit SHA', () => {
     const record: SddGateRecord = {
@@ -69,6 +81,17 @@ describe('pre-branch SDD policy', () => {
       plan: { ...plan, action: 'update' }, branchName: 'feature/42-change', commitSha: 'invalid',
     };
     expect(readSddGateRecord(renderSddGateRecord(record), 42)).toBeUndefined();
+  });
+  it('links a verified publication only to the matching HTTPS issue repository', () => {
+    const record: SddGateRecord = {
+      version: 1, issueNumber: 42, phase: 'published', issueDigest: 'a'.repeat(64), baseSha: 'b'.repeat(40), round: 1,
+      plan: { ...plan, action: 'update' }, branchName: 'feature/42-change', commitSha: 'c'.repeat(40),
+    };
+    const linked = renderSddGateRecord(record, 'es-ES', 'https://github.com/acme/repo/issues/42');
+    expect(linked).toContain(`https://github.com/acme/repo/blob/${record.commitSha}/specs/payments.md`);
+    expect(linked).toContain('**Enlaces:**');
+    expect(renderSddGateRecord(record, 'en-US', 'http://evil.test/acme/repo/issues/42')).not.toContain('evil.test');
+    expect(renderSddGateRecord(record, 'en-US', 'https://github.com/acme/repo/issues/43')).not.toContain('**Links:**');
   });
   it('rejects a draft without numbered acceptance, architecture, or numeric test budget', () => {
     expect(() => validateSddMarkdown('# Too short')).toThrow();

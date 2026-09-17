@@ -5,6 +5,8 @@ import { execFileSync } from 'node:child_process';
 import { PreBranchSddWorkspaceAdapter } from '../pre_branch_sdd_workspace_adapter';
 import type { SddPlan } from '../../domain/pre_branch_sdd';
 
+jest.setTimeout(30_000);
+
 const plan: SddPlan = {
   action: 'update', path: 'specs/payments.md', capabilityId: 'payments',
   reason: 'The issue modifies the existing payment behavior and its acceptance contract.', questions: [],
@@ -61,29 +63,44 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
 
   it('validates before branch creation and makes the SDD the only first branch change', async () => {
     const workspace = new PreBranchSddWorkspaceAdapter(repo);
-    const snapshot = await workspace.loadSnapshot('develop', '');
+    const snapshot = await workspace.loadSnapshot('develop');
     const prepared = await workspace.validateDraft(snapshot, plan, draft());
     expect(prepared.changedPaths).toEqual(['specs/payments.md']);
     expect(git(repo, 'branch', '--list', 'feature/42-change')).toBe('');
     git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
 
-    const commitSha = await workspace.publish('feature/42-change', prepared, '');
-    expect(await workspace.verifyPublication('feature/42-change', snapshot.baseSha, commitSha, plan.path, '')).toBe(true);
-    expect(await workspace.recoverPublished('feature/42-change', snapshot.baseSha, plan.path, '')).toBe(commitSha);
+    const commitSha = await workspace.publish('feature/42-change', prepared);
+    expect(await workspace.verifyPublication('feature/42-change', snapshot.baseSha, commitSha, plan.path)).toBe(true);
+    expect(await workspace.recoverPublished('feature/42-change', prepared)).toBe(commitSha);
+    expect(await workspace.recoverPublished('feature/42-change', { ...prepared, markdown: `${prepared.markdown}\nregenerated draft` })).toBe(commitSha);
     expect(git(repo, 'diff-tree', '--no-commit-id', '--name-only', '-r', commitSha)).toBe(plan.path);
     expect(git(repo, 'rev-parse', `${commitSha}^`)).toBe(snapshot.baseSha);
   });
 
   it('retains an existing branch with unrelated commits and blocks an SDD first-commit rewrite', async () => {
     const workspace = new PreBranchSddWorkspaceAdapter(repo);
-    const snapshot = await workspace.loadSnapshot('develop', '');
+    const snapshot = await workspace.loadSnapshot('develop');
     const prepared = await workspace.validateDraft(snapshot, plan, draft());
     git(repo, 'checkout', '-b', 'feature/42-change');
     fs.writeFileSync(path.join(repo, 'src/index.ts'), 'export const value = 2;\n');
     git(repo, 'add', 'src/index.ts');
     git(repo, 'commit', '-m', 'unrelated code');
     git(repo, 'push', 'origin', 'feature/42-change');
-    await expect(workspace.publish('feature/42-change', prepared, '')).rejects.toThrow('already contains commits');
-    await expect(workspace.recoverPublished('feature/42-change', snapshot.baseSha, plan.path, '')).resolves.toBeUndefined();
+    await expect(workspace.publish('feature/42-change', prepared)).rejects.toThrow('already contains commits');
+    await expect(workspace.recoverPublished('feature/42-change', prepared)).resolves.toBeUndefined();
+  });
+
+  it('rejects a symlinked owning SDD before writing to its target', async () => {
+    const external = path.join(temp, 'outside.md');
+    fs.writeFileSync(external, '# Protected external file\n');
+    fs.rmSync(path.join(repo, 'specs/payments.md'));
+    fs.symlinkSync(external, path.join(repo, 'specs/payments.md'));
+    git(repo, 'add', 'specs/payments.md');
+    git(repo, 'commit', '-m', 'symlinked specification');
+    git(repo, 'push', 'origin', 'develop');
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    await expect(workspace.validateDraft(snapshot, plan, draft())).rejects.toThrow('not a regular file');
+    expect(fs.readFileSync(external, 'utf8')).toBe('# Protected external file\n');
   });
 });

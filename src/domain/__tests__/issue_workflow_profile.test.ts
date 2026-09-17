@@ -18,14 +18,13 @@ describe('issue workflow profile', () => {
     const parsed = parseIssueWorkflowProfile('{"schemaVersion":1,"enabled":["release","feature"]}');
     expect(parsed).toEqual({
       profile: createIssueWorkflowProfile(['feature', 'release']),
-      legacy: false,
     });
     expect('error' in parsed ? '' : serializeIssueWorkflowProfile(parsed.profile))
       .toBe('{"schemaVersion":1,"enabled":["feature","release"]}');
   });
 
-  it('treats an omitted profile as legacy all and rejects malformed profiles', () => {
-    expect(parseIssueWorkflowProfile(undefined)).toEqual({ profile: ALL_ISSUE_WORKFLOWS, legacy: true });
+  it('uses all workflows by default with standard admission and rejects malformed profiles', () => {
+    expect(parseIssueWorkflowProfile(undefined)).toEqual({ profile: ALL_ISSUE_WORKFLOWS });
     expect(parseIssueWorkflowProfile('{"schemaVersion":2,"enabled":[]}')).toEqual({
       error: 'Issue workflow profile schemaVersion must be 1.',
     });
@@ -36,7 +35,7 @@ describe('issue workflow profile', () => {
       error: 'Unknown issue workflow profile field(s): extra.',
     });
     expect(parseIssueWorkflowProfile('{"schemaVersion":1,"enabled":[]}')).toEqual({
-      profile: createIssueWorkflowProfile([]), legacy: false,
+      profile: createIssueWorkflowProfile([]),
     });
   });
 
@@ -53,7 +52,7 @@ describe('issue workflow profile', () => {
   });
 
   it('bounds profile bytes before parsing and treats whitespace as the legacy compatibility default', () => {
-    expect(parseIssueWorkflowProfile(' '.repeat(4097))).toEqual({ profile: ALL_ISSUE_WORKFLOWS, legacy: true });
+    expect(parseIssueWorkflowProfile(' '.repeat(4097))).toEqual({ profile: ALL_ISSUE_WORKFLOWS });
     expect(parseIssueWorkflowProfile(`{"schemaVersion":1,"enabled":[],"padding":"${'x'.repeat(4097)}"}`))
       .toEqual({ error: 'Issue workflow profile must not exceed 4096 bytes.' });
   });

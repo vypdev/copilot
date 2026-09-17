@@ -44,6 +44,7 @@ const SDD_PATH = /^specs\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.md$/;
 const CAPABILITY_ID = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 const SHA = /^[a-f0-9]{40}$/i;
 const DIGEST = /^[a-f0-9]{64}$/i;
+const BRANCH_NAME = /^[a-zA-Z0-9][a-zA-Z0-9._/-]*$/;
 
 /** Ignores the emoji/version prefix written by the Action while tracking human title edits. */
 export function normalizeSddIssueTitle(title: string): string {
@@ -123,7 +124,8 @@ export function readSddGateRecord(body: string | null | undefined, issueNumber: 
     if (value.phase === 'published'
       && (typeof value.branchName !== 'string' || typeof value.commitSha !== 'string' || !SHA.test(value.commitSha))) return undefined;
     if ((value.branchName !== undefined || value.commitSha !== undefined)
-      && (typeof value.branchName !== 'string' || !value.branchName.trim()
+      && (typeof value.branchName !== 'string' || !BRANCH_NAME.test(value.branchName)
+        || value.branchName.includes('..') || value.branchName.includes('//') || value.branchName.endsWith('.lock')
         || typeof value.commitSha !== 'string' || !SHA.test(value.commitSha))) return undefined;
     if (value.revisionSha !== undefined && (typeof value.revisionSha !== 'string' || !SHA.test(value.revisionSha))) return undefined;
     if (value.revisionBaseSha !== undefined && (typeof value.revisionBaseSha !== 'string' || !SHA.test(value.revisionBaseSha))) return undefined;
@@ -140,18 +142,42 @@ export function readSddGateRecord(body: string | null | undefined, issueNumber: 
   }
 }
 
-export function renderSddGateRecord(record: SddGateRecord): string {
+export function renderSddGateRecord(record: SddGateRecord, locale = 'en-US', issueUrl?: string): string {
+  const spanish = /^es(?:-|$)/i.test(locale);
   const marker = `<!-- ${SDD_GATE_MARKER}\n${JSON.stringify(record)}\n-->`;
   if (record.phase === 'published') {
-    return `## SDD work status\n\n**Current status:** The SDD is published; implementation can begin after branch verification.\n\n**SDD:** \`${record.plan.path}\` · **Branch:** \`${record.branchName}\` · **First commit:** \`${record.commitSha}\`${record.revisionSha ? ` · **Revision:** \`${record.revisionSha}\`` : ''}\n\n${marker}`;
+    const links = sddPublicationLinks(record, issueUrl, spanish);
+    return spanish
+      ? `## Estado del SDD\n\n**Estado actual:** El SDD está publicado; la implementación puede empezar tras verificar la rama.\n\n**SDD:** \`${record.plan.path}\` · **Rama:** \`${record.branchName}\` · **Primer commit:** \`${record.commitSha}\`${record.revisionSha ? ` · **Revisión:** \`${record.revisionSha}\`` : ''}${links}\n\n${marker}`
+      : `## SDD work status\n\n**Current status:** The SDD is published; implementation can begin after branch verification.\n\n**SDD:** \`${record.plan.path}\` · **Branch:** \`${record.branchName}\` · **First commit:** \`${record.commitSha}\`${record.revisionSha ? ` · **Revision:** \`${record.revisionSha}\`` : ''}${links}\n\n${marker}`;
   }
   const questions = record.plan.questions.map(question =>
-    `- **${question.id} · ${question.owner === 'maintainer' ? 'Maintainer' : 'Issue author'}:** ${sanitize(question.text)}${question.suggestion ? `\n  Suggested answer: ${sanitize(question.suggestion)}` : ''}`,
+    `- **${question.id} · ${question.owner === 'maintainer' ? (spanish ? 'Mantenimiento' : 'Maintainer') : (spanish ? 'Autor de la issue' : 'Issue author')}:** ${sanitize(question.text)}${question.suggestion ? `\n  ${spanish ? 'Respuesta sugerida' : 'Suggested answer'}: ${sanitize(question.suggestion)}` : ''}`,
   ).join('\n');
   const retained = record.branchName
-    ? `The linked branch \`${record.branchName}\` and its first SDD commit are retained; implementation waits for this revision.`
-    : 'No SDD draft or branch exists yet.';
-  return `## SDD work status\n\n**Current status:** Waiting for specification answers. ${retained}\n\n**Owning SDD:** \`${record.plan.path}\`\n\n${questions}\n\nReply with \`SDD Q1: your answer\` (one line per question). The Action will continue after the required people answer every question.\n\n${marker}`;
+    ? spanish
+      ? `Se conservan la rama vinculada \`${record.branchName}\` y el primer commit del SDD; la implementación espera esta revisión.`
+      : `The linked branch \`${record.branchName}\` and its first SDD commit are retained; implementation waits for this revision.`
+    : spanish ? 'Todavía no existe ningún borrador del SDD ni ninguna rama.' : 'No SDD draft or branch exists yet.';
+  return spanish
+    ? `## Estado del SDD\n\n**Estado actual:** A la espera de respuestas para la especificación. ${retained}\n\n**SDD responsable:** \`${record.plan.path}\`\n\n${questions}\n\nResponde con \`SDD Q1: tu respuesta\` (una línea por pregunta). La Action continuará cuando las personas indicadas respondan todas las preguntas.\n\n${marker}`
+    : `## SDD work status\n\n**Current status:** Waiting for specification answers. ${retained}\n\n**Owning SDD:** \`${record.plan.path}\`\n\n${questions}\n\nReply with \`SDD Q1: your answer\` (one line per question). The Action will continue after the required people answer every question.\n\n${marker}`;
+}
+
+function sddPublicationLinks(record: SddGateRecord, issueUrl: string | undefined, spanish: boolean): string {
+  if (!issueUrl || !record.branchName || !record.commitSha) return '';
+  try {
+    const url = new URL(issueUrl);
+    const match = url.pathname.match(/^\/(?:[^/]+)\/(?:[^/]+)\/issues\/(\d+)$/);
+    if (url.protocol !== 'https:' || !match || Number(match[1]) !== record.issueNumber) return '';
+    const repository = `${url.origin}${url.pathname.slice(0, url.pathname.lastIndexOf('/issues/'))}`;
+    const commit = record.revisionSha ?? record.commitSha;
+    return spanish
+      ? `\n\n**Enlaces:** [SDD](${repository}/blob/${commit}/${record.plan.path}) · [Rama](${repository}/tree/${record.branchName}) · [Commit](${repository}/commit/${commit})`
+      : `\n\n**Links:** [SDD](${repository}/blob/${commit}/${record.plan.path}) · [Branch](${repository}/tree/${record.branchName}) · [Commit](${repository}/commit/${commit})`;
+  } catch {
+    return '';
+  }
 }
 
 export function parseSddAnswer(body: string, questionId: string): string | undefined {
@@ -172,7 +198,10 @@ export function validateSddMarkdown(markdown: string): void {
 }
 
 function sanitize(value: string): string {
-  return value.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\r?\n/g, ' ').trim();
+  return value.replace(/\r?\n/g, ' ').trim()
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/([\\`*_[\]()#!])/g, '\\$1')
+    .replace(/@/g, '@\u200B');
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

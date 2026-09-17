@@ -70,7 +70,7 @@ const ISSUE_WORKFLOW_PROFILE_MAX_BYTES = 4096;
 const ISSUE_WORKFLOW_PROFILE_KEYS = new Set(['schemaVersion', 'enabled']);
 
 export type IssueWorkflowProfileParseResult =
-  | { readonly profile: IssueWorkflowProfile; readonly legacy: boolean }
+  | { readonly profile: IssueWorkflowProfile }
   | { readonly error: string };
 
 export type IssueWorkflowAdmission =
@@ -108,9 +108,9 @@ export function createIssueWorkflowProfile(enabled: readonly IssueWorkflowKind[]
   });
 }
 
-/** Empty input means legacy/all so existing manually-authored workflows continue to work. */
+/** Empty input selects all workflows with the same admission checks as an explicit profile. */
 export function parseIssueWorkflowProfile(raw: string | undefined): IssueWorkflowProfileParseResult {
-  if (!raw?.trim()) return { profile: ALL_ISSUE_WORKFLOWS, legacy: true };
+  if (!raw?.trim()) return { profile: ALL_ISSUE_WORKFLOWS };
   if (Buffer.byteLength(raw, 'utf8') > ISSUE_WORKFLOW_PROFILE_MAX_BYTES) {
     return { error: `Issue workflow profile must not exceed ${ISSUE_WORKFLOW_PROFILE_MAX_BYTES} bytes.` };
   }
@@ -128,7 +128,7 @@ export function parseIssueWorkflowProfile(raw: string | undefined): IssueWorkflo
   const unknown = enabled.filter(kind => !ISSUE_WORKFLOW_KINDS.includes(kind as IssueWorkflowKind));
   if (unknown.length > 0) return { error: `Unknown issue workflow(s): ${unknown.join(', ')}.` };
   if (new Set(enabled).size !== enabled.length) return { error: 'Issue workflow profile cannot contain duplicate workflow IDs.' };
-  return { profile: createIssueWorkflowProfile(enabled as IssueWorkflowKind[]), legacy: false };
+  return { profile: createIssueWorkflowProfile(enabled as IssueWorkflowKind[]) };
 }
 
 export function serializeIssueWorkflowProfile(profile: IssueWorkflowProfile): string {

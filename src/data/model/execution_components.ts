@@ -43,7 +43,6 @@ export interface ExecutionComponents {
     inactivityThresholdHours?: number;
     inputs?: ExecutionInputs;
     issueWorkflowProfile?: IssueWorkflowProfile;
-    issueWorkflowProfileLegacy?: boolean;
     issueWorkflowProfileDigest?: string;
     issueWorkflowAdmission?: IssueWorkflowAdmission;
     preBranchSdd?: boolean;

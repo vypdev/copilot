@@ -20,7 +20,7 @@ const prepared: SddPreparedDraft = { plan, baseSha, markdown: '# Draft', changed
 function context(): PreBranchSddContext {
   return {
     issueNumber: 42, issueTitle: 'Change payments', issueBody: 'The payment flow must change.', issueAuthor: 'alice',
-    admittedKind: 'feature', profileDigest: 'profile', baseBranch: 'develop', token: 'secret', tokenUser: 'copilot[bot]',
+    admittedKind: 'feature', profileDigest: 'profile', baseBranch: 'develop', tokenUser: 'copilot[bot]',
     agentConfiguration: { provider: 'codex', model: 'model' } as never,
   };
 }
@@ -69,6 +69,15 @@ describe('PreBranchSddGateUseCase', () => {
     expect(h.comments[0].body).toContain('SDD Q1: your answer');
     expect(h.validateDraft).not.toHaveBeenCalled();
     expect(h.query).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the effective issue locale for the clarification card', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null });
+    await h.useCase.begin({ ...context(), issueLocale: 'es-ES' });
+    expect(h.comments[0].body).toContain('Estado del SDD');
+    expect(h.comments[0].body).toContain('SDD Q1: tu respuesta');
+    expect(h.query.mock.calls[0][0].prompt).toContain('es-ES');
   });
 
   it('ignores a comment by an unauthorized maintainer and remains silent on replay', async () => {
@@ -122,9 +131,9 @@ describe('PreBranchSddGateUseCase', () => {
     if (draft.status !== 'drafted') throw new Error('expected draft');
     const outcome = await h.useCase.publish(context(), draft, 'feature/42-change');
     expect(outcome).toMatchObject({ status: 'published', branchName: 'feature/42-change', commitSha });
-    expect(h.recoverPublished).toHaveBeenCalledWith('feature/42-change', baseSha, plan.path, 'secret');
-    expect(h.publish).toHaveBeenCalledWith('feature/42-change', prepared, 'secret');
-    expect(h.verifyPublication).toHaveBeenCalledWith('feature/42-change', baseSha, commitSha, plan.path, 'secret');
+    expect(h.recoverPublished).toHaveBeenCalledWith('feature/42-change', prepared);
+    expect(h.publish).toHaveBeenCalledWith('feature/42-change', prepared);
+    expect(h.verifyPublication).toHaveBeenCalledWith('feature/42-change', baseSha, commitSha, plan.path);
     expect(h.comments).toHaveLength(1);
     expect(h.comments[0].body).toContain(commitSha);
   });

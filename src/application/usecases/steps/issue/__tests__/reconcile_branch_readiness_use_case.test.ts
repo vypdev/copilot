@@ -29,7 +29,7 @@ describe('linked branch readiness reconciliation', () => {
   ])('removes a manually applied label when %s', async (_name, linked, sddRequired, revisionPending) => {
     const ports = makePorts(['feature', 'branched'], linked);
     await ports.useCase.invoke({ issueNumber: 42, branchName: 'feature/42-change', sddRequired, sddPublished: false, revisionPending });
-    expect(ports.current()).toEqual(['feature']);
+    expect(ports.current()).toEqual(sddRequired ? ['feature', 'SDD'] : ['feature']);
   });
 
   it('requires an SDD publication fact and remains idempotent on replay', async () => {
@@ -40,6 +40,14 @@ describe('linked branch readiness reconciliation', () => {
     expect(ports.current()).toContain('branched');
     expect(ports.setLabels).toHaveBeenCalledTimes(1);
     expect(replay[0]).toMatchObject({ success: true, executed: false });
+  });
+
+  it('projects the SDD label from eligibility and removes a manual label outside the gate', async () => {
+    const ports = makePorts(['feature', 'in-progress', 'SDD'], false);
+    await ports.useCase.invoke({ issueNumber: 42, branchName: 'feature/42-change', sddRequired: false, sddPublished: false });
+    expect(ports.current()).toEqual(['feature', 'in-progress']);
+    await ports.useCase.invoke({ issueNumber: 42, branchName: 'feature/42-change', sddRequired: true, sddPublished: false });
+    expect(ports.current()).toContain('SDD');
   });
 
   it('fails closed when the provider cannot verify remote evidence', async () => {

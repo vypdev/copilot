@@ -156,7 +156,7 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
     bindActorAuthorization(createActorAuthorizationRepository(), binding),
     new PreBranchSddGateUseCase(
       createFindingsQueryPort(),
-      new PreBranchSddWorkspaceAdapter(),
+      new PreBranchSddWorkspaceAdapter(process.cwd(), binding.token),
       bindIssueCommentPublication(issueContent, binding),
       bindIssueLabels(createIssueLabelRepository(), binding),
       bindActorAuthorization(createActorAuthorizationRepository(), binding),

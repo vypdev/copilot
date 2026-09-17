@@ -17,7 +17,7 @@ The repository must already contain a valid `specs/catalog.json`, `specs/README.
 4. When all questions are answered, the Action analyzes the answers again. It may ask another bounded round of questions. Once the contract is clear, it drafts and validates the SDD in an isolated temporary worktree.
 5. The Action creates the linked issue branch, commits only the validated SDD and any required catalog files, pushes the commit, and verifies the exact remote branch. It updates the status comment, adds `branched`, and moves to `state:working`.
 
-The status comment shows the owning SDD, each question and its owner, the retained branch if one exists, and the verified commit. The first branch commit contains the SDD; implementation starts afterward.
+The status comment uses the effective issue locale (Spanish and English are bundled, with English fallback). It shows the owning SDD, each question and its owner, the retained branch if one exists, and the verified commit. The first branch commit contains the SDD; implementation starts afterward.
 
 ## Edits, retries, and revisions
 

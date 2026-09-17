@@ -4,7 +4,7 @@ import { INPUT_KEYS } from '../application/contracts/input_keys';
 import type { ProjectDetailQueryPort } from '../application/ports/project_detail_ports';
 import type { ActionInputValues } from './action_input_source';
 import { getActionInputsWithDefaults } from '../utils/yml_utils';
-import { isEnabledInput } from './input_boolean_policy';
+import { isEnabledInput, parseIssueWorkflowBoolean } from './input_boolean_policy';
 import { resolveActionInput } from './action_input_source';
 import { loadProjectDetails } from './project_details_loader';
 import { parseBoundedPositiveIntegerInput, parseIntegerInput } from './input_number_policy';
@@ -281,8 +281,8 @@ export function readLocalWorkflowConfiguration(
         docsTree: read(INPUT_KEYS.DOCS_TREE),
         choreTree: read(INPUT_KEYS.CHORE_TREE),
         commitPrefixBuilder: read(INPUT_KEYS.COMMIT_PREFIX_TRANSFORMS) || 'replace-slash',
-        issueManagedBranches: isEnabledInput(read(INPUT_KEYS.ISSUE_MANAGED_BRANCHES) || 'true'),
-        preBranchSdd: isEnabledInput(read(INPUT_KEYS.PRE_BRANCH_SDD)),
+        issueManagedBranches: parseIssueWorkflowBoolean(read(INPUT_KEYS.ISSUE_MANAGED_BRANCHES), INPUT_KEYS.ISSUE_MANAGED_BRANCHES, true),
+        preBranchSdd: parseIssueWorkflowBoolean(read(INPUT_KEYS.PRE_BRANCH_SDD), INPUT_KEYS.PRE_BRANCH_SDD, false),
         reopenIssueOnPush: isEnabledInput(read(INPUT_KEYS.REOPEN_ISSUE_ON_PUSH)),
         issueDesiredAssigneesCount: parseIntegerInput(read(INPUT_KEYS.DESIRED_ASSIGNEES_COUNT), 0),
         pullRequestDesiredAssigneesCount: parseIntegerInput(read(INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0),
