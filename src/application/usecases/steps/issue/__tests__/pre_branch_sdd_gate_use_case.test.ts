@@ -5,6 +5,7 @@ const baseSha = 'a'.repeat(40);
 const commitSha = 'b'.repeat(40);
 const reason = 'The issue changes a product contract that belongs to the payments capability.';
 const plan = { action: 'update', path: 'specs/payments.md', capabilityId: 'payments', reason, questions: [] } as const;
+const newPlan = { action: 'new', path: 'specs/invoicing.md', capabilityId: 'invoicing', reason, questions: [] } as const;
 const question = { id: 'Q1', text: 'Should existing callers retain the same behavior?', owner: 'maintainer' };
 const snapshot: SddCatalogSnapshot = {
   baseSha,
@@ -120,6 +121,31 @@ describe('PreBranchSddGateUseCase', () => {
     ]);
     expect(h.validateDraft).toHaveBeenCalledWith(snapshot, expect.objectContaining({ path: plan.path }), '# New SDD content', undefined);
     expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it('validates the proposed catalog owner before drafting a new capability', async () => {
+    const h = harness();
+    const newCapability = {
+      ...snapshot.capabilities[0], id: 'invoicing', title: 'Invoicing', status: 'proposed',
+      scope: 'Invoice behavior', specs: [newPlan.path],
+    };
+    h.query.mockResolvedValueOnce({ ...newPlan, newCapability });
+    h.query.mockResolvedValueOnce({ markdown: '# Invoice contract' });
+    expect((await h.useCase.begin(context())).status).toBe('drafted');
+    expect(h.validateDraft).toHaveBeenCalledWith(snapshot, newPlan, '# Invoice contract', newCapability);
+  });
+
+  it.each([
+    ['missing proposed owner', null],
+    ['wrong owner ID', { ...snapshot.capabilities[0], id: 'payments', status: 'proposed', specs: [newPlan.path] }],
+    ['missing tests', { ...snapshot.capabilities[0], id: 'invoicing', status: 'proposed', specs: [newPlan.path], tests: [] }],
+    ['invalid path type', { ...snapshot.capabilities[0], id: 'invoicing', status: 'proposed', specs: [newPlan.path], code: [42] }],
+  ])('blocks a new capability with %s', async (_reason, newCapability) => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...newPlan, newCapability });
+    h.query.mockResolvedValueOnce({ markdown: '# Invoice contract' });
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.validateDraft).not.toHaveBeenCalled();
   });
 
   it('restarts clarification when the development base changes while answers are pending', async () => {
@@ -239,6 +265,19 @@ describe('PreBranchSddGateUseCase', () => {
     expect(h.addComment).not.toHaveBeenCalled();
   });
 
+  it('blocks when branch linkage disappears after the SDD commit is pushed', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
+    h.query.mockResolvedValueOnce({ markdown: '# New SDD content' });
+    const first = await h.useCase.begin(context());
+    if (first.status !== 'drafted') throw new Error('expected draft');
+    h.getLinkedBranch.mockResolvedValueOnce({ name: 'feature/42-change', headSha: baseSha });
+    h.getLinkedBranch.mockResolvedValueOnce(undefined);
+    expect((await h.useCase.publish(context(), first, 'feature/42-change')).status).toBe('blocked');
+    expect(h.publish).toHaveBeenCalledTimes(1);
+    expect(h.addComment).not.toHaveBeenCalled();
+  });
+
   it('blocks publication after a human title edit but ignores the generated emoji prefix', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
@@ -278,6 +317,8 @@ describe('PreBranchSddGateUseCase', () => {
     expect(published).toMatchObject({ status: 'published', commitSha: revisionSha });
     expect(h.comments[0].body).toContain(revisionSha);
     expect(h.comments[0].body).toContain(commitSha);
+    h.verifyPublication.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    expect((await h.useCase.begin(revisedContext)).status).toBe('blocked');
   });
 
   it('blocks an invalid owner response before asking questions or drafting', async () => {

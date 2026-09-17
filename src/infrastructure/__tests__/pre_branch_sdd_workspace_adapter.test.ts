@@ -61,6 +61,22 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
   beforeEach(() => { ({ temp, repo } = fixture()); });
   afterEach(() => fs.rmSync(temp, { recursive: true, force: true }));
 
+  it('reads only safe SDD paths from the selected base commit', async () => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    expect(await workspace.readSdd(snapshot.baseSha, plan.path)).toContain('Existing payment contract');
+    expect(await workspace.readSdd(snapshot.baseSha, 'specs/missing.md')).toBeUndefined();
+    await expect(workspace.readSdd(snapshot.baseSha, '../outside.md')).rejects.toThrow('outside the specification boundary');
+  });
+
+  it('rejects a malformed repository catalog before asking an agent to draft', async () => {
+    fs.writeFileSync(path.join(repo, 'specs/catalog.json'), '{"version":2,"capabilities":[]}\n');
+    git(repo, 'add', 'specs/catalog.json');
+    git(repo, 'commit', '-m', 'invalid catalog');
+    git(repo, 'push', 'origin', 'develop');
+    await expect(new PreBranchSddWorkspaceAdapter(repo).loadSnapshot('develop')).rejects.toThrow('no valid SDD catalog');
+  });
+
   it('validates before branch creation and makes the SDD the only first branch change', async () => {
     const workspace = new PreBranchSddWorkspaceAdapter(repo);
     const snapshot = await workspace.loadSnapshot('develop');
@@ -88,6 +104,25 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     git(repo, 'push', 'origin', 'feature/42-change');
     await expect(workspace.publish('feature/42-change', prepared)).rejects.toThrow('already contains commits');
     await expect(workspace.recoverPublished('feature/42-change', prepared)).resolves.toBeUndefined();
+  });
+
+  it('rejects a draft whose selected SDD path is already owned by another action', async () => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    await expect(workspace.validateDraft(snapshot, { ...plan, action: 'companion' }, draft()))
+      .rejects.toThrow('SDD owner changed since analysis');
+  });
+
+  it('rejects an unrelated SDD commit even if its parent and changed path match', async () => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
+    git(repo, 'checkout', '-b', 'unrelated', snapshot.baseSha);
+    fs.writeFileSync(path.join(repo, plan.path), draft());
+    git(repo, 'add', '--', plan.path);
+    git(repo, 'commit', '-m', 'unrelated SDD');
+    const unrelatedSha = git(repo, 'rev-parse', 'HEAD');
+    expect(await workspace.verifyPublication('feature/42-change', snapshot.baseSha, unrelatedSha, plan.path)).toBe(false);
   });
 
   it('adds a companion SDD and its generated catalog as the only first-commit files', async () => {
