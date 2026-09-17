@@ -21,6 +21,7 @@ import {
   type RecommendStepsOutcome,
 } from './push_single_action_contexts';
 import type { BranchConfigurationPatch } from './issue_workflow_context';
+import { ISSUE_START_LABEL } from '../../domain/issue_start_policy';
 
 export class IssueUseCase implements ParamUseCase<Execution, Result[]> {
   taskId: string = "IssueUseCase";
@@ -91,7 +92,9 @@ function buildIssueWorkflowAdmissionResult(
 }
 
 function projectIssueWorkflowRouteContext(param: Execution): IssueWorkflowRouteContext {
-  const recommendation = !param.issue.opened && !param.issue.descriptionEdited
+  const started = param.issueStartDecision.started;
+  const startEvent = param.issue.labeled && param.issue.labelAdded === ISSUE_START_LABEL;
+  const recommendation = !started || (!startEvent && !param.issue.descriptionEdited && !param.issue.opened)
     ? undefined
     : param.labels.isRelease || param.labels.isHotfix
         ? undefined
@@ -99,6 +102,11 @@ function projectIssueWorkflowRouteContext(param: Execution): IssueWorkflowRouteC
           ? 'answer-help' as const
           : 'recommend' as const;
   return Object.freeze({
+    started,
+    sddRequired: param.issueStartDecision.sddRequired,
+    sddPublished: false,
+    issueNumber: param.issue.number,
+    branchName: param.currentConfiguration.workingBranch,
     cleanIssueBranches: param.cleanIssueBranches,
     branched: param.isBranched,
     membersOnly: param.ai.getAiMembersOnly(),

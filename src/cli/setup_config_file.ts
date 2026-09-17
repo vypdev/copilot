@@ -47,7 +47,7 @@ const REPOSITORY_STRING_KEYS = new Set([
     'orchestrationPresentationMode',
     'orchestrationCommentMode',
 ]);
-const REPOSITORY_BOOLEAN_KEYS = new Set(['branchManagementAlways', 'reopenIssueOnPush', 'orchestrationDiagrams']);
+const REPOSITORY_BOOLEAN_KEYS = new Set(['issueManagedBranches', 'preBranchSdd', 'reopenIssueOnPush', 'orchestrationDiagrams']);
 const REPOSITORY_NUMBER_KEYS = new Set(['desiredAssigneesCount', 'desiredReviewersCount', 'inactivityThresholdHours']);
 const REPOSITORY_STRUCTURED_KEYS = new Set(['mergeQueueCheckAttestations']);
 const AI_STRING_KEYS = new Set(['ignoreFiles', 'pullRequestDescriptionMode', 'bugbotSeverity', 'bugbotFixVerifyCommands', 'bugbotEffort', 'bugbotOrganizationRules', 'provisioningMode']);

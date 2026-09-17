@@ -2,7 +2,7 @@ name: 🔥 Hotfix Issue
 
 description: Request a new hotfix for copilot (only team members)
 title: "<YOUR TITLE HERE>"
-labels: [ "hotfix", "branched", "priority: high" ]
+labels: [ "hotfix", "priority: high" ]
 body:
   - type: markdown
     attributes:

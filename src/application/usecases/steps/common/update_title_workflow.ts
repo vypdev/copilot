@@ -13,7 +13,6 @@ export type UpdateTitleContext =
         readonly issueNumber: number;
         readonly fallbackTitle: string;
         readonly version: string;
-        readonly branchManagementAlways: boolean;
         readonly branchManagementEmoji: string;
         readonly labelFacts: TitleLabelFacts;
     }
@@ -34,7 +33,6 @@ export interface UpdateTitleContextSource {
     readonly issue: {
         readonly number: number;
         readonly title: string;
-        readonly branchManagementAlways: boolean;
     };
     readonly pullRequest: { readonly number: number; readonly title: string };
     readonly emoji: { readonly emojiLabeledTitle: boolean; readonly branchManagementEmoji: string };
@@ -55,7 +53,6 @@ export function projectUpdateTitleContext(source: UpdateTitleContextSource): Upd
                 : source.hotfix.active
                     ? source.hotfix.version ?? ''
                     : '',
-            branchManagementAlways: source.issue.branchManagementAlways,
             branchManagementEmoji: source.emoji.branchManagementEmoji,
             labelFacts: projectTitleLabelFacts(source.labels),
         });
@@ -84,7 +81,6 @@ export async function runIssueTitleUpdate(
         version: param.version,
         currentTitle,
         issueNumber: param.issueNumber,
-        branchManagementAlways: param.branchManagementAlways,
         branchManagementEmoji: param.branchManagementEmoji,
         labelFacts: param.labelFacts,
     });

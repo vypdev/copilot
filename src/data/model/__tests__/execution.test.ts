@@ -55,7 +55,6 @@ import { applySetupExecutionResult, projectSetupExecutionContext } from '../../.
 
 function makeLabels(): Labels {
   return new Labels(
-    'launch',
     'bug',
     'bugfix',
     'hotfix',
@@ -321,10 +320,11 @@ describe('Execution', () => {
       expect(e.isChore).toBe(true);
     });
 
-    it('isBranched returns true when labels contain branched label', () => {
+    it('isBranched follows the fixed start label when branch management is enabled', () => {
       const labels = makeLabels();
-      labels.currentIssueLabels = ['launch'];
-      const e = buildExecution(undefined, { labels });
+      labels.currentIssueLabels = ['feature', 'in-progress'];
+      const e = buildExecution(undefined, { labels, issue: new Issue(true, false, 0) });
+      e.currentIssueWorkflowAdmission = { status: 'eligible', kind: 'feature' };
       expect(e.isBranched).toBe(true);
     });
 

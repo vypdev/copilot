@@ -30,7 +30,7 @@ describe('configuration builders', () => {
         const pullRequest = buildPullRequest(1, 2, inputs);
 
         expect(issue.inputs).toBe(inputs);
-        expect(issue.branchManagementAlways).toBe(true);
+        expect(issue.issueManagedBranches).toBe(true);
         expect(pullRequest.inputs).toBe(inputs);
     });
 
@@ -41,13 +41,13 @@ describe('configuration builders', () => {
 
     it('maps labels by branching, workflow, priority, and size groups', () => {
         const labels = buildLabels({
-            branching: { launcher: 'branched' },
             workflow: { bug: 'bug', bugfix: 'bugfix', hotfix: 'hotfix', enhancement: 'enhancement', feature: 'feature', release: 'release', question: 'question', help: 'help', deploy: 'deploy', deployed: 'deployed', docs: 'docs', documentation: 'documentation', chore: 'chore', maintenance: 'maintenance' },
             priorities: { high: 'P0', medium: 'P1', low: 'P2', none: 'none' },
             sizes: { xxl: 'XXL', xl: 'XL', l: 'L', m: 'M', s: 'S', xs: 'XS' },
         });
 
-        expect(labels.branchManagementLauncherLabel).toBe('branched');
+        labels.currentIssueLabels = ['branched'];
+        expect(labels.containsBranchedLabel).toBe(true);
         expect(labels.isBug).toBe(false);
         expect(labels.sizeLabels).toEqual(['XXL', 'XL', 'L', 'M', 'S', 'XS']);
         expect(labels.priorityHigh).toBe('P0');

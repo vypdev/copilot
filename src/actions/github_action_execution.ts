@@ -80,11 +80,12 @@ export async function buildGithubActionExecution(
         singleAction,
         commitPrefixBuilder: getCommitPrefixBuilder(getInput),
         issue: buildIssue(
-            isEnabledInput(getInput(INPUT_KEYS.BRANCH_MANAGEMENT_ALWAYS)),
+            isEnabledInput(getInput(INPUT_KEYS.ISSUE_MANAGED_BRANCHES)),
             isEnabledInput(getInput(INPUT_KEYS.REOPEN_ISSUE_ON_PUSH)),
             parseIntegerInput(getInput(INPUT_KEYS.DESIRED_ASSIGNEES_COUNT), 0),
             eventInputs,
         ),
+        preBranchSdd: isEnabledInput(getInput(INPUT_KEYS.PRE_BRANCH_SDD)),
         pullRequest: buildPullRequest(
             parseIntegerInput(getInput(INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0),
             parseIntegerInput(getInput(INPUT_KEYS.PULL_REQUEST_DESIRED_REVIEWERS_COUNT), 0),

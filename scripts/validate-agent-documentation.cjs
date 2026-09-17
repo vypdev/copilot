@@ -120,8 +120,10 @@ for (const [relative, role] of Object.entries(generatedArtifactPaths)) {
 const profile = JSON.parse(fs.readFileSync(path.join(root, '.copilot/repository-profile.json'), 'utf8'));
 const expectedProfileKeys = ['branches', 'deployment', 'generator', 'issueWorkflows', 'pullRequests', 'schemaVersion'];
 if (JSON.stringify(Object.keys(profile).sort()) !== JSON.stringify(expectedProfileKeys)
-  || profile.schemaVersion !== 1
+  || profile.schemaVersion !== 2
   || profile.branches?.remoteLifecycleOwner !== 'github-action'
+  || profile.branches?.startLabel !== 'in-progress'
+  || profile.branches?.readyLabel !== 'branched'
   || profile.branches?.helpCreatesBranch !== false
   || profile.pullRequests?.mustLinkIssue !== true
   || profile.deployment?.agentMayInitiateWithoutExplicitAuthorization !== false) {

@@ -567,7 +567,7 @@ describe("DeploymentOrchestrationUseCase", () => {
     const result = await value.useCase.invoke(input);
     expect(result[0].success).toBe(true);
     expect(value.labels.setLabels).toHaveBeenCalledWith(
-      355, expect.arrayContaining(["release", "deployed", "state:in-progress"]),
+      355, expect.arrayContaining(["release", "deployed", "state:working"]),
     );
     expect(input.currentConfiguration.deploymentOrchestration).toEqual(expect.objectContaining({ phase: "reconciliation_pending", publicationVerified: true }));
   });

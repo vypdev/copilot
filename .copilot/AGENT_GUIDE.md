@@ -25,11 +25,13 @@ Create managed work with the exact installed Issue Form listed below. Do not use
 
 The GitHub Action exclusively owns creation, naming, base selection, rename, synchronization, and deletion of managed remote branches. Work like a human contributor: fetch and check out the exact branch linked by the Action, make focused changes, test, commit, and push normal commits to that same remote ref. Never invent a replacement branch, create a differently named remote branch, force-push, or delete a managed branch.
 
-Implementation is launched by the `branched` label. Apply or request that label only when the user has authorized starting implementation.
+An authorized maintainer starts every admitted issue by adding `in-progress`. The Action applies `branched` only after its linked branch and any required SDD commit are verified.
+
+The pre-branch SDD gate is disabled in this repository.
 
 If the expected branch is absent or delayed, inspect the Action result and wait or ask a maintainer. Exceptional recovery requires all of: an explicit Action branch-management error, explicit maintainer authorization, the exact expected ref and base from diagnostics, and a recorded reconciliation plan.
 
-Help issues are branchless even when branch management is configured as always-on. Code changes require a branch-bearing enabled kind.
+Help issues are branchless. Code changes require a branch-bearing enabled kind and Action-managed branches.
 
 ## Pull requests and deployment
 

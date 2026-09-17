@@ -26,6 +26,9 @@ import { AnswerIssueHelpUseCase } from "../../application/usecases/steps/issue/a
 import { BranchLifecycleRepository } from "../../data/repository/branch_lifecycle_repository";
 import { BranchNameRepository } from "../../data/repository/branch_name_repository";
 import { LinkedBranchRepository } from "../../data/repository/branch/linked_branch_repository";
+import { LinkedBranchReadinessRepository } from "../../data/repository/branch/linked_branch_readiness_repository";
+import { ReconcileBranchReadinessUseCase } from "../../application/usecases/steps/issue/reconcile_branch_readiness_use_case";
+import { createIssueLabelRepository } from './issue_labels_composition_root';
 import { GitCliRepository } from "../../data/repository/git_cli_repository";
 import { IssueAssignmentRepository } from "../../data/repository/issue/issue_assignment_repository";
 import { IssueClosureRepository } from "../../data/repository/issue/issue_closure_repository";
@@ -56,6 +59,7 @@ import {
   bindIssueAssignee,
   bindIssueState,
   bindIssueTypeAssignment,
+  bindIssueLabels,
   bindLinkedBranchCommand,
   bindOrganizationMemberSelection,
   bindProjectBoardCommands,
@@ -120,6 +124,14 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
       boundLinkedBranch,
       branchPropagationDelay,
       moveIssueToInProgress,
+    ),
+    reconcileBranchReadiness: new ReconcileBranchReadinessUseCase(
+      {
+        getLinkedBranch: (issueNumber, branchName) => new LinkedBranchReadinessRepository(
+          createGraphqlTransportClient(),
+        ).getLinkedBranch(binding.owner, binding.repository, issueNumber, branchName, binding.token),
+      },
+      bindIssueLabels(createIssueLabelRepository(), binding),
     ),
     removeNotNeededBranches: new RemoveNotNeededBranchesUseCase(
       boundBranchLifecycle,

@@ -15,6 +15,7 @@ const createIssueMetadataClient = jest.fn(() => ({
   kind: "issue-metadata-client",
 }));
 const createIssueTitleClient = jest.fn(() => ({ kind: "issue-title-client" }));
+const createIssueLabelsClient = jest.fn(() => ({ kind: "issue-labels-client" }));
 const createWorkflowDispatchClient = jest.fn(() => ({
   kind: "workflow-client",
 }));
@@ -29,6 +30,7 @@ jest.mock("../github_issue_client_factory", () => ({
   createIssueLifecycleClient,
   createIssueMetadataClient,
   createIssueTitleClient,
+  createIssueLabelsClient,
 }));
 jest.mock("../github_workflow_client_factory", () => ({
   createWorkflowDispatchClient,
@@ -106,6 +108,7 @@ describe("issue use case composition root", () => {
     expect(workflowSteps).toEqual(expect.objectContaining({
       checkPermissions: expect.objectContaining({ invoke: expect.any(Function) }),
       prepareBranches: expect.objectContaining({ invoke: expect.any(Function) }),
+      reconcileBranchReadiness: expect.objectContaining({ invoke: expect.any(Function) }),
       removeNotNeededBranches: expect.objectContaining({ invoke: expect.any(Function) }),
     }));
     expect(createBranchClient).toHaveBeenCalledTimes(1);

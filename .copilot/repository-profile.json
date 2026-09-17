@@ -1,8 +1,8 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "generator": {
     "name": "@vypdev/copilot",
-    "contractVersion": 1
+    "contractVersion": 2
   },
   "issueWorkflows": {
     "enabled": [
@@ -125,7 +125,6 @@
         ],
         "formLabels": [
           "hotfix",
-          "branched",
           "priority: high"
         ],
         "nativeIssueType": "Hotfix",
@@ -147,7 +146,6 @@
         ],
         "formLabels": [
           "release",
-          "branched",
           "priority: medium"
         ],
         "nativeIssueType": "Release",
@@ -165,10 +163,10 @@
   },
   "branches": {
     "remoteLifecycleOwner": "github-action",
-    "launcher": {
-      "mode": "label",
-      "label": "branched"
-    },
+    "issueManagedBranches": true,
+    "preBranchSdd": false,
+    "startLabel": "in-progress",
+    "readyLabel": "branched",
     "helpCreatesBranch": false
   },
   "pullRequests": {

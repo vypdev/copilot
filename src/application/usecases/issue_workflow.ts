@@ -25,8 +25,13 @@ import type {
 } from './push_single_action_contexts';
 
 export interface IssueWorkflowRouteContext {
+  readonly started: boolean;
   readonly cleanIssueBranches: boolean;
   readonly branched: boolean;
+  readonly sddRequired?: boolean;
+  readonly sddPublished?: boolean;
+  readonly branchName?: string;
+  readonly issueNumber?: number;
   readonly membersOnly: boolean;
   readonly actor: string;
   readonly newIssue: boolean;
@@ -89,7 +94,7 @@ export async function runIssueWorkflow(
     return issueWorkflowOutcome(results);
   }
 
-  if (context.cleanIssueBranches) {
+  if (context.started && context.cleanIssueBranches) {
     results.push(...(await ports.workflowSteps.removeIssueBranches.invoke(ports.sharedContexts.steps.removeIssueBranches)));
   }
 
@@ -98,21 +103,34 @@ export async function runIssueWorkflow(
   results.push(...(await ports.workflowSteps.updateIssueType.invoke(ports.sharedContexts.steps.issueType)));
   results.push(...(await ports.workflowSteps.linkIssueProject.invoke(ports.sharedContexts.projectLink)));
   results.push(...(await ports.workflowSteps.checkPriorityIssueSize.invoke(ports.sharedContexts.steps.priority)));
-  if (context.branched) {
+  if (context.started && context.branched && !context.sddRequired) {
     const outcome = await ports.workflowSteps.prepareBranches.invoke(ports.sharedContexts.steps.prepareBranches);
     branchConfigurationPatch = outcome.configurationPatch;
     results.push(...outcome.results);
-  } else {
-    results.push(...(await ports.workflowSteps.removeIssueBranches.invoke(ports.sharedContexts.steps.removeIssueBranches)));
   }
-  results.push(...(await ports.workflowSteps.removeNotNeededBranches.invoke(ports.sharedContexts.steps.removeObsoleteBranches)));
-  results.push(...(await ports.workflowSteps.deployAdded.invoke(ports.sharedContexts.steps.deployAdded)));
+  let branchReady = false;
+  if (ports.workflowSteps.reconcileBranchReadiness && context.issueNumber !== undefined) {
+    const readinessResults = await ports.workflowSteps.reconcileBranchReadiness.invoke({
+      issueNumber: context.issueNumber,
+      branchName: branchConfigurationPatch?.workingBranch ?? context.branchName,
+      sddRequired: context.sddRequired ?? false,
+      sddPublished: context.sddPublished ?? false,
+    });
+    results.push(...readinessResults);
+    branchReady = readinessResults.some(result => result.success && result.payload !== undefined);
+  }
+  if (context.started) {
+    results.push(...(await ports.workflowSteps.removeNotNeededBranches.invoke(ports.sharedContexts.steps.removeObsoleteBranches)));
+    if (!context.branched || branchReady) {
+      results.push(...(await ports.workflowSteps.deployAdded.invoke(ports.sharedContexts.steps.deployAdded)));
+    }
+  }
 
   const agentAllowed = !context.membersOnly || Boolean(
     ports.actorAuthorizationPort
     && await ports.actorAuthorizationPort.isActorAllowedToModifyFiles(context.actor),
   );
-  const recommendation = agentAllowed ? context.recommendation : undefined;
+  const recommendation = context.started && agentAllowed ? context.recommendation : undefined;
   if (recommendation) {
     const recommendationOutcome = recommendation === 'answer-help'
       ? { results: await ports.answerIssueHelpUseCase.invoke(ports.sharedContexts.steps.answerHelp) }

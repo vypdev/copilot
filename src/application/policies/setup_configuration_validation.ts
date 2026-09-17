@@ -10,6 +10,14 @@ import { effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
 
 export function validateSetupConfiguration(configuration: SetupConfiguration): string[] {
     const errors: string[] = [];
+    if (configuration.repository.preBranchSdd && !configuration.repository.issueManagedBranches) {
+        errors.push('pre-branch-sdd requires issue-managed-branches.');
+    }
+    for (const retired of ['branch-management-always', 'branch-management-launcher-label']) {
+        if (retired in configuration.actionInputs) {
+            errors.push(`Action input ${retired} was removed; use issue-managed-branches and the fixed in-progress start label.`);
+        }
+    }
     const enabledWorkflows = configuration.issueWorkflows?.enabled ?? ISSUE_WORKFLOW_KINDS;
     const unknownWorkflows = enabledWorkflows.filter(kind => !ISSUE_WORKFLOW_KINDS.includes(kind));
     if (unknownWorkflows.length > 0) errors.push(`Unknown issue workflow(s): ${unknownWorkflows.join(', ')}.`);
@@ -26,7 +34,7 @@ export function validateSetupConfiguration(configuration: SetupConfiguration): s
         errors.push('Repository agent guidance pointer must be prompt, create-if-missing, or disabled.');
     }
     for (const key of [
-        'branch-management-launcher-label', 'bug-label', 'bugfix-label', 'hotfix-label',
+        'bug-label', 'bugfix-label', 'hotfix-label',
         'enhancement-label', 'feature-label', 'release-label', 'question-label', 'help-label',
         'deploy-label', 'deployed-label', 'docs-label', 'documentation-label', 'chore-label',
         'maintenance-label', 'priority-high-label', 'priority-medium-label', 'priority-low-label',

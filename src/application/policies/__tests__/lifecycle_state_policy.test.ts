@@ -13,10 +13,10 @@ const findingStates = (overrides: Record<string, number> = {}) => ({
 });
 
 describe('lifecycle state policy', () => {
-    it('moves an issue to planned and in-progress while agent activity remains separate', () => {
+    it('moves an issue to planned and working while agent activity remains separate', () => {
         expect(resolveLifecycleState({ eventName: 'issues', action: 'opened', isIssue: true, isPullRequest: false, issueOpened: true, issueDescriptionEdited: false, pullRequestMerged: false, pullRequestClosed: false, results: [] })).toBeUndefined();
         expect(resolveLifecycleState({ eventName: 'issues', action: 'edited', isIssue: true, isPullRequest: false, issueOpened: false, issueDescriptionEdited: true, pullRequestMerged: false, pullRequestClosed: false, results: [result('RecommendStepsUseCase')] })).toBe('planned');
-        expect(resolveLifecycleState({ eventName: 'issues', action: 'labeled', isIssue: true, isPullRequest: false, issueOpened: false, issueDescriptionEdited: false, pullRequestMerged: false, pullRequestClosed: false, results: [result('PrepareBranchesUseCase')] })).toBe('in-progress');
+        expect(resolveLifecycleState({ eventName: 'issues', action: 'labeled', isIssue: true, isPullRequest: false, issueOpened: false, issueDescriptionEdited: false, pullRequestMerged: false, pullRequestClosed: false, results: [result('PrepareBranchesUseCase')] })).toBe('working');
     });
 
     it('moves a PR to reviewing, verified, or blocked', () => {

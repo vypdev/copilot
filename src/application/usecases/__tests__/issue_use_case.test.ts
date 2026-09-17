@@ -44,7 +44,7 @@ const workflowSteps = {
 };
 
 function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
-  const defaultIssue = { number: 8, opened: false, creator: 'alice', title: 'Issue', body: '', labeled: false, labelAdded: '', desiredAssigneesCount: 1, branchManagementAlways: false };
+  const defaultIssue = { number: 8, opened: false, creator: 'alice', title: 'Issue', body: '', labeled: false, labelAdded: '', desiredAssigneesCount: 1, issueManagedBranches: false };
   const defaultPullRequest = { number: -1, opened: false, creator: '', title: '', id: '', desiredAssigneesCount: 0 };
   const defaultLabels = {
     isRelease: false,
@@ -73,6 +73,7 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
   };
   const base = {
     cleanIssueBranches: false,
+    issueStartDecision: { started: true, branchRequired: true, sddRequired: false, helpRequired: false },
     isBranched: true,
     isIssue: true,
     isPullRequest: false,
@@ -224,12 +225,12 @@ describe("IssueUseCase", () => {
     expect(results.some((result) => result.id === 'branch')).toBe(true);
   });
 
-  it("removes issue branches instead when branching is disabled", async () => {
+  it("never deletes an existing branch when branch management is disabled", async () => {
     const param = minimalExecution({ isBranched: false });
 
     await createUseCase().invoke(param);
 
-    expect(mockRemoveIssueBranchesInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8 }));
+    expect(mockRemoveIssueBranchesInvoke).not.toHaveBeenCalled();
   });
 
   it("recommends steps for a newly opened non-release issue", async () => {

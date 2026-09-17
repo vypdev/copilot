@@ -102,7 +102,6 @@ export const INPUT_KEYS = {
     BRANCH_MANAGEMENT_EMOJI: 'branch-management-emoji',
 
     // Labels
-    BRANCH_MANAGEMENT_LAUNCHER_LABEL: 'branch-management-launcher-label',
     BUGFIX_LABEL: 'bugfix-label',
     BUG_LABEL: 'bug-label',
     HOTFIX_LABEL: 'hotfix-label',
@@ -131,7 +130,8 @@ export const INPUT_KEYS = {
     // Lifecycle label inputs
     STATE_AI_PROCESSING_LABEL: 'state-ai-processing-label',
     STATE_PLANNED_LABEL: 'state-planned-label',
-    STATE_IN_PROGRESS_LABEL: 'state-in-progress-label',
+    STATE_WORKING_LABEL: 'state-working-label',
+    STATE_SPECIFYING_LABEL: 'state-specifying-label',
     STATE_REVIEWING_LABEL: 'state-reviewing-label',
     STATE_CHANGES_REQUESTED_LABEL: 'state-changes-requested-label',
     STATE_VERIFIED_LABEL: 'state-verified-label',
@@ -217,7 +217,8 @@ export const INPUT_KEYS = {
     COMMIT_PREFIX_TRANSFORMS: 'commit-prefix-transforms',
 
     // Issue
-    BRANCH_MANAGEMENT_ALWAYS: 'branch-management-always',
+    ISSUE_MANAGED_BRANCHES: 'issue-managed-branches',
+    PRE_BRANCH_SDD: 'pre-branch-sdd',
     REOPEN_ISSUE_ON_PUSH: 'reopen-issue-on-push',
     DESIRED_ASSIGNEES_COUNT: 'desired-assignees-count',
 

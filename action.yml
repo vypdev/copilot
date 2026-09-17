@@ -38,14 +38,14 @@ inputs:
   emoji-labeled-title:
     description: "Enable titles with emojis based on issue labels."
     default: "true"
-  branch-management-launcher-label:
-    description: "Label to trigger branch management actions."
-    default: "branched"
-  branch-management-always:
-    description: "If true, ignores the branch-management-launcher-label requirement for running Git Board."
+  issue-managed-branches:
+    description: "Let the Action create linked branches after an authorized in-progress start."
+    default: "true"
+  pre-branch-sdd:
+    description: "Require a validated SDD first commit for started feature and contract-change issues. Requires issue-managed-branches."
     default: "false"
   issue-workflow-profile:
-    description: "JSON profile of enabled issue workflows. Empty preserves legacy behavior; setup writes schemaVersion 1 with an enabled array."
+    description: "JSON profile of enabled issue workflows."
     default: ""
   branch-management-emoji:
     description: "Emoji to indicate branched issues. It will be ignored if emoji-labeled-title is false."
@@ -128,9 +128,12 @@ inputs:
   state-planned-label:
     description: "Label for the Copilot lifecycle state: planned."
     default: "state:planned"
-  state-in-progress-label:
-    description: "Label for the Copilot lifecycle state: implementation in progress."
-    default: "state:in-progress"
+  state-working-label:
+    description: "Label for work ready on a branch or branchless help."
+    default: "state:working"
+  state-specifying-label:
+    description: "Label for active SDD clarification and drafting."
+    default: "state:specifying"
   state-reviewing-label:
     description: "Label for the Copilot lifecycle state: reviewing."
     default: "state:reviewing"

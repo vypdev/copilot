@@ -22,7 +22,7 @@ const mockCloseIssueInvoke = jest.fn();
 const mockReviewPotentialProblemsInvoke = jest.fn();
 
 function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
-  const defaultIssue = { number: -1, title: '', creator: '', desiredAssigneesCount: 0, branchManagementAlways: false };
+  const defaultIssue = { number: -1, title: '', creator: '', desiredAssigneesCount: 0, issueManagedBranches: false };
   const defaultPullRequest = {
     number: 7,
     id: 'PR_node_7',

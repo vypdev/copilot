@@ -89,7 +89,7 @@ function source(): DeepMutable<PushSingleActionContextSource> {
     },
     inactivityThresholdHours: 168,
     labels: {
-      branchManagementLauncherLabel: 'branch-management', bug: 'bug', bugfix: 'bugfix', hotfix: 'hotfix',
+      bug: 'bug', bugfix: 'bugfix', hotfix: 'hotfix',
       enhancement: 'enhancement', feature: 'feature', release: 'release', question: 'question', help: 'help',
       deploy: 'deploy', deployed: 'deployed', docs: 'docs', documentation: 'documentation', chore: 'chore',
       maintenance: 'maintenance', priorityHigh: 'priority: high', priorityMedium: 'priority: medium',

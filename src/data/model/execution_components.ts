@@ -46,4 +46,5 @@ export interface ExecutionComponents {
     issueWorkflowProfileLegacy?: boolean;
     issueWorkflowProfileDigest?: string;
     issueWorkflowAdmission?: IssueWorkflowAdmission;
+    preBranchSdd?: boolean;
 }

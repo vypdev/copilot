@@ -33,6 +33,7 @@ import {
 } from './main_run_lifecycle';
 import { decideIssueWorkflowRuntime } from '../domain/issue_workflow_runtime_policy';
 import { ApplicationError } from '../application/errors/application_error';
+import { ISSUE_START_LABEL } from '../domain/issue_start_policy';
 
 export type PrepareExecutionRuntime = (execution: Execution) => Promise<void> | void;
 
@@ -128,7 +129,7 @@ function isExplicitIssueWorkflowIntent(execution: Execution): boolean {
     if (execution.isSingleAction && execution.issueNumber > 0) return true;
     if (execution.issue.isIssueComment) return true;
     if (!execution.issue.labeled) return false;
-    return [execution.labels.branchManagementLauncherLabel, execution.labels.deploy]
+    return [ISSUE_START_LABEL, execution.labels.deploy]
         .includes(execution.issue.labelAdded);
 }
 

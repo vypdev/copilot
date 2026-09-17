@@ -10,12 +10,12 @@ function execution(overrides: Record<string, unknown> = {}): any {
         issue: { number: 7 },
         pullRequest: { number: 0 },
         labels: {
-            currentIssueLabels: ['feature', 'state:in-progress', 'state:awaiting-maintainer'],
+            currentIssueLabels: ['feature', 'state:working', 'state:awaiting-maintainer'],
             currentPullRequestLabels: [],
             lifecycle: {
                 aiProcessing: 'state:ai-processing',
                 planned: 'state:planned',
-                inProgress: 'state:in-progress',
+                specifying: 'state:specifying', working: 'state:working',
                 reviewing: 'state:reviewing',
                 changesRequested: 'state:changes-requested',
                 verified: 'state:verified',
@@ -35,7 +35,7 @@ describe('SynchronizeAgentActivityUseCase', () => {
         const setLabels = jest.fn().mockResolvedValue(undefined);
         const getLabels = jest.fn().mockResolvedValue([
             'feature',
-            'state:in-progress',
+            'state:working',
             'state:awaiting-maintainer',
             'state:ai-processing',
             'size: M',
@@ -50,12 +50,12 @@ describe('SynchronizeAgentActivityUseCase', () => {
         expect(setLabels).toHaveBeenNthCalledWith(
             1,
             7,
-            ['feature', 'state:in-progress', 'state:awaiting-maintainer', 'state:ai-processing'],
+            ['feature', 'state:working', 'state:awaiting-maintainer', 'state:ai-processing'],
         );
         expect(setLabels).toHaveBeenNthCalledWith(
             2,
             7,
-            ['feature', 'state:in-progress', 'state:awaiting-maintainer', 'size: M'],
+            ['feature', 'state:working', 'state:awaiting-maintainer', 'size: M'],
         );
         expect(getLabels).toHaveBeenCalledWith(7);
     });

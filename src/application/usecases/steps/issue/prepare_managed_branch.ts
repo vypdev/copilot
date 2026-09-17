@@ -57,7 +57,7 @@ export async function prepareManagedBranch(
         success: true,
         executed: false,
       }),
-    ]);
+    ], { workingBranch: decision.targetBranchName });
   }
 
   const branchesResult = await dependencies.linkedBranchCommandPort.createLinkedBranch(

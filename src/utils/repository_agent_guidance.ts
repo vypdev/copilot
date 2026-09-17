@@ -369,10 +369,10 @@ function validRepositoryAgentProfile(content: string): boolean {
   try {
     const parsed: unknown = JSON.parse(content);
     if (!hasExactKeys(parsed, ['schemaVersion', 'generator', 'issueWorkflows', 'branches', 'pullRequests', 'deployment'])
-      || parsed.schemaVersion !== 1) return false;
+      || parsed.schemaVersion !== 2) return false;
     const { generator, issueWorkflows, branches, pullRequests, deployment } = parsed;
     if (!hasExactKeys(generator, ['name', 'contractVersion'])
-      || generator.name !== '@vypdev/copilot' || generator.contractVersion !== 1) return false;
+      || generator.name !== '@vypdev/copilot' || generator.contractVersion !== 2) return false;
     if (!hasExactKeys(issueWorkflows, ['enabled', 'formsEnabled', 'forms'])) return false;
     const { enabled: rawEnabled, formsEnabled, forms } = issueWorkflows;
     if (typeof formsEnabled !== 'boolean'
@@ -387,13 +387,16 @@ function validRepositoryAgentProfile(content: string): boolean {
       forms[kind],
       kind,
       formsEnabled,
+      isRecord(branches) && branches.issueManagedBranches === true,
     ))) return false;
-    if (!hasExactKeys(branches, ['remoteLifecycleOwner', 'launcher', 'helpCreatesBranch'])
+    if (!hasExactKeys(branches, ['remoteLifecycleOwner', 'issueManagedBranches', 'preBranchSdd', 'startLabel', 'readyLabel', 'helpCreatesBranch'])
       || branches.remoteLifecycleOwner !== 'github-action'
       || branches.helpCreatesBranch !== false
-      || !hasExactKeys(branches.launcher, ['mode', 'label'])
-      || !['always', 'label'].includes(String(branches.launcher.mode))
-      || !isNonEmptyString(branches.launcher.label)) return false;
+      || typeof branches.issueManagedBranches !== 'boolean'
+      || typeof branches.preBranchSdd !== 'boolean'
+      || (branches.preBranchSdd && !branches.issueManagedBranches)
+      || branches.startLabel !== 'in-progress'
+      || branches.readyLabel !== 'branched') return false;
     if (!hasExactKeys(pullRequests, ['mustLinkIssue']) || pullRequests.mustLinkIssue !== true) return false;
     return hasExactKeys(deployment, ['agentMayInitiateWithoutExplicitAuthorization', 'launcherLabel'])
       && deployment.agentMayInitiateWithoutExplicitAuthorization === false
@@ -407,6 +410,7 @@ function validRepositoryAgentWorkflowFact(
   value: unknown,
   kind: IssueWorkflowKind,
   formsEnabled: boolean,
+  issueManagedBranches: boolean,
 ): boolean {
   if (!hasExactKeys(value, [
     'template', 'labels', 'formLabels', 'nativeIssueType', 'createsManagedBranch',
@@ -417,7 +421,7 @@ function validRepositoryAgentWorkflowFact(
     && isStringArray(value.labels) && value.labels.every(isNonEmptyString)
     && isStringArray(value.formLabels) && value.formLabels.every(isNonEmptyString)
     && value.nativeIssueType === definition.nativeIssueType
-    && value.createsManagedBranch === definition.branchManaged
+    && value.createsManagedBranch === (definition.branchManaged && issueManagedBranches)
     && (definition.branchManaged ? isNonEmptyString(value.branchPrefix) : value.branchPrefix === null)
     && isStringArray(value.requiredFields) && value.requiredFields.every(isNonEmptyString)
     && (value.workflow === null || isNonEmptyString(value.workflow));

@@ -45,7 +45,8 @@ jobs:
           release-tree: ${{ vars.RELEASE_TREE || 'release' }}
           docs-tree: ${{ vars.DOCS_TREE || 'docs' }}
           chore-tree: ${{ vars.CHORE_TREE || 'chore' }}
-          branch-management-always: ${{ vars.BRANCH_MANAGEMENT_ALWAYS || 'false' }}
+          issue-managed-branches: ${{ vars.ISSUE_MANAGED_BRANCHES || 'true' }}
+          pre-branch-sdd: ${{ vars.PRE_BRANCH_SDD || 'false' }}
           reopen-issue-on-push: ${{ vars.REOPEN_ISSUE_ON_PUSH || 'true' }}
           desired-assignees-count: ${{ vars.DESIRED_ASSIGNEES_COUNT || '1' }}
           desired-reviewers-count: ${{ vars.DESIRED_REVIEWERS_COUNT || '1' }}

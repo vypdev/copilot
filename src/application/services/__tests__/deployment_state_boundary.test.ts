@@ -46,7 +46,7 @@ function context(value: DeploymentOperationSnapshot) {
     singleAction: { issue: 355 },
     labels: { deploy: "deploy", deployed: "deployed", lifecycle: {
       planned: "state:planned",
-      inProgress: "state:in-progress",
+      inProgress: "state:working",
       reviewing: "state:reviewing",
       changesRequested: "state:changes-requested",
       verified: "state:verified",

@@ -81,7 +81,7 @@ describe('SynchronizeLifecycleStateUseCase', () => {
         });
         expect(dependencies.labels.setLabels).toHaveBeenCalledWith(
             7,
-            ['bug', 'state:in-progress'],
+            ['bug', 'state:working'],
         );
     });
 
@@ -99,7 +99,7 @@ describe('SynchronizeLifecycleStateUseCase', () => {
         });
         expect(dependencies.labels.setLabels).toHaveBeenCalledWith(
             7,
-            ['bug', 'state:ai-processing', 'size: M', 'state:in-progress'],
+            ['bug', 'state:ai-processing', 'size: M', 'state:working'],
         );
     });
 

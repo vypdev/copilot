@@ -77,7 +77,8 @@ export function resolveLifecycleState(
         return undefined;
     }
 
-    if (hasResult(input.results, 'PrepareBranchesUseCase')) return 'in-progress';
+    if (hasResult(input.results, 'PreBranchSddGateUseCase')) return 'specifying';
+    if (hasResult(input.results, 'PrepareBranchesUseCase')) return 'working';
     if (hasSuccessfulResult(input.results, 'RecommendStepsUseCase')) return 'planned';
     if (hasExplicitPlanningCommand(input.results)) return 'planned';
     return undefined;

@@ -66,7 +66,7 @@ export function buildCopilotStatusSnapshot(execution: CopilotStatusExecutionCont
     const lifecycleLabels: Partial<CopilotLifecycleLabels> = execution.labels?.lifecycle ?? {};
     const lifecycle = Object.entries({
         planned: lifecycleLabels.planned,
-        'in-progress': lifecycleLabels.inProgress,
+        'in-progress': lifecycleLabels.working,
         reviewing: lifecycleLabels.reviewing,
         'changes-requested': lifecycleLabels.changesRequested,
         verified: lifecycleLabels.verified,
