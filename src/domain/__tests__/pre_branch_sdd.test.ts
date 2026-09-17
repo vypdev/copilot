@@ -82,6 +82,41 @@ describe('pre-branch SDD policy', () => {
     };
     expect(readSddGateRecord(renderSddGateRecord(record), 42)).toBeUndefined();
   });
+
+  it('rejects forged branch, revision, and answer fields in a durable status marker', () => {
+    const record: SddGateRecord = {
+      version: 1, issueNumber: 42, phase: 'published', issueDigest: 'a'.repeat(64), baseSha: 'b'.repeat(40), round: 1,
+      plan: { ...plan, action: 'update' }, branchName: 'feature/42-change', commitSha: 'c'.repeat(40),
+    };
+    const marker = (change: Record<string, unknown>) => `<!-- copilot:sdd-gate:v1\n${JSON.stringify({ ...record, ...change })}\n-->`;
+    expect(readSddGateRecord(marker({ branchName: 'feature/../other' }), 42)).toBeUndefined();
+    expect(readSddGateRecord(marker({ revisionSha: 'd'.repeat(40) }), 42)).toBeUndefined();
+    expect(readSddGateRecord(marker({ answers: [{ questionId: 'Q1', author: 'alice', commentId: -1, text: 'yes' }] }), 42)).toBeUndefined();
+    expect(readSddGateRecord('<!-- copilot:sdd-gate:v1\nnot JSON\n-->', 42)).toBeUndefined();
+  });
+
+  it('shows a retained branch and links to the latest verified revision', () => {
+    const record: SddGateRecord = {
+      version: 1, issueNumber: 42, phase: 'published', issueDigest: 'a'.repeat(64), baseSha: 'b'.repeat(40), round: 2,
+      plan: { ...plan, action: 'update' }, branchName: 'feature/42-change', commitSha: 'c'.repeat(40),
+      revisionSha: 'd'.repeat(40), revisionBaseSha: 'c'.repeat(40),
+    };
+    const body = renderSddGateRecord(record, 'en-US', 'https://github.com/acme/repo/issues/42');
+    expect(body).toContain(`https://github.com/acme/repo/blob/${record.revisionSha}/${plan.path}`);
+    expect(body).toContain(`**Revision:** \`${record.revisionSha}\``);
+    expect(readSddGateRecord(body, 42)).toEqual(record);
+    expect(renderSddGateRecord({ ...record, phase: 'awaiting-answer' }, 'es-ES')).toContain('Se conservan la rama vinculada');
+  });
+
+  it('escapes an untrusted suggested answer without tagging a GitHub user', () => {
+    const record: SddGateRecord = {
+      version: 1, issueNumber: 42, phase: 'awaiting-answer', issueDigest: 'a'.repeat(64), baseSha: 'b'.repeat(40), round: 1,
+      plan: { ...plan, action: 'update', questions: [{ id: 'Q1', text: 'Which behavior should change?', owner: 'issue-author', suggestion: '@team [click](https://example.test)' }] },
+    };
+    const body = renderSddGateRecord(record, 'es-ES');
+    expect(body).toContain('Respuesta sugerida: @\u200Bteam \\[click\\]');
+    expect(body).not.toContain('[@team]');
+  });
   it('links a verified publication only to the matching HTTPS issue repository', () => {
     const record: SddGateRecord = {
       version: 1, issueNumber: 42, phase: 'published', issueDigest: 'a'.repeat(64), baseSha: 'b'.repeat(40), round: 1,

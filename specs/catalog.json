@@ -755,6 +755,7 @@
         "src/application/usecases/__tests__/issue_use_case.test.ts",
         "src/application/usecases/steps/issue/__tests__/prepare_branches_use_case.test.ts",
         "src/application/policies/__tests__/lifecycle_state_policy.test.ts",
+        "src/application/usecases/actions/__tests__/synchronize_lifecycle_state_use_case.test.ts",
         "src/tooling/__tests__/validate_specification_catalog.test.ts",
         "src/domain/__tests__/issue_start_policy.test.ts",
         "src/domain/__tests__/pre_branch_sdd.test.ts",

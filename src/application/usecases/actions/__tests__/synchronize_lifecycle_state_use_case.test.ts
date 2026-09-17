@@ -77,7 +77,10 @@ describe('SynchronizeLifecycleStateUseCase', () => {
         });
         await useCase.invoke({
             context: lifecycleContext,
-            results: [{ id: 'PrepareBranchesUseCase', success: true, executed: true, steps: [], errors: [] } as never],
+            results: [{
+                id: 'ReconcileBranchReadinessUseCase', success: true, executed: true, steps: [], errors: [],
+                payload: { branchName: 'feature/7-fix', branchSha: 'sha-1' },
+            } as never],
         });
         expect(dependencies.labels.setLabels).toHaveBeenCalledWith(
             7,
@@ -95,7 +98,10 @@ describe('SynchronizeLifecycleStateUseCase', () => {
                     kind: 'issue', number: 7, labels: ['stale'], opened: false, descriptionEdited: true,
                 },
             }),
-            results: [{ id: 'PrepareBranchesUseCase', success: true, executed: true, steps: [], errors: [] } as never],
+            results: [{
+                id: 'ReconcileBranchReadinessUseCase', success: true, executed: true, steps: [], errors: [],
+                payload: { branchName: 'feature/7-fix', branchSha: 'sha-1' },
+            } as never],
         });
         expect(dependencies.labels.setLabels).toHaveBeenCalledWith(
             7,

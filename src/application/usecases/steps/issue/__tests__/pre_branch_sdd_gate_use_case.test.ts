@@ -93,6 +93,19 @@ describe('PreBranchSddGateUseCase', () => {
     expect(h.validateDraft).not.toHaveBeenCalled();
   });
 
+  it('accepts an issue-author answer only from the issue author', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, questions: [{ ...question, owner: 'issue-author' }], newCapability: null });
+    await h.useCase.begin(context());
+    h.comments.push({ id: 101, body: 'SDD Q1: Keep old callers working', user: { login: 'maintainer' } });
+    expect((await h.useCase.begin(context())).status).toBe('waiting');
+    h.comments.push({ id: 102, body: 'SDD Q1: Keep old callers working', user: { login: 'alice' } });
+    h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
+    h.query.mockResolvedValueOnce({ markdown: '# New SDD content' });
+    expect((await h.useCase.begin(context())).status).toBe('drafted');
+    expect(h.isActorAllowedToModifyFiles).not.toHaveBeenCalled();
+  });
+
   it('drafts only after an authorized answer and validates before returning a branch-ready draft', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null });
@@ -150,6 +163,34 @@ describe('PreBranchSddGateUseCase', () => {
     expect(h.publish).not.toHaveBeenCalled();
   });
 
+  it('reuses a verified published SDD without another agent call or timeline card', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
+    h.query.mockResolvedValueOnce({ markdown: '# New SDD content' });
+    const first = await h.useCase.begin(context());
+    if (first.status !== 'drafted') throw new Error('expected draft');
+    await h.useCase.publish(context(), first, 'feature/42-change');
+
+    const replay = await h.useCase.begin(context());
+    expect(replay).toMatchObject({ status: 'published', branchName: 'feature/42-change', commitSha });
+    expect(h.query).toHaveBeenCalledTimes(2);
+    expect(h.addComment).toHaveBeenCalledTimes(1);
+    expect(h.publish).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks replay when the published SDD commit is no longer on the linked remote branch', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
+    h.query.mockResolvedValueOnce({ markdown: '# New SDD content' });
+    const first = await h.useCase.begin(context());
+    if (first.status !== 'drafted') throw new Error('expected draft');
+    await h.useCase.publish(context(), first, 'feature/42-change');
+    h.verifyPublication.mockResolvedValue(false);
+
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.query).toHaveBeenCalledTimes(2);
+  });
+
   it('refuses to publish on a matching remote name that is not linked to this issue', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
@@ -160,6 +201,42 @@ describe('PreBranchSddGateUseCase', () => {
     const outcome = await h.useCase.publish(context(), draft, 'feature/42-change');
     expect(outcome.status).toBe('blocked');
     expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it('blocks a changed branch head before publishing and keeps the first commit untouched', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
+    h.query.mockResolvedValueOnce({ markdown: '# New SDD content' });
+    const first = await h.useCase.begin(context());
+    if (first.status !== 'drafted') throw new Error('expected draft');
+    h.getLinkedBranch.mockResolvedValue({ name: 'feature/42-change', headSha: 'd'.repeat(40) });
+
+    expect((await h.useCase.publish(context(), first, 'feature/42-change')).status).toBe('blocked');
+    expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it('blocks a stale issue body before publication', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
+    h.query.mockResolvedValueOnce({ markdown: '# New SDD content' });
+    const first = await h.useCase.begin(context());
+    if (first.status !== 'drafted') throw new Error('expected draft');
+    h.getDescription.mockResolvedValue('The payment flow changed again.');
+
+    expect((await h.useCase.publish(context(), first, 'feature/42-change')).status).toBe('blocked');
+    expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it('blocks when remote verification fails after a pushed commit', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
+    h.query.mockResolvedValueOnce({ markdown: '# New SDD content' });
+    const first = await h.useCase.begin(context());
+    if (first.status !== 'drafted') throw new Error('expected draft');
+    h.verifyPublication.mockResolvedValue(false);
+
+    expect((await h.useCase.publish(context(), first, 'feature/42-change')).status).toBe('blocked');
+    expect(h.addComment).not.toHaveBeenCalled();
   });
 
   it('blocks publication after a human title edit but ignores the generated emoji prefix', async () => {
@@ -210,5 +287,21 @@ describe('PreBranchSddGateUseCase', () => {
     expect(outcome.status).toBe('blocked');
     expect(h.addComment).not.toHaveBeenCalled();
     expect(h.validateDraft).not.toHaveBeenCalled();
+  });
+
+  it('blocks a missing catalogued SDD before the drafting call', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
+    h.readSdd.mockResolvedValue(undefined);
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.query).toHaveBeenCalledTimes(1);
+    expect(h.validateDraft).not.toHaveBeenCalled();
+  });
+
+  it('requires a known bot identity and a configured drafting agent', async () => {
+    const h = harness();
+    expect((await h.useCase.begin({ ...context(), tokenUser: '' })).status).toBe('blocked');
+    expect((await h.useCase.begin({ ...context(), agentConfiguration: undefined })).status).toBe('blocked');
+    expect(h.query).not.toHaveBeenCalled();
   });
 });

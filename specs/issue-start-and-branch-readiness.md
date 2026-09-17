@@ -105,8 +105,9 @@ managed-issue baseline has been updated to point to the new start boundary.
 workflow, including SDD discovery and clarification. `branched` is
 an output fact: the linked branch and its required first SDD commit
 are verified. `state:specifying` means SDD work is underway;
-`state:working` means the issue can proceed with branch-based implementation
-or branchless answering. These managed states replace `state:in-progress` in
+`state:working` means a verified linked branch can be used for implementation.
+Branchless help and planning use `state:planned` after a successful response.
+These managed states replace `state:in-progress` in
 the new contract. Waiting labels remain orthogonal. A branch name or label
 alone never proves readiness.
 
@@ -217,11 +218,12 @@ then the Action creates and verifies its linked branch before adding
 
 | State | Entered when | Visible meaning | Allowed next | Recovery/owner |
 |---|---|---|---|---|
-| waiting-to-start | Admitted; no start latch | Add `in-progress` | specifying, preparing, branchless-work | Maintainer |
+| waiting-to-start | Admitted; no start latch | Add `in-progress` | specifying, preparing, planned | Maintainer |
 | specifying | Start accepted; docs gate open | Questions/docs are underway | waiting-for-answer, preparing, blocked | Issue author/Action |
 | waiting-for-answer | Blocking question posted | Answer in issue | specifying, canceled | Named respondent |
 | preparing | Docs done or skipped | Branch being created/verified | working, partial, blocked | Action/operator |
-| working | Branch ready or branchless work active | Work can continue | reviewing, blocked, complete | Contributor |
+| planned | Branchless help or planning response succeeded | Answer or plan available | complete, blocked | Issue author/maintainer |
+| working | Exact linked branch verified | Branch work can continue | reviewing, blocked, complete | Contributor |
 | partial | Branch exists; prerequisite incomplete | Branch retained; implementation waits | preparing, blocked | Operator |
 | blocked | Invalid/failed prerequisite | Named recovery action required | prior safe state | Maintainer/operator |
 | canceled | Start removed before branch | No new work will run | waiting-to-start | Maintainer |

@@ -77,10 +77,10 @@ export function resolveLifecycleState(
         return undefined;
     }
 
+    // A verified branch is evidence even when reconciliation made no label change.
     if (input.results.some(result => result.id === 'ReconcileBranchReadinessUseCase'
       && result.success && getResultPayload(result.payload)?.branchName)) return 'working';
     if (hasResult(input.results, 'PreBranchSddGateUseCase')) return 'specifying';
-    if (hasResult(input.results, 'PrepareBranchesUseCase')) return 'working';
     if (hasSuccessfulResult(input.results, 'RecommendStepsUseCase')) return 'planned';
     if (hasExplicitPlanningCommand(input.results)) return 'planned';
     return undefined;

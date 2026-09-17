@@ -211,6 +211,16 @@ describe("IssueUseCase", () => {
     expect(publish).not.toHaveBeenCalled();
   });
 
+  it('fails closed when the configured SDD gate is unavailable', async () => {
+    const param = minimalExecution({ issueStartDecision: { started: true, branchRequired: true, sddRequired: true, helpRequired: false } });
+    const results = await createUseCase().invoke(param);
+    expect(results).toEqual(expect.arrayContaining([expect.objectContaining({
+      id: 'PreBranchSddGateUseCase', success: false,
+    })]));
+    expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
+    expect(mockDeployAddedInvoke).not.toHaveBeenCalled();
+  });
+
   it('prepares the linked branch only after SDD validation and then publishes the draft', async () => {
     const gate = {
       status: 'drafted', results: [new Result({ id: 'PreBranchSddGateUseCase', success: true, executed: true })],
@@ -243,6 +253,45 @@ describe("IssueUseCase", () => {
     expect(mockRemoveNotNeededInvoke).not.toHaveBeenCalled();
     expect(mockDeployAddedInvoke).not.toHaveBeenCalled();
     expect(mockRecommendStepsInvoke).not.toHaveBeenCalled();
+  });
+
+  it('does not publish a validated SDD when branch preparation fails', async () => {
+    const gate = { status: 'drafted', results: [], prepared: { plan: { path: 'specs/payments.md' } }, record: { issueNumber: 8 } };
+    const begin = jest.fn().mockResolvedValue(gate);
+    const publish = jest.fn();
+    mockPrepareBranchesInvoke.mockResolvedValue({
+      results: [new Result({ id: 'PrepareBranchesUseCase', success: false, executed: true })],
+      configurationPatch: { workingBranch: 'feature/8-issue' },
+    });
+    const param = minimalExecution({ issueStartDecision: { started: true, branchRequired: true, sddRequired: true, helpRequired: false } });
+    const results = await createUseCase(undefined, { begin, publish } as never).invoke(param);
+    expect(publish).not.toHaveBeenCalled();
+    expect(results).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'PreBranchSddGateUseCase', success: false })]));
+    expect(mockDeployAddedInvoke).not.toHaveBeenCalled();
+  });
+
+  it('publishes a recovered SDD draft on its existing branch without preparing another', async () => {
+    const gate = {
+      status: 'drafted', results: [], prepared: { plan: { path: 'specs/payments.md' } },
+      record: { issueNumber: 8, branchName: 'feature/8-issue' },
+    };
+    const begin = jest.fn().mockResolvedValue(gate);
+    const publish = jest.fn().mockResolvedValue({ status: 'published', branchName: 'feature/8-issue', results: [] });
+    const param = minimalExecution({ issueStartDecision: { started: true, branchRequired: true, sddRequired: true, helpRequired: false } });
+    await createUseCase(undefined, { begin, publish } as never).invoke(param);
+    expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
+    expect(publish).toHaveBeenCalledWith(expect.anything(), gate, 'feature/8-issue');
+    expect(param.currentConfiguration.workingBranch).toBe('feature/8-issue');
+  });
+
+  it('resumes a published SDD without creating or republishing the branch', async () => {
+    const begin = jest.fn().mockResolvedValue({ status: 'published', branchName: 'feature/8-issue', results: [] });
+    const publish = jest.fn();
+    const param = minimalExecution({ issueStartDecision: { started: true, branchRequired: true, sddRequired: true, helpRequired: false } });
+    await createUseCase(undefined, { begin, publish } as never).invoke(param);
+    expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
+    expect(publish).not.toHaveBeenCalled();
+    expect(param.currentConfiguration.workingBranch).toBe('feature/8-issue');
   });
 
   it('applies only the explicit successful branch configuration patch at the route boundary', async () => {

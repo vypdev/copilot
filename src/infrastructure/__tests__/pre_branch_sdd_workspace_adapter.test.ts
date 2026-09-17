@@ -90,6 +90,72 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     await expect(workspace.recoverPublished('feature/42-change', prepared)).resolves.toBeUndefined();
   });
 
+  it('adds a companion SDD and its generated catalog as the only first-commit files', async () => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const companion: SddPlan = { ...plan, action: 'companion', path: 'specs/payments-extension.md' };
+    const prepared = await workspace.validateDraft(snapshot, companion, draft());
+    expect(prepared.changedPaths).toEqual(['specs/CATALOG.md', 'specs/catalog.json', companion.path]);
+    expect(JSON.parse(prepared.catalogJson!).capabilities[0].specs).toEqual([plan.path, companion.path]);
+    git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
+
+    const commitSha = await workspace.publish('feature/42-change', prepared);
+    expect(git(repo, 'diff-tree', '--no-commit-id', '--name-only', '-r', commitSha).split('\n').sort()).toEqual(prepared.changedPaths);
+    expect(await workspace.recoverPublished('feature/42-change', prepared)).toBe(commitSha);
+  });
+
+  it('registers a new proposed capability and recovers its validated first commit', async () => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const proposal: SddPlan = { ...plan, action: 'new', path: 'specs/invoicing.md', capabilityId: 'invoicing' };
+    const capability = {
+      ...snapshot.capabilities[0], id: 'invoicing', title: 'Invoicing', status: 'proposed' as const,
+      scope: 'Invoice behavior', specs: [proposal.path],
+    };
+    const prepared = await workspace.validateDraft(snapshot, proposal, draft(), capability);
+    expect(prepared.changedPaths).toEqual(['specs/CATALOG.md', 'specs/catalog.json', proposal.path]);
+    git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
+
+    const commitSha = await workspace.publish('feature/42-change', prepared);
+    expect(await workspace.recoverPublished('feature/42-change', prepared)).toBe(commitSha);
+    expect(JSON.parse(git(repo, 'show', `${commitSha}:specs/catalog.json`)).capabilities).toHaveLength(2);
+  });
+
+  it('rejects an invalid proposed catalog owner before creating a branch', async () => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const proposal: SddPlan = { ...plan, action: 'new', path: 'specs/invoicing.md', capabilityId: 'invoicing' };
+    await expect(workspace.validateDraft(snapshot, proposal, draft())).rejects.toThrow('proposed catalog capability');
+    expect(git(repo, 'branch', '--list', 'feature/42-change')).toBe('');
+  });
+
+  it('does not recover a matching-looking first commit authored outside the Action', async () => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const prepared = await workspace.validateDraft(snapshot, plan, draft());
+    git(repo, 'checkout', '-b', 'feature/42-change');
+    fs.writeFileSync(path.join(repo, plan.path), prepared.markdown);
+    git(repo, 'add', '--', plan.path);
+    git(repo, 'commit', '-m', `docs(sdd): specify issue contract in ${plan.path}`);
+    git(repo, 'push', 'origin', 'feature/42-change');
+    expect(await workspace.recoverPublished('feature/42-change', prepared)).toBeUndefined();
+  });
+
+  it('rejects a symlinked generated catalog before writing metadata', async () => {
+    const external = path.join(temp, 'outside-catalog.md');
+    fs.copyFileSync(path.join(repo, 'specs/CATALOG.md'), external);
+    fs.rmSync(path.join(repo, 'specs/CATALOG.md'));
+    fs.symlinkSync(external, path.join(repo, 'specs/CATALOG.md'));
+    git(repo, 'add', 'specs/CATALOG.md');
+    git(repo, 'commit', '-m', 'symlinked catalog');
+    git(repo, 'push', 'origin', 'develop');
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const companion: SddPlan = { ...plan, action: 'companion', path: 'specs/payments-extension.md' };
+    await expect(workspace.validateDraft(snapshot, companion, draft())).rejects.toThrow('not a regular file');
+    expect(fs.readFileSync(external, 'utf8')).toBe('# Catalog\n');
+  });
+
   it('rejects a symlinked owning SDD before writing to its target', async () => {
     const external = path.join(temp, 'outside.md');
     fs.writeFileSync(external, '# Protected external file\n');
