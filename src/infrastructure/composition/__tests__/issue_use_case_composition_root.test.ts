@@ -15,6 +15,7 @@ const createIssueMetadataClient = jest.fn(() => ({
   kind: "issue-metadata-client",
 }));
 const createIssueTitleClient = jest.fn(() => ({ kind: "issue-title-client" }));
+const createIssueLabelsClient = jest.fn(() => ({ kind: "issue-labels-client" }));
 const createWorkflowDispatchClient = jest.fn(() => ({
   kind: "workflow-client",
 }));
@@ -29,6 +30,7 @@ jest.mock("../github_issue_client_factory", () => ({
   createIssueLifecycleClient,
   createIssueMetadataClient,
   createIssueTitleClient,
+  createIssueLabelsClient,
 }));
 jest.mock("../github_workflow_client_factory", () => ({
   createWorkflowDispatchClient,
@@ -96,16 +98,21 @@ describe("issue use case composition root", () => {
     const workflowSteps = dependencies[2];
 
     expect(result).toBe(composedIssueUseCase);
-    expect(dependencies).toHaveLength(5);
+    expect(dependencies).toHaveLength(6);
     expect(dependencies[3]).toEqual(expect.objectContaining({
       listIssueComments: expect.any(Function),
     }));
     expect(dependencies[4]).toEqual(expect.objectContaining({
       isActorAllowedToModifyFiles: expect.any(Function),
     }));
+    expect(dependencies[5]).toEqual(expect.objectContaining({
+      begin: expect.any(Function),
+      publish: expect.any(Function),
+    }));
     expect(workflowSteps).toEqual(expect.objectContaining({
       checkPermissions: expect.objectContaining({ invoke: expect.any(Function) }),
       prepareBranches: expect.objectContaining({ invoke: expect.any(Function) }),
+      reconcileBranchReadiness: expect.objectContaining({ invoke: expect.any(Function) }),
       removeNotNeededBranches: expect.objectContaining({ invoke: expect.any(Function) }),
     }));
     expect(createBranchClient).toHaveBeenCalledTimes(1);

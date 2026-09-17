@@ -3,7 +3,7 @@ import { parsePositiveSafeInteger } from '../../domain/positive_integer_policy';
 
 export class Issue {
     reopenOnPush: boolean;
-    branchManagementAlways: boolean;
+    issueManagedBranches: boolean;
     desiredAssigneesCount: number;
     inputs: ExecutionInputs | undefined = undefined;
     liveBody: string | undefined;
@@ -77,12 +77,12 @@ export class Issue {
     }
 
     constructor(
-        branchManagementAlways: boolean,
+        issueManagedBranches: boolean,
         reopenOnPush: boolean,
         desiredAssigneesCount: number,
         inputs: ExecutionInputs | undefined = undefined,
     ) {
-        this.branchManagementAlways = branchManagementAlways;
+        this.issueManagedBranches = issueManagedBranches;
         this.reopenOnPush = reopenOnPush;
         this.desiredAssigneesCount = desiredAssigneesCount;
         this.inputs = inputs;

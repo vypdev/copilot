@@ -214,7 +214,9 @@ The setup creates the following labels. Names come from the action input default
 
 | Input key | Default label name | Purpose |
 |-----------|--------------------|--------|
-| `branch-management-launcher-label` | `branched` | Triggers branch creation when added to an issue |
+| Fixed start label | `in-progress` | Starts every admitted issue workflow |
+| Fixed readiness label | `branched` | Added by the Action after verifying an exact linked branch |
+| Fixed SDD labels | `SDD`, `contract-change` | Required SDD status and behavior-change intent |
 | `feature-label` | `feature` | Feature branches |
 | `enhancement-label` | `enhancement` | Treated like feature |
 | `bug-label` | `bug` | Bug type |
@@ -256,12 +258,13 @@ The setup creates **21 progress labels**: `0%`, `5%`, `10%`, … `100%`. Colors 
 
 ### Lifecycle, activity, and waiting labels
 
-The setup creates three related label dimensions. The durable lifecycle phase is exclusive; the temporary activity label and the waiting label are independent, so a target can have (for example) `state:in-progress` and `state:ai-processing` at the same time.
+The setup creates three related label dimensions. The durable lifecycle phase is exclusive; the temporary activity label and the waiting label are independent, so a target can have (for example) `state:specifying` and `state:ai-processing` at the same time.
 
 | Input key | Default label name | Purpose |
 |-----------|--------------------|--------|
 | `state-planned-label` | `state:planned` | An implementation plan is available |
-| `state-in-progress-label` | `state:in-progress` | Implementation has started |
+| `state-specifying-label` | `state:specifying` | A required SDD is being clarified or revised |
+| `state-working-label` | `state:working` | Implementation may proceed |
 | `state-reviewing-label` | `state:reviewing` | A pull request is under review |
 | `state-changes-requested-label` | `state:changes-requested` | The review has active findings |
 | `state-verified-label` | `state:verified` | The pull request was merged successfully |
@@ -408,13 +411,13 @@ All files here are copied to `.github/ISSUE_TEMPLATE/`.
 | File | Purpose |
 |------|--------|
 | `config.yml` | Issue template config (e.g. `blank_issues_enabled`, contact link to Git-Flow). |
-| `feature_request.yml` | Feature request; uses labels like `enhancement`, `feature`, `priority: low`. Add `branched` if you want a branch created automatically. |
-| `bug_report.yml` | Bug report; uses `bug`, `bugfix`, `priority: high`. Add `branched` if needed. |
+| `feature_request.yml` | Feature request; uses labels like `enhancement`, `feature`, `priority: low`. Add `in-progress` to start; the Action adds `branched` after verification. |
+| `bug_report.yml` | Bug report; uses `bug`, `bugfix`, `priority: high`. Add `in-progress` to start. |
 | `doc_update.yml` | Documentation; uses `documentation`, `docs`. |
 | `chore_task.yml` | Chore/maintenance; uses `chore`, `maintenance`. |
 | `help_request.yml` | Help request; uses `help` (no branch). |
-| `hotfix.yml` | Hotfix; uses `hotfix`, `branched`, `priority: high`. Includes Base Version, Hotfix Version, Changelog. |
-| `release.yml` | Release; uses `release`, `branched`, `priority: medium`. Includes Release Type, Version, Changelog. |
+| `hotfix.yml` | Hotfix; uses `hotfix`, `priority: high`; add `in-progress` to start. Includes Base Version, Hotfix Version, Changelog. |
+| `release.yml` | Release; uses `release`, `priority: medium`; add `in-progress` to start. Includes Release Type, Version, Changelog. |
 
 The **labels** in each template must match the label names configured in the action (or your custom inputs). For example, if you change `deploy-label` to `ready-to-deploy`, then any template or process that adds the deploy trigger must use `ready-to-deploy`.
 

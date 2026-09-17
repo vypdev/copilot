@@ -51,7 +51,8 @@ export interface SetupRepositoryConfiguration {
     releaseTree: string;
     docsTree: string;
     choreTree: string;
-    branchManagementAlways: boolean;
+    issueManagedBranches: boolean;
+    preBranchSdd: boolean;
     reopenIssueOnPush: boolean;
     desiredAssigneesCount: number;
     desiredReviewersCount: number;

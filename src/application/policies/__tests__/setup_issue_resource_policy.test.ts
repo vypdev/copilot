@@ -8,7 +8,6 @@ import {
 } from '../setup_issue_workflow_policy';
 
 const labels = {
-  branchManagementLauncherLabel: 'branched',
   bug: 'bug', bugfix: 'bugfix', hotfix: 'hotfix', enhancement: 'enhancement', feature: 'feature', release: 'release',
   question: 'question', help: 'help', deploy: 'deploy', deployed: 'deployed', docs: 'docs', documentation: 'documentation',
   chore: 'chore', maintenance: 'maintenance', priorityHigh: 'high', priorityMedium: 'medium', priorityLow: 'low', priorityNone: 'none',
@@ -35,14 +34,14 @@ describe('selected setup issue resources', () => {
     expect(selected.feature).toBe('');
     expect(selected.release).toBe('');
     expect(selected.deploy).toBe('');
-    expect(selected.branchManagementLauncherLabel).toBe('branched');
     expect(selected.priorityHigh).toBe('high');
   });
 
-  it('keeps help branchless when it is the only enabled kind', () => {
+  it('keeps help as the only workflow label when it is the only enabled kind', () => {
     const configuration = createDefaultSetupConfiguration();
     configuration.issueWorkflows = { enabled: ['help'] };
-    expect(selectedInitialLabels(labels, configuration).branchManagementLauncherLabel).toBe('');
+    expect(selectedInitialLabels(labels, configuration).help).toBe('help');
+    expect(selectedInitialLabels(labels, configuration).feature).toBe('');
   });
 
   it('provisions only native Issue Types selected by the profile', () => {
@@ -74,7 +73,7 @@ describe('selected setup issue resources', () => {
 
     expect(selectedInitialLabels(labels, configuration)).toMatchObject({
       feature: '', bug: '', docs: '', chore: '', help: '', hotfix: '', release: '',
-      branchManagementLauncherLabel: '', deploy: '', deployed: '',
+      deploy: '', deployed: '',
     });
     expect(selectedInitialIssueTypes(issueTypes, configuration)).toMatchObject({
       feature: '', bug: '', documentation: '', maintenance: '', help: '', hotfix: '', release: '',
@@ -104,18 +103,17 @@ describe('effective issue workflow setup policy', () => {
     expect(effectiveIssueWorkflowFeatures(configuration)).toMatchObject({ hotfix: false, release: false });
   });
 
-  it('projects custom and fallback routing, priority, and launcher labels', () => {
+  it('projects custom and fallback routing and priority labels without a launcher', () => {
     const configuration = createDefaultSetupConfiguration();
     configuration.actionInputs['feature-label'] = 'kind:feature';
     configuration.actionInputs['enhancement-label'] = '  ';
     configuration.actionInputs['priority-low-label'] = 'p3';
-    configuration.actionInputs['branch-management-launcher-label'] = 'start';
 
     const labelsByKind = effectiveIssueWorkflowLabels(configuration);
     const formLabels = effectiveIssueFormLabels(configuration);
 
     expect(labelsByKind.feature).toEqual(['enhancement', 'kind:feature']);
     expect(formLabels.feature).toEqual(['enhancement', 'kind:feature', 'p3']);
-    expect(formLabels.hotfix).toContain('start');
+    expect(formLabels.hotfix).not.toContain('branched');
   });
 });

@@ -77,7 +77,10 @@ export function resolveLifecycleState(
         return undefined;
     }
 
-    if (hasResult(input.results, 'PrepareBranchesUseCase')) return 'in-progress';
+    // A verified branch is evidence even when reconciliation made no label change.
+    if (input.results.some(result => result.id === 'ReconcileBranchReadinessUseCase'
+      && result.success && getResultPayload(result.payload)?.branchName)) return 'working';
+    if (hasResult(input.results, 'PreBranchSddGateUseCase')) return 'specifying';
     if (hasSuccessfulResult(input.results, 'RecommendStepsUseCase')) return 'planned';
     if (hasExplicitPlanningCommand(input.results)) return 'planned';
     return undefined;

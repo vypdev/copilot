@@ -69,7 +69,6 @@ export interface SetupExecutionSource {
         readonly branch?: string;
     };
     readonly issueWorkflowProfile?: IssueWorkflowProfile;
-    readonly issueWorkflowProfileLegacy?: boolean;
 }
 
 export interface SetupExecutionTarget {
@@ -183,7 +182,6 @@ export function projectSetupExecutionContext(source: SetupExecutionSource): Setu
             branch: source.hotfix.branch,
         }),
         issueWorkflowProfile: source.issueWorkflowProfile,
-        issueWorkflowProfileLegacy: source.issueWorkflowProfileLegacy,
     });
 }
 

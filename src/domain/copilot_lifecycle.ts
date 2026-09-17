@@ -6,7 +6,8 @@
  */
 export type CopilotLifecycleState =
     | 'planned'
-    | 'in-progress'
+    | 'specifying'
+    | 'working'
     | 'reviewing'
     | 'changes-requested'
     | 'verified'
@@ -20,7 +21,8 @@ export type CopilotWaitingState = 'awaiting-maintainer' | 'awaiting-issue-author
 export interface CopilotLifecycleLabels {
     aiProcessing: string;
     planned: string;
-    inProgress: string;
+    specifying: string;
+    working: string;
     reviewing: string;
     changesRequested: string;
     verified: string;
@@ -33,7 +35,8 @@ export interface CopilotLifecycleLabels {
 export const DEFAULT_COPILOT_LIFECYCLE_LABELS: Readonly<CopilotLifecycleLabels> = {
     aiProcessing: 'state:ai-processing',
     planned: 'state:planned',
-    inProgress: 'state:in-progress',
+    specifying: 'state:specifying',
+    working: 'state:working',
     reviewing: 'state:reviewing',
     changesRequested: 'state:changes-requested',
     verified: 'state:verified',
@@ -59,7 +62,8 @@ type WaitingMetadata = readonly [CopilotWaitingState, keyof CopilotLifecycleLabe
 
 const STABLE_LIFECYCLE_METADATA: ReadonlyArray<StableMetadata> = [
     ['planned', 'planned', '1D76DB', 'Copilot has produced an implementation plan.'],
-    ['in-progress', 'inProgress', '0E8A16', 'Implementation work is in progress.'],
+    ['specifying', 'specifying', '6F42C1', 'The issue contract is being clarified and specified.'],
+    ['working', 'working', '0E8A16', 'Work can proceed on the verified branch or without a branch.'],
     ['reviewing', 'reviewing', '5319E7', 'A pull request is being reviewed.'],
     ['changes-requested', 'changesRequested', 'D93F0B', 'Review identified changes that are required.'],
     ['verified', 'verified', '0E8A16', 'The change has passed Copilot verification.'],

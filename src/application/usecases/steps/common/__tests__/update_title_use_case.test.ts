@@ -16,7 +16,7 @@ function baseParam(overrides: Record<string, unknown> = {}) {
     owner: 'o',
     repo: 'r',
     tokens: { token: 't' },
-    issue: { number: 1, title: 'Issue', branchManagementAlways: false },
+    issue: { number: 1, title: 'Issue' },
     pullRequest: { number: 2, title: 'PR' },
     issueNumber: 1,
     emoji: { emojiLabeledTitle: false, branchManagementEmoji: '' },
@@ -130,7 +130,7 @@ describe('UpdateTitleUseCase', () => {
     const param = baseParam({
       isIssue: true,
       emoji: { emojiLabeledTitle: true, branchManagementEmoji: '' },
-      issue: { number: 1, title: 'Fallback title', branchManagementAlways: false },
+      issue: { number: 1, title: 'Fallback title' },
     });
 
     const results = await invoke(param);
@@ -141,7 +141,6 @@ describe('UpdateTitleUseCase', () => {
       version: '',
       currentTitle: 'Fallback title',
       issueNumber: 1,
-      branchManagementAlways: false,
       branchManagementEmoji: '',
     }));
   });
@@ -189,7 +188,6 @@ describe('UpdateTitleUseCase', () => {
       version: '1.2.1',
       currentTitle: expect.any(String),
       issueNumber: 1,
-      branchManagementAlways: false,
       branchManagementEmoji: '',
     }));
   });
@@ -227,7 +225,6 @@ describe('UpdateTitleUseCase', () => {
       version: '',
       currentTitle: 'My Release',
       issueNumber: 1,
-      branchManagementAlways: false,
       branchManagementEmoji: '',
     }));
   });

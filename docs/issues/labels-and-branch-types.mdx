@@ -11,12 +11,12 @@ Copilot uses **labels** to decide what kind of branch to create and which workfl
 
 | Flow | Required / optional labels | Branch created from | Notes |
 |------|----------------------------|---------------------|--------|
-| **Feature** | `feature`; optionally `branched` (or set `branch-management-always: true`) | `development-branch` (default: develop) | New functionality. |
-| **Bugfix** | `bugfix`; optionally `branched` (or `branch-management-always: true`) | `development-branch` | Bug fixes on develop. |
-| **Docs** | `docs` or `documentation`; optionally `branched` (or `branch-management-always: true`) | `development-branch` | Documentation tasks. |
-| **Chore** | `chore` or `maintenance`; optionally `branched` (or `branch-management-always: true`) | `development-branch` | Maintenance, refactors, dependencies. |
-| **Hotfix** | `hotfix` (branch is created without needing `branched`; templates often include `branched` too) | `main-branch` (from latest tag) | Urgent production fix. Add `deploy` to trigger deploy workflow. Only org/repo members can create hotfix issues (others are closed). |
-| **Release** | `release` (branch is created without needing `branched`; templates often include `branched` too) | `development-branch` | New version release. Add `deploy` to trigger release workflow. Only org/repo members can create release issues (others are closed). |
+| **Feature** | `feature` + `in-progress`; optional `contract-change` | `development-branch` (default: develop) | New functionality. |
+| **Bugfix** | `bugfix` + `in-progress`; optional `contract-change` | `development-branch` | Bug fixes on develop. |
+| **Docs** | `docs` or `documentation` + `in-progress` | `development-branch` | Documentation tasks. |
+| **Chore** | `chore` or `maintenance` + `in-progress`; optional `contract-change` | `development-branch` | Maintenance, refactors, dependencies. |
+| **Hotfix** | `hotfix` + `in-progress` | `main-branch` (from selected version tag) | Urgent production fix. Add `deploy` to trigger deploy workflow. Only org/repo members can create hotfix issues (others are closed). |
+| **Release** | `release` + `in-progress` | `development-branch` | New version release. Add `deploy` to trigger release workflow. Only org/repo members can create release issues (others are closed). |
 | **Deploy** | `deploy` on the issue | — | Triggers the workflow defined by `release-workflow` or `hotfix-workflow`. |
 | **Deployed** | `deployed` (added by action after deploy success) | — | Marks the issue as deployed; used for auto-close and state updates. |
 
@@ -24,6 +24,8 @@ Copilot uses **labels** to decide what kind of branch to create and which workfl
 
 - **Issue type:** `bug`, `enhancement` (no branch by themselves; often used with bugfix/feature).
 - **No branch:** `question`, `help` — Copilot does not create branches; used for Q&A or help requests.
+- **Start and readiness:** `in-progress` starts admitted work; the Action adds `branched` only after verifying the exact linked branch.
+- **Specification:** `SDD` is added by the Action when the optional gate applies; `contract-change` marks a behavior change that needs the gate when enabled.
 - **Priority:** `priority: high`, `priority: medium`, `priority: low` (and similar from configuration).
 - **Size:** `size: XS` … `size: XXL` — Applied by the action from branch diff (push/PR); see [Configuration](/configuration) for thresholds.
 
@@ -38,5 +40,5 @@ For **hotfix** and **release**, the action only creates branches (and allows the
 ## Next steps
 
 - **[Workflow setup](/issues/workflow-setup)** — Enable the action for issue events.
-- **[Branch management](/issues/branch-management)** — Launcher label, naming, and when branches are created.
+- **[Branch management](/issues/branch-management)** — Start label, naming, and verified branch readiness.
 - **[Issue types](/issues/type/feature)** — Feature, Bugfix, Docs, Chore, Hotfix, Release (step-by-step flows).

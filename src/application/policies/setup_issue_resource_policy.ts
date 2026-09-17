@@ -21,7 +21,6 @@ export function selectedInitialLabels(
   if (!enabled.has('help')) clear('help', 'question');
   if (!enabled.has('hotfix')) clear('hotfix');
   if (!enabled.has('release')) clear('release');
-  if (![...enabled].some(kind => kind !== 'help')) clear('branchManagementLauncherLabel');
   if (!enabled.has('hotfix') && !enabled.has('release')) clear('deploy', 'deployed');
   return Object.freeze(selected) as unknown as InitialLabelConfiguration;
 }

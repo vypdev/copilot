@@ -1,113 +1,37 @@
 ---
 title: Branch management
-description: Launcher label, naming conventions, and when branches are created (including hotfix and release).
+description: Start issues with in-progress and verify linked branches before implementation.
 ---
 
 # Branch management
 
-Copilot creates **branches** for issues when the right **labels** are present. For most issue types (feature, bugfix, docs, chore), a **launcher label** (e.g. `branched`) is required unless you set **`branch-management-always: true`**. For **hotfix** and **release**, the branch is created as soon as the type label is present (and the issue creator is a member). This page details the launcher, naming, and special rules.
+Adding `in-progress` starts every admitted issue workflow. Opening an issue or adding its type label only classifies it. When `issue-managed-branches: true` (the default), the Action creates the issue branch, verifies the exact linked remote branch, and then adds `branched`. `branched` is a readiness result; adding it yourself cannot start work.
 
-## Launcher label (when to create the branch)
+| Issue kind | After `in-progress` |
+| --- | --- |
+| Feature, bugfix, docs, chore | Create a branch from `development-branch` when branch management is enabled. |
+| Hotfix | Create from the selected production version tag after form and membership checks. |
+| Release | Create from `development-branch` after form and membership checks. |
+| Help | Answer the issue without a branch or `branched`. |
 
-For **feature**, **bugfix**, **docs**, and **chore** issues, the action does **not** create a branch on issue open by default. A member must add a **launcher label** to trigger branch creation.
+To work without Action-managed branches, set `issue-managed-branches: false`. The issue still starts with `in-progress`; the Action does not add `branched`. Release and hotfix workflows require managed branches. The optional [pre-branch SDD gate](/issues/pre-branch-sdds) also requires managed branches.
 
-| Input | Default | Description |
-|-------|---------|-------------|
-| **`branch-management-launcher-label`** | `branched` | Label that triggers branch creation when added to an issue that already has a type label (feature, bugfix, docs, chore). |
-| **`branch-management-always`** | `false` | If `true`, the action **ignores** the launcher label: it creates the branch as soon as the issue has a type label (e.g. on open or when the type label is added). |
+## Ready to implement
 
-### Example: use the default launcher
+For a regular branch-bearing issue, the visible sequence is `in-progress` → linked branch → `branched` → implementation. The Action checks the branch's exact GitHub issue link and remote SHA on every issue run. If the link or branch is missing, it removes an unsupported `branched` label. If verification fails, it reports the error and pauses branch-dependent work.
 
-Workflow:
+With `pre-branch-sdd: true`, an eligible feature or behavior-changing issue enters `state:specifying` first. The Action clarifies the contract in issue comments, validates the SDD outside the new branch, creates the linked branch, and publishes the SDD as its first commit. Only after the remote commit is verified does it add `branched` and move to `state:working`.
 
-```yaml
-- uses: vypdev/copilot@v3
-  with:
-    token: ${{ secrets.PAT }}
-    branch-management-launcher-label: branched
-```
+## Naming and source branches
 
-Flow: Open issue with label `feature` → no branch yet. Add label `branched` → branch `feature/123-title` is created from `develop`.
+Branch names follow `<tree>/<issue-number>-<slug>`. The title supplies the slug; `feature-tree`, `bugfix-tree`, `docs-tree`, `chore-tree`, `hotfix-tree`, and `release-tree` configure the prefix. `development-branch` defaults to `develop`; `main-branch` defaults to `master`.
 
-### Example: create branch without launcher
+Examples: `feature/123-add-user-login`, `bugfix/456-fix-null-check`, `hotfix/789-critical-payment-fix`, `release/10-v1-2-0`.
 
-```yaml
-- uses: vypdev/copilot@v3
-  with:
-    token: ${{ secrets.PAT }}
-    branch-management-always: true
-```
+If branch creation succeeds but a later step fails, rerun the issue workflow on the same issue. The Action reuses the linked branch and verifies its current remote state. Do not create a second branch to recover an SDD publication failure.
 
-Flow: Open issue with label `feature` → branch is created immediately (no need to add `branched`).
+## Related pages
 
-## Naming conventions
-
-Branch names follow **`<tree>/<issue-number>-<slug>`**. The **tree** is the prefix for the issue type; the **slug** is derived from the issue title (sanitized). You can configure main branch, development branch, and each tree.
-
-| Input | Default | Description |
-|-------|---------|-------------|
-| `main-branch` | `master` | Main production branch (used as base for hotfix). |
-| `development-branch` | `develop` | Development branch (used as base for feature, bugfix, docs, chore, release). |
-| `feature-tree` | `feature` | Prefix for feature branches. |
-| `bugfix-tree` | `bugfix` | Prefix for bugfix branches. |
-| `docs-tree` | `docs` | Prefix for docs branches. |
-| `chore-tree` | `chore` | Prefix for chore branches. |
-| `hotfix-tree` | `hotfix` | Prefix for hotfix branches. |
-| `release-tree` | `release` | Prefix for release branches. |
-
-### Example branch names
-
-- `feature/123-add-user-login`
-- `bugfix/456-fix-null-check`
-- `hotfix/789-critical-payment-fix`
-- `release/10-v1-2-0`
-
-Use **`commit-prefix-transforms`** (e.g. `replace-slash`) so commit message prefixes match your conventions (e.g. `feature-123-add-user-login`). See [Configuration](/configuration).
-
-### Example: custom naming
-
-```yaml
-- uses: vypdev/copilot@v3
-  with:
-    token: ${{ secrets.PAT }}
-    main-branch: main
-    development-branch: dev
-    feature-tree: feat
-    bugfix-tree: fix
-```
-
-Branches would be e.g. `feat/123-add-login` and `fix/456-fix-bug`, created from `dev` (or `main` for hotfix).
-
-## Hotfix and release: no launcher needed
-
-For **hotfix** and **release**:
-
-- The branch is created **without** requiring the launcher label. As soon as the issue has the `hotfix` or `release` label (and the creator is a member), the action creates the branch.
-- **Hotfix** branches are created from **`main-branch`** (at the latest tag).
-- **Release** branches are created from **`development-branch`**.
-- If a **non-member** opens a hotfix or release issue, the action **closes** the issue to avoid accidental production/release flows.
-
-Adding the **`deploy`** label to a release or hotfix issue **triggers** the workflow named in `release-workflow` or `hotfix-workflow`. Ensure those workflow **filenames** match exactly (e.g. `release_workflow.yml`, `hotfix_workflow.yml`). See [Labels and branch types](/issues/labels-and-branch-types).
-
-## State and partial recovery
-
-Copilot records branch configuration only after branch preparation returns a
-validated result. The issue route applies the returned parent, working, release,
-or hotfix facts as one bounded patch; a lower-level branch helper cannot change
-the run's configuration while GitHub operations are still pending.
-
-If the branch is created but a later project or status update fails, the result
-names the retained branch. Do not delete that valid branch or relaunch under a
-different name. Continue work if appropriate, fix the reported permission or
-project problem, and rerun the same issue workflow; it will inspect and reuse
-the existing branch before applying its configuration facts.
-
-## Emoji in issue title
-
-When **`emoji-labeled-title`** is `true` (default), the action can update the issue title to include an emoji based on labels (e.g. 🧑‍💻 when branched). The **`branch-management-emoji`** input (default: 🧑‍💻) is the emoji used for branched issues. See [Configuration](/issues/configuration).
-
-## Next steps
-
-- **[Labels and branch types](/issues/labels-and-branch-types)** — Which labels create which branches.
-- **[Workflow setup](/issues/workflow-setup)** — Enable the action for issue events.
-- **[Issue types](/issues/type/feature)** — Per-type details (source branch, naming, deploy).
+- [Workflow setup](/issues/workflow-setup)
+- [Labels and branch types](/issues/labels-and-branch-types)
+- [Pre-branch SDDs](/issues/pre-branch-sdds)

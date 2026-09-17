@@ -52,14 +52,13 @@ export function effectiveIssueFormLabels(
     medium: configured('priority-medium-label', 'priority: medium'),
     low: configured('priority-low-label', 'priority: low'),
   };
-  const launcher = configured('branch-management-launcher-label', 'branched');
   return Object.freeze({
     feature: Object.freeze([...labels.feature, priority.low]),
     bugfix: Object.freeze([...labels.bugfix, priority.high]),
     documentation: Object.freeze([...labels.documentation, priority.low]),
     chore: Object.freeze([...labels.chore, priority.low]),
     help: Object.freeze([...labels.help, priority.medium]),
-    hotfix: Object.freeze([...labels.hotfix, launcher, priority.high]),
-    release: Object.freeze([...labels.release, launcher, priority.medium]),
+    hotfix: Object.freeze([...labels.hotfix, priority.high]),
+    release: Object.freeze([...labels.release, priority.medium]),
   });
 }

@@ -2,10 +2,9 @@ import {
     DEFAULT_COPILOT_LIFECYCLE_LABELS,
     type CopilotLifecycleLabels,
 } from '../../domain/copilot_lifecycle';
+import { BRANCH_READY_LABEL } from '../../domain/issue_start_policy';
 
 export class Labels {
-    branchManagementLauncherLabel: string;
-
     bug: string;
     bugfix: string;
     hotfix: string;
@@ -43,7 +42,7 @@ export class Labels {
     }
 
     get containsBranchedLabel(): boolean {
-        return this.currentIssueLabels.includes(this.branchManagementLauncherLabel);
+        return this.currentIssueLabels.includes(BRANCH_READY_LABEL);
     }
 
     get isDeploy(): boolean {
@@ -199,7 +198,6 @@ export class Labels {
     }
 
     constructor(
-        branchManagementLauncherLabel: string,
         bug: string,
         bugfix: string,
         hotfix: string,
@@ -226,7 +224,6 @@ export class Labels {
         sizeXs: string,
         lifecycle: Partial<CopilotLifecycleLabels> = {},
     ) {
-        this.branchManagementLauncherLabel = branchManagementLauncherLabel;
         this.bug = bug;
         this.bugfix = bugfix;
         this.hotfix = hotfix;

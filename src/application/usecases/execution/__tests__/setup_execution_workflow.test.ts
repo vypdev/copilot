@@ -28,7 +28,6 @@ function context(overrides: Partial<SetupExecutionContext> = {}): SetupExecution
     release: { active: false },
     hotfix: { active: false },
     issueWorkflowProfile: createIssueWorkflowProfile(['feature']),
-    issueWorkflowProfileLegacy: false,
     ...overrides,
   };
 }

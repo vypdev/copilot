@@ -19,14 +19,14 @@ on:
 
 | Event type | When it runs | Typical use |
 |------------|--------------|-------------|
-| `opened` | A new issue is created | Link to projects, assign members, apply initial behavior (e.g. if branch-management-always, create branch). |
-| `reopened` | A closed issue is reopened | Re-apply linking/assignees; branch creation may run again depending on labels. |
+| `opened` | A new issue is created | Classify, link to projects, and assign members; work waits for `in-progress`. |
+| `reopened` | A closed issue is reopened | Re-apply linking and assignees; an existing `in-progress` issue resumes its workflow. |
 | `edited` | Issue title or body is edited | Update project/title/linking if needed. |
-| `labeled` | A label is added to the issue | **Branch creation** when the launcher label (e.g. `branched`) is added, or when type is hotfix/release; deploy trigger when `deploy` is added. |
+| `labeled` | A label is added to the issue | **Start work** when `in-progress` is added; deploy trigger when `deploy` is added. |
 | `unlabeled` | A label is removed | Update state (e.g. branch already exists; deploy label removed). |
 | `assigned` / `unassigned` | Assignees change | Sync with project/assignees if your flow depends on it. |
 
-For **branch creation**, the most important event is usually **`labeled`**: when the user adds the **branch launcher label** (default: `branched`) or when the issue has a hotfix/release label and the creator is a member, the action creates the branch. See [Branch management](/issues/branch-management).
+For **branch creation**, the most important event is usually **`labeled`**: when a user adds `in-progress` to an admitted issue, the Action begins work. It creates and verifies a branch when branch management is enabled, then adds `branched`. See [Branch management](/issues/branch-management).
 
 ## Minimal workflow
 
@@ -78,7 +78,7 @@ type labels is not converted into a Feature; the Action reports a no-op or a
 configuration block. Release and hotfix issues are admitted only when the
 required form headings and values are present.
 
-Add other inputs as needed: `branch-management-launcher-label`, `desired-assignees-count`, `main-branch`, `development-branch`, etc. See [Configuration](/issues/configuration) and [Examples](/issues/examples).
+Add other inputs as needed: `issue-managed-branches`, `pre-branch-sdd`, `desired-assignees-count`, `main-branch`, `development-branch`, etc. See [Configuration](/issues/configuration) and [Examples](/issues/examples).
 
 ## What runs when
 
@@ -92,7 +92,7 @@ Add other inputs as needed: `branch-management-launcher-label`, `desired-assigne
 
 4. **Assignees:** If `desired-assignees-count` is set, the action assigns up to that many members (issue creator first if they belong to the org/repo, then additional members). See [Assignees and projects](/issues/assignees-and-projects).
 
-5. **Branch creation:** When the admitted issue has a **branch type** label (feature, bugfix, docs, chore, hotfix, release) and either the **launcher label** (e.g. `branched`) is present or `branch-management-always: true`, the action creates the branch (with hotfix/release restrictions for non-members). See [Branch management](/issues/branch-management).
+5. **Branch creation:** After `in-progress`, the Action creates a branch for an admitted branch-bearing issue when `issue-managed-branches: true`. For eligible feature or `contract-change` issues with `pre-branch-sdd: true`, it resolves blocking questions and publishes the validated SDD as the first branch commit. It then verifies the linked remote branch and adds `branched`. See [Branch management](/issues/branch-management).
 
 6. **Deploy trigger:** When the `deploy` label is added to an issue that has a release or hotfix type, the action **dispatches** the workflow named in `release-workflow` or `hotfix-workflow` (e.g. `release_workflow.yml`, `hotfix_workflow.yml`). Filenames must match exactly.
 

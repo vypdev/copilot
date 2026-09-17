@@ -232,6 +232,7 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
     pullRequestDescription,
     new RememberBugbotRuleUseCase(bugbot.rules),
     branchSync,
+    createIssueUseCaseCompositionRoot(binding),
   );
 }
 

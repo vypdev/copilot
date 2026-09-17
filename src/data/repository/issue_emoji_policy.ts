@@ -20,17 +20,17 @@ const CONTEXT_RULES: readonly EmojiRule[] = [
     { emoji: '❓', matches: labels => labels.isQuestion },
 ];
 
-export function resolveIssueTitleEmoji(labels: TitleLabelFacts, branchManagementAlways: boolean, branchManagementEmoji: string): string {
-    return resolveTitleEmoji(labels, branchManagementAlways, branchManagementEmoji);
+export function resolveIssueTitleEmoji(labels: TitleLabelFacts, branchManagementEmoji: string): string {
+    return resolveTitleEmoji(labels, branchManagementEmoji);
 }
 
-export function resolvePullRequestTitleEmoji(labels: TitleLabelFacts, branchManagementAlways: boolean, branchManagementEmoji: string): string {
-    return resolveTitleEmoji(labels, branchManagementAlways, branchManagementEmoji);
+export function resolvePullRequestTitleEmoji(labels: TitleLabelFacts, branchManagementEmoji: string): string {
+    return resolveTitleEmoji(labels, branchManagementEmoji);
 }
 
-function resolveTitleEmoji(labels: TitleLabelFacts, branchManagementAlways: boolean, branchManagementEmoji: string): string {
+function resolveTitleEmoji(labels: TitleLabelFacts, branchManagementEmoji: string): string {
     const typeEmoji = firstMatchingEmoji(TYPE_RULES, labels);
-    if (typeEmoji && (branchManagementAlways || labels.containsBranchedLabel)) return `${typeEmoji}${branchManagementEmoji}`;
+    if (typeEmoji && labels.containsBranchedLabel) return `${typeEmoji}${branchManagementEmoji}`;
     return typeEmoji ?? firstMatchingEmoji(CONTEXT_RULES.slice(TYPE_RULES.length), labels) ?? '🤖';
 }
 

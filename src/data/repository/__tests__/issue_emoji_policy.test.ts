@@ -19,11 +19,11 @@ const labels = (overrides: Record<string, boolean> = {}) => ({
 
 describe('issue emoji policy', () => {
     it('keeps branched issue emoji and branch marker', () => {
-        expect(resolveIssueTitleEmoji(labels({ isHotfix: true }), true, '🌿')).toBe('🔥🌿');
-        expect(resolveIssueTitleEmoji(labels({ isHelp: true }), false, '🌿')).toBe('🆘');
+        expect(resolveIssueTitleEmoji(labels({ isHotfix: true, containsBranchedLabel: true }), '🌿')).toBe('🔥🌿');
+        expect(resolveIssueTitleEmoji(labels({ isHelp: true }), '🌿')).toBe('🆘');
     });
 
     it('preserves pull-request precedence for bug labels', () => {
-        expect(resolvePullRequestTitleEmoji(labels({ isBug: true, isDocs: true }), false, '🌿')).toBe('🐛');
+        expect(resolvePullRequestTitleEmoji(labels({ isBug: true, isDocs: true }), '🌿')).toBe('🐛');
     });
 });

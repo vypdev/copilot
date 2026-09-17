@@ -194,6 +194,23 @@ describe("IssueCommentUseCase", () => {
     mockDoUserRequestInvoke.mockReset();
   });
 
+  it('routes an active numbered SDD answer to issue continuation without a slash command', async () => {
+    const continueIssue = jest.fn().mockResolvedValue([new Result({ id: 'sdd', success: true, executed: true })]);
+    const routed = new IssueCommentUseCase(
+      { invoke: jest.fn() } as never, { invoke: jest.fn() } as never,
+      { invoke: jest.fn() } as never, { invoke: jest.fn() } as never,
+      { invoke: jest.fn() } as never, { isActorAllowedToModifyFiles: jest.fn() } as never,
+      {} as never, undefined, undefined, undefined, undefined, undefined,
+      { invoke: continueIssue } as never,
+    );
+    const execution = baseExecution({
+      issueStartDecision: { started: true, branchRequired: true, sddRequired: true, helpRequired: false },
+      issue: { isIssueComment: true, commentBody: 'SDD Q1: Preserve the current API', commentAuthor: 'alice', number: 296 } as never,
+    });
+    await routed.invoke(execution);
+    expect(continueIssue).toHaveBeenCalledWith(execution);
+  });
+
   it("runs CheckIssueCommentLanguage and DetectBugbotFixIntent in order", async () => {
     mockDetectIntentInvoke.mockResolvedValue([
       new Result({

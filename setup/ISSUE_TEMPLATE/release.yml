@@ -1,7 +1,7 @@
 name: 🚀 Release Issue
 description: Request a new release for copilot (only team members)
 title: "<YOUR TITLE HERE>"
-labels: ["release", "branched", "priority: medium"]
+labels: ["release", "priority: medium"]
 body:
   - type: markdown
     attributes:

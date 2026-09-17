@@ -3,6 +3,7 @@ import type { ProjectReference } from '../ports/project_board_link_ports';
 import type { SelectedIssueType } from '../ports/issue_management_ports';
 import type { Result } from '../../data/model/result';
 import type { IssueWorkflowKind } from '../../domain/issue_workflow_profile';
+import { ISSUE_START_LABEL } from '../../domain/issue_start_policy';
 
 export interface AssignmentContext {
   readonly target: 'issue' | 'pull request';
@@ -324,7 +325,7 @@ export function projectIssueWorkflowStepContexts(source: IssueWorkflowContextSou
     }),
     answerHelp: Object.freeze({
       issueNumber: source.issue.number,
-      opened: source.issue.opened,
+      opened: source.issue.opened || (source.issue.labeled && source.issue.labelAdded === ISSUE_START_LABEL),
       questionOrHelp: source.labels.isQuestion || source.labels.isHelp,
       description: (source.issue.body ?? '').trim(),
       agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),

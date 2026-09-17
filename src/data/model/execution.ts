@@ -25,6 +25,7 @@ import { DEFAULT_DEPLOYMENT_CONFIGURATION, type DeploymentConfigurationValues } 
 import { ALL_ISSUE_WORKFLOWS, classifyIssueWorkflow, type IssueWorkflowAdmission, type IssueWorkflowProfile } from '../../domain/issue_workflow_profile';
 import type { IssueWorkflowKind } from '../../domain/issue_workflow_profile';
 import type { IssueWorkflowRuntimeMode } from '../../domain/issue_workflow_runtime_policy';
+import { decideIssueStart } from '../../domain/issue_start_policy';
 
 
 export class Execution {
@@ -60,10 +61,10 @@ export class Execution {
     inactivityThresholdHours: number;
     inputs: ExecutionInputs | undefined;
     readonly issueWorkflowProfile: IssueWorkflowProfile;
-    readonly issueWorkflowProfileLegacy: boolean;
     readonly issueWorkflowProfileDigest?: string;
     currentIssueWorkflowAdmission?: IssueWorkflowAdmission;
     issueWorkflowRuntimeMode: IssueWorkflowRuntimeMode = 'execute';
+    readonly preBranchSdd: boolean;
 
     get eventName(): string {
         return this.inputs?.eventName ?? '';
@@ -116,12 +117,16 @@ export class Execution {
     }
 
     get isBranched(): boolean {
-        const admission = this.issueWorkflowAdmission;
-        if (admission.status === 'eligible' && admission.kind === 'help') return false;
-        if (admission.status !== 'eligible' && this.isIssue) return false;
-        return this.issue.branchManagementAlways ||
-            this.labels.containsBranchedLabel ||
-            this.labels.isMandatoryBranchedLabel;
+        return this.issueStartDecision.branchRequired;
+    }
+
+    get issueStartDecision() {
+        return decideIssueStart({
+            kind: this.issueWorkflowKind,
+            labels: this.labels.currentIssueLabels,
+            issueManagedBranches: this.issue.issueManagedBranches,
+            preBranchSdd: this.preBranchSdd,
+        });
     }
 
     get issueWorkflowAdmission(): IssueWorkflowAdmission {
@@ -138,7 +143,6 @@ export class Execution {
                 release: [this.labels.release],
             },
             this.issue.body,
-            !this.issueWorkflowProfileLegacy,
         );
     }
 
@@ -198,10 +202,10 @@ export class Execution {
         this.inputs = components.inputs;
         this.welcome = components.welcome;
         this.issueWorkflowProfile = components.issueWorkflowProfile ?? ALL_ISSUE_WORKFLOWS;
-        this.issueWorkflowProfileLegacy = components.issueWorkflowProfileLegacy ?? components.issueWorkflowProfile === undefined;
         this.issueWorkflowProfileDigest = components.issueWorkflowProfileDigest;
         this.currentIssueWorkflowAdmission = components.issueWorkflowAdmission;
         this.currentConfiguration.issueWorkflowProfileDigest = components.issueWorkflowProfileDigest;
+        this.preBranchSdd = components.preBranchSdd ?? false;
     }
 
 }

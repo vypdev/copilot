@@ -116,7 +116,7 @@ describe("main run route composition root", () => {
     expect(RememberBugbotRuleUseCase).toHaveBeenCalledWith(mockRules);
     expect(IssueCommentUseCase).toHaveBeenCalledTimes(1);
     expect(IssueCommentUseCase).toHaveBeenCalledWith(
-      ...Array.from({ length: 12 }, () => expect.anything()),
+      ...Array.from({ length: 13 }, () => expect.anything()),
     );
   });
 

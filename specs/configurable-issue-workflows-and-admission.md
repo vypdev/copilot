@@ -220,7 +220,8 @@ ownership.
 5. The only allowed pre-admission repository write is one bounded diagnostic
    reply to an explicit addressed command. Passive events use logs and Job
    Summary only.
-6. Help work MUST remain branchless even when `branch-management-always=true`.
+6. Help work MUST remain branchless even when `issue-managed-branches=true`
+   and after its `in-progress` start.
 7. Release and hotfix bodies MUST distinguish the explicit value `Automatic`
    from missing, duplicated, empty, or invalid values; invalid is never
    reinterpreted as automatic.
@@ -229,8 +230,8 @@ ownership.
 9. The Action owns remote managed-branch creation, naming, rename, parent, and
    deletion. Configuration cannot delegate those operations to an agent.
 10. Invalid, unknown-version, or contradictory profile configuration MUST fail
-    closed before mutations. A truly absent profile uses the documented legacy
-    compatibility rule in section 13.
+    closed before mutations. An absent profile selects all seven kinds and
+    applies the same body validation as an explicit profile.
 11. Labels required by a selected rendered form MUST exist before that form is
     considered ready. `blank_issues_enabled=false` improves the chooser but does
     not replace runtime classification and schema validation.
@@ -333,7 +334,7 @@ domain changes.
 
 | State | Entered when | User-visible meaning | Allowed next states | Recovery/owner |
 |---|---|---|---|---|
-| `legacy-all` | profile is absent, not empty/invalid | compatibility treats all seven kinds as enabled | any decision below | rerun setup to persist explicit profile |
+| `all-selected` | profile is absent | all seven kinds are enabled with normal body validation | any decision below | optionally persist an explicit profile |
 | `eligible` | one enabled kind, valid body/dependencies | normal behavior may run | `completed`, route-specific failure | Action |
 | `continuation-only` | disabled kind has pre-existing managed state | only synchronization, PR completion, and cleanup are allowed | `completed`, `blocked` | Action/maintainer |
 | `durable-operation` | stored release/hotfix operation predates disablement | recover or finish that exact operation; no new deploy | `completed`, `blocked` | orchestration owner |
@@ -375,7 +376,7 @@ does not change the previous profile.
 | `features.issueTemplates` | boolean | `true` | boolean | setup config |
 | legacy `features.release` | boolean compatibility input | derived | accepted only when new field absent or consistent | deprecated setup input |
 | legacy `features.hotfix` | boolean compatibility input | derived | accepted only when new field absent or consistent | deprecated setup input |
-| `issue-workflow-profile` | canonical compact JSON string | empty = legacy-all | schema version 1, known unique IDs only | Action input |
+| `issue-workflow-profile` | canonical compact JSON string | empty selects all seven with body validation | schema version 1, known unique IDs only | Action input |
 | `COPILOT_ISSUE_WORKFLOW_PROFILE` | canonical compact JSON string | explicit all for new setup | same as Action input | repository Variable |
 
 The compact runtime value is exactly minified JSON with lexically stable catalog
@@ -401,8 +402,8 @@ Validation rules:
    disable runtime kinds.
 6. Unknown keys, schema versions, IDs, duplicates, non-arrays, oversized
    non-blank input, or malformed JSON fail before mutation. GitHub Actions maps
-   both an omitted input and its declared empty compatibility default to the
-   same empty string, so that value intentionally means `legacy-all`.
+   both an omitted input and its declared empty default to the same empty
+   string, so that value selects all kinds with normal body validation.
 7. Workflow templates MUST pass the repository Variable into the Action input.
    Setup writes the Variable and forms from one immutable plan. Runtime rereads
    the value for each run and snapshots it in the admission outcome.
@@ -680,12 +681,11 @@ existing irreversible release as wholly failed when only reconciliation failed.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
-1. A missing or empty Action input means `legacy-all`: all seven kinds are
-   enabled using current effective labels. This preserves manually installed
-   and older setup workflows and reflects the Actions input API, which cannot
-   distinguish omission from an empty declared default.
+1. A missing or empty Action input selects all seven kinds with normal body
+   validation. The Actions input API cannot distinguish omission from an
+   empty declared default.
 2. Every new or rerun setup writes explicit schema-1 JSON, including when all
-   kinds are selected. Doctor warns on legacy mode until setup is rerun.
+   kinds are selected.
 3. Existing setup config without `issueWorkflows.enabled` derives the profile
    from `features.issues`, `features.release`, and `features.hotfix`. Documentation
    marks the latter two as compatibility inputs once the new selector ships.
@@ -698,7 +698,7 @@ existing irreversible release as wholly failed when only reconciliation failed.
    doctor; fail-closed runtime gate; form reconciliation; native Issue Type
    selection optimization. Shadow mode records differences without changing
    decisions and MUST be removed before Definition of Done.
-7. Rollback can stop passing the input, returning to legacy-all behavior. The
+7. Rollback can stop passing the input, selecting all seven kinds. The
    operator MUST be warned that this re-enables every kind. Form retirements are
    recoverable from setup backups; remote irreversible releases are not rolled
    back by this feature.
@@ -761,8 +761,8 @@ validated against setup forms and profile fixtures.
    then their labels and runtime classification agree exactly.
 5. Given an issue has both bugfix and release aliases, when its event runs, then
    admission fails before every domain mutation and identifies both groups.
-6. Given a help issue and `branch-management-always=true`, when it is admitted,
-   then help handling may run but no branch operation is reachable.
+6. Given a help issue and `issue-managed-branches=true`, when `in-progress`
+   starts it, then help handling may run but no branch operation is reachable.
 7. Given an explicit `Automatic` release version and valid release type, when
    admitted, then automatic version resolution is allowed; given a missing or
    malformed heading, it blocks instead.
@@ -775,8 +775,8 @@ validated against setup forms and profile fixtures.
 10. Given an existing release operation is mid-reconciliation when release is
     disabled, then the same operation can recover to a terminal state but a new
     deploy request is rejected.
-11. Given an absent profile from an old workflow, then all kinds retain legacy
-    behavior with a doctor warning; given malformed profile JSON, the run blocks.
+11. Given an absent profile, then all kinds use the same admission and body
+    validation as an explicit all-kinds profile; malformed JSON blocks.
 12. Given an unlinked PR, when its workflow runs, then PR-native enrichment is
     not blocked by issue workflow classification.
 13. Given a selected managed form is locally modified, when setup reruns, then it
@@ -864,7 +864,7 @@ validated against setup forms and profile fixtures.
   making form usability depend on an organization-scoped optional resource.
 - Decision: classify all matching groups and reject ambiguity. Rejected: a
   precedence order, because it hides contradictory user state.
-- Decision: absence means temporary legacy-all; invalid presence fails closed.
+- Decision: absence selects all kinds with normal body checks; invalid presence fails closed.
   Rejected: treating all parse failures as absence.
 - Decision: disablement preserves bounded completion of already-admitted work.
   Rejected: immediate destructive branch/operation cancellation.

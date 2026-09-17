@@ -4,6 +4,7 @@ import {
     progressPercentToColor,
 } from './progress_labels';
 import { managedLifecycleLabelDefinitions } from '../../domain/copilot_lifecycle';
+import { BRANCH_READY_LABEL, CONTRACT_CHANGE_LABEL, ISSUE_START_LABEL, SDD_REQUIRED_LABEL } from '../../domain/issue_start_policy';
 
 export interface InitialLabelDefinition {
     name: string;
@@ -25,7 +26,6 @@ const normalizeLabelName = (name: string): string => name.trim().toLowerCase();
 
 function configuredLabelDefinitions(labels: InitialLabelConfiguration): InitialLabelDefinition[] {
     const metadata = [
-        ['branchManagementLauncherLabel', '0E8A16', 'Label to trigger branch management actions'],
         ['bug', 'D73A4A', 'Label to indicate a bug type'],
         ['bugfix', 'D73A4A', 'Label to manage bugfix branches'],
         ['hotfix', 'B60205', 'Label to manage hotfix branches'],
@@ -51,9 +51,15 @@ function configuredLabelDefinitions(labels: InitialLabelConfiguration): InitialL
         ['sizeS', 'F39C12', 'Label to indicate a task of size S'],
         ['sizeXs', 'E67E22', 'Label to indicate a task of size XS'],
     ] as const;
-    return metadata
+    return [
+        { name: ISSUE_START_LABEL, color: '0E8A16', description: 'Start work on an admitted issue.' },
+        { name: BRANCH_READY_LABEL, color: '1D76DB', description: 'The linked branch and required SDD commit are verified.' },
+        { name: SDD_REQUIRED_LABEL, color: '6F42C1', description: 'An SDD update is required before branch work.' },
+        { name: CONTRACT_CHANGE_LABEL, color: 'D93F0B', description: 'The issue changes a product or engineering contract.' },
+        ...metadata
         .map(([key, color, description]) => ({ name: labels[key], color, description }))
-        .filter(definition => typeof definition.name === 'string' && definition.name.trim().length > 0);
+        .filter(definition => typeof definition.name === 'string' && definition.name.trim().length > 0),
+    ];
 }
 
 function progressLabelDefinitions(): InitialLabelDefinition[] {

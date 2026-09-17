@@ -26,7 +26,7 @@ function relativeModuleSpecifiers(source: string): string[] {
 
 function resolveTypeScriptImport(file: string, specifier: string): string | undefined {
     const target = resolve(dirname(file), specifier);
-    const candidates = specifier.endsWith('.json')
+    const candidates = specifier.endsWith('.json') || specifier.endsWith('.cjs')
         ? [target]
         : [`${target}.ts`, `${target}.json`, join(target, 'index.ts')];
     return candidates.find(existsSync);

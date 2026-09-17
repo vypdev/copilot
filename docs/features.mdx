@@ -31,7 +31,7 @@ When the workflow runs on `issues` (opened, edited, labeled, unlabeled, etc.):
 
 | Feature | Description |
 |--------|-------------|
-| **Branch creation** | Creates feature, bugfix, docs, chore, and release branches from the configured development line. A release records the exact development SHA at the cut; a hotfix instead starts from the commit behind the selected production version tag. Optional: non-release/hotfix types require a launcher label (for example `branched`) unless `branch-management-always` is true. |
+| **Branch creation** | Creates feature, bugfix, docs, chore, and release branches from the configured development line. A release records the exact development SHA at the cut; a hotfix instead starts from the commit behind the selected production version tag. Adding `in-progress` starts admitted work. When issue-managed branches are enabled, `branched` is added after the exact linked branch is verified; an optional SDD gate publishes the contract first. |
 | **Branch–issue linking** | Links the new branch to the issue. The branch and native issue metadata are the visible evidence; routine linkage does not add a recap comment. |
 | **Project linking** | Adds the issue to the configured GitHub Projects (by `project-ids`) and moves it to the configured column (e.g. "Todo", "In Progress"). |
 | **Assignees** | Assigns up to `desired-assignees-count` members to the issue (creator preferred if in org). |

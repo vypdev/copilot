@@ -359,6 +359,11 @@
           "icon": "code-branch"
         },
         {
+          "title": "Pre-branch SDDs",
+          "href": "/issues/pre-branch-sdds",
+          "icon": "file-lines"
+        },
+        {
           "title": "Branch synchronization",
           "href": "/issues/branch-synchronization",
           "icon": "code-branch"

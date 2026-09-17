@@ -56,8 +56,8 @@ Copilot provides extensive configuration options to customize your workflow. Use
   <Tab title="Branches & Labels" icon="code-branch">
     ## Branch Management
 
-    - `branch-management-launcher-label`: Label to trigger branch management (default: "branched")
-    - `branch-management-always`: Ignore launcher label requirement (default: "false")
+    - `issue-managed-branches`: Create and verify a linked branch after `in-progress` (default: "true")
+    - `pre-branch-sdd`: Require a validated SDD before implementation for eligible issues (default: "false")
     - `branch-management-emoji`: Emoji for branched issues (default: "🧑‍💻")
 
     ## Branch Types
@@ -244,7 +244,8 @@ and waiting dimensions can coexist with it.
 | Input | Default | Meaning |
 | --- | --- | --- |
 | `state-planned-label` | `state:planned` | A plan is available. |
-| `state-in-progress-label` | `state:in-progress` | Implementation is in progress. |
+| `state-specifying-label` | `state:specifying` | A required SDD is being clarified or revised. |
+| `state-working-label` | `state:working` | Implementation may proceed. |
 | `state-reviewing-label` | `state:reviewing` | A pull request is under review. |
 | `state-changes-requested-label` | `state:changes-requested` | Review findings require changes. |
 | `state-verified-label` | `state:verified` | The pull request was merged successfully. |

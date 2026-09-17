@@ -12,7 +12,6 @@ import type { ExecutionInputs } from '../data/model/execution_inputs';
 import type { CopilotLifecycleLabels } from '../domain/copilot_lifecycle';
 
 export interface LabelValues {
-    branching: { launcher: string };
     workflow: { bug: string; bugfix: string; hotfix: string; enhancement: string; feature: string; release: string; question: string; help: string; deploy: string; deployed: string; docs: string; documentation: string; chore: string; maintenance: string };
     priorities: { high: string; medium: string; low: string; none: string };
     sizes: { xxl: string; xl: string; l: string; m: string; s: string; xs: string };
@@ -53,8 +52,8 @@ export function buildLocale(repository: string, issue: string = '', pullRequest:
     return new Locale(repository, issue, pullRequest);
 }
 
-export function buildIssue(branchManagementAlways: boolean, reopenOnPush: boolean, desiredAssigneesCount: number, inputs?: ExecutionInputs): Issue {
-    return new Issue(branchManagementAlways, reopenOnPush, desiredAssigneesCount, inputs);
+export function buildIssue(issueManagedBranches: boolean, reopenOnPush: boolean, desiredAssigneesCount: number, inputs?: ExecutionInputs): Issue {
+    return new Issue(issueManagedBranches, reopenOnPush, desiredAssigneesCount, inputs);
 }
 
 export function buildPullRequest(desiredAssigneesCount: number, desiredReviewersCount: number, inputs?: ExecutionInputs): PullRequest {
@@ -71,7 +70,6 @@ export function buildTokens(token: string): Tokens {
 
 export function buildLabels(values: LabelValues): Labels {
     return new Labels(
-        values.branching.launcher,
         values.workflow.bug,
         values.workflow.bugfix,
         values.workflow.hotfix,

@@ -401,7 +401,6 @@ export function projectAgentActivityContext(source: PushSingleActionContextSourc
 
 function copyInitialLabels(source: PushSingleActionContextSource['labels']): InitialLabelConfiguration {
   const keys = [
-    'branchManagementLauncherLabel',
     'bug', 'bugfix', 'hotfix', 'enhancement', 'feature', 'release',
     'question', 'help', 'deploy', 'deployed', 'docs', 'documentation',
     'chore', 'maintenance', 'priorityHigh', 'priorityMedium', 'priorityLow',

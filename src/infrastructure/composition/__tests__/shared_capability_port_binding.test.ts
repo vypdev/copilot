@@ -68,7 +68,6 @@ describe('shared capability repository bindings', () => {
       version: '1.0.0',
       currentTitle: 'Issue',
       issueNumber: 8,
-      branchManagementAlways: true,
       branchManagementEmoji: '🌿',
       labelFacts: labels,
     });
@@ -82,10 +81,10 @@ describe('shared capability repository bindings', () => {
 
     expect(getTitle).toHaveBeenCalledWith('acme', 'demo', 8, 'secret');
     expect(updateTitleIssueFormat).toHaveBeenCalledWith(
-      'acme', 'demo', '1.0.0', 'Issue', 8, true, '🌿', labels, 'secret',
+      'acme', 'demo', '1.0.0', 'Issue', 8, '🌿', labels, 'secret',
     );
     expect(updateTitlePullRequestFormat).toHaveBeenCalledWith(
-      'acme', 'demo', 'Pull request', 'Issue', 8, 9, false, '', labels, 'secret',
+      'acme', 'demo', 'Pull request', 'Issue', 8, 9, '', labels, 'secret',
     );
   });
 

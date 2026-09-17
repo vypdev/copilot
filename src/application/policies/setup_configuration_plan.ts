@@ -96,7 +96,8 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
     add('RELEASE_TREE', repository.releaseTree);
     add('DOCS_TREE', repository.docsTree);
     add('CHORE_TREE', repository.choreTree);
-    add('BRANCH_MANAGEMENT_ALWAYS', repository.branchManagementAlways);
+    add('ISSUE_MANAGED_BRANCHES', repository.issueManagedBranches);
+    add('PRE_BRANCH_SDD', repository.preBranchSdd);
     add('REOPEN_ISSUE_ON_PUSH', repository.reopenIssueOnPush);
     add('DESIRED_ASSIGNEES_COUNT', repository.desiredAssigneesCount);
     add('DESIRED_REVIEWERS_COUNT', repository.desiredReviewersCount);
@@ -161,7 +162,8 @@ export function buildSetupActionInputs(configuration: SetupConfiguration): Recor
         'release-tree': repository.releaseTree,
         'docs-tree': repository.docsTree,
         'chore-tree': repository.choreTree,
-        'branch-management-always': String(repository.branchManagementAlways),
+        'issue-managed-branches': String(repository.issueManagedBranches),
+        'pre-branch-sdd': String(repository.preBranchSdd),
         'reopen-issue-on-push': String(repository.reopenIssueOnPush),
         'desired-assignees-count': String(repository.desiredAssigneesCount),
         'desired-reviewers-count': String(repository.desiredReviewersCount),
@@ -235,8 +237,8 @@ function buildSetupWarnings(configuration: SetupConfiguration): string[] {
     if (configuration.features.issues !== false && issueWorkflowProfile.enabled.length === 0) {
         warnings.push('No issue workflow kind is enabled; issue events will remain unmanaged until a supported Issue Form and profile entry are enabled.');
     }
-    if (configuration.repository.branchManagementAlways && issueWorkflowProfile.enabled.includes('help')) {
-        warnings.push('Help / question issues remain branchless even when branch-management-always is enabled.');
+    if (configuration.repository.issueManagedBranches && issueWorkflowProfile.enabled.includes('help')) {
+        warnings.push('Help / question issues remain branchless even when issue-managed-branches is enabled.');
     }
     if (configuration.features.release !== false && !issueWorkflowProfile.enabled.includes('release')) {
         warnings.push('Release automation is installed, but release issue events are disabled by the selected issue workflow profile.');

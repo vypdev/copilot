@@ -9,6 +9,6 @@ Help issues are for questions and troubleshooting that do not require a code bra
 
 The default routing labels are `help` and `question`. The body must retain the **Describe your problem or question** heading with non-empty content. Configured label overrides are written into the installed form and repository profile.
 
-Help is always branchless. `branch-management-always`, the `branched` launcher label, and agent instructions cannot turn a help issue into implementation work. If a code change is needed, create or request a suitable enabled feature, bugfix, documentation, chore, hotfix, or release issue and let the Action create its branch.
+Help is always branchless. `in-progress` starts help handling, but the issue remains branchless and the Action never adds `branched`. Agent instructions cannot turn a help issue into implementation work. If a code change is needed, create or request a suitable enabled feature, bugfix, documentation, chore, hotfix, or release issue and let the Action create its branch.
 
 The Action may answer an admitted help issue with the configured planner agent. Conflicting type labels, a disabled help workflow, or an incomplete body block that automation before agent preparation.

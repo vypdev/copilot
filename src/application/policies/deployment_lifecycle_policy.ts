@@ -28,7 +28,7 @@ export function projectDeploymentLabels(
   } else if (operation.phase === "promotion_pr_pending" || operation.phase === "reconciliation_pending") {
     projected.push(labels.lifecycle.reviewing);
   } else {
-    projected.push(labels.lifecycle.inProgress);
+    projected.push(labels.lifecycle.working);
   }
   return [...new Set(projected)];
 }

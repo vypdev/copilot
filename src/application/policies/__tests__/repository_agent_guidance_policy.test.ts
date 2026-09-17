@@ -28,21 +28,22 @@ describe('repository agent guidance policy', () => {
     });
     expect(profile.issueWorkflows.forms.hotfix?.workflow).toBe('hotfix_workflow.yml');
     expect(profile.issueWorkflows.forms.release?.workflow).toBe('release_workflow.yml');
-    expect(profile.branches.launcher).toEqual({ mode: 'label', label: 'branched' });
+    expect(profile.branches).toMatchObject({ issueManagedBranches: true, preBranchSdd: false, startLabel: 'in-progress', readyLabel: 'branched' });
     expect(profile.deployment.launcherLabel).toBe('deploy');
 
     const guide = renderRepositoryAgentGuide(profile);
     expect(guide).toContain('exact installed Issue Form');
     expect(guide).toContain('Action-managed');
     expect(guide).toContain('| `help` |');
-    expect(guide).toContain('Implementation is launched by the `branched` label');
+    expect(guide).toContain('starts every admitted issue by adding `in-progress`');
   });
 
-  it('projects disabled forms, custom workflows, labels, and always-on branch management', () => {
+  it('projects disabled forms, custom workflows, labels, and SDD branch gating', () => {
     const configuration = createDefaultSetupConfiguration();
     configuration.features.issueTemplates = false;
     configuration.issueWorkflows = { enabled: ['feature', 'hotfix', 'release'] };
-    configuration.repository.branchManagementAlways = true;
+    configuration.repository.issueManagedBranches = true;
+    configuration.repository.preBranchSdd = true;
     configuration.actionInputs['hotfix-workflow'] = 'custom-hotfix.yml';
     configuration.actionInputs['release-workflow'] = 'custom-release.yml';
     configuration.actionInputs['deploy-label'] = 'ship';
@@ -52,13 +53,13 @@ describe('repository agent guidance policy', () => {
     expect(profile.issueWorkflows.forms.feature?.template).toBeNull();
     expect(profile.issueWorkflows.forms.hotfix?.workflow).toBe('custom-hotfix.yml');
     expect(profile.issueWorkflows.forms.release?.workflow).toBe('custom-release.yml');
-    expect(profile.branches.launcher.mode).toBe('always');
+    expect(profile.branches.preBranchSdd).toBe(true);
     expect(profile.deployment.launcherLabel).toBe('ship');
 
     const guide = renderRepositoryAgentGuide(profile);
     expect(guide).toContain('Issue Forms are disabled');
     expect(guide).toContain('maintainer-approved manual issue');
-    expect(guide).toContain('Branch management starts automatically');
+    expect(guide).toContain('answer the Action\'s blocking questions');
   });
 
   it('disables forms when issue automation is disabled even if templates remain selected', () => {

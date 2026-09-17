@@ -2,7 +2,6 @@ import { Labels } from '../labels';
 
 function createLabels(overrides: Partial<Record<keyof Labels, string>> = {}): Labels {
   const base = {
-    branchManagementLauncherLabel: 'launch',
     bug: 'bug',
     bugfix: 'bugfix',
     hotfix: 'hotfix',
@@ -29,7 +28,6 @@ function createLabels(overrides: Partial<Record<keyof Labels, string>> = {}): La
     priorityNone: 'priority/none',
   };
   const l = new Labels(
-    base.branchManagementLauncherLabel,
     base.bug,
     base.bugfix,
     base.hotfix,
@@ -70,11 +68,11 @@ describe('Labels', () => {
     expect(l.isMandatoryBranchedLabel).toBe(true);
   });
 
-  it('containsBranchedLabel reflects branchManagementLauncherLabel in currentIssueLabels', () => {
+  it('containsBranchedLabel reflects the fixed branch readiness label', () => {
     const l = createLabels();
     l.currentIssueLabels = [];
     expect(l.containsBranchedLabel).toBe(false);
-    l.currentIssueLabels = [l.branchManagementLauncherLabel];
+    l.currentIssueLabels = ['branched'];
     expect(l.containsBranchedLabel).toBe(true);
   });
 

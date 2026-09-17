@@ -85,7 +85,7 @@ function minimalExecution(singleAction: {
     },
     labels: {
       lifecycle: {
-        aiProcessing: 'state:ai-processing', planned: 'state:planned', inProgress: 'state:in-progress',
+        aiProcessing: 'state:ai-processing', planned: 'state:planned', specifying: 'state:specifying', working: 'state:working',
         reviewing: 'state:reviewing', changesRequested: 'state:changes-requested', verified: 'state:verified',
         ready: 'state:ready', blocked: 'state:blocked', awaitingMaintainer: 'state:awaiting-maintainer',
         awaitingIssueAuthor: 'state:awaiting-issue-author',

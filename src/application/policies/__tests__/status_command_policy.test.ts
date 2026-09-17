@@ -13,11 +13,11 @@ function execution(overrides: Record<string, unknown> = {}) {
         commit: { branch: 'feature/17-demo' },
         inputs: { action: 'synchronize' },
         labels: {
-            currentIssueLabels: ['state:in-progress'],
+            currentIssueLabels: ['state:working'],
             currentPullRequestLabels: ['size:m', 'state:reviewing'],
             lifecycle: {
                 planned: 'state:planned',
-                inProgress: 'state:in-progress',
+                specifying: 'state:specifying', working: 'state:working',
                 reviewing: 'state:reviewing',
                 changesRequested: 'state:changes-requested',
                 verified: 'state:verified',
@@ -157,7 +157,7 @@ describe('status command policy', () => {
         const body = formatCopilotStatus({
             owner: 'acme', repository: 'demo', event: 'pull_request', action: 'opened', target: 'pull-request',
             issueNumber: 17, pullRequestNumber: 21, branch: 'feature/17-demo', lifecycle: 'reviewing',
-            waitingFor: 'maintainer', pullRequestDescriptionMode: 'append', issueLabels: ['state:in-progress'],
+            waitingFor: 'maintainer', pullRequestDescriptionMode: 'append', issueLabels: ['state:working'],
             pullRequestLabels: ['state:reviewing'],
             findingStates: { open: 1, reopened: 2, verificationRequired: 3, unknown: 4, resolved: 5 },
         }, 'es-ES');

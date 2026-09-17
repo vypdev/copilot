@@ -257,9 +257,9 @@ setup-managed artifacts are refreshed only when the manifest identifies them as
 owned. Use `--agent-guidance disabled` to opt out.
 
 The Action receives the same profile through the `issue-workflow-profile` input
-and the `COPILOT_ISSUE_WORKFLOW_PROFILE` Repository Variable. Empty input keeps
-legacy all-workflow behavior for manually wired repositories. A configured
-profile is fail-closed: unknown, disabled, conflicting, or incomplete issue
+and the `COPILOT_ISSUE_WORKFLOW_PROFILE` Repository Variable. An empty input
+selects all seven workflows and still validates their required Issue Form
+fields. Admission is fail-closed: unknown, disabled, conflicting, or incomplete issue
 work is skipped or blocked before agent preparation and repository mutation; it
 never silently becomes Feature work. Release and hotfix bodies must retain the
 headings and semantic fields supplied by their forms.

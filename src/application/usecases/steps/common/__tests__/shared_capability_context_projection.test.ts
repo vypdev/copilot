@@ -262,7 +262,7 @@ describe('P2-D shared capability context projections', () => {
   it('projects equivalent issue and pull-request title facts as discriminated records', () => {
     const source = {
       issueNumber: 10,
-      issue: { number: 10, title: 'Issue', branchManagementAlways: true },
+      issue: { number: 10, title: 'Issue' },
       pullRequest: { number: 11, title: 'Pull request' },
       emoji: { emojiLabeledTitle: true, branchManagementEmoji: '🌿' },
       release: { active: false },

@@ -3,7 +3,6 @@ import type { LabelValues } from './configuration_builders';
 
 export function readGithubActionLabelInputs(getInput: (key: string) => string): LabelValues {
     return {
-        branching: { launcher: getInput(INPUT_KEYS.BRANCH_MANAGEMENT_LAUNCHER_LABEL) },
         workflow: {
             bug: getInput(INPUT_KEYS.BUG_LABEL), bugfix: getInput(INPUT_KEYS.BUGFIX_LABEL),
             hotfix: getInput(INPUT_KEYS.HOTFIX_LABEL), enhancement: getInput(INPUT_KEYS.ENHANCEMENT_LABEL),
@@ -25,7 +24,8 @@ export function readGithubActionLabelInputs(getInput: (key: string) => string): 
         lifecycle: {
             aiProcessing: getInput(INPUT_KEYS.STATE_AI_PROCESSING_LABEL),
             planned: getInput(INPUT_KEYS.STATE_PLANNED_LABEL),
-            inProgress: getInput(INPUT_KEYS.STATE_IN_PROGRESS_LABEL),
+            specifying: getInput(INPUT_KEYS.STATE_SPECIFYING_LABEL),
+            working: getInput(INPUT_KEYS.STATE_WORKING_LABEL),
             reviewing: getInput(INPUT_KEYS.STATE_REVIEWING_LABEL),
             changesRequested: getInput(INPUT_KEYS.STATE_CHANGES_REQUESTED_LABEL),
             verified: getInput(INPUT_KEYS.STATE_VERIFIED_LABEL),

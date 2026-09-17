@@ -39,9 +39,22 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly updatePullRequestDescriptionUseCase?: UpdatePullRequestDescriptionUseCase,
     private readonly rememberBugbotRuleUseCase?: ParamUseCase<RememberBugbotRuleParam, Result[]>,
     private readonly syncBranchUseCase?: ParamUseCase<SyncBranchRequest, Result[]>,
+    private readonly preBranchSddContinuation?: ParamUseCase<Execution, Result[]>,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
+    if (param.preBranchSdd && !param.issue.issueManagedBranches) {
+      return [new Result({
+        id: this.taskId, success: false, executed: true,
+        steps: ['pre-branch-sdd requires issue-managed-branches; correct the Action configuration.'],
+      })];
+    }
+    if (this.preBranchSddContinuation
+      && param.issueStartDecision.sddRequired
+      && /^\s*SDD\s+Q[1-8]:/im.test(param.issue.commentBody)
+      && param.issue.commentAuthor.toLowerCase() !== param.tokenUser?.toLowerCase()) {
+      return this.preBranchSddContinuation.invoke(param);
+    }
     const context = projectCommentAutomationContext(
       param,
       projectIssueCommentLanguageRequest(param),

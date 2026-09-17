@@ -10,7 +10,7 @@ jest.mock('../../../../utils/logger', () => ({
 
 function createLabels(): Labels {
     return new Labels(
-        'launch', 'bug', 'bugfix', 'hotfix', 'enhancement', 'feature', 'release',
+        'bug', 'bugfix', 'hotfix', 'enhancement', 'feature', 'release',
         'question', 'help', 'deploy', 'deployed', 'docs', 'documentation', 'chore', 'maintenance',
         'priority/high', 'priority/medium', 'priority/low', 'priority/none',
         'size/xxl', 'size/xl', 'size/l', 'size/m', 'size/s', 'size/xs',
@@ -35,7 +35,7 @@ describe('IssueTitleRepository', () => {
         labels.currentIssueLabels = [labels.feature];
 
         await expect(repository.updateTitleIssueFormat(
-            'owner', 'repo', '1.2.3', 'Add login', 42, false, '✨', labels, 'token',
+            'owner', 'repo', '1.2.3', 'Add login', 42, '✨', labels, 'token',
         )).resolves.toBe('✨ - 1.2.3 - Add login');
 
         expect(update).toHaveBeenCalledWith({
@@ -49,7 +49,7 @@ describe('IssueTitleRepository', () => {
         labels.currentIssueLabels = [labels.feature];
 
         await expect(repository.updateTitleIssueFormat(
-            'owner', 'repo', '', '✨ - Add login', 42, false, '✨', labels, 'token',
+            'owner', 'repo', '', '✨ - Add login', 42, '✨', labels, 'token',
         )).resolves.toBeUndefined();
 
         expect(update).not.toHaveBeenCalled();
@@ -61,7 +61,7 @@ describe('IssueTitleRepository', () => {
         labels.currentIssueLabels = [labels.bug];
 
         await expect(repository.updateTitlePullRequestFormat(
-            'owner', 'repo', 'old PR title', 'Fix 1.2.3!', 42, 99, false, '', labels, 'token',
+            'owner', 'repo', 'old PR title', 'Fix 1.2.3!', 42, 99, '', labels, 'token',
         )).resolves.toBe('[#42] 🐛 - Fix 123');
 
         expect(update).toHaveBeenCalledWith({
@@ -75,7 +75,7 @@ describe('IssueTitleRepository', () => {
 
         await expect(repository.updateTitlePullRequestFormat(
             'owner', 'repo', '[#347] 🤖 - 347  347 Develop', '[#347] 🤖 - 347  347 Develop',
-            347, 99, false, '', labels, 'token',
+            347, 99, '', labels, 'token',
         )).resolves.toBe('[#347] 🐛 - Develop');
     });
 
@@ -93,7 +93,7 @@ describe('IssueTitleRepository', () => {
         const labels = createLabels();
 
         await expect(repository.updateTitleIssueFormat(
-            'owner', 'repo', '', 'New title', 42, false, '', labels, 'token',
+            'owner', 'repo', '', 'New title', 42, '', labels, 'token',
         )).rejects.toBe(error);
     });
 });

@@ -5,7 +5,7 @@ import { SingleAction } from '../data/model/single_action';
 import type { Execution } from '../data/model/execution';
 import type { ProjectDetailQueryPort } from '../application/ports/project_detail_ports';
 import { INPUT_KEYS } from '../application/contracts/input_keys';
-import { isEnabledInput } from './input_boolean_policy';
+import { isEnabledInput, parseIssueWorkflowBoolean } from './input_boolean_policy';
 import { getGithubActionInput } from './github_action_input';
 import { parseBoundedPositiveIntegerInput, parseIntegerInput } from './input_number_policy';
 import { parseDelimitedValues } from './input_values_policy';
@@ -80,11 +80,12 @@ export async function buildGithubActionExecution(
         singleAction,
         commitPrefixBuilder: getCommitPrefixBuilder(getInput),
         issue: buildIssue(
-            isEnabledInput(getInput(INPUT_KEYS.BRANCH_MANAGEMENT_ALWAYS)),
+            parseIssueWorkflowBoolean(getInput(INPUT_KEYS.ISSUE_MANAGED_BRANCHES), INPUT_KEYS.ISSUE_MANAGED_BRANCHES, true),
             isEnabledInput(getInput(INPUT_KEYS.REOPEN_ISSUE_ON_PUSH)),
             parseIntegerInput(getInput(INPUT_KEYS.DESIRED_ASSIGNEES_COUNT), 0),
             eventInputs,
         ),
+        preBranchSdd: parseIssueWorkflowBoolean(getInput(INPUT_KEYS.PRE_BRANCH_SDD), INPUT_KEYS.PRE_BRANCH_SDD, false),
         pullRequest: buildPullRequest(
             parseIntegerInput(getInput(INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0),
             parseIntegerInput(getInput(INPUT_KEYS.PULL_REQUEST_DESIRED_REVIEWERS_COUNT), 0),
@@ -125,7 +126,6 @@ export async function buildGithubActionExecution(
         tokenUser: input.tokenUser,
         inputs: eventInputs,
         issueWorkflowProfile: parsedIssueWorkflowProfile.profile,
-        issueWorkflowProfileLegacy: parsedIssueWorkflowProfile.legacy,
         issueWorkflowProfileDigest: issueWorkflowProfileDigest(parsedIssueWorkflowProfile.profile),
     });
 }
