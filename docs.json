@@ -461,6 +461,11 @@
           "icon": "list"
         },
         {
+          "title": "Guarded approval",
+          "href": "/pull-requests/guarded-approval",
+          "icon": "square-check"
+        },
+        {
           "title": "AI PR description",
           "href": "/pull-requests/ai-description",
           "icon": "file-lines"

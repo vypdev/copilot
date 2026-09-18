@@ -12,6 +12,7 @@ import type { SetupConfigurationOverrides } from '../../application/policies/set
 import { createSetupCredentialsUseCase, createSetupRemoteConfigurationReadPort } from '../../infrastructure/composition/setup_credentials_composition_root';
 import { createSetupMergeQueueReadinessUseCase } from '../../infrastructure/composition/setup_doctor_composition_root';
 import { SetupDoctorWorkspaceQueryAdapter } from '../../infrastructure/setup_workspace_adapter';
+import { GithubSetupApprovalReadinessAdapter } from '../../infrastructure/setup_approval_readiness_adapter';
 import type { SetupResourceScope } from '../../domain/setup';
 import { ISSUE_WORKFLOW_KINDS, type IssueWorkflowKind } from '../../domain/issue_workflow_profile';
 import { toApplicationError } from '../../application/errors/application_error';
@@ -33,6 +34,10 @@ export function registerSetupCommand(program: Command): void {
     .option('--issue-workflows <types>', 'Comma-separated issue workflow types, or "all" (for non-interactive setup)')
     .option('--agent-guidance <mode>', 'Generated agent guidance mode (prompt|create-if-missing|disabled)')
     .option('--config <path>', 'YAML or JSON file with setup overrides')
+    .option('--pr-approval-mode <mode>', 'PR bot approval: recommend (new setup default), guarded, or off')
+    .option('--pr-approval-check <identity>', 'Exact test producer name|source-App-ID|workflow-name; repeat for multiple checks', collectApprovalCheck, [])
+    .option('--pr-approval-coverage-check <name>', 'Exact selected check that enforces the coverage budget')
+    .option('--pr-approval-attest-producer', 'Confirm exact check/App/workflow identity and a coverage-enforcing CI step', false)
     .option('--non-interactive', 'Use defaults and config-file values without prompting', false)
     .option('--yes', 'Apply the plan without the final confirmation prompt', false)
     .option('--dry-run', 'Show the setup plan without changing files or GitHub', false)
@@ -98,6 +103,7 @@ export function registerSetupCommand(program: Command): void {
             : new SetupPlanConfirmationAdapter(terminal, Boolean(options.yes)),
           remoteConfiguration: remoteConfigurationReader,
           mergeQueueReadiness: createSetupMergeQueueReadinessUseCase(),
+          approvalReadiness: new GithubSetupApprovalReadinessAdapter(),
         });
         const overrides = loadSetupOverrides(options);
         const result = await wizard.execute({
@@ -105,6 +111,7 @@ export function registerSetupCommand(program: Command): void {
           overrides,
           skipRepositoryVariables: Boolean(options.skipVariables),
           skipRepositorySecrets: Boolean(options.skipSecrets),
+          previewOnly: Boolean(options.dryRun),
           ...(token ? { remoteTarget: { owner: gitInfo.owner, repository: gitInfo.repo, token } } : {}),
         });
         if (result.status === 'cancelled') {
@@ -115,7 +122,7 @@ export function registerSetupCommand(program: Command): void {
           return;
         }
         const { configuration, remoteConfiguration } = result;
-        const workflowComparisons = new SetupDoctorWorkspaceQueryAdapter().compareWorkflows(effectiveIssueWorkflowFeatures(configuration));
+        const workflowComparisons = new SetupDoctorWorkspaceQueryAdapter().compareWorkflows(effectiveIssueWorkflowFeatures(configuration), configuration);
         const updateWorkflows = await workflowPrompt.confirmWorkflowUpdates(workflowComparisons, Boolean(options.updateWorkflows));
         const approvedWorkflowFiles = updateWorkflows
           ? workflowComparisons.filter(comparison => comparison.status === 'changed').map(comparison => comparison.file)
@@ -168,6 +175,10 @@ function collectSecret(value: string, previous: Record<string, string>): Record<
   return { ...previous, [name]: secret };
 }
 
+function collectApprovalCheck(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
+
 function loadSetupOverrides(options: {
   config?: string;
   agent?: string;
@@ -180,9 +191,28 @@ function loadSetupOverrides(options: {
   secretsVisibility?: string;
   variableScope?: Record<string, SetupResourceScope>;
   secretScope?: Record<string, SetupResourceScope>;
+  prApprovalMode?: string;
+  prApprovalCheck?: string[];
+  prApprovalCoverageCheck?: string;
+  prApprovalAttestProducer?: boolean;
 }): SetupConfigurationOverrides {
   const fromFile = options.config ? loadSetupConfigurationOverrides(options.config) : {};
   const fromFlags: SetupConfigurationOverrides = {};
+  if (options.prApprovalMode || options.prApprovalCheck?.length || options.prApprovalCoverageCheck || options.prApprovalAttestProducer) {
+    if (options.prApprovalMode && !['off', 'recommend', 'guarded'].includes(options.prApprovalMode)) {
+      throw new Error('--pr-approval-mode must be guarded, recommend, or off.');
+    }
+    const checks = options.prApprovalCheck?.map(value => {
+      const [name, appId, workflowName] = value.split('|').map(item => item.trim());
+      return { name, sourceAppId: Number(appId), workflowName };
+    });
+    fromFlags.pullRequestApproval = {
+      ...(options.prApprovalMode ? { mode: options.prApprovalMode as 'off' | 'recommend' | 'guarded' } : {}),
+      ...(checks?.length ? { testChecks: checks } : {}),
+      ...(options.prApprovalAttestProducer ? { producerAttested: true } : {}),
+      ...(options.prApprovalCoverageCheck ? { coverage: { mode: 'check', checkName: options.prApprovalCoverageCheck } } : {}),
+    };
+  }
   if (options.agent) {
     if (!['codex', 'opencode', 'cursor'].includes(options.agent)) {
       throw new Error('--agent must be one of: codex, opencode, cursor.');
@@ -244,6 +274,11 @@ function mergeSetupOverrides(
     agents: { ...fileOverrides.agents, ...flagOverrides.agents },
     repository: { ...fileOverrides.repository, ...flagOverrides.repository },
     ai: { ...fileOverrides.ai, ...flagOverrides.ai },
+    pullRequestApproval: {
+      ...fileOverrides.pullRequestApproval,
+      ...flagOverrides.pullRequestApproval,
+      coverage: { ...fileOverrides.pullRequestApproval?.coverage, ...flagOverrides.pullRequestApproval?.coverage },
+    } as SetupConfigurationOverrides['pullRequestApproval'],
     projects: { ...fileOverrides.projects, ...flagOverrides.projects },
     issueWorkflows: { ...fileOverrides.issueWorkflows, ...flagOverrides.issueWorkflows },
     repositoryAgentGuidance: { ...fileOverrides.repositoryAgentGuidance, ...flagOverrides.repositoryAgentGuidance },

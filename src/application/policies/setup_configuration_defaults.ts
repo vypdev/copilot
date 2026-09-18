@@ -16,6 +16,7 @@ import { DEFAULT_INACTIVITY_THRESHOLD_HOURS } from '../../domain/issue_inactivit
 import { DEFAULT_DEPLOYMENT_CONFIGURATION } from '../../domain/deployment_configuration';
 import { resolveLocaleProfile } from '../../domain/locale';
 import { ISSUE_WORKFLOW_KINDS, type IssueWorkflowKind } from '../../domain/issue_workflow_profile';
+import { DISABLED_PULL_REQUEST_APPROVAL_POLICY } from '../../domain/pull_request_approval_policy';
 
 export const SETUP_AGENT_TASKS: readonly AgentTask[] = [
     'planner',
@@ -114,7 +115,7 @@ export function createDefaultSetupConfiguration(): SetupConfiguration {
             ignoreFiles: 'build/*',
             membersOnly: false,
             includeReasoning: false,
-            bugbotSeverity: 'low',
+            bugbotSeverity: 'info',
             bugbotCommentLimit: 20,
             bugbotFixVerifyCommands: '',
             bugbotDryRun: false,
@@ -126,6 +127,14 @@ export function createDefaultSetupConfiguration(): SetupConfiguration {
             bugbotFailOnUnresolved: false,
             bugbotOrganizationRules: '',
             provisioningMode: 'auto',
+        },
+        pullRequestApproval: {
+            ...DISABLED_PULL_REQUEST_APPROVAL_POLICY,
+            targetRoles: [...DISABLED_PULL_REQUEST_APPROVAL_POLICY.targetRoles],
+            branchKinds: [...DISABLED_PULL_REQUEST_APPROVAL_POLICY.branchKinds],
+            additionalExcludedPaths: [],
+            testChecks: [],
+            coverage: { ...DISABLED_PULL_REQUEST_APPROVAL_POLICY.coverage },
         },
         projects: {
             ids: '',
@@ -149,6 +158,7 @@ export type SetupConfigurationOverrides = {
     agents?: Partial<Record<AgentTask, Partial<SetupAgentRoleConfiguration>>>;
     repository?: Partial<SetupConfiguration['repository']>;
     ai?: Partial<SetupConfiguration['ai']>;
+    pullRequestApproval?: Partial<SetupConfiguration['pullRequestApproval']>;
     projects?: Partial<SetupConfiguration['projects']>;
     createInitialTag?: boolean;
     manageRepositoryVariables?: boolean;
@@ -193,6 +203,11 @@ export function mergeSetupConfiguration(
         agents,
         repository: { ...base.repository, ...(overrides.repository ?? {}) },
         ai: { ...base.ai, ...(overrides.ai ?? {}) },
+        pullRequestApproval: {
+            ...base.pullRequestApproval,
+            ...(overrides.pullRequestApproval ?? {}),
+            coverage: { ...base.pullRequestApproval.coverage, ...(overrides.pullRequestApproval?.coverage ?? {}) },
+        } as SetupConfiguration['pullRequestApproval'],
         projects: { ...base.projects, ...(overrides.projects ?? {}) },
         createInitialTag: overrides.createInitialTag ?? base.createInitialTag,
         manageRepositoryVariables: overrides.manageRepositoryVariables ?? base.manageRepositoryVariables,

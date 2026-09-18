@@ -7,6 +7,8 @@ description: Enable the Copilot action for pull_request events and what runs whe
 
 To run Copilot on **pull request** events, add a workflow that uses the `pull_request` trigger and passes the required inputs (at least `token`). This page describes the **events** to use and a **minimal workflow** example.
 
+Guarded native approval is deliberately separate from this analysis workflow. Setup renders `copilot_pull_request_approval.yml` with exact selected `workflow_run: completed` producer names and an authorized manual recheck; it must be installed on the default branch. The observer does not check out PR code and uses the runtime `PAT` only for a verified exact-head `APPROVE`. See [guarded approval](/pull-requests/guarded-approval) for setup prerequisites and recovery.
+
 ## Trigger events
 
 Use separate workflows for code/lifecycle analysis and review-state observation:

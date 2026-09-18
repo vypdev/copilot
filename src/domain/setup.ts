@@ -13,6 +13,7 @@ import type {
     ReconciliationStrategy,
 } from './deployment_configuration';
 import type { IssueWorkflowKind } from './issue_workflow_profile';
+import type { PullRequestApprovalPolicy } from './pull_request_approval_policy';
 
 export type SetupFeature =
     | 'issues'
@@ -108,6 +109,7 @@ export interface SetupConfiguration {
     agents: SetupAgentConfiguration;
     repository: SetupRepositoryConfiguration;
     ai: SetupAiConfiguration;
+    pullRequestApproval: PullRequestApprovalPolicy;
     projects: SetupProjectConfiguration;
     createInitialTag: boolean;
     manageRepositoryVariables: boolean;
@@ -242,5 +244,6 @@ export interface SetupPlan {
     requiredSecrets: string[];
     credentialRequirements: SetupCredentialRequirement[];
     mergeQueueReadiness: DoctorCheck[];
+    approvalReadiness: DoctorCheck[];
     warnings: string[];
 }

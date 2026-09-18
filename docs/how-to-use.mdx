@@ -5,6 +5,8 @@ description: Quick setup with copilot setup, then customize labels, templates, a
 
 ## Recommended installation and initialization
 
+The setup questionnaire includes an optional [guarded PR approval](/pull-requests/guarded-approval) stage. It recommends guarded mode for new installations, but will not invent test or coverage evidence; `recommend` and `off` remain explicit choices. Existing installations do not begin approving merely by upgrading.
+
 The recommended path is to install the published package globally with `pnpm` and
 then initialize the target repository with `copilot setup`. The package is scoped
 as `@vypdev/copilot`, but it exposes the global `copilot` executable:
@@ -325,6 +327,7 @@ and roles:
 | `copilot_issue.yml` | Runs on issue events (opened, edited, labeled, unlabeled, etc.): creates branches, links to projects, assignees, deploy trigger. |
 | `copilot_pull_request.yml` | Runs on PR events: links PR to issue/project, reviewers, AI description, etc. |
 | `copilot_pull_request_review_state.yml` | Reconciles lifecycle labels from submitted, edited, or dismissed reviews in a fixed, isolated review-state check. |
+| `copilot_pull_request_approval.yml` | Optional trusted default-branch observer for evidence-gated native bot approvals; setup renders its exact CI producer names. |
 | `copilot_pull_request_merge_queue.yml` | Reports the existing `Copilot - Pull Request` required-check context for `merge_group` without adding a skipped merge job to normal PR runs. |
 | `copilot_commit.yml` | Runs the issue-centric push pipeline (all branches except main/develop by default): native issue state and size/progress. It also runs Bugbot when the branch has no open PR; otherwise the PR synchronization event owns review. |
 | `copilot_branch_sync.yml` | Lightweight push observer on all branches: detects parent/working drift and maintains a synchronization notice without loading Bugbot or an agent. |

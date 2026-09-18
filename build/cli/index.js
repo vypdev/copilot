@@ -40354,6 +40354,113 @@ function renderApplicationErrorMarkdown(error, message = application_error_messa
 
 /***/ }),
 
+/***/ 36904:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SPANISH_APPROVAL_DOCTOR_MESSAGES = exports.ENGLISH_APPROVAL_DOCTOR_MESSAGES = exports.APPROVAL_DOCTOR_MESSAGE_IDS = void 0;
+exports.APPROVAL_DOCTOR_MESSAGE_IDS = Object.freeze([
+    'doctor.approval.policyInvalid', 'doctor.approval.policyInvalidAction',
+    'doctor.approval.overallInvalid', 'doctor.approval.overallInvalidAction',
+    'doctor.approval.policyUnverified', 'doctor.approval.policyUnverifiedAction',
+    'doctor.approval.policyMissing', 'doctor.approval.policyMissingAction',
+    'doctor.approval.policyOff', 'doctor.approval.policyOffAction',
+    'doctor.approval.policyInstalled',
+    'doctor.approval.dependencySkipped', 'doctor.approval.dependencySkippedAction',
+    'doctor.approval.overallOff', 'doctor.approval.overallOffAction',
+    'doctor.approval.workflowReady', 'doctor.approval.workflowMissing', 'doctor.approval.workflowAction',
+    'doctor.approval.botMissing', 'doctor.approval.botHealthyUnverified',
+    'doctor.approval.botUnverified', 'doctor.approval.botAction',
+    'doctor.approval.rulesReady', 'doctor.approval.rulesUnsafe', 'doctor.approval.rulesAction',
+    'doctor.approval.producersReady', 'doctor.approval.producersUnsafe', 'doctor.approval.producersAction',
+    'doctor.approval.numericAttested', 'doctor.approval.numericUnattested', 'doctor.approval.numericAction',
+    'doctor.approval.bugbotReady', 'doctor.approval.bugbotUnsafe', 'doctor.approval.bugbotAction',
+    'doctor.approval.overallReady', 'doctor.approval.overallNotReady', 'doctor.approval.overallAction',
+]);
+exports.ENGLISH_APPROVAL_DOCTOR_MESSAGES = Object.freeze({
+    'doctor.approval.policyInvalid': 'Installed PR approval policy is invalid or has an unknown version.',
+    'doctor.approval.policyInvalidAction': 'Run copilot setup with a supported policy.',
+    'doctor.approval.overallInvalid': 'Native approval is blocked by an invalid policy.',
+    'doctor.approval.overallInvalidAction': 'Repair the policy and rerun doctor.',
+    'doctor.approval.policyUnverified': 'Installed PR approval policy could not be inspected.',
+    'doctor.approval.policyUnverifiedAction': 'Validate the setup PAT and rerun doctor.',
+    'doctor.approval.policyMissing': 'No policy Variable is installed; native approval is safely off.',
+    'doctor.approval.policyMissingAction': 'Run copilot setup to opt in.',
+    'doctor.approval.policyOff': 'PR approval is explicitly off.',
+    'doctor.approval.policyOffAction': 'Choose recommend or guarded in copilot setup to enable.',
+    'doctor.approval.policyInstalled': 'Version 1 {mode} policy is installed.',
+    'doctor.approval.dependencySkipped': 'Approval is not enabled by an installed policy.',
+    'doctor.approval.dependencySkippedAction': 'Install a validated policy through copilot setup.',
+    'doctor.approval.overallOff': 'No native bot approvals can occur; the feature is disabled or unverified.',
+    'doctor.approval.overallOffAction': 'Run copilot setup when ready.',
+    'doctor.approval.workflowReady': 'Approval observer matches the managed template on the default branch.',
+    'doctor.approval.workflowMissing': 'Approval observer is missing, drifted, or not yet installed on the default branch.',
+    'doctor.approval.workflowAction': 'Review and install the generated observer on the default branch.',
+    'doctor.approval.botMissing': 'Runtime PAT Secret is missing.',
+    'doctor.approval.botHealthyUnverified': 'Runtime PAT health passed, but Pull requests write permission cannot be proven by a read-only check.',
+    'doctor.approval.botUnverified': 'Runtime PAT identity or Pull requests write capability is not verified.',
+    'doctor.approval.botAction': 'Verify the runtime PAT has Pull requests write permission and belongs to a distinct bot account.',
+    'doctor.approval.rulesReady': 'Selected branch rules are readable, dismiss stale approvals, and have no approval-check cycle.',
+    'doctor.approval.rulesUnsafe': 'Selected branch rules are unsafe or could not be verified; native approval is blocked.',
+    'doctor.approval.rulesAction': 'Enable stale-review dismissal, remove Copilot / Approval from required checks, or grant rules read access.',
+    'doctor.approval.producersReady': 'Producer workflow names are active and their exact check/App identity and coverage gate were operator-attested; runtime rechecks current-head evidence.',
+    'doctor.approval.producersUnsafe': 'One or more exact test/coverage producers are missing or not attested.',
+    'doctor.approval.producersAction': 'Select active exact producers and attest their App identity and coverage-enforcing step in copilot setup.',
+    'doctor.approval.numericAttested': 'Numeric reporter installation is attested, but output cannot be verified without a current PR artifact.',
+    'doctor.approval.numericUnattested': 'Numeric coverage reporter installation has not been attested.',
+    'doctor.approval.numericAction': 'Install the reporter in trusted CI, attest it in setup, and verify a bounded copilot-diff-coverage-v1 artifact on a test PR.',
+    'doctor.approval.bugbotReady': 'Bugbot can produce complete info-level, non-dry-run evidence.',
+    'doctor.approval.bugbotUnsafe': 'Bugbot configuration hides or omits evidence needed for approval.',
+    'doctor.approval.bugbotAction': 'Enable telemetry, disable dry-run, and use info severity.',
+    'doctor.approval.overallReady': 'Future eligible human PRs can be assessed for guarded approval.',
+    'doctor.approval.overallNotReady': 'Native approval is not ready; existing PRs and reviews are unchanged.',
+    'doctor.approval.overallAction': 'Resolve the named approval checks and rerun doctor.',
+});
+exports.SPANISH_APPROVAL_DOCTOR_MESSAGES = Object.freeze({
+    'doctor.approval.policyInvalid': 'La política de aprobación instalada es inválida o tiene una versión desconocida.',
+    'doctor.approval.policyInvalidAction': 'Ejecuta copilot setup con una política compatible.',
+    'doctor.approval.overallInvalid': 'La aprobación nativa está bloqueada por una política inválida.',
+    'doctor.approval.overallInvalidAction': 'Corrige la política y vuelve a ejecutar doctor.',
+    'doctor.approval.policyUnverified': 'No se pudo inspeccionar la política de aprobación instalada.',
+    'doctor.approval.policyUnverifiedAction': 'Comprueba el PAT de setup y vuelve a ejecutar doctor.',
+    'doctor.approval.policyMissing': 'No hay Variable de política; la aprobación nativa está desactivada de forma segura.',
+    'doctor.approval.policyMissingAction': 'Ejecuta copilot setup para activarla.',
+    'doctor.approval.policyOff': 'La aprobación de PR está desactivada explícitamente.',
+    'doctor.approval.policyOffAction': 'Elige recommend o guarded en copilot setup para activarla.',
+    'doctor.approval.policyInstalled': 'Está instalada la política versión 1 en modo {mode}.',
+    'doctor.approval.dependencySkipped': 'No hay una política instalada que active la aprobación.',
+    'doctor.approval.dependencySkippedAction': 'Instala una política validada con copilot setup.',
+    'doctor.approval.overallOff': 'No puede haber aprobaciones nativas del bot; la función está desactivada o sin verificar.',
+    'doctor.approval.overallOffAction': 'Ejecuta copilot setup cuando esté todo preparado.',
+    'doctor.approval.workflowReady': 'El observador coincide con la plantilla gestionada en la rama por defecto.',
+    'doctor.approval.workflowMissing': 'El observador falta, difiere o todavía no está instalado en la rama por defecto.',
+    'doctor.approval.workflowAction': 'Revisa e instala el observador generado en la rama por defecto.',
+    'doctor.approval.botMissing': 'Falta el Secret PAT de ejecución.',
+    'doctor.approval.botHealthyUnverified': 'El PAT de ejecución está sano, pero una comprobación de solo lectura no puede demostrar el permiso de escritura sobre PRs.',
+    'doctor.approval.botUnverified': 'No se ha verificado la identidad del PAT de ejecución ni su permiso de escritura sobre PRs.',
+    'doctor.approval.botAction': 'Comprueba que el PAT permita escribir revisiones de PR y pertenezca a una cuenta de bot distinta.',
+    'doctor.approval.rulesReady': 'Las reglas de rama se pueden leer, descartan aprobaciones antiguas y no contienen ciclos con el check de aprobación.',
+    'doctor.approval.rulesUnsafe': 'Las reglas de rama no son seguras o no se pudieron verificar; la aprobación nativa está bloqueada.',
+    'doctor.approval.rulesAction': 'Activa el descarte de revisiones antiguas, quita Copilot / Approval de los checks obligatorios o concede acceso de lectura a las reglas.',
+    'doctor.approval.producersReady': 'Los workflows productores están activos y se ha atestiguado su check, App y paso de cobertura; la ejecución volverá a comprobar la revisión actual.',
+    'doctor.approval.producersUnsafe': 'Faltan productores de test/cobertura o no se han atestiguado.',
+    'doctor.approval.producersAction': 'Selecciona los productores exactos activos y atestigua la App y el paso obligatorio de cobertura en copilot setup.',
+    'doctor.approval.numericAttested': 'Se ha atestiguado el reporter numérico, pero no se puede verificar su salida sin un artefacto de una PR actual.',
+    'doctor.approval.numericUnattested': 'No se ha atestiguado la instalación del reporter de cobertura numérica.',
+    'doctor.approval.numericAction': 'Instala el reporter en CI de confianza, atestígualo en setup y comprueba un artefacto copilot-diff-coverage-v1 en una PR de prueba.',
+    'doctor.approval.bugbotReady': 'Bugbot puede producir evidencias completas con severidad info y sin dry-run.',
+    'doctor.approval.bugbotUnsafe': 'La configuración de Bugbot oculta u omite evidencias necesarias para aprobar.',
+    'doctor.approval.bugbotAction': 'Activa telemetría, desactiva dry-run y usa severidad info.',
+    'doctor.approval.overallReady': 'Las futuras PRs humanas elegibles pueden evaluarse para aprobación protegida.',
+    'doctor.approval.overallNotReady': 'La aprobación nativa no está lista; las PRs y revisiones existentes no cambian.',
+    'doctor.approval.overallAction': 'Resuelve las comprobaciones de aprobación indicadas y vuelve a ejecutar doctor.',
+});
+
+
+/***/ }),
+
 /***/ 85918:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -41793,6 +41900,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BUGBOT_REVIEW_OVERFLOW_MARKER = exports.BUGBOT_REVIEW_STATUS_END = exports.BUGBOT_REVIEW_STATUS_START = exports.BUGBOT_REVIEW_MARKER_PREFIX = exports.BUGBOT_STATUS_MARKER_PREFIX = void 0;
 exports.normalizeBugbotPresentationLocale = normalizeBugbotPresentationLocale;
 exports.buildBugbotStatusMarker = buildBugbotStatusMarker;
+exports.buildBugbotApprovalEvidenceMarker = buildBugbotApprovalEvidenceMarker;
 exports.isBugbotStatusComment = isBugbotStatusComment;
 exports.renderBugbotStatusCard = renderBugbotStatusCard;
 exports.renderBugbotReviewSnapshot = renderBugbotReviewSnapshot;
@@ -41811,6 +41919,11 @@ function normalizeBugbotPresentationLocale(locale) {
 }
 function buildBugbotStatusMarker(projection) {
     return `<!-- ${exports.BUGBOT_STATUS_MARKER_PREFIX} schema="1" pr="${projection.pullRequestNumber}" verified_head="${projection.verifiedHeadSha}" digest="${projection.digest}" -->`;
+}
+/** Content-free machine evidence; absent on older cards, which cannot authorize an approval. */
+function buildBugbotApprovalEvidenceMarker(projection) {
+    const counts = projection.counts;
+    return `<!-- copilot-bugbot-approval-evidence schema="1" head="${projection.verifiedHeadSha}" digest="${projection.digest}" outcome="${projection.outcome}" coverage="${projection.coverage.status}" open="${counts.open}" reopened="${counts.reopened}" dismissed="${counts.dismissed}" verification="${counts['verification-required']}" unknown="${counts.unknown}" -->`;
 }
 function isBugbotStatusComment(body) {
     if (!body)
@@ -41876,6 +41989,7 @@ function renderBugbotStatusCard(projection, catalogOrLocale, links) {
             digest: projection.digest,
         }),
         buildBugbotStatusMarker(projection),
+        buildBugbotApprovalEvidenceMarker(projection),
         `## ${heading}`,
         '',
         `> **${catalog.message('bugbot.status.currentStatus')}:** ${status}`,
@@ -45496,6 +45610,97 @@ function safeDigest(value) {
 
 /***/ }),
 
+/***/ 53296:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildApprovalDoctorChecks = buildApprovalDoctorChecks;
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+const setup_doctor_message_catalog_1 = __nccwpck_require__(80226);
+/** Stable ordered checks; unknown prerequisites never project native-approval readiness. */
+function buildApprovalDoctorChecks(input) {
+    const checks = [];
+    const catalog = input.catalog ?? (0, setup_doctor_message_catalog_1.resolveStaticSetupDoctorCatalog)();
+    const message = (id, variables) => catalog.message(id, variables);
+    const observed = [...(input.remote?.organizationVariables ?? []), ...(input.remote?.repositoryVariables ?? [])]
+        .filter(variable => variable.name === 'PR_APPROVAL_POLICY').at(-1)?.value;
+    let policy;
+    try {
+        policy = (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(observed);
+    }
+    catch {
+        checks.push(check('approval.policy', 'fail', message('doctor.approval.policyInvalid'), message('doctor.approval.policyInvalidAction')));
+        return [...checks, check('approval.overall', 'fail', message('doctor.approval.overallInvalid'), message('doctor.approval.overallInvalidAction'))];
+    }
+    if (!input.remote) {
+        checks.push(check('approval.policy', 'skipped', message('doctor.approval.policyUnverified'), message('doctor.approval.policyUnverifiedAction'), ['credentials.setup-pat']));
+    }
+    else if (!observed) {
+        checks.push(check('approval.policy', 'warn', message('doctor.approval.policyMissing'), message('doctor.approval.policyMissingAction')));
+    }
+    else if (policy.mode === 'off') {
+        checks.push(check('approval.policy', 'warn', message('doctor.approval.policyOff'), message('doctor.approval.policyOffAction')));
+    }
+    else {
+        checks.push(check('approval.policy', 'pass', message('doctor.approval.policyInstalled', { mode: policy.mode })));
+    }
+    if (!observed || policy.mode === 'off') {
+        for (const id of ['approval.workflow', 'approval.bot', 'approval.rules', 'approval.producers', 'approval.bugbot']) {
+            checks.push(check(id, 'skipped', message('doctor.approval.dependencySkipped'), message('doctor.approval.dependencySkippedAction'), ['approval.policy']));
+        }
+        checks.push(check('approval.overall', 'warn', message('doctor.approval.overallOff'), message('doctor.approval.overallOffAction')));
+        return checks;
+    }
+    const workflowState = input.facts?.defaultBranchWorkflow;
+    checks.push(check('approval.workflow', workflowState === 'matching' && input.workflow?.status === 'unchanged' ? 'pass'
+        : workflowState === 'missing' || workflowState === 'unavailable' ? 'warn' : 'fail', workflowState === 'matching' && input.workflow?.status === 'unchanged'
+        ? message('doctor.approval.workflowReady')
+        : message('doctor.approval.workflowMissing'), workflowState === 'matching' && input.workflow?.status === 'unchanged' ? undefined : message('doctor.approval.workflowAction')));
+    const present = [...(input.remote?.repositorySecrets ?? []), ...(input.remote?.organizationSecrets ?? [])].includes('PAT');
+    // Credential health proves token availability, not Pull requests:write. No read-only API
+    // can safely prove that a future APPROVE mutation will be authorized.
+    const botStatus = !present ? 'fail' : 'warn';
+    checks.push(check('approval.bot', botStatus, !present ? message('doctor.approval.botMissing')
+        : input.botCredential?.status === 'pass'
+            ? message('doctor.approval.botHealthyUnverified')
+            : message('doctor.approval.botUnverified'), message('doctor.approval.botAction')));
+    const rules = input.facts?.rules ?? [];
+    const rulesStatus = rules.length !== policy.targetRoles.length || rules.some(rule => !rule.readable) ? 'skipped'
+        : rules.some(rule => !rule.dismissesStaleReviews || rule.approvalCheckCycle) ? 'fail' : 'pass';
+    checks.push(check('approval.rules', rulesStatus, rulesStatus === 'pass'
+        ? message('doctor.approval.rulesReady')
+        : message('doctor.approval.rulesUnsafe'), rulesStatus === 'pass' ? undefined : message('doctor.approval.rulesAction')));
+    const producersStatus = !input.facts ? 'skipped'
+        : input.facts.missingWorkflowNames.length > 0 || policy.testChecks.length === 0 ? 'fail'
+            : policy.producerAttested ? 'pass' : 'warn';
+    checks.push(check('approval.producers', producersStatus, producersStatus === 'pass'
+        ? message('doctor.approval.producersReady')
+        : message('doctor.approval.producersUnsafe'), producersStatus === 'pass' ? undefined : message('doctor.approval.producersAction')));
+    if (policy.coverage.mode === 'numeric') {
+        checks.push(check('approval.coverage', policy.coverage.reporterAttested ? 'warn' : 'fail', policy.coverage.reporterAttested
+            ? message('doctor.approval.numericAttested')
+            : message('doctor.approval.numericUnattested'), message('doctor.approval.numericAction')));
+    }
+    const bugbotStatus = input.configuration.ai.bugbotSeverity === 'info'
+        && input.configuration.ai.bugbotTelemetry && !input.configuration.ai.bugbotDryRun ? 'pass' : 'fail';
+    checks.push(check('approval.bugbot', bugbotStatus, bugbotStatus === 'pass'
+        ? message('doctor.approval.bugbotReady')
+        : message('doctor.approval.bugbotUnsafe'), bugbotStatus === 'pass' ? undefined : message('doctor.approval.bugbotAction')));
+    const blockers = checks.filter(item => item.status !== 'pass').map(item => item.id);
+    checks.push(check('approval.overall', blockers.length === 0 ? 'pass'
+        : checks.some(item => item.status === 'fail') ? 'fail' : 'warn', blockers.length === 0 ? message('doctor.approval.overallReady')
+        : message('doctor.approval.overallNotReady'), blockers.length === 0 ? undefined : message('doctor.approval.overallAction'), blockers));
+    return checks;
+}
+function check(id, status, summary, action, blockedBy = []) {
+    return { id, status, summary, ...(action ? { action } : {}), evidence: {}, blockedBy };
+}
+
+
+/***/ }),
+
 /***/ 85881:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -45522,6 +45727,14 @@ function cloneSetupConfiguration(configuration) {
             })),
         },
         ai: { ...configuration.ai },
+        pullRequestApproval: {
+            ...configuration.pullRequestApproval,
+            targetRoles: [...configuration.pullRequestApproval.targetRoles],
+            branchKinds: [...configuration.pullRequestApproval.branchKinds],
+            additionalExcludedPaths: [...configuration.pullRequestApproval.additionalExcludedPaths],
+            testChecks: configuration.pullRequestApproval.testChecks.map(check => ({ ...check })),
+            coverage: { ...configuration.pullRequestApproval.coverage },
+        },
         projects: { ...configuration.projects },
         actionInputs: { ...configuration.actionInputs },
         storage: {
@@ -45559,6 +45772,7 @@ const issue_inactivity_1 = __nccwpck_require__(38572);
 const deployment_configuration_1 = __nccwpck_require__(22495);
 const locale_1 = __nccwpck_require__(15386);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 exports.SETUP_AGENT_TASKS = [
     'planner',
     'findings',
@@ -45644,7 +45858,7 @@ function createDefaultSetupConfiguration() {
             ignoreFiles: 'build/*',
             membersOnly: false,
             includeReasoning: false,
-            bugbotSeverity: 'low',
+            bugbotSeverity: 'info',
             bugbotCommentLimit: 20,
             bugbotFixVerifyCommands: '',
             bugbotDryRun: false,
@@ -45656,6 +45870,14 @@ function createDefaultSetupConfiguration() {
             bugbotFailOnUnresolved: false,
             bugbotOrganizationRules: '',
             provisioningMode: 'auto',
+        },
+        pullRequestApproval: {
+            ...pull_request_approval_policy_1.DISABLED_PULL_REQUEST_APPROVAL_POLICY,
+            targetRoles: [...pull_request_approval_policy_1.DISABLED_PULL_REQUEST_APPROVAL_POLICY.targetRoles],
+            branchKinds: [...pull_request_approval_policy_1.DISABLED_PULL_REQUEST_APPROVAL_POLICY.branchKinds],
+            additionalExcludedPaths: [],
+            testChecks: [],
+            coverage: { ...pull_request_approval_policy_1.DISABLED_PULL_REQUEST_APPROVAL_POLICY.coverage },
         },
         projects: {
             ids: '',
@@ -45701,6 +45923,11 @@ function mergeSetupConfiguration(base, overrides = {}) {
         agents,
         repository: { ...base.repository, ...(overrides.repository ?? {}) },
         ai: { ...base.ai, ...(overrides.ai ?? {}) },
+        pullRequestApproval: {
+            ...base.pullRequestApproval,
+            ...(overrides.pullRequestApproval ?? {}),
+            coverage: { ...base.pullRequestApproval.coverage, ...(overrides.pullRequestApproval?.coverage ?? {}) },
+        },
         projects: { ...base.projects, ...(overrides.projects ?? {}) },
         createInitialTag: overrides.createInitialTag ?? base.createInitialTag,
         manageRepositoryVariables: overrides.manageRepositoryVariables ?? base.manageRepositoryVariables,
@@ -45769,8 +45996,9 @@ Object.defineProperty(exports, "buildSetupCredentialRequirements", ({ enumerable
 const locale_1 = __nccwpck_require__(15386);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
-function buildSetupPlan(configuration, mergeQueueReadiness = []) {
-    const workflowFiles = (0, setup_workflow_catalog_1.enabledSetupWorkflowFiles)((0, setup_issue_workflow_policy_1.effectiveIssueWorkflowFeatures)(configuration));
+function buildSetupPlan(configuration, mergeQueueReadiness = [], approvalReadiness = []) {
+    const workflowFiles = (0, setup_workflow_catalog_1.enabledSetupWorkflowFiles)((0, setup_issue_workflow_policy_1.effectiveIssueWorkflowFeatures)(configuration))
+        .filter(file => file !== 'copilot_pull_request_approval.yml' || configuration.pullRequestApproval.mode !== 'off');
     const issueWorkflowProfile = (0, setup_issue_workflow_policy_1.effectiveIssueWorkflowProfile)(configuration);
     const issueTemplateFiles = configuration.features.issueTemplates === false || configuration.features.issues === false
         ? []
@@ -45802,6 +46030,7 @@ function buildSetupPlan(configuration, mergeQueueReadiness = []) {
             .map(requirement => requirement.name),
         credentialRequirements,
         mergeQueueReadiness: [...mergeQueueReadiness],
+        approvalReadiness: [...approvalReadiness],
         warnings: buildSetupWarnings(configuration),
     };
 }
@@ -45880,6 +46109,7 @@ function buildSetupRepositoryVariables(configuration) {
     add('BUGBOT_TELEMETRY', configuration.ai.bugbotTelemetry);
     add('BUGBOT_FAIL_ON_UNRESOLVED', configuration.ai.bugbotFailOnUnresolved);
     add('BUGBOT_ORGANIZATION_RULES', configuration.ai.bugbotOrganizationRules);
+    add('PR_APPROVAL_POLICY', JSON.stringify(configuration.pullRequestApproval));
     add('PROJECT_IDS', configuration.projects.ids);
     add('PROJECT_COLUMN_ISSUE_CREATED', configuration.projects.issueCreatedColumn);
     add('PROJECT_COLUMN_PULL_REQUEST_CREATED', configuration.projects.pullRequestCreatedColumn);
@@ -46197,8 +46427,23 @@ const deployment_configuration_1 = __nccwpck_require__(22495);
 const locale_1 = __nccwpck_require__(15386);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
-function validateSetupConfiguration(configuration) {
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+function validateSetupConfiguration(configuration, options = {}) {
     const errors = [];
+    errors.push(...(0, pull_request_approval_policy_1.validatePullRequestApprovalPolicy)(configuration.pullRequestApproval, options.allowIncompleteApproval === true));
+    if (configuration.actionInputs['pr-approval-policy'] !== undefined) {
+        errors.push('pr-approval-policy cannot be overridden through actionInputs.');
+    }
+    if (configuration.pullRequestApproval.mode !== 'off') {
+        if (!configuration.manageRepositoryVariables && !options.allowIncompleteApproval) {
+            errors.push('PR approval requires setup to manage PR_APPROVAL_POLICY; --skip-variables would leave the runtime policy unverified.');
+        }
+        if (configuration.features.pullRequests === false)
+            errors.push('PR approval requires pull-request automation.');
+        if (configuration.ai.bugbotDryRun || !configuration.ai.bugbotTelemetry || configuration.ai.bugbotSeverity !== 'info') {
+            errors.push('PR approval requires Bugbot telemetry, non-dry-run analysis, and info severity.');
+        }
+    }
     if (typeof configuration.repository.issueManagedBranches !== 'boolean'
         || typeof configuration.repository.preBranchSdd !== 'boolean') {
         errors.push('issue-managed-branches and pre-branch-sdd must be boolean values.');
@@ -46467,6 +46712,7 @@ exports.resolveSetupDoctorCatalog = resolveSetupDoctorCatalog;
 const message_catalog_1 = __nccwpck_require__(27097);
 const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
 const merge_queue_message_catalog_1 = __nccwpck_require__(56033);
+const approval_doctor_message_catalog_1 = __nccwpck_require__(36904);
 const DOCTOR_ONLY_MESSAGE_IDS = Object.freeze([
     'doctor.title',
     'doctor.title.partial',
@@ -46567,6 +46813,7 @@ const DOCTOR_ONLY_MESSAGE_IDS = Object.freeze([
 exports.SETUP_DOCTOR_MESSAGE_IDS = Object.freeze([
     ...DOCTOR_ONLY_MESSAGE_IDS,
     ...merge_queue_message_catalog_1.MERGE_QUEUE_MESSAGE_IDS,
+    ...approval_doctor_message_catalog_1.APPROVAL_DOCTOR_MESSAGE_IDS,
 ]);
 const ENGLISH_DOCTOR_MESSAGES = Object.freeze({
     'doctor.title': 'Copilot Doctor',
@@ -46762,20 +47009,20 @@ const SPANISH_DOCTOR_MESSAGES = Object.freeze({
     'doctor.mergeQueue.producer': '{verdict}: {state}',
     'doctor.mergeQueue.producerAction': 'Configura o atestigua exactamente este productor obligatorio.',
 });
-function messages(doctor, mergeQueue) {
-    return Object.freeze({ ...doctor, ...mergeQueue });
+function messages(doctor, mergeQueue, approval) {
+    return Object.freeze({ ...doctor, ...mergeQueue, ...approval });
 }
 exports.ENGLISH_SETUP_DOCTOR_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
     locale: 'en-US',
     compatibleBaseLanguage: 'en',
-    messages: messages(ENGLISH_DOCTOR_MESSAGES, merge_queue_message_catalog_1.ENGLISH_MERGE_QUEUE_MESSAGES),
+    messages: messages(ENGLISH_DOCTOR_MESSAGES, merge_queue_message_catalog_1.ENGLISH_MERGE_QUEUE_MESSAGES, approval_doctor_message_catalog_1.ENGLISH_APPROVAL_DOCTOR_MESSAGES),
 });
 exports.SPANISH_SETUP_DOCTOR_DEFINITION = Object.freeze({
     version: message_catalog_1.MESSAGE_CATALOG_VERSION,
     locale: 'es-ES',
     compatibleBaseLanguage: 'es',
-    messages: messages(SPANISH_DOCTOR_MESSAGES, merge_queue_message_catalog_1.SPANISH_MERGE_QUEUE_MESSAGES),
+    messages: messages(SPANISH_DOCTOR_MESSAGES, merge_queue_message_catalog_1.SPANISH_MERGE_QUEUE_MESSAGES, approval_doctor_message_catalog_1.SPANISH_APPROVAL_DOCTOR_MESSAGES),
 });
 exports.SETUP_DOCTOR_CATALOG_DEFINITIONS = Object.freeze([
     exports.ENGLISH_SETUP_DOCTOR_DEFINITION,
@@ -47116,6 +47363,7 @@ function setupQuestionnaireStateLabel(stateId) {
         repository: 'Repository behavior',
         deployment: 'Release and hotfix orchestration',
         bugbot: 'Bugbot and AI',
+        'pull-request-approval': 'Pull-request approval',
         projects: 'Projects',
         provisioning: 'Provisioning',
         storage: 'GitHub Actions resource storage',
@@ -47171,6 +47419,7 @@ function definitions() {
         ...repositoryQuestions(),
         ...deploymentQuestions(),
         ...bugbotQuestions(),
+        ...approvalQuestions(),
         { stateId: 'projects', id: 'projects.ids', label: 'GitHub Project IDs (comma-separated, empty skips integration)', kind: 'text' },
         ...['issueCreatedColumn', 'pullRequestCreatedColumn', 'issueInProgressColumn', 'pullRequestInProgressColumn'].map((field) => ({
             stateId: 'projects', id: `projects.${field}`, label: projectLabel(field), kind: 'text', applies: (config) => Boolean(config.projects.ids.trim()),
@@ -47246,6 +47495,64 @@ function bugbotQuestions() {
         { stateId: 'bugbot', id: 'ai.bugbotFailOnUnresolved', label: 'Fail the workflow check while findings remain unresolved?', kind: 'boolean' },
         { stateId: 'bugbot', id: 'ai.bugbotOrganizationRules', label: 'Organization Bugbot rules (newline-separated)', kind: 'text' },
         { stateId: 'bugbot', id: 'ai.provisioningMode', label: 'Agent CLI provisioning mode', kind: 'choice', choices: ['auto', 'always', 'disabled'] },
+    ];
+}
+function approvalQuestions() {
+    return [
+        {
+            stateId: 'pull-request-approval', id: 'pullRequestApproval.mode',
+            label: 'Bot PR approval mode (guarded needs exact CI evidence and stale-approval protection)',
+            kind: 'choice', choices: ['recommend', 'guarded', 'off'],
+            applies: draft => draft.features.pullRequests !== false,
+        },
+        {
+            stateId: 'pull-request-approval', id: 'pullRequestApproval.testChecks',
+            label: 'Trusted test checks: name|source App ID|workflow name (semicolon-separated)',
+            kind: 'text',
+            read: draft => draft.pullRequestApproval.testChecks.map(check => `${check.name}|${check.sourceAppId}|${check.workflowName}`).join(';'),
+            applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off',
+        },
+        {
+            stateId: 'pull-request-approval', id: 'pullRequestApproval.producerAttested',
+            label: 'Have you verified each exact check, source App ID, workflow, and coverage-enforcing CI step?',
+            kind: 'boolean',
+            applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off',
+        },
+        {
+            stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.mode',
+            label: 'Coverage evidence mode', kind: 'choice', choices: ['check', 'numeric'],
+            applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off',
+        },
+        {
+            stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.checkName',
+            label: 'Exact trusted check that enforces the coverage budget (no inferred percentage)',
+            kind: 'text',
+            applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off',
+        },
+        {
+            stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.minDiffPercent',
+            label: 'Minimum changed-line coverage percentage (0–100)', kind: 'number',
+            read: draft => draft.pullRequestApproval.coverage.mode === 'numeric'
+                ? draft.pullRequestApproval.coverage.minDiffPercent : 80,
+            applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off'
+                && draft.pullRequestApproval.coverage.mode === 'numeric',
+        },
+        {
+            stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.artifactWorkflowName',
+            label: 'Exact workflow publishing copilot-diff-coverage-v1', kind: 'text',
+            read: draft => draft.pullRequestApproval.coverage.mode === 'numeric'
+                ? draft.pullRequestApproval.coverage.artifactWorkflowName : '',
+            applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off'
+                && draft.pullRequestApproval.coverage.mode === 'numeric',
+        },
+        {
+            stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.reporterAttested',
+            label: 'Is the bounded numeric coverage reporter installed in that trusted CI workflow?', kind: 'boolean',
+            read: draft => draft.pullRequestApproval.coverage.mode === 'numeric'
+                && draft.pullRequestApproval.coverage.reporterAttested,
+            applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off'
+                && draft.pullRequestApproval.coverage.mode === 'numeric',
+        },
     ];
 }
 function storageQuestions(kind) {
@@ -47340,6 +47647,37 @@ function applyAnswer(configuration, question, value) {
     const draft = (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration);
     if (question.id === 'agents.configureIndependently')
         return draft;
+    if (question.id === 'features.pullRequests' && value === false) {
+        draft.features.pullRequests = false;
+        draft.pullRequestApproval = { ...draft.pullRequestApproval, mode: 'off' };
+        return draft;
+    }
+    if (question.id === 'pullRequestApproval.testChecks') {
+        const entries = String(value).split(';').map(item => item.trim()).filter(Boolean);
+        draft.pullRequestApproval = {
+            ...draft.pullRequestApproval,
+            testChecks: entries.map(entry => {
+                const [name, sourceAppId, workflowName] = entry.split('|').map(part => part.trim());
+                return { name, sourceAppId: Number(sourceAppId), workflowName };
+            }),
+        };
+        return draft;
+    }
+    if (question.id === 'pullRequestApproval.coverage.checkName') {
+        draft.pullRequestApproval = {
+            ...draft.pullRequestApproval,
+            coverage: { ...draft.pullRequestApproval.coverage, checkName: String(value) },
+        };
+        return draft;
+    }
+    if (question.id === 'pullRequestApproval.coverage.mode') {
+        const checkName = draft.pullRequestApproval.coverage.checkName;
+        draft.pullRequestApproval = { ...draft.pullRequestApproval,
+            coverage: value === 'numeric'
+                ? { mode: 'numeric', checkName, minDiffPercent: 80, artifactWorkflowName: '', reporterAttested: false }
+                : { mode: 'check', checkName } };
+        return draft;
+    }
     if (question.id === 'issueWorkflows.enabled') {
         const selected = String(value).split(',').map(item => item.trim()).filter(Boolean);
         draft.issueWorkflows = (0, issue_workflow_profile_1.createIssueWorkflowProfile)(selected);
@@ -52738,6 +53076,14 @@ class PullRequestUseCase {
             },
         });
     }
+    /** Used only after a narrowly admitted same-repository PAT-authored PR event. */
+    async reviewOnly(param) {
+        if (param.eventName !== 'pull_request'
+            || !['opened', 'reopened', 'synchronize'].includes(param.pullRequest.action)
+            || !this.reviewPotentialProblemsUseCase)
+            return [];
+        return this.reviewPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param));
+    }
 }
 exports.PullRequestUseCase = PullRequestUseCase;
 function projectPullRequestWorkflowRouteContext(param) {
@@ -53455,13 +53801,15 @@ const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const setup_doctor_report_policy_1 = __nccwpck_require__(67615);
 const bounded_concurrency_policy_1 = __nccwpck_require__(35596);
 const setup_doctor_message_catalog_1 = __nccwpck_require__(80226);
+const setup_approval_doctor_policy_1 = __nccwpck_require__(53296);
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 class SetupDoctorUseCase {
     constructor(dependencies) {
         this.dependencies = dependencies;
     }
     async execute(request) {
         const catalog = await (0, setup_doctor_message_catalog_1.resolveSetupDoctorCatalog)(doctorCatalogLocale(request.configuration), request.configuration.agents.planner, this.dependencies.catalogResolver);
-        const configurationErrors = (0, setup_configuration_policy_1.validateSetupConfiguration)(request.configuration);
+        const configurationErrors = (0, setup_configuration_policy_1.validateSetupConfiguration)(request.configuration, { allowIncompleteApproval: true });
         const checks = [
             configurationCheck(configurationErrors, catalog),
             ...(0, setup_doctor_report_policy_1.buildLocaleDoctorChecks)(request.configuration, catalog),
@@ -53473,6 +53821,7 @@ class SetupDoctorUseCase {
         checks.push(pat);
         if (pat.status !== 'pass') {
             checks.push(...skippedRemoteChecks(request.configuration, pat.id, catalog));
+            checks.push(...(0, setup_approval_doctor_policy_1.buildApprovalDoctorChecks)({ configuration: request.configuration, catalog }));
             return { report: (0, setup_doctor_report_policy_1.buildDoctorReport)(checks), catalog };
         }
         const remote = await (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)([
@@ -53521,6 +53870,7 @@ class SetupDoctorUseCase {
         if (!remoteConfiguration) {
             checks.push(remoteScopeFailure(request.configuration, catalog));
             checks.push(...mergeQueueChecks, ...skippedResourceChecks(request.configuration, 'github.resource-scopes', catalog));
+            checks.push(...(0, setup_approval_doctor_policy_1.buildApprovalDoctorChecks)({ configuration: request.configuration, catalog }));
             return { report: (0, setup_doctor_report_policy_1.buildDoctorReport)(checks), catalog };
         }
         checks.push(resourceScopeCheck(request.configuration, remoteConfiguration, catalog));
@@ -53529,7 +53879,59 @@ class SetupDoctorUseCase {
             ? [(0, setup_doctor_report_policy_1.skippedDoctorCheck)('github.variables', ['configuration.valid'], catalog.message('doctor.skipped.variables'), catalog.message('doctor.skipped.resourceAction'))]
             : variableChecks(request.configuration, remoteConfiguration, catalog)));
         checks.push(secretNamesCheck(remoteConfiguration, catalog));
-        checks.push(...await this.credentialChecks(request, remoteConfiguration, catalog));
+        const credentials = await this.credentialChecks(request, remoteConfiguration, catalog);
+        checks.push(...credentials);
+        const remoteVariables = new Map([
+            ...remoteConfiguration.organizationVariables.map(variable => [variable.name, variable.value]),
+            ...remoteConfiguration.repositoryVariables.map(variable => [variable.name, variable.value]),
+        ]);
+        let approvalConfiguration;
+        try {
+            approvalConfiguration = {
+                ...request.configuration,
+                ai: {
+                    ...request.configuration.ai,
+                    bugbotSeverity: remoteVariables.has('BUGBOT_SEVERITY')
+                        ? remoteVariables.get('BUGBOT_SEVERITY')
+                        : request.configuration.ai.bugbotSeverity,
+                    bugbotTelemetry: remoteVariables.has('BUGBOT_TELEMETRY')
+                        ? remoteVariables.get('BUGBOT_TELEMETRY') === 'true' : request.configuration.ai.bugbotTelemetry,
+                    bugbotDryRun: remoteVariables.has('BUGBOT_DRY_RUN')
+                        ? remoteVariables.get('BUGBOT_DRY_RUN') === 'true' : request.configuration.ai.bugbotDryRun,
+                },
+                pullRequestApproval: (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(remoteVariables.get('PR_APPROVAL_POLICY')),
+            };
+        }
+        catch {
+            approvalConfiguration = request.configuration;
+        }
+        let approvalWorkflow;
+        if (configurationErrors.length === 0) {
+            try {
+                approvalWorkflow = this.dependencies.workspace.compareWorkflows((0, setup_configuration_policy_1.effectiveIssueWorkflowFeatures)(approvalConfiguration), approvalConfiguration).find(item => item.file === 'copilot_pull_request_approval.yml');
+            }
+            catch {
+                approvalWorkflow = undefined;
+            }
+        }
+        let approvalFacts;
+        if (this.dependencies.approvalReadiness && remoteConfiguration.repositoryVariables.concat(remoteConfiguration.organizationVariables)
+            .some(variable => variable.name === 'PR_APPROVAL_POLICY')) {
+            try {
+                approvalFacts = await this.dependencies.approvalReadiness.inspect(request.owner, request.repository, request.setupToken, approvalConfiguration);
+            }
+            catch {
+                approvalFacts = undefined;
+            }
+        }
+        checks.push(...(0, setup_approval_doctor_policy_1.buildApprovalDoctorChecks)({
+            configuration: approvalConfiguration,
+            remote: remoteConfiguration,
+            workflow: approvalWorkflow,
+            facts: approvalFacts,
+            botCredential: credentials.find(item => item.id === 'credential.PAT'),
+            catalog,
+        }));
         return { report: (0, setup_doctor_report_policy_1.buildDoctorReport)(checks), catalog };
     }
     async validatePat(request, catalog) {
@@ -53684,7 +54086,7 @@ function variableChecks(configuration, remote, catalog) {
         remoteVariables.set(variable.name, { value: variable.value, source: 'organization' });
     for (const variable of remote.repositoryVariables)
         remoteVariables.set(variable.name, { value: variable.value, source: 'repository' });
-    return (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(configuration).map((variable) => {
+    return (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(configuration).filter(variable => variable.name !== 'PR_APPROVAL_POLICY').map((variable) => {
         const observed = remoteVariables.get(variable.name);
         const state = (0, setup_configuration_policy_1.setupResourceExists)(remote, 'variable', variable.name);
         const policy = (0, setup_configuration_policy_1.getSetupResourceStoragePolicy)(configuration, 'variable');
@@ -54193,6 +54595,7 @@ const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
 const setup_configuration_clone_policy_1 = __nccwpck_require__(85881);
 const setup_doctor_message_catalog_1 = __nccwpck_require__(80226);
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 class SetupWizardUseCase {
     constructor(dependencies) {
         this.dependencies = dependencies;
@@ -54208,15 +54611,18 @@ class SetupWizardUseCase {
                 },
             }
             : request.overrides;
-        const defaults = (0, setup_configuration_policy_1.mergeSetupConfiguration)((0, setup_configuration_policy_1.createDefaultSetupConfiguration)(), {
+        const defaults = (0, setup_configuration_policy_1.mergeSetupConfiguration)((0, setup_configuration_policy_1.mergeSetupConfiguration)((0, setup_configuration_policy_1.createDefaultSetupConfiguration)(), { pullRequestApproval: pull_request_approval_policy_1.DEFAULT_PULL_REQUEST_APPROVAL_POLICY }), {
             ...effectiveOverrides,
             ...(request.skipRepositoryVariables ? { manageRepositoryVariables: false } : {}),
             ...(request.skipRepositorySecrets ? { manageRepositorySecrets: false } : {}),
         });
+        if (defaults.features.pullRequests === false && effectiveOverrides?.pullRequestApproval?.mode === undefined) {
+            defaults.pullRequestApproval = { ...defaults.pullRequestApproval, mode: 'off' };
+        }
         const remoteConfiguration = request.remoteTarget && this.dependencies.remoteConfiguration
             ? await this.dependencies.remoteConfiguration.inspect(request.remoteTarget.owner, request.remoteTarget.repository, request.remoteTarget.token)
             : undefined;
-        const defaultValidationErrors = (0, setup_configuration_policy_1.validateSetupConfiguration)(defaults);
+        const defaultValidationErrors = (0, setup_configuration_policy_1.validateSetupConfiguration)(defaults, { allowIncompleteApproval: true });
         if (defaultValidationErrors.length > 0) {
             throw new application_error_1.ApplicationError('configuration.invalid', `Invalid setup configuration:\n${defaultValidationErrors.map((error) => `- ${error}`).join('\n')}`);
         }
@@ -54237,7 +54643,13 @@ class SetupWizardUseCase {
             };
         }
         const collectedConfiguration = (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(questionnaire.draft);
-        const validationErrors = (0, setup_configuration_policy_1.validateSetupConfiguration)(collectedConfiguration);
+        if (collectedConfiguration.features.pullRequests === false
+            && effectiveOverrides?.pullRequestApproval?.mode === undefined) {
+            // The conditional approval questionnaire stage was skipped; its new-install
+            // default must not outlive an explicit decision to disable PR automation.
+            collectedConfiguration.pullRequestApproval = { ...collectedConfiguration.pullRequestApproval, mode: 'off' };
+        }
+        const validationErrors = (0, setup_configuration_policy_1.validateSetupConfiguration)(collectedConfiguration, { allowIncompleteApproval: request.previewOnly === true });
         const configuration = validationErrors.length === 0
             ? (0, setup_configuration_policy_1.normalizeSetupConfigurationLocales)(collectedConfiguration)
             : collectedConfiguration;
@@ -54258,7 +54670,47 @@ class SetupWizardUseCase {
                 catalog: (0, setup_doctor_message_catalog_1.resolveStaticSetupDoctorCatalog)(),
             })
             : [];
-        const plan = (0, setup_configuration_policy_1.buildSetupPlan)(configuration, readiness);
+        const approvalReadiness = [];
+        if (configuration.pullRequestApproval.mode !== 'off') {
+            if (!request.remoteTarget || !this.dependencies.approvalReadiness) {
+                approvalReadiness.push({
+                    id: 'approval.remote', status: 'skipped',
+                    summary: 'Branch rules and producer identities are unverified.',
+                    action: 'Run setup with a setup PAT before enabling native approval.', evidence: {}, blockedBy: [],
+                });
+                if (configuration.pullRequestApproval.mode === 'guarded' && !request.previewOnly) {
+                    throw new application_error_1.ApplicationError('configuration.invalid', 'Guarded approval requires remote branch-rule and producer inspection.');
+                }
+            }
+            else {
+                const facts = await this.dependencies.approvalReadiness.inspect(request.remoteTarget.owner, request.remoteTarget.repository, request.remoteTarget.token, configuration);
+                for (const rule of facts.rules) {
+                    const safe = rule.readable && rule.dismissesStaleReviews && !rule.approvalCheckCycle;
+                    approvalReadiness.push({
+                        id: `approval.rules.${rule.role}`, status: safe ? 'pass' : 'fail',
+                        summary: safe ? `${rule.branch}: stale approvals are dismissed.`
+                            : `${rule.branch}: stale-dismissal or approval-check safety is missing or unreadable.`,
+                        ...(safe ? {} : { action: 'Correct branch protection/rulesets or choose recommend/off.' }),
+                        evidence: { branch: rule.branch }, blockedBy: [],
+                    });
+                }
+                approvalReadiness.push({
+                    id: 'approval.producers', status: facts.missingWorkflowNames.length > 0 ? 'fail'
+                        : configuration.pullRequestApproval.producerAttested ? 'pass' : 'warn',
+                    summary: facts.missingWorkflowNames.length > 0 ? 'One or more selected producer workflows are absent or disabled.'
+                        : configuration.pullRequestApproval.producerAttested
+                            ? 'Selected producer workflows are active; exact check/App identity and coverage enforcement are operator-attested.'
+                            : 'Producer names are active, but exact check/App identity and coverage enforcement have not been attested.',
+                    ...(facts.missingWorkflowNames.length === 0 && configuration.pullRequestApproval.producerAttested
+                        ? {} : { action: 'Inspect exact CI checks, source App IDs, and coverage-enforcing steps; then attest or choose recommend/off.' }),
+                    evidence: { missingCount: facts.missingWorkflowNames.length }, blockedBy: [],
+                });
+                if (configuration.pullRequestApproval.mode === 'guarded' && approvalReadiness.some(check => check.status === 'fail') && !request.previewOnly) {
+                    throw new application_error_1.ApplicationError('configuration.invalid', 'Guarded approval is blocked: branch rules or exact CI producers are not ready. Choose recommend/off or correct them.');
+                }
+            }
+        }
+        const plan = (0, setup_configuration_policy_1.buildSetupPlan)(configuration, readiness, approvalReadiness);
         this.dependencies.planPresenter.present(plan);
         const confirmation = (0, setup_questionnaire_policy_1.enterSetupConfirmation)(questionnaire);
         const decision = await this.dependencies.confirmation.confirm(plan);
@@ -63505,6 +63957,7 @@ const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const setup_credentials_composition_root_1 = __nccwpck_require__(69084);
 const setup_doctor_composition_root_1 = __nccwpck_require__(56360);
 const setup_workspace_adapter_1 = __nccwpck_require__(5729);
+const setup_approval_readiness_adapter_1 = __nccwpck_require__(78572);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const application_error_1 = __nccwpck_require__(75999);
 const setup_terminal_driver_1 = __nccwpck_require__(5462);
@@ -63524,6 +63977,10 @@ function registerSetupCommand(program) {
         .option('--issue-workflows <types>', 'Comma-separated issue workflow types, or "all" (for non-interactive setup)')
         .option('--agent-guidance <mode>', 'Generated agent guidance mode (prompt|create-if-missing|disabled)')
         .option('--config <path>', 'YAML or JSON file with setup overrides')
+        .option('--pr-approval-mode <mode>', 'PR bot approval: recommend (new setup default), guarded, or off')
+        .option('--pr-approval-check <identity>', 'Exact test producer name|source-App-ID|workflow-name; repeat for multiple checks', collectApprovalCheck, [])
+        .option('--pr-approval-coverage-check <name>', 'Exact selected check that enforces the coverage budget')
+        .option('--pr-approval-attest-producer', 'Confirm exact check/App/workflow identity and a coverage-enforcing CI step', false)
         .option('--non-interactive', 'Use defaults and config-file values without prompting', false)
         .option('--yes', 'Apply the plan without the final confirmation prompt', false)
         .option('--dry-run', 'Show the setup plan without changing files or GitHub', false)
@@ -63590,6 +64047,7 @@ function registerSetupCommand(program) {
                     : new setup_confirmation_adapter_1.SetupPlanConfirmationAdapter(terminal, Boolean(options.yes)),
                 remoteConfiguration: remoteConfigurationReader,
                 mergeQueueReadiness: (0, setup_doctor_composition_root_1.createSetupMergeQueueReadinessUseCase)(),
+                approvalReadiness: new setup_approval_readiness_adapter_1.GithubSetupApprovalReadinessAdapter(),
             });
             const overrides = loadSetupOverrides(options);
             const result = await wizard.execute({
@@ -63597,6 +64055,7 @@ function registerSetupCommand(program) {
                 overrides,
                 skipRepositoryVariables: Boolean(options.skipVariables),
                 skipRepositorySecrets: Boolean(options.skipSecrets),
+                previewOnly: Boolean(options.dryRun),
                 ...(token ? { remoteTarget: { owner: gitInfo.owner, repository: gitInfo.repo, token } } : {}),
             });
             if (result.status === 'cancelled') {
@@ -63608,7 +64067,7 @@ function registerSetupCommand(program) {
                 return;
             }
             const { configuration, remoteConfiguration } = result;
-            const workflowComparisons = new setup_workspace_adapter_1.SetupDoctorWorkspaceQueryAdapter().compareWorkflows((0, setup_configuration_policy_1.effectiveIssueWorkflowFeatures)(configuration));
+            const workflowComparisons = new setup_workspace_adapter_1.SetupDoctorWorkspaceQueryAdapter().compareWorkflows((0, setup_configuration_policy_1.effectiveIssueWorkflowFeatures)(configuration), configuration);
             const updateWorkflows = await workflowPrompt.confirmWorkflowUpdates(workflowComparisons, Boolean(options.updateWorkflows));
             const approvedWorkflowFiles = updateWorkflows
                 ? workflowComparisons.filter(comparison => comparison.status === 'changed').map(comparison => comparison.file)
@@ -63656,9 +64115,27 @@ function collectSecret(value, previous) {
         throw new Error('--secret must use a non-empty NAME=VALUE with an uppercase secret name.');
     return { ...previous, [name]: secret };
 }
+function collectApprovalCheck(value, previous) {
+    return [...previous, value];
+}
 function loadSetupOverrides(options) {
     const fromFile = options.config ? (0, setup_config_file_1.loadSetupConfigurationOverrides)(options.config) : {};
     const fromFlags = {};
+    if (options.prApprovalMode || options.prApprovalCheck?.length || options.prApprovalCoverageCheck || options.prApprovalAttestProducer) {
+        if (options.prApprovalMode && !['off', 'recommend', 'guarded'].includes(options.prApprovalMode)) {
+            throw new Error('--pr-approval-mode must be guarded, recommend, or off.');
+        }
+        const checks = options.prApprovalCheck?.map(value => {
+            const [name, appId, workflowName] = value.split('|').map(item => item.trim());
+            return { name, sourceAppId: Number(appId), workflowName };
+        });
+        fromFlags.pullRequestApproval = {
+            ...(options.prApprovalMode ? { mode: options.prApprovalMode } : {}),
+            ...(checks?.length ? { testChecks: checks } : {}),
+            ...(options.prApprovalAttestProducer ? { producerAttested: true } : {}),
+            ...(options.prApprovalCoverageCheck ? { coverage: { mode: 'check', checkName: options.prApprovalCoverageCheck } } : {}),
+        };
+    }
     if (options.agent) {
         if (!['codex', 'opencode', 'cursor'].includes(options.agent)) {
             throw new Error('--agent must be one of: codex, opencode, cursor.');
@@ -63720,6 +64197,11 @@ function mergeSetupOverrides(fileOverrides, flagOverrides) {
         agents: { ...fileOverrides.agents, ...flagOverrides.agents },
         repository: { ...fileOverrides.repository, ...flagOverrides.repository },
         ai: { ...fileOverrides.ai, ...flagOverrides.ai },
+        pullRequestApproval: {
+            ...fileOverrides.pullRequestApproval,
+            ...flagOverrides.pullRequestApproval,
+            coverage: { ...fileOverrides.pullRequestApproval?.coverage, ...flagOverrides.pullRequestApproval?.coverage },
+        },
         projects: { ...fileOverrides.projects, ...flagOverrides.projects },
         issueWorkflows: { ...fileOverrides.issueWorkflows, ...flagOverrides.issueWorkflows },
         repositoryAgentGuidance: { ...fileOverrides.repositoryAgentGuidance, ...flagOverrides.repositoryAgentGuidance },
@@ -63963,6 +64445,7 @@ const SETUP_OVERRIDE_KEYS = new Set([
     'agents',
     'repository',
     'ai',
+    'pullRequestApproval',
     'projects',
     'createInitialTag',
     'manageRepositoryVariables',
@@ -64048,6 +64531,7 @@ function loadSetupConfigurationOverrides(filePath) {
         raw.repository.mergeQueueCheckAttestations = result.value;
     }
     validateSection(raw.ai, 'ai', AI_STRING_KEYS, AI_BOOLEAN_KEYS, AI_NUMBER_KEYS);
+    validateApprovalOverride(raw.pullRequestApproval);
     validateSection(raw.projects, 'projects', PROJECT_KEYS, new Set(), new Set());
     validateBooleanProperty(raw, 'createInitialTag');
     validateBooleanProperty(raw, 'manageRepositoryVariables');
@@ -64059,6 +64543,25 @@ function loadSetupConfigurationOverrides(filePath) {
     validateIssueWorkflows(raw.issueWorkflows);
     validateGuidance(raw.repositoryAgentGuidance);
     return raw;
+}
+function validateApprovalOverride(value) {
+    if (value === undefined)
+        return;
+    validateObject(value, 'pullRequestApproval');
+    const policy = value;
+    validateObjectKeys(policy, new Set([
+        'version', 'mode', 'targetRoles', 'branchKinds', 'requireLinkedIssue',
+        'additionalExcludedPaths', 'testChecks', 'producerAttested', 'coverage', 'allowHumanDismissed',
+        'skipWhenHumanApproved',
+    ]), 'pullRequestApproval');
+    if (policy.testChecks !== undefined && !Array.isArray(policy.testChecks))
+        throw new Error('pullRequestApproval.testChecks must be an array.');
+    if (policy.coverage !== undefined) {
+        validateObject(policy.coverage, 'pullRequestApproval.coverage');
+        validateObjectKeys(policy.coverage, new Set([
+            'mode', 'checkName', 'minDiffPercent', 'artifactWorkflowName', 'reporterAttested',
+        ]), 'pullRequestApproval.coverage');
+    }
 }
 function validateIssueWorkflows(value) {
     if (value === undefined)
@@ -64424,6 +64927,7 @@ exports.ConsoleSetupPlanPresenter = void 0;
 exports.renderSetupPlan = renderSetupPlan;
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 class ConsoleSetupPlanPresenter {
     present(plan) {
         console.log(renderSetupPlan(plan));
@@ -64431,6 +64935,7 @@ class ConsoleSetupPlanPresenter {
 }
 exports.ConsoleSetupPlanPresenter = ConsoleSetupPlanPresenter;
 function renderSetupPlan(plan) {
+    const approval = plan.configuration.pullRequestApproval;
     const enabledFeatures = Object.entries(plan.configuration.features)
         .filter(([, enabled]) => enabled)
         .map(([feature]) => `  ${(0, setup_prompt_rendering_1.color)('✓', 32)} ${setup_configuration_policy_1.SETUP_FEATURE_DESCRIPTIONS[feature] ?? feature}`)
@@ -64441,6 +64946,19 @@ function renderSetupPlan(plan) {
     const content = [
         (0, setup_prompt_rendering_1.color)('Capabilities', 36), enabledFeatures || '  (none)', '',
         (0, setup_prompt_rendering_1.color)('Agent routing', 36), agents, '',
+        (0, setup_prompt_rendering_1.color)('Pull-request approval', 36),
+        `  Mode: ${approval.mode} (new setup; absent runtime policy stays off)`,
+        `  Scope: ${approval.targetRoles.join(', ')} / ${approval.branchKinds.join(', ')}; linked issue ${approval.requireLinkedIssue ? 'required' : 'optional'}`,
+        `  Protected paths: ${pull_request_approval_policy_1.FIXED_APPROVAL_EXCLUSIONS.length} fixed trust-boundary patterns; ${approval.additionalExcludedPaths.length} extra`,
+        `  Test producers: ${approval.testChecks.map(check => `${check.name} [App ${check.sourceAppId}, ${check.workflowName}]`).join('; ') || '(not selected)'}`,
+        `  Producer/coverage enforcement: ${approval.producerAttested ? 'operator-attested' : 'not attested'}`,
+        `  Coverage: ${approval.coverage.mode} / ${approval.coverage.checkName || '(not selected)'}`,
+        ...(approval.coverage.mode === 'numeric' ? [`  Numeric reporter: ${approval.coverage.artifactWorkflowName || '(not selected)'}; threshold ${approval.coverage.minDiffPercent}%; ${approval.coverage.reporterAttested ? 'installed (operator-attested)' : 'not attested'}`] : []),
+        `  Bugbot: ${plan.configuration.ai.bugbotSeverity} floor, telemetry ${plan.configuration.ai.bugbotTelemetry ? 'on' : 'off'}, dry-run ${plan.configuration.ai.bugbotDryRun ? 'on' : 'off'}`,
+        `  Observer: ${approval.mode === 'off' ? 'not installed' : 'copilot_pull_request_approval.yml (active only after default-branch installation)'}`,
+        '  Runtime PAT: Secret PAT; bot identity and Pull requests write need verification.',
+        `  Outcome: ${approval.mode === 'off' ? 'disabled' : approval.mode === 'recommend' ? 'recommendation only' : 'eligible PRs may be approved after default-branch installation and live evidence'}`,
+        '  Native approval still requires readable stale-dismissal rules and a distinct runtime PAT bot.', '',
         (0, setup_prompt_rendering_1.color)('Repository changes', 36),
         `  Files selected: ${plan.selectedFiles.length}`,
         `  Variables to upsert: ${plan.configuration.manageRepositoryVariables ? plan.variables.length : 0}`,
@@ -64452,6 +64970,11 @@ function renderSetupPlan(plan) {
         ...(plan.mergeQueueReadiness.length > 0 ? [
             (0, setup_prompt_rendering_1.color)('Merge queue readiness', 36),
             ...plan.mergeQueueReadiness.map((check) => `  ${(0, setup_prompt_rendering_1.doctorIcon)(check.status)} ${check.id}: ${check.summary}`),
+            '',
+        ] : []),
+        ...(plan.approvalReadiness.length > 0 ? [
+            (0, setup_prompt_rendering_1.color)('Approval readiness', 36),
+            ...plan.approvalReadiness.map((check) => `  ${(0, setup_prompt_rendering_1.doctorIcon)(check.status)} ${check.id}: ${check.summary}`),
             '',
         ] : []),
         (0, setup_prompt_rendering_1.color)('Strictly required Secrets', 33), `  ${plan.requiredSecrets.join(', ') || '(none)'}`,
@@ -76498,6 +77021,186 @@ function isRecord(value) {
 
 /***/ }),
 
+/***/ 98820:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.FIXED_APPROVAL_EXCLUSIONS = exports.DISABLED_PULL_REQUEST_APPROVAL_POLICY = exports.DEFAULT_PULL_REQUEST_APPROVAL_POLICY = void 0;
+exports.validatePullRequestApprovalPolicy = validatePullRequestApprovalPolicy;
+exports.parsePullRequestApprovalPolicy = parsePullRequestApprovalPolicy;
+exports.serializePullRequestApprovalPolicy = serializePullRequestApprovalPolicy;
+exports.DEFAULT_PULL_REQUEST_APPROVAL_POLICY = {
+    version: 1,
+    mode: 'recommend',
+    targetRoles: ['development'],
+    branchKinds: ['feature', 'bugfix', 'documentation', 'chore'],
+    requireLinkedIssue: true,
+    additionalExcludedPaths: [],
+    testChecks: [],
+    producerAttested: false,
+    coverage: { mode: 'check', checkName: '' },
+    allowHumanDismissed: false,
+    skipWhenHumanApproved: true,
+};
+exports.DISABLED_PULL_REQUEST_APPROVAL_POLICY = {
+    ...exports.DEFAULT_PULL_REQUEST_APPROVAL_POLICY,
+    mode: 'off',
+};
+/** Additive exclusions. A user-selected glob cannot remove any of these paths. */
+exports.FIXED_APPROVAL_EXCLUSIONS = [
+    '.github/workflows/**',
+    '.github/actions/**',
+    '.copilot/**',
+    'setup/workflows/**',
+    'action.yml',
+    'build/**',
+    'CODEOWNERS',
+    '**/CODEOWNERS',
+    'src/domain/pull_request_approval**',
+    'src/domain/bugbot/**',
+    'src/application/**/pull_request_approval**',
+    'src/application/usecases/steps/commit/bugbot/**',
+    'src/application/policies/bugbot_review_presentation_policy.ts',
+    'src/data/repository/pull_request/**approval**',
+    'src/actions/**approval**',
+    'src/actions/github_action.ts',
+    'src/application/contracts/input_keys.ts',
+    'src/infrastructure/**approval**',
+    'src/application/policies/setup_configuration_**',
+];
+const POLICY_KEYS = new Set([
+    'version', 'mode', 'targetRoles', 'branchKinds', 'requireLinkedIssue',
+    'additionalExcludedPaths', 'testChecks', 'producerAttested', 'coverage', 'allowHumanDismissed',
+    'skipWhenHumanApproved',
+]);
+const PRODUCER_KEYS = new Set(['name', 'sourceAppId', 'workflowName']);
+const SAFE_NAME = /^[^\r\n${}<>|]{1,100}$/u;
+const SAFE_GLOB = /^(?![!/]|.*(?:^|\/)\.\.(?:\/|$))[A-Za-z0-9._*?/-]{1,120}$/u;
+function validatePullRequestApprovalPolicy(value, allowIncomplete = false) {
+    const errors = [];
+    if (!isRecord(value))
+        return ['PR approval policy must be an object.'];
+    unknownKeys(value, POLICY_KEYS, 'policy', errors);
+    if (value.version !== 1)
+        errors.push('PR approval policy version must be 1.');
+    if (!['off', 'recommend', 'guarded'].includes(String(value.mode)))
+        errors.push('PR approval mode must be off, recommend, or guarded.');
+    enumArray(value.targetRoles, ['development', 'main'], 'targetRoles', 2, errors);
+    enumArray(value.branchKinds, ['feature', 'bugfix', 'documentation', 'chore'], 'branchKinds', 4, errors);
+    for (const key of ['requireLinkedIssue', 'allowHumanDismissed', 'skipWhenHumanApproved']) {
+        if (typeof value[key] !== 'boolean')
+            errors.push(`${key} must be boolean.`);
+    }
+    if (!Array.isArray(value.additionalExcludedPaths) || value.additionalExcludedPaths.length > 32
+        || value.additionalExcludedPaths.some(path => typeof path !== 'string' || !SAFE_GLOB.test(path))
+        || new Set(value.additionalExcludedPaths).size !== value.additionalExcludedPaths.length) {
+        errors.push('additionalExcludedPaths must contain at most 32 unique safe rooted globs.');
+    }
+    if (!Array.isArray(value.testChecks) || value.testChecks.length > 8 || (value.mode !== 'off' && value.testChecks.length === 0 && !allowIncomplete)) {
+        errors.push('guarded/recommend mode requires 1–8 exact test checks.');
+    }
+    else {
+        const identities = new Set();
+        for (const item of value.testChecks) {
+            if (!isRecord(item)) {
+                errors.push('Each test check must be an object.');
+                continue;
+            }
+            unknownKeys(item, PRODUCER_KEYS, 'test check', errors);
+            if (!safeName(item.name) || !safeName(item.workflowName) || !Number.isSafeInteger(item.sourceAppId) || Number(item.sourceAppId) <= 0) {
+                errors.push('Each test check needs a safe exact name, workflow name, and positive source App ID.');
+            }
+            const identity = `${item.name}:${item.sourceAppId}:${item.workflowName}`;
+            if (identities.has(identity))
+                errors.push('Test checks cannot contain duplicate producer identities.');
+            identities.add(identity);
+        }
+    }
+    if (typeof value.producerAttested !== 'boolean')
+        errors.push('producerAttested must be boolean.');
+    if (value.mode === 'guarded' && value.producerAttested !== true && !allowIncomplete) {
+        errors.push('Guarded approval requires explicit exact-producer and coverage-enforcement attestation.');
+    }
+    const coverage = value.coverage;
+    if (!isRecord(coverage) || !['check', 'numeric'].includes(String(coverage.mode))) {
+        errors.push('Coverage mode must be check or numeric.');
+    }
+    else {
+        unknownKeys(coverage, new Set(coverage.mode === 'numeric'
+            ? ['mode', 'checkName', 'minDiffPercent', 'artifactWorkflowName', 'reporterAttested']
+            : ['mode', 'checkName']), 'coverage', errors);
+        if (!safeName(coverage.checkName) && !(coverage.checkName === '' && (value.mode === 'off' || allowIncomplete))) {
+            errors.push('Coverage checkName must identify one exact safe check.');
+        }
+        if (value.mode !== 'off' && !(allowIncomplete && coverage.checkName === '') && Array.isArray(value.testChecks)
+            && !value.testChecks.some(item => isRecord(item) && item.name === coverage.checkName)) {
+            errors.push('Coverage checkName must match a configured trusted test check.');
+        }
+        if (coverage.mode === 'numeric' && (!Number.isSafeInteger(coverage.minDiffPercent)
+            || Number(coverage.minDiffPercent) < 0 || Number(coverage.minDiffPercent) > 100
+            || !safeName(coverage.artifactWorkflowName))) {
+            errors.push('Numeric coverage needs minDiffPercent 0–100 and an exact artifact workflow name.');
+        }
+        if (coverage.mode === 'numeric' && Array.isArray(value.testChecks)
+            && !value.testChecks.some(item => isRecord(item) && item.workflowName === coverage.artifactWorkflowName)) {
+            errors.push('Numeric artifact workflow must match a configured trusted producer.');
+        }
+        if (coverage.mode === 'numeric' && typeof coverage.reporterAttested !== 'boolean') {
+            errors.push('Numeric coverage reporterAttested must be boolean.');
+        }
+        if (coverage.mode === 'numeric' && value.mode === 'guarded'
+            && coverage.reporterAttested !== true && !allowIncomplete) {
+            errors.push('Guarded numeric coverage requires an installed-reporter attestation.');
+        }
+    }
+    return errors;
+}
+function parsePullRequestApprovalPolicy(raw) {
+    if (raw && raw.length > 16384)
+        throw new Error('PR approval policy exceeds 16 KiB.');
+    if (!raw?.trim())
+        return exports.DISABLED_PULL_REQUEST_APPROVAL_POLICY;
+    let value;
+    try {
+        value = JSON.parse(raw);
+    }
+    catch {
+        throw new Error('PR approval policy is not valid JSON.');
+    }
+    const errors = validatePullRequestApprovalPolicy(value);
+    if (errors.length > 0)
+        throw new Error(errors.join(' '));
+    return value;
+}
+function serializePullRequestApprovalPolicy(policy) {
+    const errors = validatePullRequestApprovalPolicy(policy);
+    if (errors.length > 0)
+        throw new Error(errors.join(' '));
+    return JSON.stringify(policy);
+}
+function safeName(value) {
+    return typeof value === 'string' && SAFE_NAME.test(value) && value.trim() === value;
+}
+function isRecord(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+function unknownKeys(value, allowed, label, errors) {
+    const unknown = Object.keys(value).filter(key => !allowed.has(key));
+    if (unknown.length > 0)
+        errors.push(`Unknown ${label} field(s): ${unknown.join(', ')}.`);
+}
+function enumArray(value, allowed, label, max, errors) {
+    if (!Array.isArray(value) || value.length === 0 || value.length > max
+        || value.some(item => typeof item !== 'string' || !allowed.includes(item))
+        || new Set(value).size !== value.length)
+        errors.push(`${label} must be a nonempty unique supported selection.`);
+}
+
+
+/***/ }),
+
 /***/ 45315:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -76672,6 +77375,28 @@ function normalizeOrigin(origin) {
 
 /***/ }),
 
+/***/ 9512:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.renderApprovalObserverWorkflow = renderApprovalObserverWorkflow;
+const WORKFLOW_PLACEHOLDER = '__PR_APPROVAL_WORKFLOW_NAMES__';
+/** Only exact, validated workflow names enter the event filter. */
+function renderApprovalObserverWorkflow(template, policy) {
+    if (!template.includes(WORKFLOW_PLACEHOLDER))
+        throw new Error('Approval observer template is missing its workflow filter.');
+    const names = [...new Set(['Copilot - Pull Request', ...policy.testChecks.map(check => check.workflowName)])];
+    if (names.some(name => !name || name.length > 100 || /[\r\n${}<>]/u.test(name))) {
+        throw new Error('Approval producer workflow names must be exact safe single-line names.');
+    }
+    return template.replace(WORKFLOW_PLACEHOLDER, JSON.stringify(names));
+}
+
+
+/***/ }),
+
 /***/ 24596:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -76684,6 +77409,7 @@ const SETUP_WORKFLOWS = [
     { file: 'copilot_issue.yml', feature: 'issues' },
     { file: 'copilot_pull_request.yml', feature: 'pullRequests' },
     { file: 'copilot_pull_request_review_state.yml', feature: 'pullRequests' },
+    { file: 'copilot_pull_request_approval.yml', feature: 'pullRequests' },
     { file: 'copilot_pull_request_merge_queue.yml', feature: 'pullRequests' },
     { file: 'copilot_commit.yml', feature: 'commits' },
     { file: 'copilot_branch_sync.yml', feature: 'commits' },
@@ -78811,6 +79537,7 @@ const octokit_deployment_adapter_1 = __nccwpck_require__(46819);
 const merge_queue_readiness_use_case_1 = __nccwpck_require__(9890);
 const resolve_message_catalog_use_case_1 = __nccwpck_require__(99961);
 const agent_capability_composition_root_1 = __nccwpck_require__(85079);
+const setup_approval_readiness_adapter_1 = __nccwpck_require__(78572);
 function createSetupMergeQueueReadinessUseCase(catalogResolver = new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)())) {
     return new merge_queue_readiness_use_case_1.SetupMergeQueueReadinessUseCase(new github_target_merge_capabilities_inspector_1.GithubTargetMergeCapabilitiesInspector(new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter()), catalogResolver);
 }
@@ -78823,6 +79550,7 @@ function createSetupDoctorUseCase() {
         remoteConfiguration: repositoryConfiguration,
         remoteHealth: new setup_remote_credential_health_adapter_1.SetupRemoteCredentialHealthQueryAdapter(new octokit_credential_health_adapter_1.OctokitCredentialHealthClientAdapter()),
         mergeQueueReadiness: createSetupMergeQueueReadinessUseCase(catalogResolver),
+        approvalReadiness: new setup_approval_readiness_adapter_1.GithubSetupApprovalReadinessAdapter(),
         catalogResolver,
     });
 }
@@ -80007,6 +80735,140 @@ function writeSpecFile(target, content, exists) {
 
 /***/ }),
 
+/***/ 78572:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GithubSetupApprovalReadinessAdapter = void 0;
+const github = __importStar(__nccwpck_require__(78227));
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const setup_approval_workflow_1 = __nccwpck_require__(9512);
+class GithubSetupApprovalReadinessAdapter {
+    async inspect(owner, repository, setupToken, configuration) {
+        const octokit = github.getOctokit(setupToken);
+        const policy = configuration.pullRequestApproval;
+        const branches = policy.targetRoles.map(role => ({
+            role,
+            branch: role === 'development' ? configuration.repository.developmentBranch : configuration.repository.mainBranch,
+        }));
+        const rules = await Promise.all(branches.map(async ({ role, branch }) => {
+            try {
+                const effective = await octokit.request('GET /repos/{owner}/{repo}/rules/branches/{branch}', {
+                    owner, repo: repository, branch,
+                });
+                const items = Array.isArray(effective.data) ? effective.data : [];
+                let classic;
+                try {
+                    const response = await octokit.rest.repos.getBranchProtection({ owner, repo: repository, branch });
+                    classic = response.data;
+                }
+                catch (error) {
+                    if (statusOf(error) !== 404)
+                        throw error;
+                }
+                const reviews = items.filter(item => item.type === 'pull_request');
+                const classicReview = record(classic?.required_pull_request_reviews);
+                const dismissesStaleReviews = (reviews.length > 0 || Boolean(classicReview))
+                    && reviews.every(item => record(item.parameters)?.dismiss_stale_reviews === true)
+                    && (!classicReview || classicReview.dismiss_stale_reviews === true);
+                const classicChecks = record(classic?.required_status_checks);
+                const required = [
+                    ...array(classicChecks?.contexts),
+                    ...array(classicChecks?.checks).map(check => record(check)?.context),
+                    ...items.filter(item => item.type === 'required_status_checks')
+                        .flatMap(item => array(record(item.parameters)?.required_status_checks).map(check => record(check)?.context)),
+                ];
+                return { role, branch, readable: true, dismissesStaleReviews, approvalCheckCycle: required.includes('Copilot / Approval') };
+            }
+            catch {
+                return { role, branch, readable: false, dismissesStaleReviews: false, approvalCheckCycle: false };
+            }
+        }));
+        const defaultBranchWorkflow = await this.compareDefaultBranchWorkflow(octokit, owner, repository, configuration);
+        const requiredNames = [...new Set(['Copilot - Pull Request', ...policy.testChecks.map(check => check.workflowName)])];
+        let missingWorkflowNames;
+        try {
+            const workflows = await octokit.paginate(octokit.rest.actions.listRepoWorkflows, { owner, repo: repository, per_page: 100 });
+            const names = new Set(workflows.filter(workflow => workflow.state === 'active').map(workflow => workflow.name));
+            missingWorkflowNames = requiredNames.filter(name => !names.has(name));
+        }
+        catch {
+            missingWorkflowNames = requiredNames;
+        }
+        return { defaultBranchWorkflow, rules, missingWorkflowNames };
+    }
+    async compareDefaultBranchWorkflow(octokit, owner, repository, configuration) {
+        try {
+            const repo = await octokit.rest.repos.get({ owner, repo: repository });
+            const response = await octokit.rest.repos.getContent({
+                owner, repo: repository, path: '.github/workflows/copilot_pull_request_approval.yml', ref: repo.data.default_branch,
+            });
+            if (Array.isArray(response.data) || response.data.type !== 'file' || !('content' in response.data))
+                return 'drift';
+            const installed = Buffer.from(response.data.content, 'base64').toString('utf8');
+            if (owner.toLowerCase() === 'vypdev' && repository.toLowerCase() === 'copilot') {
+                // The source repository runs the unreleased local Action only from its
+                // trusted default branch. This is a reviewed variant, not template drift.
+                const sourceObserver = (0, node_fs_1.readFileSync)((0, node_path_1.join)(__dirname, '..', '..', 'setup', 'source-workflows', 'copilot_pull_request_approval.yml'), 'utf8');
+                return installed === sourceObserver ? 'matching' : 'drift';
+            }
+            const source = (0, node_fs_1.readFileSync)((0, node_path_1.join)(__dirname, '..', '..', 'setup', 'workflows', 'copilot_pull_request_approval.yml'), 'utf8');
+            const expected = (0, setup_approval_workflow_1.renderApprovalObserverWorkflow)(source, configuration.pullRequestApproval);
+            return installed === expected ? 'matching' : 'drift';
+        }
+        catch (error) {
+            return statusOf(error) === 404 ? 'missing' : 'unavailable';
+        }
+    }
+}
+exports.GithubSetupApprovalReadinessAdapter = GithubSetupApprovalReadinessAdapter;
+function statusOf(error) {
+    return error && typeof error === 'object' && 'status' in error ? Number(error.status) : undefined;
+}
+function record(value) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
+}
+function array(value) { return Array.isArray(value) ? value : []; }
+
+
+/***/ }),
+
 /***/ 47020:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -80425,8 +81287,8 @@ class SetupDoctorWorkspaceQueryAdapter {
     isRepositoryRoot() {
         return (0, cli_context_1.isGitRepositoryRoot)(process.cwd());
     }
-    compareWorkflows(features) {
-        return (0, setup_files_1.compareSetupWorkflows)(process.cwd(), features);
+    compareWorkflows(features, configuration) {
+        return (0, setup_files_1.compareSetupWorkflows)(process.cwd(), features, undefined, configuration);
     }
     inspectAgentGuidance(configuration) {
         return (0, repository_agent_guidance_1.inspectRepositoryAgentGuidance)(process.cwd(), configuration);
@@ -80448,8 +81310,8 @@ class SetupReconcileWorkspaceAdapter {
     isRepositoryRoot() {
         return this.query.isRepositoryRoot();
     }
-    compareWorkflows(features) {
-        return this.query.compareWorkflows(features);
+    compareWorkflows(features, configuration) {
+        return this.query.compareWorkflows(features, configuration);
     }
     inspectAgentGuidance(configuration) {
         return this.query.inspectAgentGuidance(configuration);
@@ -82861,6 +83723,7 @@ const setup_workflow_catalog_1 = __nccwpck_require__(24596);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 const repository_agent_guidance_1 = __nccwpck_require__(38445);
+const setup_approval_workflow_1 = __nccwpck_require__(9512);
 /**
  * Ensure .github, .github/workflows and .github/ISSUE_TEMPLATE exist; create them if missing.
  * @param cwd - Directory (repo root)
@@ -82907,6 +83770,7 @@ function copySetupFiles(cwd, setupDirOverride, features, options = {}) {
         ? retireDeselectedSetupAssets(cwd, setupDir, options.setupConfiguration)
         : { copied: 0, skipped: 0 };
     const workflows = (0, setup_file_copy_1.copySetupDirectory)(path.join(setupDir, 'workflows'), path.join(cwd, '.github', 'workflows'), (fileName) => (fileName.endsWith('.yml') || fileName.endsWith('.yaml'))
+        && fileName !== 'copilot_pull_request_approval.yml'
         && (0, setup_workflow_catalog_1.isSetupWorkflowEnabled)(fileName, effectiveFeatures)
         && (!options.updateExistingWorkflows
             || approvedWorkflowFiles.has(fileName)
@@ -82914,6 +83778,9 @@ function copySetupFiles(cwd, setupDirOverride, features, options = {}) {
         overwrite: options.updateExistingWorkflows,
         backupDirectory,
     });
+    const approvalWorkflow = options.setupConfiguration?.pullRequestApproval.mode !== 'off' && options.setupConfiguration
+        ? copyApprovalObserverWorkflow(cwd, setupDir, options.setupConfiguration, options.updateExistingWorkflows === true, approvedWorkflowFiles, backupDirectory)
+        : { copied: 0, skipped: 0 };
     const issueTemplates = options.setupConfiguration
         ? copySelectedIssueForms(cwd, setupDir, options.setupConfiguration)
         : (0, setup_file_copy_1.copySetupDirectory)(path.join(setupDir, 'ISSUE_TEMPLATE'), path.join(cwd, '.github', 'ISSUE_TEMPLATE'), (fileName) => features?.issueTemplates !== false
@@ -82927,10 +83794,31 @@ function copySetupFiles(cwd, setupDirOverride, features, options = {}) {
     const guidance = options.setupConfiguration
         ? (0, repository_agent_guidance_1.reconcileRepositoryAgentGuidance)(cwd, options.setupConfiguration)
         : { copied: 0, skipped: 0 };
-    return [retired, workflows, issueTemplates, pullRequestTemplate, guidance].reduce((total, current) => ({
+    return [retired, workflows, approvalWorkflow, issueTemplates, pullRequestTemplate, guidance].reduce((total, current) => ({
         copied: total.copied + current.copied,
         skipped: total.skipped + current.skipped,
     }), { copied: 0, skipped: 0 });
+}
+function copyApprovalObserverWorkflow(cwd, setupDir, configuration, updateExisting, approved, backupDirectory) {
+    const file = 'copilot_pull_request_approval.yml';
+    const template = fs.readFileSync(path.join(setupDir, 'workflows', file), 'utf8');
+    const content = (0, setup_approval_workflow_1.renderApprovalObserverWorkflow)(template, configuration.pullRequestApproval);
+    const destination = path.join(cwd, '.github', 'workflows', file);
+    if (isLocalSourceApprovalObserver(cwd, destination))
+        return { copied: 0, skipped: 1 };
+    if (fs.existsSync(destination)) {
+        if (fs.readFileSync(destination, 'utf8') === content)
+            return { copied: 0, skipped: 1 };
+        if (!updateExisting || !approved.has(file))
+            return { copied: 0, skipped: 1 };
+        if (!backupDirectory)
+            throw new Error('Changed approval observer needs a backup directory.');
+        const backup = path.join(backupDirectory, '.github', 'workflows', file);
+        fs.mkdirSync(path.dirname(backup), { recursive: true });
+        fs.copyFileSync(destination, backup);
+    }
+    atomicWriteSetupAsset(destination, content);
+    return { copied: 1, skipped: 0 };
 }
 function copySelectedIssueForms(cwd, setupDir, configuration) {
     if (configuration.features.issueTemplates === false || configuration.features.issues === false) {
@@ -83030,22 +83918,36 @@ function setupBackupDestination(cwd, relativePath, operation) {
     fs.mkdirSync(path.dirname(destination), { recursive: true });
     return destination;
 }
-function compareSetupWorkflows(cwd, features, setupDirOverride) {
+function compareSetupWorkflows(cwd, features, setupDirOverride, configuration) {
     const setupDir = setupDirOverride ?? path.join(__dirname, '..', '..', 'setup');
     const sourceDirectory = path.join(setupDir, 'workflows');
     if (!fs.existsSync(sourceDirectory))
         return [];
     return fs.readdirSync(sourceDirectory)
-        .filter(file => (file.endsWith('.yml') || file.endsWith('.yaml')) && (0, setup_workflow_catalog_1.isSetupWorkflowEnabled)(file, features))
+        .filter(file => (file.endsWith('.yml') || file.endsWith('.yaml')) && (0, setup_workflow_catalog_1.isSetupWorkflowEnabled)(file, features)
+        && (file !== 'copilot_pull_request_approval.yml' || (configuration && configuration.pullRequestApproval.mode !== 'off')))
         .filter(file => fs.statSync(path.join(sourceDirectory, file)).isFile())
         .map(file => {
         const source = path.join(sourceDirectory, file);
         const destination = path.join(cwd, '.github', 'workflows', file);
         if (!fs.existsSync(destination))
             return { file, destination: `.github/workflows/${file}`, status: 'missing' };
-        const equal = fs.readFileSync(source, 'utf8') === fs.readFileSync(destination, 'utf8');
+        const expected = file === 'copilot_pull_request_approval.yml' && configuration
+            ? (0, setup_approval_workflow_1.renderApprovalObserverWorkflow)(fs.readFileSync(source, 'utf8'), configuration.pullRequestApproval)
+            : fs.readFileSync(source, 'utf8');
+        const equal = isLocalSourceApprovalObserver(cwd, destination)
+            || expected === fs.readFileSync(destination, 'utf8');
         return { file, destination: `.github/workflows/${file}`, status: equal ? 'unchanged' : 'changed' };
     });
+}
+/** This repository tests the unreleased Action from a reviewed default-branch workflow. */
+function isLocalSourceApprovalObserver(cwd, destination) {
+    const packageRoot = path.resolve(__dirname, '..', '..');
+    if (path.resolve(cwd) !== packageRoot || !fs.existsSync(destination))
+        return false;
+    const sourceObserver = path.join(packageRoot, 'setup', 'source-workflows', 'copilot_pull_request_approval.yml');
+    return fs.existsSync(sourceObserver)
+        && fs.readFileSync(destination, 'utf8') === fs.readFileSync(sourceObserver, 'utf8');
 }
 const ENV_TOKEN_KEY = 'PERSONAL_ACCESS_TOKEN';
 const ENV_PLACEHOLDER_VALUE = 'github_pat_11..';

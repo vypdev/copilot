@@ -33,8 +33,8 @@ export class SetupDoctorWorkspaceQueryAdapter implements SetupDoctorWorkspaceQue
         return isGitRepositoryRoot(process.cwd());
     }
 
-    compareWorkflows(features?: Parameters<typeof compareSetupWorkflows>[1]): ReturnType<typeof compareSetupWorkflows> {
-        return compareSetupWorkflows(process.cwd(), features);
+    compareWorkflows(features?: Parameters<typeof compareSetupWorkflows>[1], configuration?: Parameters<typeof compareSetupWorkflows>[3]): ReturnType<typeof compareSetupWorkflows> {
+        return compareSetupWorkflows(process.cwd(), features, undefined, configuration);
     }
 
     inspectAgentGuidance(configuration: Parameters<typeof inspectRepositoryAgentGuidance>[1]): ReturnType<typeof inspectRepositoryAgentGuidance> {
@@ -59,8 +59,8 @@ export class SetupReconcileWorkspaceAdapter implements SetupWorkspacePort, Setup
         return this.query.isRepositoryRoot();
     }
 
-    compareWorkflows(features?: Parameters<typeof compareSetupWorkflows>[1]): ReturnType<typeof compareSetupWorkflows> {
-        return this.query.compareWorkflows(features);
+    compareWorkflows(features?: Parameters<typeof compareSetupWorkflows>[1], configuration?: Parameters<typeof compareSetupWorkflows>[3]): ReturnType<typeof compareSetupWorkflows> {
+        return this.query.compareWorkflows(features, configuration);
     }
 
     inspectAgentGuidance(configuration: Parameters<SetupDoctorWorkspaceQueryAdapter['inspectAgentGuidance']>[0]): ReturnType<SetupDoctorWorkspaceQueryAdapter['inspectAgentGuidance']> {

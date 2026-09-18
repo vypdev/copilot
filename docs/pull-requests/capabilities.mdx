@@ -5,6 +5,8 @@ description: What the action does on pull requests: linking, projects, reviewers
 
 # What the action does on pull requests
 
+Optional [guarded PR approval](/pull-requests/guarded-approval) is a separate observer after CI and Bugbot. `state:ready` means ready for human action, not permission for an `APPROVE`; a native bot review requires complete exact-head evidence, a distinct human author, and effective stale-approval protection. It never auto-merges.
+
 This page describes each **capability** the action performs when it runs on a pull request: PR–issue linking, project linking, reviewers, size and priority labels, AI-generated description, and semantic status.
 
 ## PR–issue linking

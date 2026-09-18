@@ -27,6 +27,7 @@ jest.mock('@actions/core', () => ({
   getInput: jest.fn(),
   setFailed: jest.fn(),
   setOutput: jest.fn(),
+  summary: { addRaw: jest.fn().mockReturnThis(), write: jest.fn().mockResolvedValue(undefined) },
 }));
 
 jest.mock('../../utils/logger', () => ({
@@ -39,6 +40,11 @@ jest.mock('../../utils/logger', () => ({
 const mockMainRun = jest.fn();
 jest.mock('../common_action', () => ({
   mainRun: (...args: unknown[]) => mockMainRun(...args),
+}));
+
+const mockReviewOnly = jest.fn();
+jest.mock('../../infrastructure/composition/pull_request_use_case_composition_root', () => ({
+  createPullRequestUseCaseCompositionRoot: jest.fn(() => ({ reviewOnly: mockReviewOnly })),
 }));
 
 const mockLanguageQuery = jest.fn();
@@ -105,6 +111,7 @@ describe('runGitHubAction', () => {
       if (prepareRuntime) await prepareRuntime(args[0]);
       return [];
     });
+    mockReviewOnly.mockResolvedValue([]);
     mockPublishInvoke.mockResolvedValue(undefined);
     mockStoreInvoke.mockResolvedValue([]);
     mockConfigurationUpdate.mockResolvedValue(undefined);
@@ -149,6 +156,24 @@ describe('runGitHubAction', () => {
     expect(mockGetProjectDetail).not.toHaveBeenCalled();
     expect(mockPublishInvoke).not.toHaveBeenCalled();
     expect(mockStoreInvoke).not.toHaveBeenCalled();
+  });
+
+  it('runs only Bugbot review for a same-repository PAT-authored PR event', async () => {
+    mockExecutionAdmissionInvoke.mockResolvedValue({ decision: 'discard', tokenUser: 'test-actor' });
+    github.context.eventName = 'pull_request';
+    github.context.payload = {
+      repository: { id: 17, name: 'test-repo', owner: { login: 'test-owner' } }, action: 'opened',
+      pull_request: { number: 42, state: 'open', user: { login: 'test-actor' },
+        head: { ref: 'feature/42', sha: 'a'.repeat(40), repo: { id: 17, owner: { login: 'test-owner' } } },
+        base: { ref: 'develop' } },
+    };
+
+    await runGitHubAction();
+
+    expect(mockReviewOnly).toHaveBeenCalledTimes(1);
+    expect(mockReviewOnly.mock.calls[0][0].issueNumber).toBe(42);
+    expect(mockMainRun).not.toHaveBeenCalled();
+    expect(finishActionSpy).not.toHaveBeenCalled();
   });
 
   it('discards an unaddressed comment before project, AI, runtime, or result work', async () => {

@@ -4,6 +4,8 @@ description: Clean Architecture boundaries for agent execution and workflow auto
 ---
 # Architecture
 
+Guarded PR approval uses a separate trusted observer entrypoint, a pure domain decision (`pull_request_approval`), a read-before-write application use case, and a GitHub adapter. The adapter owns exact producer/rule/review queries and the `commit_id`-pinned native review. Its PR assessment card and supplemental Check are derived UI; GitHub's native review is authoritative. The observer has no PR-head checkout or agent invocation. See the [runtime SDD](../../specs/guarded-pull-request-approval.md) and [setup/doctor SDD](../../specs/guarded-pull-request-approval-setup-and-doctor.md).
+
 The repository separates semantic application ports from provider-specific adapters.
 
 GitHub conversation output crosses a closed publication boundary. Capabilities

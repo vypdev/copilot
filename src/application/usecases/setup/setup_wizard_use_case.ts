@@ -28,12 +28,16 @@ import {
 } from '../../policies/setup_questionnaire_policy';
 import { cloneSetupConfiguration } from '../../policies/setup_configuration_clone_policy';
 import { resolveStaticSetupDoctorCatalog } from '../../policies/setup_doctor_message_catalog';
+import { DEFAULT_PULL_REQUEST_APPROVAL_POLICY } from '../../../domain/pull_request_approval_policy';
+import type { SetupApprovalReadinessPort } from '../../ports/setup_approval_readiness_port';
+import type { DoctorCheck } from '../../../domain/setup';
 
 export interface SetupWizardRequest {
   mode: 'interactive' | 'non-interactive';
   overrides?: SetupConfigurationOverrides;
   skipRepositoryVariables?: boolean;
   skipRepositorySecrets?: boolean;
+  previewOnly?: boolean;
   remoteTarget?: {
     owner: string;
     repository: string;
@@ -62,6 +66,7 @@ export interface SetupWizardDependencies {
   confirmation: SetupPlanConfirmationPort;
   remoteConfiguration?: SetupRemoteConfigurationReadPort;
   mergeQueueReadiness?: SetupMergeQueueReadinessPort;
+  approvalReadiness?: SetupApprovalReadinessPort;
 }
 
 export class SetupWizardUseCase {
@@ -79,13 +84,16 @@ export class SetupWizardUseCase {
         }
       : request.overrides;
     const defaults = mergeSetupConfiguration(
-      createDefaultSetupConfiguration(),
+      mergeSetupConfiguration(createDefaultSetupConfiguration(), { pullRequestApproval: DEFAULT_PULL_REQUEST_APPROVAL_POLICY }),
       {
         ...effectiveOverrides,
         ...(request.skipRepositoryVariables ? { manageRepositoryVariables: false } : {}),
         ...(request.skipRepositorySecrets ? { manageRepositorySecrets: false } : {}),
       },
     );
+    if (defaults.features.pullRequests === false && effectiveOverrides?.pullRequestApproval?.mode === undefined) {
+      defaults.pullRequestApproval = { ...defaults.pullRequestApproval, mode: 'off' };
+    }
     const remoteConfiguration = request.remoteTarget && this.dependencies.remoteConfiguration
       ? await this.dependencies.remoteConfiguration.inspect(
           request.remoteTarget.owner,
@@ -93,7 +101,7 @@ export class SetupWizardUseCase {
           request.remoteTarget.token,
         )
       : undefined;
-    const defaultValidationErrors = validateSetupConfiguration(defaults);
+    const defaultValidationErrors = validateSetupConfiguration(defaults, { allowIncompleteApproval: true });
     if (defaultValidationErrors.length > 0) {
       throw new ApplicationError(
         'configuration.invalid',
@@ -118,7 +126,13 @@ export class SetupWizardUseCase {
     }
 
     const collectedConfiguration = cloneSetupConfiguration(questionnaire.draft);
-    const validationErrors = validateSetupConfiguration(collectedConfiguration);
+    if (collectedConfiguration.features.pullRequests === false
+      && effectiveOverrides?.pullRequestApproval?.mode === undefined) {
+      // The conditional approval questionnaire stage was skipped; its new-install
+      // default must not outlive an explicit decision to disable PR automation.
+      collectedConfiguration.pullRequestApproval = { ...collectedConfiguration.pullRequestApproval, mode: 'off' };
+    }
+    const validationErrors = validateSetupConfiguration(collectedConfiguration, { allowIncompleteApproval: request.previewOnly === true });
     const configuration = validationErrors.length === 0
       ? normalizeSetupConfigurationLocales(collectedConfiguration)
       : collectedConfiguration;
@@ -143,7 +157,48 @@ export class SetupWizardUseCase {
           catalog: resolveStaticSetupDoctorCatalog(),
         })
       : [];
-    const plan = buildSetupPlan(configuration, readiness);
+    const approvalReadiness: DoctorCheck[] = [];
+    if (configuration.pullRequestApproval.mode !== 'off') {
+      if (!request.remoteTarget || !this.dependencies.approvalReadiness) {
+        approvalReadiness.push({
+          id: 'approval.remote', status: 'skipped',
+          summary: 'Branch rules and producer identities are unverified.',
+          action: 'Run setup with a setup PAT before enabling native approval.', evidence: {}, blockedBy: [],
+        });
+        if (configuration.pullRequestApproval.mode === 'guarded' && !request.previewOnly) {
+          throw new ApplicationError('configuration.invalid', 'Guarded approval requires remote branch-rule and producer inspection.');
+        }
+      } else {
+        const facts = await this.dependencies.approvalReadiness.inspect(
+          request.remoteTarget.owner, request.remoteTarget.repository, request.remoteTarget.token, configuration,
+        );
+        for (const rule of facts.rules) {
+          const safe = rule.readable && rule.dismissesStaleReviews && !rule.approvalCheckCycle;
+          approvalReadiness.push({
+            id: `approval.rules.${rule.role}`, status: safe ? 'pass' : 'fail',
+            summary: safe ? `${rule.branch}: stale approvals are dismissed.`
+              : `${rule.branch}: stale-dismissal or approval-check safety is missing or unreadable.`,
+            ...(safe ? {} : { action: 'Correct branch protection/rulesets or choose recommend/off.' }),
+            evidence: { branch: rule.branch }, blockedBy: [],
+          });
+        }
+        approvalReadiness.push({
+          id: 'approval.producers', status: facts.missingWorkflowNames.length > 0 ? 'fail'
+            : configuration.pullRequestApproval.producerAttested ? 'pass' : 'warn',
+          summary: facts.missingWorkflowNames.length > 0 ? 'One or more selected producer workflows are absent or disabled.'
+            : configuration.pullRequestApproval.producerAttested
+              ? 'Selected producer workflows are active; exact check/App identity and coverage enforcement are operator-attested.'
+              : 'Producer names are active, but exact check/App identity and coverage enforcement have not been attested.',
+          ...(facts.missingWorkflowNames.length === 0 && configuration.pullRequestApproval.producerAttested
+            ? {} : { action: 'Inspect exact CI checks, source App IDs, and coverage-enforcing steps; then attest or choose recommend/off.' }),
+          evidence: { missingCount: facts.missingWorkflowNames.length }, blockedBy: [],
+        });
+        if (configuration.pullRequestApproval.mode === 'guarded' && approvalReadiness.some(check => check.status === 'fail') && !request.previewOnly) {
+          throw new ApplicationError('configuration.invalid', 'Guarded approval is blocked: branch rules or exact CI producers are not ready. Choose recommend/off or correct them.');
+        }
+      }
+    }
+    const plan = buildSetupPlan(configuration, readiness, approvalReadiness);
     this.dependencies.planPresenter.present(plan);
     const confirmation = enterSetupConfirmation(questionnaire);
     const decision = await this.dependencies.confirmation.confirm(plan);

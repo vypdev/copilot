@@ -12,6 +12,7 @@ import {
   effectiveIssueWorkflowProfile,
 } from '../application/policies/setup_issue_workflow_policy';
 import { reconcileRepositoryAgentGuidance } from './repository_agent_guidance';
+import { renderApprovalObserverWorkflow } from '../domain/setup_approval_workflow';
 
 /**
  * Ensure .github, .github/workflows and .github/ISSUE_TEMPLATE exist; create them if missing.
@@ -72,6 +73,7 @@ export function copySetupFiles(
     path.join(setupDir, 'workflows'),
     path.join(cwd, '.github', 'workflows'),
     (fileName) => (fileName.endsWith('.yml') || fileName.endsWith('.yaml'))
+      && fileName !== 'copilot_pull_request_approval.yml'
       && isSetupWorkflowEnabled(fileName, effectiveFeatures)
       && (!options.updateExistingWorkflows
         || approvedWorkflowFiles.has(fileName)
@@ -82,6 +84,9 @@ export function copySetupFiles(
       backupDirectory,
     },
   );
+  const approvalWorkflow = options.setupConfiguration?.pullRequestApproval.mode !== 'off' && options.setupConfiguration
+    ? copyApprovalObserverWorkflow(cwd, setupDir, options.setupConfiguration, options.updateExistingWorkflows === true, approvedWorkflowFiles, backupDirectory)
+    : { copied: 0, skipped: 0 };
   const issueTemplates = options.setupConfiguration
     ? copySelectedIssueForms(cwd, setupDir, options.setupConfiguration)
     : copySetupDirectory(
@@ -105,10 +110,35 @@ export function copySetupFiles(
   const guidance = options.setupConfiguration
     ? reconcileRepositoryAgentGuidance(cwd, options.setupConfiguration)
     : { copied: 0, skipped: 0 };
-  return [retired, workflows, issueTemplates, pullRequestTemplate, guidance].reduce((total, current) => ({
+  return [retired, workflows, approvalWorkflow, issueTemplates, pullRequestTemplate, guidance].reduce((total, current) => ({
     copied: total.copied + current.copied,
     skipped: total.skipped + current.skipped,
   }), { copied: 0, skipped: 0 });
+}
+
+function copyApprovalObserverWorkflow(
+  cwd: string,
+  setupDir: string,
+  configuration: Readonly<SetupConfiguration>,
+  updateExisting: boolean,
+  approved: ReadonlySet<string>,
+  backupDirectory?: string,
+): { copied: number; skipped: number } {
+  const file = 'copilot_pull_request_approval.yml';
+  const template = fs.readFileSync(path.join(setupDir, 'workflows', file), 'utf8');
+  const content = renderApprovalObserverWorkflow(template, configuration.pullRequestApproval);
+  const destination = path.join(cwd, '.github', 'workflows', file);
+  if (isLocalSourceApprovalObserver(cwd, destination)) return { copied: 0, skipped: 1 };
+  if (fs.existsSync(destination)) {
+    if (fs.readFileSync(destination, 'utf8') === content) return { copied: 0, skipped: 1 };
+    if (!updateExisting || !approved.has(file)) return { copied: 0, skipped: 1 };
+    if (!backupDirectory) throw new Error('Changed approval observer needs a backup directory.');
+    const backup = path.join(backupDirectory, '.github', 'workflows', file);
+    fs.mkdirSync(path.dirname(backup), { recursive: true });
+    fs.copyFileSync(destination, backup);
+  }
+  atomicWriteSetupAsset(destination, content);
+  return { copied: 1, skipped: 0 };
 }
 
 function copySelectedIssueForms(
@@ -225,20 +255,35 @@ export function compareSetupWorkflows(
   cwd: string,
   features?: SetupFeatures,
   setupDirOverride?: string,
+  configuration?: Readonly<SetupConfiguration>,
 ): SetupWorkflowComparison[] {
   const setupDir = setupDirOverride ?? path.join(__dirname, '..', '..', 'setup');
   const sourceDirectory = path.join(setupDir, 'workflows');
   if (!fs.existsSync(sourceDirectory)) return [];
   return fs.readdirSync(sourceDirectory)
-    .filter(file => (file.endsWith('.yml') || file.endsWith('.yaml')) && isSetupWorkflowEnabled(file, features))
+    .filter(file => (file.endsWith('.yml') || file.endsWith('.yaml')) && isSetupWorkflowEnabled(file, features)
+      && (file !== 'copilot_pull_request_approval.yml' || (configuration && configuration.pullRequestApproval.mode !== 'off')))
     .filter(file => fs.statSync(path.join(sourceDirectory, file)).isFile())
     .map(file => {
       const source = path.join(sourceDirectory, file);
       const destination = path.join(cwd, '.github', 'workflows', file);
       if (!fs.existsSync(destination)) return { file, destination: `.github/workflows/${file}`, status: 'missing' as const };
-      const equal = fs.readFileSync(source, 'utf8') === fs.readFileSync(destination, 'utf8');
+      const expected = file === 'copilot_pull_request_approval.yml' && configuration
+        ? renderApprovalObserverWorkflow(fs.readFileSync(source, 'utf8'), configuration.pullRequestApproval)
+        : fs.readFileSync(source, 'utf8');
+      const equal = isLocalSourceApprovalObserver(cwd, destination)
+        || expected === fs.readFileSync(destination, 'utf8');
       return { file, destination: `.github/workflows/${file}`, status: equal ? 'unchanged' as const : 'changed' as const };
     });
+}
+
+/** This repository tests the unreleased Action from a reviewed default-branch workflow. */
+function isLocalSourceApprovalObserver(cwd: string, destination: string): boolean {
+  const packageRoot = path.resolve(__dirname, '..', '..');
+  if (path.resolve(cwd) !== packageRoot || !fs.existsSync(destination)) return false;
+  const sourceObserver = path.join(packageRoot, 'setup', 'source-workflows', 'copilot_pull_request_approval.yml');
+  return fs.existsSync(sourceObserver)
+    && fs.readFileSync(destination, 'utf8') === fs.readFileSync(sourceObserver, 'utf8');
 }
 
 const ENV_TOKEN_KEY = 'PERSONAL_ACCESS_TOKEN';

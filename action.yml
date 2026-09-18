@@ -5,6 +5,15 @@ inputs:
   debug:
     description: "Enable debug mode."
     default: "false"
+  pr-approval-observer:
+    description: "Run the isolated, trusted-default-branch pull-request approval observer."
+    default: "false"
+  pr-approval-pr-number:
+    description: "Positive pull-request number for an authorized manual approval recheck."
+    default: ""
+  pr-approval-policy:
+    description: "Versioned PR approval policy forwarded by the observer workflow; runtime rereads the Variable before a review write."
+    default: ""
   single-action:
     description: "Launch single actions."
     default: ""

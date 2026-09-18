@@ -22,6 +22,8 @@ The setup PAT used by the operator is separate from the workflow `PAT` Secret.
 After setup, review and commit the generated `.github/` files, then customize the
 selected workflows as needed. See [How to use](/how-to-use) for the full flow.
 
+New setup offers [PR approval assessment](/pull-requests/guarded-approval) in `recommend` mode by default: it explains readiness without submitting a native approval. Select and attest an exact CI/coverage producer, verify stale-approval dismissal and the runtime bot PAT, and commit the generated observer workflow to the default branch. Choose `guarded` explicitly only after those prerequisites are proven, or `off` to disable it. Existing repositories without the policy Variable remain off.
+
 <Warning>
   If you enable release or hotfix automation, merge
   `copilot_deployment_orchestration.yml` and every publishing workflow you

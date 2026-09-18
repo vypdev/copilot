@@ -173,6 +173,21 @@ describe("PullRequestUseCase", () => {
     expect(mockReviewPotentialProblemsInvoke).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps the PAT-authored PR exception strictly analysis-only', async () => {
+    const useCase = new PullRequestUseCase(
+      { taskId: 'UpdatePullRequestDescriptionUseCase', invoke: mockUpdateDescriptionInvoke },
+      workflowSteps,
+      { taskId: 'DetectPotentialProblemsUseCase', invoke: mockReviewPotentialProblemsInvoke },
+    );
+    await useCase.reviewOnly(minimalExecution({ pullRequest: { action: 'opened' } }));
+    expect(mockReviewPotentialProblemsInvoke).toHaveBeenCalledTimes(1);
+    expect(mockUpdateTitleInvoke).not.toHaveBeenCalled();
+    expect(mockUpdateDescriptionInvoke).not.toHaveBeenCalled();
+    expect(mockLinkIssueInvoke).not.toHaveBeenCalled();
+    await useCase.reviewOnly(minimalExecution({ eventName: 'pull_request_review' }));
+    expect(mockReviewPotentialProblemsInvoke).toHaveBeenCalledTimes(1);
+  });
+
   it('authorizes the projected actor before member-only PR review', async () => {
     const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) };
     const useCase = new PullRequestUseCase(

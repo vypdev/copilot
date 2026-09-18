@@ -13,6 +13,7 @@ const SETUP_OVERRIDE_KEYS = new Set([
     'agents',
     'repository',
     'ai',
+    'pullRequestApproval',
     'projects',
     'createInitialTag',
     'manageRepositoryVariables',
@@ -107,6 +108,7 @@ export function loadSetupConfigurationOverrides(filePath: string): SetupConfigur
         (raw.repository as Record<string, unknown>).mergeQueueCheckAttestations = result.value;
     }
     validateSection(raw.ai, 'ai', AI_STRING_KEYS, AI_BOOLEAN_KEYS, AI_NUMBER_KEYS);
+    validateApprovalOverride(raw.pullRequestApproval);
     validateSection(raw.projects, 'projects', PROJECT_KEYS, new Set(), new Set());
     validateBooleanProperty(raw, 'createInitialTag');
     validateBooleanProperty(raw, 'manageRepositoryVariables');
@@ -117,6 +119,24 @@ export function loadSetupConfigurationOverrides(filePath: string): SetupConfigur
     validateIssueWorkflows(raw.issueWorkflows);
     validateGuidance(raw.repositoryAgentGuidance);
     return raw as SetupConfigurationOverrides;
+}
+
+function validateApprovalOverride(value: unknown): void {
+    if (value === undefined) return;
+    validateObject(value, 'pullRequestApproval');
+    const policy = value as Record<string, unknown>;
+    validateObjectKeys(policy, new Set([
+        'version', 'mode', 'targetRoles', 'branchKinds', 'requireLinkedIssue',
+        'additionalExcludedPaths', 'testChecks', 'producerAttested', 'coverage', 'allowHumanDismissed',
+        'skipWhenHumanApproved',
+    ]), 'pullRequestApproval');
+    if (policy.testChecks !== undefined && !Array.isArray(policy.testChecks)) throw new Error('pullRequestApproval.testChecks must be an array.');
+    if (policy.coverage !== undefined) {
+        validateObject(policy.coverage, 'pullRequestApproval.coverage');
+        validateObjectKeys(policy.coverage as Record<string, unknown>, new Set([
+            'mode', 'checkName', 'minDiffPercent', 'artifactWorkflowName', 'reporterAttested',
+        ]), 'pullRequestApproval.coverage');
+    }
 }
 
 function validateIssueWorkflows(value: unknown): void {

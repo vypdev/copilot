@@ -37,6 +37,9 @@ import {
   resolveSetupDoctorCatalog,
   type SetupDoctorMessageCatalog,
 } from '../../policies/setup_doctor_message_catalog';
+import type { SetupApprovalReadinessPort } from '../../ports/setup_approval_readiness_port';
+import { buildApprovalDoctorChecks } from '../../policies/setup_approval_doctor_policy';
+import { parsePullRequestApprovalPolicy } from '../../../domain/pull_request_approval_policy';
 
 export interface DoctorRequest {
   owner: string;
@@ -51,6 +54,7 @@ export interface SetupDoctorDependencies {
   remoteConfiguration: SetupRemoteConfigurationReadPort;
   remoteHealth: SetupRemoteCredentialHealthPort;
   mergeQueueReadiness: SetupMergeQueueReadinessPort;
+  approvalReadiness?: SetupApprovalReadinessPort;
   catalogResolver?: MessageCatalogResolutionPort;
 }
 
@@ -74,7 +78,7 @@ export class SetupDoctorUseCase {
       request.configuration.agents.planner,
       this.dependencies.catalogResolver,
     );
-    const configurationErrors = validateSetupConfiguration(request.configuration);
+    const configurationErrors = validateSetupConfiguration(request.configuration, { allowIncompleteApproval: true });
     const checks: DoctorCheck[] = [
       configurationCheck(configurationErrors, catalog),
       ...buildLocaleDoctorChecks(request.configuration, catalog),
@@ -87,6 +91,7 @@ export class SetupDoctorUseCase {
     checks.push(pat);
     if (pat.status !== 'pass') {
       checks.push(...skippedRemoteChecks(request.configuration, pat.id, catalog));
+      checks.push(...buildApprovalDoctorChecks({ configuration: request.configuration, catalog }));
       return { report: buildDoctorReport(checks), catalog };
     }
 
@@ -146,6 +151,7 @@ export class SetupDoctorUseCase {
     if (!remoteConfiguration) {
       checks.push(remoteScopeFailure(request.configuration, catalog));
       checks.push(...mergeQueueChecks, ...skippedResourceChecks(request.configuration, 'github.resource-scopes', catalog));
+      checks.push(...buildApprovalDoctorChecks({ configuration: request.configuration, catalog }));
       return { report: buildDoctorReport(checks), catalog };
     }
 
@@ -160,7 +166,54 @@ export class SetupDoctorUseCase {
         )]
       : variableChecks(request.configuration, remoteConfiguration, catalog)));
     checks.push(secretNamesCheck(remoteConfiguration, catalog));
-    checks.push(...await this.credentialChecks(request, remoteConfiguration, catalog));
+    const credentials = await this.credentialChecks(request, remoteConfiguration, catalog);
+    checks.push(...credentials);
+    const remoteVariables = new Map([
+      ...remoteConfiguration.organizationVariables.map(variable => [variable.name, variable.value] as const),
+      ...remoteConfiguration.repositoryVariables.map(variable => [variable.name, variable.value] as const),
+    ]);
+    let approvalConfiguration: SetupConfiguration;
+    try {
+      approvalConfiguration = {
+        ...request.configuration,
+        ai: {
+          ...request.configuration.ai,
+          bugbotSeverity: remoteVariables.has('BUGBOT_SEVERITY')
+            ? remoteVariables.get('BUGBOT_SEVERITY') as SetupConfiguration['ai']['bugbotSeverity']
+            : request.configuration.ai.bugbotSeverity,
+          bugbotTelemetry: remoteVariables.has('BUGBOT_TELEMETRY')
+            ? remoteVariables.get('BUGBOT_TELEMETRY') === 'true' : request.configuration.ai.bugbotTelemetry,
+          bugbotDryRun: remoteVariables.has('BUGBOT_DRY_RUN')
+            ? remoteVariables.get('BUGBOT_DRY_RUN') === 'true' : request.configuration.ai.bugbotDryRun,
+        },
+        pullRequestApproval: parsePullRequestApprovalPolicy(remoteVariables.get('PR_APPROVAL_POLICY')),
+      };
+    } catch { approvalConfiguration = request.configuration; }
+    let approvalWorkflow;
+    if (configurationErrors.length === 0) {
+      try {
+        approvalWorkflow = this.dependencies.workspace.compareWorkflows(
+          effectiveIssueWorkflowFeatures(approvalConfiguration), approvalConfiguration,
+        ).find(item => item.file === 'copilot_pull_request_approval.yml');
+      } catch { approvalWorkflow = undefined; }
+    }
+    let approvalFacts;
+    if (this.dependencies.approvalReadiness && remoteConfiguration.repositoryVariables.concat(remoteConfiguration.organizationVariables)
+      .some(variable => variable.name === 'PR_APPROVAL_POLICY')) {
+      try {
+        approvalFacts = await this.dependencies.approvalReadiness.inspect(
+          request.owner, request.repository, request.setupToken, approvalConfiguration,
+        );
+      } catch { approvalFacts = undefined; }
+    }
+    checks.push(...buildApprovalDoctorChecks({
+      configuration: approvalConfiguration,
+      remote: remoteConfiguration,
+      workflow: approvalWorkflow,
+      facts: approvalFacts,
+      botCredential: credentials.find(item => item.id === 'credential.PAT'),
+      catalog,
+    }));
     return { report: buildDoctorReport(checks), catalog };
   }
 
@@ -362,7 +415,7 @@ function variableChecks(
   const remoteVariables = new Map<string, { value: string; source: 'repository' | 'organization' }>();
   for (const variable of remote.organizationVariables) remoteVariables.set(variable.name, { value: variable.value, source: 'organization' });
   for (const variable of remote.repositoryVariables) remoteVariables.set(variable.name, { value: variable.value, source: 'repository' });
-  return buildSetupRepositoryVariables(configuration).map((variable) => {
+  return buildSetupRepositoryVariables(configuration).filter(variable => variable.name !== 'PR_APPROVAL_POLICY').map((variable) => {
     const observed = remoteVariables.get(variable.name);
     const state = setupResourceExists(remote, 'variable', variable.name);
     const policy = getSetupResourceStoragePolicy(configuration, 'variable');

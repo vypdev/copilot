@@ -1220,6 +1220,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BUGBOT_REVIEW_OVERFLOW_MARKER = exports.BUGBOT_REVIEW_STATUS_END = exports.BUGBOT_REVIEW_STATUS_START = exports.BUGBOT_REVIEW_MARKER_PREFIX = exports.BUGBOT_STATUS_MARKER_PREFIX = void 0;
 exports.normalizeBugbotPresentationLocale = normalizeBugbotPresentationLocale;
 exports.buildBugbotStatusMarker = buildBugbotStatusMarker;
+exports.buildBugbotApprovalEvidenceMarker = buildBugbotApprovalEvidenceMarker;
 exports.isBugbotStatusComment = isBugbotStatusComment;
 exports.renderBugbotStatusCard = renderBugbotStatusCard;
 exports.renderBugbotReviewSnapshot = renderBugbotReviewSnapshot;
@@ -1238,6 +1239,11 @@ function normalizeBugbotPresentationLocale(locale) {
 }
 function buildBugbotStatusMarker(projection) {
     return `<!-- ${exports.BUGBOT_STATUS_MARKER_PREFIX} schema="1" pr="${projection.pullRequestNumber}" verified_head="${projection.verifiedHeadSha}" digest="${projection.digest}" -->`;
+}
+/** Content-free machine evidence; absent on older cards, which cannot authorize an approval. */
+function buildBugbotApprovalEvidenceMarker(projection) {
+    const counts = projection.counts;
+    return `<!-- copilot-bugbot-approval-evidence schema="1" head="${projection.verifiedHeadSha}" digest="${projection.digest}" outcome="${projection.outcome}" coverage="${projection.coverage.status}" open="${counts.open}" reopened="${counts.reopened}" dismissed="${counts.dismissed}" verification="${counts['verification-required']}" unknown="${counts.unknown}" -->`;
 }
 function isBugbotStatusComment(body) {
     if (!body)
@@ -1303,6 +1309,7 @@ function renderBugbotStatusCard(projection, catalogOrLocale, links) {
             digest: projection.digest,
         }),
         buildBugbotStatusMarker(projection),
+        buildBugbotApprovalEvidenceMarker(projection),
         `## ${heading}`,
         '',
         `> **${catalog.message('bugbot.status.currentStatus')}:** ${status}`,

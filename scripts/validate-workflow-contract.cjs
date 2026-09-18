@@ -80,6 +80,7 @@ const BOT_GATED_WORKFLOW_FILES = new Set([
 ]);
 const BOT_GATE_EXPRESSION = "${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}";
 const FORK_SAFE_BOT_GATE_EXPRESSION = "${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}";
+const BOT_PR_ANALYSIS_GATE_EXPRESSION = "${{ github.event.pull_request.head.repo.full_name == github.repository && (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN || ((github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'synchronize') && github.event.pull_request.user.login == github.actor)) }}";
 const FORK_GATED_WORKFLOW_FILES = new Set([
   'copilot_pull_request.yml',
   'copilot_pull_request_review_state.yml',
@@ -208,6 +209,7 @@ function assertRunner(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     const expected = relativeFile.startsWith('setup/workflows/')
+      || relativeFile === '.github/workflows/copilot_pull_request_approval.yml'
       ? ['ubuntu-latest']
       : /^\.github\/workflows\/(?:release|hotfix)_workflow\.yml$/.test(relativeFile) && jobId === 'publish-npm'
         ? ['ubuntu-latest']
@@ -403,6 +405,7 @@ function assertReviewConcurrency(relativeFile, workflow) {
 function assertDirectEventTriggers(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   const triggers = workflow.on ?? {};
+  if (relativeFile.endsWith('/copilot_pull_request_approval.yml')) return;
   if (triggers && typeof triggers === 'object' && Object.prototype.hasOwnProperty.call(triggers, 'workflow_run')) {
     throw new Error(`${relativeFile} must use direct event triggers and must not define workflow_run.`);
   }
@@ -440,6 +443,43 @@ function assertDirectEventTriggers(file, workflow) {
     || !workflow['run-name'].includes('github.event_name')
     || !workflow['run-name'].includes('github.event.action')) {
     throw new Error(`${relativeFile} must expose the event kind and action in its run identity.`);
+  }
+}
+
+function assertApprovalObserverWorkflow(file, workflow) {
+  const relativeFile = relativeWorkflow(file);
+  if (!relativeFile.endsWith('/copilot_pull_request_approval.yml')) return;
+  const sourceRepositoryWorkflow = relativeFile.startsWith('.github/');
+  const triggers = workflow.on ?? {};
+  if (Object.keys(triggers).sort().join(',') !== 'workflow_dispatch,workflow_run'
+    || JSON.stringify(triggers.workflow_run?.types) !== JSON.stringify(['completed'])
+    || (sourceRepositoryWorkflow
+      ? JSON.stringify(triggers.workflow_run?.workflows) !== JSON.stringify(['Copilot - Pull Request', 'CI Check'])
+      : triggers.workflow_run?.workflows !== '__PR_APPROVAL_WORKFLOW_NAMES__')
+    || triggers.workflow_dispatch?.inputs?.pr?.required !== true
+    || Object.keys(workflow.jobs ?? {}).join(',') !== 'observe-approval') {
+    throw new Error(`${relativeFile} must use only exact completed workflow_run producers and an explicit manual PR number.`);
+  }
+  const job = workflow.jobs['observe-approval'];
+  const permissions = job.permissions ?? {};
+  const observerStep = sourceRepositoryWorkflow ? job.steps?.[1] : job.steps?.[0];
+  const trustedSourceCheckout = sourceRepositoryWorkflow
+    && job.steps?.length === 2
+    && job.steps[0]?.uses === CHECKOUT_ACTION
+    && job.steps[0]?.with?.ref === '${{ github.sha }}'
+    && job.steps[0]?.with?.['persist-credentials'] === false
+    && observerStep?.uses === './';
+  if (JSON.stringify(permissions) !== JSON.stringify({ actions: 'read', checks: 'write', contents: 'read', 'pull-requests': 'read' })
+    || job.concurrency?.group !== 'copilot-approval-${{ github.repository }}'
+    || job.concurrency?.['cancel-in-progress'] !== false
+    || (sourceRepositoryWorkflow ? !trustedSourceCheckout
+      : job.steps?.length !== 1 || observerStep?.uses !== DISTRIBUTED_COPILOT_ACTION)
+    || observerStep?.with?.['pr-approval-observer'] !== 'true'
+    || observerStep?.with?.token !== '${{ secrets.PAT }}'
+    || observerStep?.with?.['pr-approval-policy'] !== "${{ vars.PR_APPROVAL_POLICY || '' }}"
+    || observerStep?.env?.COPILOT_APPROVAL_CHECK_TOKEN !== '${{ github.token }}'
+    || /actions\/cache|\brun\s*:/u.test(JSON.stringify(job))) {
+    throw new Error(`${relativeFile} must keep the privileged observer isolated from PR-head code and use narrow permissions.`);
   }
 }
 
@@ -904,8 +944,10 @@ function assertQueueWorkflow(file, workflow) {
   }
   const queueJob = workflow.jobs?.[manifest.jobId];
   if (!queueJob) throw new Error(`${relativeFile} must define queue job ${manifest.jobId}.`);
-  const expectedBotGate = FORK_GATED_WORKFLOW_FILES.has(manifest.file)
-    ? FORK_SAFE_BOT_GATE_EXPRESSION
+  const expectedBotGate = manifest.file === 'copilot_pull_request.yml' && relativeFile.startsWith('setup/')
+    ? BOT_PR_ANALYSIS_GATE_EXPRESSION
+    : FORK_GATED_WORKFLOW_FILES.has(manifest.file)
+      ? FORK_SAFE_BOT_GATE_EXPRESSION
     : BOT_GATE_EXPRESSION;
   if (BOT_GATED_WORKFLOW_FILES.has(manifest.file) && queueJob.if !== expectedBotGate) {
     throw new Error(`${relativeFile} queue job ${manifest.jobId} must use the required bot actor${FORK_GATED_WORKFLOW_FILES.has(manifest.file) ? ' and same-repository PR' : ''} gate.`);
@@ -972,6 +1014,7 @@ function assertIssueWorkflowProfileInput(file, workflow) {
 function validateWorkflow(file, workflow) {
   if (!workflow || typeof workflow !== 'object') throw new Error('workflow document is empty.');
   assertDirectEventTriggers(file, workflow);
+  assertApprovalObserverWorkflow(file, workflow);
   assertPullRequestMergeQueueWorkflow(file, workflow);
   assertRunner(file, workflow);
   assertSequentialMutationWorkflow(file, workflow);

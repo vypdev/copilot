@@ -16,6 +16,12 @@ import {
   SPANISH_MERGE_QUEUE_MESSAGES,
   type MergeQueueMessageId,
 } from './merge_queue_message_catalog';
+import {
+  APPROVAL_DOCTOR_MESSAGE_IDS,
+  ENGLISH_APPROVAL_DOCTOR_MESSAGES,
+  SPANISH_APPROVAL_DOCTOR_MESSAGES,
+  type ApprovalDoctorMessageId,
+} from './approval_doctor_message_catalog';
 
 const DOCTOR_ONLY_MESSAGE_IDS = Object.freeze([
   'doctor.title',
@@ -116,12 +122,13 @@ const DOCTOR_ONLY_MESSAGE_IDS = Object.freeze([
 ] as const);
 
 type DoctorOnlyMessageId = typeof DOCTOR_ONLY_MESSAGE_IDS[number];
-export type SetupDoctorMessageId = DoctorOnlyMessageId | MergeQueueMessageId;
+export type SetupDoctorMessageId = DoctorOnlyMessageId | MergeQueueMessageId | ApprovalDoctorMessageId;
 export type SetupDoctorMessageCatalog = ResolvedMessageCatalogView<SetupDoctorMessageId>;
 
 export const SETUP_DOCTOR_MESSAGE_IDS: readonly SetupDoctorMessageId[] = Object.freeze([
   ...DOCTOR_ONLY_MESSAGE_IDS,
   ...MERGE_QUEUE_MESSAGE_IDS,
+  ...APPROVAL_DOCTOR_MESSAGE_IDS,
 ]);
 
 const ENGLISH_DOCTOR_MESSAGES: Readonly<Record<DoctorOnlyMessageId, CatalogMessage>> = Object.freeze({
@@ -323,22 +330,23 @@ const SPANISH_DOCTOR_MESSAGES: Readonly<Record<DoctorOnlyMessageId, CatalogMessa
 function messages(
   doctor: Readonly<Record<DoctorOnlyMessageId, CatalogMessage>>,
   mergeQueue: Readonly<Record<MergeQueueMessageId, CatalogMessage>>,
+  approval: Readonly<Record<ApprovalDoctorMessageId, CatalogMessage>>,
 ): Readonly<Record<SetupDoctorMessageId, CatalogMessage>> {
-  return Object.freeze({ ...doctor, ...mergeQueue });
+  return Object.freeze({ ...doctor, ...mergeQueue, ...approval });
 }
 
 export const ENGLISH_SETUP_DOCTOR_DEFINITION: MessageCatalogDefinition<SetupDoctorMessageId> = Object.freeze({
   version: MESSAGE_CATALOG_VERSION,
   locale: 'en-US',
   compatibleBaseLanguage: 'en',
-  messages: messages(ENGLISH_DOCTOR_MESSAGES, ENGLISH_MERGE_QUEUE_MESSAGES),
+  messages: messages(ENGLISH_DOCTOR_MESSAGES, ENGLISH_MERGE_QUEUE_MESSAGES, ENGLISH_APPROVAL_DOCTOR_MESSAGES),
 });
 
 export const SPANISH_SETUP_DOCTOR_DEFINITION: MessageCatalogDefinition<SetupDoctorMessageId> = Object.freeze({
   version: MESSAGE_CATALOG_VERSION,
   locale: 'es-ES',
   compatibleBaseLanguage: 'es',
-  messages: messages(SPANISH_DOCTOR_MESSAGES, SPANISH_MERGE_QUEUE_MESSAGES),
+  messages: messages(SPANISH_DOCTOR_MESSAGES, SPANISH_MERGE_QUEUE_MESSAGES, SPANISH_APPROVAL_DOCTOR_MESSAGES),
 });
 
 export const SETUP_DOCTOR_CATALOG_DEFINITIONS = Object.freeze([

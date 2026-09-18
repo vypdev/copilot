@@ -21,8 +21,10 @@ export { buildSetupCredentialRequirements };
 export function buildSetupPlan(
     configuration: SetupConfiguration,
     mergeQueueReadiness: readonly DoctorCheck[] = [],
+    approvalReadiness: readonly DoctorCheck[] = [],
 ): SetupPlan {
-    const workflowFiles = enabledSetupWorkflowFiles(effectiveIssueWorkflowFeatures(configuration));
+    const workflowFiles = enabledSetupWorkflowFiles(effectiveIssueWorkflowFeatures(configuration))
+        .filter(file => file !== 'copilot_pull_request_approval.yml' || configuration.pullRequestApproval.mode !== 'off');
     const issueWorkflowProfile = effectiveIssueWorkflowProfile(configuration);
     const issueTemplateFiles = configuration.features.issueTemplates === false || configuration.features.issues === false
         ? []
@@ -54,6 +56,7 @@ export function buildSetupPlan(
             .map(requirement => requirement.name),
         credentialRequirements,
         mergeQueueReadiness: [...mergeQueueReadiness],
+        approvalReadiness: [...approvalReadiness],
         warnings: buildSetupWarnings(configuration),
     };
 }
@@ -136,6 +139,7 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
     add('BUGBOT_TELEMETRY', configuration.ai.bugbotTelemetry);
     add('BUGBOT_FAIL_ON_UNRESOLVED', configuration.ai.bugbotFailOnUnresolved);
     add('BUGBOT_ORGANIZATION_RULES', configuration.ai.bugbotOrganizationRules);
+    add('PR_APPROVAL_POLICY', JSON.stringify(configuration.pullRequestApproval));
     add('PROJECT_IDS', configuration.projects.ids);
     add('PROJECT_COLUMN_ISSUE_CREATED', configuration.projects.issueCreatedColumn);
     add('PROJECT_COLUMN_PULL_REQUEST_CREATED', configuration.projects.pullRequestCreatedColumn);

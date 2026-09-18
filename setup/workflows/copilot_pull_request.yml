@@ -7,7 +7,7 @@ on:
 
 jobs:
   copilot-pull-requests:
-    if: ${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN || ((github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'synchronize') && github.event.pull_request.user.login == github.actor)) }}
     name: Copilot - Pull Request
     runs-on: ubuntu-latest
     timeout-minutes: 120

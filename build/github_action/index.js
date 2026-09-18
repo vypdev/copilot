@@ -39258,7 +39258,14 @@ const github_action_locale_inputs_1 = __nccwpck_require__(58893);
 const publication_message_catalog_1 = __nccwpck_require__(34223);
 const application_error_message_catalog_1 = __nccwpck_require__(64809);
 const github_action_runtime_1 = __nccwpck_require__(96382);
+const pull_request_approval_action_1 = __nccwpck_require__(56480);
+const bot_pull_request_analysis_policy_1 = __nccwpck_require__(52801);
+const pull_request_use_case_composition_root_1 = __nccwpck_require__(70636);
 async function runGitHubAction() {
+    if ((0, input_boolean_policy_1.isEnabledInput)((0, github_action_input_1.getGithubActionInput)('pr-approval-observer'))) {
+        await (0, pull_request_approval_action_1.runPullRequestApprovalAction)((0, github_action_input_1.getGithubActionInput)(input_keys_1.INPUT_KEYS.TOKEN, { required: true }));
+        return;
+    }
     const eventInputs = (0, github_event_inputs_1.buildGithubActionEventInputs)({
         payload: github.context.payload,
         eventName: github.context.eventName,
@@ -39278,7 +39285,15 @@ async function runGitHubAction() {
         isSingleAction: singleAction.enabledSingleAction,
         validSingleAction: singleAction.validSingleAction,
     });
-    if (admission.decision === 'discard') {
+    const botAnalysisOnly = admission.decision === 'discard' && (0, bot_pull_request_analysis_policy_1.isBotPullRequestAnalysisEvent)({
+        eventName: eventInputs.eventName,
+        action: eventInputs.action,
+        actor: eventInputs.actor,
+        tokenUser: admission.tokenUser,
+        repositoryId: github.context.payload.repository?.id,
+        pullRequest: eventInputs.pull_request,
+    });
+    if (admission.decision === 'discard' && !botAnalysisOnly) {
         (0, logger_1.logInfo)('GitHub Action: event actor matches the PAT user. Skipping normal pipeline before queue and mutation work.');
         return;
     }
@@ -39307,6 +39322,22 @@ async function runGitHubAction() {
         activeAgentTasks: requestedActiveAgentTasks,
         localeInputs,
     });
+    if (botAnalysisOnly) {
+        // Bypass the normal lifecycle/issue route entirely. The only permitted
+        // side effect is Bugbot's PR analysis and its own bounded presentation.
+        execution.issueNumber = execution.pullRequest.number;
+        (0, github_action_runtime_1.prepareGithubAgentRuntime)(aiInputs.requestedAgentTasks, ['reviewer']);
+        const results = await (0, pull_request_use_case_composition_root_1.createPullRequestUseCaseCompositionRoot)({
+            owner: execution.owner,
+            repository: execution.repo,
+            token,
+        }).reviewOnly(execution);
+        if (results.some(result => !result.success)) {
+            throw new Error('Bot-authored pull-request analysis did not complete.');
+        }
+        await core.summary.addRaw('Copilot analyzed this bot-authored pull request. Native bot approval is never permitted.').write();
+        return;
+    }
     (0, logger_1.logDebugInfo)(`Execution built. Event will be resolved in mainRun. Single action: ${execution.singleAction.currentSingleAction ?? 'none'}, ` +
         `AI PR description mode: ${execution.ai.getPullRequestDescriptionMode()}, bugbot min severity: ${execution.ai.getBugbotMinSeverity()}.`);
     const repositoryBinding = {
@@ -40458,6 +40489,169 @@ async function loadProjectDetails(projectRepository, projectIds, owner, token) {
         projects.push(await projectRepository.getProjectDetail(projectId, normalizedOwner, token));
     }
     return projects;
+}
+
+
+/***/ }),
+
+/***/ 56480:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.runPullRequestApprovalAction = runPullRequestApprovalAction;
+const core = __importStar(__nccwpck_require__(75855));
+const github = __importStar(__nccwpck_require__(78227));
+const observe_pull_request_approval_use_case_1 = __nccwpck_require__(36169);
+const pull_request_approval_repository_1 = __nccwpck_require__(23001);
+const github_action_input_1 = __nccwpck_require__(8824);
+const input_values_policy_1 = __nccwpck_require__(68841);
+const github_action_locale_inputs_1 = __nccwpck_require__(58893);
+const pull_request_approval_presentation_policy_1 = __nccwpck_require__(79017);
+/** Dedicated trusted-default-branch route. It never calls the agent or checks out PR code. */
+async function runPullRequestApprovalAction(token) {
+    const repository = github.context.payload.repository;
+    const repositoryId = repository?.id;
+    if (!Number.isSafeInteger(repositoryId) || !repositoryId || repositoryId <= 0) {
+        throw new Error('Approval observer requires a bound repository ID.');
+    }
+    const owner = github.context.repo.owner;
+    const repo = github.context.repo.repo;
+    let locale = 'en-US';
+    try {
+        locale = (0, github_action_locale_inputs_1.readGithubActionLocaleInputs)(github_action_input_1.getGithubActionInput).pullRequest;
+    }
+    catch {
+        // A malformed optional locale must not change approval eligibility.
+    }
+    const targetNumbers = await resolvePullNumbers(token, owner, repo);
+    if (targetNumbers.length === 0) {
+        await core.summary.addRaw('Copilot approval: no unambiguous same-repository PR matched this wakeup.').write();
+        return;
+    }
+    const port = new pull_request_approval_repository_1.PullRequestApprovalRepository(token, {
+        mainBranch: (0, github_action_input_1.getGithubActionInput)('main-branch') || 'master',
+        developmentBranch: (0, github_action_input_1.getGithubActionInput)('development-branch') || 'develop',
+        branchPrefixes: {
+            feature: (0, github_action_input_1.getGithubActionInput)('feature-tree') || 'feature',
+            bugfix: (0, github_action_input_1.getGithubActionInput)('bugfix-tree') || 'bugfix',
+            documentation: (0, github_action_input_1.getGithubActionInput)('docs-tree') || 'docs',
+            chore: (0, github_action_input_1.getGithubActionInput)('chore-tree') || 'chore',
+        },
+        bugbotSeverity: (0, github_action_input_1.getGithubActionInput)('bugbot-severity') || 'low',
+        bugbotDryRun: (0, github_action_input_1.getGithubActionInput)('bugbot-dry-run') === 'true',
+        bugbotIgnorePatterns: (0, input_values_policy_1.parseDelimitedValues)((0, github_action_input_1.getGithubActionInput)('ai-ignore-files')),
+        githubToken: process.env.COPILOT_APPROVAL_CHECK_TOKEN,
+        locale,
+    });
+    const useCase = new observe_pull_request_approval_use_case_1.ObservePullRequestApprovalUseCase(port);
+    const failedPulls = [];
+    for (const pullNumber of targetNumbers) {
+        const target = { owner, repository: repo, repositoryId, pullNumber };
+        const result = await useCase.execute(target);
+        const safeCode = result.decision.code.replace(/[^a-z0-9-]/gu, '').slice(0, 60);
+        core.info(`PR #${pullNumber}: ${result.decision.status} (${safeCode}); assessment ${result.publication}.`);
+        if (result.publication === 'failed' || [
+            'invalid-policy', 'evidence-unavailable', 'target-mismatch',
+            'pre-submit-unavailable', 'publication-unknown',
+        ].includes(result.decision.code))
+            failedPulls.push(pullNumber);
+        if (result.evidence) {
+            core.summary.addRaw((0, pull_request_approval_presentation_policy_1.renderApprovalRunSummary)({
+                target, evidence: result.evidence, decision: result.decision,
+                ...(result.reviewId ? { reviewId: result.reviewId } : {}),
+                mode: result.mode ?? 'unknown', publication: result.publication,
+                wakeup: github.context.eventName, locale,
+            }) + '\n');
+        }
+        else {
+            core.summary.addRaw(`PR #${pullNumber}: ${result.decision.status} (${safeCode}). Assessment: ${result.publication}.\n`);
+        }
+    }
+    await core.summary.write();
+    if (failedPulls.length > 0) {
+        throw new Error(`Approval observation needs attention for PR(s) ${failedPulls.join(', ')}; inspect the Job Summary and rerun after recovery.`);
+    }
+}
+async function resolvePullNumbers(token, owner, repo) {
+    const octokit = github.getOctokit(token);
+    if (github.context.eventName === 'workflow_dispatch') {
+        const raw = (0, github_action_input_1.getGithubActionInput)('pr-approval-pr-number');
+        const pullNumber = Number(raw);
+        if (!Number.isSafeInteger(pullNumber) || pullNumber <= 0)
+            throw new Error('A positive PR number is required for manual approval observation.');
+        const permission = await octokit.rest.repos.getCollaboratorPermissionLevel({
+            owner, repo, username: github.context.actor,
+        });
+        if (!['admin', 'maintain', 'write'].includes(permission.data.permission)) {
+            throw new Error('Manual approval observation requires repository write permission.');
+        }
+        return [pullNumber];
+    }
+    if (github.context.eventName !== 'workflow_run' || github.context.payload.action !== 'completed')
+        return [];
+    const run = github.context.payload.workflow_run;
+    if (!run || run.head_repository?.id !== github.context.payload.repository?.id)
+        return [];
+    const associatedPulls = Array.isArray(run.pull_requests) ? run.pull_requests : [];
+    const candidates = associatedPulls.filter(pull => Number.isSafeInteger(pull.number) && Number(pull.number) > 0)
+        .map(pull => Number(pull.number));
+    if (new Set(candidates).size === 1)
+        return [candidates[0]];
+    if (candidates.length > 1)
+        return [];
+    const headSha = run.head_sha;
+    if (!/^[a-f0-9]{40}$/iu.test(headSha ?? ''))
+        return [];
+    const matches = [];
+    let scanned = 0;
+    for await (const response of octokit.paginate.iterator(octokit.rest.pulls.list, { owner, repo, state: 'open', per_page: 100 })) {
+        for (const pull of response.data) {
+            scanned += 1;
+            if (scanned > 3000)
+                return [];
+            if ((pull.head.sha === headSha || pull.merge_commit_sha === headSha)
+                && pull.head.repo?.id === github.context.payload.repository?.id)
+                matches.push(pull.number);
+        }
+        if (matches.length > 1)
+            return [];
+    }
+    return matches.length === 1 ? matches : [];
 }
 
 
@@ -42765,6 +42959,39 @@ function selectConfirmedAssignees(requestedMembers, assignedMembers) {
 
 /***/ }),
 
+/***/ 52801:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isBotPullRequestAnalysisEvent = isBotPullRequestAnalysisEvent;
+const github_user_policy_1 = __nccwpck_require__(84403);
+/** A PAT-authored PR may receive Bugbot analysis, but no lifecycle mutation. */
+function isBotPullRequestAnalysisEvent(input) {
+    if (input.eventName !== 'pull_request'
+        || !['opened', 'reopened', 'synchronize'].includes(String(input.action))
+        || !(0, github_user_policy_1.githubUsersMatch)(input.actor, input.tokenUser)
+        || !Number.isSafeInteger(input.repositoryId))
+        return false;
+    const pull = record(input.pullRequest);
+    const head = record(pull?.head);
+    const headRepo = record(head?.repo);
+    const author = record(pull?.user);
+    return pull?.state === 'open'
+        && Number.isSafeInteger(pull?.number)
+        && Number(pull?.number) > 0
+        && headRepo?.id === input.repositoryId
+        && (0, github_user_policy_1.githubUsersMatch)(String(author?.login ?? ''), input.tokenUser);
+}
+function record(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value)
+        ? value : undefined;
+}
+
+
+/***/ }),
+
 /***/ 35596:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -44167,6 +44394,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BUGBOT_REVIEW_OVERFLOW_MARKER = exports.BUGBOT_REVIEW_STATUS_END = exports.BUGBOT_REVIEW_STATUS_START = exports.BUGBOT_REVIEW_MARKER_PREFIX = exports.BUGBOT_STATUS_MARKER_PREFIX = void 0;
 exports.normalizeBugbotPresentationLocale = normalizeBugbotPresentationLocale;
 exports.buildBugbotStatusMarker = buildBugbotStatusMarker;
+exports.buildBugbotApprovalEvidenceMarker = buildBugbotApprovalEvidenceMarker;
 exports.isBugbotStatusComment = isBugbotStatusComment;
 exports.renderBugbotStatusCard = renderBugbotStatusCard;
 exports.renderBugbotReviewSnapshot = renderBugbotReviewSnapshot;
@@ -44185,6 +44413,11 @@ function normalizeBugbotPresentationLocale(locale) {
 }
 function buildBugbotStatusMarker(projection) {
     return `<!-- ${exports.BUGBOT_STATUS_MARKER_PREFIX} schema="1" pr="${projection.pullRequestNumber}" verified_head="${projection.verifiedHeadSha}" digest="${projection.digest}" -->`;
+}
+/** Content-free machine evidence; absent on older cards, which cannot authorize an approval. */
+function buildBugbotApprovalEvidenceMarker(projection) {
+    const counts = projection.counts;
+    return `<!-- copilot-bugbot-approval-evidence schema="1" head="${projection.verifiedHeadSha}" digest="${projection.digest}" outcome="${projection.outcome}" coverage="${projection.coverage.status}" open="${counts.open}" reopened="${counts.reopened}" dismissed="${counts.dismissed}" verification="${counts['verification-required']}" unknown="${counts.unknown}" -->`;
 }
 function isBugbotStatusComment(body) {
     if (!body)
@@ -44250,6 +44483,7 @@ function renderBugbotStatusCard(projection, catalogOrLocale, links) {
             digest: projection.digest,
         }),
         buildBugbotStatusMarker(projection),
+        buildBugbotApprovalEvidenceMarker(projection),
         `## ${heading}`,
         '',
         `> **${catalog.message('bugbot.status.currentStatus')}:** ${status}`,
@@ -47203,6 +47437,123 @@ function areOrderedUniquePositiveIntegers(values) {
 
 /***/ }),
 
+/***/ 79017:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.renderApprovalAssessment = renderApprovalAssessment;
+exports.renderApprovalRunSummary = renderApprovalRunSummary;
+/** One bounded, text-first card. No PR prose or provider response is rendered. */
+function renderApprovalAssessment(input) {
+    const spanish = input.locale.toLowerCase().startsWith('es');
+    const { evidence, decision, target } = input;
+    const url = `https://github.com/${encodeURIComponent(target.owner)}/${encodeURIComponent(target.repository)}/pull/${target.pullNumber}`;
+    const approved = decision.code === 'approved' || decision.status === 'already-approved';
+    const partial = decision.code === 'publication-unknown';
+    const status = approved ? (spanish ? 'Aprobada por el bot' : 'Approved by the bot')
+        : partial ? (spanish ? 'Resultado de publicación incierto' : 'Publication outcome uncertain')
+            : decision.status === 'pending' ? (spanish ? 'Esperando evidencias' : 'Waiting for evidence')
+                : decision.status === 'recommend' ? (spanish ? 'Revisión humana necesaria' : 'Human review needed')
+                    : (spanish ? 'Aprobación bloqueada' : 'Approval blocked');
+    const action = approved ? (spanish ? 'Ninguna; GitHub seguirá aplicando sus reglas.' : 'None; GitHub still applies its review rules.')
+        : partial ? (spanish ? 'Reejecuta el observador; comprobará la revisión antes de intentar publicarla otra vez.'
+            : 'Rerun the observer; it reads the review before any retry.')
+            : decision.status === 'pending' ? (spanish ? 'Espera al productor pendiente o reejecuta el observador.'
+                : 'Wait for the pending producer or rerun the observer.')
+                : decision.status === 'recommend' ? (spanish ? 'Pide una decisión a una persona revisora.'
+                    : 'Ask a human reviewer to decide.')
+                    : (spanish ? 'Corrige el requisito indicado y reejecuta el observador.'
+                        : 'Fix the named prerequisite and rerun the observer.');
+    const completed = evidence.checks.filter(check => check.status === 'completed' && check.conclusion === 'success').length;
+    const selected = evidence.checks.length;
+    const bugbot = evidence.bugbot?.headSha === evidence.headSha && evidence.bugbot.outcome === 'complete'
+        && evidence.bugbot.coverage === 'complete';
+    const detail = spanish ? spanishDecisionReason(decision.code) : escapeMarkdown(decision.detail);
+    const lines = [
+        '<!-- copilot:approval-assessment:v1 -->',
+        `### ${spanish ? 'Aprobación de Copilot' : 'Copilot approval'} · ${status}`,
+        `**${spanish ? 'Estado' : 'Status'}:** ${detail}`,
+        `**${spanish ? 'Completado' : 'Completed'}:** ${completed}/${selected} ${spanish ? 'checks observados correctos' : 'observed checks succeeded'}; Bugbot ${bugbot ? (spanish ? 'completo' : 'complete') : (spanish ? 'no verificado' : 'unverified')}.`,
+        `**${spanish ? 'Acción necesaria' : 'Action required'}:** ${action}`,
+        `**${spanish ? 'Impacto' : 'Impact'}:** ${approved
+            ? (spanish ? 'Hay una revisión nativa para esta revisión; no se ha fusionado la PR.' : 'A native review exists for this revision; the PR was not merged.')
+            : (spanish ? 'No se ha confirmado ninguna aprobación nueva para esta revisión.' : 'No new approval is confirmed for this revision.')}`,
+        input.reviewId ? `[${spanish ? 'Abrir aprobación' : 'Open approval'}](${url}#pullrequestreview-${input.reviewId}) · [${spanish ? 'Ver checks' : 'See checks'}](${url}/checks)`
+            : `[${spanish ? 'Ver checks' : 'See checks'}](${url}/checks)`,
+        '<details>',
+        `<summary>${spanish ? 'Evidencia técnica' : 'Technical evidence'}</summary>`,
+        `${spanish ? 'Revisión' : 'Revision'}: \`${evidence.headSha.slice(0, 12)}\`; base: \`${evidence.baseSha.slice(0, 12)}\`; ${spanish ? 'motivo' : 'reason'}: \`${escapeMarkdown(decision.code)}\`.`,
+        '</details>',
+    ];
+    return lines.join('\n').slice(0, 1800);
+}
+const SPANISH_DECISION_REASONS = Object.freeze({
+    disabled: 'La aprobación automática está desactivada.',
+    'unsupported-pr': 'Solo se evalúan PRs abiertas, no borrador, completas y del mismo repositorio.',
+    scope: 'La PR queda fuera del ámbito de aprobación configurado.',
+    'bot-author': 'Una persona debe revisar las PRs abiertas por bots.',
+    'protected-path': 'Ha cambiado un archivo protegido de workflow, política o seguridad.',
+    'bugbot-ignored-path': 'Bugbot omitió un archivo modificado; su resultado no permite aprobar.',
+    'unsafe-rules': 'Las reglas de rama deben ser legibles y descartar aprobaciones antiguas.',
+    'producer-unattested': 'Falta la confirmación del productor de CI y del paso obligatorio de cobertura.',
+    'reporter-unattested': 'No se ha confirmado la instalación del reporter numérico en CI de confianza.',
+    'merge-ref-unavailable': 'Se espera una fusión de prueba verificada para la base y revisión actuales.',
+    'approval-check-cycle': 'El check Copilot / Approval no puede exigirse a sí mismo.',
+    'bugbot-configuration': 'Bugbot debe usar severidad info y tener desactivado dry-run.',
+    'check-producer-unconfigured': 'Falta configurar un productor de confianza para un check obligatorio.',
+    'check-missing': 'Se espera un check de la revisión actual.',
+    'check-source': 'El origen de un check difiere del productor configurado.',
+    'check-ambiguous': 'Hay intentos recientes ambiguos para un check.',
+    'check-pending': 'Se espera a que termine un check.',
+    'check-failed': 'Un check obligatorio no terminó correctamente.',
+    'bugbot-missing': 'Se espera una revisión completa de Bugbot para esta revisión.',
+    'bugbot-incomplete': 'La evidencia de Bugbot es parcial, fallida u obsoleta.',
+    'bugbot-findings': 'Bugbot tiene hallazgos abiertos, desconocidos o descartados que bloquean.',
+    'coverage-evidence': 'Falta evidencia numérica válida para la revisión actual.',
+    'coverage-low': 'La cobertura del diff no alcanza el umbral configurado.',
+    'reviews-unavailable': 'No se pudo leer todo el historial de revisiones.',
+    'existing-approval': 'El bot ya aprobó esta revisión exacta.',
+    'approval-dismissed': 'Una persona responsable descartó la aprobación del bot para esta revisión.',
+    'changes-requested': 'Una persona revisora ha solicitado cambios.',
+    'human-approved': 'Una persona ya aprobó esta revisión.',
+    'recommend-mode': 'Las evidencias cumplen; una persona debe decidir.',
+    eligible: 'Las evidencias y reglas permiten una aprobación nativa.',
+    approved: 'El bot aprobó esta revisión; GitHub sigue aplicando las reglas de rama.',
+    'publication-unknown': 'GitHub podría haber aceptado la revisión; reejecuta para comprobarla.',
+    'invalid-policy': 'La política instalada no es válida; ejecuta copilot doctor.',
+    'evidence-unavailable': 'No se pudo leer la evidencia de aprobación; reejecuta el observador.',
+    'target-mismatch': 'La PR resuelta no coincide con el repositorio y número esperados.',
+    'pre-submit-unavailable': 'No se pudo volver a leer la evidencia antes de publicar la aprobación.',
+    superseded: 'La política o revisión cambió; vuelve a comprobar la revisión actual.',
+});
+function spanishDecisionReason(code) {
+    return SPANISH_DECISION_REASONS[code] ?? 'No se pudo completar la evaluación de aprobación.';
+}
+function renderApprovalRunSummary(input) {
+    const spanish = input.locale.toLowerCase().startsWith('es');
+    const checks = input.evidence.checks.slice(0, 8).map(check => `- \`${escapeMarkdown(check.name)}\` · App ${check.sourceAppId} · \`${escapeMarkdown(check.workflowName)}\` · ${escapeMarkdown(check.status)}/${escapeMarkdown(check.conclusion ?? 'unknown')} · run ${check.runId}/${check.attempt}`);
+    return [
+        `### ${spanish ? 'Observación de aprobación' : 'Approval observation'} · PR #${input.target.pullNumber}`,
+        `- ${spanish ? 'Inicio' : 'Wakeup'}: ${escapeMarkdown(input.wakeup)}`,
+        `- ${spanish ? 'Modo' : 'Mode'}: \`${escapeMarkdown(input.mode)}\`; ${spanish ? 'resultado' : 'result'}: \`${escapeMarkdown(input.decision.status)}\` (\`${escapeMarkdown(input.decision.code)}\`)`,
+        `- ${spanish ? 'Revisión/base' : 'Head/base'}: \`${input.evidence.headSha}\` / \`${input.evidence.baseSha}\``,
+        `- Bugbot: ${escapeMarkdown(input.evidence.bugbot?.outcome ?? 'missing')}/${escapeMarkdown(input.evidence.bugbot?.coverage ?? 'missing')}`,
+        `- ${spanish ? 'Revisión nativa' : 'Native review'}: ${input.reviewId ?? (spanish ? 'ninguna confirmada' : 'none confirmed')}`,
+        `- ${spanish ? 'Tarjeta/Check' : 'Card/Check'}: ${escapeMarkdown(input.publication)}`,
+        ...(checks.length > 0 ? [spanish ? 'Productores observados:' : 'Observed producers:', ...checks] : []),
+        `- ${spanish ? 'Recuperación' : 'Recovery'}: ${spanish ? 'corrige el bloqueo y reejecuta Copilot - Pull Request Approval con el número de PR' : 'fix the blocker and rerun Copilot - Pull Request Approval with the PR number'}.`,
+    ].join('\n');
+}
+function escapeMarkdown(value) {
+    return [...value].map(character => character === '@' ? '@\u200b'
+        : '\\`*_{}[]()#+.!|>~-<>'.includes(character) ? `\\${character}` : character).join('');
+}
+
+
+/***/ }),
+
 /***/ 43268:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -48179,6 +48530,7 @@ const issue_inactivity_1 = __nccwpck_require__(38572);
 const deployment_configuration_1 = __nccwpck_require__(22495);
 const locale_1 = __nccwpck_require__(15386);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 exports.SETUP_AGENT_TASKS = [
     'planner',
     'findings',
@@ -48264,7 +48616,7 @@ function createDefaultSetupConfiguration() {
             ignoreFiles: 'build/*',
             membersOnly: false,
             includeReasoning: false,
-            bugbotSeverity: 'low',
+            bugbotSeverity: 'info',
             bugbotCommentLimit: 20,
             bugbotFixVerifyCommands: '',
             bugbotDryRun: false,
@@ -48276,6 +48628,14 @@ function createDefaultSetupConfiguration() {
             bugbotFailOnUnresolved: false,
             bugbotOrganizationRules: '',
             provisioningMode: 'auto',
+        },
+        pullRequestApproval: {
+            ...pull_request_approval_policy_1.DISABLED_PULL_REQUEST_APPROVAL_POLICY,
+            targetRoles: [...pull_request_approval_policy_1.DISABLED_PULL_REQUEST_APPROVAL_POLICY.targetRoles],
+            branchKinds: [...pull_request_approval_policy_1.DISABLED_PULL_REQUEST_APPROVAL_POLICY.branchKinds],
+            additionalExcludedPaths: [],
+            testChecks: [],
+            coverage: { ...pull_request_approval_policy_1.DISABLED_PULL_REQUEST_APPROVAL_POLICY.coverage },
         },
         projects: {
             ids: '',
@@ -48321,6 +48681,11 @@ function mergeSetupConfiguration(base, overrides = {}) {
         agents,
         repository: { ...base.repository, ...(overrides.repository ?? {}) },
         ai: { ...base.ai, ...(overrides.ai ?? {}) },
+        pullRequestApproval: {
+            ...base.pullRequestApproval,
+            ...(overrides.pullRequestApproval ?? {}),
+            coverage: { ...base.pullRequestApproval.coverage, ...(overrides.pullRequestApproval?.coverage ?? {}) },
+        },
         projects: { ...base.projects, ...(overrides.projects ?? {}) },
         createInitialTag: overrides.createInitialTag ?? base.createInitialTag,
         manageRepositoryVariables: overrides.manageRepositoryVariables ?? base.manageRepositoryVariables,
@@ -48389,8 +48754,9 @@ Object.defineProperty(exports, "buildSetupCredentialRequirements", ({ enumerable
 const locale_1 = __nccwpck_require__(15386);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
-function buildSetupPlan(configuration, mergeQueueReadiness = []) {
-    const workflowFiles = (0, setup_workflow_catalog_1.enabledSetupWorkflowFiles)((0, setup_issue_workflow_policy_1.effectiveIssueWorkflowFeatures)(configuration));
+function buildSetupPlan(configuration, mergeQueueReadiness = [], approvalReadiness = []) {
+    const workflowFiles = (0, setup_workflow_catalog_1.enabledSetupWorkflowFiles)((0, setup_issue_workflow_policy_1.effectiveIssueWorkflowFeatures)(configuration))
+        .filter(file => file !== 'copilot_pull_request_approval.yml' || configuration.pullRequestApproval.mode !== 'off');
     const issueWorkflowProfile = (0, setup_issue_workflow_policy_1.effectiveIssueWorkflowProfile)(configuration);
     const issueTemplateFiles = configuration.features.issueTemplates === false || configuration.features.issues === false
         ? []
@@ -48422,6 +48788,7 @@ function buildSetupPlan(configuration, mergeQueueReadiness = []) {
             .map(requirement => requirement.name),
         credentialRequirements,
         mergeQueueReadiness: [...mergeQueueReadiness],
+        approvalReadiness: [...approvalReadiness],
         warnings: buildSetupWarnings(configuration),
     };
 }
@@ -48500,6 +48867,7 @@ function buildSetupRepositoryVariables(configuration) {
     add('BUGBOT_TELEMETRY', configuration.ai.bugbotTelemetry);
     add('BUGBOT_FAIL_ON_UNRESOLVED', configuration.ai.bugbotFailOnUnresolved);
     add('BUGBOT_ORGANIZATION_RULES', configuration.ai.bugbotOrganizationRules);
+    add('PR_APPROVAL_POLICY', JSON.stringify(configuration.pullRequestApproval));
     add('PROJECT_IDS', configuration.projects.ids);
     add('PROJECT_COLUMN_ISSUE_CREATED', configuration.projects.issueCreatedColumn);
     add('PROJECT_COLUMN_PULL_REQUEST_CREATED', configuration.projects.pullRequestCreatedColumn);
@@ -48817,8 +49185,23 @@ const deployment_configuration_1 = __nccwpck_require__(22495);
 const locale_1 = __nccwpck_require__(15386);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
-function validateSetupConfiguration(configuration) {
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+function validateSetupConfiguration(configuration, options = {}) {
     const errors = [];
+    errors.push(...(0, pull_request_approval_policy_1.validatePullRequestApprovalPolicy)(configuration.pullRequestApproval, options.allowIncompleteApproval === true));
+    if (configuration.actionInputs['pr-approval-policy'] !== undefined) {
+        errors.push('pr-approval-policy cannot be overridden through actionInputs.');
+    }
+    if (configuration.pullRequestApproval.mode !== 'off') {
+        if (!configuration.manageRepositoryVariables && !options.allowIncompleteApproval) {
+            errors.push('PR approval requires setup to manage PR_APPROVAL_POLICY; --skip-variables would leave the runtime policy unverified.');
+        }
+        if (configuration.features.pullRequests === false)
+            errors.push('PR approval requires pull-request automation.');
+        if (configuration.ai.bugbotDryRun || !configuration.ai.bugbotTelemetry || configuration.ai.bugbotSeverity !== 'info') {
+            errors.push('PR approval requires Bugbot telemetry, non-dry-run analysis, and info severity.');
+        }
+    }
     if (typeof configuration.repository.issueManagedBranches !== 'boolean'
         || typeof configuration.repository.preBranchSdd !== 'boolean') {
         errors.push('issue-managed-branches and pre-branch-sdd must be boolean values.');
@@ -54569,6 +54952,126 @@ function buildCatalogResponseSchema(source, ids, targetLocale = 'en-US') {
 
 /***/ }),
 
+/***/ 36169:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ObservePullRequestApprovalUseCase = void 0;
+const pull_request_approval_1 = __nccwpck_require__(8024);
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+/** Read-first replay and exact-revision guard around the non-atomic GitHub review API. */
+class ObservePullRequestApprovalUseCase {
+    constructor(port) {
+        this.port = port;
+    }
+    async execute(target) {
+        let policy;
+        let rawPolicy;
+        try {
+            rawPolicy = await this.port.readPolicy(target);
+            policy = (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(rawPolicy);
+        }
+        catch {
+            return {
+                decision: { status: 'blocked', code: 'invalid-policy', detail: 'The installed PR approval policy is invalid; run copilot doctor.' },
+                publication: 'not-applicable',
+            };
+        }
+        if (policy.mode === 'off') {
+            return { decision: { status: 'off', code: 'disabled', detail: 'Automatic approval is disabled.' }, mode: 'off', publication: 'not-applicable' };
+        }
+        let initial;
+        try {
+            initial = await this.port.loadEvidence(target);
+        }
+        catch {
+            return {
+                decision: { status: 'blocked', code: 'evidence-unavailable', detail: 'GitHub approval evidence could not be read; rerun this observer.' },
+                publication: 'not-applicable',
+            };
+        }
+        if (initial.repositoryId !== target.repositoryId || initial.pullNumber !== target.pullNumber) {
+            return { decision: { status: 'blocked', code: 'target-mismatch', detail: 'The resolved PR does not match the bound repository and number.' }, publication: 'not-applicable' };
+        }
+        let decision = (0, pull_request_approval_1.decidePullRequestApproval)(policy, initial);
+        let reviewId;
+        if (decision.status === 'eligible') {
+            let current;
+            let currentPolicy;
+            try {
+                current = await this.port.loadEvidence(target);
+                currentPolicy = await this.port.readPolicy(target);
+            }
+            catch {
+                decision = { status: 'blocked', code: 'pre-submit-unavailable', detail: 'Current approval evidence could not be reread before submission.' };
+            }
+            if (current && currentPolicy !== rawPolicy) {
+                decision = { status: 'pending', code: 'superseded', detail: 'The approval policy changed before submission; recheck the current head.' };
+            }
+            else if (current && !sameRevisionAndEvidence(initial, current)) {
+                decision = { status: 'pending', code: 'superseded', detail: 'PR revision, policy, or approval evidence changed before submission; recheck the current head.' };
+            }
+            else if (current) {
+                decision = (0, pull_request_approval_1.decidePullRequestApproval)(policy, current);
+                if (decision.status === 'eligible') {
+                    try {
+                        const posted = await this.port.submitApproval(target, current.headSha, approvalReviewBody(current.headSha));
+                        reviewId = posted.id;
+                    }
+                    catch {
+                        // A transport error can occur after GitHub accepted the review. Never retry the POST blind.
+                    }
+                    try {
+                        const readback = await this.port.loadEvidence(target);
+                        const botReviews = readback.reviews.filter(review => review.userId === current.botUserId)
+                            .sort((left, right) => right.submittedAt.localeCompare(left.submittedAt) || right.id - left.id);
+                        const observed = botReviews.find(review => review.state === 'APPROVED' && review.commitId === current.headSha);
+                        if (observed && observed.userId === current.botUserId
+                            && observed.state === 'APPROVED' && observed.commitId === current.headSha
+                            && !botReviews.some(review => review.state === 'DISMISSED' && review.commitId === current.headSha)
+                            && readback.headSha === current.headSha && readback.baseSha === current.baseSha) {
+                            reviewId = observed.id;
+                            decision = { status: 'already-approved', code: 'approved', detail: 'The bot approved this revision; GitHub still applies the configured branch rules.' };
+                        }
+                        else {
+                            decision = { status: 'pending', code: 'publication-unknown', detail: 'GitHub may have accepted the review; rerun to read it before any new submission.' };
+                        }
+                    }
+                    catch {
+                        decision = { status: 'pending', code: 'publication-unknown', detail: 'GitHub may have accepted the review; rerun to read it before any new submission.' };
+                    }
+                }
+            }
+        }
+        try {
+            // The adapter guards the current head again before editing the single card.
+            await this.port.publishAssessment(target, initial, decision, reviewId);
+            return { decision, headSha: initial.headSha, evidence: initial, mode: policy.mode,
+                ...(reviewId ? { reviewId } : {}), publication: 'published' };
+        }
+        catch {
+            return { decision, headSha: initial.headSha, evidence: initial, mode: policy.mode,
+                ...(reviewId ? { reviewId } : {}), publication: 'failed' };
+        }
+    }
+}
+exports.ObservePullRequestApprovalUseCase = ObservePullRequestApprovalUseCase;
+function sameRevisionAndEvidence(left, right) {
+    return left.repositoryId === right.repositoryId
+        && left.pullNumber === right.pullNumber
+        && left.headSha === right.headSha
+        && left.baseSha === right.baseSha
+        && JSON.stringify(left) === JSON.stringify(right);
+}
+function approvalReviewBody(headSha) {
+    return `<!-- copilot:guarded-approval:v1 head="${headSha}" -->\nCopilot approved this revision (${headSha.slice(0, 7)}) after its configured CI and coverage gates passed and Bugbot reported no blocking findings. GitHub still applies branch rules. Configure a separate human-review requirement if needed; a bot approval may count toward a generic approval minimum.`;
+}
+
+
+/***/ }),
+
 /***/ 29415:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -54668,6 +55171,14 @@ class PullRequestUseCase {
                 steps: (0, pull_request_workflow_context_1.projectPullRequestWorkflowStepContexts)(param),
             },
         });
+    }
+    /** Used only after a narrowly admitted same-repository PAT-authored PR event. */
+    async reviewOnly(param) {
+        if (param.eventName !== 'pull_request'
+            || !['opened', 'reopened', 'synchronize'].includes(param.pullRequest.action)
+            || !this.reviewPotentialProblemsUseCase)
+            return [];
+        return this.reviewPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param));
     }
 }
 exports.PullRequestUseCase = PullRequestUseCase;
@@ -71092,6 +71603,81 @@ function selectAvailableMembers(members, currentMembers, requested) {
 
 /***/ }),
 
+/***/ 96710:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parseApprovalCoverageZip = parseApprovalCoverageZip;
+const node_zlib_1 = __nccwpck_require__(65628);
+/** Parse one bounded GitHub artifact as data; never extract paths or execute content. */
+function parseApprovalCoverageZip(value) {
+    const zip = Buffer.from(value);
+    if (zip.length > 64 * 1024 || zip.length < 30)
+        return undefined;
+    let eocd = -1;
+    for (let index = zip.length - 22; index >= Math.max(0, zip.length - 65557); index--) {
+        if (zip.readUInt32LE(index) === 0x06054b50) {
+            eocd = index;
+            break;
+        }
+    }
+    if (eocd < 0 || zip.readUInt16LE(eocd + 10) !== 1)
+        return undefined;
+    const central = zip.readUInt32LE(eocd + 16);
+    if (central + 46 > zip.length || zip.readUInt32LE(central) !== 0x02014b50)
+        return undefined;
+    const method = zip.readUInt16LE(central + 10);
+    const compressedSize = zip.readUInt32LE(central + 20);
+    const plainSize = zip.readUInt32LE(central + 24);
+    const nameLength = zip.readUInt16LE(central + 28);
+    const name = zip.subarray(central + 46, central + 46 + nameLength).toString('utf8');
+    const local = zip.readUInt32LE(central + 42);
+    if (name !== 'copilot-diff-coverage.json' || plainSize > 16384 || compressedSize > 64 * 1024
+        || ![0, 8].includes(method) || local + 30 > zip.length || zip.readUInt32LE(local) !== 0x04034b50)
+        return undefined;
+    const start = local + 30 + zip.readUInt16LE(local + 26) + zip.readUInt16LE(local + 28);
+    if (start + compressedSize > zip.length)
+        return undefined;
+    let raw;
+    try {
+        const contents = zip.subarray(start, start + compressedSize);
+        raw = method === 0 ? contents : (0, node_zlib_1.inflateRawSync)(contents, { maxOutputLength: 16384 });
+    }
+    catch {
+        return undefined;
+    }
+    if (raw.length !== plainSize)
+        return undefined;
+    let parsed;
+    try {
+        parsed = JSON.parse(raw.toString('utf8'));
+    }
+    catch {
+        return undefined;
+    }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+        return undefined;
+    const item = parsed;
+    const keys = [
+        'version', 'repositoryId', 'pullNumber', 'headSha', 'baseSha', 'workflowRunId',
+        'workflowRunAttempt', 'coveredChangedLines', 'totalChangedLines',
+    ];
+    if (Object.keys(item).sort().join(',') !== keys.sort().join(',') || item.version !== 1
+        || ![item.repositoryId, item.pullNumber, item.workflowRunId, item.workflowRunAttempt,
+            item.coveredChangedLines, item.totalChangedLines].every(Number.isSafeInteger)
+        || !/^[a-f0-9]{40}$/iu.test(String(item.headSha)) || !/^[a-f0-9]{40}$/iu.test(String(item.baseSha))
+        || Number(item.repositoryId) <= 0 || Number(item.pullNumber) <= 0 || Number(item.workflowRunId) <= 0
+        || Number(item.workflowRunAttempt) <= 0 || Number(item.totalChangedLines) < 0
+        || Number(item.coveredChangedLines) < 0 || Number(item.coveredChangedLines) > Number(item.totalChangedLines))
+        return undefined;
+    return item;
+}
+
+
+/***/ }),
+
 /***/ 55165:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -71119,6 +71705,386 @@ class BugbotPullRequestRepository {
     }
 }
 exports.BugbotPullRequestRepository = BugbotPullRequestRepository;
+
+
+/***/ }),
+
+/***/ 23001:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PullRequestApprovalRepository = void 0;
+const github = __importStar(__nccwpck_require__(78227));
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+const approval_coverage_artifact_1 = __nccwpck_require__(96710);
+const file_ignore_1 = __nccwpck_require__(10304);
+const pull_request_approval_presentation_policy_1 = __nccwpck_require__(79017);
+/** GitHub DTOs terminate here. Every partial/forbidden read becomes non-authorizing evidence. */
+class PullRequestApprovalRepository {
+    constructor(token, settings) {
+        this.token = token;
+        this.settings = settings;
+        this.octokit = github.getOctokit(token);
+        this.checkOctokit = settings.githubToken ? github.getOctokit(settings.githubToken) : undefined;
+    }
+    async readPolicy(target) {
+        try {
+            const response = await this.octokit.rest.actions.getRepoVariable({
+                owner: target.owner, repo: target.repository, name: 'PR_APPROVAL_POLICY',
+            });
+            return response.data.value;
+        }
+        catch (error) {
+            if (statusOf(error) !== 404)
+                throw error;
+        }
+        // A repository Variable takes precedence over an accessible organization Variable.
+        try {
+            const response = await this.octokit.rest.actions.getOrgVariable({
+                org: target.owner, name: 'PR_APPROVAL_POLICY',
+            });
+            return response.data.value;
+        }
+        catch (error) {
+            if (statusOf(error) === 404)
+                return undefined;
+            throw error;
+        }
+    }
+    async loadEvidence(target) {
+        const { data: pull } = await this.octokit.rest.pulls.get({
+            owner: target.owner, repo: target.repository, pull_number: target.pullNumber,
+        });
+        const headSha = pull.head.sha;
+        const policy = (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(await this.readPolicy(target));
+        let testedMergeSha;
+        if (pull.mergeable === true && /^[a-f0-9]{40}$/iu.test(pull.merge_commit_sha ?? '')) {
+            try {
+                const merge = await this.octokit.rest.git.getCommit({
+                    owner: target.owner, repo: target.repository, commit_sha: pull.merge_commit_sha,
+                });
+                if (merge.data.parents[0]?.sha === pull.base.sha && merge.data.parents[1]?.sha === headSha
+                    && merge.data.parents.length === 2)
+                    testedMergeSha = pull.merge_commit_sha;
+            }
+            catch { /* Missing or unreadable merge parentage is non-authorizing. */ }
+        }
+        const [files, reviews, comments, headChecks, mergeChecks, headRuns, mergeRuns, rules, user] = await Promise.all([
+            this.allPages(this.octokit.rest.pulls.listFiles, { owner: target.owner, repo: target.repository, pull_number: target.pullNumber }),
+            this.allPages(this.octokit.rest.pulls.listReviews, { owner: target.owner, repo: target.repository, pull_number: target.pullNumber }),
+            this.allPages(this.octokit.rest.issues.listComments, { owner: target.owner, repo: target.repository, issue_number: target.pullNumber }),
+            this.allPages(this.octokit.rest.checks.listForRef, { owner: target.owner, repo: target.repository, ref: headSha, filter: 'all' }),
+            testedMergeSha ? this.allPages(this.octokit.rest.checks.listForRef, { owner: target.owner, repo: target.repository, ref: testedMergeSha, filter: 'all' }) : Promise.resolve([]),
+            this.allPages(this.octokit.rest.actions.listWorkflowRunsForRepo, { owner: target.owner, repo: target.repository, head_sha: headSha }),
+            testedMergeSha ? this.allPages(this.octokit.rest.actions.listWorkflowRunsForRepo, { owner: target.owner, repo: target.repository, head_sha: testedMergeSha }) : Promise.resolve([]),
+            this.effectiveRules(target.owner, target.repository, pull.base.ref),
+            this.octokit.rest.users.getAuthenticated(),
+        ]);
+        const branch = Object.entries(this.settings.branchPrefixes)
+            .find(([, prefix]) => pull.head.ref.startsWith(`${prefix}/`));
+        const branchKind = branch?.[0];
+        const branchIssue = branch
+            ? Number(pull.head.ref.slice(branch[1].length + 1).match(/^(\d+)-/u)?.[1])
+            : NaN;
+        const linkedIssue = Number.isSafeInteger(branchIssue) && branchIssue > 0
+            && new RegExp(`\\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\\s+#${branchIssue}\\b`, 'iu').test(pull.body ?? '');
+        const checkRuns = [...headChecks, ...mergeChecks];
+        const workflowRuns = [...headRuns, ...mergeRuns];
+        const latestRuns = [...new Set(policy.testChecks.map(producer => producer.workflowName))].flatMap(name => {
+            const named = workflowRuns.filter(run => run.name === name);
+            const onMerge = named.filter(run => run.head_sha === testedMergeSha);
+            const authoritative = onMerge.length > 0 ? onMerge : named.filter(run => run.head_sha === headSha);
+            const latest = [...authoritative].sort((left, right) => right.id - left.id || right.run_attempt - left.run_attempt)[0];
+            return latest ? [latest] : [];
+        });
+        const currentJobs = await Promise.all(latestRuns.map(async (run) => ({
+            run,
+            jobs: await this.allPages(this.octokit.rest.actions.listJobsForWorkflowRunAttempt, {
+                owner: target.owner, repo: target.repository, run_id: run.id, attempt_number: run.run_attempt,
+            }),
+        })));
+        const checkFacts = currentJobs.flatMap(({ run, jobs }) => jobs.flatMap(job => {
+            const id = Number(job.check_run_url?.match(/\/check-runs\/(\d+)$/u)?.[1]);
+            const check = checkRuns.find(item => item.id === id && item.head_sha === run.head_sha);
+            if (!check)
+                return [];
+            return [{
+                    name: check.name,
+                    sourceAppId: check.app?.id ?? 0,
+                    workflowName: run.name,
+                    headSha: check.head_sha,
+                    conclusion: run.conclusion === 'success' ? check.conclusion : run.conclusion,
+                    status: run.status === 'completed' ? check.status : run.status,
+                    runId: run.id,
+                    attempt: run.run_attempt,
+                }];
+        }));
+        const botId = user.data.id;
+        const botCards = comments.filter((comment) => comment.user?.id === botId && /<!-- copilot-bugbot-status schema="1"/u.test(comment.body ?? ''));
+        const bugbot = botCards.length === 1 ? parseBugbotCard(botCards[0].body ?? '', headSha, target.pullNumber) : undefined;
+        const reviewFacts = reviews.map((review) => ({
+            id: review.id,
+            userId: review.user?.id ?? 0,
+            state: review.state,
+            commitId: review.commit_id ?? '',
+            submittedAt: review.submitted_at ?? '',
+        }));
+        const numericCoverage = policy.coverage.mode === 'numeric'
+            ? await this.numericCoverage(target, policy.coverage.artifactWorkflowName, headSha, pull.base.sha, testedMergeSha, workflowRuns)
+            : undefined;
+        return {
+            repositoryId: pull.base.repo?.id ?? 0,
+            pullNumber: pull.number,
+            headSha,
+            baseSha: pull.base.sha,
+            ...(testedMergeSha ? { testedMergeSha } : {}),
+            mergeCommitVerified: testedMergeSha !== undefined,
+            baseRef: pull.base.ref,
+            targetRole: pull.base.ref === this.settings.developmentBranch ? 'development'
+                : pull.base.ref === this.settings.mainBranch ? 'main' : undefined,
+            branchKind,
+            linkedIssue,
+            open: pull.state === 'open',
+            draft: pull.draft === true,
+            sameRepository: pull.head.repo?.id === pull.base.repo?.id,
+            authorId: pull.user?.id ?? 0,
+            authorIsBot: pull.user?.type === 'Bot',
+            botUserId: botId,
+            changedPaths: files.map((file) => file.filename),
+            ignoredChangedPaths: files.map((file) => file.filename)
+                .filter((path) => (0, file_ignore_1.fileMatchesIgnorePatterns)(path, this.settings.bugbotIgnorePatterns)),
+            filesComplete: files.length === pull.changed_files && files.length <= 3000,
+            rulesReadable: rules.readable,
+            dismissesStaleReviews: rules.dismissesStaleReviews,
+            requiredChecks: rules.requiredChecks,
+            checks: checkFacts,
+            bugbot,
+            bugbotSeverity: this.settings.bugbotSeverity,
+            bugbotDryRun: this.settings.bugbotDryRun,
+            reviews: reviewFacts,
+            reviewHistoryComplete: reviews.length < 3000,
+            ...(numericCoverage ? { numericCoverage } : {}),
+        };
+    }
+    async numericCoverage(target, workflowName, headSha, baseSha, testedMergeSha, workflowRuns) {
+        const candidates = workflowRuns.filter(run => run.name === workflowName
+            && (run.head_sha === headSha || run.head_sha === testedMergeSha));
+        const mergeCandidates = candidates.filter(run => run.head_sha === testedMergeSha);
+        const authoritative = mergeCandidates.length > 0 ? mergeCandidates : candidates;
+        const run = [...authoritative].sort((left, right) => right.id - left.id || right.run_attempt - left.run_attempt)[0];
+        if (!run || run.conclusion !== 'success' || run.status !== 'completed')
+            return undefined;
+        try {
+            const artifacts = await this.allPages(this.octokit.rest.actions.listWorkflowRunArtifacts, {
+                owner: target.owner, repo: target.repository, run_id: run.id,
+            });
+            const matches = artifacts.filter(artifact => artifact.name === 'copilot-diff-coverage-v1' && !artifact.expired);
+            if (matches.length !== 1 || matches[0].size_in_bytes > 64 * 1024)
+                return undefined;
+            const response = await this.octokit.rest.actions.downloadArtifact({
+                owner: target.owner, repo: target.repository, artifact_id: matches[0].id, archive_format: 'zip',
+            });
+            const data = response.data;
+            const bytes = data instanceof ArrayBuffer ? new Uint8Array(data)
+                : data instanceof Uint8Array ? data
+                    : typeof data === 'string' ? Buffer.from(data, 'binary') : undefined;
+            const attestation = bytes ? (0, approval_coverage_artifact_1.parseApprovalCoverageZip)(bytes) : undefined;
+            if (!attestation || attestation.repositoryId !== target.repositoryId
+                || attestation.pullNumber !== target.pullNumber || attestation.headSha !== headSha
+                || attestation.baseSha !== baseSha || attestation.workflowRunId !== run.id
+                || attestation.workflowRunAttempt !== run.run_attempt)
+                return undefined;
+            return {
+                coveredChangedLines: attestation.coveredChangedLines,
+                totalChangedLines: attestation.totalChangedLines,
+                headSha,
+                baseSha,
+            };
+        }
+        catch {
+            return undefined;
+        }
+    }
+    async submitApproval(target, headSha, body) {
+        const response = await this.octokit.rest.pulls.createReview({
+            owner: target.owner, repo: target.repository, pull_number: target.pullNumber,
+            event: 'APPROVE', commit_id: headSha, body,
+        });
+        return {
+            id: response.data.id,
+            commitId: response.data.commit_id ?? '',
+            userId: response.data.user?.id ?? 0,
+            state: response.data.state,
+        };
+    }
+    async publishAssessment(target, evidence, decision, reviewId) {
+        const headSha = evidence.headSha;
+        const current = await this.octokit.rest.pulls.get({
+            owner: target.owner, repo: target.repository, pull_number: target.pullNumber,
+        });
+        if (current.data.head.sha !== headSha || current.data.base.sha !== evidence.baseSha) {
+            throw new Error('PR head or base changed before assessment publication.');
+        }
+        const user = await this.octokit.rest.users.getAuthenticated();
+        const comments = await this.allPages(this.octokit.rest.issues.listComments, {
+            owner: target.owner, repo: target.repository, issue_number: target.pullNumber,
+        });
+        const card = [...comments].reverse().find(comment => comment.user?.id === user.data.id
+            && (comment.body ?? '').includes('<!-- copilot:approval-assessment:v1 -->'));
+        const body = (0, pull_request_approval_presentation_policy_1.renderApprovalAssessment)({ target, evidence, decision, locale: this.settings.locale ?? 'en-US',
+            ...(reviewId ? { reviewId } : {}) });
+        if (card) {
+            if (card.body !== body)
+                await this.octokit.rest.issues.updateComment({ owner: target.owner, repo: target.repository, comment_id: card.id, body });
+        }
+        else {
+            await this.octokit.rest.issues.createComment({ owner: target.owner, repo: target.repository, issue_number: target.pullNumber, body });
+        }
+        if (this.checkOctokit) {
+            const prior = await this.checkOctokit.rest.checks.listForRef({
+                owner: target.owner, repo: target.repository, ref: headSha, check_name: 'Copilot / Approval', filter: 'all', per_page: 100,
+            });
+            if (prior.data.total_count > 100)
+                throw new Error('Approval Check Run history exceeds the bounded lookup.');
+            const externalId = `copilot:approval:${target.repositoryId}:${target.pullNumber}`;
+            const matches = prior.data.check_runs.filter((check) => check.name === 'Copilot / Approval'
+                && check.app?.slug === 'github-actions' && check.external_id === externalId);
+            if (matches.length > 1)
+                throw new Error('Approval Check Run identity is ambiguous.');
+            const existing = matches[0];
+            const fields = {
+                owner: target.owner, repo: target.repository, name: 'Copilot / Approval', head_sha: headSha,
+                external_id: externalId,
+                status: 'completed',
+                conclusion: decision.code === 'approved' || decision.status === 'already-approved' ? 'success'
+                    : decision.status === 'blocked' ? 'failure' : 'neutral',
+                output: { title: `PR approval: ${decision.status}`, summary: body.slice(0, 20000) },
+            };
+            if (existing) {
+                await this.checkOctokit.rest.checks.update({
+                    owner: target.owner, repo: target.repository, check_run_id: existing.id,
+                    status: fields.status, conclusion: fields.conclusion, output: fields.output,
+                });
+            }
+            else {
+                await this.checkOctokit.rest.checks.create(fields);
+            }
+        }
+    }
+    async effectiveRules(owner, repo, branch) {
+        try {
+            const rulesResponse = await this.octokit.request('GET /repos/{owner}/{repo}/rules/branches/{branch}', { owner, repo, branch });
+            const rules = Array.isArray(rulesResponse.data) ? rulesResponse.data : [];
+            let classic;
+            try {
+                const response = await this.octokit.rest.repos.getBranchProtection({ owner, repo, branch });
+                classic = response.data;
+            }
+            catch (error) {
+                if (statusOf(error) !== 404)
+                    throw error;
+            }
+            const reviewRules = rules.filter(rule => rule.type === 'pull_request');
+            const classicReview = record(classic?.required_pull_request_reviews);
+            const allStale = reviewRules.every(rule => record(rule.parameters)?.dismiss_stale_reviews === true)
+                && (!classicReview || classicReview.dismiss_stale_reviews === true);
+            const hasStaleRule = reviewRules.length > 0 || classicReview !== undefined;
+            const requiredChecks = new Set();
+            const classicChecks = record(classic?.required_status_checks);
+            for (const item of array(classicChecks?.contexts))
+                if (typeof item === 'string')
+                    requiredChecks.add(item);
+            for (const item of array(classicChecks?.checks)) {
+                const context = record(item)?.context;
+                if (typeof context === 'string')
+                    requiredChecks.add(context);
+            }
+            for (const rule of rules.filter(item => item.type === 'required_status_checks')) {
+                for (const item of array(record(rule.parameters)?.required_status_checks)) {
+                    const context = record(item)?.context;
+                    if (typeof context === 'string')
+                        requiredChecks.add(context);
+                }
+            }
+            return { readable: true, dismissesStaleReviews: hasStaleRule && allStale, requiredChecks: [...requiredChecks] };
+        }
+        catch {
+            return { readable: false, dismissesStaleReviews: false, requiredChecks: [] };
+        }
+    }
+    async allPages(method, params) {
+        const result = [];
+        for await (const response of this.octokit.paginate.iterator(method, { ...params, per_page: 100 })) {
+            const page = Array.isArray(response.data) ? response.data
+                : record(response.data)?.check_runs ?? record(response.data)?.workflow_runs
+                    ?? record(response.data)?.artifacts ?? record(response.data)?.jobs;
+            if (!Array.isArray(page))
+                throw new Error('GitHub pagination returned an invalid page.');
+            result.push(...page);
+            if (result.length > 3000)
+                throw new Error('Approval evidence pagination exceeded the safe bound.');
+        }
+        return result;
+    }
+}
+exports.PullRequestApprovalRepository = PullRequestApprovalRepository;
+function parseBugbotCard(body, headSha, pullNumber) {
+    const status = body.match(/<!-- copilot-bugbot-status schema="1" pr="(\d+)" verified_head="([a-fA-F0-9]{7,64})" digest="([a-f0-9]{8})" -->/u);
+    const evidence = body.match(/<!-- copilot-bugbot-approval-evidence schema="1" head="([a-fA-F0-9]{7,64})" digest="([a-f0-9]{8})" outcome="([a-z-]+)" coverage="([a-z-]+)" open="(\d+)" reopened="(\d+)" dismissed="(\d+)" verification="(\d+)" unknown="(\d+)" -->/u);
+    if (!status || !evidence || Number(status[1]) !== pullNumber || status[2] !== headSha
+        || evidence[1] !== headSha || status[3] !== evidence[2])
+        return undefined;
+    const counts = evidence.slice(5).map(Number);
+    if (counts.some(count => !Number.isSafeInteger(count)))
+        return undefined;
+    return {
+        headSha, outcome: evidence[3], coverage: evidence[4],
+        open: counts[0], reopened: counts[1], dismissed: counts[2],
+        verificationRequired: counts[3], unknown: counts[4],
+    };
+}
+function statusOf(error) {
+    return record(error)?.status;
+}
+function record(value) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
+}
+function array(value) { return Array.isArray(value) ? value : []; }
 
 
 /***/ }),
@@ -75697,6 +76663,323 @@ function isRecord(value) {
 
 /***/ }),
 
+/***/ 8024:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.decidePullRequestApproval = decidePullRequestApproval;
+exports.isDocumentationOnlyDiff = isDocumentationOnlyDiff;
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+/** Pure, intentionally conservative decision. Every unknown provider fact blocks mutation. */
+function decidePullRequestApproval(policy, evidence) {
+    const stop = (status, code, detail) => ({ status, code, detail });
+    if (policy.mode === 'off')
+        return stop('off', 'disabled', 'Automatic approval is disabled.');
+    if (!evidence.open || evidence.draft || !evidence.sameRepository || !evidence.filesComplete) {
+        return stop('recommend', 'unsupported-pr', 'Only open, non-draft, complete same-repository pull requests are eligible.');
+    }
+    if (!evidence.targetRole || !policy.targetRoles.includes(evidence.targetRole)
+        || !evidence.branchKind || !policy.branchKinds.includes(evidence.branchKind)
+        || (policy.requireLinkedIssue && !evidence.linkedIssue)) {
+        return stop('recommend', 'scope', 'This pull request is outside the configured approval scope.');
+    }
+    if (evidence.authorIsBot || evidence.authorId === evidence.botUserId || evidence.botUserId <= 0) {
+        return stop('recommend', 'bot-author', 'A human must review pull requests opened by the approval bot or another bot.');
+    }
+    const excluded = evidence.changedPaths.find(path => [...pull_request_approval_policy_1.FIXED_APPROVAL_EXCLUSIONS, ...policy.additionalExcludedPaths].some(glob => matchesGlob(path, glob)));
+    if (excluded)
+        return stop('recommend', 'protected-path', 'A protected workflow, policy, or trust-boundary file changed.');
+    if ((evidence.ignoredChangedPaths?.length ?? 0) > 0) {
+        return stop('blocked', 'bugbot-ignored-path', 'Bugbot excluded a changed file from its review; its clean result cannot authorize approval.');
+    }
+    if (!evidence.rulesReadable || !evidence.dismissesStaleReviews) {
+        return stop('blocked', 'unsafe-rules', 'Effective branch rules must be readable and dismiss stale approvals.');
+    }
+    if (!policy.producerAttested) {
+        return stop('blocked', 'producer-unattested', 'The exact CI producer and coverage-enforcing step have not been attested by the operator.');
+    }
+    if (policy.coverage.mode === 'numeric' && !policy.coverage.reporterAttested) {
+        return stop('blocked', 'reporter-unattested', 'The numeric coverage reporter is not confirmed as installed in trusted CI.');
+    }
+    if (!evidence.mergeCommitVerified || !evidence.testedMergeSha) {
+        return stop('pending', 'merge-ref-unavailable', 'Waiting for a verified test merge of the current base and head.');
+    }
+    if (evidence.requiredChecks.includes('Copilot / Approval')) {
+        return stop('blocked', 'approval-check-cycle', 'Copilot / Approval cannot be its own required prerequisite.');
+    }
+    if (evidence.bugbotSeverity !== 'info' || evidence.bugbotDryRun) {
+        return stop('blocked', 'bugbot-configuration', 'Bugbot must run with info severity and dry-run disabled.');
+    }
+    const selected = [...policy.testChecks];
+    const required = new Set([...evidence.requiredChecks, ...selected.map(check => check.name)]);
+    for (const name of required) {
+        const producer = selected.find(check => check.name === name);
+        if (!producer) {
+            return stop('blocked', 'check-producer-unconfigured', `Required check ${name} has no trusted producer configured.`);
+        }
+        const mergeCandidates = evidence.checks.filter(check => check.name === name && check.headSha === evidence.testedMergeSha);
+        const candidates = mergeCandidates.length > 0 ? mergeCandidates
+            : evidence.checks.filter(check => check.name === name && check.headSha === evidence.headSha);
+        if (candidates.length === 0)
+            return stop('pending', 'check-missing', `Waiting for current-head check: ${name}.`);
+        const latest = [...candidates].sort((left, right) => right.runId - left.runId || right.attempt - left.attempt)[0];
+        if (latest.sourceAppId !== producer.sourceAppId || latest.workflowName !== producer.workflowName) {
+            return stop('blocked', 'check-source', `The source of check ${name} differs from the configured producer.`);
+        }
+        if (candidates.filter(check => check.runId === latest.runId && check.attempt === latest.attempt).length !== 1) {
+            return stop('blocked', 'check-ambiguous', `Check ${name} has ambiguous latest attempts.`);
+        }
+        if (latest.status !== 'completed')
+            return stop('pending', 'check-pending', `Waiting for check: ${name}.`);
+        if (latest.conclusion !== 'success')
+            return stop('blocked', 'check-failed', `Check ${name} did not succeed.`);
+    }
+    const bugbot = evidence.bugbot;
+    if (!bugbot || bugbot.headSha !== evidence.headSha)
+        return stop('pending', 'bugbot-missing', 'Waiting for a complete Bugbot review of this head.');
+    if (bugbot.outcome !== 'complete' || bugbot.coverage !== 'complete') {
+        return stop('blocked', 'bugbot-incomplete', 'Bugbot review evidence is partial, failed, or superseded.');
+    }
+    if (bugbot.open + bugbot.reopened + bugbot.verificationRequired + bugbot.unknown > 0
+        || (!policy.allowHumanDismissed && bugbot.dismissed > 0)) {
+        return stop('blocked', 'bugbot-findings', 'Bugbot has unresolved, unknown, or policy-blocked dismissed findings.');
+    }
+    // A complete, explicitly classified documentation-only diff has no
+    // measurable executable lines. It still needs every declared CI and
+    // Bugbot gate above; a zero-line code diff is never exempt.
+    if (policy.coverage.mode === 'numeric' && !isDocumentationOnlyDiff(evidence.changedPaths)) {
+        const coverage = evidence.numericCoverage;
+        if (!coverage || coverage.headSha !== evidence.headSha || coverage.baseSha !== evidence.baseSha
+            || !Number.isSafeInteger(coverage.coveredChangedLines) || !Number.isSafeInteger(coverage.totalChangedLines)
+            || coverage.totalChangedLines <= 0 || coverage.coveredChangedLines < 0
+            || coverage.coveredChangedLines > coverage.totalChangedLines) {
+            return stop('blocked', 'coverage-evidence', 'Current-head numeric coverage evidence is missing or invalid.');
+        }
+        if (coverage.coveredChangedLines * 100 < coverage.totalChangedLines * policy.coverage.minDiffPercent) {
+            return stop('blocked', 'coverage-low', 'Diff coverage is below the configured threshold.');
+        }
+    }
+    if (!evidence.reviewHistoryComplete)
+        return stop('blocked', 'reviews-unavailable', 'Native review history is incomplete.');
+    const botReviewsForHead = evidence.reviews.filter(review => review.userId === evidence.botUserId && review.commitId === evidence.headSha);
+    if (botReviewsForHead.some(review => review.state === 'DISMISSED')) {
+        return stop('recommend', 'approval-dismissed', 'A maintainer dismissed the bot approval for this revision.');
+    }
+    if (botReviewsForHead.some(review => review.state === 'APPROVED')) {
+        return stop('already-approved', 'existing-approval', 'The bot already approved this exact revision.');
+    }
+    const latestByUser = new Map();
+    for (const review of [...evidence.reviews].sort((left, right) => left.submittedAt.localeCompare(right.submittedAt) || left.id - right.id)) {
+        latestByUser.set(review.userId, review);
+    }
+    if ([...latestByUser.values()].some(review => review.userId !== evidence.botUserId && review.state === 'CHANGES_REQUESTED')) {
+        return stop('blocked', 'changes-requested', 'A human reviewer requested changes.');
+    }
+    if (policy.skipWhenHumanApproved && [...latestByUser.values()].some(review => review.userId !== evidence.botUserId && review.state === 'APPROVED' && review.commitId === evidence.headSha)) {
+        return stop('recommend', 'human-approved', 'A human has already approved this revision.');
+    }
+    if (policy.mode === 'recommend')
+        return stop('recommend', 'recommend-mode', 'Evidence passed; a human reviewer must decide.');
+    return stop('eligible', 'eligible', 'Current-revision evidence and safety rules permit one native approval.');
+}
+function isDocumentationOnlyDiff(paths) {
+    return paths.length > 0 && paths.every(path => /^(?:docs\/|documentation\/)[A-Za-z0-9._/-]+\.(?:md|mdx|txt)$/iu.test(path)
+        || /^(?:README|CHANGELOG|CONTRIBUTING)\.md$/iu.test(path));
+}
+function matchesGlob(path, glob) {
+    const escaped = glob.replace(/[.+^${}()|[\]\\]/gu, '\\$&')
+        .replace(/\*\*/gu, '\u0000')
+        .replace(/\*/gu, '[^/]*')
+        .replace(/\?/gu, '[^/]')
+        .split('\u0000').join('.*');
+    return new RegExp(`^${escaped}$`, 'u').test(path);
+}
+
+
+/***/ }),
+
+/***/ 98820:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.FIXED_APPROVAL_EXCLUSIONS = exports.DISABLED_PULL_REQUEST_APPROVAL_POLICY = exports.DEFAULT_PULL_REQUEST_APPROVAL_POLICY = void 0;
+exports.validatePullRequestApprovalPolicy = validatePullRequestApprovalPolicy;
+exports.parsePullRequestApprovalPolicy = parsePullRequestApprovalPolicy;
+exports.serializePullRequestApprovalPolicy = serializePullRequestApprovalPolicy;
+exports.DEFAULT_PULL_REQUEST_APPROVAL_POLICY = {
+    version: 1,
+    mode: 'recommend',
+    targetRoles: ['development'],
+    branchKinds: ['feature', 'bugfix', 'documentation', 'chore'],
+    requireLinkedIssue: true,
+    additionalExcludedPaths: [],
+    testChecks: [],
+    producerAttested: false,
+    coverage: { mode: 'check', checkName: '' },
+    allowHumanDismissed: false,
+    skipWhenHumanApproved: true,
+};
+exports.DISABLED_PULL_REQUEST_APPROVAL_POLICY = {
+    ...exports.DEFAULT_PULL_REQUEST_APPROVAL_POLICY,
+    mode: 'off',
+};
+/** Additive exclusions. A user-selected glob cannot remove any of these paths. */
+exports.FIXED_APPROVAL_EXCLUSIONS = [
+    '.github/workflows/**',
+    '.github/actions/**',
+    '.copilot/**',
+    'setup/workflows/**',
+    'action.yml',
+    'build/**',
+    'CODEOWNERS',
+    '**/CODEOWNERS',
+    'src/domain/pull_request_approval**',
+    'src/domain/bugbot/**',
+    'src/application/**/pull_request_approval**',
+    'src/application/usecases/steps/commit/bugbot/**',
+    'src/application/policies/bugbot_review_presentation_policy.ts',
+    'src/data/repository/pull_request/**approval**',
+    'src/actions/**approval**',
+    'src/actions/github_action.ts',
+    'src/application/contracts/input_keys.ts',
+    'src/infrastructure/**approval**',
+    'src/application/policies/setup_configuration_**',
+];
+const POLICY_KEYS = new Set([
+    'version', 'mode', 'targetRoles', 'branchKinds', 'requireLinkedIssue',
+    'additionalExcludedPaths', 'testChecks', 'producerAttested', 'coverage', 'allowHumanDismissed',
+    'skipWhenHumanApproved',
+]);
+const PRODUCER_KEYS = new Set(['name', 'sourceAppId', 'workflowName']);
+const SAFE_NAME = /^[^\r\n${}<>|]{1,100}$/u;
+const SAFE_GLOB = /^(?![!/]|.*(?:^|\/)\.\.(?:\/|$))[A-Za-z0-9._*?/-]{1,120}$/u;
+function validatePullRequestApprovalPolicy(value, allowIncomplete = false) {
+    const errors = [];
+    if (!isRecord(value))
+        return ['PR approval policy must be an object.'];
+    unknownKeys(value, POLICY_KEYS, 'policy', errors);
+    if (value.version !== 1)
+        errors.push('PR approval policy version must be 1.');
+    if (!['off', 'recommend', 'guarded'].includes(String(value.mode)))
+        errors.push('PR approval mode must be off, recommend, or guarded.');
+    enumArray(value.targetRoles, ['development', 'main'], 'targetRoles', 2, errors);
+    enumArray(value.branchKinds, ['feature', 'bugfix', 'documentation', 'chore'], 'branchKinds', 4, errors);
+    for (const key of ['requireLinkedIssue', 'allowHumanDismissed', 'skipWhenHumanApproved']) {
+        if (typeof value[key] !== 'boolean')
+            errors.push(`${key} must be boolean.`);
+    }
+    if (!Array.isArray(value.additionalExcludedPaths) || value.additionalExcludedPaths.length > 32
+        || value.additionalExcludedPaths.some(path => typeof path !== 'string' || !SAFE_GLOB.test(path))
+        || new Set(value.additionalExcludedPaths).size !== value.additionalExcludedPaths.length) {
+        errors.push('additionalExcludedPaths must contain at most 32 unique safe rooted globs.');
+    }
+    if (!Array.isArray(value.testChecks) || value.testChecks.length > 8 || (value.mode !== 'off' && value.testChecks.length === 0 && !allowIncomplete)) {
+        errors.push('guarded/recommend mode requires 1–8 exact test checks.');
+    }
+    else {
+        const identities = new Set();
+        for (const item of value.testChecks) {
+            if (!isRecord(item)) {
+                errors.push('Each test check must be an object.');
+                continue;
+            }
+            unknownKeys(item, PRODUCER_KEYS, 'test check', errors);
+            if (!safeName(item.name) || !safeName(item.workflowName) || !Number.isSafeInteger(item.sourceAppId) || Number(item.sourceAppId) <= 0) {
+                errors.push('Each test check needs a safe exact name, workflow name, and positive source App ID.');
+            }
+            const identity = `${item.name}:${item.sourceAppId}:${item.workflowName}`;
+            if (identities.has(identity))
+                errors.push('Test checks cannot contain duplicate producer identities.');
+            identities.add(identity);
+        }
+    }
+    if (typeof value.producerAttested !== 'boolean')
+        errors.push('producerAttested must be boolean.');
+    if (value.mode === 'guarded' && value.producerAttested !== true && !allowIncomplete) {
+        errors.push('Guarded approval requires explicit exact-producer and coverage-enforcement attestation.');
+    }
+    const coverage = value.coverage;
+    if (!isRecord(coverage) || !['check', 'numeric'].includes(String(coverage.mode))) {
+        errors.push('Coverage mode must be check or numeric.');
+    }
+    else {
+        unknownKeys(coverage, new Set(coverage.mode === 'numeric'
+            ? ['mode', 'checkName', 'minDiffPercent', 'artifactWorkflowName', 'reporterAttested']
+            : ['mode', 'checkName']), 'coverage', errors);
+        if (!safeName(coverage.checkName) && !(coverage.checkName === '' && (value.mode === 'off' || allowIncomplete))) {
+            errors.push('Coverage checkName must identify one exact safe check.');
+        }
+        if (value.mode !== 'off' && !(allowIncomplete && coverage.checkName === '') && Array.isArray(value.testChecks)
+            && !value.testChecks.some(item => isRecord(item) && item.name === coverage.checkName)) {
+            errors.push('Coverage checkName must match a configured trusted test check.');
+        }
+        if (coverage.mode === 'numeric' && (!Number.isSafeInteger(coverage.minDiffPercent)
+            || Number(coverage.minDiffPercent) < 0 || Number(coverage.minDiffPercent) > 100
+            || !safeName(coverage.artifactWorkflowName))) {
+            errors.push('Numeric coverage needs minDiffPercent 0–100 and an exact artifact workflow name.');
+        }
+        if (coverage.mode === 'numeric' && Array.isArray(value.testChecks)
+            && !value.testChecks.some(item => isRecord(item) && item.workflowName === coverage.artifactWorkflowName)) {
+            errors.push('Numeric artifact workflow must match a configured trusted producer.');
+        }
+        if (coverage.mode === 'numeric' && typeof coverage.reporterAttested !== 'boolean') {
+            errors.push('Numeric coverage reporterAttested must be boolean.');
+        }
+        if (coverage.mode === 'numeric' && value.mode === 'guarded'
+            && coverage.reporterAttested !== true && !allowIncomplete) {
+            errors.push('Guarded numeric coverage requires an installed-reporter attestation.');
+        }
+    }
+    return errors;
+}
+function parsePullRequestApprovalPolicy(raw) {
+    if (raw && raw.length > 16384)
+        throw new Error('PR approval policy exceeds 16 KiB.');
+    if (!raw?.trim())
+        return exports.DISABLED_PULL_REQUEST_APPROVAL_POLICY;
+    let value;
+    try {
+        value = JSON.parse(raw);
+    }
+    catch {
+        throw new Error('PR approval policy is not valid JSON.');
+    }
+    const errors = validatePullRequestApprovalPolicy(value);
+    if (errors.length > 0)
+        throw new Error(errors.join(' '));
+    return value;
+}
+function serializePullRequestApprovalPolicy(policy) {
+    const errors = validatePullRequestApprovalPolicy(policy);
+    if (errors.length > 0)
+        throw new Error(errors.join(' '));
+    return JSON.stringify(policy);
+}
+function safeName(value) {
+    return typeof value === 'string' && SAFE_NAME.test(value) && value.trim() === value;
+}
+function isRecord(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+function unknownKeys(value, allowed, label, errors) {
+    const unknown = Object.keys(value).filter(key => !allowed.has(key));
+    if (unknown.length > 0)
+        errors.push(`Unknown ${label} field(s): ${unknown.join(', ')}.`);
+}
+function enumArray(value, allowed, label, max, errors) {
+    if (!Array.isArray(value) || value.length === 0 || value.length > max
+        || value.some(item => typeof item !== 'string' || !allowed.includes(item))
+        || new Set(value).size !== value.length)
+        errors.push(`${label} must be a nonempty unique supported selection.`);
+}
+
+
+/***/ }),
+
 /***/ 45315:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -75871,6 +77154,28 @@ function normalizeOrigin(origin) {
 
 /***/ }),
 
+/***/ 9512:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.renderApprovalObserverWorkflow = renderApprovalObserverWorkflow;
+const WORKFLOW_PLACEHOLDER = '__PR_APPROVAL_WORKFLOW_NAMES__';
+/** Only exact, validated workflow names enter the event filter. */
+function renderApprovalObserverWorkflow(template, policy) {
+    if (!template.includes(WORKFLOW_PLACEHOLDER))
+        throw new Error('Approval observer template is missing its workflow filter.');
+    const names = [...new Set(['Copilot - Pull Request', ...policy.testChecks.map(check => check.workflowName)])];
+    if (names.some(name => !name || name.length > 100 || /[\r\n${}<>]/u.test(name))) {
+        throw new Error('Approval producer workflow names must be exact safe single-line names.');
+    }
+    return template.replace(WORKFLOW_PLACEHOLDER, JSON.stringify(names));
+}
+
+
+/***/ }),
+
 /***/ 24596:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -75883,6 +77188,7 @@ const SETUP_WORKFLOWS = [
     { file: 'copilot_issue.yml', feature: 'issues' },
     { file: 'copilot_pull_request.yml', feature: 'pullRequests' },
     { file: 'copilot_pull_request_review_state.yml', feature: 'pullRequests' },
+    { file: 'copilot_pull_request_approval.yml', feature: 'pullRequests' },
     { file: 'copilot_pull_request_merge_queue.yml', feature: 'pullRequests' },
     { file: 'copilot_commit.yml', feature: 'commits' },
     { file: 'copilot_branch_sync.yml', feature: 'commits' },
@@ -79060,8 +80366,8 @@ class SetupDoctorWorkspaceQueryAdapter {
     isRepositoryRoot() {
         return (0, cli_context_1.isGitRepositoryRoot)(process.cwd());
     }
-    compareWorkflows(features) {
-        return (0, setup_files_1.compareSetupWorkflows)(process.cwd(), features);
+    compareWorkflows(features, configuration) {
+        return (0, setup_files_1.compareSetupWorkflows)(process.cwd(), features, undefined, configuration);
     }
     inspectAgentGuidance(configuration) {
         return (0, repository_agent_guidance_1.inspectRepositoryAgentGuidance)(process.cwd(), configuration);
@@ -79083,8 +80389,8 @@ class SetupReconcileWorkspaceAdapter {
     isRepositoryRoot() {
         return this.query.isRepositoryRoot();
     }
-    compareWorkflows(features) {
-        return this.query.compareWorkflows(features);
+    compareWorkflows(features, configuration) {
+        return this.query.compareWorkflows(features, configuration);
     }
     inspectAgentGuidance(configuration) {
         return this.query.inspectAgentGuidance(configuration);
@@ -81024,6 +82330,7 @@ const setup_workflow_catalog_1 = __nccwpck_require__(24596);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 const repository_agent_guidance_1 = __nccwpck_require__(38445);
+const setup_approval_workflow_1 = __nccwpck_require__(9512);
 /**
  * Ensure .github, .github/workflows and .github/ISSUE_TEMPLATE exist; create them if missing.
  * @param cwd - Directory (repo root)
@@ -81070,6 +82377,7 @@ function copySetupFiles(cwd, setupDirOverride, features, options = {}) {
         ? retireDeselectedSetupAssets(cwd, setupDir, options.setupConfiguration)
         : { copied: 0, skipped: 0 };
     const workflows = (0, setup_file_copy_1.copySetupDirectory)(path.join(setupDir, 'workflows'), path.join(cwd, '.github', 'workflows'), (fileName) => (fileName.endsWith('.yml') || fileName.endsWith('.yaml'))
+        && fileName !== 'copilot_pull_request_approval.yml'
         && (0, setup_workflow_catalog_1.isSetupWorkflowEnabled)(fileName, effectiveFeatures)
         && (!options.updateExistingWorkflows
             || approvedWorkflowFiles.has(fileName)
@@ -81077,6 +82385,9 @@ function copySetupFiles(cwd, setupDirOverride, features, options = {}) {
         overwrite: options.updateExistingWorkflows,
         backupDirectory,
     });
+    const approvalWorkflow = options.setupConfiguration?.pullRequestApproval.mode !== 'off' && options.setupConfiguration
+        ? copyApprovalObserverWorkflow(cwd, setupDir, options.setupConfiguration, options.updateExistingWorkflows === true, approvedWorkflowFiles, backupDirectory)
+        : { copied: 0, skipped: 0 };
     const issueTemplates = options.setupConfiguration
         ? copySelectedIssueForms(cwd, setupDir, options.setupConfiguration)
         : (0, setup_file_copy_1.copySetupDirectory)(path.join(setupDir, 'ISSUE_TEMPLATE'), path.join(cwd, '.github', 'ISSUE_TEMPLATE'), (fileName) => features?.issueTemplates !== false
@@ -81090,10 +82401,31 @@ function copySetupFiles(cwd, setupDirOverride, features, options = {}) {
     const guidance = options.setupConfiguration
         ? (0, repository_agent_guidance_1.reconcileRepositoryAgentGuidance)(cwd, options.setupConfiguration)
         : { copied: 0, skipped: 0 };
-    return [retired, workflows, issueTemplates, pullRequestTemplate, guidance].reduce((total, current) => ({
+    return [retired, workflows, approvalWorkflow, issueTemplates, pullRequestTemplate, guidance].reduce((total, current) => ({
         copied: total.copied + current.copied,
         skipped: total.skipped + current.skipped,
     }), { copied: 0, skipped: 0 });
+}
+function copyApprovalObserverWorkflow(cwd, setupDir, configuration, updateExisting, approved, backupDirectory) {
+    const file = 'copilot_pull_request_approval.yml';
+    const template = fs.readFileSync(path.join(setupDir, 'workflows', file), 'utf8');
+    const content = (0, setup_approval_workflow_1.renderApprovalObserverWorkflow)(template, configuration.pullRequestApproval);
+    const destination = path.join(cwd, '.github', 'workflows', file);
+    if (isLocalSourceApprovalObserver(cwd, destination))
+        return { copied: 0, skipped: 1 };
+    if (fs.existsSync(destination)) {
+        if (fs.readFileSync(destination, 'utf8') === content)
+            return { copied: 0, skipped: 1 };
+        if (!updateExisting || !approved.has(file))
+            return { copied: 0, skipped: 1 };
+        if (!backupDirectory)
+            throw new Error('Changed approval observer needs a backup directory.');
+        const backup = path.join(backupDirectory, '.github', 'workflows', file);
+        fs.mkdirSync(path.dirname(backup), { recursive: true });
+        fs.copyFileSync(destination, backup);
+    }
+    atomicWriteSetupAsset(destination, content);
+    return { copied: 1, skipped: 0 };
 }
 function copySelectedIssueForms(cwd, setupDir, configuration) {
     if (configuration.features.issueTemplates === false || configuration.features.issues === false) {
@@ -81193,22 +82525,36 @@ function setupBackupDestination(cwd, relativePath, operation) {
     fs.mkdirSync(path.dirname(destination), { recursive: true });
     return destination;
 }
-function compareSetupWorkflows(cwd, features, setupDirOverride) {
+function compareSetupWorkflows(cwd, features, setupDirOverride, configuration) {
     const setupDir = setupDirOverride ?? path.join(__dirname, '..', '..', 'setup');
     const sourceDirectory = path.join(setupDir, 'workflows');
     if (!fs.existsSync(sourceDirectory))
         return [];
     return fs.readdirSync(sourceDirectory)
-        .filter(file => (file.endsWith('.yml') || file.endsWith('.yaml')) && (0, setup_workflow_catalog_1.isSetupWorkflowEnabled)(file, features))
+        .filter(file => (file.endsWith('.yml') || file.endsWith('.yaml')) && (0, setup_workflow_catalog_1.isSetupWorkflowEnabled)(file, features)
+        && (file !== 'copilot_pull_request_approval.yml' || (configuration && configuration.pullRequestApproval.mode !== 'off')))
         .filter(file => fs.statSync(path.join(sourceDirectory, file)).isFile())
         .map(file => {
         const source = path.join(sourceDirectory, file);
         const destination = path.join(cwd, '.github', 'workflows', file);
         if (!fs.existsSync(destination))
             return { file, destination: `.github/workflows/${file}`, status: 'missing' };
-        const equal = fs.readFileSync(source, 'utf8') === fs.readFileSync(destination, 'utf8');
+        const expected = file === 'copilot_pull_request_approval.yml' && configuration
+            ? (0, setup_approval_workflow_1.renderApprovalObserverWorkflow)(fs.readFileSync(source, 'utf8'), configuration.pullRequestApproval)
+            : fs.readFileSync(source, 'utf8');
+        const equal = isLocalSourceApprovalObserver(cwd, destination)
+            || expected === fs.readFileSync(destination, 'utf8');
         return { file, destination: `.github/workflows/${file}`, status: equal ? 'unchanged' : 'changed' };
     });
+}
+/** This repository tests the unreleased Action from a reviewed default-branch workflow. */
+function isLocalSourceApprovalObserver(cwd, destination) {
+    const packageRoot = path.resolve(__dirname, '..', '..');
+    if (path.resolve(cwd) !== packageRoot || !fs.existsSync(destination))
+        return false;
+    const sourceObserver = path.join(packageRoot, 'setup', 'source-workflows', 'copilot_pull_request_approval.yml');
+    return fs.existsSync(sourceObserver)
+        && fs.readFileSync(destination, 'utf8') === fs.readFileSync(sourceObserver, 'utf8');
 }
 const ENV_TOKEN_KEY = 'PERSONAL_ACCESS_TOKEN';
 const ENV_PLACEHOLDER_VALUE = 'github_pat_11..';

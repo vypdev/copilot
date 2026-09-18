@@ -35,6 +35,7 @@
     "build/api/src/",
     "setup/ISSUE_TEMPLATE/",
     "setup/workflows/",
+    "setup/source-workflows/",
     "setup/pull_request_template.md",
     "scripts/install-git-hooks.cjs",
     "README.md",

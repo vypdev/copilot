@@ -73,6 +73,15 @@ describe('setup_files', () => {
     ]);
   });
 
+  it('recognizes the source repository observer as a managed trusted variant', () => {
+    const sourceRoot = path.resolve(__dirname, '../../..');
+    const configuration = createDefaultSetupConfiguration();
+    configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'recommend' };
+    const observer = compareSetupWorkflows(sourceRoot, configuration.features, undefined, configuration)
+      .find(item => item.file === 'copilot_pull_request_approval.yml');
+    expect(observer?.status).toBe('unchanged');
+  });
+
   it('copies only selected Issue Forms and generates agent guidance', () => {
     const setupDir = path.resolve(__dirname, '../../../setup');
     const configuration = createDefaultSetupConfiguration();

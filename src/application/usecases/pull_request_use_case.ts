@@ -41,6 +41,14 @@ export class PullRequestUseCase implements ParamUseCase<Execution, Result[]> {
       },
     });
   }
+
+  /** Used only after a narrowly admitted same-repository PAT-authored PR event. */
+  async reviewOnly(param: Execution): Promise<Result[]> {
+    if (param.eventName !== 'pull_request'
+      || !['opened', 'reopened', 'synchronize'].includes(param.pullRequest.action)
+      || !this.reviewPotentialProblemsUseCase) return [];
+    return this.reviewPotentialProblemsUseCase.invoke(projectBugbotReviewOperationContext(param));
+  }
 }
 
 function projectPullRequestWorkflowRouteContext(param: Execution): PullRequestWorkflowRouteContext {

@@ -7,9 +7,23 @@ import { validateDeploymentConfiguration } from '../../domain/deployment_configu
 import { canonicalizeLocaleTag } from '../../domain/locale';
 import { ISSUE_WORKFLOW_KINDS } from '../../domain/issue_workflow_profile';
 import { effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
+import { validatePullRequestApprovalPolicy } from '../../domain/pull_request_approval_policy';
 
-export function validateSetupConfiguration(configuration: SetupConfiguration): string[] {
+export function validateSetupConfiguration(configuration: SetupConfiguration, options: { allowIncompleteApproval?: boolean } = {}): string[] {
     const errors: string[] = [];
+    errors.push(...validatePullRequestApprovalPolicy(configuration.pullRequestApproval, options.allowIncompleteApproval === true));
+    if (configuration.actionInputs['pr-approval-policy'] !== undefined) {
+        errors.push('pr-approval-policy cannot be overridden through actionInputs.');
+    }
+    if (configuration.pullRequestApproval.mode !== 'off') {
+        if (!configuration.manageRepositoryVariables && !options.allowIncompleteApproval) {
+            errors.push('PR approval requires setup to manage PR_APPROVAL_POLICY; --skip-variables would leave the runtime policy unverified.');
+        }
+        if (configuration.features.pullRequests === false) errors.push('PR approval requires pull-request automation.');
+        if (configuration.ai.bugbotDryRun || !configuration.ai.bugbotTelemetry || configuration.ai.bugbotSeverity !== 'info') {
+            errors.push('PR approval requires Bugbot telemetry, non-dry-run analysis, and info severity.');
+        }
+    }
     if (typeof configuration.repository.issueManagedBranches !== 'boolean'
         || typeof configuration.repository.preBranchSdd !== 'boolean') {
         errors.push('issue-managed-branches and pre-branch-sdd must be boolean values.');

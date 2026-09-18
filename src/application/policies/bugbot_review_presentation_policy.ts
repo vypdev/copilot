@@ -30,6 +30,12 @@ export function buildBugbotStatusMarker(projection: BugbotReviewProjection): str
   return `<!-- ${BUGBOT_STATUS_MARKER_PREFIX} schema="1" pr="${projection.pullRequestNumber}" verified_head="${projection.verifiedHeadSha}" digest="${projection.digest}" -->`;
 }
 
+/** Content-free machine evidence; absent on older cards, which cannot authorize an approval. */
+export function buildBugbotApprovalEvidenceMarker(projection: BugbotReviewProjection): string {
+  const counts = projection.counts;
+  return `<!-- copilot-bugbot-approval-evidence schema="1" head="${projection.verifiedHeadSha}" digest="${projection.digest}" outcome="${projection.outcome}" coverage="${projection.coverage.status}" open="${counts.open}" reopened="${counts.reopened}" dismissed="${counts.dismissed}" verification="${counts['verification-required']}" unknown="${counts.unknown}" -->`;
+}
+
 export function isBugbotStatusComment(body: string | null): boolean {
   if (!body) return false;
   return new RegExp(
@@ -104,6 +110,7 @@ export function renderBugbotStatusCard(
       digest: projection.digest,
     }),
     buildBugbotStatusMarker(projection),
+    buildBugbotApprovalEvidenceMarker(projection),
     `## ${heading}`,
     '',
     `> **${catalog.message('bugbot.status.currentStatus')}:** ${status}`,

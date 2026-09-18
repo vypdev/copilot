@@ -36,8 +36,15 @@ import {
     type ApplicationErrorMessageReader,
 } from '../application/policies/application_error_message_catalog';
 import { prepareGithubAgentRuntime } from './github_action_runtime';
+import { runPullRequestApprovalAction } from './pull_request_approval_action';
+import { isBotPullRequestAnalysisEvent } from '../application/policies/bot_pull_request_analysis_policy';
+import { createPullRequestUseCaseCompositionRoot } from '../infrastructure/composition/pull_request_use_case_composition_root';
 
 export async function runGitHubAction(): Promise<void> {
+    if (isEnabledInput(getGithubActionInput('pr-approval-observer'))) {
+        await runPullRequestApprovalAction(getGithubActionInput(INPUT_KEYS.TOKEN, { required: true }));
+        return;
+    }
     const eventInputs = buildGithubActionEventInputs({
         payload: github.context.payload as Record<string, unknown>,
         eventName: github.context.eventName,
@@ -58,7 +65,15 @@ export async function runGitHubAction(): Promise<void> {
         isSingleAction: singleAction.enabledSingleAction,
         validSingleAction: singleAction.validSingleAction,
     });
-    if (admission.decision === 'discard') {
+    const botAnalysisOnly = admission.decision === 'discard' && isBotPullRequestAnalysisEvent({
+        eventName: eventInputs.eventName,
+        action: eventInputs.action,
+        actor: eventInputs.actor,
+        tokenUser: admission.tokenUser,
+        repositoryId: github.context.payload.repository?.id,
+        pullRequest: eventInputs.pull_request,
+    });
+    if (admission.decision === 'discard' && !botAnalysisOnly) {
         logInfo('GitHub Action: event actor matches the PAT user. Skipping normal pipeline before queue and mutation work.');
         return;
     }
@@ -95,6 +110,22 @@ export async function runGitHubAction(): Promise<void> {
         activeAgentTasks: requestedActiveAgentTasks,
         localeInputs,
     });
+    if (botAnalysisOnly) {
+        // Bypass the normal lifecycle/issue route entirely. The only permitted
+        // side effect is Bugbot's PR analysis and its own bounded presentation.
+        execution.issueNumber = execution.pullRequest.number;
+        prepareGithubAgentRuntime(aiInputs.requestedAgentTasks, ['reviewer']);
+        const results = await createPullRequestUseCaseCompositionRoot({
+            owner: execution.owner,
+            repository: execution.repo,
+            token,
+        }).reviewOnly(execution);
+        if (results.some(result => !result.success)) {
+            throw new Error('Bot-authored pull-request analysis did not complete.');
+        }
+        await core.summary.addRaw('Copilot analyzed this bot-authored pull request. Native bot approval is never permitted.').write();
+        return;
+    }
     logDebugInfo(
         `Execution built. Event will be resolved in mainRun. Single action: ${execution.singleAction.currentSingleAction ?? 'none'}, ` +
         `AI PR description mode: ${execution.ai.getPullRequestDescriptionMode()}, bugbot min severity: ${execution.ai.getBugbotMinSeverity()}.`,

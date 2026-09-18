@@ -5,6 +5,8 @@ description: Common issues and solutions when using Copilot
 
 # Troubleshooting
 
+If guarded PR approval is missing, run `copilot doctor` and inspect the ordered `approval.*` checks. A missing `PR_APPROVAL_POLICY` is safely off; a copied observer that has not reached the default branch cannot receive `workflow_run` wakeups. Correct the named CI producer, Bugbot completeness, runtime PAT, or stale-dismissal rule, then manually dispatch **Copilot - Pull Request Approval** with the PR number. An ambiguous review POST is read-first on retry; never blindly submit a second approval. See [guarded approval](/pull-requests/guarded-approval).
+
 This guide helps you resolve common issues you might encounter while using Copilot. Expand the section that matches your problem.
 
 <AccordionGroup>

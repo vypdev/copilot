@@ -8,6 +8,7 @@ export const SETUP_QUESTIONNAIRE_STATE_ORDER = [
   'repository',
   'deployment',
   'bugbot',
+  'pull-request-approval',
   'projects',
   'provisioning',
   'storage',

@@ -9,6 +9,7 @@ const SETUP_WORKFLOWS: readonly SetupWorkflowDefinition[] = [
     { file: 'copilot_issue.yml', feature: 'issues' },
     { file: 'copilot_pull_request.yml', feature: 'pullRequests' },
     { file: 'copilot_pull_request_review_state.yml', feature: 'pullRequests' },
+    { file: 'copilot_pull_request_approval.yml', feature: 'pullRequests' },
     { file: 'copilot_pull_request_merge_queue.yml', feature: 'pullRequests' },
     { file: 'copilot_commit.yml', feature: 'commits' },
     { file: 'copilot_branch_sync.yml', feature: 'commits' },

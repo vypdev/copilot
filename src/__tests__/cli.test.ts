@@ -446,6 +446,8 @@ describe('CLI', () => {
         'ghp_setup_test_token_xxxxxxxxxxxxxxxxxxxx',
         '--skip-secrets',
         '--non-interactive',
+        '--pr-approval-mode',
+        'off',
         '--yes',
       ]);
 
@@ -457,7 +459,7 @@ describe('CLI', () => {
     });
 
     it('proceeds when --token is provided even if env/.env has no token', async () => {
-      await program.parseAsync(['node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12', '--skip-secrets', '--non-interactive', '--yes']);
+      await program.parseAsync(['node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12', '--skip-secrets', '--non-interactive', '--pr-approval-mode', 'off', '--yes']);
 
       expect(exitSpy).not.toHaveBeenCalled();
       expect(runLocalAction).toHaveBeenCalledTimes(1);

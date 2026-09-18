@@ -11,6 +11,7 @@ import { SetupMergeQueueReadinessUseCase } from '../../application/usecases/setu
 import { ResolveMessageCatalogUseCase } from '../../application/usecases/localization/resolve_message_catalog_use_case';
 import { createLanguageQueryPort } from './agent_capability_composition_root';
 import type { MessageCatalogResolutionPort } from '../../application/ports/message_catalog_ports';
+import { GithubSetupApprovalReadinessAdapter } from '../setup_approval_readiness_adapter';
 
 export function createSetupMergeQueueReadinessUseCase(
     catalogResolver: MessageCatalogResolutionPort = new ResolveMessageCatalogUseCase(createLanguageQueryPort()),
@@ -30,6 +31,7 @@ export function createSetupDoctorUseCase(): SetupDoctorUseCase {
         remoteConfiguration: repositoryConfiguration,
         remoteHealth: new SetupRemoteCredentialHealthQueryAdapter(new OctokitCredentialHealthClientAdapter()),
         mergeQueueReadiness: createSetupMergeQueueReadinessUseCase(catalogResolver),
+        approvalReadiness: new GithubSetupApprovalReadinessAdapter(),
         catalogResolver,
     });
 }

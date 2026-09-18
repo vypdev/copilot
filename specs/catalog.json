@@ -1399,6 +1399,85 @@
         "docs/security-operations/security/prompt-injection.mdx",
         "docs/development/architecture.mdx"
       ]
+    },
+    {
+      "id": "guarded-pull-request-approval",
+      "title": "Guarded pull-request approval and setup readiness",
+      "status": "proposed",
+      "scope": "Specify and locally implement revision-bound, evidence-gated native bot approvals for eligible human pull requests, with safe setup defaults, read-only doctor checks, and explainable recovery",
+      "owner": "Copilot maintainers",
+      "lastVerified": "2026-09-17",
+      "specs": [
+        "specs/guarded-pull-request-approval.md",
+        "specs/guarded-pull-request-approval-setup-and-doctor.md"
+      ],
+      "workflows": [
+        ".github/workflows/ci_check.yml",
+        ".github/workflows/copilot_pull_request_approval.yml",
+        "setup/workflows/copilot_pull_request.yml",
+        "setup/workflows/copilot_pull_request_review_state.yml",
+        "setup/workflows/copilot_pull_request_approval.yml"
+      ],
+      "entrypoints": [
+        "src/actions/github_action.ts",
+        "src/actions/pull_request_approval_action.ts",
+        "src/cli/commands/setup.ts",
+        "src/cli/commands/doctor.ts"
+      ],
+      "code": [
+        "src/domain/setup.ts",
+        "src/domain/pull_request_approval.ts",
+        "src/domain/pull_request_approval_policy.ts",
+        "src/domain/setup_approval_workflow.ts",
+        "src/domain/setup_workflow_catalog.ts",
+        "src/application/policies/bot_pull_request_analysis_policy.ts",
+        "src/application/policies/bugbot_review_presentation_policy.ts",
+        "src/application/policies/pull_request_approval_presentation_policy.ts",
+        "src/application/policies/approval_doctor_message_catalog.ts",
+        "src/application/policies/setup_approval_doctor_policy.ts",
+        "src/application/policies/setup_configuration_defaults.ts",
+        "src/application/policies/setup_configuration_plan.ts",
+        "src/application/policies/setup_configuration_validation.ts",
+        "src/application/policies/setup_questionnaire_policy.ts",
+        "src/application/usecases/pull_request_approval/observe_pull_request_approval_use_case.ts",
+        "src/application/usecases/setup/doctor_use_case.ts",
+        "src/application/usecases/setup/setup_wizard_use_case.ts",
+        "src/application/usecases/steps/commit/bugbot/synchronize_bugbot_review_presentation_use_case.ts",
+        "src/data/repository/pull_request/pull_request_review_comment_command_repository.ts",
+        "src/data/repository/pull_request/pull_request_approval_repository.ts",
+        "src/data/repository/pull_request/approval_coverage_artifact.ts",
+        "src/infrastructure/setup_approval_readiness_adapter.ts",
+        "src/utils/setup_files.ts"
+      ],
+      "tests": [
+        "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
+        "src/application/policies/__tests__/bot_pull_request_analysis_policy.test.ts",
+        "src/application/policies/__tests__/pull_request_approval_presentation_policy.test.ts",
+        "src/application/policies/__tests__/setup_approval_doctor_policy.test.ts",
+        "src/application/usecases/pull_request_approval/__tests__/observe_pull_request_approval_use_case.test.ts",
+        "src/application/usecases/setup/__tests__/doctor_use_case.test.ts",
+        "src/application/usecases/setup/__tests__/setup_wizard_use_case.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/synchronize_bugbot_review_presentation_use_case.test.ts",
+        "src/domain/__tests__/pull_request_approval.test.ts",
+        "src/domain/__tests__/setup_approval_workflow.test.ts",
+        "src/actions/__tests__/pull_request_approval_action.test.ts",
+        "src/data/repository/pull_request/__tests__/approval_coverage_artifact.test.ts",
+        "src/data/repository/pull_request/__tests__/pull_request_approval_repository.test.ts",
+        "src/data/repository/pull_request/__tests__/pull_request_review_comment_command_repository.test.ts",
+        "src/infrastructure/__tests__/setup_approval_readiness_adapter.test.ts",
+        "src/utils/__tests__/setup_files.test.ts",
+        "src/tooling/__tests__/validate_workflow_contract.test.ts"
+      ],
+      "documentation": [
+        "docs/authentication.mdx",
+        "docs/configuration.mdx",
+        "docs/configuration-checklist.mdx",
+        "docs/pull-requests/capabilities.mdx",
+        "docs/pull-requests/guarded-approval.mdx",
+        "docs/pull-requests/workflow-setup.mdx",
+        "docs/bugbot/configuration.mdx",
+        "docs/development/architecture.mdx"
+      ]
     }
   ]
 }

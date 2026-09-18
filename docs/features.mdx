@@ -55,6 +55,7 @@ or `closed`):
 | **AI PR description** | When `ai-pull-request-description-mode` is `replace`, `append`, or `preserve`, the selected agent CLI writes a concise outcome and material changes from the optional issue context and branch diff. Validation appears only when supported by evidence; `disabled` turns the feature off. See [Pull Requests → AI-generated PR description](/pull-requests/ai-description). |
 | **Conversation UX** | Publishes only purpose-specific replies and durable status cards. Equivalent retries are silent; exact bot-owned duplicates caused by concurrent runs are removed, with a short localized pointer retained only when GitHub forbids deletion. It does not add a generic action recap or decorative image. |
 | **Bugbot review** | Reviews the full PR on open/reopen and the new commit range on synchronize; publishes historical review snapshots and stable line findings, then reconciles native threads, review status blocks, one current PR card, and the Check from a provider-verified projection. |
+| **Guarded PR approval** | An optional separate observer may submit one native bot approval for a verified human PR revision after exact CI, coverage, Bugbot, native-review, and stale-branch-rule checks. Missing policy stays off; it never merges or substitutes human/code-owner review. See [guarded approval](/pull-requests/guarded-approval). |
 
 ### 3. Push events (`on: push`)
 

@@ -6,6 +6,8 @@ description: Required checks before enabling Copilot automation.
 
 ## Action contract
 
+If guarded PR approval is selected, confirm the exact test/coverage producer tuple, complete info-level Bugbot evidence, a separate workflow PAT bot, effective stale-dismissal rules, and installation of the observer on the default branch. `Copilot / Approval` must never be a required prerequisite of itself. See [guarded approval](/pull-requests/guarded-approval) and rerun `copilot doctor` after installing.
+
 - [ ] `token` is supplied as a repository or organization secret.
 - [ ] `agent-provider`, `agent-model-provider`, and `agent-model` are explicit.
 - [ ] `agent-effort` is set when the selected model/provider supports a specific effort or variant.
