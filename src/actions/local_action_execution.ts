@@ -4,7 +4,7 @@ import { Release } from '../data/model/release';
 import { SingleAction } from '../data/model/single_action';
 import { Welcome } from '../data/model/welcome';
 import { buildExecution } from './execution_builder';
-import { buildEmoji, buildImages, buildIssue, buildIssueTypes, buildLabels, buildLocale, buildProjects, buildPullRequest, buildTokens, buildWorkflows } from './configuration_builders';
+import { buildEmoji, buildIssue, buildIssueTypes, buildLabels, buildLocale, buildProjects, buildPullRequest, buildTokens, buildWorkflows } from './configuration_builders';
 import { buildBranches } from './branches_builder';
 import { buildSizeThresholds } from './size_threshold_builder';
 import type { LocalActionConfiguration } from './local_action_configuration';
@@ -17,11 +17,11 @@ export function buildLocalActionExecution(
         debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog,
         singleActionMessage, singleActionCommentId, singleActionCommentMode, singleActionOperationId,
         inactivityThresholdHours,
-        commitPrefixBuilder, branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount,
+        commitPrefixBuilder, issueManagedBranches, preBranchSdd, reopenIssueOnPush, issueDesiredAssigneesCount,
         pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount,
-        titleEmoji, branchManagementEmoji, imageConfiguration, token, agentModel,
+        titleEmoji, branchManagementEmoji, token, agentModel,
         aiPullRequestDescriptionMode, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity,
-        bugbotCommentLimit, bugbotFixVerifyCommands, bugbotReviewConfiguration, agentTasks, branchManagementLauncherLabel, bugLabel,
+        bugbotCommentLimit, bugbotFixVerifyCommands, bugbotReviewConfiguration, agentTasks, bugLabel,
         bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel,
         deployLabel, deployedLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel,
         priorityHighLabel, priorityMediumLabel, priorityLowLabel, priorityNoneLabel, sizeXxlLabel, sizeXlLabel,
@@ -31,7 +31,7 @@ export function buildLocalActionExecution(
         issueTypeDocumentationColor, issueTypeMaintenance, issueTypeMaintenanceDescription, issueTypeMaintenanceColor,
         issueTypeHotfix, issueTypeHotfixDescription, issueTypeHotfixColor, issueTypeRelease, issueTypeReleaseDescription,
         issueTypeReleaseColor, issueTypeQuestion, issueTypeQuestionDescription, issueTypeQuestionColor, issueTypeHelp,
-        issueTypeHelpDescription, issueTypeHelpColor, issueLocale, pullRequestLocale, sizeXxlThresholdLines,
+        issueTypeHelpDescription, issueTypeHelpColor, repositoryLocale, issueLocale, pullRequestLocale, sizeXxlThresholdLines,
         sizeXxlThresholdFiles, sizeXxlThresholdCommits, sizeXlThresholdLines, sizeXlThresholdFiles,
         sizeXlThresholdCommits, sizeLThresholdLines, sizeLThresholdFiles, sizeLThresholdCommits, sizeMThresholdLines,
         sizeMThresholdFiles, sizeMThresholdCommits, sizeSThresholdLines, sizeSThresholdFiles, sizeSThresholdCommits,
@@ -56,17 +56,10 @@ export function buildLocalActionExecution(
             singleActionOperationId,
         ),
         commitPrefixBuilder,
-        issue: buildIssue(branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount, additionalParams),
+        issue: buildIssue(issueManagedBranches, reopenIssueOnPush, issueDesiredAssigneesCount, additionalParams),
+        preBranchSdd,
         pullRequest: buildPullRequest(pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, additionalParams),
         emoji: buildEmoji(titleEmoji, branchManagementEmoji),
-        images: buildImages({
-            onIssue: imageConfiguration.onIssue,
-            onPullRequest: imageConfiguration.onPullRequest,
-            onCommit: imageConfiguration.onCommit,
-            issue: imageConfiguration.issue,
-            pullRequest: imageConfiguration.pullRequest,
-            commit: imageConfiguration.commit,
-        }),
         tokens: buildTokens(token),
         ai: new Ai(
             '',
@@ -82,7 +75,6 @@ export function buildLocalActionExecution(
             bugbotReviewConfiguration,
         ),
         labels: buildLabels({
-            branching: { launcher: branchManagementLauncherLabel },
             workflow: { bug: bugLabel, bugfix: bugfixLabel, hotfix: hotfixLabel, enhancement: enhancementLabel, feature: featureLabel, release: releaseLabel, question: questionLabel, help: helpLabel, deploy: deployLabel, deployed: deployedLabel, docs: docsLabel, documentation: documentationLabel, chore: choreLabel, maintenance: maintenanceLabel },
             priorities: { high: priorityHighLabel, medium: priorityMediumLabel, low: priorityLowLabel, none: priorityNoneLabel },
             sizes: { xxl: sizeXxlLabel, xl: sizeXlLabel, l: sizeLLabel, m: sizeMLabel, s: sizeSLabel, xs: sizeXsLabel },
@@ -99,7 +91,7 @@ export function buildLocalActionExecution(
             question: { name: issueTypeQuestion, description: issueTypeQuestionDescription, color: issueTypeQuestionColor },
             help: { name: issueTypeHelp, description: issueTypeHelpDescription, color: issueTypeHelpColor },
         }),
-        locale: buildLocale(issueLocale, pullRequestLocale),
+        locale: buildLocale(repositoryLocale, issueLocale, pullRequestLocale),
         sizeThresholds: buildSizeThresholds({
             xxl: { lines: sizeXxlThresholdLines, files: sizeXxlThresholdFiles, commits: sizeXxlThresholdCommits },
             xl: { lines: sizeXlThresholdLines, files: sizeXlThresholdFiles, commits: sizeXlThresholdCommits },

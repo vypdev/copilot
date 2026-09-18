@@ -19,6 +19,7 @@ import type { Result } from '../data/model/result';
 import { runAtApplicationErrorBoundary } from '../application/errors/application_error_context';
 import { INPUT_KEYS } from '../application/contracts/input_keys';
 import { assertLocalSingleActionAllowed } from '../application/policies/local_single_action_policy';
+import { resolvePublicationCatalog } from '../application/policies/publication_message_catalog';
 
 export async function runLocalAction(
     additionalParams: Record<string, unknown>,
@@ -47,7 +48,14 @@ export async function runLocalAction(
             }),
         );
 
-        if (options.render !== false) renderLocalActionResults(results);
+        if (options.render !== false) {
+            const catalog = await resolvePublicationCatalog(
+                execution.locale.repository,
+                execution.ai.getAgentConfiguration('planner'),
+                composition.catalogResolver,
+            );
+            renderLocalActionResults(results, catalog);
+        }
         return results;
     });
 }

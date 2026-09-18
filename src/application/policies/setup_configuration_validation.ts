@@ -4,9 +4,74 @@ import { SUPPORTED_AGENT_PROVIDERS } from './agent_configuration_validation_poli
 import { validateStorageConfiguration } from './setup_configuration_storage_policy';
 import { MAX_INACTIVITY_THRESHOLD_HOURS } from '../../domain/issue_inactivity';
 import { validateDeploymentConfiguration } from '../../domain/deployment_configuration';
+import { canonicalizeLocaleTag } from '../../domain/locale';
+import { ISSUE_WORKFLOW_KINDS } from '../../domain/issue_workflow_profile';
+import { effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
+import { validatePullRequestApprovalPolicy } from '../../domain/pull_request_approval_policy';
 
-export function validateSetupConfiguration(configuration: SetupConfiguration): string[] {
+export function validateSetupConfiguration(configuration: SetupConfiguration, options: { allowIncompleteApproval?: boolean } = {}): string[] {
     const errors: string[] = [];
+    errors.push(...validatePullRequestApprovalPolicy(configuration.pullRequestApproval, options.allowIncompleteApproval === true));
+    if (configuration.actionInputs['pr-approval-policy'] !== undefined) {
+        errors.push('pr-approval-policy cannot be overridden through actionInputs.');
+    }
+    if (configuration.pullRequestApproval.mode !== 'off') {
+        if (!configuration.manageRepositoryVariables && !options.allowIncompleteApproval) {
+            errors.push('PR approval requires setup to manage PR_APPROVAL_POLICY; --skip-variables would leave the runtime policy unverified.');
+        }
+        if (configuration.features.pullRequests === false) errors.push('PR approval requires pull-request automation.');
+        if (configuration.ai.bugbotDryRun || !configuration.ai.bugbotTelemetry || configuration.ai.bugbotSeverity !== 'info') {
+            errors.push('PR approval requires Bugbot telemetry, non-dry-run analysis, and info severity.');
+        }
+    }
+    if (typeof configuration.repository.issueManagedBranches !== 'boolean'
+        || typeof configuration.repository.preBranchSdd !== 'boolean') {
+        errors.push('issue-managed-branches and pre-branch-sdd must be boolean values.');
+    }
+    if (configuration.repository.preBranchSdd && !configuration.repository.issueManagedBranches) {
+        errors.push('pre-branch-sdd requires issue-managed-branches.');
+    }
+    for (const retired of ['branch-management-always', 'branch-management-launcher-label']) {
+        if (retired in configuration.actionInputs) {
+            errors.push(`Action input ${retired} was removed; use issue-managed-branches and the fixed in-progress start label.`);
+        }
+    }
+    const enabledWorkflows = configuration.issueWorkflows?.enabled ?? ISSUE_WORKFLOW_KINDS;
+    if (!configuration.repository.issueManagedBranches
+        && enabledWorkflows.some(kind => kind === 'release' || kind === 'hotfix')) {
+        errors.push('release and hotfix issue workflows require issue-managed-branches.');
+    }
+    const unknownWorkflows = enabledWorkflows.filter(kind => !ISSUE_WORKFLOW_KINDS.includes(kind));
+    if (unknownWorkflows.length > 0) errors.push(`Unknown issue workflow(s): ${unknownWorkflows.join(', ')}.`);
+    if (new Set(enabledWorkflows).size !== enabledWorkflows.length) errors.push('Issue workflow selection cannot contain duplicates.');
+    for (const kind of ['release', 'hotfix'] as const) {
+        if ((configuration.features[kind] !== false) !== enabledWorkflows.includes(kind)) {
+            errors.push(`features.${kind} must match issueWorkflows.enabled; use the issue workflow selector as the source of truth.`);
+        }
+    }
+    if (configuration.features.issues !== false && effectiveIssueWorkflowProfile(configuration).enabled.length === 0) {
+        errors.push('At least one issue workflow must be enabled when issue automation is enabled.');
+    }
+    if (!configuration.repositoryAgentGuidance || !['prompt', 'create-if-missing', 'disabled'].includes(configuration.repositoryAgentGuidance.agentsPointer)) {
+        errors.push('Repository agent guidance pointer must be prompt, create-if-missing, or disabled.');
+    }
+    for (const key of [
+        'bug-label', 'bugfix-label', 'hotfix-label',
+        'enhancement-label', 'feature-label', 'release-label', 'question-label', 'help-label',
+        'deploy-label', 'deployed-label', 'docs-label', 'documentation-label', 'chore-label',
+        'maintenance-label', 'priority-high-label', 'priority-medium-label', 'priority-low-label',
+    ]) {
+        const value = configuration.actionInputs[key];
+        if (value !== undefined && (!value.trim() || value.length > 50 || /[\r\n]/u.test(value))) {
+            errors.push(`Action input ${key} must be a non-empty single-line label of at most 50 characters.`);
+        }
+    }
+    for (const key of ['release-workflow', 'hotfix-workflow']) {
+        const value = configuration.actionInputs[key];
+        if (value !== undefined && !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$/u.test(value)) {
+            errors.push(`Action input ${key} must be a safe workflow file name.`);
+        }
+    }
     const nonEmpty = [
         ['main branch', configuration.repository.mainBranch],
         ['development branch', configuration.repository.developmentBranch],
@@ -31,6 +96,9 @@ export function validateSetupConfiguration(configuration: SetupConfiguration): s
         || configuration.repository.inactivityThresholdHours > MAX_INACTIVITY_THRESHOLD_HOURS) {
         errors.push(`Inactivity threshold must be between 1 and ${MAX_INACTIVITY_THRESHOLD_HOURS} hours.`);
     }
+    validateLocale(errors, 'Repository locale', configuration.repository.repositoryLocale, false);
+    validateLocale(errors, 'Issue locale override', configuration.repository.issueLocale, true);
+    validateLocale(errors, 'Pull-request locale override', configuration.repository.pullRequestLocale, true);
     if (configuration.ai.bugbotCommentLimit < 1 || configuration.ai.bugbotCommentLimit > 100) {
         errors.push('Bugbot comment limit must be between 1 and 100.');
     }
@@ -76,4 +144,13 @@ export function validateSetupConfiguration(configuration: SetupConfiguration): s
         if (/\s/.test(agent.model) || /\s/.test(agent.modelProvider)) errors.push(`Model provider and model for ${task} cannot contain whitespace.`);
     }
     return errors;
+}
+
+function validateLocale(errors: string[], label: string, value: string, optional: boolean): void {
+    if (optional && !value.trim()) return;
+    try {
+        canonicalizeLocaleTag(value);
+    } catch {
+        errors.push(`${label} must be a valid BCP-47 language tag${optional ? ' or empty to inherit' : ''}.`);
+    }
 }

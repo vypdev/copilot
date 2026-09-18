@@ -12,30 +12,36 @@ import {
 } from './setup_configuration_defaults';
 import { usesOrganizationStorage } from './setup_configuration_storage_policy';
 import { buildSetupCredentialRequirements } from './setup_credential_requirement_policy';
+import { resolveLocaleProfile } from '../../domain/locale';
+import { issueWorkflowFormFiles, serializeIssueWorkflowProfile } from '../../domain/issue_workflow_profile';
+import { effectiveIssueWorkflowFeatures, effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
 
 export { buildSetupCredentialRequirements };
 
-const ISSUE_TEMPLATE_FILES = [
-    'config.yml',
-    'feature_request.yml',
-    'bug_report.yml',
-    'doc_update.yml',
-    'chore_task.yml',
-    'help_request.yml',
-    'hotfix.yml',
-    'release.yml',
-];
-
-export function buildSetupPlan(configuration: SetupConfiguration, mergeQueueReadiness: readonly DoctorCheck[] = []): SetupPlan {
-    const workflowFiles = enabledSetupWorkflowFiles(configuration.features);
-    const issueTemplateFiles = configuration.features.issueTemplates === false
+export function buildSetupPlan(
+    configuration: SetupConfiguration,
+    mergeQueueReadiness: readonly DoctorCheck[] = [],
+    approvalReadiness: readonly DoctorCheck[] = [],
+): SetupPlan {
+    const workflowFiles = enabledSetupWorkflowFiles(effectiveIssueWorkflowFeatures(configuration))
+        .filter(file => file !== 'copilot_pull_request_approval.yml' || configuration.pullRequestApproval.mode !== 'off');
+    const issueWorkflowProfile = effectiveIssueWorkflowProfile(configuration);
+    const issueTemplateFiles = configuration.features.issueTemplates === false || configuration.features.issues === false
         ? []
-        : ISSUE_TEMPLATE_FILES.filter(file => configuration.features.release !== false || file !== 'release.yml')
+        : ['config.yml', ...issueWorkflowFormFiles(issueWorkflowProfile)]
+            .filter(file => configuration.features.release !== false || file !== 'release.yml')
             .filter(file => configuration.features.hotfix !== false || file !== 'hotfix.yml');
     const selectedFiles = [
         ...workflowFiles.map(file => `workflows/${file}`),
         ...issueTemplateFiles.map(file => `ISSUE_TEMPLATE/${file}`),
         ...(configuration.features.pullRequestTemplate === false ? [] : ['pull_request_template.md']),
+        ...(configuration.repositoryAgentGuidance?.enabled === false ? [] : [
+            '.copilot/repository-profile.json',
+            '.copilot/AGENT_GUIDE.md',
+            '.agents/skills/copilot-repository-workflow/SKILL.md',
+            '.copilot/setup-manifest.json',
+            ...(configuration.repositoryAgentGuidance.agentsPointer === 'disabled' ? [] : ['AGENTS.md (managed pointer only)']),
+        ]),
     ];
     const credentialRequirements = buildSetupCredentialRequirements(configuration);
     return {
@@ -50,6 +56,7 @@ export function buildSetupPlan(configuration: SetupConfiguration, mergeQueueRead
             .map(requirement => requirement.name),
         credentialRequirements,
         mergeQueueReadiness: [...mergeQueueReadiness],
+        approvalReadiness: [...approvalReadiness],
         warnings: buildSetupWarnings(configuration),
     };
 }
@@ -79,6 +86,11 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
         add(`${prefix}_EXECUTABLE`, agent.executable);
     }
     const repository = configuration.repository;
+    const locale = resolveLocaleProfile(
+        repository.repositoryLocale,
+        repository.issueLocale,
+        repository.pullRequestLocale,
+    );
     add('MAIN_BRANCH', repository.mainBranch);
     add('DEVELOPMENT_BRANCH', repository.developmentBranch);
     add('FEATURE_TREE', repository.featureTree);
@@ -87,15 +99,17 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
     add('RELEASE_TREE', repository.releaseTree);
     add('DOCS_TREE', repository.docsTree);
     add('CHORE_TREE', repository.choreTree);
-    add('BRANCH_MANAGEMENT_ALWAYS', repository.branchManagementAlways);
+    add('ISSUE_MANAGED_BRANCHES', repository.issueManagedBranches);
+    add('PRE_BRANCH_SDD', repository.preBranchSdd);
     add('REOPEN_ISSUE_ON_PUSH', repository.reopenIssueOnPush);
     add('DESIRED_ASSIGNEES_COUNT', repository.desiredAssigneesCount);
     add('DESIRED_REVIEWERS_COUNT', repository.desiredReviewersCount);
     if (configuration.features.inactiveIssueClosure !== false) {
         add('INACTIVITY_THRESHOLD_HOURS', repository.inactivityThresholdHours);
     }
-    add('ISSUES_LOCALE', repository.issueLocale);
-    add('PULL_REQUESTS_LOCALE', repository.pullRequestLocale);
+    add('REPOSITORY_LOCALE', locale.repository);
+    add('ISSUES_LOCALE', locale.issueOverride);
+    add('PULL_REQUESTS_LOCALE', locale.pullRequestOverride);
     add('COMMIT_PREFIX_TRANSFORMS', repository.commitPrefixTransforms);
     add('RELEASE_RECONCILIATION_STRATEGY', repository.releaseReconciliationStrategy);
     add('HOTFIX_RECONCILIATION_STRATEGY', repository.hotfixReconciliationStrategy);
@@ -109,6 +123,7 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
     add('ORCHESTRATION_PRESENTATION_MODE', repository.orchestrationPresentationMode);
     add('ORCHESTRATION_DIAGRAMS', repository.orchestrationDiagrams);
     add('ORCHESTRATION_COMMENT_MODE', repository.orchestrationCommentMode);
+    add('COPILOT_ISSUE_WORKFLOW_PROFILE', serializeIssueWorkflowProfile(effectiveIssueWorkflowProfile(configuration)));
     add('AI_PULL_REQUEST_DESCRIPTION_MODE', configuration.ai.pullRequestDescriptionMode);
     add('AI_IGNORE_FILES', configuration.ai.ignoreFiles);
     add('AI_MEMBERS_ONLY', configuration.ai.membersOnly);
@@ -124,6 +139,7 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
     add('BUGBOT_TELEMETRY', configuration.ai.bugbotTelemetry);
     add('BUGBOT_FAIL_ON_UNRESOLVED', configuration.ai.bugbotFailOnUnresolved);
     add('BUGBOT_ORGANIZATION_RULES', configuration.ai.bugbotOrganizationRules);
+    add('PR_APPROVAL_POLICY', JSON.stringify(configuration.pullRequestApproval));
     add('PROJECT_IDS', configuration.projects.ids);
     add('PROJECT_COLUMN_ISSUE_CREATED', configuration.projects.issueCreatedColumn);
     add('PROJECT_COLUMN_PULL_REQUEST_CREATED', configuration.projects.pullRequestCreatedColumn);
@@ -134,6 +150,11 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
 
 export function buildSetupActionInputs(configuration: SetupConfiguration): Record<string, string> {
     const repository = configuration.repository;
+    const locale = resolveLocaleProfile(
+        repository.repositoryLocale,
+        repository.issueLocale,
+        repository.pullRequestLocale,
+    );
     const ai = configuration.ai;
     const projects = configuration.projects;
     return {
@@ -145,13 +166,15 @@ export function buildSetupActionInputs(configuration: SetupConfiguration): Recor
         'release-tree': repository.releaseTree,
         'docs-tree': repository.docsTree,
         'chore-tree': repository.choreTree,
-        'branch-management-always': String(repository.branchManagementAlways),
+        'issue-managed-branches': String(repository.issueManagedBranches),
+        'pre-branch-sdd': String(repository.preBranchSdd),
         'reopen-issue-on-push': String(repository.reopenIssueOnPush),
         'desired-assignees-count': String(repository.desiredAssigneesCount),
         'desired-reviewers-count': String(repository.desiredReviewersCount),
         'inactivity-threshold-hours': String(repository.inactivityThresholdHours),
-        'issues-locale': repository.issueLocale,
-        'pull-requests-locale': repository.pullRequestLocale,
+        'repository-locale': locale.repository,
+        'issues-locale': locale.issueOverride ?? '',
+        'pull-requests-locale': locale.pullRequestOverride ?? '',
         'commit-prefix-transforms': repository.commitPrefixTransforms,
         'release-reconciliation-strategy': repository.releaseReconciliationStrategy,
         'hotfix-reconciliation-strategy': repository.hotfixReconciliationStrategy,
@@ -165,6 +188,7 @@ export function buildSetupActionInputs(configuration: SetupConfiguration): Recor
         'orchestration-presentation-mode': repository.orchestrationPresentationMode,
         'orchestration-diagrams': String(repository.orchestrationDiagrams),
         'orchestration-comment-mode': repository.orchestrationCommentMode,
+        'issue-workflow-profile': serializeIssueWorkflowProfile(effectiveIssueWorkflowProfile(configuration)),
         'ai-pull-request-description-mode': normalizePullRequestDescriptionMode(ai.pullRequestDescriptionMode),
         'ai-ignore-files': ai.ignoreFiles,
         'ai-members-only': String(ai.membersOnly),
@@ -213,6 +237,22 @@ function buildAgentActionInputs(configuration: SetupConfiguration): Record<strin
 
 function buildSetupWarnings(configuration: SetupConfiguration): string[] {
     const warnings: string[] = [];
+    const issueWorkflowProfile = effectiveIssueWorkflowProfile(configuration);
+    if (configuration.features.issues !== false && issueWorkflowProfile.enabled.length === 0) {
+        warnings.push('No issue workflow kind is enabled; issue events will remain unmanaged until a supported Issue Form and profile entry are enabled.');
+    }
+    if (configuration.repository.issueManagedBranches && issueWorkflowProfile.enabled.includes('help')) {
+        warnings.push('Help / question issues remain branchless even when issue-managed-branches is enabled.');
+    }
+    if (configuration.features.release !== false && !issueWorkflowProfile.enabled.includes('release')) {
+        warnings.push('Release automation is installed, but release issue events are disabled by the selected issue workflow profile.');
+    }
+    if (configuration.features.hotfix !== false && !issueWorkflowProfile.enabled.includes('hotfix')) {
+        warnings.push('Hotfix automation is installed, but hotfix issue events are disabled by the selected issue workflow profile.');
+    }
+    if (configuration.repositoryAgentGuidance?.enabled === false) {
+        warnings.push('Repository agent guidance generation is disabled; collaborators will not receive the generated profile or workflow skill.');
+    }
     if (configuration.features.release !== false && configuration.features.hotfix !== false) {
         warnings.push('Release and hotfix workflows require the workflow PAT Secret and a writable token.');
     }

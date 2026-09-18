@@ -91,17 +91,13 @@ describe("main run route composition root", () => {
 
     expect(useCase).toBeInstanceOf(IssueCommentUseCase);
     expect(CheckIssueCommentLanguageUseCase).toHaveBeenCalledWith(
-      expect.objectContaining({
-        commentRepository: mockIssueComments,
-        languageQueryPort: mockLanguage,
-      }),
+      expect.objectContaining({ languageQueryPort: mockLanguage }),
     );
     expect(DetectBugbotFixIntentUseCase).toHaveBeenCalledWith(
       mockFindings,
       mockContext,
     );
     expect(ThinkUseCase).toHaveBeenCalledWith(
-      expect.anything(),
       expect.anything(),
       mockFindings,
     );
@@ -120,7 +116,7 @@ describe("main run route composition root", () => {
     expect(RememberBugbotRuleUseCase).toHaveBeenCalledWith(mockRules);
     expect(IssueCommentUseCase).toHaveBeenCalledTimes(1);
     expect(IssueCommentUseCase).toHaveBeenCalledWith(
-      ...Array.from({ length: 12 }, () => expect.anything()),
+      ...Array.from({ length: 13 }, () => expect.anything()),
     );
   });
 

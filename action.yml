@@ -5,6 +5,15 @@ inputs:
   debug:
     description: "Enable debug mode."
     default: "false"
+  pr-approval-observer:
+    description: "Run the isolated, trusted-default-branch pull-request approval observer."
+    default: "false"
+  pr-approval-pr-number:
+    description: "Positive pull-request number for an authorized manual approval recheck."
+    default: ""
+  pr-approval-policy:
+    description: "Versioned PR approval policy forwarded by the observer workflow; runtime rereads the Variable before a review write."
+    default: ""
   single-action:
     description: "Launch single actions."
     default: ""
@@ -38,12 +47,15 @@ inputs:
   emoji-labeled-title:
     description: "Enable titles with emojis based on issue labels."
     default: "true"
-  branch-management-launcher-label:
-    description: "Label to trigger branch management actions."
-    default: "branched"
-  branch-management-always:
-    description: "If true, ignores the branch-management-launcher-label requirement for running Git Board."
+  issue-managed-branches:
+    description: "Let the Action create linked branches after an authorized in-progress start."
+    default: "true"
+  pre-branch-sdd:
+    description: "Require a validated SDD first commit for started feature and contract-change issues. Requires issue-managed-branches."
     default: "false"
+  issue-workflow-profile:
+    description: "JSON profile of enabled issue workflows."
+    default: ""
   branch-management-emoji:
     description: "Emoji to indicate branched issues. It will be ignored if emoji-labeled-title is false."
     default: "🧑‍💻"
@@ -125,9 +137,12 @@ inputs:
   state-planned-label:
     description: "Label for the Copilot lifecycle state: planned."
     default: "state:planned"
-  state-in-progress-label:
-    description: "Label for the Copilot lifecycle state: implementation in progress."
-    default: "state:in-progress"
+  state-working-label:
+    description: "Label for work ready on a branch or branchless help."
+    default: "state:working"
+  state-specifying-label:
+    description: "Label for active SDD clarification and drafting."
+    default: "state:specifying"
   state-reviewing-label:
     description: "Label for the Copilot lifecycle state: reviewing."
     default: "state:reviewing"
@@ -309,12 +324,15 @@ inputs:
     description: "Color of the issue type for help."
     default: "purple"
 
+  repository-locale:
+    description: "BCP-47 locale for repository-facing messages. Issue and pull-request locales inherit it."
+    default: "en-US"
   issues-locale:
-    description: "Locale of the issues."
-    default: "en-US"
+    description: "Optional BCP-47 locale override for issue-facing messages. Empty inherits repository-locale."
+    default: ""
   pull-requests-locale:
-    description: "Locale of the pull requests."
-    default: "en-US"
+    description: "Optional BCP-47 locale override for pull-request-facing messages. Empty inherits repository-locale."
+    default: ""
   main-branch:
     description: "Name of the main branch (e.g., master)."
     default: "master"
@@ -339,78 +357,6 @@ inputs:
   release-tree:
     description: "Naming convention for release branches."
     default: "release"
-  images-on-issue:
-    description: "Include images in issue comments."
-    default: "true"
-  images-on-pull-request:
-    description: "Include images in pull request comments."
-    default: "true"
-  images-on-commit:
-    description: "Include images in commit comments."
-    default: "true"
-  images-issue-automatic:
-    description: "Image URLs to display in automatic action issue comments."
-    default: ""
-  images-issue-feature:
-    description: "Image URLs to display in feature action issue comments."
-    default: ""
-  images-issue-bugfix:
-    description: "Image URLs to display in bugfix action issue comments."
-    default: ""
-  images-issue-docs:
-    description: "Image URLs to display in docs action issue comments."
-    default: ""
-  images-issue-chore:
-    description: "Image URLs to display in chore action issue comments."
-    default: ""
-  images-issue-hotfix:
-    description: "Image URLs to display in hotfix action issue comments."
-    default: ""
-  images-issue-release:
-    description: "Image URLs to display in release action issue comments."
-    default: ""
-  images-pull-request-automatic:
-    description: "Image URLs to display in automatic action pull request comments."
-    default: ""
-  images-pull-request-feature:
-    description: "Image URLs to display in feature action pull request comments."
-    default: ""
-  images-pull-request-bugfix:
-    description: "Image URLs to display in bugfix action pull request comments."
-    default: ""
-  images-pull-request-docs:
-    description: "Image URLs to display in docs action pull request comments."
-    default: ""
-  images-pull-request-chore:
-    description: "Image URLs to display in chore action pull request comments."
-    default: ""
-  images-pull-request-hotfix:
-    description: "Image URLs to display in hotfix action pull request comments."
-    default: ""
-  images-pull-request-release:
-    description: "Image URLs to display in release action pull request comments."
-    default: ""
-  images-commit-feature:
-    description: "Image URLs to display in feature action commit comments."
-    default: ""
-  images-commit-bugfix:
-    description: "Image URLs to display in bugfix action commit comments."
-    default: ""
-  images-commit-release:
-    description: "Image URLs to display in release action commit comments."
-    default: ""
-  images-commit-automatic:
-    description: "Image URLs to display in automatic action commit comments."
-    default: ""
-  images-commit-docs:
-    description: "Image URLs to display in docs action commit comments."
-    default: ""
-  images-commit-chore:
-    description: "Image URLs to display in chore action commit comments."
-    default: ""
-  images-commit-hotfix:
-    description: "Image URLs to display in hotfix action commit comments."
-    default: "" 
   commit-prefix-transforms:
     description: "List of transformations to apply sequentially for commit prefix generation. Options: replace-slash, replace-all, lowercase, uppercase, kebab-case, snake-case, camel-case, trim, remove-numbers, clean-dashes, etc."
     default: "replace-slash"

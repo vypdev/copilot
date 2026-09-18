@@ -26,9 +26,13 @@ export function buildGithubActionEventInputs(
     const repository = requireRepositoryCoordinates(context.repo);
     const eventName = requireNonEmptyContextValue(context.eventName, 'event name');
     const actor = requireNonEmptyContextValue(context.actor, 'actor');
+    const payloadAfter = typeof context.payload.after === 'string' && context.payload.after.trim()
+        ? context.payload.after.trim()
+        : undefined;
 
     return {
         ...context.payload,
+        ...(payloadAfter ? { after: payloadAfter } : {}),
         eventName,
         actor,
         repo: repository,

@@ -18,6 +18,16 @@ const mockRemoveNotNeededInvoke = jest.fn();
 const mockDeployAddedInvoke = jest.fn();
 const mockRecommendStepsInvoke = jest.fn();
 const mockAnswerIssueHelpInvoke = jest.fn();
+const mockListIssueComments = jest.fn();
+
+const implementationPlan = {
+  steps: [
+    { title: 'Define the change', details: [] },
+    { title: 'Implement the change', details: [] },
+    { title: 'Verify the change', details: [] },
+  ],
+  acceptance: 'The requested behavior is verified.',
+};
 
 const workflowSteps = {
   checkPermissions: { taskId: 'check-permissions', invoke: mockCheckPermissionsInvoke },
@@ -34,7 +44,7 @@ const workflowSteps = {
 };
 
 function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
-  const defaultIssue = { number: 8, opened: false, creator: 'alice', title: 'Issue', body: '', labeled: false, labelAdded: '', desiredAssigneesCount: 1, branchManagementAlways: false };
+  const defaultIssue = { number: 8, opened: false, creator: 'alice', title: 'Issue', body: '', labeled: false, labelAdded: '', desiredAssigneesCount: 1, issueManagedBranches: true };
   const defaultPullRequest = { number: -1, opened: false, creator: '', title: '', id: '', desiredAssigneesCount: 0 };
   const defaultLabels = {
     isRelease: false,
@@ -63,10 +73,11 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
   };
   const base = {
     cleanIssueBranches: false,
-    isBranched: true,
+    issueStartDecision: { started: true, branchRequired: true, sddRequired: false, helpRequired: false },
     isIssue: true,
     isPullRequest: false,
     issueNumber: 8,
+    tokens: { token: 'secret' },
     owner: 'org',
     repo: 'repo',
     issue: defaultIssue,
@@ -94,6 +105,7 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
     commitPrefixBuilder: '',
     workflows: { release: 'release.yml', hotfix: 'hotfix.yml' },
     eventName: '',
+    locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
     ai: new Ai("", "model", false, [], false, "low", 20),
     ...overrides,
   } as Record<string, unknown>;
@@ -103,12 +115,21 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
   return base as unknown as Execution;
 }
 
-function createUseCase(actorAuthorizationPort?: ConstructorParameters<typeof IssueUseCase>[3]): IssueUseCase {
+function createUseCase(
+  actorAuthorizationPort?: ConstructorParameters<typeof IssueUseCase>[4],
+  preBranchSddGate?: ConstructorParameters<typeof IssueUseCase>[5],
+  reconcileBranchReadiness?: jest.Mock,
+): IssueUseCase {
   return new IssueUseCase(
     { taskId: "RecommendStepsUseCase", invoke: mockRecommendStepsInvoke },
     { taskId: "AnswerIssueHelpUseCase", invoke: mockAnswerIssueHelpInvoke },
-    workflowSteps,
+    reconcileBranchReadiness ? {
+      ...workflowSteps,
+      reconcileBranchReadiness: { taskId: 'ReconcileBranchReadinessUseCase', invoke: reconcileBranchReadiness },
+    } : workflowSteps,
+    { listIssueComments: mockListIssueComments },
     actorAuthorizationPort,
+    preBranchSddGate,
   );
 }
 
@@ -130,6 +151,7 @@ describe("IssueUseCase", () => {
     mockDeployAddedInvoke.mockResolvedValue([]);
     mockRecommendStepsInvoke.mockResolvedValue({ results: [] });
     mockAnswerIssueHelpInvoke.mockResolvedValue([]);
+    mockListIssueComments.mockResolvedValue([]);
   });
 
   it("closes and returns early when permissions fail", async () => {
@@ -173,12 +195,110 @@ describe("IssueUseCase", () => {
     expect(mockRemoveIssueBranchesInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8 }));
   });
 
-  it("prepares branches when branching is enabled", async () => {
-    const param = minimalExecution({ isBranched: true });
+  it('prepares a managed branch when in-progress starts work without a branched label', async () => {
+    const param = minimalExecution({
+      issue: { issueManagedBranches: true, labeled: true, labelAdded: 'in-progress' },
+      labels: { currentIssueLabels: ['feature', 'in-progress'], containsBranchedLabel: false },
+    });
 
     await createUseCase().invoke(param);
 
     expect(mockPrepareBranchesInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8, issueTitle: 'Issue' }));
+    expect(param.labels.currentIssueLabels).not.toContain('branched');
+  });
+
+  it('waits for SDD answers without preparing a branch or deployment', async () => {
+    const begin = jest.fn().mockResolvedValue({ status: 'waiting', results: [new Result({ id: 'PreBranchSddGateUseCase', success: true, executed: true })] });
+    const publish = jest.fn();
+    const param = minimalExecution({ issueStartDecision: { started: true, branchRequired: true, sddRequired: true, helpRequired: false } });
+    await createUseCase(undefined, { begin, publish } as never).invoke(param);
+    expect(begin).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8, baseBranch: 'develop' }));
+    expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
+    expect(mockDeployAddedInvoke).not.toHaveBeenCalled();
+    expect(publish).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the configured SDD gate is unavailable', async () => {
+    const param = minimalExecution({ issueStartDecision: { started: true, branchRequired: true, sddRequired: true, helpRequired: false } });
+    const results = await createUseCase().invoke(param);
+    expect(results).toEqual(expect.arrayContaining([expect.objectContaining({
+      id: 'PreBranchSddGateUseCase', success: false,
+    })]));
+    expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
+    expect(mockDeployAddedInvoke).not.toHaveBeenCalled();
+  });
+
+  it('prepares the linked branch only after SDD validation and then publishes the draft', async () => {
+    const gate = {
+      status: 'drafted', results: [new Result({ id: 'PreBranchSddGateUseCase', success: true, executed: true })],
+      prepared: { plan: { path: 'specs/payments.md' } }, record: { issueNumber: 8 },
+    };
+    const begin = jest.fn().mockResolvedValue(gate);
+    const publish = jest.fn().mockResolvedValue({ status: 'published', branchName: 'feature/8-issue', commitSha: 'a'.repeat(40), results: [] });
+    mockPrepareBranchesInvoke.mockResolvedValue({
+      results: [new Result({ id: 'PrepareBranchesUseCase', success: true, executed: true })],
+      configurationPatch: { workingBranch: 'feature/8-issue' },
+    });
+    const param = minimalExecution({ issueStartDecision: { started: true, branchRequired: true, sddRequired: true, helpRequired: false } });
+    await createUseCase(undefined, { begin, publish } as never).invoke(param);
+    expect(mockPrepareBranchesInvoke).toHaveBeenCalledTimes(1);
+    expect(publish).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8 }), gate, 'feature/8-issue');
+  });
+
+  it('pauses branch-dependent work when SDD publication fails after branch preparation', async () => {
+    const gate = {
+      status: 'drafted', results: [], prepared: { plan: { path: 'specs/payments.md' } }, record: { issueNumber: 8 },
+    };
+    const begin = jest.fn().mockResolvedValue(gate);
+    const publish = jest.fn().mockResolvedValue({ status: 'blocked', results: [new Result({ id: 'PreBranchSddGateUseCase', success: false, executed: true })] });
+    mockPrepareBranchesInvoke.mockResolvedValue({
+      results: [new Result({ id: 'PrepareBranchesUseCase', success: true, executed: true })],
+      configurationPatch: { workingBranch: 'feature/8-issue' },
+    });
+    const param = minimalExecution({ issueStartDecision: { started: true, branchRequired: true, sddRequired: true, helpRequired: false } });
+    await createUseCase(undefined, { begin, publish } as never).invoke(param);
+    expect(mockRemoveNotNeededInvoke).not.toHaveBeenCalled();
+    expect(mockDeployAddedInvoke).not.toHaveBeenCalled();
+    expect(mockRecommendStepsInvoke).not.toHaveBeenCalled();
+  });
+
+  it('does not publish a validated SDD when branch preparation fails', async () => {
+    const gate = { status: 'drafted', results: [], prepared: { plan: { path: 'specs/payments.md' } }, record: { issueNumber: 8 } };
+    const begin = jest.fn().mockResolvedValue(gate);
+    const publish = jest.fn();
+    mockPrepareBranchesInvoke.mockResolvedValue({
+      results: [new Result({ id: 'PrepareBranchesUseCase', success: false, executed: true })],
+      configurationPatch: { workingBranch: 'feature/8-issue' },
+    });
+    const param = minimalExecution({ issueStartDecision: { started: true, branchRequired: true, sddRequired: true, helpRequired: false } });
+    const results = await createUseCase(undefined, { begin, publish } as never).invoke(param);
+    expect(publish).not.toHaveBeenCalled();
+    expect(results).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'PreBranchSddGateUseCase', success: false })]));
+    expect(mockDeployAddedInvoke).not.toHaveBeenCalled();
+  });
+
+  it('publishes a recovered SDD draft on its existing branch without preparing another', async () => {
+    const gate = {
+      status: 'drafted', results: [], prepared: { plan: { path: 'specs/payments.md' } },
+      record: { issueNumber: 8, branchName: 'feature/8-issue' },
+    };
+    const begin = jest.fn().mockResolvedValue(gate);
+    const publish = jest.fn().mockResolvedValue({ status: 'published', branchName: 'feature/8-issue', results: [] });
+    const param = minimalExecution({ issueStartDecision: { started: true, branchRequired: true, sddRequired: true, helpRequired: false } });
+    await createUseCase(undefined, { begin, publish } as never).invoke(param);
+    expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
+    expect(publish).toHaveBeenCalledWith(expect.anything(), gate, 'feature/8-issue');
+    expect(param.currentConfiguration.workingBranch).toBe('feature/8-issue');
+  });
+
+  it('resumes a published SDD without creating or republishing the branch', async () => {
+    const begin = jest.fn().mockResolvedValue({ status: 'published', branchName: 'feature/8-issue', results: [] });
+    const publish = jest.fn();
+    const param = minimalExecution({ issueStartDecision: { started: true, branchRequired: true, sddRequired: true, helpRequired: false } });
+    await createUseCase(undefined, { begin, publish } as never).invoke(param);
+    expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
+    expect(publish).not.toHaveBeenCalled();
+    expect(param.currentConfiguration.workingBranch).toBe('feature/8-issue');
   });
 
   it('applies only the explicit successful branch configuration patch at the route boundary', async () => {
@@ -194,7 +314,7 @@ describe("IssueUseCase", () => {
         hotfixOriginSha: 'def',
       },
     });
-    const param = minimalExecution({ isBranched: true, currentConfiguration: { branchType: 'feature' } });
+    const param = minimalExecution({ currentConfiguration: { branchType: 'feature' } });
 
     const results = await createUseCase().invoke(param);
 
@@ -211,19 +331,59 @@ describe("IssueUseCase", () => {
     expect(results.some((result) => result.id === 'branch')).toBe(true);
   });
 
-  it("removes issue branches instead when branching is disabled", async () => {
-    const param = minimalExecution({ isBranched: false });
+  it('ignores a manually applied branched label when branch management is disabled', async () => {
+    const param = minimalExecution({
+      cleanIssueBranches: true,
+      issueStartDecision: { started: true, branchRequired: false, sddRequired: false, helpRequired: false },
+      issue: { issueManagedBranches: false },
+      labels: { currentIssueLabels: ['feature', 'in-progress', 'branched'], containsBranchedLabel: true },
+    });
 
     await createUseCase().invoke(param);
 
-    expect(mockRemoveIssueBranchesInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8 }));
+    expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
+    expect(mockRemoveIssueBranchesInvoke).not.toHaveBeenCalled();
+    expect(mockRemoveNotNeededInvoke).not.toHaveBeenCalled();
+    expect(mockDeployAddedInvoke).not.toHaveBeenCalled();
+  });
+
+  it('defers branch cleanup and deployment until the exact linked branch is verified', async () => {
+    const reconcile = jest.fn().mockResolvedValue([
+      new Result({ id: 'ReconcileBranchReadinessUseCase', success: true, executed: false }),
+    ]);
+    mockPrepareBranchesInvoke.mockResolvedValue({
+      results: [new Result({ id: 'PrepareBranchesUseCase', success: true, executed: true })],
+      configurationPatch: { workingBranch: 'feature/8-issue' },
+    });
+    const param = minimalExecution({ issue: { issueManagedBranches: true } });
+    await createUseCase(undefined, undefined, reconcile).invoke(param);
+    expect(reconcile).toHaveBeenCalledWith({
+      issueNumber: 8, branchName: 'feature/8-issue', sddRequired: false, sddPublished: false,
+    });
+    expect(mockRemoveNotNeededInvoke).not.toHaveBeenCalled();
+    expect(mockDeployAddedInvoke).not.toHaveBeenCalled();
+
+    reconcile.mockResolvedValue([new Result({
+      id: 'ReconcileBranchReadinessUseCase', success: true, executed: false,
+      payload: { branchName: 'feature/8-issue', branchSha: 'a'.repeat(40) },
+    })]);
+    await createUseCase(undefined, undefined, reconcile).invoke(param);
+    expect(mockRemoveNotNeededInvoke).toHaveBeenCalledTimes(1);
+    expect(mockDeployAddedInvoke).toHaveBeenCalledTimes(1);
   });
 
   it("recommends steps for a newly opened non-release issue", async () => {
     mockRecommendStepsInvoke.mockResolvedValue({
-      results: [new Result({ id: "rec", success: true, executed: true, steps: [] })],
+      results: [new Result({
+        id: "RecommendStepsUseCase",
+        success: true,
+        executed: true,
+        payload: { issueNumber: 8, implementationPlan },
+      })],
     });
     const param = minimalExecution({
+      eventName: 'issues',
+      inputs: { action: 'opened' },
       issue: { opened: true },
       labels: { isRelease: false, isQuestion: false, isHelp: false },
     });
@@ -231,7 +391,8 @@ describe("IssueUseCase", () => {
     const results = await createUseCase().invoke(param);
 
     expect(mockRecommendStepsInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8 }));
-    expect(results.some((result) => result.id === "rec")).toBe(true);
+    expect(results.some((result) => result.id === "RecommendStepsUseCase")).toBe(true);
+    expect(results.some((result) => result.id === "CopilotWelcomeUseCase")).toBe(false);
   });
 
   it("recommends steps when the issue description is edited", async () => {
@@ -267,15 +428,51 @@ describe("IssueUseCase", () => {
     const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(false) };
     const param = minimalExecution({
       actor: 'outsider',
+      eventName: 'issues',
+      inputs: { action: 'opened' },
       issue: { opened: true },
       ai: new Ai('', 'model', true, [], false, 'low', 20),
     });
 
-    await createUseCase(authorization).invoke(param);
+    const results = await createUseCase(authorization).invoke(param);
 
     expect(authorization.isActorAllowedToModifyFiles).toHaveBeenCalledWith('outsider');
     expect(mockRecommendStepsInvoke).not.toHaveBeenCalled();
     expect(mockAnswerIssueHelpInvoke).not.toHaveBeenCalled();
+    expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(true);
+  });
+
+  it('applies the recommendation state patch returned by the recommendation workflow', async () => {
+    mockRecommendStepsInvoke.mockResolvedValue({
+      results: [new Result({
+        id: 'RecommendStepsUseCase',
+        success: true,
+        executed: true,
+        payload: { issueNumber: 8, implementationPlan },
+      })],
+      configurationPatch: {
+        recommendationState: {
+          issueDescriptionFingerprint: 'description-fingerprint',
+          recommendationFingerprint: 'recommendation-fingerprint',
+          implementationPlan,
+          implementationPlanLocale: 'en-US',
+        },
+      },
+    });
+    const param = minimalExecution({
+      eventName: 'issues',
+      inputs: { action: 'opened' },
+      issue: { opened: true },
+    });
+
+    await createUseCase().invoke(param);
+
+    expect(param.currentConfiguration.recommendationState).toEqual({
+      issueDescriptionFingerprint: 'description-fingerprint',
+      recommendationFingerprint: 'recommendation-fingerprint',
+      implementationPlan,
+      implementationPlanLocale: 'en-US',
+    });
   });
 
   it("does not recommend steps for an unrelated issue edit", async () => {
@@ -288,22 +485,124 @@ describe("IssueUseCase", () => {
     expect(mockRecommendStepsInvoke).not.toHaveBeenCalled();
   });
 
-  it("posts a static welcome for a newly opened issue when no AI recommendation applies", async () => {
+  it("posts a static welcome for a newly opened normal issue when no plan is available", async () => {
     const param = minimalExecution({
       tokenUser: "vypbot",
       eventName: "issues",
       inputs: { eventName: "issues", action: "opened" },
       issue: { opened: true },
-      labels: { isRelease: true, isQuestion: false, isHelp: false },
+      labels: { isRelease: false, isQuestion: false, isHelp: false },
+      locale: { repository: 'es-ES', issue: 'es-ES', pullRequest: 'es-ES' },
     });
 
     const results = await createUseCase().invoke(param);
 
-    expect(mockRecommendStepsInvoke).not.toHaveBeenCalled();
+    expect(mockRecommendStepsInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8 }));
     expect(results.some((result) => result.id === "CopilotWelcomeUseCase")).toBe(true);
+    expect(results.find((result) => result.id === "CopilotWelcomeUseCase")?.steps[0]).not.toContain('<!-- copilot:');
     expect(results.find((result) => result.id === "CopilotWelcomeUseCase")?.steps[0]).toContain(
-      "<!-- copilot:welcome -->",
+      "Hola, soy **@vypbot**",
     );
+  });
+
+  it('does not let a malformed plan projection suppress the welcome fallback', async () => {
+    mockRecommendStepsInvoke.mockResolvedValue({
+      results: [new Result({
+        id: 'RecommendStepsUseCase',
+        success: true,
+        executed: true,
+        payload: { issueNumber: 0, recommendedSteps: '1. This cannot be published.' },
+      })],
+    });
+    const param = minimalExecution({
+      eventName: 'issues',
+      inputs: { action: 'opened' },
+      issue: { opened: true },
+    });
+
+    const results = await createUseCase().invoke(param);
+
+    expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(true);
+  });
+
+  it('does not add a welcome when a replay finds an existing bot-owned plan', async () => {
+    mockListIssueComments.mockResolvedValue([{
+      id: 91,
+      body: '<!-- copilot:publication schema="1" topic="plan" target="issue:8" key="implementation" source="issue-body:abcdef12" digest="abcdef12" -->',
+      user: { login: 'vypbot' },
+    }]);
+    const param = minimalExecution({
+      tokenUser: 'vypbot',
+      eventName: 'issues',
+      inputs: { action: 'opened' },
+      issue: { opened: true },
+    });
+
+    const results = await createUseCase().invoke(param);
+
+    expect(mockListIssueComments).toHaveBeenCalledWith(8);
+    expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(false);
+  });
+
+  it('does not add a welcome when a replay finds an existing bot-owned direct answer', async () => {
+    mockListIssueComments.mockResolvedValue([{
+      id: 92,
+      body: '<!-- copilot:reply schema="1" target="issue:8" correlation="event:abcdef12" key="direct-answer" digest="abcdef12" -->',
+      user: { login: 'vypbot' },
+    }]);
+    const param = minimalExecution({
+      tokenUser: 'vypbot',
+      eventName: 'issues',
+      inputs: { action: 'opened' },
+      issue: { opened: true },
+      labels: { isQuestion: true },
+    });
+
+    const results = await createUseCase().invoke(param);
+
+    expect(mockListIssueComments).toHaveBeenCalledWith(8);
+    expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(false);
+  });
+
+  it('does not add a welcome when a replay finds an existing bot-owned correlated welcome', async () => {
+    const body = '<!-- copilot:reply schema="1" target="issue:8" correlation="event:abcdef12" key="copilot-welcome" digest="abcdef12" -->';
+    mockListIssueComments.mockResolvedValue([{ id: 93, body, user: { login: 'vypbot' } }]);
+    const param = minimalExecution({
+      tokenUser: 'vypbot',
+      eventName: 'issues',
+      inputs: { action: 'opened' },
+      issue: { opened: true },
+    });
+
+    const results = await createUseCase().invoke(param);
+
+    expect(mockListIssueComments).toHaveBeenCalledWith(8);
+    expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(false);
+  });
+
+  it('treats a removed standalone welcome marker as inert', async () => {
+    mockListIssueComments.mockResolvedValue([{
+      id: 93, body: '<!-- copilot:welcome -->', user: { login: 'vypbot' },
+    }]);
+    const results = await createUseCase().invoke(minimalExecution({
+      tokenUser: 'vypbot', eventName: 'issues', inputs: { action: 'opened' }, issue: { opened: true },
+    }));
+
+    expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(true);
+  });
+
+  it('omits the optional welcome when historical publication cannot be verified', async () => {
+    mockListIssueComments.mockRejectedValue(new Error('GitHub unavailable'));
+    const param = minimalExecution({
+      tokenUser: 'vypbot',
+      eventName: 'issues',
+      inputs: { action: 'opened' },
+      issue: { opened: true },
+    });
+
+    const results = await createUseCase().invoke(param);
+
+    expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(false);
   });
 
   it("posts a static welcome when the initial help agent cannot answer", async () => {
@@ -313,19 +612,30 @@ describe("IssueUseCase", () => {
       inputs: { eventName: "issues", action: "opened" },
       issue: { opened: true },
       labels: { isRelease: false, isQuestion: true, isHelp: false },
+      locale: { repository: 'es-ES', issue: 'es-ES', pullRequest: 'es-ES' },
     });
 
     const results = await createUseCase().invoke(param);
 
     expect(mockAnswerIssueHelpInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8, questionOrHelp: true }));
     expect(results.some((result) => result.id === "CopilotWelcomeUseCase")).toBe(true);
+    expect(results.find((result) => result.id === "CopilotWelcomeUseCase")?.steps[0]).toContain(
+      "Hola, soy **@vypbot**",
+    );
   });
 
   it("answers help for a newly opened question or help issue", async () => {
     mockAnswerIssueHelpInvoke.mockResolvedValue([
-      new Result({ id: "help", success: true, executed: true, steps: [] }),
+      new Result({
+        id: "AnswerIssueHelpUseCase",
+        success: true,
+        executed: true,
+        payload: { publication: { kind: 'direct-answer', answer: 'Use the documented webhook settings.' } },
+      }),
     ]);
     const param = minimalExecution({
+      eventName: 'issues',
+      inputs: { action: 'opened' },
       issue: { opened: true },
       labels: { isRelease: false, isQuestion: true, isHelp: false },
     });
@@ -333,6 +643,27 @@ describe("IssueUseCase", () => {
     const results = await createUseCase().invoke(param);
 
     expect(mockAnswerIssueHelpInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8, questionOrHelp: true }));
-    expect(results.some((result) => result.id === "help")).toBe(true);
+    expect(results.some((result) => result.id === "AnswerIssueHelpUseCase")).toBe(true);
+    expect(results.some((result) => result.id === "CopilotWelcomeUseCase")).toBe(false);
+  });
+
+  it.each([
+    ['release', { isRelease: true, isHotfix: false }],
+    ['hotfix', { isRelease: false, isHotfix: true }],
+  ])('leaves a newly opened %s issue to its feature-owned dashboard', async (_kind, labels) => {
+    const param = minimalExecution({
+      tokenUser: 'vypbot',
+      eventName: 'issues',
+      inputs: { action: 'opened' },
+      issue: { opened: true },
+      labels: { ...labels, isQuestion: true, isHelp: false },
+    });
+
+    const results = await createUseCase().invoke(param);
+
+    expect(mockRecommendStepsInvoke).not.toHaveBeenCalled();
+    expect(mockAnswerIssueHelpInvoke).not.toHaveBeenCalled();
+    expect(mockListIssueComments).not.toHaveBeenCalled();
+    expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(false);
   });
 });

@@ -6,18 +6,22 @@ import {
     type SetupConfigurationOverrides,
 } from '../application/policies/setup_configuration_policy';
 import { normalizeMergeQueueCheckAttestations } from '../domain/merge_queue_readiness';
+import { ISSUE_WORKFLOW_KINDS, type IssueWorkflowKind } from '../domain/issue_workflow_profile';
 
 const SETUP_OVERRIDE_KEYS = new Set([
     'features',
     'agents',
     'repository',
     'ai',
+    'pullRequestApproval',
     'projects',
     'createInitialTag',
     'manageRepositoryVariables',
     'manageRepositorySecrets',
     'actionInputs',
     'storage',
+    'issueWorkflows',
+    'repositoryAgentGuidance',
 ]);
 const AGENT_OVERRIDE_KEYS = new Set(['provider', 'modelProvider', 'model', 'effort', 'executable']);
 const REPOSITORY_STRING_KEYS = new Set([
@@ -29,6 +33,7 @@ const REPOSITORY_STRING_KEYS = new Set([
     'releaseTree',
     'docsTree',
     'choreTree',
+    'repositoryLocale',
     'issueLocale',
     'pullRequestLocale',
     'commitPrefixTransforms',
@@ -43,7 +48,7 @@ const REPOSITORY_STRING_KEYS = new Set([
     'orchestrationPresentationMode',
     'orchestrationCommentMode',
 ]);
-const REPOSITORY_BOOLEAN_KEYS = new Set(['branchManagementAlways', 'reopenIssueOnPush', 'orchestrationDiagrams']);
+const REPOSITORY_BOOLEAN_KEYS = new Set(['issueManagedBranches', 'preBranchSdd', 'reopenIssueOnPush', 'orchestrationDiagrams']);
 const REPOSITORY_NUMBER_KEYS = new Set(['desiredAssigneesCount', 'desiredReviewersCount', 'inactivityThresholdHours']);
 const REPOSITORY_STRUCTURED_KEYS = new Set(['mergeQueueCheckAttestations']);
 const AI_STRING_KEYS = new Set(['ignoreFiles', 'pullRequestDescriptionMode', 'bugbotSeverity', 'bugbotFixVerifyCommands', 'bugbotEffort', 'bugbotOrganizationRules', 'provisioningMode']);
@@ -58,6 +63,7 @@ const PROJECT_KEYS = new Set([
 ]);
 const STORAGE_KEYS = new Set(['secrets', 'variables']);
 const STORAGE_POLICY_KEYS = new Set(['defaultScope', 'organizationVisibility', 'preserveExisting', 'overrides']);
+const GUIDANCE_KEYS = new Set(['enabled', 'agentsPointer']);
 
 /** Loads a non-secret setup override file. JSON and YAML are supported. */
 export function loadSetupConfigurationOverrides(filePath: string): SetupConfigurationOverrides {
@@ -102,6 +108,7 @@ export function loadSetupConfigurationOverrides(filePath: string): SetupConfigur
         (raw.repository as Record<string, unknown>).mergeQueueCheckAttestations = result.value;
     }
     validateSection(raw.ai, 'ai', AI_STRING_KEYS, AI_BOOLEAN_KEYS, AI_NUMBER_KEYS);
+    validateApprovalOverride(raw.pullRequestApproval);
     validateSection(raw.projects, 'projects', PROJECT_KEYS, new Set(), new Set());
     validateBooleanProperty(raw, 'createInitialTag');
     validateBooleanProperty(raw, 'manageRepositoryVariables');
@@ -109,7 +116,52 @@ export function loadSetupConfigurationOverrides(filePath: string): SetupConfigur
     validateOptionalObject(raw.actionInputs, 'actionInputs');
     if (raw.actionInputs !== undefined) validateStringValues(raw.actionInputs as Record<string, unknown>, 'actionInputs');
     validateStorage(raw.storage);
+    validateIssueWorkflows(raw.issueWorkflows);
+    validateGuidance(raw.repositoryAgentGuidance);
     return raw as SetupConfigurationOverrides;
+}
+
+function validateApprovalOverride(value: unknown): void {
+    if (value === undefined) return;
+    validateObject(value, 'pullRequestApproval');
+    const policy = value as Record<string, unknown>;
+    validateObjectKeys(policy, new Set([
+        'version', 'mode', 'targetRoles', 'branchKinds', 'requireLinkedIssue',
+        'additionalExcludedPaths', 'testChecks', 'producerAttested', 'coverage', 'allowHumanDismissed',
+        'skipWhenHumanApproved',
+    ]), 'pullRequestApproval');
+    if (policy.testChecks !== undefined && !Array.isArray(policy.testChecks)) throw new Error('pullRequestApproval.testChecks must be an array.');
+    if (policy.coverage !== undefined) {
+        validateObject(policy.coverage, 'pullRequestApproval.coverage');
+        validateObjectKeys(policy.coverage as Record<string, unknown>, new Set([
+            'mode', 'checkName', 'minDiffPercent', 'artifactWorkflowName', 'reporterAttested',
+        ]), 'pullRequestApproval.coverage');
+    }
+}
+
+function validateIssueWorkflows(value: unknown): void {
+    if (value === undefined) return;
+    validateObject(value, 'issueWorkflows');
+    const section = value as Record<string, unknown>;
+    validateObjectKeys(section, new Set(['enabled']), 'issueWorkflows');
+    if (!Array.isArray(section.enabled) || section.enabled.some(item => typeof item !== 'string')) {
+        throw new Error('issueWorkflows.enabled must be an array of workflow IDs.');
+    }
+    const enabled = section.enabled as string[];
+    const unknown = enabled.filter(item => !ISSUE_WORKFLOW_KINDS.includes(item as IssueWorkflowKind));
+    if (unknown.length > 0) throw new Error(`Unknown issue workflow(s): ${unknown.join(', ')}.`);
+    if (new Set(enabled).size !== enabled.length) throw new Error('issueWorkflows.enabled cannot contain duplicates.');
+}
+
+function validateGuidance(value: unknown): void {
+    if (value === undefined) return;
+    validateObject(value, 'repositoryAgentGuidance');
+    const section = value as Record<string, unknown>;
+    validateObjectKeys(section, GUIDANCE_KEYS, 'repositoryAgentGuidance');
+    if (section.enabled !== undefined && typeof section.enabled !== 'boolean') throw new Error('repositoryAgentGuidance.enabled must be a boolean.');
+    if (section.agentsPointer !== undefined && !['prompt', 'create-if-missing', 'disabled'].includes(String(section.agentsPointer))) {
+        throw new Error('repositoryAgentGuidance.agentsPointer must be prompt, create-if-missing, or disabled.');
+    }
 }
 
 function validateStorage(value: unknown): void {

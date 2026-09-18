@@ -9,7 +9,7 @@ jest.mock('../../../../utils/logger', () => ({
 function createLabels(overrides: Partial<Record<keyof Labels, string>> = {}): Labels {
   return Object.assign(
     new Labels(
-      '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+      '', '', '', '', '', '', '', '', '', '', '', '', '', '',
       '', '', '', '', '', '', '', '', '', '',
     ),
     overrides,
@@ -34,7 +34,6 @@ describe('IssueLabelProvisioningRepository', () => {
     }));
     const repository = new IssueLabelProvisioningRepository({ getClient } as never);
     const labels = createLabels({
-      branchManagementLauncherLabel: 'existing',
       bug: 'Existing',
       feature: 'feature',
     });
@@ -42,7 +41,7 @@ describe('IssueLabelProvisioningRepository', () => {
     await expect(
       repository.ensureInitialLabels('owner', 'repo', labels, 'token'),
     ).resolves.toEqual({
-      configured: { created: 11, existing: 1, errors: [] },
+      configured: { created: 16, existing: 1, errors: [] },
       progress: { created: 21, existing: 0, errors: [] },
     });
 
@@ -53,7 +52,7 @@ describe('IssueLabelProvisioningRepository', () => {
       repo: 'repo',
       per_page: 100,
     });
-    expect(createLabel).toHaveBeenCalledTimes(32);
+    expect(createLabel).toHaveBeenCalledTimes(37);
     expect(createLabel).not.toHaveBeenCalledWith(
       expect.objectContaining({ name: 'existing' }),
     );
@@ -95,10 +94,10 @@ describe('IssueLabelProvisioningRepository', () => {
         'token',
       ),
     ).resolves.toEqual({
-      configured: { created: 10, existing: 1, errors: [] },
+      configured: { created: 15, existing: 1, errors: [] },
       progress: { created: 21, existing: 0, errors: [] },
     });
-    expect(createLabel).toHaveBeenCalledTimes(32);
+    expect(createLabel).toHaveBeenCalledTimes(37);
   });
 
   it('serializes provider mutations', async () => {
@@ -139,7 +138,7 @@ describe('IssueLabelProvisioningRepository', () => {
     expect(createLabel).toHaveBeenCalledTimes(1);
     releaseFirstMutation();
     await provisioning;
-    expect(createLabel).toHaveBeenCalledTimes(33);
+    expect(createLabel).toHaveBeenCalledTimes(38);
   });
 
   it('aggregates provider errors by category and continues with remaining labels', async () => {
@@ -167,7 +166,7 @@ describe('IssueLabelProvisioningRepository', () => {
     );
     expect(result).toEqual({
       configured: {
-        created: 11,
+        created: 16,
         existing: 0,
         errors: ['Unable to create label "bug".'],
       },
@@ -178,6 +177,6 @@ describe('IssueLabelProvisioningRepository', () => {
       },
     });
     expect(JSON.stringify(result)).not.toContain('unavailable');
-    expect(createLabel).toHaveBeenCalledTimes(33);
+    expect(createLabel).toHaveBeenCalledTimes(38);
   });
 });

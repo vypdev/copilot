@@ -4,13 +4,12 @@ import { INPUT_KEYS } from '../application/contracts/input_keys';
 import type { ProjectDetailQueryPort } from '../application/ports/project_detail_ports';
 import type { ActionInputValues } from './action_input_source';
 import { getActionInputsWithDefaults } from '../utils/yml_utils';
-import { isEnabledInput } from './input_boolean_policy';
+import { isEnabledInput, parseIssueWorkflowBoolean } from './input_boolean_policy';
 import { resolveActionInput } from './action_input_source';
 import { loadProjectDetails } from './project_details_loader';
 import { parseBoundedPositiveIntegerInput, parseIntegerInput } from './input_number_policy';
 import { parseDelimitedValues } from './input_values_policy';
 import { buildAgentTasksFromValues } from './agent_input_builder';
-import { buildImageConfiguration } from './image_configuration_builder';
 import { normalizePullRequestDescriptionMode } from '../domain/pull_request_description';
 import { DEFAULT_INACTIVITY_THRESHOLD_HOURS, MAX_INACTIVITY_THRESHOLD_HOURS } from '../domain/issue_inactivity';
 import { normalizeBugbotReviewEffort, parseBugbotOrganizationRules } from '../domain/bugbot/review_configuration';
@@ -143,7 +142,6 @@ export function readLocalLabelsAndIssueTypes(
     const issueTypeTask = readIssueType(additionalParams, actionInputs, INPUT_KEYS.ISSUE_TYPE_TASK, INPUT_KEYS.ISSUE_TYPE_TASK_DESCRIPTION, INPUT_KEYS.ISSUE_TYPE_TASK_COLOR);
     return {
         labels: {
-            branchManagementLauncherLabel: label(INPUT_KEYS.BRANCH_MANAGEMENT_LAUNCHER_LABEL),
             bugfixLabel: label(INPUT_KEYS.BUGFIX_LABEL),
             bugLabel: label(INPUT_KEYS.BUG_LABEL),
             hotfixLabel: label(INPUT_KEYS.HOTFIX_LABEL),
@@ -171,7 +169,8 @@ export function readLocalLabelsAndIssueTypes(
             lifecycle: {
                 aiProcessing: label(INPUT_KEYS.STATE_AI_PROCESSING_LABEL),
                 planned: label(INPUT_KEYS.STATE_PLANNED_LABEL),
-                inProgress: label(INPUT_KEYS.STATE_IN_PROGRESS_LABEL),
+                specifying: label(INPUT_KEYS.STATE_SPECIFYING_LABEL),
+                working: label(INPUT_KEYS.STATE_WORKING_LABEL),
                 reviewing: label(INPUT_KEYS.STATE_REVIEWING_LABEL),
                 changesRequested: label(INPUT_KEYS.STATE_CHANGES_REQUESTED_LABEL),
                 verified: label(INPUT_KEYS.STATE_VERIFIED_LABEL),
@@ -259,14 +258,19 @@ export function readLocalWorkflowConfiguration(
     const developmentBranch = read(INPUT_KEYS.DEVELOPMENT_BRANCH);
     const releaseTree = read(INPUT_KEYS.RELEASE_TREE);
     const hotfixTree = read(INPUT_KEYS.HOTFIX_TREE);
+    const locale = new Locale(
+        read(INPUT_KEYS.REPOSITORY_LOCALE) || Locale.DEFAULT,
+        read(INPUT_KEYS.ISSUES_LOCALE) || '',
+        read(INPUT_KEYS.PULL_REQUESTS_LOCALE) || '',
+    );
     return {
-        imageConfiguration: buildImageConfiguration((key) => additionalParams[key] ?? actionInputs[key]),
         releaseWorkflow: read(INPUT_KEYS.RELEASE_WORKFLOW),
         hotfixWorkflow: read(INPUT_KEYS.HOTFIX_WORKFLOW),
         titleEmoji: read(INPUT_KEYS.EMOJI_LABELED_TITLE) === 'true',
         branchManagementEmoji: read(INPUT_KEYS.BRANCH_MANAGEMENT_EMOJI),
-        issueLocale: read(INPUT_KEYS.ISSUES_LOCALE) ?? Locale.DEFAULT,
-        pullRequestLocale: read(INPUT_KEYS.PULL_REQUESTS_LOCALE) ?? Locale.DEFAULT,
+        repositoryLocale: locale.repository,
+        issueLocale: locale.issue,
+        pullRequestLocale: locale.pullRequest,
         ...readThresholds(additionalParams, actionInputs),
         mainBranch,
         developmentBranch,
@@ -277,7 +281,8 @@ export function readLocalWorkflowConfiguration(
         docsTree: read(INPUT_KEYS.DOCS_TREE),
         choreTree: read(INPUT_KEYS.CHORE_TREE),
         commitPrefixBuilder: read(INPUT_KEYS.COMMIT_PREFIX_TRANSFORMS) || 'replace-slash',
-        branchManagementAlways: isEnabledInput(read(INPUT_KEYS.BRANCH_MANAGEMENT_ALWAYS)),
+        issueManagedBranches: parseIssueWorkflowBoolean(read(INPUT_KEYS.ISSUE_MANAGED_BRANCHES), INPUT_KEYS.ISSUE_MANAGED_BRANCHES, true),
+        preBranchSdd: parseIssueWorkflowBoolean(read(INPUT_KEYS.PRE_BRANCH_SDD), INPUT_KEYS.PRE_BRANCH_SDD, false),
         reopenIssueOnPush: isEnabledInput(read(INPUT_KEYS.REOPEN_ISSUE_ON_PUSH)),
         issueDesiredAssigneesCount: parseIntegerInput(read(INPUT_KEYS.DESIRED_ASSIGNEES_COUNT), 0),
         pullRequestDesiredAssigneesCount: parseIntegerInput(read(INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0),

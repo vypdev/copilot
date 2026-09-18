@@ -7,231 +7,45 @@ jest.mock('../../../../../utils/logger', () => ({
   logError: jest.fn(),
 }));
 
-jest.mock('../../../../../utils/list_utils', () => ({
-  getRandomElement: jest.fn((arr: string[]) => arr[0]),
-}));
+const openIssue = jest.fn();
 
-const mockAddComment = jest.fn();
-const mockOpenIssue = jest.fn();
-
-const mockBuildCommitPrefix = jest.fn();
-jest.mock('../../common/execute_script_use_case', () => ({
-  buildCommitPrefix: (...args: unknown[]) => mockBuildCommitPrefix(...args),
-}));
-
-function baseParam(overrides: Record<string, unknown> = {}) {
+function context(reopenOnPush: boolean) {
   return projectCommitNotificationContext({
-    owner: 'o',
-    repo: 'r',
     issueNumber: 42,
-    tokens: { token: 't' },
-    commit: {
-      branch: 'feature/42-add-login',
-      commits: [
-        {
-          id: 'abc',
-          message: 'feat: add button',
-          author: { name: 'Alice', username: 'alice' },
-        },
-      ],
-    },
-    commitPrefixBuilder: '',
-    images: {
-      imagesOnCommit: true,
-      commitReleaseGifs: ['url1'],
-      commitHotfixGifs: ['url2'],
-      commitBugfixGifs: ['url3'],
-      commitFeatureGifs: ['url4'],
-      commitDocsGifs: ['url5'],
-      commitChoreGifs: ['url6'],
-      commitAutomaticActions: ['url7'],
-    },
-    issue: { reopenOnPush: false },
-    release: { active: false },
-    hotfix: { active: false },
-    isFeature: true,
-    isBugfix: false,
-    isDocs: false,
-    isChore: false,
-    ...overrides,
+    commit: { branch: 'feature/42-add-login' },
+    issue: { reopenOnPush },
   } as never);
 }
 
-describe('NotifyNewCommitOnIssueUseCase', () => {
-  let useCase: NotifyNewCommitOnIssueUseCase;
-
+describe('NotifyNewCommitOnIssueUseCase quiet push policy', () => {
   beforeEach(() => {
-    useCase = new NotifyNewCommitOnIssueUseCase({ openIssue: mockOpenIssue, addComment: mockAddComment });
-    mockAddComment.mockResolvedValue(undefined);
-    mockOpenIssue.mockResolvedValue(true);
-    mockBuildCommitPrefix.mockReturnValue('');
+    jest.clearAllMocks();
+    openIssue.mockResolvedValue(true);
   });
 
-  it('adds comment with commit info and returns', async () => {
-    const param = baseParam();
-    const results = await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith(
-      42,
-      expect.stringContaining('Feature News'),
-    );
-    expect(mockAddComment).toHaveBeenCalledWith(
-      42,
-      expect.stringContaining('feature/42-add-login'),
-    );
-    expect(mockAddComment).toHaveBeenCalledWith(
-      42,
-      expect.stringContaining('alice'),
-    );
+  it('creates no comment and performs no state mutation for a routine push', async () => {
+    const port = { openIssue };
+    const results = await new NotifyNewCommitOnIssueUseCase(port).invoke(context(false));
+
     expect(results).toEqual([]);
+    expect(openIssue).not.toHaveBeenCalled();
+    expect(port).not.toHaveProperty('addComment');
   });
 
-  it('does not call openIssue when reopenOnPush is false', async () => {
-    const param = baseParam({ issue: { reopenOnPush: false } });
-    await useCase.invoke(param);
-    expect(mockOpenIssue).not.toHaveBeenCalled();
+  it.each([true, false])('uses only native reopen state when the provider returns %s', async (opened) => {
+    openIssue.mockResolvedValue(opened);
+    const results = await new NotifyNewCommitOnIssueUseCase({ openIssue }).invoke(context(true));
+
+    expect(results).toEqual([]);
+    expect(openIssue).toHaveBeenCalledWith(42);
   });
 
-  it('calls openIssue and addComment when reopenOnPush is true', async () => {
-    const param = baseParam({ issue: { reopenOnPush: true } });
-    await useCase.invoke(param);
-    expect(mockOpenIssue).toHaveBeenCalledWith(42);
-    expect(mockAddComment).toHaveBeenCalled();
-  });
+  it('returns semantic operator evidence when native state synchronization fails', async () => {
+    openIssue.mockRejectedValue(new Error('API error'));
 
-  it('returns failure on error', async () => {
-    mockAddComment.mockRejectedValue(new Error('API error'));
-    const param = baseParam();
-    const results = await useCase.invoke(param);
-    expect(results.some((r) => r.success === false)).toBe(true);
-    expect(results[0].errors?.length).toBeGreaterThan(0);
-  });
+    const results = await new NotifyNewCommitOnIssueUseCase({ openIssue }).invoke(context(true));
 
-  it('builds and uses the commit prefix when commitPrefixBuilder is set', async () => {
-    mockBuildCommitPrefix.mockReturnValue('feature-42-add-login');
-    const param = baseParam({
-      commitPrefixBuilder: 'replace-slash',
-      commitPrefixBuilderParams: undefined,
-      commit: {
-        branch: 'feature/42-add-login',
-        commits: [
-          {
-            id: 'x',
-            message: 'feature-42-add-login: add login screen',
-            author: { name: 'A', username: 'a' },
-          },
-        ],
-      },
-    });
-    await useCase.invoke(param);
-    expect(mockBuildCommitPrefix).toHaveBeenCalledWith(
-      'feature/42-add-login',
-      'replace-slash',
-    );
-    expect(mockAddComment).toHaveBeenCalledWith(
-      42,
-      expect.stringContaining('add login screen')
-    );
-  });
-
-  it('uses release title when release.active', async () => {
-    const param = baseParam({ release: { active: true }, isFeature: false });
-    await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith(
-      42,
-      expect.stringContaining('Release News')
-    );
-  });
-
-  it('uses hotfix title when hotfix.active', async () => {
-    const param = baseParam({ hotfix: { active: true }, isFeature: false });
-    await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith(
-      42,
-      expect.stringContaining('Hotfix News')
-    );
-  });
-
-  it('uses bugfix and docs titles', async () => {
-    const paramBugfix = baseParam({ isBugfix: true, isFeature: false });
-    await useCase.invoke(paramBugfix);
-    expect(mockAddComment).toHaveBeenCalledWith(
-      42,
-      expect.stringContaining('Bugfix News')
-    );
-
-    const paramDocs = baseParam({ isDocs: true, isFeature: false });
-    await useCase.invoke(paramDocs);
-    expect(mockAddComment).toHaveBeenCalledWith(
-      42,
-      expect.stringContaining('Documentation News')
-    );
-  });
-
-  it('uses chore and Automatic News titles', async () => {
-    const paramChore = baseParam({ isChore: true, isFeature: false });
-    await useCase.invoke(paramChore);
-    expect(mockAddComment).toHaveBeenCalledWith(
-      42,
-      expect.stringContaining('Chore News')
-    );
-
-    const paramAuto = baseParam({
-      isFeature: false,
-      isBugfix: false,
-      isDocs: false,
-      isChore: false,
-    });
-    await useCase.invoke(paramAuto);
-    expect(mockAddComment).toHaveBeenCalledWith(
-      42,
-      expect.stringContaining('Automatic News')
-    );
-  });
-
-  it('adds Attention section when commit does not start with prefix and commitPrefix is set', async () => {
-    mockBuildCommitPrefix.mockReturnValue('feature-42');
-    const param = baseParam({
-      commitPrefixBuilder: 'replace-slash',
-      commit: {
-        branch: 'feature/42-add-login',
-        commits: [
-          {
-            id: 'x',
-            message: 'wrong prefix: something',
-            author: { name: 'A', username: 'a' },
-          },
-        ],
-      },
-    });
-    await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith(
-      42,
-      expect.stringContaining('Attention')
-    );
-    expect(mockAddComment).toHaveBeenCalledWith(
-      42,
-      expect.stringMatching(/prefix \*\*feature-42\*\*/)
-    );
-  });
-
-  it('when reopenOnPush and openIssue returns true, adds re-opened comment first', async () => {
-    mockOpenIssue.mockResolvedValue(true);
-    const param = baseParam({ issue: { reopenOnPush: true } });
-    await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith(
-      42,
-      expect.stringContaining('re-opened after pushing new commits')
-    );
-  });
-
-  it('when reopenOnPush and openIssue returns false, does not add re-opened comment', async () => {
-    mockAddComment.mockClear();
-    mockOpenIssue.mockResolvedValue(false);
-    const param = baseParam({ issue: { reopenOnPush: true } });
-    await useCase.invoke(param);
-    const reOpenedCalls = mockAddComment.mock.calls.filter((c) =>
-      c[1].includes('re-opened after pushing')
-    );
-    expect(reOpenedCalls).toHaveLength(0);
+    expect(results[0]).toMatchObject({ success: false, executed: true });
+    expect(results[0].errors[0]).toMatchObject({ code: 'provider.unavailable' });
   });
 });

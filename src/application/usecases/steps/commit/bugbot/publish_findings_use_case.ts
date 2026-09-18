@@ -4,7 +4,6 @@
  */
 
 import type { BugbotFindingPublicationPorts } from "../../../../../application/ports/bugbot_finding_publication_ports";
-import { getCommentWatermark } from "../../../../../utils/comment_watermark";
 import type { BugbotContext } from "./types";
 import {
     findExistingFindingInfo,
@@ -14,27 +13,24 @@ import { publishIssueFindingComment } from "./publish_issue_finding_comment";
 import { PullRequestReviewCommentPublisher } from "./publish_pr_review_comments";
 import { publishOverflowComment } from "./publish_overflow_comment";
 import type { BugbotReviewOperationContext } from './bugbot_review_operation_context';
+import type { BugbotMessageCatalog } from '../../../../policies/bugbot_message_catalog';
 
 export interface PublishFindingsParam {
     operation: BugbotReviewOperationContext;
     context: BugbotContext;
     findings: BugbotFinding[];
-    /** Commit SHA for bugbot watermark (commit link). When set, comment uses "for commit ..." watermark. */
+    /** Commit SHA retained as provider metadata for compatible issue adapters. */
     commitSha?: string;
     /** When findings were limited by max comments, add one summary comment with this overflow info. */
     overflowCount?: number;
     overflowTitles?: string[];
     ports: BugbotFindingPublicationPorts;
+    catalog?: BugbotMessageCatalog;
 }
 
 export async function publishFindings(param: PublishFindingsParam): Promise<void> {
-    const { operation, context, findings, commitSha, overflowCount = 0, overflowTitles = [], ports } = param;
+    const { operation, context, findings, commitSha, overflowCount = 0, overflowTitles = [], ports, catalog } = param;
     const { existingByFindingId, canonicalPullRequest, prContext } = context;
-
-    const watermark =
-        commitSha
-            ? getCommentWatermark({ commitSha, owner: operation.repository.owner, repo: operation.repository.name })
-            : getCommentWatermark();
 
     const reviewPublisher =
         prContext && canonicalPullRequest
@@ -43,9 +39,9 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
                   operation,
                   openPrNumber: canonicalPullRequest.number,
                   prContext,
-                  watermark,
                   ruleSources: context.reviewRuleSources,
                   omittedRuleCount: context.omittedReviewRules,
+                  catalog,
               })
             : undefined;
 
@@ -56,7 +52,8 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
                 operation.target.issueNumber,
                 finding,
                 findExistingFindingInfo(existingByFindingId, finding),
-                commitSha
+                commitSha,
+                catalog,
             );
         }
         if (reviewPublisher) {
@@ -71,7 +68,8 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
             operation.target.issueNumber,
             overflowCount,
             overflowTitles,
-            commitSha
+            commitSha,
+            catalog,
         );
     }
 }

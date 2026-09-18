@@ -31,3 +31,7 @@ or implementation RFC:
 7. Run `pnpm run validate:specifications` for every specification or catalog
    change. Regenerate `specs/CATALOG.md` with
    `pnpm run generate:specifications` after editing catalog metadata.
+
+<!-- copilot:agent-guidance:start -->
+Before repository work, use the `copilot-repository-workflow` skill and read `.copilot/AGENT_GUIDE.md`. Managed remote branches are owned by the GitHub Action.
+<!-- copilot:agent-guidance:end -->

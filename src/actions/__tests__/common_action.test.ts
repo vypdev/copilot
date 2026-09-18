@@ -65,6 +65,28 @@ function unresolvedSetupResult(context: {
   };
 }
 
+function configuredSetupResult(
+  context: Parameters<typeof unresolvedSetupResult>[0],
+  admission: unknown,
+  previousConfiguration?: Record<string, unknown>,
+) {
+  return {
+    ...unresolvedSetupResult(context),
+    status: 'configured',
+    branchType: '',
+    state: {
+      previousConfiguration,
+      currentIssueLabels: [],
+      currentPullRequestLabels: [],
+      release: { active: false },
+      hotfix: { active: false },
+      configuration: {},
+      issueWorkflowAdmission: admission,
+      liveIssueBody: '',
+    },
+  };
+}
+
 jest.mock('../../infrastructure/composition/main_run_route_composition_root', () => ({
   createMainRunRouteCompositionRoot: jest.fn().mockImplementation(() => ({
     'single-action': mockSingleActionInvoke,
@@ -456,6 +478,22 @@ describe('mainRun', () => {
     expect(mockSingleActionInvoke).not.toHaveBeenCalled();
   });
 
+  it('dispatches an unlinked pull request instead of treating it as a targetless action', async () => {
+    const execution = mockExecution({
+      eventName: 'pull_request',
+      issueNumber: -1,
+      isPullRequest: true,
+      pullRequest: { number: 84, isPullRequest: true },
+    });
+    mockPullRequestInvoke.mockResolvedValue([new Result({ id: 'pr', success: true })]);
+
+    const results = await runMain(execution);
+
+    expect(mockPullRequestInvoke).toHaveBeenCalledWith(execution);
+    expect(mockSingleActionInvoke).not.toHaveBeenCalled();
+    expect(results).toHaveLength(1);
+  });
+
   it('runs IssueCommentUseCase when isIssue and issue comment', async () => {
     const execution = mockExecution({
       isIssue: true,
@@ -552,6 +590,29 @@ describe('mainRun', () => {
     expect(execution.labels.currentPullRequestLabels).toEqual(['state:reviewing']);
   });
 
+  it('still reconciles pull-request lifecycle labels for an edited review event', async () => {
+    const execution = mockExecution({
+      eventName: 'pull_request_review',
+      inputs: { action: 'edited' },
+      isPullRequest: true,
+      pullRequest: { number: 42, isPullRequestReviewComment: false, isPullRequest: true },
+    });
+    mockPullRequestInvoke.mockResolvedValue([]);
+    mockLifecycleStateInvoke.mockResolvedValue({
+      results: [],
+      labelPatch: { target: { kind: 'pull-request', number: 42 }, labels: ['state:reviewing'] },
+    });
+
+    await runMainWithLifecycle(execution);
+
+    expect(mockPullRequestInvoke).toHaveBeenCalledWith(execution);
+    expect(mockLifecycleStateInvoke).toHaveBeenCalledWith({
+      context: expect.objectContaining({ eventName: 'pull_request_review', action: 'edited' }),
+      results: [],
+    });
+    expect(execution.labels.currentPullRequestLabels).toEqual(['state:reviewing']);
+  });
+
   it('leaves both label caches unchanged when lifecycle synchronization returns no patch', async () => {
     const execution = mockExecution({
       eventName: 'issues',
@@ -612,6 +673,90 @@ describe('mainRun', () => {
     expect(results).toEqual(expected);
   });
 
+  it('returns a successful no-op for passive disabled work before runtime or route mutation', async () => {
+    const execution = mockExecution({
+      eventName: 'issues',
+      isIssue: true,
+      issue: { number: 42, isIssue: true, isIssueComment: false, labeled: false },
+    });
+    mockSetupExecutionInvoke.mockImplementation(async context => configuredSetupResult(
+      context,
+      { status: 'disabled', kind: 'bugfix' },
+    ));
+    const prepareRuntime = jest.fn();
+
+    const results = await productionMainRun(
+      execution,
+      projectBoardCommandPort,
+      latestTagQueryPort,
+      'github-workflow',
+      undefined,
+      undefined,
+      prepareRuntime,
+    );
+
+    expect(results).toEqual([expect.objectContaining({ id: 'IssueWorkflowAdmission', success: true, executed: false })]);
+    expect(prepareRuntime).not.toHaveBeenCalled();
+    expect(mockIssueInvoke).not.toHaveBeenCalled();
+    expect(createMainRunRouteCompositionRoot).not.toHaveBeenCalled();
+  });
+
+  it('returns a blocking result for explicit unmanaged work before runtime or route mutation', async () => {
+    const execution = mockExecution({
+      eventName: 'issue_comment',
+      isIssue: true,
+      issue: { number: 42, isIssue: false, isIssueComment: true, labeled: false },
+    });
+    mockSetupExecutionInvoke.mockImplementation(async context => configuredSetupResult(
+      context,
+      { status: 'unmanaged', reason: 'no-recognized-kind' },
+    ));
+    const prepareRuntime = jest.fn();
+
+    const results = await productionMainRun(
+      execution,
+      projectBoardCommandPort,
+      latestTagQueryPort,
+      'github-workflow',
+      undefined,
+      undefined,
+      prepareRuntime,
+    );
+
+    expect(results[0]).toMatchObject({ id: 'IssueWorkflowAdmission', success: false, executed: false });
+    expect(results[0].errors[0]).toMatchObject({ code: 'configuration.invalid' });
+    expect(prepareRuntime).not.toHaveBeenCalled();
+    expect(mockIssueCommentInvoke).not.toHaveBeenCalled();
+  });
+
+  it('allows a disabled managed pull request to continue without agent preparation', async () => {
+    const execution = mockExecution({
+      eventName: 'pull_request',
+      isPullRequest: true,
+      pullRequest: { number: 77, head: 'feature/42-work', base: 'develop', isPullRequest: true, isPullRequestReviewComment: false },
+    });
+    mockSetupExecutionInvoke.mockImplementation(async context => configuredSetupResult(
+      context,
+      { status: 'disabled', kind: 'feature' },
+      { branchType: 'feature', workingBranch: 'feature/42-work' },
+    ));
+    const prepareRuntime = jest.fn();
+
+    await productionMainRun(
+      execution,
+      projectBoardCommandPort,
+      latestTagQueryPort,
+      'github-workflow',
+      undefined,
+      undefined,
+      prepareRuntime,
+    );
+
+    expect(execution.issueWorkflowRuntimeMode).toBe('continuation-only');
+    expect(prepareRuntime).toHaveBeenCalledWith(execution);
+    expect(mockPullRequestInvoke).toHaveBeenCalledWith(execution);
+  });
+
   it('tracks agent activity around an agent-backed route', async () => {
     const order: string[] = [];
     mockAgentActivityStart.mockImplementation(async () => {
@@ -640,7 +785,7 @@ describe('mainRun', () => {
     expect(execution.labels.currentIssueLabels).toEqual(['state:ready']);
   });
 
-  it('calls core.setFailed when action not handled', async () => {
+  it('returns a semantic failure when the action route is not handled', async () => {
     const execution = mockExecution({
       isIssue: false,
       isPullRequest: false,
@@ -649,19 +794,23 @@ describe('mainRun', () => {
 
     const results = await runMain(execution);
 
-    expect(core.setFailed).toHaveBeenCalledWith('Action not handled.');
-    expect(logInfo).toHaveBeenCalledWith('Main run finished. Results: 0, total steps: 0.');
-    expect(results).toEqual([]);
+    expect(core.setFailed).not.toHaveBeenCalled();
+    expect(logInfo).toHaveBeenCalledWith('Main run finished. Results: 1, total steps: 0.');
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ success: false, executed: false });
+    expect(results[0].errors[0]).toMatchObject({ code: 'workflow.invalid-event' });
   });
 
-  it('calls core.setFailed and returns [] when use case throws', async () => {
+  it('returns a semantic failure when a use case throws', async () => {
     const execution = mockExecution({ isPush: true });
     mockCommitInvoke.mockRejectedValue(new Error('Commit failed'));
 
     const results = await runMain(execution);
 
-    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Cause (workflow.failed): Main run failed.'));
-    expect(results).toEqual([]);
+    expect(core.setFailed).not.toHaveBeenCalled();
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ success: false, executed: true });
+    expect(results[0].errors[0]).toMatchObject({ code: 'workflow.failed', message: 'Main run failed.' });
   });
 
   it('does not expose a non-Error thrown value in the action failure', async () => {
@@ -670,9 +819,10 @@ describe('mainRun', () => {
 
     const results = await runMain(execution);
 
-    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Cause (workflow.failed): Main run failed.'));
-    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('plain string error'));
-    expect(results).toEqual([]);
+    expect(core.setFailed).not.toHaveBeenCalled();
+    expect(results).toHaveLength(1);
+    expect(results[0].errors[0]).toMatchObject({ code: 'workflow.failed', message: 'Main run failed.' });
+    expect(results[0].errors[0].message).not.toContain('plain string error');
   });
 
   it('propagates a canonical queue failure without exposing provider diagnostics', async () => {

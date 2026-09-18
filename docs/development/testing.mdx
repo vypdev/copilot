@@ -30,7 +30,16 @@ inputs, actions, commands, and orchestration modes.
 `validate:specifications` validates unique capability ownership, safe existing
 repository-relative evidence paths, complete registration of top-level SDDs,
 retrospective-baseline structure, and byte-for-byte freshness of the generated
-`specs/CATALOG.md` view.
+`specs/CATALOG.md` view. It also enforces the communication-program test ledger:
+at least 128 semantic-publication cases and 136 localization cases, allocated to
+disjoint test files. Parameterized declarations count once, and removing tests,
+inflating an allocation, or assigning one file to both budgets fails the gate.
+
+The ledger lives at
+`src/architecture/github_communication_test_budget.json`. Its qualifying counts
+are a conservative audit of new Jest `it`/`test` declarations since the two SDDs
+landed at baseline `0bb83b75^`; a table-driven declaration is not multiplied by
+its data rows.
 
 Merge-queue contract tests cover ruleset-only targets, classic/ruleset union,
 GitHub Actions workflow parsing on target and candidate refs, external exact
@@ -55,8 +64,11 @@ rate-limited 403 headers, bounded fallback backoff/jitter, and the absolute dead
 The workflow contract test keeps the nine queue-bearing workflow names synchronized with the
 validator and verifies the `90m queue / 120m job` budget, required runners, action
 inputs, missing/short timeouts, forbidden durable-mutation concurrency, and the
-exact shared branch concurrency contract permitted only for Commit/Pull Request
-Bugbot jobs.
+distinct branch concurrency and event-ownership contracts for Commit and Pull
+Request jobs. The Bugbot ownership policy matrix and push-shaped integration
+test additionally prove that exact-head provider discovery—not a nonexistent
+`pull_request` field on the push payload—stops duplicate agent review before
+the diff and conversation are loaded.
 
 GitHub lifecycle tests cover admission before queue polling, PAT-owner normal-run
 discard, valid single-action preservation, identity lookup failure, and the absence
@@ -82,7 +94,12 @@ all-branch observer workflow is also contract-checked to remain free of agent in
 
 Architecture tests additionally verify that production imports remain acyclic,
 application code does not depend on concrete adapters, and pure model/policy
-code remains free of runtime, provider, and logging dependencies. Refresh the
+code remains free of runtime, provider, and logging dependencies. The
+product-facing agent inventory test also requires exactly one guarded query for
+Think, help, recommendations, progress, PR descriptions, and Bugbot, and prompt
+tests require both `targetLocale` and `outputLocale`. Workflow tests prove that
+a mismatched response cannot publish or mutate labels, descriptions,
+recommendation state, or findings. Refresh the
 local topology before an architecture review with Graphify, and use the
 RepoWise index-only health/dead-code reports to distinguish current complexity
 from history-based churn signals:

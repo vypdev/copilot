@@ -8,7 +8,7 @@ Release issues are used to track and manage the process of creating new versions
 ## Workflow
 
 The release process follows these steps after creating an issue with `release`
-and `branched` labels:
+and then adding `in-progress`:
 
 <Steps>
   <Step title="Snapshot development">
@@ -137,24 +137,13 @@ jobs:
           development-branch: development # [!code highlight]
 ```
 
-## Images
+## Conversation presentation
 
-You can configure custom images to be displayed in the comments of release issues. These images will be randomly selected and displayed when Copilot performs actions on the issue.
-
-To configure the images, provide a comma-separated list of image URLs in the `images-issue-release` input:
-
-```yml
-jobs:
-  git-board-issues:
-    name: Git Board - Issue
-    runs-on: ubuntu-latest
-    steps:
-      - uses: vypdev/copilot@v3
-        with:
-          images-issue-release: url1, url2, url3 # [!code highlight]
-```
-
-<Image zoom src="https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExeHNrY2JseXlwNmY3bTI2aDd3eXp4N2pjMHJtNDBiYWg3OHE3Zmd5aCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ROlbnsc7aCIL6Icq6h/giphy.gif" />
+The durable release dashboard owns the issue presentation. Routine
+orchestration does not create an “Actions” summary or add decorative media. The
+dashboard uses the effective issue locale, managed PRs use
+the pull-request locale, and the Actions summary uses the English-default
+repository locale; see the orchestration guide for inheritance and fallback.
 
 ## Template
 You can use this template for release issues that helps capture all the necessary information. The template includes fields for:
@@ -170,7 +159,7 @@ You can find this template in `.github/ISSUE_TEMPLATE/release.yml`. Below is an 
 name: 🚀 Release Issue
 description: Request a new release for copilot (only team members)
 title: "<YOUR TITLE HERE>"
-labels: ["release", "branched", "priority: medium"]
+labels: ["release", "priority: medium"]
 body:
   - type: markdown
     attributes:

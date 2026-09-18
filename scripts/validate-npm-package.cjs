@@ -57,6 +57,13 @@ const requiredRepositoryFiles = [
   'build/api/src/api.d.ts',
   'setup/workflows/copilot_issue.yml',
   'setup/ISSUE_TEMPLATE/config.yml',
+  'setup/ISSUE_TEMPLATE/feature_request.yml',
+  'setup/ISSUE_TEMPLATE/bug_report.yml',
+  'setup/ISSUE_TEMPLATE/doc_update.yml',
+  'setup/ISSUE_TEMPLATE/chore_task.yml',
+  'setup/ISSUE_TEMPLATE/help_request.yml',
+  'setup/ISSUE_TEMPLATE/hotfix.yml',
+  'setup/ISSUE_TEMPLATE/release.yml',
   'setup/pull_request_template.md',
   'scripts/install-git-hooks.cjs',
 ];
@@ -93,7 +100,7 @@ try {
   const metadata = JSON.parse(output);
   const packageFiles = new Set((metadata[0]?.files ?? []).map((file) => file.path));
 
-  for (const requiredFile of ['action.yml', 'build/cli/index.js', 'build/github_action/index.js', 'build/api/index.js', 'build/api/src/api.d.ts', 'setup/workflows/copilot_issue.yml', 'scripts/install-git-hooks.cjs']) {
+  for (const requiredFile of requiredRepositoryFiles) {
     if (!packageFiles.has(requiredFile)) {
       error(`npm package is missing ${requiredFile}.`);
     }

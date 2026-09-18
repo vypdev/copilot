@@ -21,6 +21,8 @@ The qualified model is `<agent-model-provider>/<agent-model>`; the default is `o
 
 ## Authorization variables
 
+The isolated PR approval observer uses `pr-approval-observer` (`false` by default), `pr-approval-pr-number` (positive number for manual recheck), and `pr-approval-policy` (versioned JSON forwarded from `PR_APPROVAL_POLICY`). These are observer inputs, not agent-selection inputs. The runtime rereads the Variable and never accepts PR content as an override. See [guarded PR approval](/pull-requests/guarded-approval).
+
 | Variable | Example | Meaning |
 | --- | --- | --- |
 | `AGENT_ALLOWED_MODEL_PROVIDERS` | `openai` | Comma-separated provider allowlist |

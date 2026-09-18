@@ -1,6 +1,12 @@
-import { parseCopilotCommand } from '../copilot_command';
+import { copilotCommandAcceptsAdaptableProse, parseCopilotCommand } from '../copilot_command';
 
 describe('Copilot command policy', () => {
+    it('classifies only commands with natural-language arguments as adaptable prose', () => {
+        expect(copilotCommandAcceptsAdaptableProse('fix')).toBe(true);
+        expect(copilotCommandAcceptsAdaptableProse('sync-branch')).toBe(false);
+        expect(copilotCommandAcceptsAdaptableProse('help')).toBe(false);
+    });
+
     it.each([
         ['/copilot plan', 'plan'],
         ['/copilot help', 'help'],

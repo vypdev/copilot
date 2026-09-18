@@ -1,4 +1,5 @@
 import type {
+  BugbotPresentationDiagnostic,
   BugbotPresentationReport,
   BugbotReconciliationPlan,
   BugbotReconciliationSnapshot,
@@ -17,6 +18,13 @@ import {
   type OwnedBugbotReview,
 } from '../../../../policies/bugbot_review_ownership_policy';
 import { buildBugbotReviewProjection } from '../../../../../domain/bugbot/review_projection';
+import { buildDuplicateMarker } from '../../../../policies/publication_identity_policy';
+import {
+  bugbotDiagnosticOperatorMessage,
+  renderBugbotDiagnostic,
+  resolveStaticBugbotCatalog,
+  type BugbotMessageCatalog,
+} from '../../../../policies/bugbot_message_catalog';
 
 const MAX_REVIEW_UPDATES_PER_RUN = 20;
 const REVIEW_UPDATE_CONCURRENCY = 4;
@@ -28,11 +36,17 @@ interface PlannedReviewUpdate {
   readonly body: string;
 }
 
+interface PresentationFailure {
+  readonly diagnostic: BugbotPresentationDiagnostic;
+  readonly error: Error;
+}
+
 export interface BugbotPresentationSynchronizationInput {
   readonly target: BugbotReconciliationTarget;
   readonly snapshot: BugbotReconciliationSnapshot;
   readonly plan: BugbotReconciliationPlan;
   readonly ports: BugbotPresentationMutationPorts;
+  readonly catalog?: BugbotMessageCatalog;
 }
 
 /**
@@ -43,14 +57,15 @@ export interface BugbotPresentationSynchronizationInput {
 export async function synchronizeBugbotReviewPresentation(
   input: BugbotPresentationSynchronizationInput,
 ): Promise<BugbotPresentationReport> {
-  const initialErrors = input.plan.diagnostics.map((message) => new Error(message));
-  let projection = buildProjection(input, initialErrors);
+  const catalog = input.catalog ?? resolveStaticBugbotCatalog(input.target.locale);
+  const initialFailures = input.plan.diagnostics.map(toPresentationFailure);
+  let projection = buildProjection(input, initialFailures, catalog);
   const navigation = input.snapshot.navigation;
   if (!navigation) {
-    return report(projection, 0, 0, 'failed', initialErrors);
+    return report(projection, 0, 0, 'failed', initialFailures.map(({ error }) => error));
   }
 
-  const plannedReviewUpdates = planReviewUpdates(input, projection, navigation);
+  const plannedReviewUpdates = planReviewUpdates(input, projection, navigation, catalog);
   const selectedReviewUpdates = plannedReviewUpdates.slice(0, MAX_REVIEW_UPDATES_PER_RUN);
   const reviewWriteResults = await mapWithConcurrency(
     selectedReviewUpdates,
@@ -64,11 +79,12 @@ export async function synchronizeBugbotReviewPresentation(
     },
   );
   const reviewUpdates = reviewWriteResults.filter((result) => result === 'fulfilled').length;
-  const reviewErrors = reviewWriteResults.flatMap((result, index) =>
+  const reviewFailures = reviewWriteResults.flatMap((result, index) =>
     result === 'rejected'
-      ? [new Error(
-          `Unable to update Bugbot review ${selectedReviewUpdates[index].ownedReview.review.identity}.`,
-        )]
+      ? [toPresentationFailure({
+          code: 'review-update-failed',
+          reviewIdentity: selectedReviewUpdates[index].ownedReview.review.identity,
+        })]
       : [],
   );
   const pendingReviewUpdates = Math.max(
@@ -76,22 +92,23 @@ export async function synchronizeBugbotReviewPresentation(
     plannedReviewUpdates.length - MAX_REVIEW_UPDATES_PER_RUN,
   );
   if (pendingReviewUpdates > 0) {
-    reviewErrors.push(new Error(
-      `${pendingReviewUpdates} Bugbot review status block(s) remain pending; run /copilot recheck.`,
-    ));
+    reviewFailures.push(toPresentationFailure({
+      code: 'review-updates-pending',
+      count: pendingReviewUpdates,
+    }));
   }
 
-  const errorsBeforeStatus = [...initialErrors, ...reviewErrors];
-  projection = buildProjection(input, errorsBeforeStatus);
-  const statusResult = await synchronizeStatusCard(input, projection, navigation);
-  const errors = [...errorsBeforeStatus, ...statusResult.errors];
-  if (statusResult.errors.length > 0) projection = buildProjection(input, errors);
+  const failuresBeforeStatus = [...initialFailures, ...reviewFailures];
+  projection = buildProjection(input, failuresBeforeStatus, catalog);
+  const statusResult = await synchronizeStatusCard(input, projection, navigation, catalog);
+  const failures = [...failuresBeforeStatus, ...statusResult.failures];
+  if (statusResult.failures.length > 0) projection = buildProjection(input, failures, catalog);
   return report(
     projection,
     reviewUpdates,
     pendingReviewUpdates,
     statusResult.operation,
-    errors,
+    failures.map(({ error }) => error),
   );
 }
 
@@ -99,6 +116,7 @@ function planReviewUpdates(
   input: BugbotPresentationSynchronizationInput,
   projection: BugbotPresentationReport['projection'],
   navigation: BugbotReviewNavigation,
+  catalog: BugbotMessageCatalog,
 ): PlannedReviewUpdate[] {
   return selectOwnedBugbotReviews({
     reviews: input.snapshot.reviews,
@@ -113,7 +131,7 @@ function planReviewUpdates(
       projectionDigest: projection.digest,
       coverageStatus: projection.coverage.status,
       findings: ownedReview.findings,
-      locale: input.target.locale,
+      catalog,
       statusUrl: navigation.pullRequestUrl,
     });
     return body === ownedReview.review.body ? [] : [{ ownedReview, body }];
@@ -124,9 +142,10 @@ async function synchronizeStatusCard(
   input: BugbotPresentationSynchronizationInput,
   projection: BugbotPresentationReport['projection'],
   navigation: BugbotReviewNavigation,
+  catalog: BugbotMessageCatalog,
 ): Promise<{
   readonly operation: BugbotPresentationReport['statusCardOperation'];
-  readonly errors: readonly Error[];
+  readonly failures: readonly PresentationFailure[];
 }> {
   if (
     !input.target.trustedAuthorLogin?.trim()
@@ -134,7 +153,7 @@ async function synchronizeStatusCard(
   ) {
     return statusFailure();
   }
-  const statusBody = renderBugbotStatusCard(projection, input.target.locale, navigation);
+  const statusBody = renderBugbotStatusCard(projection, catalog, navigation);
   const trustedStatusComments = input.snapshot.conversationComments
     .filter((comment) =>
       isTrustedBugbotAuthor(comment.user?.login, input.target.trustedAuthorLogin)
@@ -174,9 +193,11 @@ async function synchronizeStatusCard(
         input.target.pullRequestNumber,
         duplicate.id,
         [
-          '## 🤖 Bugbot status moved',
+          buildDuplicateMarker(canonical?.id ?? duplicate.id),
           '',
-          `This duplicate status card is no longer current. [Use the canonical PR status](${navigation.pullRequestUrl}).`,
+          catalog.message('bugbot.status.duplicate.superseded'),
+          '',
+          `[${catalog.message('bugbot.status.duplicate.viewCurrent')}](${navigation.pullRequestUrl}).`,
         ].join('\n'),
         { commitSha: input.snapshot.verifiedHeadSha },
       );
@@ -184,12 +205,13 @@ async function synchronizeStatusCard(
   );
   if (duplicateResults.includes('rejected')) failed = true;
   if (duplicateResults.includes('fulfilled')) operation = 'updated';
-  return failed ? statusFailure() : { operation, errors: [] };
+  return failed ? statusFailure() : { operation, failures: [] };
 }
 
 function buildProjection(
   input: BugbotPresentationSynchronizationInput,
-  errors: readonly Error[],
+  failures: readonly PresentationFailure[],
+  catalog: BugbotMessageCatalog,
 ): BugbotPresentationReport['projection'] {
   return buildBugbotReviewProjection({
     pullRequestNumber: input.target.pullRequestNumber,
@@ -197,17 +219,24 @@ function buildProjection(
     verifiedHeadSha: input.snapshot.verifiedHeadSha,
     findings: input.plan.findings,
     coverage: input.plan.coverage,
-    errors: errors.map((error) => error.message.slice(0, 500)),
+    errors: failures.map(({ diagnostic }) => renderBugbotDiagnostic(diagnostic, catalog).slice(0, 500)),
   });
 }
 
 function statusFailure(): {
   readonly operation: 'failed';
-  readonly errors: readonly Error[];
+  readonly failures: readonly PresentationFailure[];
 } {
   return {
     operation: 'failed',
-    errors: [new Error('Unable to create or update the canonical Bugbot PR status card.')],
+    failures: [toPresentationFailure({ code: 'status-card-update-failed' })],
+  };
+}
+
+function toPresentationFailure(diagnostic: BugbotPresentationDiagnostic): PresentationFailure {
+  return {
+    diagnostic,
+    error: new Error(bugbotDiagnosticOperatorMessage(diagnostic)),
   };
 }
 

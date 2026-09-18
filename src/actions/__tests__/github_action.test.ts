@@ -27,6 +27,7 @@ jest.mock('@actions/core', () => ({
   getInput: jest.fn(),
   setFailed: jest.fn(),
   setOutput: jest.fn(),
+  summary: { addRaw: jest.fn().mockReturnThis(), write: jest.fn().mockResolvedValue(undefined) },
 }));
 
 jest.mock('../../utils/logger', () => ({
@@ -39,6 +40,17 @@ jest.mock('../../utils/logger', () => ({
 const mockMainRun = jest.fn();
 jest.mock('../common_action', () => ({
   mainRun: (...args: unknown[]) => mockMainRun(...args),
+}));
+
+const mockReviewOnly = jest.fn();
+jest.mock('../../infrastructure/composition/pull_request_use_case_composition_root', () => ({
+  createPullRequestUseCaseCompositionRoot: jest.fn(() => ({ reviewOnly: mockReviewOnly })),
+}));
+
+const mockLanguageQuery = jest.fn();
+const mockCreateLanguageQueryPort = jest.fn(() => ({ query: mockLanguageQuery }));
+jest.mock('../../infrastructure/composition/agent_capability_composition_root', () => ({
+  createLanguageQueryPort: () => mockCreateLanguageQueryPort(),
 }));
 
 const mockExecutionAdmissionInvoke = jest.fn();
@@ -94,7 +106,12 @@ describe('runGitHubAction', () => {
       return '';
     });
     mockGetProjectDetail.mockResolvedValue({ id: 'p1', title: 'Board', url: 'https://example.com' });
-    mockMainRun.mockResolvedValue([]);
+    mockMainRun.mockImplementation(async (...args: unknown[]) => {
+      const prepareRuntime = args[6] as ((execution: unknown) => Promise<void>) | undefined;
+      if (prepareRuntime) await prepareRuntime(args[0]);
+      return [];
+    });
+    mockReviewOnly.mockResolvedValue([]);
     mockPublishInvoke.mockResolvedValue(undefined);
     mockStoreInvoke.mockResolvedValue([]);
     mockConfigurationUpdate.mockResolvedValue(undefined);
@@ -133,11 +150,30 @@ describe('runGitHubAction', () => {
     expect(projectCompositionSpy).not.toHaveBeenCalled();
     expect(executionBuilderSpy).not.toHaveBeenCalled();
     expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(mockCreateLanguageQueryPort).not.toHaveBeenCalled();
     expect(mockMainRun).not.toHaveBeenCalled();
     expect(finishActionSpy).not.toHaveBeenCalled();
     expect(mockGetProjectDetail).not.toHaveBeenCalled();
     expect(mockPublishInvoke).not.toHaveBeenCalled();
     expect(mockStoreInvoke).not.toHaveBeenCalled();
+  });
+
+  it('runs only Bugbot review for a same-repository PAT-authored PR event', async () => {
+    mockExecutionAdmissionInvoke.mockResolvedValue({ decision: 'discard', tokenUser: 'test-actor' });
+    github.context.eventName = 'pull_request';
+    github.context.payload = {
+      repository: { id: 17, name: 'test-repo', owner: { login: 'test-owner' } }, action: 'opened',
+      pull_request: { number: 42, state: 'open', user: { login: 'test-actor' },
+        head: { ref: 'feature/42', sha: 'a'.repeat(40), repo: { id: 17, owner: { login: 'test-owner' } } },
+        base: { ref: 'develop' } },
+    };
+
+    await runGitHubAction();
+
+    expect(mockReviewOnly).toHaveBeenCalledTimes(1);
+    expect(mockReviewOnly.mock.calls[0][0].issueNumber).toBe(42);
+    expect(mockMainRun).not.toHaveBeenCalled();
+    expect(finishActionSpy).not.toHaveBeenCalled();
   });
 
   it('discards an unaddressed comment before project, AI, runtime, or result work', async () => {
@@ -157,6 +193,44 @@ describe('runGitHubAction', () => {
     expect(mockIsActorAllowedToModifyFiles).not.toHaveBeenCalled();
     expect(mockMainRun).not.toHaveBeenCalled();
     expect(finishActionSpy).not.toHaveBeenCalled();
+  });
+
+  it('delegates unmanaged live-state admission to mainRun without preparing early', async () => {
+    github.context.eventName = 'issues';
+    github.context.payload = {
+      action: 'opened',
+      issue: { number: 42, labels: [{ name: 'priority: high' }] },
+    };
+
+    mockMainRun.mockResolvedValueOnce([]);
+    await runGitHubAction();
+
+    expect(executionBuilderSpy).toHaveBeenCalled();
+    expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(mockCreateLanguageQueryPort).not.toHaveBeenCalled();
+    expect(mockMainRun).toHaveBeenCalled();
+    expect(mockMainRun.mock.calls[0][6]).toEqual(expect.any(Function));
+  });
+
+  it('passes a disabled profile to live-state admission without event-payload preflight', async () => {
+    github.context.eventName = 'issues';
+    github.context.payload = {
+      action: 'opened',
+      issue: { number: 42, labels: [{ name: 'bug' }] },
+    };
+    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
+      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'fake-token';
+      if (key === INPUT_KEYS.ISSUE_WORKFLOW_PROFILE) return '{"schemaVersion":1,"enabled":["feature"]}';
+      return '';
+    });
+
+    mockMainRun.mockResolvedValueOnce([]);
+    await runGitHubAction();
+
+    expect(projectCompositionSpy).toHaveBeenCalled();
+    expect(executionBuilderSpy).toHaveBeenCalled();
+    expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(mockMainRun.mock.calls[0][0].issueWorkflowProfile.enabled).toEqual(['feature']);
   });
 
   it('passes a valid single action through admission and the normal lifecycle', async () => {
@@ -222,9 +296,10 @@ describe('runGitHubAction', () => {
       'fake-token',
     );
     expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(mockCreateLanguageQueryPort).not.toHaveBeenCalled();
     expect(mockMainRun).toHaveBeenCalledTimes(1);
     expect(mockMainRun.mock.calls[0][0].ai.getAgentConfiguration('planner')).toEqual(expect.objectContaining({
-      model: '',
+      model: 'gpt-5.6-luna',
     }));
     expect(mockMainRun.mock.calls[0][0].ai.getAgentConfiguration('planner')).not.toHaveProperty('command');
   });
@@ -238,6 +313,36 @@ describe('runGitHubAction', () => {
     expect(executionBuilderSpy).not.toHaveBeenCalled();
     expect(mockMainRun).not.toHaveBeenCalled();
     expect(finishActionSpy).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invalid repository locale before project or agent preparation', async () => {
+    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
+      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'fake-token';
+      if (key === INPUT_KEYS.REPOSITORY_LOCALE) return 'und';
+      return '';
+    });
+
+    await expect(runGitHubAction()).rejects.toThrow('Invalid locale tag');
+    expect(projectCompositionSpy).not.toHaveBeenCalled();
+    expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(mockMainRun).not.toHaveBeenCalled();
+  });
+
+  it('prepares the planner capability when a valid locale needs dynamic product copy', async () => {
+    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
+      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'fake-token';
+      if (key === INPUT_KEYS.REPOSITORY_LOCALE) return 'fr-FR';
+      return '';
+    });
+
+    await runGitHubAction();
+
+    expect(agentProvisioningSpy).toHaveBeenCalledWith(expect.anything(), expect.arrayContaining(['planner']));
+    expect(executionBuilderSpy).toHaveBeenCalledWith(expect.objectContaining({
+      localeInputs: expect.objectContaining({ repository: 'fr-FR', issue: 'fr-FR', pullRequest: 'fr-FR' }),
+      activeAgentTasks: expect.arrayContaining(['planner']),
+    }));
+    expect(mockCreateLanguageQueryPort).toHaveBeenCalledTimes(1);
   });
 
   it('publishes results but skips configuration persistence when no issue target exists', async () => {
@@ -292,7 +397,8 @@ describe('runGitHubAction', () => {
     await runGitHubAction();
 
     expect(mockPublishInvoke).toHaveBeenCalled();
-    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Cause (workflow.failed): First error'));
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: workflow.failed'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('First error'));
   });
 
   it('calls logError when INPUT_VARS_JSON is invalid JSON', async () => {
@@ -334,7 +440,33 @@ describe('runGitHubActionEntry', () => {
   it('converts an unhandled rejection into an action failure without forcing process exit', async () => {
     await runGitHubActionEntry(jest.fn().mockRejectedValue(new Error('entry failed')));
 
-    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Cause (workflow.failed): GitHub Action execution failed.'));
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: workflow.failed'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('GitHub Action execution failed.'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('entry failed'));
+  });
+
+  it('uses a bundled repository locale for failures before execution is available', async () => {
+    (core.getInput as jest.Mock).mockImplementation((key: string) =>
+      key === INPUT_KEYS.REPOSITORY_LOCALE ? 'es-MX' : '');
+
+    await runGitHubActionEntry(jest.fn().mockRejectedValue(new Error('entry failed')));
+
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Impacto:'));
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Código de error: workflow.failed'));
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Reintentable: Sí'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('Impact:'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('entry failed'));
+  });
+
+  it('falls back atomically to English when the early locale input is invalid', async () => {
+    (core.getInput as jest.Mock).mockImplementation((key: string) =>
+      key === INPUT_KEYS.REPOSITORY_LOCALE ? 'not a locale' : '');
+
+    await runGitHubActionEntry(jest.fn().mockRejectedValue(new Error('entry failed')));
+
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Impact:'));
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: workflow.failed'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('Impacto:'));
     expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('entry failed'));
   });
 });

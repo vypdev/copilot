@@ -5,7 +5,7 @@ description: Detect parent-branch drift on every push and safely align issue or 
 
 # Branch synchronization
 
-Copilot can watch parent-to-child branch relationships and notify the related open issue when its working branch falls behind. Detection is intentionally separate from the normal commit workflow: `copilot_branch_sync.yml` listens to pushes on **all branches**, performs only GitHub metadata and comparison requests, and never loads Bugbot or an agent.
+Copilot can watch parent-to-child branch relationships and keep the related open issue's branch status current when its working branch falls behind. Detection is intentionally separate from the normal commit workflow: `copilot_branch_sync.yml` listens to pushes on **all branches**, performs GitHub metadata and comparison requests, and never loads Bugbot or a code-changing agent. English is the default. English and Spanish notices use bundled catalogs; another configured BCP-47 locale may make one schema-constrained language request for the complete branch-notice catalog. Invalid or unavailable localization falls back atomically to English before any comment is written.
 
 This separation keeps pushes to `main`, `master`, `develop`, release branches, and intermediate feature branches observable without paying the cost or accepting the noise of the full commit-analysis pipeline.
 
@@ -17,9 +17,38 @@ On each non-deletion push, the observer:
 2. resolves branch relationships from Copilot's durable issue configuration first, then from GitHub linked branches and PR base/head data;
 3. selects relationships where the pushed branch is either the parent or the working branch;
 4. compares each working branch with its parent; and
-5. creates or updates a single bot-authored synchronization notice on the issue.
+5. reconciles one bot-authored synchronization status card on the issue.
 
-The notice is stateful. Further parent pushes update it instead of creating comment spam. When the working branch catches up—including after an automated synchronization—the same notice is marked resolved. A PAT-authored sync push is observed too, so a chain such as `develop → feature/A → feature/B` can propagate recommendations to the next level.
+The card is stateful. The first stale observation creates only that card. Further parent pushes update it only when the rendered comparison changes. When the working branch catches up—including after an automated synchronization—the same card is marked resolved. If a later push changes that resolved card back to stale, Copilot also creates one short action notification linked to the card so the newly required action is not hidden by an edit. Replays of the same source head create nothing, and concurrent duplicates are removed or compacted to a link to the oldest notification.
+
+A PAT-authored sync push is observed too, so a chain such as `develop → feature/A → feature/B` can propagate recommendations to the next level.
+
+Notice prose uses the issue locale inherited from the repository locale unless `issues-locale` overrides it. Commands, branch names, comparison URLs, markers, and machine-readable state remain unchanged in every language.
+
+## Status and notification lifecycle
+
+| Previous state | New comparison | Conversation effect | Why |
+| --- | --- | --- | --- |
+| No card | Stale | Create one status card | The card itself is the initial notification. |
+| Stale | Same rendered comparison | No mutation | Equivalent pushes should be silent. |
+| Stale | Changed comparison | Update the card | The current fact changes without creating timeline noise. |
+| Stale | Aligned | Update the card to resolved | The action is complete; GitHub does not need another notification. |
+| Aligned | Stale | Update the card and create one short linked notification | Human action has become newly necessary. |
+| Aligned | Stale replay at the same source head | No additional notification | The transition fingerprint is immutable and idempotent. |
+
+With the default locale, the transition notification is intentionally compact:
+
+```markdown
+Branch synchronization needs attention: `feature/42` is behind `develop`. [Open the current status](https://github.com/example/project/issues/42#issuecomment-8).
+```
+
+With `issues-locale: es-ES`, the same semantic transition is rendered in Spanish:
+
+```markdown
+La sincronización de la rama necesita atención: `feature/42` está por detrás de `develop`. [Abrir el estado actual](https://github.com/example/project/issues/42#issuecomment-8).
+```
+
+The visible wording never participates in notification identity. Changing a translation therefore does not recreate or rewrite an already issued notification. The workflow Job Summary records whether the notification was created or reused and reports bounded duplicate-cleanup evidence without copying the message body.
 
 <Info>
   A manually created linked branch needs an open PR whose head is that branch to establish its parent. Branches created by Copilot already persist `parentBranch` and `workingBranch`, so they do not require this fallback.
@@ -99,10 +128,27 @@ Every command finishes with a comment in the conversation. The report distinguis
 - merged after fixer-agent conflict resolution; or
 - safely aborted, with a publishable reason and no provider-secret details.
 
-Successful reports include the parent and working branches, verification count, and merge commit SHA in the structured run result. The subsequent push observer resolves the prior stale-branch notice.
+Successful and no-change reports use the issue or pull-request surface locale,
+are correlated to the requesting comment, and are reconciled at most once on
+event replay. For example, an already aligned branch receives one sentence:
+
+```markdown
+No changes were needed — `feature/42` already contains `develop`.
+```
+
+A completed merge names the branches, pushed commit, fixer use when applicable,
+and number of verification checks. It never repeats internal execution steps or
+adds a generic action summary to the conversation.
+
+Successful reports include the parent and working branches, verification count, and merge commit SHA in the structured run result. The subsequent push observer resolves the prior stale-branch card.
 
 ## Why the normal commit workflow remains limited
 
-`copilot_commit.yml` is an issue-centric, agent-capable pipeline: it can publish commit summaries, calculate size/progress, and run Bugbot. Its default exclusion of `master` and `develop` avoids irrelevant issue lookup, agent provisioning, duplicate PR analysis, higher API/model usage, and bot feedback loops on integration branches.
+`copilot_commit.yml` is an issue-centric, agent-capable pipeline: it can
+calculate size/progress and run Bugbot. Pushes themselves stay silent; a
+purpose-specific progress or review surface is updated only when that outcome
+exists. Its default exclusion of `master` and `develop` avoids irrelevant issue
+lookup, agent provisioning, duplicate PR analysis, higher API/model usage, and
+bot feedback loops on integration branches.
 
 The lightweight observer provides the useful part of all-branch visibility without broadening that expensive workflow. Repositories may still remove the commit-workflow exclusions deliberately, but branch synchronization does not require doing so.

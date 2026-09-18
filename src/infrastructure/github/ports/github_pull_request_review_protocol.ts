@@ -39,7 +39,7 @@ export interface GithubReviewComment {
   body?: string | null;
   path?: string;
   line?: number | null;
-  user?: { login?: string | null } | null;
+  user?: { login?: string | null; type?: string | null } | null;
   pull_request_review_id?: number | null;
   html_url?: string | null;
   created_at?: string | null;

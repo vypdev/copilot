@@ -14,10 +14,7 @@ import { getRecommendStepsPrompt } from './recommend_steps';
 import type { RecommendStepsParams } from './recommend_steps';
 import { getCheckProgressPrompt } from './check_progress';
 import type { CheckProgressParams } from './check_progress';
-import {
-    getCheckCommentLanguagePrompt,
-    getTranslateCommentPrompt,
-} from './check_comment_language';
+import { getAdaptCommentLanguagePrompt } from './check_comment_language';
 import type { CheckCommentLanguageParams } from './check_comment_language';
 import { getCliDoPrompt } from './cli_do';
 import type { CliDoParams } from './cli_do';
@@ -41,10 +38,7 @@ export { getRecommendStepsPrompt } from './recommend_steps';
 export type { RecommendStepsParams } from './recommend_steps';
 export { getCheckProgressPrompt } from './check_progress';
 export type { CheckProgressParams } from './check_progress';
-export {
-    getCheckCommentLanguagePrompt,
-    getTranslateCommentPrompt,
-} from './check_comment_language';
+export { getAdaptCommentLanguagePrompt } from './check_comment_language';
 export type { CheckCommentLanguageParams } from './check_comment_language';
 export { getCliDoPrompt } from './cli_do';
 export type { CliDoParams } from './cli_do';
@@ -63,8 +57,7 @@ export const PROMPT_NAMES = {
     USER_REQUEST: 'user_request',
     RECOMMEND_STEPS: 'recommend_steps',
     CHECK_PROGRESS: 'check_progress',
-    CHECK_COMMENT_LANGUAGE: 'check_comment_language',
-    TRANSLATE_COMMENT: 'translate_comment',
+    ADAPT_COMMENT_LANGUAGE: 'adapt_comment_language',
     CLI_DO: 'cli_do',
     BUGBOT: 'bugbot',
     BUGBOT_FIX: 'bugbot_fix',
@@ -80,8 +73,7 @@ type PromptParamsMap = {
     [PROMPT_NAMES.USER_REQUEST]: UserRequestParams;
     [PROMPT_NAMES.RECOMMEND_STEPS]: RecommendStepsParams;
     [PROMPT_NAMES.CHECK_PROGRESS]: CheckProgressParams;
-    [PROMPT_NAMES.CHECK_COMMENT_LANGUAGE]: CheckCommentLanguageParams;
-    [PROMPT_NAMES.TRANSLATE_COMMENT]: CheckCommentLanguageParams;
+    [PROMPT_NAMES.ADAPT_COMMENT_LANGUAGE]: CheckCommentLanguageParams;
     [PROMPT_NAMES.CLI_DO]: CliDoParams;
     [PROMPT_NAMES.BUGBOT]: BugbotParams;
     [PROMPT_NAMES.BUGBOT_FIX]: BugbotFixParams;
@@ -96,10 +88,8 @@ const registry: Record<PromptName, (params: Record<string, string>) => string> =
     [PROMPT_NAMES.USER_REQUEST]: (p) => getUserRequestPrompt(p as UserRequestParams),
     [PROMPT_NAMES.RECOMMEND_STEPS]: (p) => getRecommendStepsPrompt(p as RecommendStepsParams),
     [PROMPT_NAMES.CHECK_PROGRESS]: (p) => getCheckProgressPrompt(p as CheckProgressParams),
-    [PROMPT_NAMES.CHECK_COMMENT_LANGUAGE]: (p) =>
-        getCheckCommentLanguagePrompt(p as CheckCommentLanguageParams),
-    [PROMPT_NAMES.TRANSLATE_COMMENT]: (p) =>
-        getTranslateCommentPrompt(p as CheckCommentLanguageParams),
+    [PROMPT_NAMES.ADAPT_COMMENT_LANGUAGE]: (p) =>
+        getAdaptCommentLanguagePrompt(p as CheckCommentLanguageParams),
     [PROMPT_NAMES.CLI_DO]: (p) => getCliDoPrompt(p as CliDoParams),
     [PROMPT_NAMES.BUGBOT]: (p) => getBugbotPrompt(p as BugbotParams),
     [PROMPT_NAMES.BUGBOT_FIX]: (p) => getBugbotFixPrompt(p as BugbotFixParams),

@@ -99,6 +99,43 @@ already be present when a managed promotion PR closes.
 The immutable facts are visible in one issue control-center comment. Duplicate
 events and retries update that comment instead of creating another operation.
 
+## Language and presentation
+
+Deployment UI follows the repository locale profile. English (`en-US`) is the
+default when no locale is configured.
+
+- The issue control center and the four optional milestone notifications use the
+  effective issue locale.
+- Managed promotion and reconciliation PR titles and descriptions use the
+  effective pull-request locale. The stable `release(...)` or `hotfix(...)`
+  prefix, refs, SHAs, tags, IDs, and marker fields are not translated.
+- The GitHub Actions Job Summary uses the repository locale because it belongs to
+  the run, not to the issue or PR conversation.
+
+Empty `issues-locale` and `pull-requests-locale` values inherit
+`repository-locale`. Complete reviewed catalogs ship for English and Spanish.
+Any other valid BCP-47 locale uses the configured planning agent to resolve one
+bounded catalog for the destination. If that response is unavailable, incomplete,
+or unsafe, the whole artifact falls back to English; Copilot never mixes
+languages or creates a separate fallback comment.
+
+The installed release and hotfix workflow templates pass `repository-locale`
+and preserve empty issue/PR overrides. This matters when the repository locale is
+not English: replacing an empty override with `en-US` would disable inheritance.
+
+The dashboard leads with current status and a required action only when a person
+must act. Progress, transition, and links follow, while operation IDs and other
+technical facts stay collapsed. Managed PR descriptions explain their single
+purpose and consequence without repeating the dashboard. The Job Summary shows
+the durable revision, branch/publication facts, retryability, and descriptive
+links; it does not replay internal workflow step logs such as “created” or
+“reused”.
+
+New operations snapshot the complete canonical locale profile when they start,
+so a later Variable change cannot switch an in-flight release between languages.
+An operation without that snapshot is invalid and stops before continuation or
+provider mutation. Start a new deployment from valid current configuration.
+
 ## Serialization, durable revisions, and safe retries
 
 All release, hotfix, and managed-PR mutation routes for the same launcher issue
@@ -112,6 +149,12 @@ revision 1; every accepted state change increments it by exactly one and saves
 against the previously read operation ID, phase, and revision. A stale delivery
 is a successful no-op. A missing, malformed, unversioned, future, or conflicting
 snapshot fails closed and is not converted or rewritten.
+
+Every snapshot includes `lastFailure`. It is exactly `null` in a non-blocked
+phase. A blocked snapshot instead requires one closed failure record containing
+its category, safe message, retryability, and exact prior non-blocked phase.
+Missing, extra, or contradictory fields are invalid; only the dedicated failure
+transition can enter `blocked`.
 
 There is deliberately no legacy or standalone deployment-publication path.
 `create_tag`, `create_release`, `publish_github_action`, and all orchestration
@@ -409,9 +452,11 @@ routine detail.
 
 Promotion PRs state that publication occurs only after merge. Reconciliation
 PRs state prominently that the package is already public and that merging or
-closing the PR cannot publish it again. Issue text follows `issues-locale`; PR
-text follows `pull-requests-locale`; Spanish and English are built in, with a
-safe English fallback.
+closing the PR cannot publish it again. Issue text follows the effective issue
+locale and PR text follows the effective pull-request locale. Both inherit
+`repository-locale` (`en-US` by default) unless their optional scope override is
+configured. Spanish and English deployment copy is built in, with a safe English
+fallback while the generic catalog resolver is rolled out to further locales.
 
 A pending control center leads with meaning rather than internal identifiers:
 

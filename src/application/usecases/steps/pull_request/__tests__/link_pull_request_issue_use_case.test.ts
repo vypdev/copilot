@@ -60,6 +60,28 @@ describe('LinkPullRequestIssueUseCase', () => {
     expect(mockUpdateDescription).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { issueNumber: -1 },
+    { issueNumber: 10 },
+  ])('skips without provider I/O when no separate issue exists: %p', async (override) => {
+    const results = await useCase.invoke(context(override));
+
+    expect(results[0]).toMatchObject({ success: true, executed: false });
+    expect(results[0].steps[0]).toContain('No separate linked issue');
+    expect(mockGetDetails).not.toHaveBeenCalled();
+    expect(mockIsLinked).not.toHaveBeenCalled();
+    expect(mockUpdateBaseBranch).not.toHaveBeenCalled();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invalid PR identity even when no separate issue exists', async () => {
+    const results = await useCase.invoke(context({ pullRequestNumber: Number.NaN, issueNumber: -1 }));
+
+    expect(results[0]).toMatchObject({ success: false, executed: false });
+    expect(results[0].steps[0]).toContain('positive pull-request number');
+    expect(mockGetDetails).not.toHaveBeenCalled();
+  });
+
   it('cleans an owned pending operation even when GitHub already reports the link', async () => {
     const pending = '<!-- copilot:pr-issue-link:v1;pr=10;issue=42;base=develop;state=pending -->';
     mockGetDetails.mockResolvedValue({ body: `Original\n\nResolves #42\n\n${pending}`, baseBranch: 'main' });
@@ -86,7 +108,10 @@ describe('LinkPullRequestIssueUseCase', () => {
     expect(results.at(-1)).toMatchObject({
       success: false,
       errors: [expect.objectContaining({
-        retainedState: 'The original pull-request base and description were restored.',
+        recovery: {
+          id: 'pull-request-link-restored',
+          variables: {},
+        },
       })],
     });
   });
@@ -151,6 +176,10 @@ describe('LinkPullRequestIssueUseCase', () => {
     const results = await useCase.invoke(context());
     expect(results.at(-1)?.success).toBe(false);
     expect(results.at(-1)?.steps[0]).toContain('retained the temporary default base branch');
+    expect(results.at(-1)?.errors[0].recovery).toEqual({
+      id: 'pull-request-link-base-retained',
+      variables: {},
+    });
     expect(mockUpdateDescription).toHaveBeenCalledTimes(2);
   });
 
@@ -162,7 +191,27 @@ describe('LinkPullRequestIssueUseCase', () => {
     expect(results.at(-1)?.steps).toEqual([
       'Pull-request issue linkage failed and retained the temporary issue reference in the description. Restore that PR state, then re-run the workflow.',
     ]);
+    expect(results.at(-1)?.errors[0].recovery).toEqual({
+      id: 'pull-request-link-reference-retained',
+      variables: {},
+    });
     expect(mockUpdateBaseBranch).toHaveBeenLastCalledWith(10, 'develop');
+  });
+
+  it('reports both retained temporary states when neither restoration succeeds', async () => {
+    mockUpdateBaseBranch
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('base restore failed'));
+    mockUpdateDescription
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('description restore failed'));
+
+    const results = await useCase.invoke(context());
+
+    expect(results.at(-1)?.errors[0].recovery).toEqual({
+      id: 'pull-request-link-base-and-reference-retained',
+      variables: {},
+    });
   });
 
   it('resumes an exact pending marker without layering another reference', async () => {
@@ -235,7 +284,6 @@ describe('LinkPullRequestIssueUseCase', () => {
   });
 
   it.each([
-    { issueNumber: -1 },
     { pullRequestNumber: Number.MAX_SAFE_INTEGER + 1 },
     { defaultBranch: '../unsafe' },
     { originalBaseBranch: '' },

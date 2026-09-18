@@ -6,6 +6,7 @@ import { markFindingsResolved } from "./mark_findings_resolved_use_case";
 import { publishFindings } from "./publish_findings_use_case";
 import { PullRequestReviewOperationError } from "../../../../../application/ports/pull_request_review_errors";
 import type { BugbotReviewOperationContext } from './bugbot_review_operation_context';
+import type { BugbotMessageCatalog } from '../../../../policies/bugbot_message_catalog';
 
 export async function applyDetectedFindings(
   operation: BugbotReviewOperationContext,
@@ -13,6 +14,7 @@ export async function applyDetectedFindings(
   prepared: PreparedBugbotFindings,
   publicationPorts: BugbotFindingPublicationPorts,
   resolutionPorts: BugbotFindingResolutionPorts,
+  catalog?: BugbotMessageCatalog,
 ): Promise<Error[]> {
   try {
     await publishFindings({
@@ -25,6 +27,7 @@ export async function applyDetectedFindings(
       overflowTitles:
         prepared.overflowCount > 0 ? prepared.overflowTitles : undefined,
       ports: publicationPorts,
+      catalog,
     });
   } catch (error) {
     const publicationError =
@@ -39,6 +42,7 @@ export async function applyDetectedFindings(
     resolvedFindingIds: prepared.resolvedFindingIds,
     resolvedFindingResolutions: prepared.resolvedFindingResolutions,
     ports: resolutionPorts,
+    catalog,
   });
   return resolutionErrors;
 }

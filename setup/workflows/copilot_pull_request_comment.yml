@@ -26,6 +26,10 @@ jobs:
 
       - uses: vypdev/copilot@v3
         with:
+          repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
+          issues-locale: ${{ vars.ISSUES_LOCALE || '' }}
+          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || '' }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
           ai-ignore-files: ${{ vars.AI_IGNORE_FILES || 'build/*' }}
           debug: ${{ vars.DEBUG }}
           main-branch: ${{ vars.MAIN_BRANCH || 'master' }}
@@ -36,12 +40,11 @@ jobs:
           release-tree: ${{ vars.RELEASE_TREE || 'release' }}
           docs-tree: ${{ vars.DOCS_TREE || 'docs' }}
           chore-tree: ${{ vars.CHORE_TREE || 'chore' }}
-          branch-management-always: ${{ vars.BRANCH_MANAGEMENT_ALWAYS || 'false' }}
+          issue-managed-branches: ${{ vars.ISSUE_MANAGED_BRANCHES || 'true' }}
+          pre-branch-sdd: ${{ vars.PRE_BRANCH_SDD || 'false' }}
           reopen-issue-on-push: ${{ vars.REOPEN_ISSUE_ON_PUSH || 'true' }}
           desired-assignees-count: ${{ vars.DESIRED_ASSIGNEES_COUNT || '1' }}
           desired-reviewers-count: ${{ vars.DESIRED_REVIEWERS_COUNT || '1' }}
-          issues-locale: ${{ vars.ISSUES_LOCALE || 'en-US' }}
-          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || 'en-US' }}
           commit-prefix-transforms: ${{ vars.COMMIT_PREFIX_TRANSFORMS || 'replace-slash' }}
           ai-pull-request-description-mode: ${{ vars.AI_PULL_REQUEST_DESCRIPTION_MODE || 'replace' }}
           ai-members-only: ${{ vars.AI_MEMBERS_ONLY || 'false' }}

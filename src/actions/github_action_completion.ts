@@ -2,7 +2,7 @@ import * as core from '@actions/core';
 import type { Execution } from '../data/model/execution';
 import { renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
 import { getResultPayload, type Result } from '../data/model/result';
-import { isRecommendationState } from '../data/model/recommendation_state';
+import { restoreRecommendationState } from '../data/model/recommendation_state';
 import type { ConfigurationStorePort } from '../application/ports/configuration_store_ports';
 import { PublishResultUseCase } from '../application/usecases/steps/common/publish_resume_use_case';
 import { StoreConfigurationUseCase } from '../application/usecases/steps/common/store_configuration_use_case';
@@ -10,17 +10,28 @@ import { projectPublishResultContext } from '../application/usecases/steps/commo
 import { projectConfigurationPersistenceContext } from '../application/usecases/steps/common/store_configuration_use_case';
 
 import { logInfo } from '../utils/logger';
-import { createLogReportAdapter } from '../infrastructure/logging/logger_adapter';
-import { buildActionSummary } from '../application/policies/action_summary_policy';
+import {
+    buildActionSummary,
+    renderLocalizationSummarySection,
+    type ActionSummaryContext,
+    type LocalizationSummaryLabels,
+} from '../application/policies/action_summary_policy';
+import type { CatalogResolutionObservation } from '../domain/message_catalog';
+import { resolveActionSummaryCatalog } from '../application/policies/action_summary_message_catalog';
 import { lifecycleStateFromLabels } from '../domain/copilot_lifecycle';
 import type { CopilotEvidencePort } from '../application/ports/copilot_evidence_ports';
 import { buildCopilotEvidence } from '../application/policies/copilot_evidence_policy';
 import type { ActionSummaryPort } from '../application/ports/action_summary_ports';
-import { toApplicationError } from '../application/errors/application_error';
+import { ApplicationError, toApplicationError } from '../application/errors/application_error';
 import { shouldPersistConfiguration } from '../application/policies/configuration_persistence_policy';
 import { renderDeploymentJobSummary } from '../application/policies/deployment_presentation_policy';
+import { deploymentCopy, resolveDeploymentCatalog } from '../application/policies/deployment_message_catalog';
 import { projectBugbotResultFindingStates } from '../application/policies/bugbot_result_finding_state_projection_policy';
 import { countActionableBugbotFindings } from '../domain/bugbot/review_state';
+import type { MessageCatalogResolutionPort } from '../application/ports/message_catalog_ports';
+import type { ApplicationErrorMessageReader } from '../application/policies/application_error_message_catalog';
+import type { BoundPublicationSourceQueryPort } from '../application/ports/publication_freshness_ports';
+import { requiredDeploymentFailure } from '../domain/deployment_operation';
 
 export async function finishGithubAction(
     execution: Execution,
@@ -29,6 +40,8 @@ export async function finishGithubAction(
     configurationStorePort: ConfigurationStorePort,
     evidencePort?: CopilotEvidencePort,
     summaryPort?: ActionSummaryPort,
+    catalogResolver?: MessageCatalogResolutionPort,
+    publicationSourceQuery?: BoundPublicationSourceQueryPort,
 ): Promise<void> {
     const stepCount = results.reduce((acc, result) => acc + (result.steps?.length ?? 0), 0);
     const errorCount = results.reduce((acc, result) => acc + (result.errors?.length ?? 0), 0);
@@ -39,11 +52,12 @@ export async function finishGithubAction(
     const dryRun = results.some((result) => getResultPayload(result.payload)?.dryRun === true);
     const ownsDeploymentPresentation = execution.singleAction.isDeploymentOrchestrationAction;
     if (!dryRun && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
-        const publicationFailure = await new PublishResultUseCase(
+        const publicationOutcome = await new PublishResultUseCase(
             issueNotificationPort,
-            createLogReportAdapter(),
+            catalogResolver,
+            publicationSourceQuery,
         ).invoke(projectPublishResultContext(execution));
-        if (publicationFailure) results.push(publicationFailure);
+        if (publicationOutcome) results.push(publicationOutcome);
     } else if (execution.singleAction.isPublishIssueCommentAction || ownsDeploymentPresentation) {
         logInfo('Generic result publication skipped: this single action owns its user-facing presentation.');
     } else {
@@ -61,34 +75,30 @@ export async function finishGithubAction(
     } else {
         logInfo('Configuration persistence skipped: this single action does not modify execution configuration.');
     }
-    const summary = await writeActionSummary(execution, summaryPort);
-    if (!dryRun) await publishCopilotEvidence(execution, results, summary, evidencePort);
-    failActionForUnresolvedFindingsIfConfigured(execution, results, dryRun);
-    setFirstErrorIfExists(results);
+    const summary = await writeActionSummary(execution, summaryPort, catalogResolver);
+    if (!dryRun) await publishCopilotEvidence(
+        execution,
+        results,
+        summary.text,
+        evidencePort,
+        catalogResolver,
+    );
+    const completionError = firstApplicationError(results)
+        ?? bugbotCompletionError(execution, results, dryRun);
+    if (completionError) core.setFailed(renderApplicationErrorText(completionError, summary.errorMessage));
 }
 
-function extractBugbotTelemetry(results: readonly Result[]): unknown[] {
-    return results.flatMap((result) => {
-        const snapshot = getResultPayload(result.payload)?.bugbotTelemetry;
-        return snapshot && typeof snapshot === 'object' && !Array.isArray(snapshot) ? [snapshot] : [];
-    });
+interface WrittenActionSummary {
+    readonly text: string;
+    readonly errorMessage: ApplicationErrorMessageReader;
 }
 
-async function writeActionSummary(execution: Execution, summaryPort?: ActionSummaryPort): Promise<string> {
-    const operation = execution.currentConfiguration.deploymentOrchestration;
-    const summaryText = execution.singleAction.isDeploymentOrchestrationAction && operation
-        ? renderDeploymentJobSummary(operation, {
-            owner: execution.owner,
-            repository: execution.repo,
-            issue: execution.singleAction.issue,
-            issueLocale: execution.locale.issue,
-            pullRequestLocale: execution.locale.pullRequest,
-            packageName: execution.owner === 'vypdev' && execution.repo === 'copilot' ? '@vypdev/copilot' : undefined,
-            workflowRunUrl: process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
-                ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
-                : undefined,
-        }, operation.lastFailure?.previousPhase, execution.currentConfiguration.results.flatMap((result) => result.steps ?? []))
-        : buildActionSummary({
+function actionSummaryContext(
+    execution: Execution,
+    catalogResolutions: readonly CatalogResolutionObservation[],
+): ActionSummaryContext {
+    const locale = execution.locale;
+    return Object.freeze({
         owner: execution.owner,
         repository: execution.repo,
         eventName: execution.eventName,
@@ -102,15 +112,97 @@ async function writeActionSummary(execution: Execution, summaryPort?: ActionSumm
         ),
         pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode(),
         failOnUnresolvedFindings: execution.ai.getBugbotReviewConfiguration().failOnUnresolved,
+        locale: Object.freeze({
+            repository: locale.repository,
+            issue: locale.issue,
+            pullRequest: locale.pullRequest,
+        }),
+        catalogResolutions,
         results: execution.currentConfiguration.results,
-        });
-    if (!summaryPort) return summaryText;
+    });
+}
+
+function extractBugbotTelemetry(results: readonly Result[]): unknown[] {
+    return results.flatMap((result) => {
+        const snapshot = getResultPayload(result.payload)?.bugbotTelemetry;
+        return snapshot && typeof snapshot === 'object' && !Array.isArray(snapshot) ? [snapshot] : [];
+    });
+}
+
+async function writeActionSummary(
+    execution: Execution,
+    summaryPort?: ActionSummaryPort,
+    catalogResolver?: MessageCatalogResolutionPort,
+): Promise<WrittenActionSummary> {
+    const operation = execution.currentConfiguration.deploymentOrchestration;
+    const locale = execution.locale;
+    const summaryLocale = execution.singleAction.isDeploymentOrchestrationAction && operation
+        ? operation.locale
+        : locale;
+    let body: string;
+    let localizationLabels: LocalizationSummaryLabels | undefined;
+    let appendLocalizationEvidence = false;
+    let errorMessage: ApplicationErrorMessageReader;
+    if (execution.singleAction.isDeploymentOrchestrationAction && operation) {
+        const effectiveLocale = operation.locale;
+        const catalog = await resolveDeploymentCatalog(
+            effectiveLocale.repository,
+            execution.ai.getAgentConfiguration('planner'),
+            catalogResolver,
+        );
+        const messages = deploymentCopy(catalog);
+        errorMessage = (id, variables) => catalog.message(id, variables);
+        localizationLabels = {
+            heading: messages.localization,
+            property: messages.property,
+            value: messages.value,
+            repositoryLocale: messages.repositoryLocaleLabel,
+            issueLocale: messages.issueLocaleLabel,
+            pullRequestLocale: messages.pullRequestLocaleLabel,
+            catalogResolution: messages.catalogResolution,
+            descriptors: messages.descriptors,
+            reason: messages.reason,
+        };
+        appendLocalizationEvidence = true;
+        body = renderDeploymentJobSummary(operation, {
+            owner: execution.owner,
+            repository: execution.repo,
+            issue: execution.singleAction.issue,
+            repositoryLocale: effectiveLocale.repository,
+            issueLocale: effectiveLocale.issue,
+            pullRequestLocale: effectiveLocale.pullRequest,
+            packageName: execution.owner === 'vypdev' && execution.repo === 'copilot' ? '@vypdev/copilot' : undefined,
+            workflowRunUrl: process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
+                ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+                : undefined,
+        }, operation.phase === 'blocked' ? requiredDeploymentFailure(operation).previousPhase : undefined, catalog);
+    } else {
+        const catalog = await resolveActionSummaryCatalog(
+            locale.repository,
+            execution.ai.getAgentConfiguration('planner'),
+            catalogResolver,
+        );
+        errorMessage = (id, variables) => catalog.message(id, variables);
+        body = buildActionSummary(
+            actionSummaryContext(execution, catalogResolver?.observations?.() ?? []),
+            catalog,
+        );
+    }
+    const localizationEvidence = appendLocalizationEvidence
+        ? renderLocalizationSummarySection({
+            repository: summaryLocale.repository,
+            issue: summaryLocale.issue,
+            pullRequest: summaryLocale.pullRequest,
+        }, catalogResolver?.observations?.() ?? [], localizationLabels)
+        : '';
+    const summaryText = [body, localizationEvidence].filter(Boolean).join('\n\n');
+    if (!summaryPort) return { text: summaryText, errorMessage };
     try {
         await summaryPort.publish(summaryText);
     } catch (error) {
         logInfo(toApplicationError(error, 'provider.unavailable', 'Could not write the GitHub Actions summary.').message);
     }
-    return summaryText;
+    return { text: summaryText, errorMessage };
 }
 
 async function publishCopilotEvidence(
@@ -118,16 +210,39 @@ async function publishCopilotEvidence(
     results: Result[],
     summary: string,
     evidencePort: CopilotEvidencePort | undefined,
+    catalogResolver?: MessageCatalogResolutionPort,
 ): Promise<void> {
     if (!evidencePort) return;
     const headSha = execution.inputs?.pull_request?.head?.sha
         || (execution.isPush ? process.env.GITHUB_SHA : undefined);
-    const evidence = buildCopilotEvidence({
+    const evidenceInput = {
         eventName: execution.eventName,
         headSha,
         summary,
         results,
         failOnUnresolvedFindings: execution.ai.getBugbotReviewConfiguration().failOnUnresolved,
+    };
+    if (!buildCopilotEvidence(evidenceInput)) return;
+    const locale = execution.locale;
+    const surfaceLocale = execution.isPullRequest
+        ? locale.pullRequest
+        : execution.isIssue ? locale.issue : locale.repository;
+    const catalog = await resolveActionSummaryCatalog(
+        surfaceLocale,
+        execution.ai.getAgentConfiguration('planner'),
+        catalogResolver,
+    );
+    const evidenceSummary = surfaceLocale === locale.repository
+        ? summary
+        : buildActionSummary(
+            actionSummaryContext(execution, catalogResolver?.observations?.() ?? []),
+            catalog,
+        );
+    const evidence = buildCopilotEvidence({
+        ...evidenceInput,
+        summary: evidenceSummary,
+        locale: surfaceLocale,
+        catalog,
     });
     if (!evidence) return;
     try {
@@ -139,32 +254,34 @@ async function publishCopilotEvidence(
     }
 }
 
-function failActionForUnresolvedFindingsIfConfigured(
+function bugbotCompletionError(
     execution: Execution,
     results: readonly Result[],
     dryRun: boolean,
-): void {
-    if (dryRun) return;
+): ApplicationError | undefined {
+    if (dryRun) return undefined;
     const projection = projectBugbotResultFindingStates(results);
     if (projection.status === 'invalid') {
-        core.setFailed('Bugbot finding-state evidence is malformed.');
-        return;
+        return new ApplicationError('provider.contract-invalid', 'Bugbot finding-state evidence is malformed.');
     }
-    if (projection.status === 'absent') return;
+    if (projection.status === 'absent') return undefined;
     if (projection.counts.unknown > 0) {
-        core.setFailed(`Bugbot could not verify ${projection.counts.unknown} finding state(s).`);
-    } else if (
+        return new ApplicationError('provider.contract-invalid', 'Bugbot finding-state evidence could not be verified.');
+    }
+    if (
         execution.ai.getBugbotReviewConfiguration().failOnUnresolved
         && countActionableBugbotFindings(projection.counts) > 0
     ) {
-        core.setFailed(`Bugbot found ${countActionableBugbotFindings(projection.counts)} unresolved actionable finding(s).`);
+        return new ApplicationError('workflow.failed', 'Bugbot found unresolved actionable findings.');
     }
+    return undefined;
 }
 
 function commitPublishedRecommendationState(execution: Execution, results: Result[]): void {
     const pendingState = results
         .map((result) => getResultPayload(result.payload)?.recommendationState)
-        .find(isRecommendationState);
+        .map(restoreRecommendationState)
+        .find((state) => state !== undefined);
     if (!pendingState) return;
 
     const publicationFailed = execution.currentConfiguration.results.some(
@@ -175,11 +292,11 @@ function commitPublishedRecommendationState(execution: Execution, results: Resul
     }
 }
 
-function setFirstErrorIfExists(results: Result[]): void {
+function firstApplicationError(results: readonly Result[]): Result['errors'][number] | undefined {
     for (const result of results) {
         if (result.errors && result.errors.length > 0) {
-            core.setFailed(renderApplicationErrorText(result.errors[0]));
-            return;
+            return result.errors[0];
         }
     }
+    return undefined;
 }

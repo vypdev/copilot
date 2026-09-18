@@ -9,6 +9,10 @@ import { ApplicationError, toApplicationError } from './application/errors/appli
 import { runAtApplicationErrorBoundary } from './application/errors/application_error_context';
 import { normalizeBugbotReviewConfiguration } from './domain/bugbot/review_configuration';
 import type { BugbotReviewOperationContext } from './application/usecases/steps/commit/bugbot/bugbot_review_operation_context';
+import type { MessageCatalogResolutionPort } from './application/ports/message_catalog_ports';
+import { resolveLocaleProfile } from './domain/locale';
+
+export type { MessageCatalogResolutionPort } from './application/ports/message_catalog_ports';
 
 /** Already-bound SCM authority for exactly one repository. */
 export interface BugbotScmGateway extends BugbotScmPorts {
@@ -52,6 +56,7 @@ export interface BugbotReviewRequest {
     readonly commentLimit?: number;
     readonly authenticatedUser?: string;
     readonly locale?: {
+        readonly issue?: string;
         readonly pullRequest?: string;
     };
 }
@@ -61,12 +66,17 @@ export class BugbotReviewService {
     private readonly useCase: DetectPotentialProblemsUseCase;
     private readonly repository: BugbotScmGateway['repository'];
 
-    constructor(agent: FindingsQueryPort, scm: BugbotScmGateway) {
+    constructor(
+        agent: FindingsQueryPort,
+        scm: BugbotScmGateway,
+        catalogResolver?: MessageCatalogResolutionPort,
+    ) {
         this.repository = snapshotRepositoryBinding(scm);
         this.useCase = new DetectPotentialProblemsUseCase(
             agent,
             scm,
             scm.telemetry,
+            catalogResolver,
         );
     }
 
@@ -124,6 +134,7 @@ function buildReviewOperationContext(
     const eventName = isPullRequest ? 'pull_request' : 'push';
     const action = isPullRequest ? target.action ?? 'synchronize' : '';
     const authenticatedUser = optionalText(request.authenticatedUser, 'Authenticated user', 255);
+    const locale = normalizeReviewLocale(request.locale);
     return Object.freeze({
         repository: Object.freeze({ owner, name: repository }),
         target: Object.freeze({
@@ -148,9 +159,7 @@ function buildReviewOperationContext(
         ...(authenticatedUser ? { trustedAuthorLogin: authenticatedUser } : {}),
         ignorePatterns: Object.freeze(ignoreFiles),
         organizationRules: Object.freeze([...organizationRules]),
-        locale: Object.freeze({
-            pullRequest: optionalText(request.locale?.pullRequest, 'Pull request locale', 64) ?? 'en-US',
-        }),
+        locale,
         analysis: Object.freeze({
             agentConfiguration: Object.freeze(agent),
             minimumSeverity,
@@ -158,6 +167,27 @@ function buildReviewOperationContext(
             reviewConfiguration: Object.freeze(reviewConfiguration),
         }),
     });
+}
+
+function normalizeReviewLocale(
+    value: BugbotReviewRequest['locale'],
+): BugbotReviewOperationContext['locale'] {
+    if (value !== undefined && (value === null || typeof value !== 'object' || Array.isArray(value)
+        || Object.keys(value).some(key => !['issue', 'pullRequest'].includes(key)))) {
+        throw new ApplicationError(
+            'configuration.invalid',
+            'Bugbot locale configuration must contain only issue and pullRequest BCP-47 tags.',
+        );
+    }
+    try {
+        const locale = resolveLocaleProfile('en-US', value?.issue, value?.pullRequest);
+        return Object.freeze({ issue: locale.issue, pullRequest: locale.pullRequest });
+    } catch {
+        throw new ApplicationError(
+            'configuration.invalid',
+            'Bugbot locale configuration contains an invalid BCP-47 tag.',
+        );
+    }
 }
 
 function normalizeTarget(target: BugbotReviewTarget): BugbotReviewTarget {

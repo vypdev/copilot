@@ -156,6 +156,35 @@ describe("ProjectBoardCommandRepository", () => {
     number: 1,
   });
 
+  it("updates a newly linked item by mutation ID without querying the project item list", async () => {
+    const harness = createHarness();
+
+    await expect(
+      harness.repository.moveProjectItemToColumn(
+        project,
+        "PVTI_created",
+        "In progress",
+        "token",
+      ),
+    ).resolves.toBe(true);
+
+    expect(harness.contentQuery.getProjectItemId).not.toHaveBeenCalled();
+    expect(
+      harness.graphql.mock.calls.some(([document]) =>
+        String(document).includes("items(first"),
+      ),
+    ).toBe(false);
+    const mutationCall = harness.graphql.mock.calls.find(([document]) =>
+      String(document).includes("mutation("),
+    );
+    expect(mutationCall?.[1]).toMatchObject({
+      projectId: "PVT_project",
+      itemId: "PVTI_created",
+      fieldId: "PVTSSF_status",
+      optionId: "option_in_progress",
+    });
+  });
+
   it("rejects a missing content ID before resolving a GraphQL client", async () => {
     const harness = createHarness({ contentId: "" });
 

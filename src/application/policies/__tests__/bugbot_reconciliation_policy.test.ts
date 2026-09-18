@@ -41,7 +41,7 @@ describe('bugbot reconciliation policy', () => {
             parentReviewIdentity: '77',
         })]);
         expect(result.diagnostics).toEqual([
-            'The final provider snapshot omitted 1 previously observed unresolved or unverified Bugbot finding(s).',
+            { code: 'provider-omitted-findings', count: 1 },
         ]);
     });
 
@@ -80,12 +80,12 @@ describe('bugbot reconciliation policy', () => {
             conversation: 'failed',
             navigation: 'failed',
         })).toEqual([
-            'Unable to re-read pull request review comments.',
-            'Unable to re-read pull request review thread state.',
-            'Unable to re-read pull request reviews.',
-            'Unable to re-read the pull request conversation.',
-            'Unable to re-read linked issue finding comments.',
-            'Unable to build safe Bugbot navigation links.',
+            { code: 'snapshot-pull-request-comments-failed' },
+            { code: 'snapshot-review-threads-failed' },
+            { code: 'snapshot-reviews-failed' },
+            { code: 'snapshot-conversation-failed' },
+            { code: 'snapshot-linked-issue-comments-failed' },
+            { code: 'snapshot-navigation-failed' },
         ]);
     });
 

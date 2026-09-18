@@ -9,6 +9,7 @@ import type {
 } from '../../domain/setup_questionnaire';
 import { cloneSetupConfiguration } from './setup_configuration_clone_policy';
 import { SETUP_AGENT_TASKS, SETUP_FEATURE_DESCRIPTIONS } from './setup_configuration_defaults';
+import { ISSUE_WORKFLOW_KINDS, ISSUE_WORKFLOW_CATALOG, createIssueWorkflowProfile, type IssueWorkflowKind } from '../../domain/issue_workflow_profile';
 
 const AGENT_PROVIDERS = ['codex', 'opencode', 'cursor'] as const;
 const MODEL_PROVIDERS = ['openai', 'anthropic', 'google', 'openrouter', 'opencode', 'local'] as const;
@@ -108,6 +109,7 @@ export function setupQuestionnaireStateLabel(stateId: SetupQuestionnaireStateId)
     repository: 'Repository behavior',
     deployment: 'Release and hotfix orchestration',
     bugbot: 'Bugbot and AI',
+    'pull-request-approval': 'Pull-request approval',
     projects: 'Projects',
     provisioning: 'Provisioning',
     storage: 'GitHub Actions resource storage',
@@ -129,9 +131,34 @@ function questions(
 
 function definitions(): readonly QuestionDefinition[] {
   return [
-    ...Object.entries(SETUP_FEATURE_DESCRIPTIONS).map(([feature, label]): QuestionDefinition => ({
+    ...Object.entries(SETUP_FEATURE_DESCRIPTIONS)
+      .filter(([feature]) => !['release', 'hotfix'].includes(feature))
+      .map(([feature, label]): QuestionDefinition => ({
       stateId: 'capabilities', id: `features.${feature}`, label, kind: 'boolean',
-    })),
+      })),
+    {
+      stateId: 'capabilities',
+      id: 'issueWorkflows.enabled',
+      label: 'Issue workflow types to enable (Space toggles, Enter confirms)',
+      kind: 'multi-select',
+      choices: ['All', ...ISSUE_WORKFLOW_KINDS.map(kind => `${kind} — ${ISSUE_WORKFLOW_CATALOG[kind].label}`)],
+      read: draft => draft.issueWorkflows.enabled.join(','),
+      applies: draft => draft.features.issues !== false,
+    },
+    {
+      stateId: 'capabilities',
+      id: 'repositoryAgentGuidance.enabled',
+      label: 'Generate repository guidance and a Copilot workflow skill for agents?',
+      kind: 'boolean',
+    },
+    {
+      stateId: 'capabilities',
+      id: 'repositoryAgentGuidance.agentsPointer',
+      label: 'Root AGENTS.md discovery pointer policy',
+      kind: 'choice',
+      choices: ['prompt', 'create-if-missing', 'disabled'],
+      applies: draft => draft.repositoryAgentGuidance.enabled,
+    },
     ...SETUP_AGENT_TASKS.map((task): QuestionDefinition => ({
       stateId: 'agent-runtime', id: `agents.${task}.provider`, label: `${formatTask(task)} runtime`, kind: 'choice', choices: AGENT_PROVIDERS,
     })),
@@ -144,6 +171,7 @@ function definitions(): readonly QuestionDefinition[] {
     ...repositoryQuestions(),
     ...deploymentQuestions(),
     ...bugbotQuestions(),
+    ...approvalQuestions(),
     { stateId: 'projects', id: 'projects.ids', label: 'GitHub Project IDs (comma-separated, empty skips integration)', kind: 'text' },
     ...['issueCreatedColumn', 'pullRequestCreatedColumn', 'issueInProgressColumn', 'pullRequestInProgressColumn'].map((field): QuestionDefinition => ({
       stateId: 'projects', id: `projects.${field}`, label: projectLabel(field), kind: 'text', applies: (config) => Boolean(config.projects.ids.trim()),
@@ -176,13 +204,15 @@ function repositoryQuestions(): QuestionDefinition[] {
     ['releaseTree', 'Release branch prefix', 'text'],
     ['docsTree', 'Documentation branch prefix', 'text'],
     ['choreTree', 'Chore branch prefix', 'text'],
-    ['branchManagementAlways', 'Create/manage branches without the branched label?', 'boolean'],
+    ['issueManagedBranches', 'Let the Action create linked branches after in-progress?', 'boolean'],
+    ['preBranchSdd', 'Require an SDD before feature and contract-change branches?', 'boolean'],
     ['reopenIssueOnPush', 'Reopen closed issues when a related branch receives a push?', 'boolean'],
     ['desiredAssigneesCount', 'Desired issue assignees (0 disables automatic assignment)', 'number'],
     ['desiredReviewersCount', 'Desired pull-request reviewers (0 disables automatic assignment)', 'number'],
     ['inactivityThresholdHours', 'Hours without activity before closing a waiting issue', 'number'],
-    ['issueLocale', 'Issue comment locale', 'text'],
-    ['pullRequestLocale', 'Pull-request comment locale', 'text'],
+    ['repositoryLocale', 'Repository message locale (BCP-47)', 'text'],
+    ['issueLocale', 'Issue message locale override (empty inherits)', 'text'],
+    ['pullRequestLocale', 'Pull-request message locale override (empty inherits)', 'text'],
     ['commitPrefixTransforms', 'Commit prefix transforms', 'text'],
   ].map(([field, label, kind]) => ({ stateId: 'repository', id: `repository.${field}`, label, kind })) as QuestionDefinition[];
 }
@@ -221,6 +251,65 @@ function bugbotQuestions(): QuestionDefinition[] {
     { stateId: 'bugbot', id: 'ai.bugbotFailOnUnresolved', label: 'Fail the workflow check while findings remain unresolved?', kind: 'boolean' },
     { stateId: 'bugbot', id: 'ai.bugbotOrganizationRules', label: 'Organization Bugbot rules (newline-separated)', kind: 'text' },
     { stateId: 'bugbot', id: 'ai.provisioningMode', label: 'Agent CLI provisioning mode', kind: 'choice', choices: ['auto', 'always', 'disabled'] },
+  ];
+}
+
+function approvalQuestions(): QuestionDefinition[] {
+  return [
+    {
+      stateId: 'pull-request-approval', id: 'pullRequestApproval.mode',
+      label: 'Bot PR approval mode (guarded needs exact CI evidence and stale-approval protection)',
+      kind: 'choice', choices: ['recommend', 'guarded', 'off'],
+      applies: draft => draft.features.pullRequests !== false,
+    },
+    {
+      stateId: 'pull-request-approval', id: 'pullRequestApproval.testChecks',
+      label: 'Trusted test checks: name|source App ID|workflow name (semicolon-separated)',
+      kind: 'text',
+      read: draft => draft.pullRequestApproval.testChecks.map(check => `${check.name}|${check.sourceAppId}|${check.workflowName}`).join(';'),
+      applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off',
+    },
+    {
+      stateId: 'pull-request-approval', id: 'pullRequestApproval.producerAttested',
+      label: 'Have you verified each exact check, source App ID, workflow, and coverage-enforcing CI step?',
+      kind: 'boolean',
+      applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off',
+    },
+    {
+      stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.mode',
+      label: 'Coverage evidence mode', kind: 'choice', choices: ['check', 'numeric'],
+      applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off',
+    },
+    {
+      stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.checkName',
+      label: 'Exact trusted check that enforces the coverage budget (no inferred percentage)',
+      kind: 'text',
+      applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off',
+    },
+    {
+      stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.minDiffPercent',
+      label: 'Minimum changed-line coverage percentage (0–100)', kind: 'number',
+      read: draft => draft.pullRequestApproval.coverage.mode === 'numeric'
+        ? draft.pullRequestApproval.coverage.minDiffPercent : 80,
+      applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off'
+        && draft.pullRequestApproval.coverage.mode === 'numeric',
+    },
+    {
+      stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.artifactWorkflowName',
+      label: 'Exact workflow publishing copilot-diff-coverage-v1', kind: 'text',
+      read: draft => draft.pullRequestApproval.coverage.mode === 'numeric'
+        ? draft.pullRequestApproval.coverage.artifactWorkflowName : '',
+      applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off'
+        && draft.pullRequestApproval.coverage.mode === 'numeric',
+    },
+    {
+      stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.reporterAttested',
+      label: 'Is the bounded numeric coverage reporter installed in that trusted CI workflow?', kind: 'boolean',
+      read: draft => draft.pullRequestApproval.coverage.mode === 'numeric'
+        && draft.pullRequestApproval.coverage.reporterAttested,
+      applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off'
+        && draft.pullRequestApproval.coverage.mode === 'numeric',
+    },
   ];
 }
 
@@ -301,6 +390,11 @@ function parseAnswer(question: SetupQuestion, raw: string): { value: string | nu
       : question.choices?.find((candidate) => candidate.toLowerCase() === input.toLowerCase());
     return choice ? { value: choice } : { error: 'Select one of the listed options.' };
   }
+  if (question.kind === 'multi-select') {
+    const selected = parseWorkflowSelection(input || String(question.defaultValue));
+    if ('error' in selected) return selected;
+    return { value: selected.value.join(',') };
+  }
   const scopeInput = input || String(question.defaultValue);
   const requested = (scopeInput.toLowerCase() === 'none' ? '' : scopeInput)
     .split(',')
@@ -318,6 +412,44 @@ function applyAnswer(
 ): SetupConfiguration {
   const draft = cloneSetupConfiguration(configuration);
   if (question.id === 'agents.configureIndependently') return draft;
+  if (question.id === 'features.pullRequests' && value === false) {
+    draft.features.pullRequests = false;
+    draft.pullRequestApproval = { ...draft.pullRequestApproval, mode: 'off' };
+    return draft;
+  }
+  if (question.id === 'pullRequestApproval.testChecks') {
+    const entries = String(value).split(';').map(item => item.trim()).filter(Boolean);
+    draft.pullRequestApproval = {
+      ...draft.pullRequestApproval,
+      testChecks: entries.map(entry => {
+        const [name, sourceAppId, workflowName] = entry.split('|').map(part => part.trim());
+        return { name, sourceAppId: Number(sourceAppId), workflowName };
+      }),
+    };
+    return draft;
+  }
+  if (question.id === 'pullRequestApproval.coverage.checkName') {
+    draft.pullRequestApproval = {
+      ...draft.pullRequestApproval,
+      coverage: { ...draft.pullRequestApproval.coverage, checkName: String(value) },
+    };
+    return draft;
+  }
+  if (question.id === 'pullRequestApproval.coverage.mode') {
+    const checkName = draft.pullRequestApproval.coverage.checkName;
+    draft.pullRequestApproval = { ...draft.pullRequestApproval,
+      coverage: value === 'numeric'
+        ? { mode: 'numeric', checkName, minDiffPercent: 80, artifactWorkflowName: '', reporterAttested: false }
+        : { mode: 'check', checkName } };
+    return draft;
+  }
+  if (question.id === 'issueWorkflows.enabled') {
+    const selected = String(value).split(',').map(item => item.trim()).filter(Boolean) as IssueWorkflowKind[];
+    draft.issueWorkflows = createIssueWorkflowProfile(selected);
+    draft.features.release = selected.includes('release');
+    draft.features.hotfix = selected.includes('hotfix');
+    return draft;
+  }
   if (['agents.findings.modelProvider', 'agents.findings.model', 'agents.findings.effort', 'agents.findings.executable'].includes(question.id)) {
     const field = question.id.split('.')[2] as 'modelProvider' | 'model' | 'effort' | 'executable';
     for (const task of SETUP_AGENT_TASKS) draft.agents[task] = { ...draft.agents[task], [field]: value as string };
@@ -334,6 +466,16 @@ function applyAnswer(
       )
     : value;
   return draft;
+}
+
+function parseWorkflowSelection(raw: string): { value: IssueWorkflowKind[] } | { error: string } {
+  const normalized = raw.trim().toLowerCase();
+  if (!normalized || normalized === 'all') return { value: [...ISSUE_WORKFLOW_KINDS] };
+  const requested = normalized.split(',').map(item => item.trim()).filter(Boolean)
+    .map(item => item.replace(/\s+—.*$/u, '').replace(/^\d+[.)]\s*/u, ''));
+  const unknown = requested.filter(item => !ISSUE_WORKFLOW_KINDS.includes(item as IssueWorkflowKind));
+  if (unknown.length > 0) return { error: `Unknown issue workflow(s): ${unknown.join(', ')}.` };
+  return { value: ISSUE_WORKFLOW_KINDS.filter(kind => requested.includes(kind)) };
 }
 
 function inheritedNames(

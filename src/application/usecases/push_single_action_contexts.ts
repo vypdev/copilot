@@ -7,8 +7,7 @@ import type {
   SetupCredentialCollection,
   SetupRemoteConfiguration,
 } from '../../domain/setup';
-import type { EventCommitPayload } from '../../data/model/execution_inputs';
-import type { RecommendationState } from '../../data/model/recommendation_state';
+import { restoreRecommendationState, type RecommendationState } from '../../data/model/recommendation_state';
 import type { ProjectReference } from '../ports/project_board_link_ports';
 import type {
   InitialIssueTypeConfiguration,
@@ -16,6 +15,7 @@ import type {
 } from '../ports/issue_management_ports';
 import type { IssueCommentPublicationRequest } from '../policies/issue_comment_publication_policy';
 import { resolveIssueCommentPublicationRequest } from '../policies/issue_comment_publication_policy';
+import { canonicalGitObjectId } from '../../domain/git_object_id';
 
 export interface DeploymentPublicationContext {
   readonly requestedOperationId: string;
@@ -30,6 +30,8 @@ export interface ProgressContext {
   readonly branchTypes: readonly string[];
   readonly agentConfiguration: Readonly<AgentConfiguration>;
   readonly includeReasoning: boolean;
+  readonly targetLocale: string;
+  readonly sourceHeadSha?: string;
 }
 
 export interface RecommendStepsContext {
@@ -39,6 +41,7 @@ export interface RecommendStepsContext {
   readonly tokenUser?: string;
   readonly previousRecommendation?: Readonly<RecommendationState>;
   readonly agentConfiguration: Readonly<AgentConfiguration>;
+  readonly targetLocale: string;
 }
 
 export interface RecommendationStatePatch {
@@ -54,13 +57,19 @@ export interface InactivityContext {
   readonly waitingLabels: readonly string[];
   readonly activityLabel: string;
   readonly thresholdHours: number;
+  readonly locale: string;
+  readonly repositoryLocale: string;
+  readonly agentConfiguration: Readonly<AgentConfiguration>;
 }
 
 export interface BranchObservationContext {
   readonly pushedBranch: string;
   readonly deletedPush: boolean;
+  readonly sourceHeadSha?: string;
   readonly trustedBotLogin?: string;
   readonly repository: { readonly owner: string; readonly name: string };
+  readonly locale: string;
+  readonly agentConfiguration: Readonly<AgentConfiguration>;
 }
 
 export interface UserRequestContext {
@@ -80,13 +89,7 @@ export interface BranchSyncContext {
 
 export interface CommitNotificationContext {
   readonly issueNumber: number;
-  readonly branch: string;
-  readonly commits: readonly Readonly<EventCommitPayload>[];
-  readonly commitPrefixBuilder: string;
   readonly reopenOnPush: boolean;
-  readonly theme: 'release' | 'hotfix' | 'bugfix' | 'feature' | 'docs' | 'chore' | 'automatic';
-  readonly imagesOnCommit: boolean;
-  readonly themeImages: readonly string[];
 }
 
 export interface ChangeSizeThreshold {
@@ -143,6 +146,7 @@ export interface PushSingleActionContextSource {
   readonly issueNumber: number;
   readonly eventName: string;
   readonly tokenUser?: string;
+  readonly locale: { readonly repository: string; readonly issue: string; readonly pullRequest: string };
   readonly inputs?: {
     readonly action?: string;
     readonly after?: string;
@@ -151,7 +155,7 @@ export interface PushSingleActionContextSource {
     readonly setupRemoteConfiguration?: unknown;
     readonly setupWorkflowUpdates?: unknown;
   };
-  readonly commit: { readonly branch: string; readonly commits: readonly EventCommitPayload[] };
+  readonly commit: { readonly branch: string };
   readonly currentConfiguration: {
     readonly parentBranch?: string;
     readonly deploymentOrchestration?: DeploymentOperationSnapshot;
@@ -199,23 +203,6 @@ export interface PushSingleActionContextSource {
   readonly project: { getProjects(): readonly ProjectReference[] };
   readonly issue: { readonly number: number; readonly reopenOnPush: boolean };
   readonly pullRequest: { readonly number: number };
-  readonly release: { readonly active: boolean };
-  readonly hotfix: { readonly active: boolean };
-  readonly images: {
-    readonly imagesOnCommit: boolean;
-    readonly commitAutomaticActions: readonly string[];
-    readonly commitFeatureGifs: readonly string[];
-    readonly commitBugfixGifs: readonly string[];
-    readonly commitReleaseGifs: readonly string[];
-    readonly commitHotfixGifs: readonly string[];
-    readonly commitDocsGifs: readonly string[];
-    readonly commitChoreGifs: readonly string[];
-  };
-  readonly isBugfix: boolean;
-  readonly isFeature: boolean;
-  readonly isDocs: boolean;
-  readonly isChore: boolean;
-  readonly commitPrefixBuilder: string;
   readonly issueTypes: InitialIssueTypeConfiguration;
 }
 
@@ -230,7 +217,9 @@ export function projectDeploymentPublicationContext(source: PushSingleActionCont
 }
 
 export function projectDeploymentOrchestrationContext(
-  source: DeploymentOrchestrationContext,
+  source: DeploymentOrchestrationContext & {
+    readonly ai?: { getAgentConfiguration(task: 'planner'): AgentConfiguration };
+  },
 ): DeploymentOrchestrationContext {
   return {
     owner: source.owner,
@@ -238,6 +227,11 @@ export function projectDeploymentOrchestrationContext(
     branches: Object.freeze({ ...source.branches }),
     workflows: Object.freeze({ ...source.workflows }),
     locale: Object.freeze({ ...source.locale }),
+    ...(source.agentConfiguration
+      ? { agentConfiguration: Object.freeze({ ...source.agentConfiguration }) }
+      : source.ai
+        ? { agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }) }
+        : {}),
     labels: Object.freeze({
       ...source.labels,
       lifecycle: Object.freeze({ ...source.labels.lifecycle }),
@@ -255,6 +249,7 @@ export function projectDeploymentOrchestrationContext(
 }
 
 export function projectProgressContext(source: PushSingleActionContextSource): ProgressContext {
+  const sourceHeadSha = canonicalGitObjectId(source.inputs?.after);
   return Object.freeze({
     issueNumber: source.issueNumber,
     pushedBranch: source.commit.branch,
@@ -269,18 +264,21 @@ export function projectProgressContext(source: PushSingleActionContextSource): P
     ]),
     agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('findings') }),
     includeReasoning: source.ai.getAiIncludeReasoning(),
+    targetLocale: source.locale.issue,
+    ...(sourceHeadSha ? { sourceHeadSha } : {}),
   });
 }
 
 export function projectRecommendStepsContext(source: PushSingleActionContextSource): RecommendStepsContext {
-  const previous = source.previousConfiguration?.recommendationState;
+  const previous = restoreRecommendationState(source.previousConfiguration?.recommendationState);
   return Object.freeze({
     issueNumber: source.issueNumber,
     eventName: source.eventName,
     eventAction: source.inputs?.action ?? '',
     ...(source.tokenUser ? { tokenUser: source.tokenUser } : {}),
-    ...(previous ? { previousRecommendation: Object.freeze({ ...previous }) } : {}),
+    ...(previous ? { previousRecommendation: previous } : {}),
     agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
+    targetLocale: source.locale.issue,
   });
 }
 
@@ -292,15 +290,23 @@ export function projectInactivityContext(source: PushSingleActionContextSource):
     ]),
     activityLabel: source.labels.lifecycle.aiProcessing,
     thresholdHours: source.inactivityThresholdHours,
+    locale: source.locale.issue,
+    repositoryLocale: source.locale.repository,
+    agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
   });
 }
 
 export function projectBranchObservationContext(source: PushSingleActionContextSource): BranchObservationContext {
+  const deletedPush = typeof source.inputs?.after === 'string' && /^0+$/u.test(source.inputs.after);
+  const sourceHeadSha = deletedPush ? undefined : canonicalGitObjectId(source.inputs?.after);
   return Object.freeze({
     pushedBranch: source.commit.branch.trim(),
-    deletedPush: typeof source.inputs?.after === 'string' && /^0+$/u.test(source.inputs.after),
+    deletedPush,
+    ...(sourceHeadSha ? { sourceHeadSha } : {}),
     ...(source.tokenUser ? { trustedBotLogin: source.tokenUser } : {}),
     repository: Object.freeze({ owner: source.owner, name: source.repo }),
+    locale: source.locale.issue,
+    agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
   });
 }
 
@@ -325,19 +331,9 @@ export function projectBranchSyncContext(source: PushSingleActionContextSource):
 }
 
 export function projectCommitNotificationContext(source: PushSingleActionContextSource): CommitNotificationContext {
-  const theme = commitTheme(source);
   return Object.freeze({
     issueNumber: source.issueNumber,
-    branch: source.commit.branch,
-    commits: Object.freeze(source.commit.commits.map(commit => Object.freeze({
-      ...commit,
-      ...(commit.author ? { author: Object.freeze({ ...commit.author }) } : {}),
-    }))),
-    commitPrefixBuilder: source.commitPrefixBuilder,
     reopenOnPush: source.issue.reopenOnPush,
-    theme: theme.kind,
-    imagesOnCommit: source.images.imagesOnCommit,
-    themeImages: Object.freeze([...theme.images]),
   });
 }
 
@@ -403,19 +399,8 @@ export function projectAgentActivityContext(source: PushSingleActionContextSourc
   });
 }
 
-function commitTheme(source: PushSingleActionContextSource): { kind: CommitNotificationContext['theme']; images: readonly string[] } {
-  if (source.release.active) return { kind: 'release', images: source.images.commitReleaseGifs };
-  if (source.hotfix.active) return { kind: 'hotfix', images: source.images.commitHotfixGifs };
-  if (source.isBugfix) return { kind: 'bugfix', images: source.images.commitBugfixGifs };
-  if (source.isFeature) return { kind: 'feature', images: source.images.commitFeatureGifs };
-  if (source.isDocs) return { kind: 'docs', images: source.images.commitDocsGifs };
-  if (source.isChore) return { kind: 'chore', images: source.images.commitChoreGifs };
-  return { kind: 'automatic', images: source.images.commitAutomaticActions };
-}
-
 function copyInitialLabels(source: PushSingleActionContextSource['labels']): InitialLabelConfiguration {
   const keys = [
-    'branchManagementLauncherLabel',
     'bug', 'bugfix', 'hotfix', 'enhancement', 'feature', 'release',
     'question', 'help', 'deploy', 'deployed', 'docs', 'documentation',
     'chore', 'maintenance', 'priorityHigh', 'priorityMedium', 'priorityLow',
@@ -430,9 +415,10 @@ function copyInitialLabels(source: PushSingleActionContextSource['labels']): Ini
 function copyDeploymentOperation(operation: DeploymentOperationSnapshot): DeploymentOperationSnapshot {
   return Object.freeze({
     ...operation,
+    locale: Object.freeze({ ...operation.locale }),
     reconciliationTargets: Object.freeze((operation.reconciliationTargets ?? []).map(target => Object.freeze({ ...target }))),
     ...(operation.publicationReceipt ? { publicationReceipt: Object.freeze({ ...operation.publicationReceipt }) } : {}),
-    ...(operation.lastFailure ? { lastFailure: Object.freeze({ ...operation.lastFailure }) } : {}),
+    lastFailure: operation.lastFailure ? Object.freeze({ ...operation.lastFailure }) : null,
   });
 }
 

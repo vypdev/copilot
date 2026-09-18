@@ -1,8 +1,10 @@
-import { buildEmoji, buildImages, buildIssue, buildIssueTypes, buildLabels, buildLocale, buildProjects, buildPullRequest, buildTokens, buildWorkflows } from '../configuration_builders';
+import { buildEmoji, buildIssue, buildIssueTypes, buildLabels, buildLocale, buildProjects, buildPullRequest, buildTokens, buildWorkflows } from '../configuration_builders';
 
 describe('configuration builders', () => {
     it('builds locale and workflows', () => {
-        expect(buildLocale('es', 'fr')).toMatchObject({ issue: 'es', pullRequest: 'fr' });
+        expect(buildLocale('en-US', 'es', 'fr')).toMatchObject({
+            repository: 'en-US', issue: 'es', pullRequest: 'fr',
+        });
         expect(buildWorkflows('release.yml', 'hotfix.yml')).toMatchObject({ release: 'release.yml', hotfix: 'hotfix.yml' });
     });
 
@@ -28,7 +30,7 @@ describe('configuration builders', () => {
         const pullRequest = buildPullRequest(1, 2, inputs);
 
         expect(issue.inputs).toBe(inputs);
-        expect(issue.branchManagementAlways).toBe(true);
+        expect(issue.issueManagedBranches).toBe(true);
         expect(pullRequest.inputs).toBe(inputs);
     });
 
@@ -37,34 +39,15 @@ describe('configuration builders', () => {
         expect(buildTokens('token')).toMatchObject({ token: 'token' });
     });
 
-    it('maps image configuration by scope without positional ambiguity', () => {
-        const scope = (prefix: string) => ({
-            automatic: [`${prefix}-automatic`],
-            feature: [`${prefix}-feature`],
-            bugfix: [`${prefix}-bugfix`],
-            release: [`${prefix}-release`],
-            hotfix: [`${prefix}-hotfix`],
-            docs: [`${prefix}-docs`],
-            chore: [`${prefix}-chore`],
-        });
-        const images = buildImages({ onIssue: true, onPullRequest: false, onCommit: true, issue: scope('issue'), pullRequest: scope('pr'), commit: scope('commit') });
-
-        expect(images.imagesOnIssue).toBe(true);
-        expect(images.imagesOnPullRequest).toBe(false);
-        expect(images.issueFeatureGifs).toEqual(['issue-feature']);
-        expect(images.pullRequestAutomaticActions).toEqual(['pr-automatic']);
-        expect(images.commitChoreGifs).toEqual(['commit-chore']);
-    });
-
     it('maps labels by branching, workflow, priority, and size groups', () => {
         const labels = buildLabels({
-            branching: { launcher: 'branched' },
             workflow: { bug: 'bug', bugfix: 'bugfix', hotfix: 'hotfix', enhancement: 'enhancement', feature: 'feature', release: 'release', question: 'question', help: 'help', deploy: 'deploy', deployed: 'deployed', docs: 'docs', documentation: 'documentation', chore: 'chore', maintenance: 'maintenance' },
             priorities: { high: 'P0', medium: 'P1', low: 'P2', none: 'none' },
             sizes: { xxl: 'XXL', xl: 'XL', l: 'L', m: 'M', s: 'S', xs: 'XS' },
         });
 
-        expect(labels.branchManagementLauncherLabel).toBe('branched');
+        labels.currentIssueLabels = ['branched'];
+        expect(labels.containsBranchedLabel).toBe(true);
         expect(labels.isBug).toBe(false);
         expect(labels.sizeLabels).toEqual(['XXL', 'XL', 'L', 'M', 'S', 'XS']);
         expect(labels.priorityHigh).toBe('P0');

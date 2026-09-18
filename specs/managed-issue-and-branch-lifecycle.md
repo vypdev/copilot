@@ -2,7 +2,7 @@
 
 - Status: As-built baseline
 - Date: 2026-09-13
-- Last verified: 2026-09-13 on `develop` (P2-E implementation validation)
+- Last verified: 2026-09-17 on the local issue start and SDD gate implementation branch
 - Owners: Copilot maintainers
 - Scope: issue admission, metadata enrichment, managed branch creation, lifecycle state, and merge-driven closure
 - Related issues/PRs: release orchestration and branch synchronization SDDs
@@ -11,7 +11,7 @@
 
 ## 1. Executive summary
 
-Copilot turns an authorized typed issue into traceable work: it normalizes
+After a maintainer adds `in-progress`, Copilot turns an admitted typed issue into traceable work: it normalizes
 metadata, links projects, selects a branch strategy, creates or reuses a linked
 branch, persists parent/working branch facts, and communicates the next action.
 Regular work starts from the configured development branch; a release starts
@@ -19,8 +19,9 @@ from the exact development HEAD at cut time; a hotfix starts from the latest
 accepted production tag.
 
 ```text
-issue -> permission/type/labels -> managed strategy -> linked branch
-      -> in-progress state -> commits/PR -> merged PR -> close linked issue
+issue -> permission/type/labels -> wait for in-progress -> optional SDD gate
+      -> managed strategy -> verified linked branch -> branched/state:working
+      -> commits/PR -> merged PR -> close linked issue
 ```
 
 ## 2. Problem, current behavior, and evidence
@@ -36,14 +37,18 @@ and hotfix origin mistakes are especially hard to recover.
 1. The issue workflow verifies permission and closes disallowed issues.
 2. It cleans requested stale branches, assigns members, normalizes title/type,
    links projects, and evaluates priority/size.
-3. Branch management runs when the launcher label or always-on option applies;
-   release/hotfix labels bypass the normal launcher requirement.
+3. Every admitted issue waits for the fixed `in-progress` start label. When
+   `issue-managed-branches` is enabled, branch-bearing types use a managed branch.
+   `branched` is added only after exact linked remote branch verification.
 4. Strategy precedence is hotfix, then release, then managed work.
 5. Managed feature/bugfix/docs/chore branches originate from development;
    release branches persist development origin SHA; hotfix branches use the
    latest tag commit.
-6. A created linked branch returns immutable branch facts; the issue route then
-   moves the issue to in-progress and applies only the returned configuration patch.
+6. A created linked branch returns immutable branch facts; the issue route
+   applies the returned configuration patch. An eligible issue with
+   `pre-branch-sdd` first resolves blocking questions and publishes its SDD
+   as the first branch commit. `state:specifying` and `state:working` distinguish
+   the gate from implementation.
 7. The workflow may answer help or recommend steps; new issues get one welcome.
 8. A merged linked PR closes the issue through the PR lifecycle.
 
@@ -54,8 +59,9 @@ and hotfix origin mistakes are especially hard to recover.
 - Intentional contract: semantic origins, deterministic strategy precedence,
   idempotent reuse, persisted branch facts, and one welcome.
 - Known debt and limitations: linked-branch propagation includes an adapter
-  delay; GitHub linkage/project APIs may be eventually consistent; lifecycle
-  labels supplement rather than replace GitHub state.
+  delay; project linking avoids list propagation by using the ProjectV2 item ID
+  returned by the add mutation; lifecycle labels supplement rather than replace
+  GitHub state.
 - Unknown rationale: historic emoji/title defaults are treated as current
   presentation choices, not architectural necessities.
 - Proposed improvements: replacing propagation delay with provider events needs
@@ -114,15 +120,21 @@ the route only after the preparation step returns.
 
 ### 6.1 Happy path
 
-1. An authorized issue is opened or labelled with a supported work type.
-2. Metadata and project state are normalized.
-3. The branch decision selects origin, safe name, and create/reuse behavior.
-4. GitHub creates and links the branch; Copilot persists facts and marks in-progress.
-5. Commits and a linked PR advance review state; merge closes the issue.
+1. An authorized issue is opened with an admitted work type and waits.
+2. A maintainer adds `in-progress`; metadata and project state are normalized.
+3. Any required SDD questions are resolved and the draft is validated off-branch.
+4. The branch decision selects origin, safe name, and create/reuse behavior.
+5. GitHub creates and links the branch; an eligible SDD becomes its first commit.
+6. Copilot verifies the exact remote branch, adds `branched`, and marks `state:working`.
+7. Commits and a linked PR advance review state; merge closes the issue.
+
+Project enrichment is immediate and deterministic: the existing-item query or
+add mutation returns the exact ProjectV2 item ID, and the status mutation uses
+that ID directly without a fixed sleep or a second board-list lookup.
 
 ### 6.2 Alternative paths
 
-- With `branch-management-always=false`, normal work waits for `branched`.
+- With `issue-managed-branches=false`, eligible regular work proceeds without an Action-managed branch; help is always branchless.
 - Existing correct branch becomes a no-op; a rename decision may create the new safe name.
 - Question/help issues receive answers instead of branch recommendations.
 - Release issues skip generic recommendations and delegate deployment later.
@@ -132,10 +144,10 @@ the route only after the preparation step returns.
 
 | State | Meaning | Next | Owner/recovery |
 |---|---|---|---|
-| classified | type/labels known | waiting/branched | maintainer |
-| waiting-to-branch | launcher absent | branched | add label |
-| branched | linked branch exists | in-progress/reviewing | contributor |
-| in-progress | changes on working branch | reviewing/blocked | contributor |
+| classified | type/labels known | waiting to start | maintainer |
+| waiting to start | `in-progress` absent | specifying/working | add `in-progress` |
+| specifying | SDD gate needs answers or revision | working/blocked | answer status card |
+| working | verified branch or authorized branchless help | reviewing/blocked | contributor |
 | reviewing | linked PR open | changes-requested/verified | reviewers |
 | ready | checks/review permit merge | complete/blocked | maintainer |
 | blocked | action/input required | prior active state | named actor |
@@ -148,8 +160,9 @@ explicit and must not delete unrelated branches.
 
 | Input | Default | Bounds/alternatives | Persistence |
 |---|---|---|---|
-| `branch-management-launcher-label` | `branched` | non-empty label | workflow input |
-| `branch-management-always` | `false` | boolean | workflow/Variable |
+| `issue-managed-branches` | `true` | boolean; release/hotfix require true | workflow/Variable |
+| `pre-branch-sdd` | `false` | boolean; requires managed branches | workflow/Variable |
+| fixed start/readiness labels | `in-progress` / `branched` | not configurable | repository labels |
 | `main-branch` / `development-branch` | `master` / `develop` | safe non-empty branch names | stored at operation cut where needed |
 | `feature-tree`, `bugfix-tree`, `docs-tree`, `chore-tree` | matching names | safe prefixes | repository config |
 | `release-tree`, `hotfix-tree` | matching names | safe prefixes | operation snapshot |
@@ -182,14 +195,18 @@ flowchart LR
 
 Architecture tests MUST keep policies provider-free, application ports semantic,
 and composition as the only concrete wiring owner.
+The project-link semantic port returns a required ProjectV2 item ID. An add
+response without that ID fails explicitly; the application never treats it as
+an already-linked skip. The project command adapter updates the returned item
+directly, while credentials and GraphQL details remain outside the use case.
 
 ## 9. UI/UX and content contract
 
 ```markdown
-Pending: **This issue is classified but has no work branch.** Add `branched` to start.
-Action required: **Prepare `feature/123-readable-title`.** Check out the linked branch and use the shown commit prefix.
+Pending: **This issue is classified and waiting.** Add `in-progress` to start.
+Action required: **Answer the numbered SDD questions.** The branch is created after the contract is validated.
 Blocked: **Branch creation was not authorized.** No branch was created; ask a maintainer to review access.
-Partial: **The branch exists, but project status could not be updated.** Work may continue; retry metadata sync.
+Partial: **The branch exists, but readiness is unverified.** Retry verification on the same issue and branch.
 Complete: **The linked pull request was merged and the issue is closed.** No action is required.
 ```
 
@@ -208,6 +225,7 @@ Untrusted titles/body/branch text is sanitized before Markdown or commands.
 | create/link fails | no or partial link | provider state | yes | inspect branch first | do not duplicate |
 | branch created, later metadata move fails | branch exists; configuration patch still returned | exact branch URL/name and patch | yes | continue work and retry metadata | never delete a valid branch implicitly |
 | project/metadata fails | branch may exist | branch/config | yes | retry enrichment | none |
+| project linked, status update fails | project membership remains but its configured status is unconfirmed | authoritative ProjectV2 item ID and link | yes | rerun enrichment | never delete the valid item implicitly |
 | stale cleanup request | wrong deletion risk | all branches | no unsafe retry | re-resolve exact targets | exact branches only |
 
 ## 11. Security, permissions, and privacy
@@ -274,6 +292,8 @@ dark/light, and non-English fallback.
 9. Untrusted issue text cannot inject commands, mentions, or markers.
 10. A branch helper cannot mutate route-owned configuration; the route applies
     exactly the returned frozen patch after the step completes.
+11. Issue project linking uses the mutation-returned item ID for the status
+    update without a timer or board-list read; replay reuses the existing item.
 
 ## 17. Requirements traceability
 

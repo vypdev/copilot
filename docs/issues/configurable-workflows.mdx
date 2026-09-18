@@ -1,0 +1,62 @@
+---
+title: Configurable issue workflows
+description: Select Issue Forms and understand live runtime admission.
+---
+
+# Configurable issue workflows
+
+`copilot setup` uses one ordered workflow catalog for Issue Forms, routing labels, native Issue Types, branch roles, release dependencies, runtime admission, and generated agent guidance. Interactive setup starts with **All** selected: use Space to toggle a kind and Enter to confirm.
+
+For non-interactive setup, pass stable IDs:
+
+```bash
+copilot setup --non-interactive --yes \
+  --issue-workflows feature,bugfix,documentation,chore,help
+```
+
+Or configure the same selection in YAML:
+
+```yaml
+issueWorkflows:
+  enabled: [feature, bugfix, documentation, chore, help]
+```
+
+`all` is accepted by the CLI. Unknown and duplicate IDs are rejected. The older `features.release` and `features.hotfix` switches are compatibility inputs; when both old and new settings are supplied they must agree.
+
+## Catalog
+
+| ID | Installed form | Routing labels | Managed remote branch | Extra workflow |
+|---|---|---|---|---|
+| `feature` | `feature_request.yml` | `feature`, `enhancement` | `feature/…` | — |
+| `bugfix` | `bug_report.yml` | `bugfix`, `bug` | `bugfix/…` | — |
+| `documentation` | `doc_update.yml` | `documentation`, `docs` | `docs/…` | — |
+| `chore` | `chore_task.yml` | `chore`, `maintenance` | `chore/…` | — |
+| `help` | `help_request.yml` | `help`, `question` | none | — |
+| `hotfix` | `hotfix.yml` | `hotfix` | `hotfix/…` | `hotfix_workflow.yml` |
+| `release` | `release.yml` | `release` | `release/…` | `release_workflow.yml` |
+
+Configured label overrides are rendered into newly installed forms and into `.copilot/repository-profile.json`. Deselecting release or hotfix also deselects its workflow; an unchanged setup-owned file is moved to `.copilot/setup-backups/`, while a customized file is preserved and reported as drift.
+
+If `features.issueTemplates` is disabled, admission still uses the selected profile. A maintainer-approved manual issue must then contain exactly one enabled routing group and every required Markdown heading.
+
+## Live admission
+
+The compact profile is stored in `COPILOT_ISSUE_WORKFLOW_PROFILE` and passed as `issue-workflow-profile` by every issue-bound workflow. After the workflow queue, the Action reloads the live labels, body, and durable Copilot state. It does not trust a stale event payload.
+
+| Live state | Passive event | Explicit command, `in-progress`, deploy, or issue-bound action |
+|---|---|---|
+| enabled and valid | execute | execute |
+| disabled or unmanaged | successful no-op | blocking result |
+| conflicting kinds | block | block |
+| missing, duplicate, or invalid required fields | block | block |
+| disabled with an existing branch/PR | PR completion and cleanup only | unsafe commands block |
+| disabled with an existing durable deployment | finish or recover that operation only | a new deployment blocks |
+
+An unlinked pull request stays on its PR-native route. Help is always branchless after `in-progress`, including when `issue-managed-branches` is enabled.
+
+## Migration and diagnosis
+
+Every setup writes an explicit schema-1 profile, including an all-kinds selection. Run `copilot doctor --config <setup.yml>` to detect profile, form, workflow, generated-guide, and manifest drift without changing files.
+An omitted profile in a manually wired workflow selects all seven kinds and
+still applies the same required body checks. Malformed profile JSON blocks.
+When admission blocks, correct the selected setup kind, conflicting live labels, or required issue body. Do not work around admission by inventing a branch or changing the generated profile manually.

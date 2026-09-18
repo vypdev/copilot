@@ -1,5 +1,6 @@
 import type { Result } from '../../data/model/result';
 import type { ParamUseCase } from './base/param_usecase';
+import type { BranchReadinessContext } from './steps/issue/reconcile_branch_readiness_use_case';
 import type { CheckPermissionsContext } from './steps/common/check_permissions_workflow';
 import type { UpdateTitleContext } from './steps/common/update_title_workflow';
 import type { ProjectContentLinkContext } from './steps/common/project_content_link_workflow';
@@ -25,6 +26,7 @@ export interface IssueWorkflowSteps {
   linkIssueProject: ParamUseCase<ProjectContentLinkContext, Result[]>;
   checkPriorityIssueSize: ParamUseCase<PrioritySizeContext, Result[]>;
   prepareBranches: ParamUseCase<BranchPreparationContext, BranchPreparationOutcome>;
+  reconcileBranchReadiness?: ParamUseCase<BranchReadinessContext, Result[]>;
   removeNotNeededBranches: ParamUseCase<RemoveObsoleteIssueBranchesContext, Result[]>;
   deployAdded: ParamUseCase<DeployAddedContext, Result[]>;
 }

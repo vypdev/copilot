@@ -140,6 +140,21 @@ Run repository-dependent commands from the **root of the target repository**, no
 
 For local use, prefer the hidden prompt or an environment variable instead of putting a token in shell history. `copilot setup` and `copilot doctor` prompt for the setup PAT; other commands accept `-t, --token` or `PERSONAL_ACCESS_TOKEN`. `copilot do` does not use a GitHub PAT option and reads the configured agent environment instead. See [Authentication](/authentication) and [Agent CLI configuration](/agents/cli-configuration).
 
+## Human-readable result output
+
+Repository-aware single actions render one semantic outcome in the configured
+`repository-locale`, which defaults to English. The terminal reports the status
+(`Succeeded`, `Partially completed`, `Failed`, or `No changes`) and bounded
+counts for completed, skipped, and failed operations. Semantic answers and
+errors are expanded because they help the operator decide what to do next.
+
+Internal `Result.steps` and reminder prose are not replayed into the terminal:
+they are operational evidence and may contain implementation-oriented English
+that would make localized output misleading. The terminal reports only the
+number of recorded operator reminders; use debug logs or structured results when
+that evidence is required. Error codes and references remain stable in every
+locale, and raw provider messages are never shown.
+
 ## Command reference
 
 All commands support `-h, --help`. The `-d, --debug` option enables additional diagnostics where listed below.
@@ -148,12 +163,16 @@ All commands support `-h, --help`. The `-d, --debug` option enables additional d
 
 Initializes the current GitHub repository through an interactive English-language wizard. It can select the workflows and templates to install, route each Copilot task to Codex, OpenCode, or Cursor, configure repository behavior and AI policy, inspect and provision GitHub Actions Variables and Secrets at repository or organization scope, verify access, and create the configured labels and issue types. If the repository has no version tags, setup asks whether it should create `v1.0.0`.
 
+Setup is the profile-creation surface, so its questionnaire, plan, confirmation, and embedded readiness checks stay in authoritative English until the repository configuration is installed. The selected `repository-locale` governs subsequent repository-aware output, including `copilot doctor`; issue and pull-request overrides do not change setup or doctor language.
+
 | Option | Required | Description |
 | --- | --- | --- |
 | `-t, --token <token>` | No | Setup PAT override. Otherwise uses the hidden prompt interactively or `PERSONAL_ACCESS_TOKEN` from the environment. |
 | `-d, --debug` | No | Enables debug logging. |
 | `--agent <provider>` | No | Preselect one runtime for every task: `codex`, `opencode`, or `cursor`. |
 | `--features <features>` | No | Preselect a comma-separated feature list, or `all`. Feature names are listed below. |
+| `--issue-workflows <types>` | No | Preselect enabled issue workflow kinds (`feature`, `bugfix`, `documentation`, `chore`, `help`, `hotfix`, `release`) or `all`. The interactive wizard offers the same list with Space/Enter multi-select. |
+| `--agent-guidance <mode>` | No | Control generated repository guidance: `prompt` (interactive default or explicit pointer authorization), `create-if-missing`, or `disabled`. Unattended setup defaults safely to `create-if-missing`. |
 | `--config <path>` | No | Load non-secret YAML/JSON setup overrides. Interactive answers can still refine them. |
 | `--non-interactive` | No | Use defaults, flags, config-file values, and explicit credentials without creating a terminal or prompting. |
 | `--yes` | No | Approve only the final plan; it does not fill missing configuration or credentials. |
@@ -176,9 +195,9 @@ copilot setup
 
 Run it from the target repository root. Existing setup files are not overwritten unless you approve the update prompt or pass `--update-workflows`. The interactive flow installs the selected workflows/templates, asks for agent routing and operational settings, inspects the repository's effective Actions resources, and asks separately where Secrets and Variables should live. Organization scope requires an organization-owned repository and the corresponding organization permissions on the setup PAT. Existing repository resources take precedence over organization resources; setup preserves an inherited organization resource unless you explicitly request a repository override.
 
-The questionnaire is forward-only and immutable. Its stable stages are capabilities, agent runtime, model defaults, optional role overrides, repository, deployment, Bugbot, optional Projects, provisioning, storage, review, and confirmation. `Ctrl-C` or end-of-input closes the prompt once, exits 130, and writes nothing. Declining the final plan exits 0 and also writes nothing; rerun setup or edit the config file to change earlier answers.
+The questionnaire is forward-only and immutable. Its stable stages are capabilities, issue workflow multi-select, agent runtime, model defaults, optional role overrides, repository, deployment, Bugbot, optional Projects, provisioning, storage, review, and confirmation. The issue workflow selector uses the usual `Space` to toggle and `Enter` to confirm; `All` is selected by default. `Ctrl-C` or end-of-input closes the prompt once, exits 130, and writes nothing. Declining the final plan exits 0 and also writes nothing; rerun setup or edit the config file to change earlier answers.
 
-The wizard covers these features: `issues`, `pullRequests`, `commits`, `issueComments`, `pullRequestComments`, `release`, `hotfix`, `agentProvisioning`, `credentialHealth`, `inactiveIssueClosure`, `issueTemplates`, and `pullRequestTemplate`. The agent tasks are `planner`, `findings`, `reviewer`, `fixer`, and `tester`; each can use any of the three supported runtimes independently. Model provider, model, effort, branch strategy, locales, AI ignore patterns, project columns, Bugbot policy, provisioning mode, and initial-tag creation are also configurable. Cursor is available as an experimental runtime and is called out in the review plan with its extra credential/checksum requirements.
+The wizard covers these features: `issues`, `pullRequests`, `commits`, `issueComments`, `pullRequestComments`, `release`, `hotfix`, `agentProvisioning`, `credentialHealth`, `inactiveIssueClosure`, `issueTemplates`, and `pullRequestTemplate`. It also asks whether to generate repository agent guidance; this is enabled by default. The agent tasks are `planner`, `findings`, `reviewer`, `fixer`, and `tester`; each can use any of the three supported runtimes independently. Model provider, model, effort, branch strategy, locales, AI ignore patterns, project columns, Bugbot policy, provisioning mode, and initial-tag creation are also configurable. Cursor is available as an experimental runtime and is called out in the review plan with its extra credential/checksum requirements.
 
 For automation, use the same defaults without prompts:
 
@@ -186,7 +205,14 @@ For automation, use the same defaults without prompts:
 copilot setup --non-interactive --yes
 copilot setup --dry-run
 copilot setup --non-interactive --yes --features issues,pullRequests,commits,issueComments,pullRequestComments --agent codex
+copilot setup --non-interactive --yes --issue-workflows feature,bugfix,help
 ```
+
+Without an explicit `--agent-guidance` or config value, non-interactive setup
+still generates the profile, guide, and skill, but it uses
+`create-if-missing`: an existing root `AGENTS.md` is not edited. Pass
+`--agent-guidance prompt` (and approve the final plan) to authorize the bounded
+marker insertion in unattended setup.
 
 For unattended credential provisioning, keep the setup PAT in a protected CI secret and pass credential values explicitly (never commit them):
 
@@ -203,9 +229,65 @@ copilot setup --non-interactive --yes --update-workflows \
 
 The explicit `--workflow-pat` and `--secret` options are provided for automation and can appear in process listings or shell history. The interactive hidden prompt is safer for a human operator.
 
+The equivalent non-secret setup file fragment is:
+
+```yaml
+issueWorkflows:
+  enabled: [feature, bugfix, documentation, chore, help]
+repositoryAgentGuidance:
+  enabled: true
+  agentsPointer: prompt
+```
+
+`issueWorkflows.enabled` accepts only the seven catalog IDs. `All` exists only
+in the interactive/CLI selector and is persisted as the explicit ordered list.
+The `release` and `hotfix` entries are also constrained by their corresponding
+setup features. `repositoryAgentGuidance` never overwrites existing guidance;
+the setup manifest is the ownership record for artifacts it generated.
+
+When guidance is enabled, setup generates `.copilot/repository-profile.json`,
+`.copilot/AGENT_GUIDE.md`, `.copilot/setup-manifest.json`, and the Codex skill
+`.agents/skills/copilot-repository-workflow/SKILL.md`. The generated guidance
+is derived from the selected issue workflow profile and branch/deployment
+settings. It tells repository agents to create issues from enabled Issue Forms,
+work on the exact Action-managed remote branch, push normal commits, and use a
+linked pull request. Agents must not create, rename, delete, replace, or
+force-push managed remote branches. Existing guidance and skills are preserved;
+setup-managed artifacts are refreshed only when the manifest identifies them as
+owned. Use `--agent-guidance disabled` to opt out.
+
+The Action receives the same profile through the `issue-workflow-profile` input
+and the `COPILOT_ISSUE_WORKFLOW_PROFILE` Repository Variable. An empty input
+selects all seven workflows and still validates their required Issue Form
+fields. Admission is fail-closed: unknown, disabled, conflicting, or incomplete issue
+work is skipped or blocked before agent preparation and repository mutation; it
+never silently becomes Feature work. Release and hotfix bodies must retain the
+headings and semantic fields supplied by their forms.
+
 ### `copilot doctor`
 
 Checks the setup PAT, selected workflow templates, Repository Variables, Secret presence, remote credential health, and live merge-queue readiness for production and development targets. It combines classic branch protection with effective rulesets and emits stable, ordered checks with `pass`, `warn`, `fail`, or dependency-blocked `skipped` status. Active release branches are discovered and revalidated at hotfix runtime. A failed setup PAT does not hide independent local drift: local checks continue and remote dependants name the blocking check. Independent remote probes use a fixed maximum concurrency of four, but their completion order never changes report order. Doctor exits non-zero exactly when at least one check fails.
+
+The complete human-readable report uses the configured repository locale and defaults to English (`en-US`). English and Spanish use reviewed bundled catalogs with exact or compatible-base matching. Any other valid BCP-47 locale uses one schema-constrained planner/language-agent request for the complete report catalog. If that request is unavailable or invalid, the whole report falls back atomically to English—never a mixture of translated headings and English diagnostics. Check IDs, status enums, branch names, credential names, and other machine facts remain stable. Raw provider and credential-health messages are not echoed into the report.
+
+The same rule applies to semantic errors from repository-aware local commands:
+the terminal localizes impact, action, retained state, retryability, and labels as
+one catalog while leaving the error code and correlation reference stable. The
+original producer message is not displayed. Failures raised before repository
+configuration can be resolved use the safe English default.
+
+This reduced two-check fixture shows the default English shape:
+
+```text
+Copilot Doctor
+
+✓ PASS    Configuration — Setup configuration is valid.
+✗ FAIL    Merge queue production — Target policy could not be inspected because the provider request failed.
+            Action: Check the setup PAT permissions and target branch policy, then retry.
+
+Checks: 1 pass, 0 warn, 1 fail, 0 skipped.
+No repository configuration was changed.
+```
 
 Doctor's composition contains query ports only: it never creates, updates, deletes, or overwrites repository configuration. The credential health query may dispatch the already-installed `copilot_credential_health.yml` workflow, which creates an Actions run but does not modify repository configuration or expose Secret values. Only setup owns the separate temporary health-workflow bootstrap capability.
 
@@ -290,6 +372,13 @@ The first version deliberately scopes reconciliation to workflow templates. Bran
 ### `copilot check-progress`
 
 Checks the progress of an issue from the selected branch and updates the progress label on the issue and its related open pull requests.
+The command sends the current workspace object ID, verifies that it matches the
+selected remote branch `HEAD` before agent analysis, then revalidates that
+remote snapshot before changing labels. The shared publisher performs the
+same check before each progress-card mutation in GitHub Actions. If the branch
+advances, the run succeeds as **No changes**, the stale result is suppressed,
+and newer state remains untouched. The selected branch must therefore exist on
+the configured GitHub remote.
 
 | Option | Required | Default | Description |
 | --- | --- | --- | --- |
@@ -333,7 +422,22 @@ copilot detect-potential-problems -i 456 --dry-run --output json --effort high
 
 ### `copilot recommend-steps`
 
-Uses the configured analysis agent to recommend implementation steps from an issue and posts the recommendation as an issue comment.
+Uses the configured analysis agent to create or update one bounded implementation-plan
+card from an issue. The agent returns structured content: three to eight ordered
+steps, zero to two details per step, and one verifiable acceptance criterion.
+Copilot owns the Markdown layout, so model-generated headings or generic
+“Automatic Actions” wrappers cannot become the presentation.
+
+The plan uses the effective issue locale, defaulting to English (`en-US`). Paths,
+commands, refs, and code identifiers remain unchanged. A mismatched locale or
+malformed plan fails before publication. Re-running against an unchanged issue
+reconciles the existing card without creating a new comment; a material issue
+edit updates that card. Stored state accepts only the current closed structured
+plan shape and its exact canonical locale; removed free-form or missing-locale
+state is invalid. When the effective issue locale changes, the next agent-backed
+run must return a complete replacement in that locale and cannot answer
+`unchanged`. If no agent is configured, Copilot fails closed, so it cannot
+knowingly republish mixed-language UI.
 
 | Option | Required | Description |
 | --- | --- | --- |
@@ -347,12 +451,15 @@ copilot recommend-steps -i 789
 
 ### `copilot think`
 
-Runs deep code analysis and returns change proposals from the configured agent. The question is required; the issue and branch options provide repository context.
+Runs deep code analysis and prints the configured agent's semantic response under
+a localized `Answer` label. The question is required; issue and branch options
+provide optional repository context. This local command does not create or
+update a GitHub comment.
 
 | Option | Required | Default | Description |
 | --- | --- | --- | --- |
 | `-q, --question <question...>` | Yes | — | Question or prompt. Multiple words may be supplied without shell quoting each word. |
-| `-i, --issue <number>` | No | `1` | Issue number used when the repository has that issue context. |
+| `-i, --issue <number>` | No | none | Optional issue whose description is added to the analysis context. Omitting it never probes or requires issue `#1`. |
 | `-b, --branch <name>` | No | `master` | Branch to use for the analysis context. |
 | `-t, --token <token>` | No | `PERSONAL_ACCESS_TOKEN` | PAT override. |
 | `--ai-ignore-files <patterns>` | No | `node_modules/*,build/*` | Comma-separated file patterns excluded from AI context. |

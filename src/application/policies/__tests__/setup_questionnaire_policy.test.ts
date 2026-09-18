@@ -25,11 +25,41 @@ describe('setup questionnaire policy', () => {
       'repository',
       'deployment',
       'bugbot',
+      'pull-request-approval',
       'projects',
       'provisioning',
       'storage',
     ]);
     expect(state).toEqual(expect.objectContaining({ stateId: 'review', terminal: 'review' }));
+  });
+
+  it('asks for recommendation, guarded, or off and requires explicit producer attestation', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'recommend' };
+    let state = advanceTo(createSetupQuestionnaire(configuration), 'pullRequestApproval.mode');
+    expect(state.question?.choices).toEqual(['recommend', 'guarded', 'off']);
+    expect(state.question?.defaultValue).toBe('recommend');
+    state = advanceTo(state, 'pullRequestApproval.producerAttested');
+    expect(state.question?.defaultValue).toBe(false);
+    state = transitionSetupQuestionnaire(state, { kind: 'answer', value: 'yes' });
+    expect(state.draft.pullRequestApproval.producerAttested).toBe(true);
+  });
+
+  it('asks for numeric threshold, artifact workflow, and reporter attestation only in numeric mode', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'recommend' };
+    let state = advanceTo(createSetupQuestionnaire(configuration), 'pullRequestApproval.coverage.mode');
+    state = transitionSetupQuestionnaire(state, { kind: 'answer', value: 'numeric' });
+    expect(state.draft.pullRequestApproval.coverage).toMatchObject({ mode: 'numeric', minDiffPercent: 80,
+      reporterAttested: false });
+    state = advanceTo(state, 'pullRequestApproval.coverage.minDiffPercent');
+    state = transitionSetupQuestionnaire(state, { kind: 'answer', value: '85' });
+    expect(state.draft.pullRequestApproval.coverage).toMatchObject({ minDiffPercent: 85 });
+    state = advanceTo(state, 'pullRequestApproval.coverage.artifactWorkflowName');
+    state = transitionSetupQuestionnaire(state, { kind: 'answer', value: 'CI Check' });
+    state = advanceTo(state, 'pullRequestApproval.coverage.reporterAttested');
+    state = transitionSetupQuestionnaire(state, { kind: 'answer', value: 'yes' });
+    expect(state.draft.pullRequestApproval.coverage).toMatchObject({ artifactWorkflowName: 'CI Check', reporterAttested: true });
   });
 
   it('adds per-role model questions only after the explicit independent decision', () => {

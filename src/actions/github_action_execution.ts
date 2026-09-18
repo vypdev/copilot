@@ -5,13 +5,11 @@ import { SingleAction } from '../data/model/single_action';
 import type { Execution } from '../data/model/execution';
 import type { ProjectDetailQueryPort } from '../application/ports/project_detail_ports';
 import { INPUT_KEYS } from '../application/contracts/input_keys';
-import { isEnabledInput } from './input_boolean_policy';
+import { isEnabledInput, parseIssueWorkflowBoolean } from './input_boolean_policy';
 import { getGithubActionInput } from './github_action_input';
 import { parseBoundedPositiveIntegerInput, parseIntegerInput } from './input_number_policy';
 import { parseDelimitedValues } from './input_values_policy';
 import { readGithubActionAiInputs } from './github_action_ai_inputs';
-import { prepareGithubAgentRuntime } from './github_action_runtime';
-import { readGithubActionImageInputs } from './github_action_image_inputs';
 import { readGithubActionLocaleInputs } from './github_action_locale_inputs';
 import { buildSizeThresholds } from './size_threshold_builder';
 import { readGithubActionThresholdInputs } from './github_action_threshold_inputs';
@@ -22,13 +20,15 @@ import { readGithubActionWorkflowInputs } from './github_action_workflow_inputs'
 import { readGithubActionIssueTypeInputs } from './github_action_issue_type_inputs';
 import { readGithubActionProjectInputs } from './github_action_project_inputs';
 import { buildExecution } from './execution_builder';
-import { buildEmoji, buildImages, buildIssue, buildIssueTypes, buildLabels, buildLocale, buildProjects, buildPullRequest, buildTokens, buildWorkflows } from './configuration_builders';
+import { buildEmoji, buildIssue, buildIssueTypes, buildLabels, buildLocale, buildProjects, buildPullRequest, buildTokens, buildWorkflows } from './configuration_builders';
 import { loadProjectDetails } from './project_details_loader';
 import type { buildGithubActionEventInputs } from './github_event_inputs';
 import { DEFAULT_INACTIVITY_THRESHOLD_HOURS, MAX_INACTIVITY_THRESHOLD_HOURS } from '../domain/issue_inactivity';
 import { activeAgentTasks } from '../application/policies/agent_task_activation_policy';
 import type { AgentTaskConfiguration } from '../domain/agent';
 import { readDeploymentConfiguration } from './deployment_configuration_builder';
+import { parseIssueWorkflowProfile } from '../domain/issue_workflow_profile';
+import { issueWorkflowProfileDigest } from '../utils/issue_workflow_profile_digest';
 
 export interface GithubActionExecutionInput {
     readonly getInput: typeof getGithubActionInput;
@@ -41,41 +41,26 @@ export interface GithubActionExecutionInput {
     readonly aiInputs?: ReturnType<typeof readGithubActionAiInputs>;
     readonly activeAgentTasks?: ReturnType<typeof activeAgentTasks>;
     readonly agentRuntimeAuthorized?: boolean;
+    readonly localeInputs?: ReturnType<typeof readGithubActionLocaleInputs>;
 }
 
 export async function buildGithubActionExecution(
     input: GithubActionExecutionInput,
 ): Promise<Execution> {
-    const { getInput, eventInputs, projectQuery, debug, singleAction, token } = input;
+    const { getInput, eventInputs, debug, singleAction, token } = input;
+    const parsedIssueWorkflowProfile = parseIssueWorkflowProfile(getInput(INPUT_KEYS.ISSUE_WORKFLOW_PROFILE));
+    if ('error' in parsedIssueWorkflowProfile) throw new Error(parsedIssueWorkflowProfile.error);
+    // Locale is trusted configuration. Validate it before agent provisioning or
+    // any provider/domain mutation can begin.
+    const localeInputs = input.localeInputs ?? readGithubActionLocaleInputs(getInput);
     const aiInputs = input.aiInputs ?? readGithubActionAiInputs(getInput);
     const agentTasks = input.agentRuntimeAuthorized === false
         ? disableAgentTasks(aiInputs.requestedAgentTasks)
         : aiInputs.requestedAgentTasks;
-    const runtimeTasks = input.activeAgentTasks ?? activeAgentTasks(
-        eventInputs,
-        singleAction,
-        input.tokenUser,
-        aiInputs.pullRequestDescriptionMode !== 'disabled',
-    );
-    if (!singleAction.isCloseInactiveIssuesAction && runtimeTasks.length > 0) {
-        prepareGithubAgentRuntime(
-            agentTasks,
-            runtimeTasks,
-        );
-    }
-
-    const projects = await loadProjectDetails(
-        projectQuery,
-        parseDelimitedValues(getInput(INPUT_KEYS.PROJECT_IDS)),
-        eventInputs.repo.owner,
-        token,
-    );
-    const projectInputs = readGithubActionProjectInputs(getInput, projects);
-    const imageConfiguration = readGithubActionImageInputs(getInput);
+    const projectInputs = readGithubActionProjectInputs(getInput, []);
     const workflowInputs = readGithubActionWorkflowInputs(getInput);
     const labelInputs = readGithubActionLabelInputs(getInput);
     const issueTypeInputs = readGithubActionIssueTypeInputs(getInput);
-    const localeInputs = readGithubActionLocaleInputs(getInput);
     const sizeThresholdInputs = readGithubActionThresholdInputs(getInput);
     const branchInputs = readGithubActionBranchInputs(getInput);
     const deployment = readDeploymentConfiguration(getInput, {
@@ -95,11 +80,12 @@ export async function buildGithubActionExecution(
         singleAction,
         commitPrefixBuilder: getCommitPrefixBuilder(getInput),
         issue: buildIssue(
-            isEnabledInput(getInput(INPUT_KEYS.BRANCH_MANAGEMENT_ALWAYS)),
+            parseIssueWorkflowBoolean(getInput(INPUT_KEYS.ISSUE_MANAGED_BRANCHES), INPUT_KEYS.ISSUE_MANAGED_BRANCHES, true),
             isEnabledInput(getInput(INPUT_KEYS.REOPEN_ISSUE_ON_PUSH)),
             parseIntegerInput(getInput(INPUT_KEYS.DESIRED_ASSIGNEES_COUNT), 0),
             eventInputs,
         ),
+        preBranchSdd: parseIssueWorkflowBoolean(getInput(INPUT_KEYS.PRE_BRANCH_SDD), INPUT_KEYS.PRE_BRANCH_SDD, false),
         pullRequest: buildPullRequest(
             parseIntegerInput(getInput(INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0),
             parseIntegerInput(getInput(INPUT_KEYS.PULL_REQUEST_DESIRED_REVIEWERS_COUNT), 0),
@@ -109,7 +95,6 @@ export async function buildGithubActionExecution(
             getInput(INPUT_KEYS.EMOJI_LABELED_TITLE) === 'true',
             getInput(INPUT_KEYS.BRANCH_MANAGEMENT_EMOJI),
         ),
-        images: buildImages(imageConfiguration),
         tokens: buildTokens(token),
         ai: new Ai(
             '',
@@ -126,7 +111,11 @@ export async function buildGithubActionExecution(
         ),
         labels: buildLabels(labelInputs),
         issueTypes: buildIssueTypes(issueTypeInputs),
-        locale: buildLocale(localeInputs.issue, localeInputs.pullRequest),
+        locale: buildLocale(
+            localeInputs.repository,
+            localeInputs.issueOverride,
+            localeInputs.pullRequestOverride,
+        ),
         sizeThresholds: buildSizeThresholds(sizeThresholdInputs),
         branches: buildBranches(branchInputs),
         release: new Release(),
@@ -136,7 +125,23 @@ export async function buildGithubActionExecution(
         projects: buildProjects(projectInputs),
         tokenUser: input.tokenUser,
         inputs: eventInputs,
+        issueWorkflowProfile: parsedIssueWorkflowProfile.profile,
+        issueWorkflowProfileDigest: issueWorkflowProfileDigest(parsedIssueWorkflowProfile.profile),
     });
+}
+
+/** Loads provider-backed project facts only after live issue admission succeeds. */
+export async function hydrateGithubActionExecutionProjects(
+    execution: Execution,
+    input: Pick<GithubActionExecutionInput, 'getInput' | 'projectQuery' | 'token'>,
+): Promise<void> {
+    const projects = await loadProjectDetails(
+        input.projectQuery,
+        parseDelimitedValues(input.getInput(INPUT_KEYS.PROJECT_IDS)),
+        execution.owner,
+        input.token,
+    );
+    execution.project = buildProjects(readGithubActionProjectInputs(input.getInput, projects));
 }
 
 function disableAgentTasks(tasks: AgentTaskConfiguration): AgentTaskConfiguration {

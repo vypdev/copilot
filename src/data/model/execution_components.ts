@@ -2,7 +2,6 @@ import type { Ai } from './ai';
 import type { Branches } from './branches';
 import type { Emoji } from './emoji';
 import type { Hotfix } from './hotfix';
-import type { Images } from './images';
 import type { Issue } from './issue';
 import type { IssueTypes } from './issue_types';
 import type { Labels } from './labels';
@@ -17,6 +16,7 @@ import type { Welcome } from './welcome';
 import type { Workflows } from './workflows';
 import type { ExecutionInputs } from './execution_inputs';
 import type { DeploymentConfigurationValues } from '../../domain/deployment_configuration';
+import type { IssueWorkflowAdmission, IssueWorkflowProfile } from '../../domain/issue_workflow_profile';
 
 /** Immutable construction contract for the runtime execution aggregate. */
 export interface ExecutionComponents {
@@ -26,7 +26,6 @@ export interface ExecutionComponents {
     issue: Issue;
     pullRequest: PullRequest;
     emoji: Emoji;
-    images: Images;
     tokens: Tokens;
     ai: Ai;
     labels: Labels;
@@ -43,4 +42,8 @@ export interface ExecutionComponents {
     welcome?: Welcome;
     inactivityThresholdHours?: number;
     inputs?: ExecutionInputs;
+    issueWorkflowProfile?: IssueWorkflowProfile;
+    issueWorkflowProfileDigest?: string;
+    issueWorkflowAdmission?: IssueWorkflowAdmission;
+    preBranchSdd?: boolean;
 }

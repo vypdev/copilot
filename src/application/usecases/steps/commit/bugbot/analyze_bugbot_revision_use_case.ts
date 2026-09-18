@@ -33,6 +33,9 @@ export async function analyzeBugbotRevision(
             dependencies.agent,
             execution.analysis.agentConfiguration,
             prompt,
+            context.prContext && context.canonicalPullRequest
+                ? execution.locale.pullRequest
+                : execution.locale.issue ?? execution.locale.pullRequest,
         ),
     );
     dependencies.telemetry.observeResponse(agentResponse);

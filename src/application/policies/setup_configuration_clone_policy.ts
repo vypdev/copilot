@@ -19,6 +19,14 @@ export function cloneSetupConfiguration(configuration: SetupConfiguration): Setu
       })),
     },
     ai: { ...configuration.ai },
+    pullRequestApproval: {
+      ...configuration.pullRequestApproval,
+      targetRoles: [...configuration.pullRequestApproval.targetRoles],
+      branchKinds: [...configuration.pullRequestApproval.branchKinds],
+      additionalExcludedPaths: [...configuration.pullRequestApproval.additionalExcludedPaths],
+      testChecks: configuration.pullRequestApproval.testChecks.map(check => ({ ...check })),
+      coverage: { ...configuration.pullRequestApproval.coverage },
+    },
     projects: { ...configuration.projects },
     actionInputs: { ...configuration.actionInputs },
     storage: {
@@ -31,5 +39,7 @@ export function cloneSetupConfiguration(configuration: SetupConfiguration): Setu
         overrides: { ...configuration.storage.variables.overrides },
       },
     },
+    issueWorkflows: { enabled: [...configuration.issueWorkflows.enabled] },
+    repositoryAgentGuidance: { ...configuration.repositoryAgentGuidance },
   };
 }

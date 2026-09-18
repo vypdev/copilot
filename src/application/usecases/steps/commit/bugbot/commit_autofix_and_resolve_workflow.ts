@@ -39,7 +39,7 @@ export async function commitAutofixAndResolveFindings(
   }
   if (commitResult.committed && payload.context) {
     logInfo(
-      `Committed autofix for ${payload.targetFindingIds.length} finding(s). `
+      `Committed autofix for ${payload.targetFindingIds.length} ${payload.targetFindingIds.length === 1 ? 'finding' : 'findings'}. `
       + 'Findings remain open until a fresh review verifies the pushed revision.',
     );
     return [];

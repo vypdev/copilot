@@ -5,6 +5,8 @@ description: Configuration options specific to pull request workflows
 
 # Pull Requests Configuration
 
+For the versioned `PR_APPROVAL_POLICY` Variable, setup defaults, producer tuples, coverage modes, and safety limits, see [guarded PR approval](/pull-requests/guarded-approval). A missing Variable means off in existing installations; a new `copilot setup` plan proposes recommendation-only assessment and requires an explicit choice and producer attestation before guarded native approval.
+
 These inputs apply when the action runs on `pull_request` events. For the complete list of all action inputs, see [Configuration](/configuration).
 
 ## Project and assignees
@@ -21,20 +23,13 @@ These inputs apply when the action runs on `pull_request` events. For the comple
 | Input | Description | Default |
 |-------|-------------|---------|
 | `ai-pull-request-description-mode` | `replace`, `append`, `preserve`, or `disabled`; controls automatic ownership and explicit `/copilot description` updates | `replace` |
-| `pull-requests-locale` | Target locale for explicitly addressed PR review comment translation | "en-US" |
+| `repository-locale` | BCP-47 locale inherited by generated repository, issue, and PR messages | `en-US` |
+| `pull-requests-locale` | Optional PR-surface override; empty inherits `repository-locale` | empty |
 | `ai-members-only` | Restrict AI PR description to org/project members only | "false" |
 
 See [AI PR description](/pull-requests/ai-description) for how the description is generated and [Agent CLI configuration](/agents/cli-configuration) for runtime and model setup.
 
-## Images on pull requests
-
-| Input | Description | Default |
-|-------|-------------|---------|
-| `images-on-pull-request` | Enable images in PR comments | "true" |
-| `images-pull-request-automatic` | Image URLs for automatic PR comments | (built-in) |
-| `images-pull-request-feature` | Image URLs for feature PR comments | (built-in) |
-| `images-pull-request-bugfix` | Image URLs for bugfix PR comments | (built-in) |
-| … | Same pattern for `docs`, `chore`, `hotfix`, `release` | — |
+Copilot preserves the original review comment byte-for-byte. For an addressed request in another language it performs one bounded adaptation before domain work, keeps commands and technical operands intact, and adds escaped translation context to the bot-owned response only when translation occurred.
 
 ## Other
 

@@ -1,8 +1,16 @@
 import {
     composeTranslatedComment,
     hasTranslatedCommentMarker,
+    prepareLanguageAdaptationInput,
+    rebuildAdaptedComment,
+    renderTranslationContext,
+    restoreLanguageAdaptationOutput,
     TRANSLATED_COMMENT_MARKER,
 } from '../comment_translation_policy';
+import {
+    ENGLISH_PUBLICATION_CATALOG,
+    SPANISH_PUBLICATION_CATALOG,
+} from '../publication_message_catalog';
 
 describe('comment translation policy', () => {
     it('composes a safe bot comment and preserves the original as escaped data', () => {
@@ -12,11 +20,14 @@ describe('comment translation policy', () => {
         );
 
         expect(result).toBeDefined();
-        expect(result?.commentBody).toContain('Hola @\u200boctocat');
-        expect(result?.commentBody).toContain('\u200b/');
-        expect(result?.commentBody).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
-        expect(result?.commentBody).toContain(TRANSLATED_COMMENT_MARKER);
-        expect(result?.commentBody).not.toContain('<!-- fake marker -->');
+        expect(result?.translatedText).toContain('Hola @\u200boctocat');
+        expect(result?.translatedText).toContain('\u200b/');
+        expect(result?.originalText).toContain('<script>alert(1)</script>');
+        expect(result?.translatedText).not.toContain('<!-- fake marker -->');
+        const rendered = renderTranslationContext(result!, ENGLISH_PUBLICATION_CATALOG);
+        expect(rendered).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+        expect(rendered).not.toContain('<script>');
+        expect(rendered).toContain(TRANSLATED_COMMENT_MARKER);
     });
 
     it('rejects empty, marked, and non-string model output', () => {
@@ -28,14 +39,251 @@ describe('comment translation policy', () => {
 
     it('recognizes only the current translated-comment marker', () => {
         expect(hasTranslatedCommentMarker(`text\n${TRANSLATED_COMMENT_MARKER}`)).toBe(true);
+        expect(hasTranslatedCommentMarker('text\n<!-- copilot:translated-comment:v2 -->')).toBe(false);
         expect(hasTranslatedCommentMarker('plain comment')).toBe(false);
+        expect(hasTranslatedCommentMarker(undefined)).toBe(false);
     });
 
     it('keeps the translated publication below the GitHub comment-size boundary', () => {
         const result = composeTranslatedComment('x'.repeat(12_000), '&'.repeat(65_000));
 
         expect(result).toBeDefined();
-        expect(result!.commentBody.length).toBeLessThan(65_536);
-        expect(result!.commentBody).toContain('[untrusted content truncated]');
+        const rendered = renderTranslationContext(result!, ENGLISH_PUBLICATION_CATALOG);
+        expect(rendered.length).toBeLessThan(65_536);
+        expect(rendered).toContain('[untrusted content truncated]');
+    });
+
+    it('separates plain, mention, and command prose and reconstructs only trusted control syntax', () => {
+        const plain = prepareLanguageAdaptationInput('  plain request  ', '');
+        const mention = prepareLanguageAdaptationInput('@vypbot hola', '@vypbot');
+        const command = prepareLanguageAdaptationInput('/copilot explain por que', 'vypbot');
+
+        expect(plain).toEqual({ kind: 'plain', prose: 'plain request' });
+        expect(mention).toEqual({ kind: 'mention', prose: 'hola', trustedBotLogin: 'vypbot' });
+        expect(command).toEqual({ kind: 'command', prose: 'por que', commandName: 'explain' });
+        expect(rebuildAdaptedComment(plain, ' translated ')).toBe('translated');
+        expect(rebuildAdaptedComment(mention, '')).toBe('@vypbot');
+        expect(rebuildAdaptedComment(mention, 'translated')).toBe('@vypbot translated');
+        expect(rebuildAdaptedComment({ kind: 'mention', prose: 'plain' }, 'translated')).toBe('translated');
+        expect(rebuildAdaptedComment(command, '')).toBe('/copilot explain');
+        expect(rebuildAdaptedComment(command, 'translated')).toBe('/copilot explain translated');
+    });
+
+    it('protects technical operands from translation and restores them only after exact validation', () => {
+        const input = prepareLanguageAdaptationInput(
+            '/copilot explain por qué falla `src/cache.ts` en feature/cache --verbose https://example.com/log a1b2c3d',
+            'vypbot',
+        );
+
+        expect(input.prose).toBe(
+            'por qué falla COPILOT_OPERAND_0_TOKEN en COPILOT_OPERAND_1_TOKEN COPILOT_OPERAND_2_TOKEN COPILOT_OPERAND_3_TOKEN COPILOT_OPERAND_4_TOKEN',
+        );
+        expect(input.protectedOperands?.map(operand => operand.value)).toEqual([
+            '`src/cache.ts`', 'feature/cache', '--verbose', 'https://example.com/log', 'a1b2c3d',
+        ]);
+        expect(Object.isFrozen(input.protectedOperands)).toBe(true);
+        expect(input.protectedOperands?.every(Object.isFrozen)).toBe(true);
+
+        const translated = 'why COPILOT_OPERAND_0_TOKEN fails on COPILOT_OPERAND_1_TOKEN COPILOT_OPERAND_2_TOKEN COPILOT_OPERAND_3_TOKEN COPILOT_OPERAND_4_TOKEN';
+        expect(restoreLanguageAdaptationOutput(input, translated)).toBe(
+            'why `src/cache.ts` fails on feature/cache --verbose https://example.com/log a1b2c3d',
+        );
+        expect(restoreLanguageAdaptationOutput(input, [
+            'COPILOT_OPERAND_0_TOKEN works on',
+            'COPILOT_OPERAND_1_TOKEN COPILOT_OPERAND_2_TOKEN',
+            'COPILOT_OPERAND_3_TOKEN COPILOT_OPERAND_4_TOKEN',
+        ].join(' '))).toContain('`src/cache.ts` works on feature/cache');
+        expect(rebuildAdaptedComment(input, translated)).toContain(
+            '/copilot explain why `src/cache.ts` fails on feature/cache --verbose',
+        );
+    });
+
+    it.each([
+        ['/copilot fix README.md', ['README.md']],
+        ['/copilot explain package.json', ['package.json']],
+        ['/copilot diagnose .github', ['.github']],
+        ['/copilot fix Dockerfile', ['Dockerfile']],
+        ['/copilot explain failure in #123 and GH-456', ['#123', 'GH-456']],
+        ['/copilot diagnose main at HEAD~2 for v1.2.3-rc.1', ['main', 'HEAD~2', 'v1.2.3-rc.1']],
+    ])('protects bare repository operands in adaptable command prose: %s', (comment, expected) => {
+        const input = prepareLanguageAdaptationInput(comment, 'vypbot');
+
+        expect(input.protectedOperands?.map(operand => operand.value)).toEqual(expected);
+        expect(restoreLanguageAdaptationOutput(input, input.prose)).toBe(
+            comment.replace(/^\/copilot\s+\S+\s*/u, ''),
+        );
+    });
+
+    it('protects every argument of commands whose grammar does not accept adaptable prose', () => {
+        const input = prepareLanguageAdaptationInput('/copilot sync-branch --from main', 'vypbot');
+
+        expect(input).toMatchObject({
+            kind: 'command',
+            commandName: 'sync-branch',
+            prose: 'COPILOT_OPERAND_0_TOKEN COPILOT_OPERAND_1_TOKEN',
+            protectedOperands: [
+                { placeholder: 'COPILOT_OPERAND_0_TOKEN', value: '--from' },
+                { placeholder: 'COPILOT_OPERAND_1_TOKEN', value: 'main' },
+            ],
+        });
+        expect(rebuildAdaptedComment(input, input.prose)).toBe('/copilot sync-branch --from main');
+
+        const arbitraryIdentifier = prepareLanguageAdaptationInput('/copilot dismiss finding-one', 'vypbot');
+        expect(rebuildAdaptedComment(arbitraryIdentifier, arbitraryIdentifier.prose))
+            .toBe('/copilot dismiss finding-one');
+    });
+
+    it.each([
+        'translated without the required placeholder',
+        'translated COPILOT_OPERAND_0_TOKEN COPILOT_OPERAND_0_TOKEN',
+        'translated COPILOT_OPERAND_9_TOKEN',
+        'translated COPILOT_OPERAND_0_TOKEN COPILOT_OPERAND_9_TOKEN',
+        'translated COPILOT_OPERAND_0_TOKEN --force',
+        'translated COPILOT_OPERAND_0_TOKEN src/other.ts',
+        'translated COPILOT_OPERAND_0_TOKEN https://attacker.example',
+        'translated COPILOT_OPERAND_0_TOKEN "different literal"',
+        'translated COPILOT_OPERAND_0_TOKEN README.md',
+        'translated COPILOT_OPERAND_0_TOKEN #999',
+        'translated COPILOT_OPERAND_0_TOKEN main',
+        'translated COPILOT_OPERAND_0_TOKENx',
+        'translated xCOPILOT_OPERAND_0_TOKEN',
+        'translated COPILOT_OPERAND_0_TOKEN.tsx',
+        'translated COPILOT_OPERAND_0_TOKEN?ref=main',
+    ])('rejects missing, duplicated, unknown, or generated technical operands: %s', (translated) => {
+        const input = prepareLanguageAdaptationInput('/copilot explain src/cache.ts', 'vypbot');
+
+        expect(restoreLanguageAdaptationOutput(input, translated)).toBeUndefined();
+        expect(rebuildAdaptedComment(input, translated)).toBeUndefined();
+    });
+
+    it('rejects an operand placeholder invented for prose that had no protected values', () => {
+        const input = prepareLanguageAdaptationInput('@vypbot explica esto', 'vypbot');
+
+        expect(restoreLanguageAdaptationOutput(input, 'explain COPILOT_OPERAND_0_TOKEN')).toBeUndefined();
+    });
+
+    it('rejects reordered operands and malformed trusted adaptation input', () => {
+        const reordered = prepareLanguageAdaptationInput('/copilot explain src/a.ts src/b.ts', 'vypbot');
+        expect(restoreLanguageAdaptationOutput(
+            reordered,
+            'COPILOT_OPERAND_1_TOKEN COPILOT_OPERAND_0_TOKEN',
+        )).toBeUndefined();
+        expect(restoreLanguageAdaptationOutput({
+            kind: 'plain',
+            prose: 'COPILOT_OPERAND_0_TOKEN',
+            protectedOperands: [{ placeholder: 'COPILOT_OPERAND_0_TOKEN', value: 'not-an-operand' }],
+        }, 'COPILOT_OPERAND_0_TOKEN')).toBeUndefined();
+        expect(restoreLanguageAdaptationOutput({
+            kind: 'command',
+            commandName: 'dismiss',
+            prose: 'COPILOT_OPERAND_0_TOKEN',
+            protectedOperands: [{ placeholder: 'COPILOT_OPERAND_0_TOKEN', value: 'prefix/ref:suffix' }],
+        }, 'COPILOT_OPERAND_0_TOKEN')).toBeUndefined();
+    });
+
+    it('rejects text that becomes empty after unsafe format controls are removed', () => {
+        expect(composeTranslatedComment('\u200b', 'original')).toBeUndefined();
+    });
+
+    it('renders translation evidence only at the publication boundary', () => {
+        const publication = composeTranslatedComment('translated', 'original');
+        const rendered = renderTranslationContext(publication!, ENGLISH_PUBLICATION_CATALOG);
+
+        expect(rendered).toContain('<details>');
+        expect(rendered).toContain('**Interpreted request**');
+        expect(rendered).toContain('\ntranslated\n');
+        expect(rendered).toContain('**Original request**');
+        expect(rendered).toContain(TRANSLATED_COMMENT_MARKER);
+    });
+
+    it('omits incomplete translation evidence at the publication boundary', () => {
+        expect(renderTranslationContext({
+            translatedText: '   ',
+            originalText: 'original',
+            sourceLocale: 'es-ES',
+            targetLocale: 'en-US',
+        }, ENGLISH_PUBLICATION_CATALOG)).toBe('');
+        expect(renderTranslationContext({
+            translatedText: 'translated',
+            originalText: '   ',
+            sourceLocale: 'es-ES',
+            targetLocale: 'en-US',
+        }, ENGLISH_PUBLICATION_CATALOG)).toBe('');
+    });
+
+    it.each([
+        ['en-US', 'es-ES', ENGLISH_PUBLICATION_CATALOG, 'Request interpreted from European Spanish'],
+        ['es-ES', 'en-US', SPANISH_PUBLICATION_CATALOG, 'Solicitud interpretada desde inglés estadounidense'],
+    ] as const)('renders localized translation provenance for target %s', (targetLocale, sourceLocale, catalog, summary) => {
+        const result = composeTranslatedComment('texte', '@team\n/fix\u202E', { targetLocale, sourceLocale });
+        const rendered = renderTranslationContext(result!, catalog);
+        expect(result).toMatchObject({ targetLocale, sourceLocale: sourceLocale ?? 'und' });
+        expect(rendered).toContain(`<summary>${summary}</summary>`);
+        expect(rendered).toContain(`source="${sourceLocale ?? 'und'}" target="${targetLocale}"`);
+        expect(rendered).toContain('@\u200bteam');
+        expect(rendered).toContain('\u200b/fix');
+        expect(rendered).not.toContain('\u202E');
+    });
+
+    it('uses an arbitrary resolved catalog instead of branching on locale names', () => {
+        const publication = composeTranslatedComment('inspectez ceci', 'inspect this', {
+            sourceLocale: 'en-US', targetLocale: 'fr-FR',
+        });
+        const frenchCatalog = Object.freeze({
+            ...ENGLISH_PUBLICATION_CATALOG,
+            locale: 'fr-FR',
+            requestedLocale: 'fr-FR',
+            translation: Object.freeze({
+                summary: (sourceLanguage: string) => `Demande interprétée depuis ${sourceLanguage}`,
+                interpretedRequest: 'Demande interprétée',
+                originalRequest: 'Demande originale',
+            }),
+        });
+
+        const rendered = renderTranslationContext(publication!, frenchCatalog);
+        expect(rendered).toContain('Demande interprétée depuis anglais américain');
+        expect(rendered).toContain('**Demande interprétée**');
+        expect(rendered).toContain('**Demande originale**');
+    });
+
+    it('falls back to trusted locale defaults when provenance tags are invalid', () => {
+        const result = composeTranslatedComment('translated', 'original', {
+            sourceLocale: 'not_a_locale',
+            targetLocale: 'also_not_a_locale',
+        });
+
+        expect(result).toMatchObject({ sourceLocale: 'und', targetLocale: 'en-US' });
+        expect(renderTranslationContext(result!, ENGLISH_PUBLICATION_CATALOG))
+            .toContain('<summary>Request interpreted from und</summary>');
+    });
+
+    it('keeps canonical provenance when language display names are unavailable', () => {
+        const displayNames = jest.spyOn(Intl, 'DisplayNames').mockImplementation(() => {
+            throw new RangeError('unsupported display names');
+        });
+        try {
+            const result = composeTranslatedComment('translated', 'original', {
+                sourceLocale: 'es-ES',
+                targetLocale: 'en-US',
+            });
+            expect(renderTranslationContext(result!, ENGLISH_PUBLICATION_CATALOG))
+                .toContain('<summary>Request interpreted from es-ES</summary>');
+        } finally {
+            displayNames.mockRestore();
+        }
+    });
+
+    it('uses the canonical source tag when the display-name service returns no label', () => {
+        const of = jest.spyOn(Intl.DisplayNames.prototype, 'of').mockReturnValue(undefined);
+        try {
+            const result = composeTranslatedComment('translated', 'original', {
+                sourceLocale: 'es-ES',
+                targetLocale: 'en-US',
+            });
+            expect(renderTranslationContext(result!, ENGLISH_PUBLICATION_CATALOG))
+                .toContain('<summary>Request interpreted from es-ES</summary>');
+        } finally {
+            of.mockRestore();
+        }
     });
 });

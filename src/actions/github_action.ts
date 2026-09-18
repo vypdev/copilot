@@ -3,12 +3,11 @@ import * as github from '@actions/github';
 import { ConfigurationHandler } from '../manager/description/configuration_handler';
 import { GitCliRepository } from '../data/repository/git_cli_repository';
 import { createIssueContentCompositionRoot } from '../infrastructure/composition/issue_content_composition_root';
-import { createIssueNotificationRepository } from '../infrastructure/composition/issue_interaction_composition_root';
 import { createProjectBoardCompositionRoot } from '../infrastructure/composition/project_board_composition_root';
 import { finishGithubAction } from './github_action_completion';
 import { getGithubActionInput } from './github_action_input';
 import { isEnabledInput } from './input_boolean_policy';
-import { buildGithubActionExecution, readGithubActionSingleAction } from './github_action_execution';
+import { buildGithubActionExecution, hydrateGithubActionExecutionProjects, readGithubActionSingleAction } from './github_action_execution';
 import { buildGithubActionEventInputs } from './github_event_inputs';
 import { mainRun } from './common_action';
 import { INPUT_KEYS } from '../application/contracts/input_keys';
@@ -24,9 +23,28 @@ import { createActorAuthorizationRepository } from '../infrastructure/compositio
 import { runAtApplicationErrorBoundary } from '../application/errors/application_error_context';
 import { toApplicationError } from '../application/errors/application_error';
 import { renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
-import { bindIssueNotification } from '../infrastructure/composition/shared_capability_port_binding';
+import { bindIssueCommentPublication } from '../infrastructure/composition/push_single_action_capability_port_binding';
+import { bindPublicationSourceQuery } from '../infrastructure/composition/shared_capability_port_binding';
+import { GithubPublicationSourceRepository } from '../data/repository/github_publication_source_repository';
+import { createBranchClient } from '../infrastructure/composition/github_branch_client_factory';
+import { createLanguageQueryPort } from '../infrastructure/composition/agent_capability_composition_root';
+import { ResolveMessageCatalogUseCase } from '../application/usecases/localization/resolve_message_catalog_use_case';
+import { readGithubActionLocaleInputs } from './github_action_locale_inputs';
+import { publicationLocaleNeedsDynamicCatalog } from '../application/policies/publication_message_catalog';
+import {
+    resolveStaticApplicationErrorCatalog,
+    type ApplicationErrorMessageReader,
+} from '../application/policies/application_error_message_catalog';
+import { prepareGithubAgentRuntime } from './github_action_runtime';
+import { runPullRequestApprovalAction } from './pull_request_approval_action';
+import { isBotPullRequestAnalysisEvent } from '../application/policies/bot_pull_request_analysis_policy';
+import { createPullRequestUseCaseCompositionRoot } from '../infrastructure/composition/pull_request_use_case_composition_root';
 
 export async function runGitHubAction(): Promise<void> {
+    if (isEnabledInput(getGithubActionInput('pr-approval-observer'))) {
+        await runPullRequestApprovalAction(getGithubActionInput(INPUT_KEYS.TOKEN, { required: true }));
+        return;
+    }
     const eventInputs = buildGithubActionEventInputs({
         payload: github.context.payload as Record<string, unknown>,
         eventName: github.context.eventName,
@@ -47,7 +65,15 @@ export async function runGitHubAction(): Promise<void> {
         isSingleAction: singleAction.enabledSingleAction,
         validSingleAction: singleAction.validSingleAction,
     });
-    if (admission.decision === 'discard') {
+    const botAnalysisOnly = admission.decision === 'discard' && isBotPullRequestAnalysisEvent({
+        eventName: eventInputs.eventName,
+        action: eventInputs.action,
+        actor: eventInputs.actor,
+        tokenUser: admission.tokenUser,
+        repositoryId: github.context.payload.repository?.id,
+        pullRequest: eventInputs.pull_request,
+    });
+    if (admission.decision === 'discard' && !botAnalysisOnly) {
         logInfo('GitHub Action: event actor matches the PAT user. Skipping normal pipeline before queue and mutation work.');
         return;
     }
@@ -56,24 +82,19 @@ export async function runGitHubAction(): Promise<void> {
         return;
     }
 
+    const localeInputs = readGithubActionLocaleInputs(getGithubActionInput);
     const aiInputs = readGithubActionAiInputs(getGithubActionInput);
-    const requestedActiveAgentTasks = activeAgentTasks(
-        eventInputs,
-        singleAction,
-        admission.tokenUser,
-        aiInputs.pullRequestDescriptionMode !== 'disabled',
-    );
-    const agentRuntimeAuthorized = !aiInputs.membersOnly
-        || requestedActiveAgentTasks.length === 0
-        || await createActorAuthorizationRepository().isActorAllowedToModifyFiles(
-            eventInputs.repo.owner,
-            eventInputs.repo.repo,
-            eventInputs.actor,
-            token,
-        );
-    if (!agentRuntimeAuthorized) {
-        logInfo('Skipping agent runtime preparation because ai-members-only is enabled and the actor is not authorized.');
-    }
+    const requestedActiveAgentTasks = [...new Set([
+        ...activeAgentTasks(
+            eventInputs,
+            singleAction,
+            admission.tokenUser,
+            aiInputs.pullRequestDescriptionMode !== 'disabled',
+        ),
+        ...([localeInputs.repository, localeInputs.issue, localeInputs.pullRequest]
+            .some(publicationLocaleNeedsDynamicCatalog) ? ['planner' as const] : []),
+    ])];
+    let languageRuntimeAvailable = false;
 
     const projectBoard = createProjectBoardCompositionRoot();
 
@@ -86,9 +107,25 @@ export async function runGitHubAction(): Promise<void> {
         tokenUser: admission.tokenUser,
         singleAction,
         aiInputs,
-        activeAgentTasks: agentRuntimeAuthorized ? requestedActiveAgentTasks : [],
-        agentRuntimeAuthorized,
+        activeAgentTasks: requestedActiveAgentTasks,
+        localeInputs,
     });
+    if (botAnalysisOnly) {
+        // Bypass the normal lifecycle/issue route entirely. The only permitted
+        // side effect is Bugbot's PR analysis and its own bounded presentation.
+        execution.issueNumber = execution.pullRequest.number;
+        prepareGithubAgentRuntime(aiInputs.requestedAgentTasks, ['reviewer']);
+        const results = await createPullRequestUseCaseCompositionRoot({
+            owner: execution.owner,
+            repository: execution.repo,
+            token,
+        }).reviewOnly(execution);
+        if (results.some(result => !result.success)) {
+            throw new Error('Bot-authored pull-request analysis did not complete.');
+        }
+        await core.summary.addRaw('Copilot analyzed this bot-authored pull request. Native bot approval is never permitted.').write();
+        return;
+    }
     logDebugInfo(
         `Execution built. Event will be resolved in mainRun. Single action: ${execution.singleAction.currentSingleAction ?? 'none'}, ` +
         `AI PR description mode: ${execution.ai.getPullRequestDescriptionMode()}, bugbot min severity: ${execution.ai.getBugbotMinSeverity()}.`,
@@ -106,13 +143,37 @@ export async function runGitHubAction(): Promise<void> {
         'github-workflow',
         createSynchronizeLifecycleStateUseCase(repositoryBinding),
         createSynchronizeAgentActivityUseCase(repositoryBinding),
+        async (admittedExecution) => {
+            await hydrateGithubActionExecutionProjects(admittedExecution, {
+                getInput: getGithubActionInput,
+                projectQuery: projectBoard.query,
+                token,
+            });
+            if (admittedExecution.issueWorkflowRuntimeMode !== 'execute') return;
+            const agentRuntimeAuthorized = !aiInputs.membersOnly
+                || requestedActiveAgentTasks.length === 0
+                || await createActorAuthorizationRepository().isActorAllowedToModifyFiles(
+                    eventInputs.repo.owner,
+                    eventInputs.repo.repo,
+                    eventInputs.actor,
+                    token,
+                );
+            if (!agentRuntimeAuthorized) {
+                logInfo('Skipping agent runtime preparation because ai-members-only is enabled and the actor is not authorized.');
+                return;
+            }
+            if (!singleAction.isCloseInactiveIssuesAction && requestedActiveAgentTasks.length > 0) {
+                prepareGithubAgentRuntime(aiInputs.requestedAgentTasks, requestedActiveAgentTasks);
+                languageRuntimeAvailable = requestedActiveAgentTasks.includes('planner');
+            }
+        },
     );
     const issueContentPort = createIssueContentCompositionRoot();
     const configurationHandler = new ConfigurationHandler(issueContentPort);
     await finishGithubAction(
         execution,
         results,
-        bindIssueNotification(createIssueNotificationRepository(), repositoryBinding),
+        bindIssueCommentPublication(issueContentPort, repositoryBinding),
         {
             update: (context) => configurationHandler.update({
                 ...repositoryBinding,
@@ -121,6 +182,13 @@ export async function runGitHubAction(): Promise<void> {
         },
         createCopilotEvidenceCompositionRoot(),
         createGithubActionSummaryCompositionRoot(),
+        new ResolveMessageCatalogUseCase(
+            languageRuntimeAvailable ? createLanguageQueryPort() : undefined,
+        ),
+        bindPublicationSourceQuery(
+            new GithubPublicationSourceRepository(createBranchClient()),
+            repositoryBinding,
+        ),
     );
 }
 
@@ -141,12 +209,22 @@ export async function runGitHubActionEntry(
         } catch (cause: unknown) {
             const semanticError = toApplicationError(cause, 'workflow.failed', 'GitHub Action execution failed.');
             logError(semanticError);
-            core.setFailed(renderApplicationErrorText(semanticError));
+            core.setFailed(renderApplicationErrorText(semanticError, earlyGithubActionErrorMessage()));
         }
     });
 }
 
+function earlyGithubActionErrorMessage(): ApplicationErrorMessageReader {
+    try {
+        const locale = readGithubActionLocaleInputs(getGithubActionInput).repository;
+        return resolveStaticApplicationErrorCatalog(locale).message;
+    } catch {
+        return resolveStaticApplicationErrorCatalog('en-US').message;
+    }
+}
+
 // Only auto-run when executed as the action entry (not when imported by tests)
+/* istanbul ignore next -- the bundled production entry is covered by the Action smoke path. */
 if (typeof process.env.JEST_WORKER_ID === 'undefined') {
     void runGitHubActionEntry();
 }

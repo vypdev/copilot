@@ -6,6 +6,7 @@ import type {
   SetupCredentialRequirement,
   SetupRemoteConfiguration,
 } from '../../../domain/setup';
+import { DEFAULT_REPOSITORY_LOCALE, resolveLocaleProfile } from '../../../domain/locale';
 import {
   buildSetupCredentialRequirements,
   buildSetupRepositoryVariables,
@@ -14,12 +15,14 @@ import {
   setupResourceExists,
   usesOrganizationStorage,
   validateSetupConfiguration,
+  effectiveIssueWorkflowFeatures,
 } from '../../policies/setup_configuration_policy';
 import {
   buildDoctorReport,
   doctorCheck,
   normalizedDoctorPathId,
   skippedDoctorCheck,
+  buildLocaleDoctorChecks,
 } from '../../policies/setup_doctor_report_policy';
 import { runWithConcurrencyLimit } from '../../policies/bounded_concurrency_policy';
 import type {
@@ -29,6 +32,14 @@ import type {
   SetupRemoteCredentialHealthPort,
 } from '../../ports/setup_wizard_ports';
 import type { SetupDoctorWorkspaceQueryPort } from '../../ports/setup_workspace_ports';
+import type { MessageCatalogResolutionPort } from '../../ports/message_catalog_ports';
+import {
+  resolveSetupDoctorCatalog,
+  type SetupDoctorMessageCatalog,
+} from '../../policies/setup_doctor_message_catalog';
+import type { SetupApprovalReadinessPort } from '../../ports/setup_approval_readiness_port';
+import { buildApprovalDoctorChecks } from '../../policies/setup_approval_doctor_policy';
+import { parsePullRequestApprovalPolicy } from '../../../domain/pull_request_approval_policy';
 
 export interface DoctorRequest {
   owner: string;
@@ -43,6 +54,13 @@ export interface SetupDoctorDependencies {
   remoteConfiguration: SetupRemoteConfigurationReadPort;
   remoteHealth: SetupRemoteCredentialHealthPort;
   mergeQueueReadiness: SetupMergeQueueReadinessPort;
+  approvalReadiness?: SetupApprovalReadinessPort;
+  catalogResolver?: MessageCatalogResolutionPort;
+}
+
+export interface SetupDoctorExecutionResult {
+  readonly report: DoctorReport;
+  readonly catalog: SetupDoctorMessageCatalog;
 }
 
 type RemoteResult =
@@ -54,19 +72,27 @@ type RemoteResult =
 export class SetupDoctorUseCase {
   constructor(private readonly dependencies: SetupDoctorDependencies) {}
 
-  async execute(request: DoctorRequest): Promise<DoctorReport> {
-    const configurationErrors = validateSetupConfiguration(request.configuration);
+  async execute(request: DoctorRequest): Promise<SetupDoctorExecutionResult> {
+    const catalog = await resolveSetupDoctorCatalog(
+      doctorCatalogLocale(request.configuration),
+      request.configuration.agents.planner,
+      this.dependencies.catalogResolver,
+    );
+    const configurationErrors = validateSetupConfiguration(request.configuration, { allowIncompleteApproval: true });
     const checks: DoctorCheck[] = [
-      configurationCheck(configurationErrors),
-      repositoryRootCheck(this.dependencies.workspace),
-      ...workflowChecks(request.configuration, configurationErrors, this.dependencies.workspace),
+      configurationCheck(configurationErrors, catalog),
+      ...buildLocaleDoctorChecks(request.configuration, catalog),
+      repositoryRootCheck(this.dependencies.workspace, catalog),
+      ...workflowChecks(request.configuration, configurationErrors, this.dependencies.workspace, catalog),
+      ...agentGuidanceChecks(request.configuration, this.dependencies.workspace),
     ];
 
-    const pat = await this.validatePat(request);
+    const pat = await this.validatePat(request, catalog);
     checks.push(pat);
     if (pat.status !== 'pass') {
-      checks.push(...skippedRemoteChecks(request.configuration, pat.id));
-      return buildDoctorReport(checks);
+      checks.push(...skippedRemoteChecks(request.configuration, pat.id, catalog));
+      checks.push(...buildApprovalDoctorChecks({ configuration: request.configuration, catalog }));
+      return { report: buildDoctorReport(checks), catalog };
     }
 
     const remote = await runWithConcurrencyLimit<RemoteResult>([
@@ -91,8 +117,8 @@ export class SetupDoctorUseCase {
             value: [skippedDoctorCheck(
               'github.merge-queue',
               ['configuration.valid'],
-              'Merge-queue readiness was not inspected because setup configuration is invalid.',
-              'Fix the reported configuration errors, then run doctor again.',
+              catalog.message('doctor.mergeQueue.skipped'),
+              catalog.message('doctor.mergeQueue.skippedAction'),
             )],
           };
         }
@@ -104,6 +130,7 @@ export class SetupDoctorUseCase {
               repository: request.repository,
               token: request.setupToken,
               configuration: request.configuration,
+              catalog,
             }),
           };
         } catch {
@@ -118,24 +145,82 @@ export class SetupDoctorUseCase {
       result.kind === 'merge-queue')?.value ?? [doctorCheck({
         id: 'github.merge-queue',
         status: 'fail',
-        summary: 'Merge-queue readiness could not be inspected.',
-        action: 'Check branch policy access and run doctor again.',
+        summary: catalog.message('doctor.mergeQueue.unverified'),
+        action: catalog.message('doctor.mergeQueue.unverifiedAction'),
       })];
     if (!remoteConfiguration) {
-      checks.push(remoteScopeFailure(request.configuration));
-      checks.push(...mergeQueueChecks, ...skippedResourceChecks(request.configuration, 'github.resource-scopes'));
-      return buildDoctorReport(checks);
+      checks.push(remoteScopeFailure(request.configuration, catalog));
+      checks.push(...mergeQueueChecks, ...skippedResourceChecks(request.configuration, 'github.resource-scopes', catalog));
+      checks.push(...buildApprovalDoctorChecks({ configuration: request.configuration, catalog }));
+      return { report: buildDoctorReport(checks), catalog };
     }
 
-    checks.push(resourceScopeCheck(request.configuration, remoteConfiguration));
+    checks.push(resourceScopeCheck(request.configuration, remoteConfiguration, catalog));
     checks.push(...mergeQueueChecks);
-    checks.push(...variableChecks(request.configuration, remoteConfiguration));
-    checks.push(secretNamesCheck(remoteConfiguration));
-    checks.push(...await this.credentialChecks(request, remoteConfiguration));
-    return buildDoctorReport(checks);
+    checks.push(...(configurationErrors.length > 0
+      ? [skippedDoctorCheck(
+          'github.variables',
+          ['configuration.valid'],
+          catalog.message('doctor.skipped.variables'),
+          catalog.message('doctor.skipped.resourceAction'),
+        )]
+      : variableChecks(request.configuration, remoteConfiguration, catalog)));
+    checks.push(secretNamesCheck(remoteConfiguration, catalog));
+    const credentials = await this.credentialChecks(request, remoteConfiguration, catalog);
+    checks.push(...credentials);
+    const remoteVariables = new Map([
+      ...remoteConfiguration.organizationVariables.map(variable => [variable.name, variable.value] as const),
+      ...remoteConfiguration.repositoryVariables.map(variable => [variable.name, variable.value] as const),
+    ]);
+    let approvalConfiguration: SetupConfiguration;
+    try {
+      approvalConfiguration = {
+        ...request.configuration,
+        ai: {
+          ...request.configuration.ai,
+          bugbotSeverity: remoteVariables.has('BUGBOT_SEVERITY')
+            ? remoteVariables.get('BUGBOT_SEVERITY') as SetupConfiguration['ai']['bugbotSeverity']
+            : request.configuration.ai.bugbotSeverity,
+          bugbotTelemetry: remoteVariables.has('BUGBOT_TELEMETRY')
+            ? remoteVariables.get('BUGBOT_TELEMETRY') === 'true' : request.configuration.ai.bugbotTelemetry,
+          bugbotDryRun: remoteVariables.has('BUGBOT_DRY_RUN')
+            ? remoteVariables.get('BUGBOT_DRY_RUN') === 'true' : request.configuration.ai.bugbotDryRun,
+        },
+        pullRequestApproval: parsePullRequestApprovalPolicy(remoteVariables.get('PR_APPROVAL_POLICY')),
+      };
+    } catch { approvalConfiguration = request.configuration; }
+    let approvalWorkflow;
+    if (configurationErrors.length === 0) {
+      try {
+        approvalWorkflow = this.dependencies.workspace.compareWorkflows(
+          effectiveIssueWorkflowFeatures(approvalConfiguration), approvalConfiguration,
+        ).find(item => item.file === 'copilot_pull_request_approval.yml');
+      } catch { approvalWorkflow = undefined; }
+    }
+    let approvalFacts;
+    if (this.dependencies.approvalReadiness && remoteConfiguration.repositoryVariables.concat(remoteConfiguration.organizationVariables)
+      .some(variable => variable.name === 'PR_APPROVAL_POLICY')) {
+      try {
+        approvalFacts = await this.dependencies.approvalReadiness.inspect(
+          request.owner, request.repository, request.setupToken, approvalConfiguration,
+        );
+      } catch { approvalFacts = undefined; }
+    }
+    checks.push(...buildApprovalDoctorChecks({
+      configuration: approvalConfiguration,
+      remote: remoteConfiguration,
+      workflow: approvalWorkflow,
+      facts: approvalFacts,
+      botCredential: credentials.find(item => item.id === 'credential.PAT'),
+      catalog,
+    }));
+    return { report: buildDoctorReport(checks), catalog };
   }
 
-  private async validatePat(request: DoctorRequest): Promise<DoctorCheck> {
+  private async validatePat(
+    request: DoctorRequest,
+    catalog: SetupDoctorMessageCatalog,
+  ): Promise<DoctorCheck> {
     try {
       const result = await this.dependencies.validation.validateSetupPat(
         request.owner,
@@ -145,8 +230,8 @@ export class SetupDoctorUseCase {
       return doctorCheck({
         id: 'credentials.setup-pat',
         status: result.status === 'valid' ? 'pass' : 'fail',
-        summary: result.message,
-        ...(result.status === 'valid' ? {} : { action: 'Replace the setup PAT and run doctor again.' }),
+        summary: catalog.message(result.status === 'valid' ? 'doctor.setupPat.valid' : 'doctor.setupPat.invalid'),
+        ...(result.status === 'valid' ? {} : { action: catalog.message('doctor.setupPat.replaceAction') }),
         evidence: {
           credential: 'SETUP_PAT',
           ...(result.account ? { account: result.account } : {}),
@@ -156,8 +241,8 @@ export class SetupDoctorUseCase {
       return doctorCheck({
         id: 'credentials.setup-pat',
         status: 'fail',
-        summary: 'The setup PAT could not be validated.',
-        action: 'Check the setup PAT and network access, then run doctor again.',
+        summary: catalog.message('doctor.setupPat.unverified'),
+        action: catalog.message('doctor.setupPat.unverifiedAction'),
         evidence: { credential: 'SETUP_PAT' },
       });
     }
@@ -166,6 +251,7 @@ export class SetupDoctorUseCase {
   private async credentialChecks(
     request: DoctorRequest,
     remote: SetupRemoteConfiguration,
+    catalog: SetupDoctorMessageCatalog,
   ): Promise<DoctorCheck[]> {
     const requirements = buildSetupCredentialRequirements(request.configuration);
     const remoteSecrets = new Set([...remote.repositorySecrets, ...remote.organizationSecrets]);
@@ -184,37 +270,43 @@ export class SetupDoctorUseCase {
         health = undefined;
       }
     }
-    return buildCredentialChecks(requirements, remoteSecrets, health);
+    return buildCredentialChecks(requirements, remoteSecrets, health, catalog);
   }
 }
 
-function configurationCheck(errors: readonly string[]): DoctorCheck {
+function configurationCheck(
+  errors: readonly string[],
+  catalog: SetupDoctorMessageCatalog,
+): DoctorCheck {
   return doctorCheck({
     id: 'configuration.valid',
     status: errors.length === 0 ? 'pass' : 'fail',
     summary: errors.length === 0
-      ? 'Setup configuration is valid.'
-      : `Setup configuration has ${errors.length} validation error(s).`,
-    ...(errors.length === 0 ? {} : { action: 'Fix the setup configuration and run doctor again.' }),
+      ? catalog.message('doctor.configuration.valid')
+      : catalog.message('doctor.configuration.invalid', { count: errors.length }),
+    ...(errors.length === 0 ? {} : { action: catalog.message('doctor.configuration.action') }),
     evidence: { errorCount: errors.length },
   });
 }
 
-function repositoryRootCheck(workspace: SetupDoctorWorkspaceQueryPort): DoctorCheck {
+function repositoryRootCheck(
+  workspace: SetupDoctorWorkspaceQueryPort,
+  catalog: SetupDoctorMessageCatalog,
+): DoctorCheck {
   try {
     const valid = workspace.isRepositoryRoot();
     return doctorCheck({
       id: 'workspace.repository-root',
       status: valid ? 'pass' : 'fail',
-      summary: valid ? 'Current directory is the repository root.' : 'Current directory is not the repository root.',
-      ...(valid ? {} : { action: 'Run doctor from the root of the target Git repository.' }),
+      summary: catalog.message(valid ? 'doctor.repositoryRoot.valid' : 'doctor.repositoryRoot.invalid'),
+      ...(valid ? {} : { action: catalog.message('doctor.repositoryRoot.action') }),
     });
   } catch {
     return doctorCheck({
       id: 'workspace.repository-root',
       status: 'fail',
-      summary: 'Repository root could not be verified.',
-      action: 'Run doctor from the root of the target Git repository.',
+      summary: catalog.message('doctor.repositoryRoot.unverified'),
+      action: catalog.message('doctor.repositoryRoot.action'),
     });
   }
 }
@@ -223,47 +315,80 @@ function workflowChecks(
   configuration: SetupConfiguration,
   configurationErrors: readonly string[],
   workspace: SetupDoctorWorkspaceQueryPort,
+  catalog: SetupDoctorMessageCatalog,
 ): DoctorCheck[] {
   if (configurationErrors.length > 0) {
     return [skippedDoctorCheck(
       'workflow.comparison',
       ['configuration.valid'],
-      'Workflow comparison was skipped because setup configuration is invalid.',
-      'Fix setup configuration, then run doctor again.',
+      catalog.message('doctor.workflow.skipped'),
+      catalog.message('doctor.workflow.configurationAction'),
     )];
   }
   try {
-    return [...workspace.compareWorkflows(configuration.features)]
+    return [...workspace.compareWorkflows(effectiveIssueWorkflowFeatures(configuration))]
       .sort((left, right) => left.destination.localeCompare(right.destination))
       .map((comparison) => doctorCheck({
         id: `workflow.${normalizedDoctorPathId(comparison.destination)}`,
         status: comparison.status === 'unchanged' ? 'pass' : 'fail',
         summary: comparison.status === 'unchanged'
-          ? 'Matches the installed setup template.'
-          : `Local workflow is ${comparison.status}.`,
-        ...(comparison.status === 'unchanged' ? {} : { action: 'Run setup to repair this managed workflow.' }),
+          ? catalog.message('doctor.workflow.matches')
+          : catalog.message('doctor.workflow.drift', { state: comparison.status }),
+        ...(comparison.status === 'unchanged' ? {} : { action: catalog.message('doctor.workflow.repairAction') }),
         evidence: { path: comparison.destination, state: comparison.status },
       }));
   } catch {
     return [doctorCheck({
       id: 'workflow.comparison',
       status: 'fail',
-      summary: 'Managed workflows could not be compared.',
-      action: 'Check local workflow files and run doctor again.',
+      summary: catalog.message('doctor.workflow.unverified'),
+      action: catalog.message('doctor.workflow.unverifiedAction'),
     })];
   }
 }
 
-function remoteScopeFailure(configuration: SetupConfiguration): DoctorCheck {
+function agentGuidanceChecks(
+  configuration: SetupConfiguration,
+  workspace: SetupDoctorWorkspaceQueryPort,
+): DoctorCheck[] {
+  if (!workspace.inspectAgentGuidance) return [];
+  try {
+    return workspace.inspectAgentGuidance(configuration).map(check => doctorCheck({
+      id: check.id,
+      status: check.status,
+      summary: check.summary,
+      ...(check.status === 'pass' || check.status === 'skipped'
+        ? {}
+        : { action: 'Run copilot setup to reconcile repository agent guidance, preserving any reported drift.' }),
+      evidence: check.path ? { path: check.path } : {},
+    }));
+  } catch {
+    return [doctorCheck({
+      id: 'agent-guidance-manifest',
+      status: 'fail',
+      summary: 'Repository agent guidance could not be inspected.',
+      action: 'Run copilot setup after checking local file permissions.',
+    })];
+  }
+}
+
+function remoteScopeFailure(
+  configuration: SetupConfiguration,
+  catalog: SetupDoctorMessageCatalog,
+): DoctorCheck {
   return doctorCheck({
     id: 'github.resource-scopes',
     status: usesOrganizationStorage(configuration) ? 'fail' : 'warn',
-    summary: 'GitHub Actions resource scopes could not be inspected.',
-    action: 'Check setup PAT access to repository and organization Actions metadata, then retry.',
+    summary: catalog.message('doctor.scope.unverified'),
+    action: catalog.message('doctor.scope.unverifiedAction'),
   });
 }
 
-function resourceScopeCheck(configuration: SetupConfiguration, remote: SetupRemoteConfiguration): DoctorCheck {
+function resourceScopeCheck(
+  configuration: SetupConfiguration,
+  remote: SetupRemoteConfiguration,
+  catalog: SetupDoctorMessageCatalog,
+): DoctorCheck {
   const unavailable = remote.organizationAccess === 'unavailable'
     || remote.organizationSecretsAccess === 'unavailable'
     || remote.organizationVariablesAccess === 'unavailable';
@@ -272,10 +397,8 @@ function resourceScopeCheck(configuration: SetupConfiguration, remote: SetupRemo
   return doctorCheck({
     id: 'github.resource-scopes',
     status,
-    summary: status === 'pass'
-      ? 'GitHub Actions resource scopes are readable.'
-      : 'Some organization-level GitHub Actions resource scopes are unavailable.',
-    ...(status === 'pass' ? {} : { action: 'Grant the setup PAT the required organization Actions metadata access.' }),
+    summary: catalog.message(status === 'pass' ? 'doctor.scope.readable' : 'doctor.scope.unavailable'),
+    ...(status === 'pass' ? {} : { action: catalog.message('doctor.scope.grantAction') }),
     evidence: {
       ownerType: remote.ownerType,
       repositoryVisibility: remote.repositoryVisibility,
@@ -284,11 +407,15 @@ function resourceScopeCheck(configuration: SetupConfiguration, remote: SetupRemo
   });
 }
 
-function variableChecks(configuration: SetupConfiguration, remote: SetupRemoteConfiguration): DoctorCheck[] {
+function variableChecks(
+  configuration: SetupConfiguration,
+  remote: SetupRemoteConfiguration,
+  catalog: SetupDoctorMessageCatalog,
+): DoctorCheck[] {
   const remoteVariables = new Map<string, { value: string; source: 'repository' | 'organization' }>();
   for (const variable of remote.organizationVariables) remoteVariables.set(variable.name, { value: variable.value, source: 'organization' });
   for (const variable of remote.repositoryVariables) remoteVariables.set(variable.name, { value: variable.value, source: 'repository' });
-  return buildSetupRepositoryVariables(configuration).map((variable) => {
+  return buildSetupRepositoryVariables(configuration).filter(variable => variable.name !== 'PR_APPROVAL_POLICY').map((variable) => {
     const observed = remoteVariables.get(variable.name);
     const state = setupResourceExists(remote, 'variable', variable.name);
     const policy = getSetupResourceStoragePolicy(configuration, 'variable');
@@ -302,23 +429,26 @@ function variableChecks(configuration: SetupConfiguration, remote: SetupRemoteCo
       id: `github.variables.${normalizedDoctorPathId(variable.name)}`,
       status,
       summary: !observed
-        ? 'Variable is missing.'
+        ? catalog.message('doctor.variable.missing')
         : matches
-          ? `Variable is configured at ${observed.source} scope.`
+          ? catalog.message('doctor.variable.configured', { scope: observed.source })
           : preserveExisting
-            ? `Variable differs but is intentionally preserved at ${observed.source} scope.`
-            : 'Variable differs from the expected setup configuration.',
-      ...(status === 'pass' || status === 'warn' ? {} : { action: 'Run setup to reconcile this Variable.' }),
+            ? catalog.message('doctor.variable.preserved', { scope: observed.source })
+            : catalog.message('doctor.variable.different'),
+      ...(status === 'pass' || status === 'warn' ? {} : { action: catalog.message('doctor.variable.action') }),
       evidence: { name: variable.name, present: observed !== undefined, matches, ...(observed ? { scope: observed.source } : {}) },
     });
   });
 }
 
-function secretNamesCheck(remote: SetupRemoteConfiguration): DoctorCheck {
+function secretNamesCheck(
+  remote: SetupRemoteConfiguration,
+  catalog: SetupDoctorMessageCatalog,
+): DoctorCheck {
   return doctorCheck({
     id: 'github.secret-names',
     status: 'pass',
-    summary: 'GitHub Actions Secret metadata is readable.',
+    summary: catalog.message('doctor.secretMetadata.readable'),
     evidence: {
       repositorySecretCount: remote.repositorySecrets.length,
       organizationSecretCount: remote.organizationSecrets.length,
@@ -330,6 +460,7 @@ function buildCredentialChecks(
   requirements: readonly SetupCredentialRequirement[],
   remoteSecrets: ReadonlySet<string>,
   health: readonly SetupCredentialCheck[] | undefined,
+  catalog: SetupDoctorMessageCatalog,
 ): DoctorCheck[] {
   const healthByName = new Map((health ?? []).map((check) => [check.name, check]));
   const reportedGroups = new Set<string>();
@@ -348,16 +479,16 @@ function buildCredentialChecks(
       checks.push(doctorCheck({
         id: `credential.${normalizedDoctorPathId(group)}`,
         status,
-        summary: available.length === 0
+        summary: catalog.message(available.length === 0
           ? runnerAllowed
-            ? 'No fallback Secret is configured; runner authentication must satisfy this group.'
-            : 'No alternative credential is present.'
+            ? 'doctor.credential.group.runnerRequired'
+            : 'doctor.credential.group.missing'
           : healthy
-            ? 'At least one alternative credential is healthy.'
+            ? 'doctor.credential.group.healthy'
             : invalid
-              ? 'Every available alternative credential is invalid.'
-              : 'An alternative credential is present, but remote health is unavailable.',
-        ...(status === 'pass' ? {} : { action: 'Configure and validate one credential for this requirement group.' }),
+              ? 'doctor.credential.group.invalid'
+              : 'doctor.credential.group.unverified'),
+        ...(status === 'pass' ? {} : { action: catalog.message('doctor.credential.group.action') }),
         evidence: { group, availableCount: available.length, runnerAuthenticationAllowed: runnerAllowed },
       }));
       continue;
@@ -368,31 +499,84 @@ function buildCredentialChecks(
     checks.push(doctorCheck({
       id: `credential.${normalizedDoctorPathId(requirement.name)}`,
       status,
-      summary: !present ? 'Required Secret is missing.' : check?.message ?? 'Secret is present, but remote health is unavailable.',
-      ...(status === 'pass' ? {} : { action: `Configure or replace ${requirement.name}, then rerun credential health.` }),
+      summary: !present
+        ? catalog.message('doctor.credential.missing')
+        : catalog.message(check ? credentialHealthMessageId(check.status) : 'doctor.credential.unverified'),
+      ...(status === 'pass' ? {} : {
+        action: catalog.message('doctor.credential.action', { name: requirement.name }),
+      }),
       evidence: { name: requirement.name, present },
     }));
   }
   return checks;
 }
 
-function skippedRemoteChecks(configuration: SetupConfiguration, blocker: string): DoctorCheck[] {
+function skippedRemoteChecks(
+  configuration: SetupConfiguration,
+  blocker: string,
+  catalog: SetupDoctorMessageCatalog,
+): DoctorCheck[] {
   return [
-    skippedDoctorCheck('github.resource-scopes', [blocker], 'Resource-scope inspection requires a valid setup PAT.', 'Replace the setup PAT.'),
-    skippedDoctorCheck('github.merge-queue', [blocker], 'Merge-queue inspection requires a valid setup PAT.', 'Replace the setup PAT.'),
-    ...skippedResourceChecks(configuration, blocker),
+    skippedDoctorCheck(
+      'github.resource-scopes',
+      [blocker],
+      catalog.message('doctor.skipped.scope'),
+      catalog.message('doctor.skipped.scopeAction'),
+    ),
+    skippedDoctorCheck(
+      'github.merge-queue',
+      [blocker],
+      catalog.message('doctor.mergeQueue.skipped'),
+      catalog.message('doctor.skipped.scopeAction'),
+    ),
+    ...skippedResourceChecks(configuration, blocker, catalog),
   ];
 }
 
-function skippedResourceChecks(configuration: SetupConfiguration, blocker: string): DoctorCheck[] {
+function skippedResourceChecks(
+  configuration: SetupConfiguration,
+  blocker: string,
+  catalog: SetupDoctorMessageCatalog,
+): DoctorCheck[] {
   return [
-    skippedDoctorCheck('github.variables', [blocker], 'Variable checks could not run.', 'Resolve the blocking check and rerun doctor.'),
-    skippedDoctorCheck('github.secret-names', [blocker], 'Secret metadata checks could not run.', 'Resolve the blocking check and rerun doctor.'),
+    skippedDoctorCheck(
+      'github.variables',
+      [blocker],
+      catalog.message('doctor.skipped.variables'),
+      catalog.message('doctor.skipped.resourceAction'),
+    ),
+    skippedDoctorCheck(
+      'github.secret-names',
+      [blocker],
+      catalog.message('doctor.skipped.secrets'),
+      catalog.message('doctor.skipped.resourceAction'),
+    ),
     ...buildSetupCredentialRequirements(configuration).map((requirement) => skippedDoctorCheck(
       `credential.${normalizedDoctorPathId(requirement.alternativeGroups?.[0] ?? requirement.name)}`,
       [blocker],
-      'Credential health could not run.',
-      'Resolve the blocking check and rerun doctor.',
+      catalog.message('doctor.skipped.credentials'),
+      catalog.message('doctor.skipped.resourceAction'),
     )).filter((check, index, all) => all.findIndex((candidate) => candidate.id === check.id) === index),
   ];
+}
+
+function credentialHealthMessageId(
+  status: SetupCredentialCheck['status'],
+): 'doctor.credential.valid' | 'doctor.credential.invalid' | 'doctor.credential.unverifiable' | 'doctor.credential.unverified' {
+  if (status === 'valid') return 'doctor.credential.valid';
+  if (status === 'invalid') return 'doctor.credential.invalid';
+  if (status === 'unverifiable') return 'doctor.credential.unverifiable';
+  return 'doctor.credential.unverified';
+}
+
+function doctorCatalogLocale(configuration: SetupConfiguration): string {
+  try {
+    return resolveLocaleProfile(
+      configuration.repository.repositoryLocale,
+      configuration.repository.issueLocale,
+      configuration.repository.pullRequestLocale,
+    ).repository;
+  } catch {
+    return DEFAULT_REPOSITORY_LOCALE;
+  }
 }

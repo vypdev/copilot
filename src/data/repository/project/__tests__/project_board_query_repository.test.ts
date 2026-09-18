@@ -281,8 +281,8 @@ describe("ProjectBoardQueryRepository", () => {
     const harness = createHarness({ itemPages });
 
     await expect(
-      harness.repository.isContentLinked(project, "CONTENT_1", "token"),
-    ).resolves.toBe(true);
+      harness.repository.getLinkedContentItemId(project, "CONTENT_1", "token"),
+    ).resolves.toBe("PVTI_item");
   });
 
   it("rejects when repository content is not linked after all project pages", async () => {
@@ -347,27 +347,27 @@ describe("ProjectBoardQueryRepository", () => {
     });
 
     await expect(
-      firstPage.repository.isContentLinked(project, "CONTENT_1", "token"),
-    ).resolves.toBe(true);
+      firstPage.repository.getLinkedContentItemId(project, "CONTENT_1", "token"),
+    ).resolves.toBe("PVTI_item");
     await expect(
-      laterPage.repository.isContentLinked(project, "CONTENT_1", "token"),
-    ).resolves.toBe(true);
+      laterPage.repository.getLinkedContentItemId(project, "CONTENT_1", "token"),
+    ).resolves.toBe("PVTI_item");
   });
 
   it("returns false when content is absent after all pages", async () => {
     const harness = createHarness({ itemPages: [terminalPage([])] });
 
     await expect(
-      harness.repository.isContentLinked(project, "CONTENT_1", "token"),
-    ).resolves.toBe(false);
+      harness.repository.getLinkedContentItemId(project, "CONTENT_1", "token"),
+    ).resolves.toBeUndefined();
   });
 
   it("treats an omitted project items connection as an empty board", async () => {
     const harness = createHarness({ itemConnection: "missing" });
 
     await expect(
-      harness.repository.isContentLinked(project, "CONTENT_1", "token"),
-    ).resolves.toBe(false);
+      harness.repository.getLinkedContentItemId(project, "CONTENT_1", "token"),
+    ).resolves.toBeUndefined();
   });
 
   it("fails closed on malformed linked-content pagination and null projects", async () => {
@@ -379,12 +379,12 @@ describe("ProjectBoardQueryRepository", () => {
     const nullProject = createHarness({ projectNode: "null" });
 
     await expect(
-      malformed.repository.isContentLinked(project, "CONTENT_1", "token"),
+      malformed.repository.getLinkedContentItemId(project, "CONTENT_1", "token"),
     ).rejects.toThrow(
       "project board content: hasNextPage is true but endCursor is null (page 1).",
     );
     await expect(
-      nullProject.repository.isContentLinked(project, "CONTENT_1", "token"),
+      nullProject.repository.getLinkedContentItemId(project, "CONTENT_1", "token"),
     ).rejects.toThrow(
       "Project PVT_project was not found while reading project items.",
     );

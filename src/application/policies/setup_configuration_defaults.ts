@@ -14,6 +14,9 @@ import type {
 } from '../../domain/setup';
 import { DEFAULT_INACTIVITY_THRESHOLD_HOURS } from '../../domain/issue_inactivity';
 import { DEFAULT_DEPLOYMENT_CONFIGURATION } from '../../domain/deployment_configuration';
+import { resolveLocaleProfile } from '../../domain/locale';
+import { ISSUE_WORKFLOW_KINDS, type IssueWorkflowKind } from '../../domain/issue_workflow_profile';
+import { DISABLED_PULL_REQUEST_APPROVAL_POLICY } from '../../domain/pull_request_approval_policy';
 
 export const SETUP_AGENT_TASKS: readonly AgentTask[] = [
     'planner',
@@ -95,13 +98,15 @@ export function createDefaultSetupConfiguration(): SetupConfiguration {
             releaseTree: 'release',
             docsTree: 'docs',
             choreTree: 'chore',
-            branchManagementAlways: false,
+            issueManagedBranches: true,
+            preBranchSdd: false,
             reopenIssueOnPush: true,
             desiredAssigneesCount: 1,
             desiredReviewersCount: 1,
             inactivityThresholdHours: DEFAULT_INACTIVITY_THRESHOLD_HOURS,
-            issueLocale: 'en-US',
-            pullRequestLocale: 'en-US',
+            repositoryLocale: 'en-US',
+            issueLocale: '',
+            pullRequestLocale: '',
             commitPrefixTransforms: 'replace-slash',
             ...DEFAULT_DEPLOYMENT_CONFIGURATION,
         },
@@ -110,7 +115,7 @@ export function createDefaultSetupConfiguration(): SetupConfiguration {
             ignoreFiles: 'build/*',
             membersOnly: false,
             includeReasoning: false,
-            bugbotSeverity: 'low',
+            bugbotSeverity: 'info',
             bugbotCommentLimit: 20,
             bugbotFixVerifyCommands: '',
             bugbotDryRun: false,
@@ -122,6 +127,14 @@ export function createDefaultSetupConfiguration(): SetupConfiguration {
             bugbotFailOnUnresolved: false,
             bugbotOrganizationRules: '',
             provisioningMode: 'auto',
+        },
+        pullRequestApproval: {
+            ...DISABLED_PULL_REQUEST_APPROVAL_POLICY,
+            targetRoles: [...DISABLED_PULL_REQUEST_APPROVAL_POLICY.targetRoles],
+            branchKinds: [...DISABLED_PULL_REQUEST_APPROVAL_POLICY.branchKinds],
+            additionalExcludedPaths: [],
+            testChecks: [],
+            coverage: { ...DISABLED_PULL_REQUEST_APPROVAL_POLICY.coverage },
         },
         projects: {
             ids: '',
@@ -135,6 +148,8 @@ export function createDefaultSetupConfiguration(): SetupConfiguration {
         manageRepositorySecrets: true,
         actionInputs: {},
         storage: createDefaultSetupStorageConfiguration(),
+        issueWorkflows: { enabled: [...ISSUE_WORKFLOW_KINDS] },
+        repositoryAgentGuidance: { enabled: true, agentsPointer: 'prompt' },
     };
 }
 
@@ -143,6 +158,7 @@ export type SetupConfigurationOverrides = {
     agents?: Partial<Record<AgentTask, Partial<SetupAgentRoleConfiguration>>>;
     repository?: Partial<SetupConfiguration['repository']>;
     ai?: Partial<SetupConfiguration['ai']>;
+    pullRequestApproval?: Partial<SetupConfiguration['pullRequestApproval']>;
     projects?: Partial<SetupConfiguration['projects']>;
     createInitialTag?: boolean;
     manageRepositoryVariables?: boolean;
@@ -152,22 +168,46 @@ export type SetupConfigurationOverrides = {
         secrets?: Partial<SetupResourceStoragePolicy>;
         variables?: Partial<SetupResourceStoragePolicy>;
     };
+    issueWorkflows?: { enabled?: readonly IssueWorkflowKind[] };
+    repositoryAgentGuidance?: Partial<SetupConfiguration['repositoryAgentGuidance']>;
 };
 
 export function mergeSetupConfiguration(
     base: SetupConfiguration,
     overrides: SetupConfigurationOverrides = {},
 ): SetupConfiguration {
+    if (overrides.issueWorkflows?.enabled) {
+        for (const kind of ['release', 'hotfix'] as const) {
+            const legacy = overrides.features?.[kind];
+            if (legacy !== undefined && legacy !== overrides.issueWorkflows.enabled.includes(kind)) {
+                throw new Error(`features.${kind} contradicts issueWorkflows.enabled.`);
+            }
+        }
+    }
     const agents = { ...base.agents } as SetupAgentConfiguration;
     for (const task of SETUP_AGENT_TASKS) {
         agents[task] = { ...base.agents[task], ...(overrides.agents?.[task] ?? {}) };
     }
+    const features = { ...base.features, ...(overrides.features ?? {}) } as SetupFeatures;
+    const enabledIssueWorkflows = overrides.issueWorkflows?.enabled
+        ?? base.issueWorkflows.enabled
+            .filter(kind => kind !== 'release' || features.release !== false)
+            .filter(kind => kind !== 'hotfix' || features.hotfix !== false);
+    if (overrides.issueWorkflows?.enabled) {
+        features.release = enabledIssueWorkflows.includes('release');
+        features.hotfix = enabledIssueWorkflows.includes('hotfix');
+    }
     return {
         ...base,
-        features: { ...base.features, ...(overrides.features ?? {}) } as SetupFeatures,
+        features,
         agents,
         repository: { ...base.repository, ...(overrides.repository ?? {}) },
         ai: { ...base.ai, ...(overrides.ai ?? {}) },
+        pullRequestApproval: {
+            ...base.pullRequestApproval,
+            ...(overrides.pullRequestApproval ?? {}),
+            coverage: { ...base.pullRequestApproval.coverage, ...(overrides.pullRequestApproval?.coverage ?? {}) },
+        } as SetupConfiguration['pullRequestApproval'],
         projects: { ...base.projects, ...(overrides.projects ?? {}) },
         createInitialTag: overrides.createInitialTag ?? base.createInitialTag,
         manageRepositoryVariables: overrides.manageRepositoryVariables ?? base.manageRepositoryVariables,
@@ -190,6 +230,31 @@ export function mergeSetupConfiguration(
                     ...(overrides.storage?.variables?.overrides ?? {}),
                 },
             },
+        },
+        issueWorkflows: {
+            enabled: enabledIssueWorkflows,
+        },
+        repositoryAgentGuidance: {
+            ...base.repositoryAgentGuidance,
+            ...(overrides.repositoryAgentGuidance ?? {}),
+        },
+    };
+}
+
+/** Returns a copy with only canonical BCP-47 locale values. */
+export function normalizeSetupConfigurationLocales(configuration: SetupConfiguration): SetupConfiguration {
+    const profile = resolveLocaleProfile(
+        configuration.repository.repositoryLocale,
+        configuration.repository.issueLocale,
+        configuration.repository.pullRequestLocale,
+    );
+    return {
+        ...configuration,
+        repository: {
+            ...configuration.repository,
+            repositoryLocale: profile.repository,
+            issueLocale: profile.issueOverride ?? '',
+            pullRequestLocale: profile.pullRequestOverride ?? '',
         },
     };
 }

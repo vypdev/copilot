@@ -16,7 +16,7 @@ function baseParam(overrides: Record<string, unknown> = {}) {
     owner: 'o',
     repo: 'r',
     tokens: { token: 't' },
-    issue: { number: 1, title: 'Issue', branchManagementAlways: false },
+    issue: { number: 1, title: 'Issue' },
     pullRequest: { number: 2, title: 'PR' },
     issueNumber: 1,
     emoji: { emojiLabeledTitle: false, branchManagementEmoji: '' },
@@ -75,6 +75,23 @@ describe('UpdateTitleUseCase', () => {
     expect(results[0].executed).toBe(false);
   });
 
+  it.each([-1, 2, Number.MAX_SAFE_INTEGER + 1])(
+    'preserves an unlinked PR title without issue-provider I/O: %s',
+    async (issueNumber) => {
+      const param = baseParam({
+        isPullRequest: true,
+        issueNumber,
+        emoji: { emojiLabeledTitle: true, branchManagementEmoji: '' },
+      });
+
+      const results = await invoke(param);
+
+      expect(results[0]).toMatchObject({ success: true, executed: false });
+      expect(mockGetTitle).not.toHaveBeenCalled();
+      expect(mockUpdateTitlePullRequestFormat).not.toHaveBeenCalled();
+    },
+  );
+
   it('returns success executed true when isIssue, emojiLabeledTitle, and updateTitleIssueFormat returns new title', async () => {
     mockGetTitle.mockResolvedValue('Old title');
     mockUpdateTitleIssueFormat.mockResolvedValue('v1.0.0 Old title');
@@ -113,7 +130,7 @@ describe('UpdateTitleUseCase', () => {
     const param = baseParam({
       isIssue: true,
       emoji: { emojiLabeledTitle: true, branchManagementEmoji: '' },
-      issue: { number: 1, title: 'Fallback title', branchManagementAlways: false },
+      issue: { number: 1, title: 'Fallback title' },
     });
 
     const results = await invoke(param);
@@ -124,7 +141,6 @@ describe('UpdateTitleUseCase', () => {
       version: '',
       currentTitle: 'Fallback title',
       issueNumber: 1,
-      branchManagementAlways: false,
       branchManagementEmoji: '',
     }));
   });
@@ -172,7 +188,6 @@ describe('UpdateTitleUseCase', () => {
       version: '1.2.1',
       currentTitle: expect.any(String),
       issueNumber: 1,
-      branchManagementAlways: false,
       branchManagementEmoji: '',
     }));
   });
@@ -210,7 +225,6 @@ describe('UpdateTitleUseCase', () => {
       version: '',
       currentTitle: 'My Release',
       issueNumber: 1,
-      branchManagementAlways: false,
       branchManagementEmoji: '',
     }));
   });

@@ -12,6 +12,8 @@ export interface ConfigurationPayloadContext {
         readonly deploymentOrchestration?: unknown;
         readonly branchConfiguration?: unknown;
         readonly recommendationState?: unknown;
+        readonly issueWorkflowKind?: string;
+        readonly issueWorkflowProfileDigest?: string;
     };
 }
 

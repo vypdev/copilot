@@ -5,10 +5,12 @@ description: Stable semantic failure codes, user impact, and recovery actions.
 
 # Application error reference
 
-Every failure presentation uses the same order: impact, safe cause and code,
-recommended action, retained state, then a correlation UUID. Search the Job
-Summary and sanitized logs using that UUID; it is safe to include in a support
-request. Do not include credentials or private provider output.
+Every failure presentation uses the same order: impact, stable error code,
+recommended action, retained state, retryability, then a correlation UUID.
+Search the Job Summary and sanitized logs using that UUID; it is safe to include
+in a support request. Do not include credentials or private provider output.
+Repository-aware views use the configured repository locale and default to
+English. Error codes and references never translate.
 
 | Code | Meaning | Action |
 | --- | --- | --- |
@@ -23,6 +25,8 @@ request. Do not include credentials or private provider output.
 | `provider.contract-invalid` | A provider response could not be interpreted safely. | Review the integration before retrying. |
 | `agent.policy-rejected` | Fixed policy rejected the agent execution plan. | Use an allowed agent configuration. |
 | `agent.failed` | An admitted agent did not produce a usable result. | Inspect sanitized agent status and retry if appropriate. |
+| `locale.output-invalid` | Generated product content violated its target-locale contract. | Retry with a provider compatible with the configured repository locale. |
+| `locale.translation-failed` | An addressed request could not be safely adapted to the target locale. | Rephrase the request or retry when the language provider is available. |
 | `validation.invalid-input` | Entrypoint input is malformed. | Correct the input and retry. |
 | `workflow.invalid-event` | The event cannot start the requested workflow. | Start from a supported event or surface. |
 | `workflow.stale` | A newer durable state superseded this invocation. | Inspect current state and start a fresh invocation only if needed. |
@@ -34,6 +38,11 @@ request. Do not include credentials or private provider output.
 Retryability is determined by the code. A specific operation can make a
 normally retryable failure terminal, but presentation never turns a terminal
 code into a retry recommendation.
+
+Some partial operations add a closed recovery variant, for example to name a
+retained managed branch or a closed issue whose final explanation was not
+published. These variants use reviewed catalog templates and only bounded,
+validated variables; feature code cannot replace them with arbitrary prose.
 
 Provider exceptions are not diagnostics for public surfaces. They remain a
 private in-memory cause even if a catch block interpolates or assigns the value

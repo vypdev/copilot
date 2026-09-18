@@ -15,10 +15,10 @@ export class IssueTitleRepository implements IssueTitlePort {
 
     updateTitleIssueFormat = async (
         owner: string, repository: string, version: string, issueTitle: string, issueNumber: number,
-        branchManagementAlways: boolean, branchManagementEmoji: string, labels: TitleLabelFacts, token: string,
+        branchManagementEmoji: string, labels: TitleLabelFacts, token: string,
     ): Promise<string | undefined> => {
         return withTitleUpdateLogging(() => {
-            const emoji = resolveIssueTitleEmoji(labels, branchManagementAlways, branchManagementEmoji);
+            const emoji = resolveIssueTitleEmoji(labels, branchManagementEmoji);
             const sanitizedTitle = sanitizeIssueTitle(issueTitle);
             const formattedTitle = version.length > 0
                 ? `${emoji} - ${version} - ${sanitizedTitle}`
@@ -29,11 +29,11 @@ export class IssueTitleRepository implements IssueTitlePort {
 
     updateTitlePullRequestFormat = async (
         owner: string, repository: string, pullRequestTitle: string, issueTitle: string, issueNumber: number,
-        pullRequestNumber: number, branchManagementAlways: boolean, branchManagementEmoji: string,
+        pullRequestNumber: number, branchManagementEmoji: string,
         labels: TitleLabelFacts, token: string,
     ): Promise<string | undefined> => {
         return withTitleUpdateLogging(() => {
-            const emoji = resolvePullRequestTitleEmoji(labels, branchManagementAlways, branchManagementEmoji);
+            const emoji = resolvePullRequestTitleEmoji(labels, branchManagementEmoji);
             const formattedTitle = `[#${issueNumber}] ${emoji} - ${sanitizePullRequestTitle(normalizePullRequestSourceTitle(issueTitle, issueNumber))}`;
             return updateIssueTitle(this.issueTitleClient, owner, repository, pullRequestTitle, formattedTitle, pullRequestNumber, token);
         });

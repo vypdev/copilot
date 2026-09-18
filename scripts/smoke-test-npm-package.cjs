@@ -39,6 +39,7 @@ try {
   const version = execFileSync(process.execPath, [cliPath, '--version'], { encoding: 'utf8' }).trim();
   const help = execFileSync(process.execPath, [cliPath, '--help'], { encoding: 'utf8' });
   const bugbotApi = require(bugbotApiPath);
+  const cliBundle = fs.readFileSync(cliPath, 'utf8');
 
   if (packageJson.name !== '@vypdev/copilot') {
     throw new Error(`packaged name is ${packageJson.name}, expected @vypdev/copilot.`);
@@ -52,9 +53,23 @@ try {
   if (!help.includes('Usage: copilot')) {
     throw new Error('packaged CLI help does not expose the copilot executable.');
   }
+  const setupHelp = execFileSync(process.execPath, [cliPath, 'setup', '--help'], { encoding: 'utf8' });
+  for (const option of ['--issue-workflows <types>', '--agent-guidance <mode>', '--non-interactive']) {
+    if (!setupHelp.includes(option)) throw new Error(`packaged setup CLI is missing ${option}.`);
+  }
   for (const publicExport of ['BugbotReviewService', 'evaluateBugbotFindings', 'buildBugbotAnalytics']) {
     if (typeof bugbotApi[publicExport] !== 'function') {
       throw new Error(`packaged Bugbot API does not expose ${publicExport}.`);
+    }
+  }
+  for (const generatedContract of [
+    '.copilot/repository-profile.json',
+    '.copilot/AGENT_GUIDE.md',
+    '.agents/skills/copilot-repository-workflow/SKILL.md',
+    'copilot:agent-guidance:start',
+  ]) {
+    if (!cliBundle.includes(generatedContract)) {
+      throw new Error(`packaged setup CLI is missing the generated guidance contract ${generatedContract}.`);
     }
   }
 

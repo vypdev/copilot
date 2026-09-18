@@ -65,6 +65,7 @@ function target(): SetupExecutionTarget {
     issueNumber: -1,
     singleAction: { issue: -1, isIssue: false, isPullRequest: false, isPush: false },
     labels: { currentIssueLabels: ['old'], currentPullRequestLabels: ['old-pr'] },
+    issue: {},
     release: { active: false },
     hotfix: { active: false },
     previousConfiguration: undefined,

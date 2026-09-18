@@ -14,7 +14,7 @@ describe('lifecycle waiting state policy', () => {
     });
 
     it('clears waiting state when a route reaches another stable state', () => {
-        expect(resolveLifecycleWaitingState({ eventName: 'issues', lifecycleState: 'in-progress' })).toEqual({ kind: 'clear' });
+        expect(resolveLifecycleWaitingState({ eventName: 'issues', lifecycleState: 'working' })).toEqual({ kind: 'clear' });
     });
 
     it('clears waiting state after a human interaction without a new stable state', () => {

@@ -18,6 +18,7 @@ import {
   RECONCILIATION_PR_MODES,
   RECONCILIATION_STRATEGIES,
 } from "./deployment_configuration";
+import { isLocaleProfile, type LocaleProfile } from './locale';
 
 export const DEPLOYMENT_PHASES = [
   "preparing",
@@ -63,6 +64,8 @@ export interface DeploymentOperationSnapshot {
   readonly stateVersion: typeof DEPLOYMENT_STATE_VERSION;
   readonly revision: number;
   readonly operationId: string;
+  /** Effective locale profile captured when the durable operation starts. */
+  readonly locale: LocaleProfile;
   readonly kind: DeploymentKind;
   readonly version: string;
   readonly title: string;
@@ -92,7 +95,7 @@ export interface DeploymentOperationSnapshot {
   readonly publicationVerified: boolean;
   readonly publicationReceipt?: DeploymentPublicationReceipt;
   readonly reconciliationTargets: readonly ReconciliationTargetState[];
-  readonly lastFailure?: DeploymentFailure | null;
+  readonly lastFailure: DeploymentFailure | null;
 }
 
 const NORMAL_TRANSITIONS: Readonly<Record<Exclude<DeploymentPhase, "blocked">, readonly DeploymentPhase[]>> = {
@@ -122,7 +125,7 @@ export function transitionDeploymentOperation(
     return { kind: "noop", operation, reason: `Expected ${expectedPhase}, found ${operation.phase}.` };
   }
   if (nextPhase === "blocked") {
-    return { kind: "advance", operation: { ...operation, phase: nextPhase } };
+    return { kind: "invalid", operation, reason: "Blocked state requires an explicit deployment failure." };
   }
   if (expectedPhase === "blocked" || !NORMAL_TRANSITIONS[expectedPhase].includes(nextPhase)) {
     return { kind: "invalid", operation, reason: `Transition ${expectedPhase} -> ${nextPhase} is not allowed.` };
@@ -138,7 +141,7 @@ export function blockDeploymentOperation(
 ): DeploymentOperationSnapshot {
   if (operation.phase === "completed") return operation;
   const previousPhase = operation.phase === "blocked"
-    ? operation.lastFailure?.previousPhase ?? "preparing"
+    ? requiredDeploymentFailure(operation).previousPhase
     : operation.phase;
   return {
     ...operation,
@@ -148,12 +151,14 @@ export function blockDeploymentOperation(
 }
 
 export function resumeBlockedDeployment(operation: DeploymentOperationSnapshot): DeploymentTransitionDecision {
-  if (operation.phase !== "blocked" || !operation.lastFailure?.retryable) {
+  if (operation.phase !== "blocked") {
     return { kind: "invalid", operation, reason: "Operation is not retryable from blocked state." };
   }
+  const failure = requiredDeploymentFailure(operation);
+  if (!failure.retryable) return { kind: "invalid", operation, reason: "Operation is not retryable from blocked state." };
   return {
     kind: "advance",
-    operation: { ...operation, phase: operation.lastFailure.previousPhase, lastFailure: null },
+    operation: { ...operation, phase: failure.previousPhase, lastFailure: null },
   };
 }
 
@@ -182,6 +187,14 @@ export function sanitizeDeploymentMessage(value: string): string {
 
 export function isDeploymentOperationSnapshot(value: unknown): value is DeploymentOperationSnapshot {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  if (!hasOnlyKeys(value, [
+    'stateVersion', 'revision', 'operationId', 'locale', 'kind', 'version', 'title', 'changelog',
+    'phase', 'strategy', 'prMode', 'selectedPrMode', 'backmergeMode', 'hotfixActiveReleasePolicy',
+    'cleanup', 'issueCompletion', 'presentationMode', 'diagrams', 'commentMode', 'sourceBranch',
+    'sourceSha', 'originBranch', 'originSha', 'productionBranch', 'developmentBranch',
+    'reconciliationTree', 'promotionPullRequest', 'productionSha', 'tag', 'publicationWorkflow',
+    'publicationVerified', 'publicationReceipt', 'reconciliationTargets', 'lastFailure',
+  ])) return false;
   const operation = value as Partial<DeploymentOperationSnapshot>;
   return operation.stateVersion === DEPLOYMENT_STATE_VERSION
     && typeof operation.revision === "number"
@@ -189,6 +202,8 @@ export function isDeploymentOperationSnapshot(value: unknown): value is Deployme
     && operation.revision > 0
     && typeof operation.operationId === "string"
     && /^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(operation.operationId)
+    && hasOnlyKeys(operation.locale, ['repository', 'issue', 'pullRequest', 'issueOverride', 'pullRequestOverride'])
+    && isLocaleProfile(operation.locale)
     && (operation.kind === "release" || operation.kind === "hotfix")
     && typeof operation.version === "string" && /^[0-9]+\.[0-9]+\.[0-9]+$/.test(operation.version)
     && typeof operation.title === "string" && operation.title.length <= 1_000
@@ -220,13 +235,24 @@ export function isDeploymentOperationSnapshot(value: unknown): value is Deployme
     && isPublicationReceiptConsistent(operation)
     && Array.isArray(operation.reconciliationTargets)
     && operation.reconciliationTargets.every(isReconciliationTarget)
-    && (operation.lastFailure === undefined || operation.lastFailure === null || isDeploymentFailure(operation.lastFailure));
+    && (operation.phase === "blocked"
+      ? isDeploymentFailure(operation.lastFailure)
+      : operation.lastFailure === null);
+}
+
+/** Returns the failure required by the sole valid blocked-state contract. */
+export function requiredDeploymentFailure(operation: DeploymentOperationSnapshot): DeploymentFailure {
+  if (operation.phase !== "blocked" || !isDeploymentFailure(operation.lastFailure)) {
+    throw new Error("Blocked deployment state requires a valid failure payload.");
+  }
+  return operation.lastFailure;
 }
 
 function isPublicationReceiptConsistent(operation: Partial<DeploymentOperationSnapshot>): boolean {
   const receipt = operation.publicationReceipt;
   if (!receipt) return operation.publicationVerified === false;
-  return operation.publicationVerified === true
+  return hasOnlyKeys(receipt, ['tag', 'productionSha', 'operationId', 'releaseUrl'])
+    && operation.publicationVerified === true
     && receipt.tag === operation.tag
     && receipt.operationId === operation.operationId
     && receipt.productionSha === operation.productionSha
@@ -260,6 +286,7 @@ function isSafeWorkflowName(value: string): boolean {
 
 function isReconciliationTarget(value: unknown): value is ReconciliationTargetState {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  if (!hasOnlyKeys(value, ['targetBranch', 'sourceBranch', 'sourceSha', 'syncBranch', 'syncSha', 'pullRequest', 'status'])) return false;
   const target = value as Partial<ReconciliationTargetState>;
   return isSafePersistedRef(target.targetBranch)
     && isSafePersistedRef(target.sourceBranch)
@@ -273,6 +300,7 @@ function isReconciliationTarget(value: unknown): value is ReconciliationTargetSt
 
 function isDeploymentFailure(value: unknown): value is DeploymentFailure {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  if (!hasOnlyKeys(value, ['category', 'message', 'retryable', 'previousPhase'])) return false;
   const failure = value as Partial<DeploymentFailure>;
   return ["promotion", "publication", "reconciliation", "cleanup"].includes(failure.category as DeploymentFailure["category"])
     && typeof failure.message === "string"
@@ -280,4 +308,9 @@ function isDeploymentFailure(value: unknown): value is DeploymentFailure {
     && typeof failure.retryable === "boolean"
     && ["preparing", "promotion_pr_pending", "promoted", "publishing", "published", "reconciliation_pending", "completed"]
       .includes(failure.previousPhase as Exclude<DeploymentPhase, "blocked">);
+}
+
+function hasOnlyKeys(value: unknown, allowed: readonly string[]): value is Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  return Object.keys(value).every(key => allowed.includes(key));
 }

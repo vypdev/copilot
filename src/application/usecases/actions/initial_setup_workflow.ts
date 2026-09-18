@@ -20,6 +20,7 @@ import {
     resolveRemoteConfiguration,
 } from './setup_resource_provisioning';
 import { ApplicationError, type ApplicationErrorCode, toApplicationError } from '../../errors/application_error';
+import { selectedInitialIssueTypes, selectedInitialLabels } from '../../policies/setup_issue_resource_policy';
 
 export interface InitialSetupWorkflowDependencies extends SetupResourceProvisioningDependencies {
     authenticatedUserPort: BoundAuthenticatedUserPort;
@@ -56,6 +57,7 @@ export async function runInitialSetupWorkflow(
         logInfo('📋 Ensuring .github and copying setup files...');
         const workspaceSelection = {
             features: setupConfiguration?.features,
+            setupConfiguration,
             ...(request.workflowUpdates.length > 0 ? {
                 updateExistingWorkflows: true,
                 approvedWorkflowFiles: request.workflowUpdates,
@@ -85,7 +87,7 @@ export async function runInitialSetupWorkflow(
         if (secrets.errors.length > 0) errors.push(...fromMessages(secrets.errors, 'authorization.credential-invalid'));
 
         logInfo('🏷️  Checking configured and progress labels...');
-        const labels = await ensureInitialLabels(request, dependencies.initialLabelProvisioningPort);
+        const labels = await ensureInitialLabels(request, dependencies.initialLabelProvisioningPort, setupConfiguration);
         if (!labels.completed) {
             errors.push(labels.error);
         } else {
@@ -94,7 +96,7 @@ export async function runInitialSetupWorkflow(
         }
 
         logInfo('📋 Checking issue types...');
-        const issueTypes = await ensureIssueTypes(request, dependencies.issueTypeProvisioningPort);
+        const issueTypes = await ensureIssueTypes(request, dependencies.issueTypeProvisioningPort, setupConfiguration);
         if (!issueTypes.success) {
             errors.push(...fromMessages(issueTypes.errors, 'provider.unavailable'));
         } else {
@@ -134,10 +136,11 @@ async function verifyGitHubAccess(
 async function ensureInitialLabels(
     request: InitialSetupContext,
     repository: BoundInitialLabelProvisioningPort,
+    setupConfiguration?: Readonly<SetupConfiguration>,
 ): Promise<InitialLabelProvisioningOutcome> {
     try {
         const summary = await repository.ensureInitialLabels(
-            request.labels,
+            selectedInitialLabels(request.labels, setupConfiguration),
         );
         return { completed: true, ...summary };
     } catch (error) {
@@ -150,10 +153,11 @@ async function ensureInitialLabels(
 async function ensureIssueTypes(
     request: InitialSetupContext,
     repository: BoundIssueTypeProvisioningPort,
+    setupConfiguration?: Readonly<SetupConfiguration>,
 ): Promise<{ success: boolean; created: number; existing: number; errors: string[] }> {
     try {
         const result = await repository.ensureIssueTypes(
-            request.issueTypes,
+            selectedInitialIssueTypes(request.issueTypes, setupConfiguration),
         );
         return {
             success: result.errors.length === 0,

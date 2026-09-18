@@ -1,6 +1,5 @@
 import { Emoji } from '../data/model/emoji';
 import { Issue } from '../data/model/issue';
-import { Images } from '../data/model/images';
 import { IssueTypes } from '../data/model/issue_types';
 import { Labels } from '../data/model/labels';
 import { Locale } from '../data/model/locale';
@@ -12,27 +11,7 @@ import { Workflows } from '../data/model/workflows';
 import type { ExecutionInputs } from '../data/model/execution_inputs';
 import type { CopilotLifecycleLabels } from '../domain/copilot_lifecycle';
 
-export interface ImageScopeValues {
-    automatic: string[];
-    feature: string[];
-    bugfix: string[];
-    release: string[];
-    hotfix: string[];
-    docs: string[];
-    chore: string[];
-}
-
-export interface ImageConfigurationValues {
-    onIssue: boolean;
-    onPullRequest: boolean;
-    onCommit: boolean;
-    issue: ImageScopeValues;
-    pullRequest: ImageScopeValues;
-    commit: ImageScopeValues;
-}
-
 export interface LabelValues {
-    branching: { launcher: string };
     workflow: { bug: string; bugfix: string; hotfix: string; enhancement: string; feature: string; release: string; question: string; help: string; deploy: string; deployed: string; docs: string; documentation: string; chore: string; maintenance: string };
     priorities: { high: string; medium: string; low: string; none: string };
     sizes: { xxl: string; xl: string; l: string; m: string; s: string; xs: string };
@@ -69,12 +48,12 @@ export function buildWorkflows(release: string, hotfix: string): Workflows {
     return new Workflows(release, hotfix);
 }
 
-export function buildLocale(issue: string, pullRequest: string): Locale {
-    return new Locale(issue, pullRequest);
+export function buildLocale(repository: string, issue: string = '', pullRequest: string = ''): Locale {
+    return new Locale(repository, issue, pullRequest);
 }
 
-export function buildIssue(branchManagementAlways: boolean, reopenOnPush: boolean, desiredAssigneesCount: number, inputs?: ExecutionInputs): Issue {
-    return new Issue(branchManagementAlways, reopenOnPush, desiredAssigneesCount, inputs);
+export function buildIssue(issueManagedBranches: boolean, reopenOnPush: boolean, desiredAssigneesCount: number, inputs?: ExecutionInputs): Issue {
+    return new Issue(issueManagedBranches, reopenOnPush, desiredAssigneesCount, inputs);
 }
 
 export function buildPullRequest(desiredAssigneesCount: number, desiredReviewersCount: number, inputs?: ExecutionInputs): PullRequest {
@@ -91,7 +70,6 @@ export function buildTokens(token: string): Tokens {
 
 export function buildLabels(values: LabelValues): Labels {
     return new Labels(
-        values.branching.launcher,
         values.workflow.bug,
         values.workflow.bugfix,
         values.workflow.hotfix,
@@ -131,34 +109,5 @@ export function buildIssueTypes(values: IssueTypeConfigurationValues): IssueType
         values.release.name, values.release.description, values.release.color,
         values.question.name, values.question.description, values.question.color,
         values.help.name, values.help.description, values.help.color,
-    );
-}
-
-export function buildImages(values: ImageConfigurationValues): Images {
-    return new Images(
-        values.onIssue,
-        values.onPullRequest,
-        values.onCommit,
-        values.issue.automatic,
-        values.issue.feature,
-        values.issue.bugfix,
-        values.issue.docs,
-        values.issue.chore,
-        values.issue.release,
-        values.issue.hotfix,
-        values.pullRequest.automatic,
-        values.pullRequest.feature,
-        values.pullRequest.bugfix,
-        values.pullRequest.release,
-        values.pullRequest.hotfix,
-        values.pullRequest.docs,
-        values.pullRequest.chore,
-        values.commit.automatic,
-        values.commit.feature,
-        values.commit.bugfix,
-        values.commit.release,
-        values.commit.hotfix,
-        values.commit.docs,
-        values.commit.chore,
     );
 }

@@ -22,7 +22,7 @@ const mockCloseIssueInvoke = jest.fn();
 const mockReviewPotentialProblemsInvoke = jest.fn();
 
 function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
-  const defaultIssue = { number: -1, title: '', creator: '', desiredAssigneesCount: 0, branchManagementAlways: false };
+  const defaultIssue = { number: -1, title: '', creator: '', desiredAssigneesCount: 0, issueManagedBranches: false };
   const defaultPullRequest = {
     number: 7,
     id: 'PR_node_7',
@@ -68,6 +68,7 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
     eventName: 'pull_request',
     tokens: { token: 'token' },
     tokenUser: 'bot',
+    locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
     commit: { branch: 'feature/review' },
     currentConfiguration: { parentBranch: 'develop' },
     branches: { development: 'develop', defaultBranch: 'main' },
@@ -172,6 +173,21 @@ describe("PullRequestUseCase", () => {
     expect(mockReviewPotentialProblemsInvoke).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps the PAT-authored PR exception strictly analysis-only', async () => {
+    const useCase = new PullRequestUseCase(
+      { taskId: 'UpdatePullRequestDescriptionUseCase', invoke: mockUpdateDescriptionInvoke },
+      workflowSteps,
+      { taskId: 'DetectPotentialProblemsUseCase', invoke: mockReviewPotentialProblemsInvoke },
+    );
+    await useCase.reviewOnly(minimalExecution({ pullRequest: { action: 'opened' } }));
+    expect(mockReviewPotentialProblemsInvoke).toHaveBeenCalledTimes(1);
+    expect(mockUpdateTitleInvoke).not.toHaveBeenCalled();
+    expect(mockUpdateDescriptionInvoke).not.toHaveBeenCalled();
+    expect(mockLinkIssueInvoke).not.toHaveBeenCalled();
+    await useCase.reviewOnly(minimalExecution({ eventName: 'pull_request_review' }));
+    expect(mockReviewPotentialProblemsInvoke).toHaveBeenCalledTimes(1);
+  });
+
   it('authorizes the projected actor before member-only PR review', async () => {
     const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) };
     const useCase = new PullRequestUseCase(
@@ -218,6 +234,34 @@ describe("PullRequestUseCase", () => {
     expect(mockReviewPotentialProblemsInvoke).not.toHaveBeenCalled();
     expect(mockAssignMemberInvoke).not.toHaveBeenCalled();
   });
+
+  it.each(['submitted', 'edited', 'dismissed'])(
+    'does not run PR mutations for an %s review event',
+    async action => {
+      const useCase = new PullRequestUseCase(
+        { taskId: 'UpdatePullRequestDescriptionUseCase', invoke: mockUpdateDescriptionInvoke },
+        workflowSteps,
+        { taskId: 'DetectPotentialProblemsUseCase', invoke: mockReviewPotentialProblemsInvoke },
+      );
+
+      const results = await useCase.invoke(minimalExecution({
+        eventName: 'pull_request_review',
+        pullRequest: { action, isOpened: false },
+      }));
+
+      expect(results).toEqual([]);
+      expect(mockUpdateTitleInvoke).not.toHaveBeenCalled();
+      expect(mockAssignMemberInvoke).not.toHaveBeenCalled();
+      expect(mockAssignReviewersInvoke).not.toHaveBeenCalled();
+      expect(mockLinkProjectInvoke).not.toHaveBeenCalled();
+      expect(mockLinkIssueInvoke).not.toHaveBeenCalled();
+      expect(mockSyncLabelsInvoke).not.toHaveBeenCalled();
+      expect(mockCheckPriorityInvoke).not.toHaveBeenCalled();
+      expect(mockCloseIssueInvoke).not.toHaveBeenCalled();
+      expect(mockUpdateDescriptionInvoke).not.toHaveBeenCalled();
+      expect(mockReviewPotentialProblemsInvoke).not.toHaveBeenCalled();
+    },
+  );
 
   it("when a PR opens in replace mode, calls UpdatePullRequestDescriptionUseCase", async () => {
     mockUpdateDescriptionInvoke.mockResolvedValue([

@@ -16,6 +16,7 @@ import {
   type BugbotReviewRequest,
   type BugbotScmGateway,
   type FindingsQueryPort,
+  type MessageCatalogResolutionPort,
 } from '@vypdev/copilot/bugbot';
 
 const service = new BugbotReviewService(findingsPort, scmGateway);
@@ -56,6 +57,22 @@ The returned error array is readonly and contains only semantic
 retry decision, impact, action, retained state, and correlation ID. It never
 includes a token, provider payload, raw cause, stack, prompt, command arguments,
 or local path.
+
+`locale.issue` and `locale.pullRequest` accept canonicalizable BCP-47 tags and
+default independently to `en-US`. Branch or issue-only publication uses the
+issue locale; publication attached to a verified pull request uses the pull
+request locale. Invalid tags and unknown locale keys fail before analysis or
+publication.
+
+The optional third constructor argument is a `MessageCatalogResolutionPort`.
+English and Spanish are bundled. For any other valid locale, the service asks
+that resolver for one complete catalog per review, including every cardinal
+plural category required by the locale, and reuses it across the
+status card, review snapshot, inline findings, overflow, and resolution notes.
+An absent resolver, failed request, or incomplete response falls back atomically
+to English; a review never mixes partially translated catalog entries. Dry-run,
+skipped, superseded, and issue-only no-mutation paths do not resolve a
+presentation catalog.
 
 The API intentionally has no overload accepting the internal runtime aggregate
 and does not export `Execution` or `Ai`. It also never accepts a token in the

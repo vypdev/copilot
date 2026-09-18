@@ -36,6 +36,24 @@ describe('buildGithubActionEventInputs', () => {
         });
     });
 
+    it('uses only an event-provided branch head as freshness evidence', () => {
+        const pushHead = 'a'.repeat(40);
+        expect(buildGithubActionEventInputs({
+            payload: { after: ` ${pushHead} ` }, eventName: 'push', actor: 'octocat',
+            repo: { owner: 'vypdev', repo: 'copilot' },
+        }).after).toBe(pushHead);
+    });
+
+    it.each(['issue_comment', 'workflow_dispatch'])(
+        'does not infer source-head evidence from the %s runtime context',
+        (eventName) => {
+            expect(buildGithubActionEventInputs({
+                payload: {}, eventName, actor: 'octocat',
+                repo: { owner: 'vypdev', repo: 'copilot' },
+            })).not.toHaveProperty('after');
+        },
+    );
+
     it('rejects a runtime context without repository coordinates', () => {
         expect(() => buildGithubActionEventInputs({
             payload: {},

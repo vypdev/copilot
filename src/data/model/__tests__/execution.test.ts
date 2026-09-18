@@ -27,6 +27,29 @@ const mockGetLatestTag = jest.fn();
 const mockGetReleaseVersionInvoke = jest.fn();
 const mockGetReleaseTypeInvoke = jest.fn();
 const mockGetHotfixVersionInvoke = jest.fn();
+const mockGetDescription = jest.fn();
+
+const validIssueFormBody = [
+  '## Description of the idea or improvement', 'A concrete change.',
+  '## Current limitations or challenges', 'Existing behavior is limited.',
+  '## Expected impact', 'The workflow improves.',
+  '## Description', 'A reproducible problem.',
+  '## Reproducing the issue', 'Run the command.',
+  '## copilot Version', '3.3.1',
+  '## Describe the documentation update', 'Update the guide.',
+  '## Why is this update needed?', 'The behavior changed.',
+  '## Task description', 'Complete the maintenance task.',
+  '## Current issues or inefficiencies', 'The old path is inefficient.',
+  '## Describe your problem or question', 'How does the workflow start?',
+  '## Base Version', 'Automatic',
+  '## Hotfix Version', 'Automatic',
+  '## Issue Description', 'The release is affected.',
+  '## Hotfix Solution', 'Apply the tested correction.',
+  '## Additional Context', 'No other context.',
+  '## Release Type', 'Minor',
+  '## Release Version', 'Automatic',
+  '## Changelog', 'Release notes.',
+].join('\n\n');
 
 import { ACTIONS } from '../action_types';
 import { INPUT_KEYS } from '../../../application/contracts/input_keys';
@@ -36,7 +59,6 @@ import { Emoji } from '../emoji';
 import type { LatestTagQueryPort } from '../../../application/ports/branch_tag_ports';
 import { Execution } from '../execution';
 import { Hotfix } from '../hotfix';
-import { Images } from '../images';
 import { Issue } from '../issue';
 import { IssueTypes } from '../issue_types';
 import { Labels } from '../labels';
@@ -56,7 +78,6 @@ import { applySetupExecutionResult, projectSetupExecutionContext } from '../../.
 
 function makeLabels(): Labels {
   return new Labels(
-    'launch',
     'bug',
     'bugfix',
     'hotfix',
@@ -85,7 +106,9 @@ function makeLabels(): Labels {
 }
 
 function makeIssue(inputs?: Record<string, unknown>): Issue {
-  return new Issue(false, false, 0, inputs as never);
+  const issue = new Issue(false, false, 0, inputs as never);
+  issue.liveBody = validIssueFormBody;
+  return issue;
 }
 
 function makePullRequest(inputs?: Record<string, unknown>): PullRequest {
@@ -103,36 +126,6 @@ function makeBranches(): Branches {
     'release',
     'docs',
     'chore',
-  );
-}
-
-function makeImages(): Images {
-  const empty: string[] = [];
-  return new Images(
-    false,
-    false,
-    false,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
-    empty,
   );
 }
 
@@ -195,7 +188,6 @@ function buildExecution(inputs?: Record<string, unknown>, overrides?: Partial<{
     issue: overrides?.issue ?? makeIssue(inputs),
     pullRequest: overrides?.pullRequest ?? makePullRequest(inputs),
     emoji: new Emoji(false, ''),
-    images: makeImages(),
     tokens: new Tokens('token'),
     ai: new Ai('http://localhost', 'model', false, [], false, 'High', 10, []),
     labels,
@@ -218,7 +210,7 @@ const setupIssuePort = {
   isPullRequest: mockIsPullRequest,
   isIssue: mockIsIssue,
   getHeadBranch: mockGetHeadBranch,
-  getDescription: jest.fn(),
+  getDescription: mockGetDescription,
   updateDescription: jest.fn(),
 };
 const setupOrganizationPort = { getTokenUser: mockGetUserFromToken };
@@ -246,6 +238,7 @@ describe('Execution', () => {
     mockGetUserFromToken.mockResolvedValue('token-user');
     mockGetLabels.mockResolvedValue([]);
     mockConfigGet.mockResolvedValue(undefined);
+    mockGetDescription.mockResolvedValue(validIssueFormBody);
   });
 
   describe('getters (inputs override)', () => {
@@ -353,10 +346,11 @@ describe('Execution', () => {
       expect(e.isChore).toBe(true);
     });
 
-    it('isBranched returns true when labels contain branched label', () => {
+    it('isBranched follows the fixed start label when branch management is enabled', () => {
       const labels = makeLabels();
-      labels.currentIssueLabels = ['launch'];
-      const e = buildExecution(undefined, { labels });
+      labels.currentIssueLabels = ['feature', 'in-progress'];
+      const e = buildExecution(undefined, { labels, issue: new Issue(true, false, 0) });
+      e.currentIssueWorkflowAdmission = { status: 'eligible', kind: 'feature' };
       expect(e.isBranched).toBe(true);
     });
 
@@ -373,6 +367,15 @@ describe('Execution', () => {
       labels.currentIssueLabels = ['feature'];
       const e = buildExecution(undefined, { labels });
       expect(e.managementBranch).toBe('feature');
+    });
+
+    it('validates form content with the default all-kinds profile', () => {
+      const labels = makeLabels();
+      labels.currentIssueLabels = ['feature'];
+      const issue = makeIssue({ eventName: 'issues', issue: { number: 42 } });
+      issue.liveBody = '';
+      const execution = buildExecution(undefined, { issue, labels });
+      expect(execution.issueWorkflowAdmission.status).toBe('invalid');
     });
 
     it('issueType returns feature when feature label present', () => {
@@ -436,7 +439,6 @@ describe('Execution', () => {
         issue,
         pullRequest,
         emoji,
-        images: makeImages(),
         tokens,
         ai,
         labels,
@@ -523,6 +525,26 @@ describe('Execution', () => {
       await setupExecution(e);
       expect(e.issueNumber).toBe(42);
       expect(mockConfigGet).toHaveBeenCalledWith(314);
+    });
+
+    it('configures an unlinked pull request without using the PR as its own issue', async () => {
+      const pullRequest = makePullRequest({
+        eventName: 'pull_request',
+        repo: { owner: 'owner', repo: 'repository' },
+        pull_request: { number: 314, head: { ref: 'codex/pr-enrichment-ux' }, base: { ref: 'develop' } },
+      } as never);
+      const e = buildExecution({
+        eventName: 'pull_request',
+        repo: { owner: 'owner', repo: 'repository' },
+        pull_request: { number: 314, head: { ref: 'codex/pr-enrichment-ux' }, base: { ref: 'develop' } },
+      } as never, { pullRequest });
+
+      await setupExecution(e);
+
+      expect(e.issueNumber).toBe(-1);
+      expect(mockConfigGet).toHaveBeenCalledWith(314);
+      expect(mockGetLabels).toHaveBeenCalledTimes(1);
+      expect(mockGetLabels).toHaveBeenCalledWith(314);
     });
 
     it('sets up a PR conversation comment from its exact payload number', async () => {

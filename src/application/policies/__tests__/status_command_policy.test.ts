@@ -13,11 +13,11 @@ function execution(overrides: Record<string, unknown> = {}) {
         commit: { branch: 'feature/17-demo' },
         inputs: { action: 'synchronize' },
         labels: {
-            currentIssueLabels: ['state:in-progress'],
+            currentIssueLabels: ['state:working'],
             currentPullRequestLabels: ['size:m', 'state:reviewing'],
             lifecycle: {
                 planned: 'state:planned',
-                inProgress: 'state:in-progress',
+                specifying: 'state:specifying', working: 'state:working',
                 reviewing: 'state:reviewing',
                 changesRequested: 'state:changes-requested',
                 verified: 'state:verified',
@@ -139,5 +139,30 @@ describe('status command policy', () => {
         expect(result.success).toBe(true);
         expect(result.executed).toBe(true);
         expect(result.steps[0]).toContain('## Copilot status');
+    });
+
+    it('renders Spanish status defaults and invalid evidence explicitly', () => {
+        const body = formatCopilotStatus({
+            owner: 'acme', repository: 'demo', event: 'issues', action: '', target: 'issue',
+            pullRequestDescriptionMode: 'disabled', issueLabels: [], pullRequestLabels: [],
+            findingStateEvidence: 'invalid',
+        }, 'es-MX');
+
+        expect(body).toContain('## Estado de Copilot');
+        expect(body).toContain('Rama:** desconocida');
+        expect(body).toContain('evidencia no válida');
+    });
+
+    it('renders Spanish status with identifiers, labels, and finding counts', () => {
+        const body = formatCopilotStatus({
+            owner: 'acme', repository: 'demo', event: 'pull_request', action: 'opened', target: 'pull-request',
+            issueNumber: 17, pullRequestNumber: 21, branch: 'feature/17-demo', lifecycle: 'reviewing',
+            waitingFor: 'maintainer', pullRequestDescriptionMode: 'append', issueLabels: ['state:working'],
+            pullRequestLabels: ['state:reviewing'],
+            findingStates: { open: 1, reopened: 2, verificationRequired: 3, unknown: 4, resolved: 5 },
+        }, 'es-ES');
+
+        expect(body).toContain('pull-request #17 / PR #21');
+        expect(body).toContain('1 abiertos, 2 reabiertos, 3 requieren verificación, 4 desconocidos, 5 resueltos');
     });
 });

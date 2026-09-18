@@ -1,5 +1,5 @@
 import { Result } from "../../../../data/model/result";
-import type { BoundIssueClosurePort } from "../../../../application/ports/issue_lifecycle_ports";
+import type { BoundIssueStatePort } from "../../../../application/ports/issue_lifecycle_ports";
 import { logDebugInfo, logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
@@ -9,7 +9,7 @@ import type { IssueNumberContext } from '../../issue_workflow_context';
 export class CloseNotAllowedIssueUseCase implements ParamUseCase<IssueNumberContext, Result[]> {
     taskId: string = 'CloseNotAllowedIssueUseCase';
     
-    constructor(private readonly issueRepository: BoundIssueClosurePort) {}
+    constructor(private readonly issueRepository: BoundIssueStatePort) {}
 
     async invoke(param: IssueNumberContext): Promise<Result[]> {
         logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`)
@@ -18,19 +18,14 @@ export class CloseNotAllowedIssueUseCase implements ParamUseCase<IssueNumberCont
         try {
             const closed = await this.issueRepository.closeIssue(param.issueNumber);
             if (closed) {
-                logInfo(`Issue #${param.issueNumber} closed (author not allowed). Adding comment.`);
-                await this.issueRepository.addComment(
-                    param.issueNumber,
-                    `This issue has been closed because the author is not a member of the project. The user may be banned if the fact is repeated.`,
-                )
+                logInfo(`Issue #${param.issueNumber} closed (author not allowed).`);
                 result.push(
                     new Result({
                         id: this.taskId,
                         success: true,
                         executed: true,
-                        steps: [
-                            `#${param.issueNumber} was automatically closed because the author is not a member of the project.`
-                        ]
+                        steps: [`#${param.issueNumber} was automatically closed because the author is not a member of the project.`],
+                        payload: Object.freeze({ publication: Object.freeze({ kind: 'access-policy' }) }),
                     })
                 )
             } else {

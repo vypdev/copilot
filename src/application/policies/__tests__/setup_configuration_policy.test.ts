@@ -5,6 +5,7 @@ import {
     buildSetupRepositoryVariables,
     createDefaultSetupConfiguration,
     mergeSetupConfiguration,
+    normalizeSetupConfigurationLocales,
     resolveSetupResourceTarget,
     shouldUpsertSetupResource,
     validateSetupStorageAgainstRemote,
@@ -17,9 +18,10 @@ describe('setup configuration policy', () => {
         const configuration = createDefaultSetupConfiguration();
         const plan = buildSetupPlan(configuration);
 
-        expect(plan.workflowFiles).toHaveLength(11);
+        expect(plan.workflowFiles).toHaveLength(13);
         expect(plan.issueTemplateFiles).toHaveLength(8);
-        expect(plan.selectedFiles).toHaveLength(20);
+        expect(plan.selectedFiles).toHaveLength(27);
+        expect(plan.selectedFiles).toContain('AGENTS.md (managed pointer only)');
         expect(plan.variables).toEqual(expect.arrayContaining([
             { name: 'AGENT_PROVIDER', value: 'codex' },
             { name: 'AGENT_ALLOWED_MODELS', value: 'openai/gpt-5.6-luna' },
@@ -44,6 +46,30 @@ describe('setup configuration policy', () => {
         ]);
     });
 
+    it('canonicalizes valid BCP-47 casing while preserving empty override inheritance', () => {
+        const configuration = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
+            repository: { repositoryLocale: 'pt-br', issueLocale: '', pullRequestLocale: 'zh-hant-tw' },
+        });
+        const normalized = normalizeSetupConfigurationLocales(configuration);
+
+        expect(normalized.repository).toMatchObject({
+            repositoryLocale: 'pt-BR', issueLocale: '', pullRequestLocale: 'zh-Hant-TW',
+        });
+        expect(buildSetupRepositoryVariables(configuration)).toEqual(expect.arrayContaining([
+            { name: 'REPOSITORY_LOCALE', value: 'pt-BR' },
+            { name: 'PULL_REQUESTS_LOCALE', value: 'zh-Hant-TW' },
+        ]));
+        expect(buildSetupRepositoryVariables(configuration).some(variable => variable.name === 'ISSUES_LOCALE')).toBe(false);
+        expect(buildSetupActionInputs(configuration)).toMatchObject({
+            'repository-locale': 'pt-BR', 'issues-locale': '', 'pull-requests-locale': 'zh-Hant-TW',
+        });
+    });
+
+    it('derives operational warnings only from the current setup configuration', () => {
+        const plan = buildSetupPlan(createDefaultSetupConfiguration());
+        expect(plan.warnings).toContain('Release and hotfix workflows require the workflow PAT Secret and a writable token.');
+    });
+
     it('removes optional files while retaining core setup resources', () => {
         const configuration = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
             features: {
@@ -59,11 +85,13 @@ describe('setup configuration policy', () => {
         expect(plan.workflowFiles).toEqual(expect.arrayContaining([
             'copilot_issue.yml',
             'copilot_pull_request.yml',
+            'copilot_pull_request_review_state.yml',
+            'copilot_pull_request_merge_queue.yml',
             'copilot_commit.yml',
             'copilot_branch_sync.yml',
         ]));
         expect(plan.workflowFiles).not.toContain('release_workflow.yml');
-        expect(plan.selectedFiles).toHaveLength(7);
+        expect(plan.selectedFiles).toHaveLength(14);
     });
 
     it('keeps inactivity closure opt-in and wires its threshold when enabled', () => {
@@ -218,6 +246,28 @@ describe('setup configuration policy', () => {
             { name: 'AI_PULL_REQUEST_DESCRIPTION_MODE', value: 'append' },
         ]));
         expect(buildSetupActionInputs(configuration)['ai-pull-request-description-mode']).toBe('append');
+    });
+
+    it('requires Action-managed branches for the SDD gate and release or hotfix workflows', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.repository.issueManagedBranches = false;
+        configuration.repository.preBranchSdd = true;
+        expect(validateSetupConfiguration(configuration)).toEqual(expect.arrayContaining([
+            'pre-branch-sdd requires issue-managed-branches.',
+            'release and hotfix issue workflows require issue-managed-branches.',
+        ]));
+    });
+
+    it('persists the two bounded issue branch settings without a launcher input', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.repository.preBranchSdd = true;
+        expect(validateSetupConfiguration(configuration)).toEqual([]);
+        expect(buildSetupActionInputs(configuration)).toMatchObject({
+            'issue-managed-branches': 'true',
+            'pre-branch-sdd': 'true',
+        });
+        expect(buildSetupActionInputs(configuration)).not.toHaveProperty('branch-management-always');
+        expect(buildSetupActionInputs(configuration)).not.toHaveProperty('branch-management-launcher-label');
     });
 
     it('keeps independent repository/organization storage policies and mixed overrides', () => {

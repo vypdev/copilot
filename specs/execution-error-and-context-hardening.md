@@ -162,6 +162,8 @@ semantic contract.
 | `provider.contract-invalid` | provider | no | response violates the adapter contract |
 | `agent.policy-rejected` | agent | no | execution plan violates fixed policy |
 | `agent.failed` | agent | yes | an admitted agent process failed |
+| `locale.output-invalid` | agent | yes | generated product content violates its target-locale contract |
+| `locale.translation-failed` | agent | yes | an addressed request could not be safely adapted to the target locale |
 | `validation.invalid-input` | validation | no | trusted entrypoint input is malformed |
 | `workflow.invalid-event` | workflow | no | event cannot target the requested workflow |
 | `workflow.stale` | workflow | no | newer durable state superseded this event |
@@ -178,9 +180,12 @@ specific product decision, but never broadened from no to yes at presentation.
 
 The class extends `Error` for standard JavaScript error semantics and has these public,
 readonly fields: `code`, derived `kind`, `retryable`, `impact`, `action`,
-`retainedState`, and `correlationId`. Its inherited `message` is the safe public
-message. `toJSON()` returns exactly those allowlisted fields plus `name` and
-`message`.
+`retainedState`, `correlationId`, and an optional closed `recovery` descriptor.
+Its inherited `message` is the safe public message. `toJSON()` returns exactly
+those allowlisted fields plus `name`, `message`, and the optional descriptor.
+The descriptor ID selects reviewed code-specific recovery templates, and its
+variables are an exact, bounded allowlist of validated branch names or positive
+issue numbers. Application callers cannot override presentation prose directly.
 
 The raw cause is stored in an ECMAScript `#cause` private field with no public
 getter and is never serialized. It exists only for an in-memory debugger before
@@ -526,25 +531,41 @@ remain facts copied into the relevant context after ordinary validation.
 
 ## 9. UI/UX and content contract
 
-Every failure view follows `impact -> cause category -> action -> retained
-state -> correlation ID`. GitHub annotations and terminal output use the same
-semantic view model. Exit code is `0` for success/no-op, `1` for failed/blocked,
-and `130` only for an explicit local user cancellation.
+Every failure view follows `impact -> stable error code -> action -> retained
+state -> retryability -> correlation ID`. GitHub annotations, Job Summaries,
+Action completion, and terminal output use the same semantic view model and do
+not interpolate producer exception prose. Exit code is `0` for success/no-op,
+`1` for failed/blocked, and `130` only for an explicit local user cancellation.
 
 ```markdown
 ### Deployment could not continue
 
 **Impact:** No repository or release mutation was attempted.
-**Cause:** The saved deployment state is newer than this event.
+**Error code:** `workflow.stale`
 **Action:** Re-run the operation from the launcher issue.
 **Retained state:** The existing deployment state and published artifacts were preserved.
+**Retryable:** No
 **Reference:** `6f173f89-96a3-4fc8-b90e-4f8f48e0e319`
 ```
 
 Pending views do not show an error. Partial views name successful irreversible
 facts before the failure. Completed views contain no correlation ID unless it
-is already part of the standard operator evidence. Existing locale resolution
-and English fallback remain; codes and UUIDs are not translated.
+is already part of the standard operator evidence. Repository-aware boundaries
+resolve the complete code-specific descriptor set in the repository locale:
+English and Spanish are bundled, arbitrary valid BCP-47 locales use the bounded
+dynamic resolver, and any incomplete or invalid result falls back atomically to
+English. Failures before repository configuration is available use English;
+the early GitHub Action boundary MAY use a validated bundled locale input.
+Labels and recovery prose are localized, while error codes and UUIDs are not.
+When a partial operation needs more detail than its broad error code can convey,
+it selects one closed recovery descriptor with validated variables. The entire
+descriptor is translated with the surrounding catalog, so a retained branch or
+issue number is preserved without mixing English prose into another locale.
+An explicitly addressed issue or pull-request request that fails is projected
+once through the shared reply identity and uses this same semantic view; a
+background failure remains Job-Summary/Check-only. Translation failures use the
+complete English fallback reply because the requested locale could not be
+established safely.
 
 ## 10. Failure, recovery, and cleanup
 
@@ -569,11 +590,12 @@ and English fallback remain; codes and UUIDs are not translated.
 
 ## 12. Observability and operational UX
 
-Structured records contain only `code`, `kind`, `retryable`, `correlationId`,
+Structured records contain only `code`, `kind`, `retryable`, `correlationId`, an
+optional closed recovery descriptor with bounded validated variables,
 capability, operation phase, and bounded safe counts. Metrics aggregate by code
-and capability, never by message. The architecture report records current, added,
-and removed aggregate imports; any positive delta fails CI. No raw error sampling
-is permitted in production.
+and capability, never by message. The architecture report records current,
+added, and removed aggregate imports; any positive delta fails CI. No raw error
+sampling is permitted in production.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
@@ -588,6 +610,18 @@ is permitted in production.
   runtime translation.
 - Rollback means reverting the complete unreleased change. It MUST NOT add a
   compatibility layer, restore raw-error publication, or increase the allowlist.
+
+Implementation evidence as of 2026-09-15: route failures return semantic
+`Result` values instead of terminating through route-local `setFailed` calls.
+The repository-aware CLI, generic and deployment Job Summaries, and final GitHub
+Action conclusion compose the same versioned, code-specific error descriptors
+into their complete surface catalog. One final boundary renders the failure and
+sets the Action conclusion; producer exception messages are omitted. Early CLI
+parse/configuration failures remain deterministic English, while the early
+GitHub boundary can select a validated bundled English or Spanish descriptor
+set and otherwise falls back atomically to English. Closed recovery variants
+preserve operation-specific rollback and retained-state context without allowing
+callers to inject arbitrary presentation strings.
 
 ## 14. Testing strategy and numeric budget
 

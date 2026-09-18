@@ -77,11 +77,14 @@ describe('SynchronizeLifecycleStateUseCase', () => {
         });
         await useCase.invoke({
             context: lifecycleContext,
-            results: [{ id: 'PrepareBranchesUseCase', success: true, executed: true, steps: [], errors: [] } as never],
+            results: [{
+                id: 'ReconcileBranchReadinessUseCase', success: true, executed: true, steps: [], errors: [],
+                payload: { branchName: 'feature/7-fix', branchSha: 'sha-1' },
+            } as never],
         });
         expect(dependencies.labels.setLabels).toHaveBeenCalledWith(
             7,
-            ['bug', 'state:in-progress'],
+            ['bug', 'state:working'],
         );
     });
 
@@ -95,11 +98,14 @@ describe('SynchronizeLifecycleStateUseCase', () => {
                     kind: 'issue', number: 7, labels: ['stale'], opened: false, descriptionEdited: true,
                 },
             }),
-            results: [{ id: 'PrepareBranchesUseCase', success: true, executed: true, steps: [], errors: [] } as never],
+            results: [{
+                id: 'ReconcileBranchReadinessUseCase', success: true, executed: true, steps: [], errors: [],
+                payload: { branchName: 'feature/7-fix', branchSha: 'sha-1' },
+            } as never],
         });
         expect(dependencies.labels.setLabels).toHaveBeenCalledWith(
             7,
-            ['bug', 'state:ai-processing', 'size: M', 'state:in-progress'],
+            ['bug', 'state:ai-processing', 'size: M', 'state:working'],
         );
     });
 
@@ -127,6 +133,42 @@ describe('SynchronizeLifecycleStateUseCase', () => {
         expect(dependencies.labels.setLabels).toHaveBeenCalledWith(
             11,
             ['state:ai-processing', 'state:changes-requested', 'state:awaiting-issue-author'],
+        );
+    });
+
+    it('replaces a stale ready label when Bugbot coverage is partial', async () => {
+        const dependencies = ports(['state:ready', 'state:awaiting-maintainer']);
+        const useCase = new SynchronizeLifecycleStateUseCase(dependencies.labels, dependencies.head);
+        await useCase.invoke({
+            context: context({
+                eventName: 'pull_request',
+                action: 'synchronize',
+                target: { kind: 'pull-request', number: 11, labels: [], merged: false, closed: false },
+            }),
+            results: [{
+                id: 'DetectPotentialProblemsUseCase',
+                success: true,
+                executed: true,
+                steps: [],
+                errors: [],
+                payload: {
+                    findingStates: {
+                        open: 0, reopened: 0, fixed: 0, obsolete: 0, dismissed: 0,
+                        'verification-required': 0, unknown: 0,
+                    },
+                    bugbotTelemetry: {
+                        schemaVersion: 1,
+                        outcome: 'partial',
+                        elapsedMs: 10,
+                        configuredEffort: 'smart',
+                        headSha: 'sha-123',
+                    },
+                },
+            } as never],
+        });
+        expect(dependencies.labels.setLabels).toHaveBeenCalledWith(
+            11,
+            ['state:blocked', 'state:awaiting-maintainer'],
         );
     });
 

@@ -1,0 +1,55 @@
+name: Copilot - Pull Request Approval
+run-name: Copilot approval · ${{ github.event_name }}
+
+on:
+  workflow_run:
+    workflows: ['Copilot - Pull Request', 'CI Check']
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Positive pull-request number to recheck
+        required: true
+        type: number
+
+jobs:
+  observe-approval:
+    name: Copilot - Pull Request Approval
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: copilot-approval-${{ github.repository }}
+      cancel-in-progress: false
+    permissions:
+      actions: read
+      checks: write
+      contents: read
+      pull-requests: read
+    steps:
+      # workflow_run's github.sha is the trusted default-branch revision, never
+      # the PR head. This source-repository workflow can test unreleased code.
+      - name: Checkout trusted default-branch revision
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Observe current PR evidence without checking out PR code
+        uses: ./
+        with:
+          pr-approval-observer: 'true'
+          pr-approval-pr-number: ${{ github.event.inputs.pr || '' }}
+          pr-approval-policy: ${{ vars.PR_APPROVAL_POLICY || '' }}
+          main-branch: ${{ vars.MAIN_BRANCH || 'master' }}
+          development-branch: ${{ vars.DEVELOPMENT_BRANCH || 'develop' }}
+          feature-tree: ${{ vars.FEATURE_TREE || 'feature' }}
+          bugfix-tree: ${{ vars.BUGFIX_TREE || 'bugfix' }}
+          docs-tree: ${{ vars.DOCS_TREE || 'docs' }}
+          chore-tree: ${{ vars.CHORE_TREE || 'chore' }}
+          bugbot-severity: ${{ vars.BUGBOT_SEVERITY || 'low' }}
+          bugbot-dry-run: ${{ vars.BUGBOT_DRY_RUN || 'false' }}
+          ai-ignore-files: ${{ vars.AI_IGNORE_FILES || 'build/*' }}
+          repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
+          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || '' }}
+          token: ${{ secrets.PAT }}
+        env:
+          COPILOT_APPROVAL_CHECK_TOKEN: ${{ github.token }}

@@ -194,8 +194,7 @@ export class ReconciliationHandler {
     await this.runtime.publishMilestone(
       context,
       completed,
-      "orchestration-complete",
-      `✅ Deployment ${completed.tag} and every configured reconciliation target are complete.`,
+      { kind: "orchestration-complete", tag: completed.tag },
     );
     return deploymentSuccess(`Deployment ${completed.tag} completed${completionContext}.`);
   }

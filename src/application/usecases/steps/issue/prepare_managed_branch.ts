@@ -57,7 +57,7 @@ export async function prepareManagedBranch(
         success: true,
         executed: false,
       }),
-    ]);
+    ], { workingBranch: decision.targetBranchName });
   }
 
   const branchesResult = await dependencies.linkedBranchCommandPort.createLinkedBranch(
@@ -109,9 +109,10 @@ export async function prepareManagedBranch(
       'provider.unavailable',
       'The branch was created, but its linked issue state could not be synchronized.',
       {
-        impact: 'The linked branch exists, but later issue metadata may be incomplete.',
-        action: 'Continue on the retained branch and rerun issue enrichment.',
-        retainedState: `The branch ${branchPayload.newBranchName} and its configuration patch were preserved.`,
+        recovery: {
+          id: 'managed-branch-enrichment-failed',
+          variables: { branchName: branchPayload.newBranchName },
+        },
       },
     );
     result.push(new Result({

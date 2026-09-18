@@ -28,25 +28,53 @@ function dependencies(overrides: Record<string, unknown> = {}) {
 }
 
 describe('SetupWizardUseCase', () => {
+  it('requires an explicit exact CI producer in non-interactive guarded setup', async () => {
+    await expect(new SetupWizardUseCase(dependencies()).execute({ mode: 'non-interactive' }))
+      .rejects.toThrow('guarded/recommend mode requires 1–8 exact test checks');
+  });
+
   it('validates, previews, confirms, and returns an isolated non-interactive configuration', async () => {
     const deps = dependencies();
-    const result = await new SetupWizardUseCase(deps).execute({ mode: 'non-interactive' });
+    const result = await new SetupWizardUseCase(deps).execute({ mode: 'non-interactive', overrides: { pullRequestApproval: { mode: 'off' } } });
 
     expect(result).toEqual(expect.objectContaining({ status: 'completed', exitCode: 0 }));
     expect(deps.planPresenter.present).toHaveBeenCalledTimes(1);
     expect(deps.confirmation.confirm).toHaveBeenCalledTimes(1);
     if (result.status === 'completed') {
       const defaults = createDefaultSetupConfiguration();
-      expect(result.configuration).toEqual(defaults);
+      expect(result.configuration).toEqual({
+        ...defaults,
+        repositoryAgentGuidance: { enabled: true, agentsPointer: 'create-if-missing' },
+      });
       expect(result.configuration).not.toBe(defaults);
       expect(result.configuration.agents).not.toBe(defaults.agents);
     }
   });
 
+  it('honors an explicit non-interactive pointer policy', async () => {
+    const result = await new SetupWizardUseCase(dependencies()).execute({
+      mode: 'non-interactive',
+      overrides: { repositoryAgentGuidance: { agentsPointer: 'prompt' }, pullRequestApproval: { mode: 'off' } },
+    });
+
+    expect(result.status === 'completed' && result.configuration.repositoryAgentGuidance.agentsPointer)
+      .toBe('prompt');
+  });
+
+  it('keeps guidance disabled while applying the safe non-interactive pointer default', async () => {
+    const result = await new SetupWizardUseCase(dependencies()).execute({
+      mode: 'non-interactive',
+      overrides: { repositoryAgentGuidance: { enabled: false }, pullRequestApproval: { mode: 'off' } },
+    });
+
+    expect(result.status === 'completed' && result.configuration.repositoryAgentGuidance)
+      .toEqual({ enabled: false, agentsPointer: 'create-if-missing' });
+  });
+
   it('enforces explicit skip flags after merging overrides', async () => {
     const result = await new SetupWizardUseCase(dependencies()).execute({
       mode: 'non-interactive',
-      overrides: { manageRepositoryVariables: true, manageRepositorySecrets: true },
+      overrides: { manageRepositoryVariables: true, manageRepositorySecrets: true, pullRequestApproval: { mode: 'off' } },
       skipRepositoryVariables: true,
       skipRepositorySecrets: true,
     });
@@ -55,10 +83,39 @@ describe('SetupWizardUseCase', () => {
     expect(result.status === 'completed' && result.configuration.manageRepositorySecrets).toBe(false);
   });
 
+  it('does not install guarded mode when its runtime policy Variable would be skipped', async () => {
+    await expect(new SetupWizardUseCase(dependencies()).execute({
+      mode: 'non-interactive',
+      skipRepositoryVariables: true,
+      overrides: { pullRequestApproval: {
+        mode: 'guarded',
+        producerAttested: true,
+        testChecks: [{ name: 'CI Check', sourceAppId: 15368, workflowName: 'CI Check' }],
+        coverage: { mode: 'check', checkName: 'CI Check' },
+      } },
+    })).rejects.toThrow('--skip-variables would leave the runtime policy unverified');
+  });
+
+  it('turns the suggested approval mode off when PR automation was disabled before its stage', async () => {
+    const result = await new SetupWizardUseCase(dependencies()).execute({
+      mode: 'non-interactive', overrides: { features: { pullRequests: false } },
+    });
+    expect(result.status === 'completed' && result.configuration.pullRequestApproval.mode).toBe('off');
+  });
+
+  it('rejects underscore-separated locale tags without a migration path', async () => {
+    const deps = dependencies();
+    await expect(new SetupWizardUseCase(deps).execute({
+      mode: 'non-interactive',
+      overrides: { repository: { repositoryLocale: 'pt_BR', issueLocale: 'es_MX', pullRequestLocale: '' } },
+    })).rejects.toMatchObject({ code: 'configuration.invalid' });
+    expect(deps.planPresenter.present).not.toHaveBeenCalled();
+  });
+
   it('returns exit zero and no configuration when confirmation is declined', async () => {
     const result = await new SetupWizardUseCase(dependencies({
       confirmation: { confirm: jest.fn().mockResolvedValue({ kind: 'declined' }) },
-    })).execute({ mode: 'non-interactive' });
+    })).execute({ mode: 'non-interactive', overrides: { pullRequestApproval: { mode: 'off' } } });
 
     expect(result).toEqual(expect.objectContaining({
       status: 'cancelled',
@@ -71,7 +128,7 @@ describe('SetupWizardUseCase', () => {
   it('returns exit 130 when terminal input is interrupted during confirmation', async () => {
     const result = await new SetupWizardUseCase(dependencies({
       confirmation: { confirm: jest.fn().mockResolvedValue({ kind: 'cancelled' }) },
-    })).execute({ mode: 'non-interactive' });
+    })).execute({ mode: 'non-interactive', overrides: { pullRequestApproval: { mode: 'off' } } });
 
     expect(result).toEqual(expect.objectContaining({
       status: 'cancelled',
@@ -104,6 +161,7 @@ describe('SetupWizardUseCase', () => {
       remoteConfiguration: { inspect },
     })).execute({
       mode: 'interactive',
+      overrides: { pullRequestApproval: { mode: 'off' } },
       remoteTarget: { owner: 'owner', repository: 'repo', token: 'token' },
     });
 
@@ -128,10 +186,15 @@ describe('SetupWizardUseCase', () => {
     const deps = dependencies({ mergeQueueReadiness: readiness });
     await new SetupWizardUseCase(deps).execute({
       mode: 'non-interactive',
+      overrides: { pullRequestApproval: { mode: 'off' } },
       remoteTarget: { owner: 'owner', repository: 'repo', token: 'token' },
     });
 
-    expect(readiness.inspect).toHaveBeenCalledWith(expect.objectContaining({ owner: 'owner', repository: 'repo' }));
+    expect(readiness.inspect).toHaveBeenCalledWith(expect.objectContaining({
+      owner: 'owner',
+      repository: 'repo',
+      catalog: expect.objectContaining({ locale: 'en-US', resolutionSource: 'exact' }),
+    }));
     expect(deps.planPresenter.present).toHaveBeenCalledWith(expect.objectContaining({ mergeQueueReadiness: [check] }));
   });
 

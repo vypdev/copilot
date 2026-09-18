@@ -1,9 +1,12 @@
 import {
   buildDoctorReport,
+  buildLocaleDoctorChecks,
   doctorCheck,
   normalizedDoctorPathId,
   skippedDoctorCheck,
 } from '../setup_doctor_report_policy';
+import { createDefaultSetupConfiguration } from '../setup_configuration_policy';
+import { resolveStaticSetupDoctorCatalog } from '../setup_doctor_message_catalog';
 
 describe('setup doctor report policy', () => {
   it('aggregates every status and is unhealthy only when a failure exists', () => {
@@ -59,6 +62,67 @@ describe('setup doctor report policy', () => {
     ['***', 'unknown'],
   ])('normalizes %s as %s', (input, expected) => {
     expect(normalizedDoctorPathId(input)).toBe(expected);
+  });
+
+  it.each([
+    ['en-US', '', '', ['exact', 'exact', 'exact']],
+    ['en-GB', '', '', ['base', 'base', 'base']],
+    ['es-ES', 'es-MX', '', ['exact', 'base', 'exact']],
+    ['fr-FR', 'ar', 'zh-Hant-TW', ['dynamic', 'dynamic', 'dynamic']],
+  ] as const)('reports locale resolution paths for repository=%s', (repository, issue, pullRequest, sources) => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.repository.repositoryLocale = repository;
+    configuration.repository.issueLocale = issue;
+    configuration.repository.pullRequestLocale = pullRequest;
+
+    const checks = buildLocaleDoctorChecks(configuration);
+    expect(checks.map(item => item.evidence.catalogSource)).toEqual(sources);
+    expect(checks[1].evidence.effective).toBe(issue ? new Intl.Locale(issue).toString() : new Intl.Locale(repository).toString());
+  });
+
+  it('rejects underscore-separated locale tags instead of exposing a migration path', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.repository.repositoryLocale = 'pt_BR';
+    configuration.repository.issueLocale = 'es_MX';
+    const checks = buildLocaleDoctorChecks(configuration);
+
+    expect(checks).toEqual([
+      expect.objectContaining({ id: 'locale.profile', status: 'skipped', blockedBy: ['configuration.valid'] }),
+    ]);
+  });
+
+  it('reports atomic English fallback when no language agent is ready', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.repository.repositoryLocale = 'fr-FR';
+    configuration.agents.planner.model = '';
+    expect(buildLocaleDoctorChecks(configuration)[0]).toMatchObject({
+      status: 'warn',
+      evidence: { catalogSource: 'fallback', effective: 'fr-FR' },
+      action: expect.stringContaining('planner/language agent is ready'),
+    });
+  });
+
+  it('projects the actual repository fallback onto inherited issue and pull-request locales', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.repository.repositoryLocale = 'fr-FR';
+    const checks = buildLocaleDoctorChecks(
+      configuration,
+      resolveStaticSetupDoctorCatalog('fr-FR'),
+    );
+
+    expect(checks.map((check) => check.status)).toEqual(['warn', 'warn', 'warn']);
+    expect(checks.map((check) => check.evidence.catalogSource))
+      .toEqual(['fallback', 'fallback', 'fallback']);
+    expect(checks.slice(1).every((check) => check.summary.includes('fell back atomically to en-US')))
+      .toBe(true);
+  });
+
+  it('skips locale capability detail when the profile is invalid', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.repository.repositoryLocale = 'und';
+    expect(buildLocaleDoctorChecks(configuration)).toEqual([
+      expect.objectContaining({ id: 'locale.profile', status: 'skipped', blockedBy: ['configuration.valid'] }),
+    ]);
   });
 });
 

@@ -5,6 +5,7 @@ import { ParamUseCase } from '../../../usecases/base/param_usecase';
 import { runDetectPotentialProblemsWorkflow } from './detect_potential_problems_workflow';
 import type { BugbotReviewOperationContext } from './bugbot/bugbot_review_operation_context';
 import type { BugbotTelemetryPort } from '../../../ports/bugbot_telemetry_ports';
+import type { MessageCatalogResolutionPort } from '../../../ports/message_catalog_ports';
 
 export type { BugbotFinding } from '../../../../domain/bugbot/finding';
 
@@ -16,6 +17,7 @@ export class DetectPotentialProblemsUseCase implements ParamUseCase<BugbotReview
         private readonly aiRepository: FindingsQueryPort,
         private readonly scm: BugbotScmPorts,
         private readonly telemetryPort?: BugbotTelemetryPort,
+        private readonly catalogResolver?: MessageCatalogResolutionPort,
     ) {}
 
     async invoke(param: BugbotReviewOperationContext): Promise<Result[]> {
@@ -23,6 +25,7 @@ export class DetectPotentialProblemsUseCase implements ParamUseCase<BugbotReview
             aiRepository: this.aiRepository,
             scm: this.scm,
             telemetryPort: this.telemetryPort,
+            catalogResolver: this.catalogResolver,
         });
     }
 }

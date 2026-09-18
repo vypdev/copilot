@@ -2,9 +2,9 @@
 
 - Status: Implemented — automated architecture, UX, documentation, and coverage gates complete; controlled live GitHub permission-path evidence remains external
 - Date: 2026-09-11
-- Last updated: 2026-09-12
+- Last updated: 2026-09-14
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-09-12
+- Last verified: 2026-09-14
 - Owners: Copilot maintainers
 - Scope: interactive/non-interactive installation planning, file and resource provisioning, credential validation, and read-only diagnosis
 - Related issues/PRs: merge-queue readiness SDD; architecture quality and
@@ -47,7 +47,9 @@ but unusable, overwrite hand-maintained files, or expose credentials.
    managed files require approval and backups.
 6. Doctor compares the repository to the same expected configuration and emits
    stable, ordered `pass`, `warn`, `fail`, or dependency-blocked `skipped`
-   checks without mutation. Local checks continue after setup-PAT failure.
+   checks without mutation. Local checks continue after setup-PAT failure. One
+   resolved repository-locale catalog supplies every human heading, summary,
+   state, and action in the report; the default and atomic fallback are English.
 
 ### 2.3 Evidence and contract classification
 
@@ -102,6 +104,11 @@ organization value that GitHub Actions will expose.
 3. `.env` is not a supported credential source.
 4. Organization storage MUST be permission-checked and safely scoped.
 5. Merge-queue mode fails closed unless workflow support is proven or attested.
+6. Setup remains authoritative English while it creates the repository profile;
+   subsequent doctor output uses the configured repository locale. Issue and
+   pull-request overrides never select setup or doctor language.
+7. Raw PAT, credential-health, rule, and workflow-provider messages never enter
+   a setup plan or doctor report.
 
 ## 5. Current versus proposed product journey
 
@@ -160,7 +167,7 @@ existing resources and avoid duplicate shadowing.
 | features | all except inactivity closure | named `SetupFeature` booleans | config file → prompts |
 | branches | `master`, `develop`, standard prefixes | non-empty, no whitespace | repository Variables |
 | assignment | 1 assignee, 1 reviewer | 0–10 / 0–15 | Variables |
-| locales | `en-US` | supported locale strings | Variables |
+| locales | repository `en-US`; issue/PR inherit | any valid canonical BCP-47 tag; reviewed `en`/`es`, dynamic otherwise | Variables; repository → issue/PR inheritance |
 | agent roles | `codex` / `openai/gpt-5.6-luna` | `codex`, `opencode`, `cursor` + allowed model | Variables |
 | Bugbot | low, smart in setup, non-blocking | bounded enums/1–100 comments | Variables |
 | storage | repository, preserve existing | repository/org per resource | remote GitHub |
@@ -177,8 +184,8 @@ rules, secret serialization, backups, and confirmation are not configurable.
 | Boundary | Owns | Must not own/import |
 |---|---|---|
 | Domain | setup plan/check/value types | prompts/Octokit/fs |
-| Policies | defaults, immutable clone/questionnaire, validation, storage, plans, doctor report | terminal UI |
-| Use cases | drive questionnaire, credential decisions, provision, doctor probes | provider DTOs |
+| Policies | defaults, immutable clone/questionnaire, validation, storage, plans, typed message catalogs, doctor report | terminal I/O or language/provider selection |
+| Use cases | drive questionnaire, credential decisions, provision, doctor probes, resolve one complete doctor catalog | provider DTOs or feature-local language branches |
 | Ports | raw terminal, render/present/confirm, workspace, narrow remote queries/commands, health | provider implementation |
 | Adapters | terminal mechanics, presenters, filesystem, narrow Octokit reads/writes, health query/bootstrap | product defaults/question order |
 | CLI composition | command flags and concrete wiring | duplicated validation |
@@ -209,8 +216,16 @@ Complete: **Copilot setup is healthy.** 12 workflows, 8 templates, Variables, an
 The plan MUST group files, Variables, Secrets by name only, credentials by
 status/source scope, warnings, and merge-queue readiness. One confirmation is
 the primary action. Secret input is masked. Text and status words accompany
-icons; output remains readable at narrow terminal widths. English is the CLI
-fallback. Provider messages are summarized and technical causes disclosed later.
+icons; output remains readable at narrow terminal widths. Setup is English while
+creating the profile. Doctor uses the repository locale: English and Spanish are
+bundled, other valid locales use one bounded complete-catalog request, and any
+unavailable or invalid dynamic response falls back atomically to English.
+Provider messages are replaced by stable semantic reasons and one concrete
+recovery action rather than echoed or partially translated.
+
+Plan warnings derive only from the validated current setup configuration and
+current readiness facts. Callers cannot inject migration, compatibility, or
+arbitrary warning text into the pure plan builder.
 
 ## 10. Failure, recovery, and cleanup
 
@@ -238,7 +253,9 @@ one check is `fail`; `warn` and `skipped` preserve a successful exit when no
 failure exists. Every check has a stable ID, status, summary, safe evidence,
 blocker IDs, and an action where useful. Reports render in declared order even
 when independent read-only probes complete out of order. Logs correlate
-owner/repository but redact values. No telemetry service is required.
+owner/repository but redact values. Catalog resolution records requested locale,
+resolved locale, exact/base/dynamic/fallback source, descriptor count, and a
+stable fallback reason without storing prose. No telemetry service is required.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
@@ -259,12 +276,13 @@ manual reversal.
 | Questionnaire/wizard/idempotency | 18 | transitions, immutability, cancel, preserve, replace |
 | Credentials/provider adapters | 18 | valid/invalid/missing/unverifiable/groups |
 | Workflows/assets/schema | 14 | selection, parity, readiness, permissions |
-| Prompt/CLI UX/sanitization | 12 | masking, status order, non-interactive |
+| Prompt/CLI UX/sanitization/localization | 18 | masking, status order, non-interactive, English default, Spanish exact/base, arbitrary locale, atomic fallback, hostile diagnostic suppression |
 | Integration/security/cutover | 12 | backup, org scope, doctor, no `.env` |
-| **Total** | **98** | no double counting |
+| **Total** | **104** | no double counting |
 
-Global coverage thresholds remain; questionnaire and doctor report policies
-MUST reach 100% statements/branches/functions/lines, and changed setup
+Global coverage thresholds remain; questionnaire, doctor catalog/report, shared
+merge-readiness message, and doctor presenter policies MUST reach 100%
+statements/branches/functions/lines, and changed setup
 application modules MUST reach at least 90% branch coverage. Tests use temporary directories, fake prompts and GitHub adapters, no
 live services. Workflow checks parse YAML. Manual evidence covers terminal
 widths, canceled prompts, secret masking, and GitHub permission variants.
@@ -289,6 +307,15 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 7. Given doctor, no mutation port is called and unhealthy state returns non-zero.
 8. Given merge-queue without proven support, setup/doctor reports fail closed.
 9. Given output inspection, no secret value appears.
+10. Given no explicit locale, doctor renders one complete English report.
+11. Given `es-MX`, doctor resolves the reviewed Spanish base catalog while
+    keeping check IDs, enums, branch names, and credential names unchanged.
+12. Given a valid non-bundled locale, doctor requests one complete catalog and
+    reuses it for report checks, merge readiness, and terminal presentation.
+13. Given an invalid dynamic catalog response, every human string in the doctor
+    artifact falls back to English rather than mixing languages.
+14. Given hostile PAT, credential-health, or rule-provider prose, doctor omits
+    the raw value and renders only the catalogued reason and recovery action.
 
 ## 17. Requirements traceability
 
@@ -311,7 +338,7 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 ## 19. Definition of Done
 
 - [x] Every new option has default, bounds, precedence, persistence, retirement/rejection, and security rules.
-- [x] The 98-case budget and coverage thresholds pass.
+- [x] The 104-case budget and coverage thresholds pass.
 - [x] Setup cancel/retry/partial state and doctor read-only behavior pass.
 - [x] Secrets are absent from plans, config, logs, errors, and backups.
 - [x] Workflow/assets, documentation, and catalog checks pass.

@@ -1,0 +1,39 @@
+---
+title: Pre-branch SDDs
+description: Clarify and publish a specification before implementation starts.
+---
+
+# Pre-branch SDDs
+
+`pre-branch-sdd: true` enables a specification gate for admitted **feature** issues and issues marked `contract-change`. It requires `issue-managed-branches: true` and an agent configuration that can return structured responses. The default is `false`.
+
+The repository must already contain a valid `specs/catalog.json`, `specs/README.md`, and `specs/_template.md`. The catalog identifies the owning SDD. The Action can update that SDD, add a companion SDD to its capability, or create a new proposed capability when the catalog evidence and referenced paths are valid. It does not generate PRDs or ADRs in this flow.
+
+## Issue flow
+
+1. Open an admitted issue with a feature type or `contract-change`, then add `in-progress`.
+2. The Action adds `SDD`, analyzes the issue against the catalog, and posts one **SDD work status** comment. If it finds blocking questions, it waits in `state:specifying` without drafting a document or creating a branch.
+3. Answer each question in an issue comment using `SDD Q1: your answer`, `SDD Q2: your answer`, and so on. The issue author answers questions assigned to the author; a repository member answers maintainer questions. A comment can answer several numbered questions. The Action ignores answers from other accounts.
+4. When all questions are answered, the Action analyzes the answers again. It may ask another bounded round of questions. Once the contract is clear, it drafts and validates the SDD in an isolated temporary worktree.
+5. The Action creates the linked issue branch, commits only the validated SDD and any required catalog files, pushes the commit, and verifies the exact remote branch. It updates the status comment, adds `branched`, and moves to `state:working`.
+
+The status comment uses the effective issue locale (Spanish and English are bundled, with English fallback). It shows the owning SDD, each question and its owner, the retained branch if one exists, and the verified commit. The first branch commit contains the SDD; implementation starts afterward.
+
+## Edits, retries, and revisions
+
+If the issue body, human title, or source branch changes while an SDD is being prepared, the Action reanalyzes or blocks publication so it cannot publish a stale contract. A duplicate event reuses the status comment and branch. A push that succeeded before the comment update can be recovered from the same remote branch.
+
+If the issue materially changes after publication, the Action retains the linked branch and its first commit, removes `branched` while the revision is pending, clarifies the changed contract, and publishes a validated SDD revision on that branch. `branched` returns only after the remote revision is verified. Resolve a blocked status on the existing issue and rerun its workflow; a new branch is not needed.
+
+## Configuration example
+
+```yaml
+- uses: vypdev/copilot@v3
+  with:
+    token: ${{ secrets.PAT }}
+    issue-managed-branches: true
+    pre-branch-sdd: true
+    development-branch: develop
+```
+
+See [Branch management](/issues/branch-management) for the standard flow and [Specifications](/development/specifications) for the catalog format.

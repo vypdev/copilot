@@ -81,32 +81,6 @@ export const INPUT_KEYS = {
     PROJECT_COLUMN_ISSUE_IN_PROGRESS: 'project-column-issue-in-progress',
     PROJECT_COLUMN_PULL_REQUEST_IN_PROGRESS: 'project-column-pull-request-in-progress',
 
-    // Images
-    IMAGES_ON_ISSUE: 'images-on-issue',
-    IMAGES_ON_PULL_REQUEST: 'images-on-pull-request',
-    IMAGES_ON_COMMIT: 'images-on-commit',
-    IMAGES_ISSUE_AUTOMATIC: 'images-issue-automatic',
-    IMAGES_ISSUE_FEATURE: 'images-issue-feature',
-    IMAGES_ISSUE_BUGFIX: 'images-issue-bugfix',
-    IMAGES_ISSUE_DOCS: 'images-issue-docs',
-    IMAGES_ISSUE_CHORE: 'images-issue-chore',
-    IMAGES_ISSUE_RELEASE: 'images-issue-release',
-    IMAGES_ISSUE_HOTFIX: 'images-issue-hotfix',
-    IMAGES_PULL_REQUEST_AUTOMATIC: 'images-pull-request-automatic',
-    IMAGES_PULL_REQUEST_FEATURE: 'images-pull-request-feature',
-    IMAGES_PULL_REQUEST_BUGFIX: 'images-pull-request-bugfix',
-    IMAGES_PULL_REQUEST_RELEASE: 'images-pull-request-release',
-    IMAGES_PULL_REQUEST_HOTFIX: 'images-pull-request-hotfix',
-    IMAGES_PULL_REQUEST_DOCS: 'images-pull-request-docs',
-    IMAGES_PULL_REQUEST_CHORE: 'images-pull-request-chore',
-    IMAGES_COMMIT_AUTOMATIC: 'images-commit-automatic',
-    IMAGES_COMMIT_FEATURE: 'images-commit-feature',
-    IMAGES_COMMIT_BUGFIX: 'images-commit-bugfix',
-    IMAGES_COMMIT_RELEASE: 'images-commit-release',
-    IMAGES_COMMIT_HOTFIX: 'images-commit-hotfix',
-    IMAGES_COMMIT_DOCS: 'images-commit-docs',
-    IMAGES_COMMIT_CHORE: 'images-commit-chore',
-
     // Workflows
     RELEASE_WORKFLOW: 'release-workflow',
     HOTFIX_WORKFLOW: 'hotfix-workflow',
@@ -128,7 +102,6 @@ export const INPUT_KEYS = {
     BRANCH_MANAGEMENT_EMOJI: 'branch-management-emoji',
 
     // Labels
-    BRANCH_MANAGEMENT_LAUNCHER_LABEL: 'branch-management-launcher-label',
     BUGFIX_LABEL: 'bugfix-label',
     BUG_LABEL: 'bug-label',
     HOTFIX_LABEL: 'hotfix-label',
@@ -157,7 +130,8 @@ export const INPUT_KEYS = {
     // Lifecycle label inputs
     STATE_AI_PROCESSING_LABEL: 'state-ai-processing-label',
     STATE_PLANNED_LABEL: 'state-planned-label',
-    STATE_IN_PROGRESS_LABEL: 'state-in-progress-label',
+    STATE_WORKING_LABEL: 'state-working-label',
+    STATE_SPECIFYING_LABEL: 'state-specifying-label',
     STATE_REVIEWING_LABEL: 'state-reviewing-label',
     STATE_CHANGES_REQUESTED_LABEL: 'state-changes-requested-label',
     STATE_VERIFIED_LABEL: 'state-verified-label',
@@ -204,6 +178,7 @@ export const INPUT_KEYS = {
     ISSUE_TYPE_TASK_COLOR: 'issue-type-task-color',
 
     // Locale
+    REPOSITORY_LOCALE: 'repository-locale',
     ISSUES_LOCALE: 'issues-locale',
     PULL_REQUESTS_LOCALE: 'pull-requests-locale',
 
@@ -236,12 +211,14 @@ export const INPUT_KEYS = {
     RELEASE_TREE: 'release-tree',
     DOCS_TREE: 'docs-tree',
     CHORE_TREE: 'chore-tree',
+    ISSUE_WORKFLOW_PROFILE: 'issue-workflow-profile',
 
     // Commit
     COMMIT_PREFIX_TRANSFORMS: 'commit-prefix-transforms',
 
     // Issue
-    BRANCH_MANAGEMENT_ALWAYS: 'branch-management-always',
+    ISSUE_MANAGED_BRANCHES: 'issue-managed-branches',
+    PRE_BRANCH_SDD: 'pre-branch-sdd',
     REOPEN_ISSUE_ON_PUSH: 'reopen-issue-on-push',
     DESIRED_ASSIGNEES_COUNT: 'desired-assignees-count',
 

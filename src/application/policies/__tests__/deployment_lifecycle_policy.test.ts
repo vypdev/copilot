@@ -12,8 +12,8 @@ const operation = (phase: DeploymentOperationSnapshot["phase"], overrides: Parti
 
 describe("projectDeploymentLabels", () => {
   it.each([
-    ["preparing", "state:in-progress"],
-    ["publishing", "state:in-progress"],
+    ["preparing", "state:working"],
+    ["publishing", "state:working"],
     ["promotion_pr_pending", "state:reviewing"],
     ["reconciliation_pending", "state:reviewing"],
     ["completed", "state:verified"],

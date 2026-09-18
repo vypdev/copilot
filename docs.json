@@ -158,6 +158,16 @@
           "title": "Failure behavior",
           "href": "/agents/failure-policy",
           "icon": "triangle-exclamation"
+        },
+        {
+          "title": "Repository collaboration",
+          "href": "/agents/repository-collaboration",
+          "icon": "code-branch"
+        },
+        {
+          "title": "Guidance troubleshooting",
+          "href": "/agents/repository-guidance-troubleshooting",
+          "icon": "wrench"
         }
       ]
     },
@@ -334,6 +344,11 @@
           "icon": "play"
         },
         {
+          "title": "Configurable workflows",
+          "href": "/issues/configurable-workflows",
+          "icon": "list-check"
+        },
+        {
           "title": "Assignees and projects",
           "href": "/issues/assignees-and-projects",
           "icon": "users"
@@ -342,6 +357,11 @@
           "title": "Branch management",
           "href": "/issues/branch-management",
           "icon": "code-branch"
+        },
+        {
+          "title": "Pre-branch SDDs",
+          "href": "/issues/pre-branch-sdds",
+          "icon": "file-lines"
         },
         {
           "title": "Branch synchronization",
@@ -408,6 +428,11 @@
           "title": "Release",
           "href": "/issues/type/release",
           "icon": "tag"
+        },
+        {
+          "title": "Help",
+          "href": "/issues/type/help",
+          "icon": "circle-question"
         }
       ]
     },
@@ -434,6 +459,11 @@
           "title": "Capabilities",
           "href": "/pull-requests/capabilities",
           "icon": "list"
+        },
+        {
+          "title": "Guarded approval",
+          "href": "/pull-requests/guarded-approval",
+          "icon": "square-check"
         },
         {
           "title": "AI PR description",

@@ -4,16 +4,14 @@ import type { BranchListQueryPort, BoundBranchListQueryPort } from '../../applic
 import type {
   BoundBranchDependencyQueryPort,
   BoundBranchSyncComparisonPort,
-  BoundBranchSyncNotificationPort,
   BoundBranchSyncWorkspacePort,
   BranchDependencyQueryPort,
   BranchSyncComparisonPort,
-  BranchSyncNotificationPort,
   BranchSyncWorkspacePort,
 } from '../../application/ports/branch_sync_ports';
 import type {
   BoundIssueCommentPublicationPort,
-  BoundIssuePushNotificationPort,
+  BoundIssueReopenPort,
   IssueCommentPublicationPort,
   IssueNotificationPort,
 } from '../../application/ports/issue_lifecycle_ports';
@@ -228,17 +226,17 @@ export function bindIssueCommentPublication(
   return Object.freeze<BoundIssueCommentPublicationPort>({
     addComment: (issueNumber, comment) => port.addComment(binding.owner, binding.repository, issueNumber, comment, binding.token),
     updateComment: (issueNumber, commentId, comment) => port.updateComment(binding.owner, binding.repository, issueNumber, commentId, comment, binding.token),
+    removeComment: (issueNumber, commentId) => port.removeComment(binding.owner, binding.repository, issueNumber, commentId, binding.token),
     listIssueComments: (issueNumber) => port.listIssueComments(binding.owner, binding.repository, issueNumber, binding.token),
   });
 }
 
-export function bindIssuePushNotification(
-  port: IssueNotificationPort,
+export function bindIssueReopen(
+  port: Pick<IssueNotificationPort, 'openIssue'>,
   binding: RepositoryCredentialBinding,
-): BoundIssuePushNotificationPort {
-  return Object.freeze<BoundIssuePushNotificationPort>({
+): BoundIssueReopenPort {
+  return Object.freeze<BoundIssueReopenPort>({
     openIssue: (issueNumber) => port.openIssue(binding.owner, binding.repository, issueNumber, binding.token),
-    addComment: (issueNumber, comment) => port.addComment(binding.owner, binding.repository, issueNumber, comment, binding.token),
   });
 }
 
@@ -329,17 +327,6 @@ export function bindBranchComparison(
       workingBranch,
       binding.token,
     ),
-  });
-}
-
-export function bindBranchSyncNotification(
-  port: BranchSyncNotificationPort,
-  binding: RepositoryCredentialBinding,
-): BoundBranchSyncNotificationPort {
-  return Object.freeze<BoundBranchSyncNotificationPort>({
-    listIssueComments: (issueNumber) => port.listIssueComments(binding.owner, binding.repository, issueNumber, binding.token),
-    addComment: (issueNumber, comment) => port.addComment(binding.owner, binding.repository, issueNumber, comment, binding.token),
-    updateComment: (issueNumber, commentId, comment) => port.updateComment(binding.owner, binding.repository, issueNumber, commentId, comment, binding.token),
   });
 }
 

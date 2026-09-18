@@ -4,7 +4,7 @@ import { buildInitialLabelProvisioningPlan } from '../initial_label_provisioning
 function createLabels(overrides: Partial<Record<keyof Labels, string>> = {}): Labels {
   return Object.assign(
     new Labels(
-      '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+      '', '', '', '', '', '', '', '', '', '', '', '', '', '',
       '', '', '', '', '', '', '', '', '', '',
     ),
     overrides,
@@ -15,21 +15,21 @@ describe('initial label provisioning policy', () => {
   it('maps configured labels to stable creation metadata', () => {
     const plan = buildInitialLabelProvisioningPlan(
       new Labels(
-        'branched', 'bug', 'bugfix', 'hotfix', 'enhancement', 'feature', 'release', 'question', 'help',
+        'bug', 'bugfix', 'hotfix', 'enhancement', 'feature', 'release', 'question', 'help',
         'deploy', 'deployed', 'docs', 'documentation', 'chore', 'maintenance', 'p0', 'p1', 'p2', 'none',
         'xxl', 'xl', 'l', 'm', 's', 'xs',
       ),
       [],
     );
 
-    expect(plan.configured.missing).toHaveLength(35);
+    expect(plan.configured.missing).toHaveLength(39);
     expect(plan.configured).toEqual({
       existing: 0,
       missing: expect.arrayContaining([
         {
           name: 'branched',
-          color: '0E8A16',
-          description: 'Label to trigger branch management actions',
+          color: '1D76DB',
+          description: 'The linked branch and required SDD commit are verified.',
         },
         {
           name: 'state:planned',
@@ -54,7 +54,6 @@ describe('initial label provisioning policy', () => {
   it('omits blanks and deduplicates names case-insensitively across categories', () => {
     const plan = buildInitialLabelProvisioningPlan(
       createLabels({
-        branchManagementLauncherLabel: 'existing',
         bug: 'Existing',
         feature: '0%',
         release: 'new',
@@ -63,7 +62,7 @@ describe('initial label provisioning policy', () => {
       ['EXISTING'],
     );
 
-    expect(plan.configured.missing).toHaveLength(12);
+    expect(plan.configured.missing).toHaveLength(17);
     expect(plan.configured).toEqual({
       existing: 1,
       missing: expect.arrayContaining([
@@ -71,7 +70,7 @@ describe('initial label provisioning policy', () => {
         expect.objectContaining({ name: 'new' }),
         expect.objectContaining({ name: 'state:ai-processing' }),
         expect.objectContaining({ name: 'state:planned' }),
-        expect.objectContaining({ name: 'state:in-progress' }),
+        expect.objectContaining({ name: 'state:working' }),
         expect.objectContaining({ name: 'state:reviewing' }),
         expect.objectContaining({ name: 'state:changes-requested' }),
         expect.objectContaining({ name: 'state:verified' }),

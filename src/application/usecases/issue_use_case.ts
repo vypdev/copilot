@@ -1,11 +1,13 @@
 import type { Execution } from "../../data/model/execution";
 import { Result } from "../../data/model/result";
+import { ApplicationError } from '../errors/application_error';
 import { logInfo } from "../ports/logging_ports";
 import { getTaskEmoji } from "../../utils/task_emoji";
 import { ParamUseCase } from "./base/param_usecase";
 import type { IssueWorkflowSteps } from "./issue_workflow_steps";
 import { runIssueWorkflow, type IssueWorkflowRouteContext } from "./issue_workflow";
 import type { BoundActorAuthorizationPort } from '../ports/actor_authorization_ports';
+import type { BoundIssueCommentQueryPort } from '../ports/issue_lifecycle_ports';
 import { projectCheckPermissionsContext } from './steps/common/check_permissions_workflow';
 import { projectUpdateTitleContext } from './steps/common/update_title_workflow';
 import { projectIssueContentLinkContext } from './steps/common/project_content_link_workflow';
@@ -19,6 +21,8 @@ import {
   type RecommendStepsOutcome,
 } from './push_single_action_contexts';
 import type { BranchConfigurationPatch } from './issue_workflow_context';
+import { ISSUE_START_LABEL } from '../../domain/issue_start_policy';
+import type { PreBranchSddGateUseCase } from './sdd/pre_branch_sdd_gate_use_case';
 
 export class IssueUseCase implements ParamUseCase<Execution, Result[]> {
   taskId: string = "IssueUseCase";
@@ -27,16 +31,39 @@ export class IssueUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly recommendStepsUseCase: ParamUseCase<RecommendStepsContext, RecommendStepsOutcome>,
     private readonly answerIssueHelpUseCase: ParamUseCase<AnswerIssueHelpContext, Result[]>,
     private readonly workflowSteps: IssueWorkflowSteps,
+    private readonly issueCommentQueryPort: BoundIssueCommentQueryPort,
     private readonly actorAuthorizationPort?: BoundActorAuthorizationPort,
+    private readonly preBranchSddGate?: PreBranchSddGateUseCase,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
     logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`);
+    if (param.preBranchSdd && !param.issue.issueManagedBranches) {
+      const message = 'pre-branch-sdd requires issue-managed-branches; correct the Action configuration before starting work.';
+      return [new Result({
+        id: this.taskId, success: false, executed: true, steps: [message],
+        errors: [new ApplicationError('configuration.invalid', message)],
+      })];
+    }
+    const admission = param.issueWorkflowAdmission;
+    if (param.isIssue && admission && admission.status !== 'eligible') {
+      return [buildIssueWorkflowAdmissionResult(this.taskId, admission)];
+    }
+    if (!param.issue.issueManagedBranches && admission?.status === 'eligible'
+      && (admission.kind === 'release' || admission.kind === 'hotfix')) {
+      const message = `${admission.kind} issues require issue-managed-branches before work can start.`;
+      return [new Result({
+        id: this.taskId, success: false, executed: true, steps: [message],
+        errors: [new ApplicationError('configuration.invalid', message)],
+      })];
+    }
     const outcome = await runIssueWorkflow(projectIssueWorkflowRouteContext(param), this.taskId, {
       recommendStepsUseCase: this.recommendStepsUseCase,
       answerIssueHelpUseCase: this.answerIssueHelpUseCase,
       workflowSteps: this.workflowSteps,
       actorAuthorizationPort: this.actorAuthorizationPort,
+      preBranchSddGate: this.preBranchSddGate,
+      issueCommentQueryPort: this.issueCommentQueryPort,
       sharedContexts: {
         permissions: projectCheckPermissionsContext(param),
         title: projectUpdateTitleContext(param),
@@ -52,23 +79,74 @@ export class IssueUseCase implements ParamUseCase<Execution, Result[]> {
   }
 }
 
+function buildIssueWorkflowAdmissionResult(
+  taskId: string,
+  admission: NonNullable<Execution['issueWorkflowAdmission']>,
+): Result {
+  if (admission.status === 'unmanaged') {
+    return new Result({
+      id: taskId,
+      success: true,
+      executed: false,
+      steps: ['⏭️ Issue is unmanaged: no recognized enabled issue workflow label was found.'],
+    });
+  }
+  const message = admission.status === 'disabled'
+    ? `Issue workflow "${admission.kind}" is disabled in the repository profile.`
+    : admission.status === 'conflict'
+      ? `Issue has conflicting workflow labels: ${admission.kinds.join(', ')}.`
+      : admission.status === 'invalid'
+        ? `The ${admission.kind} Issue Form is incomplete; ${admission.missingHeadings.length > 0
+          ? `missing headings: ${admission.missingHeadings.join(', ')}`
+          : `invalid fields: ${admission.invalidFields?.join(', ') ?? 'unknown'}`}.`
+        : 'Issue workflow admission failed.';
+  return new Result({
+    id: taskId,
+    success: false,
+    executed: true,
+    steps: [`🛑 ${message}`],
+    errors: [new ApplicationError('configuration.invalid', message)],
+  });
+}
+
 function projectIssueWorkflowRouteContext(param: Execution): IssueWorkflowRouteContext {
-  const recommendation = !param.issue.opened && !param.issue.descriptionEdited
+  const started = param.issueStartDecision.started;
+  const startEvent = param.issue.labeled && param.issue.labelAdded === ISSUE_START_LABEL;
+  const recommendation = !started || (!startEvent && !param.issue.descriptionEdited && !param.issue.opened)
     ? undefined
-    : param.labels.isQuestion || param.labels.isHelp
-      ? 'answer-help' as const
-      : param.labels.isRelease
+    : param.labels.isRelease || param.labels.isHotfix
         ? undefined
-        : 'recommend' as const;
+        : param.labels.isQuestion || param.labels.isHelp
+          ? 'answer-help' as const
+          : 'recommend' as const;
+  const recommendSteps = projectRecommendStepsContext(param);
   return Object.freeze({
+    started,
+    sddRequired: param.issueStartDecision.sddRequired,
+    issueNumber: param.issue.number,
+    branchName: param.currentConfiguration.workingBranch,
+    sddContext: param.issueStartDecision.sddRequired ? {
+      issueNumber: param.issue.number,
+      issueTitle: param.issue.title,
+      issueBody: param.issue.body,
+      issueAuthor: param.issue.creator,
+      issueUrl: param.issue.url,
+      issueLocale: param.locale.issue,
+      admittedKind: param.issueWorkflowKind ?? 'unknown',
+      profileDigest: param.issueWorkflowProfileDigest,
+      baseBranch: param.labels.isHotfix ? (param.hotfix.baseBranch ?? param.branches.main) : param.branches.development,
+      tokenUser: param.tokenUser ?? '',
+      agentConfiguration: recommendSteps.agentConfiguration,
+    } : undefined,
     cleanIssueBranches: param.cleanIssueBranches,
-    branched: param.isBranched,
+    branchRequired: param.issueStartDecision.branchRequired,
     membersOnly: param.ai.getAiMembersOnly(),
     actor: param.actor,
     newIssue: param.eventName === 'issues' && param.inputs?.action === 'opened',
+    onboardingEligible: !param.labels.isRelease && !param.labels.isHotfix,
     ...(param.tokenUser ? { tokenUser: param.tokenUser } : {}),
     ...(recommendation ? { recommendation } : {}),
-    recommendSteps: projectRecommendStepsContext(param),
+    recommendSteps,
   });
 }
 

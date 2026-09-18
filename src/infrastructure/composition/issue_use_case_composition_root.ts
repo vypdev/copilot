@@ -26,18 +26,22 @@ import { AnswerIssueHelpUseCase } from "../../application/usecases/steps/issue/a
 import { BranchLifecycleRepository } from "../../data/repository/branch_lifecycle_repository";
 import { BranchNameRepository } from "../../data/repository/branch_name_repository";
 import { LinkedBranchRepository } from "../../data/repository/branch/linked_branch_repository";
+import { LinkedBranchReadinessRepository } from "../../data/repository/branch/linked_branch_readiness_repository";
+import { ReconcileBranchReadinessUseCase } from "../../application/usecases/steps/issue/reconcile_branch_readiness_use_case";
+import { PreBranchSddGateUseCase } from "../../application/usecases/sdd/pre_branch_sdd_gate_use_case";
+import { PreBranchSddWorkspaceAdapter } from '../pre_branch_sdd_workspace_adapter';
+import { bindIssueCommentPublication } from './push_single_action_capability_port_binding';
+import { createIssueLabelRepository } from './issue_labels_composition_root';
 import { GitCliRepository } from "../../data/repository/git_cli_repository";
 import { IssueAssignmentRepository } from "../../data/repository/issue/issue_assignment_repository";
 import { IssueClosureRepository } from "../../data/repository/issue/issue_closure_repository";
 import { IssueContentRepository } from "../../data/repository/issue/issue_content_repository";
 import { IssueLifecycleRepository } from "../../data/repository/issue/issue_lifecycle_repository";
 import { IssueMetadataRepository } from "../../data/repository/issue/issue_metadata_repository";
-import { IssueNotificationRepository } from "../../data/repository/issue/issue_notification_repository";
 import { IssueTitleRepository } from "../../data/repository/issue/issue_title_repository";
 import { IssueTypeAssignmentRepository } from "../../data/repository/issue/issue_type_assignment_repository";
 import { WorkflowDispatchRepository } from "../../data/repository/workflow/workflow_dispatch_repository";
 import { TimerBranchPropagationDelayAdapter } from "../time/timer_branch_propagation_delay_adapter";
-import { TimerDelayAdapter } from "../time/timer_delay_adapter";
 import { createFindingsQueryPort } from "./agent_capability_composition_root";
 import { composeIssueUseCase } from "./issue_use_case_composition";
 import { createOrganizationMembersCompositionRoot } from "./organization_members_composition_root";
@@ -45,9 +49,9 @@ import { createProjectBoardCompositionRoot } from "./project_board_composition_r
 import { createActorAuthorizationRepository } from './actor_authorization_composition_root';
 import {
   bindIssueTitle,
+  bindIssueCommentQuery,
   bindIssueDescriptionQuery,
   bindOrganizationMembers,
-  bindIssueNotification,
   bindProjectContent,
   type RepositoryCredentialBinding,
 } from './shared_capability_port_binding';
@@ -56,8 +60,9 @@ import {
   bindBranchLifecycle,
   bindBranchWorkflow,
   bindIssueAssignee,
-  bindIssueClosure,
+  bindIssueState,
   bindIssueTypeAssignment,
+  bindIssueLabels,
   bindLinkedBranchCommand,
   bindOrganizationMemberSelection,
   bindProjectBoardCommands,
@@ -72,10 +77,6 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
   const issueLifecycle = new IssueLifecycleRepository(
     createIssueLifecycleClient(),
   );
-  const issueNotification = new IssueNotificationRepository(
-    issueLifecycle,
-    issueContent,
-  );
   const organizationMembers = createOrganizationMembersCompositionRoot();
   const branchLifecycle = new BranchLifecycleRepository(createBranchClient());
   const branchName = new BranchNameRepository();
@@ -84,7 +85,6 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
     createGraphqlTransportClient(),
   );
   const branchPropagationDelay = new TimerBranchPropagationDelayAdapter();
-  const eventualConsistencyDelay = new TimerDelayAdapter();
   const projectBoard = createProjectBoardCompositionRoot();
   const issueAssignee = new IssueAssignmentRepository(createIssueAssignmentClient());
   const issueClosure = new IssueClosureRepository(issueLifecycle, issueContent);
@@ -102,15 +102,20 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
   );
   const boundProjectBoard = bindProjectBoardCommands(projectBoard.command, binding);
   const boundBranchLifecycle = bindBranchLifecycle(branchLifecycle, binding);
-  const boundIssueClosure = bindIssueClosure(issueClosure, binding);
   const boundIssueAssignee = bindIssueAssignee(issueAssignee, binding);
   const boundOrganizationMembers = bindOrganizationMemberSelection(organizationMembers, binding);
   const boundLinkedBranch = bindLinkedBranchCommand(linkedBranch, binding);
+  const linkedBranchReadiness = new LinkedBranchReadinessRepository(createGraphqlTransportClient());
+  const boundLinkedBranchReadiness = {
+    getLinkedBranch: (issueNumber: number, branchName: string) => linkedBranchReadiness.getLinkedBranch(
+      binding.owner, binding.repository, issueNumber, branchName, binding.token,
+    ),
+  };
   const moveIssueToInProgress = new MoveIssueToInProgressUseCase(boundProjectBoard);
 
   const workflowSteps = {
     checkPermissions: new CheckPermissionsUseCase(bindOrganizationMembers(organizationMembers, binding)),
-    closeNotAllowedIssue: new CloseNotAllowedIssueUseCase(boundIssueClosure),
+    closeNotAllowedIssue: new CloseNotAllowedIssueUseCase(bindIssueState(issueClosure, binding)),
     removeIssueBranches: new RemoveIssueBranchesUseCase(boundBranchLifecycle),
     assignMemberToIssue: new AssignMemberToIssueUseCase(
       boundIssueAssignee,
@@ -118,10 +123,7 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
     ),
     updateTitle: new UpdateTitleUseCase(bindIssueTitle(issueTitle, binding)),
     updateIssueType: new UpdateIssueTypeUseCase(bindIssueTypeAssignment(issueTypeAssignment, binding)),
-    linkIssueProject: new LinkIssueProjectUseCase(
-      projectContent,
-      eventualConsistencyDelay,
-    ),
+    linkIssueProject: new LinkIssueProjectUseCase(projectContent),
     checkPriorityIssueSize: new CheckPriorityIssueSizeUseCase(boundProjectBoard),
     prepareBranches: new PrepareBranchesUseCase(
       boundBranchLifecycle,
@@ -131,6 +133,10 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
       boundLinkedBranch,
       branchPropagationDelay,
       moveIssueToInProgress,
+    ),
+    reconcileBranchReadiness: new ReconcileBranchReadinessUseCase(
+      boundLinkedBranchReadiness,
+      bindIssueLabels(createIssueLabelRepository(), binding),
     ),
     removeNotNeededBranches: new RemoveNotNeededBranchesUseCase(
       boundBranchLifecycle,
@@ -144,8 +150,19 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
 
   return composeIssueUseCase(
     new RecommendStepsUseCase(bindIssueDescriptionQuery(issueContent, binding), createFindingsQueryPort()),
-    new AnswerIssueHelpUseCase(bindIssueNotification(issueNotification, binding), createFindingsQueryPort()),
+    new AnswerIssueHelpUseCase(createFindingsQueryPort()),
     workflowSteps,
+    bindIssueCommentQuery(issueContent, binding),
     bindActorAuthorization(createActorAuthorizationRepository(), binding),
+    new PreBranchSddGateUseCase(
+      createFindingsQueryPort(),
+      new PreBranchSddWorkspaceAdapter(process.cwd(), binding.token),
+      bindIssueCommentPublication(issueContent, binding),
+      bindIssueLabels(createIssueLabelRepository(), binding),
+      bindActorAuthorization(createActorAuthorizationRepository(), binding),
+      bindIssueDescriptionQuery(issueContent, binding),
+      bindIssueTitle(issueTitle, binding),
+      boundLinkedBranchReadiness,
+    ),
   );
 }

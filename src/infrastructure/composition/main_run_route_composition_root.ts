@@ -69,10 +69,10 @@ import { OctokitDeploymentClientAdapter } from "../github/octokit_deployment_ada
 import { WorkflowDispatchRepository } from "../../data/repository/workflow/workflow_dispatch_repository";
 import { createWorkflowDispatchClient } from "./github_workflow_client_factory";
 import { randomUUID } from "node:crypto";
+import { ResolveMessageCatalogUseCase } from '../../application/usecases/localization/resolve_message_catalog_use_case';
 import type { BugbotScmBinding } from './bugbot_scm_port_factory';
 import {
   bindIssueDescriptionQuery,
-  bindIssueNotification,
   bindOrganizationMembers,
 } from './shared_capability_port_binding';
 import { bindPullRequestDescription } from './lifecycle_capability_port_binding';
@@ -82,7 +82,6 @@ import {
   bindBranchChangeSize,
   bindBranchComparison,
   bindBranchDependencies,
-  bindBranchSyncNotification,
   bindBranchSyncWorkspace,
   bindDeploymentContinuation,
   bindDeploymentGit,
@@ -93,7 +92,7 @@ import {
   bindDeploymentState,
   bindDeploymentTargetRules,
   bindIssueCommentPublication,
-  bindIssuePushNotification,
+  bindIssueReopen,
   bindManagedPullRequests,
   bindPullRequestBranchQuery,
   bindRepositoryRelease,
@@ -106,6 +105,7 @@ function createDetectPotentialProblemsUseCase(binding: BugbotScmBinding): Detect
     createFindingsQueryPort(),
     bugbot.scm,
     bugbot.telemetry,
+    new ResolveMessageCatalogUseCase(createLanguageQueryPort()),
   );
 }
 
@@ -115,6 +115,7 @@ export function createSingleActionUseCaseCompositionRoot(
   surface: MainRunCompositionSurface,
   binding: BugbotScmBinding,
 ): SingleActionUseCase {
+  const catalogResolver = new ResolveMessageCatalogUseCase(createLanguageQueryPort());
   const issueDescriptionQueryPort = createIssueContentCompositionRoot();
   const repositoryTagPort = surface === "github-workflow"
     ? new RepositoryTagRepository(createReleaseClient())
@@ -123,7 +124,7 @@ export function createSingleActionUseCaseCompositionRoot(
     ? new RepositoryReleasePublicationRepository(createReleaseClient())
     : undefined;
   const deploymentOrchestration = surface === "github-workflow"
-    ? createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, repositoryReleasePort!, binding)
+    ? createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, repositoryReleasePort!, binding, catalogResolver)
     : undefined;
   return new SingleActionUseCase(
     repositoryTagPort && repositoryReleasePort
@@ -133,7 +134,6 @@ export function createSingleActionUseCaseCompositionRoot(
     repositoryTagPort ? new CreateTagUseCase(bindRepositoryTag(repositoryTagPort, binding)) : undefined,
     new ThinkUseCase(
       bindIssueDescriptionQuery(issueDescriptionQueryPort, binding),
-      bindIssueNotification(createIssueNotificationRepository(), binding),
       createFindingsQueryPort(),
     ),
     createInitialSetupCompositionRoot(binding),
@@ -143,13 +143,14 @@ export function createSingleActionUseCaseCompositionRoot(
       bindIssueDescriptionQuery(issueDescriptionQueryPort, binding),
       createFindingsQueryPort(),
     ),
-    createCloseInactiveIssuesUseCase(binding),
+    createCloseInactiveIssuesUseCase(binding, catalogResolver),
     createActorAuthorizationRepository(),
     new PublishIssueCommentUseCase(bindIssueCommentPublication(issueDescriptionQueryPort, binding)),
     new ObserveBranchSyncUseCase(
       bindBranchDependencies(new BranchDependencyRepository(createGraphqlTransportClient()), binding),
       bindBranchComparison(new BranchCompareRepository(createBranchComparisonClient()), binding),
-      bindBranchSyncNotification(issueDescriptionQueryPort, binding),
+      bindIssueCommentPublication(issueDescriptionQueryPort, binding),
+      catalogResolver,
     ),
     deploymentOrchestration,
   );
@@ -159,6 +160,7 @@ function createDeploymentOrchestrationUseCase(
   issueDescriptionQueryPort: ReturnType<typeof createIssueContentCompositionRoot>,
   publication: RepositoryReleasePublicationRepository,
   binding: BugbotScmBinding,
+  catalogResolver: ResolveMessageCatalogUseCase,
 ): DeploymentOrchestrationUseCase {
   const deploymentClient = new OctokitDeploymentClientAdapter();
   return new DeploymentOrchestrationUseCase({
@@ -174,6 +176,7 @@ function createDeploymentOrchestrationUseCase(
     labels: bindDeploymentLabels(createIssueLabelRepository(), binding),
     issues: bindDeploymentIssues(createIssueClosureRepository(), binding),
     operationId: randomUUID,
+    catalogResolver,
   });
 }
 
@@ -201,7 +204,7 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
 
   return new IssueCommentUseCase(
     new CheckIssueCommentLanguageUseCase(
-      new CommentLanguageTranslationWorkflow(bugbot.scm.publication.issueComments, language),
+      new CommentLanguageTranslationWorkflow(language),
     ),
     new DetectBugbotFixIntentUseCase(
       findings,
@@ -209,18 +212,27 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
     ),
     new ThinkUseCase(
       bindIssueDescriptionQuery(createIssueContentCompositionRoot(), binding),
-      bindIssueNotification(createIssueNotificationRepository(), binding),
       findings,
     ),
     new BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit),
     new DoUserRequestUseCase(fixer, bugbotGit),
     createActorAuthorizationRepository(),
     bugbotGit,
-    new DismissBugbotFindingsUseCase({ contextPorts: bugbot.scm.context, resolutionPorts: bugbot.scm.resolution }),
-    new DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry),
+    new DismissBugbotFindingsUseCase({
+      contextPorts: bugbot.scm.context,
+      resolutionPorts: bugbot.scm.resolution,
+      catalogResolver: new ResolveMessageCatalogUseCase(language),
+    }),
+    new DetectPotentialProblemsUseCase(
+      findings,
+      bugbot.scm,
+      bugbot.telemetry,
+      new ResolveMessageCatalogUseCase(language),
+    ),
     pullRequestDescription,
     new RememberBugbotRuleUseCase(bugbot.rules),
     branchSync,
+    createIssueUseCaseCompositionRoot(binding),
   );
 }
 
@@ -248,7 +260,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
 
   return new PullRequestReviewCommentUseCase(
     new CheckPullRequestCommentLanguageUseCase(
-      new CommentLanguageTranslationWorkflow(bugbot.scm.publication.issueComments, language),
+      new CommentLanguageTranslationWorkflow(language),
     ),
     new DetectBugbotFixIntentUseCase(
       findings,
@@ -256,15 +268,23 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
     ),
     new ThinkUseCase(
       bindIssueDescriptionQuery(createIssueContentCompositionRoot(), binding),
-      bindIssueNotification(createIssueNotificationRepository(), binding),
       findings,
     ),
     new BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit),
     new DoUserRequestUseCase(fixer, bugbotGit),
     createActorAuthorizationRepository(),
     bugbotGit,
-    new DismissBugbotFindingsUseCase({ contextPorts: bugbot.scm.context, resolutionPorts: bugbot.scm.resolution }),
-    new DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry),
+    new DismissBugbotFindingsUseCase({
+      contextPorts: bugbot.scm.context,
+      resolutionPorts: bugbot.scm.resolution,
+      catalogResolver: new ResolveMessageCatalogUseCase(language),
+    }),
+    new DetectPotentialProblemsUseCase(
+      findings,
+      bugbot.scm,
+      bugbot.telemetry,
+      new ResolveMessageCatalogUseCase(language),
+    ),
     pullRequestDescription,
     new RememberBugbotRuleUseCase(bugbot.rules),
     branchSync,
@@ -276,7 +296,7 @@ export function createCommitUseCaseCompositionRoot(
   binding: BugbotScmBinding,
 ): CommitUseCase {
   return new CommitUseCase(
-    new NotifyNewCommitOnIssueUseCase(bindIssuePushNotification(createIssueNotificationRepository(), binding)),
+    new NotifyNewCommitOnIssueUseCase(bindIssueReopen(createIssueNotificationRepository(), binding)),
     new CheckChangesIssueSizeUseCase(
       bindProjectBoardCommands(projectBoardCommandPort, binding),
       bindIssueLabels(createIssueLabelRepository(), binding),

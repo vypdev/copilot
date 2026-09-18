@@ -8,6 +8,8 @@ import type {
 } from "../../domain/deployment_state_fence";
 import type { DeploymentConfigurationValues } from "../../domain/deployment_configuration";
 import type { CopilotLifecycleLabels } from "../../domain/copilot_lifecycle";
+import type { AgentConfiguration } from '../../domain/agent';
+import type { LocaleProfile } from '../../domain/locale';
 
 export interface ManagedPullRequestRecord {
   readonly number: number;
@@ -221,7 +223,8 @@ export interface DeploymentOrchestrationContext {
     readonly hotfixTree: string;
   };
   readonly workflows: { readonly release: string; readonly hotfix: string };
-  readonly locale: { readonly issue: string; readonly pullRequest: string };
+  readonly locale: LocaleProfile;
+  readonly agentConfiguration?: Readonly<AgentConfiguration>;
   readonly labels: {
     readonly isRelease: boolean;
     readonly isHotfix: boolean;

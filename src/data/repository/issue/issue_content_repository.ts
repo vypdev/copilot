@@ -1,4 +1,3 @@
-import { getCommentWatermark } from "../../../utils/comment_watermark";
 import { hasVisibleCommentContent } from '../../../domain/comment_content_policy';
 import { logDebugInfo, logError } from "../../../utils/logger";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
@@ -8,6 +7,8 @@ import type {
 } from "../../../infrastructure/github/ports/github_issue_provider_ports";
 import { requireArrayPage } from "../github/github_pagination_policy";
 import { toApplicationError } from '../../../application/errors/application_error';
+import { getGithubErrorStatus, isGithubPermissionDenied } from '../github/github_error_policy';
+import type { IssueCommentRemovalOutcome } from '../../../application/ports/issue_lifecycle_ports';
 
 export interface IssueComment {
     id: number;
@@ -90,15 +91,13 @@ export class IssueContentRepository {
             return;
         }
 
-        const watermark = getCommentWatermark(
-            options?.commitSha ? { commitSha: options.commitSha, owner, repo: repository } : undefined,
-        );
+        void options;
         const octokit = this.githubClient.getClient(token);
         await octokit.rest.issues.createComment({
             owner,
             repo: repository,
             issue_number: issueNumber,
-            body: `${comment}\n\n${watermark}`,
+            body: comment,
         });
         logDebugInfo(`Comment added to Issue ${issueNumber}.`);
     };
@@ -117,17 +116,45 @@ export class IssueContentRepository {
             return;
         }
 
-        const watermark = getCommentWatermark(
-            options?.commitSha ? { commitSha: options.commitSha, owner, repo: repository } : undefined,
-        );
+        void options;
         const octokit = this.githubClient.getClient(token);
         await octokit.rest.issues.updateComment({
             owner,
             repo: repository,
             comment_id: commentId,
-            body: `${comment}\n\n${watermark}`,
+            body: comment,
         });
         logDebugInfo(`Comment ${commentId} updated in Issue ${issueNumber}.`);
+    };
+
+    removeComment = async (
+        owner: string,
+        repository: string,
+        issueNumber: number,
+        commentId: number,
+        token: string,
+    ): Promise<IssueCommentRemovalOutcome> => {
+        const octokit = this.githubClient.getClient(token);
+        try {
+            await octokit.rest.issues.deleteComment({
+                owner,
+                repo: repository,
+                comment_id: commentId,
+            });
+            logDebugInfo(`Duplicate comment ${commentId} removed from Issue ${issueNumber}.`);
+            return 'removed';
+        } catch (error) {
+            const status = getGithubErrorStatus(error);
+            if (status === 404) {
+                logDebugInfo(`Duplicate comment ${commentId} was already absent from Issue ${issueNumber}.`);
+                return 'removed';
+            }
+            if (isGithubPermissionDenied(error)) {
+                logDebugInfo(`Duplicate comment ${commentId} cannot be removed from Issue ${issueNumber}; compacting it instead.`);
+                return 'compaction-required';
+            }
+            throw error;
+        }
     };
 
     listIssueComments = async (

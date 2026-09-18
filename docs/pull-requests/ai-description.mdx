@@ -1,6 +1,6 @@
 ---
 title: AI-Generated PR Description
-description: How the configured agent fills your pull request template from the issue and branch diff
+description: How the configured agent writes a concise pull request description from the diff and optional issue context
 ---
 
 # AI-Generated PR Description
@@ -10,32 +10,53 @@ description: How the configured agent fills your pull request template from the 
 
 1. The action determines the PR's **base** and **head** branch (target and source branch).
 2. The configured agent CLI runs in the repository workspace. It:
-   - Reads the repository's **pull request template** (see below).
-   - Computes the **diff** between base and head (e.g. `git diff base..head`) to understand what changed.
+   - Reads the repository's **pull request template** as content guidance and constraints.
+   - Computes the merge-base **diff** between base and head (`git diff base...head`) to understand what changed.
    - Uses the **issue description** (when the PR branch is linked to an issue) as context; otherwise it infers intent from the PR metadata and diff.
-3. The agent **fills the template** with a structured description: summary, scope of changes, technical details, how to test, breaking changes, deployment notes, etc., following the same sections and format as your template.
-4. The action writes the result to the PR body (prefixed with the issue number for reference).
+3. The agent returns bounded semantic fields for one short outcome paragraph, two to six changes, optional verified validation evidence, and optional review notes. The action validates and sanitizes those fields, then renders the fixed Markdown hierarchy; the model does not control arbitrary sections or closing-reference syntax.
+4. The request carries the effective PR locale (`pull-requests-locale`, otherwise `repository-locale`, otherwise `en-US`). The response must echo that exact canonical tag in `outputLocale`; a mismatch stops before the body changes.
+5. The action writes the validated result to the PR body according to the configured ownership mode.
 
 No pre-computed file list or patches are sent from the action; the agent has access to the workspace and computes the diff itself, similar to the [check progress](/single-actions) flow.
 
-## PR template as example for the AI
+## PR template as guidance
 
-The AI is instructed to use your repository's **pull request template** as the structure for the description. You should define:
+The AI reads your repository's **pull request template** for team-specific guidance:
 
-- **`.github/pull_request_template.md`** — This file is read by the configured `planner` agent runtime and used as the **skeleton** to fill. The agent keeps the same headings, bullet lists, checkboxes (`- [ ]`, `- [x]`), and separators, and fills each section with content derived from the diff and the issue.
+- **`.github/pull_request_template.md`** — This file is read by the configured `planner` agent runtime. Its instructions and relevant headings influence the result, but empty placeholders and generic sections are omitted.
 
-If you don't have a template, the agent will still produce a structured description, but defining a template ensures consistent, professional PR descriptions that match your team's expectations (e.g. Summary, Related Issues, Scope of Changes, Technical Details, How to Test, Breaking Changes, Deployment Notes, etc.).
+The generated body is normally under 4,000 characters and can never exceed
+12,000. It excludes emoji, separators, empty headings, generic checklists,
+file-by-file inventories, repeated statements, and unsupported claims that a
+test passed or a change has no impact. When no verification evidence is
+available, both validation fields are `null` and the entire section is omitted;
+Copilot does not add a “not run” placeholder. A template can add useful constraints,
+but it cannot force the agent to reproduce empty boilerplate.
+
+Review notes also require evidence. Removing code, configuration, inputs, or a
+symbol named “deprecated” does not by itself prove that consumers exist or that
+an upgrade, migration, compatibility, or rollout step is required. Copilot adds
+those notes only when the issue, diff, repository documentation, or verification
+evidence identifies a concrete affected consumer or transition.
+If repository evidence explicitly states that there are no installed users,
+external consumers, or persisted production state, Copilot treats removed
+contracts as a greenfield cutover: it does not add migration notes merely to
+repeat strict parsing, fail-closed behavior, rejected old shapes, or the absence
+of compatibility work. Those facts belong under **What changed** only when they
+help review the outcome. **Review notes** still appear for a concrete reviewer
+action or unresolved material risk.
 
 <Info>
-  **Recommendation:** Add a `.github/pull_request_template.md` in your repo with the sections you want (summary, scope, testing, breaking changes, etc.). The AI will use it as a guide and fill it with the information from the issue and the branch diff.
+  **Recommendation:** Keep the template short. Ask for the outcome, material changes, validation evidence, and conditional reviewer notes. The setup template follows this contract.
 </Info>
 
 ## When the AI description runs
 
 <Info>
-  - A linked issue with a non-empty description enriches the result, but it is not required; PRs without an issue are supported.
+  - A linked issue description enriches the result when available. An empty or absent issue description does not block generation; the PR metadata and diff remain sufficient context.
+  - A PR is never treated as its own linked issue. A closing reference is added only for a distinct inferred issue and only when the change fully resolves it.
   - If `ai-members-only` is enabled (default: false), the PR author must be a **project/org member**; otherwise the step is skipped.
-  - The action runs on the same `pull_request` events as the rest of the PR pipeline (e.g. opened, edited).
+  - Automatic descriptions run on `opened`, `reopened`, and `synchronize`. Body/title-only `pull_request: edited` events are intentionally ignored so the action's own body update cannot trigger another Copilot PR run.
 </Info>
 
 ## Description policies

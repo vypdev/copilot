@@ -2,6 +2,8 @@ import type { AgentConfiguration } from '../../domain/agent';
 import type { ProjectReference } from '../ports/project_board_link_ports';
 import type { SelectedIssueType } from '../ports/issue_management_ports';
 import type { Result } from '../../data/model/result';
+import type { IssueWorkflowKind } from '../../domain/issue_workflow_profile';
+import { ISSUE_START_LABEL } from '../../domain/issue_start_policy';
 
 export interface AssignmentContext {
   readonly target: 'issue' | 'pull request';
@@ -129,8 +131,7 @@ export interface AnswerIssueHelpContext extends IssueNumberContext {
   readonly questionOrHelp: boolean;
   readonly description: string;
   readonly agentConfiguration: Readonly<AgentConfiguration>;
-  readonly newIssue: boolean;
-  readonly tokenUser?: string;
+  readonly locale: string;
 }
 
 export interface IssueWorkflowStepContexts {
@@ -158,6 +159,7 @@ export interface IssueWorkflowContextSource {
   readonly eventName: string;
   readonly tokenUser?: string;
   readonly managementBranch: string;
+  readonly issueWorkflowKind?: IssueWorkflowKind;
   readonly issue: {
     readonly number: number;
     readonly title: string;
@@ -224,6 +226,7 @@ export interface IssueWorkflowContextSource {
     getProjectColumnIssueInProgress(): string;
   };
   readonly ai: { getAgentConfiguration(task: 'planner'): AgentConfiguration };
+  readonly locale: { readonly issue: string };
   readonly inputs?: { readonly action?: string };
 }
 
@@ -322,12 +325,11 @@ export function projectIssueWorkflowStepContexts(source: IssueWorkflowContextSou
     }),
     answerHelp: Object.freeze({
       issueNumber: source.issue.number,
-      opened: source.issue.opened,
+      opened: source.issue.opened || (source.issue.labeled && source.issue.labelAdded === ISSUE_START_LABEL),
       questionOrHelp: source.labels.isQuestion || source.labels.isHelp,
       description: (source.issue.body ?? '').trim(),
       agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }),
-      newIssue: source.eventName === 'issues' && source.inputs?.action === 'opened',
-      ...(source.tokenUser?.trim() ? { tokenUser: source.tokenUser.trim() } : {}),
+      locale: source.locale.issue,
     }),
   });
 }
@@ -358,7 +360,14 @@ export function copyProjects(projects: readonly ProjectSource[]): readonly Proje
 }
 
 function selectIssueType(source: IssueWorkflowContextSource): SelectedIssueType {
-  const name: IssueTypeName = source.labels.isHotfix ? 'hotfix'
+  const name: IssueTypeName = source.issueWorkflowKind === 'bugfix' ? 'bug'
+    : source.issueWorkflowKind === 'documentation' ? 'documentation'
+      : source.issueWorkflowKind === 'chore' ? 'maintenance'
+        : source.issueWorkflowKind === 'help' ? 'help'
+          : source.issueWorkflowKind === 'hotfix' ? 'hotfix'
+            : source.issueWorkflowKind === 'release' ? 'release'
+              : source.issueWorkflowKind === 'feature' ? 'feature'
+                : source.labels.isHotfix ? 'hotfix'
     : source.labels.isRelease ? 'release'
       : source.labels.isDocs || source.labels.isDocumentation ? 'documentation'
         : source.labels.isChore || source.labels.isMaintenance ? 'maintenance'

@@ -66,7 +66,6 @@ function baseParam(overrides: Record<string, unknown> = {}) {
     commit: {},
     commitPrefixBuilder: '',
     emoji: {},
-    images: {},
     ai: {},
     locale: {},
     sizeThresholds: {},
@@ -172,7 +171,10 @@ describe('InitialSetupUseCase', () => {
     const results = await useCase.invoke(baseParam({ inputs: { setupConfiguration } }));
 
     expect(results[0].success).toBe(true);
-    expect(mockSetupPrepare).toHaveBeenCalledWith({ features: setupConfiguration.features });
+    expect(mockSetupPrepare).toHaveBeenCalledWith({
+      features: setupConfiguration.features,
+      setupConfiguration,
+    });
     expect(mockSetupVariablesUpsert).toHaveBeenCalledWith(
       expect.arrayContaining([{ name: 'AGENT_PROVIDER', value: 'codex' }]),
     );

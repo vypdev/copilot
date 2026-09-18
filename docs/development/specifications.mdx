@@ -44,6 +44,18 @@ The specification validator rejects missing or escaped paths, duplicate
 capability/spec ownership, invalid status/date metadata, unregistered top-level
 SDDs, and a stale generated `CATALOG.md`.
 
+## Issue-driven specification gate
+
+Repositories can opt into `pre-branch-sdd: true` for feature and
+`contract-change` issues. Before adding `in-progress`, ensure the repository
+has this catalog, the specification standard, and the template. The Action
+finds the owning capability, asks blocking questions in issue comments, and
+validates the draft against the same catalog rules in a detached worktree.
+It publishes the SDD as the first commit on the exact issue-linked branch and
+adds `branched` only after remote verification. Subsequent material changes
+revise the same SDD on the retained branch. See
+[Pre-branch SDDs](/issues/pre-branch-sdds) for the contributor flow.
+
 ## As-built baselines
 
 Several capabilities existed before their SDD. Their status is **As-built

@@ -19,6 +19,7 @@ import {
   synchronizeBugbotReviewPresentation,
   type BugbotPresentationMutationPorts,
 } from './synchronize_bugbot_review_presentation_use_case';
+import type { BugbotMessageCatalog } from '../../../../policies/bugbot_message_catalog';
 
 export type { BugbotPresentationReport } from '../../../../contracts/bugbot_reconciliation';
 
@@ -36,6 +37,7 @@ export async function reconcileBugbotReviewState(input: {
   readonly mutationErrors?: readonly Error[];
   readonly snapshotPorts: BugbotReconciliationSnapshotPorts;
   readonly presentationPorts: BugbotPresentationMutationPorts;
+  readonly catalog?: BugbotMessageCatalog;
 }): Promise<BugbotPresentationReport> {
   const snapshotResult = await loadBugbotReconciliationSnapshot(
     input.target,
@@ -60,9 +62,12 @@ export async function reconcileBugbotReviewState(input: {
 
   const snapshot = snapshotResult.snapshot;
   const diagnostics = [
-    ...(input.mutationErrors ?? []).map(toSafeOperationMessage),
+    ...(input.mutationErrors ?? []).map((error) => ({
+      code: 'operation-failed' as const,
+      operatorMessage: toSafeOperationMessage(error),
+    })),
     ...(!input.target.trustedAuthorLogin?.trim()
-      ? ['The authenticated Bugbot identity is unavailable.']
+      ? [{ code: 'identity-unavailable' as const }]
       : []),
     ...describeBugbotSnapshotFailures(snapshot.completeness),
   ];
@@ -92,6 +97,7 @@ export async function reconcileBugbotReviewState(input: {
     snapshot,
     plan,
     ports: input.presentationPorts,
+    catalog: input.catalog,
   });
 }
 

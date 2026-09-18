@@ -12,8 +12,14 @@ import {
   validateInitialDeploymentInput,
   type TargetMergeCapabilities,
 } from "../deployment_plan_policy";
+import { resolveStaticDeploymentCatalog } from '../deployment_message_catalog';
 
 const sha = (letter: string) => letter.repeat(40);
+const locale = Object.freeze({
+  repository: "en-US",
+  issue: "en-US",
+  pullRequest: "en-US",
+});
 const capabilities = (overrides: Partial<TargetMergeCapabilities> = {}): TargetMergeCapabilities => ({
   autoMergeAllowed: true,
   mergeQueueRequired: false,
@@ -61,12 +67,14 @@ const operation = (overrides: Partial<DeploymentOperationSnapshot> = {}): Deploy
   reconciliationTargets: [],
   lastFailure: null,
   ...overrides,
+  locale: overrides.locale ?? { repository: "en-US", issue: "en-US", pullRequest: "en-US" },
 });
 
 describe("deployment plan policy", () => {
   it("snapshots a release plan from the development cut", () => {
     const value = buildInitialDeploymentOperation({
       operationId: "operation-12345678",
+      locale,
       kind: "release",
       version: "3.4.0",
       title: "Release",
@@ -80,12 +88,14 @@ describe("deployment plan policy", () => {
       configuration: { ...DEFAULT_DEPLOYMENT_CONFIGURATION },
       publicationWorkflow: "release_workflow.yml",
     });
-    expect(value).toEqual(expect.objectContaining({ phase: "preparing", originBranch: "develop", originSha: sha("b"), tag: "v3.4.0" }));
+    expect(value).toEqual(expect.objectContaining({ phase: "preparing", originBranch: "develop", originSha: sha("b"), tag: "v3.4.0", locale }));
+    expect(Object.isFrozen(value.locale)).toBe(true);
   });
 
   it("selects the hotfix strategy independently", () => {
     const value = buildInitialDeploymentOperation({
       operationId: "operation-12345678", kind: "hotfix", version: "3.4.1", title: "Hotfix", changelog: "Fix",
+      locale,
       sourceBranch: "hotfix/3.4.1", sourceSha: sha("a"), originBranch: "v3.4.0", originSha: sha("b"),
       productionBranch: "master", developmentBranch: "develop", publicationWorkflow: "hotfix_workflow.yml",
       configuration: { ...DEFAULT_DEPLOYMENT_CONFIGURATION, hotfixReconciliationStrategy: "canonical-gitflow" },
@@ -131,10 +141,11 @@ describe("deployment plan policy", () => {
         message: "Forbidden\n::error::@team github_pat_abcdefghijklmnopqrstuvwxyz123456",
       }],
     }));
-    expect(decision).toEqual(expect.objectContaining({ kind: "unsupported", reason: expect.stringContaining("Forbidden") }));
-    expect(decision.reason).not.toContain("github_pat_");
-    expect(decision.reason).not.toContain("::error::");
-    expect(decision.reason).not.toContain("@team");
+    expect(decision).toEqual(expect.objectContaining({
+      kind: "unsupported",
+      reasonCode: 'policy-observation-failed',
+    }));
+    expect(decision).not.toHaveProperty('diagnostic');
   });
 
   it("rejects explicit auto-merge when the target requires its queue", () => {
@@ -148,7 +159,7 @@ describe("deployment plan policy", () => {
       targetBranch: "master",
       producers: [{ kind: "check", name: "CI Check", integrationId: 15368, verdict: "unsupported", reason: "Falta el trigger." }],
       problems: [],
-    }, "es-ES");
+    }, resolveStaticDeploymentCatalog("es-ES"));
     expect(message).toContain("preparación de la merge queue");
     expect(message).toContain("Añade merge_group: checks_requested");
     expect(message).toContain("CI Check [unsupported]");
@@ -161,10 +172,24 @@ describe("deployment plan policy", () => {
       targetBranch: "develop",
       producers: [],
       problems: [{ area: "effective-rules", message: "Forbidden" }],
-    }, "es-ES");
-    expect(message).toContain("effective-rules: Forbidden");
+    }, resolveStaticDeploymentCatalog("es-ES"));
+    expect(message).toContain("effective-rules: No se han podido inspeccionar las reglas efectivas");
+    expect(message).not.toContain("Forbidden");
     expect(message).toContain("Restaura el acceso de lectura");
     expect(message).not.toContain("Añade merge_group");
+  });
+
+  it('renders bounded generic evidence when readiness has no producer or observation detail', () => {
+    const message = mergeQueueReadinessFailureMessage({
+      verdict: 'unknown',
+      targetRole: 'production',
+      targetBranch: 'master',
+      producers: [],
+      problems: [],
+    }, resolveStaticDeploymentCatalog('en-US'));
+
+    expect(message).toContain('Required producer evidence is incomplete.');
+    expect(message).toContain('Make the required producer support merge groups');
   });
 
   it("uses a sync branch for a strict target whose source is stale", () => {
@@ -240,6 +265,7 @@ describe("deployment plan policy", () => {
   it("rejects invalid initial deployment facts", () => {
     const input = {
       operationId: "operation-12345678", kind: "release" as const, version: "v3", title: "", changelog: "",
+      locale,
       sourceBranch: "master", sourceSha: "bad", originBranch: "develop", originSha: "bad",
       productionBranch: "master", developmentBranch: "develop", publicationWorkflow: "release_workflow.yml",
       configuration: { ...DEFAULT_DEPLOYMENT_CONFIGURATION },

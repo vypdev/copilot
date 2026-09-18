@@ -13,10 +13,23 @@ const findingStates = (overrides: Record<string, number> = {}) => ({
 });
 
 describe('lifecycle state policy', () => {
-    it('moves an issue to planned and in-progress while agent activity remains separate', () => {
+    it('moves an issue to planned and working only after branch readiness is verified', () => {
         expect(resolveLifecycleState({ eventName: 'issues', action: 'opened', isIssue: true, isPullRequest: false, issueOpened: true, issueDescriptionEdited: false, pullRequestMerged: false, pullRequestClosed: false, results: [] })).toBeUndefined();
         expect(resolveLifecycleState({ eventName: 'issues', action: 'edited', isIssue: true, isPullRequest: false, issueOpened: false, issueDescriptionEdited: true, pullRequestMerged: false, pullRequestClosed: false, results: [result('RecommendStepsUseCase')] })).toBe('planned');
-        expect(resolveLifecycleState({ eventName: 'issues', action: 'labeled', isIssue: true, isPullRequest: false, issueOpened: false, issueDescriptionEdited: false, pullRequestMerged: false, pullRequestClosed: false, results: [result('PrepareBranchesUseCase')] })).toBe('in-progress');
+        const branchStart = { eventName: 'issues', action: 'labeled', isIssue: true, isPullRequest: false, issueOpened: false, issueDescriptionEdited: false, pullRequestMerged: false, pullRequestClosed: false };
+        expect(resolveLifecycleState({ ...branchStart, results: [result('PrepareBranchesUseCase')] })).toBeUndefined();
+        expect(resolveLifecycleState({ ...branchStart, results: [
+            result('PrepareBranchesUseCase'),
+            result('ReconcileBranchReadinessUseCase'),
+        ] })).toBeUndefined();
+        expect(resolveLifecycleState({ ...branchStart, results: [
+            result('PrepareBranchesUseCase'),
+            { ...result('ReconcileBranchReadinessUseCase'), executed: false, payload: { branchName: 'feature/42' } },
+        ] })).toBe('working');
+        expect(resolveLifecycleState({ ...branchStart, results: [
+            result('PrepareBranchesUseCase'),
+            { ...result('ReconcileBranchReadinessUseCase'), payload: { branchName: 'feature/42' } },
+        ] })).toBe('working');
     });
 
     it('moves a PR to reviewing, verified, or blocked', () => {
@@ -52,6 +65,29 @@ describe('lifecycle state policy', () => {
             pullRequestClosed: false,
             results: [{ ...result('DetectPotentialProblemsUseCase'), payload: { findingStates: findingStates() } }],
         })).toBe('ready');
+    });
+
+    it('blocks a partial-coverage review instead of declaring zero findings ready', () => {
+        expect(resolveLifecycleState({
+            eventName: 'pull_request',
+            action: 'synchronize',
+            isIssue: false,
+            isPullRequest: true,
+            issueOpened: false,
+            issueDescriptionEdited: false,
+            pullRequestMerged: false,
+            pullRequestClosed: false,
+            results: [{ ...result('DetectPotentialProblemsUseCase'), payload: {
+                findingStates: findingStates(),
+                bugbotTelemetry: {
+                    schemaVersion: 1,
+                    outcome: 'partial',
+                    elapsedMs: 10,
+                    configuredEffort: 'smart',
+                    headSha: 'sha-123',
+                },
+            } }],
+        })).toBe('blocked');
     });
 
     it('maps verification-required to changes-requested and unknown to blocked', () => {

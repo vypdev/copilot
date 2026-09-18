@@ -6,5 +6,5 @@ export interface ProjectBoardContentQueryPort {
 }
 
 export interface ProjectBoardQueryPort extends ProjectDetailQueryPort {
-    isContentLinked(project: ProjectDetail, contentId: string, token: string): Promise<boolean>;
+    getLinkedContentItemId(project: ProjectDetail, contentId: string, token: string): Promise<string | undefined>;
 }

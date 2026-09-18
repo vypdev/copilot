@@ -37,12 +37,22 @@ export class SetupQuestionnaireController implements SetupConfigurationCollector
         visibleState = state.stateId;
       }
       if (state.validation) this.renderer.showValidation(state.validation);
-      const input = await this.terminal.readText(this.renderer.renderPrompt(state.question));
+      const input = state.question.kind === 'multi-select' && this.terminal.readMultiSelect
+        ? await this.terminal.readMultiSelect(
+          this.renderer.renderPrompt(state.question),
+          state.question.choices ?? [],
+          parseSelectedDefaults(state.question.defaultValue),
+        )
+        : await this.terminal.readText(this.renderer.renderPrompt(state.question));
       state = transitionSetupQuestionnaire(state, toEvent(input), context);
     }
     if (state.terminal === 'cancelled') this.renderer.showCancelled();
     return state;
   }
+}
+
+function parseSelectedDefaults(value: string | number | boolean): readonly string[] {
+  return typeof value === 'string' ? value.split(',').map(item => item.trim()).filter(Boolean) : [];
 }
 
 function toEvent(input: Awaited<ReturnType<TerminalDriver['readText']>>): SetupQuestionnaireEvent {

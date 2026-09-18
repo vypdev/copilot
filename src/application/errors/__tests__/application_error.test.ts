@@ -12,7 +12,7 @@ describe('ApplicationError', () => {
     it('exposes the closed semantic contract for every error code', () => {
         const codes = Object.keys(APPLICATION_ERROR_METADATA) as ApplicationErrorCode[];
 
-        expect(codes).toHaveLength(18);
+        expect(codes).toHaveLength(20);
         for (const code of codes) {
             const error = new ApplicationError(code, 'Safe public message.', { correlationId: CORRELATION_ID });
             expect(error).toMatchObject({
@@ -59,6 +59,37 @@ describe('ApplicationError', () => {
             retryable: true,
             correlationId: CORRELATION_ID,
         })).toThrow('Retryability cannot be broadened');
+    });
+
+    it('preserves only closed, immutable recovery descriptors with bounded variables', () => {
+        const error = new ApplicationError('provider.unavailable', 'Enrichment failed.', {
+            correlationId: CORRELATION_ID,
+            recovery: {
+                id: 'managed-branch-enrichment-failed',
+                variables: { branchName: 'feature/42-add-login' },
+            },
+        });
+
+        expect(error.recovery).toEqual({
+            id: 'managed-branch-enrichment-failed',
+            variables: { branchName: 'feature/42-add-login' },
+        });
+        expect(Object.isFrozen(error.recovery)).toBe(true);
+        expect(Object.isFrozen(error.recovery?.variables)).toBe(true);
+        expect(error.toJSON()).toMatchObject({ recovery: error.recovery });
+    });
+
+    it.each([
+        { id: 'managed-branch-enrichment-failed', variables: { branchName: '`forged`' } },
+        { id: 'managed-branch-enrichment-failed', variables: {} },
+        { id: 'inactivity-explanation-failed', variables: { issueNumber: 0 } },
+        { id: 'pull-request-link-restored', variables: { unexpected: 'value' } },
+        { id: 'not-supported', variables: {} },
+    ])('rejects an invalid recovery descriptor: $id $variables', recovery => {
+        expect(() => new ApplicationError('provider.unavailable', 'Failed.', {
+            correlationId: CORRELATION_ID,
+            recovery: recovery as never,
+        })).toThrow('Application error recovery');
     });
 
     it('creates and validates lowercase UUID v4 correlation IDs', () => {

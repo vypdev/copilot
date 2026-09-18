@@ -12,6 +12,8 @@ import type {
     ReconciliationPullRequestMode,
     ReconciliationStrategy,
 } from './deployment_configuration';
+import type { IssueWorkflowKind } from './issue_workflow_profile';
+import type { PullRequestApprovalPolicy } from './pull_request_approval_policy';
 
 export type SetupFeature =
     | 'issues'
@@ -50,11 +52,13 @@ export interface SetupRepositoryConfiguration {
     releaseTree: string;
     docsTree: string;
     choreTree: string;
-    branchManagementAlways: boolean;
+    issueManagedBranches: boolean;
+    preBranchSdd: boolean;
     reopenIssueOnPush: boolean;
     desiredAssigneesCount: number;
     desiredReviewersCount: number;
     inactivityThresholdHours: number;
+    repositoryLocale: string;
     issueLocale: string;
     pullRequestLocale: string;
     commitPrefixTransforms: string;
@@ -105,6 +109,7 @@ export interface SetupConfiguration {
     agents: SetupAgentConfiguration;
     repository: SetupRepositoryConfiguration;
     ai: SetupAiConfiguration;
+    pullRequestApproval: PullRequestApprovalPolicy;
     projects: SetupProjectConfiguration;
     createInitialTag: boolean;
     manageRepositoryVariables: boolean;
@@ -114,6 +119,15 @@ export interface SetupConfiguration {
     actionInputs: Record<string, string>;
     /** Independent storage policies for non-sensitive variables and secrets. */
     storage: SetupStorageConfiguration;
+    /** Issue Forms/workflows that the action is allowed to process. */
+    issueWorkflows: {
+        enabled: readonly IssueWorkflowKind[];
+    };
+    /** Generated repository guidance for human and agent collaborators. */
+    repositoryAgentGuidance: {
+        enabled: boolean;
+        agentsPointer: 'prompt' | 'create-if-missing' | 'disabled';
+    };
 }
 
 export type SetupResourceScope = 'repository' | 'organization';
@@ -230,5 +244,6 @@ export interface SetupPlan {
     requiredSecrets: string[];
     credentialRequirements: SetupCredentialRequirement[];
     mergeQueueReadiness: DoctorCheck[];
+    approvalReadiness: DoctorCheck[];
     warnings: string[];
 }

@@ -1,6 +1,6 @@
 import { Result } from '../../../../../data/model/result';
 import { Ai } from '../../../../../data/model/ai';
-import { projectCommentAutomationContext } from '../../../comment_automation_context';
+import { projectCommentAutomationContext, withCommentLanguageAdaptation } from '../../../comment_automation_context';
 import { projectCheckPermissionsContext } from '../check_permissions_workflow';
 import { projectIssueCommentLanguageRequest } from '../../issue_comment/check_issue_comment_language_use_case';
 import { projectPullRequestCommentLanguageRequest } from '../../pull_request_review_comment/check_pull_request_comment_language_use_case';
@@ -48,27 +48,6 @@ function expectDataOnly(value: unknown): void {
   };
   visit(value);
   expect(JSON.stringify(value)).not.toContain('secret-value');
-}
-
-function images() {
-  return {
-    imagesOnIssue: true,
-    issueAutomaticActions: ['issue.gif'],
-    issueFeatureGifs: [],
-    issueBugfixGifs: [],
-    issueReleaseGifs: [],
-    issueHotfixGifs: [],
-    issueDocsGifs: [],
-    issueChoreGifs: [],
-    imagesOnPullRequest: true,
-    pullRequestAutomaticActions: ['pull-request.gif'],
-    pullRequestFeatureGifs: [],
-    pullRequestBugfixGifs: [],
-    pullRequestReleaseGifs: [],
-    pullRequestHotfixGifs: [],
-    pullRequestDocsGifs: [],
-    pullRequestChoreGifs: [],
-  };
 }
 
 describe('P2-D shared capability context projections', () => {
@@ -135,6 +114,7 @@ describe('P2-D shared capability context projections', () => {
       tokenUser: 'copilot-bot',
       issue: { commentBody: '@copilot-bot plan this', isIssueComment: true, number: 9 },
       pullRequest: { commentBody: '', isPullRequestReviewComment: false, number: -1 },
+      locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
       ai: { getAgentConfiguration: () => selected },
       tokens: { token: 'secret-value' },
     } as never);
@@ -201,10 +181,88 @@ describe('P2-D shared capability context projections', () => {
     expectDataOnly(context);
   });
 
+  it('projects a translated mention into Think and intent contexts without mutating the source', () => {
+    const source = {
+      owner: 'acme', repo: 'demo', actor: 'alice', issueNumber: 9,
+      isIssue: true, isPullRequest: false, eventName: 'issue_comment', tokenUser: 'copilot-bot',
+      issue: { number: 9, commentBody: '@copilot-bot revisa esto', isIssueComment: true },
+      pullRequest: { number: -1, head: '', action: '', commentBody: '', isPullRequestReviewComment: false },
+      commit: { branch: 'feature/9' }, currentConfiguration: { parentBranch: 'develop', results: [] },
+      branches: { development: 'develop' }, inputs: { action: 'created' },
+      labels: { currentIssueLabels: ['feature'], currentPullRequestLabels: [] },
+      locale: { issue: 'en-US', pullRequest: 'en-US' },
+      ai: new Ai('', 'gpt-5.6-luna', false, [], false, 'low', 20, []),
+    };
+    const context = projectCommentAutomationContext(source as never, {
+      commentBody: source.issue.commentBody, locale: 'en-US', issueNumber: 9,
+      commentId: 90, configuration,
+    }, source.issue.commentBody);
+    const adapted = withCommentLanguageAdaptation(context, {
+      kind: 'comment-language-adaptation', status: 'translated', targetLocale: 'en-US',
+      sourceLocale: 'es', reasonCode: 'none', interpretedComment: '@copilot-bot inspect this',
+      publication: {
+        translatedText: 'inspect this', originalText: '@copilot-bot revisa esto',
+        sourceLocale: 'es', targetLocale: 'en-US',
+      },
+    });
+
+    expect(adapted).not.toBe(context);
+    expect(adapted.userComment).toBe('@copilot-bot inspect this');
+    expect(adapted.bugbot.fixIntent.comment.body).toBe('@copilot-bot inspect this');
+    expect(adapted.think).toMatchObject({
+      request: { question: 'inspect this' },
+      targetLocale: 'en-US',
+      translationPublication: { translatedText: 'inspect this' },
+    });
+    expect(context.userComment).toBe('@copilot-bot revisa esto');
+    expectDataOnly(adapted);
+  });
+
+  it('rebuilds translated explicit-command Think context and leaves matching input unchanged', () => {
+    const ai = new Ai('', 'gpt-5.6-luna', false, [], false, 'low', 20, []);
+    const source = {
+      owner: 'acme', repo: 'demo', actor: 'alice', issueNumber: 9,
+      isIssue: true, isPullRequest: false, eventName: 'issue_comment',
+      issue: { number: 9, commentBody: '/copilot explain por qué', isIssueComment: true },
+      pullRequest: { number: -1, head: '', action: '', commentBody: '', isPullRequestReviewComment: false },
+      commit: { branch: 'feature/9' }, currentConfiguration: { parentBranch: 'develop', results: [] },
+      branches: { development: 'develop' }, inputs: { action: 'created' },
+      labels: { currentIssueLabels: ['feature'], currentPullRequestLabels: [] },
+      locale: { issue: 'en-US', pullRequest: 'en-US' }, ai,
+    };
+    const context = projectCommentAutomationContext(source as never, {
+      commentBody: source.issue.commentBody, locale: 'en-US', issueNumber: 9,
+      commentId: 90, configuration,
+    }, source.issue.commentBody);
+    const matching = {
+      kind: 'comment-language-adaptation', status: 'matches', targetLocale: 'en-US',
+      interpretedComment: source.issue.commentBody, reasonCode: 'none',
+    } as const;
+    expect(withCommentLanguageAdaptation(context, matching)).toBe(context);
+
+    const adapted = withCommentLanguageAdaptation(context, {
+      ...matching, status: 'translated', interpretedComment: '/copilot explain why',
+    });
+    expect(adapted.think.request).toMatchObject({
+      command: { name: 'explain', arguments: ['why'] },
+      question: expect.stringContaining('User-provided command arguments'),
+    });
+
+    const skipped = projectCommentAutomationContext({
+      ...source,
+      issue: { ...source.issue, commentBody: '' },
+    } as never, {
+      commentBody: '', locale: 'en-US', issueNumber: 9, commentId: 90, configuration,
+    }, '');
+    expect(withCommentLanguageAdaptation(skipped, {
+      ...matching, status: 'translated', interpretedComment: 'translated but not addressed',
+    }).think.request.kind).toBe('skip');
+  });
+
   it('projects equivalent issue and pull-request title facts as discriminated records', () => {
     const source = {
       issueNumber: 10,
-      issue: { number: 10, title: 'Issue', branchManagementAlways: true },
+      issue: { number: 10, title: 'Issue' },
       pullRequest: { number: 11, title: 'Pull request' },
       emoji: { emojiLabeledTitle: true, branchManagementEmoji: '🌿' },
       release: { active: false },
@@ -253,7 +311,6 @@ describe('P2-D shared capability context projections', () => {
 
   it('snapshots result publication data and semantic errors without retaining credentials', () => {
     const results = [new Result({ id: 'step', success: true, executed: true, steps: ['Done'] })];
-    const publicationImages = images();
     const context = projectPublishResultContext({
       debug: false,
       isSingleAction: false,
@@ -269,17 +326,16 @@ describe('P2-D shared capability context projections', () => {
       singleAction: { issue: -1 },
       issue: { number: 14 },
       pullRequest: { number: -1, action: '' },
+      locale: { issue: 'en-US', pullRequest: 'en-US' },
       release: { active: false },
       hotfix: { active: false },
-      images: publicationImages,
       currentConfiguration: { results },
       tokens: { token: 'secret-value' },
     } as never);
 
     results[0].steps[0] = 'Mutated';
-    publicationImages.issueAutomaticActions[0] = 'mutated.gif';
     expect(context.results[0].steps).toEqual(['Done']);
-    expect(context.presentation.images.issueAutomaticActions).toEqual(['issue.gif']);
+    expect(context).toMatchObject({ owner: undefined, repository: undefined, botLogin: '', locale: 'en-US' });
     expectDataOnly(context);
   });
 

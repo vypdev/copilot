@@ -75,7 +75,6 @@ export interface BoundIssueTypeProvisioningPort {
 }
 
 export type InitialLabelConfiguration = Readonly<Pick<Labels,
-    | 'branchManagementLauncherLabel'
     | 'bug' | 'bugfix' | 'hotfix' | 'enhancement' | 'feature' | 'release'
     | 'question' | 'help' | 'deploy' | 'deployed' | 'docs' | 'documentation'
     | 'chore' | 'maintenance' | 'priorityHigh' | 'priorityMedium' | 'priorityLow'

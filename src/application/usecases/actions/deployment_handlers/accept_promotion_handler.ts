@@ -67,8 +67,7 @@ export class AcceptPromotionHandler {
     await this.runtime.publishMilestone(
       context,
       publishing,
-      "promotion-merged",
-      `✅ Promotion PR #${pullRequest.number} merged. Publication is starting from production SHA \`${productionSha}\`.`,
+      { kind: "promotion-merged", pullRequest: pullRequest.number, productionSha },
     );
     await this.runtime.dependencies.continuation.dispatch(
       operation.publicationWorkflow,

@@ -61,9 +61,9 @@ export function buildReviewDiffContext(
 
   if (ignored > 0 || truncated > 0 || omitted > 0) {
     const notes = [
-      ...(ignored > 0 ? [`${ignored} file(s) excluded by configured ignore patterns`] : []),
-      ...(truncated > 0 ? [`${truncated} patch(es) truncated`] : []),
-      ...(omitted > 0 ? [`${omitted} file patch(es) omitted by the prompt budget`] : []),
+      ...(ignored > 0 ? [`${ignored} ${ignored === 1 ? 'file' : 'files'} excluded by configured ignore patterns`] : []),
+      ...(truncated > 0 ? [`${truncated} ${truncated === 1 ? 'patch' : 'patches'} truncated`] : []),
+      ...(omitted > 0 ? [`${omitted} ${omitted === 1 ? 'file patch' : 'file patches'} omitted by the prompt budget`] : []),
     ];
     const inspect = truncated > 0 || omitted > 0
       ? ' Inspect truncated or budget-omitted files locally before making or resolving a finding.'
@@ -93,7 +93,7 @@ export function buildReviewConversationContext(
 ): BuiltBugbotPromptContext {
   const entries: ConversationEntry[] = [];
   for (const comment of issueComments) {
-    if (isBot(comment.user?.login, botLogin)) continue;
+    if (comment.isAutomatedAuthor || isBot(comment.user?.login, botLogin)) continue;
     appendConversationEntry(
       entries,
       comment.user?.login,
@@ -105,7 +105,7 @@ export function buildReviewConversationContext(
   }
   for (const comments of commentsByPullRequest.values()) {
     for (const comment of comments) {
-      if (isBot(comment.authorLogin, botLogin)) continue;
+      if (comment.isAutomatedAuthor || isBot(comment.authorLogin, botLogin)) continue;
       const location = comment.path
         ? `inline review comment at ${comment.path}${comment.line ? `:${comment.line}` : ''}`
         : 'inline review comment';
@@ -132,7 +132,7 @@ export function buildReviewConversationContext(
   }
   const omitted = entries.length - selected.length;
   const chronological = selected.reverse();
-  const suffix = omitted > 0 ? `\n${omitted} older discussion item(s) omitted by the prompt budget.` : '';
+  const suffix = omitted > 0 ? `\n${omitted} older discussion ${omitted === 1 ? 'item' : 'items'} omitted by the prompt budget.` : '';
   return {
     block: `${header}\n\n${chronological.map((entry) => entry.rendered).join('\n\n')}\n${suffix}`,
     omitted,

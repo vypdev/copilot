@@ -23,6 +23,16 @@ export class ConsoleSetupQuestionRenderer implements SetupQuestionRenderer {
         `  ${index + 1}) ${choice}${choice === question.defaultValue ? color(' (default)', 90) : ''}`);
       return [question.label, ...lines, `Select 1-${choices.length} ${color(`[${choices.indexOf(String(question.defaultValue)) + 1}]`, 90)}: `].join('\n');
     }
+    if (question.kind === 'multi-select') {
+      const selected = new Set(formatDefault(question.defaultValue).split(',').map(item => item.trim()).filter(Boolean));
+      const choices = question.choices ?? [];
+      const lines = choices.map((choice, index) => {
+        const workflowId = choice === 'All' ? 'all' : choice.split(' — ')[0];
+        const checked = selected.has('all') || selected.has(workflowId) ? '●' : '○';
+        return `  ${checked} ${index === 0 ? 'All' : choice}`;
+      });
+      return [question.label, ...lines, 'Use ↑/↓ and Space to toggle; Enter to confirm.'].join('\n');
+    }
     if (question.kind === 'scope-overrides' && question.allowedNames?.length) {
       return `${question.label}\n  Available: ${question.allowedNames.join(', ')}; enter "none" to inherit all\n  ${color(`[${fallback}]`, 90)}: `;
     }

@@ -1,7 +1,6 @@
 import type { Execution } from '../../../../data/model/execution';
 import { ACTIONS } from '../../../../data/model/action_types';
 import { SingleAction } from '../../../../data/model/single_action';
-import { getCommentWatermark } from '../../../../utils/comment_watermark';
 import { PublishIssueCommentUseCase } from '../publish_issue_comment_use_case';
 import { projectIssueCommentActionContext } from '../../push_single_action_contexts';
 
@@ -54,10 +53,10 @@ describe('PublishIssueCommentUseCase', () => {
         expect(updateComment).toHaveBeenCalledWith(42, 101, 'Deployment failed.');
     });
 
-    it('appends after existing content without duplicating its Copilot watermark', async () => {
+    it('appends after the exact existing content without rewriting it', async () => {
         listIssueComments.mockResolvedValue([{
             id: 101,
-            body: `Deployment started.\n\n${getCommentWatermark()}`,
+            body: 'Deployment started.\n\n<sup>Made with ❤️ by [vypdev/copilot](https://github.com/marketplace/actions/copilot-github-with-super-powers)</sup>',
         }]);
 
         const results = await useCase.invoke(execution('Deployment failed.', '101', 'append'));
@@ -66,7 +65,7 @@ describe('PublishIssueCommentUseCase', () => {
         expect(updateComment).toHaveBeenCalledWith(
             42,
             101,
-            'Deployment started.\n\nDeployment failed.',
+            'Deployment started.\n\n<sup>Made with ❤️ by [vypdev/copilot](https://github.com/marketplace/actions/copilot-github-with-super-powers)</sup>\n\nDeployment failed.',
         );
     });
 

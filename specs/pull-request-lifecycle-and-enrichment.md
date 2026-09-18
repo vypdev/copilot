@@ -1,29 +1,32 @@
 # Pull Request Lifecycle and Enrichment
 
-- Status: As-built baseline
-- Date: 2026-09-13
-- Last verified: 2026-09-13 on `develop` (P2-E implementation validation)
+- Status: Implemented
+- Date: 2026-09-15
+- Last verified: 2026-09-16 on `develop` plus PR #394 live UX iteration
 - Owners: Copilot maintainers
 - Scope: PR-to-issue/project linkage, assignments, metadata, size/progress, description ownership, review integration, and merge closure
-- Related issues/PRs: managed issue lifecycle and Bugbot SDDs
+- Related issues/PRs: managed issue lifecycle and Bugbot SDDs; live UX evidence from [PR #378](https://github.com/vypdev/copilot/pull/378), [PR #379](https://github.com/vypdev/copilot/pull/379), [PR #393](https://github.com/vypdev/copilot/pull/393), and [PR #394](https://github.com/vypdev/copilot/pull/394)
 - Required review gates: product UX, architecture, testing, documentation, security/operations
-- Open decisions blocking readiness: none for the baseline
+- Open decisions blocking readiness: none
 
 ## 1. Executive summary
 
-On an opened PR, Copilot links its issue and projects, assigns people, syncs
-size/progress/priority metadata, optionally owns all or a marked section of the
-description, and starts review. Synchronize events refresh enabled generated
-content and review; edits normalize title; a merged PR closes the linked issue.
-Human-authored body content is preserved only in `append`, `preserve`, or
-`disabled` mode—the recommended existing default is explicit full ownership
-with `replace`.
+On an opened PR, Copilot enriches the PR even when no issue is linked. When the
+branch identifies a separate issue, Copilot also links and synchronizes that
+issue; it never falls back to treating the PR number as the issue number.
+Generated descriptions prioritize reviewer decisions: a short outcome,
+material changes, verified validation evidence when available, and conditional review notes.
+Synchronize events refresh enabled generated content and review; metadata-only
+edits are ignored so Copilot's own body update cannot retrigger the pipeline. A
+merged PR closes only a distinct linked issue. Human-authored body content is
+preserved only in `append`, `preserve`, or `disabled` mode—the existing default
+is explicit full ownership with `replace`.
 
 ```text
-opened PR -> link issue/project -> assign -> sync labels/size -> description -> review
-synchronize -> description policy -> review
-edited -> title normalization
-merged -> close linked issue
+opened/reopened -> resolve optional distinct issue -> enrich PR -> concise description -> review
+synchronize -> concise description policy -> review
+edited metadata -> no Copilot PR workflow
+merged -> close distinct linked issue only
 ```
 
 ## 2. Problem, current behavior, and evidence
@@ -36,30 +39,56 @@ descriptions can also overwrite human content unless ownership is explicit.
 
 ### 2.2 Current behavior
 
-1. The route resolves PR state and branch-linked issue context.
+1. The route resolves PR state and optional branch-linked issue context. A
+   missing or self-equal issue number is represented as unlinked.
 2. On open/reopen, the route snapshots separate immutable step requests; the
    sequential workflow updates title, assigns assignee and reviewers, links
    projects/issue, syncs size/progress labels, and checks priority size through
-   repository- and credential-bound ports.
-3. `replace` or `append` automatically generates a sanitized description from
-   PR branches/workspace diff and optional linked issue context.
+   repository- and credential-bound ports. Project linking uses the ProjectV2
+   item ID returned by GitHub's add mutation as the authority for the immediate
+   status update; it does not sleep and re-list the board.
+3. `replace` or `append` automatically generates a sanitized, bounded
+   description from the merge-base diff and optional distinct issue context.
 4. `replace` owns the body; `append` upserts a marker-bounded Copilot section;
    `preserve` updates only on authorized `/copilot description`; `disabled` never updates.
 5. Open/reopen/synchronize run read-only review when configured/authorized.
-6. Edited PRs update title only. Merged PRs close the linked issue.
-7. Result publication, lifecycle labels, Job Summary, and optional Check Run expose state.
+6. Metadata-only edited events do not start the supplied workflow. Merged PRs
+   close only a distinct linked issue.
+7. Runs expose event/action identity and review-state events use a distinct job
+   name. A separate merge-group workflow avoids a skipped duplicate while its
+   job intentionally shares the normal PR required-check name so branch
+   protection resolves the same context in both event paths.
+   Result publication, lifecycle labels, Job Summary, and optional Check Run
+   expose state.
 
 ### 2.3 Evidence and contract classification
 
 - Observed behavior: PR workflow/steps, description domain/workflow, PR
-  repositories/composition, workflow, tests, and documentation.
+  repositories/composition, workflow, tests, documentation, and PR #378.
 - Intentional contract: event-specific sequencing, semantic linkage, explicit
   body ownership modes, marker idempotency, creator/member guard, and merge closure.
-- Known debt and limitations: issue number inference depends on branch naming or
-  GitHub links; assignment candidate quality depends on accessible membership;
-  generated-description quality is probabilistic; live responsive UX evidence is absent.
+- Known debt and limitations: ordinary PR issue inference depends on branch
+  naming; assignment candidate quality depends on accessible membership;
+  generated-description quality is probabilistic; live responsive UX evidence
+  remains required for every shipped workflow change.
 - Unknown rationale: `replace` is the current default, but historic selection evidence is unavailable.
-- Proposed improvements: changing the recommended default requires migration and user study.
+- Proposed improvements: changing the recommended default requires an explicit
+  product decision and live UX study. There is no installed-user state to
+  migrate before adoption, so no compatibility layer is permitted.
+- Live iteration: PR #379's first run displayed a skipped merge-group job beside
+  the active PR job under the same check name. Merge-group compatibility moved
+  to a dedicated workflow so subsequent normal PR runs expose only the relevant
+  analysis/review-state job while merge groups retain the required context.
+- Live iteration: PR #393 proved that a successful ProjectV2 add mutation can
+  remain absent from an immediate board listing. Re-querying after a fixed
+  delay incorrectly failed the workflow even though the PR was already linked.
+  The mutation-returned item ID now drives the status mutation directly.
+- Live iteration: PR #394 showed that removal vocabulary could still make the
+  description agent invent a `Review notes` migration recap even though the
+  repository explicitly documents zero installed users, external consumers,
+  and persisted production state. That evidence now requires the optional
+  section to remain absent unless a concrete reviewer action or unresolved
+  material risk exists.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -80,6 +109,17 @@ body ownership. “Enrichment” is metadata mutation that does not merge code.
 1. Opened PRs MUST converge to one linked/enriched state on replay.
 2. Description ownership MUST be explicit and preserve content per mode.
 3. Merge-driven issue closure MUST use resolved linkage, not title guessing alone.
+4. Unlinked PRs MUST retain PR-native enrichment without provider calls against
+   a synthetic issue number.
+5. Generated descriptions MUST optimize for reviewer decisions, not execution
+   inventories or template completeness.
+6. Generated descriptions MUST NOT invent consumers, compatibility duties,
+   upgrade steps, or migration work from removal/deprecation wording alone.
+7. Explicit greenfield evidence (no installed users, external consumers, or
+   persisted production state) MUST suppress migration/compatibility review
+   notes for removed contracts. Strict parsing, fail-closed behavior, and
+   rejected old shapes belong in material changes only when useful; they are
+   not reviewer actions by themselves.
 
 ### 4.2 Non-goals
 
@@ -93,15 +133,17 @@ body ownership. “Enrichment” is metadata mutation that does not merge code.
 2. Agent-generated Markdown MUST be sanitized before body update.
 3. Append mode MUST replace only the managed section.
 4. Missing branches/context MUST skip safely rather than guess.
+5. A PR number MUST NOT be used as that PR's linked issue number.
+6. Copilot-authored body edits MUST NOT trigger another supplied PR workflow.
 
 ## 5. Current versus proposed product journey
 
 | Stage | Manual/ambiguous risk | As-built contract | Effect |
 |---|---|---|---|
-| Linkage | branch/title guess by human | branch + provider linkage | traceable issue |
+| Linkage | PR number could become issue fallback | distinct branch issue or explicit unlinked state | no self-link/close |
 | Metadata | independent labels/projects | ordered synchronization | consistency |
-| Body | implicit AI ownership | four explicit modes | predictable edits |
-| Review | unrelated event timing | open/reopen/sync route | current evidence |
+| Body | exhaustive template dump | concise evidence-based body in four ownership modes | faster review |
+| Review | ambiguous run/check names and body-edit churn | event-specific run identity, distinct review-state check, merge-compatible required check | legible current evidence |
 | Closure | manual issue close | merged linked PR | aligned lifecycle |
 
 P2-E preserves the normal enrichment journey while hardening its authority and
@@ -112,20 +154,30 @@ link mutations are compensated on every edge, and partial cleanup is explicit.
 
 ### 6.1 Happy path
 
-1. Same-repository PR opens from a managed branch containing issue identity.
-2. Copilot enriches linkage, people, projects, labels, size, and description.
+1. Same-repository PR opens; its managed branch may contain a distinct issue identity.
+2. Copilot enriches PR-native people, projects, description, and review; it adds
+   issue linkage and issue-derived title/priority/size/progress synchronization
+   only when a distinct issue exists.
 3. Review result updates current status/lifecycle.
 4. Synchronize reruns only refreshable content and review.
 5. Merge closes the linked issue and exposes completion.
 
 ### 6.2 Alternative paths
 
-- No linked issue still permits a description inferred from PR metadata/diff,
-  without adding a false `Closes` line.
+- No linked issue preserves the PR title and still permits
+  assignee/reviewer/project/review enrichment and a description inferred from PR
+  metadata/diff, without an issue-provider call, issue-derived label
+  synchronization, or false `Closes` line.
+- A distinct linked issue with an empty description remains valid optional
+  context; description generation continues from PR metadata and diff.
+- A branch number equal to the PR number is unlinked rather than self-linked.
 - `preserve` accepts only explicit authorized description refresh.
 - `disabled` skips both automatic and explicit body generation.
 - Non-member creators are skipped for AI description when `ai-members-only=true`.
 - Missing optional review composition does not prevent deterministic enrichment.
+- A newly linked project item is moved by the item ID returned from the same
+  mutation. A replay first resolves an existing item ID and updates that item;
+  neither path depends on list propagation or a timer.
 - PR-to-issue linkage reads the current body for the exact bound PR, temporarily
   adds an owned closing reference and default base, waits through the injected
   observation boundary, then restores the exact original body and base.
@@ -159,10 +211,12 @@ than duplicate content. A stale review is governed by the Bugbot freshness contr
 | size/priority/progress labels and thresholds | documented defaults | bounded numeric/label inputs | repository/workflow |
 | `ai-members-only` | `false` | boolean | per run |
 
-Recommended configuration uses a PR template, one reviewer, `replace`, and
-same-repository workflow guards. Teams preserving human prose use `append`.
+Recommended configuration uses a concise PR template, one reviewer, `replace`,
+and same-repository workflow guards. Teams preserving human prose use `append`.
 Marker syntax, sanitization, safe branch resolution, fork boundary, and merged
-issue-closure semantics are not configurable.
+issue-closure semantics are not configurable. The 12,000-character hard body
+limit, normal 4,000-character target, no-self-link rule, and omission of
+metadata-only edited triggers are fixed product/safety boundaries.
 
 ## 8. Clean Architecture design
 
@@ -173,14 +227,17 @@ issue-closure semantics are not configurable.
 | Ports | PR details/body/link/project/reviewer/issue close | Octokit types |
 | Adapters | GitHub REST/GraphQL operations | event policy |
 | Composition | ordered concrete steps | duplicated business rules |
-| Presentation | generated/sanitized body and result | provider mutations |
+| Presentation | validate structured agent fields; sanitize and render the fixed body hierarchy | provider mutations |
 
 ```mermaid
 flowchart LR
-  E[PR event] --> U[PR workflow]
-  U --> D[Description/event policies]
-  U --> P[PR/issue/project/reviewer ports]
+  E[PR code or lifecycle event] --> R[Optional distinct issue resolver]
+  R --> U[PR workflow]
+  U --> D[Concise description/event policies]
+  U --> P[PR-native ports]
+  R -->|distinct issue only| I[Issue linkage/sync/closure ports]
   A[GitHub and agent adapters] --> P
+  A --> I
   U --> V[PR body/status presentation]
 ```
 
@@ -191,31 +248,101 @@ P2-E makes this boundary executable: issue/PR leaves import no `Execution`
 aggregate, application requests contain facts rather than credentials, and
 composition exposes operation-only bound ports. Automatic and explicit PR
 description generation share one discriminated request instead of dual methods.
+The agent returns bounded semantic fields, not arbitrary body Markdown. A pure
+application presentation policy validates cardinality, sentence count,
+duplicates, optional notes, trusted linkage, unsafe Markdown controls, and the
+hard body budget before rendering and before any provider write.
+The project-link port returns one required ProjectV2 item ID. The adapter obtains
+it from either the existing-item query or the add mutation; an add response
+without an item ID is a provider failure, never an ambiguous no-op. The command
+port accepts that item ID directly, preventing an eventual-consistency read from
+becoming part of application orchestration.
 
 ## 9. UI/UX and content contract
 
+The default generated body is English and uses this information hierarchy:
+
 ```markdown
-Pending: **Copilot is enriching PR #84.** Linkage and review are still running.
-Action required: **No linked issue was found.** Rename/link the branch if issue tracking is required.
-Blocked: **This fork cannot run the privileged PR workflow.** No repository content was changed.
-Partial: **Issue and labels linked; AI description failed.** Existing PR body was retained; retry the run.
-Complete: **PR metadata and review are current.** The linked issue will close when this PR merges.
+This change keeps unlinked pull requests usable and removes workflow noise caused
+by Copilot updating its own description.
+
+## What changed
+
+- Continue PR-native enrichment when no distinct issue can be inferred.
+- Prevent self-linking, self-closing references, and self-triggered body-edit runs.
+- Make every event recognizable while preserving the normal PR required-check
+  context for merge-group admission.
+
+## Validation
+
+- `pnpm run test:coverage`
+- `pnpm run validate:workflows`
+
+## Review notes
+
+Metadata-only PR edits no longer normalize titles automatically; human edits are preserved.
 ```
 
+The opening outcome and `What changed` are required. `Validation` appears only
+when at least one command, check, or manual scenario has supporting evidence;
+the whole section is omitted instead of displaying a “not run” placeholder.
+`Review notes` and a
+distinct `Closes #…` reference appear only when supported. The normal target is
+4,000 characters and the schema rejects more than 12,000. Empty template
+sections, emoji, separators, generic checklists, file/use-case inventories,
+repeated copy, and unverified test/no-impact claims are forbidden.
+Removal or a symbol being named deprecated is not evidence of an active consumer
+or transition obligation. Compatibility, migration, upgrade, and rollout notes
+appear only when the issue, diff, repository documentation, or verification
+evidence identifies a concrete affected consumer or required transition.
+When repository evidence explicitly establishes a greenfield system with no
+installed users, external consumers, or persisted production state, the
+renderer request must omit migration notes for removed contracts. A review-note
+section remains valid only for an evidence-backed reviewer action or unresolved
+material risk.
+
+| Trigger | Visible behavior | Must not appear |
+|---|---|---|
+| open/reopen | enrichment plus concise body and review | self-link, generic recap comment |
+| synchronize | refresh owned body and exact-head review | duplicate card or stale review |
+| metadata edit | no supplied Copilot PR run | body-edit cascade or title rewrite |
+| review submitted/edited/dismissed | review-state job with distinct identity | full analysis masquerading under same check name |
+| merge queue | separate event-specific run plus lightweight required check | skipped duplicate on normal PRs or a renamed check that cannot satisfy branch protection |
+| merged with distinct issue | close that issue | closure of the PR's own number |
+
 The PR body follows configured ownership; append uses one stable section.
-Result/status surfaces link issue, project where possible, current commit/review,
-and next action. One primary status and action precede technical detail. English
-fallback, descriptive links, logical headings, and text equivalents are required.
+Result/status surfaces link the issue only when distinct, and expose project,
+current commit/review, and next action where useful. English fallback,
+descriptive links, logical headings, and text equivalents are required.
 Untrusted body/title/template/agent output and mentions are sanitized.
+
+Operational copy belongs in the Job Summary or the stable review Check/card,
+not in a new conversation recap. The English default examples below show the
+minimum useful state; configured repository locale changes the surrounding copy
+without changing stable machine-readable event, state, finding, or error codes.
+
+| State | When it appears | Representative message |
+|---|---|---|
+| pending | PR analysis has started and no decision exists yet | `Review in progress for 8f3c2d1. No action is required yet.` |
+| action required | current actionable findings need an author response | `2 findings need attention. Fix or discuss them in the review threads, then push an update.` |
+| blocked | required context or provider capability prevents safe progress | `PR description was not updated: the configured agent returned invalid structured content. The existing body was retained.` |
+| partial | bounded coverage or cleanup retained named state | `Review covered 100 of 137 changed files. Results are incomplete; inspect the Job Summary before merging.` |
+| complete | current head has a trustworthy clean result | `Review complete for 8f3c2d1. No actionable findings remain; maintainer review is next.` |
+
+Each message states the affected object or head, the material outcome, and one
+next action only when a person must act. It omits completed-step inventories,
+generic `Feature Actions`/`Automatic Actions` headings, decorative media, and
+success comments that merely repeat native GitHub metadata.
 
 ## 10. Failure, recovery, and cleanup
 
 | Failure | Impact | Retained facts | Retry | Action | Cleanup |
 |---|---|---|---|---|---|
-| linkage absent | issue automation unavailable | PR unchanged otherwise | yes | link/rename | none |
+| linkage absent | issue-specific automation unavailable | PR-native enrichment remains | optional | link/rename only if issue tracking is required | none |
 | linkage propagation fails, compensation succeeds | link may be incomplete | exact original body/base restored | yes | rerun | none |
 | linkage compensation is partial | PR may retain default base and/or temporary reference | result names each retained mutation | recovery-first rerun/manual | restore named state, rerun | never claim full restoration |
 | metadata provider fail | partial enrichment | successful fields | yes | rerun | idempotent upsert |
+| project linked, status update fails | Project membership is retained; configured status is not confirmed | authoritative ProjectV2 item ID and link | yes | rerun project enrichment | never remove the valid item implicitly |
 | description failure | body retained per mode | metadata/review may exist | yes | fix agent/context | no blank overwrite |
 | stale review/head | no stale findings | new head | automatic/retry | wait | discard stale result |
 | merge closure fail | code merged, issue open | merge fact | yes | rerun/close issue | never undo merge |
@@ -236,32 +363,45 @@ links, lifecycle/activity/waiting labels, Job Summary, and optional Check Run
 provide user/operator evidence. A synchronize run correlates the current head.
 Optional capability absence is a visible skip; provider failure is not hidden as
 successful enrichment. Replays should not increase comment/body-section count.
+The Actions run name includes event and action. Review-state observation has a
+distinct check name, while normal PR analysis and merge-queue admission share
+the exact required-check context deliberately in separate workflows; their run
+names provide the human-visible distinction without a skipped duplicate.
 
-## 13. Compatibility, migration, rollout, and rollback
+## 13. Greenfield cutover, rollout, and rollback
 
 Existing unmarked bodies are preserved in append/preserve/disabled and replaced
 only in replace. Existing marked append sections are updated in place. Mode
 changes are prospective: moving away from replace cannot recover overwritten
-historic prose. Rollback restores body through GitHub history/manual edit; issue
-closure is reversible by reopening, while merged code is not altered.
+historic prose. Existing large templates remain valid inputs, but generated
+output omits empty boilerplate. This repository has no installed users,
+external consumers, or persisted production setup state. No compatibility
+parser, retired configuration alias, or migration-only path is retained. A
+future adopter that independently adds title normalization on
+`pull_request: edited` must isolate that policy in a separate workflow to
+prevent body-edit recursion.
+Rollback restores body through GitHub history/manual edit and may restore the
+edited trigger; issue closure is reversible by reopening, while merged code is
+not altered.
 
 ## 14. Testing strategy and numeric budget
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
-| Event/description/label policy | 22 | action matrix, modes, markers, bounds |
-| Orchestration/idempotency | 18 | order, replay, partial, merge closure |
+| Event/description/label policy | 26 | action matrix, optional/self linkage, modes, markers, bounds |
+| Orchestration/idempotency | 20 | order, unlinked route, replay, partial, merge closure |
 | Provider/agent adapters | 14 | link/project/reviewer/body/errors |
-| Workflow/config contracts | 10 | events, forks, permissions, inputs |
-| PR UX/localization/sanitization | 14 | body/status/links/template/output |
-| Integration/security/migration | 12 | PR→issue close, mode changes, stale head |
-| **Total** | **90** | no double counting |
+| Workflow/config contracts | 14 | event exclusion, identity, forks, permissions, inputs |
+| PR UX/localization/sanitization | 15 | concise body/status/links/template/output, evidence-backed optional notes |
+| Integration/security/greenfield cutover | 12 | PR→issue close, mode changes, stale head |
+| **Total** | **101** | no double counting |
 
 Global thresholds remain; description/marker policy SHOULD reach 100% branch
 coverage. The P2-E context/orchestration path enforces 95% lines/statements and
 90% branches/functions. Tests use fake provider/agent results and semantic Markdown assertions.
 Manual evidence covers open/sync/merge on desktop/mobile, light/dark, screen
-reader, all four body modes, and fork-visible messaging.
+reader, all four body modes, fork-visible messaging, and an observed automatic
+body mutation that produces no follow-up PR workflow.
 
 ## 15. Documentation and discoverability
 
@@ -278,7 +418,8 @@ reader, all four body modes, and fork-visible messaging.
 2. Synchronize refreshes enabled description/review without duplicating markers.
 3. Replace owns the full body; append only its section; preserve needs explicit
    command; disabled performs no description update.
-4. A PR without linked issue never invents a closing reference.
+4. A PR without a distinct linked issue still runs PR-native enrichment and
+   never queries, links, labels, closes, or references its own PR number as an issue.
 5. A disallowed actor/fork cannot invoke privileged writes or agent execution.
 6. Partial description/provider failure retains completed facts and existing body.
 7. A stale head publishes no stale review evidence.
@@ -288,15 +429,38 @@ reader, all four body modes, and fork-visible messaging.
     positive safe PR number determine every linkage read/write.
 11. Linkage compensation reports whether the temporary base, description
     reference, both, or neither remain, and replay never layers another marker.
+12. A generated body is rendered from a strict structured response, starts with
+    a one-to-three sentence outcome, has two to six
+    material-change bullets, includes validation only when evidence exists,
+    stays within 12,000 characters, and omits empty/generic sections and
+    “not run” placeholders.
+13. Copilot's own PR body update creates zero follow-up PR workflow runs.
+14. Actions distinguish PR analysis, review-state observation, and merge-queue
+    admission without requiring log inspection; review state uses a distinct
+    check and a separate merge-queue workflow preserves the normal PR
+    required-check context without adding a skipped duplicate.
+15. A successful ProjectV2 add response is moved to the configured status by its
+    returned item ID without a timer or board-list read; replay reuses the
+    existing item and creates no duplicate.
+16. Removing unused or deprecated configuration without evidence of consumers
+    produces no invented compatibility, upgrade, or migration note.
+17. Repository evidence that there are no installed users, external consumers,
+    or persisted production state keeps `reviewNotesHeading` and `reviewNotes`
+    null for removed state/configuration contracts, even when the diff uses
+    `legacy`, `deprecated`, migration, strict-reader, or fail-closed wording.
 
 ## 17. Requirements traceability
 
 | Requirement | Owner | Evidence | Documentation |
 |---|---|---|---|
 | event sequence | PR workflow | PR use-case tests | capabilities |
+| optional distinct linkage | execution issue policy and PR workflows | unlinked/self-link setup, link, sync, and close tests | capabilities |
 | body ownership | description domain/workflow | description tests | AI description |
+| concise content | description prompt/schema/template | prompt/schema semantic tests and live PR body | AI description |
 | enrichment ports | PR/project/reviewer adapters | repository tests | configuration |
+| authoritative project item | project link workflow and ProjectV2 adapters | direct-ID, replay, incomplete-response, and no-list-read tests | capabilities |
 | review integration | Bugbot contracts | Bugbot E2E | Bugbot docs |
+| run/check identity and no edit churn | workflow template/validator | distributed workflow contract tests and live PR runs | features/Bugbot docs |
 | fork safety | workflow guards | workflow tests | workflow setup/security |
 | safe/recoverable linkage | exact-target adapter and compensation workflow | URL, identifier, marker, replay, and restoration-edge tests | capabilities/troubleshooting |
 | immutable authority boundary | PR contexts and lifecycle port binding | projection, mutation-isolation, binding, and zero-leaf AST tests | architecture/dependency rules |
@@ -306,15 +470,16 @@ reader, all four body modes, and fork-visible messaging.
 1. Update event/body policies and exhaustive tests.
 2. Update PR workflow/use cases and replay/partial tests.
 3. Update adapters/composition/workflows and contract tests.
-4. Update PR presentation/docs/catalog and migration guidance.
+4. Update PR presentation, docs, catalog, and greenfield cutover guidance.
 5. Run all gates and capture human PR UX evidence.
 
 ## 19. Definition of Done
 
-- [ ] The 90-case budget, coverage, architecture, and workflow gates pass.
+- [ ] The 101-case budget, coverage, architecture, and workflow gates pass.
 - [ ] Event order, replay, partial state, stale head, and merge closure are proven.
-- [ ] All body modes preserve their documented ownership and migration behavior.
+- [ ] All body modes preserve their documented ownership without compatibility-only paths.
 - [ ] UI states, accessibility, localization, sanitization, and noise pass.
+- [ ] An unlinked PR and Copilot-authored description edit pass live UX verification without self-linkage or a follow-up PR workflow.
 - [ ] PR docs, Bugbot links, and catalog are current.
 - [ ] Human four-mode and fork UX evidence is captured.
 

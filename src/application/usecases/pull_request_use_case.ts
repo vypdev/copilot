@@ -27,6 +27,8 @@ export class PullRequestUseCase implements ParamUseCase<Execution, Result[]> {
 
   async invoke(param: Execution): Promise<Result[]> {
     logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`);
+    // Review events only reconcile lifecycle state in the outer tracked route.
+    if (param.eventName === 'pull_request_review') return [];
     return runPullRequestWorkflow(projectPullRequestWorkflowRouteContext(param), this.taskId, {
       updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase,
       reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
@@ -38,6 +40,14 @@ export class PullRequestUseCase implements ParamUseCase<Execution, Result[]> {
         steps: projectPullRequestWorkflowStepContexts(param),
       },
     });
+  }
+
+  /** Used only after a narrowly admitted same-repository PAT-authored PR event. */
+  async reviewOnly(param: Execution): Promise<Result[]> {
+    if (param.eventName !== 'pull_request'
+      || !['opened', 'reopened', 'synchronize'].includes(param.pullRequest.action)
+      || !this.reviewPotentialProblemsUseCase) return [];
+    return this.reviewPotentialProblemsUseCase.invoke(projectBugbotReviewOperationContext(param));
   }
 }
 

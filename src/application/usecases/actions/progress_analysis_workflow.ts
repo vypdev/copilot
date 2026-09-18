@@ -16,20 +16,25 @@ import {
     type ProgressAttemptResult,
 } from './progress_response';
 import { ApplicationError, type ApplicationErrorCode } from '../../errors/application_error';
+import { productFacingAgentQueryOptions } from '../../policies/agent_output_locale_policy';
+import type { BoundPublicationSourceQueryPort } from '../../ports/publication_freshness_ports';
 
 export interface ProgressAnalysisDependencies {
     issueDescriptionQueryPort: BoundIssueDescriptionQueryPort;
     branchRepository: BoundBranchListQueryPort;
     aiRepository: FindingsQueryPort;
+    publicationSourceQuery: BoundPublicationSourceQueryPort;
 }
 
 export type ProgressAnalysis =
     | { kind: 'failure'; result: Result }
+    | { kind: 'stale-source'; branch: string; sourceHeadSha: string }
     | {
         kind: 'ready';
         issueNumber: number;
         branch: string;
         developmentBranch: string;
+        sourceHeadSha: string;
         attemptResult: ProgressAttemptResult;
     };
 
@@ -86,6 +91,10 @@ export async function analyzeProgress(
     }
 
     const resolvedBranch = branch as string;
+    const sourceHeadSha = await dependencies.publicationSourceQuery.getBranchHeadSha(resolvedBranch);
+    if (param.sourceHeadSha && param.sourceHeadSha !== sourceHeadSha) {
+        return { kind: 'stale-source', branch: resolvedBranch, sourceHeadSha: param.sourceHeadSha };
+    }
     const developmentBranch = param.developmentBranch;
     logInfo(
         `📦 Progress will be assessed from workspace diff: base branch "${developmentBranch}", current branch "${resolvedBranch}" (configured agent will run git diff).`,
@@ -97,6 +106,7 @@ export async function analyzeProgress(
         issueDescription,
         baseBranch: developmentBranch,
         currentBranch: resolvedBranch,
+        targetLocale: param.targetLocale,
     });
     logDebugInfo(
         `CheckProgress: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`,
@@ -108,12 +118,11 @@ export async function analyzeProgress(
             agentId: AGENT_PLAN,
             prompt,
             options: {
-                expectJson: true,
-                schema: PROGRESS_RESPONSE_SCHEMA as unknown as Record<string, unknown>,
-                schemaName: 'progress_response',
+                ...productFacingAgentQueryOptions('progress', PROGRESS_RESPONSE_SCHEMA),
                 includeReasoning: param.includeReasoning,
             },
         }),
+        param.targetLocale,
     );
 
     return {
@@ -121,6 +130,7 @@ export async function analyzeProgress(
         issueNumber,
         branch: resolvedBranch,
         developmentBranch,
+        sourceHeadSha,
         attemptResult,
     };
 }

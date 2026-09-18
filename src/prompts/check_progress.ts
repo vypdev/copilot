@@ -5,6 +5,8 @@ import { fillTemplate } from './fill';
 
 const TEMPLATE = `You are in the repository workspace. Assess the progress of issue #{{issueNumber}} using the full diff between the base (parent) branch and the current branch.
 
+Write every human-readable sentence in {{targetLocale}}. Preserve code identifiers, paths, refs, commands, URLs, percentages, and JSON keys verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
+
 {{projectContextInstruction}}
 
 **Branches:**
@@ -20,7 +22,7 @@ const TEMPLATE = `You are in the repository workspace. Assess the progress of is
 **Issue description:**
 {{issueDescription}}
 
-Respond with a single JSON object: { "progress": <number 0-100>, "summary": "<short explanation>", "remaining": "<what is left to reach 100%>" | null }.`;
+Respond with a single JSON object: { "outputLocale": "{{targetLocale}}", "progress": <number 0-100>, "summary": "<short explanation>", "remaining": "<what is left to reach 100%>" | null }.`;
 
 export type CheckProgressParams = {
     projectContextInstruction: string;
@@ -28,6 +30,7 @@ export type CheckProgressParams = {
     baseBranch: string;
     currentBranch: string;
     issueDescription: string;
+    targetLocale: string;
 };
 
 export function getCheckProgressPrompt(params: CheckProgressParams): string {
@@ -37,5 +40,6 @@ export function getCheckProgressPrompt(params: CheckProgressParams): string {
         baseBranch: params.baseBranch,
         currentBranch: params.currentBranch,
         issueDescription: params.issueDescription,
+        targetLocale: params.targetLocale,
     });
 }

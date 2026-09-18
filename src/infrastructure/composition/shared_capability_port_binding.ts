@@ -1,7 +1,9 @@
 import type { BoundIssueDescriptionQueryPort } from '../../application/ports/issue_description_ports';
 import type {
+  BoundIssueCommentQueryPort,
   BoundIssueCommentUpdatePort,
   BoundIssueNotificationPort,
+  IssueCommentQueryPort,
   IssueCommentUpdatePort,
   IssueNotificationPort,
 } from '../../application/ports/issue_lifecycle_ports';
@@ -19,11 +21,29 @@ import type {
 } from '../../application/ports/project_board_link_ports';
 import type { IssueIdentityQueryPort } from '../../application/ports/issue_identity_ports';
 import { ProjectDetail } from '../../data/model/project_detail';
+import type {
+  BoundPublicationSourceQueryPort,
+  PublicationSourceQueryPort,
+} from '../../application/ports/publication_freshness_ports';
 
 export interface RepositoryCredentialBinding {
   readonly owner: string;
   readonly repository: string;
   readonly token: string;
+}
+
+export function bindPublicationSourceQuery(
+  port: PublicationSourceQueryPort,
+  binding: RepositoryCredentialBinding,
+): BoundPublicationSourceQueryPort {
+  return Object.freeze({
+    getBranchHeadSha: (branch: string) => port.getBranchHeadSha(
+      binding.owner,
+      binding.repository,
+      branch,
+      binding.token,
+    ),
+  });
 }
 
 export function bindOrganizationMembers(
@@ -64,6 +84,20 @@ export function bindIssueNotification(
   };
 }
 
+export function bindIssueCommentQuery(
+  port: IssueCommentQueryPort,
+  binding: RepositoryCredentialBinding,
+): BoundIssueCommentQueryPort {
+  return {
+    listIssueComments: (issueNumber) => port.listIssueComments(
+      binding.owner,
+      binding.repository,
+      issueNumber,
+      binding.token,
+    ),
+  };
+}
+
 export function bindIssueCommentUpdate(
   port: IssueCommentUpdatePort,
   binding: RepositoryCredentialBinding,
@@ -97,7 +131,6 @@ export function bindIssueTitle(
       input.version,
       input.currentTitle,
       input.issueNumber,
-      input.branchManagementAlways,
       input.branchManagementEmoji,
       input.labelFacts,
       binding.token,
@@ -109,7 +142,6 @@ export function bindIssueTitle(
       input.issueTitle,
       input.issueNumber,
       input.pullRequestNumber,
-      false,
       '',
       input.labelFacts,
       binding.token,
@@ -135,11 +167,9 @@ export function bindProjectContent(
       contentId,
       binding.token,
     ),
-    moveContent: (project, contentNumber, columnName) => commands.moveIssueToColumn(
+    moveContent: (project, projectItemId, columnName) => commands.moveProjectItemToColumn(
       toProjectDetail(project),
-      binding.owner,
-      binding.repository,
-      contentNumber,
+      projectItemId,
       columnName,
       binding.token,
     ),

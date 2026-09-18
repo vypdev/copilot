@@ -12,13 +12,16 @@ describe('issue command policy', () => {
   });
 
   it('builds check-progress params with an optional branch reference', () => {
-    const params = buildCheckProgressParams({ issue: '12', branch: 'feature/test', debug: true }, gitInfo);
+    const params = buildCheckProgressParams(
+      { issue: '12', branch: 'feature/test', debug: true }, gitInfo, 'a'.repeat(40),
+    );
     if (!params) throw new Error('Expected valid check-progress parameters.');
     expect(params).toMatchObject({
       [INPUT_KEYS.SINGLE_ACTION]: ACTIONS.CHECK_PROGRESS,
       [INPUT_KEYS.SINGLE_ACTION_ISSUE]: 12,
       issue: { number: 12 },
       commits: { ref: 'refs/heads/feature/test' },
+      after: 'a'.repeat(40),
     });
   });
 

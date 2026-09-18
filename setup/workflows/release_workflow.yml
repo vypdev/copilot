@@ -115,6 +115,7 @@ jobs:
         with:
           single-action: prepare_deployment_action
           single-action-issue: ${{ inputs.issue }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
           single-action-version: ${{ inputs.version }}
           single-action-title: ${{ inputs.title }}
           single-action-changelog: ${{ inputs.changelog }}
@@ -136,8 +137,9 @@ jobs:
           orchestration-presentation-mode: ${{ vars.ORCHESTRATION_PRESENTATION_MODE || 'guided' }}
           orchestration-diagrams: ${{ vars.ORCHESTRATION_DIAGRAMS || 'true' }}
           orchestration-comment-mode: ${{ vars.ORCHESTRATION_COMMENT_MODE || 'update' }}
-          issues-locale: ${{ vars.ISSUES_LOCALE || 'en-US' }}
-          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || 'en-US' }}
+          repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
+          issues-locale: ${{ vars.ISSUES_LOCALE || '' }}
+          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || '' }}
           token: ${{ secrets.PAT }}
 
   publish:
@@ -160,6 +162,7 @@ jobs:
         with:
           single-action: create_tag
           single-action-issue: ${{ inputs.issue }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
           single-action-operation-id: ${{ inputs.operation-id }}
           single-action-version: ${{ inputs.version }}
           token: ${{ secrets.PAT }}
@@ -169,6 +172,7 @@ jobs:
         with:
           single-action: create_release
           single-action-issue: ${{ inputs.issue }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
           single-action-operation-id: ${{ inputs.operation-id }}
           single-action-version: ${{ inputs.version }}
           token: ${{ secrets.PAT }}
@@ -177,6 +181,7 @@ jobs:
         with:
           single-action: published_deployment_action
           single-action-issue: ${{ inputs.issue }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
           single-action-operation-id: ${{ inputs.operation-id }}
           single-action-version: ${{ inputs.version }}
           token: ${{ secrets.PAT }}
@@ -196,6 +201,7 @@ jobs:
         with:
           single-action: failed_deployment_action
           single-action-issue: ${{ inputs.issue }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
           single-action-operation-id: ${{ inputs.operation-id }}
           single-action-version: ${{ inputs.version }}
           single-action-message: Publication failed. Review ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} before retrying.
@@ -206,6 +212,7 @@ jobs:
         with:
           single-action: publish_issue_comment
           single-action-issue: ${{ inputs.issue }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
           single-action-message: |
             ## ❌ Release orchestration needs attention
 

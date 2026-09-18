@@ -1,12 +1,10 @@
 
-import { branchesForManagement, typesForIssue } from './label_branch_policy';
 import { Ai } from "./ai";
 import { Branches } from "./branches";
 import { Commit } from "./commit";
 import { Config } from "./config";
 import { Emoji } from "./emoji";
 import { Hotfix } from "./hotfix";
-import { Images } from "./images";
 import { Issue } from "./issue";
 import { IssueTypes } from "./issue_types";
 import { Labels } from "./labels";
@@ -24,6 +22,10 @@ import type { ExecutionInputs } from './execution_inputs';
 import type { ExecutionComponents } from './execution_components';
 import { DEFAULT_INACTIVITY_THRESHOLD_HOURS } from '../../domain/issue_inactivity';
 import { DEFAULT_DEPLOYMENT_CONFIGURATION, type DeploymentConfigurationValues } from '../../domain/deployment_configuration';
+import { ALL_ISSUE_WORKFLOWS, classifyIssueWorkflow, type IssueWorkflowAdmission, type IssueWorkflowProfile } from '../../domain/issue_workflow_profile';
+import type { IssueWorkflowKind } from '../../domain/issue_workflow_profile';
+import type { IssueWorkflowRuntimeMode } from '../../domain/issue_workflow_runtime_policy';
+import { decideIssueStart } from '../../domain/issue_start_policy';
 
 
 export class Execution {
@@ -39,7 +41,6 @@ export class Execution {
     singleAction: SingleAction;
     commitPrefixBuilder: string;
     emoji: Emoji;
-    images: Images;
     tokens: Tokens;
     ai: Ai;
     labels: Labels;
@@ -59,6 +60,11 @@ export class Execution {
     tokenUser: string | undefined;
     inactivityThresholdHours: number;
     inputs: ExecutionInputs | undefined;
+    readonly issueWorkflowProfile: IssueWorkflowProfile;
+    readonly issueWorkflowProfileDigest?: string;
+    currentIssueWorkflowAdmission?: IssueWorkflowAdmission;
+    issueWorkflowRuntimeMode: IssueWorkflowRuntimeMode = 'execute';
+    readonly preBranchSdd: boolean;
 
     get eventName(): string {
         return this.inputs?.eventName ?? '';
@@ -111,9 +117,38 @@ export class Execution {
     }
 
     get isBranched(): boolean {
-        return this.issue.branchManagementAlways ||
-            this.labels.containsBranchedLabel ||
-            this.labels.isMandatoryBranchedLabel;
+        return this.issueStartDecision.branchRequired;
+    }
+
+    get issueStartDecision() {
+        return decideIssueStart({
+            kind: this.issueWorkflowKind,
+            labels: this.labels.currentIssueLabels,
+            issueManagedBranches: this.issue.issueManagedBranches,
+            preBranchSdd: this.preBranchSdd,
+        });
+    }
+
+    get issueWorkflowAdmission(): IssueWorkflowAdmission {
+        return this.currentIssueWorkflowAdmission ?? classifyIssueWorkflow(
+            this.labels.currentIssueLabels,
+            this.issueWorkflowProfile,
+            {
+                feature: [this.labels.feature, this.labels.enhancement],
+                bugfix: [this.labels.bugfix, this.labels.bug],
+                documentation: [this.labels.documentation, this.labels.docs],
+                chore: [this.labels.chore, this.labels.maintenance],
+                help: [this.labels.help, this.labels.question],
+                hotfix: [this.labels.hotfix],
+                release: [this.labels.release],
+            },
+            this.issue.body,
+        );
+    }
+
+    get issueWorkflowKind(): IssueWorkflowKind | undefined {
+        const admission = this.issueWorkflowAdmission;
+        return admission.status === 'eligible' ? admission.kind : undefined;
     }
 
     get issueNotBranched(): boolean {
@@ -121,37 +156,11 @@ export class Execution {
     }
 
     get managementBranch(): string {
-        return branchesForManagement(
-            this,
-            this.labels.currentIssueLabels,
-            this.labels.feature,
-            this.labels.enhancement,
-            this.labels.bugfix,
-            this.labels.bug,
-            this.labels.hotfix,
-            this.labels.release,
-            this.labels.docs,
-            this.labels.documentation,
-            this.labels.chore,
-            this.labels.maintenance,
-        );
+        return issueWorkflowBranch(this.issueWorkflowKind, this.branches);
     }
 
     get issueType(): string {
-        return typesForIssue(
-            this,
-            this.labels.currentIssueLabels,
-            this.labels.feature,
-            this.labels.enhancement,
-            this.labels.bugfix,
-            this.labels.bug,
-            this.labels.hotfix,
-            this.labels.release,
-            this.labels.docs,
-            this.labels.documentation,
-            this.labels.chore,
-            this.labels.maintenance,
-        );
+        return issueWorkflowBranch(this.issueWorkflowKind, this.branches);
     }
 
     get cleanIssueBranches(): boolean {
@@ -174,7 +183,6 @@ export class Execution {
         this.commitPrefixBuilder = components.commitPrefixBuilder;
         this.issue = components.issue;
         this.pullRequest = components.pullRequest;
-        this.images = components.images;
         this.tokens = components.tokens;
         this.ai = components.ai;
         this.emoji = components.emoji;
@@ -193,6 +201,23 @@ export class Execution {
         this.currentConfiguration = new Config({});
         this.inputs = components.inputs;
         this.welcome = components.welcome;
+        this.issueWorkflowProfile = components.issueWorkflowProfile ?? ALL_ISSUE_WORKFLOWS;
+        this.issueWorkflowProfileDigest = components.issueWorkflowProfileDigest;
+        this.currentIssueWorkflowAdmission = components.issueWorkflowAdmission;
+        this.currentConfiguration.issueWorkflowProfileDigest = components.issueWorkflowProfileDigest;
+        this.preBranchSdd = components.preBranchSdd ?? false;
     }
 
+}
+
+function issueWorkflowBranch(kind: IssueWorkflowKind | undefined, branches: Branches): string {
+    if (!kind || kind === 'help') return '';
+    return ({
+        feature: branches.featureTree,
+        bugfix: branches.bugfixTree,
+        documentation: branches.docsTree,
+        chore: branches.choreTree,
+        hotfix: branches.hotfixTree,
+        release: branches.releaseTree,
+    })[kind];
 }

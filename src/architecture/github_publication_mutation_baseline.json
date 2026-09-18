@@ -1,0 +1,16 @@
+{
+  "entries": [
+    { "file": "src/application/usecases/actions/close_inactive_issues_workflow.ts", "addComment": 1, "reason": "Publishes the terminal inactivity policy after a successful native close." },
+    { "file": "src/application/usecases/actions/observe_branch_sync_use_case.ts", "addComment": 1, "updateComment": 2, "reason": "Reconciles the feature-owned branch synchronization card and delegates actionable transitions to the shared publisher." },
+    { "file": "src/application/usecases/actions/publish_issue_comment_workflow.ts", "addComment": 1, "updateComment": 1, "reason": "Executes the explicitly requested caller-supplied comment mutation." },
+    { "file": "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts", "addComment": 1, "updateComment": 1, "reason": "Creates or updates one bot-owned SDD clarification and publication status card after issue and branch verification." },
+    { "file": "src/application/usecases/steps/commit/bugbot/publish_issue_finding_comment.ts", "addComment": 1, "updateComment": 1, "reason": "Creates or updates one Bugbot issue finding." },
+    { "file": "src/application/usecases/steps/commit/bugbot/publish_overflow_comment.ts", "addComment": 1, "reason": "Publishes the bounded Bugbot overflow record." },
+    { "file": "src/application/usecases/steps/commit/bugbot/resolve_issue_finding.ts", "updateComment": 1, "reason": "Transitions an existing Bugbot finding to its resolved state." },
+    { "file": "src/application/usecases/steps/commit/bugbot/synchronize_bugbot_review_presentation_use_case.ts", "addComment": 1, "updateComment": 2, "updatePullRequestReview": 1, "reason": "Reconciles the Bugbot aggregate card, duplicates, and historical review state." },
+    { "file": "src/application/usecases/steps/common/duplicate_comment_cleanup_workflow.ts", "updateComment": 1, "removeComment": 1, "reason": "Removes exact bot-owned duplicates or compacts them when deletion is forbidden." },
+    { "file": "src/application/usecases/steps/common/reply_publication_workflow.ts", "addComment": 1, "reason": "Publishes one correlated explicit reply and selects exact bot-owned duplicates for cleanup." },
+    { "file": "src/application/usecases/steps/common/status_card_publication_workflow.ts", "addComment": 1, "updateComment": 1, "reason": "Creates or reconciles one canonical semantic status card and selects exact bot-owned duplicates for cleanup." },
+    { "file": "src/application/usecases/steps/common/transition_notification_workflow.ts", "addComment": 1, "reason": "Creates one fingerprinted action notification and selects exact bot-owned duplicates for cleanup." }
+  ]
+}

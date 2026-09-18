@@ -10,12 +10,12 @@ export interface ProjectReference {
 }
 
 export interface ProjectBoardLinkPort {
-    linkContentId(project: ProjectDetail, contentId: string, token: string): Promise<boolean>;
+    linkContentId(project: ProjectDetail, contentId: string, token: string): Promise<string>;
 }
 
 /** Repository-credential-bound project authority for one content-link workflow. */
 export interface BoundProjectContentPort {
     resolveIssueContentId(issueNumber: number): Promise<string>;
-    linkContentId(project: ProjectReference, contentId: string): Promise<boolean>;
-    moveContent(project: ProjectReference, contentNumber: number, columnName: string): Promise<boolean>;
+    linkContentId(project: ProjectReference, contentId: string): Promise<string>;
+    moveContent(project: ProjectReference, projectItemId: string, columnName: string): Promise<boolean>;
 }

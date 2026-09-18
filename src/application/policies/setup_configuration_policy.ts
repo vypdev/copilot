@@ -3,3 +3,4 @@ export * from './setup_configuration_defaults';
 export * from './setup_configuration_plan';
 export * from './setup_configuration_storage_policy';
 export * from './setup_configuration_validation';
+export * from './setup_issue_workflow_policy';

@@ -1,0 +1,97 @@
+---
+title: Guarded PR approval
+description: Configure evidence-gated bot approvals, understand blockers, and recover safely.
+---
+
+# Guarded PR approval
+
+The workflow PAT bot can approve one exact revision of an eligible human-authored pull request after independent CI, a declared coverage gate, complete Bugbot evidence, native reviews, and effective branch rules all agree. It never merges the PR or waives branch rules. A bot approval may count toward a generic minimum number of approvals: configure a separate code-owner or human-review requirement if your governance needs one. A green Bugbot `state:ready` label alone is not an approval decision. For CI on GitHub's test-merge commit, the observer verifies that its parents are exactly the current base and head before trusting its checks.
+
+```text
+PR revision → CI and Bugbot complete → trusted observer rereads current facts
+            → approve this head once, or explain why no approval was submitted
+new push     → previous assessment is stale → fresh evidence is required
+```
+
+New `copilot setup` runs offer `recommend` by default: Copilot assesses evidence and asks a human to decide, but never submits `APPROVE`. Choose `guarded` explicitly after checking the producer and coverage prerequisites, or `off` to disable assessment. Existing installations with no `PR_APPROVAL_POLICY` Variable remain **off**; upgrading the package alone never starts issuing approvals. An already installed observer workflow may still wake and exit without assessing PRs. A setup preview does not approve a current PR.
+
+## First setup
+
+Use `copilot setup` interactively to select an exact CI check, its GitHub App ID, and the workflow that produces it. The coverage check must enforce your repository's coverage budget; a successful advisory upload does not prove a percentage. Setup displays the selected names, target branches, Bugbot prerequisites, and branch-rule readiness before confirmation. The generated `copilot_pull_request_approval.yml` must reach the repository default branch before its `workflow_run` wakeups operate.
+
+When testing this repository itself before a new package release, the source repository has a reviewed observer variant that checks out only its trusted default-branch revision and invokes `./`. Local setup preserves that variant instead of replacing it with the consumer template, whose `v3` reference cannot run unreleased changes. Consumer repositories need a published Action version containing this feature before enabling the generated observer.
+
+For non-interactive setup, supply the producer explicitly:
+
+```sh
+copilot setup --non-interactive --config approval-setup.yml --yes
+```
+
+`approval-setup.yml` is a local non-secret file. Example IDs and names must be replaced with values inspected in **your** repository. Every branch-required status check must also appear among the trusted `testChecks` tuples; an undeclared producer blocks approval:
+
+```yaml
+ai:
+  bugbotSeverity: info
+  bugbotTelemetry: true
+  bugbotDryRun: false
+pullRequestApproval:
+  version: 1
+  mode: recommend
+  targetRoles: [development]
+  branchKinds: [feature, bugfix, documentation, chore]
+  requireLinkedIssue: true
+  additionalExcludedPaths: []
+  testChecks:
+    - name: CI Check
+      sourceAppId: 15368
+      workflowName: CI Check
+  producerAttested: true # record this only after inspecting the exact CI gate
+  coverage:
+    mode: check
+    checkName: CI Check
+  allowHumanDismissed: false
+  skipWhenHumanApproved: true
+```
+
+This example is recommendation-only: it evaluates the same evidence but cannot submit a native approval. After controlled tests, change `mode` to `guarded` explicitly; setup will reject it unless the producer and coverage attestations are complete.
+
+For quick CLI configuration, `--pr-approval-mode`, repeatable `--pr-approval-check 'name|App-ID|workflow-name'`, `--pr-approval-coverage-check`, and `--pr-approval-attest-producer` set the common check mode. Only attest after inspecting the exact workflow job, App ID, and coverage-enforcing step. `--non-interactive --yes` cannot invent a missing producer. `--dry-run` reports unverified remote facts without writing files or GitHub resources.
+
+## Policy contract
+
+Setup stores one versioned JSON policy in the non-secret `PR_APPROVAL_POLICY` Variable and forwards it to the observer Action. The observer rereads the effective Variable before an approval write. Repository Variables override accessible organization Variables. Unknown versions, keys, or values fail closed.
+
+| Field | Values | New setup default |
+|---|---|---|
+| `mode` | `off`, `recommend`, `guarded` | `recommend` |
+| `targetRoles` | nonempty subset of `development`, `main` | `development` |
+| `branchKinds` | nonempty subset of `feature`, `bugfix`, `documentation`, `chore` | all four |
+| `requireLinkedIssue` | boolean | `true` |
+| `additionalExcludedPaths` | up to 32 safe additive globs | empty |
+| `testChecks` | 1–8 exact name, App ID, workflow-name tuples for guarded mode | chosen during setup |
+| `producerAttested` | confirms exact check/App/workflow and a coverage-enforcing CI step; required for guarded | `false` |
+| `coverage.mode` | `check` or `numeric` | `check` |
+| `coverage.checkName` | exact trusted configured check | chosen during setup |
+| `coverage.minDiffPercent` | integer 0–100, numeric mode only | unset |
+| `coverage.artifactWorkflowName` | exact trusted workflow, numeric mode only | unset |
+| `coverage.reporterAttested` | confirms the numeric reporter is installed in trusted CI; required for guarded numeric mode | unset |
+| `allowHumanDismissed` | boolean; never bypasses unknown findings | `false` |
+| `skipWhenHumanApproved` | boolean | `true` |
+
+Numeric mode consumes a single `copilot-diff-coverage-v1` workflow artifact containing one `copilot-diff-coverage.json` file (16 KiB maximum). Your selected CI workflow must publish this artifact; setup asks whether that reporter is installed but does not add it to an unmanaged CI workflow. Its schema has `version: 1`, `repositoryId`, `pullNumber`, exact `headSha` and `baseSha`, `workflowRunId`, `workflowRunAttempt`, `coveredChangedLines`, and `totalChangedLines`. All counts are nonnegative safe integers and covered lines cannot exceed total lines. Missing, ambiguous, malformed, or stale evidence blocks approval. A completely classified documentation-only diff is exempt from numeric changed-line coverage while still requiring CI and Bugbot; zero measurable lines in a code diff are not exempt. Copilot computes the percentage from the counts. The artifact is CI evidence, not proof against a contributor who controls CI test code.
+
+No setting can make the bot approve its own PR, a fork, a draft, a deployment/release/hotfix PR, a changed file hidden from Bugbot by `AI_IGNORE_FILES`, or a change to protected workflow/policy files. Effective branch rules must be readable and dismiss stale approvals; `Copilot / Approval` must not be its own required check. The workflow PAT used at runtime is separate from the local setup PAT. The observer never checks out or runs PR-head code.
+
+## What you will see
+
+The PR gets one editable “Copilot approval” assessment card. It says whether the bot is waiting, a human must review, a prerequisite blocks approval, a submission is uncertain, or a native review was confirmed. `Copilot / Approval` is a supplemental Check, not a prerequisite for itself. The native GitHub `APPROVE` review is the actual approval record and is tied to the head commit.
+
+If the card says “waiting”, let the named CI or Bugbot producer finish. If it says “blocked”, fix the named check, coverage source, Bugbot finding, PAT permission, or branch rule, then rerun the observer. Bot-authored PRs require a human reviewer. A dismissed bot approval on the same revision is not automatically reposted. After an ambiguous API timeout, a recheck reads GitHub's existing reviews before attempting any new submission.
+
+## Diagnose and recover
+
+Run `copilot doctor` for ordered `approval.policy`, `approval.workflow`, `approval.bot`, `approval.rules`, `approval.producers`, `approval.bugbot`, and `approval.overall` checks. `pass` means the prerequisite was verified; `warn` or `skipped` never means native approval is ready. Doctor is read-only. Credential health cannot prove future `Pull requests: write` authorization without submitting a review, so `approval.bot` remains a warning even when the Secret is healthy; verify that permission in the bot token settings. An observer file copied locally but not yet on the default branch will be reported as pending installation.
+
+Use the **Copilot - Pull Request Approval** workflow's manual dispatch with a positive PR number to re-evaluate a missed wakeup. The dispatcher needs repository write permission; re-evaluation never bypasses eligibility. Set the policy mode to `off` to stop future reviews. Existing native reviews remain in GitHub history and need human assessment; disabling does not dismiss them.
+
+See [workflow setup](/pull-requests/workflow-setup), [authentication](/authentication), and [operations troubleshooting](/security-operations/operations/troubleshooting) for related prerequisites.

@@ -5,15 +5,17 @@ import type {
 } from "../../../../../domain/bugbot/finding";
 import { buildCommentBody } from '../../../../policies/bugbot_finding_marker_policy';
 import { logDebugInfo } from "../../../../ports/logging_ports";
+import type { BugbotMessageCatalog } from '../../../../policies/bugbot_message_catalog';
 
 export async function publishIssueFindingComment(
     repository: BoundBugbotIssueCommentWritePort,
     issueNumber: number,
     finding: BugbotFinding,
     existing: ExistingFindingInfo | undefined,
-    commitSha: string | undefined
+    commitSha: string | undefined,
+    catalog?: BugbotMessageCatalog,
 ): Promise<void> {
-    const body = buildCommentBody(finding, false);
+    const body = buildCommentBody(finding, false, undefined, { catalog });
     const options = commitSha ? { commitSha } : undefined;
 
     if (existing?.issue != null) {

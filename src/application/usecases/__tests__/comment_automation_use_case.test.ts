@@ -67,6 +67,7 @@ function runCommentAutomation(
     issueNumber: execution.issueNumber ?? -1,
     isPullRequest: execution.isPullRequest ?? false,
     eventName: execution.eventName ?? 'issue_comment',
+    locale: execution.locale ?? { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
     commit: { ...(execution.commit ?? {}), branch: execution.commit?.branch ?? '' },
     currentConfiguration: execution.currentConfiguration ?? {},
     branches: execution.branches ?? {},
@@ -354,6 +355,7 @@ describe("runCommentAutomation", () => {
 
   it.each([
     ['/copilot sync-branch --from release/3', 'release/3'],
+    ['/copilot sync-branch --from main', 'main'],
   ])('routes authorized branch synchronization directly: %s', async (userComment, parentOverride) => {
     const sync = { invoke: jest.fn().mockResolvedValue([successfulResult('sync')]) };
     const language = { invoke: jest.fn() };

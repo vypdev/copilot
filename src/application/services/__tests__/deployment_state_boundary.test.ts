@@ -35,6 +35,7 @@ const operation = (operationId = "operation-12345678"): DeploymentOperationSnaps
   publicationVerified: false,
   reconciliationTargets: [],
   lastFailure: null,
+  locale: { repository: "en-US", issue: "en-US", pullRequest: "en-US" },
 });
 
 function context(value: DeploymentOperationSnapshot) {
@@ -45,7 +46,7 @@ function context(value: DeploymentOperationSnapshot) {
     singleAction: { issue: 355 },
     labels: { deploy: "deploy", deployed: "deployed", lifecycle: {
       planned: "state:planned",
-      inProgress: "state:in-progress",
+      inProgress: "state:working",
       reviewing: "state:reviewing",
       changesRequested: "state:changes-requested",
       verified: "state:verified",

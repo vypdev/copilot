@@ -25,6 +25,7 @@ The Action fails closed. It MUST stop rather than silently selecting another run
 | CLI timeout | Execution | Stop; do not switch provider |
 | Non-zero CLI exit | Execution | Stop; preserve sanitized diagnostics only |
 | Invalid agent response | Parsing | Stop; do not publish unsafe findings |
+| Missing or mismatched `outputLocale` | Parsing | Stop before product publication or state mutation; retain existing state |
 | Verification command fails | Autofix | Do not commit or push |
 | Sensitive workspace change | Commit policy | Reject automated commit |
 

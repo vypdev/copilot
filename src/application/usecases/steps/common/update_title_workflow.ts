@@ -4,6 +4,7 @@ import type {
     TitleLabelFacts,
 } from '../../../../application/ports/issue_title_ports';
 import { toApplicationError } from '../../../errors/application_error';
+import { parsePositiveSafeInteger } from '../../../../domain/positive_integer_policy';
 
 export type UpdateTitleContext =
     | {
@@ -12,7 +13,6 @@ export type UpdateTitleContext =
         readonly issueNumber: number;
         readonly fallbackTitle: string;
         readonly version: string;
-        readonly branchManagementAlways: boolean;
         readonly branchManagementEmoji: string;
         readonly labelFacts: TitleLabelFacts;
     }
@@ -33,7 +33,6 @@ export interface UpdateTitleContextSource {
     readonly issue: {
         readonly number: number;
         readonly title: string;
-        readonly branchManagementAlways: boolean;
     };
     readonly pullRequest: { readonly number: number; readonly title: string };
     readonly emoji: { readonly emojiLabeledTitle: boolean; readonly branchManagementEmoji: string };
@@ -54,7 +53,6 @@ export function projectUpdateTitleContext(source: UpdateTitleContextSource): Upd
                 : source.hotfix.active
                     ? source.hotfix.version ?? ''
                     : '',
-            branchManagementAlways: source.issue.branchManagementAlways,
             branchManagementEmoji: source.emoji.branchManagementEmoji,
             labelFacts: projectTitleLabelFacts(source.labels),
         });
@@ -83,7 +81,6 @@ export async function runIssueTitleUpdate(
         version: param.version,
         currentTitle,
         issueNumber: param.issueNumber,
-        branchManagementAlways: param.branchManagementAlways,
         branchManagementEmoji: param.branchManagementEmoji,
         labelFacts: param.labelFacts,
     });
@@ -98,14 +95,18 @@ export async function runPullRequestTitleUpdate(
     issueRepository: BoundIssueTitlePort,
 ): Promise<Result[]> {
     if (!param.enabled) return [skippedResult(taskId)];
-    const issueTitle = await issueRepository.getTitle(param.issueNumber);
+    const linkedIssueNumber = parsePositiveSafeInteger(param.issueNumber);
+    if (!linkedIssueNumber || linkedIssueNumber === param.pullRequestNumber) {
+        return [skippedResult(taskId)];
+    }
+    const issueTitle = await issueRepository.getTitle(linkedIssueNumber);
     if (issueTitle === undefined) {
         return [new Result({ id: taskId, success: false, executed: true, steps: ['Tried to update title, but there was a problem.'] })];
     }
     const title = await issueRepository.updatePullRequestTitle({
         pullRequestTitle: param.pullRequestTitle,
         issueTitle,
-        issueNumber: param.issueNumber,
+        issueNumber: linkedIssueNumber,
         pullRequestNumber: param.pullRequestNumber,
         labelFacts: param.labelFacts,
     });
