@@ -10,6 +10,7 @@ import { SetupQuestionnaireController, SetupWizardUseCase } from '../../applicat
 import {
   SETUP_FEATURE_DESCRIPTIONS,
   buildSetupCredentialRequirements,
+  buildSetupRepositoryVariables,
   effectiveIssueWorkflowFeatures,
   validateSetupManagedRepositoryInventory,
 } from '../../application/policies/setup_configuration_policy';
@@ -172,8 +173,13 @@ export function registerSetupCommand(program: Command): void {
             );
           }
         }
+        const credentialRequirements = buildSetupCredentialRequirements(configuration);
+        const repositoryVariables = buildSetupRepositoryVariables(configuration);
         if (remoteConfiguration) {
-          const inventoryErrors = validateSetupManagedRepositoryInventory(configuration, remoteConfiguration);
+          const inventoryErrors = validateSetupManagedRepositoryInventory(configuration, remoteConfiguration, {
+            secrets: credentialRequirements.map(requirement => requirement.name),
+            variables: repositoryVariables.map(variable => variable.name),
+          });
           if (inventoryErrors.length > 0) {
             throw new ApplicationError(
               'provider.unavailable',
@@ -194,8 +200,9 @@ export function registerSetupCommand(program: Command): void {
           owner: gitInfo.owner,
           repository: gitInfo.repo,
           setupToken: token ?? '',
-          requirements: buildSetupCredentialRequirements(configuration),
+          requirements: credentialRequirements,
           manageSecrets: !options.skipSecrets && configuration.manageRepositorySecrets,
+          secretStoragePolicy: configuration.storage.secrets,
           ref: configuration.repository.mainBranch,
           remoteConfiguration,
           workflowTokenPermissions: buildWorkflowPatPermissionRequirements(configuration, remoteConfiguration),

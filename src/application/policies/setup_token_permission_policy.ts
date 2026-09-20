@@ -1,7 +1,11 @@
 import type { SetupConfiguration, SetupRemoteConfiguration } from '../../domain/setup';
 import { buildSetupRepositoryVariables } from './setup_configuration_plan';
 import { buildSetupCredentialRequirements } from './setup_credential_requirement_policy';
-import { resolveSetupResourceTarget } from './setup_configuration_storage_policy';
+import {
+    getSetupResourceStoragePolicy,
+    requiresSetupRepositoryInventory,
+    resolveSetupResourceTarget,
+} from './setup_configuration_storage_policy';
 import type {
     SetupTokenPermissionApplicability,
     SetupTokenPermissionLevel,
@@ -189,12 +193,19 @@ function selectedResourceScopes(
     names: readonly string[],
     remote?: Readonly<SetupRemoteConfiguration>,
 ): Set<SetupTokenPermissionScope> {
-    return new Set(names.map(name => resolveSetupResourceTarget(
+    const scopes = new Set(names.map(name => resolveSetupResourceTarget(
         configuration,
         kind,
         name,
         remote,
     ).scope));
+    if (requiresSetupRepositoryInventory(
+        getSetupResourceStoragePolicy(configuration, kind),
+        names,
+    )) {
+        scopes.add('repository');
+    }
+    return scopes;
 }
 
 function levelRank(level: SetupTokenPermissionLevel): number {

@@ -6,6 +6,8 @@ import type {
 } from '../../../domain/setup';
 import {
     buildSetupRepositoryVariables,
+    getSetupResourceStoragePolicy,
+    requiresSetupRepositoryInventory,
     resolveSetupResourceTarget,
     shouldUpsertSetupResource,
     usesOrganizationStorage,
@@ -130,7 +132,11 @@ export function groupSetupResources(
     const repositoryAccess = kind === 'secret'
         ? remoteConfiguration?.repositorySecretsAccess
         : remoteConfiguration?.repositoryVariablesAccess;
-    if (remoteConfiguration && repositoryAccess !== 'available') {
+    const requiresRepositoryInventory = requiresSetupRepositoryInventory(
+        getSetupResourceStoragePolicy(configuration, kind),
+        resources.map(resource => resource.name),
+    );
+    if (remoteConfiguration && requiresRepositoryInventory && repositoryAccess !== 'available') {
         throw new Error(`Repository ${kind} inventory is ${repositoryAccess}; resource targets cannot be resolved safely.`);
     }
     const groups = new Map<string, SetupResourceGroup>();

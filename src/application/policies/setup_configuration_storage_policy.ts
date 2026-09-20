@@ -10,6 +10,11 @@ import { createDefaultSetupStorageConfiguration } from './setup_configuration_de
 
 export type SetupResourceKind = 'secret' | 'variable';
 
+export interface SetupManagedResourceNames {
+    secrets: readonly string[];
+    variables: readonly string[];
+}
+
 export function resolveSetupResourceScope(
     policy: SetupResourceStoragePolicy,
     name: string,
@@ -32,6 +37,23 @@ export function getSetupStorageConfiguration(
         secrets: mergeStoragePolicy(fallback.secrets, configuration.storage?.secrets),
         variables: mergeStoragePolicy(fallback.variables, configuration.storage?.variables),
     };
+}
+
+/**
+ * Repository inventory is needed only when a selected resource can target the
+ * repository or when preserving an unoverridden resource requires discovering
+ * whether it already exists there.
+ */
+export function requiresSetupRepositoryInventory(
+    policy: Readonly<SetupResourceStoragePolicy>,
+    names: readonly string[],
+): boolean {
+    return names.some(name => {
+        if (Object.prototype.hasOwnProperty.call(policy.overrides, name)) {
+            return policy.overrides[name] === 'repository';
+        }
+        return policy.defaultScope === 'repository' || policy.preserveExisting;
+    });
 }
 
 export function resolveSetupResourceTarget(
@@ -125,12 +147,23 @@ export function validateSetupStorageAgainstRemote(
 export function validateSetupManagedRepositoryInventory(
     configuration: SetupConfiguration,
     remote: SetupRemoteConfiguration,
+    resources: Readonly<SetupManagedResourceNames>,
 ): string[] {
     const errors: string[] = [];
-    if (configuration.manageRepositorySecrets && remote.repositorySecretsAccess !== 'available') {
+    const secretsRequireRepositoryInventory = configuration.manageRepositorySecrets
+        && requiresSetupRepositoryInventory(
+            getSetupResourceStoragePolicy(configuration, 'secret'),
+            resources.secrets,
+        );
+    const variablesRequireRepositoryInventory = configuration.manageRepositoryVariables
+        && requiresSetupRepositoryInventory(
+            getSetupResourceStoragePolicy(configuration, 'variable'),
+            resources.variables,
+        );
+    if (secretsRequireRepositoryInventory && remote.repositorySecretsAccess !== 'available') {
         errors.push(`Repository Secret inventory is ${remote.repositorySecretsAccess}; setup cannot safely decide whether to preserve or replace existing Secrets.`);
     }
-    if (configuration.manageRepositoryVariables && remote.repositoryVariablesAccess !== 'available') {
+    if (variablesRequireRepositoryInventory && remote.repositoryVariablesAccess !== 'available') {
         errors.push(`Repository Variable inventory is ${remote.repositoryVariablesAccess}; setup cannot safely preserve existing Variable scopes and values.`);
     }
     return errors;

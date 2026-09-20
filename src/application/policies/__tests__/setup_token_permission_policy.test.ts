@@ -96,10 +96,12 @@ describe('setup token permission policy', () => {
         ]));
     });
 
-    it('includes selected organization storage and credential-health mutations in the final setup plan', () => {
+    it('includes organization-only storage without unrelated repository grants when preservation is disabled', () => {
         const configuration = createDefaultSetupConfiguration();
         configuration.storage.secrets.defaultScope = 'organization';
+        configuration.storage.secrets.preserveExisting = false;
         configuration.storage.variables.defaultScope = 'organization';
+        configuration.storage.variables.preserveExisting = false;
         const configuredRemote = {
             ...organization,
             organizationSecrets: ['PAT'],
@@ -119,6 +121,22 @@ describe('setup token permission policy', () => {
         expect(permissions).not.toEqual(expect.arrayContaining([
             'repository:Secrets:write',
             'repository:Variables:write',
+        ]));
+    });
+
+    it('retains repository inventory grants when organization defaults preserve existing resources', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.storage.secrets.defaultScope = 'organization';
+        configuration.storage.variables.defaultScope = 'organization';
+
+        const permissions = buildConfiguredSetupPatPermissionRequirements(configuration, organization)
+            .map(item => `${item.scope}:${item.permission}:${item.level}`);
+
+        expect(permissions).toEqual(expect.arrayContaining([
+            'repository:Secrets:write',
+            'repository:Variables:write',
+            'organization:Secrets:write',
+            'organization:Variables:write',
         ]));
     });
 

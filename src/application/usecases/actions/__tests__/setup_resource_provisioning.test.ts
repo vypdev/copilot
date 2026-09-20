@@ -180,6 +180,23 @@ describe('setup resource provisioning policy', () => {
         })).toThrow('resource targets cannot be resolved safely');
     });
 
+    it('groups organization-only resources without unrelated repository inventory', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.storage.variables.defaultScope = 'organization';
+        configuration.storage.variables.preserveExisting = false;
+
+        expect(groupSetupResources([{ name: 'AGENT_MODEL', value: 'gpt-5.6' }], 'variable', configuration, {
+            ownerType: 'Organization', repositoryId: 42, repositoryVisibility: 'private',
+            repositorySecrets: [], repositorySecretsAccess: 'available', organizationSecrets: [],
+            repositoryVariables: [], repositoryVariablesAccess: 'unavailable', organizationVariables: [],
+            organizationAccess: 'available', organizationSecretsAccess: 'available',
+            organizationVariablesAccess: 'available',
+        })).toEqual([{
+            target: { scope: 'organization', organizationVisibility: 'selected', repositoryId: 42 },
+            resources: [{ name: 'AGENT_MODEL', value: 'gpt-5.6' }],
+        }]);
+    });
+
     it('does not expose a raw variable-provider failure', async () => {
         const configuration = createDefaultSetupConfiguration();
         const result = await ensureRepositoryVariables(

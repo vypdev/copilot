@@ -6,6 +6,7 @@ import {
     createDefaultSetupConfiguration,
     mergeSetupConfiguration,
     normalizeSetupConfigurationLocales,
+    requiresSetupRepositoryInventory,
     resolveSetupResourceTarget,
     shouldUpsertSetupResource,
     validateSetupManagedRepositoryInventory,
@@ -375,13 +376,52 @@ describe('setup configuration policy', () => {
             organizationSecretsAccess: 'not_applicable' as const, organizationVariablesAccess: 'not_applicable' as const,
         };
 
-        expect(validateSetupManagedRepositoryInventory(configuration, remote)).toEqual([
+        const resources = { secrets: ['PAT'], variables: ['AGENT_PROVIDER'] };
+        expect(validateSetupManagedRepositoryInventory(configuration, remote, resources)).toEqual([
             expect.stringContaining('Repository Secret inventory is unknown'),
             expect.stringContaining('Repository Variable inventory is unavailable'),
         ]);
         configuration.manageRepositorySecrets = false;
         configuration.manageRepositoryVariables = false;
-        expect(validateSetupManagedRepositoryInventory(configuration, remote)).toEqual([]);
+        expect(validateSetupManagedRepositoryInventory(configuration, remote, resources)).toEqual([]);
+    });
+
+    it('requires repository inventory only for selected scopes or preservation discovery', () => {
+        const configuration = createDefaultSetupConfiguration();
+        const policy = configuration.storage.secrets;
+
+        policy.defaultScope = 'organization';
+        policy.preserveExisting = false;
+        expect(requiresSetupRepositoryInventory(policy, ['PAT'])).toBe(false);
+
+        policy.preserveExisting = true;
+        expect(requiresSetupRepositoryInventory(policy, ['PAT'])).toBe(true);
+
+        policy.overrides.PAT = 'organization';
+        expect(requiresSetupRepositoryInventory(policy, ['PAT'])).toBe(false);
+
+        policy.overrides.OPENAI_API_KEY = 'repository';
+        expect(requiresSetupRepositoryInventory(policy, ['PAT', 'OPENAI_API_KEY'])).toBe(true);
+    });
+
+    it('allows unavailable repository inventory when every selected resource is organization-only', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.storage.secrets.defaultScope = 'organization';
+        configuration.storage.secrets.preserveExisting = false;
+        configuration.storage.variables.overrides.AGENT_PROVIDER = 'organization';
+        configuration.storage.variables.preserveExisting = true;
+        const remote = {
+            ownerType: 'Organization' as const, repositoryId: 42, repositoryVisibility: 'private' as const,
+            repositorySecrets: [], repositorySecretsAccess: 'unavailable' as const,
+            organizationSecrets: [], repositoryVariables: [], repositoryVariablesAccess: 'unknown' as const,
+            organizationVariables: [], organizationAccess: 'available' as const,
+            organizationSecretsAccess: 'available' as const, organizationVariablesAccess: 'available' as const,
+        };
+
+        expect(validateSetupManagedRepositoryInventory(configuration, remote, {
+            secrets: ['PAT'],
+            variables: ['AGENT_PROVIDER'],
+        })).toEqual([]);
     });
 
     it('validates storage policy values and selected access requirements', () => {

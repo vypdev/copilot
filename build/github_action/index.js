@@ -49044,6 +49044,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveSetupResourceScope = resolveSetupResourceScope;
 exports.getSetupResourceStoragePolicy = getSetupResourceStoragePolicy;
 exports.getSetupStorageConfiguration = getSetupStorageConfiguration;
+exports.requiresSetupRepositoryInventory = requiresSetupRepositoryInventory;
 exports.resolveSetupResourceTarget = resolveSetupResourceTarget;
 exports.setupResourceExists = setupResourceExists;
 exports.shouldUpsertSetupResource = shouldUpsertSetupResource;
@@ -49064,6 +49065,19 @@ function getSetupStorageConfiguration(configuration) {
         secrets: mergeStoragePolicy(fallback.secrets, configuration.storage?.secrets),
         variables: mergeStoragePolicy(fallback.variables, configuration.storage?.variables),
     };
+}
+/**
+ * Repository inventory is needed only when a selected resource can target the
+ * repository or when preserving an unoverridden resource requires discovering
+ * whether it already exists there.
+ */
+function requiresSetupRepositoryInventory(policy, names) {
+    return names.some(name => {
+        if (Object.prototype.hasOwnProperty.call(policy.overrides, name)) {
+            return policy.overrides[name] === 'repository';
+        }
+        return policy.defaultScope === 'repository' || policy.preserveExisting;
+    });
 }
 function resolveSetupResourceTarget(configuration, kind, name, remote) {
     const policy = getSetupResourceStoragePolicy(configuration, kind);
@@ -49136,12 +49150,16 @@ function validateSetupStorageAgainstRemote(configuration, remote) {
  * Prevents unavailable repository inventory from being interpreted as an
  * authoritative empty list after the final permission report has been shown.
  */
-function validateSetupManagedRepositoryInventory(configuration, remote) {
+function validateSetupManagedRepositoryInventory(configuration, remote, resources) {
     const errors = [];
-    if (configuration.manageRepositorySecrets && remote.repositorySecretsAccess !== 'available') {
+    const secretsRequireRepositoryInventory = configuration.manageRepositorySecrets
+        && requiresSetupRepositoryInventory(getSetupResourceStoragePolicy(configuration, 'secret'), resources.secrets);
+    const variablesRequireRepositoryInventory = configuration.manageRepositoryVariables
+        && requiresSetupRepositoryInventory(getSetupResourceStoragePolicy(configuration, 'variable'), resources.variables);
+    if (secretsRequireRepositoryInventory && remote.repositorySecretsAccess !== 'available') {
         errors.push(`Repository Secret inventory is ${remote.repositorySecretsAccess}; setup cannot safely decide whether to preserve or replace existing Secrets.`);
     }
-    if (configuration.manageRepositoryVariables && remote.repositoryVariablesAccess !== 'available') {
+    if (variablesRequireRepositoryInventory && remote.repositoryVariablesAccess !== 'available') {
         errors.push(`Repository Variable inventory is ${remote.repositoryVariablesAccess}; setup cannot safely preserve existing Variable scopes and values.`);
     }
     return errors;
@@ -52646,7 +52664,8 @@ function groupSetupResources(resources, kind, configuration, remoteConfiguration
     const repositoryAccess = kind === 'secret'
         ? remoteConfiguration?.repositorySecretsAccess
         : remoteConfiguration?.repositoryVariablesAccess;
-    if (remoteConfiguration && repositoryAccess !== 'available') {
+    const requiresRepositoryInventory = (0, setup_configuration_policy_1.requiresSetupRepositoryInventory)((0, setup_configuration_policy_1.getSetupResourceStoragePolicy)(configuration, kind), resources.map(resource => resource.name));
+    if (remoteConfiguration && requiresRepositoryInventory && repositoryAccess !== 'available') {
         throw new Error(`Repository ${kind} inventory is ${repositoryAccess}; resource targets cannot be resolved safely.`);
     }
     const groups = new Map();

@@ -12,8 +12,13 @@ import type {
 } from '../../ports/setup_wizard_ports';
 import type { SetupTokenPermissionAuditPort, SetupTokenPermissionPresenterPort } from '../../ports/setup_token_permission_ports';
 import { ApplicationError } from '../../errors/application_error';
-import type { SetupRemoteConfiguration, SetupResourceScope } from '../../../domain/setup';
+import type {
+    SetupRemoteConfiguration,
+    SetupResourceScope,
+    SetupResourceStoragePolicy,
+} from '../../../domain/setup';
 import type { SetupTokenPermissionRequirement } from '../../../domain/setup_token_permissions';
+import { requiresSetupRepositoryInventory } from '../../policies/setup_configuration_storage_policy';
 
 export interface SetupCredentialsRequest {
     owner: string;
@@ -21,6 +26,7 @@ export interface SetupCredentialsRequest {
     setupToken: string;
     requirements: readonly SetupCredentialRequirement[];
     manageSecrets: boolean;
+    secretStoragePolicy?: Readonly<SetupResourceStoragePolicy>;
     ref?: string;
     remoteConfiguration?: SetupRemoteConfiguration;
     workflowTokenPermissions?: readonly SetupTokenPermissionRequirement[];
@@ -53,7 +59,15 @@ export class SetupCredentialsUseCase {
             return { collection: { apiKeys: [] }, checks: [setupCheck], existingSecretNames: [] };
         }
         if (!this.secrets) throw new ApplicationError('configuration.unsupported', 'Repository Secret provisioning is not available in this installation.');
-        if (request.remoteConfiguration && request.remoteConfiguration.repositorySecretsAccess !== 'available') {
+        const requirements = request.requirements.filter(requirement => requirement.name !== 'SETUP_PAT');
+        const requiresRepositoryInventory = request.secretStoragePolicy === undefined
+            || requiresSetupRepositoryInventory(
+                request.secretStoragePolicy,
+                requirements.map(requirement => requirement.name),
+            );
+        if (requiresRepositoryInventory
+            && request.remoteConfiguration
+            && request.remoteConfiguration.repositorySecretsAccess !== 'available') {
             throw new ApplicationError(
                 'provider.unavailable',
                 `Repository Secret inventory is ${request.remoteConfiguration.repositorySecretsAccess}; credential collection cannot safely preserve existing Secrets.`,
@@ -64,7 +78,6 @@ export class SetupCredentialsUseCase {
             ? [...request.remoteConfiguration.repositorySecrets]
             : await this.secrets.list(request.owner, request.repository, request.setupToken);
         const existingOrganizationSecretNames = request.remoteConfiguration?.organizationSecrets ?? [];
-        const requirements = request.requirements.filter(requirement => requirement.name !== 'SETUP_PAT');
         this.prompt.explainCredentialSeparation(requirements);
         if (request.workflowTokenPermissions?.length) {
             this.permissionPresenter?.showRequirements('workflow', request.workflowTokenPermissions);

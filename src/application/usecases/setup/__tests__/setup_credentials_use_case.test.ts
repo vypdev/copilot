@@ -203,6 +203,37 @@ describe('SetupCredentialsUseCase', () => {
         expect(secrets.list).not.toHaveBeenCalled();
     });
 
+    it('uses organization inventory when selected Secrets do not depend on repository scope', async () => {
+        const prompt = {
+            requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(), requestWorkflowPat: jest.fn(), requestApiKey: jest.fn(),
+            chooseExistingCredential: jest.fn().mockResolvedValue('keep'), showCredentialChecks: jest.fn(),
+        };
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }), validateCredential: jest.fn() };
+        const secrets = { list: jest.fn(), upsertSecrets: jest.fn() };
+        const remoteHealth = { validateExisting: jest.fn().mockResolvedValue([{ name: 'PAT', status: 'valid', message: 'remote ok' }]) };
+        const remoteConfiguration = {
+            ownerType: 'Organization' as const, repositoryId: 42, repositoryVisibility: 'private' as const,
+            repositorySecrets: [], repositorySecretsAccess: 'unavailable' as const,
+            organizationSecrets: ['PAT'], repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
+            organizationVariables: [], organizationAccess: 'available' as const,
+            organizationSecretsAccess: 'available' as const, organizationVariablesAccess: 'available' as const,
+        };
+
+        await expect(new SetupCredentialsUseCase(prompt, validation, secrets, remoteHealth).collect({
+            owner: 'owner', repository: 'repo', setupToken: 'setup-token',
+            requirements: [requirement('PAT', 'workflowPat')], manageSecrets: true, remoteConfiguration,
+            secretStoragePolicy: {
+                defaultScope: 'organization', organizationVisibility: 'selected', preserveExisting: false, overrides: {},
+            },
+        })).resolves.toEqual(expect.objectContaining({ collection: { apiKeys: [] } }));
+
+        expect(prompt.chooseExistingCredential).toHaveBeenCalledWith(
+            expect.objectContaining({ name: 'PAT' }),
+            expect.objectContaining({ sourceScope: 'organization' }),
+        );
+        expect(secrets.list).not.toHaveBeenCalled();
+    });
+
     it('accepts one usable credential from an alternative group', async () => {
         const prompt = {
             requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(),
