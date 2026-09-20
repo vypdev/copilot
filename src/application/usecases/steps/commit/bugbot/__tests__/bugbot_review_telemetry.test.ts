@@ -131,4 +131,21 @@ describe('Bugbot review telemetry', () => {
             maximumAnalysisConcurrency: 1,
         }));
     });
+
+    it('records an observed zero-partition plan while leaving legacy telemetry unpartitioned', () => {
+        const partitioned = new BugbotReviewTelemetry(operationContext());
+        partitioned.observePartitionPlan(0, 0, 0);
+
+        expect(partitioned.snapshot('no-findings')).toEqual(expect.objectContaining({
+            analysisPartitions: 0,
+            completedAnalysisPartitions: 0,
+            analysisDiffFragments: 0,
+            analysisAssignedFiles: 0,
+            maximumAnalysisConcurrency: 0,
+        }));
+
+        const legacy = new BugbotReviewTelemetry(operationContext()).snapshot('no-findings');
+        expect(legacy).not.toHaveProperty('analysisPartitions');
+        expect(legacy).not.toHaveProperty('completedAnalysisPartitions');
+    });
 });

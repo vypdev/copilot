@@ -74,6 +74,12 @@ This guide helps you resolve common issues you might encounter while using Copil
     transient provider failure, rerun setup so it can rediscover an installed
     workflow and narrow the table.
 
+    If an existing `PAT` passes credential health but setup asks for it again,
+    this is intentional: GitHub never returns a Secret value, and remote health
+    proves only bounded runtime reachability. Re-enter the workflow PAT so setup
+    can run and display the complete permission audit. For unattended setup,
+    supply `PAT` explicitly; without it setup fails before any resource write.
+
     If identity itself is invalid, confirm token expiration, resource owner, and
     selected repository before changing individual permissions. Never paste the
     token into an issue, log, screenshot, or troubleshooting comment.

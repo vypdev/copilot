@@ -57443,6 +57443,7 @@ class BugbotReviewTelemetry {
         this.stages = {};
         this.promptCharacters = 0;
         this.responseCharacters = 0;
+        this.analysisPlanObserved = false;
         this.analysisPartitions = 0;
         this.completedAnalysisPartitions = 0;
         this.analysisDiffFragments = 0;
@@ -57476,6 +57477,7 @@ class BugbotReviewTelemetry {
         this.responseCharacters += safeSerializedLength(response);
     }
     observePartitionPlan(partitions, fragments, files) {
+        this.analysisPlanObserved = true;
         this.analysisPartitions = partitions;
         this.analysisDiffFragments = fragments;
         this.analysisAssignedFiles = files;
@@ -57589,7 +57591,7 @@ class BugbotReviewTelemetry {
             contextLogicalProviderReads: providerSources.length,
             contextRawProviderRequests: providerSources.reduce((sum, source) => sum + source.pagesFetched, 0),
             contextConcurrencyLimit: 2,
-            ...(this.analysisPartitions > 0 ? {
+            ...(this.analysisPlanObserved ? {
                 analysisPartitions: this.analysisPartitions,
                 completedAnalysisPartitions: this.completedAnalysisPartitions,
                 analysisDiffFragments: this.analysisDiffFragments,

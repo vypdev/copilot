@@ -54922,9 +54922,10 @@ class SetupCredentialsUseCase {
             ? [...request.remoteConfiguration.repositorySecrets]
             : await this.secrets.list(request.owner, request.repository, request.setupToken);
         const existingOrganizationSecretNames = request.remoteConfiguration?.organizationSecrets ?? [];
+        const workflowTokenPermissions = request.workflowTokenPermissions ?? [];
         this.prompt.explainCredentialSeparation(requirements);
-        if (request.workflowTokenPermissions?.length) {
-            this.permissionPresenter?.showRequirements('workflow', request.workflowTokenPermissions);
+        if (workflowTokenPermissions.length > 0) {
+            this.permissionPresenter?.showRequirements('workflow', workflowTokenPermissions);
         }
         const existingRequirements = requirements.filter(requirement => existingSecretNames.includes(requirement.name) || existingOrganizationSecretNames.includes(requirement.name));
         const remoteChecks = this.remoteHealth && existingRequirements.length > 0
@@ -54945,29 +54946,39 @@ class SetupCredentialsUseCase {
                 : organizationExisting
                     ? 'organization'
                     : undefined;
+            const workflowPermissionAuditRequired = requirement.kind === 'workflowPat'
+                && workflowTokenPermissions.length > 0;
+            let existingCheckIndex;
             if (existing) {
                 const remoteCheck = remoteCheckByName.get(requirement.name) ?? {
                     name: requirement.name,
                     status: 'unverifiable',
                     message: 'The remote health workflow is not available yet; GitHub does not reveal Secret values.',
                 };
-                const scopedCheck = { ...remoteCheck, sourceScope };
-                checks.push(scopedCheck);
-                const decision = await this.prompt.chooseExistingCredential(requirement, scopedCheck);
-                if (remoteCheck.status === 'invalid' && decision !== 'replace' && !hasAlternative(requirement)) {
-                    throw new application_error_1.ApplicationError('authorization.credential-invalid', `${requirement.name} is invalid and must be replaced before setup can continue.`);
+                const scopedCheck = workflowPermissionAuditRequired
+                    ? workflowPatReentryCheck(remoteCheck, sourceScope)
+                    : { ...remoteCheck, sourceScope };
+                existingCheckIndex = checks.push(scopedCheck) - 1;
+                if (!workflowPermissionAuditRequired) {
+                    const decision = await this.prompt.chooseExistingCredential(requirement, scopedCheck);
+                    if (remoteCheck.status === 'invalid' && decision !== 'replace' && !hasAlternative(requirement)) {
+                        throw new application_error_1.ApplicationError('authorization.credential-invalid', `${requirement.name} is invalid and must be replaced before setup can continue.`);
+                    }
+                    if (decision === 'keep' && remoteCheck.status !== 'invalid') {
+                        markRequirementSatisfied(requirement, satisfiedGroups);
+                        continue;
+                    }
+                    if (decision === 'skip')
+                        continue;
                 }
-                if (decision === 'keep' && remoteCheck.status !== 'invalid') {
-                    markRequirementSatisfied(requirement, satisfiedGroups);
-                    continue;
-                }
-                if (decision === 'skip')
-                    continue;
             }
             const value = requirement.kind === 'workflowPat'
                 ? await this.prompt.requestWorkflowPat(requirement, existing ? checks[checks.length - 1] : undefined)
                 : await this.prompt.requestApiKey(requirement, existing ? checks[checks.length - 1] : undefined);
             if (!value) {
+                if (existing && workflowPermissionAuditRequired) {
+                    throw new application_error_1.ApplicationError('authorization.credential-invalid', 'Existing PAT cannot be permission-audited because GitHub does not reveal Secret values; re-enter or supply PAT before setup can continue.');
+                }
                 if (!existing)
                     checks.push(runnerAuthenticationCanSatisfyRequirement(requirement)
                         ? {
@@ -54981,13 +54992,16 @@ class SetupCredentialsUseCase {
                 throw new application_error_1.ApplicationError('authorization.credential-invalid', `${requirement.name} is required by the selected workflows.`);
             }
             let check;
-            if (requirement.kind === 'workflowPat' && this.tokenPermissions && request.workflowTokenPermissions?.length) {
+            if (workflowPermissionAuditRequired) {
+                if (!this.tokenPermissions) {
+                    throw new application_error_1.ApplicationError('configuration.unsupported', 'Workflow PAT permission auditing is not available in this installation.');
+                }
                 const report = await this.tokenPermissions.inspect({
                     role: 'workflow',
                     owner: request.owner,
                     repository: request.repository,
                     token: value.value,
-                    requirements: request.workflowTokenPermissions,
+                    requirements: workflowTokenPermissions,
                 });
                 this.permissionPresenter?.showReport(report);
                 const permissionAccepted = report.ready
@@ -55009,7 +55023,11 @@ class SetupCredentialsUseCase {
                     ? await this.validation.validateSetupPat(request.owner, request.repository, value.value)
                     : await this.validation.validateCredential(requirement, value.value);
             }
-            checks.push({ ...check, name: requirement.name });
+            const namedCheck = { ...check, name: requirement.name };
+            if (existingCheckIndex !== undefined)
+                checks[existingCheckIndex] = namedCheck;
+            else
+                checks.push(namedCheck);
             if (!isAcceptedCredentialCheck(requirement, check)) {
                 if (hasAlternative(requirement))
                     continue;
@@ -55039,6 +55057,14 @@ class SetupCredentialsUseCase {
     }
 }
 exports.SetupCredentialsUseCase = SetupCredentialsUseCase;
+function workflowPatReentryCheck(check, sourceScope) {
+    return {
+        ...check,
+        sourceScope,
+        status: check.status === 'invalid' ? 'invalid' : 'unverifiable',
+        message: `${check.message} GitHub does not reveal existing Secret values; re-enter the workflow PAT to audit its required permissions.`,
+    };
+}
 function hasAlternative(requirement) {
     return (requirement.alternativeGroups?.length ?? 0) > 0;
 }
@@ -56594,6 +56620,7 @@ class BugbotReviewTelemetry {
         this.stages = {};
         this.promptCharacters = 0;
         this.responseCharacters = 0;
+        this.analysisPlanObserved = false;
         this.analysisPartitions = 0;
         this.completedAnalysisPartitions = 0;
         this.analysisDiffFragments = 0;
@@ -56627,6 +56654,7 @@ class BugbotReviewTelemetry {
         this.responseCharacters += safeSerializedLength(response);
     }
     observePartitionPlan(partitions, fragments, files) {
+        this.analysisPlanObserved = true;
         this.analysisPartitions = partitions;
         this.analysisDiffFragments = fragments;
         this.analysisAssignedFiles = files;
@@ -56740,7 +56768,7 @@ class BugbotReviewTelemetry {
             contextLogicalProviderReads: providerSources.length,
             contextRawProviderRequests: providerSources.reduce((sum, source) => sum + source.pagesFetched, 0),
             contextConcurrencyLimit: 2,
-            ...(this.analysisPartitions > 0 ? {
+            ...(this.analysisPlanObserved ? {
                 analysisPartitions: this.analysisPartitions,
                 completedAnalysisPartitions: this.completedAnalysisPartitions,
                 analysisDiffFragments: this.analysisDiffFragments,

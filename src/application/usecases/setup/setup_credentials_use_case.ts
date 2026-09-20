@@ -96,9 +96,10 @@ export class SetupCredentialsUseCase {
             ? [...request.remoteConfiguration.repositorySecrets]
             : await this.secrets.list(request.owner, request.repository, request.setupToken);
         const existingOrganizationSecretNames = request.remoteConfiguration?.organizationSecrets ?? [];
+        const workflowTokenPermissions = request.workflowTokenPermissions ?? [];
         this.prompt.explainCredentialSeparation(requirements);
-        if (request.workflowTokenPermissions?.length) {
-            this.permissionPresenter?.showRequirements('workflow', request.workflowTokenPermissions);
+        if (workflowTokenPermissions.length > 0) {
+            this.permissionPresenter?.showRequirements('workflow', workflowTokenPermissions);
         }
         const existingRequirements = requirements.filter(requirement =>
             existingSecretNames.includes(requirement.name) || existingOrganizationSecretNames.includes(requirement.name),
@@ -127,29 +128,42 @@ export class SetupCredentialsUseCase {
                 : organizationExisting
                     ? 'organization'
                     : undefined;
+            const workflowPermissionAuditRequired = requirement.kind === 'workflowPat'
+                && workflowTokenPermissions.length > 0;
+            let existingCheckIndex: number | undefined;
             if (existing) {
                 const remoteCheck: SetupCredentialCheck = remoteCheckByName.get(requirement.name) ?? {
                     name: requirement.name,
                     status: 'unverifiable',
                     message: 'The remote health workflow is not available yet; GitHub does not reveal Secret values.',
                 };
-                const scopedCheck = { ...remoteCheck, sourceScope };
-                checks.push(scopedCheck);
-                const decision = await this.prompt.chooseExistingCredential(requirement, scopedCheck);
-                if (remoteCheck.status === 'invalid' && decision !== 'replace' && !hasAlternative(requirement)) {
-                    throw new ApplicationError('authorization.credential-invalid', `${requirement.name} is invalid and must be replaced before setup can continue.`);
+                const scopedCheck = workflowPermissionAuditRequired
+                    ? workflowPatReentryCheck(remoteCheck, sourceScope)
+                    : { ...remoteCheck, sourceScope };
+                existingCheckIndex = checks.push(scopedCheck) - 1;
+                if (!workflowPermissionAuditRequired) {
+                    const decision = await this.prompt.chooseExistingCredential(requirement, scopedCheck);
+                    if (remoteCheck.status === 'invalid' && decision !== 'replace' && !hasAlternative(requirement)) {
+                        throw new ApplicationError('authorization.credential-invalid', `${requirement.name} is invalid and must be replaced before setup can continue.`);
+                    }
+                    if (decision === 'keep' && remoteCheck.status !== 'invalid') {
+                        markRequirementSatisfied(requirement, satisfiedGroups);
+                        continue;
+                    }
+                    if (decision === 'skip') continue;
                 }
-                if (decision === 'keep' && remoteCheck.status !== 'invalid') {
-                    markRequirementSatisfied(requirement, satisfiedGroups);
-                    continue;
-                }
-                if (decision === 'skip') continue;
             }
 
             const value = requirement.kind === 'workflowPat'
                 ? await this.prompt.requestWorkflowPat(requirement, existing ? checks[checks.length - 1] : undefined)
                 : await this.prompt.requestApiKey(requirement, existing ? checks[checks.length - 1] : undefined);
             if (!value) {
+                if (existing && workflowPermissionAuditRequired) {
+                    throw new ApplicationError(
+                        'authorization.credential-invalid',
+                        'Existing PAT cannot be permission-audited because GitHub does not reveal Secret values; re-enter or supply PAT before setup can continue.',
+                    );
+                }
                 if (!existing) checks.push(runnerAuthenticationCanSatisfyRequirement(requirement)
                     ? {
                         name: requirement.name,
@@ -161,13 +175,19 @@ export class SetupCredentialsUseCase {
                 throw new ApplicationError('authorization.credential-invalid', `${requirement.name} is required by the selected workflows.`);
             }
             let check: SetupCredentialCheck;
-            if (requirement.kind === 'workflowPat' && this.tokenPermissions && request.workflowTokenPermissions?.length) {
+            if (workflowPermissionAuditRequired) {
+                if (!this.tokenPermissions) {
+                    throw new ApplicationError(
+                        'configuration.unsupported',
+                        'Workflow PAT permission auditing is not available in this installation.',
+                    );
+                }
                 const report = await this.tokenPermissions.inspect({
                     role: 'workflow',
                     owner: request.owner,
                     repository: request.repository,
                     token: value.value,
-                    requirements: request.workflowTokenPermissions,
+                    requirements: workflowTokenPermissions,
                 });
                 this.permissionPresenter?.showReport(report);
                 const permissionAccepted = report.ready
@@ -188,7 +208,9 @@ export class SetupCredentialsUseCase {
                     ? await this.validation.validateSetupPat(request.owner, request.repository, value.value)
                     : await this.validation.validateCredential(requirement, value.value);
             }
-            checks.push({ ...check, name: requirement.name });
+            const namedCheck = { ...check, name: requirement.name };
+            if (existingCheckIndex !== undefined) checks[existingCheckIndex] = namedCheck;
+            else checks.push(namedCheck);
             if (!isAcceptedCredentialCheck(requirement, check)) {
                 if (hasAlternative(requirement)) continue;
                 throw new ApplicationError('authorization.credential-invalid', `${requirement.name} validation failed: ${check.message}`);
@@ -216,6 +238,18 @@ export class SetupCredentialsUseCase {
             existingSecretNames,
         };
     }
+}
+
+function workflowPatReentryCheck(
+    check: SetupCredentialCheck,
+    sourceScope: SetupResourceScope | undefined,
+): SetupCredentialCheck {
+    return {
+        ...check,
+        sourceScope,
+        status: check.status === 'invalid' ? 'invalid' : 'unverifiable',
+        message: `${check.message} GitHub does not reveal existing Secret values; re-enter the workflow PAT to audit its required permissions.`,
+    };
 }
 
 function hasAlternative(requirement: SetupCredentialRequirement): boolean {

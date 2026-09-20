@@ -26,6 +26,7 @@ export class BugbotReviewTelemetry {
     private context?: BugbotContext;
     private prepared?: PreparedBugbotFindings;
     private projection?: BugbotReviewProjection;
+    private analysisPlanObserved = false;
     private analysisPartitions = 0;
     private completedAnalysisPartitions = 0;
     private analysisDiffFragments = 0;
@@ -70,6 +71,7 @@ export class BugbotReviewTelemetry {
     }
 
     observePartitionPlan(partitions: number, fragments: number, files: number): void {
+        this.analysisPlanObserved = true;
         this.analysisPartitions = partitions;
         this.analysisDiffFragments = fragments;
         this.analysisAssignedFiles = files;
@@ -201,7 +203,7 @@ export class BugbotReviewTelemetry {
             contextLogicalProviderReads: providerSources.length,
             contextRawProviderRequests: providerSources.reduce((sum, source) => sum + source.pagesFetched, 0),
             contextConcurrencyLimit: 2,
-            ...(this.analysisPartitions > 0 ? {
+            ...(this.analysisPlanObserved ? {
                 analysisPartitions: this.analysisPartitions,
                 completedAnalysisPartitions: this.completedAnalysisPartitions,
                 analysisDiffFragments: this.analysisDiffFragments,

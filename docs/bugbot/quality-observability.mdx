@@ -35,7 +35,9 @@ request counts; the fixed concurrency limit of two; and fetched, retained,
 omitted, and truncated counts per source. Partitioned PR analysis additionally
 records planned/completed partition counts, fragment and assigned-file counts,
 maximum observed reviewer concurrency, and aggregate prompt/response character
-counts. A failed plan also records the failed partition ordinal and a sanitized
+counts. An observed ignored-only plan emits explicit zeroes for those partition
+fields, which distinguishes a valid canonical zero-work review from a legacy
+issue/local execution that has no partition plan. A failed plan also records the failed partition ordinal and a sanitized
 failure category, never its patch or model prose. These facts let operators
 distinguish a complete multi-request review from a failed or provider-partial run. Prompt text, branches, diffs, source,
 comments, responses, credentials, authors, and rule contents are never stored in

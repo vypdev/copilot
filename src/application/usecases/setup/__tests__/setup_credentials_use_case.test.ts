@@ -123,6 +123,192 @@ describe('SetupCredentialsUseCase', () => {
         expect(remoteHealth.validateExisting).toHaveBeenCalledWith('owner', 'repo', 'setup-token', 'main', expect.any(Array));
     });
 
+    it('replaces and validates an existing credential when requested', async () => {
+        const prompt = {
+            requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(), requestWorkflowPat: jest.fn(),
+            requestApiKey: jest.fn().mockResolvedValue({ name: 'OPENAI_API_KEY', value: 'replacement' }),
+            chooseExistingCredential: jest.fn().mockResolvedValue('replace'), showCredentialChecks: jest.fn(),
+        };
+        const validation = {
+            validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }),
+            validateCredential: jest.fn().mockResolvedValue({ name: 'OPENAI_API_KEY', status: 'valid', message: 'replacement ok' }),
+        };
+
+        const result = await new SetupCredentialsUseCase(
+            prompt,
+            validation,
+            { list: jest.fn().mockResolvedValue(['OPENAI_API_KEY']) },
+            { validateExisting: jest.fn().mockResolvedValue([{ name: 'OPENAI_API_KEY', status: 'valid', message: 'remote ok' }]) },
+        ).collect({
+            owner: 'owner', repository: 'repo', setupToken: 'setup-token',
+            requirements: [requirement('OPENAI_API_KEY')], manageSecrets: true,
+        });
+
+        expect(validation.validateCredential).toHaveBeenCalledWith(
+            expect.objectContaining({ name: 'OPENAI_API_KEY' }),
+            'replacement',
+        );
+        expect(result.collection.apiKeys).toEqual([{ name: 'OPENAI_API_KEY', value: 'replacement' }]);
+        expect(result.checks.filter(check => check.name === 'OPENAI_API_KEY')).toEqual([
+            expect.objectContaining({ status: 'valid', message: 'replacement ok' }),
+        ]);
+    });
+
+    it('requires an existing workflow PAT to be re-entered and audited before provisioning it', async () => {
+        const prompt = {
+            requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(),
+            requestWorkflowPat: jest.fn().mockResolvedValue({ name: 'PAT', value: 'workflow-token' }),
+            requestApiKey: jest.fn(), chooseExistingCredential: jest.fn(), showCredentialChecks: jest.fn(),
+        };
+        const validation = {
+            validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }),
+            validateCredential: jest.fn(),
+        };
+        const secrets = { list: jest.fn().mockResolvedValue(['PAT']), upsertSecrets: jest.fn() };
+        const remoteHealth = {
+            validateExisting: jest.fn().mockResolvedValue([{ name: 'PAT', status: 'valid', message: 'Remote health passed.' }]),
+        };
+        const permission = {
+            id: 'workflow.repository.metadata', role: 'workflow' as const, scope: 'repository' as const,
+            permission: 'Metadata', level: 'read' as const, applicability: 'required' as const,
+            reason: 'Resolve repository.', probe: 'metadata' as const,
+        };
+        const report = {
+            role: 'workflow' as const, account: 'workflow-bot', identityStatus: 'valid' as const,
+            identityMessage: 'ok', ready: true, confirmationRequired: false,
+            checks: [{ ...permission, status: 'verified' as const, message: 'available' }],
+        };
+        const tokenPermissions = { inspect: jest.fn().mockResolvedValue(report) };
+
+        const result = await new SetupCredentialsUseCase(
+            prompt,
+            validation,
+            secrets,
+            remoteHealth,
+            tokenPermissions,
+            { showRequirements: jest.fn(), showReport: jest.fn() },
+        ).collect({
+            owner: 'owner', repository: 'repo', setupToken: 'setup-token', ref: 'main',
+            requirements: [requirement('PAT', 'workflowPat')], manageSecrets: true,
+            workflowTokenPermissions: [permission],
+        });
+
+        expect(prompt.chooseExistingCredential).not.toHaveBeenCalled();
+        expect(prompt.requestWorkflowPat).toHaveBeenCalledWith(
+            expect.objectContaining({ name: 'PAT' }),
+            expect.objectContaining({
+                status: 'unverifiable',
+                message: expect.stringContaining('re-enter the workflow PAT'),
+            }),
+        );
+        expect(tokenPermissions.inspect).toHaveBeenCalledWith(expect.objectContaining({
+            role: 'workflow', token: 'workflow-token', requirements: [permission],
+        }));
+        expect(result.collection.workflowPat).toEqual({ name: 'PAT', value: 'workflow-token' });
+        expect(result.checks.filter(check => check.name === 'PAT')).toEqual([
+            expect.objectContaining({ status: 'valid', account: 'workflow-bot' }),
+        ]);
+    });
+
+    it('preserves invalid remote-health evidence while requesting a workflow PAT re-entry', async () => {
+        const prompt = {
+            requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(),
+            requestWorkflowPat: jest.fn().mockResolvedValue({ name: 'PAT', value: 'replacement-token' }),
+            requestApiKey: jest.fn(), chooseExistingCredential: jest.fn(), showCredentialChecks: jest.fn(),
+        };
+        const permission = {
+            id: 'workflow.repository.metadata', role: 'workflow' as const, scope: 'repository' as const,
+            permission: 'Metadata', level: 'read' as const, applicability: 'required' as const,
+            reason: 'Resolve repository.', probe: 'metadata' as const,
+        };
+        const report = {
+            role: 'workflow' as const, identityStatus: 'valid' as const, identityMessage: 'ok',
+            ready: true, confirmationRequired: false,
+            checks: [{ ...permission, status: 'verified' as const, message: 'available' }],
+        };
+
+        await new SetupCredentialsUseCase(
+            prompt,
+            {
+                validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }),
+                validateCredential: jest.fn(),
+            },
+            { list: jest.fn().mockResolvedValue(['PAT']) },
+            { validateExisting: jest.fn().mockResolvedValue([{ name: 'PAT', status: 'invalid', message: 'Remote health failed.' }]) },
+            { inspect: jest.fn().mockResolvedValue(report) },
+            { showRequirements: jest.fn(), showReport: jest.fn() },
+        ).collect({
+            owner: 'owner', repository: 'repo', setupToken: 'setup-token',
+            requirements: [requirement('PAT', 'workflowPat')], manageSecrets: true,
+            workflowTokenPermissions: [permission],
+        });
+
+        expect(prompt.requestWorkflowPat).toHaveBeenCalledWith(
+            expect.objectContaining({ name: 'PAT' }),
+            expect.objectContaining({ status: 'invalid', message: expect.stringContaining('re-enter the workflow PAT') }),
+        );
+    });
+
+    it('rejects an existing workflow PAT when non-interactive setup cannot re-enter it for audit', async () => {
+        const prompt = {
+            requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(),
+            requestWorkflowPat: jest.fn().mockResolvedValue(undefined), requestApiKey: jest.fn(),
+            chooseExistingCredential: jest.fn(), showCredentialChecks: jest.fn(),
+        };
+        const validation = {
+            validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }),
+            validateCredential: jest.fn(),
+        };
+        const permission = {
+            id: 'workflow.repository.metadata', role: 'workflow' as const, scope: 'repository' as const,
+            permission: 'Metadata', level: 'read' as const, applicability: 'required' as const,
+            reason: 'Resolve repository.', probe: 'metadata' as const,
+        };
+        const tokenPermissions = { inspect: jest.fn() };
+
+        await expect(new SetupCredentialsUseCase(
+            prompt,
+            validation,
+            { list: jest.fn().mockResolvedValue(['PAT']) },
+            { validateExisting: jest.fn().mockResolvedValue([{ name: 'PAT', status: 'valid', message: 'Remote health passed.' }]) },
+            tokenPermissions,
+            { showRequirements: jest.fn(), showReport: jest.fn() },
+        ).collect({
+            owner: 'owner', repository: 'repo', setupToken: 'setup-token',
+            requirements: [requirement('PAT', 'workflowPat')], manageSecrets: true,
+            workflowTokenPermissions: [permission],
+        })).rejects.toThrow('Existing PAT cannot be permission-audited');
+
+        expect(prompt.chooseExistingCredential).not.toHaveBeenCalled();
+        expect(tokenPermissions.inspect).not.toHaveBeenCalled();
+    });
+
+    it('fails closed when a workflow permission plan has no audit port', async () => {
+        const prompt = {
+            requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(),
+            requestWorkflowPat: jest.fn().mockResolvedValue({ name: 'PAT', value: 'workflow-token' }),
+            requestApiKey: jest.fn(), chooseExistingCredential: jest.fn(), showCredentialChecks: jest.fn(),
+        };
+        const permission = {
+            id: 'workflow.repository.metadata', role: 'workflow' as const, scope: 'repository' as const,
+            permission: 'Metadata', level: 'read' as const, applicability: 'required' as const,
+            reason: 'Resolve repository.', probe: 'metadata' as const,
+        };
+
+        await expect(new SetupCredentialsUseCase(
+            prompt,
+            {
+                validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }),
+                validateCredential: jest.fn(),
+            },
+            { list: jest.fn().mockResolvedValue([]) },
+        ).collect({
+            owner: 'owner', repository: 'repo', setupToken: 'setup-token',
+            requirements: [requirement('PAT', 'workflowPat')], manageSecrets: true,
+            workflowTokenPermissions: [permission],
+        })).rejects.toThrow('Workflow PAT permission auditing is not available');
+    });
+
     it('fails closed when a required credential is omitted', async () => {
         const prompt = {
             requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(), requestWorkflowPat: jest.fn().mockResolvedValue(undefined), requestApiKey: jest.fn(),

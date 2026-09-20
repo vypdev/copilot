@@ -448,6 +448,9 @@ count, assigned-file count, maximum reviewer concurrency, aggregate prompt/
 response characters, and failed partition ordinal/category when applicable.
 Existing review ID and canonical SHA correlate every partition. Logs MAY state
 `partition 3/5` and elapsed time but MUST NOT include paths or fragment content.
+An observed canonical partition plan MUST emit those plan fields even when it
+contains zero partitions, so ignored-only zero-work reviews remain
+distinguishable from legacy non-partitioned issue/local execution.
 
 `diff` coverage reports complete only when provider enumeration is complete and
 the plan assigns all reviewable files/characters. Prompt-budget omission and
@@ -469,17 +472,17 @@ comments remain untouched.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **36 distinct cases**.
+This SDD owns at least **37 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain/pure planning | 11 | empty/single/multi-file, newline/hard split, exact prompt and 64/65 partition boundaries, absent patch, ignore, stable IDs, order, no character loss |
 | State/application/idempotency/races | 7 | all-complete, one failure, wrong/duplicate ID, wrong SHA, resolution ownership, stale head, replay |
 | Agent adapter/schema contracts | 4 | required attestation, locale, undefined/invalid result, aggregate bounds |
-| Workflow/architecture/telemetry | 4 | concurrency two, ordered collection, no mutation before complete, metrics |
+| Workflow/architecture/telemetry | 5 | concurrency two, ordered collection, no mutation before complete, positive and zero-partition plan metrics |
 | UI/UX/localization/sanitization | 4 | pending, failed, complete, hostile content/control characters |
 | Integration/security/compatibility | 6 | 44-file regression, oversized patch, provider partial, dry-run, legacy issue-only path, ignored-only canonical no-op |
-| **Total** | **36** | No double counting |
+| **Total** | **37** | No double counting |
 
 Planner, attestation, and aggregate pure policies require 100% enumerated branch
 coverage. Changed analyzer/context modules require at least 95% lines/statements
@@ -536,6 +539,9 @@ token scope, secret, or public input.
     retains existing open findings for the current head.
 17. Given a diff that packs into exactly 64 partitions, then the plan succeeds;
     adding content that requires partition 65 fails before reviewer execution.
+18. Given a canonical ignored-only diff produces an observed zero-partition
+    plan, then telemetry emits zero plan/completion/fragment/file/concurrency
+    fields; a legacy execution with no plan omits those fields.
 
 ## 17. Requirements traceability
 
@@ -548,6 +554,7 @@ token scope, secret, or public input.
 | content-free progress | telemetry/presentation | schema/render/redaction tests | observability |
 | clean only after completeness | coverage + workflow result policy | provider-partial/zero-finding tests | detection/failures |
 | ignored-only resolution safety | partitioned analyzer zero-work guard | canonical ignored-only no-agent/no-resolution test | detection/failures |
+| zero-work plan observability | partition telemetry | zero-plan versus legacy-no-plan telemetry test | observability |
 | unchanged authority | semantic agent port/composition | architecture/credential tests | permissions |
 
 ## 18. Implementation sequence
@@ -570,7 +577,7 @@ token scope, secret, or public input.
       provider enumeration and every partition respects fixed prompt bounds.
 - [x] Attestation, resolution ownership, concurrency, aggregation, freshness,
       replay, cancellation/failure, and no-prepublication-mutation tests pass.
-- [x] The 36-case floor and changed-module/repository coverage budgets pass.
+- [x] The 37-case floor and changed-module/repository coverage budgets pass.
 - [x] Pending, failed, provider-partial, complete, dry-run, and publication-
       partial surfaces are accurate, localized, accessible, and bounded.
 - [x] No public configuration, permission, credential, or durable-state change

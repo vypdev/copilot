@@ -100,8 +100,8 @@ transient response.
 
 1. Both PAT prompts MUST show a complete, role-specific permission table before
    reading the secret.
-2. A newly supplied PAT MUST produce a permission status table in the same
-   terminal flow before setup relies on it.
+2. A newly supplied or re-entered PAT MUST produce a permission status table
+   in the same terminal flow before setup relies on it.
 3. Workflow-PAT requirements MUST be narrowed by the final selected features;
    optional permissions MUST state their enabling condition.
 4. Missing safely verifiable required access MUST block the dependent setup
@@ -112,8 +112,10 @@ transient response.
 1. Setup does not enumerate, create, edit, rotate, or revoke GitHub PATs.
 2. Setup does not prove write access by creating temporary labels, branches,
    files, Variables, Secrets, comments, projects, or workflow runs.
-3. Existing remote Secret values remain unavailable and are not reclassified as
-   fully permission-verified without credential-health evidence.
+3. Existing remote Secret values remain unavailable. Credential-health evidence
+   MAY establish bounded runtime reachability, but MUST NOT be treated as a
+   permission audit; an existing workflow PAT is not accepted until its value is
+   re-entered and the configured permission audit completes.
 4. This change does not merge the setup and workflow PAT roles.
 
 ### 4.3 Fixed product/safety invariants
@@ -224,6 +226,13 @@ read-only GitHub queries and presents ordered permission outcomes.
    GitHub's documented `409 Conflict` for an empty Git repository is also
    accepted as empty-repository evidence after base repository identity/access
    validation. `404` remains ambiguous and never becomes verified.
+6. When the `PAT` Secret already exists, remote credential health is presented
+   as bounded evidence only. Setup MUST require the operator to re-enter the
+   workflow PAT, run the same ordered permission audit used for a new value, and
+   provision it only after that audit is accepted. Interactive setup MUST NOT
+   offer an unaudited keep path. Non-interactive setup MUST fail before mutation
+   unless `PAT` is supplied again; GitHub's write-only Secret API is never
+   described as permission evidence.
 
 ### 6.3 Permission states
 
@@ -394,6 +403,7 @@ No durable marker or notification is created.
 | required repository inventory remains unavailable after final audit | setup stops before credential prompts, target resolution, or mutation; no empty inventory is inferred | final permission table and bounded access state | no | retry after provider recovery or correct the named PAT permission | none |
 | unrelated repository inventory unavailable for organization-only resources | setup continues using available organization inventory; no repository absence is inferred or needed | final permission table and bounded access states | no | none | none |
 | required write level unverifiable | setup pauses before dependent work; the row remains non-verified | verified identity/read facts | no | inspect PAT settings, then confirm interactively or pass the dedicated non-interactive acknowledgement flag | none |
+| existing workflow PAT cannot be read | setup requests the PAT again before accepting or reprovisioning it; non-interactive setup without `PAT` stops | bounded remote-health result only | no | re-enter or supply `PAT`, then complete its permission audit | none |
 | rate limit/network/5xx | no false missing result | other completed rows | bounded provider retry only | retry later | none |
 | narrow terminal | table wraps | semantic row order | not applicable | none | none |
 
@@ -429,17 +439,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **56 distinct cases**.
+This SDD adds at least **59 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain permission policy | 12 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants |
 | Application state/blocking | 9 | verified, missing, required-read unverifiable, required-write confirmation, invalid base token, organization-only credential collection, remote-storage blocked result |
 | Adapter/provider contracts | 21 | GET-only probes, commit-list Contents target, empty-repository 409, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, installed/missing/unavailable health-workflow inspection, unavailable endpoint state, duplicate-comment deletion fallback regression |
-| Setup/credential integration | 9 | pre-prompt setup table, conditional denial through planning, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, workflow PAT check and explicit acknowledgement |
+| Setup/credential integration | 12 | pre-prompt setup table, conditional denial through planning, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
 | UI/accessibility | 4 | required/result tables, confirmation-required copy, 40-column wrapping, no-color text |
 | Architecture/security/docs | 1 | query-only boundary and no duplicated catalog |
-| **Total** | **56** | No double counting |
+| **Total** | **59** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -526,6 +536,16 @@ at widths 40/80/120 and `NO_COLOR`.
     write but omits bootstrap-only Contents and Workflows write; when it is
     missing, unavailable, or unknown, those bootstrap permissions remain
     required so setup can install and remove the temporary workflow safely.
+22. Given an existing workflow PAT passes remote credential health, interactive
+    setup still requires its value to be re-entered, audits every configured
+    workflow permission, and provisions the value only after acceptance; no
+    unaudited keep decision is available.
+23. Given an existing workflow PAT in non-interactive setup, when no `PAT` value
+    is supplied, setup fails before resource mutation with bounded guidance to
+    supply it again rather than treating remote health as a permission audit.
+24. Given a workflow permission plan but no permission-audit port, credential
+    collection fails closed as an unsupported installation before accepting or
+    provisioning the PAT.
 
 ## 17. Requirements traceability
 
@@ -543,6 +563,7 @@ at widths 40/80/120 and `NO_COLOR`.
 | feature/effective-target workflow PAT | configuration projection policy | conditional matrix and preserved organization-variable tests | checklist |
 | empty-repository-safe Contents probe | read-only query adapter | commit-list URL, 409 read/write, and 404 tests | authentication/troubleshooting |
 | least-privilege credential-health bootstrap | remote configuration query plus permission policy | installed/missing/unavailable inspection and permission-matrix tests | authentication/troubleshooting |
+| no unaudited existing workflow PAT | credential collection use case plus prompt adapter | existing re-entry/audit and non-interactive rejection tests | authentication/troubleshooting |
 
 ## 18. Implementation sequence
 
@@ -562,7 +583,7 @@ at widths 40/80/120 and `NO_COLOR`.
 - [x] No validation request mutates GitHub and no result overclaims write access.
 - [x] Token values and raw provider text are absent from all output/state/errors.
 - [x] Clean Architecture boundaries and their executable test pass.
-- [x] At least 56 distinct cases and stated coverage thresholds pass.
+- [x] At least 59 distinct cases and stated coverage thresholds pass.
 - [x] Authentication, checklist, troubleshooting, and architecture docs agree.
 - [x] Catalog evidence and generated `specs/CATALOG.md` are current.
 - [x] Specification, documentation, typecheck, lint, and test gates pass.
