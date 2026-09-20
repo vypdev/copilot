@@ -8,6 +8,11 @@ import { buildSetupParams } from './setup_policy';
 import { loadSetupConfigurationOverrides } from '../setup_config_file';
 import { SetupQuestionnaireController, SetupWizardUseCase } from '../../application/usecases/setup';
 import { SETUP_FEATURE_DESCRIPTIONS, buildSetupCredentialRequirements, effectiveIssueWorkflowFeatures } from '../../application/policies/setup_configuration_policy';
+import {
+  buildConfiguredSetupPatPermissionRequirements,
+  buildSetupPatPermissionRequirements,
+  buildWorkflowPatPermissionRequirements,
+} from '../../application/policies/setup_token_permission_policy';
 import type { SetupConfigurationOverrides } from '../../application/policies/setup_configuration_policy';
 import { createSetupCredentialsUseCase, createSetupRemoteConfigurationReadPort } from '../../infrastructure/composition/setup_credentials_composition_root';
 import { createSetupMergeQueueReadinessUseCase } from '../../infrastructure/composition/setup_doctor_composition_root';
@@ -15,13 +20,15 @@ import { SetupDoctorWorkspaceQueryAdapter } from '../../infrastructure/setup_wor
 import { GithubSetupApprovalReadinessAdapter } from '../../infrastructure/setup_approval_readiness_adapter';
 import type { SetupResourceScope } from '../../domain/setup';
 import { ISSUE_WORKFLOW_KINDS, type IssueWorkflowKind } from '../../domain/issue_workflow_profile';
-import { toApplicationError } from '../../application/errors/application_error';
+import { ApplicationError, toApplicationError } from '../../application/errors/application_error';
 import { createInteractiveTerminalDriver } from '../setup_terminal_driver';
 import { ConsoleSetupQuestionRenderer } from '../setup_question_renderer';
 import { ConsoleSetupPlanPresenter } from '../setup_plan_presenter';
 import { DryRunSetupPlanConfirmation, SetupPlanConfirmationAdapter } from '../setup_confirmation_adapter';
 import { SetupCredentialPromptAdapter, SetupTerminalCancelledError } from '../setup_credential_prompt_adapter';
 import { SetupWorkflowUpdatePromptAdapter } from '../setup_workflow_update_prompt_adapter';
+import { ConsoleSetupTokenPermissionPresenter } from '../setup_token_permission_presenter';
+import { createSetupTokenPermissionsUseCase } from '../../infrastructure/composition/setup_token_permissions_composition_root';
 
 export function registerSetupCommand(program: Command): void {
   program
@@ -58,6 +65,8 @@ export function registerSetupCommand(program: Command): void {
         ...(options.workflowPat ? { PAT: options.workflowPat } : {}),
         ...options.secret,
       });
+      const permissionPresenter = new ConsoleSetupTokenPermissionPresenter();
+      const tokenPermissions = createSetupTokenPermissionsUseCase();
       const workflowPrompt = new SetupWorkflowUpdatePromptAdapter(terminal);
       const cwd = process.cwd();
       try {
@@ -81,6 +90,8 @@ export function registerSetupCommand(program: Command): void {
           return;
         }
         logInfo(`📦 Repository: ${gitInfo.owner}/${gitInfo.repo}`);
+        const setupPatPermissions = buildSetupPatPermissionRequirements();
+        permissionPresenter.showRequirements('setup', setupPatPermissions);
         let token = getSetupToken(cwd, options.token);
         if (!token && !options.nonInteractive && !options.dryRun) token = await credentialPrompt.requestSetupPat();
         if (!token && !options.dryRun) {
@@ -90,6 +101,22 @@ export function registerSetupCommand(program: Command): void {
           logInfo('   • Add it to your environment: export PERSONAL_ACCESS_TOKEN=your_github_token');
           process.exitCode = 1;
           return;
+        }
+        if (token) {
+          const permissionReport = await tokenPermissions.inspect({
+            role: 'setup',
+            owner: gitInfo.owner,
+            repository: gitInfo.repo,
+            token,
+            requirements: setupPatPermissions,
+          });
+          permissionPresenter.showReport(permissionReport);
+          if (!permissionReport.ready || permissionReport.identityStatus !== 'valid') {
+            throw new ApplicationError(
+              'authorization.credential-invalid',
+              'The setup PAT is missing required repository access. Grant the permissions shown above and retry.',
+            );
+          }
         }
         logInfo(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
         const remoteConfigurationReader = createSetupRemoteConfigurationReadPort();
@@ -122,6 +149,24 @@ export function registerSetupCommand(program: Command): void {
           return;
         }
         const { configuration, remoteConfiguration } = result;
+        const configuredSetupPatPermissions = buildConfiguredSetupPatPermissionRequirements(configuration, remoteConfiguration);
+        permissionPresenter.showRequirements('setup', configuredSetupPatPermissions);
+        if (token) {
+          const permissionReport = await tokenPermissions.inspect({
+            role: 'setup',
+            owner: gitInfo.owner,
+            repository: gitInfo.repo,
+            token,
+            requirements: configuredSetupPatPermissions,
+          });
+          permissionPresenter.showReport(permissionReport);
+          if (!permissionReport.ready || permissionReport.identityStatus !== 'valid') {
+            throw new ApplicationError(
+              'authorization.credential-invalid',
+              'The setup PAT is missing access required by the approved setup plan. Grant the permissions shown above and retry.',
+            );
+          }
+        }
         const workflowComparisons = new SetupDoctorWorkspaceQueryAdapter().compareWorkflows(effectiveIssueWorkflowFeatures(configuration), configuration);
         const updateWorkflows = await workflowPrompt.confirmWorkflowUpdates(workflowComparisons, Boolean(options.updateWorkflows));
         const approvedWorkflowFiles = updateWorkflows
@@ -131,7 +176,7 @@ export function registerSetupCommand(program: Command): void {
           logInfo('✅ Dry run complete. No files or GitHub resources were changed.');
           return;
         }
-        const credentials = await createSetupCredentialsUseCase(credentialPrompt).collect({
+        const credentials = await createSetupCredentialsUseCase(credentialPrompt, permissionPresenter).collect({
           owner: gitInfo.owner,
           repository: gitInfo.repo,
           setupToken: token ?? '',
@@ -139,6 +184,7 @@ export function registerSetupCommand(program: Command): void {
           manageSecrets: !options.skipSecrets && configuration.manageRepositorySecrets,
           ref: configuration.repository.mainBranch,
           remoteConfiguration,
+          workflowTokenPermissions: buildWorkflowPatPermissionRequirements(configuration, remoteConfiguration),
         });
         logInfo('⚙️  Applying the approved setup plan...');
         const params = buildSetupParams(

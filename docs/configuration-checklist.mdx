@@ -20,6 +20,9 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 
 ## Credentials
 
+- [ ] Before entering each PAT, the setup terminal table matches the intended repository/organization target, access level, selected features, and storage scope.
+- [ ] After entry, every `❌ Missing` required permission has been corrected; every `? Unverifiable` write permission has been compared manually with the PAT settings and is not treated as a pass.
+- [ ] Permission verification used read-only probes only; no temporary label, branch, file, Variable, Secret, project item, comment, or workflow run was created as a permission test.
 - [ ] Credentials are configured as secrets or as a local self-hosted credential store.
 - [ ] No session file or token is copied into GitHub Secrets.
 - [ ] Secret values are never placed in `.copilot-setup.yml`, command configuration, or Variables.
@@ -49,6 +52,7 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 - [ ] Unattended setup uses `--non-interactive --yes` plus every required external credential; `--yes` is treated only as plan approval.
 - [ ] Cancellation (`Ctrl-C` or EOF) has been observed to exit 130 with no writes; declining the final plan exits 0 with no writes.
 - [ ] Setup review lists Secret names only and no secret value appears in config, plan, logs, errors, reports, fixtures, or backups.
+- [ ] Setup PAT and workflow PAT permission reports contain only stable permission IDs, target scopes, access levels, semantic statuses, and bounded reasons; tokens and raw provider responses are absent.
 - [ ] `copilot doctor` reports stable check IDs with `pass`, `warn`, `fail`, or dependency-blocked `skipped` and exits non-zero only for `fail`.
 - [ ] Invalid setup-PAT diagnosis still returns independent local checks; remote dependants identify their blocking check.
 - [ ] Doctor is wired only to query ports. Temporary credential-health workflow bootstrap remains setup-only.

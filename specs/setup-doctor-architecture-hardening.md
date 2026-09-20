@@ -2,9 +2,9 @@
 
 - Status: Implemented — automated gates complete; controlled live GitHub permission-path evidence remains external
 - Date: 2026-09-11
-- Last updated: 2026-09-14
+- Last updated: 2026-09-20
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-09-14
+- Last verified: 2026-09-20
 - Owners: Copilot maintainers and setup operators
 - Scope: separate setup decisions from terminal mechanics, execute doctor as a
   deterministic read-only check graph, and split remote resource responsibilities
@@ -27,6 +27,12 @@ always rendered in declared plan order. Doctor composition exposes no mutation
 port and resolves one complete repository-locale catalog for checks, merge
 readiness, and terminal presentation. English remains the authoritative default
 and atomic fallback.
+
+Setup PAT permission verification follows the same boundary discipline: a pure
+policy derives requirements, an application use case coordinates identity and
+ordered outcomes, infrastructure exposes only read probes, and a CLI presenter
+owns terminal layout. The full contract lives in the companion PAT-permission
+SDD.
 
 ```text
 defaults + overrides -> questionnaire -> immutable config -> plan -> confirm -> apply
@@ -517,6 +523,7 @@ required inputs, exit codes, skipped semantics, read-only guarantee, and recover
 
 - Parent: `architecture-quality-and-scalability-hardening.md`.
 - Baseline: `setup-configuration-credentials-and-doctor.md`.
+- Permission companion: `setup-pat-permission-guidance-and-verification.md`.
 - Decision: no back navigation; cancel/rerun or config-file editing keeps the
   state machine and persistence model explicit.
 - Decision: doctor continues independent local checks after PAT failure and uses

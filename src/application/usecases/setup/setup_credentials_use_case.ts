@@ -10,8 +10,10 @@ import type {
     SetupRepositorySecretNamesQueryPort,
     SetupRemoteCredentialHealthPort,
 } from '../../ports/setup_wizard_ports';
+import type { SetupTokenPermissionAuditPort, SetupTokenPermissionPresenterPort } from '../../ports/setup_token_permission_ports';
 import { ApplicationError } from '../../errors/application_error';
 import type { SetupRemoteConfiguration, SetupResourceScope } from '../../../domain/setup';
+import type { SetupTokenPermissionRequirement } from '../../../domain/setup_token_permissions';
 
 export interface SetupCredentialsRequest {
     owner: string;
@@ -21,6 +23,7 @@ export interface SetupCredentialsRequest {
     manageSecrets: boolean;
     ref?: string;
     remoteConfiguration?: SetupRemoteConfiguration;
+    workflowTokenPermissions?: readonly SetupTokenPermissionRequirement[];
 }
 
 export interface SetupCredentialsResult {
@@ -36,6 +39,8 @@ export class SetupCredentialsUseCase {
         private readonly validation: SetupCredentialValidationPort,
         private readonly secrets?: SetupRepositorySecretNamesQueryPort,
         private readonly remoteHealth?: SetupRemoteCredentialHealthPort,
+        private readonly tokenPermissions?: SetupTokenPermissionAuditPort,
+        private readonly permissionPresenter?: SetupTokenPermissionPresenterPort,
     ) {}
 
     async collect(request: SetupCredentialsRequest): Promise<SetupCredentialsResult> {
@@ -55,6 +60,9 @@ export class SetupCredentialsUseCase {
         const existingOrganizationSecretNames = request.remoteConfiguration?.organizationSecrets ?? [];
         const requirements = request.requirements.filter(requirement => requirement.name !== 'SETUP_PAT');
         this.prompt.explainCredentialSeparation(requirements);
+        if (request.workflowTokenPermissions?.length) {
+            this.permissionPresenter?.showRequirements('workflow', request.workflowTokenPermissions);
+        }
         const existingRequirements = requirements.filter(requirement =>
             existingSecretNames.includes(requirement.name) || existingOrganizationSecretNames.includes(requirement.name),
         );
@@ -115,9 +123,29 @@ export class SetupCredentialsUseCase {
                 if (hasAlternative(requirement)) continue;
                 throw new ApplicationError('authorization.credential-invalid', `${requirement.name} is required by the selected workflows.`);
             }
-            const check = requirement.kind === 'workflowPat'
-                ? await this.validation.validateSetupPat(request.owner, request.repository, value.value)
-                : await this.validation.validateCredential(requirement, value.value);
+            let check: SetupCredentialCheck;
+            if (requirement.kind === 'workflowPat' && this.tokenPermissions && request.workflowTokenPermissions?.length) {
+                const report = await this.tokenPermissions.inspect({
+                    role: 'workflow',
+                    owner: request.owner,
+                    repository: request.repository,
+                    token: value.value,
+                    requirements: request.workflowTokenPermissions,
+                });
+                this.permissionPresenter?.showReport(report);
+                check = {
+                    name: requirement.name,
+                    status: report.ready && report.identityStatus === 'valid' ? 'valid' : 'invalid',
+                    message: report.ready
+                        ? 'GitHub identity, repository access, and safely verifiable permissions were checked.'
+                        : 'The workflow PAT is missing required GitHub access.',
+                    ...(report.account ? { account: report.account } : {}),
+                };
+            } else {
+                check = requirement.kind === 'workflowPat'
+                    ? await this.validation.validateSetupPat(request.owner, request.repository, value.value)
+                    : await this.validation.validateCredential(requirement, value.value);
+            }
             checks.push({ ...check, name: requirement.name });
             if (!isAcceptedCredentialCheck(requirement, check)) {
                 if (hasAlternative(requirement)) continue;

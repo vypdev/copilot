@@ -23,6 +23,25 @@ This guide helps you resolve common issues you might encounter while using Copil
     `fail`; warnings and skipped checks still require reviewing their actions.
   </Accordion>
 
+  <Accordion title="PAT permission table shows Missing or Unverifiable" icon="key">
+    **`❌ Missing`:** GitHub rejected a safe read-only capability probe after
+    setup confirmed the token identity and repository selection. Grant the named
+    repository or organization permission to the correct resource owner, ensure
+    the repository is included in the fine-grained PAT selection, and rerun
+    setup. The dependent mutation has not started.
+
+    **`? Unverifiable`:** this is not a pass. GitHub either does not expose a
+    safe read-only proof for the requested write level, returned an ambiguous
+    `404`, or had a transient/rate-limit failure. Compare the requested level in
+    the table with the PAT settings, confirm organization approval if required,
+    and rerun. Copilot deliberately does not create disposable GitHub resources
+    to test write access.
+
+    If identity itself is invalid, confirm token expiration, resource owner, and
+    selected repository before changing individual permissions. Never paste the
+    token into an issue, log, screenshot, or troubleshooting comment.
+  </Accordion>
+
   <Accordion title="Branch creation fails" icon="code-branch">
     **Symptoms:**
     - Error messages during branch creation

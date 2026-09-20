@@ -60,6 +60,17 @@ jest.mock('../cli/setup_doctor_presenter', () => ({
   }),
 }));
 
+const mockTokenPermissionInspect = jest.fn(async (request: { role: 'setup' | 'workflow'; requirements: readonly Record<string, unknown>[] }) => ({
+  role: request.role,
+  identityStatus: 'valid' as const,
+  identityMessage: 'verified',
+  ready: true,
+  checks: request.requirements.map(requirement => ({ ...requirement, status: 'verified', message: 'available' })),
+}));
+jest.mock('../infrastructure/composition/setup_token_permissions_composition_root', () => ({
+  createSetupTokenPermissionsUseCase: () => ({ inspect: mockTokenPermissionInspect }),
+}));
+
 jest.mock('../infrastructure/composition/setup_credentials_composition_root', () => ({
   createSetupCredentialsUseCase: () => ({ collect: jest.fn().mockResolvedValue({ collection: { apiKeys: [] }, checks: [], existingSecretNames: [] }) }),
   createSetupRemoteConfigurationReadPort: () => ({
@@ -456,6 +467,11 @@ describe('CLI', () => {
       expect(params[INPUT_KEYS.SINGLE_ACTION]).toBe(ACTIONS.INITIAL_SETUP);
       expect(params[INPUT_KEYS.TOKEN]).toBe('ghp_setup_test_token_xxxxxxxxxxxxxxxxxxxx');
       expect(params[INPUT_KEYS.WELCOME_TITLE]).toContain('Initial Setup');
+      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
+      expect(mockTokenPermissionInspect.mock.calls[1][0].requirements).toEqual(expect.arrayContaining([
+        expect.objectContaining({ role: 'setup', permission: 'Metadata', applicability: 'required' }),
+        expect.objectContaining({ role: 'setup', permission: 'Variables', applicability: 'required' }),
+      ]));
     });
 
     it('proceeds when --token is provided even if env/.env has no token', async () => {

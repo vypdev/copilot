@@ -2,9 +2,9 @@
 
 - Status: Implemented — automated architecture, UX, documentation, and coverage gates complete; controlled live GitHub permission-path evidence remains external
 - Date: 2026-09-11
-- Last updated: 2026-09-14
+- Last updated: 2026-09-20
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-09-14
+- Last verified: 2026-09-20
 - Owners: Copilot maintainers
 - Scope: interactive/non-interactive installation planning, file and resource provisioning, credential validation, and read-only diagnosis
 - Related issues/PRs: merge-queue readiness SDD; architecture quality and
@@ -57,9 +57,10 @@ but unusable, overwrite hand-maintained files, or expose credentials.
   and doctor commands, setup adapters, and `setup/` assets.
 - Intentional contract: preview/confirmation, separate credentials, bounded
   configuration, preserve-existing storage, backups, and read-only doctor.
-- Known limitations: GitHub cannot reveal Secret values; health may be
-  `unverifiable`; remote organization access depends on PAT permissions; live
-  GitHub permission-path UX remains an external rollout check.
+- Known limitations: GitHub cannot reveal Secret values or a complete inventory
+  of fine-grained PAT grants; health and write permission evidence may be
+  `unverifiable`; controlled live GitHub permission-path evidence remains an
+  external rollout check.
 - Unknown rationale: historic defaults predating the typed wizard are not
   assumed intentional unless represented by current policy and docs.
 - Implemented hardening: questionnaire/terminal separation, named doctor checks,
@@ -67,6 +68,8 @@ but unusable, overwrite hand-maintained files, or expose credentials.
   [`setup-doctor-architecture-hardening.md`](./setup-doctor-architecture-hardening.md),
   under the shared gates in
   [`architecture-quality-and-scalability-hardening.md`](./architecture-quality-and-scalability-hardening.md).
+  Role-specific PAT guidance and safe permission evidence are specified in
+  [`setup-pat-permission-guidance-and-verification.md`](./setup-pat-permission-guidance-and-verification.md).
   Transactional rollback across local and GitHub writes requires a separate design.
 
 ## 3. Actors, surfaces, and terminology
@@ -351,6 +354,9 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 - Implemented hardening: `setup-doctor-architecture-hardening.md` owns setup questionnaire,
   doctor, and remote configuration adapter decomposition; the architecture
   hardening SDD owns shared sequencing and verification gates.
+- Permission companion: `setup-pat-permission-guidance-and-verification.md`
+  owns the pre-prompt matrices, post-entry evidence states, and read-only probe
+  boundary for setup and workflow PATs.
 - Decision: one configuration policy serves setup, doctor, and workflow inputs.
 - Rejected: storing credentials in YAML/JSON or silently overwriting managed files.
 - Follow-up: cross-provider transactional rollback is outside this baseline.

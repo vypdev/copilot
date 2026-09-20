@@ -47753,6 +47753,170 @@ function projectLabel(field) {
 
 /***/ }),
 
+/***/ 99590:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildSetupPatPermissionRequirements = buildSetupPatPermissionRequirements;
+exports.buildConfiguredSetupPatPermissionRequirements = buildConfiguredSetupPatPermissionRequirements;
+exports.buildWorkflowPatPermissionRequirements = buildWorkflowPatPermissionRequirements;
+exports.normalizePermissionRequirements = normalizePermissionRequirements;
+const setup_configuration_plan_1 = __nccwpck_require__(87770);
+const setup_credential_requirement_policy_1 = __nccwpck_require__(43562);
+const setup_configuration_storage_policy_1 = __nccwpck_require__(2554);
+const requirement = (input) => ({
+    id: `${input.role}.${input.scope}.${input.permission.toLowerCase().replace(/[^a-z0-9]+/gu, '-')}`,
+    applicability: 'required',
+    ...input,
+});
+/**
+ * Bootstrap guidance is intentionally comprehensive because the final
+ * interactive configuration does not exist before the setup PAT prompt.
+ */
+function buildSetupPatPermissionRequirements() {
+    return normalizePermissionRequirements([
+        requirement({ role: 'setup', scope: 'repository', permission: 'Metadata', level: 'read', reason: 'Resolve repository identity and visibility.', probe: 'metadata' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'read', reason: 'Inspect installed workflows and repository files.', probe: 'contents' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Secrets', level: 'write', applicability: 'conditional', condition: 'Secret provisioning enabled', reason: 'Inspect and provision selected GitHub Actions Secrets.', probe: 'secrets' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Variables', level: 'write', applicability: 'conditional', condition: 'Variable provisioning enabled', reason: 'Inspect and provision selected GitHub Actions Variables.', probe: 'variables' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Issues', level: 'write', applicability: 'conditional', condition: 'Issue workflows enabled', reason: 'Provision labels and issue resources.', probe: 'issues' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'write', applicability: 'conditional', condition: 'Credential health enabled', reason: 'Inspect and dispatch credential-health workflows.', probe: 'actions' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Administration', level: 'read', applicability: 'conditional', condition: 'Release, hotfix, or guarded approval enabled', reason: 'Inspect branch protection and rulesets.', probe: 'administration' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write', applicability: 'conditional', condition: 'Temporary health workflow required', reason: 'Bootstrap a missing credential-health workflow.', probe: 'workflows' }),
+        requirement({ role: 'setup', scope: 'organization', permission: 'Secrets', level: 'write', applicability: 'conditional', condition: 'Organization Secret storage selected', reason: 'Inspect and provision organization Actions Secrets.', probe: 'secrets' }),
+        requirement({ role: 'setup', scope: 'organization', permission: 'Variables', level: 'write', applicability: 'conditional', condition: 'Organization Variable storage selected', reason: 'Inspect and provision organization Actions Variables.', probe: 'variables' }),
+        requirement({ role: 'setup', scope: 'organization', permission: 'Issue Types', level: 'write', applicability: 'conditional', condition: 'Issue type automation enabled', reason: 'Provision and assign configured issue types.', probe: 'issue-types' }),
+        requirement({ role: 'setup', scope: 'organization', permission: 'Projects', level: 'write', applicability: 'conditional', condition: 'Organization Projects selected', reason: 'Inspect and configure selected Projects.', probe: 'projects' }),
+    ]);
+}
+/**
+ * Recomputes setup-PAT permissions after the operator has approved the final
+ * configuration. Unlike the bootstrap catalog, every row is now required by a
+ * selected setup operation or its read-only preflight.
+ */
+function buildConfiguredSetupPatPermissionRequirements(configuration, remote) {
+    const repositorySecretNames = (0, setup_credential_requirement_policy_1.buildSetupCredentialRequirements)(configuration)
+        .map(credential => credential.name);
+    const repositoryVariableNames = (0, setup_configuration_plan_1.buildSetupRepositoryVariables)(configuration)
+        .map(variable => variable.name);
+    const secretScopes = configuration.manageRepositorySecrets
+        ? selectedResourceScopes(configuration, 'secret', repositorySecretNames, remote)
+        : new Set();
+    const variableScopes = configuration.manageRepositoryVariables
+        ? selectedResourceScopes(configuration, 'variable', repositoryVariableNames, remote)
+        : new Set();
+    const enabledIssueWorkflows = configuration.issueWorkflows.enabled.length > 0;
+    const releaseOrHotfix = configuration.features.release
+        || configuration.features.hotfix
+        || configuration.issueWorkflows.enabled.some(kind => kind === 'release' || kind === 'hotfix');
+    const guardedApproval = configuration.pullRequestApproval.mode === 'guarded';
+    const hasExistingCredential = repositorySecretNames.some(name => remote?.repositorySecrets.includes(name) || remote?.organizationSecrets.includes(name));
+    const needsCredentialHealth = configuration.manageRepositorySecrets && hasExistingCredential;
+    const organization = remote?.ownerType === 'Organization';
+    return normalizePermissionRequirements([
+        requirement({ role: 'setup', scope: 'repository', permission: 'Metadata', level: 'read', reason: 'Resolve repository identity and visibility.', probe: 'metadata' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'read', reason: 'Inspect installed workflows and repository files.', probe: 'contents' }),
+        ...(configuration.createInitialTag ? [requirement({
+                role: 'setup', scope: 'repository', permission: 'Contents', level: 'write',
+                reason: 'Create the initial repository tag when no version tag exists.', probe: 'contents',
+            })] : []),
+        ...(secretScopes.has('repository') ? [requirement({
+                role: 'setup', scope: 'repository', permission: 'Secrets', level: 'write',
+                reason: 'Inspect and provision selected repository Actions Secrets.', probe: 'secrets',
+            })] : []),
+        ...(variableScopes.has('repository') ? [requirement({
+                role: 'setup', scope: 'repository', permission: 'Variables', level: 'write',
+                reason: 'Inspect and provision selected repository Actions Variables.', probe: 'variables',
+            })] : []),
+        ...(enabledIssueWorkflows ? [requirement({
+                role: 'setup', scope: 'repository', permission: 'Issues', level: 'write',
+                reason: 'Provision labels for the selected issue workflows.', probe: 'issues',
+            })] : []),
+        ...(needsCredentialHealth ? [
+            requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'write', reason: 'Dispatch credential-health checks for existing Secrets.', probe: 'actions' }),
+            requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'write', reason: 'Temporarily install credential health when its workflow is missing.', probe: 'contents' }),
+            requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write', reason: 'Temporarily install credential health when its workflow is missing.', probe: 'workflows' }),
+        ] : []),
+        ...(releaseOrHotfix || guardedApproval ? [requirement({
+                role: 'setup', scope: 'repository', permission: 'Administration', level: 'read',
+                reason: 'Inspect branch protection and effective rulesets.', probe: 'administration',
+            })] : []),
+        ...(organization && secretScopes.has('organization') ? [requirement({
+                role: 'setup', scope: 'organization', permission: 'Secrets', level: 'write',
+                reason: 'Inspect and provision selected organization Actions Secrets.', probe: 'secrets',
+            })] : []),
+        ...(organization && variableScopes.has('organization') ? [requirement({
+                role: 'setup', scope: 'organization', permission: 'Variables', level: 'write',
+                reason: 'Inspect and provision selected organization Actions Variables.', probe: 'variables',
+            })] : []),
+        ...(organization && enabledIssueWorkflows ? [requirement({
+                role: 'setup', scope: 'organization', permission: 'Issue Types', level: 'write',
+                reason: 'Provision native issue types for the selected workflows.', probe: 'issue-types',
+            })] : []),
+        ...(organization && configuration.projects.ids.trim().length > 0 ? [requirement({
+                role: 'setup', scope: 'organization', permission: 'Projects', level: 'write',
+                reason: 'Inspect and configure the selected organization Projects.', probe: 'projects',
+            })] : []),
+    ]);
+}
+function buildWorkflowPatPermissionRequirements(configuration, remote) {
+    const releaseOrHotfix = configuration.features.release
+        || configuration.features.hotfix
+        || configuration.issueWorkflows.enabled.some(kind => kind === 'release' || kind === 'hotfix');
+    const guardedApproval = configuration.pullRequestApproval.mode === 'guarded';
+    const organization = remote?.ownerType === 'Organization';
+    const hasProjects = configuration.projects.ids.trim().length > 0;
+    const issueTypes = configuration.issueWorkflows.enabled.length > 0;
+    const organizationVariables = guardedApproval && usesOrganizationResource(configuration.storage.variables, 'PR_APPROVAL_POLICY');
+    return normalizePermissionRequirements([
+        requirement({ role: 'workflow', scope: 'repository', permission: 'Metadata', level: 'read', reason: 'Resolve repository and collaborator metadata.', probe: 'metadata' }),
+        requirement({ role: 'workflow', scope: 'repository', permission: 'Actions', level: 'write', reason: 'Inspect and dispatch Copilot workflows.', probe: 'actions' }),
+        requirement({ role: 'workflow', scope: 'repository', permission: 'Contents', level: 'write', reason: 'Create and update managed branches and files.', probe: 'contents' }),
+        requirement({ role: 'workflow', scope: 'repository', permission: 'Issues', level: 'write', reason: 'Manage issue labels, assignments, types, and comments.', probe: 'issues' }),
+        requirement({ role: 'workflow', scope: 'repository', permission: 'Pull requests', level: 'write', reason: 'Create and update pull requests and reviews.', probe: 'pull-requests' }),
+        ...(releaseOrHotfix || guardedApproval ? [requirement({
+                role: 'workflow', scope: 'repository', permission: 'Administration', level: 'read',
+                reason: 'Inspect branch protection and effective rulesets.', probe: 'administration',
+            })] : []),
+        ...(guardedApproval ? [
+            requirement({ role: 'workflow', scope: 'repository', permission: 'Checks', level: 'read', reason: 'Verify current-head required checks and producer identities.', probe: 'checks' }),
+            requirement({ role: 'workflow', scope: 'repository', permission: 'Variables', level: 'read', reason: 'Load the guarded approval policy.', probe: 'variables' }),
+        ] : []),
+        ...(organization ? [requirement({ role: 'workflow', scope: 'organization', permission: 'Members', level: 'read', reason: 'Authorize organization members.', probe: 'members' })] : []),
+        ...(organization && issueTypes ? [requirement({ role: 'workflow', scope: 'organization', permission: 'Issue Types', level: 'write', reason: 'Assign configured organization issue types.', probe: 'issue-types' })] : []),
+        ...(organization && hasProjects ? [requirement({ role: 'workflow', scope: 'organization', permission: 'Projects', level: 'write', reason: 'Update selected organization Projects.', probe: 'projects' })] : []),
+        ...(organization && organizationVariables ? [requirement({ role: 'workflow', scope: 'organization', permission: 'Variables', level: 'read', reason: 'Load the organization-scoped approval policy.', probe: 'variables' })] : []),
+    ]);
+}
+function normalizePermissionRequirements(requirements) {
+    const strongest = new Map();
+    for (const candidate of requirements) {
+        const key = `${candidate.role}:${candidate.scope}:${candidate.permission.toLowerCase()}`;
+        const current = strongest.get(key);
+        if (!current || levelRank(candidate.level) > levelRank(current.level)) {
+            strongest.set(key, candidate);
+        }
+        else if (current.applicability === 'conditional' && candidate.applicability === 'required') {
+            strongest.set(key, { ...current, applicability: 'required', condition: undefined });
+        }
+    }
+    return [...strongest.values()];
+}
+function usesOrganizationResource(policy, name) {
+    return (policy.overrides[name] ?? policy.defaultScope) === 'organization';
+}
+function selectedResourceScopes(configuration, kind, names, remote) {
+    return new Set(names.map(name => (0, setup_configuration_storage_policy_1.resolveSetupResourceTarget)(configuration, kind, name, remote).scope));
+}
+function levelRank(level) {
+    return level === 'write' ? 2 : 1;
+}
+
+
+/***/ }),
+
 /***/ 3449:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -54393,11 +54557,13 @@ exports.SetupCredentialsUseCase = void 0;
 const application_error_1 = __nccwpck_require__(75999);
 /** Coordinates secret collection and validation without placing secret values in config files. */
 class SetupCredentialsUseCase {
-    constructor(prompt, validation, secrets, remoteHealth) {
+    constructor(prompt, validation, secrets, remoteHealth, tokenPermissions, permissionPresenter) {
         this.prompt = prompt;
         this.validation = validation;
         this.secrets = secrets;
         this.remoteHealth = remoteHealth;
+        this.tokenPermissions = tokenPermissions;
+        this.permissionPresenter = permissionPresenter;
     }
     async collect(request) {
         const setupCheck = await this.validation.validateSetupPat(request.owner, request.repository, request.setupToken);
@@ -54416,6 +54582,9 @@ class SetupCredentialsUseCase {
         const existingOrganizationSecretNames = request.remoteConfiguration?.organizationSecrets ?? [];
         const requirements = request.requirements.filter(requirement => requirement.name !== 'SETUP_PAT');
         this.prompt.explainCredentialSeparation(requirements);
+        if (request.workflowTokenPermissions?.length) {
+            this.permissionPresenter?.showRequirements('workflow', request.workflowTokenPermissions);
+        }
         const existingRequirements = requirements.filter(requirement => existingSecretNames.includes(requirement.name) || existingOrganizationSecretNames.includes(requirement.name));
         const remoteChecks = this.remoteHealth && existingRequirements.length > 0
             ? await this.remoteHealth.validateExisting(request.owner, request.repository, request.setupToken, request.ref ?? 'master', existingRequirements)
@@ -54470,9 +54639,30 @@ class SetupCredentialsUseCase {
                     continue;
                 throw new application_error_1.ApplicationError('authorization.credential-invalid', `${requirement.name} is required by the selected workflows.`);
             }
-            const check = requirement.kind === 'workflowPat'
-                ? await this.validation.validateSetupPat(request.owner, request.repository, value.value)
-                : await this.validation.validateCredential(requirement, value.value);
+            let check;
+            if (requirement.kind === 'workflowPat' && this.tokenPermissions && request.workflowTokenPermissions?.length) {
+                const report = await this.tokenPermissions.inspect({
+                    role: 'workflow',
+                    owner: request.owner,
+                    repository: request.repository,
+                    token: value.value,
+                    requirements: request.workflowTokenPermissions,
+                });
+                this.permissionPresenter?.showReport(report);
+                check = {
+                    name: requirement.name,
+                    status: report.ready && report.identityStatus === 'valid' ? 'valid' : 'invalid',
+                    message: report.ready
+                        ? 'GitHub identity, repository access, and safely verifiable permissions were checked.'
+                        : 'The workflow PAT is missing required GitHub access.',
+                    ...(report.account ? { account: report.account } : {}),
+                };
+            }
+            else {
+                check = requirement.kind === 'workflowPat'
+                    ? await this.validation.validateSetupPat(request.owner, request.repository, value.value)
+                    : await this.validation.validateCredential(requirement, value.value);
+            }
             checks.push({ ...check, name: requirement.name });
             if (!isAcceptedCredentialCheck(requirement, check)) {
                 if (hasAlternative(requirement))
@@ -54579,6 +54769,59 @@ function parseSelectedDefaults(value) {
 function toEvent(input) {
     return input.kind === 'value' ? { kind: 'answer', value: input.value } : input;
 }
+
+
+/***/ }),
+
+/***/ 11797:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupTokenPermissionsUseCase = void 0;
+/** Validates PAT identity first, then runs only read-only permission probes. */
+class SetupTokenPermissionsUseCase {
+    constructor(credentials, permissions) {
+        this.credentials = credentials;
+        this.permissions = permissions;
+    }
+    async inspect(request) {
+        const identity = await this.credentials.validateSetupPat(request.owner, request.repository, request.token);
+        if (identity.status !== 'valid') {
+            const checks = request.requirements.map((requirement) => ({
+                ...requirement,
+                status: identity.status === 'invalid' ? 'missing' : 'unverifiable',
+                message: identity.status === 'invalid'
+                    ? 'The token identity or repository selection was rejected.'
+                    : 'Permission checks could not run until token identity and repository access are verified.',
+            }));
+            return {
+                role: request.role,
+                ...(identity.account ? { account: identity.account } : {}),
+                identityStatus: identity.status === 'invalid' ? 'invalid' : 'unverifiable',
+                identityMessage: identity.message,
+                checks,
+                ready: false,
+            };
+        }
+        const byId = new Map((await this.permissions.inspect(request.owner, request.repository, request.token, request.requirements)).map(check => [check.id, check]));
+        const checks = request.requirements.map(requirement => byId.get(requirement.id) ?? ({
+            ...requirement,
+            status: 'unverifiable',
+            message: 'No safe permission evidence was returned for this requirement.',
+        }));
+        return {
+            role: request.role,
+            ...(identity.account ? { account: identity.account } : {}),
+            identityStatus: 'valid',
+            identityMessage: identity.message,
+            checks,
+            ready: checks.every(check => check.applicability !== 'required' || check.status !== 'missing'),
+        };
+    }
+}
+exports.SetupTokenPermissionsUseCase = SetupTokenPermissionsUseCase;
 
 
 /***/ }),
@@ -63954,6 +64197,7 @@ const setup_policy_1 = __nccwpck_require__(28732);
 const setup_config_file_1 = __nccwpck_require__(11196);
 const setup_1 = __nccwpck_require__(36888);
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const setup_token_permission_policy_1 = __nccwpck_require__(99590);
 const setup_credentials_composition_root_1 = __nccwpck_require__(69084);
 const setup_doctor_composition_root_1 = __nccwpck_require__(56360);
 const setup_workspace_adapter_1 = __nccwpck_require__(5729);
@@ -63966,6 +64210,8 @@ const setup_plan_presenter_1 = __nccwpck_require__(33441);
 const setup_confirmation_adapter_1 = __nccwpck_require__(5502);
 const setup_credential_prompt_adapter_1 = __nccwpck_require__(93232);
 const setup_workflow_update_prompt_adapter_1 = __nccwpck_require__(84473);
+const setup_token_permission_presenter_1 = __nccwpck_require__(63206);
+const setup_token_permissions_composition_root_1 = __nccwpck_require__(64132);
 function registerSetupCommand(program) {
     program
         .command('setup')
@@ -64001,6 +64247,8 @@ function registerSetupCommand(program) {
             ...(options.workflowPat ? { PAT: options.workflowPat } : {}),
             ...options.secret,
         });
+        const permissionPresenter = new setup_token_permission_presenter_1.ConsoleSetupTokenPermissionPresenter();
+        const tokenPermissions = (0, setup_token_permissions_composition_root_1.createSetupTokenPermissionsUseCase)();
         const workflowPrompt = new setup_workflow_update_prompt_adapter_1.SetupWorkflowUpdatePromptAdapter(terminal);
         const cwd = process.cwd();
         try {
@@ -64024,6 +64272,8 @@ function registerSetupCommand(program) {
                 return;
             }
             (0, logger_1.logInfo)(`📦 Repository: ${gitInfo.owner}/${gitInfo.repo}`);
+            const setupPatPermissions = (0, setup_token_permission_policy_1.buildSetupPatPermissionRequirements)();
+            permissionPresenter.showRequirements('setup', setupPatPermissions);
             let token = (0, setup_files_1.getSetupToken)(cwd, options.token);
             if (!token && !options.nonInteractive && !options.dryRun)
                 token = await credentialPrompt.requestSetupPat();
@@ -64034,6 +64284,19 @@ function registerSetupCommand(program) {
                 (0, logger_1.logInfo)('   • Add it to your environment: export PERSONAL_ACCESS_TOKEN=your_github_token');
                 process.exitCode = 1;
                 return;
+            }
+            if (token) {
+                const permissionReport = await tokenPermissions.inspect({
+                    role: 'setup',
+                    owner: gitInfo.owner,
+                    repository: gitInfo.repo,
+                    token,
+                    requirements: setupPatPermissions,
+                });
+                permissionPresenter.showReport(permissionReport);
+                if (!permissionReport.ready || permissionReport.identityStatus !== 'valid') {
+                    throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT is missing required repository access. Grant the permissions shown above and retry.');
+                }
             }
             (0, logger_1.logInfo)(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
             const remoteConfigurationReader = (0, setup_credentials_composition_root_1.createSetupRemoteConfigurationReadPort)();
@@ -64067,6 +64330,21 @@ function registerSetupCommand(program) {
                 return;
             }
             const { configuration, remoteConfiguration } = result;
+            const configuredSetupPatPermissions = (0, setup_token_permission_policy_1.buildConfiguredSetupPatPermissionRequirements)(configuration, remoteConfiguration);
+            permissionPresenter.showRequirements('setup', configuredSetupPatPermissions);
+            if (token) {
+                const permissionReport = await tokenPermissions.inspect({
+                    role: 'setup',
+                    owner: gitInfo.owner,
+                    repository: gitInfo.repo,
+                    token,
+                    requirements: configuredSetupPatPermissions,
+                });
+                permissionPresenter.showReport(permissionReport);
+                if (!permissionReport.ready || permissionReport.identityStatus !== 'valid') {
+                    throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT is missing access required by the approved setup plan. Grant the permissions shown above and retry.');
+                }
+            }
             const workflowComparisons = new setup_workspace_adapter_1.SetupDoctorWorkspaceQueryAdapter().compareWorkflows((0, setup_configuration_policy_1.effectiveIssueWorkflowFeatures)(configuration), configuration);
             const updateWorkflows = await workflowPrompt.confirmWorkflowUpdates(workflowComparisons, Boolean(options.updateWorkflows));
             const approvedWorkflowFiles = updateWorkflows
@@ -64076,7 +64354,7 @@ function registerSetupCommand(program) {
                 (0, logger_1.logInfo)('✅ Dry run complete. No files or GitHub resources were changed.');
                 return;
             }
-            const credentials = await (0, setup_credentials_composition_root_1.createSetupCredentialsUseCase)(credentialPrompt).collect({
+            const credentials = await (0, setup_credentials_composition_root_1.createSetupCredentialsUseCase)(credentialPrompt, permissionPresenter).collect({
                 owner: gitInfo.owner,
                 repository: gitInfo.repo,
                 setupToken: token ?? '',
@@ -64084,6 +64362,7 @@ function registerSetupCommand(program) {
                 manageSecrets: !options.skipSecrets && configuration.manageRepositorySecrets,
                 ref: configuration.repository.mainBranch,
                 remoteConfiguration,
+                workflowTokenPermissions: (0, setup_token_permission_policy_1.buildWorkflowPatPermissionRequirements)(configuration, remoteConfiguration),
             });
             (0, logger_1.logInfo)('⚙️  Applying the approved setup plan...');
             const params = (0, setup_policy_1.buildSetupParams)(options, gitInfo, token ?? '', configuration, credentials.collection, approvedWorkflowFiles, remoteConfiguration);
@@ -65377,6 +65656,102 @@ class NodeTerminalDriver {
 exports.NodeTerminalDriver = NodeTerminalDriver;
 function isAbortError(error) {
     return Boolean(error && typeof error === 'object' && 'name' in error && error.name === 'AbortError');
+}
+
+
+/***/ }),
+
+/***/ 63206:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ConsoleSetupTokenPermissionPresenter = void 0;
+exports.renderSetupTokenPermissionRequirements = renderSetupTokenPermissionRequirements;
+exports.renderSetupTokenPermissionReport = renderSetupTokenPermissionReport;
+const node_process_1 = __nccwpck_require__(97742);
+const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+class ConsoleSetupTokenPermissionPresenter {
+    showRequirements(role, requirements) {
+        console.log(renderSetupTokenPermissionRequirements(role, requirements));
+    }
+    showReport(report) {
+        console.log(renderSetupTokenPermissionReport(report));
+    }
+}
+exports.ConsoleSetupTokenPermissionPresenter = ConsoleSetupTokenPermissionPresenter;
+function renderSetupTokenPermissionRequirements(role, requirements, maximumWidth = node_process_1.stdout.columns ?? 120) {
+    const rows = maximumWidth >= 88
+        ? renderWideRequirements(requirements)
+        : requirements.flatMap(requirement => [
+            `${requirement.permission} (${requirement.scope}) — ${capitalize(requirement.level)} — ${capitalize(requirement.applicability)}`,
+            `  ${requirement.reason}${requirement.condition ? ` Required when: ${requirement.condition}.` : ''}`,
+        ]);
+    return (0, setup_prompt_rendering_1.renderBox)([
+        'Configure this PAT with the least-privilege permissions below before entering it.',
+        '',
+        ...rows,
+    ].join('\n'), `${roleTitle(role)} PAT permissions required`, 36, maximumWidth);
+}
+function renderSetupTokenPermissionReport(report, maximumWidth = node_process_1.stdout.columns ?? 120) {
+    const rows = maximumWidth >= 88
+        ? renderWideChecks(report.checks)
+        : report.checks.flatMap(check => [
+            `${statusLabel(check)} — ${check.permission} (${check.scope}) — ${capitalize(check.level)}`,
+            `  ${check.message}`,
+        ]);
+    const missing = report.checks.filter(check => check.applicability === 'required' && check.status === 'missing');
+    const unverifiable = report.checks.filter(check => check.status === 'unverifiable');
+    const action = missing.length > 0
+        ? `Action required: grant ${missing.map(check => `${check.permission} ${check.level}`).join(', ')} and retry. No dependent mutation started.`
+        : unverifiable.length > 0
+            ? 'Some access is unverifiable because GitHub offers no safe read-only proof. No test mutation was performed.'
+            : 'All safely verifiable required permissions are available.';
+    return (0, setup_prompt_rendering_1.renderBox)([
+        `Identity: ${capitalize(report.identityStatus)}${report.account ? ` as @${report.account}` : ''} — ${report.identityMessage}`,
+        '',
+        ...rows,
+        '',
+        action,
+    ].join('\n'), `${roleTitle(report.role)} PAT permission check`, report.ready ? 32 : 31, maximumWidth);
+}
+function renderWideRequirements(requirements) {
+    const header = row('Permission', 'Scope', 'Access', 'Applies');
+    return [
+        header,
+        row('─'.repeat(20), '─'.repeat(12), '─'.repeat(8), '─'.repeat(11)),
+        ...requirements.flatMap(requirement => [
+            row(requirement.permission, requirement.scope, capitalize(requirement.level), capitalize(requirement.applicability)),
+            `  ${requirement.reason}${requirement.condition ? ` Required when: ${requirement.condition}.` : ''}`,
+        ]),
+    ];
+}
+function renderWideChecks(checks) {
+    return [
+        row('Status', 'Permission', 'Scope', 'Access'),
+        row('─'.repeat(16), '─'.repeat(20), '─'.repeat(12), '─'.repeat(8)),
+        ...checks.flatMap(check => [
+            row(statusLabel(check), check.permission, check.scope, capitalize(check.level)),
+            `  ${check.message}`,
+        ]),
+    ];
+}
+function row(first, second, third, fourth) {
+    return `${first.padEnd(20)} ${second.padEnd(20)} ${third.padEnd(12)} ${fourth}`;
+}
+function statusLabel(check) {
+    if (check.status === 'verified')
+        return '✅ Verified';
+    if (check.status === 'missing')
+        return '❌ Missing';
+    return '? Unverifiable';
+}
+function roleTitle(role) {
+    return role === 'setup' ? 'Setup' : 'Workflow';
+}
+function capitalize(value) {
+    return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 
@@ -79506,9 +79881,10 @@ const repository_variables_repository_1 = __nccwpck_require__(28493);
 const github_identity_client_factory_1 = __nccwpck_require__(93081);
 const setup_remote_credential_health_adapter_1 = __nccwpck_require__(1489);
 const octokit_credential_health_adapter_1 = __nccwpck_require__(41760);
-function createSetupCredentialsUseCase(prompt) {
+const setup_token_permissions_composition_root_1 = __nccwpck_require__(64132);
+function createSetupCredentialsUseCase(prompt, permissionPresenter) {
     const secretNames = new repository_variables_repository_1.RepositorySecretNamesQueryRepository((0, github_identity_client_factory_1.createRepositoryVariablesClient)());
-    return new setup_credentials_use_case_1.SetupCredentialsUseCase(prompt, new setup_credential_validation_adapter_1.SetupCredentialValidationAdapter(), secretNames, new setup_remote_credential_health_adapter_1.SetupRemoteCredentialHealthBootstrapAdapter(new octokit_credential_health_adapter_1.OctokitCredentialHealthClientAdapter()));
+    return new setup_credentials_use_case_1.SetupCredentialsUseCase(prompt, new setup_credential_validation_adapter_1.SetupCredentialValidationAdapter(), secretNames, new setup_remote_credential_health_adapter_1.SetupRemoteCredentialHealthBootstrapAdapter(new octokit_credential_health_adapter_1.OctokitCredentialHealthClientAdapter()), (0, setup_token_permissions_composition_root_1.createSetupTokenPermissionsUseCase)(), permissionPresenter);
 }
 function createSetupRemoteConfigurationReadPort() {
     return new repository_variables_repository_1.SetupRemoteConfigurationQueryRepository((0, github_identity_client_factory_1.createRepositoryVariablesClient)());
@@ -79553,6 +79929,23 @@ function createSetupDoctorUseCase() {
         approvalReadiness: new setup_approval_readiness_adapter_1.GithubSetupApprovalReadinessAdapter(),
         catalogResolver,
     });
+}
+
+
+/***/ }),
+
+/***/ 64132:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createSetupTokenPermissionsUseCase = createSetupTokenPermissionsUseCase;
+const setup_token_permissions_use_case_1 = __nccwpck_require__(11797);
+const setup_credential_validation_adapter_1 = __nccwpck_require__(47020);
+const setup_token_permission_query_adapter_1 = __nccwpck_require__(67758);
+function createSetupTokenPermissionsUseCase() {
+    return new setup_token_permissions_use_case_1.SetupTokenPermissionsUseCase(new setup_credential_validation_adapter_1.SetupCredentialValidationAdapter(), new setup_token_permission_query_adapter_1.SetupTokenPermissionQueryAdapter());
 }
 
 
@@ -81249,6 +81642,105 @@ function readHealthWorkflow() {
     catch {
         return '';
     }
+}
+
+
+/***/ }),
+
+/***/ 67758:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupTokenPermissionQueryAdapter = void 0;
+/** Maps safe GitHub reads to semantic permission evidence without test mutations. */
+class SetupTokenPermissionQueryAdapter {
+    constructor(options = {}) {
+        this.fetcher = options.fetcher ?? fetch;
+        this.timeoutMs = options.timeoutMs ?? 10000;
+    }
+    inspect(owner, repository, token, requirements) {
+        return Promise.all(requirements.map(requirement => this.inspectOne(owner, repository, token, requirement)));
+    }
+    async inspectOne(owner, repository, token, requirement) {
+        const url = probeUrl(owner, repository, requirement);
+        if (!url)
+            return outcome(requirement, 'unverifiable', 'GitHub does not expose a safe read-only proof for this permission.');
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+        try {
+            const response = await this.fetcher(url, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/vnd.github+json',
+                    'X-GitHub-Api-Version': '2022-11-28',
+                },
+                signal: controller.signal,
+            });
+            if (response.ok) {
+                return requirement.level === 'read'
+                    ? outcome(requirement, 'verified', 'GitHub accepted the read-only capability probe.')
+                    : outcome(requirement, 'unverifiable', 'Read access is available, but GitHub exposes no safe proof of write access.');
+            }
+            if (response.status === 401 || response.status === 403) {
+                return outcome(requirement, 'missing', `GitHub rejected the read-only capability probe (HTTP ${response.status}).`);
+            }
+            if (response.status === 404) {
+                return outcome(requirement, 'unverifiable', 'GitHub returned not found, which can mean absent data or hidden permission state.');
+            }
+            return outcome(requirement, 'unverifiable', `GitHub could not verify this permission safely (HTTP ${response.status}).`);
+        }
+        catch {
+            return outcome(requirement, 'unverifiable', 'The permission probe was unavailable or timed out.');
+        }
+        finally {
+            clearTimeout(timeout);
+        }
+    }
+}
+exports.SetupTokenPermissionQueryAdapter = SetupTokenPermissionQueryAdapter;
+function outcome(requirement, status, message) {
+    return { ...requirement, status, message };
+}
+function probeUrl(owner, repository, requirement) {
+    const encodedOwner = encodeURIComponent(owner);
+    const encodedRepository = encodeURIComponent(repository);
+    const repositoryRoot = `https://api.github.com/repos/${encodedOwner}/${encodedRepository}`;
+    if (requirement.scope === 'organization') {
+        const organizationRoot = `https://api.github.com/orgs/${encodedOwner}`;
+        if (requirement.probe === 'secrets')
+            return `${organizationRoot}/actions/secrets?per_page=1`;
+        if (requirement.probe === 'variables')
+            return `${organizationRoot}/actions/variables?per_page=1`;
+        if (requirement.probe === 'members')
+            return `${organizationRoot}/members?per_page=1`;
+        if (requirement.probe === 'issue-types')
+            return `${organizationRoot}/issue-types?per_page=1`;
+        return undefined;
+    }
+    if (requirement.probe === 'metadata')
+        return repositoryRoot;
+    if (requirement.probe === 'contents')
+        return `${repositoryRoot}/contents`;
+    if (requirement.probe === 'administration')
+        return `${repositoryRoot}/rulesets?per_page=1`;
+    if (requirement.probe === 'issues')
+        return `${repositoryRoot}/labels?per_page=1`;
+    if (requirement.probe === 'actions')
+        return `${repositoryRoot}/actions/workflows?per_page=1`;
+    if (requirement.probe === 'checks')
+        return `${repositoryRoot}/commits/HEAD/check-runs?per_page=1`;
+    if (requirement.probe === 'pull-requests')
+        return `${repositoryRoot}/pulls?state=open&per_page=1`;
+    if (requirement.probe === 'variables')
+        return `${repositoryRoot}/actions/variables?per_page=1`;
+    if (requirement.probe === 'secrets')
+        return `${repositoryRoot}/actions/secrets?per_page=1`;
+    if (requirement.probe === 'workflows')
+        return `${repositoryRoot}/contents/.github/workflows`;
+    return undefined;
 }
 
 

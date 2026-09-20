@@ -12,6 +12,34 @@ For [guarded PR approval](/pull-requests/guarded-approval), this same runtime PA
 
 The setup PAT and workflow PAT may have different owners and permissions. Do not paste the workflow PAT into the setup prompt unless you intentionally want the same token to perform both roles.
 
+## Permission tables in `copilot setup`
+
+Immediately before each hidden PAT prompt, interactive setup prints a
+least-privilege table with the GitHub permission, repository or organization
+scope, access level, purpose, and any enabling condition. After a newly supplied
+token is entered, setup prints the same ordered matrix with one of these states:
+
+| Status | Meaning | Setup behavior |
+|---|---|---|
+| `✅ Verified` | A safe read-only GitHub operation proved the requested read capability. | Continue. |
+| `❌ Missing` | GitHub deterministically rejected a required capability after identity and repository access were established. | Stop before the dependent mutation and name the permission to grant. |
+| `? Unverifiable` | GitHub does not expose a safe non-mutating proof of the requested write level, or the response was ambiguous/transient. | Continue with an explicit limitation; the row is never presented as a pass. |
+
+The third state is intentional. GitHub's
+`X-Accepted-GitHub-Permissions` response header describes what an endpoint
+requires; it does not enumerate every effective grant of the presented
+fine-grained PAT. Copilot never creates a temporary label, branch, file,
+Variable, Secret, comment, project item, or workflow run merely to turn that
+unknown into a checkmark.
+
+The setup-PAT table is comprehensive because it appears before the interactive
+feature choices are final. Repository Metadata and the read capabilities needed
+for initial inspection are required; later write and organization permissions
+state the feature/storage condition that makes them applicable. The workflow-PAT
+table is calculated from the final setup configuration, so guarded approval,
+release/hotfix, organization issue types, Projects, and organization Variables
+appear only when selected.
+
 <Info>GitHub does not reveal Secret values through its API. Copilot validates new credentials with provider metadata requests and validates existing remote Secrets through the read-only `copilot_credential_health.yml` workflow when it is installed on the repository's default branch. The health workflow reports each requested credential independently. Doctor can query and dispatch that installed workflow but has no bootstrap or repository-mutation authority; temporary workflow bootstrap is available only during setup. A preauthenticated Codex session is runner state, not a Secret: it is accepted only when the runtime preflight can execute `codex login status` successfully.</Info>
 
 <Warning>**When the event actor is the same as the token user**: The action detects this before entering the workflow queue. It completes successfully without waiting or running the normal issue/PR/push pipeline. A valid explicit single action still runs. This avoids the bot reacting to its own actions. Use a dedicated bot account (different from the actor) if you want full pipeline behavior on every event.</Warning>
@@ -29,6 +57,11 @@ For comment-driven assistance, read-only commands are available to anyone who ca
     The person running setup needs a separate fine-grained PAT. Give it only the permissions required by the selected setup features: repository Metadata read and repository Contents/Workflows read for inspection; Administration read when release/hotfix setup or doctor must inspect classic branch protection; Issues write for labels; Variables write for Repository Variables; Secrets read/write when provisioning Secrets; Actions read/write when checking or dispatching credential health; and organization Issue Types or Projects permissions only when those integrations are selected. If setup will use organization-level Actions Secrets or Variables, the token also needs the corresponding organization Actions Secrets/Variables read and write permissions. Organization scope is valid only for repositories owned by an organization; setup detects personal repositories and stops before attempting organization writes. Contents write and Workflows write are required only if the operator chooses to modify workflow files through the GitHub API.
 
     Enter it in the hidden prompt, or use `--token`/`PERSONAL_ACCESS_TOKEN` for automation. It remains in memory for the command and is not written to `.env`, a config file, or the `PAT` Secret.
+
+    Read the required-permissions table before creating the token, then review
+    the permission-check table after entry. A `❌ Missing` required row must be
+    corrected before setup can continue. A `? Unverifiable` write row means to
+    compare the PAT settings with the requested access level; it is not a pass.
   </Step>
   
   <Step title="Create the workflow PAT">
@@ -75,6 +108,10 @@ For comment-driven assistance, read-only commands are available to anyone who ca
     `copilot_deployment_orchestration.yml`.
 
     Finally press the **Generate new token** button.
+
+    When setup requests this PAT, use its feature-derived terminal table as the
+    authoritative checklist for the selected installation. Review every result
+    row before allowing setup to store the token as the `PAT` Secret.
 
     <Warning>Make sure to **copy the generated PAT**, as it will not be visible again.</Warning>
   </Step>

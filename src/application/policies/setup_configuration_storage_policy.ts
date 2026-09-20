@@ -18,7 +18,7 @@ export function resolveSetupResourceScope(
 }
 
 export function getSetupResourceStoragePolicy(
-    configuration: SetupConfiguration,
+    configuration: Readonly<SetupConfiguration>,
     kind: SetupResourceKind,
 ): SetupResourceStoragePolicy {
     return getSetupStorageConfiguration(configuration)[kind === 'secret' ? 'secrets' : 'variables'];
@@ -35,10 +35,10 @@ export function getSetupStorageConfiguration(
 }
 
 export function resolveSetupResourceTarget(
-    configuration: SetupConfiguration,
+    configuration: Readonly<SetupConfiguration>,
     kind: SetupResourceKind,
     name: string,
-    remote?: SetupRemoteConfiguration,
+    remote?: Readonly<SetupRemoteConfiguration>,
 ): SetupResourceTarget {
     const policy = getSetupResourceStoragePolicy(configuration, kind);
     const explicitOverride = Object.prototype.hasOwnProperty.call(policy.overrides, name);
@@ -54,7 +54,7 @@ export function resolveSetupResourceTarget(
 }
 
 export function setupResourceExists(
-    remote: SetupRemoteConfiguration | undefined,
+    remote: Readonly<SetupRemoteConfiguration> | undefined,
     kind: SetupResourceKind,
     name: string,
 ): { repository: boolean; organization: boolean; effective?: SetupResourceScope } {
