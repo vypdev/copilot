@@ -96,6 +96,13 @@ describe('IssueContentRepository', () => {
             .resolves.toBe('compaction-required');
     });
 
+    it('keeps the compact fallback for a generic forbidden deletion response', async () => {
+        mockDeleteComment.mockRejectedValue({ status: 403, message: 'Forbidden' });
+
+        await expect(repository.removeComment('owner', 'repo', 7, 12, 'token'))
+            .resolves.toBe('compaction-required');
+    });
+
     it('propagates transient duplicate-removal failures', async () => {
         mockDeleteComment.mockRejectedValue({ status: 503, message: 'unavailable' });
 

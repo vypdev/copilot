@@ -70863,7 +70863,8 @@ const isGithubPermissionDenied = (error) => {
     if (typeof message !== 'string')
         return false;
     const normalized = message.trim().toLowerCase();
-    return normalized.includes('resource not accessible by integration')
+    return normalized === 'forbidden'
+        || normalized.includes('resource not accessible by integration')
         || normalized.includes('resource not accessible by personal access token')
         || normalized.includes('permission')
         || normalized.includes('not permitted')
@@ -81818,6 +81819,8 @@ class SetupTokenPermissionQueryAdapter {
 exports.SetupTokenPermissionQueryAdapter = SetupTokenPermissionQueryAdapter;
 async function isDeterministicPermissionDenial(response) {
     const message = await readProviderMessage(response);
+    if (message?.toLowerCase() === 'forbidden')
+        return false;
     const headers = Object.fromEntries(['retry-after', 'x-ratelimit-remaining', 'x-github-sso']
         .map(name => [name, readResponseHeader(response, name)])
         .filter((entry) => entry[1] !== undefined));

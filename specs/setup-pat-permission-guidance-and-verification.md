@@ -274,6 +274,9 @@ upsert, dispatch, or temporary-resource operation.
   the generic provider message `Forbidden`, rate-limited responses, SSO
   responses, and otherwise ambiguous `403` responses remain `Unverifiable`;
   raw provider prose is never rendered.
+  This strict probe classification is context-specific: it MUST NOT weaken
+  established operational fallbacks in other GitHub adapters, such as treating
+  a generic forbidden duplicate-comment deletion as requiring compaction.
 
 ### 8.3 Executable architecture constraints
 
@@ -386,17 +389,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **37 distinct cases**.
+This SDD adds at least **38 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain permission policy | 8 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order, organization-only and mixed-scope inventory dependency |
 | Application state/blocking | 6 | verified, missing, unverifiable, invalid base token, organization-only credential collection, remote-storage blocked result |
-| Adapter/provider contracts | 12 | GET-only probes, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, 5xx, redaction, bounded unavailable repository inventory, unavailable endpoint state |
+| Adapter/provider contracts | 13 | GET-only probes, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, 5xx, redaction, bounded unavailable repository inventory, unavailable endpoint state, duplicate-comment deletion fallback regression |
 | Setup/credential integration | 7 | pre-prompt setup table, conditional denial through planning, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, workflow PAT check |
 | UI/accessibility | 3 | required/result tables, 40-column wrapping, no-color text |
 | Architecture/security/docs | 1 | query-only boundary and no duplicated catalog |
-| **Total** | **37** | No double counting |
+| **Total** | **38** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -462,6 +465,10 @@ at widths 40/80/120 and `NO_COLOR`.
    requirement and result reports are still emitted.
 16. Given architecture validation, the permission port exposes only read
     semantics and the renderer contains no permission decision catalog.
+17. Given duplicate-comment deletion receives a generic non-rate-limited
+    `Forbidden` response, the existing compaction fallback remains available;
+    setup permission probes still classify that same generic prose as
+    `Unverifiable`.
 
 ## 17. Requirements traceability
 
@@ -471,6 +478,7 @@ at widths 40/80/120 and `NO_COLOR`.
 | pre-prompt table | credential orchestration/presenter | CLI prompt tests | authentication |
 | safe evidence states | validation use case/query adapter | state/error mapping tests | troubleshooting |
 | deterministic 403 mapping | provider adapter plus bounded GitHub error policy | rate-limit, SSO, bare, and explicit-denial fixtures | authentication/troubleshooting |
+| context-specific generic 403 handling | setup query adapter plus operational GitHub error policy | setup-probe and duplicate-comment deletion regression fixtures | authentication/troubleshooting |
 | final report before remote-storage block | wizard result contract/CLI orchestration | blocked-result and CLI ordering tests | authentication/troubleshooting |
 | scope-sensitive inventory gating | storage policy/credential use case/resource provisioning | organization-only, preserve-existing, and mixed-scope tests | authentication/troubleshooting |
 | no write probes | semantic query port/architecture rule | method/transport tests | architecture |

@@ -81,6 +81,7 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionQue
 
 async function isDeterministicPermissionDenial(response: Response): Promise<boolean> {
     const message = await readProviderMessage(response);
+    if (message?.toLowerCase() === 'forbidden') return false;
     const headers = Object.fromEntries(
         ['retry-after', 'x-ratelimit-remaining', 'x-github-sso']
             .map(name => [name, readResponseHeader(response, name)] as const)
