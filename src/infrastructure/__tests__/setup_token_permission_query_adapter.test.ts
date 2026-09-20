@@ -10,9 +10,31 @@ const requirement = (
     level, applicability: 'required', reason: 'test', probe,
 });
 
-function response(ok: boolean, status: number): Response {
-    return { ok, status } as Response;
+function response(
+    ok: boolean,
+    status: number,
+    options: { message?: string; headers?: Record<string, string> } = {},
+): Response {
+    const headers = Object.fromEntries(
+        Object.entries(options.headers ?? {}).map(([name, value]) => [name.toLowerCase(), value]),
+    );
+    return {
+        ok,
+        status,
+        headers: { get: (name: string) => headers[name.toLowerCase()] ?? null },
+        json: jest.fn().mockResolvedValue(options.message ? { message: options.message } : {}),
+    } as unknown as Response;
 }
+
+const ambiguousForbiddenResponses: ReadonlyArray<{
+    label: string;
+    options: { message?: string; headers?: Record<string, string> };
+}> = [
+    { label: 'bare', options: {} },
+    { label: 'primary rate limit', options: { message: 'Forbidden', headers: { 'x-ratelimit-remaining': '0' } } },
+    { label: 'secondary rate limit', options: { message: 'Forbidden', headers: { 'retry-after': '60' } } },
+    { label: 'SSO constraint', options: { message: 'Forbidden', headers: { 'x-github-sso': 'required' } } },
+];
 
 describe('SetupTokenPermissionQueryAdapter', () => {
     it('can be constructed with the production defaults', () => {
@@ -35,10 +57,28 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         expect(check).toMatchObject({ status: 'unverifiable', message: expect.stringContaining('no safe proof of write') });
     });
 
-    it.each([401, 403])('maps HTTP %s to missing permission evidence', async status => {
-        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher: jest.fn().mockResolvedValue(response(false, status)) })
+    it('maps HTTP 401 to missing permission evidence', async () => {
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher: jest.fn().mockResolvedValue(response(false, 401)) })
             .inspect('owner', 'repo', 'secret', [requirement()]);
         expect(check).toMatchObject({ status: 'missing' });
+    });
+
+    it('maps an explicit bounded HTTP 403 permission denial to missing', async () => {
+        const providerMessage = 'Resource not accessible by personal access token';
+        const [check] = await new SetupTokenPermissionQueryAdapter({
+            fetcher: jest.fn().mockResolvedValue(response(false, 403, { message: providerMessage })),
+        }).inspect('owner', 'repo', 'secret', [requirement()]);
+
+        expect(check).toMatchObject({ status: 'missing' });
+        expect(check.message).not.toContain(providerMessage);
+    });
+
+    it.each(ambiguousForbiddenResponses)('keeps a $label HTTP 403 unverifiable', async ({ options }) => {
+        const [check] = await new SetupTokenPermissionQueryAdapter({
+            fetcher: jest.fn().mockResolvedValue(response(false, 403, options)),
+        }).inspect('owner', 'repo', 'secret', [requirement()]);
+
+        expect(check).toMatchObject({ status: 'unverifiable' });
     });
 
     it('treats HTTP 404 as ambiguous instead of claiming a missing permission', async () => {

@@ -58,6 +58,14 @@ export type SetupWizardResult =
       reason: 'questionnaire-cancelled' | 'confirmation-cancelled' | 'confirmation-declined';
       exitCode: 0 | 130;
       remoteConfiguration?: SetupRemoteConfiguration;
+    }
+  | {
+      status: 'blocked';
+      reason: 'remote-storage-unavailable';
+      exitCode: 1;
+      configuration: SetupConfiguration;
+      errors: readonly string[];
+      remoteConfiguration: SetupRemoteConfiguration;
     };
 
 export interface SetupWizardDependencies {
@@ -133,17 +141,25 @@ export class SetupWizardUseCase {
       collectedConfiguration.pullRequestApproval = { ...collectedConfiguration.pullRequestApproval, mode: 'off' };
     }
     const validationErrors = validateSetupConfiguration(collectedConfiguration, { allowIncompleteApproval: request.previewOnly === true });
-    const configuration = validationErrors.length === 0
-      ? normalizeSetupConfigurationLocales(collectedConfiguration)
-      : collectedConfiguration;
-    if (remoteConfiguration) {
-      validationErrors.push(...validateSetupStorageAgainstRemote(configuration, remoteConfiguration));
-    }
     if (validationErrors.length > 0) {
       throw new ApplicationError(
         'configuration.invalid',
         `Invalid setup configuration:\n${validationErrors.map((error) => `- ${error}`).join('\n')}`,
       );
+    }
+    const configuration = normalizeSetupConfigurationLocales(collectedConfiguration);
+    if (remoteConfiguration) {
+      const remoteStorageErrors = validateSetupStorageAgainstRemote(configuration, remoteConfiguration);
+      if (remoteStorageErrors.length > 0) {
+        return {
+          status: 'blocked',
+          reason: 'remote-storage-unavailable',
+          exitCode: 1,
+          configuration: cloneSetupConfiguration(configuration),
+          errors: remoteStorageErrors,
+          remoteConfiguration,
+        };
+      }
     }
 
     const readiness = request.remoteTarget && this.dependencies.mergeQueueReadiness

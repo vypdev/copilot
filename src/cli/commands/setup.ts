@@ -187,6 +187,12 @@ export function registerSetupCommand(program: Command): void {
             );
           }
         }
+        if (result.status === 'blocked') {
+          throw new ApplicationError(
+            'configuration.invalid',
+            `Invalid setup configuration:\n${result.errors.map(error => `- ${error}`).join('\n')}`,
+          );
+        }
         const workflowComparisons = new SetupDoctorWorkspaceQueryAdapter().compareWorkflows(effectiveIssueWorkflowFeatures(configuration), configuration);
         const updateWorkflows = await workflowPrompt.confirmWorkflowUpdates(workflowComparisons, Boolean(options.updateWorkflows));
         const approvedWorkflowFiles = updateWorkflows

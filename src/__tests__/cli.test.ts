@@ -609,6 +609,40 @@ describe('CLI', () => {
       }));
     });
 
+    it('shows the final permission report before surfacing organization storage validation', async () => {
+      mockRemoteConfigurationInspect.mockResolvedValueOnce({
+        ownerType: 'Organization',
+        repositoryId: 42,
+        repositoryVisibility: 'private',
+        repositorySecrets: [],
+        repositorySecretsAccess: 'available',
+        organizationSecrets: [],
+        repositoryVariables: [],
+        repositoryVariablesAccess: 'available',
+        organizationVariables: [],
+        organizationAccess: 'unavailable',
+        organizationSecretsAccess: 'available',
+        organizationVariablesAccess: 'unavailable',
+      });
+
+      await program.parseAsync([
+        'node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12',
+        '--skip-secrets', '--variable-scope', 'AGENT_PROVIDER=organization',
+        '--non-interactive', '--pr-approval-mode', 'off', '--yes',
+      ]);
+
+      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
+      expect(mockTokenPermissionInspect.mock.calls[1][0].requirements).toEqual(expect.arrayContaining([
+        expect.objectContaining({ scope: 'organization', permission: 'Variables' }),
+      ]));
+      expect(runLocalAction).not.toHaveBeenCalled();
+      expect(process.exitCode).toBe(1);
+      const { logError } = require('../utils/logger');
+      expect(logError).toHaveBeenCalledWith(expect.objectContaining({
+        message: expect.stringContaining('organization variables'),
+      }));
+    });
+
     it('exits when not inside a git repo', async () => {
       (execSync as jest.Mock).mockImplementation((cmd: string) => {
         if (typeof cmd === 'string' && cmd.includes('is-inside-work-tree')) throw new Error('not a repo');

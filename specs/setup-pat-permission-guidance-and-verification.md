@@ -1,6 +1,6 @@
 # Setup PAT Permission Guidance and Verification
 
-- Status: Implemented — permission UX, scope-sensitive inventory gating, coverage, and documentation gates complete
+- Status: Implemented — permission UX, deterministic provider mapping, scope-sensitive gating, coverage, and documentation gates complete
 - Date: 2026-09-20
 - Catalog capability ID: `setup-and-doctor`
 - Last verified: 2026-09-20
@@ -172,6 +172,10 @@ read-only GitHub queries and presents ordered permission outcomes.
    recomputed for mutation-time capabilities. Newly relevant missing access
    blocks mutation; unverifiable write levels remain visible and are allowed to
    proceed under the existing partial-failure/retry contract.
+   Remote storage validation MUST return the final configuration and bounded
+   blocking facts to the CLI rather than throw before this report. The CLI MUST
+   render and execute the final permission audit before surfacing those storage
+   validation errors or starting any dependent work.
 6. If repository Secret or Variable inventory is still unavailable or unknown,
    setup MUST stop after rendering the final permission table and before
    credential decisions, resource targeting, or mutation only when at least one
@@ -261,8 +265,14 @@ upsert, dispatch, or temporary-resource operation.
   repository discovery for preservation. Organization-only targets do not gain
   an unrelated repository dependency.
 - Untrusted inputs: provider status/body/headers, repository metadata, token.
-- Provider error mapping: 401 invalid token; deterministic 403/404 after base
-  access is missing; rate limit/5xx/network/unsupported proof is unverifiable.
+- Provider error mapping: 401 after base validation and an explicit permission-
+  denial 403 are missing; 404, rate limit, 5xx, network, and unsupported proof
+  are unverifiable.
+  A permission-probe `403` is deterministic only when bounded normalized
+  provider metadata identifies a permission denial and no `Retry-After`,
+  exhausted rate-limit, or SSO header is present. Bare, rate-limited, SSO, and
+  otherwise ambiguous `403` responses remain `Unverifiable`; raw provider prose
+  is never rendered.
 
 ### 8.3 Executable architecture constraints
 
@@ -335,6 +345,7 @@ No durable marker or notification is created.
 | invalid token | setup stops before remote planning | no token/result persisted | no | replace PAT | none |
 | wrong repository selection | setup stops | identity only in memory | no | grant repository access | none |
 | missing safe-probe permission | dependent phase stops | table remains in terminal | no | grant named permission | none |
+| final configuration has unavailable organization storage | final setup-PAT requirements and results remain visible, then setup stops before plan confirmation or mutation | approved configuration, bounded storage facts, permission table | no | grant the named organization permission and retry | none |
 | optional repository inventory denied before selection | wizard continues with unavailable/unknown inventory; the final audit blocks if the capability becomes required | access state and completed permission rows | no | select features, then grant any required permission named by the final table | none |
 | required repository inventory remains unavailable after final audit | setup stops before credential prompts, target resolution, or mutation; no empty inventory is inferred | final permission table and bounded access state | no | retry after provider recovery or correct the named PAT permission | none |
 | unrelated repository inventory unavailable for organization-only resources | setup continues using available organization inventory; no repository absence is inferred or needed | final permission table and bounded access states | no | none | none |
@@ -374,17 +385,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **30 distinct cases**.
+This SDD adds at least **36 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain permission policy | 8 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order, organization-only and mixed-scope inventory dependency |
-| Application state/blocking | 5 | verified, missing, unverifiable, invalid base token, organization-only credential collection |
-| Adapter/provider contracts | 7 | GET-only probes, 401, deterministic denial, rate limit/5xx, redaction, bounded unavailable repository inventory, unavailable endpoint state |
-| Setup/credential integration | 6 | pre-prompt setup table, conditional denial through planning, final setup check, scope-sensitive credential/resource consumers, workflow PAT check |
+| Application state/blocking | 6 | verified, missing, unverifiable, invalid base token, organization-only credential collection, remote-storage blocked result |
+| Adapter/provider contracts | 11 | GET-only probes, 401, explicit permission denial, bare/rate-limited/SSO 403, 5xx, redaction, bounded unavailable repository inventory, unavailable endpoint state |
+| Setup/credential integration | 7 | pre-prompt setup table, conditional denial through planning, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, workflow PAT check |
 | UI/accessibility | 3 | required/result tables, 40-column wrapping, no-color text |
 | Architecture/security/docs | 1 | query-only boundary and no duplicated catalog |
-| **Total** | **30** | No double counting |
+| **Total** | **36** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -411,36 +422,44 @@ at widths 40/80/120 and `NO_COLOR`.
    textual `Verified` rows and setup continues.
 3. Given a valid token missing a safely probed required permission, the terminal
    shows `Missing`, one recovery action, and no dependent mutation occurs.
-4. Given a valid token missing only a conditional repository Secret or Variable
+4. Given a permission probe returns a rate-limited, SSO-constrained, bare, or
+   otherwise ambiguous `403`, the affected row is `Unverifiable`, not `Missing`;
+   an explicit bounded permission-denial response remains `Missing`, and raw
+   provider prose is absent from both results.
+5. Given a valid token missing only a conditional repository Secret or Variable
    read before feature selection, remote inventory records that access as
    unavailable without throwing; if the final plan requires it, the configured
    permission table shows `Missing` and setup stops before mutation.
-5. Given a selected managed Secret or Variable that may resolve to repository
+6. Given a selected managed Secret or Variable that may resolve to repository
    scope, or whose unoverridden scope must be discovered to preserve an existing
    resource, when repository inventory remains unavailable or unknown, the final
    table remains visible and setup stops before credential prompts, scope
    resolution, or mutation without treating the inventory as empty.
-6. Given every selected Secret or Variable is explicitly organization-scoped,
+7. Given every selected Secret or Variable is explicitly organization-scoped,
    or its organization default has `preserveExisting: false`, unavailable
    repository inventory does not block credential collection, target resolution,
    or organization provisioning when the corresponding organization inventory
    is available.
-7. Given a mixed storage policy with any selected repository-scoped or
+8. Given a mixed storage policy with any selected repository-scoped or
    preservation-dependent resource, unavailable repository inventory still
    blocks all dependent work before mutation.
-8. Given a write permission that GitHub cannot prove without mutation, the row
+9. Given final organization storage validation is blocked, the terminal first
+   shows the configured setup-PAT requirements and permission results, then
+   reports the storage error; plan confirmation, credential prompts, target
+   resolution, and mutation do not run.
+10. Given a write permission that GitHub cannot prove without mutation, the row
    shows `Unverifiable`; no write probe occurs and no verified claim is made.
-9. Given the final selected features, the workflow PAT table contains exactly
+11. Given the final selected features, the workflow PAT table contains exactly
    their required repository/organization permissions and no unrelated grant.
-10. Given a workflow PAT with invalid identity or repository selection, it is not
+12. Given a workflow PAT with invalid identity or repository selection, it is not
    accepted for Secret provisioning.
-11. Given provider 429/5xx/network failure, the affected row is unverifiable, raw
+13. Given provider 429/5xx/network failure, the affected row is unverifiable, raw
    provider text is absent, and other rows remain ordered and visible.
-12. Given width 40 or `NO_COLOR`, symbols are accompanied by status text and the
+14. Given width 40 or `NO_COLOR`, symbols are accompanied by status text and the
    table remains readable.
-13. Given non-interactive supplied credentials, no prompt is created but the
+15. Given non-interactive supplied credentials, no prompt is created but the
    requirement and result reports are still emitted.
-14. Given architecture validation, the permission port exposes only read
+16. Given architecture validation, the permission port exposes only read
     semantics and the renderer contains no permission decision catalog.
 
 ## 17. Requirements traceability
@@ -450,6 +469,8 @@ at widths 40/80/120 and `NO_COLOR`.
 | role-specific least privilege | permission policy | policy matrix tests | authentication |
 | pre-prompt table | credential orchestration/presenter | CLI prompt tests | authentication |
 | safe evidence states | validation use case/query adapter | state/error mapping tests | troubleshooting |
+| deterministic 403 mapping | provider adapter plus bounded GitHub error policy | rate-limit, SSO, bare, and explicit-denial fixtures | authentication/troubleshooting |
+| final report before remote-storage block | wizard result contract/CLI orchestration | blocked-result and CLI ordering tests | authentication/troubleshooting |
 | scope-sensitive inventory gating | storage policy/credential use case/resource provisioning | organization-only, preserve-existing, and mixed-scope tests | authentication/troubleshooting |
 | no write probes | semantic query port/architecture rule | method/transport tests | architecture |
 | secret safety | all contracts/presenter | redaction fixtures | credentials |

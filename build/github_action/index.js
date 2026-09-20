@@ -69695,12 +69695,15 @@ const isGithubPermissionDenied = (error) => {
         return false;
     if (readHeader(headers, 'x-ratelimit-remaining') === '0')
         return false;
+    if (readHeader(headers, 'x-github-sso') !== undefined)
+        return false;
     const message = errorRecord?.message;
     if (typeof message !== 'string')
         return false;
     const normalized = message.trim().toLowerCase();
     return normalized === 'forbidden'
         || normalized.includes('resource not accessible by integration')
+        || normalized.includes('resource not accessible by personal access token')
         || normalized.includes('permission')
         || normalized.includes('not permitted')
         || normalized.includes('not allowed')

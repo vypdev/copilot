@@ -54945,14 +54945,22 @@ class SetupWizardUseCase {
             collectedConfiguration.pullRequestApproval = { ...collectedConfiguration.pullRequestApproval, mode: 'off' };
         }
         const validationErrors = (0, setup_configuration_policy_1.validateSetupConfiguration)(collectedConfiguration, { allowIncompleteApproval: request.previewOnly === true });
-        const configuration = validationErrors.length === 0
-            ? (0, setup_configuration_policy_1.normalizeSetupConfigurationLocales)(collectedConfiguration)
-            : collectedConfiguration;
-        if (remoteConfiguration) {
-            validationErrors.push(...(0, setup_configuration_policy_1.validateSetupStorageAgainstRemote)(configuration, remoteConfiguration));
-        }
         if (validationErrors.length > 0) {
             throw new application_error_1.ApplicationError('configuration.invalid', `Invalid setup configuration:\n${validationErrors.map((error) => `- ${error}`).join('\n')}`);
+        }
+        const configuration = (0, setup_configuration_policy_1.normalizeSetupConfigurationLocales)(collectedConfiguration);
+        if (remoteConfiguration) {
+            const remoteStorageErrors = (0, setup_configuration_policy_1.validateSetupStorageAgainstRemote)(configuration, remoteConfiguration);
+            if (remoteStorageErrors.length > 0) {
+                return {
+                    status: 'blocked',
+                    reason: 'remote-storage-unavailable',
+                    exitCode: 1,
+                    configuration: (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration),
+                    errors: remoteStorageErrors,
+                    remoteConfiguration,
+                };
+            }
         }
         const readiness = request.remoteTarget && this.dependencies.mergeQueueReadiness
             ? await this.dependencies.mergeQueueReadiness.inspect({
@@ -64408,6 +64416,9 @@ function registerSetupCommand(program) {
                     throw new application_error_1.ApplicationError('provider.unavailable', `Setup cannot safely continue with unavailable repository inventory:\n${inventoryErrors.map(error => `- ${error}`).join('\n')}`);
                 }
             }
+            if (result.status === 'blocked') {
+                throw new application_error_1.ApplicationError('configuration.invalid', `Invalid setup configuration:\n${result.errors.map(error => `- ${error}`).join('\n')}`);
+            }
             const workflowComparisons = new setup_workspace_adapter_1.SetupDoctorWorkspaceQueryAdapter().compareWorkflows((0, setup_configuration_policy_1.effectiveIssueWorkflowFeatures)(configuration), configuration);
             const updateWorkflows = await workflowPrompt.confirmWorkflowUpdates(workflowComparisons, Boolean(options.updateWorkflows));
             const approvedWorkflowFiles = updateWorkflows
@@ -70846,12 +70857,15 @@ const isGithubPermissionDenied = (error) => {
         return false;
     if (readHeader(headers, 'x-ratelimit-remaining') === '0')
         return false;
+    if (readHeader(headers, 'x-github-sso') !== undefined)
+        return false;
     const message = errorRecord?.message;
     if (typeof message !== 'string')
         return false;
     const normalized = message.trim().toLowerCase();
     return normalized === 'forbidden'
         || normalized.includes('resource not accessible by integration')
+        || normalized.includes('resource not accessible by personal access token')
         || normalized.includes('permission')
         || normalized.includes('not permitted')
         || normalized.includes('not allowed')
@@ -81740,12 +81754,13 @@ function readHealthWorkflow() {
 /***/ }),
 
 /***/ 67758:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupTokenPermissionQueryAdapter = void 0;
+const github_error_policy_1 = __nccwpck_require__(58791);
 /** Maps safe GitHub reads to semantic permission evidence without test mutations. */
 class SetupTokenPermissionQueryAdapter {
     constructor(options = {}) {
@@ -81776,8 +81791,17 @@ class SetupTokenPermissionQueryAdapter {
                     ? outcome(requirement, 'verified', 'GitHub accepted the read-only capability probe.')
                     : outcome(requirement, 'unverifiable', 'Read access is available, but GitHub exposes no safe proof of write access.');
             }
-            if (response.status === 401 || response.status === 403) {
+            if (response.status === 401) {
                 return outcome(requirement, 'missing', `GitHub rejected the read-only capability probe (HTTP ${response.status}).`);
+            }
+            if (response.status === 403) {
+                const status = await isDeterministicPermissionDenial(response)
+                    ? 'missing'
+                    : 'unverifiable';
+                const message = status === 'missing'
+                    ? 'GitHub explicitly rejected the read-only capability probe because the token lacks permission.'
+                    : 'GitHub returned an ambiguous forbidden response; rate limits, SSO, or permission state could not be distinguished safely.';
+                return outcome(requirement, status, message);
             }
             if (response.status === 404) {
                 return outcome(requirement, 'unverifiable', 'GitHub returned not found, which can mean absent data or hidden permission state.');
@@ -81793,6 +81817,37 @@ class SetupTokenPermissionQueryAdapter {
     }
 }
 exports.SetupTokenPermissionQueryAdapter = SetupTokenPermissionQueryAdapter;
+async function isDeterministicPermissionDenial(response) {
+    const message = await readProviderMessage(response);
+    const headers = Object.fromEntries(['retry-after', 'x-ratelimit-remaining', 'x-github-sso']
+        .map(name => [name, readResponseHeader(response, name)])
+        .filter((entry) => entry[1] !== undefined));
+    return (0, github_error_policy_1.isGithubPermissionDenied)({
+        status: response.status,
+        ...(message ? { message } : {}),
+        response: { headers },
+    });
+}
+async function readProviderMessage(response) {
+    try {
+        const payload = await response.json();
+        if (typeof payload !== 'object' || payload === null || Array.isArray(payload))
+            return undefined;
+        const message = payload.message;
+        return typeof message === 'string' ? message.trim().slice(0, 256) : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+function readResponseHeader(response, name) {
+    try {
+        return response.headers?.get(name) ?? undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
 function outcome(requirement, status, message) {
     return { ...requirement, status, message };
 }

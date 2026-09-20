@@ -12,7 +12,9 @@ const remote = {
   repositoryVisibility: 'private' as const,
   repositorySecrets: ['PAT'],
   organizationSecrets: [] as string[],
+  repositorySecretsAccess: 'available' as const,
   repositoryVariables: [] as { name: string; value: string }[],
+  repositoryVariablesAccess: 'available' as const,
   organizationVariables: [] as { name: string; value: string }[],
   organizationAccess: 'available' as const,
   organizationSecretsAccess: 'available' as const,
@@ -210,5 +212,32 @@ describe('SetupWizardUseCase', () => {
       overrides: { repository: { mainBranch: '' } },
     })).rejects.toThrow('Invalid setup configuration');
     expect(deps.planPresenter.present).not.toHaveBeenCalled();
+  });
+
+  it('returns the final configuration when remote storage validation blocks presentation', async () => {
+    const blockedRemote = { ...remote, organizationVariablesAccess: 'unavailable' as const };
+    const deps = dependencies({
+      remoteConfiguration: { inspect: jest.fn().mockResolvedValue(blockedRemote) },
+    });
+
+    const result = await new SetupWizardUseCase(deps).execute({
+      mode: 'non-interactive',
+      overrides: {
+        pullRequestApproval: { mode: 'off' },
+        storage: { variables: { overrides: { AGENT_PROVIDER: 'organization' } } },
+      },
+      remoteTarget: { owner: 'owner', repository: 'repo', token: 'token' },
+    });
+
+    expect(result).toEqual(expect.objectContaining({
+      status: 'blocked',
+      reason: 'remote-storage-unavailable',
+      exitCode: 1,
+      configuration: expect.objectContaining({ manageRepositoryVariables: true }),
+      errors: [expect.stringContaining('organization variables')],
+      remoteConfiguration: blockedRemote,
+    }));
+    expect(deps.planPresenter.present).not.toHaveBeenCalled();
+    expect(deps.confirmation.confirm).not.toHaveBeenCalled();
   });
 });

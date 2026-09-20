@@ -3,6 +3,7 @@ import type {
     SetupTokenPermissionCheck,
     SetupTokenPermissionRequirement,
 } from '../domain/setup_token_permissions';
+import { isGithubPermissionDenied } from '../data/repository/github/github_error_policy';
 
 export interface SetupTokenPermissionQueryOptions {
     fetcher?: typeof fetch;
@@ -54,8 +55,17 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionQue
                     ? outcome(requirement, 'verified', 'GitHub accepted the read-only capability probe.')
                     : outcome(requirement, 'unverifiable', 'Read access is available, but GitHub exposes no safe proof of write access.');
             }
-            if (response.status === 401 || response.status === 403) {
+            if (response.status === 401) {
                 return outcome(requirement, 'missing', `GitHub rejected the read-only capability probe (HTTP ${response.status}).`);
+            }
+            if (response.status === 403) {
+                const status = await isDeterministicPermissionDenial(response)
+                    ? 'missing'
+                    : 'unverifiable';
+                const message = status === 'missing'
+                    ? 'GitHub explicitly rejected the read-only capability probe because the token lacks permission.'
+                    : 'GitHub returned an ambiguous forbidden response; rate limits, SSO, or permission state could not be distinguished safely.';
+                return outcome(requirement, status, message);
             }
             if (response.status === 404) {
                 return outcome(requirement, 'unverifiable', 'GitHub returned not found, which can mean absent data or hidden permission state.');
@@ -66,6 +76,39 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionQue
         } finally {
             clearTimeout(timeout);
         }
+    }
+}
+
+async function isDeterministicPermissionDenial(response: Response): Promise<boolean> {
+    const message = await readProviderMessage(response);
+    const headers = Object.fromEntries(
+        ['retry-after', 'x-ratelimit-remaining', 'x-github-sso']
+            .map(name => [name, readResponseHeader(response, name)] as const)
+            .filter((entry): entry is readonly [string, string] => entry[1] !== undefined),
+    );
+    return isGithubPermissionDenied({
+        status: response.status,
+        ...(message ? { message } : {}),
+        response: { headers },
+    });
+}
+
+async function readProviderMessage(response: Response): Promise<string | undefined> {
+    try {
+        const payload: unknown = await response.json();
+        if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return undefined;
+        const message = (payload as Record<string, unknown>).message;
+        return typeof message === 'string' ? message.trim().slice(0, 256) : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+function readResponseHeader(response: Response, name: string): string | undefined {
+    try {
+        return response.headers?.get(name) ?? undefined;
+    } catch {
+        return undefined;
     }
 }
 
