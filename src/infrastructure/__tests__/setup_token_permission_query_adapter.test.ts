@@ -31,6 +31,7 @@ const ambiguousForbiddenResponses: ReadonlyArray<{
     options: { message?: string; headers?: Record<string, string> };
 }> = [
     { label: 'bare', options: {} },
+    { label: 'generic Forbidden', options: { message: 'Forbidden' } },
     { label: 'primary rate limit', options: { message: 'Forbidden', headers: { 'x-ratelimit-remaining': '0' } } },
     { label: 'secondary rate limit', options: { message: 'Forbidden', headers: { 'retry-after': '60' } } },
     { label: 'SSO constraint', options: { message: 'Forbidden', headers: { 'x-github-sso': 'required' } } },

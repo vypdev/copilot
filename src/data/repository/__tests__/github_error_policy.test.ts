@@ -18,7 +18,6 @@ describe("github error policy", () => {
     });
 
     it.each([
-        { status: 403, message: 'Forbidden' },
         { status: 403, message: 'Resource not accessible by integration' },
         { status: 403, message: 'Resource not accessible by personal access token' },
         { status: 403, message: 'Write permission is required' },
@@ -32,6 +31,7 @@ describe("github error policy", () => {
     it.each([
         { status: 401, message: 'Forbidden' },
         { status: 403 },
+        { status: 403, message: 'Forbidden' },
         { status: 403, message: 'You have exceeded a secondary rate limit.' },
         { status: 403, message: 'Forbidden', response: { headers: { 'retry-after': '60' } } },
         { status: 403, message: 'Forbidden', response: { headers: { 'X-RateLimit-Remaining': 0 } } },

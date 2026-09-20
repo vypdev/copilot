@@ -69701,8 +69701,7 @@ const isGithubPermissionDenied = (error) => {
     if (typeof message !== 'string')
         return false;
     const normalized = message.trim().toLowerCase();
-    return normalized === 'forbidden'
-        || normalized.includes('resource not accessible by integration')
+    return normalized.includes('resource not accessible by integration')
         || normalized.includes('resource not accessible by personal access token')
         || normalized.includes('permission')
         || normalized.includes('not permitted')

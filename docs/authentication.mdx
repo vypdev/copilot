@@ -27,9 +27,10 @@ token is entered, setup prints the same ordered matrix with one of these states:
 
 A `403` is not automatically a missing-permission result. Copilot reports it as
 `Missing` only when bounded GitHub metadata explicitly identifies a permission
-denial and there is no rate-limit, retry, or SSO signal. Bare, rate-limited,
-SSO-constrained, and otherwise ambiguous `403` responses remain `Unverifiable`;
-raw provider messages are never printed.
+denial and there is no rate-limit, retry, or SSO signal. Bare responses, the
+generic provider message `Forbidden`, rate-limited responses, SSO-constrained
+responses, and otherwise ambiguous `403` responses remain `Unverifiable`; raw
+provider messages are never printed.
 
 The third state is intentional. GitHub's
 `X-Accepted-GitHub-Permissions` response header describes what an endpoint

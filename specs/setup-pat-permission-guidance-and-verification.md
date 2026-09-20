@@ -269,10 +269,11 @@ upsert, dispatch, or temporary-resource operation.
   denial 403 are missing; 404, rate limit, 5xx, network, and unsupported proof
   are unverifiable.
   A permission-probe `403` is deterministic only when bounded normalized
-  provider metadata identifies a permission denial and no `Retry-After`,
-  exhausted rate-limit, or SSO header is present. Bare, rate-limited, SSO, and
-  otherwise ambiguous `403` responses remain `Unverifiable`; raw provider prose
-  is never rendered.
+  provider metadata explicitly identifies a missing permission and no
+  `Retry-After`, exhausted rate-limit, or SSO header is present. Bare responses,
+  the generic provider message `Forbidden`, rate-limited responses, SSO
+  responses, and otherwise ambiguous `403` responses remain `Unverifiable`;
+  raw provider prose is never rendered.
 
 ### 8.3 Executable architecture constraints
 
@@ -385,17 +386,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **36 distinct cases**.
+This SDD adds at least **37 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain permission policy | 8 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order, organization-only and mixed-scope inventory dependency |
 | Application state/blocking | 6 | verified, missing, unverifiable, invalid base token, organization-only credential collection, remote-storage blocked result |
-| Adapter/provider contracts | 11 | GET-only probes, 401, explicit permission denial, bare/rate-limited/SSO 403, 5xx, redaction, bounded unavailable repository inventory, unavailable endpoint state |
+| Adapter/provider contracts | 12 | GET-only probes, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, 5xx, redaction, bounded unavailable repository inventory, unavailable endpoint state |
 | Setup/credential integration | 7 | pre-prompt setup table, conditional denial through planning, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, workflow PAT check |
 | UI/accessibility | 3 | required/result tables, 40-column wrapping, no-color text |
 | Architecture/security/docs | 1 | query-only boundary and no duplicated catalog |
-| **Total** | **36** | No double counting |
+| **Total** | **37** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -422,10 +423,10 @@ at widths 40/80/120 and `NO_COLOR`.
    textual `Verified` rows and setup continues.
 3. Given a valid token missing a safely probed required permission, the terminal
    shows `Missing`, one recovery action, and no dependent mutation occurs.
-4. Given a permission probe returns a rate-limited, SSO-constrained, bare, or
-   otherwise ambiguous `403`, the affected row is `Unverifiable`, not `Missing`;
-   an explicit bounded permission-denial response remains `Missing`, and raw
-   provider prose is absent from both results.
+4. Given a permission probe returns a rate-limited, SSO-constrained, bare,
+   generic `Forbidden`, or otherwise ambiguous `403`, the affected row is
+   `Unverifiable`, not `Missing`; an explicit bounded permission-denial response
+   remains `Missing`, and raw provider prose is absent from both results.
 5. Given a valid token missing only a conditional repository Secret or Variable
    read before feature selection, remote inventory records that access as
    unavailable without throwing; if the final plan requires it, the configured

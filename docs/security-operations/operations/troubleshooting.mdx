@@ -43,9 +43,10 @@ This guide helps you resolve common issues you might encounter while using Copil
 
     **`? Unverifiable`:** this is not a pass. GitHub either does not expose a
     safe read-only proof for the requested write level, returned an ambiguous
-    `403`/`404`, reported SSO enforcement, or had a transient/rate-limit failure.
-    A `403` becomes `Missing` only when bounded provider metadata explicitly
-    identifies a permission denial without rate-limit, retry, or SSO headers.
+    `403`/`404` (including the generic message `Forbidden`), reported SSO
+    enforcement, or had a transient/rate-limit failure. A `403` becomes
+    `Missing` only when bounded provider metadata explicitly identifies a
+    permission denial without rate-limit, retry, or SSO headers.
     Compare the requested level in the table with the PAT settings, confirm
     organization approval if required, and rerun. Copilot deliberately does not
     create disposable GitHub resources to test write access.
