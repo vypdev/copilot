@@ -532,6 +532,51 @@ describe('CLI', () => {
       expect(process.exitCode).toBe(1);
     });
 
+    it('continues past a missing conditional permission but blocks it when the final plan requires it', async () => {
+      const conditionalVariables: SetupTokenPermissionRequirement = {
+        id: 'setup.repository.variables',
+        role: 'setup',
+        scope: 'repository',
+        permission: 'Variables',
+        level: 'write',
+        applicability: 'conditional',
+        condition: 'Variable provisioning enabled',
+        reason: 'Inspect and provision selected GitHub Actions Variables.',
+        probe: 'variables',
+      };
+      mockTokenPermissionInspect
+        .mockResolvedValueOnce({
+          role: 'setup',
+          identityStatus: 'valid',
+          identityMessage: 'verified',
+          ready: true,
+          checks: [{ ...conditionalVariables, status: 'missing', message: 'not granted' }],
+        })
+        .mockImplementationOnce(async (request: { role: 'setup' | 'workflow'; requirements: readonly SetupTokenPermissionRequirement[] }) => ({
+          role: request.role,
+          identityStatus: 'valid',
+          identityMessage: 'verified',
+          ready: false,
+          checks: request.requirements.map(requirement => ({
+            ...requirement,
+            status: requirement.probe === 'variables' ? 'missing' as const : 'verified' as const,
+            message: requirement.probe === 'variables' ? 'not granted' : 'available',
+          })),
+        }));
+
+      await program.parseAsync([
+        'node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12',
+        '--skip-secrets', '--non-interactive', '--pr-approval-mode', 'off', '--yes',
+      ]);
+
+      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
+      expect(mockTokenPermissionInspect.mock.calls[1][0].requirements).toEqual(expect.arrayContaining([
+        expect.objectContaining({ permission: 'Variables', applicability: 'required' }),
+      ]));
+      expect(runLocalAction).not.toHaveBeenCalled();
+      expect(process.exitCode).toBe(1);
+    });
+
     it('exits when not inside a git repo', async () => {
       (execSync as jest.Mock).mockImplementation((cmd: string) => {
         if (typeof cmd === 'string' && cmd.includes('is-inside-work-tree')) throw new Error('not a repo');

@@ -90,8 +90,10 @@ describe('setup prompt rendering', () => {
                 repositoryId: 42,
                 repositoryVisibility: 'private',
                 repositorySecrets: ['PAT'],
+                repositorySecretsAccess: 'available',
                 organizationSecrets: ['OPENAI_API_KEY'],
                 repositoryVariables: [{ name: 'AGENT_MODEL', value: 'gpt-5.6' }],
+                repositoryVariablesAccess: 'available',
                 organizationVariables: [{ name: 'AGENT_PROVIDER', value: 'codex' }],
                 organizationAccess: 'available',
                 organizationSecretsAccess: 'available',
@@ -126,5 +128,30 @@ describe('setup prompt rendering', () => {
         expect(rendered).toContain('repository ID: unknown');
         expect(rendered).toContain('(none detected)');
         expect(rendered).toContain('Organization resource inspection: unavailable.');
+    });
+
+    it('renders denied repository inventory as unavailable instead of empty', () => {
+        const rendered = renderRemoteConfiguration(
+            {
+                ownerType: 'User',
+                repositoryVisibility: 'private',
+                repositorySecrets: [],
+                repositorySecretsAccess: 'unavailable',
+                organizationSecrets: [],
+                repositoryVariables: [],
+                repositoryVariablesAccess: 'unavailable',
+                organizationVariables: [],
+                organizationAccess: 'not_applicable',
+                organizationSecretsAccess: 'not_applicable',
+                organizationVariablesAccess: 'not_applicable',
+            },
+            [],
+            [],
+        );
+
+        expect(rendered).toContain('Repository Secrets: (unavailable; review the PAT permission table)');
+        expect(rendered).toContain('Repository Variables: (unavailable; review the PAT permission table)');
+        expect(rendered).not.toContain('Repository Secrets: (none detected)');
+        expect(rendered).not.toContain('Repository Variables: (none detected)');
     });
 });

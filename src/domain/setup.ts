@@ -199,8 +199,12 @@ export interface SetupRemoteConfiguration {
     repositoryId?: number;
     repositoryVisibility: SetupRepositoryVisibility;
     repositorySecrets: readonly string[];
+    /** Optional for compatibility with setup context captured before access-state reporting. */
+    repositorySecretsAccess?: 'available' | 'unavailable' | 'unknown';
     organizationSecrets: readonly string[];
     repositoryVariables: readonly SetupVariable[];
+    /** Optional for compatibility with setup context captured before access-state reporting. */
+    repositoryVariablesAccess?: 'available' | 'unavailable' | 'unknown';
     organizationVariables: readonly SetupVariable[];
     organizationAccess: 'available' | 'unavailable' | 'not_applicable' | 'unknown';
     organizationSecretsAccess: 'available' | 'unavailable' | 'not_applicable' | 'unknown';

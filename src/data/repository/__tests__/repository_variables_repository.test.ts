@@ -142,10 +142,33 @@ describe('narrow GitHub Actions resource repositories', () => {
             repositorySecrets: ['REPO_SECRET'], organizationSecrets: ['ORG_SECRET'],
             repositoryVariables: [{ name: 'REPO_VAR', value: 'repo' }],
             organizationVariables: [{ name: 'ORG_VAR', value: 'org' }],
+            repositorySecretsAccess: 'available', repositoryVariablesAccess: 'available',
             organizationSecretsAccess: 'available', organizationVariablesAccess: 'available',
         }));
         expect(listRepoOrganizationSecrets).toHaveBeenCalledWith({ repository_id: 42, per_page: 30 });
         expect(listRepoOrganizationVariables).toHaveBeenCalledWith({ repository_id: 42, per_page: 30 });
+    });
+
+    it('keeps denied repository inventory distinct from a confirmed empty inventory', async () => {
+        const client = {
+            rest: {
+                repos: { get: jest.fn().mockResolvedValue({ data: { id: 42, visibility: 'private', owner: { type: 'User' } } }) },
+                actions: {
+                    listRepoVariables: jest.fn().mockRejectedValue(new Error('variables forbidden')),
+                    createRepoVariable: jest.fn(), updateRepoVariable: jest.fn(),
+                },
+                secrets: {
+                    listRepoSecrets: jest.fn().mockRejectedValue(new Error('secrets forbidden')),
+                    getRepoPublicKey: jest.fn(), createOrUpdateRepoSecret: jest.fn(),
+                },
+            },
+        };
+        const repository = new SetupRemoteConfigurationQueryRepository({ getClient: jest.fn(() => client) });
+
+        await expect(repository.inspect('owner', 'repo', 'token')).resolves.toEqual(expect.objectContaining({
+            repositorySecrets: [], repositorySecretsAccess: 'unavailable',
+            repositoryVariables: [], repositoryVariablesAccess: 'unavailable',
+        }));
     });
 
     it('upserts selected organization secrets and variables with the repository access grant', async () => {

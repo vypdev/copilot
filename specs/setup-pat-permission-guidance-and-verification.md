@@ -161,8 +161,14 @@ read-only GitHub queries and presents ordered permission outcomes.
    choices that can require broader access.
 2. After entry, setup validates identity and repository selection, executes the
    safe bootstrap probes, and renders results in the same order as requirements.
-3. A missing bootstrap permission blocks the wizard before remote inspection.
-4. After the final configuration is approved, the setup PAT permission plan is
+3. A missing required bootstrap permission blocks the wizard before remote
+   inspection. Missing conditional Secret/Variable inventory access remains
+   visible but does not block before the operator has selected storage features.
+4. Pre-plan remote inventory MUST map unavailable repository and organization
+   Secret/Variable reads to bounded access facts instead of throwing. The wizard
+   may continue with unknown inventory, but MUST NOT describe unavailable data
+   as an empty resource list.
+5. After the final configuration is approved, the setup PAT permission plan is
    recomputed for mutation-time capabilities. Newly relevant missing access
    blocks mutation; unverifiable write levels remain visible and are allowed to
    proceed under the existing partial-failure/retry contract.
@@ -214,7 +220,7 @@ prints requirements and any available checks without implying mutation access.
 | Domain/pure policy | permission vocabulary, strongest-level normalization, capability-to-requirement decisions | terminal, fetch, Octokit, tokens |
 | Application | validate-token-permissions use case, ordered result contract, blocking policy | provider endpoints/headers, console |
 | Semantic ports | read-only identity/repository/permission inspection | mutation methods or provider DTOs |
-| Infrastructure adapter | bounded GitHub GET/GraphQL probes, status/error mapping | feature selection or rendering |
+| Infrastructure adapter | bounded GitHub GET/GraphQL probes, status/error mapping, non-throwing optional resource inventory | feature selection or rendering |
 | CLI presentation | narrow tables, icons plus status text, wrapping/no-color behavior | capability policy or remote calls |
 | Entrypoint/composition | target/config projection and concrete wiring | duplicated requirement lists |
 
@@ -232,6 +238,9 @@ upsert, dispatch, or temporary-resource operation.
   operation returning semantic evidence states.
 - Durable state: none; results exist only for the command.
 - Concurrency/idempotency: bounded read probes, stable order, safe repetition.
+- Remote inventory state: repository and organization Secret/Variable access is
+  represented separately from the discovered resource names; unavailable or
+  unknown access is never projected as a confirmed empty inventory.
 - Untrusted inputs: provider status/body/headers, repository metadata, token.
 - Provider error mapping: 401 invalid token; deterministic 403/404 after base
   access is missing; rate limit/5xx/network/unsupported proof is unverifiable.
@@ -307,6 +316,7 @@ No durable marker or notification is created.
 | invalid token | setup stops before remote planning | no token/result persisted | no | replace PAT | none |
 | wrong repository selection | setup stops | identity only in memory | no | grant repository access | none |
 | missing safe-probe permission | dependent phase stops | table remains in terminal | no | grant named permission | none |
+| optional repository inventory denied before selection | wizard continues with unavailable/unknown inventory; the final audit blocks if the capability becomes required | access state and completed permission rows | no | select features, then grant any required permission named by the final table | none |
 | write level unverifiable | setup may later fail at first real write | verified read facts | no | inspect PAT settings; rerun | none |
 | rate limit/network/5xx | no false missing result | other completed rows | bounded provider retry only | retry later | none |
 | narrow terminal | table wraps | semantic row order | not applicable | none | none |
@@ -343,17 +353,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **22 distinct cases**.
+This SDD adds at least **24 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain permission policy | 6 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order |
 | Application state/blocking | 4 | verified, missing, unverifiable, invalid base token |
-| Adapter/provider contracts | 5 | GET-only probes, 401, deterministic denial, rate limit/5xx, redaction |
-| Setup/credential integration | 3 | pre-prompt setup table, final setup check, workflow PAT check |
+| Adapter/provider contracts | 6 | GET-only probes, 401, deterministic denial, rate limit/5xx, redaction, bounded unavailable repository inventory |
+| Setup/credential integration | 4 | pre-prompt setup table, conditional denial through planning, final setup check, workflow PAT check |
 | UI/accessibility | 3 | required/result tables, 40-column wrapping, no-color text |
 | Architecture/security/docs | 1 | query-only boundary and no duplicated catalog |
-| **Total** | **22** | No double counting |
+| **Total** | **24** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -380,19 +390,23 @@ at widths 40/80/120 and `NO_COLOR`.
    textual `Verified` rows and setup continues.
 3. Given a valid token missing a safely probed required permission, the terminal
    shows `Missing`, one recovery action, and no dependent mutation occurs.
-4. Given a write permission that GitHub cannot prove without mutation, the row
+4. Given a valid token missing only a conditional repository Secret or Variable
+   read before feature selection, remote inventory records that access as
+   unavailable without throwing; if the final plan requires it, the configured
+   permission table shows `Missing` and setup stops before mutation.
+5. Given a write permission that GitHub cannot prove without mutation, the row
    shows `Unverifiable`; no write probe occurs and no verified claim is made.
-5. Given the final selected features, the workflow PAT table contains exactly
+6. Given the final selected features, the workflow PAT table contains exactly
    their required repository/organization permissions and no unrelated grant.
-6. Given a workflow PAT with invalid identity or repository selection, it is not
+7. Given a workflow PAT with invalid identity or repository selection, it is not
    accepted for Secret provisioning.
-7. Given provider 429/5xx/network failure, the affected row is unverifiable, raw
+8. Given provider 429/5xx/network failure, the affected row is unverifiable, raw
    provider text is absent, and other rows remain ordered and visible.
-8. Given width 40 or `NO_COLOR`, symbols are accompanied by status text and the
+9. Given width 40 or `NO_COLOR`, symbols are accompanied by status text and the
    table remains readable.
-9. Given non-interactive supplied credentials, no prompt is created but the
+10. Given non-interactive supplied credentials, no prompt is created but the
    requirement and result reports are still emitted.
-10. Given architecture validation, the permission port exposes only read
+11. Given architecture validation, the permission port exposes only read
     semantics and the renderer contains no permission decision catalog.
 
 ## 17. Requirements traceability
@@ -424,7 +438,7 @@ at widths 40/80/120 and `NO_COLOR`.
 - [x] No validation request mutates GitHub and no result overclaims write access.
 - [x] Token values and raw provider text are absent from all output/state/errors.
 - [x] Clean Architecture boundaries and their executable test pass.
-- [x] At least 22 distinct cases and stated coverage thresholds pass.
+- [x] At least 24 distinct cases and stated coverage thresholds pass.
 - [x] Authentication, checklist, troubleshooting, and architecture docs agree.
 - [x] Catalog evidence and generated `specs/CATALOG.md` are current.
 - [x] Specification, documentation, typecheck, lint, and test gates pass.

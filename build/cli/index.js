@@ -65387,9 +65387,9 @@ function isWideCodePoint(codePoint) {
 function renderRemoteConfiguration(remote, variables, requirements) {
     const lines = [
         `Target owner: ${remote.ownerType}; repository visibility: ${remote.repositoryVisibility}; repository ID: ${remote.repositoryId ?? 'unknown'}`,
-        `Repository Secrets: ${remote.repositorySecrets.length > 0 ? remote.repositorySecrets.join(', ') : '(none detected)'}`,
+        `Repository Secrets: ${renderRepositoryInventory(remote.repositorySecrets, remote.repositorySecretsAccess)}`,
         `Organization Secrets available here: ${remote.organizationSecrets.length > 0 ? remote.organizationSecrets.join(', ') : '(none detected)'}`,
-        `Repository Variables: ${remote.repositoryVariables.length > 0 ? remote.repositoryVariables.map(variable => variable.name).join(', ') : '(none detected)'}`,
+        `Repository Variables: ${renderRepositoryInventory(remote.repositoryVariables.map(variable => variable.name), remote.repositoryVariablesAccess)}`,
         `Organization Variables available here: ${remote.organizationVariables.length > 0 ? remote.organizationVariables.map(variable => variable.name).join(', ') : '(none detected)'}`,
         `Required Secrets: ${requirements.map(requirement => requirement.name).join(', ')}`,
         `Required Variables: ${variables.map(variable => variable.name).join(', ')}`,
@@ -65399,6 +65399,13 @@ function renderRemoteConfiguration(remote, variables, requirements) {
         'Repository-level resources take precedence over organization-level resources. Secret values are never displayed.',
     ];
     return lines.join('\n');
+}
+function renderRepositoryInventory(names, access) {
+    if (access === 'unavailable')
+        return '(unavailable; review the PAT permission table)';
+    if (access === 'unknown')
+        return '(unknown; repository inspection is unavailable)';
+    return names.length > 0 ? names.join(', ') : '(none detected)';
 }
 function stripAnsi(value) {
     return value.replace(new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g'), '');
@@ -74247,21 +74254,19 @@ class GithubActionsResourceTransport {
         const metadata = repositoryResponse.data;
         const ownerType = normalizeOwnerType(metadata.owner?.type);
         const repositoryVisibility = normalizeRepositoryVisibility(metadata.visibility);
-        const repositorySecrets = client.rest.secrets
-            ? await this.list(owner, repository, token)
-            : [];
-        const repositoryVariables = (await this.listVariables(owner, repository, token))
-            .filter((variable) => variable.value !== undefined)
-            .map(variable => ({ name: variable.name, value: variable.value }));
+        const repositorySecretsResult = await this.listRepositorySecretsForInspection(client, owner, repository);
+        const repositoryVariablesResult = await this.listRepositoryVariablesForInspection(client, owner, repository);
         const organizationSecretsResult = await this.listOrganizationSecrets(client, metadata.id, ownerType);
         const organizationVariablesResult = await this.listOrganizationVariables(client, metadata.id, ownerType);
         return {
             ownerType,
             repositoryId: metadata.id,
             repositoryVisibility,
-            repositorySecrets,
+            repositorySecrets: repositorySecretsResult.resources,
+            repositorySecretsAccess: repositorySecretsResult.access,
             organizationSecrets: organizationSecretsResult.resources.map(resource => resource.name),
-            repositoryVariables,
+            repositoryVariables: repositoryVariablesResult.resources,
+            repositoryVariablesAccess: repositoryVariablesResult.access,
             organizationVariables: organizationVariablesResult.resources
                 .filter((resource) => resource.value !== undefined)
                 .map(resource => ({ name: resource.name, value: resource.value })),
@@ -74269,6 +74274,29 @@ class GithubActionsResourceTransport {
             organizationSecretsAccess: organizationSecretsResult.access,
             organizationVariablesAccess: organizationVariablesResult.access,
         };
+    }
+    async listRepositorySecretsForInspection(client, owner, repository) {
+        const list = client.rest.secrets?.listRepoSecrets;
+        if (!list)
+            return { resources: [], access: 'unknown' };
+        try {
+            const resources = await listCollection(client, list, { owner, repo: repository, per_page: 100 }, 'secrets');
+            return { resources: resources.map(secret => secret.name), access: 'available' };
+        }
+        catch {
+            return { resources: [], access: 'unavailable' };
+        }
+    }
+    async listRepositoryVariablesForInspection(client, owner, repository) {
+        try {
+            const resources = (await listCollection(client, client.rest.actions.listRepoVariables, { owner, repo: repository, per_page: 100 }, 'variables'))
+                .filter((variable) => variable.value !== undefined)
+                .map(variable => ({ name: variable.name, value: variable.value }));
+            return { resources, access: 'available' };
+        }
+        catch {
+            return { resources: [], access: 'unavailable' };
+        }
     }
     async upsertSecrets(owner, repository, token, credentials) {
         const client = this.githubClient.getClient(token);

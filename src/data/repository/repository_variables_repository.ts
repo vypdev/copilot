@@ -37,21 +37,19 @@ class GithubActionsResourceTransport {
         const metadata = repositoryResponse.data;
         const ownerType = normalizeOwnerType(metadata.owner?.type);
         const repositoryVisibility = normalizeRepositoryVisibility(metadata.visibility);
-        const repositorySecrets = client.rest.secrets
-            ? await this.list(owner, repository, token)
-            : [];
-        const repositoryVariables = (await this.listVariables(owner, repository, token))
-            .filter((variable): variable is SetupVariable => variable.value !== undefined)
-            .map(variable => ({ name: variable.name, value: variable.value }));
+        const repositorySecretsResult = await this.listRepositorySecretsForInspection(client, owner, repository);
+        const repositoryVariablesResult = await this.listRepositoryVariablesForInspection(client, owner, repository);
         const organizationSecretsResult = await this.listOrganizationSecrets(client, metadata.id, ownerType);
         const organizationVariablesResult = await this.listOrganizationVariables(client, metadata.id, ownerType);
         return {
             ownerType,
             repositoryId: metadata.id,
             repositoryVisibility,
-            repositorySecrets,
+            repositorySecrets: repositorySecretsResult.resources,
+            repositorySecretsAccess: repositorySecretsResult.access,
             organizationSecrets: organizationSecretsResult.resources.map(resource => resource.name),
-            repositoryVariables,
+            repositoryVariables: repositoryVariablesResult.resources,
+            repositoryVariablesAccess: repositoryVariablesResult.access,
             organizationVariables: organizationVariablesResult.resources
                 .filter((resource): resource is GithubOrganizationResource & { value: string } => resource.value !== undefined)
                 .map(resource => ({ name: resource.name, value: resource.value })),
@@ -59,6 +57,41 @@ class GithubActionsResourceTransport {
             organizationSecretsAccess: organizationSecretsResult.access,
             organizationVariablesAccess: organizationVariablesResult.access,
         };
+    }
+
+    private async listRepositorySecretsForInspection(
+        client: GithubRepositoryVariablesClient,
+        owner: string,
+        repository: string,
+    ): Promise<{ resources: string[]; access: NonNullable<SetupRemoteConfiguration['repositorySecretsAccess']> }> {
+        const list = client.rest.secrets?.listRepoSecrets;
+        if (!list) return { resources: [], access: 'unknown' };
+        try {
+            const resources = await listCollection(client, list, { owner, repo: repository, per_page: 100 }, 'secrets');
+            return { resources: resources.map(secret => secret.name), access: 'available' };
+        } catch {
+            return { resources: [], access: 'unavailable' };
+        }
+    }
+
+    private async listRepositoryVariablesForInspection(
+        client: GithubRepositoryVariablesClient,
+        owner: string,
+        repository: string,
+    ): Promise<{ resources: SetupVariable[]; access: NonNullable<SetupRemoteConfiguration['repositoryVariablesAccess']> }> {
+        try {
+            const resources = (await listCollection(
+                client,
+                client.rest.actions.listRepoVariables,
+                { owner, repo: repository, per_page: 100 },
+                'variables',
+            ))
+                .filter((variable): variable is SetupVariable => variable.value !== undefined)
+                .map(variable => ({ name: variable.name, value: variable.value }));
+            return { resources, access: 'available' };
+        } catch {
+            return { resources: [], access: 'unavailable' };
+        }
     }
 
     async upsertSecrets(
