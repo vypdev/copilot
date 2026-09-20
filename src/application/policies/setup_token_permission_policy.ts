@@ -82,6 +82,8 @@ export function buildConfiguredSetupPatPermissionRequirements(
         remote?.repositorySecrets.includes(name) || remote?.organizationSecrets.includes(name),
     );
     const needsCredentialHealth = configuration.manageRepositorySecrets && hasExistingCredential;
+    const needsCredentialHealthBootstrap = needsCredentialHealth
+        && remote?.credentialHealthWorkflow !== 'installed';
     const organization = remote?.ownerType === 'Organization';
 
     return normalizePermissionRequirements([
@@ -103,10 +105,13 @@ export function buildConfiguredSetupPatPermissionRequirements(
             role: 'setup', scope: 'repository', permission: 'Issues', level: 'write',
             reason: 'Provision labels for the selected issue workflows.', probe: 'issues',
         })] : []),
-        ...(needsCredentialHealth ? [
-            requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'write', reason: 'Dispatch credential-health checks for existing Secrets.', probe: 'actions' }),
-            requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'write', reason: 'Temporarily install credential health when its workflow is missing.', probe: 'contents' }),
-            requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write', reason: 'Temporarily install credential health when its workflow is missing.', probe: 'workflows' }),
+        ...(needsCredentialHealth ? [requirement({
+            role: 'setup', scope: 'repository', permission: 'Actions', level: 'write',
+            reason: 'Dispatch credential-health checks for existing Secrets.', probe: 'actions',
+        })] : []),
+        ...(needsCredentialHealthBootstrap ? [
+            requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'write', reason: 'Temporarily install credential health when its workflow is not confirmed installed.', probe: 'contents' }),
+            requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write', reason: 'Temporarily install credential health when its workflow is not confirmed installed.', probe: 'workflows' }),
         ] : []),
         ...(releaseOrHotfix || guardedApproval ? [requirement({
             role: 'setup', scope: 'repository', permission: 'Administration', level: 'read',

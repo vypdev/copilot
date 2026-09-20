@@ -11,8 +11,9 @@ import type {
   GithubCredentialHealthQueryClient,
   GithubWorkflowRun,
 } from './github/ports/github_credential_health_protocol';
+import { SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE } from '../domain/setup_workflow_catalog';
 
-const WORKFLOW_ID = 'copilot_credential_health.yml';
+const WORKFLOW_ID = SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE;
 const INPUT_BY_SECRET: Readonly<Record<string, string>> = {
   PAT: 'check_pat',
   OPENAI_API_KEY: 'check_openai',

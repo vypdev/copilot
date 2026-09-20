@@ -40908,7 +40908,10 @@ function buildReviewDiffPlan(context, ignorePatterns = []) {
         const separatorLength = current.length > 0 ? 2 : 0;
         if (current.length > 0 && used + separatorLength + section.rendered.length > bodyBudget) {
             bodies.push(current);
-            if (bodies.length >= exports.MAX_REVIEW_DIFF_PARTITIONS)
+            // `section` is still pending: reaching 64 completed bodies here means it
+            // would require partition 65. A plan ending at exactly 64 never enters
+            // this branch again and remains valid.
+            if (bodies.length === exports.MAX_REVIEW_DIFF_PARTITIONS)
                 throw new BugbotDiffPlanLimitError();
             current = [];
             used = 0;
@@ -48106,6 +48109,8 @@ function buildConfiguredSetupPatPermissionRequirements(configuration, remote) {
     const guardedApproval = configuration.pullRequestApproval.mode === 'guarded';
     const hasExistingCredential = repositorySecretNames.some(name => remote?.repositorySecrets.includes(name) || remote?.organizationSecrets.includes(name));
     const needsCredentialHealth = configuration.manageRepositorySecrets && hasExistingCredential;
+    const needsCredentialHealthBootstrap = needsCredentialHealth
+        && remote?.credentialHealthWorkflow !== 'installed';
     const organization = remote?.ownerType === 'Organization';
     return normalizePermissionRequirements([
         requirement({ role: 'setup', scope: 'repository', permission: 'Metadata', level: 'read', reason: 'Resolve repository identity and visibility.', probe: 'metadata' }),
@@ -48126,10 +48131,13 @@ function buildConfiguredSetupPatPermissionRequirements(configuration, remote) {
                 role: 'setup', scope: 'repository', permission: 'Issues', level: 'write',
                 reason: 'Provision labels for the selected issue workflows.', probe: 'issues',
             })] : []),
-        ...(needsCredentialHealth ? [
-            requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'write', reason: 'Dispatch credential-health checks for existing Secrets.', probe: 'actions' }),
-            requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'write', reason: 'Temporarily install credential health when its workflow is missing.', probe: 'contents' }),
-            requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write', reason: 'Temporarily install credential health when its workflow is missing.', probe: 'workflows' }),
+        ...(needsCredentialHealth ? [requirement({
+                role: 'setup', scope: 'repository', permission: 'Actions', level: 'write',
+                reason: 'Dispatch credential-health checks for existing Secrets.', probe: 'actions',
+            })] : []),
+        ...(needsCredentialHealthBootstrap ? [
+            requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'write', reason: 'Temporarily install credential health when its workflow is not confirmed installed.', probe: 'contents' }),
+            requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write', reason: 'Temporarily install credential health when its workflow is not confirmed installed.', probe: 'workflows' }),
         ] : []),
         ...(releaseOrHotfix || guardedApproval ? [requirement({
                 role: 'setup', scope: 'repository', permission: 'Administration', level: 'read',
@@ -65920,6 +65928,7 @@ function renderRemoteConfiguration(remote, variables, requirements) {
         `Organization Secrets available here: ${remote.organizationSecrets.length > 0 ? remote.organizationSecrets.join(', ') : '(none detected)'}`,
         `Repository Variables: ${renderRepositoryInventory(remote.repositoryVariables.map(variable => variable.name), remote.repositoryVariablesAccess)}`,
         `Organization Variables available here: ${remote.organizationVariables.length > 0 ? remote.organizationVariables.map(variable => variable.name).join(', ') : '(none detected)'}`,
+        `Credential health workflow: ${remote.credentialHealthWorkflow ?? 'unknown'}`,
         `Required Secrets: ${requirements.map(requirement => requirement.name).join(', ')}`,
         `Required Variables: ${variables.map(variable => variable.name).join(', ')}`,
         remote.organizationAccess === 'available'
@@ -74767,6 +74776,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RepositorySecretsCommandRepository = exports.RepositoryVariablesCommandRepository = exports.SetupRemoteConfigurationQueryRepository = exports.RepositoryVariablesQueryRepository = exports.RepositorySecretNamesQueryRepository = void 0;
 exports.encryptSecret = encryptSecret;
+const setup_workflow_catalog_1 = __nccwpck_require__(24596);
+const github_error_policy_1 = __nccwpck_require__(58791);
 const tweetnacl_1 = __importDefault(__nccwpck_require__(24258));
 const node_crypto_1 = __nccwpck_require__(6005);
 class GithubActionsResourceTransport {
@@ -74797,6 +74808,7 @@ class GithubActionsResourceTransport {
         const repositoryVariablesResult = await this.listRepositoryVariablesForInspection(client, owner, repository);
         const organizationSecretsResult = await this.listOrganizationSecrets(client, metadata.id, ownerType);
         const organizationVariablesResult = await this.listOrganizationVariables(client, metadata.id, ownerType);
+        const credentialHealthWorkflow = await this.inspectCredentialHealthWorkflow(client, owner, repository);
         return {
             ownerType,
             repositoryId: metadata.id,
@@ -74812,7 +74824,23 @@ class GithubActionsResourceTransport {
             organizationAccess: combineOrganizationAccess(organizationSecretsResult.access, organizationVariablesResult.access),
             organizationSecretsAccess: organizationSecretsResult.access,
             organizationVariablesAccess: organizationVariablesResult.access,
+            credentialHealthWorkflow,
         };
+    }
+    async inspectCredentialHealthWorkflow(client, owner, repository) {
+        if (!client.rest.actions.getWorkflow)
+            return 'unknown';
+        try {
+            await client.rest.actions.getWorkflow({
+                owner,
+                repo: repository,
+                workflow_id: setup_workflow_catalog_1.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE,
+            });
+            return 'installed';
+        }
+        catch (error) {
+            return (0, github_error_policy_1.isGithubNotFound)(error) ? 'missing' : 'unavailable';
+        }
     }
     async listRepositorySecretsForInspection(client, owner, repository) {
         const list = client.rest.secrets?.listRepoSecrets;
@@ -78345,8 +78373,10 @@ function renderApprovalObserverWorkflow(template, policy) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE = void 0;
 exports.enabledSetupWorkflowFiles = enabledSetupWorkflowFiles;
 exports.isSetupWorkflowEnabled = isSetupWorkflowEnabled;
+exports.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE = 'copilot_credential_health.yml';
 const SETUP_WORKFLOWS = [
     { file: 'copilot_issue.yml', feature: 'issues' },
     { file: 'copilot_pull_request.yml', feature: 'pullRequests' },
@@ -78361,7 +78391,7 @@ const SETUP_WORKFLOWS = [
     { file: 'hotfix_workflow.yml', feature: 'hotfix' },
     { file: 'copilot_deployment_orchestration.yml', feature: ['release', 'hotfix'] },
     { file: 'agent-cli-provisioning.yml', feature: 'agentProvisioning' },
-    { file: 'copilot_credential_health.yml', feature: 'credentialHealth' },
+    { file: exports.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE, feature: 'credentialHealth' },
     { file: 'copilot_close_inactive_issues.yml', feature: 'inactiveIssueClosure' },
 ];
 function enabledSetupWorkflowFiles(features) {
@@ -82008,7 +82038,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupRemoteCredentialHealthBootstrapAdapter = exports.SetupRemoteCredentialHealthQueryAdapter = void 0;
 const node_fs_1 = __nccwpck_require__(87561);
 const path = __importStar(__nccwpck_require__(49411));
-const WORKFLOW_ID = 'copilot_credential_health.yml';
+const setup_workflow_catalog_1 = __nccwpck_require__(24596);
+const WORKFLOW_ID = setup_workflow_catalog_1.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE;
 const INPUT_BY_SECRET = {
     PAT: 'check_pat',
     OPENAI_API_KEY: 'check_openai',

@@ -193,6 +193,7 @@ export interface SetupCredentialCollection {
 
 export type SetupOwnerType = 'User' | 'Organization' | 'Unknown';
 export type SetupRepositoryVisibility = 'public' | 'private' | 'internal' | 'unknown';
+export type SetupCredentialHealthWorkflowState = 'installed' | 'missing' | 'unavailable' | 'unknown';
 
 export interface SetupRemoteConfiguration {
     ownerType: SetupOwnerType;
@@ -207,6 +208,8 @@ export interface SetupRemoteConfiguration {
     organizationAccess: 'available' | 'unavailable' | 'not_applicable' | 'unknown';
     organizationSecretsAccess: 'available' | 'unavailable' | 'not_applicable' | 'unknown';
     organizationVariablesAccess: 'available' | 'unavailable' | 'not_applicable' | 'unknown';
+    /** Optional for additive compatibility with callers that supply legacy remote snapshots. */
+    credentialHealthWorkflow?: SetupCredentialHealthWorkflowState;
 }
 
 export interface SetupWorkflowComparison {

@@ -308,7 +308,10 @@ function buildReviewDiffPlan(context, ignorePatterns = []) {
         const separatorLength = current.length > 0 ? 2 : 0;
         if (current.length > 0 && used + separatorLength + section.rendered.length > bodyBudget) {
             bodies.push(current);
-            if (bodies.length >= exports.MAX_REVIEW_DIFF_PARTITIONS)
+            // `section` is still pending: reaching 64 completed bodies here means it
+            // would require partition 65. A plan ending at exactly 64 never enters
+            // this branch again and remains valid.
+            if (bodies.length === exports.MAX_REVIEW_DIFF_PARTITIONS)
                 throw new BugbotDiffPlanLimitError();
             current = [];
             used = 0;

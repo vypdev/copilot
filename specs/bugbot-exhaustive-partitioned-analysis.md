@@ -134,8 +134,9 @@ analysis detects every defect.
 3. Each partition prompt MUST remain within 64,000 diff-block characters and
    each fragment within 12,000 characters.
 4. At most two reviewer queries MAY run concurrently.
-5. A plan MUST contain at most 64 partitions. A larger diff fails before model
-   execution and instructs the reviewer to split the PR; it is never partially reviewed.
+5. A plan MUST contain at most 64 partitions. Exactly 64 is valid; only the
+   attempted creation of partition 65 fails before model execution and
+   instructs the reviewer to split the PR. It is never partially reviewed.
 6. No findings or resolutions MAY be published until all planned partitions
    validate for the same head SHA.
 7. One designated partition owns prior-finding resolution; all other partitions
@@ -468,17 +469,17 @@ comments remain untouched.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **35 distinct cases**.
+This SDD owns at least **36 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/pure planning | 10 | empty/single/multi-file, newline/hard split, exact boundary, absent patch, ignore, stable IDs, order, no character loss |
+| Domain/pure planning | 11 | empty/single/multi-file, newline/hard split, exact prompt and 64/65 partition boundaries, absent patch, ignore, stable IDs, order, no character loss |
 | State/application/idempotency/races | 7 | all-complete, one failure, wrong/duplicate ID, wrong SHA, resolution ownership, stale head, replay |
 | Agent adapter/schema contracts | 4 | required attestation, locale, undefined/invalid result, aggregate bounds |
 | Workflow/architecture/telemetry | 4 | concurrency two, ordered collection, no mutation before complete, metrics |
 | UI/UX/localization/sanitization | 4 | pending, failed, complete, hostile content/control characters |
 | Integration/security/compatibility | 6 | 44-file regression, oversized patch, provider partial, dry-run, legacy issue-only path, ignored-only canonical no-op |
-| **Total** | **35** | No double counting |
+| **Total** | **36** | No double counting |
 
 Planner, attestation, and aggregate pure policies require 100% enumerated branch
 coverage. Changed analyzer/context modules require at least 95% lines/statements
@@ -533,6 +534,8 @@ token scope, secret, or public input.
 16. Given a canonical PR whose changed files are all ignored, then no reviewer
     query runs, no prior finding is resolved, and the normal status projection
     retains existing open findings for the current head.
+17. Given a diff that packs into exactly 64 partitions, then the plan succeeds;
+    adding content that requires partition 65 fails before reviewer execution.
 
 ## 17. Requirements traceability
 
@@ -567,7 +570,7 @@ token scope, secret, or public input.
       provider enumeration and every partition respects fixed prompt bounds.
 - [x] Attestation, resolution ownership, concurrency, aggregation, freshness,
       replay, cancellation/failure, and no-prepublication-mutation tests pass.
-- [x] The 35-case floor and changed-module/repository coverage budgets pass.
+- [x] The 36-case floor and changed-module/repository coverage budgets pass.
 - [x] Pending, failed, provider-partial, complete, dry-run, and publication-
       partial surfaces are accurate, localized, accessible, and bounded.
 - [x] No public configuration, permission, credential, or durable-state change

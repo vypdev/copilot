@@ -6,6 +6,8 @@ import type {
     SetupRepositoryVariablesCommandPort,
 } from '../../application/ports/setup_wizard_ports';
 import type { SetupCredentialValue, SetupRemoteConfiguration, SetupResourceTarget, SetupVariable } from '../../domain/setup';
+import { SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE } from '../../domain/setup_workflow_catalog';
+import { isGithubNotFound } from './github/github_error_policy';
 import type { GithubClientPort } from '../../infrastructure/github/ports/github_client_provider_port';
 import type {
     GithubOrganizationResource,
@@ -41,6 +43,7 @@ class GithubActionsResourceTransport {
         const repositoryVariablesResult = await this.listRepositoryVariablesForInspection(client, owner, repository);
         const organizationSecretsResult = await this.listOrganizationSecrets(client, metadata.id, ownerType);
         const organizationVariablesResult = await this.listOrganizationVariables(client, metadata.id, ownerType);
+        const credentialHealthWorkflow = await this.inspectCredentialHealthWorkflow(client, owner, repository);
         return {
             ownerType,
             repositoryId: metadata.id,
@@ -56,7 +59,26 @@ class GithubActionsResourceTransport {
             organizationAccess: combineOrganizationAccess(organizationSecretsResult.access, organizationVariablesResult.access),
             organizationSecretsAccess: organizationSecretsResult.access,
             organizationVariablesAccess: organizationVariablesResult.access,
+            credentialHealthWorkflow,
         };
+    }
+
+    private async inspectCredentialHealthWorkflow(
+        client: GithubRepositoryVariablesClient,
+        owner: string,
+        repository: string,
+    ): Promise<NonNullable<SetupRemoteConfiguration['credentialHealthWorkflow']>> {
+        if (!client.rest.actions.getWorkflow) return 'unknown';
+        try {
+            await client.rest.actions.getWorkflow({
+                owner,
+                repo: repository,
+                workflow_id: SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE,
+            });
+            return 'installed';
+        } catch (error) {
+            return isGithubNotFound(error) ? 'missing' : 'unavailable';
+        }
     }
 
     private async listRepositorySecretsForInspection(

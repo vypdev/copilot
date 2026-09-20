@@ -196,6 +196,14 @@ read-only GitHub queries and presents ordered permission outcomes.
    organization scope, including a policy with `preserveExisting: false`, setup
    MUST continue from the available organization inventory and MUST NOT request
    or block on unrelated repository Secret or Variable access.
+8. Remote setup inspection records whether `copilot_credential_health.yml` is
+   installed, confirmed missing, unavailable, or unknown without mutating the
+   repository. When existing Secrets require health validation, Actions write
+   is always required for dispatch. Contents write and Workflows write are
+   required only when the workflow is confirmed missing or its availability
+   cannot be established safely; an installed workflow MUST NOT trigger those
+   bootstrap-only grants. The remote-configuration summary renders the bounded
+   workflow state so the operator can understand that permission decision.
 
 ### 6.2 Workflow PAT
 
@@ -421,17 +429,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **52 distinct cases**.
+This SDD adds at least **56 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain permission policy | 11 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope |
+| Domain permission policy | 12 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants |
 | Application state/blocking | 9 | verified, missing, required-read unverifiable, required-write confirmation, invalid base token, organization-only credential collection, remote-storage blocked result |
-| Adapter/provider contracts | 18 | GET-only probes, commit-list Contents target, empty-repository 409, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, unavailable endpoint state, duplicate-comment deletion fallback regression |
+| Adapter/provider contracts | 21 | GET-only probes, commit-list Contents target, empty-repository 409, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, installed/missing/unavailable health-workflow inspection, unavailable endpoint state, duplicate-comment deletion fallback regression |
 | Setup/credential integration | 9 | pre-prompt setup table, conditional denial through planning, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, workflow PAT check and explicit acknowledgement |
 | UI/accessibility | 4 | required/result tables, confirmation-required copy, 40-column wrapping, no-color text |
 | Architecture/security/docs | 1 | query-only boundary and no duplicated catalog |
-| **Total** | **52** | No double counting |
+| **Total** | **56** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -513,6 +521,11 @@ at widths 40/80/120 and `NO_COLOR`.
     commit-list endpoint and treats its documented `409 Conflict` as verified
     read evidence; the same result for a write requirement remains
     `Unverifiable`, and a `404` remains blocked as ambiguous.
+21. Given existing Secrets require credential-health validation, when the remote
+    health workflow is installed, the configured setup PAT requires Actions
+    write but omits bootstrap-only Contents and Workflows write; when it is
+    missing, unavailable, or unknown, those bootstrap permissions remain
+    required so setup can install and remove the temporary workflow safely.
 
 ## 17. Requirements traceability
 
@@ -529,6 +542,7 @@ at widths 40/80/120 and `NO_COLOR`.
 | secret safety | all contracts/presenter | redaction fixtures | credentials |
 | feature/effective-target workflow PAT | configuration projection policy | conditional matrix and preserved organization-variable tests | checklist |
 | empty-repository-safe Contents probe | read-only query adapter | commit-list URL, 409 read/write, and 404 tests | authentication/troubleshooting |
+| least-privilege credential-health bootstrap | remote configuration query plus permission policy | installed/missing/unavailable inspection and permission-matrix tests | authentication/troubleshooting |
 
 ## 18. Implementation sequence
 
@@ -548,7 +562,7 @@ at widths 40/80/120 and `NO_COLOR`.
 - [x] No validation request mutates GitHub and no result overclaims write access.
 - [x] Token values and raw provider text are absent from all output/state/errors.
 - [x] Clean Architecture boundaries and their executable test pass.
-- [x] At least 52 distinct cases and stated coverage thresholds pass.
+- [x] At least 56 distinct cases and stated coverage thresholds pass.
 - [x] Authentication, checklist, troubleshooting, and architecture docs agree.
 - [x] Catalog evidence and generated `specs/CATALOG.md` are current.
 - [x] Specification, documentation, typecheck, lint, and test gates pass.

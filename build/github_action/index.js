@@ -43402,7 +43402,10 @@ function buildReviewDiffPlan(context, ignorePatterns = []) {
         const separatorLength = current.length > 0 ? 2 : 0;
         if (current.length > 0 && used + separatorLength + section.rendered.length > bodyBudget) {
             bodies.push(current);
-            if (bodies.length >= exports.MAX_REVIEW_DIFF_PARTITIONS)
+            // `section` is still pending: reaching 64 completed bodies here means it
+            // would require partition 65. A plan ending at exactly 64 never enters
+            // this branch again and remains valid.
+            if (bodies.length === exports.MAX_REVIEW_DIFF_PARTITIONS)
                 throw new BugbotDiffPlanLimitError();
             current = [];
             used = 0;
@@ -73990,6 +73993,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RepositorySecretsCommandRepository = exports.RepositoryVariablesCommandRepository = exports.SetupRemoteConfigurationQueryRepository = exports.RepositoryVariablesQueryRepository = exports.RepositorySecretNamesQueryRepository = void 0;
 exports.encryptSecret = encryptSecret;
+const setup_workflow_catalog_1 = __nccwpck_require__(24596);
+const github_error_policy_1 = __nccwpck_require__(58791);
 const tweetnacl_1 = __importDefault(__nccwpck_require__(24258));
 const node_crypto_1 = __nccwpck_require__(6005);
 class GithubActionsResourceTransport {
@@ -74020,6 +74025,7 @@ class GithubActionsResourceTransport {
         const repositoryVariablesResult = await this.listRepositoryVariablesForInspection(client, owner, repository);
         const organizationSecretsResult = await this.listOrganizationSecrets(client, metadata.id, ownerType);
         const organizationVariablesResult = await this.listOrganizationVariables(client, metadata.id, ownerType);
+        const credentialHealthWorkflow = await this.inspectCredentialHealthWorkflow(client, owner, repository);
         return {
             ownerType,
             repositoryId: metadata.id,
@@ -74035,7 +74041,23 @@ class GithubActionsResourceTransport {
             organizationAccess: combineOrganizationAccess(organizationSecretsResult.access, organizationVariablesResult.access),
             organizationSecretsAccess: organizationSecretsResult.access,
             organizationVariablesAccess: organizationVariablesResult.access,
+            credentialHealthWorkflow,
         };
+    }
+    async inspectCredentialHealthWorkflow(client, owner, repository) {
+        if (!client.rest.actions.getWorkflow)
+            return 'unknown';
+        try {
+            await client.rest.actions.getWorkflow({
+                owner,
+                repo: repository,
+                workflow_id: setup_workflow_catalog_1.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE,
+            });
+            return 'installed';
+        }
+        catch (error) {
+            return (0, github_error_policy_1.isGithubNotFound)(error) ? 'missing' : 'unavailable';
+        }
     }
     async listRepositorySecretsForInspection(client, owner, repository) {
         const list = client.rest.secrets?.listRepoSecrets;
@@ -77637,8 +77659,10 @@ function renderApprovalObserverWorkflow(template, policy) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE = void 0;
 exports.enabledSetupWorkflowFiles = enabledSetupWorkflowFiles;
 exports.isSetupWorkflowEnabled = isSetupWorkflowEnabled;
+exports.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE = 'copilot_credential_health.yml';
 const SETUP_WORKFLOWS = [
     { file: 'copilot_issue.yml', feature: 'issues' },
     { file: 'copilot_pull_request.yml', feature: 'pullRequests' },
@@ -77653,7 +77677,7 @@ const SETUP_WORKFLOWS = [
     { file: 'hotfix_workflow.yml', feature: 'hotfix' },
     { file: 'copilot_deployment_orchestration.yml', feature: ['release', 'hotfix'] },
     { file: 'agent-cli-provisioning.yml', feature: 'agentProvisioning' },
-    { file: 'copilot_credential_health.yml', feature: 'credentialHealth' },
+    { file: exports.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE, feature: 'credentialHealth' },
     { file: 'copilot_close_inactive_issues.yml', feature: 'inactiveIssueClosure' },
 ];
 function enabledSetupWorkflowFiles(features) {

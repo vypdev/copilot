@@ -96,6 +96,23 @@ describe('setup token permission policy', () => {
         ]));
     });
 
+    it('omits bootstrap-only workflow writes when credential health is already installed', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.createInitialTag = false;
+        const configuredRemote = {
+            ...organization,
+            repositorySecrets: ['PAT'],
+            credentialHealthWorkflow: 'installed' as const,
+        };
+
+        const permissions = buildConfiguredSetupPatPermissionRequirements(configuration, configuredRemote)
+            .map(item => `${item.permission}:${item.level}`);
+
+        expect(permissions).toContain('Actions:write');
+        expect(permissions).not.toContain('Contents:write');
+        expect(permissions).not.toContain('Workflows:write');
+    });
+
     it('includes organization-only storage without unrelated repository grants when preservation is disabled', () => {
         const configuration = createDefaultSetupConfiguration();
         configuration.storage.secrets.defaultScope = 'organization';

@@ -120,10 +120,12 @@ describe('narrow GitHub Actions resource repositories', () => {
     it('inspects repository and organization resources without exposing secret values', async () => {
         const listRepoOrganizationVariables = jest.fn().mockResolvedValue({ data: { variables: [{ name: 'ORG_VAR', value: 'org' }] } });
         const listRepoOrganizationSecrets = jest.fn().mockResolvedValue({ data: { secrets: [{ name: 'ORG_SECRET' }] } });
+        const getWorkflow = jest.fn().mockResolvedValue({ data: { id: 1 } });
         const client = {
             rest: {
                 repos: { get: jest.fn().mockResolvedValue({ data: { id: 42, visibility: 'private', owner: { type: 'Organization' } } }) },
                 actions: {
+                    getWorkflow,
                     listRepoVariables: jest.fn().mockResolvedValue({ data: { variables: [{ name: 'REPO_VAR', value: 'repo' }] } }),
                     createRepoVariable: jest.fn(), updateRepoVariable: jest.fn(),
                     listRepoOrganizationVariables,
@@ -144,9 +146,38 @@ describe('narrow GitHub Actions resource repositories', () => {
             organizationVariables: [{ name: 'ORG_VAR', value: 'org' }],
             repositorySecretsAccess: 'available', repositoryVariablesAccess: 'available',
             organizationSecretsAccess: 'available', organizationVariablesAccess: 'available',
+            credentialHealthWorkflow: 'installed',
         }));
+        expect(getWorkflow).toHaveBeenCalledWith({
+            owner: 'owner', repo: 'repo', workflow_id: 'copilot_credential_health.yml',
+        });
         expect(listRepoOrganizationSecrets).toHaveBeenCalledWith({ repository_id: 42, per_page: 30 });
         expect(listRepoOrganizationVariables).toHaveBeenCalledWith({ repository_id: 42, per_page: 30 });
+    });
+
+    it.each([
+        { label: 'confirmed missing', error: { status: 404 }, expected: 'missing' },
+        { label: 'provider unavailable', error: new Error('workflow API unavailable'), expected: 'unavailable' },
+    ])('records credential-health workflow as $label', async ({ error, expected }) => {
+        const client = {
+            rest: {
+                repos: { get: jest.fn().mockResolvedValue({ data: { id: 42, visibility: 'private', owner: { type: 'User' } } }) },
+                actions: {
+                    getWorkflow: jest.fn().mockRejectedValue(error),
+                    listRepoVariables: jest.fn().mockResolvedValue({ data: { variables: [] } }),
+                    createRepoVariable: jest.fn(), updateRepoVariable: jest.fn(),
+                },
+                secrets: {
+                    listRepoSecrets: jest.fn().mockResolvedValue({ data: { secrets: [] } }),
+                    getRepoPublicKey: jest.fn(), createOrUpdateRepoSecret: jest.fn(),
+                },
+            },
+        };
+
+        await expect(new SetupRemoteConfigurationQueryRepository({ getClient: jest.fn(() => client) })
+            .inspect('owner', 'repo', 'token')).resolves.toEqual(expect.objectContaining({
+                credentialHealthWorkflow: expected,
+            }));
     });
 
     it('keeps denied repository inventory distinct from a confirmed empty inventory', async () => {
@@ -186,6 +217,7 @@ describe('narrow GitHub Actions resource repositories', () => {
         await expect(repository.inspect('owner', 'repo', 'token')).resolves.toEqual(expect.objectContaining({
             repositorySecrets: [], repositorySecretsAccess: 'unknown',
             repositoryVariables: [], repositoryVariablesAccess: 'available',
+            credentialHealthWorkflow: 'unknown',
         }));
     });
 

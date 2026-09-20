@@ -119,6 +119,7 @@ export function renderRemoteConfiguration(
         `Organization Secrets available here: ${remote.organizationSecrets.length > 0 ? remote.organizationSecrets.join(', ') : '(none detected)'}`,
         `Repository Variables: ${renderRepositoryInventory(remote.repositoryVariables.map(variable => variable.name), remote.repositoryVariablesAccess)}`,
         `Organization Variables available here: ${remote.organizationVariables.length > 0 ? remote.organizationVariables.map(variable => variable.name).join(', ') : '(none detected)'}`,
+        `Credential health workflow: ${remote.credentialHealthWorkflow ?? 'unknown'}`,
         `Required Secrets: ${requirements.map(requirement => requirement.name).join(', ')}`,
         `Required Variables: ${variables.map(variable => variable.name).join(', ')}`,
         remote.organizationAccess === 'available'

@@ -5,6 +5,8 @@ interface SetupWorkflowDefinition {
     readonly feature: SetupFeature | readonly SetupFeature[];
 }
 
+export const SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE = 'copilot_credential_health.yml';
+
 const SETUP_WORKFLOWS: readonly SetupWorkflowDefinition[] = [
     { file: 'copilot_issue.yml', feature: 'issues' },
     { file: 'copilot_pull_request.yml', feature: 'pullRequests' },
@@ -19,7 +21,7 @@ const SETUP_WORKFLOWS: readonly SetupWorkflowDefinition[] = [
     { file: 'hotfix_workflow.yml', feature: 'hotfix' },
     { file: 'copilot_deployment_orchestration.yml', feature: ['release', 'hotfix'] },
     { file: 'agent-cli-provisioning.yml', feature: 'agentProvisioning' },
-    { file: 'copilot_credential_health.yml', feature: 'credentialHealth' },
+    { file: SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE, feature: 'credentialHealth' },
     { file: 'copilot_close_inactive_issues.yml', feature: 'inactiveIssueClosure' },
 ];
 

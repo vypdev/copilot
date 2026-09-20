@@ -66,6 +66,14 @@ This guide helps you resolve common issues you might encounter while using Copil
     names the unavailable organization inventory; no plan confirmation,
     credential prompt, resource targeting, or mutation has run.
 
+    If the table requests Contents and Workflows write for credential health,
+    inspect the preceding `Credential health workflow` state. `installed` omits
+    both bootstrap grants and needs only Actions write for dispatch. `missing`,
+    `unavailable`, or `unknown` keeps them because setup may have to install and
+    remove the temporary workflow. After correcting Actions access or a
+    transient provider failure, rerun setup so it can rediscover an installed
+    workflow and narrow the table.
+
     If identity itself is invalid, confirm token expiration, resource owner, and
     selected repository before changing individual permissions. Never paste the
     token into an issue, log, screenshot, or troubleshooting comment.

@@ -98,12 +98,14 @@ describe('setup prompt rendering', () => {
                 organizationAccess: 'available',
                 organizationSecretsAccess: 'available',
                 organizationVariablesAccess: 'available',
+                credentialHealthWorkflow: 'installed',
             },
             [{ name: 'AGENT_MODEL', value: 'gpt-5.6' }],
             [{ name: 'PAT', kind: 'workflowPat', description: 'workflow token' }],
         );
 
         expect(rendered).toContain('Organization resources can be inspected');
+        expect(rendered).toContain('Credential health workflow: installed');
         expect(rendered).toContain('PAT');
         expect(rendered).not.toContain('credential-value');
     });
@@ -130,6 +132,7 @@ describe('setup prompt rendering', () => {
         expect(rendered).toContain('repository ID: unknown');
         expect(rendered).toContain('(none detected)');
         expect(rendered).toContain('Organization resource inspection: unavailable.');
+        expect(rendered).toContain('Credential health workflow: unknown');
     });
 
     it('renders denied repository inventory as unavailable instead of empty', () => {

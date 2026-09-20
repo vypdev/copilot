@@ -27,6 +27,7 @@ export interface GithubRepositoryVariablesClient {
             get(parameters: Record<string, unknown>): Promise<{ data: GithubRepositoryMetadata }>;
         };
         actions: {
+            getWorkflow?: (parameters: Record<string, unknown>) => Promise<unknown>;
             listRepoVariables(parameters: Record<string, unknown>): Promise<{ data: { variables: GithubRepositoryVariable[] } }>;
             createRepoVariable(parameters: Record<string, unknown>): Promise<unknown>;
             updateRepoVariable(parameters: Record<string, unknown>): Promise<unknown>;

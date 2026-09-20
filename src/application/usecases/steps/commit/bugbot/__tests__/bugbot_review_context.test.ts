@@ -9,6 +9,7 @@ import {
   buildReviewDiffPlan,
   MAX_REVIEW_DIFF_FRAGMENT_LENGTH,
   MAX_REVIEW_DIFF_PARTITION_LENGTH,
+  MAX_REVIEW_DIFF_PARTITIONS,
   splitReviewDiffPatch,
 } from '../../../../../policies/bugbot_diff_partition_policy';
 
@@ -347,6 +348,21 @@ describe('Bugbot review context', () => {
         patch: String(index % 10).repeat(62_000),
       })),
     })).toThrow(BugbotDiffPlanLimitError);
+  });
+
+  it('accepts exactly the documented 64-partition ceiling', () => {
+    const plan = buildReviewDiffPlan({
+      prHeadSha: 'e'.repeat(40),
+      changes: Array.from({ length: MAX_REVIEW_DIFF_PARTITIONS }, (_, index) => ({
+        filename: `src/boundary/file-${index}.ts`,
+        status: 'modified',
+        additions: 1,
+        deletions: 0,
+        patch: String(index % 10).repeat(60_000),
+      })),
+    });
+
+    expect(plan.partitions).toHaveLength(MAX_REVIEW_DIFF_PARTITIONS);
   });
 
   it('fails closed when immutable partition metadata exceeds its reserved budget', () => {
