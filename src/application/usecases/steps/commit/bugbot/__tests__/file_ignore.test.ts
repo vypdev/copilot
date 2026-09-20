@@ -2,7 +2,7 @@
  * Unit tests for file_ignore: fileMatchesIgnorePatterns (glob-style path matching).
  */
 
-import { fileMatchesIgnorePatterns } from '../file_ignore';
+import { fileMatchesIgnorePatterns } from '../../../../../policies/file_ignore_policy';
 
 describe('fileMatchesIgnorePatterns', () => {
     it('returns false when filePath is undefined or empty', () => {

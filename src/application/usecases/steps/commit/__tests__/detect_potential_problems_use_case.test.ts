@@ -248,7 +248,11 @@ describe("DetectPotentialProblemsUseCase", () => {
             request.prompt,
             request.options,
           )).then((response) => response && typeof response === 'object' && !Array.isArray(response)
-            ? { outputLocale: 'en-US', ...response }
+            ? {
+                outputLocale: 'en-US',
+                ...partitionAttestation(request.prompt, response as Record<string, unknown>),
+                ...response,
+              }
             : response),
       },
       {
@@ -1063,12 +1067,18 @@ describe("DetectPotentialProblemsUseCase", () => {
           prompt: string;
           options?: unknown;
         }) =>
-          mockAskAgent(
+          Promise.resolve(mockAskAgent(
             request.configuration,
             request.agentId,
             request.prompt,
             request.options,
-          ),
+          )).then((response) => response && typeof response === 'object' && !Array.isArray(response)
+            ? {
+                outputLocale: 'en-US',
+                ...partitionAttestation(request.prompt, response as Record<string, unknown>),
+                ...response,
+              }
+            : response),
       },
       {
         context,
@@ -1578,3 +1588,18 @@ describe("DetectPotentialProblemsUseCase", () => {
     });
   });
 });
+
+function partitionAttestation(
+  prompt: string,
+  response: Record<string, unknown>,
+): Record<string, unknown> {
+  const partitionId = prompt.match(/Return partition_id exactly as `([^`]+)`/u)?.[1];
+  const headSha = prompt.match(/Return reviewed_head_sha exactly as `([^`]+)`/u)?.[1];
+  return partitionId && headSha
+      ? {
+        ...(response.partition_id === undefined ? { partition_id: partitionId } : {}),
+        ...(response.reviewed_head_sha === undefined ? { reviewed_head_sha: headSha } : {}),
+        ...(response.resolved_findings === undefined ? { resolved_findings: [] } : {}),
+      }
+    : {};
+}

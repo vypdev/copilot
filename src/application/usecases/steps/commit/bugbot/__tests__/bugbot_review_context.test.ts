@@ -4,12 +4,20 @@ import {
   buildReviewDiffBlock,
   buildReviewDiffContext,
 } from '../bugbot_review_context';
+import {
+  BugbotDiffPlanLimitError,
+  buildReviewDiffPlan,
+  MAX_REVIEW_DIFF_FRAGMENT_LENGTH,
+  MAX_REVIEW_DIFF_PARTITION_LENGTH,
+  splitReviewDiffPatch,
+} from '../../../../../policies/bugbot_diff_partition_policy';
 
 describe('Bugbot review context', () => {
   it('returns empty blocks when no diff or human discussion exists', () => {
     expect(buildReviewDiffContext(null)).toEqual({ block: '', omitted: 0, truncated: 0, retained: 0 });
     expect(buildReviewDiffContext({ prHeadSha: 'sha', prFiles: [], pathToFirstDiffLine: {} }))
       .toEqual({ block: '', omitted: 0, truncated: 0, retained: 0 });
+    expect(buildReviewDiffPlan(null)).toEqual({ partitions: [], ignored: 0, retained: 0, fragments: 0 });
     expect(buildReviewConversationContext([], new Map())).toEqual({
       block: '', omitted: 0, truncated: 0, retained: 0,
     });
@@ -30,13 +38,13 @@ describe('Bugbot review context', () => {
       }],
     });
 
-    expect(block).toContain('Canonical pull-request diff from GitHub');
+    expect(block).toContain('Canonical pull-request diff partition');
     expect(block).toContain('src/a.ts');
     expect(block).toContain('+new');
   });
 
   it('excludes ignored files before they consume the canonical diff budget', () => {
-    const block = buildReviewDiffBlock({
+    const source = {
       prHeadSha: 'sha',
       prFiles: [
         { filename: 'build/generated.js', status: 'modified' },
@@ -59,19 +67,34 @@ describe('Bugbot review context', () => {
           patch: '+const reviewed = true;',
         },
       ],
-    }, ['build/*']);
+    };
+    const plan = buildReviewDiffPlan(source, ['build/*']);
+    const block = buildReviewDiffBlock(source, ['build/*']);
 
     expect(block).not.toContain('build/generated.js');
     expect(block).not.toContain('generatedgenerated');
     expect(block).toContain('src/review-me.ts');
-    expect(block).toContain('1 file excluded by configured ignore patterns');
+    expect(plan).toEqual(expect.objectContaining({ ignored: 1, retained: 1, fragments: 1 }));
   });
 
-  it('uses plural coverage nouns for multiple ignored and truncated patches', () => {
-    const context = buildReviewDiffContext({
+  it('returns no assignments when every changed file is ignored', () => {
+    const plan = buildReviewDiffPlan({
       prHeadSha: 'sha',
-      prFiles: [],
-      pathToFirstDiffLine: {},
+      changes: [{
+        filename: 'build/generated.js',
+        status: 'modified',
+        additions: 1,
+        deletions: 0,
+        patch: '+generated',
+      }],
+    }, ['build/*']);
+
+    expect(plan).toEqual({ partitions: [], ignored: 1, retained: 0, fragments: 0 });
+  });
+
+  it('splits multiple oversized patches without truncating them', () => {
+    const plan = buildReviewDiffPlan({
+      prHeadSha: 'sha',
       changes: [
         ...['build/a.js', 'build/b.js'].map((filename) => ({
           filename, status: 'modified', additions: 1, deletions: 0, patch: '+generated',
@@ -82,8 +105,11 @@ describe('Bugbot review context', () => {
       ],
     }, ['build/*']);
 
-    expect(context.block).toContain('2 files excluded by configured ignore patterns');
-    expect(context.block).toContain('2 patches truncated');
+    expect(plan.ignored).toBe(2);
+    expect(plan.retained).toBe(2);
+    expect(plan.fragments).toBe(4);
+    expect(plan.partitions.every((partition) => partition.block.length <= MAX_REVIEW_DIFF_PARTITION_LENGTH)).toBe(true);
+    expect(plan.partitions.map((partition) => partition.block).join('')).not.toContain('[patch truncated]');
   });
 
   it('names a provider patch that is unavailable', () => {
@@ -94,7 +120,7 @@ describe('Bugbot review context', () => {
       changes: [{ filename: 'src/no-patch.ts', status: 'modified', additions: 1, deletions: 0, patch: '' }],
     });
 
-    expect(context.block).toContain('[patch unavailable from GitHub]');
+    expect(context.block).toContain('[patch unavailable from GitHub;');
   });
 
   it('includes human discussion while excluding owned and provider-classified automation', () => {
@@ -193,15 +219,13 @@ describe('Bugbot review context', () => {
     expect(context.block).toContain('1 older discussion item omitted');
   });
 
-  it('reports per-item truncation without allowing the diff or discussion blocks past their caps', () => {
+  it('splits oversized patches without allowing any partition past its cap', () => {
     const conversation = buildReviewConversationContext(
       [{ id: 1, user: { login: 'maintainer' }, body: 'x'.repeat(3_000) }],
       new Map(),
     );
-    const diff = buildReviewDiffContext({
+    const diff = buildReviewDiffPlan({
       prHeadSha: 'sha',
-      prFiles: [{ filename: 'src/large.ts', status: 'modified' }],
-      pathToFirstDiffLine: {},
       changes: [{
         filename: 'src/large.ts',
         status: 'modified',
@@ -213,9 +237,9 @@ describe('Bugbot review context', () => {
 
     expect(conversation.truncated).toBe(1);
     expect(conversation.block.length).toBeLessThanOrEqual(24_000);
-    expect(diff.truncated).toBe(1);
-    expect(diff.block).toContain('[patch truncated]');
-    expect(diff.block.length).toBeLessThanOrEqual(64_000);
+    expect(diff.fragments).toBe(2);
+    expect(diff.partitions.map((partition) => partition.block).join('')).not.toContain('[patch truncated]');
+    expect(diff.partitions.every((partition) => partition.block.length <= MAX_REVIEW_DIFF_PARTITION_LENGTH)).toBe(true);
   });
 
   it('stops packing discussion when the character budget is reached', () => {
@@ -233,11 +257,9 @@ describe('Bugbot review context', () => {
     expect(context.block.length).toBeLessThanOrEqual(24_000);
   });
 
-  it('omits overflowing diff files and exposes the omission in-band', () => {
-    const context = buildReviewDiffContext({
+  it('partitions an overflowing diff without omitting any file', () => {
+    const context = buildReviewDiffPlan({
       prHeadSha: 'sha',
-      prFiles: [],
-      pathToFirstDiffLine: {},
       changes: Array.from({ length: 8 }, (_, index) => ({
         filename: `src/file-${index}.ts`,
         status: 'modified',
@@ -247,26 +269,96 @@ describe('Bugbot review context', () => {
       })),
     });
 
-    expect(context.omitted).toBeGreaterThan(0);
-    expect(context.block).toContain('omitted by the prompt budget');
-    expect(context.block.length).toBeLessThanOrEqual(64_000);
+    expect(context.partitions.length).toBeGreaterThan(1);
+    expect(context.retained).toBe(8);
+    expect(context.fragments).toBe(8);
+    expect(context.partitions.every((partition) => partition.block.length <= MAX_REVIEW_DIFF_PARTITION_LENGTH)).toBe(true);
   });
 
-  it('uses the singular file-patch noun when exactly one diff is omitted', () => {
-    const context = buildReviewDiffContext({
+  it('assigns every oversized fragment exactly once in stable partition order', () => {
+    const patch = '0123456789'.repeat(2_500);
+    const context = buildReviewDiffPlan({
       prHeadSha: 'sha',
-      prFiles: [],
-      pathToFirstDiffLine: {},
-      changes: Array.from({ length: 6 }, (_, index) => ({
-        filename: `src/singular-${index}.ts`,
+      changes: [{
+        filename: 'src/large.ts',
         status: 'modified',
         additions: 1,
         deletions: 0,
-        patch: 'x'.repeat(12_000),
+        patch,
+      }],
+    });
+
+    expect(context.fragments).toBe(Math.ceil(patch.length / MAX_REVIEW_DIFF_FRAGMENT_LENGTH));
+    expect(context.partitions.flatMap((partition) => partition.files)).toContain('src/large.ts');
+    expect(context.partitions.map((partition) => partition.ordinal)).toEqual(
+      Array.from({ length: context.partitions.length }, (_, index) => index + 1),
+    );
+    expect(new Set(context.partitions.map((partition) => partition.id)).size).toBe(context.partitions.length);
+    expect(buildReviewDiffPlan({
+      prHeadSha: 'sha',
+      changes: [{
+        filename: 'src/large.ts',
+        status: 'modified',
+        additions: 1,
+        deletions: 0,
+        patch,
+      }],
+    }).partitions.map((partition) => partition.id)).toEqual(
+      context.partitions.map((partition) => partition.id),
+    );
+  });
+
+  it('splits at line boundaries when possible and reconstructs the sanitized patch exactly', () => {
+    const patch = `${'a'.repeat(MAX_REVIEW_DIFF_FRAGMENT_LENGTH - 10)}\n${'b'.repeat(40)}\n${'c'.repeat(MAX_REVIEW_DIFF_FRAGMENT_LENGTH + 5)}`;
+    const fragments = splitReviewDiffPatch(patch);
+
+    expect(fragments.length).toBeGreaterThan(2);
+    expect(fragments.join('')).toBe(patch);
+    expect(fragments.every((fragment) => fragment.length <= MAX_REVIEW_DIFF_FRAGMENT_LENGTH)).toBe(true);
+    expect(fragments[0].endsWith('\n')).toBe(true);
+  });
+
+  it('covers a 44-file regression fixture without prompt-budget omissions', () => {
+    const plan = buildReviewDiffPlan({
+      prHeadSha: 'c'.repeat(40),
+      changes: Array.from({ length: 44 }, (_, index) => ({
+        filename: `src/regression/file-${String(index).padStart(2, '0')}.ts`,
+        status: 'modified',
+        additions: 20,
+        deletions: 2,
+        patch: `@@ -1 +1 @@\n-${index}\n+${String(index).repeat(2_500)}`,
       })),
     });
 
-    expect(context.omitted).toBe(1);
-    expect(context.block).toContain('1 file patch omitted by the prompt budget');
+    expect(plan.retained).toBe(44);
+    expect(plan.partitions.length).toBeGreaterThan(1);
+    expect(new Set(plan.partitions.flatMap((partition) => partition.files)).size).toBe(44);
+    expect(plan.partitions.every((partition) => partition.block.length <= MAX_REVIEW_DIFF_PARTITION_LENGTH)).toBe(true);
+  });
+
+  it('fails closed instead of scheduling an unbounded number of reviewer calls', () => {
+    expect(() => buildReviewDiffPlan({
+      prHeadSha: 'd'.repeat(40),
+      changes: Array.from({ length: 65 }, (_, index) => ({
+        filename: `src/oversized/file-${index}.ts`,
+        status: 'modified',
+        additions: 1,
+        deletions: 0,
+        patch: String(index % 10).repeat(62_000),
+      })),
+    })).toThrow(BugbotDiffPlanLimitError);
+  });
+
+  it('fails closed when immutable partition metadata exceeds its reserved budget', () => {
+    expect(() => buildReviewDiffPlan({
+      prHeadSha: 'a'.repeat(MAX_REVIEW_DIFF_PARTITION_LENGTH),
+      changes: [{
+        filename: 'src/file.ts',
+        status: 'modified',
+        additions: 1,
+        deletions: 0,
+        patch: '+reviewed',
+      }],
+    })).toThrow('partition exceeded its fixed prompt budget');
   });
 });

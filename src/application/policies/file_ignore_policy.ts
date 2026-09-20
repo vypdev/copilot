@@ -9,33 +9,28 @@ const MAX_REGEX_CACHE_SIZE = 100;
 
 const regexCache = new Map<string, RegExp[]>();
 
-/**
- * Converts a glob-like pattern to a safe regex string (bounded length, collapsed stars to avoid ReDoS).
- */
-function patternToRegexString(p: string): string | null {
-    if (p.length > MAX_PATTERN_LENGTH) return null;
-    const collapsed = p.replace(/\*+/g, '*');
+/** Converts a glob-like pattern to a bounded regex string. */
+function patternToRegexString(pattern: string): string | null {
+    if (pattern.length > MAX_PATTERN_LENGTH) return null;
+    const collapsed = pattern.replace(/\*+/g, '*');
     return collapsed
         .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
         .replace(/\*/g, '.*')
         .replace(/\//g, '\\/');
 }
 
-/**
- * Returns compiled RegExp array for the given patterns (limited count, cached).
- */
 function getCachedRegexes(ignorePatterns: readonly string[]): RegExp[] {
-    const trimmed = ignorePatterns.map((p) => p.trim()).filter(Boolean);
+    const trimmed = ignorePatterns.map((pattern) => pattern.trim()).filter(Boolean);
     const limited = trimmed.slice(0, MAX_IGNORE_PATTERNS);
     const key = JSON.stringify(limited);
     const cached = regexCache.get(key);
     if (cached !== undefined) return cached;
 
     const regexes: RegExp[] = [];
-    for (const p of limited) {
-        const regexPattern = patternToRegexString(p);
+    for (const pattern of limited) {
+        const regexPattern = patternToRegexString(pattern);
         if (regexPattern == null) continue;
-        const regex = p.endsWith('/*')
+        const regex = pattern.endsWith('/*')
             ? new RegExp(`^${regexPattern.replace(/\\\/\.\*$/, '(\\/.*)?')}$`)
             : new RegExp(`^${regexPattern}$`);
         regexes.push(regex);
@@ -45,16 +40,13 @@ function getCachedRegexes(ignorePatterns: readonly string[]): RegExp[] {
     return regexes;
 }
 
-/**
- * Returns true if the file path matches any of the ignore patterns (glob-style).
- * Used to exclude findings in test files, build output, etc.
- * Pattern length and count are capped; consecutive * are collapsed; compiled regexes are cached.
- */
-export function fileMatchesIgnorePatterns(filePath: string | undefined, ignorePatterns: readonly string[]): boolean {
+/** Returns whether a repository-relative path matches any bounded glob-like ignore pattern. */
+export function fileMatchesIgnorePatterns(
+    filePath: string | undefined,
+    ignorePatterns: readonly string[],
+): boolean {
     if (!filePath || ignorePatterns.length === 0) return false;
     const normalized = filePath.trim();
     if (!normalized) return false;
-
-    const regexes = getCachedRegexes(ignorePatterns);
-    return regexes.some((regex) => regex.test(normalized));
+    return getCachedRegexes(ignorePatterns).some((regex) => regex.test(normalized));
 }

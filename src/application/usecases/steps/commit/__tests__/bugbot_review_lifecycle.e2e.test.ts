@@ -186,6 +186,17 @@ function finding(id = 'unchecked-token', file = 'src/auth.ts') {
   };
 }
 
+function attestPartitionResponse(
+  prompt: string,
+  response: { outputLocale: string; findings: ReturnType<typeof finding>[]; resolved_findings: unknown[] },
+) {
+  return {
+    ...response,
+    partition_id: prompt.match(/Return partition_id exactly as `([^`]+)`/u)?.[1],
+    reviewed_head_sha: 'a'.repeat(40),
+  };
+}
+
 describe('Bugbot review lifecycle E2E contract', () => {
   it('publishes one native review and durably suppresses a manually dismissed moved finding', async () => {
     const provider = new InMemoryReviewProvider();
@@ -195,7 +206,7 @@ describe('Bugbot review lifecycle E2E contract', () => {
     ];
     const telemetry: unknown[] = [];
     const useCase = new DetectPotentialProblemsUseCase(
-      { query: jest.fn(async () => responses.shift()) },
+      { query: jest.fn(async ({ prompt }) => attestPartitionResponse(prompt, responses.shift()!)) },
       scmPorts(provider),
       { publish: (snapshot) => { telemetry.push(snapshot); } },
     );
@@ -218,7 +229,11 @@ describe('Bugbot review lifecycle E2E contract', () => {
   it('executes analysis in dry-run mode without any provider mutation', async () => {
     const provider = new InMemoryReviewProvider();
     const useCase = new DetectPotentialProblemsUseCase(
-      { query: jest.fn(async () => ({ outputLocale: 'en-US', findings: [finding()], resolved_findings: [] })) },
+      {
+        query: jest.fn(async ({ prompt }) => attestPartitionResponse(prompt, {
+          outputLocale: 'en-US', findings: [finding()], resolved_findings: [],
+        })),
+      },
       scmPorts(provider),
     );
 
@@ -228,5 +243,28 @@ describe('Bugbot review lifecycle E2E contract', () => {
     expect(provider.reviews).toEqual([]);
     expect(provider.comments).toEqual([]);
     expect(results[0].payload).toEqual(expect.objectContaining({ dryRun: true, findings: [expect.objectContaining({ id: 'unchecked-token' })] }));
+  });
+
+  it('publishes nothing when a partition attestation is invalid', async () => {
+    const provider = new InMemoryReviewProvider();
+    const useCase = new DetectPotentialProblemsUseCase(
+      {
+        query: jest.fn(async () => ({
+          outputLocale: 'en-US',
+          partition_id: 'wrong-partition',
+          reviewed_head_sha: provider.headSha,
+          findings: [finding()],
+          resolved_findings: [],
+        })),
+      },
+      scmPorts(provider),
+    );
+
+    const results = await useCase.invoke(projectBugbotReviewOperationContext(execution()));
+
+    expect(results[0].success).toBe(false);
+    expect(provider.reviews).toEqual([]);
+    expect(provider.comments).toEqual([]);
+    expect(provider.statusComments).toEqual([]);
   });
 });

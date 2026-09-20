@@ -88,6 +88,15 @@ PR events retain their workflow check and Job Summary but cannot create a newer
 same-name Review Check. This evidence-ownership rule is a fixed correctness
 boundary, not a configurable setting.
 
+Canonical PR diffs are partitioned automatically. The 12,000-character fragment
+and 64,000-character per-partition diff budgets, exact partition/head
+attestation, sole resolution owner, atomic aggregation, and reviewer concurrency
+of two are fixed correctness boundaries. A plan is capped at 64 partitions and
+2,000 aggregate candidate findings; exceeding either cap fails before publication
+and requires splitting the PR. These limits require no input, secret, or
+permission. Increasing `bugbot-comment-limit` changes publication volume, not
+diff coverage or the number of analysis partitions.
+
 The same values are managed as Repository Variables by `copilot setup`. One review can override the safe subset without changing repository configuration:
 
 ```text

@@ -19,3 +19,9 @@ or agent environment. GitHub metadata reads are bounded: one canonical
 selection, at most two pages each for comments and threads, and at most ten diff
 pages, with two concurrent detail reads. A read failure is terminal for that
 review and is never converted into an empty or clean result.
+
+Partitioned PR analysis adds multiple read-only agent invocations but no GitHub
+scope. Every partition remains credential-free and cannot publish or resolve
+findings. Only the existing trusted application path receives the configured
+GitHub credential, and it mutates provider state once after every partition for
+the same canonical head has validated and the final freshness guard passes.

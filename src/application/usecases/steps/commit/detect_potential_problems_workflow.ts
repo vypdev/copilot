@@ -222,7 +222,7 @@ function dryRunResult(prepared: PreparedBugbotFindings, context: BugbotContext):
         id: TASK_ID,
         success: true,
         executed: true,
-        steps: [`Bugbot dry-run completed with ${acceptedCount} accepted ${acceptedCount === 1 ? 'finding' : 'findings'}; no SCM mutations performed.`],
+        steps: [`Bugbot dry-run completed${completedPartitionSummary(context)} with ${acceptedCount} accepted ${acceptedCount === 1 ? 'finding' : 'findings'}; no SCM mutations performed.`],
         payload: {
             dryRun: true,
             findings: prepared.activeFindings ?? prepared.toPublish,
@@ -320,6 +320,9 @@ function detectionResult(
     if (context.coverage.status === 'partial') {
         stepParts.push('partial context coverage; this run does not declare the complete target clean');
     }
+    if ((context.reviewDiffPartitions?.length ?? 0) > 0) {
+        stepParts.push(`${context.reviewDiffPartitions?.length} diff ${context.reviewDiffPartitions?.length === 1 ? 'partition' : 'partitions'} completed atomically across ${context.reviewDiffFragmentCount ?? 0} ${context.reviewDiffFragmentCount === 1 ? 'fragment' : 'fragments'}`);
+    }
     const statusSummary = presentation?.projection ?? projectBugbotFindingStatuses(
             context.existingByFindingId,
             prepared.activeFindings ?? prepared.toPublish,
@@ -356,6 +359,12 @@ function detectionResult(
             } : {}),
         },
     });
+}
+
+function completedPartitionSummary(context: BugbotContext): string {
+    const partitions = context.reviewDiffPartitions?.length ?? 0;
+    if (partitions === 0) return '';
+    return ` after atomically completing ${partitions} diff ${partitions === 1 ? 'partition' : 'partitions'}`;
 }
 
 function formatStateCounts(counts: Readonly<Record<string, number>>): string {

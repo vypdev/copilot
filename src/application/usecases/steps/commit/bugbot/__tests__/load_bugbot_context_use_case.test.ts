@@ -284,6 +284,60 @@ describe('loadBugbotContext', () => {
     }));
   });
 
+  it('turns prompt-sized diff overflow into complete lossless partitions', async () => {
+    const changes = Array.from({ length: 8 }, (_, index) => ({
+      filename: `src/file-${index}.ts`,
+      status: 'modified',
+      additions: 1,
+      deletions: 0,
+      patch: `${index}`.repeat(12_000),
+    }));
+    const reader = ports({
+      getReviewDiffSnapshot: jest.fn().mockResolvedValue({
+        value: { changes, filesWithFirstDiffLine: [], filesWithDiffLocations: [] },
+        coverage: coverage('diff', changes.length),
+      }),
+    });
+
+    const loaded = await loadBugbotContext(request(), reader);
+    const diffCoverage = loaded.coverage.sources.find((source) => source.source === 'diff');
+
+    expect(loaded.reviewDiffPartitions?.length).toBeGreaterThan(1);
+    expect(loaded.reviewDiffFileCount).toBe(8);
+    expect(loaded.reviewDiffFragmentCount).toBe(8);
+    expect(diffCoverage).toEqual(expect.objectContaining({
+      status: 'complete',
+      itemsFetched: 8,
+      itemsRetained: 8,
+      omittedItems: 0,
+      truncatedItems: 0,
+      limitReached: false,
+    }));
+    expect(loaded.coverage.status).toBe('complete');
+  });
+
+  it('fails before model analysis when the exhaustive plan exceeds the execution ceiling', async () => {
+    const changes = Array.from({ length: 65 }, (_, index) => ({
+      filename: `src/oversized/file-${index}.ts`,
+      status: 'modified',
+      additions: 1,
+      deletions: 0,
+      patch: String(index % 10).repeat(62_000),
+    }));
+    const reader = ports({
+      getReviewDiffSnapshot: jest.fn().mockResolvedValue({
+        value: { changes, filesWithFirstDiffLine: [], filesWithDiffLocations: [] },
+        coverage: coverage('diff', changes.length),
+      }),
+    });
+
+    await expect(loadBugbotContext(request(), reader)).rejects.toMatchObject({
+      code: 'workflow.failed',
+      message: expect.stringContaining('64-partition'),
+    });
+    expect(reader.loadRules).not.toHaveBeenCalled();
+  });
+
   it('makes only retained previous findings eligible for resolution', async () => {
     const issueComments = Array.from({ length: 101 }, (_, index) => ({
       id: index + 1,

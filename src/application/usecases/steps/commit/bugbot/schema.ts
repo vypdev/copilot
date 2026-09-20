@@ -73,6 +73,26 @@ export const BUGBOT_RESPONSE_SCHEMA = {
     additionalProperties: false,
 } as const;
 
+/** Partition reviews must attest the exact immutable assignment they completed. */
+export const BUGBOT_PARTITION_RESPONSE_SCHEMA = {
+    ...BUGBOT_RESPONSE_SCHEMA,
+    properties: {
+        ...BUGBOT_RESPONSE_SCHEMA.properties,
+        partition_id: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 128,
+            description: 'Exact trusted partition id supplied by the review prompt.',
+        },
+        reviewed_head_sha: {
+            type: 'string',
+            pattern: '^[0-9a-fA-F]{7,64}$',
+            description: 'Exact canonical pull-request head SHA supplied by the review prompt.',
+        },
+    },
+    required: [...BUGBOT_RESPONSE_SCHEMA.required, 'partition_id', 'reviewed_head_sha'],
+} as const;
+
 /**
  * Findings-agent response schema for comment intent.
  * Given the user comment and the list of unresolved findings, the agent decides whether

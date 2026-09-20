@@ -2,6 +2,9 @@
 
 - Status: As-built baseline
 - Date: 2026-09-11
+- Last updated: 2026-09-20
+- Catalog capability ID: `bugbot-analysis-and-autofix`
+- Last verified: 2026-09-20 on `develop`
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
@@ -39,8 +42,11 @@ comments can also disagree after partial mutations.
 2. Bugbot verifies one event PR or resolves one unique exact-head PR, then loads
    trusted prior markers, canonical diff locations, bounded human discussion,
    and ordered organization/repository/path/learned rules for that identity.
-3. The read-only agent returns schema-constrained findings and resolved IDs.
-4. Local policy rejects malformed, unsafe, ignored, low-confidence, duplicate,
+3. A canonical PR diff is split losslessly into bounded partitions. At most two
+   read-only reviewers run concurrently and every response attests its exact
+   partition and head SHA; issue-only reviews retain a single request.
+4. All partition candidates are aggregated before local policy rejects malformed,
+   unsafe, ignored, low-confidence, duplicate,
    below-severity, or over-budget findings and ranks retained results.
 5. Head freshness is checked before analysis and publication; superseded runs
    make no finding mutation.
@@ -60,8 +66,9 @@ comments can also disagree after partial mutations.
   and fail-closed unknown state.
 - Known debt and limitations: model quality is probabilistic; provider APIs can
   make surfaces temporarily unverifiable; comment update budget limits how many
-  historical blocks are refreshed per run; fixed context caps can intentionally
-  produce a partial review; controlled live quality evidence is external.
+  historical blocks are refreshed per run; non-diff/provider caps can intentionally
+  produce a partial review; plans above 64 partitions require PR splitting;
+  controlled live quality evidence is external.
 - Unknown rationale: earlier prompt wording is not treated as a permanent public contract.
 - Implemented hardening: canonical single-PR selection, bounded provider reads,
   explicit coverage, and retained-only resolution are specified in
@@ -141,8 +148,10 @@ No behavior change is proposed.
 - Unaddressable lines become explicit file-level findings, never guessed anchors.
 - An issue-only route can use a bounded branch/current-commit scope. A
   PR-required route without a verified canonical PR aborts without analysis.
-- Reaching a fixed context cap is explicit partial coverage; provider read
+- Reaching a non-diff/provider context cap is explicit partial coverage; provider read
   failure aborts before the model and is not converted to empty context.
+- Diff prompt overflow creates lossless partitions. A missing/invalid partition
+  aborts the whole aggregate before mutation; a plan over 64 partitions does not start.
 
 ### 6.3 Finding state model
 
@@ -175,7 +184,8 @@ transitions are ordered marker-first and repaired by replay.
 Confidence floor, schema validation, head guards, path safety, marker ownership,
 publication ordering, independent review, provider page limits/concurrency,
 prompt bounds (100 prior findings/48,000 characters, 50 conversation entries/
-24,000 characters, 1,000 diff files/64,000 characters), retained-only
+24,000 characters, 1,000 diff files, 12,000-character fragments, 64,000
+characters per partition, 64 partitions, and 2,000 aggregate candidates), retained-only
 resolution eligibility, and credential isolation are not configurable.
 
 ## 8. Clean Architecture design
@@ -208,7 +218,9 @@ cycle, provider-port, workflow, schema, and quality-eval checks MUST remain exec
 Pending: **Bugbot is reviewing commit `abc1234`.** No action is required.
 Action required: **2 actionable findings remain.** Open each linked thread or request `/copilot fix <id>`.
 Blocked: **The PR head changed during review.** No stale finding was published; the newer run owns the result.
-Partial context: **The retained evidence was reviewed, but a fixed context cap was reached.** Findings may be actionable; this run cannot declare the whole PR clean or resolve omitted history.
+Partitioned: **Bugbot reviewed all 5 diff partitions for `abc1234` and aggregated one result.** No action is required until publication completes.
+Partial context: **The retained non-diff/provider evidence was reviewed, but a fixed cap was reached.** Findings may be actionable; this run cannot declare the whole PR clean or resolve omitted history.
+Partition failure: **Partition 4 of 5 did not validate.** No partition-local finding was published and no prior finding was resolved; retry the current head.
 Partial publication: **Review published; one thread could not be reconciled.** Current state is `unknown`, not clean; retry reconciliation.
 Complete: **Bugbot verified this revision with no actionable findings.** Historical reviews remain available.
 ```
@@ -228,7 +240,8 @@ discussion, paths, Markdown, mentions, markers, and URLs are sanitized.
 | stale head | run superseded | prior state | automatic newer run | none | discard snapshot |
 | partial publication | some findings visible | marker/provider facts | yes | reconcile | no false resolution |
 | provider re-read fail | aggregate unknown | historical evidence | yes | retry | none |
-| context cap reached | bounded partial analysis | retained evidence and counts | explicit recheck | inspect/split/recheck | no omitted resolution |
+| non-diff/provider cap reached | bounded partial analysis | retained evidence and counts | explicit recheck | inspect/split/recheck | no omitted resolution |
+| partition plan/attestation fails | no new mutation | canonical SHA/counts | bounded queue | split/retry | discard all outputs |
 | canonical PR ambiguous/stale | no analysis or mutation | target and bounded candidate fact | new event | close obsolete PR/retry current head | none |
 | autofix verification fail | no commit | findings remain open | yes | repair code/tests | abort workspace |
 | push race | no stale push | remote heads/open findings | yes | rerun | abort workspace |
@@ -246,7 +259,9 @@ only authenticated same-HTTPS-server/repository URLs.
 
 Content-free telemetry records outcome, elapsed time, configured effort, counts,
 validation stages, canonical selection reason, request counts, fixed concurrency,
-coverage, and per-source retained/omitted/truncated counts. Job Summary and Check Run expose aggregate states; status
+coverage, per-source retained/omitted/truncated counts, planned/completed
+partitions, fragments, assigned files, maximum reviewer concurrency, and
+aggregate prompt/response size. Job Summary and Check Run expose aggregate states; the status
 card links to current findings and trusted run/commit/review context. Provider
 read status distinguishes verified/failed/not-applicable. Concurrency cancels
 superseded branch review runs; head guards and idempotent writes protect races.
@@ -310,12 +325,15 @@ screen reader, and controlled live model samples.
 10. Dry run mutates no comment, thread, check, config, or branch.
 11. Event identity or unique exact-head selection owns one canonical PR end to end.
 12. Fixed cap reach is partial and omitted findings are not resolution-eligible.
+13. All canonical diff partitions attest one SHA and aggregate before a single
+    publication; one failed partition produces no finding-state mutation.
 
 ## 17. Requirements traceability
 
 | Requirement | Owner | Evidence | Documentation |
 |---|---|---|---|
 | bounded review | context/prompt/schema policies | prompt/schema/E2E tests | detection |
+| exhaustive PR diff | partition planner/analyzer/aggregate | 44-file/lossless/concurrency/attestation tests | how it works/failures |
 | stable identity | finding identity domain | identity tests | publication |
 | safe publication | publish/reconciliation use cases | publication/reconciliation tests | publication |
 | guarded autofix | autofix/workspace/git use cases | autofix/security tests | autofix |
@@ -337,6 +355,8 @@ screen reader, and controlled live model samples.
 - [ ] All five UI states, anchors, links, accessibility, localization, and noise pass.
 - [ ] Workflows, docs, reconciliation SDD, and catalog agree.
 - [ ] Controlled live provider and GitHub UX evidence is captured.
+- [x] Prompt-sized canonical PR diffs are reviewed through lossless, attested,
+      atomic partitions under the companion SDD's 34-case budget.
 
 ## 20. References and decisions
 
@@ -345,6 +365,8 @@ screen reader, and controlled live model samples.
 - Planned hardening: `bugbot-context-selection-and-budgeting.md` owns canonical
   PR selection and the provider-request budget; the architecture hardening SDD
   owns shared sequencing and verification gates.
+- Implemented extension: `bugbot-exhaustive-partitioned-analysis.md` owns
+  exhaustive diff planning, response attestation, and atomic aggregation.
 - Decision: independent evidence, not fixer assertion, owns resolution.
 - Rejected: guessed anchors, model-only validation, provider-ID-only identity.
 - Follow-up: model-specific quality tuning remains benchmark-governed.

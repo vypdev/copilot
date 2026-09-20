@@ -32,7 +32,12 @@ counts and states, provider/model names, character counts, and rough token
 estimates. It also records `event`, `exact-head`, or `none` as the canonical
 selection reason and the bounded `0`/`1`/`2+` candidate bucket; `complete` or `partial` coverage; logical and raw provider
 request counts; the fixed concurrency limit of two; and fetched, retained,
-omitted, and truncated counts per source. Prompt text, branches, diffs, source,
+omitted, and truncated counts per source. Partitioned PR analysis additionally
+records planned/completed partition counts, fragment and assigned-file counts,
+maximum observed reviewer concurrency, and aggregate prompt/response character
+counts. A failed plan also records the failed partition ordinal and a sanitized
+failure category, never its patch or model prose. These facts let operators
+distinguish a complete multi-request review from a failed or provider-partial run. Prompt text, branches, diffs, source,
 comments, responses, credentials, authors, and rule contents are never stored in
 telemetry.
 

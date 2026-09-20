@@ -8,6 +8,8 @@ export async function runWithConcurrencyLimit<T>(
   const results: T[] = new Array(tasks.length);
   let nextIndex = 0;
   let stopped = false;
+  let failed = false;
+  let firstError: unknown;
   const worker = async (): Promise<void> => {
     while (!stopped && nextIndex < tasks.length) {
       const index = nextIndex;
@@ -16,11 +18,15 @@ export async function runWithConcurrencyLimit<T>(
         results[index] = await tasks[index]();
       } catch (error) {
         stopped = true;
-        throw error;
+        if (!failed) {
+          failed = true;
+          firstError = error;
+        }
       }
     }
   };
   const workerCount = Math.min(limit, tasks.length);
   await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  if (failed) throw firstError;
   return results;
 }

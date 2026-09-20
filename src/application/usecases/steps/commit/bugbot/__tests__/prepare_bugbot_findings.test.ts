@@ -153,4 +153,23 @@ describe('prepareBugbotFindings', () => {
         expect(result?.activeFindings?.at(-1)?.id).toBe('finding-499');
         expect(result?.resolvedFindingIds.has('resolved-500')).toBe(false);
     });
+
+    it('accepts a larger explicit normalization ceiling for an already bounded partition aggregate', () => {
+        const findings = Array.from({ length: 600 }, (_, index) => ({
+            id: `partition-finding-${index}`,
+            title: `Partition finding ${index}`,
+            description: 'Description',
+        }));
+
+        const result = prepareBugbotFindings(
+            { findings, resolved_findings: [] },
+            [],
+            'low',
+            200,
+            2_000,
+        );
+
+        expect(result?.activeFindings).toHaveLength(600);
+        expect(result?.activeFindings?.at(-1)?.id).toBe('partition-finding-599');
+    });
 });

@@ -214,7 +214,18 @@ identifier invented in its response.
 Bugbot's status card contains a context-coverage section. `complete` means every
 applicable bounded source finished without reaching a fixed cap. `partial`
 means the run retained a deterministic subset—for example the newest 200
-comments, newest 200 thread records, or first 1,000 diff files. Partial analysis
+comments, newest 200 thread records, or first 1,000 diff files. The per-prompt
+diff character budget does **not** omit later files: Bugbot splits every
+non-ignored provider patch into bounded fragments, reviews every partition for
+the same head SHA with at most two concurrent reviewer calls, verifies each
+partition attestation, and aggregates once before publication. Large patches
+are split without dropping sanitized patch characters; missing provider patches
+become explicit local-diff inspection assignments.
+
+If any planned partition fails, is missing, returns the wrong identity/SHA, or
+attempts a resolution outside the sole resolution-owner partition, the whole
+analysis fails before finding publication or resolution. A provider file-page
+cap is still partial because unenumerated files cannot be planned. Partial analysis
 may still report findings supported by retained evidence, but it never says the
 whole PR is clean, never resolves a prior finding omitted from the prompt, and
 never receives a successful Review Check conclusion.
@@ -224,8 +235,9 @@ stale `state:ready` label with `state:blocked` and
 reduce the change scope; zero findings in the retained subset is not a ready
 decision.
 
-A GitHub read error is not partial context: the run fails before agent analysis
-or finding mutation. For a cap, inspect the named omitted source, split an
+A GitHub read error or incomplete partition set is not a successful partial
+review: the run fails before finding publication or resolution. For a cap,
+inspect the named omitted source, split an
 oversized PR when appropriate, and run `/copilot recheck`. For an ambiguous PR
 head, close the obsolete PR or invoke the review from the intended PR event.
 

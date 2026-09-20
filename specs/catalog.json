@@ -7,7 +7,7 @@
       "status": "implemented",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-16",
+      "lastVerified": "2026-09-20",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md"
@@ -929,12 +929,13 @@
       "id": "bugbot-analysis-and-autofix",
       "title": "Bugbot analysis, finding publication, and autofix",
       "status": "implemented",
-      "scope": "Select one canonical PR, analyze bounded evidence, publish stable findings, and apply authorized verified fixes",
+      "scope": "Select one canonical PR, exhaustively analyze its bounded diff partitions, publish stable findings atomically, and apply authorized verified fixes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-16",
+      "lastVerified": "2026-09-20",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
-        "specs/bugbot-context-selection-and-budgeting.md"
+        "specs/bugbot-context-selection-and-budgeting.md",
+        "specs/bugbot-exhaustive-partitioned-analysis.md"
       ],
       "workflows": [
         ".github/workflows/copilot_commit.yml",
@@ -954,6 +955,7 @@
         "src/application/policies/bugbot_resolution_eligibility_policy.ts",
         "src/application/policies/bugbot_result_finding_state_projection_policy.ts",
         "src/application/policies/bugbot_telemetry_projection_policy.ts",
+        "src/application/policies/bugbot_diff_partition_policy.ts",
         "src/application/policies/action_summary_policy.ts",
         "src/application/policies/copilot_evidence_policy.ts",
         "src/application/ports/bugbot_git_ports.ts",
@@ -963,7 +965,14 @@
         "src/application/usecases/steps/commit/bugbot/bugbot_review_operation_context.ts",
         "src/application/usecases/steps/commit/bugbot/bugbot_context_request.ts",
         "src/application/usecases/steps/commit/bugbot/prepare_bugbot_findings_policy.ts",
+        "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts",
+        "src/application/usecases/steps/commit/bugbot/bugbot_partition_aggregation.ts",
+        "src/application/usecases/steps/commit/bugbot/bugbot_review_context.ts",
+        "src/application/usecases/steps/commit/bugbot/bugbot_review_telemetry.ts",
+        "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts",
         "src/application/usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts",
+        "src/application/usecases/steps/commit/bugbot/query_bugbot_findings.ts",
+        "src/prompts/bugbot.ts",
         "src/application/usecases/steps/commit/bugbot/bugbot_previous_findings_context.ts",
         "src/application/usecases/steps/commit/bugbot/publish_findings_use_case.ts",
         "src/application/usecases/steps/commit/workspace_mutation_guard.ts",
@@ -977,11 +986,14 @@
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_operation_context.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/analyze_bugbot_revision_use_case.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_partition_aggregation.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_context_request.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/load_bugbot_context_use_case.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/schema.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/prepare_bugbot_findings.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_context.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/query_bugbot_findings.test.ts",
         "src/domain/bugbot/__tests__/context.test.ts",
         "src/data/repository/issue/__tests__/bugbot_issue_comment_query_repository.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/publish_findings_use_case.test.ts",

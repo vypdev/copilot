@@ -38,6 +38,13 @@ export interface BugbotReviewTelemetrySnapshot {
     readonly contextLogicalProviderReads: number;
     readonly contextRawProviderRequests: number;
     readonly contextConcurrencyLimit: 2;
+    readonly analysisPartitions?: number;
+    readonly completedAnalysisPartitions?: number;
+    readonly analysisDiffFragments?: number;
+    readonly analysisAssignedFiles?: number;
+    readonly maximumAnalysisConcurrency?: number;
+    readonly failedAnalysisPartitionOrdinal?: number;
+    readonly failedAnalysisPartitionCategory?: string;
     readonly candidateFindings: number;
     readonly publishedFindings: number;
     readonly overflowFindings: number;

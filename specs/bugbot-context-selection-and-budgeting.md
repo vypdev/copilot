@@ -2,9 +2,9 @@
 
 - Status: Implemented
 - Date: 2026-09-11
-- Last updated: 2026-09-15
+- Last updated: 2026-09-20
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-09-15 on PR #393 implementation branch
+- Last verified: 2026-09-20 on `develop`
 - Owners: Copilot and Bugbot maintainers
 - Scope: resolve exactly one canonical pull request, bound every provider read
   and prompt section, and make incomplete context visible and safe
@@ -21,15 +21,18 @@ requests. A trusted event candidate is verified against GitHub; otherwise a
 server-side exact head query returns at most two records so uniqueness or
 ambiguity is known with constant work.
 
-All context sources have page, item, character, and concurrency limits. Reaching
-a limit is a successful but `partial` coverage fact. A provider failure is
+All context sources have page, item, character, and concurrency limits. The
+canonical PR diff uses lossless bounded partitions rather than omitting content
+that exceeds one prompt. Non-diff/provider limits remain successful but
+`partial` coverage facts. A provider failure is
 `unavailable` and aborts review before the model or publication. Partial coverage
 may produce findings about included evidence but can never produce a whole-PR
 clean result or resolve an omitted prior finding.
 
 ```text
 trigger -> canonical PR decision -> bounded reads (max concurrency 2)
-        -> complete/partial coverage -> analysis -> bounded publication
+        -> lossless diff plan + complete/partial other context
+        -> attested partition analysis -> atomic bounded publication
 ```
 
 ## 2. Problem, current behavior, and evidence
@@ -52,11 +55,14 @@ silently decides which PR receives diff, publication, and reconciliation logic.
    12,000 per patch; rules use 100,000 and 30,000 per rule.
 5. Conversation packing walks old-to-new through the last 50 and stops at the
    first overflow, which can omit newer items.
+6. Before the partitioned-analysis extension, diff packing truncated patches at
+   12,000 characters and omitted file sections beyond one 64,000-character prompt.
 
 ### 2.3 Evidence
 
-- Code: `load_bugbot_context_use_case.ts`, `bugbot_review_context.ts`,
-  `bugbot_finding_context.ts`, `bugbot_review_rules.ts`, and Bugbot read ports.
+- Code: `load_bugbot_context_use_case.ts`, `bugbot_diff_partition_policy.ts`,
+  `bugbot_review_context.ts`, `bugbot_finding_context.ts`,
+  `bugbot_review_rules.ts`, and Bugbot read ports.
 - Product contract: `bugbot-analysis-publication-and-autofix.md` and the Bugbot
   documentation set.
 - Provider contract: GitHub's pull-request list API supports `head=owner:branch`,
@@ -96,6 +102,8 @@ page.
 3. Bound pages, retained items, characters, and simultaneous requests.
 4. Preserve useful partial analysis without overstating cleanliness or resolution.
 5. Expose deterministic coverage counts and selection reason without content telemetry.
+6. Assign every non-ignored provider diff fragment to an attested bounded review
+   partition and aggregate before publication.
 
 ### 4.2 Non-goals
 
@@ -115,6 +123,10 @@ page.
 4. Partial diff/context cannot yield a whole-review `clean` state.
 5. At most two independent provider detail requests are in flight.
 6. Query values and retained content remain sanitized and bounded.
+7. Prompt-size overflow creates another diff partition; it never silently omits
+   or truncates a provider patch.
+8. A partition plan is capped at 64 reviewer calls, runs at concurrency two, and
+   publishes nothing unless every response attests the same canonical SHA.
 
 ## 5. Current versus proposed product journey
 
@@ -124,7 +136,7 @@ page.
 | Load | fan out per PR | detail for one PR | bounded requests |
 | Pack | local section limits, ambiguous recency | newest-first selection, chronological rendering | relevant discussion retained |
 | Failure | empty/degraded can be confused | provider failure aborts | no false clean |
-| Truncation | notes in some text blocks | typed coverage manifest | safe resolution/publication |
+| Diff prompt overflow | truncated/omitted patches | lossless attested partitions | complete ordinary-PR diff review |
 
 ```mermaid
 flowchart LR
@@ -216,7 +228,7 @@ before any item/character budget.
 |---|---:|---:|---:|---|
 | unresolved previous findings | 100 | 48,000 chars including wrappers/note | existing finding body cap | newest unresolved first, render chronological |
 | human conversation | 50 | 24,000 chars including omission note | 2,000 chars | newest first for packing, render chronological |
-| diff | 1,000 files pre-pack | 64,000 chars | 12,000 patch chars | provider file order; ignored files removed first |
+| diff | 1,000 files pre-plan; max 64 partitions | 64,000 chars per partition | 12,000 fragment chars | provider file order; ignored files removed first; lossless line/hard splitting |
 | review rules | deduplicated | 100,000 chars | 30,000 chars | organization then repository specificity |
 
 Every record gains a normalized `createdAt` and stable provider ID. Combined
@@ -226,15 +238,20 @@ are reached, then reverses selected entries for chronological rendering. An
 oversized item is truncated to its per-item cap and does not prevent newer items.
 
 The coverage manifest records per source: fetched pages/items, retained items,
-omitted items when known, truncated items/chars, limit reached, and status. It is
-model-visible as a short fixed template and observable as content-free counts.
+omitted items when known, truncated items/chars, limit reached, and status. Diff
+prompt packing reports zero omitted/truncated items after a complete plan; only
+provider enumeration can leave diff coverage partial. The model-visible plan
+adds exact partition/head attestations, while telemetry exposes content-free
+partition, fragment, assigned-file, concurrency, and character totals.
 
 ### 6.5 Complete, partial, and unavailable behavior
 
 | Condition | Coverage | Model call | Publication/resolution |
 |---|---|---:|---|
 | all applicable reads complete, no cap hit | complete | yes | ordinary policy |
-| page/item/character/diff/rule cap hit | partial | yes | new findings for included evidence; no whole-PR clean; resolve only included IDs with current evidence |
+| comment/history/rule or provider diff cap hit | partial | yes when a safe plan exists | new findings for included evidence; no whole-PR clean; resolve only included IDs with current evidence |
+| diff exceeds 64 partitions | failed | no | no publication/resolution; split PR |
+| one partition/attestation fails | failed | queued work stops; active calls drain | no publication/resolution; retry current head |
 | issue comments fail when issue exists | unavailable | no | none |
 | PR comments or threads fail | unavailable | no | none |
 | diff/identity read fails or PR changes SHA | stale/unavailable | no | none |
@@ -259,7 +276,8 @@ does not close/resolve any finding absent from `eligibleResolutionIds`.
 ## 7. User-facing configuration
 
 Existing Bugbot settings remain unchanged. Selection order, exact query, five
-logical reads, page/item/character limits, concurrency two, coverage semantics,
+logical reads, page/item/character limits, 64-partition ceiling, reviewer and
+provider concurrency two, coverage semantics, atomic aggregation,
 and resolution restrictions are safety/quality boundaries and are not
 configurable. Ignore patterns and organization/repository rules continue to be
 snapshotted for the run after validation; they cannot increase hard budgets.
@@ -281,6 +299,12 @@ The PR context port exposes `getPullRequest`,
 `findOpenPullRequestsByExactHead(limit: 2)`, bounded comments, bounded threads,
 and a diff snapshot including canonical identity. It never exposes “all open PR
 numbers.” Issue/comment ports return typed page metadata.
+
+The companion partition policy owns lossless fragment splitting, stable plan
+identity, the 64-partition ceiling, exact response attestation, sole resolution
+ownership, and a 2,000-candidate aggregate cap. The analyzer schedules through
+the existing semantic findings port and the existing publisher receives only
+one globally normalized result.
 
 ### 8.2 Executable architecture constraints
 
@@ -331,7 +355,8 @@ sanitization, descriptive links, and narrow Markdown requirements remain.
 | ambiguous exact head | no review | bounded candidate count | no | close/select PR | none |
 | stale head/event | obsolete run stops | prior finding state | next event | rerun at current head | discard output |
 | required read unavailable | no model/publication | prior durable state | bounded adapter retry | retry later | none |
-| fixed limit reached | partial findings possible | coverage manifest | no expansion | inspect/split/recheck | no omitted resolution |
+| non-diff/provider fixed limit reached | partial findings possible | coverage manifest | no expansion | inspect/split/recheck | no omitted resolution |
+| partition plan/execution fails | no new review mutation | canonical SHA and content-free counts | bounded queue only | split/retry | discard all partition output |
 | model/publish failure | current result fails | context identity/coverage | owning policy | retry if fresh | existing idempotent publication |
 
 ## 11. Security, permissions, and privacy
@@ -350,8 +375,10 @@ sanitization, descriptive links, and narrow Markdown requirements remain.
 Emit repository numeric ID, trigger kind, selection reason, candidate bucket
 `0|1|2+`, canonical PR number/SHA when public, logical/raw request counts,
 maximum observed concurrency, coverage state, and per-source retained/omitted/
-truncated counts. Do not emit branch/comment/rule/patch content. Rate-limit
-failure remains distinct from fixed-budget truncation.
+truncated counts, plus planned/completed partitions, fragments, assigned files,
+reviewer concurrency, and aggregate character totals. Do not emit
+branch/comment/rule/patch content. Rate-limit failure remains distinct from
+provider page limits and partition execution failures.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
@@ -370,7 +397,9 @@ failure remains distinct from fixed-budget truncation.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **18 distinct cases**.
+This SDD retains its **18 distinct context-selection cases**. The partitioned
+analysis extension adds the separate 34-case budget in
+`bugbot-exhaustive-partitioned-analysis.md`; neither budget double-counts cases.
 
 | Area | Minimum cases | Required risks |
 |---|---:|---|
@@ -417,6 +446,10 @@ and catalog evidence in the implementation slice.
    and tells the reviewer what must change before a rerun can improve coverage.
 10. A head SHA change discards generated output before publication.
 11. Issue-only supported flow never invokes a PR port.
+12. A 44-file prompt-overflow fixture creates multiple bounded partitions with
+    every reviewable file assigned and zero prompt-budget omission/truncation.
+13. Any failed, stale, duplicated, or non-owner partition response produces no
+    finding/resolution mutation; a complete plan aggregates once.
 
 ## 17. Requirements traceability
 
@@ -425,6 +458,7 @@ and catalog evidence in the implementation slice.
 | canonical PR | selection policy/exact query adapter | identity/ambiguity/stale tests | detection |
 | bounded reads | loader/limiter/adapters | call/page/concurrency ledger | how it works |
 | deterministic prompt | packing/coverage policies | boundary/ordering tests | observability |
+| exhaustive diff | partition planner/analyzer/aggregate | lossless/attestation/concurrency/44-file tests | how it works/failure scenarios |
 | safe partial behavior | analyzer/publication/resolution policy | partial clean/omission tests | failure scenarios |
 | no secrets/content telemetry | auth-bound ports/telemetry mapper | architecture/redaction tests | permissions |
 
@@ -436,6 +470,8 @@ and catalog evidence in the implementation slice.
 4. Correct newest-first packing and propagate coverage/resolution eligibility.
 5. Update presentation, telemetry, docs, SDD/catalog evidence, then delete the
    obsolete all-open-PR port and fields.
+6. Replace single-prompt diff packing with the catalogued exhaustive partition
+   plan, attested analyzer, and atomic aggregate.
 
 ## 19. Definition of Done
 
@@ -448,6 +484,8 @@ and catalog evidence in the implementation slice.
 - [x] Active behavior, docs, UX, telemetry, SDD, catalog, and ports agree.
 - [x] No open decision, unbounded pagination/fan-out, legacy context/marker,
       compatibility method, dual field, or translator remains.
+- [x] Ordinary prompt overflow produces lossless bounded partitions; execution
+      and aggregation fail atomically on incomplete or stale evidence.
 
 ## 20. References and decisions
 
@@ -458,6 +496,10 @@ and catalog evidence in the implementation slice.
   is partial and may analyze only retained evidence.
 - Decision: exact head queries return at most two records because uniqueness,
   not enumeration, is the required fact.
+- Decision: diff prompt budgets create at most 64 lossless partitions; a larger
+  plan fails before the model rather than publishing a partial packing result.
+- Companion: `bugbot-exhaustive-partitioned-analysis.md` owns partition and
+  aggregation details, UX, and its 34-case budget.
 - Implementation evidence: `src/domain/bugbot/context.ts`,
   `src/application/usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts`,
   `src/infrastructure/composition/bugbot_scm_port_factory.ts`, provider
