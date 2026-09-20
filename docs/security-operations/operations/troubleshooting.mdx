@@ -47,6 +47,8 @@ This guide helps you resolve common issues you might encounter while using Copil
     enforcement, or had a transient/rate-limit failure. A `403` becomes
     `Missing` only when bounded provider metadata explicitly identifies a
     permission denial without rate-limit, retry, or SSO headers.
+    Malformed provider JSON or unreadable response headers also remain
+    `Unverifiable`.
     Compare the requested level in the table with the PAT settings, confirm
     organization approval if required, and rerun. Copilot deliberately does not
     create disposable GitHub resources to test write access.

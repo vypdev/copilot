@@ -81821,9 +81821,15 @@ async function isDeterministicPermissionDenial(response) {
     const message = await readProviderMessage(response);
     if (message?.toLowerCase() === 'forbidden')
         return false;
-    const headers = Object.fromEntries(['retry-after', 'x-ratelimit-remaining', 'x-github-sso']
-        .map(name => [name, readResponseHeader(response, name)])
-        .filter((entry) => entry[1] !== undefined));
+    let headers;
+    try {
+        headers = Object.fromEntries(['retry-after', 'x-ratelimit-remaining', 'x-github-sso']
+            .map(name => [name, response.headers.get(name) ?? undefined])
+            .filter((entry) => entry[1] !== undefined));
+    }
+    catch {
+        return false;
+    }
     return (0, github_error_policy_1.isGithubPermissionDenied)({
         status: response.status,
         ...(message ? { message } : {}),
@@ -81837,14 +81843,6 @@ async function readProviderMessage(response) {
             return undefined;
         const message = payload.message;
         return typeof message === 'string' ? message.trim().slice(0, 256) : undefined;
-    }
-    catch {
-        return undefined;
-    }
-}
-function readResponseHeader(response, name) {
-    try {
-        return response.headers?.get(name) ?? undefined;
     }
     catch {
         return undefined;

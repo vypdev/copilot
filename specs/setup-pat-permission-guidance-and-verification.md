@@ -277,6 +277,9 @@ upsert, dispatch, or temporary-resource operation.
   This strict probe classification is context-specific: it MUST NOT weaken
   established operational fallbacks in other GitHub adapters, such as treating
   a generic forbidden duplicate-comment deletion as requiring compaction.
+  Malformed provider JSON and unavailable header access are also bounded as
+  ambiguous evidence and MUST resolve to `Unverifiable` without leaking or
+  propagating the provider failure.
 
 ### 8.3 Executable architecture constraints
 
@@ -389,17 +392,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **38 distinct cases**.
+This SDD adds at least **41 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain permission policy | 8 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order, organization-only and mixed-scope inventory dependency |
 | Application state/blocking | 6 | verified, missing, unverifiable, invalid base token, organization-only credential collection, remote-storage blocked result |
-| Adapter/provider contracts | 13 | GET-only probes, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, 5xx, redaction, bounded unavailable repository inventory, unavailable endpoint state, duplicate-comment deletion fallback regression |
+| Adapter/provider contracts | 16 | GET-only probes, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, unavailable endpoint state, duplicate-comment deletion fallback regression |
 | Setup/credential integration | 7 | pre-prompt setup table, conditional denial through planning, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, workflow PAT check |
 | UI/accessibility | 3 | required/result tables, 40-column wrapping, no-color text |
 | Architecture/security/docs | 1 | query-only boundary and no duplicated catalog |
-| **Total** | **38** | No double counting |
+| **Total** | **41** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -469,6 +472,9 @@ at widths 40/80/120 and `NO_COLOR`.
     `Forbidden` response, the existing compaction fallback remains available;
     setup permission probes still classify that same generic prose as
     `Unverifiable`.
+18. Given a permission probe cannot parse provider JSON, receives a non-object
+    body, or cannot read provider headers, the row remains `Unverifiable`, the
+    audit continues, and no provider payload or exception is rendered.
 
 ## 17. Requirements traceability
 

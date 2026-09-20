@@ -82,11 +82,16 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionQue
 async function isDeterministicPermissionDenial(response: Response): Promise<boolean> {
     const message = await readProviderMessage(response);
     if (message?.toLowerCase() === 'forbidden') return false;
-    const headers = Object.fromEntries(
-        ['retry-after', 'x-ratelimit-remaining', 'x-github-sso']
-            .map(name => [name, readResponseHeader(response, name)] as const)
-            .filter((entry): entry is readonly [string, string] => entry[1] !== undefined),
-    );
+    let headers: Record<string, string>;
+    try {
+        headers = Object.fromEntries(
+            ['retry-after', 'x-ratelimit-remaining', 'x-github-sso']
+                .map(name => [name, response.headers.get(name) ?? undefined] as const)
+                .filter((entry): entry is readonly [string, string] => entry[1] !== undefined),
+        );
+    } catch {
+        return false;
+    }
     return isGithubPermissionDenied({
         status: response.status,
         ...(message ? { message } : {}),
@@ -100,14 +105,6 @@ async function readProviderMessage(response: Response): Promise<string | undefin
         if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return undefined;
         const message = (payload as Record<string, unknown>).message;
         return typeof message === 'string' ? message.trim().slice(0, 256) : undefined;
-    } catch {
-        return undefined;
-    }
-}
-
-function readResponseHeader(response: Response, name: string): string | undefined {
-    try {
-        return response.headers?.get(name) ?? undefined;
     } catch {
         return undefined;
     }

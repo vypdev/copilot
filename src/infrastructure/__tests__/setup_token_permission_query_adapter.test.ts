@@ -82,6 +82,37 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         expect(check).toMatchObject({ status: 'unverifiable' });
     });
 
+    it.each([
+        {
+            label: 'unparseable provider JSON',
+            json: jest.fn().mockRejectedValue(new Error('provider body unavailable')),
+            getHeader: jest.fn().mockReturnValue(null),
+        },
+        {
+            label: 'non-object provider JSON',
+            json: jest.fn().mockResolvedValue('Forbidden'),
+            getHeader: jest.fn().mockReturnValue(null),
+        },
+        {
+            label: 'unavailable provider headers',
+            json: jest.fn().mockResolvedValue({ message: 'Resource not accessible by personal access token' }),
+            getHeader: jest.fn(() => { throw new Error('provider headers unavailable'); }),
+        },
+    ])('keeps a 403 with $label unverifiable', async ({ json, getHeader }) => {
+        const providerResponse = {
+            ok: false,
+            status: 403,
+            headers: { get: getHeader },
+            json,
+        } as unknown as Response;
+        const [check] = await new SetupTokenPermissionQueryAdapter({
+            fetcher: jest.fn().mockResolvedValue(providerResponse),
+        }).inspect('owner', 'repo', 'secret', [requirement()]);
+
+        expect(check).toMatchObject({ status: 'unverifiable' });
+        expect(check.message).not.toContain('provider');
+    });
+
     it('treats HTTP 404 as ambiguous instead of claiming a missing permission', async () => {
         const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher: jest.fn().mockResolvedValue(response(false, 404)) })
             .inspect('owner', 'repo', 'secret', [requirement()]);
