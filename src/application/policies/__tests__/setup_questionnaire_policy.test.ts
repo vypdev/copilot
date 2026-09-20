@@ -115,8 +115,10 @@ describe('setup questionnaire policy', () => {
         repositoryId: 4,
         repositoryVisibility: 'private',
         repositorySecrets: [],
+        repositorySecretsAccess: 'available',
         organizationSecrets: ['PAT', 'UNRELATED_SECRET'],
         repositoryVariables: [{ name: 'UNRELATED_VARIABLE', value: 'repository' }],
+        repositoryVariablesAccess: 'available',
         organizationVariables: [
           { name: 'AGENT_PROVIDER', value: 'codex' },
           { name: 'UNRELATED_VARIABLE', value: 'x' },
@@ -152,8 +154,10 @@ describe('setup questionnaire policy', () => {
         repositoryId: 4,
         repositoryVisibility: 'private',
         repositorySecrets: [],
+        repositorySecretsAccess: 'available',
         organizationSecrets: [],
         repositoryVariables: [{ name: 'ALREADY_LOCAL', value: 'local' }],
+        repositoryVariablesAccess: 'available',
         organizationVariables: [
           { name: 'AGENT_PROVIDER', value: 'codex' },
           { name: 'ALREADY_LOCAL', value: 'organization' },

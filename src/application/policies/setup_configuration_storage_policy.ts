@@ -118,6 +118,24 @@ export function validateSetupStorageAgainstRemote(
     return errors;
 }
 
+/**
+ * Prevents unavailable repository inventory from being interpreted as an
+ * authoritative empty list after the final permission report has been shown.
+ */
+export function validateSetupManagedRepositoryInventory(
+    configuration: SetupConfiguration,
+    remote: SetupRemoteConfiguration,
+): string[] {
+    const errors: string[] = [];
+    if (configuration.manageRepositorySecrets && remote.repositorySecretsAccess !== 'available') {
+        errors.push(`Repository Secret inventory is ${remote.repositorySecretsAccess}; setup cannot safely decide whether to preserve or replace existing Secrets.`);
+    }
+    if (configuration.manageRepositoryVariables && remote.repositoryVariablesAccess !== 'available') {
+        errors.push(`Repository Variable inventory is ${remote.repositoryVariablesAccess}; setup cannot safely preserve existing Variable scopes and values.`);
+    }
+    return errors;
+}
+
 export function usesOrganizationStorage(configuration: SetupConfiguration): boolean {
     const storage = getSetupStorageConfiguration(configuration);
     return [storage.secrets, storage.variables].some(policy =>

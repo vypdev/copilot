@@ -72,20 +72,23 @@ jest.mock('../infrastructure/composition/setup_token_permissions_composition_roo
   createSetupTokenPermissionsUseCase: () => ({ inspect: mockTokenPermissionInspect }),
 }));
 
+const mockRemoteConfigurationInspect = jest.fn().mockResolvedValue({
+  ownerType: 'User',
+  repositoryVisibility: 'private',
+  repositorySecrets: [],
+  repositorySecretsAccess: 'available',
+  organizationSecrets: [],
+  repositoryVariables: [],
+  repositoryVariablesAccess: 'available',
+  organizationVariables: [],
+  organizationAccess: 'not_applicable',
+  organizationSecretsAccess: 'not_applicable',
+  organizationVariablesAccess: 'not_applicable',
+});
 jest.mock('../infrastructure/composition/setup_credentials_composition_root', () => ({
   createSetupCredentialsUseCase: () => ({ collect: jest.fn().mockResolvedValue({ collection: { apiKeys: [] }, checks: [], existingSecretNames: [] }) }),
   createSetupRemoteConfigurationReadPort: () => ({
-    inspect: jest.fn().mockResolvedValue({
-      ownerType: 'User',
-      repositoryVisibility: 'private',
-      repositorySecrets: [],
-      organizationSecrets: [],
-      repositoryVariables: [],
-      organizationVariables: [],
-      organizationAccess: 'not_applicable',
-      organizationSecretsAccess: 'not_applicable',
-      organizationVariablesAccess: 'not_applicable',
-    }),
+    inspect: mockRemoteConfigurationInspect,
   }),
 }));
 
@@ -575,6 +578,35 @@ describe('CLI', () => {
       ]));
       expect(runLocalAction).not.toHaveBeenCalled();
       expect(process.exitCode).toBe(1);
+    });
+
+    it('shows the final permission report before blocking unavailable managed inventory', async () => {
+      mockRemoteConfigurationInspect.mockResolvedValueOnce({
+        ownerType: 'User',
+        repositoryVisibility: 'private',
+        repositorySecrets: [],
+        repositorySecretsAccess: 'available',
+        organizationSecrets: [],
+        repositoryVariables: [],
+        repositoryVariablesAccess: 'unavailable',
+        organizationVariables: [],
+        organizationAccess: 'not_applicable',
+        organizationSecretsAccess: 'not_applicable',
+        organizationVariablesAccess: 'not_applicable',
+      });
+
+      await program.parseAsync([
+        'node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12',
+        '--skip-secrets', '--non-interactive', '--pr-approval-mode', 'off', '--yes',
+      ]);
+
+      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
+      expect(runLocalAction).not.toHaveBeenCalled();
+      expect(process.exitCode).toBe(1);
+      const { logError } = require('../utils/logger');
+      expect(logError).toHaveBeenCalledWith(expect.objectContaining({
+        message: expect.stringContaining('Repository Variable inventory is unavailable'),
+      }));
     });
 
     it('exits when not inside a git repo', async () => {

@@ -33,7 +33,9 @@ This guide helps you resolve common issues you might encounter while using Copil
     A conditional repository Secret or Variable row may be missing before the
     setup choices are final. In that case inventory is shown as unavailable,
     not as an empty list. Setup may continue to the plan, but it stops before
-    mutation if the approved configuration makes that permission required.
+    credential choices, resource targeting, or mutation if the approved
+    configuration makes that inventory necessary. This also applies when a
+    transient provider response leaves the permission merely unverifiable.
 
     **`? Unverifiable`:** this is not a pass. GitHub either does not expose a
     safe read-only proof for the requested write level, returned an ambiguous

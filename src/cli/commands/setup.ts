@@ -7,7 +7,12 @@ import { getGitInfo, isInsideGitRepo } from '../../cli_context';
 import { buildSetupParams } from './setup_policy';
 import { loadSetupConfigurationOverrides } from '../setup_config_file';
 import { SetupQuestionnaireController, SetupWizardUseCase } from '../../application/usecases/setup';
-import { SETUP_FEATURE_DESCRIPTIONS, buildSetupCredentialRequirements, effectiveIssueWorkflowFeatures } from '../../application/policies/setup_configuration_policy';
+import {
+  SETUP_FEATURE_DESCRIPTIONS,
+  buildSetupCredentialRequirements,
+  effectiveIssueWorkflowFeatures,
+  validateSetupManagedRepositoryInventory,
+} from '../../application/policies/setup_configuration_policy';
 import {
   buildConfiguredSetupPatPermissionRequirements,
   buildSetupPatPermissionRequirements,
@@ -164,6 +169,15 @@ export function registerSetupCommand(program: Command): void {
             throw new ApplicationError(
               'authorization.credential-invalid',
               'The setup PAT is missing access required by the approved setup plan. Grant the permissions shown above and retry.',
+            );
+          }
+        }
+        if (remoteConfiguration) {
+          const inventoryErrors = validateSetupManagedRepositoryInventory(configuration, remoteConfiguration);
+          if (inventoryErrors.length > 0) {
+            throw new ApplicationError(
+              'provider.unavailable',
+              `Setup cannot safely continue with unavailable repository inventory:\n${inventoryErrors.map(error => `- ${error}`).join('\n')}`,
             );
           }
         }

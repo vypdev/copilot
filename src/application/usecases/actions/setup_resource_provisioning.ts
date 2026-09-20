@@ -127,6 +127,12 @@ export function groupSetupResources(
     configuration: SetupConfiguration,
     remoteConfiguration?: SetupRemoteConfiguration,
 ): SetupResourceGroup[] {
+    const repositoryAccess = kind === 'secret'
+        ? remoteConfiguration?.repositorySecretsAccess
+        : remoteConfiguration?.repositoryVariablesAccess;
+    if (remoteConfiguration && repositoryAccess !== 'available') {
+        throw new Error(`Repository ${kind} inventory is ${repositoryAccess}; resource targets cannot be resolved safely.`);
+    }
     const groups = new Map<string, SetupResourceGroup>();
     for (const resource of resources) {
         // Secret values reach this workflow only after the user chose keep/replace.

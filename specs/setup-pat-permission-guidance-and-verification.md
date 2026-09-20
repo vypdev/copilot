@@ -172,6 +172,11 @@ read-only GitHub queries and presents ordered permission outcomes.
    recomputed for mutation-time capabilities. Newly relevant missing access
    blocks mutation; unverifiable write levels remain visible and are allowed to
    proceed under the existing partial-failure/retry contract.
+6. If repository Secret or Variable inventory is still unavailable or unknown
+   for a selected managed resource, setup MUST stop after rendering the final
+   permission table and before credential decisions, resource targeting, or
+   mutation. An empty collection is authoritative only when its access state is
+   `available`; transient or ambiguous failures MUST NOT imply absence.
 
 ### 6.2 Workflow PAT
 
@@ -241,6 +246,9 @@ upsert, dispatch, or temporary-resource operation.
 - Remote inventory state: repository and organization Secret/Variable access is
   represented separately from the discovered resource names; unavailable or
   unknown access is never projected as a confirmed empty inventory.
+- Fail-closed consumers: credential collection and resource provisioning reject
+  unavailable/unknown selected repository inventory even when a permission
+  probe can report only `Unverifiable` rather than deterministic `Missing`.
 - Untrusted inputs: provider status/body/headers, repository metadata, token.
 - Provider error mapping: 401 invalid token; deterministic 403/404 after base
   access is missing; rate limit/5xx/network/unsupported proof is unverifiable.
@@ -317,6 +325,7 @@ No durable marker or notification is created.
 | wrong repository selection | setup stops | identity only in memory | no | grant repository access | none |
 | missing safe-probe permission | dependent phase stops | table remains in terminal | no | grant named permission | none |
 | optional repository inventory denied before selection | wizard continues with unavailable/unknown inventory; the final audit blocks if the capability becomes required | access state and completed permission rows | no | select features, then grant any required permission named by the final table | none |
+| selected repository inventory remains unavailable after final audit | setup stops before credential prompts, target resolution, or mutation; no empty inventory is inferred | final permission table and bounded access state | no | retry after provider recovery or correct the named PAT permission | none |
 | write level unverifiable | setup may later fail at first real write | verified read facts | no | inspect PAT settings; rerun | none |
 | rate limit/network/5xx | no false missing result | other completed rows | bounded provider retry only | retry later | none |
 | narrow terminal | table wraps | semantic row order | not applicable | none | none |
@@ -353,17 +362,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **24 distinct cases**.
+This SDD adds at least **26 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain permission policy | 6 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order |
 | Application state/blocking | 4 | verified, missing, unverifiable, invalid base token |
-| Adapter/provider contracts | 6 | GET-only probes, 401, deterministic denial, rate limit/5xx, redaction, bounded unavailable repository inventory |
-| Setup/credential integration | 4 | pre-prompt setup table, conditional denial through planning, final setup check, workflow PAT check |
+| Adapter/provider contracts | 7 | GET-only probes, 401, deterministic denial, rate limit/5xx, redaction, bounded unavailable repository inventory, unavailable endpoint state |
+| Setup/credential integration | 5 | pre-prompt setup table, conditional denial through planning, final setup check, fail-closed credential/resource consumers, workflow PAT check |
 | UI/accessibility | 3 | required/result tables, 40-column wrapping, no-color text |
 | Architecture/security/docs | 1 | query-only boundary and no duplicated catalog |
-| **Total** | **24** | No double counting |
+| **Total** | **26** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -394,19 +403,23 @@ at widths 40/80/120 and `NO_COLOR`.
    read before feature selection, remote inventory records that access as
    unavailable without throwing; if the final plan requires it, the configured
    permission table shows `Missing` and setup stops before mutation.
-5. Given a write permission that GitHub cannot prove without mutation, the row
+5. Given a selected managed Secret or Variable inventory whose read remains
+   unavailable or unknown while its permission probe is merely unverifiable,
+   the final table remains visible and setup stops before credential prompts,
+   scope resolution, or mutation without treating the inventory as empty.
+6. Given a write permission that GitHub cannot prove without mutation, the row
    shows `Unverifiable`; no write probe occurs and no verified claim is made.
-6. Given the final selected features, the workflow PAT table contains exactly
+7. Given the final selected features, the workflow PAT table contains exactly
    their required repository/organization permissions and no unrelated grant.
-7. Given a workflow PAT with invalid identity or repository selection, it is not
+8. Given a workflow PAT with invalid identity or repository selection, it is not
    accepted for Secret provisioning.
-8. Given provider 429/5xx/network failure, the affected row is unverifiable, raw
+9. Given provider 429/5xx/network failure, the affected row is unverifiable, raw
    provider text is absent, and other rows remain ordered and visible.
-9. Given width 40 or `NO_COLOR`, symbols are accompanied by status text and the
+10. Given width 40 or `NO_COLOR`, symbols are accompanied by status text and the
    table remains readable.
-10. Given non-interactive supplied credentials, no prompt is created but the
+11. Given non-interactive supplied credentials, no prompt is created but the
    requirement and result reports are still emitted.
-11. Given architecture validation, the permission port exposes only read
+12. Given architecture validation, the permission port exposes only read
     semantics and the renderer contains no permission decision catalog.
 
 ## 17. Requirements traceability
@@ -438,7 +451,7 @@ at widths 40/80/120 and `NO_COLOR`.
 - [x] No validation request mutates GitHub and no result overclaims write access.
 - [x] Token values and raw provider text are absent from all output/state/errors.
 - [x] Clean Architecture boundaries and their executable test pass.
-- [x] At least 24 distinct cases and stated coverage thresholds pass.
+- [x] At least 26 distinct cases and stated coverage thresholds pass.
 - [x] Authentication, checklist, troubleshooting, and architecture docs agree.
 - [x] Catalog evidence and generated `specs/CATALOG.md` are current.
 - [x] Specification, documentation, typecheck, lint, and test gates pass.

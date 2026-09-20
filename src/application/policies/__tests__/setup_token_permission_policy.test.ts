@@ -10,7 +10,8 @@ import type { SetupTokenPermissionRequirement } from '../../../domain/setup_toke
 
 const organization: SetupRemoteConfiguration = {
     ownerType: 'Organization', repositoryId: 42, repositoryVisibility: 'private',
-    repositorySecrets: [], organizationSecrets: [], repositoryVariables: [], organizationVariables: [],
+    repositorySecrets: [], repositorySecretsAccess: 'available', organizationSecrets: [],
+    repositoryVariables: [], repositoryVariablesAccess: 'available', organizationVariables: [],
     organizationAccess: 'available', organizationSecretsAccess: 'available', organizationVariablesAccess: 'available',
 };
 

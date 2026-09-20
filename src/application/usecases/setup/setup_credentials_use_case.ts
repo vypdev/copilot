@@ -53,6 +53,12 @@ export class SetupCredentialsUseCase {
             return { collection: { apiKeys: [] }, checks: [setupCheck], existingSecretNames: [] };
         }
         if (!this.secrets) throw new ApplicationError('configuration.unsupported', 'Repository Secret provisioning is not available in this installation.');
+        if (request.remoteConfiguration && request.remoteConfiguration.repositorySecretsAccess !== 'available') {
+            throw new ApplicationError(
+                'provider.unavailable',
+                `Repository Secret inventory is ${request.remoteConfiguration.repositorySecretsAccess}; credential collection cannot safely preserve existing Secrets.`,
+            );
+        }
 
         const existingSecretNames = request.remoteConfiguration?.repositorySecrets
             ? [...request.remoteConfiguration.repositorySecrets]

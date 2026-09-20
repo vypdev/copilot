@@ -171,6 +171,24 @@ describe('narrow GitHub Actions resource repositories', () => {
         }));
     });
 
+    it('reports repository Secret inventory as unknown when the provider endpoint is absent', async () => {
+        const client = {
+            rest: {
+                repos: { get: jest.fn().mockResolvedValue({ data: { id: 42, visibility: 'private', owner: { type: 'User' } } }) },
+                actions: {
+                    listRepoVariables: jest.fn().mockResolvedValue({ data: { variables: [] } }),
+                    createRepoVariable: jest.fn(), updateRepoVariable: jest.fn(),
+                },
+            },
+        };
+        const repository = new SetupRemoteConfigurationQueryRepository({ getClient: jest.fn(() => client) });
+
+        await expect(repository.inspect('owner', 'repo', 'token')).resolves.toEqual(expect.objectContaining({
+            repositorySecrets: [], repositorySecretsAccess: 'unknown',
+            repositoryVariables: [], repositoryVariablesAccess: 'available',
+        }));
+    });
+
     it('upserts selected organization secrets and variables with the repository access grant', async () => {
         const createOrUpdateOrgSecret = jest.fn().mockResolvedValue(undefined);
         const addSelectedRepoToOrgSecret = jest.fn().mockResolvedValue(undefined);

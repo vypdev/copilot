@@ -22,8 +22,10 @@ describe('setup resource provisioning policy', () => {
             repositoryId: 42,
             repositoryVisibility: 'private',
             repositorySecrets: [],
+            repositorySecretsAccess: 'available',
             organizationSecrets: [],
             repositoryVariables: [{ name: 'AGENT_MODEL', value: 'inherited' }],
+            repositoryVariablesAccess: 'available',
             organizationVariables: [],
             organizationAccess: 'available',
             organizationSecretsAccess: 'available',
@@ -48,8 +50,10 @@ describe('setup resource provisioning policy', () => {
             repositoryId: 7,
             repositoryVisibility: 'private',
             repositorySecrets: [],
+            repositorySecretsAccess: 'available',
             organizationSecrets: [],
             repositoryVariables: [],
+            repositoryVariablesAccess: 'available',
             organizationVariables: [],
             organizationAccess: 'available',
             organizationSecretsAccess: 'available',
@@ -117,8 +121,10 @@ describe('setup resource provisioning policy', () => {
                 repositoryId: 42,
                 repositoryVisibility: 'private',
                 repositorySecrets: [],
+                repositorySecretsAccess: 'available',
                 organizationSecrets: [],
                 repositoryVariables: [],
+                repositoryVariablesAccess: 'available',
                 organizationVariables: [],
                 organizationAccess: 'available',
                 organizationSecretsAccess: 'available',
@@ -136,8 +142,10 @@ describe('setup resource provisioning policy', () => {
             ownerType: 'User' as const,
             repositoryVisibility: 'public' as const,
             repositorySecrets: [],
+            repositorySecretsAccess: 'available' as const,
             organizationSecrets: [],
             repositoryVariables: [],
+            repositoryVariablesAccess: 'available' as const,
             organizationVariables: [],
             organizationAccess: 'not_applicable' as const,
             organizationSecretsAccess: 'not_applicable' as const,
@@ -153,6 +161,23 @@ describe('setup resource provisioning policy', () => {
         )).resolves.toBe(provided);
 
         expect(inspect).not.toHaveBeenCalled();
+    });
+
+    it('blocks resource grouping when selected repository inventory is unavailable', () => {
+        const configuration = createDefaultSetupConfiguration();
+        expect(() => groupSetupResources([{ name: 'AGENT_MODEL', value: 'gpt-5.6' }], 'variable', configuration, {
+            ownerType: 'User',
+            repositoryVisibility: 'private',
+            repositorySecrets: [],
+            repositorySecretsAccess: 'available',
+            organizationSecrets: [],
+            repositoryVariables: [],
+            repositoryVariablesAccess: 'unavailable',
+            organizationVariables: [],
+            organizationAccess: 'not_applicable',
+            organizationSecretsAccess: 'not_applicable',
+            organizationVariablesAccess: 'not_applicable',
+        })).toThrow('resource targets cannot be resolved safely');
     });
 
     it('does not expose a raw variable-provider failure', async () => {

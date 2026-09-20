@@ -192,7 +192,8 @@ describe('InitialSetupUseCase', () => {
       ownerType: 'Organization' as const,
       repositoryId: 42,
       repositoryVisibility: 'private' as const,
-      repositorySecrets: [], organizationSecrets: [], repositoryVariables: [], organizationVariables: [],
+      repositorySecrets: [], repositorySecretsAccess: 'available' as const, organizationSecrets: [],
+      repositoryVariables: [], repositoryVariablesAccess: 'available' as const, organizationVariables: [],
       organizationAccess: 'available' as const, organizationSecretsAccess: 'available' as const,
       organizationVariablesAccess: 'available' as const,
     };

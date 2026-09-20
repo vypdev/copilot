@@ -114,8 +114,10 @@ describe('setup prompt rendering', () => {
                 ownerType: 'User',
                 repositoryVisibility: 'unknown',
                 repositorySecrets: [],
+                repositorySecretsAccess: 'available',
                 organizationSecrets: [],
                 repositoryVariables: [],
+                repositoryVariablesAccess: 'available',
                 organizationVariables: [],
                 organizationAccess: 'unavailable',
                 organizationSecretsAccess: 'unavailable',
@@ -153,5 +155,28 @@ describe('setup prompt rendering', () => {
         expect(rendered).toContain('Repository Variables: (unavailable; review the PAT permission table)');
         expect(rendered).not.toContain('Repository Secrets: (none detected)');
         expect(rendered).not.toContain('Repository Variables: (none detected)');
+    });
+
+    it('renders missing repository endpoints as unknown instead of empty', () => {
+        const rendered = renderRemoteConfiguration(
+            {
+                ownerType: 'User',
+                repositoryVisibility: 'private',
+                repositorySecrets: [],
+                repositorySecretsAccess: 'unknown',
+                organizationSecrets: [],
+                repositoryVariables: [],
+                repositoryVariablesAccess: 'unknown',
+                organizationVariables: [],
+                organizationAccess: 'not_applicable',
+                organizationSecretsAccess: 'not_applicable',
+                organizationVariablesAccess: 'not_applicable',
+            },
+            [],
+            [],
+        );
+
+        expect(rendered).toContain('Repository Secrets: (unknown; repository inspection is unavailable)');
+        expect(rendered).toContain('Repository Variables: (unknown; repository inspection is unavailable)');
     });
 });

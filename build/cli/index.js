@@ -46290,6 +46290,7 @@ exports.resolveSetupResourceTarget = resolveSetupResourceTarget;
 exports.setupResourceExists = setupResourceExists;
 exports.shouldUpsertSetupResource = shouldUpsertSetupResource;
 exports.validateSetupStorageAgainstRemote = validateSetupStorageAgainstRemote;
+exports.validateSetupManagedRepositoryInventory = validateSetupManagedRepositoryInventory;
 exports.usesOrganizationStorage = usesOrganizationStorage;
 exports.validateStorageConfiguration = validateStorageConfiguration;
 const setup_configuration_defaults_1 = __nccwpck_require__(23381);
@@ -46370,6 +46371,20 @@ function validateSetupStorageAgainstRemote(configuration, remote) {
         if (policy.organizationVisibility === 'selected' && remote.repositoryId === undefined) {
             errors.push(`The repository ID is required for selected organization ${kind} access.`);
         }
+    }
+    return errors;
+}
+/**
+ * Prevents unavailable repository inventory from being interpreted as an
+ * authoritative empty list after the final permission report has been shown.
+ */
+function validateSetupManagedRepositoryInventory(configuration, remote) {
+    const errors = [];
+    if (configuration.manageRepositorySecrets && remote.repositorySecretsAccess !== 'available') {
+        errors.push(`Repository Secret inventory is ${remote.repositorySecretsAccess}; setup cannot safely decide whether to preserve or replace existing Secrets.`);
+    }
+    if (configuration.manageRepositoryVariables && remote.repositoryVariablesAccess !== 'available') {
+        errors.push(`Repository Variable inventory is ${remote.repositoryVariablesAccess}; setup cannot safely preserve existing Variable scopes and values.`);
     }
     return errors;
 }
@@ -50957,6 +50972,12 @@ async function resolveRemoteConfiguration(context, dependencies, setupConfigurat
 }
 /** Groups resources by their resolved storage target so each provider call is scoped explicitly. */
 function groupSetupResources(resources, kind, configuration, remoteConfiguration) {
+    const repositoryAccess = kind === 'secret'
+        ? remoteConfiguration?.repositorySecretsAccess
+        : remoteConfiguration?.repositoryVariablesAccess;
+    if (remoteConfiguration && repositoryAccess !== 'available') {
+        throw new Error(`Repository ${kind} inventory is ${repositoryAccess}; resource targets cannot be resolved safely.`);
+    }
     const groups = new Map();
     for (const resource of resources) {
         // Secret values reach this workflow only after the user chose keep/replace.
@@ -54576,6 +54597,9 @@ class SetupCredentialsUseCase {
         }
         if (!this.secrets)
             throw new application_error_1.ApplicationError('configuration.unsupported', 'Repository Secret provisioning is not available in this installation.');
+        if (request.remoteConfiguration && request.remoteConfiguration.repositorySecretsAccess !== 'available') {
+            throw new application_error_1.ApplicationError('provider.unavailable', `Repository Secret inventory is ${request.remoteConfiguration.repositorySecretsAccess}; credential collection cannot safely preserve existing Secrets.`);
+        }
         const existingSecretNames = request.remoteConfiguration?.repositorySecrets
             ? [...request.remoteConfiguration.repositorySecrets]
             : await this.secrets.list(request.owner, request.repository, request.setupToken);
@@ -64343,6 +64367,12 @@ function registerSetupCommand(program) {
                 permissionPresenter.showReport(permissionReport);
                 if (!permissionReport.ready || permissionReport.identityStatus !== 'valid') {
                     throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT is missing access required by the approved setup plan. Grant the permissions shown above and retry.');
+                }
+            }
+            if (remoteConfiguration) {
+                const inventoryErrors = (0, setup_configuration_policy_1.validateSetupManagedRepositoryInventory)(configuration, remoteConfiguration);
+                if (inventoryErrors.length > 0) {
+                    throw new application_error_1.ApplicationError('provider.unavailable', `Setup cannot safely continue with unavailable repository inventory:\n${inventoryErrors.map(error => `- ${error}`).join('\n')}`);
                 }
             }
             const workflowComparisons = new setup_workspace_adapter_1.SetupDoctorWorkspaceQueryAdapter().compareWorkflows((0, setup_configuration_policy_1.effectiveIssueWorkflowFeatures)(configuration), configuration);

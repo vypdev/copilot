@@ -49048,6 +49048,7 @@ exports.resolveSetupResourceTarget = resolveSetupResourceTarget;
 exports.setupResourceExists = setupResourceExists;
 exports.shouldUpsertSetupResource = shouldUpsertSetupResource;
 exports.validateSetupStorageAgainstRemote = validateSetupStorageAgainstRemote;
+exports.validateSetupManagedRepositoryInventory = validateSetupManagedRepositoryInventory;
 exports.usesOrganizationStorage = usesOrganizationStorage;
 exports.validateStorageConfiguration = validateStorageConfiguration;
 const setup_configuration_defaults_1 = __nccwpck_require__(23381);
@@ -49128,6 +49129,20 @@ function validateSetupStorageAgainstRemote(configuration, remote) {
         if (policy.organizationVisibility === 'selected' && remote.repositoryId === undefined) {
             errors.push(`The repository ID is required for selected organization ${kind} access.`);
         }
+    }
+    return errors;
+}
+/**
+ * Prevents unavailable repository inventory from being interpreted as an
+ * authoritative empty list after the final permission report has been shown.
+ */
+function validateSetupManagedRepositoryInventory(configuration, remote) {
+    const errors = [];
+    if (configuration.manageRepositorySecrets && remote.repositorySecretsAccess !== 'available') {
+        errors.push(`Repository Secret inventory is ${remote.repositorySecretsAccess}; setup cannot safely decide whether to preserve or replace existing Secrets.`);
+    }
+    if (configuration.manageRepositoryVariables && remote.repositoryVariablesAccess !== 'available') {
+        errors.push(`Repository Variable inventory is ${remote.repositoryVariablesAccess}; setup cannot safely preserve existing Variable scopes and values.`);
     }
     return errors;
 }
@@ -52628,6 +52643,12 @@ async function resolveRemoteConfiguration(context, dependencies, setupConfigurat
 }
 /** Groups resources by their resolved storage target so each provider call is scoped explicitly. */
 function groupSetupResources(resources, kind, configuration, remoteConfiguration) {
+    const repositoryAccess = kind === 'secret'
+        ? remoteConfiguration?.repositorySecretsAccess
+        : remoteConfiguration?.repositoryVariablesAccess;
+    if (remoteConfiguration && repositoryAccess !== 'available') {
+        throw new Error(`Repository ${kind} inventory is ${repositoryAccess}; resource targets cannot be resolved safely.`);
+    }
     const groups = new Map();
     for (const resource of resources) {
         // Secret values reach this workflow only after the user chose keep/replace.

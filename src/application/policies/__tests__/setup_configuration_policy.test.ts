@@ -8,6 +8,7 @@ import {
     normalizeSetupConfigurationLocales,
     resolveSetupResourceTarget,
     shouldUpsertSetupResource,
+    validateSetupManagedRepositoryInventory,
     validateSetupStorageAgainstRemote,
     validateSetupConfiguration,
 } from '../setup_configuration_policy';
@@ -281,9 +282,9 @@ describe('setup configuration policy', () => {
             ownerType: 'Organization' as const,
             repositoryId: 42,
             repositoryVisibility: 'private' as const,
-            repositorySecrets: [],
+            repositorySecrets: [], repositorySecretsAccess: 'available' as const,
             organizationSecrets: ['PAT'],
-            repositoryVariables: [],
+            repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
             organizationVariables: [{ name: 'AGENT_PROVIDER', value: 'codex' }],
             organizationAccess: 'available' as const,
             organizationSecretsAccess: 'available' as const,
@@ -305,9 +306,9 @@ describe('setup configuration policy', () => {
             ownerType: 'Organization' as const,
             repositoryId: 42,
             repositoryVisibility: 'private' as const,
-            repositorySecrets: [],
+            repositorySecrets: [], repositorySecretsAccess: 'available' as const,
             organizationSecrets: [],
-            repositoryVariables: [],
+            repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
             organizationVariables: [{ name: 'AGENT_PROVIDER', value: 'codex' }],
             organizationAccess: 'available' as const,
             organizationSecretsAccess: 'available' as const,
@@ -327,7 +328,9 @@ describe('setup configuration policy', () => {
             ownerType: 'Organization' as const,
             repositoryId: 42,
             repositoryVisibility: 'private' as const,
-            repositorySecrets: ['PAT'], organizationSecrets: [], repositoryVariables: [], organizationVariables: [],
+            repositorySecrets: ['PAT'], repositorySecretsAccess: 'available' as const,
+            organizationSecrets: [], repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
+            organizationVariables: [],
             organizationAccess: 'available' as const, organizationSecretsAccess: 'available' as const,
             organizationVariablesAccess: 'available' as const,
         };
@@ -345,7 +348,9 @@ describe('setup configuration policy', () => {
             ownerType: 'User' as const,
             repositoryId: 42,
             repositoryVisibility: 'private' as const,
-            repositorySecrets: [], organizationSecrets: [], repositoryVariables: [], organizationVariables: [],
+            repositorySecrets: [], repositorySecretsAccess: 'available' as const,
+            organizationSecrets: [], repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
+            organizationVariables: [],
             organizationAccess: 'not_applicable' as const,
             organizationSecretsAccess: 'not_applicable' as const,
             organizationVariablesAccess: 'not_applicable' as const,
@@ -358,6 +363,25 @@ describe('setup configuration policy', () => {
         expect(validateSetupStorageAgainstRemote(configuration, unavailableRemote)).toEqual([
             'The setup PAT cannot inspect organization variables for this repository. Organization variable permissions are required.',
         ]);
+    });
+
+    it('rejects unavailable managed repository inventory after the final permission audit', () => {
+        const configuration = createDefaultSetupConfiguration();
+        const remote = {
+            ownerType: 'User' as const, repositoryVisibility: 'private' as const,
+            repositorySecrets: [], repositorySecretsAccess: 'unknown' as const,
+            organizationSecrets: [], repositoryVariables: [], repositoryVariablesAccess: 'unavailable' as const,
+            organizationVariables: [], organizationAccess: 'not_applicable' as const,
+            organizationSecretsAccess: 'not_applicable' as const, organizationVariablesAccess: 'not_applicable' as const,
+        };
+
+        expect(validateSetupManagedRepositoryInventory(configuration, remote)).toEqual([
+            expect.stringContaining('Repository Secret inventory is unknown'),
+            expect.stringContaining('Repository Variable inventory is unavailable'),
+        ]);
+        configuration.manageRepositorySecrets = false;
+        configuration.manageRepositoryVariables = false;
+        expect(validateSetupManagedRepositoryInventory(configuration, remote)).toEqual([]);
     });
 
     it('validates storage policy values and selected access requirements', () => {
@@ -380,7 +404,9 @@ describe('setup configuration policy', () => {
         });
         const remote = {
             ownerType: 'Organization' as const, repositoryVisibility: 'private' as const,
-            repositorySecrets: [], organizationSecrets: [], repositoryVariables: [], organizationVariables: [],
+            repositorySecrets: [], repositorySecretsAccess: 'available' as const,
+            organizationSecrets: [], repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
+            organizationVariables: [],
             organizationAccess: 'available' as const, organizationSecretsAccess: 'available' as const,
             organizationVariablesAccess: 'available' as const,
         };

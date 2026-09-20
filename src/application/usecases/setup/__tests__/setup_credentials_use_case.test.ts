@@ -160,7 +160,9 @@ describe('SetupCredentialsUseCase', () => {
         const remoteHealth = { validateExisting: jest.fn().mockResolvedValue([{ name: 'PAT', status: 'valid', message: 'remote ok' }]) };
         const remoteConfiguration = {
             ownerType: 'Organization' as const, repositoryId: 42, repositoryVisibility: 'private' as const,
-            repositorySecrets: [], organizationSecrets: ['PAT'], repositoryVariables: [], organizationVariables: [],
+            repositorySecrets: [], repositorySecretsAccess: 'available' as const,
+            organizationSecrets: ['PAT'], repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
+            organizationVariables: [],
             organizationAccess: 'available' as const, organizationSecretsAccess: 'available' as const,
             organizationVariablesAccess: 'available' as const,
         };
@@ -173,6 +175,31 @@ describe('SetupCredentialsUseCase', () => {
         expect(result.collection).toEqual({ apiKeys: [] });
         expect(prompt.requestWorkflowPat).not.toHaveBeenCalled();
         expect(prompt.chooseExistingCredential).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ sourceScope: 'organization' }));
+        expect(secrets.list).not.toHaveBeenCalled();
+    });
+
+    it('blocks credential decisions when repository Secret inventory is unavailable', async () => {
+        const prompt = {
+            requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(), requestWorkflowPat: jest.fn(), requestApiKey: jest.fn(),
+            chooseExistingCredential: jest.fn(), showCredentialChecks: jest.fn(),
+        };
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }), validateCredential: jest.fn() };
+        const secrets = { list: jest.fn(), upsertSecrets: jest.fn() };
+        const remoteConfiguration = {
+            ownerType: 'User' as const, repositoryVisibility: 'private' as const,
+            repositorySecrets: [], repositorySecretsAccess: 'unavailable' as const,
+            organizationSecrets: [], repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
+            organizationVariables: [], organizationAccess: 'not_applicable' as const,
+            organizationSecretsAccess: 'not_applicable' as const, organizationVariablesAccess: 'not_applicable' as const,
+        };
+
+        await expect(new SetupCredentialsUseCase(prompt, validation, secrets).collect({
+            owner: 'owner', repository: 'repo', setupToken: 'setup-token',
+            requirements: [requirement('PAT', 'workflowPat')], manageSecrets: true, remoteConfiguration,
+        })).rejects.toThrow('credential collection cannot safely preserve existing Secrets');
+
+        expect(prompt.explainCredentialSeparation).not.toHaveBeenCalled();
+        expect(prompt.requestWorkflowPat).not.toHaveBeenCalled();
         expect(secrets.list).not.toHaveBeenCalled();
     });
 

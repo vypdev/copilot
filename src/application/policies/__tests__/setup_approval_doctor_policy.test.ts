@@ -6,8 +6,9 @@ import { resolveStaticSetupDoctorCatalog } from '../setup_doctor_message_catalog
 const configuration = createDefaultSetupConfiguration();
 const remote = (value?: string): SetupRemoteConfiguration => ({
   ownerType: 'Organization', repositoryId: 1, repositoryVisibility: 'private',
-  repositorySecrets: ['PAT'], organizationSecrets: [],
+  repositorySecrets: ['PAT'], repositorySecretsAccess: 'available', organizationSecrets: [],
   repositoryVariables: value === undefined ? [] : [{ name: 'PR_APPROVAL_POLICY', value }],
+  repositoryVariablesAccess: 'available',
   organizationVariables: [],
   organizationAccess: 'available', organizationSecretsAccess: 'available', organizationVariablesAccess: 'available',
 });
