@@ -44049,6 +44049,30 @@ function bugbotDiagnosticOperatorMessage(diagnostic) {
 
 /***/ }),
 
+/***/ 57555:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.formatBugbotPartitionCompletion = formatBugbotPartitionCompletion;
+/** Builds consistent workflow copy for an atomically completed diff plan. */
+function formatBugbotPartitionCompletion(input) {
+    const partitions = input.reviewDiffPartitions?.length ?? 0;
+    if (partitions === 0)
+        return { dryRunSuffix: '' };
+    const fragments = input.reviewDiffFragmentCount ?? 0;
+    const partitionNoun = partitions === 1 ? 'partition' : 'partitions';
+    const fragmentNoun = fragments === 1 ? 'fragment' : 'fragments';
+    return {
+        dryRunSuffix: ` after atomically completing ${partitions} diff ${partitionNoun}`,
+        resultStep: `${partitions} diff ${partitionNoun} completed atomically across ${fragments} ${fragmentNoun}`,
+    };
+}
+
+
+/***/ }),
+
 /***/ 85821:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -49244,11 +49268,12 @@ exports.resolveSetupResourceScope = resolveSetupResourceScope;
 exports.getSetupResourceStoragePolicy = getSetupResourceStoragePolicy;
 exports.getSetupStorageConfiguration = getSetupStorageConfiguration;
 exports.requiresSetupRepositoryInventory = requiresSetupRepositoryInventory;
+exports.requiresSetupOrganizationInventory = requiresSetupOrganizationInventory;
 exports.resolveSetupResourceTarget = resolveSetupResourceTarget;
 exports.setupResourceExists = setupResourceExists;
 exports.shouldUpsertSetupResource = shouldUpsertSetupResource;
 exports.validateSetupStorageAgainstRemote = validateSetupStorageAgainstRemote;
-exports.validateSetupManagedRepositoryInventory = validateSetupManagedRepositoryInventory;
+exports.validateSetupManagedResourceInventory = validateSetupManagedResourceInventory;
 exports.usesOrganizationStorage = usesOrganizationStorage;
 exports.validateStorageConfiguration = validateStorageConfiguration;
 const setup_configuration_defaults_1 = __nccwpck_require__(23381);
@@ -49276,6 +49301,22 @@ function requiresSetupRepositoryInventory(policy, names) {
             return policy.overrides[name] === 'repository';
         }
         return policy.defaultScope === 'repository' || policy.preserveExisting;
+    });
+}
+/**
+ * Organization inventory is needed when a selected resource can target the
+ * organization or when preservation must discover an unoverridden resource
+ * there before falling back to its configured default scope.
+ */
+function requiresSetupOrganizationInventory(policy, names, repositoryExistingNames = []) {
+    const repositoryExisting = new Set(repositoryExistingNames);
+    return names.some(name => {
+        if (Object.prototype.hasOwnProperty.call(policy.overrides, name)) {
+            return policy.overrides[name] === 'organization';
+        }
+        if (policy.preserveExisting && repositoryExisting.has(name))
+            return false;
+        return policy.defaultScope === 'organization' || policy.preserveExisting;
     });
 }
 function resolveSetupResourceTarget(configuration, kind, name, remote) {
@@ -49349,17 +49390,29 @@ function validateSetupStorageAgainstRemote(configuration, remote) {
  * Prevents unavailable repository inventory from being interpreted as an
  * authoritative empty list after the final permission report has been shown.
  */
-function validateSetupManagedRepositoryInventory(configuration, remote, resources) {
+function validateSetupManagedResourceInventory(configuration, remote, resources) {
     const errors = [];
     const secretsRequireRepositoryInventory = configuration.manageRepositorySecrets
         && requiresSetupRepositoryInventory(getSetupResourceStoragePolicy(configuration, 'secret'), resources.secrets);
     const variablesRequireRepositoryInventory = configuration.manageRepositoryVariables
         && requiresSetupRepositoryInventory(getSetupResourceStoragePolicy(configuration, 'variable'), resources.variables);
+    const secretsRequireOrganizationInventory = remote.ownerType === 'Organization'
+        && configuration.manageRepositorySecrets
+        && requiresSetupOrganizationInventory(getSetupResourceStoragePolicy(configuration, 'secret'), resources.secrets, remote.repositorySecrets);
+    const variablesRequireOrganizationInventory = remote.ownerType === 'Organization'
+        && configuration.manageRepositoryVariables
+        && requiresSetupOrganizationInventory(getSetupResourceStoragePolicy(configuration, 'variable'), resources.variables, remote.repositoryVariables.map(variable => variable.name));
     if (secretsRequireRepositoryInventory && remote.repositorySecretsAccess !== 'available') {
         errors.push(`Repository Secret inventory is ${remote.repositorySecretsAccess}; setup cannot safely decide whether to preserve or replace existing Secrets.`);
     }
     if (variablesRequireRepositoryInventory && remote.repositoryVariablesAccess !== 'available') {
         errors.push(`Repository Variable inventory is ${remote.repositoryVariablesAccess}; setup cannot safely preserve existing Variable scopes and values.`);
+    }
+    if (secretsRequireOrganizationInventory && remote.organizationSecretsAccess !== 'available') {
+        errors.push(`Organization Secret inventory is ${remote.organizationSecretsAccess}; setup cannot safely decide whether to preserve or replace existing Secrets.`);
+    }
+    if (variablesRequireOrganizationInventory && remote.organizationVariablesAccess !== 'available') {
+        errors.push(`Organization Variable inventory is ${remote.organizationVariablesAccess}; setup cannot safely preserve existing Variable scopes and values.`);
     }
     return errors;
 }
@@ -52866,6 +52919,16 @@ function groupSetupResources(resources, kind, configuration, remoteConfiguration
     const requiresRepositoryInventory = (0, setup_configuration_policy_1.requiresSetupRepositoryInventory)((0, setup_configuration_policy_1.getSetupResourceStoragePolicy)(configuration, kind), resources.map(resource => resource.name));
     if (remoteConfiguration && requiresRepositoryInventory && repositoryAccess !== 'available') {
         throw new Error(`Repository ${kind} inventory is ${repositoryAccess}; resource targets cannot be resolved safely.`);
+    }
+    const organizationAccess = kind === 'secret'
+        ? remoteConfiguration?.organizationSecretsAccess
+        : remoteConfiguration?.organizationVariablesAccess;
+    const requiresOrganizationInventory = remoteConfiguration?.ownerType === 'Organization'
+        && (0, setup_configuration_policy_1.requiresSetupOrganizationInventory)((0, setup_configuration_policy_1.getSetupResourceStoragePolicy)(configuration, kind), resources.map(resource => resource.name), kind === 'secret'
+            ? remoteConfiguration.repositorySecrets
+            : remoteConfiguration.repositoryVariables.map(variable => variable.name));
+    if (requiresOrganizationInventory && organizationAccess !== 'available') {
+        throw new Error(`Organization ${kind} inventory is ${organizationAccess}; resource targets cannot be resolved safely.`);
     }
     const groups = new Map();
     for (const resource of resources) {
@@ -58960,7 +59023,7 @@ function normalizeFindings(findings, maxFindings) {
     const boundedMaximum = Number.isSafeInteger(maxFindings) && maxFindings > 0
         ? maxFindings
         : exports.MAX_AGENT_FINDINGS;
-    return (Array.isArray(findings) ? findings : []).slice(0, boundedMaximum).flatMap(value => {
+    return findings.slice(0, boundedMaximum).flatMap(value => {
         if (!isRecord(value))
             return [];
         const normalizedId = typeof value.id === 'string' ? (0, bugbot_finding_marker_policy_1.normalizeFindingIdForMarker)(value.id) : null;
@@ -60304,6 +60367,7 @@ const reconcile_bugbot_review_state_use_case_1 = __nccwpck_require__(57515);
 const application_error_1 = __nccwpck_require__(75999);
 const bugbot_event_ownership_policy_1 = __nccwpck_require__(52771);
 const bugbot_message_catalog_1 = __nccwpck_require__(7406);
+const bugbot_partition_completion_policy_1 = __nccwpck_require__(57555);
 const TASK_ID = 'DetectPotentialProblemsUseCase';
 /** Coordinates Bugbot context, analysis and finding publication behind application ports. */
 async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
@@ -60448,12 +60512,13 @@ function skippedDraftResult() {
 }
 function dryRunResult(prepared, context) {
     const acceptedCount = prepared.activeFindings?.length ?? 0;
+    const partitionCompletion = (0, bugbot_partition_completion_policy_1.formatBugbotPartitionCompletion)(context);
     const statuses = (0, bugbot_finding_status_policy_1.projectBugbotFindingStatuses)(context.existingByFindingId, prepared.activeFindings ?? prepared.toPublish, prepared.resolvedFindingIds, prepared.resolvedFindingResolutions);
     return new result_1.Result({
         id: TASK_ID,
         success: true,
         executed: true,
-        steps: [`Bugbot dry-run completed${completedPartitionSummary(context)} with ${acceptedCount} accepted ${acceptedCount === 1 ? 'finding' : 'findings'}; no SCM mutations performed.`],
+        steps: [`Bugbot dry-run completed${partitionCompletion.dryRunSuffix} with ${acceptedCount} accepted ${acceptedCount === 1 ? 'finding' : 'findings'}; no SCM mutations performed.`],
         payload: {
             dryRun: true,
             findings: prepared.activeFindings ?? prepared.toPublish,
@@ -60544,9 +60609,9 @@ function detectionResult(prepared, context, resolutionErrors, presentation) {
     if (context.coverage.status === 'partial') {
         stepParts.push('partial context coverage; this run does not declare the complete target clean');
     }
-    if ((context.reviewDiffPartitions?.length ?? 0) > 0) {
-        stepParts.push(`${context.reviewDiffPartitions?.length} diff ${context.reviewDiffPartitions?.length === 1 ? 'partition' : 'partitions'} completed atomically across ${context.reviewDiffFragmentCount ?? 0} ${context.reviewDiffFragmentCount === 1 ? 'fragment' : 'fragments'}`);
-    }
+    const partitionCompletion = (0, bugbot_partition_completion_policy_1.formatBugbotPartitionCompletion)(context);
+    if (partitionCompletion.resultStep)
+        stepParts.push(partitionCompletion.resultStep);
     const statusSummary = presentation?.projection ?? (0, bugbot_finding_status_policy_1.projectBugbotFindingStatuses)(context.existingByFindingId, prepared.activeFindings ?? prepared.toPublish, prepared.resolvedFindingIds, prepared.resolvedFindingResolutions);
     stepParts.push(`states: ${formatStateCounts(statusSummary.counts)}`);
     if (presentation) {
@@ -60575,12 +60640,6 @@ function detectionResult(prepared, context, resolutionErrors, presentation) {
             } : {}),
         },
     });
-}
-function completedPartitionSummary(context) {
-    const partitions = context.reviewDiffPartitions?.length ?? 0;
-    if (partitions === 0)
-        return '';
-    return ` after atomically completing ${partitions} diff ${partitions === 1 ? 'partition' : 'partitions'}`;
 }
 function formatStateCounts(counts) {
     return Object.entries(counts)

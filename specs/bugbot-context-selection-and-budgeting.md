@@ -4,7 +4,7 @@
 - Date: 2026-09-11
 - Last updated: 2026-09-20
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-09-20 on `develop`
+- Last verified: 2026-09-21 on `develop`
 - Owners: Copilot and Bugbot maintainers
 - Scope: resolve exactly one canonical pull request, bound every provider read
   and prompt section, and make incomplete context visible and safe

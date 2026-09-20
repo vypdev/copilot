@@ -338,6 +338,31 @@ describe('loadBugbotContext', () => {
     expect(reader.loadRules).not.toHaveBeenCalled();
   });
 
+  it('propagates an unexpected diff planning error without reclassifying it as a size limit', async () => {
+    const corruptChange = {
+      filename: 'src/corrupt.ts',
+      status: 'modified',
+      additions: 1,
+      deletions: 0,
+      get patch(): string {
+        throw new Error('corrupt provider patch');
+      },
+    };
+    const reader = ports({
+      getReviewDiffSnapshot: jest.fn().mockResolvedValue({
+        value: {
+          changes: [corruptChange],
+          filesWithFirstDiffLine: [],
+          filesWithDiffLocations: [],
+        },
+        coverage: coverage('diff', 1),
+      }),
+    });
+
+    await expect(loadBugbotContext(request(), reader)).rejects.toThrow('corrupt provider patch');
+    expect(reader.loadRules).not.toHaveBeenCalled();
+  });
+
   it('makes only retained previous findings eligible for resolution', async () => {
     const issueComments = Array.from({ length: 101 }, (_, index) => ({
       id: index + 1,

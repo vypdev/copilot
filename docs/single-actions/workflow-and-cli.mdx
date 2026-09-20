@@ -176,6 +176,7 @@ Setup is the profile-creation surface, so its questionnaire, plan, confirmation,
 | `--config <path>` | No | Load non-secret YAML/JSON setup overrides. Interactive answers can still refine them. |
 | `--non-interactive` | No | Use defaults, flags, config-file values, and explicit credentials without creating a terminal or prompting. |
 | `--yes` | No | Approve only the final plan; it does not fill missing configuration or credentials. |
+| `--confirm-unverifiable-write-permissions` | No | Explicitly acknowledge, after inspecting the PAT settings, required write rows that safe read-only probes cannot verify. It never accepts missing access or unverifiable required reads. |
 | `--dry-run` | No | Print the complete plan without changing files or GitHub. A token is not required. |
 | `--skip-variables` | No | Copy files and provision metadata without changing Repository Variables. |
 | `--skip-secrets` | No | Do not validate or create/update repository Secrets. |
@@ -202,10 +203,10 @@ The wizard covers these features: `issues`, `pullRequests`, `commits`, `issueCom
 For automation, use the same defaults without prompts:
 
 ```bash
-copilot setup --non-interactive --yes
+copilot setup --non-interactive --yes --confirm-unverifiable-write-permissions
 copilot setup --dry-run
-copilot setup --non-interactive --yes --features issues,pullRequests,commits,issueComments,pullRequestComments --agent codex
-copilot setup --non-interactive --yes --issue-workflows feature,bugfix,help
+copilot setup --non-interactive --yes --confirm-unverifiable-write-permissions --features issues,pullRequests,commits,issueComments,pullRequestComments --agent codex
+copilot setup --non-interactive --yes --confirm-unverifiable-write-permissions --issue-workflows feature,bugfix,help
 ```
 
 Without an explicit `--agent-guidance` or config value, non-interactive setup
@@ -217,7 +218,7 @@ marker insertion in unattended setup.
 For unattended credential provisioning, keep the setup PAT in a protected CI secret and pass credential values explicitly (never commit them):
 
 ```bash
-copilot setup --non-interactive --yes --update-workflows \
+copilot setup --non-interactive --yes --confirm-unverifiable-write-permissions --update-workflows \
   --token "$SETUP_PAT" \
   --workflow-pat "$WORKFLOW_PAT" \
   --secret "OPENAI_API_KEY=$OPENAI_API_KEY" \

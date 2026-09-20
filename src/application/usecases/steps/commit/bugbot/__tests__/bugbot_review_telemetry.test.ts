@@ -116,4 +116,19 @@ describe('Bugbot review telemetry', () => {
             unknown: 1,
         }));
     });
+
+    it('retains the earliest failed partition when later partitions also fail', () => {
+        const telemetry = new BugbotReviewTelemetry(operationContext());
+        telemetry.observePartitionPlan(3, 3, 3);
+        telemetry.beginPartition();
+        telemetry.endPartition(false, { ordinal: 2, category: 'agent.failed' });
+        telemetry.beginPartition();
+        telemetry.endPartition(false, { ordinal: 3, category: 'provider.unavailable' });
+
+        expect(telemetry.snapshot('failed')).toEqual(expect.objectContaining({
+            failedAnalysisPartitionOrdinal: 2,
+            failedAnalysisPartitionCategory: 'agent.failed',
+            maximumAnalysisConcurrency: 1,
+        }));
+    });
 });

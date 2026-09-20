@@ -637,7 +637,7 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-20",
+      "lastVerified": "2026-09-21",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
@@ -683,6 +683,7 @@
         "src/cli/setup_plan_presenter.ts",
         "src/cli/setup_doctor_presenter.ts",
         "src/cli/setup_prompt_rendering.ts",
+        "src/cli/setup_credential_prompt_adapter.ts",
         "src/cli/setup_token_permission_presenter.ts",
         "src/infrastructure/composition/setup_credentials_composition_root.ts",
         "src/infrastructure/composition/setup_token_permissions_composition_root.ts",
@@ -931,7 +932,7 @@
       "status": "implemented",
       "scope": "Select one canonical PR, exhaustively analyze its bounded diff partitions, publish stable findings atomically, and apply authorized verified fixes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-20",
+      "lastVerified": "2026-09-21",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md",
@@ -956,6 +957,7 @@
         "src/application/policies/bugbot_result_finding_state_projection_policy.ts",
         "src/application/policies/bugbot_telemetry_projection_policy.ts",
         "src/application/policies/bugbot_diff_partition_policy.ts",
+        "src/application/policies/bugbot_partition_completion_policy.ts",
         "src/application/policies/action_summary_policy.ts",
         "src/application/policies/copilot_evidence_policy.ts",
         "src/application/ports/bugbot_git_ports.ts",
@@ -986,6 +988,7 @@
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_operation_context.test.ts",
+        "src/application/policies/__tests__/bugbot_partition_completion_policy.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/analyze_bugbot_revision_use_case.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_partition_aggregation.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_context_request.test.ts",

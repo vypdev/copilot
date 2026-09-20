@@ -166,8 +166,13 @@ PAT permission validation follows the same dependency rule. The application
 GitHub GET probes and maps provider outcomes to `verified`, `missing`, or
 `unverifiable`. Write access is never inferred from a successful read. The CLI
 presenter renders the policy-owned requirements and use-case-owned outcomes but
-contains no permission catalog or remote operation. An architecture test rejects
-mutation methods on the query port and non-GET methods in its adapter.
+contains no permission catalog or remote operation. Application `ready` remains
+strict; the terminal adapter owns the separate fail-closed acknowledgement for
+required unverifiable writes, while required unverifiable reads remain blocked.
+The shared storage policy computes repository and organization inventory
+dependencies symmetrically before credential decisions or resource grouping.
+An architecture test rejects mutation methods on the query port and non-GET
+methods in its adapter.
 
 There are no installed users or persisted setup state to migrate, so this is a
 greenfield contract: no legacy prompt facade, compatibility overload, dual

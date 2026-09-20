@@ -34,9 +34,9 @@ This guide helps you resolve common issues you might encounter while using Copil
     setup choices are final. In that case inventory is shown as unavailable,
     not as an empty list. Setup may continue to the plan, but it stops before
     credential choices, resource targeting, or mutation if a selected resource
-    may target the repository or `preserveExisting` requires repository-scope
-    discovery. This also applies when a transient provider response leaves the
-    permission merely unverifiable. If every selected resource is forced to
+    may target the repository or organization, or `preserveExisting` requires
+    discovery across those scopes. This also applies when a transient provider
+    response leaves the permission merely unverifiable. If every selected resource is forced to
     organization scope, including an organization default with
     `preserveExisting: false`, setup uses the available organization inventory
     and does not block on unrelated repository inventory.
@@ -49,9 +49,12 @@ This guide helps you resolve common issues you might encounter while using Copil
     permission denial without rate-limit, retry, or SSO headers.
     Malformed provider JSON or unreadable response headers also remain
     `Unverifiable`.
-    Compare the requested level in the table with the PAT settings, confirm
-    organization approval if required, and rerun. Copilot deliberately does not
-    create disposable GitHub resources to test write access.
+    A required unverifiable read blocks and must be retried. For a required
+    write, compare the requested level with the PAT settings and explicitly
+    confirm it at the separate prompt. In unattended setup, pass
+    `--confirm-unverifiable-write-permissions` only after that inspection;
+    `--yes` alone does not acknowledge permissions. Copilot deliberately does
+    not create disposable GitHub resources to test write access.
 
     When organization storage validation fails after the questionnaire, the
     configured setup-PAT table and result are shown first. The subsequent error

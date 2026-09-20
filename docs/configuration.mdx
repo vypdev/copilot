@@ -192,7 +192,10 @@ Organization storage is available only for organization-owned repositories and r
 `--non-interactive` constructs no terminal and resolves only defaults, config,
 flags, and explicit external inputs. `--yes` approves the final plan but never
 invents a missing token, credential, target, or storage prerequisite. There is
-no legacy configuration shape or compatibility alias: unknown keys and removed
+also a separate `--confirm-unverifiable-write-permissions` acknowledgement for
+unattended runs where identity and required reads are verified but safe probes
+cannot prove required writes. It never bypasses missing or unverifiable read
+access. There is no legacy configuration shape or compatibility alias: unknown keys and removed
 values fail validation.
 
 ## Complete input reference

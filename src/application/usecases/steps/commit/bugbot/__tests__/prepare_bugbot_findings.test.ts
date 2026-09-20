@@ -172,4 +172,23 @@ describe('prepareBugbotFindings', () => {
         expect(result?.activeFindings).toHaveLength(600);
         expect(result?.activeFindings?.at(-1)?.id).toBe('partition-finding-599');
     });
+
+    it('falls back to the fixed normalization ceiling when an invalid ceiling is supplied', () => {
+        const findings = Array.from({ length: 501 }, (_, index) => ({
+            id: `fallback-finding-${index}`,
+            title: `Fallback finding ${index}`,
+            description: 'Description',
+        }));
+
+        const result = prepareBugbotFindings(
+            { findings, resolved_findings: [] },
+            [],
+            'low',
+            600,
+            0,
+        );
+
+        expect(result?.activeFindings).toHaveLength(500);
+        expect(result?.activeFindings?.at(-1)?.id).toBe('fallback-finding-499');
+    });
 });

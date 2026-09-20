@@ -10,6 +10,7 @@ import type {
     SetupRemoteConfiguration,
 } from '../../domain/setup';
 import type { SetupDoctorMessageCatalog } from '../policies/setup_doctor_message_catalog';
+import type { SetupTokenPermissionReport } from '../../domain/setup_token_permissions';
 
 export interface SetupRemoteConfigurationReadPort {
     inspect(owner: string, repository: string, token: string): Promise<SetupRemoteConfiguration>;
@@ -17,6 +18,7 @@ export interface SetupRemoteConfigurationReadPort {
 
 export interface SetupCredentialPromptPort {
     requestSetupPat(): Promise<string | undefined>;
+    confirmUnverifiableTokenPermissions?(report: SetupTokenPermissionReport): Promise<boolean>;
     explainCredentialSeparation(requirements: readonly SetupCredentialRequirement[]): void;
     requestWorkflowPat(requirement: SetupCredentialRequirement, current?: SetupCredentialCheck): Promise<SetupCredentialValue | undefined>;
     requestApiKey(requirement: SetupCredentialRequirement, current?: SetupCredentialCheck): Promise<SetupCredentialValue | undefined>;

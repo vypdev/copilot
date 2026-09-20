@@ -198,6 +198,63 @@ describe('analyzeBugbotRevision partition execution', () => {
       failedAnalysisPartitionCategory: 'error',
     }));
   });
+
+  it('derives partition metadata when optional aggregate counters are absent', async () => {
+    const partitions = [partition(1, 1)];
+    const partitionContext: BugbotContext = {
+      ...context(partitions),
+      reviewDiffFragmentCount: undefined,
+      reviewDiffFileCount: undefined,
+    };
+    const telemetry = new BugbotReviewTelemetry(operation());
+
+    await analyzeBugbotRevision(operation(), partitionContext, {
+      agent: { query: jest.fn(({ prompt }) => Promise.resolve(attestedResponse(prompt, 1))) },
+      telemetry,
+    });
+
+    expect(telemetry.snapshot('completed')).toEqual(expect.objectContaining({
+      analysisDiffFragments: 1,
+      analysisAssignedFiles: 1,
+    }));
+  });
+
+  it('uses the pull-request locale fallback for a legacy issue context without partition metadata', async () => {
+    const legacyContext: BugbotContext = {
+      ...context([]),
+      canonicalPullRequest: null,
+      prContext: null,
+      reviewDiffPartitions: undefined,
+    };
+    const legacyOperation = {
+      ...operation(),
+      locale: { issue: undefined, pullRequest: 'en-US' },
+    } as unknown as BugbotReviewOperationContext;
+    const query = jest.fn().mockResolvedValue({
+      outputLocale: 'en-US',
+      findings: [],
+      resolved_findings: [],
+    });
+
+    await expect(analyzeBugbotRevision(legacyOperation, legacyContext, {
+      agent: { query },
+      telemetry: new BugbotReviewTelemetry(legacyOperation),
+    })).resolves.toBeDefined();
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+
+  it('classifies a non-Error partition rejection as unknown telemetry', async () => {
+    const telemetry = new BugbotReviewTelemetry(operation());
+
+    await expect(analyzeBugbotRevision(operation(), context([partition(1, 1)]), {
+      agent: { query: jest.fn().mockRejectedValue('offline') },
+      telemetry,
+    })).rejects.toBe('offline');
+    expect(telemetry.snapshot('failed')).toEqual(expect.objectContaining({
+      failedAnalysisPartitionOrdinal: 1,
+      failedAnalysisPartitionCategory: 'unknown',
+    }));
+  });
 });
 
 function flushMicrotasks(): Promise<void> {

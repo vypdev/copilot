@@ -6,6 +6,7 @@ import type {
   SetupCredentialRequirement,
   SetupCredentialValue,
 } from '../domain/setup';
+import type { SetupTokenPermissionReport } from '../domain/setup_token_permissions';
 import { color, renderBox, statusIcon } from './setup_prompt_rendering';
 
 export class SetupTerminalCancelledError extends Error {
@@ -19,6 +20,7 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
   constructor(
     private readonly terminal: TerminalDriver | undefined,
     private readonly credentialValues: Readonly<Record<string, string>>,
+    private readonly confirmUnverifiableWritePermissions = false,
   ) {}
 
   async requestSetupPat(): Promise<string | undefined> {
@@ -29,6 +31,36 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
       33,
     ));
     return this.readSecret('Setup PAT');
+  }
+
+  async confirmUnverifiableTokenPermissions(report: SetupTokenPermissionReport): Promise<boolean> {
+    const permissions = report.checks
+      .filter(check => check.applicability === 'required'
+        && check.level === 'write'
+        && check.status === 'unverifiable')
+      .map(check => `${check.permission} ${check.level} (${check.scope})`);
+    if (!report.confirmationRequired || permissions.length === 0) return false;
+    if (this.confirmUnverifiableWritePermissions) {
+      console.log(renderBox(
+        `Explicit acknowledgement received for: ${permissions.join(', ')}. These permissions remain Unverifiable; no test mutation was performed.`,
+        'Write permission acknowledgement',
+        33,
+      ));
+      return true;
+    }
+    if (!this.terminal) return false;
+    while (true) {
+      const result = await this.terminal.readText([
+        'GitHub cannot safely prove these write permissions without a mutation:',
+        ...permissions.map(permission => `  - ${permission}`),
+        `Confirm that the PAT was configured exactly as shown above? ${color('[N]', 90)}: `,
+      ].join('\n'));
+      if (result.kind !== 'value') throw new SetupTerminalCancelledError();
+      const value = result.value.normalize('NFKC').trim().toLowerCase();
+      if (!value || ['n', 'no', 'false', '0'].includes(value)) return false;
+      if (['y', 'yes', 'true', '1'].includes(value)) return true;
+      console.log(color('Enter yes or no.', 33));
+    }
   }
 
   explainCredentialSeparation(requirements: readonly SetupCredentialRequirement[]): void {

@@ -3,6 +3,7 @@ import { buildSetupRepositoryVariables } from './setup_configuration_plan';
 import { buildSetupCredentialRequirements } from './setup_credential_requirement_policy';
 import {
     getSetupResourceStoragePolicy,
+    requiresSetupOrganizationInventory,
     requiresSetupRepositoryInventory,
     resolveSetupResourceTarget,
 } from './setup_configuration_storage_policy';
@@ -204,6 +205,15 @@ function selectedResourceScopes(
         names,
     )) {
         scopes.add('repository');
+    }
+    if (remote?.ownerType === 'Organization' && requiresSetupOrganizationInventory(
+        getSetupResourceStoragePolicy(configuration, kind),
+        names,
+        kind === 'secret'
+            ? remote.repositorySecrets
+            : remote.repositoryVariables.map(variable => variable.name),
+    )) {
+        scopes.add('organization');
     }
     return scopes;
 }

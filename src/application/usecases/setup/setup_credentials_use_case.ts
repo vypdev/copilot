@@ -18,7 +18,10 @@ import type {
     SetupResourceStoragePolicy,
 } from '../../../domain/setup';
 import type { SetupTokenPermissionRequirement } from '../../../domain/setup_token_permissions';
-import { requiresSetupRepositoryInventory } from '../../policies/setup_configuration_storage_policy';
+import {
+    requiresSetupOrganizationInventory,
+    requiresSetupRepositoryInventory,
+} from '../../policies/setup_configuration_storage_policy';
 
 export interface SetupCredentialsRequest {
     owner: string;
@@ -65,12 +68,27 @@ export class SetupCredentialsUseCase {
                 request.secretStoragePolicy,
                 requirements.map(requirement => requirement.name),
             );
+        const requiresOrganizationInventory = request.remoteConfiguration?.ownerType === 'Organization'
+            && (request.secretStoragePolicy === undefined
+                || requiresSetupOrganizationInventory(
+                    request.secretStoragePolicy,
+                    requirements.map(requirement => requirement.name),
+                    request.remoteConfiguration.repositorySecrets,
+                ));
         if (requiresRepositoryInventory
             && request.remoteConfiguration
             && request.remoteConfiguration.repositorySecretsAccess !== 'available') {
             throw new ApplicationError(
                 'provider.unavailable',
                 `Repository Secret inventory is ${request.remoteConfiguration.repositorySecretsAccess}; credential collection cannot safely preserve existing Secrets.`,
+            );
+        }
+        if (requiresOrganizationInventory
+            && request.remoteConfiguration
+            && request.remoteConfiguration.organizationSecretsAccess !== 'available') {
+            throw new ApplicationError(
+                'provider.unavailable',
+                `Organization Secret inventory is ${request.remoteConfiguration.organizationSecretsAccess}; credential collection cannot safely preserve existing Secrets.`,
             );
         }
 
@@ -152,12 +170,17 @@ export class SetupCredentialsUseCase {
                     requirements: request.workflowTokenPermissions,
                 });
                 this.permissionPresenter?.showReport(report);
+                const permissionAccepted = report.ready
+                    || (report.confirmationRequired
+                        && await this.prompt.confirmUnverifiableTokenPermissions?.(report) === true);
                 check = {
                     name: requirement.name,
-                    status: report.ready && report.identityStatus === 'valid' ? 'valid' : 'invalid',
-                    message: report.ready
-                        ? 'GitHub identity, repository access, and safely verifiable permissions were checked.'
-                        : 'The workflow PAT is missing required GitHub access.',
+                    status: permissionAccepted && report.identityStatus === 'valid' ? 'valid' : 'invalid',
+                    message: permissionAccepted
+                        ? report.ready
+                            ? 'GitHub identity, repository access, and safely verifiable permissions were checked.'
+                            : 'GitHub identity and required reads were verified; the operator explicitly acknowledged unverifiable write permissions.'
+                        : 'The workflow PAT has missing, unverifiable-read, or unconfirmed required GitHub access.',
                     ...(report.account ? { account: report.account } : {}),
                 };
             } else {

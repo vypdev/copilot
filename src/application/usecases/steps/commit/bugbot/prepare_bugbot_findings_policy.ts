@@ -67,11 +67,11 @@ export function prepareFindings(
     return { ...applyCommentLimit(filteredFindings, maxComments), activeFindings: filteredFindings };
 }
 
-function normalizeFindings(findings: unknown, maxFindings: number): BugbotFinding[] {
+function normalizeFindings(findings: readonly unknown[], maxFindings: number): BugbotFinding[] {
     const boundedMaximum = Number.isSafeInteger(maxFindings) && maxFindings > 0
         ? maxFindings
         : MAX_AGENT_FINDINGS;
-    return (Array.isArray(findings) ? findings : []).slice(0, boundedMaximum).flatMap(value => {
+    return findings.slice(0, boundedMaximum).flatMap(value => {
         if (!isRecord(value)) return [];
         const normalizedId = typeof value.id === 'string' ? normalizeFindingIdForMarker(value.id) : null;
         const title = boundedText(value.title, 500);

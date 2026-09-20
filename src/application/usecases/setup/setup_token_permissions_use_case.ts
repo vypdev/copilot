@@ -32,6 +32,7 @@ export class SetupTokenPermissionsUseCase {
                 identityMessage: identity.message,
                 checks,
                 ready: false,
+                confirmationRequired: false,
             };
         }
 
@@ -46,13 +47,20 @@ export class SetupTokenPermissionsUseCase {
             status: 'unverifiable',
             message: 'No safe permission evidence was returned for this requirement.',
         }));
+        const requiredChecks = checks.filter(check => check.applicability === 'required');
+        const ready = requiredChecks.every(check => check.status === 'verified');
+        const confirmationRequired = !ready
+            && requiredChecks.every(check => check.status === 'verified'
+                || (check.level === 'write' && check.status === 'unverifiable'))
+            && requiredChecks.some(check => check.level === 'write' && check.status === 'unverifiable');
         return {
             role: request.role,
             ...(identity.account ? { account: identity.account } : {}),
             identityStatus: 'valid',
             identityMessage: identity.message,
             checks,
-            ready: checks.every(check => check.applicability !== 'required' || check.status !== 'missing'),
+            ready,
+            confirmationRequired,
         };
     }
 }

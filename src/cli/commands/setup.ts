@@ -12,7 +12,7 @@ import {
   buildSetupCredentialRequirements,
   buildSetupRepositoryVariables,
   effectiveIssueWorkflowFeatures,
-  validateSetupManagedRepositoryInventory,
+  validateSetupManagedResourceInventory,
 } from '../../application/policies/setup_configuration_policy';
 import {
   buildConfiguredSetupPatPermissionRequirements,
@@ -53,6 +53,7 @@ export function registerSetupCommand(program: Command): void {
     .option('--pr-approval-attest-producer', 'Confirm exact check/App/workflow identity and a coverage-enforcing CI step', false)
     .option('--non-interactive', 'Use defaults and config-file values without prompting', false)
     .option('--yes', 'Apply the plan without the final confirmation prompt', false)
+    .option('--confirm-unverifiable-write-permissions', 'Confirm that required PAT write permissions shown as Unverifiable were configured exactly as displayed', false)
     .option('--dry-run', 'Show the setup plan without changing files or GitHub', false)
     .option('--skip-variables', 'Do not create or update GitHub Repository Variables', false)
     .option('--skip-secrets', 'Do not validate or create/update GitHub Repository Secrets', false)
@@ -70,7 +71,7 @@ export function registerSetupCommand(program: Command): void {
       const credentialPrompt = new SetupCredentialPromptAdapter(terminal, {
         ...(options.workflowPat ? { PAT: options.workflowPat } : {}),
         ...options.secret,
-      });
+      }, Boolean(options.confirmUnverifiableWritePermissions));
       const permissionPresenter = new ConsoleSetupTokenPermissionPresenter();
       const tokenPermissions = createSetupTokenPermissionsUseCase();
       const workflowPrompt = new SetupWorkflowUpdatePromptAdapter(terminal);
@@ -117,10 +118,13 @@ export function registerSetupCommand(program: Command): void {
             requirements: setupPatPermissions,
           });
           permissionPresenter.showReport(permissionReport);
-          if (!permissionReport.ready || permissionReport.identityStatus !== 'valid') {
+          const permissionAccepted = permissionReport.ready
+            || (permissionReport.confirmationRequired
+              && await credentialPrompt.confirmUnverifiableTokenPermissions(permissionReport));
+          if (!permissionAccepted || permissionReport.identityStatus !== 'valid') {
             throw new ApplicationError(
               'authorization.credential-invalid',
-              'The setup PAT is missing required repository access. Grant the permissions shown above and retry.',
+              'The setup PAT has missing or unconfirmed required access. Grant or explicitly confirm the permissions shown above and retry.',
             );
           }
         }
@@ -166,24 +170,27 @@ export function registerSetupCommand(program: Command): void {
             requirements: configuredSetupPatPermissions,
           });
           permissionPresenter.showReport(permissionReport);
-          if (!permissionReport.ready || permissionReport.identityStatus !== 'valid') {
+          const permissionAccepted = permissionReport.ready
+            || (permissionReport.confirmationRequired
+              && await credentialPrompt.confirmUnverifiableTokenPermissions(permissionReport));
+          if (!permissionAccepted || permissionReport.identityStatus !== 'valid') {
             throw new ApplicationError(
               'authorization.credential-invalid',
-              'The setup PAT is missing access required by the approved setup plan. Grant the permissions shown above and retry.',
+              'The setup PAT has missing or unconfirmed access required by the approved setup plan. Grant or explicitly confirm the permissions shown above and retry.',
             );
           }
         }
         const credentialRequirements = buildSetupCredentialRequirements(configuration);
         const repositoryVariables = buildSetupRepositoryVariables(configuration);
         if (remoteConfiguration) {
-          const inventoryErrors = validateSetupManagedRepositoryInventory(configuration, remoteConfiguration, {
+          const inventoryErrors = validateSetupManagedResourceInventory(configuration, remoteConfiguration, {
             secrets: credentialRequirements.map(requirement => requirement.name),
             variables: repositoryVariables.map(variable => variable.name),
           });
           if (inventoryErrors.length > 0) {
             throw new ApplicationError(
               'provider.unavailable',
-              `Setup cannot safely continue with unavailable repository inventory:\n${inventoryErrors.map(error => `- ${error}`).join('\n')}`,
+              `Setup cannot safely continue with unavailable required resource inventory:\n${inventoryErrors.map(error => `- ${error}`).join('\n')}`,
             );
           }
         }

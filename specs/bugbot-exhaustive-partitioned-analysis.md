@@ -3,7 +3,7 @@
 - Status: Implemented
 - Date: 2026-09-20
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-09-20 on `develop`
+- Last verified: 2026-09-21 on `develop`
 - Owners: Copilot and Bugbot maintainers
 - Scope: review every reviewable canonical pull-request diff fragment through
   bounded, attested partitions and publish one atomic aggregate result

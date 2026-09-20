@@ -115,13 +115,13 @@ The complete command reference, including every supported option, is in [Workflo
     Before applying the plan, the wizard securely asks for the setup PAT. For automation, pass it explicitly or through the environment:
 
     ```bash
-    PERSONAL_ACCESS_TOKEN=your_setup_pat copilot setup --non-interactive --yes --skip-secrets
+    PERSONAL_ACCESS_TOKEN=your_setup_pat copilot setup --non-interactive --yes --confirm-unverifiable-write-permissions --skip-secrets
     # or: copilot setup --token your_setup_pat
     ```
 
     The wizard shows a reviewable plan and asks for confirmation. Its forward-only questionnaire keeps defaults and every answer immutable; cancel and rerun if you need to revise an earlier stage. `Ctrl-C` or end-of-input exits 130 with no writes, while declining the final plan exits 0 with no writes. Use `copilot setup --dry-run` to inspect the plan without a token or changes.
 
-    In automation, `--non-interactive` creates no terminal. `--yes` approves only the final plan: it does not supply a missing setup PAT, workflow credential, provider credential, target, or organization prerequisite.
+    In automation, `--non-interactive` creates no terminal. `--yes` approves only the final plan: it does not supply a missing setup PAT, workflow credential, provider credential, target, organization prerequisite, or permission acknowledgement. If every required read is verified but safe probes cannot prove required writes, inspect the PAT settings first and pass the separate `--confirm-unverifiable-write-permissions` flag. It never bypasses missing or unverifiable read access.
 
     Repository agent guidance remains enabled by default in automation, but the root pointer uses the safe `create-if-missing` policy unless `--agent-guidance prompt` (or the equivalent config value) explicitly authorizes a bounded update to an existing `AGENTS.md`.
 

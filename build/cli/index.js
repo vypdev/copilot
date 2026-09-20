@@ -41555,6 +41555,30 @@ function bugbotDiagnosticOperatorMessage(diagnostic) {
 
 /***/ }),
 
+/***/ 57555:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.formatBugbotPartitionCompletion = formatBugbotPartitionCompletion;
+/** Builds consistent workflow copy for an atomically completed diff plan. */
+function formatBugbotPartitionCompletion(input) {
+    const partitions = input.reviewDiffPartitions?.length ?? 0;
+    if (partitions === 0)
+        return { dryRunSuffix: '' };
+    const fragments = input.reviewDiffFragmentCount ?? 0;
+    const partitionNoun = partitions === 1 ? 'partition' : 'partitions';
+    const fragmentNoun = fragments === 1 ? 'fragment' : 'fragments';
+    return {
+        dryRunSuffix: ` after atomically completing ${partitions} diff ${partitionNoun}`,
+        resultStep: `${partitions} diff ${partitionNoun} completed atomically across ${fragments} ${fragmentNoun}`,
+    };
+}
+
+
+/***/ }),
+
 /***/ 85821:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -46486,11 +46510,12 @@ exports.resolveSetupResourceScope = resolveSetupResourceScope;
 exports.getSetupResourceStoragePolicy = getSetupResourceStoragePolicy;
 exports.getSetupStorageConfiguration = getSetupStorageConfiguration;
 exports.requiresSetupRepositoryInventory = requiresSetupRepositoryInventory;
+exports.requiresSetupOrganizationInventory = requiresSetupOrganizationInventory;
 exports.resolveSetupResourceTarget = resolveSetupResourceTarget;
 exports.setupResourceExists = setupResourceExists;
 exports.shouldUpsertSetupResource = shouldUpsertSetupResource;
 exports.validateSetupStorageAgainstRemote = validateSetupStorageAgainstRemote;
-exports.validateSetupManagedRepositoryInventory = validateSetupManagedRepositoryInventory;
+exports.validateSetupManagedResourceInventory = validateSetupManagedResourceInventory;
 exports.usesOrganizationStorage = usesOrganizationStorage;
 exports.validateStorageConfiguration = validateStorageConfiguration;
 const setup_configuration_defaults_1 = __nccwpck_require__(23381);
@@ -46518,6 +46543,22 @@ function requiresSetupRepositoryInventory(policy, names) {
             return policy.overrides[name] === 'repository';
         }
         return policy.defaultScope === 'repository' || policy.preserveExisting;
+    });
+}
+/**
+ * Organization inventory is needed when a selected resource can target the
+ * organization or when preservation must discover an unoverridden resource
+ * there before falling back to its configured default scope.
+ */
+function requiresSetupOrganizationInventory(policy, names, repositoryExistingNames = []) {
+    const repositoryExisting = new Set(repositoryExistingNames);
+    return names.some(name => {
+        if (Object.prototype.hasOwnProperty.call(policy.overrides, name)) {
+            return policy.overrides[name] === 'organization';
+        }
+        if (policy.preserveExisting && repositoryExisting.has(name))
+            return false;
+        return policy.defaultScope === 'organization' || policy.preserveExisting;
     });
 }
 function resolveSetupResourceTarget(configuration, kind, name, remote) {
@@ -46591,17 +46632,29 @@ function validateSetupStorageAgainstRemote(configuration, remote) {
  * Prevents unavailable repository inventory from being interpreted as an
  * authoritative empty list after the final permission report has been shown.
  */
-function validateSetupManagedRepositoryInventory(configuration, remote, resources) {
+function validateSetupManagedResourceInventory(configuration, remote, resources) {
     const errors = [];
     const secretsRequireRepositoryInventory = configuration.manageRepositorySecrets
         && requiresSetupRepositoryInventory(getSetupResourceStoragePolicy(configuration, 'secret'), resources.secrets);
     const variablesRequireRepositoryInventory = configuration.manageRepositoryVariables
         && requiresSetupRepositoryInventory(getSetupResourceStoragePolicy(configuration, 'variable'), resources.variables);
+    const secretsRequireOrganizationInventory = remote.ownerType === 'Organization'
+        && configuration.manageRepositorySecrets
+        && requiresSetupOrganizationInventory(getSetupResourceStoragePolicy(configuration, 'secret'), resources.secrets, remote.repositorySecrets);
+    const variablesRequireOrganizationInventory = remote.ownerType === 'Organization'
+        && configuration.manageRepositoryVariables
+        && requiresSetupOrganizationInventory(getSetupResourceStoragePolicy(configuration, 'variable'), resources.variables, remote.repositoryVariables.map(variable => variable.name));
     if (secretsRequireRepositoryInventory && remote.repositorySecretsAccess !== 'available') {
         errors.push(`Repository Secret inventory is ${remote.repositorySecretsAccess}; setup cannot safely decide whether to preserve or replace existing Secrets.`);
     }
     if (variablesRequireRepositoryInventory && remote.repositoryVariablesAccess !== 'available') {
         errors.push(`Repository Variable inventory is ${remote.repositoryVariablesAccess}; setup cannot safely preserve existing Variable scopes and values.`);
+    }
+    if (secretsRequireOrganizationInventory && remote.organizationSecretsAccess !== 'available') {
+        errors.push(`Organization Secret inventory is ${remote.organizationSecretsAccess}; setup cannot safely decide whether to preserve or replace existing Secrets.`);
+    }
+    if (variablesRequireOrganizationInventory && remote.organizationVariablesAccess !== 'available') {
+        errors.push(`Organization Variable inventory is ${remote.organizationVariablesAccess}; setup cannot safely preserve existing Variable scopes and values.`);
     }
     return errors;
 }
@@ -48143,6 +48196,11 @@ function selectedResourceScopes(configuration, kind, names, remote) {
     const scopes = new Set(names.map(name => (0, setup_configuration_storage_policy_1.resolveSetupResourceTarget)(configuration, kind, name, remote).scope));
     if ((0, setup_configuration_storage_policy_1.requiresSetupRepositoryInventory)((0, setup_configuration_storage_policy_1.getSetupResourceStoragePolicy)(configuration, kind), names)) {
         scopes.add('repository');
+    }
+    if (remote?.ownerType === 'Organization' && (0, setup_configuration_storage_policy_1.requiresSetupOrganizationInventory)((0, setup_configuration_storage_policy_1.getSetupResourceStoragePolicy)(configuration, kind), names, kind === 'secret'
+        ? remote.repositorySecrets
+        : remote.repositoryVariables.map(variable => variable.name))) {
+        scopes.add('organization');
     }
     return scopes;
 }
@@ -51199,6 +51257,16 @@ function groupSetupResources(resources, kind, configuration, remoteConfiguration
     const requiresRepositoryInventory = (0, setup_configuration_policy_1.requiresSetupRepositoryInventory)((0, setup_configuration_policy_1.getSetupResourceStoragePolicy)(configuration, kind), resources.map(resource => resource.name));
     if (remoteConfiguration && requiresRepositoryInventory && repositoryAccess !== 'available') {
         throw new Error(`Repository ${kind} inventory is ${repositoryAccess}; resource targets cannot be resolved safely.`);
+    }
+    const organizationAccess = kind === 'secret'
+        ? remoteConfiguration?.organizationSecretsAccess
+        : remoteConfiguration?.organizationVariablesAccess;
+    const requiresOrganizationInventory = remoteConfiguration?.ownerType === 'Organization'
+        && (0, setup_configuration_policy_1.requiresSetupOrganizationInventory)((0, setup_configuration_policy_1.getSetupResourceStoragePolicy)(configuration, kind), resources.map(resource => resource.name), kind === 'secret'
+            ? remoteConfiguration.repositorySecrets
+            : remoteConfiguration.repositoryVariables.map(variable => variable.name));
+    if (requiresOrganizationInventory && organizationAccess !== 'available') {
+        throw new Error(`Organization ${kind} inventory is ${organizationAccess}; resource targets cannot be resolved safely.`);
     }
     const groups = new Map();
     for (const resource of resources) {
@@ -54823,10 +54891,18 @@ class SetupCredentialsUseCase {
         const requirements = request.requirements.filter(requirement => requirement.name !== 'SETUP_PAT');
         const requiresRepositoryInventory = request.secretStoragePolicy === undefined
             || (0, setup_configuration_storage_policy_1.requiresSetupRepositoryInventory)(request.secretStoragePolicy, requirements.map(requirement => requirement.name));
+        const requiresOrganizationInventory = request.remoteConfiguration?.ownerType === 'Organization'
+            && (request.secretStoragePolicy === undefined
+                || (0, setup_configuration_storage_policy_1.requiresSetupOrganizationInventory)(request.secretStoragePolicy, requirements.map(requirement => requirement.name), request.remoteConfiguration.repositorySecrets));
         if (requiresRepositoryInventory
             && request.remoteConfiguration
             && request.remoteConfiguration.repositorySecretsAccess !== 'available') {
             throw new application_error_1.ApplicationError('provider.unavailable', `Repository Secret inventory is ${request.remoteConfiguration.repositorySecretsAccess}; credential collection cannot safely preserve existing Secrets.`);
+        }
+        if (requiresOrganizationInventory
+            && request.remoteConfiguration
+            && request.remoteConfiguration.organizationSecretsAccess !== 'available') {
+            throw new application_error_1.ApplicationError('provider.unavailable', `Organization Secret inventory is ${request.remoteConfiguration.organizationSecretsAccess}; credential collection cannot safely preserve existing Secrets.`);
         }
         const existingSecretNames = request.remoteConfiguration?.repositorySecrets
             ? [...request.remoteConfiguration.repositorySecrets]
@@ -54900,12 +54976,17 @@ class SetupCredentialsUseCase {
                     requirements: request.workflowTokenPermissions,
                 });
                 this.permissionPresenter?.showReport(report);
+                const permissionAccepted = report.ready
+                    || (report.confirmationRequired
+                        && await this.prompt.confirmUnverifiableTokenPermissions?.(report) === true);
                 check = {
                     name: requirement.name,
-                    status: report.ready && report.identityStatus === 'valid' ? 'valid' : 'invalid',
-                    message: report.ready
-                        ? 'GitHub identity, repository access, and safely verifiable permissions were checked.'
-                        : 'The workflow PAT is missing required GitHub access.',
+                    status: permissionAccepted && report.identityStatus === 'valid' ? 'valid' : 'invalid',
+                    message: permissionAccepted
+                        ? report.ready
+                            ? 'GitHub identity, repository access, and safely verifiable permissions were checked.'
+                            : 'GitHub identity and required reads were verified; the operator explicitly acknowledged unverifiable write permissions.'
+                        : 'The workflow PAT has missing, unverifiable-read, or unconfirmed required GitHub access.',
                     ...(report.account ? { account: report.account } : {}),
                 };
             }
@@ -55054,6 +55135,7 @@ class SetupTokenPermissionsUseCase {
                 identityMessage: identity.message,
                 checks,
                 ready: false,
+                confirmationRequired: false,
             };
         }
         const byId = new Map((await this.permissions.inspect(request.owner, request.repository, request.token, request.requirements)).map(check => [check.id, check]));
@@ -55062,13 +55144,20 @@ class SetupTokenPermissionsUseCase {
             status: 'unverifiable',
             message: 'No safe permission evidence was returned for this requirement.',
         }));
+        const requiredChecks = checks.filter(check => check.applicability === 'required');
+        const ready = requiredChecks.every(check => check.status === 'verified');
+        const confirmationRequired = !ready
+            && requiredChecks.every(check => check.status === 'verified'
+                || (check.level === 'write' && check.status === 'unverifiable'))
+            && requiredChecks.some(check => check.level === 'write' && check.status === 'unverifiable');
         return {
             role: request.role,
             ...(identity.account ? { account: identity.account } : {}),
             identityStatus: 'valid',
             identityMessage: identity.message,
             checks,
-            ready: checks.every(check => check.applicability !== 'required' || check.status !== 'missing'),
+            ready,
+            confirmationRequired,
         };
     }
 }
@@ -58081,7 +58170,7 @@ function normalizeFindings(findings, maxFindings) {
     const boundedMaximum = Number.isSafeInteger(maxFindings) && maxFindings > 0
         ? maxFindings
         : exports.MAX_AGENT_FINDINGS;
-    return (Array.isArray(findings) ? findings : []).slice(0, boundedMaximum).flatMap(value => {
+    return findings.slice(0, boundedMaximum).flatMap(value => {
         if (!isRecord(value))
             return [];
         const normalizedId = typeof value.id === 'string' ? (0, bugbot_finding_marker_policy_1.normalizeFindingIdForMarker)(value.id) : null;
@@ -59425,6 +59514,7 @@ const reconcile_bugbot_review_state_use_case_1 = __nccwpck_require__(57515);
 const application_error_1 = __nccwpck_require__(75999);
 const bugbot_event_ownership_policy_1 = __nccwpck_require__(52771);
 const bugbot_message_catalog_1 = __nccwpck_require__(7406);
+const bugbot_partition_completion_policy_1 = __nccwpck_require__(57555);
 const TASK_ID = 'DetectPotentialProblemsUseCase';
 /** Coordinates Bugbot context, analysis and finding publication behind application ports. */
 async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
@@ -59569,12 +59659,13 @@ function skippedDraftResult() {
 }
 function dryRunResult(prepared, context) {
     const acceptedCount = prepared.activeFindings?.length ?? 0;
+    const partitionCompletion = (0, bugbot_partition_completion_policy_1.formatBugbotPartitionCompletion)(context);
     const statuses = (0, bugbot_finding_status_policy_1.projectBugbotFindingStatuses)(context.existingByFindingId, prepared.activeFindings ?? prepared.toPublish, prepared.resolvedFindingIds, prepared.resolvedFindingResolutions);
     return new result_1.Result({
         id: TASK_ID,
         success: true,
         executed: true,
-        steps: [`Bugbot dry-run completed${completedPartitionSummary(context)} with ${acceptedCount} accepted ${acceptedCount === 1 ? 'finding' : 'findings'}; no SCM mutations performed.`],
+        steps: [`Bugbot dry-run completed${partitionCompletion.dryRunSuffix} with ${acceptedCount} accepted ${acceptedCount === 1 ? 'finding' : 'findings'}; no SCM mutations performed.`],
         payload: {
             dryRun: true,
             findings: prepared.activeFindings ?? prepared.toPublish,
@@ -59665,9 +59756,9 @@ function detectionResult(prepared, context, resolutionErrors, presentation) {
     if (context.coverage.status === 'partial') {
         stepParts.push('partial context coverage; this run does not declare the complete target clean');
     }
-    if ((context.reviewDiffPartitions?.length ?? 0) > 0) {
-        stepParts.push(`${context.reviewDiffPartitions?.length} diff ${context.reviewDiffPartitions?.length === 1 ? 'partition' : 'partitions'} completed atomically across ${context.reviewDiffFragmentCount ?? 0} ${context.reviewDiffFragmentCount === 1 ? 'fragment' : 'fragments'}`);
-    }
+    const partitionCompletion = (0, bugbot_partition_completion_policy_1.formatBugbotPartitionCompletion)(context);
+    if (partitionCompletion.resultStep)
+        stepParts.push(partitionCompletion.resultStep);
     const statusSummary = presentation?.projection ?? (0, bugbot_finding_status_policy_1.projectBugbotFindingStatuses)(context.existingByFindingId, prepared.activeFindings ?? prepared.toPublish, prepared.resolvedFindingIds, prepared.resolvedFindingResolutions);
     stepParts.push(`states: ${formatStateCounts(statusSummary.counts)}`);
     if (presentation) {
@@ -59696,12 +59787,6 @@ function detectionResult(prepared, context, resolutionErrors, presentation) {
             } : {}),
         },
     });
-}
-function completedPartitionSummary(context) {
-    const partitions = context.reviewDiffPartitions?.length ?? 0;
-    if (partitions === 0)
-        return '';
-    return ` after atomically completing ${partitions} diff ${partitions === 1 ? 'partition' : 'partitions'}`;
 }
 function formatStateCounts(counts) {
     return Object.entries(counts)
@@ -64601,6 +64686,7 @@ function registerSetupCommand(program) {
         .option('--pr-approval-attest-producer', 'Confirm exact check/App/workflow identity and a coverage-enforcing CI step', false)
         .option('--non-interactive', 'Use defaults and config-file values without prompting', false)
         .option('--yes', 'Apply the plan without the final confirmation prompt', false)
+        .option('--confirm-unverifiable-write-permissions', 'Confirm that required PAT write permissions shown as Unverifiable were configured exactly as displayed', false)
         .option('--dry-run', 'Show the setup plan without changing files or GitHub', false)
         .option('--skip-variables', 'Do not create or update GitHub Repository Variables', false)
         .option('--skip-secrets', 'Do not validate or create/update GitHub Repository Secrets', false)
@@ -64618,7 +64704,7 @@ function registerSetupCommand(program) {
         const credentialPrompt = new setup_credential_prompt_adapter_1.SetupCredentialPromptAdapter(terminal, {
             ...(options.workflowPat ? { PAT: options.workflowPat } : {}),
             ...options.secret,
-        });
+        }, Boolean(options.confirmUnverifiableWritePermissions));
         const permissionPresenter = new setup_token_permission_presenter_1.ConsoleSetupTokenPermissionPresenter();
         const tokenPermissions = (0, setup_token_permissions_composition_root_1.createSetupTokenPermissionsUseCase)();
         const workflowPrompt = new setup_workflow_update_prompt_adapter_1.SetupWorkflowUpdatePromptAdapter(terminal);
@@ -64666,8 +64752,11 @@ function registerSetupCommand(program) {
                     requirements: setupPatPermissions,
                 });
                 permissionPresenter.showReport(permissionReport);
-                if (!permissionReport.ready || permissionReport.identityStatus !== 'valid') {
-                    throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT is missing required repository access. Grant the permissions shown above and retry.');
+                const permissionAccepted = permissionReport.ready
+                    || (permissionReport.confirmationRequired
+                        && await credentialPrompt.confirmUnverifiableTokenPermissions(permissionReport));
+                if (!permissionAccepted || permissionReport.identityStatus !== 'valid') {
+                    throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT has missing or unconfirmed required access. Grant or explicitly confirm the permissions shown above and retry.');
                 }
             }
             (0, logger_1.logInfo)(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
@@ -64713,19 +64802,22 @@ function registerSetupCommand(program) {
                     requirements: configuredSetupPatPermissions,
                 });
                 permissionPresenter.showReport(permissionReport);
-                if (!permissionReport.ready || permissionReport.identityStatus !== 'valid') {
-                    throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT is missing access required by the approved setup plan. Grant the permissions shown above and retry.');
+                const permissionAccepted = permissionReport.ready
+                    || (permissionReport.confirmationRequired
+                        && await credentialPrompt.confirmUnverifiableTokenPermissions(permissionReport));
+                if (!permissionAccepted || permissionReport.identityStatus !== 'valid') {
+                    throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT has missing or unconfirmed access required by the approved setup plan. Grant or explicitly confirm the permissions shown above and retry.');
                 }
             }
             const credentialRequirements = (0, setup_configuration_policy_1.buildSetupCredentialRequirements)(configuration);
             const repositoryVariables = (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(configuration);
             if (remoteConfiguration) {
-                const inventoryErrors = (0, setup_configuration_policy_1.validateSetupManagedRepositoryInventory)(configuration, remoteConfiguration, {
+                const inventoryErrors = (0, setup_configuration_policy_1.validateSetupManagedResourceInventory)(configuration, remoteConfiguration, {
                     secrets: credentialRequirements.map(requirement => requirement.name),
                     variables: repositoryVariables.map(variable => variable.name),
                 });
                 if (inventoryErrors.length > 0) {
-                    throw new application_error_1.ApplicationError('provider.unavailable', `Setup cannot safely continue with unavailable repository inventory:\n${inventoryErrors.map(error => `- ${error}`).join('\n')}`);
+                    throw new application_error_1.ApplicationError('provider.unavailable', `Setup cannot safely continue with unavailable required resource inventory:\n${inventoryErrors.map(error => `- ${error}`).join('\n')}`);
                 }
             }
             if (result.status === 'blocked') {
@@ -65422,15 +65514,46 @@ class SetupTerminalCancelledError extends Error {
 }
 exports.SetupTerminalCancelledError = SetupTerminalCancelledError;
 class SetupCredentialPromptAdapter {
-    constructor(terminal, credentialValues) {
+    constructor(terminal, credentialValues, confirmUnverifiableWritePermissions = false) {
         this.terminal = terminal;
         this.credentialValues = credentialValues;
+        this.confirmUnverifiableWritePermissions = confirmUnverifiableWritePermissions;
     }
     async requestSetupPat() {
         if (!this.terminal)
             return undefined;
         console.log((0, setup_prompt_rendering_1.renderBox)('Enter a GitHub setup PAT. It is used in memory for this run only and is never stored. The workflow PAT is a different bot-account token and is requested separately.', 'Setup PAT', 33));
         return this.readSecret('Setup PAT');
+    }
+    async confirmUnverifiableTokenPermissions(report) {
+        const permissions = report.checks
+            .filter(check => check.applicability === 'required'
+            && check.level === 'write'
+            && check.status === 'unverifiable')
+            .map(check => `${check.permission} ${check.level} (${check.scope})`);
+        if (!report.confirmationRequired || permissions.length === 0)
+            return false;
+        if (this.confirmUnverifiableWritePermissions) {
+            console.log((0, setup_prompt_rendering_1.renderBox)(`Explicit acknowledgement received for: ${permissions.join(', ')}. These permissions remain Unverifiable; no test mutation was performed.`, 'Write permission acknowledgement', 33));
+            return true;
+        }
+        if (!this.terminal)
+            return false;
+        while (true) {
+            const result = await this.terminal.readText([
+                'GitHub cannot safely prove these write permissions without a mutation:',
+                ...permissions.map(permission => `  - ${permission}`),
+                `Confirm that the PAT was configured exactly as shown above? ${(0, setup_prompt_rendering_1.color)('[N]', 90)}: `,
+            ].join('\n'));
+            if (result.kind !== 'value')
+                throw new SetupTerminalCancelledError();
+            const value = result.value.normalize('NFKC').trim().toLowerCase();
+            if (!value || ['n', 'no', 'false', '0'].includes(value))
+                return false;
+            if (['y', 'yes', 'true', '1'].includes(value))
+                return true;
+            console.log((0, setup_prompt_rendering_1.color)('Enter yes or no.', 33));
+        }
     }
     explainCredentialSeparation(requirements) {
         if (!this.terminal)
@@ -66096,19 +66219,26 @@ function renderSetupTokenPermissionReport(report, maximumWidth = node_process_1.
             `  ${check.message}`,
         ]);
     const missing = report.checks.filter(check => check.applicability === 'required' && check.status === 'missing');
+    const unverifiableRequiredReads = report.checks.filter(check => check.applicability === 'required'
+        && check.level === 'read'
+        && check.status === 'unverifiable');
     const unverifiable = report.checks.filter(check => check.status === 'unverifiable');
     const action = missing.length > 0
         ? `Action required: grant ${missing.map(check => `${check.permission} ${check.level}`).join(', ')} and retry. No dependent mutation started.`
-        : unverifiable.length > 0
-            ? 'Some access is unverifiable because GitHub offers no safe read-only proof. No test mutation was performed.'
-            : 'All safely verifiable required permissions are available.';
+        : unverifiableRequiredReads.length > 0
+            ? `Action required: retry the unverifiable read checks for ${unverifiableRequiredReads.map(check => check.permission).join(', ')}. No dependent mutation started.`
+            : report.confirmationRequired
+                ? 'Confirmation required: inspect the PAT settings for every Unverifiable write row. Continue only by explicitly confirming the displayed access; no test mutation was performed.'
+                : unverifiable.length > 0
+                    ? 'Some access is unverifiable because GitHub offers no safe read-only proof. No test mutation was performed.'
+                    : 'All safely verifiable required permissions are available.';
     return (0, setup_prompt_rendering_1.renderBox)([
         `Identity: ${capitalize(report.identityStatus)}${report.account ? ` as @${report.account}` : ''} — ${report.identityMessage}`,
         '',
         ...rows,
         '',
         action,
-    ].join('\n'), `${roleTitle(report.role)} PAT permission check`, report.ready ? 32 : 31, maximumWidth);
+    ].join('\n'), `${roleTitle(report.role)} PAT permission check`, report.ready ? 32 : report.confirmationRequired ? 33 : 31, maximumWidth);
 }
 function renderWideRequirements(requirements) {
     const header = row('Permission', 'Scope', 'Access', 'Applies');

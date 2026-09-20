@@ -7,6 +7,7 @@ import type {
 import {
     buildSetupRepositoryVariables,
     getSetupResourceStoragePolicy,
+    requiresSetupOrganizationInventory,
     requiresSetupRepositoryInventory,
     resolveSetupResourceTarget,
     shouldUpsertSetupResource,
@@ -138,6 +139,20 @@ export function groupSetupResources(
     );
     if (remoteConfiguration && requiresRepositoryInventory && repositoryAccess !== 'available') {
         throw new Error(`Repository ${kind} inventory is ${repositoryAccess}; resource targets cannot be resolved safely.`);
+    }
+    const organizationAccess = kind === 'secret'
+        ? remoteConfiguration?.organizationSecretsAccess
+        : remoteConfiguration?.organizationVariablesAccess;
+    const requiresOrganizationInventory = remoteConfiguration?.ownerType === 'Organization'
+        && requiresSetupOrganizationInventory(
+            getSetupResourceStoragePolicy(configuration, kind),
+            resources.map(resource => resource.name),
+            kind === 'secret'
+                ? remoteConfiguration.repositorySecrets
+                : remoteConfiguration.repositoryVariables.map(variable => variable.name),
+        );
+    if (requiresOrganizationInventory && organizationAccess !== 'available') {
+        throw new Error(`Organization ${kind} inventory is ${organizationAccess}; resource targets cannot be resolved safely.`);
     }
     const groups = new Map<string, SetupResourceGroup>();
     for (const resource of resources) {

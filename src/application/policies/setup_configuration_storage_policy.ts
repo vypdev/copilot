@@ -56,6 +56,26 @@ export function requiresSetupRepositoryInventory(
     });
 }
 
+/**
+ * Organization inventory is needed when a selected resource can target the
+ * organization or when preservation must discover an unoverridden resource
+ * there before falling back to its configured default scope.
+ */
+export function requiresSetupOrganizationInventory(
+    policy: Readonly<SetupResourceStoragePolicy>,
+    names: readonly string[],
+    repositoryExistingNames: readonly string[] = [],
+): boolean {
+    const repositoryExisting = new Set(repositoryExistingNames);
+    return names.some(name => {
+        if (Object.prototype.hasOwnProperty.call(policy.overrides, name)) {
+            return policy.overrides[name] === 'organization';
+        }
+        if (policy.preserveExisting && repositoryExisting.has(name)) return false;
+        return policy.defaultScope === 'organization' || policy.preserveExisting;
+    });
+}
+
 export function resolveSetupResourceTarget(
     configuration: Readonly<SetupConfiguration>,
     kind: SetupResourceKind,
@@ -144,7 +164,7 @@ export function validateSetupStorageAgainstRemote(
  * Prevents unavailable repository inventory from being interpreted as an
  * authoritative empty list after the final permission report has been shown.
  */
-export function validateSetupManagedRepositoryInventory(
+export function validateSetupManagedResourceInventory(
     configuration: SetupConfiguration,
     remote: SetupRemoteConfiguration,
     resources: Readonly<SetupManagedResourceNames>,
@@ -160,11 +180,31 @@ export function validateSetupManagedRepositoryInventory(
             getSetupResourceStoragePolicy(configuration, 'variable'),
             resources.variables,
         );
+    const secretsRequireOrganizationInventory = remote.ownerType === 'Organization'
+        && configuration.manageRepositorySecrets
+        && requiresSetupOrganizationInventory(
+            getSetupResourceStoragePolicy(configuration, 'secret'),
+            resources.secrets,
+            remote.repositorySecrets,
+        );
+    const variablesRequireOrganizationInventory = remote.ownerType === 'Organization'
+        && configuration.manageRepositoryVariables
+        && requiresSetupOrganizationInventory(
+            getSetupResourceStoragePolicy(configuration, 'variable'),
+            resources.variables,
+            remote.repositoryVariables.map(variable => variable.name),
+        );
     if (secretsRequireRepositoryInventory && remote.repositorySecretsAccess !== 'available') {
         errors.push(`Repository Secret inventory is ${remote.repositorySecretsAccess}; setup cannot safely decide whether to preserve or replace existing Secrets.`);
     }
     if (variablesRequireRepositoryInventory && remote.repositoryVariablesAccess !== 'available') {
         errors.push(`Repository Variable inventory is ${remote.repositoryVariablesAccess}; setup cannot safely preserve existing Variable scopes and values.`);
+    }
+    if (secretsRequireOrganizationInventory && remote.organizationSecretsAccess !== 'available') {
+        errors.push(`Organization Secret inventory is ${remote.organizationSecretsAccess}; setup cannot safely decide whether to preserve or replace existing Secrets.`);
+    }
+    if (variablesRequireOrganizationInventory && remote.organizationVariablesAccess !== 'available') {
+        errors.push(`Organization Variable inventory is ${remote.organizationVariablesAccess}; setup cannot safely preserve existing Variable scopes and values.`);
     }
     return errors;
 }

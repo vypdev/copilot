@@ -21,7 +21,7 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 ## Credentials
 
 - [ ] Before entering each PAT, the setup terminal table matches the intended repository/organization target, access level, selected features, and storage scope.
-- [ ] After entry, every `❌ Missing` required permission has been corrected; every `? Unverifiable` write permission has been compared manually with the PAT settings and is not treated as a pass.
+- [ ] After entry, every `❌ Missing` required permission has been corrected; required unverifiable reads have been retried; every `? Unverifiable` required write has been compared manually with the PAT settings and explicitly acknowledged without treating it as a pass.
 - [ ] Permission verification used read-only probes only; no temporary label, branch, file, Variable, Secret, project item, comment, or workflow run was created as a permission test.
 - [ ] Credentials are configured as secrets or as a local self-hosted credential store.
 - [ ] No session file or token is copied into GitHub Secrets.
@@ -49,7 +49,7 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 - [ ] `copilot doctor` reports the effective repository, issue, and pull-request locales plus `exact`, `base`, `dynamic`, or `fallback` catalog paths.
 - [ ] Doctor headings, summaries, states, and actions use one repository-locale catalog; raw PAT, credential-health, rule, and workflow-provider prose is absent, and any dynamic-catalog failure produces a complete English report.
 - [ ] Every configured locale is a valid hyphenated BCP-47 tag such as `pt-BR`; underscore forms such as `pt_BR` are rejected before setup planning.
-- [ ] Unattended setup uses `--non-interactive --yes` plus every required external credential; `--yes` is treated only as plan approval.
+- [ ] Unattended setup uses `--non-interactive --yes` plus every required external credential; when safe probes cannot prove required writes, `--confirm-unverifiable-write-permissions` records the separate manual PAT-settings acknowledgement and `--yes` remains plan approval only.
 - [ ] Cancellation (`Ctrl-C` or EOF) has been observed to exit 130 with no writes; declining the final plan exits 0 with no writes.
 - [ ] Setup review lists Secret names only and no secret value appears in config, plan, logs, errors, reports, fixtures, or backups.
 - [ ] Setup PAT and workflow PAT permission reports contain only stable permission IDs, target scopes, access levels, semantic statuses, and bounded reasons; tokens and raw provider responses are absent.

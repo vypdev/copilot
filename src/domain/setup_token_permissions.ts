@@ -43,5 +43,8 @@ export interface SetupTokenPermissionReport {
     identityStatus: 'valid' | 'invalid' | 'unverifiable';
     identityMessage: string;
     checks: readonly SetupTokenPermissionCheck[];
+    /** True only when every required permission has verified evidence. */
     ready: boolean;
+    /** True only when required reads are verified and required writes need explicit acknowledgement. */
+    confirmationRequired: boolean;
 }

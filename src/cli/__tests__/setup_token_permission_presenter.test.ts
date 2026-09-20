@@ -25,7 +25,7 @@ describe('setup token permission presenter', () => {
 
     it('renders verified, missing, and unverifiable states with text and symbols', () => {
         const output = renderSetupTokenPermissionReport({
-            role: 'workflow', identityStatus: 'valid', identityMessage: 'ok', ready: false,
+            role: 'workflow', identityStatus: 'valid', identityMessage: 'ok', ready: false, confirmationRequired: false,
             checks: [
                 { ...metadata, role: 'workflow', status: 'verified', message: 'available' },
                 { ...secrets, role: 'workflow', applicability: 'required', status: 'missing', message: 'denied' },
@@ -48,7 +48,7 @@ describe('setup token permission presenter', () => {
 
     it('never renders a token value from permission-safe models', () => {
         const output = renderSetupTokenPermissionReport({
-            role: 'setup', account: 'operator', identityStatus: 'valid', identityMessage: 'verified', ready: true,
+            role: 'setup', account: 'operator', identityStatus: 'valid', identityMessage: 'verified', ready: true, confirmationRequired: false,
             checks: [{ ...metadata, status: 'verified', message: 'available' }],
         }, 80);
         expect(output).not.toContain('github_pat_');
@@ -57,12 +57,32 @@ describe('setup token permission presenter', () => {
 
     it('explains an unverifiable-only report without presenting it as a pass', () => {
         const output = renderSetupTokenPermissionReport({
-            role: 'workflow', identityStatus: 'valid', identityMessage: 'verified', ready: true,
-            checks: [{ ...secrets, role: 'workflow', status: 'unverifiable', message: 'no safe write probe' }],
+            role: 'workflow', identityStatus: 'valid', identityMessage: 'verified', ready: false, confirmationRequired: true,
+            checks: [{ ...secrets, role: 'workflow', applicability: 'required', status: 'unverifiable', message: 'no safe write probe' }],
         }, 120);
 
         expect(output).toContain('? Unverifiable');
-        expect(output).toContain('GitHub offers no safe read-only proof');
+        expect(output).toContain('Confirmation required');
         expect(output).not.toContain('All safely verifiable required permissions are available.');
+    });
+
+    it('blocks an unverifiable required read without offering write confirmation', () => {
+        const output = renderSetupTokenPermissionReport({
+            role: 'setup', identityStatus: 'valid', identityMessage: 'verified', ready: false, confirmationRequired: false,
+            checks: [{ ...metadata, status: 'unverifiable', message: 'temporary provider failure' }],
+        }, 100);
+
+        expect(output).toContain('Action required: retry the unverifiable read checks for Metadata');
+        expect(output).not.toContain('Confirmation required:');
+    });
+
+    it('explains unverifiable conditional access without requiring acknowledgement', () => {
+        const output = renderSetupTokenPermissionReport({
+            role: 'setup', identityStatus: 'valid', identityMessage: 'verified', ready: true, confirmationRequired: false,
+            checks: [{ ...secrets, status: 'unverifiable', message: 'not selected by the approved plan' }],
+        }, 100);
+
+        expect(output).toContain('Some access is unverifiable because GitHub offers no safe read-only proof.');
+        expect(output).not.toContain('Confirmation required:');
     });
 });

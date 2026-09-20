@@ -3,7 +3,7 @@
 - Status: Implemented — permission UX, deterministic provider mapping, scope-sensitive gating, coverage, and documentation gates complete
 - Date: 2026-09-20
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-09-20
+- Last verified: 2026-09-21
 - Owners: Copilot maintainers and setup operators
 - Scope: show least-privilege permission requirements before collecting setup and workflow PATs, then report evidence-based permission checks without exposing or mutating credentials
 - Related issues/PRs: none recorded
@@ -170,20 +170,27 @@ read-only GitHub queries and presents ordered permission outcomes.
    as an empty resource list.
 5. After the final configuration is approved, the setup PAT permission plan is
    recomputed for mutation-time capabilities. Newly relevant missing access
-   blocks mutation; unverifiable write levels remain visible and are allowed to
-   proceed under the existing partial-failure/retry contract.
+   blocks mutation. A required `Unverifiable` row is never reported as ready:
+   unverifiable read access blocks, while an unverifiable write level may
+   proceed only after a separate, explicit operator acknowledgement that the
+   PAT was configured with the displayed access. Interactive acknowledgement
+   defaults to No; non-interactive execution requires
+   `--confirm-unverifiable-write-permissions`. `--yes` alone is not evidence.
    Remote storage validation MUST return the final configuration and bounded
    blocking facts to the CLI rather than throw before this report. The CLI MUST
    render and execute the final permission audit before surfacing those storage
    validation errors or starting any dependent work.
-6. If repository Secret or Variable inventory is still unavailable or unknown,
+6. If repository or organization Secret or Variable inventory is still
+   unavailable or unknown,
    setup MUST stop after rendering the final permission table and before
    credential decisions, resource targeting, or mutation only when at least one
-   selected resource may resolve to repository scope, or when
+   selected resource may resolve to that scope, or when
    `preserveExisting` requires discovering whether an unoverridden resource
-   already exists there. An empty collection is authoritative only when its
-   access state is `available`; transient or ambiguous failures MUST NOT imply
-   absence.
+   already exists in either scope. An empty collection is authoritative only
+   when its access state is `available`; transient or ambiguous failures MUST
+   NOT imply absence. Repository resources take precedence: once every
+   unoverridden selected name is verified as already present in repository
+   inventory, organization inventory is not required merely for preservation.
 7. A selected resource with an explicit organization override does not depend
    on repository inventory. When every selected resource is forced to
    organization scope, including a policy with `preserveExisting: false`, setup
@@ -210,7 +217,7 @@ read-only GitHub queries and presents ordered permission outcomes.
 | required | before input | grant this access level | wait for masked input | configure PAT |
 | verified | safe evidence proves the level | capability is available | continue | none |
 | missing | deterministic provider denial | capability is unavailable | block if required | grant permission/repository access |
-| unverifiable | write level or ambiguous response cannot be safely proven | no pass/fail claim | continue with warning unless base token invalid | inspect PAT settings or run doctor/workflow |
+| unverifiable | write level or ambiguous response cannot be safely proven | no pass/fail claim | block required reads; require explicit acknowledgement for required writes | inspect PAT settings, acknowledge only after checking them, or retry |
 
 Duplicate requirements are normalized to the strongest access level and one
 row. Provider probes MAY complete concurrently, but presentation order remains
@@ -218,11 +225,16 @@ deterministic. Retry creates no durable permission state.
 
 ## 7. User-facing configuration
 
-This change adds no public flag, environment variable, config field, or workflow
-input. Requirements are derived from the existing immutable configuration,
-repository owner type, storage targets, and selected features. The permission
-catalog, status semantics, maximum probe concurrency, and prohibition on write
-probes are intentionally not configurable.
+This change adds one bounded CLI acknowledgement flag:
+`--confirm-unverifiable-write-permissions`. It applies only when every required
+read is verified, no required permission is missing, and one or more required
+write levels remain unverifiable because validation is intentionally read-only.
+It does not convert a row to `Verified`, bypass invalid identity/repository
+selection, or accept unavailable required read evidence. Requirements remain
+derived from the existing immutable configuration, repository owner type,
+storage targets, and selected features. The permission catalog, status
+semantics, maximum probe concurrency, and prohibition on write probes are not
+configurable.
 
 Recommended interactive use remains `copilot setup`. Non-interactive setup
 prints permission results for supplied PATs but never prompts. `--dry-run`
@@ -251,7 +263,7 @@ upsert, dispatch, or temporary-resource operation.
   stable order, and whether selected resource names plus storage policy require
   repository inventory.
 - Application contracts: immutable requirement/check arrays and a summary with
-  `ready`, counts, and credential identity check.
+  strict `ready`, `confirmationRequired`, counts, and credential identity check.
 - Semantic port: one `inspect(owner, repository, token, requirements)` read-only
   operation returning semantic evidence states.
 - Durable state: none; results exist only for the command.
@@ -260,10 +272,12 @@ upsert, dispatch, or temporary-resource operation.
   represented separately from the discovered resource names; unavailable or
   unknown access is never projected as a confirmed empty inventory.
 - Fail-closed consumers: final audit, credential collection, and resource
-  provisioning reject unavailable/unknown repository inventory only when the
-  shared storage policy says a selected resource can resolve there or requires
-  repository discovery for preservation. Organization-only targets do not gain
-  an unrelated repository dependency.
+  provisioning reject unavailable/unknown repository or organization inventory
+  only when the shared storage policy says a selected resource can resolve
+  there or requires discovery in that scope for preservation. Explicitly
+  organization-only targets do not gain an unrelated repository dependency,
+  and explicitly repository-only targets do not gain an unrelated organization
+  dependency.
 - Untrusted inputs: provider status/body/headers, repository metadata, token.
 - Provider error mapping: 401 after base validation and an explicit permission-
   denial 403 are missing; 404, rate limit, 5xx, network, and unsupported proof
@@ -334,13 +348,17 @@ payloads never appear.
 ### 9.3 Primary states
 
 - Pending: required table followed by masked prompt.
-- Action required: at least one required permission is missing; no dependent
-  mutation has started.
+- Action required: at least one required permission is missing or a required
+  read is unverifiable; no dependent mutation has started.
+- Confirmation required: identity and required reads are verified, no required
+  permission is missing, and at least one required write cannot be proven by a
+  safe read-only probe. The table remains non-ready until the operator confirms.
 - Partial: verified and unverifiable rows coexist with an explicit limitation.
 - Blocked/failed: token invalid, wrong repository selection, or required safe
   probe rejected.
-- Complete: all safely verifiable requirements pass; write-only rows may remain
-  explicitly unverifiable.
+- Complete: all safely verifiable requirements pass and any required
+  unverifiable writes were explicitly acknowledged without changing their
+  displayed status.
 
 GitHub issues, PRs, or comments are not changed by this local terminal feature.
 No durable marker or notification is created.
@@ -352,11 +370,11 @@ No durable marker or notification is created.
 | invalid token | setup stops before remote planning | no token/result persisted | no | replace PAT | none |
 | wrong repository selection | setup stops | identity only in memory | no | grant repository access | none |
 | missing safe-probe permission | dependent phase stops | table remains in terminal | no | grant named permission | none |
-| final configuration has unavailable organization storage | final setup-PAT requirements and results remain visible, then setup stops before plan confirmation or mutation | approved configuration, bounded storage facts, permission table | no | grant the named organization permission and retry | none |
+| final configuration or preservation has unavailable organization storage | final setup-PAT requirements and results remain visible, then setup stops before credential decisions, target resolution, or mutation | approved configuration, bounded storage facts, permission table | no | grant the named organization permission and retry | none |
 | optional repository inventory denied before selection | wizard continues with unavailable/unknown inventory; the final audit blocks if the capability becomes required | access state and completed permission rows | no | select features, then grant any required permission named by the final table | none |
 | required repository inventory remains unavailable after final audit | setup stops before credential prompts, target resolution, or mutation; no empty inventory is inferred | final permission table and bounded access state | no | retry after provider recovery or correct the named PAT permission | none |
 | unrelated repository inventory unavailable for organization-only resources | setup continues using available organization inventory; no repository absence is inferred or needed | final permission table and bounded access states | no | none | none |
-| write level unverifiable | setup may later fail at first real write | verified read facts | no | inspect PAT settings; rerun | none |
+| required write level unverifiable | setup pauses before dependent work; the row remains non-verified | verified identity/read facts | no | inspect PAT settings, then confirm interactively or pass the dedicated non-interactive acknowledgement flag | none |
 | rate limit/network/5xx | no false missing result | other completed rows | bounded provider retry only | retry later | none |
 | narrow terminal | table wraps | semantic row order | not applicable | none | none |
 
@@ -392,22 +410,21 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **41 distinct cases**.
+This SDD adds at least **49 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain permission policy | 8 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order, organization-only and mixed-scope inventory dependency |
-| Application state/blocking | 6 | verified, missing, unverifiable, invalid base token, organization-only credential collection, remote-storage blocked result |
+| Domain permission policy | 10 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies |
+| Application state/blocking | 9 | verified, missing, required-read unverifiable, required-write confirmation, invalid base token, organization-only credential collection, remote-storage blocked result |
 | Adapter/provider contracts | 16 | GET-only probes, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, unavailable endpoint state, duplicate-comment deletion fallback regression |
-| Setup/credential integration | 7 | pre-prompt setup table, conditional denial through planning, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, workflow PAT check |
-| UI/accessibility | 3 | required/result tables, 40-column wrapping, no-color text |
+| Setup/credential integration | 9 | pre-prompt setup table, conditional denial through planning, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, workflow PAT check and explicit acknowledgement |
+| UI/accessibility | 4 | required/result tables, confirmation-required copy, 40-column wrapping, no-color text |
 | Architecture/security/docs | 1 | query-only boundary and no duplicated catalog |
-| **Total** | **41** | No double counting |
+| **Total** | **49** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
 presentation and provider adapters require at least 90% lines and 85% branches;
-repository thresholds remain in force. Tests use deterministic fake responses,
 no live GitHub calls, no real secrets, no mutating requests, and semantic
 assertions rather than snapshots alone. Manual evidence covers both PAT prompts
 at widths 40/80/120 and `NO_COLOR`.
@@ -438,10 +455,11 @@ at widths 40/80/120 and `NO_COLOR`.
    unavailable without throwing; if the final plan requires it, the configured
    permission table shows `Missing` and setup stops before mutation.
 6. Given a selected managed Secret or Variable that may resolve to repository
-   scope, or whose unoverridden scope must be discovered to preserve an existing
-   resource, when repository inventory remains unavailable or unknown, the final
-   table remains visible and setup stops before credential prompts, scope
-   resolution, or mutation without treating the inventory as empty.
+   or organization scope, or whose unoverridden scope must be discovered in
+   either location to preserve an existing resource, when the required inventory
+   remains unavailable or unknown, the final table remains visible and setup
+   stops before credential prompts, scope resolution, or mutation without
+   treating the inventory as empty.
 7. Given every selected Secret or Variable is explicitly organization-scoped,
    or its organization default has `preserveExisting: false`, unavailable
    repository inventory does not block credential collection, target resolution,
@@ -455,7 +473,9 @@ at widths 40/80/120 and `NO_COLOR`.
    reports the storage error; plan confirmation, credential prompts, target
    resolution, and mutation do not run.
 10. Given a write permission that GitHub cannot prove without mutation, the row
-   shows `Unverifiable`; no write probe occurs and no verified claim is made.
+   shows `Unverifiable`; `ready` remains false, no write probe occurs, and no
+   dependent work starts until the operator explicitly acknowledges the exact
+   displayed write requirements. `--yes` alone does not acknowledge them.
 11. Given the final selected features, the workflow PAT table contains exactly
    their required repository/organization permissions and no unrelated grant.
 12. Given a workflow PAT with invalid identity or repository selection, it is not
@@ -509,7 +529,7 @@ at widths 40/80/120 and `NO_COLOR`.
 - [x] No validation request mutates GitHub and no result overclaims write access.
 - [x] Token values and raw provider text are absent from all output/state/errors.
 - [x] Clean Architecture boundaries and their executable test pass.
-- [x] At least 26 distinct cases and stated coverage thresholds pass.
+- [x] At least 49 distinct cases and stated coverage thresholds pass.
 - [x] Authentication, checklist, troubleshooting, and architecture docs agree.
 - [x] Catalog evidence and generated `specs/CATALOG.md` are current.
 - [x] Specification, documentation, typecheck, lint, and test gates pass.

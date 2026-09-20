@@ -140,6 +140,26 @@ describe('setup token permission policy', () => {
         ]));
     });
 
+    it('includes organization inventory grants when repository defaults preserve existing resources', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.storage.secrets.defaultScope = 'repository';
+        configuration.storage.variables.defaultScope = 'repository';
+        const configuredRemote = {
+            ...organization,
+            repositoryVariables: [{ name: 'EXISTING_REPOSITORY_VARIABLE', value: 'kept' }],
+        };
+
+        const permissions = buildConfiguredSetupPatPermissionRequirements(configuration, configuredRemote)
+            .map(item => `${item.scope}:${item.permission}:${item.level}`);
+
+        expect(permissions).toEqual(expect.arrayContaining([
+            'repository:Secrets:write',
+            'repository:Variables:write',
+            'organization:Secrets:write',
+            'organization:Variables:write',
+        ]));
+    });
+
     it('always requires the documented workflow PAT baseline', () => {
         const configuration = createDefaultSetupConfiguration();
         configuration.features.release = false;

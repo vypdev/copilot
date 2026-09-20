@@ -234,6 +234,34 @@ describe('SetupCredentialsUseCase', () => {
         expect(secrets.list).not.toHaveBeenCalled();
     });
 
+    it('blocks preservation when organization Secret inventory is unavailable', async () => {
+        const prompt = {
+            requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(), requestWorkflowPat: jest.fn(), requestApiKey: jest.fn(),
+            chooseExistingCredential: jest.fn(), showCredentialChecks: jest.fn(),
+        };
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }), validateCredential: jest.fn() };
+        const secrets = { list: jest.fn(), upsertSecrets: jest.fn() };
+        const remoteConfiguration = {
+            ownerType: 'Organization' as const, repositoryId: 42, repositoryVisibility: 'private' as const,
+            repositorySecrets: [], repositorySecretsAccess: 'available' as const,
+            organizationSecrets: [], repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
+            organizationVariables: [], organizationAccess: 'unavailable' as const,
+            organizationSecretsAccess: 'unavailable' as const, organizationVariablesAccess: 'available' as const,
+        };
+
+        await expect(new SetupCredentialsUseCase(prompt, validation, secrets).collect({
+            owner: 'owner', repository: 'repo', setupToken: 'setup-token',
+            requirements: [requirement('PAT', 'workflowPat')], manageSecrets: true, remoteConfiguration,
+            secretStoragePolicy: {
+                defaultScope: 'repository', organizationVisibility: 'selected', preserveExisting: true, overrides: {},
+            },
+        })).rejects.toThrow('Organization Secret inventory is unavailable');
+
+        expect(prompt.explainCredentialSeparation).not.toHaveBeenCalled();
+        expect(prompt.requestWorkflowPat).not.toHaveBeenCalled();
+        expect(secrets.list).not.toHaveBeenCalled();
+    });
+
     it('accepts one usable credential from an alternative group', async () => {
         const prompt = {
             requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(),
@@ -375,6 +403,7 @@ describe('SetupCredentialsUseCase', () => {
         };
         const report = {
             role: 'workflow' as const, account: 'workflow-bot', identityStatus: 'valid' as const, identityMessage: 'ok', ready: true,
+            confirmationRequired: false,
             checks: [{ ...permission, status: 'verified' as const, message: 'available' }],
         };
         const tokenPermissions = { inspect: jest.fn().mockResolvedValue(report) };
@@ -414,7 +443,7 @@ describe('SetupCredentialsUseCase', () => {
             reason: 'Resolve repository.', probe: 'metadata' as const,
         };
         const tokenPermissions = { inspect: jest.fn().mockResolvedValue({
-            role: 'workflow', identityStatus: 'valid', identityMessage: 'ok', ready: false,
+            role: 'workflow', identityStatus: 'valid', identityMessage: 'ok', ready: false, confirmationRequired: false,
             checks: [{ ...permission, status: 'missing', message: 'denied' }],
         }) };
 
@@ -425,6 +454,51 @@ describe('SetupCredentialsUseCase', () => {
             requirements: [requirement('PAT', 'workflowPat')], manageSecrets: true,
             workflowTokenPermissions: [permission],
         })).rejects.toThrow('PAT validation failed');
+    });
+
+    it('accepts a workflow PAT only after explicit acknowledgement of unverifiable required writes', async () => {
+        const prompt = {
+            requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(),
+            requestWorkflowPat: jest.fn().mockResolvedValue({ name: 'PAT', value: 'workflow-token' }),
+            requestApiKey: jest.fn(), chooseExistingCredential: jest.fn(), showCredentialChecks: jest.fn(),
+            confirmUnverifiableTokenPermissions: jest.fn().mockResolvedValue(true),
+        };
+        const validation = {
+            validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'setup ok' }),
+            validateCredential: jest.fn(),
+        };
+        const secrets = { list: jest.fn().mockResolvedValue([]), upsertSecrets: jest.fn() };
+        const permission = {
+            id: 'workflow.repository.contents', role: 'workflow' as const, scope: 'repository' as const,
+            permission: 'Contents', level: 'write' as const, applicability: 'required' as const,
+            reason: 'Manage branches.', probe: 'contents' as const,
+        };
+        const report = {
+            role: 'workflow' as const, identityStatus: 'valid' as const, identityMessage: 'ok',
+            ready: false, confirmationRequired: true,
+            checks: [{ ...permission, status: 'unverifiable' as const, message: 'no safe write proof' }],
+        };
+
+        const result = await new SetupCredentialsUseCase(
+            prompt,
+            validation,
+            secrets,
+            undefined,
+            { inspect: jest.fn().mockResolvedValue(report) },
+            { showRequirements: jest.fn(), showReport: jest.fn() },
+        ).collect({
+            owner: 'owner', repository: 'repo', setupToken: 'setup-token',
+            requirements: [requirement('PAT', 'workflowPat')], manageSecrets: true,
+            workflowTokenPermissions: [permission],
+        });
+
+        expect(prompt.confirmUnverifiableTokenPermissions).toHaveBeenCalledWith(report);
+        expect(result.collection.workflowPat).toEqual({ name: 'PAT', value: 'workflow-token' });
+        expect(result.checks).toContainEqual(expect.objectContaining({
+            name: 'PAT',
+            status: 'valid',
+            message: expect.stringContaining('explicitly acknowledged'),
+        }));
     });
 
     it('preserves legacy credential validation when no permission plan is supplied', async () => {

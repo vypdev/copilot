@@ -951,6 +951,29 @@ function bugbotDiagnosticOperatorMessage(diagnostic) {
 
 /***/ }),
 
+/***/ 7555:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.formatBugbotPartitionCompletion = formatBugbotPartitionCompletion;
+/** Builds consistent workflow copy for an atomically completed diff plan. */
+function formatBugbotPartitionCompletion(input) {
+    const partitions = input.reviewDiffPartitions?.length ?? 0;
+    if (partitions === 0)
+        return { dryRunSuffix: '' };
+    const fragments = input.reviewDiffFragmentCount ?? 0;
+    const partitionNoun = partitions === 1 ? 'partition' : 'partitions';
+    const fragmentNoun = fragments === 1 ? 'fragment' : 'fragments';
+    return {
+        dryRunSuffix: ` after atomically completing ${partitions} diff ${partitionNoun}`,
+        resultStep: `${partitions} diff ${partitionNoun} completed atomically across ${fragments} ${fragmentNoun}`,
+    };
+}
+
+
+/***/ }),
+
 /***/ 5821:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -3580,7 +3603,7 @@ function normalizeFindings(findings, maxFindings) {
     const boundedMaximum = Number.isSafeInteger(maxFindings) && maxFindings > 0
         ? maxFindings
         : exports.MAX_AGENT_FINDINGS;
-    return (Array.isArray(findings) ? findings : []).slice(0, boundedMaximum).flatMap(value => {
+    return findings.slice(0, boundedMaximum).flatMap(value => {
         if (!isRecord(value))
             return [];
         const normalizedId = typeof value.id === 'string' ? (0, bugbot_finding_marker_policy_1.normalizeFindingIdForMarker)(value.id) : null;
@@ -4559,6 +4582,7 @@ const reconcile_bugbot_review_state_use_case_1 = __nccwpck_require__(7515);
 const application_error_1 = __nccwpck_require__(5999);
 const bugbot_event_ownership_policy_1 = __nccwpck_require__(2771);
 const bugbot_message_catalog_1 = __nccwpck_require__(7406);
+const bugbot_partition_completion_policy_1 = __nccwpck_require__(7555);
 const TASK_ID = 'DetectPotentialProblemsUseCase';
 /** Coordinates Bugbot context, analysis and finding publication behind application ports. */
 async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
@@ -4703,12 +4727,13 @@ function skippedDraftResult() {
 }
 function dryRunResult(prepared, context) {
     const acceptedCount = prepared.activeFindings?.length ?? 0;
+    const partitionCompletion = (0, bugbot_partition_completion_policy_1.formatBugbotPartitionCompletion)(context);
     const statuses = (0, bugbot_finding_status_policy_1.projectBugbotFindingStatuses)(context.existingByFindingId, prepared.activeFindings ?? prepared.toPublish, prepared.resolvedFindingIds, prepared.resolvedFindingResolutions);
     return new result_1.Result({
         id: TASK_ID,
         success: true,
         executed: true,
-        steps: [`Bugbot dry-run completed${completedPartitionSummary(context)} with ${acceptedCount} accepted ${acceptedCount === 1 ? 'finding' : 'findings'}; no SCM mutations performed.`],
+        steps: [`Bugbot dry-run completed${partitionCompletion.dryRunSuffix} with ${acceptedCount} accepted ${acceptedCount === 1 ? 'finding' : 'findings'}; no SCM mutations performed.`],
         payload: {
             dryRun: true,
             findings: prepared.activeFindings ?? prepared.toPublish,
@@ -4799,9 +4824,9 @@ function detectionResult(prepared, context, resolutionErrors, presentation) {
     if (context.coverage.status === 'partial') {
         stepParts.push('partial context coverage; this run does not declare the complete target clean');
     }
-    if ((context.reviewDiffPartitions?.length ?? 0) > 0) {
-        stepParts.push(`${context.reviewDiffPartitions?.length} diff ${context.reviewDiffPartitions?.length === 1 ? 'partition' : 'partitions'} completed atomically across ${context.reviewDiffFragmentCount ?? 0} ${context.reviewDiffFragmentCount === 1 ? 'fragment' : 'fragments'}`);
-    }
+    const partitionCompletion = (0, bugbot_partition_completion_policy_1.formatBugbotPartitionCompletion)(context);
+    if (partitionCompletion.resultStep)
+        stepParts.push(partitionCompletion.resultStep);
     const statusSummary = presentation?.projection ?? (0, bugbot_finding_status_policy_1.projectBugbotFindingStatuses)(context.existingByFindingId, prepared.activeFindings ?? prepared.toPublish, prepared.resolvedFindingIds, prepared.resolvedFindingResolutions);
     stepParts.push(`states: ${formatStateCounts(statusSummary.counts)}`);
     if (presentation) {
@@ -4830,12 +4855,6 @@ function detectionResult(prepared, context, resolutionErrors, presentation) {
             } : {}),
         },
     });
-}
-function completedPartitionSummary(context) {
-    const partitions = context.reviewDiffPartitions?.length ?? 0;
-    if (partitions === 0)
-        return '';
-    return ` after atomically completing ${partitions} diff ${partitions === 1 ? 'partition' : 'partitions'}`;
 }
 function formatStateCounts(counts) {
     return Object.entries(counts)

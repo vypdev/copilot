@@ -4,7 +4,7 @@
 - Date: 2026-09-11
 - Last updated: 2026-09-20
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-09-20 on `develop`
+- Last verified: 2026-09-21 on `develop`
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture

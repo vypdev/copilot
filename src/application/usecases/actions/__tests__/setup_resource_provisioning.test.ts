@@ -197,6 +197,20 @@ describe('setup resource provisioning policy', () => {
         }]);
     });
 
+    it('blocks preservation when organization inventory is unavailable', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.storage.variables.defaultScope = 'repository';
+        configuration.storage.variables.preserveExisting = true;
+
+        expect(() => groupSetupResources([{ name: 'AGENT_MODEL', value: 'gpt-5.6' }], 'variable', configuration, {
+            ownerType: 'Organization', repositoryId: 42, repositoryVisibility: 'private',
+            repositorySecrets: [], repositorySecretsAccess: 'available', organizationSecrets: [],
+            repositoryVariables: [], repositoryVariablesAccess: 'available', organizationVariables: [],
+            organizationAccess: 'unavailable', organizationSecretsAccess: 'available',
+            organizationVariablesAccess: 'unavailable',
+        })).toThrow('Organization variable inventory is unavailable');
+    });
+
     it('does not expose a raw variable-provider failure', async () => {
         const configuration = createDefaultSetupConfiguration();
         const result = await ensureRepositoryVariables(

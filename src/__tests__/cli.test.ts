@@ -66,6 +66,7 @@ const mockTokenPermissionInspect = jest.fn(async (request: { role: 'setup' | 'wo
   identityStatus: 'valid' as const,
   identityMessage: 'verified',
   ready: true,
+  confirmationRequired: false,
   checks: request.requirements.map(requirement => ({ ...requirement, status: 'verified', message: 'available' })),
 }));
 jest.mock('../infrastructure/composition/setup_token_permissions_composition_root', () => ({
@@ -497,6 +498,7 @@ describe('CLI', () => {
         identityStatus: report.identityStatus,
         identityMessage: 'insufficient access',
         ready: report.ready,
+        confirmationRequired: false,
         checks: [],
       });
 
@@ -509,19 +511,88 @@ describe('CLI', () => {
       expect(process.exitCode).toBe(1);
     });
 
+    it('does not treat --yes as acknowledgement of unverifiable required writes', async () => {
+      const requiredWrite: SetupTokenPermissionRequirement = {
+        id: 'setup.repository.contents', role: 'setup', scope: 'repository', permission: 'Contents',
+        level: 'write', applicability: 'required', reason: 'Create repository content.', probe: 'contents',
+      };
+      mockTokenPermissionInspect.mockResolvedValueOnce({
+        role: 'setup', identityStatus: 'valid', identityMessage: 'verified',
+        ready: false, confirmationRequired: true,
+        checks: [{ ...requiredWrite, status: 'unverifiable', message: 'no safe write proof' }],
+      });
+
+      await program.parseAsync([
+        'node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12',
+        '--skip-secrets', '--non-interactive', '--pr-approval-mode', 'off', '--yes',
+      ]);
+
+      expect(runLocalAction).not.toHaveBeenCalled();
+      expect(process.exitCode).toBe(1);
+    });
+
+    it('accepts the dedicated non-interactive acknowledgement for required writes', async () => {
+      const requiredWrite: SetupTokenPermissionRequirement = {
+        id: 'setup.repository.contents', role: 'setup', scope: 'repository', permission: 'Contents',
+        level: 'write', applicability: 'required', reason: 'Create repository content.', probe: 'contents',
+      };
+      mockTokenPermissionInspect.mockResolvedValueOnce({
+        role: 'setup', identityStatus: 'valid', identityMessage: 'verified',
+        ready: false, confirmationRequired: true,
+        checks: [{ ...requiredWrite, status: 'unverifiable', message: 'no safe write proof' }],
+      });
+
+      await program.parseAsync([
+        'node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12',
+        '--skip-secrets', '--non-interactive', '--pr-approval-mode', 'off', '--yes',
+        '--confirm-unverifiable-write-permissions',
+      ]);
+
+      expect(runLocalAction).toHaveBeenCalledTimes(1);
+      expect(process.exitCode).toBeUndefined();
+    });
+
+    it('requires acknowledgement again when only the final permission audit is unverifiable', async () => {
+      const requiredWrite: SetupTokenPermissionRequirement = {
+        id: 'setup.repository.variables', role: 'setup', scope: 'repository', permission: 'Variables',
+        level: 'write', applicability: 'required', reason: 'Provision repository variables.', probe: 'variables',
+      };
+      mockTokenPermissionInspect
+        .mockResolvedValueOnce({
+          role: 'setup', identityStatus: 'valid', identityMessage: 'verified',
+          ready: true, confirmationRequired: false, checks: [],
+        })
+        .mockResolvedValueOnce({
+          role: 'setup', identityStatus: 'valid', identityMessage: 'verified',
+          ready: false, confirmationRequired: true,
+          checks: [{ ...requiredWrite, status: 'unverifiable', message: 'no safe write proof' }],
+        });
+
+      await program.parseAsync([
+        'node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12',
+        '--skip-secrets', '--non-interactive', '--pr-approval-mode', 'off', '--yes',
+        '--confirm-unverifiable-write-permissions',
+      ]);
+
+      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
+      expect(runLocalAction).toHaveBeenCalledTimes(1);
+      expect(process.exitCode).toBeUndefined();
+    });
+
     it.each([
       { ready: false, identityStatus: 'valid' as const },
       { ready: true, identityStatus: 'invalid' as const },
     ])('stops after planning when the configured setup PAT report is $identityStatus/$ready', async (report) => {
       mockTokenPermissionInspect
         .mockResolvedValueOnce({
-          role: 'setup', identityStatus: 'valid', identityMessage: 'verified', ready: true, checks: [],
+          role: 'setup', identityStatus: 'valid', identityMessage: 'verified', ready: true, confirmationRequired: false, checks: [],
         })
         .mockResolvedValueOnce({
           role: 'setup',
           identityStatus: report.identityStatus,
           identityMessage: 'insufficient configured access',
           ready: report.ready,
+          confirmationRequired: false,
           checks: [],
         });
 
@@ -553,6 +624,7 @@ describe('CLI', () => {
           identityStatus: 'valid',
           identityMessage: 'verified',
           ready: true,
+          confirmationRequired: false,
           checks: [{ ...conditionalVariables, status: 'missing', message: 'not granted' }],
         })
         .mockImplementationOnce(async (request: { role: 'setup' | 'workflow'; requirements: readonly SetupTokenPermissionRequirement[] }) => ({
@@ -560,6 +632,7 @@ describe('CLI', () => {
           identityStatus: 'valid',
           identityMessage: 'verified',
           ready: false,
+          confirmationRequired: false,
           checks: request.requirements.map(requirement => ({
             ...requirement,
             status: requirement.probe === 'variables' ? 'missing' as const : 'verified' as const,
@@ -639,7 +712,37 @@ describe('CLI', () => {
       expect(process.exitCode).toBe(1);
       const { logError } = require('../utils/logger');
       expect(logError).toHaveBeenCalledWith(expect.objectContaining({
-        message: expect.stringContaining('organization variables'),
+        message: expect.stringContaining('Organization Variable inventory'),
+      }));
+    });
+
+    it('surfaces a blocked setup plan after completing its final permission and inventory audits', async () => {
+      mockRemoteConfigurationInspect.mockResolvedValueOnce({
+        ownerType: 'Organization',
+        repositoryVisibility: 'private',
+        repositorySecrets: [],
+        repositorySecretsAccess: 'available',
+        organizationSecrets: [],
+        repositoryVariables: [],
+        repositoryVariablesAccess: 'available',
+        organizationVariables: [],
+        organizationAccess: 'available',
+        organizationSecretsAccess: 'available',
+        organizationVariablesAccess: 'available',
+      });
+
+      await program.parseAsync([
+        'node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12',
+        '--skip-secrets', '--variable-scope', 'AGENT_PROVIDER=organization',
+        '--non-interactive', '--pr-approval-mode', 'off', '--yes',
+      ]);
+
+      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
+      expect(runLocalAction).not.toHaveBeenCalled();
+      expect(process.exitCode).toBe(1);
+      const { logError } = require('../utils/logger');
+      expect(logError).toHaveBeenCalledWith(expect.objectContaining({
+        message: expect.stringContaining('repository ID is required'),
       }));
     });
 

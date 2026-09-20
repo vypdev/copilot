@@ -48,6 +48,7 @@
             "src/application/policies/bugbot_resolution_eligibility_policy.ts",
             "src/application/policies/bugbot_telemetry_projection_policy.ts",
             "src/application/policies/bugbot_diff_partition_policy.ts",
+            "src/application/policies/bugbot_partition_completion_policy.ts",
             "src/application/usecases/steps/commit/bugbot/bugbot_partition_aggregation.ts",
             "src/application/usecases/steps/commit/bugbot/bugbot_previous_findings_context.ts",
             "src/application/usecases/steps/commit/bugbot/bugbot_review_context.ts"
@@ -64,6 +65,7 @@
             "src/application/policies/bugbot_resolution_eligibility_policy.ts",
             "src/application/policies/bugbot_telemetry_projection_policy.ts",
             "src/application/policies/bugbot_diff_partition_policy.ts",
+            "src/application/policies/bugbot_partition_completion_policy.ts",
             "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts",
             "src/application/usecases/steps/commit/bugbot/bugbot_partition_aggregation.ts",
             "src/application/usecases/steps/commit/bugbot/bugbot_previous_findings_context.ts",

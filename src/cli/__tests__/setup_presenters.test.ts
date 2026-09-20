@@ -175,6 +175,46 @@ describe('setup presenters and prompt-specific adapters', () => {
     adapter.showCredentialChecks([]);
   });
 
+  it('requires explicit acknowledgement for unverifiable required write permissions', async () => {
+    const report = {
+      role: 'workflow' as const,
+      identityStatus: 'valid' as const,
+      identityMessage: 'verified',
+      ready: false,
+      confirmationRequired: true,
+      checks: [{
+        id: 'workflow.repository.contents', role: 'workflow' as const, scope: 'repository' as const,
+        permission: 'Contents', level: 'write' as const, applicability: 'required' as const,
+        reason: 'Manage branches.', probe: 'contents' as const,
+        status: 'unverifiable' as const, message: 'no safe write proof',
+      }],
+    };
+    const log = jest.spyOn(console, 'log').mockImplementation();
+
+    await expect(new SetupCredentialPromptAdapter(terminal([
+      { kind: 'value', value: 'maybe' },
+      { kind: 'value', value: 'yes' },
+    ]), {}).confirmUnverifiableTokenPermissions(report)).resolves.toBe(true);
+    await expect(new SetupCredentialPromptAdapter(
+      terminal([{ kind: 'value', value: '' }]),
+      {},
+    ).confirmUnverifiableTokenPermissions(report)).resolves.toBe(false);
+    await expect(new SetupCredentialPromptAdapter(
+      undefined,
+      {},
+      true,
+    ).confirmUnverifiableTokenPermissions(report)).resolves.toBe(true);
+    await expect(new SetupCredentialPromptAdapter(
+      terminal([{ kind: 'cancel' }]),
+      {},
+    ).confirmUnverifiableTokenPermissions(report)).rejects.toBeInstanceOf(SetupTerminalCancelledError);
+    await expect(new SetupCredentialPromptAdapter(undefined, {}, true)
+      .confirmUnverifiableTokenPermissions({ ...report, confirmationRequired: false }))
+      .resolves.toBe(false);
+    expect(JSON.stringify(log.mock.calls)).not.toContain('workflow-token');
+    log.mockRestore();
+  });
+
   it('collects hidden setup and runtime credentials without rendering their values', async () => {
     const log = jest.spyOn(console, 'log').mockImplementation();
     const setupInput = terminal([{ kind: 'value', value: 'setup-token' }]);
