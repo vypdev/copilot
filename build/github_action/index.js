@@ -44059,8 +44059,15 @@ exports.formatBugbotPartitionCompletion = formatBugbotPartitionCompletion;
 /** Builds consistent workflow copy for an atomically completed diff plan. */
 function formatBugbotPartitionCompletion(input) {
     const partitions = input.reviewDiffPartitions?.length ?? 0;
-    if (partitions === 0)
-        return { dryRunSuffix: '' };
+    if (partitions === 0) {
+        const ignored = input.reviewDiffIgnoredFileCount ?? 0;
+        return ignored > 0
+            ? {
+                dryRunSuffix: ` after safely skipping ${ignored} ignored changed ${ignored === 1 ? 'file' : 'files'}`,
+                resultStep: `${ignored} changed ${ignored === 1 ? 'file was' : 'files were'} intentionally ignored; no reviewer query or prior-finding resolution ran`,
+            }
+            : { dryRunSuffix: '' };
+    }
     const fragments = input.reviewDiffFragmentCount ?? 0;
     const partitionNoun = partitions === 1 ? 'partition' : 'partitions';
     const fragmentNoun = fragments === 1 ? 'fragment' : 'fragments';
@@ -56382,38 +56389,50 @@ async function analyzeBugbotRevision(execution, context, dependencies) {
         ? execution.locale.pullRequest
         : execution.locale.issue ?? execution.locale.pullRequest;
     const partitions = context.reviewDiffPartitions ?? [];
-    const agentResponse = partitions.length > 0
-        ? await dependencies.telemetry.measure('analysis', async () => {
-            dependencies.telemetry.observePartitionPlan(partitions.length, context.reviewDiffFragmentCount ?? partitions.reduce((sum, partition) => sum + partition.fragmentCount, 0), context.reviewDiffFileCount ?? new Set(partitions.flatMap((partition) => partition.files)).size);
-            (0, logging_ports_1.logInfo)(`Bugbot reviewer planned ${partitions.length} bounded diff ${partitions.length === 1 ? 'partition' : 'partitions'} with maximum concurrency 2.`);
-            const responses = await (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(partitions.map((partition) => async () => {
-                const prompt = (0, build_bugbot_prompt_1.buildBugbotPrompt)(execution, context, { partition });
-                dependencies.telemetry.observePrompt(prompt);
-                dependencies.telemetry.beginPartition();
-                try {
-                    const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha });
-                    dependencies.telemetry.observeResponse(response);
-                    dependencies.telemetry.endPartition(true);
-                    (0, logging_ports_1.logInfo)(`Bugbot reviewer completed partition ${partition.ordinal}/${partition.total}.`);
-                    return response;
-                }
-                catch (error) {
-                    dependencies.telemetry.endPartition(false, {
-                        ordinal: partition.ordinal,
-                        category: partitionFailureCategory(error),
-                    });
-                    throw error;
-                }
-            }), 2);
-            return (0, bugbot_partition_aggregation_1.aggregateBugbotPartitionResponses)(partitions, responses);
+    const ignoredFileCount = context.reviewDiffIgnoredFileCount ?? 0;
+    const canonicalZeroWork = Boolean(context.canonicalPullRequest
+        && context.prContext
+        && context.reviewDiffPartitions !== undefined
+        && partitions.length === 0
+        && ignoredFileCount > 0);
+    const agentResponse = canonicalZeroWork
+        ? await dependencies.telemetry.measure('analysis', () => {
+            dependencies.telemetry.observePartitionPlan(0, 0, 0);
+            (0, logging_ports_1.logInfo)(`Bugbot reviewer skipped ${ignoredFileCount} intentionally ignored changed ${ignoredFileCount === 1 ? 'file' : 'files'} without resolving prior findings.`);
+            return { outputLocale: targetLocale, findings: [], resolved_findings: [] };
         })
-        : await dependencies.telemetry.measure('analysis', async () => {
-            const prompt = (0, build_bugbot_prompt_1.buildBugbotPrompt)(execution, context);
-            dependencies.telemetry.observePrompt(prompt);
-            const response = await (0, query_bugbot_findings_1.queryBugbotFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, targetLocale);
-            dependencies.telemetry.observeResponse(response);
-            return response;
-        });
+        : partitions.length > 0
+            ? await dependencies.telemetry.measure('analysis', async () => {
+                dependencies.telemetry.observePartitionPlan(partitions.length, context.reviewDiffFragmentCount ?? partitions.reduce((sum, partition) => sum + partition.fragmentCount, 0), context.reviewDiffFileCount ?? new Set(partitions.flatMap((partition) => partition.files)).size);
+                (0, logging_ports_1.logInfo)(`Bugbot reviewer planned ${partitions.length} bounded diff ${partitions.length === 1 ? 'partition' : 'partitions'} with maximum concurrency 2.`);
+                const responses = await (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(partitions.map((partition) => async () => {
+                    const prompt = (0, build_bugbot_prompt_1.buildBugbotPrompt)(execution, context, { partition });
+                    dependencies.telemetry.observePrompt(prompt);
+                    dependencies.telemetry.beginPartition();
+                    try {
+                        const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha });
+                        dependencies.telemetry.observeResponse(response);
+                        dependencies.telemetry.endPartition(true);
+                        (0, logging_ports_1.logInfo)(`Bugbot reviewer completed partition ${partition.ordinal}/${partition.total}.`);
+                        return response;
+                    }
+                    catch (error) {
+                        dependencies.telemetry.endPartition(false, {
+                            ordinal: partition.ordinal,
+                            category: partitionFailureCategory(error),
+                        });
+                        throw error;
+                    }
+                }), 2);
+                return (0, bugbot_partition_aggregation_1.aggregateBugbotPartitionResponses)(partitions, responses);
+            })
+            : await dependencies.telemetry.measure('analysis', async () => {
+                const prompt = (0, build_bugbot_prompt_1.buildBugbotPrompt)(execution, context);
+                dependencies.telemetry.observePrompt(prompt);
+                const response = await (0, query_bugbot_findings_1.queryBugbotFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, targetLocale);
+                dependencies.telemetry.observeResponse(response);
+                return response;
+            });
     (0, logging_ports_1.logInfo)(`Bugbot reviewer completed in ${Date.now() - startedAt}ms.`);
     const raw = await dependencies.telemetry.measure('normalization', () => (0, prepare_bugbot_findings_1.prepareBugbotFindings)(agentResponse, execution.ignorePatterns, execution.analysis.minimumSeverity, execution.analysis.commentLimit, partitions.length > 0 ? bugbot_partition_aggregation_1.MAX_AGGREGATE_PARTITION_FINDINGS : undefined));
     if (!raw)
@@ -58618,6 +58637,7 @@ async function loadBugbotContext(request, ports, resolvedPreflight) {
         reviewDiffPartitions: diffPlan.partitions,
         reviewDiffFragmentCount: diffPlan.fragments,
         reviewDiffFileCount: diffPlan.retained,
+        reviewDiffIgnoredFileCount: diffPlan.ignored,
         reviewConversationBlock: conversationContext.block,
         prContext,
         unresolvedFindingsWithBody: previousContext.selected.map((finding) => ({

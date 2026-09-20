@@ -166,7 +166,10 @@ function scmPorts(provider: InMemoryReviewProvider) {
   };
 }
 
-function execution(mode: 'publish' | 'dry-run' = 'publish'): Execution {
+function execution(
+  mode: 'publish' | 'dry-run' = 'publish',
+  ignorePatterns: readonly string[] = [],
+): Execution {
   return {
     owner: 'org', repo: 'repo', issueNumber: -1, tokenUser: 'bot', tokens: { token: 'token' },
     locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
@@ -174,7 +177,7 @@ function execution(mode: 'publish' | 'dry-run' = 'publish'): Execution {
     inputs: { eventName: 'pull_request', pull_request: { head: { sha: 'a'.repeat(40) } } },
     pullRequest: { number: 7, head: 'feature/review', action: 'opened' },
     commit: { branch: 'feature/review' }, currentConfiguration: { parentBranch: 'main' }, branches: { development: 'main' },
-    ai: new Ai('', 'model', false, [], false, 'low', 20, [], undefined, undefined, { publicationMode: mode, traceRules: true }),
+    ai: new Ai('', 'model', false, [...ignorePatterns], false, 'low', 20, [], undefined, undefined, { publicationMode: mode, traceRules: true }),
   } as unknown as Execution;
 }
 
@@ -243,6 +246,29 @@ describe('Bugbot review lifecycle E2E contract', () => {
     expect(provider.reviews).toEqual([]);
     expect(provider.comments).toEqual([]);
     expect(results[0].payload).toEqual(expect.objectContaining({ dryRun: true, findings: [expect.objectContaining({ id: 'unchecked-token' })] }));
+  });
+
+  it('keeps an existing finding open when the canonical diff becomes ignored-only', async () => {
+    const provider = new InMemoryReviewProvider();
+    const query = jest.fn(async ({ prompt }) => attestPartitionResponse(prompt, {
+      outputLocale: 'en-US', findings: [finding()], resolved_findings: [],
+    }));
+    const useCase = new DetectPotentialProblemsUseCase({ query }, scmPorts(provider));
+
+    await useCase.invoke(projectBugbotReviewOperationContext(execution()));
+    const findingIdentity = provider.comments[0].identity;
+
+    const results = await useCase.invoke(
+      projectBugbotReviewOperationContext(execution('publish', ['src/auth.ts'])),
+    );
+
+    expect(query).toHaveBeenCalledTimes(1);
+    expect(provider.comments).toHaveLength(1);
+    expect(provider.threadStates[findingIdentity]).toEqual({ resolved: false });
+    expect(provider.comments[0].body).toContain('resolved:false');
+    expect(results[0].payload).toEqual(expect.objectContaining({
+      findingStates: expect.objectContaining({ open: 1, fixed: 0, obsolete: 0 }),
+    }));
   });
 
   it('publishes nothing when a partition attestation is invalid', async () => {

@@ -36,7 +36,21 @@ export async function analyzeBugbotRevision(
         ? execution.locale.pullRequest
         : execution.locale.issue ?? execution.locale.pullRequest;
     const partitions = context.reviewDiffPartitions ?? [];
-    const agentResponse = partitions.length > 0
+    const ignoredFileCount = context.reviewDiffIgnoredFileCount ?? 0;
+    const canonicalZeroWork = Boolean(
+        context.canonicalPullRequest
+        && context.prContext
+        && context.reviewDiffPartitions !== undefined
+        && partitions.length === 0
+        && ignoredFileCount > 0,
+    );
+    const agentResponse = canonicalZeroWork
+        ? await dependencies.telemetry.measure('analysis', () => {
+            dependencies.telemetry.observePartitionPlan(0, 0, 0);
+            logInfo(`Bugbot reviewer skipped ${ignoredFileCount} intentionally ignored changed ${ignoredFileCount === 1 ? 'file' : 'files'} without resolving prior findings.`);
+            return { outputLocale: targetLocale, findings: [], resolved_findings: [] };
+        })
+        : partitions.length > 0
         ? await dependencies.telemetry.measure('analysis', async () => {
             dependencies.telemetry.observePartitionPlan(
                 partitions.length,

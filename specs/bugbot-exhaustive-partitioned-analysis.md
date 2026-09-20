@@ -96,7 +96,10 @@ fragment/file totals, and coverage disposition. An **attestation** is the exact
 partition ID and head SHA echoed in a schema-validated response. **Complete diff
 analysis** means every non-ignored provider file has at least one assignment and
 every provider-supplied patch character belongs to exactly one completed
-partition. It does not claim that probabilistic analysis detects every defect.
+partition. When every provider file is intentionally ignored, complete analysis
+is a deterministic zero-work result: it invokes no reviewer, publishes no new
+finding, and resolves no prior finding. It does not claim that probabilistic
+analysis detects every defect.
 
 ## 4. Goals, non-goals, and fixed invariants
 
@@ -146,6 +149,11 @@ partition. It does not claim that probabilistic analysis detects every defect.
    whole-PR clean result.
 11. Repository content, patches, discussion, and agent responses remain
     untrusted data and cannot modify the plan or execution policy.
+12. A canonical PR with one or more changed files, all intentionally ignored,
+    MUST NOT enter the legacy resolution-capable single-query path. It completes
+    without an agent query and with empty finding and resolution sets. A legacy
+    or synthetic context with no ignored-file evidence keeps its existing
+    compatibility behavior.
 
 ## 5. Current versus proposed product journey
 
@@ -195,6 +203,10 @@ publication/reconciliation operation allowed.
    digest of assigned identities/content. IDs MUST be bounded and safe to echo.
 7. Reject a plan that cannot represent even one fragment within a partition;
    never silently truncate it.
+8. If filtering intentionally retains zero files and records at least one
+   ignored file for a canonical PR, produce a zero-work plan and preserve the
+   ignored-file count for auditability. Do not synthesize a partition or reuse
+   the issue/local fallback prompt.
 
 ### 6.2 Partition execution
 
@@ -214,6 +226,13 @@ Reviewer calls run through the existing read-only agent port with concurrency
 two. Results retain plan order regardless of completion order. The aggregate
 fails if any response is undefined, invalid, in the wrong locale, carries a
 wrong/duplicate partition ID or head SHA, or violates resolution ownership.
+
+A canonical PR whose zero-work plan retained no files and recorded at least one
+intentionally ignored changed file bypasses reviewer calls and returns a
+deterministic empty prepared result. In particular, it does not send prior-
+finding context to the legacy prompt and cannot propose `resolved_findings`.
+The normal freshness and status-card reconciliation gates still run, so existing
+open findings remain open and the reviewed SHA remains visible.
 
 ### 6.3 Aggregation
 
@@ -439,7 +458,8 @@ distinguishable from reviewer/model failure.
 There is no durable partition schema and no data migration. Existing single-
 partition PRs follow the new planner and should produce equivalent findings with
 an added attestation. Issue-only and non-PR local-scope reviews retain the legacy
-single-query contract because no canonical provider diff can be partitioned.
+single-query contract because no canonical provider diff can be partitioned. A
+canonical PR with a zero-work ignored-only plan never uses that legacy path.
 
 Roll out atomically across prompt/schema, planner, analyzer, telemetry, docs,
 tests, catalog, and generated bundles. A rollback reverts the entire feature;
@@ -448,7 +468,7 @@ comments remain untouched.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **34 distinct cases**.
+This SDD owns at least **35 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
@@ -457,8 +477,8 @@ This SDD owns at least **34 distinct cases**.
 | Agent adapter/schema contracts | 4 | required attestation, locale, undefined/invalid result, aggregate bounds |
 | Workflow/architecture/telemetry | 4 | concurrency two, ordered collection, no mutation before complete, metrics |
 | UI/UX/localization/sanitization | 4 | pending, failed, complete, hostile content/control characters |
-| Integration/security/compatibility | 5 | 44-file regression, oversized patch, provider partial, dry-run, legacy issue-only path |
-| **Total** | **34** | No double counting |
+| Integration/security/compatibility | 6 | 44-file regression, oversized patch, provider partial, dry-run, legacy issue-only path, ignored-only canonical no-op |
+| **Total** | **35** | No double counting |
 
 Planner, attestation, and aggregate pure policies require 100% enumerated branch
 coverage. Changed analyzer/context modules require at least 95% lines/statements
@@ -510,6 +530,9 @@ token scope, secret, or public input.
     only after the final freshness check and all other context coverage is complete.
 15. Given a diff requiring more than 64 partitions, then no reviewer query or
     provider mutation starts and the result instructs the maintainer to split the PR.
+16. Given a canonical PR whose changed files are all ignored, then no reviewer
+    query runs, no prior finding is resolved, and the normal status projection
+    retains existing open findings for the current head.
 
 ## 17. Requirements traceability
 
@@ -521,6 +544,7 @@ token scope, secret, or public input.
 | same-SHA safety | existing freshness + attestation | stale/replay tests | how it works |
 | content-free progress | telemetry/presentation | schema/render/redaction tests | observability |
 | clean only after completeness | coverage + workflow result policy | provider-partial/zero-finding tests | detection/failures |
+| ignored-only resolution safety | partitioned analyzer zero-work guard | canonical ignored-only no-agent/no-resolution test | detection/failures |
 | unchanged authority | semantic agent port/composition | architecture/credential tests | permissions |
 
 ## 18. Implementation sequence
@@ -543,7 +567,7 @@ token scope, secret, or public input.
       provider enumeration and every partition respects fixed prompt bounds.
 - [x] Attestation, resolution ownership, concurrency, aggregation, freshness,
       replay, cancellation/failure, and no-prepublication-mutation tests pass.
-- [x] The 34-case floor and changed-module/repository coverage budgets pass.
+- [x] The 35-case floor and changed-module/repository coverage budgets pass.
 - [x] Pending, failed, provider-partial, complete, dry-run, and publication-
       partial surfaces are accurate, localized, accessible, and bounded.
 - [x] No public configuration, permission, credential, or durable-state change

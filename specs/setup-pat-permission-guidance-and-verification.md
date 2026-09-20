@@ -206,9 +206,16 @@ read-only GitHub queries and presents ordered permission outcomes.
    PR approval. Checks read and Variables read are included for guarded
    approval. Organization Members read, Issue Types write, Projects write, and
    organization Variables read are included only when their selected capability
-   and target require them.
+   and effective target require them. Effective targets include an existing
+   organization `PR_APPROVAL_POLICY` Variable preserved from remote inventory,
+   even when the configured default remains repository scope.
 4. Identity/repository validation and safe read probes run before the value is
    accepted for Secret provisioning.
+5. Repository Contents read is probed through the read-only commit-list endpoint,
+   not the root Contents endpoint. A successful response verifies read access;
+   GitHub's documented `409 Conflict` for an empty Git repository is also
+   accepted as empty-repository evidence after base repository identity/access
+   validation. `404` remains ambiguous and never becomes verified.
 
 ### 6.3 Permission states
 
@@ -294,6 +301,10 @@ upsert, dispatch, or temporary-resource operation.
   Malformed provider JSON and unavailable header access are also bounded as
   ambiguous evidence and MUST resolve to `Unverifiable` without leaking or
   propagating the provider failure.
+- Empty-repository mapping: only the repository Contents probe may interpret
+  `409 Conflict` from the commit-list endpoint as verified read evidence. No
+  other probe/status pair gains this exception, and a write requirement remains
+  `Unverifiable` because the read-only endpoint cannot prove mutation access.
 
 ### 8.3 Executable architecture constraints
 
@@ -410,17 +421,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **49 distinct cases**.
+This SDD adds at least **52 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain permission policy | 10 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies |
+| Domain permission policy | 11 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope |
 | Application state/blocking | 9 | verified, missing, required-read unverifiable, required-write confirmation, invalid base token, organization-only credential collection, remote-storage blocked result |
-| Adapter/provider contracts | 16 | GET-only probes, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, unavailable endpoint state, duplicate-comment deletion fallback regression |
+| Adapter/provider contracts | 18 | GET-only probes, commit-list Contents target, empty-repository 409, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, unavailable endpoint state, duplicate-comment deletion fallback regression |
 | Setup/credential integration | 9 | pre-prompt setup table, conditional denial through planning, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, workflow PAT check and explicit acknowledgement |
 | UI/accessibility | 4 | required/result tables, confirmation-required copy, 40-column wrapping, no-color text |
 | Architecture/security/docs | 1 | query-only boundary and no duplicated catalog |
-| **Total** | **49** | No double counting |
+| **Total** | **52** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -495,6 +506,13 @@ at widths 40/80/120 and `NO_COLOR`.
 18. Given a permission probe cannot parse provider JSON, receives a non-object
     body, or cannot read provider headers, the row remains `Unverifiable`, the
     audit continues, and no provider payload or exception is rendered.
+19. Given guarded approval preserves an existing organization-scoped
+    `PR_APPROVAL_POLICY` Variable, the workflow PAT requires organization
+    Variables read even though the configured default scope is repository.
+20. Given a base-validated empty repository, the Contents read probe uses the
+    commit-list endpoint and treats its documented `409 Conflict` as verified
+    read evidence; the same result for a write requirement remains
+    `Unverifiable`, and a `404` remains blocked as ambiguous.
 
 ## 17. Requirements traceability
 
@@ -509,7 +527,8 @@ at widths 40/80/120 and `NO_COLOR`.
 | scope-sensitive inventory gating | storage policy/credential use case/resource provisioning | organization-only, preserve-existing, and mixed-scope tests | authentication/troubleshooting |
 | no write probes | semantic query port/architecture rule | method/transport tests | architecture |
 | secret safety | all contracts/presenter | redaction fixtures | credentials |
-| feature-derived workflow PAT | configuration projection policy | conditional matrix tests | checklist |
+| feature/effective-target workflow PAT | configuration projection policy | conditional matrix and preserved organization-variable tests | checklist |
+| empty-repository-safe Contents probe | read-only query adapter | commit-list URL, 409 read/write, and 404 tests | authentication/troubleshooting |
 
 ## 18. Implementation sequence
 
@@ -529,7 +548,7 @@ at widths 40/80/120 and `NO_COLOR`.
 - [x] No validation request mutates GitHub and no result overclaims write access.
 - [x] Token values and raw provider text are absent from all output/state/errors.
 - [x] Clean Architecture boundaries and their executable test pass.
-- [x] At least 49 distinct cases and stated coverage thresholds pass.
+- [x] At least 52 distinct cases and stated coverage thresholds pass.
 - [x] Authentication, checklist, troubleshooting, and architecture docs agree.
 - [x] Catalog evidence and generated `specs/CATALOG.md` are current.
 - [x] Specification, documentation, typecheck, lint, and test gates pass.

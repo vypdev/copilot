@@ -243,6 +243,49 @@ describe('analyzeBugbotRevision partition execution', () => {
     expect(query).toHaveBeenCalledTimes(1);
   });
 
+  it('does not query or resolve prior findings for an ignored-only canonical pull request', async () => {
+    const query = jest.fn();
+    const ignoredContext: BugbotContext = {
+      ...context([]),
+      eligibleResolutionIds: new Set(['prior-finding']),
+      previousFindingsBlock: 'prior-finding must stay open',
+      reviewDiffIgnoredFileCount: 2,
+    };
+
+    const prepared = await analyzeBugbotRevision(operation(), ignoredContext, {
+      agent: { query },
+      telemetry: new BugbotReviewTelemetry(operation()),
+    });
+
+    expect(query).not.toHaveBeenCalled();
+    expect(prepared).toEqual(expect.objectContaining({
+      toPublish: [],
+      activeFindings: [],
+      overflowCount: 0,
+      resolvedFindingIds: new Set(),
+    }));
+  });
+
+  it('retains the legacy query for canonical test contexts without an ignored-only plan', async () => {
+    const query = jest.fn().mockResolvedValue({
+      outputLocale: 'en-US',
+      findings: [],
+      resolved_findings: [],
+    });
+    const legacyCanonicalContext: BugbotContext = {
+      ...context([]),
+      reviewDiffPartitions: undefined,
+      reviewDiffIgnoredFileCount: undefined,
+    };
+
+    await analyzeBugbotRevision(operation(), legacyCanonicalContext, {
+      agent: { query },
+      telemetry: new BugbotReviewTelemetry(operation()),
+    });
+
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+
   it('classifies a non-Error partition rejection as unknown telemetry', async () => {
     const telemetry = new BugbotReviewTelemetry(operation());
 

@@ -58,6 +58,32 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         expect(check).toMatchObject({ status: 'unverifiable', message: expect.stringContaining('no safe proof of write') });
     });
 
+    it('verifies Contents read when the commit-list probe identifies an empty repository', async () => {
+        const fetcher = jest.fn().mockResolvedValue(response(false, 409));
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher })
+            .inspect('owner', 'repo', 'secret', [requirement('read', 'contents')]);
+
+        expect(fetcher).toHaveBeenCalledWith(
+            'https://api.github.com/repos/owner/repo/commits?per_page=1',
+            expect.objectContaining({ method: 'GET' }),
+        );
+        expect(check).toMatchObject({ status: 'verified', message: expect.stringContaining('repository is empty') });
+    });
+
+    it('keeps Contents write unverifiable for an empty repository', async () => {
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher: jest.fn().mockResolvedValue(response(false, 409)) })
+            .inspect('owner', 'repo', 'secret', [requirement('write', 'contents')]);
+
+        expect(check).toMatchObject({ status: 'unverifiable', message: expect.stringContaining('cannot prove write access') });
+    });
+
+    it('keeps a non-Contents 409 unverifiable', async () => {
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher: jest.fn().mockResolvedValue(response(false, 409)) })
+            .inspect('owner', 'repo', 'secret', [requirement('read', 'metadata')]);
+
+        expect(check).toMatchObject({ status: 'unverifiable', message: expect.stringContaining('HTTP 409') });
+    });
+
     it('maps HTTP 401 to missing permission evidence', async () => {
         const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher: jest.fn().mockResolvedValue(response(false, 401)) })
             .inspect('owner', 'repo', 'secret', [requirement()]);
@@ -119,6 +145,12 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         expect(check).toMatchObject({ status: 'unverifiable' });
     });
 
+    it('keeps a Contents 404 ambiguous instead of treating it as an empty repository', async () => {
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher: jest.fn().mockResolvedValue(response(false, 404)) })
+            .inspect('owner', 'repo', 'secret', [requirement('read', 'contents')]);
+        expect(check).toMatchObject({ status: 'unverifiable' });
+    });
+
     it('maps unexpected provider responses to unverifiable evidence', async () => {
         const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher: jest.fn().mockResolvedValue(response(false, 500)) })
             .inspect('owner', 'repo', 'secret', [requirement()]);
@@ -170,6 +202,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
             expect(options).toEqual(expect.objectContaining({ method: 'GET' }));
         }
         expect(fetcher.mock.calls.map(call => call[0])).toEqual(expect.arrayContaining([
+            'https://api.github.com/repos/owner%2Fname/repo%20name/commits?per_page=1',
             'https://api.github.com/repos/owner%2Fname/repo%20name/commits/HEAD/check-runs?per_page=1',
             'https://api.github.com/repos/owner%2Fname/repo%20name/contents/.github/workflows',
         ]));

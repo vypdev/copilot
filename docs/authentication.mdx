@@ -54,7 +54,16 @@ for initial inspection are required; later write and organization permissions
 state the feature/storage condition that makes them applicable. The workflow-PAT
 table is calculated from the final setup configuration, so guarded approval,
 release/hotfix, organization issue types, Projects, and organization Variables
-appear only when selected.
+appear only when selected. That calculation uses the effective remote scope,
+including a preserved organization-level `PR_APPROVAL_POLICY`; leaving an
+existing organization Variable in place therefore still requires organization
+Variables read access for the workflow PAT.
+
+The repository Contents read check uses the read-only commit-list endpoint. A
+documented empty-repository response is accepted as proof that the token can
+read the selected repository, while the corresponding write capability remains
+unverifiable and needs the normal explicit acknowledgement. An ambiguous `404`
+is never treated as empty-repository evidence.
 
 If a conditional repository or organization Secret or Variable inventory read is unavailable
 before feature selection, setup keeps that access state distinct from an empty
@@ -123,7 +132,7 @@ For comment-driven assistance, read-only commands are available to anyone who ca
     - **Issues**: Read and write
     - **Metadata**: Read-only
     - **Pull requests**: Read and write
-    - **Variables**: Read-only when guarded PR approval is enabled, to load `PR_APPROVAL_POLICY`. If using an organization Variable, grant the corresponding organization Variables read permission as well.
+    - **Variables**: Read-only when guarded PR approval is enabled, to load `PR_APPROVAL_POLICY`. If setup creates, selects, or preserves an organization-level Variable, grant the corresponding organization Variables read permission as well.
 
     Do not grant Administration write, Secrets, Variables write, Webhooks, or Workflows permissions to the runtime PAT unless an independently reviewed extension actually uses them. Workflow installation and Secret/Variable administration belong to the separate setup PAT.
 

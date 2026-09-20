@@ -55,6 +55,13 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionQue
                     ? outcome(requirement, 'verified', 'GitHub accepted the read-only capability probe.')
                     : outcome(requirement, 'unverifiable', 'Read access is available, but GitHub exposes no safe proof of write access.');
             }
+            if (response.status === 409
+                && requirement.scope === 'repository'
+                && requirement.probe === 'contents') {
+                return requirement.level === 'read'
+                    ? outcome(requirement, 'verified', 'GitHub confirmed that the accessible Git repository is empty.')
+                    : outcome(requirement, 'unverifiable', 'GitHub confirmed that the repository is empty, but this read-only probe cannot prove write access.');
+            }
             if (response.status === 401) {
                 return outcome(requirement, 'missing', `GitHub rejected the read-only capability probe (HTTP ${response.status}).`);
             }
@@ -135,7 +142,7 @@ function probeUrl(
         return undefined;
     }
     if (requirement.probe === 'metadata') return repositoryRoot;
-    if (requirement.probe === 'contents') return `${repositoryRoot}/contents`;
+    if (requirement.probe === 'contents') return `${repositoryRoot}/commits?per_page=1`;
     if (requirement.probe === 'administration') return `${repositoryRoot}/rulesets?per_page=1`;
     if (requirement.probe === 'issues') return `${repositoryRoot}/labels?per_page=1`;
     if (requirement.probe === 'actions') return `${repositoryRoot}/actions/workflows?per_page=1`;

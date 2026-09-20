@@ -41565,8 +41565,15 @@ exports.formatBugbotPartitionCompletion = formatBugbotPartitionCompletion;
 /** Builds consistent workflow copy for an atomically completed diff plan. */
 function formatBugbotPartitionCompletion(input) {
     const partitions = input.reviewDiffPartitions?.length ?? 0;
-    if (partitions === 0)
-        return { dryRunSuffix: '' };
+    if (partitions === 0) {
+        const ignored = input.reviewDiffIgnoredFileCount ?? 0;
+        return ignored > 0
+            ? {
+                dryRunSuffix: ` after safely skipping ${ignored} ignored changed ${ignored === 1 ? 'file' : 'files'}`,
+                resultStep: `${ignored} changed ${ignored === 1 ? 'file was' : 'files were'} intentionally ignored; no reviewer query or prior-finding resolution ran`,
+            }
+            : { dryRunSuffix: '' };
+    }
     const fragments = input.reviewDiffFragmentCount ?? 0;
     const partitionNoun = partitions === 1 ? 'partition' : 'partitions';
     const fragmentNoun = fragments === 1 ? 'fragment' : 'fragments';
@@ -48154,7 +48161,9 @@ function buildWorkflowPatPermissionRequirements(configuration, remote) {
     const organization = remote?.ownerType === 'Organization';
     const hasProjects = configuration.projects.ids.trim().length > 0;
     const issueTypes = configuration.issueWorkflows.enabled.length > 0;
-    const organizationVariables = guardedApproval && usesOrganizationResource(configuration.storage.variables, 'PR_APPROVAL_POLICY');
+    const organizationVariables = guardedApproval
+        && organization
+        && (0, setup_configuration_storage_policy_1.resolveSetupResourceTarget)(configuration, 'variable', 'PR_APPROVAL_POLICY', remote).scope === 'organization';
     return normalizePermissionRequirements([
         requirement({ role: 'workflow', scope: 'repository', permission: 'Metadata', level: 'read', reason: 'Resolve repository and collaborator metadata.', probe: 'metadata' }),
         requirement({ role: 'workflow', scope: 'repository', permission: 'Actions', level: 'write', reason: 'Inspect and dispatch Copilot workflows.', probe: 'actions' }),
@@ -48188,9 +48197,6 @@ function normalizePermissionRequirements(requirements) {
         }
     }
     return [...strongest.values()];
-}
-function usesOrganizationResource(policy, name) {
-    return (policy.overrides[name] ?? policy.defaultScope) === 'organization';
 }
 function selectedResourceScopes(configuration, kind, names, remote) {
     const scopes = new Set(names.map(name => (0, setup_configuration_storage_policy_1.resolveSetupResourceTarget)(configuration, kind, name, remote).scope));
@@ -55529,38 +55535,50 @@ async function analyzeBugbotRevision(execution, context, dependencies) {
         ? execution.locale.pullRequest
         : execution.locale.issue ?? execution.locale.pullRequest;
     const partitions = context.reviewDiffPartitions ?? [];
-    const agentResponse = partitions.length > 0
-        ? await dependencies.telemetry.measure('analysis', async () => {
-            dependencies.telemetry.observePartitionPlan(partitions.length, context.reviewDiffFragmentCount ?? partitions.reduce((sum, partition) => sum + partition.fragmentCount, 0), context.reviewDiffFileCount ?? new Set(partitions.flatMap((partition) => partition.files)).size);
-            (0, logging_ports_1.logInfo)(`Bugbot reviewer planned ${partitions.length} bounded diff ${partitions.length === 1 ? 'partition' : 'partitions'} with maximum concurrency 2.`);
-            const responses = await (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(partitions.map((partition) => async () => {
-                const prompt = (0, build_bugbot_prompt_1.buildBugbotPrompt)(execution, context, { partition });
-                dependencies.telemetry.observePrompt(prompt);
-                dependencies.telemetry.beginPartition();
-                try {
-                    const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha });
-                    dependencies.telemetry.observeResponse(response);
-                    dependencies.telemetry.endPartition(true);
-                    (0, logging_ports_1.logInfo)(`Bugbot reviewer completed partition ${partition.ordinal}/${partition.total}.`);
-                    return response;
-                }
-                catch (error) {
-                    dependencies.telemetry.endPartition(false, {
-                        ordinal: partition.ordinal,
-                        category: partitionFailureCategory(error),
-                    });
-                    throw error;
-                }
-            }), 2);
-            return (0, bugbot_partition_aggregation_1.aggregateBugbotPartitionResponses)(partitions, responses);
+    const ignoredFileCount = context.reviewDiffIgnoredFileCount ?? 0;
+    const canonicalZeroWork = Boolean(context.canonicalPullRequest
+        && context.prContext
+        && context.reviewDiffPartitions !== undefined
+        && partitions.length === 0
+        && ignoredFileCount > 0);
+    const agentResponse = canonicalZeroWork
+        ? await dependencies.telemetry.measure('analysis', () => {
+            dependencies.telemetry.observePartitionPlan(0, 0, 0);
+            (0, logging_ports_1.logInfo)(`Bugbot reviewer skipped ${ignoredFileCount} intentionally ignored changed ${ignoredFileCount === 1 ? 'file' : 'files'} without resolving prior findings.`);
+            return { outputLocale: targetLocale, findings: [], resolved_findings: [] };
         })
-        : await dependencies.telemetry.measure('analysis', async () => {
-            const prompt = (0, build_bugbot_prompt_1.buildBugbotPrompt)(execution, context);
-            dependencies.telemetry.observePrompt(prompt);
-            const response = await (0, query_bugbot_findings_1.queryBugbotFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, targetLocale);
-            dependencies.telemetry.observeResponse(response);
-            return response;
-        });
+        : partitions.length > 0
+            ? await dependencies.telemetry.measure('analysis', async () => {
+                dependencies.telemetry.observePartitionPlan(partitions.length, context.reviewDiffFragmentCount ?? partitions.reduce((sum, partition) => sum + partition.fragmentCount, 0), context.reviewDiffFileCount ?? new Set(partitions.flatMap((partition) => partition.files)).size);
+                (0, logging_ports_1.logInfo)(`Bugbot reviewer planned ${partitions.length} bounded diff ${partitions.length === 1 ? 'partition' : 'partitions'} with maximum concurrency 2.`);
+                const responses = await (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(partitions.map((partition) => async () => {
+                    const prompt = (0, build_bugbot_prompt_1.buildBugbotPrompt)(execution, context, { partition });
+                    dependencies.telemetry.observePrompt(prompt);
+                    dependencies.telemetry.beginPartition();
+                    try {
+                        const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha });
+                        dependencies.telemetry.observeResponse(response);
+                        dependencies.telemetry.endPartition(true);
+                        (0, logging_ports_1.logInfo)(`Bugbot reviewer completed partition ${partition.ordinal}/${partition.total}.`);
+                        return response;
+                    }
+                    catch (error) {
+                        dependencies.telemetry.endPartition(false, {
+                            ordinal: partition.ordinal,
+                            category: partitionFailureCategory(error),
+                        });
+                        throw error;
+                    }
+                }), 2);
+                return (0, bugbot_partition_aggregation_1.aggregateBugbotPartitionResponses)(partitions, responses);
+            })
+            : await dependencies.telemetry.measure('analysis', async () => {
+                const prompt = (0, build_bugbot_prompt_1.buildBugbotPrompt)(execution, context);
+                dependencies.telemetry.observePrompt(prompt);
+                const response = await (0, query_bugbot_findings_1.queryBugbotFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, targetLocale);
+                dependencies.telemetry.observeResponse(response);
+                return response;
+            });
     (0, logging_ports_1.logInfo)(`Bugbot reviewer completed in ${Date.now() - startedAt}ms.`);
     const raw = await dependencies.telemetry.measure('normalization', () => (0, prepare_bugbot_findings_1.prepareBugbotFindings)(agentResponse, execution.ignorePatterns, execution.analysis.minimumSeverity, execution.analysis.commentLimit, partitions.length > 0 ? bugbot_partition_aggregation_1.MAX_AGGREGATE_PARTITION_FINDINGS : undefined));
     if (!raw)
@@ -57765,6 +57783,7 @@ async function loadBugbotContext(request, ports, resolvedPreflight) {
         reviewDiffPartitions: diffPlan.partitions,
         reviewDiffFragmentCount: diffPlan.fragments,
         reviewDiffFileCount: diffPlan.retained,
+        reviewDiffIgnoredFileCount: diffPlan.ignored,
         reviewConversationBlock: conversationContext.block,
         prContext,
         unresolvedFindingsWithBody: previousContext.selected.map((finding) => ({
@@ -82233,6 +82252,13 @@ class SetupTokenPermissionQueryAdapter {
                     ? outcome(requirement, 'verified', 'GitHub accepted the read-only capability probe.')
                     : outcome(requirement, 'unverifiable', 'Read access is available, but GitHub exposes no safe proof of write access.');
             }
+            if (response.status === 409
+                && requirement.scope === 'repository'
+                && requirement.probe === 'contents') {
+                return requirement.level === 'read'
+                    ? outcome(requirement, 'verified', 'GitHub confirmed that the accessible Git repository is empty.')
+                    : outcome(requirement, 'unverifiable', 'GitHub confirmed that the repository is empty, but this read-only probe cannot prove write access.');
+            }
             if (response.status === 401) {
                 return outcome(requirement, 'missing', `GitHub rejected the read-only capability probe (HTTP ${response.status}).`);
             }
@@ -82312,7 +82338,7 @@ function probeUrl(owner, repository, requirement) {
     if (requirement.probe === 'metadata')
         return repositoryRoot;
     if (requirement.probe === 'contents')
-        return `${repositoryRoot}/contents`;
+        return `${repositoryRoot}/commits?per_page=1`;
     if (requirement.probe === 'administration')
         return `${repositoryRoot}/rulesets?per_page=1`;
     if (requirement.probe === 'issues')

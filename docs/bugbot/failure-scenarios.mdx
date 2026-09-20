@@ -18,6 +18,9 @@ description: Diagnose terminal failures across detection, publication, autofix, 
   <Accordion title="The diff exceeds the exhaustive review ceiling" icon="layer-group">
     Bugbot permits at most 64 bounded partitions and 2,000 aggregate candidate findings for one canonical SHA. It stops before model execution when the plan itself is too large, or before publication when aggregate output exceeds its cap. No partial finding or resolution is published. Split the pull request into coherent reviewable changes and rerun.
   </Accordion>
+  <Accordion title="Every changed file is ignored" icon="circle-question">
+    This is an explicit zero-work result, not a hidden legacy review. For a canonical pull request, Bugbot reports the ignored-file count, makes no reviewer request, publishes no new finding, and resolves no existing finding. Previously open findings stay open until a later review includes eligible evidence for them. Change `ai-ignore-files` only when those files should be reviewed, then run `/copilot recheck`.
+  </Accordion>
   <Accordion title="Verification fails" icon="check-circle">
     Keep the workspace changes isolated, report the failed command, and do not commit or push.
   </Accordion>

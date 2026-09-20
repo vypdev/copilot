@@ -59,6 +59,7 @@ export interface BugbotContext {
   reviewDiffPartitions?: readonly BugbotReviewDiffPartition[];
   reviewDiffFragmentCount?: number;
   reviewDiffFileCount?: number;
+  reviewDiffIgnoredFileCount?: number;
   /** Bounded human review discussion that may affect finding validity. */
   reviewConversationBlock?: string;
   prContext: BugbotPrContext | null;

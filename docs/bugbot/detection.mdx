@@ -222,6 +222,14 @@ partition attestation, and aggregates once before publication. Large patches
 are split without dropping sanitized patch characters; missing provider patches
 become explicit local-diff inspection assignments.
 
+When every changed file in a canonical pull request matches
+`ai-ignore-files`, the exhaustive plan contains zero partitions by design.
+Bugbot records the ignored-file count and completes without invoking the
+reviewer. It neither creates findings nor asks the model to resolve earlier
+findings, so any existing unresolved finding remains open. The legacy
+single-query path is reserved for non-PR issue or commit contexts that have no
+canonical pull-request diff plan.
+
 If any planned partition fails, is missing, returns the wrong identity/SHA, or
 attempts a resolution outside the sole resolution-owner partition, the whole
 analysis fails before finding publication or resolution. A provider file-page

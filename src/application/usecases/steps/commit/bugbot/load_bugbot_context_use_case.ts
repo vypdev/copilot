@@ -179,6 +179,7 @@ export async function loadBugbotContext(
     reviewDiffPartitions: diffPlan.partitions,
     reviewDiffFragmentCount: diffPlan.fragments,
     reviewDiffFileCount: diffPlan.retained,
+    reviewDiffIgnoredFileCount: diffPlan.ignored,
     reviewConversationBlock: conversationContext.block,
     prContext,
     unresolvedFindingsWithBody: previousContext.selected.map((finding) => ({

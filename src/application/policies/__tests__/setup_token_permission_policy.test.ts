@@ -228,6 +228,21 @@ describe('setup token permission policy', () => {
         ]));
     });
 
+    it('uses the preserved organization scope of an existing guarded approval variable', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'guarded' };
+        configuration.storage.variables.defaultScope = 'repository';
+        configuration.storage.variables.preserveExisting = true;
+        const configuredRemote = {
+            ...organization,
+            organizationVariables: [{ name: 'PR_APPROVAL_POLICY', value: '{}' }],
+        };
+
+        expect(buildWorkflowPatPermissionRequirements(configuration, configuredRemote)).toEqual(expect.arrayContaining([
+            expect.objectContaining({ scope: 'organization', permission: 'Variables', level: 'read' }),
+        ]));
+    });
+
     it('omits organization permissions when the repository owner is a user', () => {
         const configuration = createDefaultSetupConfiguration();
         const personal = { ...organization, ownerType: 'User' as const };

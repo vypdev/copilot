@@ -49,6 +49,11 @@ This guide helps you resolve common issues you might encounter while using Copil
     permission denial without rate-limit, retry, or SSO headers.
     Malformed provider JSON or unreadable response headers also remain
     `Unverifiable`.
+    For repository Contents, setup probes the commit list rather than a file
+    path. GitHub's documented empty-repository response verifies read access
+    after repository identity has already been confirmed; it does not prove
+    write access. A `404` is still ambiguous because it can also mean the token
+    cannot see the repository, so setup never upgrades it to `Verified`.
     A required unverifiable read blocks and must be retried. For a required
     write, compare the requested level with the PAT settings and explicitly
     confirm it at the separate prompt. In unattended setup, pass

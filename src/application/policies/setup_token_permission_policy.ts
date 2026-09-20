@@ -142,7 +142,9 @@ export function buildWorkflowPatPermissionRequirements(
     const organization = remote?.ownerType === 'Organization';
     const hasProjects = configuration.projects.ids.trim().length > 0;
     const issueTypes = configuration.issueWorkflows.enabled.length > 0;
-    const organizationVariables = guardedApproval && usesOrganizationResource(configuration.storage.variables, 'PR_APPROVAL_POLICY');
+    const organizationVariables = guardedApproval
+        && organization
+        && resolveSetupResourceTarget(configuration, 'variable', 'PR_APPROVAL_POLICY', remote).scope === 'organization';
 
     return normalizePermissionRequirements([
         requirement({ role: 'workflow', scope: 'repository', permission: 'Metadata', level: 'read', reason: 'Resolve repository and collaborator metadata.', probe: 'metadata' }),
@@ -179,13 +181,6 @@ export function normalizePermissionRequirements(
         }
     }
     return [...strongest.values()];
-}
-
-function usesOrganizationResource(
-    policy: SetupConfiguration['storage']['variables'],
-    name: string,
-): boolean {
-    return (policy.overrides[name] ?? policy.defaultScope) === 'organization';
 }
 
 function selectedResourceScopes(

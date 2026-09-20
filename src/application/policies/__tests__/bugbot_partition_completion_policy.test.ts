@@ -16,6 +16,20 @@ describe('formatBugbotPartitionCompletion', () => {
     });
   });
 
+  it('renders an explicit zero-work result for ignored-only canonical changes', () => {
+    expect(formatBugbotPartitionCompletion({
+      reviewDiffPartitions: [],
+      reviewDiffIgnoredFileCount: 2,
+    })).toEqual({
+      dryRunSuffix: ' after safely skipping 2 ignored changed files',
+      resultStep: '2 changed files were intentionally ignored; no reviewer query or prior-finding resolution ran',
+    });
+    expect(formatBugbotPartitionCompletion({
+      reviewDiffPartitions: [],
+      reviewDiffIgnoredFileCount: 1,
+    }).resultStep).toContain('1 changed file was');
+  });
+
   it('renders plural copy and uses a safe fragment fallback', () => {
     expect(formatBugbotPartitionCompletion({
       reviewDiffPartitions: [{}, {}],
