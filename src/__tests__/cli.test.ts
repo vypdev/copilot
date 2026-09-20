@@ -8,6 +8,7 @@ import { program } from '../cli';
 import { runLocalAction } from '../actions/local_action';
 import { ACTIONS } from '../data/model/action_types';
 import { INPUT_KEYS } from '../application/contracts/input_keys';
+import type { SetupTokenPermissionReport, SetupTokenPermissionRequirement } from '../domain/setup_token_permissions';
 
 jest.mock('child_process', () => ({
   execSync: jest.fn(),
@@ -60,7 +61,7 @@ jest.mock('../cli/setup_doctor_presenter', () => ({
   }),
 }));
 
-const mockTokenPermissionInspect = jest.fn(async (request: { role: 'setup' | 'workflow'; requirements: readonly Record<string, unknown>[] }) => ({
+const mockTokenPermissionInspect = jest.fn(async (request: { role: 'setup' | 'workflow'; requirements: readonly SetupTokenPermissionRequirement[] }): Promise<SetupTokenPermissionReport> => ({
   role: request.role,
   identityStatus: 'valid' as const,
   identityMessage: 'verified',
@@ -484,6 +485,53 @@ describe('CLI', () => {
       expect(params[INPUT_KEYS.SINGLE_ACTION]).toBe(ACTIONS.INITIAL_SETUP);
     });
 
+    it.each([
+      { ready: false, identityStatus: 'valid' as const },
+      { ready: true, identityStatus: 'invalid' as const },
+    ])('stops before planning when the initial setup PAT report is $identityStatus/$ready', async (report) => {
+      mockTokenPermissionInspect.mockResolvedValueOnce({
+        role: 'setup',
+        identityStatus: report.identityStatus,
+        identityMessage: 'insufficient access',
+        ready: report.ready,
+        checks: [],
+      });
+
+      await program.parseAsync([
+        'node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12',
+        '--skip-secrets', '--non-interactive', '--pr-approval-mode', 'off', '--yes',
+      ]);
+
+      expect(runLocalAction).not.toHaveBeenCalled();
+      expect(process.exitCode).toBe(1);
+    });
+
+    it.each([
+      { ready: false, identityStatus: 'valid' as const },
+      { ready: true, identityStatus: 'invalid' as const },
+    ])('stops after planning when the configured setup PAT report is $identityStatus/$ready', async (report) => {
+      mockTokenPermissionInspect
+        .mockResolvedValueOnce({
+          role: 'setup', identityStatus: 'valid', identityMessage: 'verified', ready: true, checks: [],
+        })
+        .mockResolvedValueOnce({
+          role: 'setup',
+          identityStatus: report.identityStatus,
+          identityMessage: 'insufficient configured access',
+          ready: report.ready,
+          checks: [],
+        });
+
+      await program.parseAsync([
+        'node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12',
+        '--skip-secrets', '--non-interactive', '--pr-approval-mode', 'off', '--yes',
+      ]);
+
+      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
+      expect(runLocalAction).not.toHaveBeenCalled();
+      expect(process.exitCode).toBe(1);
+    });
+
     it('exits when not inside a git repo', async () => {
       (execSync as jest.Mock).mockImplementation((cmd: string) => {
         if (typeof cmd === 'string' && cmd.includes('is-inside-work-tree')) throw new Error('not a repo');
@@ -539,6 +587,18 @@ describe('CLI', () => {
       expect(logInfo).not.toHaveBeenCalledWith(expect.stringContaining('.env'));
       expect(runLocalAction).not.toHaveBeenCalled();
       expect(process.exitCode).toBe(1);
+    });
+
+    it('allows a tokenless dry run while still presenting both permission plans', async () => {
+      mockGetSetupToken.mockReturnValue(undefined);
+
+      await program.parseAsync([
+        'node', 'cli', 'setup', '--dry-run', '--non-interactive', '--pr-approval-mode', 'off', '--yes',
+      ]);
+
+      expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
+      expect(runLocalAction).not.toHaveBeenCalled();
+      expect(process.exitCode).toBeUndefined();
     });
   });
 

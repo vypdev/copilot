@@ -702,6 +702,7 @@
         "src/infrastructure/__tests__/setup_workspace_adapter.test.ts",
         "src/infrastructure/__tests__/setup_remote_credential_health_adapter.test.ts",
         "src/infrastructure/__tests__/setup_token_permission_query_adapter.test.ts",
+        "src/infrastructure/composition/__tests__/setup_token_permissions_composition_root.test.ts",
         "src/data/repository/__tests__/repository_variables_repository.test.ts",
         "src/cli/__tests__/setup_presenters.test.ts",
         "src/cli/__tests__/setup_prompt_rendering.test.ts",

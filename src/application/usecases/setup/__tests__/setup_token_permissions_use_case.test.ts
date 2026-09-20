@@ -43,13 +43,13 @@ describe('SetupTokenPermissionsUseCase', () => {
     });
 
     it('does not probe permissions when token identity is invalid', async () => {
-        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'invalid', message: 'rejected' }) };
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'invalid', message: 'rejected', account: 'operator' }) };
         const query = { inspect: jest.fn() };
         const report = await new SetupTokenPermissionsUseCase(validation, query).inspect({
             role: 'workflow', owner: 'owner', repository: 'repo', token: 'secret', requirements: [required],
         });
         expect(query.inspect).not.toHaveBeenCalled();
-        expect(report).toMatchObject({ ready: false, identityStatus: 'invalid' });
+        expect(report).toMatchObject({ ready: false, identityStatus: 'invalid', account: 'operator' });
         expect(report.checks[0]).toMatchObject({ status: 'missing' });
     });
 

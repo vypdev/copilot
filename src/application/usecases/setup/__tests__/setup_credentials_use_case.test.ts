@@ -316,7 +316,7 @@ describe('SetupCredentialsUseCase', () => {
             reason: 'Resolve repository.', probe: 'metadata' as const,
         };
         const report = {
-            role: 'workflow' as const, identityStatus: 'valid' as const, identityMessage: 'ok', ready: true,
+            role: 'workflow' as const, account: 'workflow-bot', identityStatus: 'valid' as const, identityMessage: 'ok', ready: true,
             checks: [{ ...permission, status: 'verified' as const, message: 'available' }],
         };
         const tokenPermissions = { inspect: jest.fn().mockResolvedValue(report) };
@@ -335,6 +335,7 @@ describe('SetupCredentialsUseCase', () => {
             role: 'workflow', token: 'workflow-token', requirements: [permission],
         }));
         expect(presenter.showReport).toHaveBeenCalledWith(report);
+        expect(result.checks).toContainEqual(expect.objectContaining({ name: 'PAT', account: 'workflow-bot' }));
         expect(result.collection.workflowPat).toEqual({ name: 'PAT', value: 'workflow-token' });
     });
 

@@ -54,4 +54,15 @@ describe('setup token permission presenter', () => {
         expect(output).not.toContain('github_pat_');
         expect(output).toContain('All safely verifiable required permissions are available.');
     });
+
+    it('explains an unverifiable-only report without presenting it as a pass', () => {
+        const output = renderSetupTokenPermissionReport({
+            role: 'workflow', identityStatus: 'valid', identityMessage: 'verified', ready: true,
+            checks: [{ ...secrets, role: 'workflow', status: 'unverifiable', message: 'no safe write probe' }],
+        }, 120);
+
+        expect(output).toContain('? Unverifiable');
+        expect(output).toContain('GitHub offers no safe read-only proof');
+        expect(output).not.toContain('All safely verifiable required permissions are available.');
+    });
 });
