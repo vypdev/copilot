@@ -43351,6 +43351,7 @@ exports.MAX_REVIEW_DIFF_PARTITION_LENGTH = 64000;
 exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH = 12000;
 exports.MAX_REVIEW_DIFF_PARTITIONS = 64;
 const DIFF_PARTITION_HEADER_RESERVE = 1024;
+const MAX_REVIEW_DIFF_METADATA_LENGTH = 512;
 class BugbotDiffPlanLimitError extends Error {
     constructor() {
         super(`Bugbot diff requires more than ${exports.MAX_REVIEW_DIFF_PARTITIONS} review partitions.`);
@@ -43383,12 +43384,13 @@ function buildReviewDiffPlan(context, ignorePatterns = []) {
             fragmentIndex += 1;
             const fragment = fragments[index];
             const safeFilename = (0, untrusted_content_1.renderUntrustedField)(change.filename, `github.diff.path.${fragmentIndex}`, 1000);
+            const safeMetadata = (0, untrusted_content_1.renderUntrustedField)(`Status: ${String(change.status)}; additions: ${String(change.additions)}; deletions: ${String(change.deletions)}`, `github.diff.metadata.${fragmentIndex}`, MAX_REVIEW_DIFF_METADATA_LENGTH);
             sections.push({
                 filename: change.filename,
                 rendered: [
                     `### Assigned file fragment ${index + 1}/${fragments.length}`,
                     safeFilename,
-                    `Status: ${change.status}; +${change.additions}/-${change.deletions}`,
+                    safeMetadata,
                     (0, untrusted_content_1.renderUntrustedField)(fragment, `github.diff.fragment.${fragmentIndex}`, exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH + 200),
                 ].join('\n\n'),
             });
@@ -56397,14 +56399,15 @@ async function analyzeBugbotRevision(execution, context, dependencies) {
     const partitions = context.reviewDiffPartitions ?? [];
     const ignoredFileCount = context.reviewDiffIgnoredFileCount ?? 0;
     const canonicalZeroWork = Boolean(context.canonicalPullRequest
-        && context.prContext
         && context.reviewDiffPartitions !== undefined
-        && partitions.length === 0
-        && ignoredFileCount > 0);
+        && partitions.length === 0);
     const agentResponse = canonicalZeroWork
         ? await dependencies.telemetry.measure('analysis', () => {
             dependencies.telemetry.observePartitionPlan(0, 0, 0);
-            (0, logging_ports_1.logInfo)(`Bugbot reviewer skipped ${ignoredFileCount} intentionally ignored changed ${ignoredFileCount === 1 ? 'file' : 'files'} without resolving prior findings.`);
+            const reason = ignoredFileCount > 0
+                ? `skipped ${ignoredFileCount} intentionally ignored changed ${ignoredFileCount === 1 ? 'file' : 'files'}`
+                : 'received a canonical diff plan with no reviewable changed files';
+            (0, logging_ports_1.logInfo)(`Bugbot reviewer ${reason} without resolving prior findings.`);
             return { outputLocale: targetLocale, findings: [], resolved_findings: [] };
         })
         : partitions.length > 0
@@ -66891,7 +66894,7 @@ function authorizationForFileModification(owner, actor, ownerType) {
         kind: 'repository-collaborator',
         owner,
         actor,
-        ownerMatches: ownerType !== 'Organization' && (0, github_user_policy_1.githubUsersMatch)(actor, owner),
+        ownerMatches: ownerType === 'User' && (0, github_user_policy_1.githubUsersMatch)(actor, owner),
     };
 }
 function authorizationForMemberOnlyAutomation(owner, actor, ownerType) {
@@ -66902,7 +66905,7 @@ function authorizationForMemberOnlyAutomation(owner, actor, ownerType) {
         kind: 'user-repository-collaborator',
         owner,
         actor,
-        ownerMatches: (0, github_user_policy_1.githubUsersMatch)(actor, owner),
+        ownerMatches: ownerType === 'User' && (0, github_user_policy_1.githubUsersMatch)(actor, owner),
     };
 }
 

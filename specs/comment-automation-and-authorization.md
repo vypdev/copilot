@@ -121,6 +121,10 @@ a mention.
 5. Issue-only and general PR-conversation comments cannot infer a write target.
 6. Comment author account type is not an authorization signal; explicit addressing
    is the machine-neutral admission boundary.
+7. Repository-owner shortcuts require the provider owner type to be exactly
+   `User`. Unknown, missing, or unsupported owner types cannot inherit either a
+   username-match or organization-membership shortcut and MUST prove repository
+   collaborator permission.
 
 ## 5. Current versus proposed product journey
 
@@ -279,7 +283,10 @@ organization repository requires organization membership, while a personal
 repository accepts its owner or a write-capable collaborator. Comment and
 parent-thread text are bounded untrusted prompt context. Read-only agents cannot
 write; mutation agents cannot own git credentials or trusted verification
-execution. Secrets and raw provider errors are redacted.
+execution. Only an exact provider owner type of `User` enables the owner-name
+shortcut; only `Organization` enables organization membership. Unknown owner
+types fail closed from both shortcuts and use the repository collaborator
+permission check. Secrets and raw provider errors are redacted.
 
 ## 12. Observability and operational UX
 
@@ -307,11 +314,11 @@ branch. Finding dismissal and learned rules require explicit follow-up commands.
 |---|---:|---|
 | Parser/mention/route policy | 26 | limits, vocabulary, precedence, collisions, PR-conversation classification |
 | Workflow/idempotency/races | 18 | fallback, duplicate, branch/push race |
-| Authorization/adapters | 18 | purpose-separated org membership and repository-write permissions, personal ownership/collaboration, API errors |
+| Authorization/adapters | 20 | purpose-separated org membership and repository-write permissions, exact personal ownership, unknown-owner fallback for file and member-only routes, collaboration, API errors |
 | Workflow/config contracts | 8 | events, permissions, active roles, inert passive comments |
 | UX/localization/sanitization | 17 | help/errors/links/mentions/Markdown, target locale, complete finding-state status, invalid-evidence recovery |
 | Integration/security/migration | 16 | comment→commit/review, exact PR diff, prompt injection |
-| **Total** | **103** | no double counting |
+| **Total** | **105** | no double counting |
 
 Global coverage remains mandatory; command and route policies SHOULD have 100%
 branch coverage. Use fake authorization/agents/git; no live models or waits.
@@ -355,6 +362,11 @@ English/non-English requests.
 15. `ai-members-only` still rejects a non-member even when that actor has a
     comment route, and its membership check is never substituted by the
     file-modification permission check.
+16. An actor whose login matches the repository owner receives an ownership
+    shortcut only when GitHub reports the owner type exactly as `User`; for an
+    unknown, missing, or unsupported type, both file modification and
+    member-only automation require `push`, `maintain`, or `admin` repository
+    collaborator permission and never use an organization-membership lookup.
 
 ## 17. Requirements traceability
 
@@ -362,7 +374,7 @@ English/non-English requests.
 |---|---|---|---|
 | bounded grammar | command domain | command tests | comment commands |
 | safe routing/admission | request/route/workflow policies | entrypoint and use-case tests | comment commands |
-| authorization | authorization port/adapter | repository tests | permissions |
+| authorization | authorization port/adapter | organization, user, unknown-owner, and collaborator repository tests | permissions |
 | guarded mutation | workspace/git workflows | mutation tests | autofix/do request |
 | safe output | result policies | publication tests | failure scenarios |
 | truthful status evidence | canonical finding-state projection + status renderer | complete/non-clean and malformed status tests | comment commands, Bugbot observability |
@@ -379,7 +391,7 @@ English/non-English requests.
 ## 19. Definition of Done
 
 - [ ] Commands, mentions, authorization, fallback, replay, and races are covered.
-- [x] The 103-case budget, coverage, and architecture checks pass.
+- [x] The 105-case budget, coverage, and architecture checks pass.
 - [ ] No model output or comment can expand authorization or git authority.
 - [ ] All five UI states and help content are reviewed and accessible.
 - [ ] Workflows, documentation, and catalog agree.

@@ -39,15 +39,16 @@ export async function analyzeBugbotRevision(
     const ignoredFileCount = context.reviewDiffIgnoredFileCount ?? 0;
     const canonicalZeroWork = Boolean(
         context.canonicalPullRequest
-        && context.prContext
         && context.reviewDiffPartitions !== undefined
-        && partitions.length === 0
-        && ignoredFileCount > 0,
+        && partitions.length === 0,
     );
     const agentResponse = canonicalZeroWork
         ? await dependencies.telemetry.measure('analysis', () => {
             dependencies.telemetry.observePartitionPlan(0, 0, 0);
-            logInfo(`Bugbot reviewer skipped ${ignoredFileCount} intentionally ignored changed ${ignoredFileCount === 1 ? 'file' : 'files'} without resolving prior findings.`);
+            const reason = ignoredFileCount > 0
+                ? `skipped ${ignoredFileCount} intentionally ignored changed ${ignoredFileCount === 1 ? 'file' : 'files'}`
+                : 'received a canonical diff plan with no reviewable changed files';
+            logInfo(`Bugbot reviewer ${reason} without resolving prior findings.`);
             return { outputLocale: targetLocale, findings: [], resolved_findings: [] };
         })
         : partitions.length > 0

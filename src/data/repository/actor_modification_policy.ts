@@ -20,7 +20,7 @@ export function authorizationForFileModification(
         kind: 'repository-collaborator',
         owner,
         actor,
-        ownerMatches: ownerType !== 'Organization' && githubUsersMatch(actor, owner),
+        ownerMatches: ownerType === 'User' && githubUsersMatch(actor, owner),
     };
 }
 
@@ -36,6 +36,6 @@ export function authorizationForMemberOnlyAutomation(
         kind: 'user-repository-collaborator',
         owner,
         actor,
-        ownerMatches: githubUsersMatch(actor, owner),
+        ownerMatches: ownerType === 'User' && githubUsersMatch(actor, owner),
     };
 }

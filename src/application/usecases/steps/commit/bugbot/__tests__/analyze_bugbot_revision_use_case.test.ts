@@ -266,7 +266,37 @@ describe('analyzeBugbotRevision partition execution', () => {
     }));
   });
 
-  it('retains the legacy query for canonical test contexts without an ignored-only plan', async () => {
+  it('does not invoke the legacy reviewer or resolve findings for an empty canonical diff plan', async () => {
+    const query = jest.fn();
+    const emptyCanonicalContext: BugbotContext = {
+      ...context([]),
+      eligibleResolutionIds: new Set(['prior-finding']),
+      previousFindingsBlock: 'prior-finding must stay open',
+      reviewDiffIgnoredFileCount: 0,
+    };
+    const telemetry = new BugbotReviewTelemetry(operation());
+
+    const prepared = await analyzeBugbotRevision(operation(), emptyCanonicalContext, {
+      agent: { query },
+      telemetry,
+    });
+
+    expect(query).not.toHaveBeenCalled();
+    expect(prepared).toEqual(expect.objectContaining({
+      toPublish: [],
+      activeFindings: [],
+      resolvedFindingIds: new Set(),
+    }));
+    expect(telemetry.snapshot('completed')).toEqual(expect.objectContaining({
+      analysisPartitions: 0,
+      completedAnalysisPartitions: 0,
+      analysisDiffFragments: 0,
+      analysisAssignedFiles: 0,
+      maximumAnalysisConcurrency: 0,
+    }));
+  });
+
+  it('retains the legacy query for a canonical compatibility context without partition metadata', async () => {
     const query = jest.fn().mockResolvedValue({
       outputLocale: 'en-US',
       findings: [],

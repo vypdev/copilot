@@ -830,6 +830,9 @@ describe("DetectPotentialProblemsUseCase", () => {
   it("when the agent returns resolved_findings, updates the PR review comment to resolved", async () => {
     mockListIssueComments.mockResolvedValue([]);
     mockFindExactHeadCandidateNumbers.mockResolvedValue([50]);
+    mockGetChangedFiles.mockResolvedValue([
+      { filename: "src/a.ts", status: "modified" },
+    ]);
     mockListPullRequestReviewComments.mockResolvedValue([
       {
         id: 777,
@@ -872,6 +875,9 @@ describe("DetectPotentialProblemsUseCase", () => {
     const { logError } = require("../../../../../utils/logger");
     mockListIssueComments.mockResolvedValue([]);
     mockFindExactHeadCandidateNumbers.mockResolvedValue([50]);
+    mockGetChangedFiles.mockResolvedValue([
+      { filename: "src/a.ts", status: "modified" },
+    ]);
     mockListPullRequestReviewComments.mockResolvedValue([
       {
         id: 777,
@@ -1354,6 +1360,9 @@ describe("DetectPotentialProblemsUseCase", () => {
     it("replaces marker in PR review comment when marker has extra whitespace", async () => {
       mockListIssueComments.mockResolvedValue([]);
       mockFindExactHeadCandidateNumbers.mockResolvedValue([80]);
+      mockGetChangedFiles.mockResolvedValue([
+        { filename: "src/b.ts", status: "modified" },
+      ]);
       mockListPullRequestReviewComments
         .mockResolvedValueOnce([
           {

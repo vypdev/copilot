@@ -5,6 +5,7 @@ export const MAX_REVIEW_DIFF_PARTITION_LENGTH = 64_000;
 export const MAX_REVIEW_DIFF_FRAGMENT_LENGTH = 12_000;
 export const MAX_REVIEW_DIFF_PARTITIONS = 64;
 const DIFF_PARTITION_HEADER_RESERVE = 1_024;
+const MAX_REVIEW_DIFF_METADATA_LENGTH = 512;
 
 export interface BugbotDiffPlanInput {
   readonly prHeadSha: string;
@@ -74,12 +75,17 @@ export function buildReviewDiffPlan(
       fragmentIndex += 1;
       const fragment = fragments[index];
       const safeFilename = renderUntrustedField(change.filename, `github.diff.path.${fragmentIndex}`, 1_000);
+      const safeMetadata = renderUntrustedField(
+        `Status: ${String(change.status)}; additions: ${String(change.additions)}; deletions: ${String(change.deletions)}`,
+        `github.diff.metadata.${fragmentIndex}`,
+        MAX_REVIEW_DIFF_METADATA_LENGTH,
+      );
       sections.push({
         filename: change.filename,
         rendered: [
           `### Assigned file fragment ${index + 1}/${fragments.length}`,
           safeFilename,
-          `Status: ${change.status}; +${change.additions}/-${change.deletions}`,
+          safeMetadata,
           renderUntrustedField(fragment, `github.diff.fragment.${fragmentIndex}`, MAX_REVIEW_DIFF_FRAGMENT_LENGTH + 200),
         ].join('\n\n'),
       });

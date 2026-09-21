@@ -27,4 +27,13 @@ describe('authorizationForFileModification', () => {
             kind: 'user-repository-collaborator', owner: 'alice', actor: 'bob', ownerMatches: false,
         });
     });
+
+    it('never grants an owner-name shortcut for an unsupported owner type', () => {
+        expect(authorizationForFileModification('alice', 'alice', 'Enterprise')).toEqual({
+            kind: 'repository-collaborator', owner: 'alice', actor: 'alice', ownerMatches: false,
+        });
+        expect(authorizationForMemberOnlyAutomation('alice', 'alice', '')).toEqual({
+            kind: 'user-repository-collaborator', owner: 'alice', actor: 'alice', ownerMatches: false,
+        });
+    });
 });

@@ -88,6 +88,23 @@ describe('ActorAuthorizationRepository', () => {
     expect(getCollaboratorPermissionLevel).toHaveBeenCalledWith({ owner: 'alice', repo: 'project', username: 'bob' });
   });
 
+  it('requires collaborator permission when an unsupported owner type matches the actor', async () => {
+    getByUsername.mockResolvedValue({ data: { type: 'Enterprise' } });
+
+    await expect(repository.isActorAllowedToModifyFiles('alice', 'project', 'alice', 'token')).resolves.toBe(false);
+    expect(checkMembershipForUser).not.toHaveBeenCalled();
+    expect(getCollaboratorPermissionLevel).toHaveBeenCalledWith({ owner: 'alice', repo: 'project', username: 'alice' });
+  });
+
+  it('uses collaborator permission instead of membership for unknown owner types', async () => {
+    getByUsername.mockResolvedValue({ data: { type: 'Unknown' } });
+    getCollaboratorPermissionLevel.mockResolvedValue({ data: { permission: 'maintain' } });
+
+    await expect(repository.isActorAllowedToUseMemberOnlyAutomation('alice', 'project', 'alice', 'token')).resolves.toBe(true);
+    expect(checkMembershipForUser).not.toHaveBeenCalled();
+    expect(getCollaboratorPermissionLevel).toHaveBeenCalledWith({ owner: 'alice', repo: 'project', username: 'alice' });
+  });
+
   it('denies a read-only collaborator on a user repository', async () => {
     getByUsername.mockResolvedValue({ data: { type: 'User' } });
     getCollaboratorPermissionLevel.mockResolvedValue({ data: { permission: 'pull' } });

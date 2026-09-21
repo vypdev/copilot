@@ -148,13 +148,15 @@ analysis detects every defect.
    failure, or stale SHA fails the aggregate closed with no SCM mutation.
 10. Provider-incomplete diff enumeration remains partial and can never yield a
    whole-PR clean result.
-11. Repository content, patches, discussion, and agent responses remain
-    untrusted data and cannot modify the plan or execution policy.
-12. A canonical PR with one or more changed files, all intentionally ignored,
-    MUST NOT enter the legacy resolution-capable single-query path. It completes
-    without an agent query and with empty finding and resolution sets. A legacy
-    or synthetic context with no ignored-file evidence keeps its existing
-    compatibility behavior.
+11. Repository content, patches, provider file status/count metadata,
+    discussion, and agent responses remain bounded untrusted data and cannot
+    modify the plan or execution policy.
+12. Any canonical PR diff plan with zero partitions, whether the provider
+    returned zero changes or every changed file was intentionally ignored, MUST
+    NOT enter the legacy resolution-capable single-query path. It completes
+    without an agent query and with empty finding and resolution sets. Only a
+    legacy or synthetic context where partition metadata is absent keeps its
+    existing compatibility behavior.
 
 ## 5. Current versus proposed product journey
 
@@ -192,7 +194,10 @@ publication/reconciliation operation allowed.
 1. Filter ignored files before planning; preserve provider file order for the
    remaining files.
 2. Normalize line endings and remove unsafe invisible prompt characters through
-   the existing untrusted-content boundary before measuring.
+   the existing untrusted-content boundary before measuring. Provider-supplied
+   filename, status, additions, and deletions metadata MUST each remain inside
+   a bounded labelled untrusted-data envelope; runtime types are not trusted
+   merely because the application contract declares them.
 3. Split an oversized patch at the last newline that fits the fragment budget.
    When a single line exceeds the budget, split that line at the hard character
    boundary. Concatenating fragment payloads MUST reproduce the sanitized patch.
@@ -204,10 +209,10 @@ publication/reconciliation operation allowed.
    digest of assigned identities/content. IDs MUST be bounded and safe to echo.
 7. Reject a plan that cannot represent even one fragment within a partition;
    never silently truncate it.
-8. If filtering intentionally retains zero files and records at least one
-   ignored file for a canonical PR, produce a zero-work plan and preserve the
-   ignored-file count for auditability. Do not synthesize a partition or reuse
-   the issue/local fallback prompt.
+8. If a canonical PR diff contains zero provider changes, or filtering
+   intentionally retains zero files and records ignored files, produce a
+   zero-work plan and preserve all available counts for auditability. Do not
+   synthesize a partition or reuse the issue/local fallback prompt.
 
 ### 6.2 Partition execution
 
@@ -432,9 +437,10 @@ partition-local finding was published.
    disabled where supported.
 2. Partition IDs and head SHA are generated from trusted canonical facts; agent
    echoes are compared exactly after schema validation.
-3. Diff fragments use the existing untrusted-content envelope and invisible-
-   control sanitization. Embedded instructions cannot alter scope, concurrency,
-   ownership, or output schema.
+3. Diff filenames, status/count metadata, and fragments use separate bounded
+   untrusted-content envelopes with invisible-control sanitization. Embedded
+   instructions or malformed provider runtime values cannot alter scope,
+   concurrency, ownership, or output schema.
 4. Telemetry contains counts, timings, IDs, and SHA only; never patch, rule,
    comment, finding prose, or credentials.
 5. Aggregate arrays are hard-bounded before allocation/publication to prevent a
@@ -449,8 +455,9 @@ response characters, and failed partition ordinal/category when applicable.
 Existing review ID and canonical SHA correlate every partition. Logs MAY state
 `partition 3/5` and elapsed time but MUST NOT include paths or fragment content.
 An observed canonical partition plan MUST emit those plan fields even when it
-contains zero partitions, so ignored-only zero-work reviews remain
-distinguishable from legacy non-partitioned issue/local execution.
+contains zero partitions, so empty-diff and ignored-only canonical zero-work
+reviews remain distinguishable from legacy non-partitioned issue/local
+execution.
 
 `diff` coverage reports complete only when provider enumeration is complete and
 the plan assigns all reviewable files/characters. Prompt-budget omission and
@@ -462,8 +469,9 @@ distinguishable from reviewer/model failure.
 There is no durable partition schema and no data migration. Existing single-
 partition PRs follow the new planner and should produce equivalent findings with
 an added attestation. Issue-only and non-PR local-scope reviews retain the legacy
-single-query contract because no canonical provider diff can be partitioned. A
-canonical PR with a zero-work ignored-only plan never uses that legacy path.
+single-query contract because no canonical provider diff can be partitioned.
+Any canonical PR with a zero-partition plan, including an empty provider diff or
+an ignored-only diff, never uses that legacy path.
 
 Roll out atomically across prompt/schema, planner, analyzer, telemetry, docs,
 tests, catalog, and generated bundles. A rollback reverts the entire feature;
@@ -472,17 +480,17 @@ comments remain untouched.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **37 distinct cases**.
+This SDD owns at least **39 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/pure planning | 11 | empty/single/multi-file, newline/hard split, exact prompt and 64/65 partition boundaries, absent patch, ignore, stable IDs, order, no character loss |
-| State/application/idempotency/races | 7 | all-complete, one failure, wrong/duplicate ID, wrong SHA, resolution ownership, stale head, replay |
+| Domain/pure planning | 12 | empty/single/multi-file, newline/hard split, exact prompt and 64/65 partition boundaries, absent patch, ignore, stable IDs, order, no character loss, hostile status/count metadata envelope |
+| State/application/idempotency/races | 8 | all-complete, one failure, wrong/duplicate ID, wrong SHA, resolution ownership, stale head, replay, empty canonical zero-work |
 | Agent adapter/schema contracts | 4 | required attestation, locale, undefined/invalid result, aggregate bounds |
 | Workflow/architecture/telemetry | 5 | concurrency two, ordered collection, no mutation before complete, positive and zero-partition plan metrics |
 | UI/UX/localization/sanitization | 4 | pending, failed, complete, hostile content/control characters |
 | Integration/security/compatibility | 6 | 44-file regression, oversized patch, provider partial, dry-run, legacy issue-only path, ignored-only canonical no-op |
-| **Total** | **37** | No double counting |
+| **Total** | **39** | No double counting |
 
 Planner, attestation, and aggregate pure policies require 100% enumerated branch
 coverage. Changed analyzer/context modules require at least 95% lines/statements
@@ -526,34 +534,38 @@ token scope, secret, or public input.
 10. Given provider file pagination reaches its cap, then the run cannot claim
     complete diff analysis or whole-PR clean.
 11. Given dry run, then all partitions execute and aggregate but GitHub remains unchanged.
-12. Given hostile prompt text in a patch, then it remains bounded untrusted data
-    and cannot alter partition identity or task policy.
+12. Given hostile prompt text or terminator/control syntax in a patch, filename,
+    status, additions, or deletions value, then every provider field remains in
+    its bounded untrusted-data envelope and cannot alter partition identity or
+    task policy.
 13. Given an issue-only review without a canonical PR diff, then the established
     single-query path remains functional.
 14. Given a complete plan with no accepted findings, then Bugbot may report clean
     only after the final freshness check and all other context coverage is complete.
 15. Given a diff requiring more than 64 partitions, then no reviewer query or
     provider mutation starts and the result instructs the maintainer to split the PR.
-16. Given a canonical PR whose changed files are all ignored, then no reviewer
-    query runs, no prior finding is resolved, and the normal status projection
-    retains existing open findings for the current head.
+16. Given a canonical PR whose provider diff is empty or whose changed files are
+    all ignored, then no reviewer query runs, no prior finding is resolved, and
+    the normal status projection retains existing open findings for the current
+    head.
 17. Given a diff that packs into exactly 64 partitions, then the plan succeeds;
     adding content that requires partition 65 fails before reviewer execution.
-18. Given a canonical ignored-only diff produces an observed zero-partition
-    plan, then telemetry emits zero plan/completion/fragment/file/concurrency
-    fields; a legacy execution with no plan omits those fields.
+18. Given an empty or ignored-only canonical diff produces an observed
+    zero-partition plan, then telemetry emits zero plan/completion/fragment/
+    file/concurrency fields; a legacy execution with no plan omits those fields.
 
 ## 17. Requirements traceability
 
 | Requirement | Policy/use case/adapter/presentation | Test or evidence | Documentation |
 |---|---|---|---|
 | lossless bounded plan | diff partition policy | reconstruction/boundary/44-file tests | how it works |
+| untrusted diff metadata | diff partition policy + security envelope | hostile filename/status/count/patch fixtures | detection/security |
 | attested atomic execution | partitioned analyzer | failure/identity/concurrency tests | failure scenarios |
 | global coherent result | aggregate policy + existing preparation | duplicate/rank/limit/resolution tests | detection |
 | same-SHA safety | existing freshness + attestation | stale/replay tests | how it works |
 | content-free progress | telemetry/presentation | schema/render/redaction tests | observability |
 | clean only after completeness | coverage + workflow result policy | provider-partial/zero-finding tests | detection/failures |
-| ignored-only resolution safety | partitioned analyzer zero-work guard | canonical ignored-only no-agent/no-resolution test | detection/failures |
+| canonical zero-work resolution safety | partitioned analyzer zero-work guard | empty and ignored-only canonical no-agent/no-resolution tests | detection/failures |
 | zero-work plan observability | partition telemetry | zero-plan versus legacy-no-plan telemetry test | observability |
 | unchanged authority | semantic agent port/composition | architecture/credential tests | permissions |
 
@@ -577,7 +589,7 @@ token scope, secret, or public input.
       provider enumeration and every partition respects fixed prompt bounds.
 - [x] Attestation, resolution ownership, concurrency, aggregation, freshness,
       replay, cancellation/failure, and no-prepublication-mutation tests pass.
-- [x] The 37-case floor and changed-module/repository coverage budgets pass.
+- [x] The 39-case floor and changed-module/repository coverage budgets pass.
 - [x] Pending, failed, provider-partial, complete, dry-run, and publication-
       partial surfaces are accurate, localized, accessible, and bounded.
 - [x] No public configuration, permission, credential, or durable-state change
