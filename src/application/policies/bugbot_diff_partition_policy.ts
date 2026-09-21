@@ -1,4 +1,4 @@
-import { createUntrustedContent, renderUntrustedField } from '../../domain/security/untrusted_content';
+import { createUntrustedContent, renderUntrustedContentVerbatim, renderUntrustedField, type UntrustedContent } from '../../domain/security/untrusted_content';
 import { fileMatchesIgnorePatterns } from './file_ignore_policy';
 
 export const MAX_REVIEW_DIFF_PARTITION_LENGTH = 64_000;
@@ -93,13 +93,22 @@ export function buildReviewDiffPlan(
         `github.diff.metadata.${fragmentIndex}`,
         MAX_REVIEW_DIFF_METADATA_LENGTH,
       );
+      // `fragment` is already a bounded slice of the sanitized patch. A second
+      // normalization would weaken the lossless review-payload guarantee.
+      const content: UntrustedContent = {
+        origin: `github.diff.fragment.${fragmentIndex}`,
+        text: fragment,
+        originalLength: fragment.length,
+        truncated: false,
+        removedControlCharacters: false,
+      };
       sections.push({
         filename: change.filename,
         rendered: [
           `### Assigned file fragment ${index + 1}/${fragments.length}`,
           safeFilename,
           safeMetadata,
-          renderUntrustedField(fragment, `github.diff.fragment.${fragmentIndex}`, MAX_REVIEW_DIFF_FRAGMENT_LENGTH + 200),
+          renderUntrustedContentVerbatim(content),
         ].join('\n\n'),
       });
     }

@@ -222,8 +222,13 @@ publication/reconciliation operation allowed.
    failure guidance MUST distinguish malformed provider content (correct the
    diff source and retry) from a size ceiling (split the PR and retry).
    Every fragment remains within 12,000 UTF-16 code units, starts and ends with
-   a complete Unicode scalar value, and concatenating fragment payloads MUST
-   reproduce the sanitized patch exactly.
+   a complete Unicode scalar value, and concatenating logical fragment payloads
+   MUST reproduce the sanitized patch exactly. Render each fragment in a
+   collision-free, length-labelled untrusted-data frame whose closing marker
+   is absent from that fragment. The rendered payload MUST preserve the
+   sanitized fragment verbatim, including literal `[END_UNTRUSTED_DATA]`
+   sequences; do not use the ordinary terminator-escaping renderer for diff
+   fragments. The framing overhead still counts towards the partition budget.
 4. Represent an absent (`undefined`/`null`) or empty provider patch as one
    explicit assignment naming the file and instructing the reviewer to inspect
    the local diff. The repository adapter normalizes omitted patches, and the
@@ -511,17 +516,17 @@ comments remain untouched.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **48 distinct cases**.
+This SDD owns at least **50 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/pure planning | 21 | empty/single/multi-file, newline/hard split, UTF-16 surrogate-safe hard boundaries and rejection of isolated high/low surrogates, individual and cumulative raw input ceilings before normalization, exact prompt and 64/65 partition boundaries, omitted/null/empty patch assignments and malformed non-string rejection even on ignored paths, root/nested leading-`**/` ignore parity, stable IDs, order, no character loss, hostile status/count metadata envelope |
+| Domain/pure planning | 23 | empty/single/multi-file, newline/hard split, UTF-16 surrogate-safe hard boundaries and rejection of isolated high/low surrogates, collision-free untrusted-data framing with verbatim delimiter-like patch text, individual and cumulative raw input ceilings before normalization, exact prompt and 64/65 partition boundaries, omitted/null/empty patch assignments and malformed non-string rejection even on ignored paths, root/nested leading-`**/` ignore parity, stable IDs, order, no character loss, hostile status/count metadata envelope |
 | State/application/idempotency/races | 8 | all-complete, one failure, wrong/duplicate ID, wrong SHA, resolution ownership, stale head, replay, empty canonical zero-work |
 | Agent adapter/schema contracts | 4 | required attestation, locale, undefined/invalid result, aggregate bounds |
 | Workflow/architecture/telemetry | 5 | concurrency two, ordered collection, no mutation before complete, positive and zero-partition plan metrics |
 | UI/UX/localization/sanitization | 4 | pending, failed, complete, hostile content/control characters |
 | Integration/security/compatibility | 6 | 44-file regression, oversized patch, provider partial, dry-run, legacy issue-only path, ignored-only canonical no-op |
-| **Total** | **48** | No double counting |
+| **Total** | **50** | No double counting |
 
 Planner, attestation, and aggregate pure policies require 100% enumerated branch
 coverage. Changed analyzer/context modules require at least 95% lines/statements
@@ -600,6 +605,10 @@ token scope, secret, or public input.
     UTF-16 code units, the planner rejects before normalization, model query,
     or publication with bounded split-PR guidance; ignored patches consume no
     plan budget and accepted patches remain lossless.
+22. Given a patch containing literal `[END_UNTRUSTED_DATA]` or a proposed
+    frame terminator, then the rendered data frame selects a non-colliding
+    terminator; its payload is exactly the sanitized fragment, never silently
+    rewritten, and the final partition remains within its budget.
 
 ## 17. Requirements traceability
 
@@ -638,7 +647,7 @@ token scope, secret, or public input.
       provider enumeration and every partition respects fixed prompt bounds.
 - [x] Attestation, resolution ownership, concurrency, aggregation, freshness,
       replay, cancellation/failure, and no-prepublication-mutation tests pass.
-- [x] The 46-case floor and changed-module/repository coverage budgets pass.
+- [x] The 50-case floor and changed-module/repository coverage budgets pass.
 - [x] Pending, failed, provider-partial, complete, dry-run, and publication-
       partial surfaces are accurate, localized, accessible, and bounded.
 - [x] No public configuration, permission, credential, or durable-state change

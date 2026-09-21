@@ -24,8 +24,10 @@ This page is the maintained acceptance contract for Copilot's agent surface. An 
 
 Metadata commands are parsed before any model call. A comment without a
 `/copilot` prefix or exact bot mention exits before project, AI, translation,
-runtime, or publication work. `ai-members-only` gates every model-backed event
-and addressed-comment route; normal non-AI lifecycle automation remains
+runtime, or publication work. `ai-members-only` gates active user-content
+agent tasks and addressed-comment routes; a localization-only planner for
+bounded, code-owned catalog copy on an otherwise inactive event does not
+trigger a membership lookup. Normal non-AI lifecycle automation remains
 available. File mutation requires an authorized actor, a clean workspace, the
 expected branch, a bounded exact-path change set, sensitive-path rejection,
 isolated verification commands, and a second postflight check before commit.

@@ -84,19 +84,20 @@ export async function runGitHubAction(): Promise<void> {
 
     const localeInputs = readGithubActionLocaleInputs(getGithubActionInput);
     const aiInputs = readGithubActionAiInputs(getGithubActionInput);
+    const activeRuntimeAgentTasks = activeAgentTasks(
+        eventInputs,
+        singleAction,
+        admission.tokenUser,
+        aiInputs.pullRequestDescriptionMode !== 'disabled',
+    );
     const requestedActiveAgentTasks = [...new Set([
-        ...activeAgentTasks(
-            eventInputs,
-            singleAction,
-            admission.tokenUser,
-            aiInputs.pullRequestDescriptionMode !== 'disabled',
-        ),
+        ...activeRuntimeAgentTasks,
         ...([localeInputs.repository, localeInputs.issue, localeInputs.pullRequest]
             .some(publicationLocaleNeedsDynamicCatalog) ? ['planner' as const] : []),
     ])];
     const agentRuntimeAuthorized = botAnalysisOnly
         || !aiInputs.membersOnly
-        || requestedActiveAgentTasks.length === 0
+        || activeRuntimeAgentTasks.length === 0
         || await createActorAuthorizationRepository().isActorAllowedToUseMemberOnlyAutomation(
             eventInputs.repo.owner,
             eventInputs.repo.repo,

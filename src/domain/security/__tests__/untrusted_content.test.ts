@@ -1,6 +1,7 @@
 import {
     createUntrustedContent,
     renderUntrustedContent,
+    renderUntrustedContentVerbatim,
 } from '../untrusted_content';
 
 describe('untrusted content policy', () => {
@@ -28,6 +29,19 @@ describe('untrusted content policy', () => {
 
         expect(rendered).toContain('[END_UNTRUSTED_DATA_LITERAL]');
         expect(rendered).toMatch(/\[END_UNTRUSTED_DATA\]$/);
+    });
+
+    it.each([
+        ['plain', 'unchanged patch', '[END_UNTRUSTED_DATA]'],
+        ['colliding', 'before [END_UNTRUSTED_DATA] and [END_UNTRUSTED_DATA_1] after', '[END_UNTRUSTED_DATA_2]'],
+    ])('frames %s diff data without rewriting its payload', (_label, payload, terminator) => {
+        const rendered = renderUntrustedContentVerbatim(createUntrustedContent(payload, 'github.diff.fragment.1'));
+        const lines = rendered.split('\n');
+
+        expect(lines[0]).toContain(`terminator=${terminator}`);
+        expect(lines.at(-1)).toBe(terminator);
+        expect(lines.slice(1, -1).join('\n')).toBe(payload);
+        expect(payload).not.toContain(terminator);
     });
 
     it('normalizes unsafe origin labels without changing the payload contract', () => {

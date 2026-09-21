@@ -39303,14 +39303,15 @@ async function runGitHubAction() {
     }
     const localeInputs = (0, github_action_locale_inputs_1.readGithubActionLocaleInputs)(github_action_input_1.getGithubActionInput);
     const aiInputs = (0, github_action_ai_inputs_1.readGithubActionAiInputs)(github_action_input_1.getGithubActionInput);
+    const activeRuntimeAgentTasks = (0, agent_task_activation_policy_1.activeAgentTasks)(eventInputs, singleAction, admission.tokenUser, aiInputs.pullRequestDescriptionMode !== 'disabled');
     const requestedActiveAgentTasks = [...new Set([
-            ...(0, agent_task_activation_policy_1.activeAgentTasks)(eventInputs, singleAction, admission.tokenUser, aiInputs.pullRequestDescriptionMode !== 'disabled'),
+            ...activeRuntimeAgentTasks,
             ...([localeInputs.repository, localeInputs.issue, localeInputs.pullRequest]
                 .some(publication_message_catalog_1.publicationLocaleNeedsDynamicCatalog) ? ['planner'] : []),
         ])];
     const agentRuntimeAuthorized = botAnalysisOnly
         || !aiInputs.membersOnly
-        || requestedActiveAgentTasks.length === 0
+        || activeRuntimeAgentTasks.length === 0
         || await (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)().isActorAllowedToUseMemberOnlyAutomation(eventInputs.repo.owner, eventInputs.repo.repo, eventInputs.actor, token);
     let languageRuntimeAvailable = false;
     const projectBoard = (0, project_board_composition_root_1.createProjectBoardCompositionRoot)();
@@ -43402,13 +43403,22 @@ function buildReviewDiffPlan(context, ignorePatterns = []) {
             const fragment = fragments[index];
             const safeFilename = (0, untrusted_content_1.renderUntrustedField)(change.filename, `github.diff.path.${fragmentIndex}`, 1000);
             const safeMetadata = (0, untrusted_content_1.renderUntrustedField)(`Status: ${String(change.status)}; additions: ${String(change.additions)}; deletions: ${String(change.deletions)}`, `github.diff.metadata.${fragmentIndex}`, MAX_REVIEW_DIFF_METADATA_LENGTH);
+            // `fragment` is already a bounded slice of the sanitized patch. A second
+            // normalization would weaken the lossless review-payload guarantee.
+            const content = {
+                origin: `github.diff.fragment.${fragmentIndex}`,
+                text: fragment,
+                originalLength: fragment.length,
+                truncated: false,
+                removedControlCharacters: false,
+            };
             sections.push({
                 filename: change.filename,
                 rendered: [
                     `### Assigned file fragment ${index + 1}/${fragments.length}`,
                     safeFilename,
                     safeMetadata,
-                    (0, untrusted_content_1.renderUntrustedField)(fragment, `github.diff.fragment.${fragmentIndex}`, exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH + 200),
+                    (0, untrusted_content_1.renderUntrustedContentVerbatim)(content),
                 ].join('\n\n'),
             });
         }
@@ -77740,6 +77750,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UNTRUSTED_CONTENT_POLICY = exports.UNTRUSTED_CONTENT_TRUNCATION_SUFFIX = exports.DEFAULT_UNTRUSTED_CONTENT_LIMIT = void 0;
 exports.createUntrustedContent = createUntrustedContent;
 exports.renderUntrustedContent = renderUntrustedContent;
+exports.renderUntrustedContentVerbatim = renderUntrustedContentVerbatim;
 exports.renderUntrustedField = renderUntrustedField;
 exports.DEFAULT_UNTRUSTED_CONTENT_LIMIT = 12000;
 exports.UNTRUSTED_CONTENT_TRUNCATION_SUFFIX = '\n[untrusted content truncated]';
@@ -77777,6 +77788,24 @@ function renderUntrustedContent(content) {
         `[BEGIN_UNTRUSTED_DATA origin=${content.origin} length=${content.originalLength} truncated=${content.truncated}]`,
         safeText,
         '[END_UNTRUSTED_DATA]',
+    ].join('\n');
+}
+/**
+ * Frames an already bounded diff fragment without rewriting its payload.
+ * A deterministic non-colliding terminator keeps delimiter-like source text
+ * inside the untrusted block and makes reconstruction exact.
+ */
+function renderUntrustedContentVerbatim(content) {
+    let terminator = '[END_UNTRUSTED_DATA]';
+    let suffix = 0;
+    while (content.text.includes(terminator)) {
+        suffix += 1;
+        terminator = `[END_UNTRUSTED_DATA_${suffix}]`;
+    }
+    return [
+        `[BEGIN_UNTRUSTED_DATA origin=${content.origin} length=${content.originalLength} truncated=${content.truncated} terminator=${terminator}]`,
+        content.text,
+        terminator,
     ].join('\n');
 }
 function renderUntrustedField(raw, origin, maxLength) {

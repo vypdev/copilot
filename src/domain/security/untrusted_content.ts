@@ -58,6 +58,25 @@ export function renderUntrustedContent(content: UntrustedContent): string {
     ].join('\n');
 }
 
+/**
+ * Frames an already bounded diff fragment without rewriting its payload.
+ * A deterministic non-colliding terminator keeps delimiter-like source text
+ * inside the untrusted block and makes reconstruction exact.
+ */
+export function renderUntrustedContentVerbatim(content: UntrustedContent): string {
+    let terminator = '[END_UNTRUSTED_DATA]';
+    let suffix = 0;
+    while (content.text.includes(terminator)) {
+        suffix += 1;
+        terminator = `[END_UNTRUSTED_DATA_${suffix}]`;
+    }
+    return [
+        `[BEGIN_UNTRUSTED_DATA origin=${content.origin} length=${content.originalLength} truncated=${content.truncated} terminator=${terminator}]`,
+        content.text,
+        terminator,
+    ].join('\n');
+}
+
 export function renderUntrustedField(
     raw: unknown,
     origin: string,

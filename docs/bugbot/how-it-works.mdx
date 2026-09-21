@@ -65,7 +65,9 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
    in flight. Every request is bound to the exact partition id and canonical
    head SHA, includes repository context, hierarchical rules, human discussion,
    ignore patterns, and its assigned diff fragments, and may inspect surrounding
-   or dependent code in the read-only workspace. Only partition one receives
+   or dependent code in the read-only workspace. Diff fragments use a
+   collision-free untrusted-data terminator so literal marker-like source text
+   remains intact inside the review payload. Only partition one receives
    **previously reported findings** and owns task 2; every other partition must
    return an empty resolution list. Each structured response must echo its exact
    partition id and head SHA. A missing, duplicated, stale, malformed, or failed
