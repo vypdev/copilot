@@ -238,8 +238,31 @@ read-only GitHub queries and presents ordered permission outcomes.
 ### 6.2 Workflow PAT
 
 1. The final `SetupConfiguration` determines workflow permissions.
-2. The table always includes repository Metadata read, Actions write, Contents
-   write, Issues write, and Pull requests write.
+2. Repository Metadata read is the only unconditional workflow-PAT row. The
+   four repository write permissions are derived independently from enabled
+   runtime consumers, not inherited as a fixed baseline:
+
+   Any enabled runtime route additionally requires Actions read for the
+   fail-closed previous-run queue check, even when it does not dispatch a
+   workflow. Actions write replaces that read row only for release/hotfix
+   dispatch. Repository templates and setup-only credential-health selection
+   are not runtime routes and do not retain this grant by themselves.
+
+   | Permission | Selected runtime capability that requires it |
+   |---|---|
+   | Actions write | Release/hotfix workflow dispatch, including an enabled release/hotfix issue workflow |
+   | Contents write | Managed issue branches, file-modifying issue/PR comment routes, or release/hotfix branch, tag, and merge operations |
+   | Issues write | Issue automation, issue comments, issue-progress commit processing, inactive-issue closure, or release/hotfix issue lifecycle |
+   | Pull requests write | PR automation, PR review comments, commit-triggered Bugbot review, issue-comment autofix on a PR, guarded approval, or release/hotfix promotion |
+
+   An issue-workflow kind is a runtime consumer only when the issue route is
+   enabled. A disabled route MUST NOT retain a write grant merely because its
+   template or issue-workflow selection remains in the configuration. With
+   all mutating routes disabled and guarded approval off, the workflow table
+   contains only Metadata read. Existing defaults still select the normal
+   write grants, and disabling one consumer MUST NOT remove a grant needed by
+   another. GitHub documents Contents write for merging a PR and Actions write
+   for workflow dispatch; neither is required just to render a disabled route.
 3. Administration read is included for release/hotfix orchestration or guarded
    PR approval. Checks read and Variables read are included for guarded
    approval. Organization Members read is included only when an enabled runtime
@@ -529,17 +552,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **93 distinct cases**.
+This SDD adds at least **98 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain permission policy | 18 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants, positive and negative organization-membership capability projection including comment-only routes |
+| Domain permission policy | 23 | setup/workflow plans, independent selected-feature write grants and all-disabled minimum, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants, positive and negative organization-membership capability projection including comment-only routes |
 | Application state/blocking | 15 | verified, missing, required-read unverifiable, public-read operational readiness, required-write confirmation, invalid base token, organization-only credential collection, bounded pre-plan inspection failure, pre-validation audit port, immediate remote-storage blocked handling, zero-count assignment and inactive membership checks |
 | Adapter/provider contracts | 32 | GET-only probes, fixed four-request concurrency with stable result order, private-versus-public/unknown visibility evidence, protected-endpoint evidence, commit-list Contents target, private empty-repository 409 versus public operational usability, default-branch Checks resolution plus encoded check-runs target, invalid/missing branch fail-closed behavior, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow in both inspection and bootstrap, unavailable endpoint state, duplicate-comment deletion fallback regression |
 | Setup/credential integration | 21 | pre-prompt setup table, conditional denial through planning, wizard-owned repository-inventory block plus organization-only continuation, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, absent/failed remote snapshot blocks every subsequent mutation, preserve-disabled and scope-moving keep rejection, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
 | UI/accessibility | 5 | required/result tables, public-read limitation copy, confirmation-required copy, 40-column wrapping, no-color text |
 | Architecture/security/docs | 2 | query-only boundary, no duplicated catalog, and safe generic/recovery automation examples |
-| **Total** | **93** | No double counting |
+| **Total** | **98** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -699,12 +722,21 @@ at widths 40/80/120 and `NO_COLOR`.
     bootstraps only after successful Contents visibility and exact-path `404`
     on the selected ref; unreadable, present, and unsupported cases never
     create or delete a workflow.
+36. Given all runtime routes are disabled and guarded approval is off, the
+    workflow PAT matrix contains only Metadata read. Enabling a route adds
+    Actions read for queue safety; enabling release/hotfix dispatch upgrades it
+    to write and adds Contents/Issues/Pull requests write. Enabling managed
+    issue branches, either file-edit comment route, issue-progress commits, PR
+    review, or guarded approval adds only the write rows actually consumed by
+    each route. Disabling a route while another consumer remains active preserves
+    the shared grant; an inactive issue-workflow selection alone adds nothing.
 
 ## 17. Requirements traceability
 
 | Requirement | Policy/use case/adapter/presentation | Test or evidence | Documentation |
 |---|---|---|---|
 | role-specific least privilege | permission policy | policy matrix tests | authentication |
+| feature-derived workflow write grants | permission policy and final wizard audit | all-disabled and independent feature/overlap matrix tests | authentication checklist |
 | pre-prompt table | credential orchestration/presenter | CLI prompt tests | authentication |
 | safe evidence states | validation use case/query adapter | state/error mapping and private/public/protected endpoint tests | troubleshooting |
 | deterministic 403 mapping | provider adapter plus bounded GitHub error policy | rate-limit, SSO, bare, and explicit-denial fixtures | authentication/troubleshooting |
@@ -745,7 +777,7 @@ at widths 40/80/120 and `NO_COLOR`.
 - [x] No validation request mutates GitHub and no result overclaims write access.
 - [x] Token values and raw provider text are absent from all output/state/errors.
 - [x] Clean Architecture boundaries and their executable test pass.
-- [x] At least 93 distinct cases and stated coverage thresholds pass.
+- [x] At least 98 distinct cases and stated coverage thresholds pass.
 - [x] Authentication, checklist, troubleshooting, and architecture docs agree.
 - [x] Catalog evidence and generated `specs/CATALOG.md` are current.
 - [x] Specification, documentation, typecheck, lint, and test gates pass.

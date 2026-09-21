@@ -15,6 +15,13 @@ const organization: SetupRemoteConfiguration = {
     organizationAccess: 'available', organizationSecretsAccess: 'available', organizationVariablesAccess: 'available',
 };
 
+function disabledRuntimeConfiguration() {
+    const configuration = createDefaultSetupConfiguration();
+    for (const feature of Object.keys(configuration.features)) configuration.features[feature] = false;
+    configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'off' };
+    return configuration;
+}
+
 describe('setup token permission policy', () => {
     it('describes the complete setup PAT permission catalog before the prompt', () => {
         const requirements = buildSetupPatPermissionRequirements();
@@ -190,7 +197,7 @@ describe('setup token permission policy', () => {
         ]));
     });
 
-    it('always requires the documented workflow PAT baseline', () => {
+    it('keeps only Actions read for queue safety without a dispatch capability', () => {
         const configuration = createDefaultSetupConfiguration();
         configuration.features.release = false;
         configuration.features.hotfix = false;
@@ -199,6 +206,63 @@ describe('setup token permission policy', () => {
         configuration.projects.ids = '';
         expect(buildWorkflowPatPermissionRequirements(configuration).map(item => item.permission)).toEqual([
             'Metadata', 'Actions', 'Contents', 'Issues', 'Pull requests',
+        ]);
+        expect(buildWorkflowPatPermissionRequirements(configuration)
+            .find(item => item.permission === 'Actions')?.level).toBe('read');
+    });
+
+    it('keeps only Metadata when all runtime routes are disabled despite stale issue and project selections', () => {
+        const configuration = disabledRuntimeConfiguration();
+        configuration.projects.ids = 'PVT_kwDOExample';
+        expect(buildWorkflowPatPermissionRequirements(configuration, organization)
+            .map(item => `${item.scope}:${item.permission}:${item.level}`)).toEqual([
+            'repository:Metadata:read',
+        ]);
+    });
+
+    it.each([
+        ['managed issues', 'issues', ['Metadata', 'Actions', 'Contents', 'Issues']],
+        ['issue comments', 'issueComments', ['Metadata', 'Actions', 'Contents', 'Issues', 'Pull requests']],
+        ['pull requests', 'pullRequests', ['Metadata', 'Actions', 'Pull requests']],
+        ['PR comments', 'pullRequestComments', ['Metadata', 'Actions', 'Contents', 'Pull requests']],
+        ['commit progress and Bugbot', 'commits', ['Metadata', 'Actions', 'Issues', 'Pull requests']],
+        ['release dispatch', 'release', ['Metadata', 'Actions', 'Contents', 'Issues', 'Pull requests', 'Administration']],
+        ['inactive issue closure', 'inactiveIssueClosure', ['Metadata', 'Actions', 'Issues']],
+    ] as const)('projects only the writes consumed by %s', (_label, feature, expected) => {
+        const configuration = disabledRuntimeConfiguration();
+        configuration.issueWorkflows.enabled = ['help'];
+        configuration.features[feature] = true;
+        const requirements = buildWorkflowPatPermissionRequirements(configuration);
+        expect(requirements.map(item => item.permission)).toEqual(expected);
+        expect(requirements.find(item => item.permission === 'Actions')?.level)
+            .toBe(feature === 'release' ? 'write' : 'read');
+    });
+
+    it('does not require Contents write for issue automation with managed branches disabled', () => {
+        const configuration = disabledRuntimeConfiguration();
+        configuration.features.issues = true;
+        configuration.repository.issueManagedBranches = false;
+        configuration.issueWorkflows.enabled = ['help'];
+        expect(buildWorkflowPatPermissionRequirements(configuration).map(item => item.permission)).toEqual([
+            'Metadata', 'Actions', 'Issues',
+        ]);
+    });
+
+    it('retains shared write grants when one of several consuming routes is disabled', () => {
+        const configuration = disabledRuntimeConfiguration();
+        configuration.features.issueComments = true;
+        configuration.features.pullRequestComments = true;
+        configuration.features.issueComments = false;
+        expect(buildWorkflowPatPermissionRequirements(configuration).map(item => item.permission)).toEqual([
+            'Metadata', 'Actions', 'Contents', 'Pull requests',
+        ]);
+    });
+
+    it('adds guarded approval PR writes without unrelated Actions, Contents, or Issues writes', () => {
+        const configuration = disabledRuntimeConfiguration();
+        configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'guarded' };
+        expect(buildWorkflowPatPermissionRequirements(configuration).map(item => item.permission)).toEqual([
+            'Metadata', 'Actions', 'Pull requests', 'Administration', 'Checks', 'Variables',
         ]);
     });
 

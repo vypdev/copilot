@@ -167,15 +167,26 @@ For comment-driven assistance, read-only commands are available to anyone who ca
 
     In the **Repository access** section, select only the repositories that will run Copilot. Avoid **All repositories** unless a separately reviewed organization policy genuinely requires it.
 
-    Set these permissions for the repository:
+    The default installation enables issue, PR, comment, commit, release, and
+    hotfix automation and therefore needs the write grants below. If you
+    disable capabilities in setup, follow the final workflow-PAT terminal table
+    instead: Metadata read is the only unconditional grant. For example, a
+    repository using only PR review needs Pull requests write and Actions read
+    for the previous-run queue check, not Actions write or Contents/Issues
+    write; release/hotfix dispatch upgrades Actions to write, and
+    file-editing routes or managed branches add Contents write. An issue
+    workflow that remains selected while the issue route is disabled does not
+    grant runtime authority.
 
-    - **Actions**: Read and write
+    For the default installation, set these permissions for the repository:
+
+    - **Actions**: Read-only for the previous-run queue check when any runtime route is enabled; read and write for release/hotfix dispatch
     - **Administration**: Read-only when release/hotfix orchestration or guarded PR approval is enabled, so runtime can inspect classic branch protection alongside effective rulesets.
     - **Checks**: Read-only when guarded PR approval is enabled, to verify current-head check runs and their producer App IDs. For ordinary pull-request automation, Checks is not required on the PAT: the supplied workflow grants job-local `checks: write` to its short-lived `GITHUB_TOKEN` for its own Check Run.
-    - **Contents**: Read and write
-    - **Issues**: Read and write
+    - **Contents**: Read and write for managed issue branches, file-editing comment routes, or release/hotfix operations
+    - **Issues**: Read and write for issue automation, issue comments, commit-driven issue progress, inactive issue closure, or release/hotfix lifecycle
     - **Metadata**: Read-only
-    - **Pull requests**: Read and write
+    - **Pull requests**: Read and write for PR automation/comments, commit-driven Bugbot review, issue-comment autofix, guarded approval, or release/hotfix promotion
     - **Variables**: Read-only when guarded PR approval is enabled, to load `PR_APPROVAL_POLICY`. If setup creates, selects, or preserves an organization-level Variable, grant the corresponding organization Variables read permission as well.
 
     Do not grant Administration write, Secrets, Variables write, Webhooks, or Workflows permissions to the runtime PAT unless an independently reviewed extension actually uses them. Workflow installation and Secret/Variable administration belong to the separate setup PAT.

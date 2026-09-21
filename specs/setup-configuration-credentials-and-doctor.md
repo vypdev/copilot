@@ -369,7 +369,7 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 ## 19. Definition of Done
 
 - [x] Every new option has default, bounds, precedence, persistence, retirement/rejection, and security rules.
-- [x] The 108-case budget and coverage thresholds pass.
+- [x] The 110-case budget and coverage thresholds pass.
 - [x] Setup cancel/retry/partial state and doctor read-only behavior pass.
 - [x] Secrets are absent from plans, config, logs, errors, and backups.
 - [x] Workflow/assets, documentation, and catalog checks pass.

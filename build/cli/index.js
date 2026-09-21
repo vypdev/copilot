@@ -48205,23 +48205,37 @@ function buildConfiguredSetupPatPermissionRequirements(configuration, remote) {
     ]);
 }
 function buildWorkflowPatPermissionRequirements(configuration, remote) {
+    const issues = configuration.features.issues !== false;
+    const pullRequests = configuration.features.pullRequests !== false;
+    const commits = configuration.features.commits !== false;
+    const issueComments = configuration.features.issueComments !== false;
+    const pullRequestComments = configuration.features.pullRequestComments !== false;
     const releaseOrHotfix = configuration.features.release
         || configuration.features.hotfix
-        || configuration.issueWorkflows.enabled.some(kind => kind === 'release' || kind === 'hotfix');
+        || (issues && configuration.issueWorkflows.enabled.some(kind => kind === 'release' || kind === 'hotfix'));
     const guardedApproval = configuration.pullRequestApproval.mode === 'guarded';
     const organization = remote?.ownerType === 'Organization';
     const organizationMembers = organization && requiresWorkflowOrganizationMembers(configuration);
-    const hasProjects = configuration.projects.ids.trim().length > 0;
-    const issueTypes = configuration.issueWorkflows.enabled.length > 0;
+    const hasProjects = (issues || pullRequests) && configuration.projects.ids.trim().length > 0;
+    const issueTypes = issues && configuration.issueWorkflows.enabled.length > 0;
+    const writesContents = (issues && configuration.repository.issueManagedBranches)
+        || issueComments || pullRequestComments || releaseOrHotfix;
+    const writesIssues = issues || issueComments || commits
+        || configuration.features.inactiveIssueClosure === true || releaseOrHotfix;
+    const writesPullRequests = pullRequests || pullRequestComments || commits
+        || issueComments || guardedApproval || releaseOrHotfix;
+    const hasRuntimeRoute = issues || pullRequests || commits || issueComments
+        || pullRequestComments || releaseOrHotfix
+        || configuration.features.inactiveIssueClosure === true || guardedApproval;
     const organizationVariables = guardedApproval
         && organization
         && (0, setup_configuration_storage_policy_1.resolveSetupResourceTarget)(configuration, 'variable', 'PR_APPROVAL_POLICY', remote).scope === 'organization';
     return normalizePermissionRequirements([
         requirement({ role: 'workflow', scope: 'repository', permission: 'Metadata', level: 'read', reason: 'Resolve repository and collaborator metadata.', probe: 'metadata' }),
-        requirement({ role: 'workflow', scope: 'repository', permission: 'Actions', level: 'write', reason: 'Inspect and dispatch Copilot workflows.', probe: 'actions' }),
-        requirement({ role: 'workflow', scope: 'repository', permission: 'Contents', level: 'write', reason: 'Create and update managed branches and files.', probe: 'contents' }),
-        requirement({ role: 'workflow', scope: 'repository', permission: 'Issues', level: 'write', reason: 'Manage issue labels, assignments, types, and comments.', probe: 'issues' }),
-        requirement({ role: 'workflow', scope: 'repository', permission: 'Pull requests', level: 'write', reason: 'Create and update pull requests and reviews.', probe: 'pull-requests' }),
+        ...(hasRuntimeRoute ? [requirement({ role: 'workflow', scope: 'repository', permission: 'Actions', level: releaseOrHotfix ? 'write' : 'read', reason: releaseOrHotfix ? 'Dispatch selected release or hotfix workflows and check previous runs.' : 'Check previous workflow runs before executing an enabled route.', probe: 'actions' })] : []),
+        ...(writesContents ? [requirement({ role: 'workflow', scope: 'repository', permission: 'Contents', level: 'write', reason: 'Create managed branches, edit files, or merge selected release/hotfix changes.', probe: 'contents' })] : []),
+        ...(writesIssues ? [requirement({ role: 'workflow', scope: 'repository', permission: 'Issues', level: 'write', reason: 'Manage selected issue lifecycles, comments, and progress.', probe: 'issues' })] : []),
+        ...(writesPullRequests ? [requirement({ role: 'workflow', scope: 'repository', permission: 'Pull requests', level: 'write', reason: 'Manage selected pull request workflows, reviews, or autofix.', probe: 'pull-requests' })] : []),
         ...(releaseOrHotfix || guardedApproval ? [requirement({
                 role: 'workflow', scope: 'repository', permission: 'Administration', level: 'read',
                 reason: 'Inspect branch protection and effective rulesets.', probe: 'administration',
