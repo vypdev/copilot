@@ -77,7 +77,24 @@ class GithubActionsResourceTransport {
             });
             return 'installed';
         } catch (error) {
-            return isGithubNotFound(error) ? 'missing' : 'unavailable';
+            if (!isGithubNotFound(error)) return 'unavailable';
+            const getContent = client.rest.repos?.getContent;
+            if (!getContent) return 'unavailable';
+            try {
+                await getContent({ owner, repo: repository, path: '' });
+            } catch {
+                return 'unavailable';
+            }
+            try {
+                await getContent({
+                    owner,
+                    repo: repository,
+                    path: `.github/workflows/${SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE}`,
+                });
+                return 'unavailable';
+            } catch (contentError) {
+                return isGithubNotFound(contentError) ? 'missing' : 'unavailable';
+            }
         }
     }
 

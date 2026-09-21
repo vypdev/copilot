@@ -22,6 +22,7 @@ const project = { id: 'P1', title: 'Delivery', type: 'organization', owner: 'acm
 describe('lifecycle capability repository bindings', () => {
   it('binds actor, assignee, organization and reviewer identities once', async () => {
     const authorize = jest.fn().mockResolvedValue(true);
+    const authorizeMemberOnly = jest.fn().mockResolvedValue(true);
     const currentAssignees = jest.fn().mockResolvedValue(['alice']);
     const assign = jest.fn().mockResolvedValue(['bob']);
     const allMembers = jest.fn().mockResolvedValue(['alice', 'bob']);
@@ -29,7 +30,12 @@ describe('lifecycle capability repository bindings', () => {
     const currentReviewers = jest.fn().mockResolvedValue([]);
     const addReviewers = jest.fn().mockResolvedValue(['bob']);
 
-    await bindActorAuthorization({ isActorAllowedToModifyFiles: authorize }, binding).isActorAllowedToModifyFiles('alice');
+    const actorAuthorization = bindActorAuthorization({
+      isActorAllowedToModifyFiles: authorize,
+      isActorAllowedToUseMemberOnlyAutomation: authorizeMemberOnly,
+    }, binding);
+    await actorAuthorization.isActorAllowedToModifyFiles('alice');
+    await actorAuthorization.isActorAllowedToUseMemberOnlyAutomation('bob');
     const assignees = bindIssueAssignee({ getCurrentAssignees: currentAssignees, assignMembersToIssue: assign }, binding);
     await assignees.getCurrentAssignees(7);
     await assignees.assignMembersToIssue(7, ['bob']);
@@ -41,6 +47,7 @@ describe('lifecycle capability repository bindings', () => {
     await reviewers.addReviewersToPullRequest(8, ['bob']);
 
     expect(authorize).toHaveBeenCalledWith('acme', 'demo', 'alice', 'secret');
+    expect(authorizeMemberOnly).toHaveBeenCalledWith('acme', 'demo', 'bob', 'secret');
     expect(currentAssignees).toHaveBeenCalledWith('acme', 'demo', 7, 'secret');
     expect(assign).toHaveBeenCalledWith('acme', 'demo', 7, ['bob'], 'secret');
     expect(allMembers).toHaveBeenCalledWith('acme', 'secret');

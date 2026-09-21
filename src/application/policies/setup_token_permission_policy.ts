@@ -187,12 +187,10 @@ function requiresWorkflowOrganizationMembers(configuration: Readonly<SetupConfig
         && configuration.issueWorkflows.enabled.some(kind => kind === 'release' || kind === 'hotfix');
     const membersOnlyAuthorization = configuration.ai.membersOnly
         && (issues || pullRequests || commits || issueComments || pullRequestComments);
-    const commentMutationAuthorization = issueComments || pullRequestComments;
     return automaticAssignees
         || automaticReviewers
         || protectedIssueAuthorization
-        || membersOnlyAuthorization
-        || commentMutationAuthorization;
+        || membersOnlyAuthorization;
 }
 
 export function normalizePermissionRequirements(

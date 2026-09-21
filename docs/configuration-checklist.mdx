@@ -63,7 +63,8 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 
 - [ ] `copilot_deployment_orchestration.yml` and every enabled publishing workflow (`release_workflow.yml` and/or `hotfix_workflow.yml`) are committed on the repository's default branch before an operation starts; this project enables both.
 - [ ] The workflow PAT can write Contents, Issues, Pull requests, and Actions; can read Metadata and classic branch-protection Administration policy; and belongs to a bot identity different from the release operator.
-- [ ] For organization repositories, the workflow PAT grants Members read only when automatic assignees/reviewers, release/hotfix issue authorization, `ai-members-only`, or issue/PR comment automation is enabled; otherwise setup omits that organization grant.
+- [ ] For organization repositories, the workflow PAT grants Members read only when automatic assignees/reviewers, release/hotfix issue authorization, or `ai-members-only` on an enabled issue, pull-request, commit, or comment route performs a membership lookup; ordinary issue/PR comment automation alone does not retain that organization grant.
+- [ ] A credential-health workflow is reported `missing` only when Actions returns `404`, an independent Contents request proves repository visibility, and the subsequent exact-file lookup also returns `404`; readable or unverifiable file state remains `unavailable` and keeps bootstrap permissions fail-closed.
 - [ ] Merge commits are allowed when `production-lineage` is selected.
 - [ ] Native auto-merge is enabled when explicitly selecting `auto-merge`.
 - [ ] Every required GitHub Actions check has an exact static job name and `merge_group: checks_requested`; third-party integrations report on `gh-readonly-queue/<base>` branches.

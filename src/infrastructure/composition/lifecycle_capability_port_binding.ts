@@ -64,6 +64,12 @@ export function bindActorAuthorization(
       actor,
       binding.token,
     ),
+    isActorAllowedToUseMemberOnlyAutomation: (actor) => port.isActorAllowedToUseMemberOnlyAutomation(
+      binding.owner,
+      binding.repository,
+      actor,
+      binding.token,
+    ),
   } satisfies BoundActorAuthorizationPort);
 }
 

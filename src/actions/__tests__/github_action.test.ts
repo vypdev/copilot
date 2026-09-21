@@ -61,9 +61,11 @@ jest.mock('../../infrastructure/composition/github_execution_admission_compositi
 }));
 
 const mockIsActorAllowedToModifyFiles = jest.fn();
+const mockIsActorAllowedToUseMemberOnlyAutomation = jest.fn();
 jest.mock('../../infrastructure/composition/actor_authorization_composition_root', () => ({
   createActorAuthorizationRepository: jest.fn().mockImplementation(() => ({
     isActorAllowedToModifyFiles: mockIsActorAllowedToModifyFiles,
+    isActorAllowedToUseMemberOnlyAutomation: mockIsActorAllowedToUseMemberOnlyAutomation,
   })),
 }));
 
@@ -117,6 +119,7 @@ describe('runGitHubAction', () => {
     mockConfigurationUpdate.mockResolvedValue(undefined);
     mockExecutionAdmissionInvoke.mockResolvedValue({ decision: 'execute', tokenUser: 'token-user' });
     mockIsActorAllowedToModifyFiles.mockResolvedValue(true);
+    mockIsActorAllowedToUseMemberOnlyAutomation.mockResolvedValue(true);
     github.context.eventName = 'workflow_dispatch';
     github.context.payload = {};
   });
@@ -285,11 +288,11 @@ describe('runGitHubAction', () => {
       if (opts?.required && key === INPUT_KEYS.TOKEN) return 'fake-token';
       return '';
     });
-    mockIsActorAllowedToModifyFiles.mockResolvedValue(false);
+    mockIsActorAllowedToUseMemberOnlyAutomation.mockResolvedValue(false);
 
     await runGitHubAction();
 
-    expect(mockIsActorAllowedToModifyFiles).toHaveBeenCalledWith(
+    expect(mockIsActorAllowedToUseMemberOnlyAutomation).toHaveBeenCalledWith(
       'test-owner',
       'test-repo',
       'test-actor',

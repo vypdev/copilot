@@ -4,6 +4,7 @@ import type {
   SetupPlanPresenterPort,
 } from '../../ports/setup_terminal_ports';
 import type {
+  SetupFinalPermissionAuditPort,
   SetupMergeQueueReadinessPort,
   SetupRemoteConfigurationReadPort,
 } from '../../ports/setup_wizard_ports';
@@ -72,6 +73,7 @@ export interface SetupWizardDependencies {
   collector?: SetupConfigurationCollectorPort;
   planPresenter: SetupPlanPresenterPort;
   confirmation: SetupPlanConfirmationPort;
+  finalPermissionAudit: SetupFinalPermissionAuditPort;
   remoteConfiguration?: SetupRemoteConfigurationReadPort;
   mergeQueueReadiness?: SetupMergeQueueReadinessPort;
   approvalReadiness?: SetupApprovalReadinessPort;
@@ -148,6 +150,7 @@ export class SetupWizardUseCase {
       );
     }
     const configuration = normalizeSetupConfigurationLocales(collectedConfiguration);
+    await this.dependencies.finalPermissionAudit.audit(configuration, remoteConfiguration);
     if (remoteConfiguration) {
       const remoteStorageErrors = validateSetupStorageAgainstRemote(configuration, remoteConfiguration);
       if (remoteStorageErrors.length > 0) {

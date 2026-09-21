@@ -248,6 +248,21 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     expect(mockAskAgent).not.toHaveBeenCalled();
   });
 
+  it('continues for a known member when members-only is enabled', async () => {
+    const results = await useCase.invoke(request({ membersOnly: true }));
+    expect(results[0]).toMatchObject({ success: true, executed: true });
+    expect(mockGetAllMembers).toHaveBeenCalledTimes(1);
+    expect(mockAskAgent).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails closed for an empty creator when members-only is enabled', async () => {
+    const pullRequest = { ...context().pullRequest, creator: '' };
+    const results = await useCase.invoke(request({ membersOnly: true, pullRequest }));
+    expect(results[0]).toMatchObject({ success: false, executed: false });
+    expect(mockGetAllMembers).toHaveBeenCalledTimes(1);
+    expect(mockAskAgent).not.toHaveBeenCalled();
+  });
+
   it('returns a semantic failure without replacing the body on provider error', async () => {
     mockGetIssueDescription.mockRejectedValue(new Error('secret diagnostic'));
     const results = await useCase.invoke(request());

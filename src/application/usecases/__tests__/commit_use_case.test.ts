@@ -157,7 +157,10 @@ describe('CommitUseCase', () => {
   });
 
   it('keeps non-agent push automation but skips every agent step for an unauthorized members-only actor', async () => {
-    const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(false) };
+    const authorization = {
+      isActorAllowedToModifyFiles: jest.fn(),
+      isActorAllowedToUseMemberOnlyAutomation: jest.fn().mockResolvedValue(false),
+    };
     const useCase = new CommitUseCase(
       { invoke: mockNotifyInvoke } as any,
       { invoke: mockCheckChangesInvoke } as any,

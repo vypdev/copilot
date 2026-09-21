@@ -5,7 +5,7 @@ description: Ask the bot to apply general code changes (tests, refactors, featur
 
 # Do user request
 
-Besides fixing **specific Bugbot findings**, you can ask the bot to perform **general code changes** in the repository: add tests, refactor a function, implement a small feature, update docs, etc. This is called **do user request**. Use `/copilot implement <request>` for an explicit command, or mention `@vypbot` and describe the request naturally. The same permission and workflow setup as [Autofix](/bugbot/autofix) apply: organization members can trigger it in organization repositories; in personal repositories the repository owner or a collaborator with `push`, `maintain`, or `admin` permission can trigger it. The workflow must grant **`contents: write`**.
+Besides fixing **specific Bugbot findings**, you can ask the bot to perform **general code changes** in the repository: add tests, refactor a function, implement a small feature, update docs, etc. This is called **do user request**. Use `/copilot implement <request>` for an explicit command, or mention `@vypbot` and describe the request naturally. The same permission and workflow setup as [Autofix](/bugbot/autofix) apply: the repository owner or a collaborator with `push`, `maintain`, or `admin` permission can trigger it in both organization and personal repositories; organization membership alone is not enough. The workflow must grant **`contents: write`**.
 
 This page explains how to use it and how it differs from autofix.
 

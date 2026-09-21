@@ -258,6 +258,10 @@ describe('setup token permission policy', () => {
             configuration.features.issues = true;
             configuration.repository.desiredAssigneesCount = 1;
         }],
+        ['automatic PR assignees', (configuration: ReturnType<typeof createDefaultSetupConfiguration>) => {
+            configuration.features.pullRequests = true;
+            configuration.repository.desiredAssigneesCount = 1;
+        }],
         ['automatic PR reviewers', (configuration: ReturnType<typeof createDefaultSetupConfiguration>) => {
             configuration.features.pullRequests = true;
             configuration.repository.desiredReviewersCount = 1;
@@ -270,8 +274,13 @@ describe('setup token permission policy', () => {
             configuration.features.commits = true;
             configuration.ai.membersOnly = true;
         }],
-        ['file-modifying comment authorization', (configuration: ReturnType<typeof createDefaultSetupConfiguration>) => {
+        ['members-only issue comment automation', (configuration: ReturnType<typeof createDefaultSetupConfiguration>) => {
             configuration.features.issueComments = true;
+            configuration.ai.membersOnly = true;
+        }],
+        ['members-only PR comment automation', (configuration: ReturnType<typeof createDefaultSetupConfiguration>) => {
+            configuration.features.pullRequestComments = true;
+            configuration.ai.membersOnly = true;
         }],
     ] as const)('adds Members read for %s', (_label, enableCapability) => {
         const configuration = createDefaultSetupConfiguration();
@@ -289,6 +298,28 @@ describe('setup token permission policy', () => {
         expect(buildWorkflowPatPermissionRequirements(configuration, organization))
             .toEqual(expect.arrayContaining([
                 expect.objectContaining({ scope: 'organization', permission: 'Members', level: 'read' }),
+            ]));
+    });
+
+    it.each([
+        ['issue comments', 'issueComments'],
+        ['pull request comments', 'pullRequestComments'],
+    ] as const)('does not require Members read for %s without members-only authorization', (_label, feature) => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.features.issues = false;
+        configuration.features.pullRequests = false;
+        configuration.features.commits = false;
+        configuration.features.issueComments = false;
+        configuration.features.pullRequestComments = false;
+        configuration.features[feature] = true;
+        configuration.repository.desiredAssigneesCount = 0;
+        configuration.repository.desiredReviewersCount = 0;
+        configuration.issueWorkflows.enabled = [];
+        configuration.ai.membersOnly = false;
+
+        expect(buildWorkflowPatPermissionRequirements(configuration, organization))
+            .not.toEqual(expect.arrayContaining([
+                expect.objectContaining({ scope: 'organization', permission: 'Members' }),
             ]));
     });
 

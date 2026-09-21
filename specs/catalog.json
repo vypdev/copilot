@@ -656,6 +656,7 @@
         "src/domain/setup_questionnaire.ts",
         "src/domain/setup_token_permissions.ts",
         "src/application/ports/setup_terminal_ports.ts",
+        "src/application/ports/setup_wizard_ports.ts",
         "src/application/ports/setup_token_permission_ports.ts",
         "src/application/policies/setup_token_permission_policy.ts",
         "src/application/policies/setup_questionnaire_policy.ts",
@@ -675,6 +676,7 @@
         "src/application/policies/setup_configuration_validation.ts",
         "src/infrastructure/setup_workspace_adapter.ts",
         "src/data/repository/repository_variables_repository.ts",
+        "src/infrastructure/github/ports/github_repository_variables_protocol.ts",
         "src/infrastructure/setup_remote_credential_health_adapter.ts",
         "src/infrastructure/setup_credential_validation_adapter.ts",
         "src/infrastructure/setup_token_permission_query_adapter.ts",
@@ -859,7 +861,7 @@
       "status": "implemented",
       "scope": "Admit only explicit commands or exact mentions, then route them while protecting repository mutations",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-16",
+      "lastVerified": "2026-09-21",
       "specs": [
         "specs/comment-automation-and-authorization.md"
       ],
@@ -886,6 +888,7 @@
         "src/application/usecases/comment_automation_use_case.ts",
         "src/application/usecases/comment_automation_route_policy.ts",
         "src/application/usecases/comment_automation_command_workflow.ts",
+        "src/application/ports/actor_authorization_ports.ts",
         "src/application/usecases/steps/issue_comment/check_issue_comment_language_use_case.ts",
         "src/application/usecases/steps/common/comment_language_translation_workflow.ts",
         "src/application/usecases/steps/common/think_request_policy.ts",
@@ -895,6 +898,8 @@
         "src/application/policies/semantic_result_publication_policy.ts",
         "src/application/usecases/steps/common/publish_resume_workflow.ts",
         "src/infrastructure/composition/shared_capability_port_binding.ts",
+        "src/infrastructure/composition/lifecycle_capability_port_binding.ts",
+        "src/data/repository/actor_modification_policy.ts",
         "src/data/repository/organization/actor_authorization_repository.ts"
       ],
       "tests": [
@@ -918,11 +923,17 @@
         "src/application/policies/__tests__/semantic_result_publication_policy.test.ts",
         "src/application/usecases/steps/common/__tests__/shared_capability_context_projection.test.ts",
         "src/infrastructure/composition/__tests__/shared_capability_port_binding.test.ts",
+        "src/infrastructure/composition/__tests__/lifecycle_capability_port_binding.test.ts",
+        "src/data/repository/__tests__/actor_modification_policy.test.ts",
         "src/data/repository/organization/__tests__/actor_authorization_repository.test.ts"
       ],
       "documentation": [
         "docs/issues/comment-commands.mdx",
         "docs/bugbot/do-user-request.mdx",
+        "docs/bugbot/autofix.mdx",
+        "docs/bugbot/examples.mdx",
+        "docs/bugbot/how-it-works.mdx",
+        "docs/authentication.mdx",
         "docs/bugbot/permissions.mdx"
       ]
     },

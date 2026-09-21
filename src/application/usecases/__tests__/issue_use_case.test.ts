@@ -411,7 +411,10 @@ describe("IssueUseCase", () => {
   });
 
   it('authorizes the projected actor before member-only issue recommendations', async () => {
-    const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) };
+    const authorization = {
+      isActorAllowedToModifyFiles: jest.fn(),
+      isActorAllowedToUseMemberOnlyAutomation: jest.fn().mockResolvedValue(true),
+    };
     const param = minimalExecution({
       actor: 'alice',
       issue: { opened: true },
@@ -420,12 +423,16 @@ describe("IssueUseCase", () => {
 
     await createUseCase(authorization).invoke(param);
 
-    expect(authorization.isActorAllowedToModifyFiles).toHaveBeenCalledWith('alice');
+    expect(authorization.isActorAllowedToUseMemberOnlyAutomation).toHaveBeenCalledWith('alice');
+    expect(authorization.isActorAllowedToModifyFiles).not.toHaveBeenCalled();
     expect(mockRecommendStepsInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8 }));
   });
 
   it('suppresses member-only issue recommendations when authorization is denied', async () => {
-    const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(false) };
+    const authorization = {
+      isActorAllowedToModifyFiles: jest.fn(),
+      isActorAllowedToUseMemberOnlyAutomation: jest.fn().mockResolvedValue(false),
+    };
     const param = minimalExecution({
       actor: 'outsider',
       eventName: 'issues',
@@ -436,7 +443,7 @@ describe("IssueUseCase", () => {
 
     const results = await createUseCase(authorization).invoke(param);
 
-    expect(authorization.isActorAllowedToModifyFiles).toHaveBeenCalledWith('outsider');
+    expect(authorization.isActorAllowedToUseMemberOnlyAutomation).toHaveBeenCalledWith('outsider');
     expect(mockRecommendStepsInvoke).not.toHaveBeenCalled();
     expect(mockAnswerIssueHelpInvoke).not.toHaveBeenCalled();
     expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(true);

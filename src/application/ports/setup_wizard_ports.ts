@@ -16,6 +16,13 @@ export interface SetupRemoteConfigurationReadPort {
     inspect(owner: string, repository: string, token: string): Promise<SetupRemoteConfiguration>;
 }
 
+export interface SetupFinalPermissionAuditPort {
+    audit(
+        configuration: Readonly<SetupConfiguration>,
+        remoteConfiguration?: Readonly<SetupRemoteConfiguration>,
+    ): Promise<void>;
+}
+
 export interface SetupCredentialPromptPort {
     requestSetupPat(): Promise<string | undefined>;
     confirmUnverifiableTokenPermissions?(report: SetupTokenPermissionReport): Promise<boolean>;

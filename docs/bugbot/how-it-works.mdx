@@ -134,7 +134,7 @@ When you post a comment on an **issue** or **pull request** (or reply in a PR re
    - **is_do_request:** whether you are asking for a general code change (not tied to findings).
    - **is_review_request:** whether you are asking for a read-only review or vulnerability analysis.
 
-2. **Permission check:** The action checks if the **comment author** is allowed to modify files: **organization member** (for org repos), or **repository owner / collaborator with `push`, `maintain`, or `admin` permission** (for personal repos). If not, it does **not** run autofix or do-user-request; it can still run **Think** or a read-only review.
+2. **Permission check:** The action checks whether the **comment author** is the repository owner or has `push`, `maintain`, or `admin` permission, for both organization and personal repositories. Organization membership alone is not file-modification authority. If the repository permission check fails, the action does **not** run autofix or do-user-request; it can still run **Think** or a read-only review. `ai-members-only` remains a separate organization-membership gate for AI routes.
 
 3. **Mutation target:** Autofix and do-user-request require an authoritative
    branch from a pull-request review-comment event or from an execution that

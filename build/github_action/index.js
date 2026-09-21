@@ -39355,7 +39355,7 @@ async function runGitHubAction() {
             return;
         const agentRuntimeAuthorized = !aiInputs.membersOnly
             || requestedActiveAgentTasks.length === 0
-            || await (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)().isActorAllowedToModifyFiles(eventInputs.repo.owner, eventInputs.repo.repo, eventInputs.actor, token);
+            || await (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)().isActorAllowedToUseMemberOnlyAutomation(eventInputs.repo.owner, eventInputs.repo.repo, eventInputs.actor, token);
         if (!agentRuntimeAuthorized) {
             (0, logger_1.logInfo)('Skipping agent runtime preparation because ai-members-only is enabled and the actor is not authorized.');
             return;
@@ -53970,7 +53970,8 @@ async function runCommentAutomation(initialParam, options, actorAuthorizationPor
         }
         const isPublicMetadataCommand = command.kind === 'command'
             && (command.command.name === 'help' || command.command.name === 'status');
-        if (!isPublicMetadataCommand && param.membersOnly && !await actorAuthorizationPort.isActorAllowedToModifyFiles(param.actor)) {
+        if (!isPublicMetadataCommand && param.membersOnly
+            && !await actorAuthorizationPort.isActorAllowedToUseMemberOnlyAutomation(param.actor)) {
             (0, logging_ports_1.logInfo)('Skipping agent automation because ai-members-only is enabled and the actor is not authorized.');
             return [new result_1.Result({ id: options.taskId, success: true, executed: false })];
         }
@@ -54051,7 +54052,7 @@ class CommitUseCase {
             results.push(...(await this.notifyNewCommitUseCase.invoke((0, push_single_action_contexts_1.projectCommitNotificationContext)(param))));
             results.push(...(await this.checkChangesIssueSizeUseCase.invoke((0, push_single_action_contexts_1.projectChangeSizeContext)(param))));
             const agentAllowed = !param.ai.getAiMembersOnly()
-                || Boolean(this.actorAuthorizationPort && await this.actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token));
+                || Boolean(this.actorAuthorizationPort && await this.actorAuthorizationPort.isActorAllowedToUseMemberOnlyAutomation(param.owner, param.repo, param.actor, param.tokens.token));
             if (agentAllowed) {
                 results.push(...(await this.checkProgressUseCase.invoke((0, push_single_action_contexts_1.projectProgressContext)(param))));
                 results.push(...(await this.detectPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param))));
@@ -54627,6 +54628,7 @@ class IssueCommentUseCase {
                 : undefined,
         }, {
             isActorAllowedToModifyFiles: (actor) => this.actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, actor, param.tokens.token),
+            isActorAllowedToUseMemberOnlyAutomation: (actor) => this.actorAuthorizationPort.isActorAllowedToUseMemberOnlyAutomation(param.owner, param.repo, actor, param.tokens.token),
         });
     }
 }
@@ -54910,7 +54912,7 @@ async function runIssueWorkflow(context, taskId, ports) {
         results.push(...(await ports.workflowSteps.deployAdded.invoke(ports.sharedContexts.steps.deployAdded)));
     }
     const agentAllowed = !context.membersOnly || Boolean(ports.actorAuthorizationPort
-        && await ports.actorAuthorizationPort.isActorAllowedToModifyFiles(context.actor));
+        && await ports.actorAuthorizationPort.isActorAllowedToUseMemberOnlyAutomation(context.actor));
     const recommendation = context.started && !sddWaiting && (!context.sddRequired || branchReady) && agentAllowed
         ? context.recommendation : undefined;
     if (recommendation) {
@@ -55437,6 +55439,7 @@ class PullRequestReviewCommentUseCase {
                 : undefined,
         }, {
             isActorAllowedToModifyFiles: (actor) => this.actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, actor, param.tokens.token),
+            isActorAllowedToUseMemberOnlyAutomation: (actor) => this.actorAuthorizationPort.isActorAllowedToUseMemberOnlyAutomation(param.owner, param.repo, actor, param.tokens.token),
         });
     }
 }
@@ -55584,7 +55587,7 @@ async function canUseAgent(context, authorization) {
         return true;
     if (!authorization)
         return false;
-    return authorization.isActorAllowedToModifyFiles(context.actor);
+    return authorization.isActorAllowedToUseMemberOnlyAutomation(context.actor);
 }
 async function runPullRequestReview(context, ports) {
     if (!ports.reviewPotentialProblemsUseCase || !context.reviewable)
@@ -56234,7 +56237,7 @@ class SingleActionUseCase {
             return [];
         }
         if (isAgentBackedSingleAction(param) && param.ai.getAiMembersOnly()) {
-            const allowed = Boolean(this.actorAuthorizationPort && await this.actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token));
+            const allowed = Boolean(this.actorAuthorizationPort && await this.actorAuthorizationPort.isActorAllowedToUseMemberOnlyAutomation(param.owner, param.repo, param.actor, param.tokens.token));
             if (!allowed) {
                 (0, logging_ports_1.logInfo)('Skipping agent-backed single action because ai-members-only is enabled and the actor is not authorized.');
                 return [];
@@ -66881,8 +66884,17 @@ exports.Workflows = Workflows;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.authorizationForFileModification = authorizationForFileModification;
+exports.authorizationForMemberOnlyAutomation = authorizationForMemberOnlyAutomation;
 const github_user_policy_1 = __nccwpck_require__(84403);
 function authorizationForFileModification(owner, actor, ownerType) {
+    return {
+        kind: 'repository-collaborator',
+        owner,
+        actor,
+        ownerMatches: ownerType !== 'Organization' && (0, github_user_policy_1.githubUsersMatch)(actor, owner),
+    };
+}
+function authorizationForMemberOnlyAutomation(owner, actor, ownerType) {
     if (ownerType === 'Organization') {
         return { kind: 'organization-membership', organization: owner, actor };
     }
@@ -71435,6 +71447,20 @@ class ActorAuthorizationRepository {
                 const octokit = this.githubClient.getClient(token);
                 const { data: ownerUser } = await octokit.rest.users.getByUsername({ username: owner });
                 const authorization = (0, actor_modification_policy_1.authorizationForFileModification)(owner, actor, ownerUser.type);
+                if (authorization.ownerMatches)
+                    return true;
+                return this.checkUserRepositoryPermission(octokit, owner, actor, repo);
+            }
+            catch (err) {
+                (0, logger_1.logDebugInfo)((0, application_error_1.toApplicationError)(err, 'authorization.denied', 'Unable to verify actor authorization.').message);
+                return false;
+            }
+        };
+        this.isActorAllowedToUseMemberOnlyAutomation = async (owner, repo, actor, token) => {
+            try {
+                const octokit = this.githubClient.getClient(token);
+                const { data: ownerUser } = await octokit.rest.users.getByUsername({ username: owner });
+                const authorization = (0, actor_modification_policy_1.authorizationForMemberOnlyAutomation)(owner, actor, ownerUser.type);
                 if (authorization.kind === 'organization-membership') {
                     return this.checkOrganizationMembership(octokit, authorization.organization, authorization.actor, owner, actor);
                 }
@@ -74062,7 +74088,28 @@ class GithubActionsResourceTransport {
             return 'installed';
         }
         catch (error) {
-            return (0, github_error_policy_1.isGithubNotFound)(error) ? 'missing' : 'unavailable';
+            if (!(0, github_error_policy_1.isGithubNotFound)(error))
+                return 'unavailable';
+            const getContent = client.rest.repos?.getContent;
+            if (!getContent)
+                return 'unavailable';
+            try {
+                await getContent({ owner, repo: repository, path: '' });
+            }
+            catch {
+                return 'unavailable';
+            }
+            try {
+                await getContent({
+                    owner,
+                    repo: repository,
+                    path: `.github/workflows/${setup_workflow_catalog_1.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE}`,
+                });
+                return 'unavailable';
+            }
+            catch (contentError) {
+                return (0, github_error_policy_1.isGithubNotFound)(contentError) ? 'missing' : 'unavailable';
+            }
         }
     }
     async listRepositorySecretsForInspection(client, owner, repository) {
@@ -78908,6 +78955,7 @@ const project_detail_1 = __nccwpck_require__(33428);
 function bindActorAuthorization(port, binding) {
     return Object.freeze({
         isActorAllowedToModifyFiles: (actor) => port.isActorAllowedToModifyFiles(binding.owner, binding.repository, actor, binding.token),
+        isActorAllowedToUseMemberOnlyAutomation: (actor) => port.isActorAllowedToUseMemberOnlyAutomation(binding.owner, binding.repository, actor, binding.token),
     });
 }
 function bindIssueAssignee(port, binding) {

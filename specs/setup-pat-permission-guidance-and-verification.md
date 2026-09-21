@@ -178,13 +178,13 @@ read-only GitHub queries and presents ordered permission outcomes.
    PAT was configured with the displayed access. Interactive acknowledgement
    defaults to No; non-interactive execution requires
    `--confirm-unverifiable-write-permissions`. `--yes` alone is not evidence.
-   Remote storage validation MUST return the final configuration and bounded
-   blocking facts to the CLI rather than throw before this report. The CLI MUST
-   recognize that structured blocked result immediately. Its dedicated blocked
-   branch MUST render and execute only the final permission audit, then report
-   the bounded storage error with the result's exit code; it MUST NOT continue
-   into inventory revalidation, credential collection, workflow comparison,
-   target resolution, or mutation.
+   The wizard MUST invoke a configured final-permission-audit port after
+   normalization and before remote storage validation. Remote storage validation
+   MUST then return the final configuration and bounded blocking facts rather
+   than throw. The CLI MUST recognize that structured blocked result immediately,
+   report the bounded storage error with the result's exit code, and MUST NOT
+   start another permission audit, inventory revalidation, credential collection,
+   workflow comparison, target resolution, or mutation.
 6. If repository or organization Secret or Variable inventory is still
    unavailable or unknown,
    setup MUST stop after rendering the final permission table and before
@@ -209,6 +209,12 @@ read-only GitHub queries and presents ordered permission outcomes.
    cannot be established safely; an installed workflow MUST NOT trigger those
    bootstrap-only grants. The remote-configuration summary renders the bounded
    workflow state so the operator can understand that permission decision.
+9. An Actions `getWorkflow` `404` does not by itself prove absence. Setup MUST
+   classify the workflow as `missing` only when an independent Contents read
+   first proves repository Contents visibility and a subsequent exact read of
+   `.github/workflows/copilot_credential_health.yml` returns `404`. A readable
+   file, absent Contents endpoint, failed visibility proof, or
+   ambiguous/transient exact-file result is `unavailable`, never `missing`.
 
 ### 6.2 Workflow PAT
 
@@ -219,10 +225,11 @@ read-only GitHub queries and presents ordered permission outcomes.
    PR approval. Checks read and Variables read are included for guarded
    approval. Organization Members read is included only when an enabled runtime
    can inspect membership: automatic issue/PR assignees, automatic PR reviewers,
-   release/hotfix issue authorization, `ai.membersOnly` on an enabled issue, PR,
-   commit, or comment route, or enabled issue/PR comment automation whose
-   file-modifying commands authorize organization members. Disabled routes and
-   zero assignment/reviewer counts MUST NOT retain a Members grant on their own.
+   release/hotfix issue authorization, or `ai.membersOnly` on an enabled issue,
+   PR, commit, or comment route. Enabling a comment route alone, disabled routes,
+   and zero assignment/reviewer counts MUST NOT retain a Members grant. Ordinary
+   comment mutations use the separate repository-write collaborator check and
+   MUST NOT be projected as organization-membership consumers.
    Issue Types write, Projects write, and organization Variables read are
    included only when their selected capability and effective target require
    them. Effective targets include an existing
@@ -448,17 +455,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **65 distinct cases**.
+This SDD adds at least **73 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain permission policy | 16 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants, positive and negative organization-membership capability projection |
-| Application state/blocking | 11 | verified, missing, required-read unverifiable, required-write confirmation, invalid base token, organization-only credential collection, dedicated remote-storage blocked branch, zero-count assignment and inactive membership checks |
-| Adapter/provider contracts | 21 | GET-only probes, commit-list Contents target, empty-repository 409, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, installed/missing/unavailable health-workflow inspection, unavailable endpoint state, duplicate-comment deletion fallback regression |
-| Setup/credential integration | 12 | pre-prompt setup table, conditional denial through planning, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
+| Domain permission policy | 18 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants, positive and negative organization-membership capability projection including comment-only routes |
+| Application state/blocking | 13 | verified, missing, required-read unverifiable, required-write confirmation, invalid base token, organization-only credential collection, pre-validation audit port, immediate remote-storage blocked handling, zero-count assignment and inactive membership checks |
+| Adapter/provider contracts | 24 | GET-only probes, commit-list Contents target, empty-repository 409, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow, unavailable endpoint state, duplicate-comment deletion fallback regression |
+| Setup/credential integration | 13 | pre-prompt setup table, conditional denial through planning, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
 | UI/accessibility | 4 | required/result tables, confirmation-required copy, 40-column wrapping, no-color text |
 | Architecture/security/docs | 1 | query-only boundary and no duplicated catalog |
-| **Total** | **65** | No double counting |
+| **Total** | **73** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -506,12 +513,12 @@ at widths 40/80/120 and `NO_COLOR`.
 8. Given a mixed storage policy with any selected repository-scoped or
    preservation-dependent resource, unavailable repository inventory still
    blocks all dependent work before mutation.
-9. Given final organization storage validation is blocked, the CLI recognizes
-   the structured result immediately, shows the configured setup-PAT
-   requirements and permission results in that dedicated branch, then reports
-   the bounded storage error with exit code 1; generic inventory revalidation,
-   plan confirmation, credential prompts, workflow comparison, target
-   resolution, and mutation do not run.
+9. Given final organization storage validation will be blocked, the wizard first
+   invokes its final-permission-audit port and then returns the structured result;
+   the CLI recognizes it immediately and reports the bounded storage error with
+   exit code 1. It does not start another audit, generic inventory revalidation,
+   plan confirmation, credential prompts, workflow comparison, target resolution,
+   or mutation.
 10. Given a write permission that GitHub cannot prove without mutation, the row
    shows `Unverifiable`; `ready` remains false, no write probe occurs, and no
    dependent work starts until the operator explicitly acknowledges the exact
@@ -558,10 +565,16 @@ at widths 40/80/120 and `NO_COLOR`.
     collection fails closed as an unsupported installation before accepting or
     provisioning the PAT.
 25. Given an organization-owned repository with automatic assignees/reviewers,
-    release/hotfix authorization, members-only AI, and comment automation all
-    disabled, the workflow PAT plan omits Members read; enabling any one route
-    that performs a membership lookup adds the grant, and runtime paths with a
-    zero count or inactive authorization do not perform that lookup.
+    release/hotfix authorization, and members-only AI disabled, the workflow PAT
+    plan omits Members read even when ordinary comment routes are enabled;
+    enabling any configured route that actually performs a membership lookup
+    adds the grant, and zero-count or inactive runtime paths do not query it.
+26. Given Actions returns `404` for the credential-health workflow, setup reports
+    `missing` only when an independent Contents request first proves repository
+    visibility and a subsequent read of the exact workflow file confirms `404`;
+    a readable file, absent fallback endpoint, failed visibility proof, or other
+    exact-file failure reports `unavailable` and cannot trigger a false
+    confirmed-absence path.
 
 ## 17. Requirements traceability
 
@@ -578,6 +591,7 @@ at widths 40/80/120 and `NO_COLOR`.
 | secret safety | all contracts/presenter | redaction fixtures | credentials |
 | feature/effective-target workflow PAT | configuration projection policy | conditional matrix and preserved organization-variable tests | checklist |
 | membership-sensitive workflow PAT | permission policy plus membership-consuming workflows | positive/negative capability matrix and no-query inactive-path tests | authentication/checklist |
+| evidence-based health-workflow absence | remote configuration query adapter | Actions-404 plus Contents-visibility and exact-file readable/missing/unavailable fixtures | authentication/troubleshooting |
 | empty-repository-safe Contents probe | read-only query adapter | commit-list URL, 409 read/write, and 404 tests | authentication/troubleshooting |
 | least-privilege credential-health bootstrap | remote configuration query plus permission policy | installed/missing/unavailable inspection and permission-matrix tests | authentication/troubleshooting |
 | no unaudited existing workflow PAT | credential collection use case plus prompt adapter | existing re-entry/audit and non-interactive rejection tests | authentication/troubleshooting |
@@ -600,7 +614,7 @@ at widths 40/80/120 and `NO_COLOR`.
 - [x] No validation request mutates GitHub and no result overclaims write access.
 - [x] Token values and raw provider text are absent from all output/state/errors.
 - [x] Clean Architecture boundaries and their executable test pass.
-- [x] At least 65 distinct cases and stated coverage thresholds pass.
+- [x] At least 73 distinct cases and stated coverage thresholds pass.
 - [x] Authentication, checklist, troubleshooting, and architecture docs agree.
 - [x] Catalog evidence and generated `specs/CATALOG.md` are current.
 - [x] Specification, documentation, typecheck, lint, and test gates pass.

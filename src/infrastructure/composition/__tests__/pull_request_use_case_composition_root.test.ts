@@ -185,6 +185,7 @@ describe("createPullRequestUseCaseCompositionRoot", () => {
     expect(argumentsPassed).toHaveLength(4);
     expect(argumentsPassed[3]).toEqual(expect.objectContaining({
       isActorAllowedToModifyFiles: expect.any(Function),
+      isActorAllowedToUseMemberOnlyAutomation: expect.any(Function),
     }));
     expect(argumentsPassed[1]).toEqual(expect.objectContaining({
       updateTitle: expect.objectContaining({ invoke: expect.any(Function) }),

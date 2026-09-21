@@ -62,9 +62,10 @@ This guide helps you resolve common issues you might encounter while using Copil
     not create disposable GitHub resources to test write access.
 
     When organization storage validation fails after the questionnaire, setup
-    handles the structured block immediately. That dedicated branch shows the
-    configured setup-PAT table and result, then exits with the bounded inventory
-    error. It does not run generic inventory revalidation, plan confirmation,
+    first runs the configured setup-PAT audit inside the wizard, before storage
+    validation. The CLI then handles the structured block immediately and exits
+    with the bounded inventory error without starting another audit. It does not
+    run generic inventory revalidation, plan confirmation,
     credential prompts, workflow comparison, resource targeting, or mutation.
 
     If the table requests Contents and Workflows write for credential health,
@@ -74,6 +75,15 @@ This guide helps you resolve common issues you might encounter while using Copil
     remove the temporary workflow. After correcting Actions access or a
     transient provider failure, rerun setup so it can rediscover an installed
     workflow and narrow the table.
+
+    An Actions API `404` alone does not prove that the credential-health
+    workflow is absent because GitHub can hide inaccessible workflows that way.
+    Setup reports `missing` only after an independent Contents request first
+    proves repository visibility and a subsequent lookup of
+    `.github/workflows/copilot_credential_health.yml` returns `404`. A readable
+    file, unavailable Contents endpoint, failed visibility proof, denied exact
+    lookup, or transient failure reports `unavailable` and retains the
+    fail-closed bootstrap permission plan.
 
     If an existing `PAT` passes credential health but setup asks for it again,
     this is intentional: GitHub never returns a Secret value, and remote health

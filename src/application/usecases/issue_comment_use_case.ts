@@ -92,6 +92,12 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
           actor,
           param.tokens.token,
         ),
+        isActorAllowedToUseMemberOnlyAutomation: (actor) => this.actorAuthorizationPort.isActorAllowedToUseMemberOnlyAutomation(
+          param.owner,
+          param.repo,
+          actor,
+          param.tokens.token,
+        ),
       },
     );
   }

@@ -14,8 +14,9 @@
 Comments expose two product paths: deterministic `/copilot` commands and
 natural-language requests that mention the authenticated bot account. Public
 metadata and read-only help remain broadly available; file or finding-state
-mutations require organization membership, repository ownership, or collaborator
-write authority. Ambiguous, unauthorized, or incomplete mutation requests fall
+mutations require repository ownership or explicit collaborator write authority;
+organization membership remains a separate policy used only by member-restricted
+automation. Ambiguous, unauthorized, or incomplete mutation requests fall
 back to a read-only answer or explicit no-op, never an inferred broad edit.
 Comments that contain neither an explicit command nor an exact mention are
 discarded before project lookup, AI configuration, translation, or runtime
@@ -128,7 +129,7 @@ a mention.
 | Admission | every comment activates AI | command or exact mention required | no passive machine loops |
 | Intent | model parses addressed prose | command parser first | auditability |
 | Mention | substring match | exact username boundary | no accidental trigger |
-| Authority | prompt assertion | GitHub membership/permission | least privilege |
+| Authority | prompt assertion | purpose-specific GitHub membership or repository-write permission | least privilege |
 | Mutation | agent controls git | guarded runner commit/push | constrained blast radius |
 | Failure | silence | result/no-op with reason | clear next action |
 
@@ -198,7 +199,7 @@ not configurable. New commands require compatibility docs and parser tests.
 | Domain | command grammar and branch-sync phrase/options | GitHub/agent SDK |
 | Policies | route choice and authorization-independent decisions | I/O |
 | Application | command/natural-language workflows and completion | provider DTOs |
-| Ports | actor authorization, agent capabilities, git, finding state | concrete clients |
+| Ports | separate member-only and file-modification actor authorization, agent capabilities, git, finding state | concrete clients |
 | Adapters | GitHub permission lookup and CLI invocation | route policy |
 | Presentation | help/status/result text | mutations |
 
@@ -270,12 +271,15 @@ untrusted mentions, Markdown, markers, and URLs are sanitized.
 
 ## 11. Security, permissions, and privacy
 
-Actor login comes from the event and authority from GitHub APIs. Organization
-repositories require membership; personal repositories accept owner or
-`push`/`maintain`/`admin` collaborator permission. Comment and parent-thread text
-are bounded untrusted prompt context. Read-only agents cannot write; mutation
-agents cannot own git credentials or trusted verification execution. Secrets and
-raw provider errors are redacted.
+Actor login comes from the event and authority from GitHub APIs. File and
+finding-state mutations require repository ownership or
+`push`/`maintain`/`admin` collaborator permission for both organization and
+personal repositories. `ai-members-only` is evaluated independently: an
+organization repository requires organization membership, while a personal
+repository accepts its owner or a write-capable collaborator. Comment and
+parent-thread text are bounded untrusted prompt context. Read-only agents cannot
+write; mutation agents cannot own git credentials or trusted verification
+execution. Secrets and raw provider errors are redacted.
 
 ## 12. Observability and operational UX
 
@@ -303,11 +307,11 @@ branch. Finding dismissal and learned rules require explicit follow-up commands.
 |---|---:|---|
 | Parser/mention/route policy | 26 | limits, vocabulary, precedence, collisions, PR-conversation classification |
 | Workflow/idempotency/races | 18 | fallback, duplicate, branch/push race |
-| Authorization/adapters | 14 | org/personal permissions, API errors |
+| Authorization/adapters | 18 | purpose-separated org membership and repository-write permissions, personal ownership/collaboration, API errors |
 | Workflow/config contracts | 8 | events, permissions, active roles, inert passive comments |
 | UX/localization/sanitization | 17 | help/errors/links/mentions/Markdown, target locale, complete finding-state status, invalid-evidence recovery |
 | Integration/security/migration | 16 | comment→commit/review, exact PR diff, prompt injection |
-| **Total** | **99** | no double counting |
+| **Total** | **103** | no double counting |
 
 Global coverage remains mandatory; command and route policies SHOULD have 100%
 branch coverage. Use fake authorization/agents/git; no live models or waits.
@@ -345,6 +349,12 @@ English/non-English requests.
     and resolved counts from the canonical result projection; malformed owned
     or required-but-absent review evidence produces an `invalid` recovery
     message and never a clean count.
+14. An organization member without repository write permission cannot run a
+    file- or finding-state mutation, while an organization repository
+    collaborator with `push`, `maintain`, or `admin` can.
+15. `ai-members-only` still rejects a non-member even when that actor has a
+    comment route, and its membership check is never substituted by the
+    file-modification permission check.
 
 ## 17. Requirements traceability
 
@@ -369,7 +379,7 @@ English/non-English requests.
 ## 19. Definition of Done
 
 - [ ] Commands, mentions, authorization, fallback, replay, and races are covered.
-- [x] The 99-case budget, coverage, and architecture checks pass.
+- [x] The 103-case budget, coverage, and architecture checks pass.
 - [ ] No model output or comment can expand authorization or git authority.
 - [ ] All five UI states and help content are reviewed and accessible.
 - [ ] Workflows, documentation, and catalog agree.

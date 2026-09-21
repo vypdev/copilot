@@ -400,7 +400,10 @@ describe('SingleActionUseCase', () => {
   });
 
   it('skips an agent-backed single action for an unauthorized members-only actor', async () => {
-    const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(false) };
+    const authorization = {
+      isActorAllowedToModifyFiles: jest.fn(),
+      isActorAllowedToUseMemberOnlyAutomation: jest.fn().mockResolvedValue(false),
+    };
     const useCase = new SingleActionUseCase(
       {} as any,
       {} as any,

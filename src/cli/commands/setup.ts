@@ -129,35 +129,6 @@ export function registerSetupCommand(program: Command): void {
           }
         }
         logInfo(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
-        const remoteConfigurationReader = createSetupRemoteConfigurationReadPort();
-        const wizard = new SetupWizardUseCase({
-          ...(terminal ? {
-            collector: new SetupQuestionnaireController(terminal, new ConsoleSetupQuestionRenderer()),
-          } : {}),
-          planPresenter: new ConsoleSetupPlanPresenter(),
-          confirmation: options.dryRun
-            ? new DryRunSetupPlanConfirmation()
-            : new SetupPlanConfirmationAdapter(terminal, Boolean(options.yes)),
-          remoteConfiguration: remoteConfigurationReader,
-          mergeQueueReadiness: createSetupMergeQueueReadinessUseCase(),
-          approvalReadiness: new GithubSetupApprovalReadinessAdapter(),
-        });
-        const overrides = loadSetupOverrides(options);
-        const result = await wizard.execute({
-          mode: options.nonInteractive ? 'non-interactive' : 'interactive',
-          overrides,
-          skipRepositoryVariables: Boolean(options.skipVariables),
-          skipRepositorySecrets: Boolean(options.skipSecrets),
-          previewOnly: Boolean(options.dryRun),
-          ...(token ? { remoteTarget: { owner: gitInfo.owner, repository: gitInfo.repo, token } } : {}),
-        });
-        if (result.status === 'cancelled') {
-          if (result.reason !== 'questionnaire-cancelled') {
-            logInfo('⏭️  Setup cancelled. No changes were applied.');
-          }
-          if (result.exitCode !== 0) process.exitCode = result.exitCode;
-          return;
-        }
         const auditConfiguredSetupPat = async (
           configuration: Readonly<SetupConfiguration>,
           remoteConfiguration?: Readonly<SetupRemoteConfiguration>,
@@ -180,8 +151,37 @@ export function registerSetupCommand(program: Command): void {
             );
           }
         };
+        const remoteConfigurationReader = createSetupRemoteConfigurationReadPort();
+        const wizard = new SetupWizardUseCase({
+          ...(terminal ? {
+            collector: new SetupQuestionnaireController(terminal, new ConsoleSetupQuestionRenderer()),
+          } : {}),
+          planPresenter: new ConsoleSetupPlanPresenter(),
+          confirmation: options.dryRun
+            ? new DryRunSetupPlanConfirmation()
+            : new SetupPlanConfirmationAdapter(terminal, Boolean(options.yes)),
+          finalPermissionAudit: { audit: auditConfiguredSetupPat },
+          remoteConfiguration: remoteConfigurationReader,
+          mergeQueueReadiness: createSetupMergeQueueReadinessUseCase(),
+          approvalReadiness: new GithubSetupApprovalReadinessAdapter(),
+        });
+        const overrides = loadSetupOverrides(options);
+        const result = await wizard.execute({
+          mode: options.nonInteractive ? 'non-interactive' : 'interactive',
+          overrides,
+          skipRepositoryVariables: Boolean(options.skipVariables),
+          skipRepositorySecrets: Boolean(options.skipSecrets),
+          previewOnly: Boolean(options.dryRun),
+          ...(token ? { remoteTarget: { owner: gitInfo.owner, repository: gitInfo.repo, token } } : {}),
+        });
+        if (result.status === 'cancelled') {
+          if (result.reason !== 'questionnaire-cancelled') {
+            logInfo('⏭️  Setup cancelled. No changes were applied.');
+          }
+          if (result.exitCode !== 0) process.exitCode = result.exitCode;
+          return;
+        }
         if (result.status === 'blocked') {
-          await auditConfiguredSetupPat(result.configuration, result.remoteConfiguration);
           logError(new ApplicationError(
             'provider.unavailable',
             `Setup is blocked by unavailable remote storage:\n${result.errors.map(error => `- ${error}`).join('\n')}`,
@@ -190,7 +190,6 @@ export function registerSetupCommand(program: Command): void {
           return;
         }
         const { configuration, remoteConfiguration } = result;
-        await auditConfiguredSetupPat(configuration, remoteConfiguration);
         const credentialRequirements = buildSetupCredentialRequirements(configuration);
         const repositoryVariables = buildSetupRepositoryVariables(configuration);
         if (remoteConfiguration) {

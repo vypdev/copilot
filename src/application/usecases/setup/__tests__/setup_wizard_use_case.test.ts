@@ -25,6 +25,7 @@ function dependencies(overrides: Record<string, unknown> = {}) {
   return {
     planPresenter: { present: jest.fn() },
     confirmation: { confirm: jest.fn().mockResolvedValue({ kind: 'approved' }) },
+    finalPermissionAudit: { audit: jest.fn().mockResolvedValue(undefined) },
     ...overrides,
   };
 }
@@ -239,5 +240,9 @@ describe('SetupWizardUseCase', () => {
     }));
     expect(deps.planPresenter.present).not.toHaveBeenCalled();
     expect(deps.confirmation.confirm).not.toHaveBeenCalled();
+    expect(deps.finalPermissionAudit.audit).toHaveBeenCalledWith(
+      expect.objectContaining({ manageRepositoryVariables: true }),
+      blockedRemote,
+    );
   });
 });

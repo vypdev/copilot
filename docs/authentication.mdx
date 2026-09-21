@@ -80,16 +80,23 @@ resource is explicitly organization-scoped, or uses an organization default
 with `preserveExisting: false`; those plans continue from the available
 organization inventory without requesting unrelated repository access.
 If organization storage itself is unavailable, setup recognizes that blocked
-result immediately, renders and runs only the final setup-PAT permission audit,
-then reports the storage validation error with a failing exit code. It does not
+result immediately after the wizard has rendered and run the final setup-PAT
+permission audit. The CLI reports the storage validation error with a failing
+exit code without starting a second audit. It does not
 continue into generic inventory revalidation, plan confirmation, credential
 collection, workflow comparison, target resolution, or mutation.
 
 <Info>GitHub does not reveal Secret values through its API. Copilot validates new credentials with provider metadata requests and validates existing remote Secrets through the read-only `copilot_credential_health.yml` workflow when it is installed on the repository's default branch. The health workflow reports each requested credential independently, but that bounded reachability result is not a permission audit. If `PAT` already exists, interactive setup asks you to re-enter it and runs the complete workflow-PAT permission matrix before provisioning; unattended setup must supply `PAT` again or stops before mutation. Doctor can query and dispatch the installed health workflow but has no bootstrap or repository-mutation authority; temporary workflow bootstrap is available only during setup. A preauthenticated Codex session is runner state, not a Secret: it is accepted only when the runtime preflight can execute `codex login status` successfully.</Info>
 
+An Actions API `404` does not by itself mark the credential-health workflow as
+missing. Setup first proves repository Contents visibility, then reads the exact
+workflow path. Only a subsequent exact-path `404` is confirmed absence; every
+unreadable or ambiguous state remains `unavailable` and keeps the bootstrap
+permission plan fail-closed.
+
 <Warning>**When the event actor is the same as the token user**: The action detects this before entering the workflow queue. It completes successfully without waiting or running the normal issue/PR/push pipeline. A valid explicit single action still runs. This avoids the bot reacting to its own actions. Use a dedicated bot account (different from the actor) if you want full pipeline behavior on every event.</Warning>
 
-For comment-driven assistance, read-only commands are available to anyone who can comment unless `ai-members-only` is enabled; with that policy, every AI invocation requires an authorized member while non-AI status/help metadata remains available. File-modifying commands are always restricted to organization members in organization repositories. In personal repositories, the repository owner or a collaborator with `push`, `maintain`, or `admin` permission may request changes. The workflow PAT still needs the relevant `contents: write` permission, and issue comments need an open PR to provide a branch for the change.
+For comment-driven assistance, read-only commands are available to anyone who can comment unless `ai-members-only` is enabled; with that policy, every AI invocation requires an authorized member while non-AI status/help metadata remains available. File-modifying commands use a separate repository-write check: for both organization and personal repositories, the repository owner or a collaborator with `push`, `maintain`, or `admin` permission may request changes. Organization membership alone is not mutation authority. The workflow PAT still needs the relevant `contents: write` permission, and issue comments need an open PR to provide a branch for the change.
 
 <Steps>
   <Step title="Who is the bot?">
@@ -142,7 +149,7 @@ For comment-driven assistance, read-only commands are available to anyone who ca
     **If your bot belongs to an organization** set these permissions for the organization:
 
     - **Issue Types**: Read and write only when issue-type automation is enabled
-    - **Members**: Read-only only when an enabled capability performs a membership lookup: automatic issue/PR assignees, automatic PR reviewers, release/hotfix issue authorization, `ai-members-only`, or issue/PR comment automation whose file-modifying commands authorize organization members. Setup omits this grant when all such routes are disabled and both assignment counts are zero.
+    - **Members**: Read-only only when an enabled capability performs a membership lookup: automatic issue/PR assignees, automatic PR reviewers, release/hotfix issue authorization, or `ai-members-only` on an enabled issue, pull-request, commit, or comment route. Enabling ordinary issue/PR comment automation alone does not require this grant. Setup also omits it when assignment/reviewer counts are zero and no other membership-consuming route is active.
     - **Projects**: Read and write only for the selected organization projects
 
     The runtime PAT does not need organization Secrets, Variables write, Custom repository roles, or Self-hosted runners administration. Organization Variables read is needed only when the approval policy is supplied at organization scope.

@@ -152,7 +152,7 @@ export async function runGitHubAction(): Promise<void> {
             if (admittedExecution.issueWorkflowRuntimeMode !== 'execute') return;
             const agentRuntimeAuthorized = !aiInputs.membersOnly
                 || requestedActiveAgentTasks.length === 0
-                || await createActorAuthorizationRepository().isActorAllowedToModifyFiles(
+                || await createActorAuthorizationRepository().isActorAllowedToUseMemberOnlyAutomation(
                     eventInputs.repo.owner,
                     eventInputs.repo.repo,
                     eventInputs.actor,

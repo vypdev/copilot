@@ -82,6 +82,12 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
           actor,
           param.tokens.token,
         ),
+        isActorAllowedToUseMemberOnlyAutomation: (actor) => this.actorAuthorizationPort.isActorAllowedToUseMemberOnlyAutomation(
+          param.owner,
+          param.repo,
+          actor,
+          param.tokens.token,
+        ),
       },
     );
   }

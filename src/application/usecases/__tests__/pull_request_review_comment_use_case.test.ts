@@ -43,12 +43,14 @@ jest.mock("../steps/commit/bugbot/bugbot_autofix_use_case", () => ({
 }));
 
 const mockIsActorAllowedToModifyFiles = jest.fn();
+const mockIsActorAllowedToUseMemberOnlyAutomation = jest.fn();
 
 jest.mock(
   "../../../data/repository/organization/actor_authorization_repository",
   () => ({
     ActorAuthorizationRepository: jest.fn().mockImplementation(() => ({
       isActorAllowedToModifyFiles: mockIsActorAllowedToModifyFiles,
+      isActorAllowedToUseMemberOnlyAutomation: mockIsActorAllowedToUseMemberOnlyAutomation,
     })),
   }),
 );
@@ -153,7 +155,10 @@ describe("PullRequestReviewCommentUseCase", () => {
       { taskId: "ThinkUseCase", invoke: mockThinkInvoke },
       { taskId: "BugbotAutofixUseCase", invoke: mockAutofixInvoke },
       { taskId: "DoUserRequestUseCase", invoke: mockDoUserRequestInvoke },
-      { isActorAllowedToModifyFiles: mockIsActorAllowedToModifyFiles },
+      {
+        isActorAllowedToModifyFiles: mockIsActorAllowedToModifyFiles,
+        isActorAllowedToUseMemberOnlyAutomation: mockIsActorAllowedToUseMemberOnlyAutomation,
+      },
       {
         execute: jest.fn(),
         getAuthenticatedUserDetails: jest.fn(),
@@ -167,6 +172,7 @@ describe("PullRequestReviewCommentUseCase", () => {
     );
     mockLogInfo.mockClear();
     mockIsActorAllowedToModifyFiles.mockReset().mockResolvedValue(true);
+    mockIsActorAllowedToUseMemberOnlyAutomation.mockReset().mockResolvedValue(true);
     mockCheckLanguageInvoke.mockReset().mockResolvedValue([
       new Result({
         id: "CheckPullRequestCommentLanguageUseCase",
@@ -556,7 +562,10 @@ describe("PullRequestReviewCommentUseCase", () => {
       { invoke: mockThinkInvoke } as never,
       { invoke: mockAutofixInvoke } as never,
       { invoke: mockDoUserRequestInvoke } as never,
-      { isActorAllowedToModifyFiles: mockIsActorAllowedToModifyFiles },
+      {
+        isActorAllowedToModifyFiles: mockIsActorAllowedToModifyFiles,
+        isActorAllowedToUseMemberOnlyAutomation: mockIsActorAllowedToUseMemberOnlyAutomation,
+      },
       {} as never,
       undefined,
       undefined,
