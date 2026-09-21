@@ -101,6 +101,13 @@ This guide helps you resolve common issues you might encounter while using Copil
     file, unavailable Contents endpoint, failed visibility proof, denied exact
     lookup, or transient failure reports `unavailable` and skips temporary
     workflow creation. Existing credential health remains unverified.
+    The preliminary inspection may reflect GitHub's default branch; after you
+    select the main branch, setup checks the repository root and exact file on
+    that selected ref before auditing the final PAT permissions. An inaccessible
+    selected ref is `unavailable`, not an inherited default-branch state.
+    Expected missing or unconfirmed final PAT permissions return a blocked
+    result with the chosen configuration and stop before storage validation or
+    any mutation.
 
     If an existing `PAT` passes credential health but setup asks for it again,
     this is intentional: GitHub never returns a Secret value, and remote health

@@ -179,6 +179,14 @@ describe('Bugbot review context', () => {
     })).toThrow(BugbotDiffPlanLimitError);
   });
 
+  it('rejects a malformed patch even when the file is ignored by review policy', () => {
+    expect(() => buildReviewDiffPlan({
+      prHeadSha: 'a'.repeat(40),
+      changes: [{ filename: 'generated/binary.png', status: 'modified', additions: 0, deletions: 0,
+        patch: { unexpected: true } as unknown as string }],
+    }, ['generated/**'])).toThrow(BugbotDiffPlanLimitError);
+  });
+
   it('includes human discussion while excluding owned and provider-classified automation', () => {
     const context = buildReviewConversationContext(
       [

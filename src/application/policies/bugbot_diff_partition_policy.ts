@@ -60,12 +60,12 @@ export function buildReviewDiffPlan(
   let rawPatchTotal = 0;
 
   for (const change of context.changes) {
+    if (change.patch != null && typeof change.patch !== 'string') {
+      throw new BugbotDiffPlanLimitError();
+    }
     if (fileMatchesIgnorePatterns(change.filename, ignorePatterns)) {
       ignored += 1;
       continue;
-    }
-    if (change.patch != null && typeof change.patch !== 'string') {
-      throw new BugbotDiffPlanLimitError();
     }
     const rawPatch = change.patch ?? '';
     if (rawPatch.length > MAX_REVIEW_DIFF_RAW_INPUT_LENGTH - rawPatchTotal) {

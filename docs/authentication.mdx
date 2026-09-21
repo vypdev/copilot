@@ -123,8 +123,14 @@ An Actions API `404` does not by itself mark the credential-health workflow as
 missing. Setup first proves repository Contents visibility, then reads the exact
 workflow path. Only a subsequent exact-path `404` is confirmed absence; every
 unreadable or ambiguous state remains `unavailable` and never authorizes
-temporary workflow creation. The setup-only bootstrap adapter independently
-repeats the two Contents reads on its selected ref before any write.
+temporary workflow creation. The initial check may use the default branch;
+after the questionnaire chooses the main branch, setup repeats both Contents
+reads on that selected ref before its final PAT audit. A failed selected-ref
+lookup cannot inherit the default-branch result. The setup-only bootstrap
+adapter independently repeats the selected-ref reads before dispatch or any
+write, even if Actions finds a workflow on the default branch. If the final PAT
+audit denies required access, setup reports a bounded blocked result with the
+selected configuration before storage validation or mutation.
 
 <Warning>**When the event actor is the same as the token user**: The action detects this before entering the workflow queue. It completes successfully without waiting or running the normal issue/PR/push pipeline. A valid explicit single action still runs. This avoids the bot reacting to its own actions. Use a dedicated bot account (different from the actor) if you want full pipeline behavior on every event.</Warning>
 

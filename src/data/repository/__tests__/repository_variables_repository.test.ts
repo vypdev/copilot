@@ -192,6 +192,28 @@ describe('narrow GitHub Actions resource repositories', () => {
     });
 
     it.each([
+        { label: 'installed', exact: { data: { sha: 'file-sha' } }, state: 'installed' },
+        { label: 'missing', exact: { status: 404 }, state: 'missing' },
+        { label: 'unavailable', exact: { status: 403 }, state: 'unavailable' },
+    ])('inspects the exact selected ref when the workflow is $label', async ({ exact, state }) => {
+        const getContent = jest.fn().mockResolvedValueOnce({ data: [{ name: '.github' }] });
+        if ('status' in exact) getContent.mockRejectedValueOnce(exact);
+        else getContent.mockResolvedValueOnce(exact);
+        const client = remoteInspectionClient(jest.fn(), getContent);
+        const repository = new SetupRemoteConfigurationQueryRepository({ getClient: jest.fn(() => client) });
+
+        await expect(repository.inspectCredentialHealthWorkflow('owner', 'repo', 'token', 'release/main'))
+            .resolves.toBe(state);
+        expect(getContent).toHaveBeenNthCalledWith(1, {
+            owner: 'owner', repo: 'repo', ref: 'release/main', path: '',
+        });
+        expect(getContent).toHaveBeenNthCalledWith(2, {
+            owner: 'owner', repo: 'repo', ref: 'release/main',
+            path: '.github/workflows/copilot_credential_health.yml',
+        });
+    });
+
+    it.each([
         { label: 'the exact workflow file is readable', exactResult: { data: {} }, rejects: false },
         { label: 'the exact workflow file lookup is denied', exactResult: { status: 403 }, rejects: true },
     ])('records the credential-health workflow as unavailable when $label', async ({ exactResult, rejects }) => {

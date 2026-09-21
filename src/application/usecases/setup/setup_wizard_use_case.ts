@@ -68,6 +68,14 @@ export type SetupWizardResult =
       configuration: SetupConfiguration;
       errors: readonly string[];
       remoteConfiguration: SetupRemoteConfiguration;
+    }
+  | {
+      status: 'blocked';
+      reason: 'setup-permissions-unavailable';
+      exitCode: 1;
+      configuration: SetupConfiguration;
+      errors: readonly string[];
+      remoteConfiguration?: SetupRemoteConfiguration;
     };
 
 export interface SetupWizardDependencies {
@@ -156,7 +164,31 @@ export class SetupWizardUseCase {
       );
     }
     const configuration = normalizeSetupConfigurationLocales(collectedConfiguration);
-    await this.dependencies.finalPermissionAudit.audit(configuration, remoteConfiguration);
+    if (request.remoteTarget && remoteConfiguration) {
+      let selectedWorkflowState: 'installed' | 'missing' | 'unavailable' = 'unavailable';
+      try {
+        selectedWorkflowState = await this.dependencies.remoteConfiguration?.inspectCredentialHealthWorkflow?.(
+          request.remoteTarget.owner,
+          request.remoteTarget.repository,
+          request.remoteTarget.token,
+          configuration.repository.mainBranch,
+        ) ?? 'unavailable';
+      } catch {
+        // A failed selected-ref read cannot inherit the provisional default-branch state.
+      }
+      remoteConfiguration = { ...remoteConfiguration, credentialHealthWorkflow: selectedWorkflowState };
+    }
+    const audit = await this.dependencies.finalPermissionAudit.audit(configuration, remoteConfiguration);
+    if (audit.status === 'blocked') {
+      return {
+        status: 'blocked',
+        reason: 'setup-permissions-unavailable',
+        exitCode: 1,
+        configuration: cloneSetupConfiguration(configuration),
+        errors: audit.errors,
+        ...(remoteConfiguration ? { remoteConfiguration } : {}),
+      };
+    }
     if (remoteConfiguration) {
       const remoteStorageErrors = [
         ...validateSetupStorageAgainstRemote(configuration, remoteConfiguration),

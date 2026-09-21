@@ -133,6 +133,25 @@ describe('setup remote credential health adapters', () => {
         expect(github.repos.deleteFile).toHaveBeenCalledWith(expect.objectContaining({ sha: 'temporary-sha', branch: 'main' }));
     });
 
+    it('bootstraps a missing selected ref even when Actions finds the workflow on the default branch', async () => {
+        const github = client();
+        github.repos.getContent.mockResolvedValueOnce({ data: [] })
+            .mockRejectedValueOnce({ status: 404 })
+            .mockResolvedValueOnce({ data: { sha: 'selected-ref-temporary-sha' } });
+
+        const checks = await new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) }, {
+            workflowContent: 'name: health', waitMs: 0, pollMs: 0,
+        }).validateExisting('owner', 'repo', 'token', 'release/main', requirements);
+
+        expect(checks?.every(check => check.status === 'valid')).toBe(true);
+        expect(github.repos.createOrUpdateFileContents).toHaveBeenCalledWith(expect.objectContaining({
+            branch: 'release/main',
+        }));
+        expect(github.repos.deleteFile).toHaveBeenCalledWith(expect.objectContaining({
+            branch: 'release/main', sha: 'selected-ref-temporary-sha',
+        }));
+    });
+
     it.each([
         { label: 'root visibility is denied', root: { status: 403 }, exact: undefined },
         { label: 'root visibility is ambiguous', root: { status: 404 }, exact: undefined },

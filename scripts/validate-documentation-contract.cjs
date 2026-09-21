@@ -306,6 +306,8 @@ requireText(
 requireText('authentication.mdx', 'After valid token identity, a successful public repository read can be used', 'public-read operational evidence');
 requireText('authentication.mdx', 'There is no separate Workflows read permission for inspection.', 'Contents-only workflow inspection grant');
 requireText('authentication.mdx', 'Workflows write and Contents write appear only when the workflow is independently confirmed missing', 'safe workflow bootstrap authority');
+requireText('authentication.mdx', 'setup repeats both Contents', 'selected-ref workflow inspection before final audit');
+requireText('authentication.mdx', 'reports a bounded blocked result with the', 'final PAT audit structured denial');
 requireText('authentication.mdx', 'on an independently available agent-backed single action', 'members-only standalone action permission');
 requireText('authentication.mdx', 'all required reads are verified or usable', 'public-read operational acknowledgement');
 requireText('security-operations/operations/troubleshooting.mdx', 'never authorizes bootstrap', 'unavailable workflow non-mutation');

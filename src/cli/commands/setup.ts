@@ -130,10 +130,10 @@ export function registerSetupCommand(program: Command): void {
         const auditConfiguredSetupPat = async (
           configuration: Readonly<SetupConfiguration>,
           remoteConfiguration?: Readonly<SetupRemoteConfiguration>,
-        ): Promise<void> => {
+        ): Promise<{ status: 'accepted' } | { status: 'blocked'; errors: readonly string[] }> => {
           const configuredSetupPatPermissions = buildConfiguredSetupPatPermissionRequirements(configuration, remoteConfiguration);
           permissionPresenter.showRequirements('setup', configuredSetupPatPermissions);
-          if (!token) return;
+          if (!token) return { status: 'accepted' };
           const permissionReport = await tokenPermissions.inspect({
             role: 'setup', owner: gitInfo.owner, repository: gitInfo.repo, token,
             requirements: configuredSetupPatPermissions,
@@ -143,11 +143,11 @@ export function registerSetupCommand(program: Command): void {
             || (permissionReport.confirmationRequired
               && await credentialPrompt.confirmUnverifiableTokenPermissions(permissionReport));
           if (!permissionAccepted || permissionReport.identityStatus !== 'valid') {
-            throw new ApplicationError(
-              'authorization.credential-invalid',
+            return { status: 'blocked', errors: [
               'The setup PAT has missing or unconfirmed access required by the approved setup plan. Grant or explicitly confirm the permissions shown above and retry.',
-            );
+            ] };
           }
+          return { status: 'accepted' };
         };
         const remoteConfigurationReader = createSetupRemoteConfigurationReadPort();
         const wizard = new SetupWizardUseCase({
@@ -181,8 +181,10 @@ export function registerSetupCommand(program: Command): void {
         }
         if (result.status === 'blocked') {
           logError(new ApplicationError(
-            'provider.unavailable',
-            `Setup is blocked by unavailable remote storage:\n${result.errors.map(error => `- ${error}`).join('\n')}`,
+            result.reason === 'setup-permissions-unavailable' ? 'authorization.credential-invalid' : 'provider.unavailable',
+            `${result.reason === 'setup-permissions-unavailable'
+              ? 'Setup is blocked by missing or unconfirmed PAT permissions:'
+              : 'Setup is blocked by unavailable remote storage:'}\n${result.errors.map(error => `- ${error}`).join('\n')}`,
           ));
           process.exitCode = result.exitCode;
           return;

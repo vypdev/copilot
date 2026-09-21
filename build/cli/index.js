@@ -40879,12 +40879,12 @@ function buildReviewDiffPlan(context, ignorePatterns = []) {
     let fragmentIndex = 0;
     let rawPatchTotal = 0;
     for (const change of context.changes) {
+        if (change.patch != null && typeof change.patch !== 'string') {
+            throw new BugbotDiffPlanLimitError();
+        }
         if ((0, file_ignore_policy_1.fileMatchesIgnorePatterns)(change.filename, ignorePatterns)) {
             ignored += 1;
             continue;
-        }
-        if (change.patch != null && typeof change.patch !== 'string') {
-            throw new BugbotDiffPlanLimitError();
         }
         const rawPatch = change.patch ?? '';
         if (rawPatch.length > exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH - rawPatchTotal) {
@@ -55392,7 +55392,27 @@ class SetupWizardUseCase {
             throw new application_error_1.ApplicationError('configuration.invalid', `Invalid setup configuration:\n${validationErrors.map((error) => `- ${error}`).join('\n')}`);
         }
         const configuration = (0, setup_configuration_policy_1.normalizeSetupConfigurationLocales)(collectedConfiguration);
-        await this.dependencies.finalPermissionAudit.audit(configuration, remoteConfiguration);
+        if (request.remoteTarget && remoteConfiguration) {
+            let selectedWorkflowState = 'unavailable';
+            try {
+                selectedWorkflowState = await this.dependencies.remoteConfiguration?.inspectCredentialHealthWorkflow?.(request.remoteTarget.owner, request.remoteTarget.repository, request.remoteTarget.token, configuration.repository.mainBranch) ?? 'unavailable';
+            }
+            catch {
+                // A failed selected-ref read cannot inherit the provisional default-branch state.
+            }
+            remoteConfiguration = { ...remoteConfiguration, credentialHealthWorkflow: selectedWorkflowState };
+        }
+        const audit = await this.dependencies.finalPermissionAudit.audit(configuration, remoteConfiguration);
+        if (audit.status === 'blocked') {
+            return {
+                status: 'blocked',
+                reason: 'setup-permissions-unavailable',
+                exitCode: 1,
+                configuration: (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration),
+                errors: audit.errors,
+                ...(remoteConfiguration ? { remoteConfiguration } : {}),
+            };
+        }
         if (remoteConfiguration) {
             const remoteStorageErrors = [
                 ...(0, setup_configuration_policy_1.validateSetupStorageAgainstRemote)(configuration, remoteConfiguration),
@@ -64957,7 +64977,7 @@ function registerSetupCommand(program) {
                 const configuredSetupPatPermissions = (0, setup_token_permission_policy_1.buildConfiguredSetupPatPermissionRequirements)(configuration, remoteConfiguration);
                 permissionPresenter.showRequirements('setup', configuredSetupPatPermissions);
                 if (!token)
-                    return;
+                    return { status: 'accepted' };
                 const permissionReport = await tokenPermissions.inspect({
                     role: 'setup', owner: gitInfo.owner, repository: gitInfo.repo, token,
                     requirements: configuredSetupPatPermissions,
@@ -64967,8 +64987,11 @@ function registerSetupCommand(program) {
                     || (permissionReport.confirmationRequired
                         && await credentialPrompt.confirmUnverifiableTokenPermissions(permissionReport));
                 if (!permissionAccepted || permissionReport.identityStatus !== 'valid') {
-                    throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT has missing or unconfirmed access required by the approved setup plan. Grant or explicitly confirm the permissions shown above and retry.');
+                    return { status: 'blocked', errors: [
+                            'The setup PAT has missing or unconfirmed access required by the approved setup plan. Grant or explicitly confirm the permissions shown above and retry.',
+                        ] };
                 }
+                return { status: 'accepted' };
             };
             const remoteConfigurationReader = (0, setup_credentials_composition_root_1.createSetupRemoteConfigurationReadPort)();
             const wizard = new setup_1.SetupWizardUseCase({
@@ -65002,7 +65025,9 @@ function registerSetupCommand(program) {
                 return;
             }
             if (result.status === 'blocked') {
-                (0, logger_1.logError)(new application_error_1.ApplicationError('provider.unavailable', `Setup is blocked by unavailable remote storage:\n${result.errors.map(error => `- ${error}`).join('\n')}`));
+                (0, logger_1.logError)(new application_error_1.ApplicationError(result.reason === 'setup-permissions-unavailable' ? 'authorization.credential-invalid' : 'provider.unavailable', `${result.reason === 'setup-permissions-unavailable'
+                    ? 'Setup is blocked by missing or unconfirmed PAT permissions:'
+                    : 'Setup is blocked by unavailable remote storage:'}\n${result.errors.map(error => `- ${error}`).join('\n')}`));
                 process.exitCode = result.exitCode;
                 return;
             }
@@ -71484,10 +71509,16 @@ exports.GitCliRepository = GitCliRepository;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.inspectMissingCredentialHealthWorkflow = inspectMissingCredentialHealthWorkflow;
+exports.inspectCredentialHealthWorkflowAtRef = inspectCredentialHealthWorkflowAtRef;
 const setup_workflow_catalog_1 = __nccwpck_require__(24596);
 const github_error_policy_1 = __nccwpck_require__(58791);
 /** A workflow API 404 is confirmed absence only after two independent Contents reads. */
 async function inspectMissingCredentialHealthWorkflow(getContent, owner, repository, ref) {
+    const state = await inspectCredentialHealthWorkflowAtRef(getContent, owner, repository, ref);
+    return state === 'missing' ? 'missing' : 'unavailable';
+}
+/** Exact workflow file state on a selected ref, independent of Actions' default-branch index. */
+async function inspectCredentialHealthWorkflowAtRef(getContent, owner, repository, ref) {
     if (!getContent)
         return 'unavailable';
     const target = { owner, repo: repository, ...(ref !== undefined ? { ref } : {}) };
@@ -71501,8 +71532,9 @@ async function inspectMissingCredentialHealthWorkflow(getContent, owner, reposit
         return 'unavailable';
     }
     try {
-        await getContent({ ...target, path: `.github/workflows/${setup_workflow_catalog_1.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE}` });
-        return 'unavailable';
+        const exact = await getContent({ ...target, path: `.github/workflows/${setup_workflow_catalog_1.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE}` });
+        return typeof exact === 'object' && exact !== null && 'data' in exact
+            && exact.data !== null && exact.data !== undefined ? 'installed' : 'unavailable';
     }
     catch (error) {
         return (0, github_error_policy_1.isGithubNotFound)(error) ? 'missing' : 'unavailable';
@@ -75009,6 +75041,10 @@ class GithubActionsResourceTransport {
     constructor(githubClient) {
         this.githubClient = githubClient;
     }
+    inspectCredentialHealthWorkflow(owner, repository, token, ref) {
+        const client = this.githubClient.getClient(token);
+        return (0, credential_health_workflow_visibility_1.inspectCredentialHealthWorkflowAtRef)(client.rest.repos?.getContent, owner, repository, ref);
+    }
     async list(owner, repository, token) {
         const client = this.githubClient.getClient(token);
         if (!client.rest.secrets)
@@ -75033,7 +75069,7 @@ class GithubActionsResourceTransport {
         const repositoryVariablesResult = await this.listRepositoryVariablesForInspection(client, owner, repository);
         const organizationSecretsResult = await this.listOrganizationSecrets(client, metadata.id, ownerType);
         const organizationVariablesResult = await this.listOrganizationVariables(client, metadata.id, ownerType);
-        const credentialHealthWorkflow = await this.inspectCredentialHealthWorkflow(client, owner, repository);
+        const credentialHealthWorkflow = await this.inspectDefaultCredentialHealthWorkflow(client, owner, repository);
         return {
             ownerType,
             repositoryId: metadata.id,
@@ -75052,7 +75088,7 @@ class GithubActionsResourceTransport {
             credentialHealthWorkflow,
         };
     }
-    async inspectCredentialHealthWorkflow(client, owner, repository) {
+    async inspectDefaultCredentialHealthWorkflow(client, owner, repository) {
         if (!client.rest.actions.getWorkflow)
             return 'unknown';
         try {
@@ -75294,6 +75330,9 @@ class SetupRemoteConfigurationQueryRepository {
     }
     inspect(owner, repository, token) {
         return this.transport.inspect(owner, repository, token);
+    }
+    inspectCredentialHealthWorkflow(owner, repository, token, ref) {
+        return this.transport.inspectCredentialHealthWorkflow(owner, repository, token, ref);
     }
 }
 exports.SetupRemoteConfigurationQueryRepository = SetupRemoteConfigurationQueryRepository;
@@ -82318,18 +82357,23 @@ class SetupRemoteCredentialHealthBootstrapAdapter {
     }
     async validateExisting(owner, repository, token, ref, requirements) {
         const client = this.githubClient.getClient(token);
+        const selectedWorkflow = await (0, credential_health_workflow_visibility_1.inspectCredentialHealthWorkflowAtRef)(client.repos.getContent, owner, repository, ref);
+        if (selectedWorkflow === 'unavailable')
+            return undefined;
         let temporaryWorkflow = false;
-        try {
-            await client.rest.actions.getWorkflow({ owner, repo: repository, workflow_id: WORKFLOW_ID });
-        }
-        catch (error) {
-            if (!isNotFound(error))
-                throw error;
-            const absence = await (0, credential_health_workflow_visibility_1.inspectMissingCredentialHealthWorkflow)(client.repos.getContent, owner, repository, ref);
-            if (absence !== 'missing')
-                return undefined;
+        if (selectedWorkflow === 'missing') {
             await this.bootstrapWorkflow(client, owner, repository, ref);
             temporaryWorkflow = true;
+        }
+        else {
+            try {
+                await client.rest.actions.getWorkflow({ owner, repo: repository, workflow_id: WORKFLOW_ID });
+            }
+            catch (error) {
+                if (isNotFound(error))
+                    return undefined;
+                throw error;
+            }
         }
         try {
             return await executeHealthWorkflow(client, owner, repository, ref, requirements, this.options);

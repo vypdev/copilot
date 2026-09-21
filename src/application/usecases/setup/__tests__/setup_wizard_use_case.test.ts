@@ -25,7 +25,7 @@ function dependencies(overrides: Record<string, unknown> = {}) {
   return {
     planPresenter: { present: jest.fn() },
     confirmation: { confirm: jest.fn().mockResolvedValue({ kind: 'approved' }) },
-    finalPermissionAudit: { audit: jest.fn().mockResolvedValue(undefined) },
+    finalPermissionAudit: { audit: jest.fn().mockResolvedValue({ status: 'accepted' }) },
     ...overrides,
   };
 }
@@ -168,7 +168,9 @@ describe('SetupWizardUseCase', () => {
       remoteTarget: { owner: 'owner', repository: 'repo', token: 'token' },
     });
 
-    expect(result).toEqual(expect.objectContaining({ status: 'completed', remoteConfiguration: remote }));
+    expect(result).toEqual(expect.objectContaining({
+      status: 'completed', remoteConfiguration: { ...remote, credentialHealthWorkflow: 'unavailable' },
+    }));
     expect(inspect).toHaveBeenCalledWith('owner', 'repo', 'token');
     expect(collect).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       remote,
@@ -236,14 +238,84 @@ describe('SetupWizardUseCase', () => {
       exitCode: 1,
       configuration: expect.objectContaining({ manageRepositoryVariables: true }),
       errors: expect.arrayContaining([expect.stringContaining('organization variables')]),
-      remoteConfiguration: blockedRemote,
+      remoteConfiguration: { ...blockedRemote, credentialHealthWorkflow: 'unavailable' },
     }));
     expect(deps.planPresenter.present).not.toHaveBeenCalled();
     expect(deps.confirmation.confirm).not.toHaveBeenCalled();
     expect(deps.finalPermissionAudit.audit).toHaveBeenCalledWith(
       expect.objectContaining({ manageRepositoryVariables: true }),
-      blockedRemote,
+      { ...blockedRemote, credentialHealthWorkflow: 'unavailable' },
     );
+  });
+
+  it('returns the normalized configuration and bounded facts when the final permission audit rejects', async () => {
+    const blockedRemote = { ...remote, repositoryVariablesAccess: 'unavailable' as const };
+    const deps = dependencies({
+      remoteConfiguration: { inspect: jest.fn().mockResolvedValue(blockedRemote) },
+      finalPermissionAudit: { audit: jest.fn().mockResolvedValue({
+        status: 'blocked', errors: ['Grant the required setup PAT access.'],
+      }) },
+    });
+    const result = await new SetupWizardUseCase(deps).execute({
+      mode: 'non-interactive',
+      overrides: { pullRequestApproval: { mode: 'off' } },
+      remoteTarget: { owner: 'owner', repository: 'repo', token: 'token' },
+    });
+
+    expect(result).toMatchObject({
+      status: 'blocked', reason: 'setup-permissions-unavailable', exitCode: 1,
+      configuration: expect.objectContaining({ repository: expect.any(Object) }),
+      errors: ['Grant the required setup PAT access.'],
+      remoteConfiguration: { ...blockedRemote, credentialHealthWorkflow: 'unavailable' },
+    });
+    expect(deps.planPresenter.present).not.toHaveBeenCalled();
+    expect(deps.confirmation.confirm).not.toHaveBeenCalled();
+  });
+
+  it('does not disguise unexpected audit transport failures as an ordinary denied permission', async () => {
+    const deps = dependencies({
+      finalPermissionAudit: { audit: jest.fn().mockRejectedValue(new Error('provider transport unavailable')) },
+    });
+    await expect(new SetupWizardUseCase(deps).execute({
+      mode: 'non-interactive', overrides: { pullRequestApproval: { mode: 'off' } },
+    })).rejects.toThrow('provider transport unavailable');
+    expect(deps.planPresenter.present).not.toHaveBeenCalled();
+  });
+
+  it('replaces provisional workflow status using the selected main branch before the final audit', async () => {
+    const initial = { ...remote, credentialHealthWorkflow: 'installed' as const };
+    const inspectCredentialHealthWorkflow = jest.fn().mockResolvedValue('missing');
+    const deps = dependencies({ remoteConfiguration: {
+      inspect: jest.fn().mockResolvedValue(initial), inspectCredentialHealthWorkflow,
+    } });
+    const result = await new SetupWizardUseCase(deps).execute({
+      mode: 'non-interactive',
+      overrides: { pullRequestApproval: { mode: 'off' }, repository: { mainBranch: 'release/main' } },
+      remoteTarget: { owner: 'owner', repository: 'repo', token: 'token' },
+    });
+
+    expect(inspectCredentialHealthWorkflow).toHaveBeenCalledWith('owner', 'repo', 'token', 'release/main');
+    expect(deps.finalPermissionAudit.audit).toHaveBeenCalledWith(
+      expect.objectContaining({ repository: expect.objectContaining({ mainBranch: 'release/main' }) }),
+      { ...initial, credentialHealthWorkflow: 'missing' },
+    );
+    expect(result.status === 'completed' && result.remoteConfiguration?.credentialHealthWorkflow).toBe('missing');
+  });
+
+  it('does not inherit default-branch presence when the selected-ref lookup fails', async () => {
+    const initial = { ...remote, credentialHealthWorkflow: 'installed' as const };
+    const deps = dependencies({ remoteConfiguration: {
+      inspect: jest.fn().mockResolvedValue(initial),
+      inspectCredentialHealthWorkflow: jest.fn().mockRejectedValue(new Error('private provider body')),
+    } });
+    const result = await new SetupWizardUseCase(deps).execute({
+      mode: 'non-interactive', overrides: { pullRequestApproval: { mode: 'off' } },
+      remoteTarget: { owner: 'owner', repository: 'repo', token: 'token' },
+    });
+    expect(deps.finalPermissionAudit.audit).toHaveBeenCalledWith(
+      expect.anything(), { ...initial, credentialHealthWorkflow: 'unavailable' },
+    );
+    expect(JSON.stringify(result)).not.toContain('private provider body');
   });
 
   it('blocks unavailable required repository inventory inside the wizard boundary', async () => {
@@ -264,7 +336,7 @@ describe('SetupWizardUseCase', () => {
       reason: 'remote-storage-unavailable',
       exitCode: 1,
       errors: [expect.stringContaining('Repository Variable inventory is unavailable')],
-      remoteConfiguration: blockedRemote,
+      remoteConfiguration: { ...blockedRemote, credentialHealthWorkflow: 'unavailable' },
     }));
     expect(deps.finalPermissionAudit.audit).toHaveBeenCalledTimes(1);
     expect(deps.planPresenter.present).not.toHaveBeenCalled();

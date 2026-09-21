@@ -8,7 +8,7 @@ import type {
 import type { SetupCredentialValue, SetupRemoteConfiguration, SetupResourceTarget, SetupVariable } from '../../domain/setup';
 import { SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE } from '../../domain/setup_workflow_catalog';
 import { isGithubNotFound } from './github/github_error_policy';
-import { inspectMissingCredentialHealthWorkflow } from './github/credential_health_workflow_visibility';
+import { inspectCredentialHealthWorkflowAtRef, inspectMissingCredentialHealthWorkflow } from './github/credential_health_workflow_visibility';
 import type { GithubClientPort } from '../../infrastructure/github/ports/github_client_provider_port';
 import type {
     GithubOrganizationResource,
@@ -19,6 +19,11 @@ import { createHash } from 'node:crypto';
 
 class GithubActionsResourceTransport {
     constructor(private readonly githubClient: GithubClientPort<GithubRepositoryVariablesClient>) {}
+
+    inspectCredentialHealthWorkflow(owner: string, repository: string, token: string, ref: string) {
+        const client = this.githubClient.getClient(token);
+        return inspectCredentialHealthWorkflowAtRef(client.rest.repos?.getContent, owner, repository, ref);
+    }
 
     async list(owner: string, repository: string, token: string): Promise<readonly string[]> {
         const client = this.githubClient.getClient(token);
@@ -44,7 +49,7 @@ class GithubActionsResourceTransport {
         const repositoryVariablesResult = await this.listRepositoryVariablesForInspection(client, owner, repository);
         const organizationSecretsResult = await this.listOrganizationSecrets(client, metadata.id, ownerType);
         const organizationVariablesResult = await this.listOrganizationVariables(client, metadata.id, ownerType);
-        const credentialHealthWorkflow = await this.inspectCredentialHealthWorkflow(client, owner, repository);
+        const credentialHealthWorkflow = await this.inspectDefaultCredentialHealthWorkflow(client, owner, repository);
         return {
             ownerType,
             repositoryId: metadata.id,
@@ -64,7 +69,7 @@ class GithubActionsResourceTransport {
         };
     }
 
-    private async inspectCredentialHealthWorkflow(
+    private async inspectDefaultCredentialHealthWorkflow(
         client: GithubRepositoryVariablesClient,
         owner: string,
         repository: string,
@@ -343,6 +348,10 @@ export class SetupRemoteConfigurationQueryRepository implements SetupRemoteConfi
 
     inspect(owner: string, repository: string, token: string): Promise<SetupRemoteConfiguration> {
         return this.transport.inspect(owner, repository, token);
+    }
+
+    inspectCredentialHealthWorkflow(owner: string, repository: string, token: string, ref: string) {
+        return this.transport.inspectCredentialHealthWorkflow(owner, repository, token, ref);
     }
 }
 

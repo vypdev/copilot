@@ -14,13 +14,16 @@ import type { SetupTokenPermissionReport } from '../../domain/setup_token_permis
 
 export interface SetupRemoteConfigurationReadPort {
     inspect(owner: string, repository: string, token: string): Promise<SetupRemoteConfiguration>;
+    inspectCredentialHealthWorkflow?(
+        owner: string, repository: string, token: string, ref: string,
+    ): Promise<'installed' | 'missing' | 'unavailable'>;
 }
 
 export interface SetupFinalPermissionAuditPort {
     audit(
         configuration: Readonly<SetupConfiguration>,
         remoteConfiguration?: Readonly<SetupRemoteConfiguration>,
-    ): Promise<void>;
+    ): Promise<{ status: 'accepted' } | { status: 'blocked'; errors: readonly string[] }>;
 }
 
 export interface SetupCredentialPromptPort {
