@@ -39,6 +39,14 @@ describe('fileMatchesIgnorePatterns', () => {
         expect(fileMatchesIgnorePatterns('src/utils/deep/helper.ts', ['src/utils/*'])).toBe(true);
     });
 
+    it('treats a leading **/ as an optional root or nested directory prefix', () => {
+        const patterns = ['**/node_modules/**'];
+        expect(fileMatchesIgnorePatterns('node_modules/package.json', patterns)).toBe(true);
+        expect(fileMatchesIgnorePatterns('packages/app/node_modules/package.json', patterns)).toBe(true);
+        expect(fileMatchesIgnorePatterns('packages/app/node_modules-cache/package.json', patterns)).toBe(false);
+        expect(fileMatchesIgnorePatterns('packages/app/package.json', patterns)).toBe(false);
+    });
+
     it('trims file path and patterns', () => {
         expect(fileMatchesIgnorePatterns('  src/foo.ts  ', ['  src/foo.ts  '])).toBe(true);
     });

@@ -12,11 +12,14 @@ const regexCache = new Map<string, RegExp[]>();
 /** Converts a glob-like pattern to a bounded regex string. */
 function patternToRegexString(pattern: string): string | null {
     if (pattern.length > MAX_PATTERN_LENGTH) return null;
-    const collapsed = pattern.replace(/\*+/g, '*');
-    return collapsed
+    const hasOptionalLeadingDirectory = pattern.startsWith('**/');
+    const patternBody = hasOptionalLeadingDirectory ? pattern.slice(3) : pattern;
+    const collapsed = patternBody.replace(/\*+/g, '*');
+    const escaped = collapsed
         .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
         .replace(/\*/g, '.*')
         .replace(/\//g, '\\/');
+    return `${hasOptionalLeadingDirectory ? '(?:.*\\/)?' : ''}${escaped}`;
 }
 
 function getCachedRegexes(ignorePatterns: readonly string[]): RegExp[] {

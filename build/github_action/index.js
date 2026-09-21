@@ -39308,6 +39308,10 @@ async function runGitHubAction() {
             ...([localeInputs.repository, localeInputs.issue, localeInputs.pullRequest]
                 .some(publication_message_catalog_1.publicationLocaleNeedsDynamicCatalog) ? ['planner'] : []),
         ])];
+    const agentRuntimeAuthorized = botAnalysisOnly
+        || !aiInputs.membersOnly
+        || requestedActiveAgentTasks.length === 0
+        || await (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)().isActorAllowedToUseMemberOnlyAutomation(eventInputs.repo.owner, eventInputs.repo.repo, eventInputs.actor, token);
     let languageRuntimeAvailable = false;
     const projectBoard = (0, project_board_composition_root_1.createProjectBoardCompositionRoot)();
     const execution = await (0, github_action_execution_1.buildGithubActionExecution)({
@@ -39320,6 +39324,7 @@ async function runGitHubAction() {
         singleAction,
         aiInputs,
         activeAgentTasks: requestedActiveAgentTasks,
+        agentRuntimeAuthorized,
         localeInputs,
     });
     if (botAnalysisOnly) {
@@ -39353,9 +39358,6 @@ async function runGitHubAction() {
         });
         if (admittedExecution.issueWorkflowRuntimeMode !== 'execute')
             return;
-        const agentRuntimeAuthorized = !aiInputs.membersOnly
-            || requestedActiveAgentTasks.length === 0
-            || await (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)().isActorAllowedToUseMemberOnlyAutomation(eventInputs.repo.owner, eventInputs.repo.repo, eventInputs.actor, token);
         if (!agentRuntimeAuthorized) {
             (0, logger_1.logInfo)('Skipping agent runtime preparation because ai-members-only is enabled and the actor is not authorized.');
             return;
@@ -46202,11 +46204,14 @@ const regexCache = new Map();
 function patternToRegexString(pattern) {
     if (pattern.length > MAX_PATTERN_LENGTH)
         return null;
-    const collapsed = pattern.replace(/\*+/g, '*');
-    return collapsed
+    const hasOptionalLeadingDirectory = pattern.startsWith('**/');
+    const patternBody = hasOptionalLeadingDirectory ? pattern.slice(3) : pattern;
+    const collapsed = patternBody.replace(/\*+/g, '*');
+    const escaped = collapsed
         .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
         .replace(/\*/g, '.*')
         .replace(/\//g, '\\/');
+    return `${hasOptionalLeadingDirectory ? '(?:.*\\/)?' : ''}${escaped}`;
 }
 function getCachedRegexes(ignorePatterns) {
     const trimmed = ignorePatterns.map((pattern) => pattern.trim()).filter(Boolean);

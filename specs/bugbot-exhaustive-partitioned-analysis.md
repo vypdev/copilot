@@ -119,6 +119,9 @@ analysis detects every defect.
 
 1. The feature does not guarantee detection of every defect.
 2. It does not analyze files matched by configured ignore patterns.
+   A leading `**/` matches both the repository root and any nested prefix, so
+   documented patterns such as `**/node_modules/**` cannot leak root-level
+   files into the review plan.
 3. It does not remove GitHub's 1,000-file provider-read ceiling.
 4. It does not auto-merge, change severity policy, or increase the publication
    comment limit.
@@ -192,7 +195,8 @@ publication/reconciliation operation allowed.
 ### 6.1 Deterministic partition planning
 
 1. Filter ignored files before planning; preserve provider file order for the
-   remaining files.
+   remaining files. Leading `**/` is an optional directory prefix and therefore
+   matches the same path at the repository root or at any nesting depth.
 2. Normalize line endings and remove unsafe invisible prompt characters through
    the existing untrusted-content boundary before measuring. Provider-supplied
    filename, status, additions, and deletions metadata MUST each remain inside
@@ -480,17 +484,17 @@ comments remain untouched.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **39 distinct cases**.
+This SDD owns at least **40 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/pure planning | 12 | empty/single/multi-file, newline/hard split, exact prompt and 64/65 partition boundaries, absent patch, ignore, stable IDs, order, no character loss, hostile status/count metadata envelope |
+| Domain/pure planning | 13 | empty/single/multi-file, newline/hard split, exact prompt and 64/65 partition boundaries, absent patch, root/nested leading-`**/` ignore parity, stable IDs, order, no character loss, hostile status/count metadata envelope |
 | State/application/idempotency/races | 8 | all-complete, one failure, wrong/duplicate ID, wrong SHA, resolution ownership, stale head, replay, empty canonical zero-work |
 | Agent adapter/schema contracts | 4 | required attestation, locale, undefined/invalid result, aggregate bounds |
 | Workflow/architecture/telemetry | 5 | concurrency two, ordered collection, no mutation before complete, positive and zero-partition plan metrics |
 | UI/UX/localization/sanitization | 4 | pending, failed, complete, hostile content/control characters |
 | Integration/security/compatibility | 6 | 44-file regression, oversized patch, provider partial, dry-run, legacy issue-only path, ignored-only canonical no-op |
-| **Total** | **39** | No double counting |
+| **Total** | **40** | No double counting |
 
 Planner, attestation, and aggregate pure policies require 100% enumerated branch
 coverage. Changed analyzer/context modules require at least 95% lines/statements
@@ -553,12 +557,16 @@ token scope, secret, or public input.
 18. Given an empty or ignored-only canonical diff produces an observed
     zero-partition plan, then telemetry emits zero plan/completion/fragment/
     file/concurrency fields; a legacy execution with no plan omits those fields.
+19. Given `**/node_modules/**`, both `node_modules/package.json` and
+    `packages/app/node_modules/package.json` are ignored before partitioning,
+    while unrelated root and nested paths remain reviewable.
 
 ## 17. Requirements traceability
 
 | Requirement | Policy/use case/adapter/presentation | Test or evidence | Documentation |
 |---|---|---|---|
 | lossless bounded plan | diff partition policy | reconstruction/boundary/44-file tests | how it works |
+| root/nested ignore parity | file-ignore policy | leading-`**/` root and nested fixtures | configuration |
 | untrusted diff metadata | diff partition policy + security envelope | hostile filename/status/count/patch fixtures | detection/security |
 | attested atomic execution | partitioned analyzer | failure/identity/concurrency tests | failure scenarios |
 | global coherent result | aggregate policy + existing preparation | duplicate/rank/limit/resolution tests | detection |
@@ -589,7 +597,7 @@ token scope, secret, or public input.
       provider enumeration and every partition respects fixed prompt bounds.
 - [x] Attestation, resolution ownership, concurrency, aggregation, freshness,
       replay, cancellation/failure, and no-prepublication-mutation tests pass.
-- [x] The 39-case floor and changed-module/repository coverage budgets pass.
+- [x] The 40-case floor and changed-module/repository coverage budgets pass.
 - [x] Pending, failed, provider-partial, complete, dry-run, and publication-
       partial surfaces are accurate, localized, accessible, and bounded.
 - [x] No public configuration, permission, credential, or durable-state change

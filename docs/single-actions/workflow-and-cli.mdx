@@ -203,10 +203,19 @@ The wizard covers these features: `issues`, `pullRequests`, `commits`, `issueCom
 For automation, use the same defaults without prompts:
 
 ```bash
-copilot setup --non-interactive --yes --confirm-unverifiable-write-permissions
+copilot setup --non-interactive --yes
 copilot setup --dry-run
-copilot setup --non-interactive --yes --confirm-unverifiable-write-permissions --features issues,pullRequests,commits,issueComments,pullRequestComments --agent codex
-copilot setup --non-interactive --yes --confirm-unverifiable-write-permissions --issue-workflows feature,bugfix,help
+copilot setup --non-interactive --yes --features issues,pullRequests,commits,issueComments,pullRequestComments --agent codex
+copilot setup --non-interactive --yes --issue-workflows feature,bugfix,help
+```
+
+Run these commands without a permission exception first. If the audit stops
+only because required write rows are `Unverifiable`, inspect the displayed
+requirements against both PATs' settings. Only after confirming every required
+row may you explicitly acknowledge that limitation on a rerun:
+
+```bash
+copilot setup --non-interactive --yes --confirm-unverifiable-write-permissions
 ```
 
 Without an explicit `--agent-guidance` or config value, non-interactive setup
@@ -218,7 +227,7 @@ marker insertion in unattended setup.
 For unattended credential provisioning, keep the setup PAT in a protected CI secret and pass credential values explicitly (never commit them):
 
 ```bash
-copilot setup --non-interactive --yes --confirm-unverifiable-write-permissions --update-workflows \
+copilot setup --non-interactive --yes --update-workflows \
   --token "$SETUP_PAT" \
   --workflow-pat "$WORKFLOW_PAT" \
   --secret "OPENAI_API_KEY=$OPENAI_API_KEY" \

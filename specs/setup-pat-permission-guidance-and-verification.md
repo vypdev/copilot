@@ -178,6 +178,10 @@ read-only GitHub queries and presents ordered permission outcomes.
    PAT was configured with the displayed access. Interactive acknowledgement
    defaults to No; non-interactive execution requires
    `--confirm-unverifiable-write-permissions`. `--yes` alone is not evidence.
+   Generic interactive or unattended setup examples MUST omit that exception
+   flag. Documentation may show it only in a separately labelled recovery flow
+   whose immediately adjacent prerequisite requires the operator to inspect the
+   displayed PAT settings first.
    The wizard MUST invoke a configured final-permission-audit port after
    normalization and before final remote storage validation. The wizard then
    MUST apply both organization-storage validation and scope-sensitive managed-
@@ -473,7 +477,7 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **78 distinct cases**.
+This SDD adds at least **79 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
@@ -482,8 +486,8 @@ This SDD adds at least **78 distinct cases**.
 | Adapter/provider contracts | 27 | GET-only probes, fixed four-request concurrency with stable result order, commit-list Contents target, empty-repository 409, default-branch Checks resolution plus encoded check-runs target, invalid/missing branch fail-closed behavior, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow, unavailable endpoint state, duplicate-comment deletion fallback regression |
 | Setup/credential integration | 15 | pre-prompt setup table, conditional denial through planning, wizard-owned repository-inventory block plus organization-only continuation, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
 | UI/accessibility | 4 | required/result tables, confirmation-required copy, 40-column wrapping, no-color text |
-| Architecture/security/docs | 1 | query-only boundary and no duplicated catalog |
-| **Total** | **78** | No double counting |
+| Architecture/security/docs | 2 | query-only boundary, no duplicated catalog, and safe generic/recovery automation examples |
+| **Total** | **79** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -499,6 +503,7 @@ at widths 40/80/120 and `NO_COLOR`.
 | Setup owner | `docs/authentication.mdx` | both matrices, status meanings, provider limitation | docs validation and setup links |
 | Operator | `docs/configuration-checklist.mdx` | preflight and recovery for each status | checklist link validation |
 | Troubleshooter | `docs/security-operations/operations/troubleshooting.mdx` | missing versus unverifiable decision | docs validation |
+| Automation operator | `docs/single-actions/workflow-and-cli.mdx` | generic commands omit acknowledgement; inspected-PAT recovery is separately labelled | docs validation |
 | Contributor | `docs/development/architecture.mdx` | policy/use case/query adapter/presenter boundary | architecture test reference |
 
 ## 16. Acceptance scenarios
@@ -602,6 +607,11 @@ at widths 40/80/120 and `NO_COLOR`.
     exact percent-encoded branch, never `HEAD`; missing or invalid branch
     metadata produces `Unverifiable` without a second request, and the two-read
     sequence remains inside one probe concurrency slot and timeout.
+28. Given an operator copies a generic interactive, non-interactive, or
+    credential-provisioning setup command from the docs, it does not silently
+    acknowledge unverifiable write access. The acknowledgement flag appears
+    only in a separate recovery example immediately after an instruction to
+    inspect every displayed PAT requirement.
 
 ## 17. Requirements traceability
 
@@ -623,6 +633,7 @@ at widths 40/80/120 and `NO_COLOR`.
 | valid Checks commit reference | read-only query adapter | default-branch resolution, encoding, and invalid-metadata tests | authentication/troubleshooting |
 | least-privilege credential-health bootstrap | remote configuration query plus permission policy | installed/missing/unavailable inspection and permission-matrix tests | authentication/troubleshooting |
 | no unaudited existing workflow PAT | credential collection use case plus prompt adapter | existing re-entry/audit and non-interactive rejection tests | authentication/troubleshooting |
+| explicit unverifiable-write acknowledgement | CLI option plus documentation contract | generic-command absence and inspected-recovery example | workflow and CLI |
 
 ## 18. Implementation sequence
 
@@ -642,7 +653,7 @@ at widths 40/80/120 and `NO_COLOR`.
 - [x] No validation request mutates GitHub and no result overclaims write access.
 - [x] Token values and raw provider text are absent from all output/state/errors.
 - [x] Clean Architecture boundaries and their executable test pass.
-- [x] At least 78 distinct cases and stated coverage thresholds pass.
+- [x] At least 79 distinct cases and stated coverage thresholds pass.
 - [x] Authentication, checklist, troubleshooting, and architecture docs agree.
 - [x] Catalog evidence and generated `specs/CATALOG.md` are current.
 - [x] Specification, documentation, typecheck, lint, and test gates pass.

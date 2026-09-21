@@ -239,6 +239,30 @@ function requireText(file, expected, contract) {
   if (!(docsByFile.get(file) ?? '').includes(expected)) errors.push(`${file}: missing ${contract}: ${expected}`);
 }
 
+const setupCliDocumentation = docsByFile.get('single-actions/workflow-and-cli.mdx') ?? '';
+const setupAutomationSection = setupCliDocumentation
+  .split('For automation, use the same defaults without prompts:')[1]
+  ?.split('Without an explicit `--agent-guidance`')[0] ?? '';
+const genericSetupAutomation = setupAutomationSection
+  .split('Run these commands without a permission exception first.')[0] ?? '';
+const inspectedPatRecovery = setupAutomationSection
+  .split('Run these commands without a permission exception first.')[1] ?? '';
+const normalizedInspectedPatRecovery = inspectedPatRecovery.replace(/\s+/g, ' ');
+const unattendedCredentialProvisioning = setupCliDocumentation
+  .split('For unattended credential provisioning')[1]
+  ?.split('The explicit `--workflow-pat`')[0] ?? '';
+const unverifiableWriteAcknowledgement = '--confirm-unverifiable-write-permissions';
+if (!genericSetupAutomation || genericSetupAutomation.includes(unverifiableWriteAcknowledgement)) {
+  errors.push('single-actions/workflow-and-cli.mdx: generic automation commands must omit unverifiable-write acknowledgement');
+}
+if (!unattendedCredentialProvisioning || unattendedCredentialProvisioning.includes(unverifiableWriteAcknowledgement)) {
+  errors.push('single-actions/workflow-and-cli.mdx: generic credential-provisioning command must omit unverifiable-write acknowledgement');
+}
+if (!normalizedInspectedPatRecovery.includes('inspect the displayed requirements against both PATs\' settings')
+  || !normalizedInspectedPatRecovery.includes(`copilot setup --non-interactive --yes ${unverifiableWriteAcknowledgement}`)) {
+  errors.push('single-actions/workflow-and-cli.mdx: inspected-PAT recovery must be explicit and adjacent to the exceptional command');
+}
+
 requireText('issues/configuration.mdx', '`ai-pull-request-description-mode`: PR body policy', 'canonical PR description policy');
 requireText('bugbot/quality-observability.mdx', 'Check is neutral when a successful review reports `open`, `reopened`, or `verification-required` findings', 'non-blocking Bugbot default');
 requireText('bugbot/quality-observability.mdx', '`unknown`, provider reconciliation errors, and analysis failures remain failures', 'fail-closed Bugbot projection');
