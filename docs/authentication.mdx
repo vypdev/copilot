@@ -40,7 +40,9 @@ workflow files may be anonymously readable on a public repository. Copilot
 marks those reads `Verified` only when the same bounded probe establishes that
 the repository is private; on a public repository, or when visibility is
 unknown, success remains `Unverifiable`. Secret and Variable inventory
-endpoints are permission-bound and may verify directly. Public organization
+reads are permission-bound; their corresponding write grants remain
+`Unverifiable` because GitHub exposes no safe non-mutating proof of write
+access, so setup requires explicit acknowledgement for those rows. Public organization
 member and issue-type reads remain `Unverifiable`.
 After valid token identity, a successful public repository read can be used
 for that exact read operation, while its PAT permission row stays

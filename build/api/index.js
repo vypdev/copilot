@@ -260,8 +260,11 @@ exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH = exports.MAX_REVIEW_DIFF_PARTITION_LEN
 const DIFF_PARTITION_HEADER_RESERVE = 1024;
 const MAX_REVIEW_DIFF_METADATA_LENGTH = 512;
 class BugbotDiffPlanLimitError extends Error {
-    constructor() {
-        super(`Bugbot diff exceeds the fixed ${exports.MAX_REVIEW_DIFF_PARTITIONS}-partition or ${exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH}-character planning limit.`);
+    constructor(reason = 'limit') {
+        super(reason === 'malformed-input'
+            ? 'Bugbot diff contains malformed provider patch content.'
+            : `Bugbot diff exceeds the fixed ${exports.MAX_REVIEW_DIFF_PARTITIONS}-partition or ${exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH}-character planning limit.`);
+        this.reason = reason;
         this.name = 'BugbotDiffPlanLimitError';
     }
 }
@@ -280,13 +283,15 @@ function buildReviewDiffPlan(context, ignorePatterns = []) {
     let rawPatchTotal = 0;
     for (const change of context.changes) {
         if (change.patch != null && typeof change.patch !== 'string') {
-            throw new BugbotDiffPlanLimitError();
+            throw new BugbotDiffPlanLimitError('malformed-input');
         }
         if ((0, file_ignore_policy_1.fileMatchesIgnorePatterns)(change.filename, ignorePatterns)) {
             ignored += 1;
             continue;
         }
         const rawPatch = change.patch ?? '';
+        if (hasUnpairedSurrogate(rawPatch))
+            throw new BugbotDiffPlanLimitError('malformed-input');
         if (rawPatch.length > exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH - rawPatchTotal) {
             throw new BugbotDiffPlanLimitError();
         }
@@ -363,6 +368,8 @@ function buildReviewDiffPlan(context, ignorePatterns = []) {
     return { partitions, ignored, retained: retainedFiles.size, fragments: sections.length };
 }
 function splitReviewDiffPatch(patch) {
+    if (hasUnpairedSurrogate(patch))
+        throw new BugbotDiffPlanLimitError('malformed-input');
     const fragments = [];
     let offset = 0;
     while (offset < patch.length) {
@@ -378,6 +385,22 @@ function splitReviewDiffPatch(patch) {
         offset = end;
     }
     return fragments;
+}
+function hasUnpairedSurrogate(value) {
+    for (let index = 0; index < value.length; index += 1) {
+        const code = value.charCodeAt(index);
+        if (code >= 0xDC00 && code <= 0xDFFF)
+            return true;
+        if (code >= 0xD800 && code <= 0xDBFF) {
+            if (index + 1 >= value.length)
+                return true;
+            const next = value.charCodeAt(index + 1);
+            if (next < 0xDC00 || next > 0xDFFF)
+                return true;
+            index += 1;
+        }
+    }
+    return false;
 }
 function moveBeforeSplitSurrogatePair(value, end) {
     if (end <= 0 || end >= value.length)
@@ -3204,7 +3227,9 @@ async function loadBugbotContext(request, ports, resolvedPreflight) {
     }
     catch (error) {
         if (error instanceof bugbot_diff_partition_policy_1.BugbotDiffPlanLimitError) {
-            throw new application_error_1.ApplicationError('workflow.failed', `The canonical diff exceeds the fixed ${bugbot_diff_partition_policy_1.MAX_REVIEW_DIFF_PARTITIONS}-partition or raw-input Bugbot planning limit. Split the pull request and retry; no partial review was started.`, { cause: error });
+            throw new application_error_1.ApplicationError('workflow.failed', error.reason === 'malformed-input'
+                ? 'The canonical diff contains malformed provider patch content. Correct the diff source and retry; no partial review was started.'
+                : `The canonical diff exceeds the fixed ${bugbot_diff_partition_policy_1.MAX_REVIEW_DIFF_PARTITIONS}-partition or raw-input Bugbot planning limit. Split the pull request and retry; no partial review was started.`, { cause: error });
         }
         throw error;
     }

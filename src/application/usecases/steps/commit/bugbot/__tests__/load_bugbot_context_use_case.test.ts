@@ -355,6 +355,23 @@ describe('loadBugbotContext', () => {
     expect(reader.loadRules).not.toHaveBeenCalled();
   });
 
+  it('reports malformed UTF-16 provider input without misleading split-PR guidance', async () => {
+    const changes = [{ filename: 'src/malformed.ts', status: 'modified', additions: 1, deletions: 0,
+      patch: '+\uD83D' }];
+    const reader = ports({
+      getReviewDiffSnapshot: jest.fn().mockResolvedValue({
+        value: { changes, filesWithFirstDiffLine: [], filesWithDiffLocations: [] },
+        coverage: coverage('diff', changes.length),
+      }),
+    });
+
+    await expect(loadBugbotContext(request(), reader)).rejects.toMatchObject({
+      code: 'workflow.failed',
+      message: expect.stringContaining('Correct the diff source'),
+    });
+    expect(reader.loadRules).not.toHaveBeenCalled();
+  });
+
   it('propagates an unexpected diff planning error without reclassifying it as a size limit', async () => {
     const corruptChange = {
       filename: 'src/corrupt.ts',

@@ -192,6 +192,22 @@ describe('narrow GitHub Actions resource repositories', () => {
     });
 
     it.each([
+        { label: 'object', payload: {} },
+        { label: 'scalar', payload: 'unexpected' },
+        { label: 'absent', payload: undefined },
+        { label: 'malformed directory entry', payload: [{}] },
+    ])('does not infer selected-ref absence from a malformed root $label payload', async ({ payload }) => {
+        const getContent = jest.fn().mockResolvedValueOnce({ data: payload })
+            .mockRejectedValueOnce({ status: 404 });
+        const client = remoteInspectionClient(jest.fn(), getContent);
+        const repository = new SetupRemoteConfigurationQueryRepository({ getClient: jest.fn(() => client) });
+
+        await expect(repository.inspectCredentialHealthWorkflow('owner', 'repo', 'token', 'main'))
+            .resolves.toBe('unavailable');
+        expect(getContent).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
         { label: 'installed', exact: { data: { sha: 'file-sha' } }, state: 'installed' },
         { label: 'missing', exact: { status: 404 }, state: 'missing' },
         { label: 'unavailable', exact: { status: 403 }, state: 'unavailable' },

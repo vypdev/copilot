@@ -214,6 +214,13 @@ publication/reconciliation operation allowed.
 3. Split an oversized patch at the last newline that fits the fragment budget.
    When a single line exceeds the budget, split that line at a hard UTF-16
    boundary moved left when necessary so it never separates a surrogate pair.
+   Reject an input patch containing an isolated high or low UTF-16 surrogate
+   with the bounded plan-limit error before assigning any partition. The
+   sanitized patch and the direct fragment-splitting boundary MUST both fail
+   closed on malformed scalar input; do not silently replace or discard a
+   provider character while claiming lossless reconstruction. The bounded
+   failure guidance MUST distinguish malformed provider content (correct the
+   diff source and retry) from a size ceiling (split the PR and retry).
    Every fragment remains within 12,000 UTF-16 code units, starts and ends with
    a complete Unicode scalar value, and concatenating fragment payloads MUST
    reproduce the sanitized patch exactly.
@@ -504,17 +511,17 @@ comments remain untouched.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **46 distinct cases**.
+This SDD owns at least **48 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/pure planning | 19 | empty/single/multi-file, newline/hard split, UTF-16 surrogate-safe hard boundaries, individual and cumulative raw input ceilings before normalization, exact prompt and 64/65 partition boundaries, omitted/null/empty patch assignments and malformed non-string rejection even on ignored paths, root/nested leading-`**/` ignore parity, stable IDs, order, no character loss, hostile status/count metadata envelope |
+| Domain/pure planning | 21 | empty/single/multi-file, newline/hard split, UTF-16 surrogate-safe hard boundaries and rejection of isolated high/low surrogates, individual and cumulative raw input ceilings before normalization, exact prompt and 64/65 partition boundaries, omitted/null/empty patch assignments and malformed non-string rejection even on ignored paths, root/nested leading-`**/` ignore parity, stable IDs, order, no character loss, hostile status/count metadata envelope |
 | State/application/idempotency/races | 8 | all-complete, one failure, wrong/duplicate ID, wrong SHA, resolution ownership, stale head, replay, empty canonical zero-work |
 | Agent adapter/schema contracts | 4 | required attestation, locale, undefined/invalid result, aggregate bounds |
 | Workflow/architecture/telemetry | 5 | concurrency two, ordered collection, no mutation before complete, positive and zero-partition plan metrics |
 | UI/UX/localization/sanitization | 4 | pending, failed, complete, hostile content/control characters |
 | Integration/security/compatibility | 6 | 44-file regression, oversized patch, provider partial, dry-run, legacy issue-only path, ignored-only canonical no-op |
-| **Total** | **46** | No double counting |
+| **Total** | **48** | No double counting |
 
 Planner, attestation, and aggregate pure policies require 100% enumerated branch
 coverage. Changed analyzer/context modules require at least 95% lines/statements
@@ -586,6 +593,9 @@ token scope, secret, or public input.
     boundary with no earlier newline, then the boundary moves left, neither
     fragment contains an orphan surrogate, both stay within budget, and their
     concatenation exactly reconstructs the sanitized patch.
+    Given a patch with an isolated high or low surrogate, either the planner
+    or a direct fragment split rejects it before review; no fragment with an
+    orphan surrogate reaches the provider.
 21. Given one patch or the cumulative non-ignored patches exceed 4,096,000 raw
     UTF-16 code units, the planner rejects before normalization, model query,
     or publication with bounded split-PR guidance; ignored patches consume no

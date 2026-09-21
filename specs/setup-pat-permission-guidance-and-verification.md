@@ -248,6 +248,10 @@ read-only GitHub queries and presents ordered permission outcomes.
    exact workflow file on `configuration.repository.mainBranch`, replacing only
    the workflow state in its remote snapshot. A missing/rejected probe becomes
    `unavailable`, never an inherited default-branch `installed` or `missing`.
+   The root Contents read proves visibility only when its `data` is a directory
+   listing array (which may be empty) whose entries have non-empty names.
+   Missing, scalar, object, and malformed-entry payloads remain `unavailable`
+   even if the subsequent exact-file lookup would be 404.
    A successful exact-file response proves `installed` only when its `data` is
    a non-array file object with a non-empty string `sha`. An empty object,
    directory array, absent `sha`, or malformed payload is `unavailable`, not
@@ -280,7 +284,7 @@ read-only GitHub queries and presents ordered permission outcomes.
    | Permission | Selected runtime capability that requires it |
    |---|---|
    | Actions write | Release/hotfix workflow dispatch, including an enabled release/hotfix issue workflow |
-   | Contents write | Managed issue branches, file-modifying issue/PR comment routes, or release/hotfix branch, tag, and merge operations |
+   | Contents write | Managed issue branches, enabled issue/PR comment routes that permit authorized autofix or do-user-request file commits, or release/hotfix branch, tag, and merge operations |
    | Issues write | Issue automation, issue comments, issue-progress commit processing, inactive-issue closure, or release/hotfix issue lifecycle |
    | Pull requests write | PR automation, PR review comments, commit-triggered Bugbot review, issue-comment autofix on a PR, guarded approval, or release/hotfix promotion |
 
@@ -292,7 +296,13 @@ read-only GitHub queries and presents ordered permission outcomes.
    members-only single actions can still require organization Members read.
    Existing defaults still select the normal write grants, and disabling one
    consumer MUST NOT remove a grant needed by
-   another. GitHub documents Contents write for merging a PR and Actions write
+   another. Every enabled issue/PR comment route includes potential
+   file-modifying autofix and do-user-request capabilities; an individual
+   comment that only posts an answer does not make its configured route
+   read-only or remove the workflow PAT's Contents write requirement. The
+   separate repository-write collaborator check authorizes the comment
+   author, not the workflow PAT. There is no selectable comment-only runtime
+   capability in this configuration. GitHub documents Contents write for merging a PR and Actions write
    for workflow dispatch; neither is required just to render a disabled route.
 3. Administration read is included for release/hotfix orchestration or guarded
    PR approval. Checks read and Variables read are included for guarded
@@ -597,17 +607,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **108 distinct cases**.
+This SDD adds at least **112 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain permission policy | 24 | setup/workflow plans, independent selected-feature write grants and all-disabled minimum, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants, positive and negative organization-membership capability projection including comment-only and independently available single-action routes |
+| Domain permission policy | 25 | setup/workflow plans, independent selected-feature write grants and all-disabled minimum, enabled comment-route file-mutation potential versus individual answer-only events, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants, positive and negative organization-membership capability projection including comment-only and independently available single-action routes |
 | Application state/blocking | 18 | verified, missing, required-read unverifiable, public-read operational readiness, required-write confirmation, invalid base token, organization-only credential collection, bounded pre-plan inspection failure, accepted/rejected final audit with structured block, selected-ref workflow state refresh, immediate remote-storage blocked handling, zero-count assignment and inactive membership checks |
-| Adapter/provider contracts | 35 | GET-only probes, fixed four-request concurrency with stable result order, private-versus-public/unknown visibility evidence, protected-endpoint evidence, commit-list Contents target, private empty-repository 409 versus public operational usability, default-branch Checks resolution plus encoded check-runs target, invalid/missing branch fail-closed behavior, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow on the selected ref in inspection and bootstrap, malformed exact-file success remains unavailable, unavailable endpoint state, duplicate-comment deletion fallback regression |
+| Adapter/provider contracts | 38 | GET-only probes, fixed four-request concurrency with stable result order, private-versus-public/unknown visibility evidence, protected-endpoint evidence, commit-list Contents target, private empty-repository 409 versus public operational usability, default-branch Checks resolution plus encoded check-runs target, invalid/missing branch fail-closed behavior, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow on the selected ref in inspection and bootstrap, malformed root scalar/object success remains unavailable without bootstrap, malformed exact-file success remains unavailable, unavailable endpoint state, duplicate-comment deletion fallback regression |
 | Setup/credential integration | 21 | pre-prompt setup table, conditional denial through planning, wizard-owned repository-inventory block plus organization-only continuation, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, absent/failed remote snapshot blocks every subsequent mutation, preserve-disabled and scope-moving keep rejection, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
 | UI/accessibility | 5 | required/result tables, public-read limitation copy, confirmation-required copy, 40-column wrapping, no-color text |
 | Architecture/security/docs | 5 | query-only boundary, no duplicated catalog, safe generic/recovery automation examples, and three nearest-paragraph permission-prerequisite cases |
-| **Total** | **108** | No double counting |
+| **Total** | **112** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal

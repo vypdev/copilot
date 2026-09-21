@@ -248,6 +248,20 @@ describe('setup token permission policy', () => {
         ]);
     });
 
+    it.each(['issueComments', 'pullRequestComments'] as const)(
+        'retains Contents write for %s because authorized comments can commit autofix or user-request edits',
+        feature => {
+            const configuration = disabledRuntimeConfiguration();
+            configuration.repository.issueManagedBranches = false;
+            configuration.features[feature] = true;
+            const requirements = buildWorkflowPatPermissionRequirements(configuration);
+            expect(requirements).toEqual(expect.arrayContaining([
+                expect.objectContaining({ permission: 'Contents', level: 'write' }),
+            ]));
+            expect(requirements.find(item => item.permission === 'Actions')?.level).toBe('read');
+        },
+    );
+
     it('retains shared write grants when one of several consuming routes is disabled', () => {
         const configuration = disabledRuntimeConfiguration();
         configuration.features.issueComments = true;

@@ -399,6 +399,19 @@ describe('Bugbot review context', () => {
     }
   });
 
+  it.each([
+    ['isolated high', '\uD83D'],
+    ['high followed by a non-low code unit', '\uD83Dx'],
+    ['isolated low', '\uDE00'],
+  ])('rejects an %s surrogate before assigning a diff fragment', (_label, surrogate) => {
+    const patch = `diff --git a/a b/a\n+${surrogate}`;
+    expect(() => splitReviewDiffPatch(patch)).toThrow(BugbotDiffPlanLimitError);
+    expect(() => buildReviewDiffPlan({
+      prHeadSha: 'sha',
+      changes: [{ filename: 'a', status: 'modified', additions: 1, deletions: 0, patch }],
+    })).toThrow(BugbotDiffPlanLimitError);
+  });
+
   it('covers a 44-file regression fixture without prompt-budget omissions', () => {
     const plan = buildReviewDiffPlan({
       prHeadSha: 'c'.repeat(40),

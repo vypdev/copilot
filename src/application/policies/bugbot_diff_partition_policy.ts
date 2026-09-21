@@ -38,8 +38,10 @@ export interface BuiltBugbotDiffReviewPlan {
 }
 
 export class BugbotDiffPlanLimitError extends Error {
-  constructor() {
-    super(`Bugbot diff exceeds the fixed ${MAX_REVIEW_DIFF_PARTITIONS}-partition or ${MAX_REVIEW_DIFF_RAW_INPUT_LENGTH}-character planning limit.`);
+  constructor(readonly reason: 'limit' | 'malformed-input' = 'limit') {
+    super(reason === 'malformed-input'
+      ? 'Bugbot diff contains malformed provider patch content.'
+      : `Bugbot diff exceeds the fixed ${MAX_REVIEW_DIFF_PARTITIONS}-partition or ${MAX_REVIEW_DIFF_RAW_INPUT_LENGTH}-character planning limit.`);
     this.name = 'BugbotDiffPlanLimitError';
   }
 }
@@ -61,13 +63,14 @@ export function buildReviewDiffPlan(
 
   for (const change of context.changes) {
     if (change.patch != null && typeof change.patch !== 'string') {
-      throw new BugbotDiffPlanLimitError();
+      throw new BugbotDiffPlanLimitError('malformed-input');
     }
     if (fileMatchesIgnorePatterns(change.filename, ignorePatterns)) {
       ignored += 1;
       continue;
     }
     const rawPatch = change.patch ?? '';
+    if (hasUnpairedSurrogate(rawPatch)) throw new BugbotDiffPlanLimitError('malformed-input');
     if (rawPatch.length > MAX_REVIEW_DIFF_RAW_INPUT_LENGTH - rawPatchTotal) {
       throw new BugbotDiffPlanLimitError();
     }
@@ -153,6 +156,7 @@ export function buildReviewDiffPlan(
 }
 
 export function splitReviewDiffPatch(patch: string): string[] {
+  if (hasUnpairedSurrogate(patch)) throw new BugbotDiffPlanLimitError('malformed-input');
   const fragments: string[] = [];
   let offset = 0;
   while (offset < patch.length) {
@@ -168,6 +172,20 @@ export function splitReviewDiffPatch(patch: string): string[] {
     offset = end;
   }
   return fragments;
+}
+
+function hasUnpairedSurrogate(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code >= 0xDC00 && code <= 0xDFFF) return true;
+    if (code >= 0xD800 && code <= 0xDBFF) {
+      if (index + 1 >= value.length) return true;
+      const next = value.charCodeAt(index + 1);
+      if (next < 0xDC00 || next > 0xDFFF) return true;
+      index += 1;
+    }
+  }
+  return false;
 }
 
 function moveBeforeSplitSurrogatePair(value: string, end: number): number {

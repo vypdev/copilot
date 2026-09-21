@@ -97,8 +97,11 @@ This guide helps you resolve common issues you might encounter while using Copil
     Setup reports `missing` only after an independent Contents request to the
     repository root (`path: ''`) first proves repository visibility and a
     subsequent lookup of
-    `.github/workflows/copilot_credential_health.yml` returns `404`. A readable
-    file, unavailable Contents endpoint, failed visibility proof, denied exact
+    `.github/workflows/copilot_credential_health.yml` returns `404`. The
+    root response must be a directory listing array (possibly empty) with
+    named entries; a successful response with malformed root data is not
+    visibility proof. A readable file, unavailable Contents endpoint, failed
+    visibility proof, denied exact
     lookup, or transient failure reports `unavailable` and skips temporary
     workflow creation. Existing credential health remains unverified.
     The preliminary inspection may reflect GitHub's default branch; after you

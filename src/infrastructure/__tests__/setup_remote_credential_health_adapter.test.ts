@@ -167,6 +167,25 @@ describe('setup remote credential health adapters', () => {
     });
 
     it.each([
+        { label: 'object', payload: {} },
+        { label: 'scalar', payload: 'unexpected' },
+    ])('does not bootstrap on malformed root Contents $label data followed by 404', async ({ payload }) => {
+        const github = client({ getWorkflow: jest.fn().mockRejectedValue({ status: 404 }) });
+        github.repos.getContent.mockResolvedValueOnce({ data: payload })
+            .mockRejectedValueOnce({ status: 404 });
+
+        const checks = await new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) }, {
+            workflowContent: 'name: health', waitMs: 0, pollMs: 0,
+        }).validateExisting('owner', 'repo', 'token', 'main', requirements);
+
+        expect(checks).toBeUndefined();
+        expect(github.repos.getContent).toHaveBeenCalledTimes(1);
+        expect(github.repos.createOrUpdateFileContents).not.toHaveBeenCalled();
+        expect(github.rest.actions.createWorkflowDispatch).not.toHaveBeenCalled();
+        expect(github.repos.deleteFile).not.toHaveBeenCalled();
+    });
+
+    it.each([
         { label: 'root visibility is denied', root: { status: 403 }, exact: undefined },
         { label: 'root visibility is ambiguous', root: { status: 404 }, exact: undefined },
         { label: 'root response is malformed', root: undefined, exact: undefined },

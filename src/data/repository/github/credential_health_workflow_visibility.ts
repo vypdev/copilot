@@ -24,7 +24,10 @@ export async function inspectCredentialHealthWorkflowAtRef(
     try {
         const visibility = await getContent({ ...target, path: '' });
         if (typeof visibility !== 'object' || visibility === null || !('data' in visibility)
-            || visibility.data === null || visibility.data === undefined) return 'unavailable';
+            || !Array.isArray(visibility.data)
+            || !visibility.data.every(entry => typeof entry === 'object' && entry !== null
+                && 'name' in entry && typeof entry.name === 'string'
+                && entry.name.trim().length > 0)) return 'unavailable';
     } catch {
         return 'unavailable';
     }
