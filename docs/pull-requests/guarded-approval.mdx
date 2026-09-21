@@ -24,8 +24,7 @@ When testing this repository itself before a new package release, the source rep
 For non-interactive setup, supply the producer explicitly:
 
 ```sh
-copilot setup --non-interactive --config approval-setup.yml --yes \
-  --confirm-unverifiable-write-permissions
+copilot setup --non-interactive --config approval-setup.yml --yes
 ```
 
 `approval-setup.yml` is a local non-secret file. Example IDs and names must be replaced with values inspected in **your** repository. Every branch-required status check must also appear among the trusted `testChecks` tuples; an undeclared producer blocks approval:

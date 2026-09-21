@@ -503,7 +503,7 @@ at widths 40/80/120 and `NO_COLOR`.
 | Setup owner | `docs/authentication.mdx` | both matrices, status meanings, provider limitation | docs validation and setup links |
 | Operator | `docs/configuration-checklist.mdx` | preflight and recovery for each status | checklist link validation |
 | Troubleshooter | `docs/security-operations/operations/troubleshooting.mdx` | missing versus unverifiable decision | docs validation |
-| Automation operator | `docs/single-actions/workflow-and-cli.mdx` | generic commands omit acknowledgement; inspected-PAT recovery is separately labelled | docs validation |
+| Automation operator | `docs/how-to-use.mdx`, `docs/single-actions/workflow-and-cli.mdx`, `docs/pull-requests/guarded-approval.mdx`, and `docs/issues/configurable-workflows.mdx` | every generic command omits acknowledgement; any inspected-PAT recovery is separately labelled | docs validation |
 | Contributor | `docs/development/architecture.mdx` | policy/use case/query adapter/presenter boundary | architecture test reference |
 
 ## 16. Acceptance scenarios
@@ -607,11 +607,12 @@ at widths 40/80/120 and `NO_COLOR`.
     exact percent-encoded branch, never `HEAD`; missing or invalid branch
     metadata produces `Unverifiable` without a second request, and the two-read
     sequence remains inside one probe concurrency slot and timeout.
-28. Given an operator copies a generic interactive, non-interactive, or
-    credential-provisioning setup command from the docs, it does not silently
-    acknowledge unverifiable write access. The acknowledgement flag appears
-    only in a separate recovery example immediately after an instruction to
-    inspect every displayed PAT requirement.
+28. Given an operator copies any generic interactive, non-interactive,
+    credential-provisioning, guarded-approval, or issue-workflow setup command
+    from public docs, it does not silently acknowledge unverifiable write
+    access. In any shell block across the documentation set, the acknowledgement
+    flag appears only in a separate recovery example immediately after an
+    instruction to inspect every displayed PAT requirement.
 
 ## 17. Requirements traceability
 
@@ -633,7 +634,7 @@ at widths 40/80/120 and `NO_COLOR`.
 | valid Checks commit reference | read-only query adapter | default-branch resolution, encoding, and invalid-metadata tests | authentication/troubleshooting |
 | least-privilege credential-health bootstrap | remote configuration query plus permission policy | installed/missing/unavailable inspection and permission-matrix tests | authentication/troubleshooting |
 | no unaudited existing workflow PAT | credential collection use case plus prompt adapter | existing re-entry/audit and non-interactive rejection tests | authentication/troubleshooting |
-| explicit unverifiable-write acknowledgement | CLI option plus documentation contract | generic-command absence and inspected-recovery example | workflow and CLI |
+| explicit unverifiable-write acknowledgement | CLI option plus global documentation contract | all public shell examples omit by default; inspected-recovery exception | setup, workflow and CLI pages |
 
 ## 18. Implementation sequence
 

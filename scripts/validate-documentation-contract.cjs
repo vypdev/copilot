@@ -262,6 +262,16 @@ if (!normalizedInspectedPatRecovery.includes('inspect the displayed requirements
   || !normalizedInspectedPatRecovery.includes(`copilot setup --non-interactive --yes ${unverifiableWriteAcknowledgement}`)) {
   errors.push('single-actions/workflow-and-cli.mdx: inspected-PAT recovery must be explicit and adjacent to the exceptional command');
 }
+for (const [file, source] of docsByFile.entries()) {
+  for (const match of source.matchAll(/^[ \t]*```(?:bash|sh|shell)\s*\n([\s\S]*?)^[ \t]*```\s*$/gm)) {
+    if (!match[1].includes(unverifiableWriteAcknowledgement)) continue;
+    const preamble = source.slice(Math.max(0, match.index - 800), match.index).replace(/\s+/g, ' ');
+    if (!/\binspect(?:ed|ing)?\b/iu.test(preamble) || !/\bonly after\b/iu.test(preamble)) {
+      const line = source.slice(0, match.index).split('\n').length;
+      errors.push(`${file}:${line}: shell example may acknowledge unverifiable writes only after an adjacent inspected-PAT prerequisite`);
+    }
+  }
+}
 
 requireText('issues/configuration.mdx', '`ai-pull-request-description-mode`: PR body policy', 'canonical PR description policy');
 requireText('bugbot/quality-observability.mdx', 'Check is neutral when a successful review reports `open`, `reopened`, or `verification-required` findings', 'non-blocking Bugbot default');
