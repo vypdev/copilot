@@ -8,6 +8,7 @@ import type {
 import type { SetupCredentialValue, SetupRemoteConfiguration, SetupResourceTarget, SetupVariable } from '../../domain/setup';
 import { SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE } from '../../domain/setup_workflow_catalog';
 import { isGithubNotFound } from './github/github_error_policy';
+import { inspectMissingCredentialHealthWorkflow } from './github/credential_health_workflow_visibility';
 import type { GithubClientPort } from '../../infrastructure/github/ports/github_client_provider_port';
 import type {
     GithubOrganizationResource,
@@ -78,23 +79,7 @@ class GithubActionsResourceTransport {
             return 'installed';
         } catch (error) {
             if (!isGithubNotFound(error)) return 'unavailable';
-            const getContent = client.rest.repos?.getContent;
-            if (!getContent) return 'unavailable';
-            try {
-                await getContent({ owner, repo: repository, path: '' });
-            } catch {
-                return 'unavailable';
-            }
-            try {
-                await getContent({
-                    owner,
-                    repo: repository,
-                    path: `.github/workflows/${SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE}`,
-                });
-                return 'unavailable';
-            } catch (contentError) {
-                return isGithubNotFound(contentError) ? 'missing' : 'unavailable';
-            }
+            return inspectMissingCredentialHealthWorkflow(client.rest.repos?.getContent, owner, repository);
         }
     }
 

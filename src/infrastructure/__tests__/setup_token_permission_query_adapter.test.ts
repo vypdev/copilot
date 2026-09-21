@@ -100,6 +100,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         expect(check).toMatchObject({
             status: 'unverifiable',
             message: expect.stringContaining('publicly readable'),
+            operationallyAvailable: true,
         });
     });
 
@@ -144,6 +145,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
 
             expect(fetcher).toHaveBeenCalledTimes(1);
             expect(check).toMatchObject({ status: 'unverifiable' });
+            expect(check.operationallyAvailable).toBeUndefined();
         },
     );
 
@@ -151,6 +153,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher: jest.fn().mockResolvedValue(response(true, 200)) })
             .inspect('owner', 'repo', 'secret', [requirement('write', 'issues')]);
         expect(check).toMatchObject({ status: 'unverifiable', message: expect.stringContaining('no safe proof of write') });
+        expect(check.operationallyAvailable).toBeUndefined();
     });
 
     it('verifies Contents read when the commit-list probe identifies an empty repository', async () => {
@@ -177,6 +180,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
 
         expect(check).toMatchObject({
             status: 'unverifiable',
+            operationallyAvailable: true,
             message: expect.stringContaining('does not prove'),
         });
     });

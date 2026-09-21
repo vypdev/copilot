@@ -83,7 +83,7 @@ export function buildConfiguredSetupPatPermissionRequirements(
     );
     const needsCredentialHealth = configuration.manageRepositorySecrets && hasExistingCredential;
     const needsCredentialHealthBootstrap = needsCredentialHealth
-        && remote?.credentialHealthWorkflow !== 'installed';
+        && remote?.credentialHealthWorkflow === 'missing';
     const organization = remote?.ownerType === 'Organization';
 
     return normalizePermissionRequirements([

@@ -46666,7 +46666,9 @@ function validateSetupStorageAgainstRemote(configuration, remote) {
         if (!needsOrganization)
             continue;
         if (remote.ownerType !== 'Organization') {
-            errors.push(`Organization-level ${kind} storage is only available for organization-owned repositories.`);
+            errors.push(remote.ownerType === 'Unknown'
+                ? `Repository ownership is unavailable; retry remote inspection before selecting organization ${kind} storage.`
+                : `Organization-level ${kind} storage is only available for organization-owned repositories.`);
             continue;
         }
         const access = kind === 'secret' ? remote.organizationSecretsAccess : remote.organizationVariablesAccess;
@@ -48151,7 +48153,7 @@ function buildConfiguredSetupPatPermissionRequirements(configuration, remote) {
     const hasExistingCredential = repositorySecretNames.some(name => remote?.repositorySecrets.includes(name) || remote?.organizationSecrets.includes(name));
     const needsCredentialHealth = configuration.manageRepositorySecrets && hasExistingCredential;
     const needsCredentialHealthBootstrap = needsCredentialHealth
-        && remote?.credentialHealthWorkflow !== 'installed';
+        && remote?.credentialHealthWorkflow === 'missing';
     const organization = remote?.ownerType === 'Organization';
     return normalizePermissionRequirements([
         requirement({ role: 'setup', scope: 'repository', permission: 'Metadata', level: 'read', reason: 'Resolve repository identity and visibility.', probe: 'metadata' }),
@@ -50247,6 +50249,7 @@ const task_emoji_1 = __nccwpck_require__(46103);
 const setup_resource_provisioning_1 = __nccwpck_require__(94894);
 const application_error_1 = __nccwpck_require__(75999);
 const setup_issue_resource_policy_1 = __nccwpck_require__(67323);
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const TASK_ID = 'InitialSetupUseCase';
 /** Runs repository setup as an ordered application workflow with explicit port dependencies. */
 async function runInitialSetupWorkflow(request, dependencies) {
@@ -50281,6 +50284,25 @@ async function runInitialSetupWorkflow(request, dependencies) {
         const remoteConfigurationErrors = [];
         const remoteConfiguration = await (0, setup_resource_provisioning_1.resolveRemoteConfiguration)(request, dependencies, setupConfiguration, remoteConfigurationErrors);
         errors.push(...fromMessages(remoteConfigurationErrors, 'provider.unavailable'));
+        if (setupConfiguration && (setupConfiguration.manageRepositorySecrets || setupConfiguration.manageRepositoryVariables)) {
+            if (!remoteConfiguration) {
+                if (remoteConfigurationErrors.length === 0) {
+                    errors.push(new application_error_1.ApplicationError('provider.unavailable', 'Could not inspect existing GitHub Actions resource scopes. Restore inventory access and rerun setup.'));
+                }
+                return [buildResult(errors, steps)];
+            }
+            const inventoryErrors = [
+                ...(0, setup_configuration_policy_1.validateSetupStorageAgainstRemote)(setupConfiguration, remoteConfiguration),
+                ...(0, setup_configuration_policy_1.validateSetupManagedResourceInventory)(setupConfiguration, remoteConfiguration, {
+                    secrets: (0, setup_configuration_policy_1.buildSetupCredentialRequirements)(setupConfiguration).map(requirement => requirement.name),
+                    variables: (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(setupConfiguration).map(variable => variable.name),
+                }),
+            ];
+            if (inventoryErrors.length > 0) {
+                errors.push(...fromMessages(inventoryErrors, 'provider.unavailable'));
+                return [buildResult(errors, steps)];
+            }
+        }
         const secrets = await (0, setup_resource_provisioning_1.ensureRepositorySecrets)(request, dependencies, setupConfiguration, remoteConfiguration);
         if (secrets.step)
             steps.push(secrets.step);
@@ -55255,9 +55277,12 @@ class SetupTokenPermissionsUseCase {
             message: 'No safe permission evidence was returned for this requirement.',
         }));
         const requiredChecks = checks.filter(check => check.applicability === 'required');
-        const ready = requiredChecks.every(check => check.status === 'verified');
+        const readUsable = (check) => check.status === 'verified'
+            || (check.status === 'unverifiable' && check.level === 'read'
+                && check.scope === 'repository' && check.operationallyAvailable === true);
+        const ready = requiredChecks.every(readUsable);
         const confirmationRequired = !ready
-            && requiredChecks.every(check => check.status === 'verified'
+            && requiredChecks.every(check => readUsable(check)
                 || (check.level === 'write' && check.status === 'unverifiable'))
             && requiredChecks.some(check => check.level === 'write' && check.status === 'unverifiable');
         return {
@@ -55312,9 +55337,15 @@ class SetupWizardUseCase {
         if (defaults.features.pullRequests === false && effectiveOverrides?.pullRequestApproval?.mode === undefined) {
             defaults.pullRequestApproval = { ...defaults.pullRequestApproval, mode: 'off' };
         }
-        const remoteConfiguration = request.remoteTarget && this.dependencies.remoteConfiguration
-            ? await this.dependencies.remoteConfiguration.inspect(request.remoteTarget.owner, request.remoteTarget.repository, request.remoteTarget.token)
-            : undefined;
+        let remoteConfiguration;
+        if (request.remoteTarget) {
+            try {
+                remoteConfiguration = await this.dependencies.remoteConfiguration?.inspect(request.remoteTarget.owner, request.remoteTarget.repository, request.remoteTarget.token) ?? unavailableRemoteConfiguration();
+            }
+            catch {
+                remoteConfiguration = unavailableRemoteConfiguration();
+            }
+        }
         const defaultValidationErrors = (0, setup_configuration_policy_1.validateSetupConfiguration)(defaults, { allowIncompleteApproval: true });
         if (defaultValidationErrors.length > 0) {
             throw new application_error_1.ApplicationError('configuration.invalid', `Invalid setup configuration:\n${defaultValidationErrors.map((error) => `- ${error}`).join('\n')}`);
@@ -55447,6 +55478,17 @@ class SetupWizardUseCase {
     }
 }
 exports.SetupWizardUseCase = SetupWizardUseCase;
+/** An unavailable read is explicit, never an authoritative empty inventory. */
+function unavailableRemoteConfiguration() {
+    return {
+        ownerType: 'Unknown', repositoryVisibility: 'unknown',
+        repositorySecrets: [], repositorySecretsAccess: 'unavailable',
+        organizationSecrets: [], organizationSecretsAccess: 'unavailable',
+        repositoryVariables: [], repositoryVariablesAccess: 'unavailable',
+        organizationVariables: [], organizationVariablesAccess: 'unavailable',
+        organizationAccess: 'unavailable', credentialHealthWorkflow: 'unavailable',
+    };
+}
 
 
 /***/ }),
@@ -66351,7 +66393,11 @@ function renderSetupTokenPermissionReport(report, maximumWidth = node_process_1.
     const missing = report.checks.filter(check => check.applicability === 'required' && check.status === 'missing');
     const unverifiableRequiredReads = report.checks.filter(check => check.applicability === 'required'
         && check.level === 'read'
-        && check.status === 'unverifiable');
+        && check.status === 'unverifiable'
+        && check.operationallyAvailable !== true);
+    const usablePublicReads = report.checks.filter(check => check.applicability === 'required'
+        && check.level === 'read' && check.status === 'unverifiable'
+        && check.operationallyAvailable === true);
     const unverifiable = report.checks.filter(check => check.status === 'unverifiable');
     const action = missing.length > 0
         ? `Action required: grant ${missing.map(check => `${check.permission} ${check.level}`).join(', ')} and retry. No dependent mutation started.`
@@ -66362,12 +66408,16 @@ function renderSetupTokenPermissionReport(report, maximumWidth = node_process_1.
                 : unverifiable.length > 0
                     ? 'Some access is unverifiable because GitHub offers no safe read-only proof. No test mutation was performed.'
                     : 'All safely verifiable required permissions are available.';
+    const publicReadLimitation = usablePublicReads.length > 0
+        ? 'Public repository reads are usable for setup, but do not prove the PAT has those permissions. Protected operations remain independently checked.'
+        : undefined;
     return (0, setup_prompt_rendering_1.renderBox)([
         `Identity: ${capitalize(report.identityStatus)}${report.account ? ` as @${report.account}` : ''} — ${report.identityMessage}`,
         '',
         ...rows,
         '',
         action,
+        ...(publicReadLimitation ? [publicReadLimitation] : []),
     ].join('\n'), `${roleTitle(report.role)} PAT permission check`, report.ready ? 32 : report.confirmationRequired ? 33 : 31, maximumWidth);
 }
 function renderWideRequirements(requirements) {
@@ -71413,6 +71463,41 @@ exports.GitCliRepository = GitCliRepository;
 
 /***/ }),
 
+/***/ 57628:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.inspectMissingCredentialHealthWorkflow = inspectMissingCredentialHealthWorkflow;
+const setup_workflow_catalog_1 = __nccwpck_require__(24596);
+const github_error_policy_1 = __nccwpck_require__(58791);
+/** A workflow API 404 is confirmed absence only after two independent Contents reads. */
+async function inspectMissingCredentialHealthWorkflow(getContent, owner, repository, ref) {
+    if (!getContent)
+        return 'unavailable';
+    const target = { owner, repo: repository, ...(ref !== undefined ? { ref } : {}) };
+    try {
+        const visibility = await getContent({ ...target, path: '' });
+        if (typeof visibility !== 'object' || visibility === null || !('data' in visibility)
+            || visibility.data === null || visibility.data === undefined)
+            return 'unavailable';
+    }
+    catch {
+        return 'unavailable';
+    }
+    try {
+        await getContent({ ...target, path: `.github/workflows/${setup_workflow_catalog_1.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE}` });
+        return 'unavailable';
+    }
+    catch (error) {
+        return (0, github_error_policy_1.isGithubNotFound)(error) ? 'missing' : 'unavailable';
+    }
+}
+
+
+/***/ }),
+
 /***/ 58791:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -74903,6 +74988,7 @@ exports.RepositorySecretsCommandRepository = exports.RepositoryVariablesCommandR
 exports.encryptSecret = encryptSecret;
 const setup_workflow_catalog_1 = __nccwpck_require__(24596);
 const github_error_policy_1 = __nccwpck_require__(58791);
+const credential_health_workflow_visibility_1 = __nccwpck_require__(57628);
 const tweetnacl_1 = __importDefault(__nccwpck_require__(24258));
 const node_crypto_1 = __nccwpck_require__(6005);
 class GithubActionsResourceTransport {
@@ -74966,26 +75052,7 @@ class GithubActionsResourceTransport {
         catch (error) {
             if (!(0, github_error_policy_1.isGithubNotFound)(error))
                 return 'unavailable';
-            const getContent = client.rest.repos?.getContent;
-            if (!getContent)
-                return 'unavailable';
-            try {
-                await getContent({ owner, repo: repository, path: '' });
-            }
-            catch {
-                return 'unavailable';
-            }
-            try {
-                await getContent({
-                    owner,
-                    repo: repository,
-                    path: `.github/workflows/${setup_workflow_catalog_1.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE}`,
-                });
-                return 'unavailable';
-            }
-            catch (contentError) {
-                return (0, github_error_policy_1.isGithubNotFound)(contentError) ? 'missing' : 'unavailable';
-            }
+            return (0, credential_health_workflow_visibility_1.inspectMissingCredentialHealthWorkflow)(client.rest.repos?.getContent, owner, repository);
         }
     }
     async listRepositorySecretsForInspection(client, owner, repository) {
@@ -82186,6 +82253,7 @@ exports.SetupRemoteCredentialHealthBootstrapAdapter = exports.SetupRemoteCredent
 const node_fs_1 = __nccwpck_require__(87561);
 const path = __importStar(__nccwpck_require__(49411));
 const setup_workflow_catalog_1 = __nccwpck_require__(24596);
+const credential_health_workflow_visibility_1 = __nccwpck_require__(57628);
 const WORKFLOW_ID = setup_workflow_catalog_1.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE;
 const INPUT_BY_SECRET = {
     PAT: 'check_pat',
@@ -82243,6 +82311,9 @@ class SetupRemoteCredentialHealthBootstrapAdapter {
         catch (error) {
             if (!isNotFound(error))
                 throw error;
+            const absence = await (0, credential_health_workflow_visibility_1.inspectMissingCredentialHealthWorkflow)(client.repos.getContent, owner, repository, ref);
+            if (absence !== 'missing')
+                return undefined;
             await this.bootstrapWorkflow(client, owner, repository, ref);
             temporaryWorkflow = true;
         }
@@ -82560,13 +82631,18 @@ async function mapProbeResponse(requirement, response, readEvidence) {
         }
         return readEvidence === 'permission-bound'
             ? outcome(requirement, 'verified', 'GitHub accepted an authentication-bound read-only capability probe.')
-            : outcome(requirement, 'unverifiable', 'GitHub served a publicly readable resource, which does not prove that this token has the requested permission.');
+            : requirement.scope === 'repository'
+                ? { ...outcome(requirement, 'unverifiable', 'This publicly readable repository read succeeded and is operationally available, but does not prove that the PAT has the named permission.'), operationallyAvailable: true }
+                : outcome(requirement, 'unverifiable', 'GitHub served a publicly readable resource, which does not prove that this token has the requested permission.');
     }
     if (response.status === 409
         && requirement.scope === 'repository'
         && requirement.probe === 'contents') {
-        return requirement.level === 'read' && readEvidence === 'permission-bound'
-            ? outcome(requirement, 'verified', 'GitHub confirmed that the accessible Git repository is empty.')
+        if (requirement.level === 'read' && readEvidence === 'permission-bound') {
+            return outcome(requirement, 'verified', 'GitHub confirmed that the accessible Git repository is empty.');
+        }
+        return requirement.level === 'read' && readEvidence === 'publicly-readable'
+            ? { ...outcome(requirement, 'unverifiable', 'This public repository is empty; its read is operationally available, but does not prove the PAT permission.'), operationallyAvailable: true }
             : outcome(requirement, 'unverifiable', 'GitHub confirmed that the repository is empty, but this read-only response does not prove the requested token permission.');
     }
     if (response.status === 401) {

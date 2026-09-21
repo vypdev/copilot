@@ -76,6 +76,17 @@ describe('setup token permission presenter', () => {
         expect(output).not.toContain('Confirmation required:');
     });
 
+    it('shows a usable public read as unverifiable PAT evidence without asking to retry it', () => {
+        const output = renderSetupTokenPermissionReport({
+            role: 'setup', identityStatus: 'valid', identityMessage: 'verified', ready: true, confirmationRequired: false,
+            checks: [{ ...metadata, status: 'unverifiable', operationallyAvailable: true,
+                message: 'The public read is usable but does not prove the PAT grant.' }],
+        }, 80);
+        expect(output).toContain('? Unverifiable');
+        expect(output).toContain('Public repository reads are usable for setup');
+        expect(output).not.toContain('Action required: retry the unverifiable read checks');
+    });
+
     it('explains unverifiable conditional access without requiring acknowledgement', () => {
         const output = renderSetupTokenPermissionReport({
             role: 'setup', identityStatus: 'valid', identityMessage: 'verified', ready: true, confirmationRequired: false,

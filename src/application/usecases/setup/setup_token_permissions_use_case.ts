@@ -48,9 +48,12 @@ export class SetupTokenPermissionsUseCase {
             message: 'No safe permission evidence was returned for this requirement.',
         }));
         const requiredChecks = checks.filter(check => check.applicability === 'required');
-        const ready = requiredChecks.every(check => check.status === 'verified');
+        const readUsable = (check: SetupTokenPermissionCheck) => check.status === 'verified'
+            || (check.status === 'unverifiable' && check.level === 'read'
+                && check.scope === 'repository' && check.operationallyAvailable === true);
+        const ready = requiredChecks.every(readUsable);
         const confirmationRequired = !ready
-            && requiredChecks.every(check => check.status === 'verified'
+            && requiredChecks.every(check => readUsable(check)
                 || (check.level === 'write' && check.status === 'unverifiable'))
             && requiredChecks.some(check => check.level === 'write' && check.status === 'unverifiable');
         return {

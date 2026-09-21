@@ -250,8 +250,40 @@ describe('InitialSetupUseCase', () => {
     expect(results[0].success).toBe(false);
     expect(results[0].errors.map(error => error.message)).toContain('Could not inspect existing GitHub Actions resource scopes.');
     expect(mockSetupVariablesUpsert).not.toHaveBeenCalled();
+    expect(mockEnsureInitialLabels).not.toHaveBeenCalled();
+    expect(mockEnsureIssueTypes).not.toHaveBeenCalled();
+    expect(mockCreateTag).not.toHaveBeenCalled();
     expect(JSON.stringify(results)).not.toContain('sensitive provider response');
     expect(inspect).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not mutate remote resources when the inventory read port is absent', async () => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    setupConfiguration.manageRepositorySecrets = false;
+    const results = await useCase.invoke(baseParam({ inputs: { setupConfiguration } }));
+
+    expect(results[0].success).toBe(false);
+    expect(results[0].errors.map(error => error.message)).toContain(
+      'Could not inspect existing GitHub Actions resource scopes. Restore inventory access and rerun setup.',
+    );
+    expect(mockSetupVariablesUpsert).not.toHaveBeenCalled();
+    expect(mockEnsureInitialLabels).not.toHaveBeenCalled();
+    expect(mockEnsureIssueTypes).not.toHaveBeenCalled();
+    expect(mockCreateTag).not.toHaveBeenCalled();
+  });
+
+  it('blocks every remote provisioning step when a selected inventory access state is unavailable', async () => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    setupConfiguration.manageRepositorySecrets = false;
+    const inventory = { ...repositorySnapshot, repositoryVariablesAccess: 'unavailable' as const };
+    const results = await useCase.invoke(baseParam({ inputs: {
+      setupConfiguration, setupRemoteConfiguration: inventory,
+    } }));
+    expect(results[0].success).toBe(false);
+    expect(mockSetupVariablesUpsert).not.toHaveBeenCalled();
+    expect(mockEnsureInitialLabels).not.toHaveBeenCalled();
+    expect(mockEnsureIssueTypes).not.toHaveBeenCalled();
+    expect(mockCreateTag).not.toHaveBeenCalled();
   });
 
   it('does not create default tag when repository already has tags', async () => {

@@ -186,7 +186,7 @@ describe('SetupWizardUseCase', () => {
       blockedBy: [],
     };
     const readiness = { inspect: jest.fn().mockResolvedValue([check]) };
-    const deps = dependencies({ mergeQueueReadiness: readiness });
+    const deps = dependencies({ mergeQueueReadiness: readiness, remoteConfiguration: { inspect: jest.fn().mockResolvedValue(remote) } });
     await new SetupWizardUseCase(deps).execute({
       mode: 'non-interactive',
       overrides: { pullRequestApproval: { mode: 'off' } },
@@ -269,6 +269,47 @@ describe('SetupWizardUseCase', () => {
     expect(deps.finalPermissionAudit.audit).toHaveBeenCalledTimes(1);
     expect(deps.planPresenter.present).not.toHaveBeenCalled();
     expect(deps.confirmation.confirm).not.toHaveBeenCalled();
+  });
+
+  it.each(['rejected', 'missing'] as const)('maps %s pre-plan inspection to bounded unavailable facts before the final audit', async kind => {
+    const collect = jest.fn(async state => createSetupReviewState(state.draft));
+    const deps = dependencies({
+      collector: { collect },
+      ...(kind === 'rejected' ? { remoteConfiguration: {
+        inspect: jest.fn().mockRejectedValue(new Error('sensitive provider body')),
+      } } : {}),
+    });
+    const result = await new SetupWizardUseCase(deps).execute({
+      mode: 'interactive', overrides: { pullRequestApproval: { mode: 'off' } },
+      remoteTarget: { owner: 'owner', repository: 'repo', token: 'token' },
+    });
+    expect(result).toMatchObject({
+      status: 'blocked', reason: 'remote-storage-unavailable', exitCode: 1,
+      remoteConfiguration: { ownerType: 'Unknown', repositorySecretsAccess: 'unavailable',
+        repositoryVariablesAccess: 'unavailable', credentialHealthWorkflow: 'unavailable' },
+    });
+    expect(collect).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      remote: expect.objectContaining({ repositoryVariablesAccess: 'unavailable' }),
+    }));
+    expect(deps.finalPermissionAudit.audit).toHaveBeenCalledTimes(1);
+    expect(deps.planPresenter.present).not.toHaveBeenCalled();
+    expect(deps.confirmation.confirm).not.toHaveBeenCalled();
+    expect(JSON.stringify(result)).not.toContain('sensitive provider body');
+  });
+
+  it('reports unknown ownership as an inspection failure, not as a personal repository', async () => {
+    const result = await new SetupWizardUseCase(dependencies({
+      remoteConfiguration: { inspect: jest.fn().mockRejectedValue(new Error('private provider body')) },
+    })).execute({
+      mode: 'non-interactive',
+      overrides: { pullRequestApproval: { mode: 'off' }, storage: {
+        variables: { defaultScope: 'organization', preserveExisting: false },
+      } },
+      remoteTarget: { owner: 'owner', repository: 'repo', token: 'token' },
+    });
+    expect(result).toMatchObject({ status: 'blocked',
+      errors: expect.arrayContaining([expect.stringContaining('Repository ownership is unavailable')]) });
+    expect(JSON.stringify(result)).not.toContain('private provider body');
   });
 
   it('does not block organization-only resources on unrelated repository inventory', async () => {

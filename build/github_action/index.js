@@ -49426,7 +49426,9 @@ function validateSetupStorageAgainstRemote(configuration, remote) {
         if (!needsOrganization)
             continue;
         if (remote.ownerType !== 'Organization') {
-            errors.push(`Organization-level ${kind} storage is only available for organization-owned repositories.`);
+            errors.push(remote.ownerType === 'Unknown'
+                ? `Repository ownership is unavailable; retry remote inspection before selecting organization ${kind} storage.`
+                : `Organization-level ${kind} storage is only available for organization-owned repositories.`);
             continue;
         }
         const access = kind === 'secret' ? remote.organizationSecretsAccess : remote.organizationVariablesAccess;
@@ -51887,6 +51889,7 @@ const task_emoji_1 = __nccwpck_require__(46103);
 const setup_resource_provisioning_1 = __nccwpck_require__(94894);
 const application_error_1 = __nccwpck_require__(75999);
 const setup_issue_resource_policy_1 = __nccwpck_require__(67323);
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const TASK_ID = 'InitialSetupUseCase';
 /** Runs repository setup as an ordered application workflow with explicit port dependencies. */
 async function runInitialSetupWorkflow(request, dependencies) {
@@ -51921,6 +51924,25 @@ async function runInitialSetupWorkflow(request, dependencies) {
         const remoteConfigurationErrors = [];
         const remoteConfiguration = await (0, setup_resource_provisioning_1.resolveRemoteConfiguration)(request, dependencies, setupConfiguration, remoteConfigurationErrors);
         errors.push(...fromMessages(remoteConfigurationErrors, 'provider.unavailable'));
+        if (setupConfiguration && (setupConfiguration.manageRepositorySecrets || setupConfiguration.manageRepositoryVariables)) {
+            if (!remoteConfiguration) {
+                if (remoteConfigurationErrors.length === 0) {
+                    errors.push(new application_error_1.ApplicationError('provider.unavailable', 'Could not inspect existing GitHub Actions resource scopes. Restore inventory access and rerun setup.'));
+                }
+                return [buildResult(errors, steps)];
+            }
+            const inventoryErrors = [
+                ...(0, setup_configuration_policy_1.validateSetupStorageAgainstRemote)(setupConfiguration, remoteConfiguration),
+                ...(0, setup_configuration_policy_1.validateSetupManagedResourceInventory)(setupConfiguration, remoteConfiguration, {
+                    secrets: (0, setup_configuration_policy_1.buildSetupCredentialRequirements)(setupConfiguration).map(requirement => requirement.name),
+                    variables: (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(setupConfiguration).map(variable => variable.name),
+                }),
+            ];
+            if (inventoryErrors.length > 0) {
+                errors.push(...fromMessages(inventoryErrors, 'provider.unavailable'));
+                return [buildResult(errors, steps)];
+            }
+        }
         const secrets = await (0, setup_resource_provisioning_1.ensureRepositorySecrets)(request, dependencies, setupConfiguration, remoteConfiguration);
         if (secrets.step)
             steps.push(secrets.step);
@@ -70130,6 +70152,41 @@ exports.GitCliRepository = GitCliRepository;
 
 /***/ }),
 
+/***/ 57628:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.inspectMissingCredentialHealthWorkflow = inspectMissingCredentialHealthWorkflow;
+const setup_workflow_catalog_1 = __nccwpck_require__(24596);
+const github_error_policy_1 = __nccwpck_require__(58791);
+/** A workflow API 404 is confirmed absence only after two independent Contents reads. */
+async function inspectMissingCredentialHealthWorkflow(getContent, owner, repository, ref) {
+    if (!getContent)
+        return 'unavailable';
+    const target = { owner, repo: repository, ...(ref !== undefined ? { ref } : {}) };
+    try {
+        const visibility = await getContent({ ...target, path: '' });
+        if (typeof visibility !== 'object' || visibility === null || !('data' in visibility)
+            || visibility.data === null || visibility.data === undefined)
+            return 'unavailable';
+    }
+    catch {
+        return 'unavailable';
+    }
+    try {
+        await getContent({ ...target, path: `.github/workflows/${setup_workflow_catalog_1.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE}` });
+        return 'unavailable';
+    }
+    catch (error) {
+        return (0, github_error_policy_1.isGithubNotFound)(error) ? 'missing' : 'unavailable';
+    }
+}
+
+
+/***/ }),
+
 /***/ 58791:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -74075,6 +74132,7 @@ exports.RepositorySecretsCommandRepository = exports.RepositoryVariablesCommandR
 exports.encryptSecret = encryptSecret;
 const setup_workflow_catalog_1 = __nccwpck_require__(24596);
 const github_error_policy_1 = __nccwpck_require__(58791);
+const credential_health_workflow_visibility_1 = __nccwpck_require__(57628);
 const tweetnacl_1 = __importDefault(__nccwpck_require__(24258));
 const node_crypto_1 = __nccwpck_require__(6005);
 class GithubActionsResourceTransport {
@@ -74138,26 +74196,7 @@ class GithubActionsResourceTransport {
         catch (error) {
             if (!(0, github_error_policy_1.isGithubNotFound)(error))
                 return 'unavailable';
-            const getContent = client.rest.repos?.getContent;
-            if (!getContent)
-                return 'unavailable';
-            try {
-                await getContent({ owner, repo: repository, path: '' });
-            }
-            catch {
-                return 'unavailable';
-            }
-            try {
-                await getContent({
-                    owner,
-                    repo: repository,
-                    path: `.github/workflows/${setup_workflow_catalog_1.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE}`,
-                });
-                return 'unavailable';
-            }
-            catch (contentError) {
-                return (0, github_error_policy_1.isGithubNotFound)(contentError) ? 'missing' : 'unavailable';
-            }
+            return (0, credential_health_workflow_visibility_1.inspectMissingCredentialHealthWorkflow)(client.rest.repos?.getContent, owner, repository);
         }
     }
     async listRepositorySecretsForInspection(client, owner, repository) {

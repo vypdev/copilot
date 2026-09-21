@@ -149,10 +149,13 @@ cancellation, skipped diagnosis, ordering, and read-only authority explicit.
   names the already-effective scope does not require a redundant rewrite.
 - Invalid required credentials must be replaced.
 - A missing remote resource snapshot is never an empty inventory. Selected
-  Secret/Variable writes MUST stop before target grouping and provider calls
-  when inspection fails or its port is absent; unaffected resource classes may
-  remain disabled. The result names a bounded inspection recovery action and
-  never exposes raw provider errors.
+  Secret/Variable management MUST stop before all remote resource, label,
+  issue-type, and tag calls when inspection fails, its port is absent, or a
+  selected inventory access state is unavailable. The questionnaire receives
+  bounded unavailable facts before final scope-sensitive validation; unrelated
+  access states may remain unavailable without blocking valid targets. The
+  result names a bounded inspection recovery action and never exposes raw
+  provider errors.
 - Runner login may satisfy explicitly declared alternative credential groups.
 
 ### 6.3 State model
@@ -291,8 +294,8 @@ manual reversal.
 | Credentials/provider adapters | 18 | valid/invalid/missing/unverifiable/groups |
 | Workflows/assets/schema | 14 | selection, parity, readiness, permissions |
 | Prompt/CLI UX/sanitization/localization | 18 | masking, status order, non-interactive, English default, Spanish exact/base, arbitrary locale, atomic fallback, hostile diagnostic suppression |
-| Integration/security/cutover | 14 | backup, org scope, doctor, no `.env`, absent remote snapshot and failed inspection before resource writes |
-| **Total** | **108** | no double counting |
+| Integration/security/cutover | 16 | backup, org scope, doctor, no `.env`, bounded pre-plan inspection and no remote provisioning after selected inventory fails |
+| **Total** | **110** | no double counting |
 
 Global coverage thresholds remain; questionnaire, doctor catalog/report, shared
 merge-readiness message, and doctor presenter policies MUST reach 100%
@@ -339,7 +342,9 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
     organization override may keep it because the effective scope does not move.
 17. Given remote resource inspection fails or is not configured, selected
     Secret/Variable provisioning reports a bounded error and performs no
-    upsert; absence cannot be interpreted as an empty repository inventory.
+    Secret/Variable/label/issue-type/tag mutation; absence cannot be
+    interpreted as an empty repository inventory. Pre-plan failures still
+    reach the final audit as bounded unavailable access facts.
 
 ## 17. Requirements traceability
 
@@ -348,7 +353,7 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 | bounded plan | setup policies/wizard | setup wizard tests | how-to-use |
 | credential separation | credential use case/ports | credential tests | credentials |
 | policy-safe existing credentials | storage policy + credential use case | disabled-preservation and scope-move tests | credentials/provisioning |
-| authoritative resource snapshot | resource grouping + initial setup workflow | absent/failed inspection and no-upsert tests | troubleshooting/provisioning |
+| authoritative resource snapshot | wizard, resource grouping + initial setup workflow | bounded pre-plan inspection and no remote mutation after failed inspection | troubleshooting/provisioning |
 | safe files | workspace adapter | workspace tests | provisioning |
 | read-only doctor | doctor use case/composition | doctor tests | workflow-and-cli |
 | readiness | readiness use case | readiness tests | checklist |

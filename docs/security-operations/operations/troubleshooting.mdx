@@ -60,8 +60,9 @@ This guide helps you resolve common issues you might encounter while using Copil
     remains inconclusive and never proves write access. A `404` is still
     ambiguous because it can also mean the token cannot see the repository, so
     setup never upgrades it to `Verified`.
-    A required unverifiable read blocks and must be retried. For a required
-    write, compare the requested level with the PAT settings and explicitly
+    A required unverifiable read without positive public-repository operational
+    evidence blocks and must be retried. For a required write, compare the
+    requested level with the PAT settings and explicitly
     confirm it at the separate prompt. In unattended setup, pass
     `--confirm-unverifiable-write-permissions` only after that inspection;
     `--yes` alone does not acknowledge permissions. Copilot deliberately does
@@ -75,9 +76,9 @@ This guide helps you resolve common issues you might encounter while using Copil
     plan confirmation,
     credential prompts, workflow comparison, resource targeting, or mutation.
     If the later provisioning inspection itself fails or its read port is
-    unavailable, selected Secrets and Variables also stop before upsert, even
-    for a repository-scope default. Restore inventory access and rerun setup;
-    an absent snapshot is never treated as an empty repository.
+    unavailable, setup stops before Secrets, Variables, labels, issue types,
+    and tags, even for a repository-scope default. Restore inventory access
+    and rerun setup; an absent snapshot is never treated as an empty repository.
 
     Permission probes use a fixed maximum concurrency of four and preserve the
     table's requirement order. A large permission plan therefore does not launch
@@ -85,11 +86,10 @@ This guide helps you resolve common issues you might encounter while using Copil
 
     If the table requests Contents and Workflows write for credential health,
     inspect the preceding `Credential health workflow` state. `installed` omits
-    both bootstrap grants and needs only Actions write for dispatch. `missing`,
-    `unavailable`, or `unknown` keeps them because setup may have to install and
-    remove the temporary workflow. After correcting Actions access or a
-    transient provider failure, rerun setup so it can rediscover an installed
-    workflow and narrow the table.
+    both bootstrap grants and needs only Actions write for dispatch. Only
+    confirmed `missing` adds Contents and Workflows write to install and remove
+    a temporary workflow. `unavailable` or `unknown` never authorizes bootstrap;
+    correct Actions/Contents access or a transient provider failure and rerun.
 
     An Actions API `404` alone does not prove that the credential-health
     workflow is absent because GitHub can hide inaccessible workflows that way.
@@ -97,8 +97,8 @@ This guide helps you resolve common issues you might encounter while using Copil
     proves repository visibility and a subsequent lookup of
     `.github/workflows/copilot_credential_health.yml` returns `404`. A readable
     file, unavailable Contents endpoint, failed visibility proof, denied exact
-    lookup, or transient failure reports `unavailable` and retains the
-    fail-closed bootstrap permission plan.
+    lookup, or transient failure reports `unavailable` and skips temporary
+    workflow creation. Existing credential health remains unverified.
 
     If an existing `PAT` passes credential health but setup asks for it again,
     this is intentional: GitHub never returns a Secret value, and remote health

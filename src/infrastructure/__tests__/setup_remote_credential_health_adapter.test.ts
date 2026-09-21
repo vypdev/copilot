@@ -116,12 +116,45 @@ describe('setup remote credential health adapters', () => {
     it('temporarily installs and removes the health workflow when setup explicitly enables bootstrap', async () => {
         const error = Object.assign(new Error('not found'), { status: 404 });
         const github = client({ getWorkflow: jest.fn().mockRejectedValue(error) });
-        github.repos.getContent.mockResolvedValue({ data: { sha: 'temporary-sha' } });
+        github.repos.getContent.mockResolvedValueOnce({ data: [{ name: '.github' }] })
+            .mockRejectedValueOnce(error)
+            .mockResolvedValueOnce({ data: { sha: 'temporary-sha' } });
         const checks = await new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) }, {
             workflowContent: 'name: health', waitMs: 0, pollMs: 0,
         }).validateExisting('owner', 'repo', 'token', 'main', requirements);
         expect(checks?.every(check => check.status === 'valid')).toBe(true);
+        expect(github.repos.getContent).toHaveBeenNthCalledWith(1, {
+            owner: 'owner', repo: 'repo', path: '', ref: 'main',
+        });
+        expect(github.repos.getContent).toHaveBeenNthCalledWith(2, {
+            owner: 'owner', repo: 'repo', path: '.github/workflows/copilot_credential_health.yml', ref: 'main',
+        });
         expect(github.repos.createOrUpdateFileContents).toHaveBeenCalledWith(expect.objectContaining({ branch: 'main' }));
         expect(github.repos.deleteFile).toHaveBeenCalledWith(expect.objectContaining({ sha: 'temporary-sha', branch: 'main' }));
+    });
+
+    it.each([
+        { label: 'root visibility is denied', root: { status: 403 }, exact: undefined },
+        { label: 'root visibility is ambiguous', root: { status: 404 }, exact: undefined },
+        { label: 'root response is malformed', root: undefined, exact: undefined },
+        { label: 'the exact workflow exists', root: undefined, exact: { data: { sha: 'existing' } } },
+        { label: 'the exact workflow lookup is denied', root: undefined, exact: { status: 403 } },
+    ])('does not bootstrap when $label after Actions 404', async ({ label, root, exact }) => {
+        const notFound = { status: 404 };
+        const github = client({ getWorkflow: jest.fn().mockRejectedValue(notFound) });
+        if (root) github.repos.getContent.mockRejectedValueOnce(root);
+        else github.repos.getContent.mockResolvedValueOnce(label === 'root response is malformed' ? undefined : { data: [] });
+        if (exact) {
+            if ('status' in exact) github.repos.getContent.mockRejectedValueOnce(exact);
+            else github.repos.getContent.mockResolvedValueOnce(exact);
+        }
+        const checks = await new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) }, {
+            workflowContent: 'name: health', waitMs: 0, pollMs: 0,
+        }).validateExisting('owner', 'repo', 'token', 'main', requirements);
+        expect(checks).toBeUndefined();
+        expect(github.repos.createOrUpdateFileContents).not.toHaveBeenCalled();
+        expect(github.rest.actions.createWorkflowDispatch).not.toHaveBeenCalled();
+        expect(github.repos.deleteFile).not.toHaveBeenCalled();
+        expect(github.repos.getContent).toHaveBeenCalledTimes(root || label === 'root response is malformed' ? 1 : 2);
     });
 });

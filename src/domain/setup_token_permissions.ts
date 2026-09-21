@@ -35,6 +35,8 @@ export interface SetupTokenPermissionRequirement {
 export interface SetupTokenPermissionCheck extends SetupTokenPermissionRequirement {
     status: SetupTokenPermissionStatus;
     message: string;
+    /** A successful public repository read is usable, but does not prove a PAT grant. */
+    operationallyAvailable?: true;
 }
 
 export interface SetupTokenPermissionReport {
@@ -43,8 +45,8 @@ export interface SetupTokenPermissionReport {
     identityStatus: 'valid' | 'invalid' | 'unverifiable';
     identityMessage: string;
     checks: readonly SetupTokenPermissionCheck[];
-    /** True only when every required permission has verified evidence. */
+    /** True when required reads are verified or positively usable, and writes are verified. */
     ready: boolean;
-    /** True only when required reads are verified and required writes need explicit acknowledgement. */
+    /** True only when required reads are verified/usable and writes need explicit acknowledgement. */
     confirmationRequired: boolean;
 }

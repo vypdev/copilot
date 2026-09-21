@@ -84,6 +84,7 @@ describe('setup token permission policy', () => {
         const configuredRemote = {
             ...organization,
             repositorySecrets: ['PAT'],
+            credentialHealthWorkflow: 'missing' as const,
         };
 
         const permissions = buildConfiguredSetupPatPermissionRequirements(configuration, configuredRemote)
@@ -113,6 +114,17 @@ describe('setup token permission policy', () => {
         expect(permissions).not.toContain('Workflows:write');
     });
 
+    it.each(['unavailable', 'unknown'] as const)('never requests bootstrap mutation grants for %s workflow status', state => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.createInitialTag = false;
+        const permissions = buildConfiguredSetupPatPermissionRequirements(configuration, {
+            ...organization, repositorySecrets: ['PAT'], credentialHealthWorkflow: state,
+        }).map(item => `${item.permission}:${item.level}`);
+        expect(permissions).toContain('Actions:write');
+        expect(permissions).not.toContain('Contents:write');
+        expect(permissions).not.toContain('Workflows:write');
+    });
+
     it('includes organization-only storage without unrelated repository grants when preservation is disabled', () => {
         const configuration = createDefaultSetupConfiguration();
         configuration.storage.secrets.defaultScope = 'organization';
@@ -122,6 +134,7 @@ describe('setup token permission policy', () => {
         const configuredRemote = {
             ...organization,
             organizationSecrets: ['PAT'],
+            credentialHealthWorkflow: 'missing' as const,
         };
 
         const permissions = buildConfiguredSetupPatPermissionRequirements(configuration, configuredRemote)

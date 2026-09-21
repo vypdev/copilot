@@ -105,13 +105,18 @@ export class SetupWizardUseCase {
     if (defaults.features.pullRequests === false && effectiveOverrides?.pullRequestApproval?.mode === undefined) {
       defaults.pullRequestApproval = { ...defaults.pullRequestApproval, mode: 'off' };
     }
-    const remoteConfiguration = request.remoteTarget && this.dependencies.remoteConfiguration
-      ? await this.dependencies.remoteConfiguration.inspect(
+    let remoteConfiguration: SetupRemoteConfiguration | undefined;
+    if (request.remoteTarget) {
+      try {
+        remoteConfiguration = await this.dependencies.remoteConfiguration?.inspect(
           request.remoteTarget.owner,
           request.remoteTarget.repository,
           request.remoteTarget.token,
-        )
-      : undefined;
+        ) ?? unavailableRemoteConfiguration();
+      } catch {
+        remoteConfiguration = unavailableRemoteConfiguration();
+      }
+    }
     const defaultValidationErrors = validateSetupConfiguration(defaults, { allowIncompleteApproval: true });
     if (defaultValidationErrors.length > 0) {
       throw new ApplicationError(
@@ -255,4 +260,16 @@ export class SetupWizardUseCase {
     }
     return this.dependencies.collector.collect(createSetupQuestionnaire(defaults, context), context);
   }
+}
+
+/** An unavailable read is explicit, never an authoritative empty inventory. */
+function unavailableRemoteConfiguration(): SetupRemoteConfiguration {
+  return {
+    ownerType: 'Unknown', repositoryVisibility: 'unknown',
+    repositorySecrets: [], repositorySecretsAccess: 'unavailable',
+    organizationSecrets: [], organizationSecretsAccess: 'unavailable',
+    repositoryVariables: [], repositoryVariablesAccess: 'unavailable',
+    organizationVariables: [], organizationVariablesAccess: 'unavailable',
+    organizationAccess: 'unavailable', credentialHealthWorkflow: 'unavailable',
+  };
 }

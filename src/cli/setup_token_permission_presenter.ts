@@ -54,7 +54,11 @@ export function renderSetupTokenPermissionReport(
     const missing = report.checks.filter(check => check.applicability === 'required' && check.status === 'missing');
     const unverifiableRequiredReads = report.checks.filter(check => check.applicability === 'required'
         && check.level === 'read'
-        && check.status === 'unverifiable');
+        && check.status === 'unverifiable'
+        && check.operationallyAvailable !== true);
+    const usablePublicReads = report.checks.filter(check => check.applicability === 'required'
+        && check.level === 'read' && check.status === 'unverifiable'
+        && check.operationallyAvailable === true);
     const unverifiable = report.checks.filter(check => check.status === 'unverifiable');
     const action = missing.length > 0
         ? `Action required: grant ${missing.map(check => `${check.permission} ${check.level}`).join(', ')} and retry. No dependent mutation started.`
@@ -65,6 +69,9 @@ export function renderSetupTokenPermissionReport(
         : unverifiable.length > 0
             ? 'Some access is unverifiable because GitHub offers no safe read-only proof. No test mutation was performed.'
             : 'All safely verifiable required permissions are available.';
+    const publicReadLimitation = usablePublicReads.length > 0
+        ? 'Public repository reads are usable for setup, but do not prove the PAT has those permissions. Protected operations remain independently checked.'
+        : undefined;
     return renderBox(
         [
             `Identity: ${capitalize(report.identityStatus)}${report.account ? ` as @${report.account}` : ''} — ${report.identityMessage}`,
@@ -72,6 +79,7 @@ export function renderSetupTokenPermissionReport(
             ...rows,
             '',
             action,
+            ...(publicReadLimitation ? [publicReadLimitation] : []),
         ].join('\n'),
         `${roleTitle(report.role)} PAT permission check`,
         report.ready ? 32 : report.confirmationRequired ? 33 : 31,

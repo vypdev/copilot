@@ -235,13 +235,18 @@ async function mapProbeResponse(
         }
         return readEvidence === 'permission-bound'
             ? outcome(requirement, 'verified', 'GitHub accepted an authentication-bound read-only capability probe.')
-            : outcome(requirement, 'unverifiable', 'GitHub served a publicly readable resource, which does not prove that this token has the requested permission.');
+            : requirement.scope === 'repository'
+                ? { ...outcome(requirement, 'unverifiable', 'This publicly readable repository read succeeded and is operationally available, but does not prove that the PAT has the named permission.'), operationallyAvailable: true }
+                : outcome(requirement, 'unverifiable', 'GitHub served a publicly readable resource, which does not prove that this token has the requested permission.');
     }
     if (response.status === 409
         && requirement.scope === 'repository'
         && requirement.probe === 'contents') {
-        return requirement.level === 'read' && readEvidence === 'permission-bound'
-            ? outcome(requirement, 'verified', 'GitHub confirmed that the accessible Git repository is empty.')
+        if (requirement.level === 'read' && readEvidence === 'permission-bound') {
+            return outcome(requirement, 'verified', 'GitHub confirmed that the accessible Git repository is empty.');
+        }
+        return requirement.level === 'read' && readEvidence === 'publicly-readable'
+            ? { ...outcome(requirement, 'unverifiable', 'This public repository is empty; its read is operationally available, but does not prove the PAT permission.'), operationallyAvailable: true }
             : outcome(requirement, 'unverifiable', 'GitHub confirmed that the repository is empty, but this read-only response does not prove the requested token permission.');
     }
     if (response.status === 401) {

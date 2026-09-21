@@ -166,7 +166,9 @@ export function validateSetupStorageAgainstRemote(
             || Object.values(policy.overrides).includes('organization');
         if (!needsOrganization) continue;
         if (remote.ownerType !== 'Organization') {
-            errors.push(`Organization-level ${kind} storage is only available for organization-owned repositories.`);
+            errors.push(remote.ownerType === 'Unknown'
+                ? `Repository ownership is unavailable; retry remote inspection before selecting organization ${kind} storage.`
+                : `Organization-level ${kind} storage is only available for organization-owned repositories.`);
             continue;
         }
         const access = kind === 'secret' ? remote.organizationSecretsAccess : remote.organizationVariablesAccess;

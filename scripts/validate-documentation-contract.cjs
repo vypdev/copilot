@@ -303,6 +303,9 @@ requireText(
   'A successful `200` is not automatically permission evidence.',
   'public-read PAT evidence boundary',
 );
+requireText('authentication.mdx', 'After valid token identity, a successful public repository read can be used', 'public-read operational evidence');
+requireText('authentication.mdx', 'Those bootstrap-only grants appear only when the workflow is independently confirmed missing', 'safe workflow bootstrap authority');
+requireText('security-operations/operations/troubleshooting.mdx', 'never authorizes bootstrap', 'unavailable workflow non-mutation');
 requireText(
   'authentication.mdx',
   'With `preserveExisting: false`, or an override that moves the Secret,',
@@ -363,6 +366,7 @@ const obsoleteDocumentation = [
   ['bugbot/do-user-request.mdx', 'Organization members for organization repositories', 'obsolete organization-membership mutation authority'],
   ['bugbot/permissions.mdx', 'Organization member; or repository owner', 'obsolete organization-membership mutation authority'],
   ['bugbot/examples.mdx', 'organization member, or repository owner', 'obsolete organization-membership mutation authority'],
+  ['authentication.mdx', 'or its availability cannot be established safely, because setup may need to install', 'unsafe ambiguous bootstrap grant'],
 ];
 const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
 for (const [file, phrase, contract] of obsoleteDocumentation) {

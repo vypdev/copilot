@@ -24,7 +24,7 @@ these states:
 |---|---|---|
 | `✅ Verified` | A safe authentication-bound GitHub operation proved the requested read capability. | Continue. |
 | `❌ Missing` | GitHub deterministically rejected a required capability after identity and repository access were established. | Stop before the dependent mutation and name the permission to grant. |
-| `? Unverifiable` | GitHub does not expose a safe non-mutating proof of the requested write level, or the response was ambiguous/transient. | Required reads block. Required writes pause for a separate explicit acknowledgement and remain non-verified. |
+| `? Unverifiable` | GitHub does not expose a safe non-mutating proof of the PAT grant, or the response was ambiguous/transient. | Required reads block unless a successful public repository read has separate operational evidence. Required writes pause for a separate explicit acknowledgement and remain non-verified. |
 
 A `403` is not automatically a missing-permission result. Copilot reports it as
 `Missing` only when bounded GitHub metadata explicitly identifies a permission
@@ -42,6 +42,10 @@ the repository is private; on a public repository, or when visibility is
 unknown, success remains `Unverifiable`. Secret and Variable inventory
 endpoints are permission-bound and may verify directly. Public organization
 member and issue-type reads remain `Unverifiable`.
+After valid token identity, a successful public repository read can be used
+for that exact read operation, while its PAT permission row stays
+`Unverifiable`. This positive operational fact is not granted to a failed,
+ambiguous, or visibility-unknown probe, an organization read, or any write.
 
 The third state is intentional. GitHub's
 `X-Accepted-GitHub-Permissions` response header describes what an endpoint
@@ -50,8 +54,11 @@ fine-grained PAT. Copilot never creates a temporary label, branch, file,
 Variable, Secret, comment, project item, or workflow run merely to turn that
 unknown into a checkmark.
 
-`ready` is strict: every required row must be `Verified`. When identity and all
-required reads are verified and only required writes remain `Unverifiable`,
+`ready` requires every selected read to be verified or positively usable, and
+every selected write to be verified. A public read remains visibly
+`Unverifiable` as token-permission evidence even when setup can use it. When
+identity and all required reads are verified or usable and only required writes
+remain `Unverifiable`,
 interactive setup asks the operator to confirm that the PAT settings exactly
 match the displayed table, defaulting to No. Unattended setup requires the
 separate `--confirm-unverifiable-write-permissions` flag; `--yes` approves only
@@ -101,9 +108,9 @@ exit code without starting a second audit or inventory validator. It does not
 continue into plan confirmation, credential collection, workflow comparison,
 target resolution, or mutation.
 The provisioning workflow repeats this fail-closed rule after approval: if it
-cannot obtain an authoritative remote snapshot, selected Secret and Variable
-upserts stop with a bounded inventory-recovery message, including when the
-configured target is repository scope.
+cannot obtain an authoritative remote snapshot or required selected inventory
+access, it stops before Secrets, Variables, labels, issue types, and tag writes
+with bounded recovery guidance, including for a repository-scope default.
 
 <Info>GitHub does not reveal Secret values through its API. Copilot validates new credentials with provider metadata requests and validates existing remote Secrets through the read-only `copilot_credential_health.yml` workflow when it is installed on the repository's default branch. The health workflow reports each requested credential independently, but that bounded reachability result is not a permission audit. If `PAT` already exists, interactive setup asks you to re-enter it and runs the complete workflow-PAT permission matrix before provisioning; unattended setup must supply `PAT` again or stops before mutation. Doctor can query and dispatch the installed health workflow but has no bootstrap or repository-mutation authority; temporary workflow bootstrap is available only during setup. A preauthenticated Codex session is runner state, not a Secret: it is accepted only when the runtime preflight can execute `codex login status` successfully.</Info>
 
@@ -115,8 +122,9 @@ setup requests and validates the value again before provisioning the new target.
 An Actions API `404` does not by itself mark the credential-health workflow as
 missing. Setup first proves repository Contents visibility, then reads the exact
 workflow path. Only a subsequent exact-path `404` is confirmed absence; every
-unreadable or ambiguous state remains `unavailable` and keeps the bootstrap
-permission plan fail-closed.
+unreadable or ambiguous state remains `unavailable` and never authorizes
+temporary workflow creation. The setup-only bootstrap adapter independently
+repeats the two Contents reads on its selected ref before any write.
 
 <Warning>**When the event actor is the same as the token user**: The action detects this before entering the workflow queue. It completes successfully without waiting or running the normal issue/PR/push pipeline. A valid explicit single action still runs. This avoids the bot reacting to its own actions. Use a dedicated bot account (different from the actor) if you want full pipeline behavior on every event.</Warning>
 
@@ -130,14 +138,16 @@ For comment-driven assistance, read-only commands are available to anyone who ca
   </Step>
 
   <Step title="Create the setup PAT">
-    The person running setup needs a separate fine-grained PAT. Give it only the permissions required by the selected setup features: repository Metadata read and repository Contents/Workflows read for inspection; Administration read when release/hotfix setup or doctor must inspect classic branch protection; Issues write for labels; Variables write for Repository Variables; Secrets read/write when provisioning Secrets; Actions read/write when checking or dispatching credential health; and organization Issue Types or Projects permissions only when those integrations are selected. If setup will use organization-level Actions Secrets or Variables, the token also needs the corresponding organization Actions Secrets/Variables read and write permissions. Organization scope is valid only for repositories owned by an organization; setup detects personal repositories and stops before attempting organization writes. For existing Secrets, an installed `copilot_credential_health.yml` requires Actions write for dispatch but does not require Contents or Workflows write. Those bootstrap-only grants appear when the workflow is confirmed missing or its availability cannot be established safely, because setup may need to install and remove a temporary copy. Contents write can also be required for an initial tag or another explicitly selected repository mutation.
+    The person running setup needs a separate fine-grained PAT. Give it only the permissions required by the selected setup features: repository Metadata read and repository Contents/Workflows read for inspection; Administration read when release/hotfix setup or doctor must inspect classic branch protection; Issues write for labels; Variables write for Repository Variables; Secrets read/write when provisioning Secrets; Actions read/write when checking or dispatching credential health; and organization Issue Types or Projects permissions only when those integrations are selected. If setup will use organization-level Actions Secrets or Variables, the token also needs the corresponding organization Actions Secrets/Variables read and write permissions. Organization scope is valid only for repositories owned by an organization; setup detects personal repositories and stops before attempting organization writes. For existing Secrets, an installed `copilot_credential_health.yml` requires Actions write for dispatch but does not require Contents or Workflows write. Those bootstrap-only grants appear only when the workflow is independently confirmed missing; unavailable or unknown workflow state never authorizes temporary creation. Contents write can also be required for an initial tag or another explicitly selected repository mutation.
 
     Enter it in the hidden prompt, or use `--token`/`PERSONAL_ACCESS_TOKEN` for automation. It remains in memory for the command and is not written to `.env`, a config file, or the `PAT` Secret.
 
     Read the required-permissions table before creating the token, then review
     the permission-check table after entry. A `❌ Missing` required row must be
-    corrected before setup can continue. A required `? Unverifiable` read row
-    blocks. A required write row means to compare the PAT settings with the
+    corrected before setup can continue. An ambiguous required
+    `? Unverifiable` read blocks; a successful public repository read can
+    remain unverified as PAT evidence but operationally usable. A required
+    write row means to compare the PAT settings with the
     requested access level and explicitly acknowledge it; it is never a pass.
   </Step>
   

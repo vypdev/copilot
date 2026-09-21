@@ -12,6 +12,7 @@ import type {
   GithubWorkflowRun,
 } from './github/ports/github_credential_health_protocol';
 import { SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE } from '../domain/setup_workflow_catalog';
+import { inspectMissingCredentialHealthWorkflow } from '../data/repository/github/credential_health_workflow_visibility';
 
 const WORKFLOW_ID = SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE;
 const INPUT_BY_SECRET: Readonly<Record<string, string>> = {
@@ -100,6 +101,8 @@ export class SetupRemoteCredentialHealthBootstrapAdapter implements SetupRemoteC
       await client.rest.actions.getWorkflow({ owner, repo: repository, workflow_id: WORKFLOW_ID });
     } catch (error) {
       if (!isNotFound(error)) throw error;
+      const absence = await inspectMissingCredentialHealthWorkflow(client.repos.getContent, owner, repository, ref);
+      if (absence !== 'missing') return undefined;
       await this.bootstrapWorkflow(client, owner, repository, ref);
       temporaryWorkflow = true;
     }
