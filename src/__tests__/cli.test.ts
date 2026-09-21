@@ -712,7 +712,7 @@ describe('CLI', () => {
       expect(process.exitCode).toBe(1);
       const { logError } = require('../utils/logger');
       expect(logError).toHaveBeenCalledWith(expect.objectContaining({
-        message: expect.stringContaining('Organization Variable inventory'),
+        message: expect.stringContaining('organization variables'),
       }));
     });
 

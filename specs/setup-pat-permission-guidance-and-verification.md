@@ -180,8 +180,11 @@ read-only GitHub queries and presents ordered permission outcomes.
    `--confirm-unverifiable-write-permissions`. `--yes` alone is not evidence.
    Remote storage validation MUST return the final configuration and bounded
    blocking facts to the CLI rather than throw before this report. The CLI MUST
-   render and execute the final permission audit before surfacing those storage
-   validation errors or starting any dependent work.
+   recognize that structured blocked result immediately. Its dedicated blocked
+   branch MUST render and execute only the final permission audit, then report
+   the bounded storage error with the result's exit code; it MUST NOT continue
+   into inventory revalidation, credential collection, workflow comparison,
+   target resolution, or mutation.
 6. If repository or organization Secret or Variable inventory is still
    unavailable or unknown,
    setup MUST stop after rendering the final permission table and before
@@ -214,9 +217,15 @@ read-only GitHub queries and presents ordered permission outcomes.
    write, Issues write, and Pull requests write.
 3. Administration read is included for release/hotfix orchestration or guarded
    PR approval. Checks read and Variables read are included for guarded
-   approval. Organization Members read, Issue Types write, Projects write, and
-   organization Variables read are included only when their selected capability
-   and effective target require them. Effective targets include an existing
+   approval. Organization Members read is included only when an enabled runtime
+   can inspect membership: automatic issue/PR assignees, automatic PR reviewers,
+   release/hotfix issue authorization, `ai.membersOnly` on an enabled issue, PR,
+   commit, or comment route, or enabled issue/PR comment automation whose
+   file-modifying commands authorize organization members. Disabled routes and
+   zero assignment/reviewer counts MUST NOT retain a Members grant on their own.
+   Issue Types write, Projects write, and organization Variables read are
+   included only when their selected capability and effective target require
+   them. Effective targets include an existing
    organization `PR_APPROVAL_POLICY` Variable preserved from remote inventory,
    even when the configured default remains repository scope.
 4. Identity/repository validation and safe read probes run before the value is
@@ -439,17 +448,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **59 distinct cases**.
+This SDD adds at least **65 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain permission policy | 12 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants |
-| Application state/blocking | 9 | verified, missing, required-read unverifiable, required-write confirmation, invalid base token, organization-only credential collection, remote-storage blocked result |
+| Domain permission policy | 16 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants, positive and negative organization-membership capability projection |
+| Application state/blocking | 11 | verified, missing, required-read unverifiable, required-write confirmation, invalid base token, organization-only credential collection, dedicated remote-storage blocked branch, zero-count assignment and inactive membership checks |
 | Adapter/provider contracts | 21 | GET-only probes, commit-list Contents target, empty-repository 409, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, installed/missing/unavailable health-workflow inspection, unavailable endpoint state, duplicate-comment deletion fallback regression |
 | Setup/credential integration | 12 | pre-prompt setup table, conditional denial through planning, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
 | UI/accessibility | 4 | required/result tables, confirmation-required copy, 40-column wrapping, no-color text |
 | Architecture/security/docs | 1 | query-only boundary and no duplicated catalog |
-| **Total** | **59** | No double counting |
+| **Total** | **65** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -497,9 +506,11 @@ at widths 40/80/120 and `NO_COLOR`.
 8. Given a mixed storage policy with any selected repository-scoped or
    preservation-dependent resource, unavailable repository inventory still
    blocks all dependent work before mutation.
-9. Given final organization storage validation is blocked, the terminal first
-   shows the configured setup-PAT requirements and permission results, then
-   reports the storage error; plan confirmation, credential prompts, target
+9. Given final organization storage validation is blocked, the CLI recognizes
+   the structured result immediately, shows the configured setup-PAT
+   requirements and permission results in that dedicated branch, then reports
+   the bounded storage error with exit code 1; generic inventory revalidation,
+   plan confirmation, credential prompts, workflow comparison, target
    resolution, and mutation do not run.
 10. Given a write permission that GitHub cannot prove without mutation, the row
    shows `Unverifiable`; `ready` remains false, no write probe occurs, and no
@@ -546,6 +557,11 @@ at widths 40/80/120 and `NO_COLOR`.
 24. Given a workflow permission plan but no permission-audit port, credential
     collection fails closed as an unsupported installation before accepting or
     provisioning the PAT.
+25. Given an organization-owned repository with automatic assignees/reviewers,
+    release/hotfix authorization, members-only AI, and comment automation all
+    disabled, the workflow PAT plan omits Members read; enabling any one route
+    that performs a membership lookup adds the grant, and runtime paths with a
+    zero count or inactive authorization do not perform that lookup.
 
 ## 17. Requirements traceability
 
@@ -561,6 +577,7 @@ at widths 40/80/120 and `NO_COLOR`.
 | no write probes | semantic query port/architecture rule | method/transport tests | architecture |
 | secret safety | all contracts/presenter | redaction fixtures | credentials |
 | feature/effective-target workflow PAT | configuration projection policy | conditional matrix and preserved organization-variable tests | checklist |
+| membership-sensitive workflow PAT | permission policy plus membership-consuming workflows | positive/negative capability matrix and no-query inactive-path tests | authentication/checklist |
 | empty-repository-safe Contents probe | read-only query adapter | commit-list URL, 409 read/write, and 404 tests | authentication/troubleshooting |
 | least-privilege credential-health bootstrap | remote configuration query plus permission policy | installed/missing/unavailable inspection and permission-matrix tests | authentication/troubleshooting |
 | no unaudited existing workflow PAT | credential collection use case plus prompt adapter | existing re-entry/audit and non-interactive rejection tests | authentication/troubleshooting |
@@ -583,7 +600,7 @@ at widths 40/80/120 and `NO_COLOR`.
 - [x] No validation request mutates GitHub and no result overclaims write access.
 - [x] Token values and raw provider text are absent from all output/state/errors.
 - [x] Clean Architecture boundaries and their executable test pass.
-- [x] At least 59 distinct cases and stated coverage thresholds pass.
+- [x] At least 65 distinct cases and stated coverage thresholds pass.
 - [x] Authentication, checklist, troubleshooting, and architecture docs agree.
 - [x] Catalog evidence and generated `specs/CATALOG.md` are current.
 - [x] Specification, documentation, typecheck, lint, and test gates pass.

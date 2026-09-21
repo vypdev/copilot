@@ -31,6 +31,7 @@ export async function runAssignMembersWorkflow(
     try {
         logDebugInfo(`#${target.number} needs ${target.desiredCount} assignees.`);
         if (target.number <= 0) return [assignmentResult(false, 'Issue or pull request number is not available.')];
+        if (target.desiredCount <= 0) return [new Result({ id: TASK_ID, success: true, executed: false })];
 
         const [currentProjectMembers, currentMembers] = await Promise.all([
             dependencies.projectRepository.getAllMembers(),

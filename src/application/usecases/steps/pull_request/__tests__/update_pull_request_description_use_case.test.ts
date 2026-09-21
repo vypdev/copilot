@@ -87,6 +87,7 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     const results = await useCase.invoke(request({ mode }));
     expect(results[0]).toMatchObject({ success: true, executed: true });
     expect(mockUpdateDescription).toHaveBeenCalledWith(10, expect.stringContaining('PR does X'));
+    expect(mockGetAllMembers).not.toHaveBeenCalled();
   });
 
   it('skips preserve mode automatically', async () => {
@@ -243,6 +244,7 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     mockGetAllMembers.mockResolvedValue(['bob']);
     const results = await useCase.invoke(request({ membersOnly: true }));
     expect(results[0]).toMatchObject({ success: false, executed: false });
+    expect(mockGetAllMembers).toHaveBeenCalledTimes(1);
     expect(mockAskAgent).not.toHaveBeenCalled();
   });
 

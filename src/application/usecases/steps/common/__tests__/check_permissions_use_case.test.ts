@@ -102,6 +102,7 @@ describe('CheckPermissionsUseCase', () => {
 
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(true);
+    expect(mockGetAllMembers).not.toHaveBeenCalled();
   });
 
   it('returns failure when getAllMembers throws', async () => {

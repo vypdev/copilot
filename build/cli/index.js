@@ -48167,6 +48167,7 @@ function buildWorkflowPatPermissionRequirements(configuration, remote) {
         || configuration.issueWorkflows.enabled.some(kind => kind === 'release' || kind === 'hotfix');
     const guardedApproval = configuration.pullRequestApproval.mode === 'guarded';
     const organization = remote?.ownerType === 'Organization';
+    const organizationMembers = organization && requiresWorkflowOrganizationMembers(configuration);
     const hasProjects = configuration.projects.ids.trim().length > 0;
     const issueTypes = configuration.issueWorkflows.enabled.length > 0;
     const organizationVariables = guardedApproval
@@ -48186,11 +48187,32 @@ function buildWorkflowPatPermissionRequirements(configuration, remote) {
             requirement({ role: 'workflow', scope: 'repository', permission: 'Checks', level: 'read', reason: 'Verify current-head required checks and producer identities.', probe: 'checks' }),
             requirement({ role: 'workflow', scope: 'repository', permission: 'Variables', level: 'read', reason: 'Load the guarded approval policy.', probe: 'variables' }),
         ] : []),
-        ...(organization ? [requirement({ role: 'workflow', scope: 'organization', permission: 'Members', level: 'read', reason: 'Authorize organization members.', probe: 'members' })] : []),
+        ...(organizationMembers ? [requirement({ role: 'workflow', scope: 'organization', permission: 'Members', level: 'read', reason: 'Select or authorize organization members for enabled workflows.', probe: 'members' })] : []),
         ...(organization && issueTypes ? [requirement({ role: 'workflow', scope: 'organization', permission: 'Issue Types', level: 'write', reason: 'Assign configured organization issue types.', probe: 'issue-types' })] : []),
         ...(organization && hasProjects ? [requirement({ role: 'workflow', scope: 'organization', permission: 'Projects', level: 'write', reason: 'Update selected organization Projects.', probe: 'projects' })] : []),
         ...(organization && organizationVariables ? [requirement({ role: 'workflow', scope: 'organization', permission: 'Variables', level: 'read', reason: 'Load the organization-scoped approval policy.', probe: 'variables' })] : []),
     ]);
+}
+function requiresWorkflowOrganizationMembers(configuration) {
+    const issues = configuration.features.issues !== false;
+    const pullRequests = configuration.features.pullRequests !== false;
+    const issueComments = configuration.features.issueComments !== false;
+    const pullRequestComments = configuration.features.pullRequestComments !== false;
+    const commits = configuration.features.commits !== false;
+    const automaticAssignees = configuration.repository.desiredAssigneesCount > 0
+        && (issues || pullRequests);
+    const automaticReviewers = configuration.repository.desiredReviewersCount > 0
+        && pullRequests;
+    const protectedIssueAuthorization = issues
+        && configuration.issueWorkflows.enabled.some(kind => kind === 'release' || kind === 'hotfix');
+    const membersOnlyAuthorization = configuration.ai.membersOnly
+        && (issues || pullRequests || commits || issueComments || pullRequestComments);
+    const commentMutationAuthorization = issueComments || pullRequestComments;
+    return automaticAssignees
+        || automaticReviewers
+        || protectedIssueAuthorization
+        || membersOnlyAuthorization
+        || commentMutationAuthorization;
 }
 function normalizePermissionRequirements(requirements) {
     const strongest = new Map();
@@ -60317,13 +60339,13 @@ async function runCheckPermissionsWorkflow(param, taskId, ports) {
     if (inactiveResult)
         return [inactiveResult];
     try {
-        const currentProjectMembers = await ports.organizationMembersPort.getAllMembers();
-        const creator = param.target.creator;
-        const creatorIsTeamMember = creator.length > 0 && currentProjectMembers.includes(creator);
         if (!param.mandatoryBranchRequired) {
             (0, logging_ports_1.logDebugInfo)("Skipping permission enforcement because a mandatory branch is not required.");
             return [new result_1.Result({ id: taskId, success: true, executed: true })];
         }
+        const currentProjectMembers = await ports.organizationMembersPort.getAllMembers();
+        const creator = param.target.creator;
+        const creatorIsTeamMember = creator.length > 0 && currentProjectMembers.includes(creator);
         (0, logging_ports_1.logDebugInfo)("Checking permissions because a mandatory branch is required.");
         if (creatorIsTeamMember) {
             return [new result_1.Result({ id: taskId, success: true, executed: true })];
@@ -61692,6 +61714,8 @@ async function runAssignMembersWorkflow(param, dependencies) {
         (0, logging_ports_1.logDebugInfo)(`#${target.number} needs ${target.desiredCount} assignees.`);
         if (target.number <= 0)
             return [assignmentResult(false, 'Issue or pull request number is not available.')];
+        if (target.desiredCount <= 0)
+            return [new result_1.Result({ id: TASK_ID, success: true, executed: false })];
         const [currentProjectMembers, currentMembers] = await Promise.all([
             dependencies.projectRepository.getAllMembers(),
             dependencies.issueRepository.getCurrentAssignees(target.number),
@@ -63467,11 +63491,13 @@ async function runUpdatePullRequestDescriptionWorkflow(request, taskId, dependen
         const issueDescription = linkedIssueNumber
             ? (await dependencies.issueDescriptionQueryPort.getDescription(linkedIssueNumber)) ?? ''
             : '';
-        const currentProjectMembers = await dependencies.organizationMembersPort.getAllMembers();
-        const creatorIsTeamMember = context.pullRequest.creator.length > 0
-            && currentProjectMembers.includes(context.pullRequest.creator);
-        if (!creatorIsTeamMember && context.membersOnly) {
-            return skipped(taskId, `The pull request creator @${context.pullRequest.creator} is not a team member and \`AI members only\` is enabled. Skipping update pull request description.`);
+        if (context.membersOnly) {
+            const currentProjectMembers = await dependencies.organizationMembersPort.getAllMembers();
+            const creatorIsTeamMember = context.pullRequest.creator.length > 0
+                && currentProjectMembers.includes(context.pullRequest.creator);
+            if (!creatorIsTeamMember) {
+                return skipped(taskId, `The pull request creator @${context.pullRequest.creator} is not a team member and \`AI members only\` is enabled. Skipping update pull request description.`);
+            }
         }
         const prompt = (0, prompts_1.getUpdatePullRequestDescriptionPrompt)({
             projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
@@ -64845,15 +64871,13 @@ function registerSetupCommand(program) {
                     process.exitCode = result.exitCode;
                 return;
             }
-            const { configuration, remoteConfiguration } = result;
-            const configuredSetupPatPermissions = (0, setup_token_permission_policy_1.buildConfiguredSetupPatPermissionRequirements)(configuration, remoteConfiguration);
-            permissionPresenter.showRequirements('setup', configuredSetupPatPermissions);
-            if (token) {
+            const auditConfiguredSetupPat = async (configuration, remoteConfiguration) => {
+                const configuredSetupPatPermissions = (0, setup_token_permission_policy_1.buildConfiguredSetupPatPermissionRequirements)(configuration, remoteConfiguration);
+                permissionPresenter.showRequirements('setup', configuredSetupPatPermissions);
+                if (!token)
+                    return;
                 const permissionReport = await tokenPermissions.inspect({
-                    role: 'setup',
-                    owner: gitInfo.owner,
-                    repository: gitInfo.repo,
-                    token,
+                    role: 'setup', owner: gitInfo.owner, repository: gitInfo.repo, token,
                     requirements: configuredSetupPatPermissions,
                 });
                 permissionPresenter.showReport(permissionReport);
@@ -64863,7 +64887,15 @@ function registerSetupCommand(program) {
                 if (!permissionAccepted || permissionReport.identityStatus !== 'valid') {
                     throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT has missing or unconfirmed access required by the approved setup plan. Grant or explicitly confirm the permissions shown above and retry.');
                 }
+            };
+            if (result.status === 'blocked') {
+                await auditConfiguredSetupPat(result.configuration, result.remoteConfiguration);
+                (0, logger_1.logError)(new application_error_1.ApplicationError('provider.unavailable', `Setup is blocked by unavailable remote storage:\n${result.errors.map(error => `- ${error}`).join('\n')}`));
+                process.exitCode = result.exitCode;
+                return;
             }
+            const { configuration, remoteConfiguration } = result;
+            await auditConfiguredSetupPat(configuration, remoteConfiguration);
             const credentialRequirements = (0, setup_configuration_policy_1.buildSetupCredentialRequirements)(configuration);
             const repositoryVariables = (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(configuration);
             if (remoteConfiguration) {
@@ -64874,9 +64906,6 @@ function registerSetupCommand(program) {
                 if (inventoryErrors.length > 0) {
                     throw new application_error_1.ApplicationError('provider.unavailable', `Setup cannot safely continue with unavailable required resource inventory:\n${inventoryErrors.map(error => `- ${error}`).join('\n')}`);
                 }
-            }
-            if (result.status === 'blocked') {
-                throw new application_error_1.ApplicationError('configuration.invalid', `Invalid setup configuration:\n${result.errors.map(error => `- ${error}`).join('\n')}`);
             }
             const workflowComparisons = new setup_workspace_adapter_1.SetupDoctorWorkspaceQueryAdapter().compareWorkflows((0, setup_configuration_policy_1.effectiveIssueWorkflowFeatures)(configuration), configuration);
             const updateWorkflows = await workflowPrompt.confirmWorkflowUpdates(workflowComparisons, Boolean(options.updateWorkflows));

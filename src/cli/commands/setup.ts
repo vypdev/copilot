@@ -24,7 +24,7 @@ import { createSetupCredentialsUseCase, createSetupRemoteConfigurationReadPort }
 import { createSetupMergeQueueReadinessUseCase } from '../../infrastructure/composition/setup_doctor_composition_root';
 import { SetupDoctorWorkspaceQueryAdapter } from '../../infrastructure/setup_workspace_adapter';
 import { GithubSetupApprovalReadinessAdapter } from '../../infrastructure/setup_approval_readiness_adapter';
-import type { SetupResourceScope } from '../../domain/setup';
+import type { SetupConfiguration, SetupRemoteConfiguration, SetupResourceScope } from '../../domain/setup';
 import { ISSUE_WORKFLOW_KINDS, type IssueWorkflowKind } from '../../domain/issue_workflow_profile';
 import { ApplicationError, toApplicationError } from '../../application/errors/application_error';
 import { createInteractiveTerminalDriver } from '../setup_terminal_driver';
@@ -158,15 +158,15 @@ export function registerSetupCommand(program: Command): void {
           if (result.exitCode !== 0) process.exitCode = result.exitCode;
           return;
         }
-        const { configuration, remoteConfiguration } = result;
-        const configuredSetupPatPermissions = buildConfiguredSetupPatPermissionRequirements(configuration, remoteConfiguration);
-        permissionPresenter.showRequirements('setup', configuredSetupPatPermissions);
-        if (token) {
+        const auditConfiguredSetupPat = async (
+          configuration: Readonly<SetupConfiguration>,
+          remoteConfiguration?: Readonly<SetupRemoteConfiguration>,
+        ): Promise<void> => {
+          const configuredSetupPatPermissions = buildConfiguredSetupPatPermissionRequirements(configuration, remoteConfiguration);
+          permissionPresenter.showRequirements('setup', configuredSetupPatPermissions);
+          if (!token) return;
           const permissionReport = await tokenPermissions.inspect({
-            role: 'setup',
-            owner: gitInfo.owner,
-            repository: gitInfo.repo,
-            token,
+            role: 'setup', owner: gitInfo.owner, repository: gitInfo.repo, token,
             requirements: configuredSetupPatPermissions,
           });
           permissionPresenter.showReport(permissionReport);
@@ -179,7 +179,18 @@ export function registerSetupCommand(program: Command): void {
               'The setup PAT has missing or unconfirmed access required by the approved setup plan. Grant or explicitly confirm the permissions shown above and retry.',
             );
           }
+        };
+        if (result.status === 'blocked') {
+          await auditConfiguredSetupPat(result.configuration, result.remoteConfiguration);
+          logError(new ApplicationError(
+            'provider.unavailable',
+            `Setup is blocked by unavailable remote storage:\n${result.errors.map(error => `- ${error}`).join('\n')}`,
+          ));
+          process.exitCode = result.exitCode;
+          return;
         }
+        const { configuration, remoteConfiguration } = result;
+        await auditConfiguredSetupPat(configuration, remoteConfiguration);
         const credentialRequirements = buildSetupCredentialRequirements(configuration);
         const repositoryVariables = buildSetupRepositoryVariables(configuration);
         if (remoteConfiguration) {
@@ -193,12 +204,6 @@ export function registerSetupCommand(program: Command): void {
               `Setup cannot safely continue with unavailable required resource inventory:\n${inventoryErrors.map(error => `- ${error}`).join('\n')}`,
             );
           }
-        }
-        if (result.status === 'blocked') {
-          throw new ApplicationError(
-            'configuration.invalid',
-            `Invalid setup configuration:\n${result.errors.map(error => `- ${error}`).join('\n')}`,
-          );
         }
         const workflowComparisons = new SetupDoctorWorkspaceQueryAdapter().compareWorkflows(effectiveIssueWorkflowFeatures(configuration), configuration);
         const updateWorkflows = await workflowPrompt.confirmWorkflowUpdates(workflowComparisons, Boolean(options.updateWorkflows));

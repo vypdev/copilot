@@ -61,10 +61,11 @@ This guide helps you resolve common issues you might encounter while using Copil
     `--yes` alone does not acknowledge permissions. Copilot deliberately does
     not create disposable GitHub resources to test write access.
 
-    When organization storage validation fails after the questionnaire, the
-    configured setup-PAT table and result are shown first. The subsequent error
-    names the unavailable organization inventory; no plan confirmation,
-    credential prompt, resource targeting, or mutation has run.
+    When organization storage validation fails after the questionnaire, setup
+    handles the structured block immediately. That dedicated branch shows the
+    configured setup-PAT table and result, then exits with the bounded inventory
+    error. It does not run generic inventory revalidation, plan confirmation,
+    credential prompts, workflow comparison, resource targeting, or mutation.
 
     If the table requests Contents and Workflows write for credential health,
     inspect the preceding `Credential health workflow` state. `installed` omits

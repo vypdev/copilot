@@ -61140,13 +61140,13 @@ async function runCheckPermissionsWorkflow(param, taskId, ports) {
     if (inactiveResult)
         return [inactiveResult];
     try {
-        const currentProjectMembers = await ports.organizationMembersPort.getAllMembers();
-        const creator = param.target.creator;
-        const creatorIsTeamMember = creator.length > 0 && currentProjectMembers.includes(creator);
         if (!param.mandatoryBranchRequired) {
             (0, logging_ports_1.logDebugInfo)("Skipping permission enforcement because a mandatory branch is not required.");
             return [new result_1.Result({ id: taskId, success: true, executed: true })];
         }
+        const currentProjectMembers = await ports.organizationMembersPort.getAllMembers();
+        const creator = param.target.creator;
+        const creatorIsTeamMember = creator.length > 0 && currentProjectMembers.includes(creator);
         (0, logging_ports_1.logDebugInfo)("Checking permissions because a mandatory branch is required.");
         if (creatorIsTeamMember) {
             return [new result_1.Result({ id: taskId, success: true, executed: true })];
@@ -62993,6 +62993,8 @@ async function runAssignMembersWorkflow(param, dependencies) {
         (0, logging_ports_1.logDebugInfo)(`#${target.number} needs ${target.desiredCount} assignees.`);
         if (target.number <= 0)
             return [assignmentResult(false, 'Issue or pull request number is not available.')];
+        if (target.desiredCount <= 0)
+            return [new result_1.Result({ id: TASK_ID, success: true, executed: false })];
         const [currentProjectMembers, currentMembers] = await Promise.all([
             dependencies.projectRepository.getAllMembers(),
             dependencies.issueRepository.getCurrentAssignees(target.number),
@@ -64768,11 +64770,13 @@ async function runUpdatePullRequestDescriptionWorkflow(request, taskId, dependen
         const issueDescription = linkedIssueNumber
             ? (await dependencies.issueDescriptionQueryPort.getDescription(linkedIssueNumber)) ?? ''
             : '';
-        const currentProjectMembers = await dependencies.organizationMembersPort.getAllMembers();
-        const creatorIsTeamMember = context.pullRequest.creator.length > 0
-            && currentProjectMembers.includes(context.pullRequest.creator);
-        if (!creatorIsTeamMember && context.membersOnly) {
-            return skipped(taskId, `The pull request creator @${context.pullRequest.creator} is not a team member and \`AI members only\` is enabled. Skipping update pull request description.`);
+        if (context.membersOnly) {
+            const currentProjectMembers = await dependencies.organizationMembersPort.getAllMembers();
+            const creatorIsTeamMember = context.pullRequest.creator.length > 0
+                && currentProjectMembers.includes(context.pullRequest.creator);
+            if (!creatorIsTeamMember) {
+                return skipped(taskId, `The pull request creator @${context.pullRequest.creator} is not a team member and \`AI members only\` is enabled. Skipping update pull request description.`);
+            }
         }
         const prompt = (0, prompts_1.getUpdatePullRequestDescriptionPrompt)({
             projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,

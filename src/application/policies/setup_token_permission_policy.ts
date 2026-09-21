@@ -145,6 +145,7 @@ export function buildWorkflowPatPermissionRequirements(
         || configuration.issueWorkflows.enabled.some(kind => kind === 'release' || kind === 'hotfix');
     const guardedApproval = configuration.pullRequestApproval.mode === 'guarded';
     const organization = remote?.ownerType === 'Organization';
+    const organizationMembers = organization && requiresWorkflowOrganizationMembers(configuration);
     const hasProjects = configuration.projects.ids.trim().length > 0;
     const issueTypes = configuration.issueWorkflows.enabled.length > 0;
     const organizationVariables = guardedApproval
@@ -165,11 +166,33 @@ export function buildWorkflowPatPermissionRequirements(
             requirement({ role: 'workflow', scope: 'repository', permission: 'Checks', level: 'read', reason: 'Verify current-head required checks and producer identities.', probe: 'checks' }),
             requirement({ role: 'workflow', scope: 'repository', permission: 'Variables', level: 'read', reason: 'Load the guarded approval policy.', probe: 'variables' }),
         ] : []),
-        ...(organization ? [requirement({ role: 'workflow', scope: 'organization', permission: 'Members', level: 'read', reason: 'Authorize organization members.', probe: 'members' })] : []),
+        ...(organizationMembers ? [requirement({ role: 'workflow', scope: 'organization', permission: 'Members', level: 'read', reason: 'Select or authorize organization members for enabled workflows.', probe: 'members' })] : []),
         ...(organization && issueTypes ? [requirement({ role: 'workflow', scope: 'organization', permission: 'Issue Types', level: 'write', reason: 'Assign configured organization issue types.', probe: 'issue-types' })] : []),
         ...(organization && hasProjects ? [requirement({ role: 'workflow', scope: 'organization', permission: 'Projects', level: 'write', reason: 'Update selected organization Projects.', probe: 'projects' })] : []),
         ...(organization && organizationVariables ? [requirement({ role: 'workflow', scope: 'organization', permission: 'Variables', level: 'read', reason: 'Load the organization-scoped approval policy.', probe: 'variables' })] : []),
     ]);
+}
+
+function requiresWorkflowOrganizationMembers(configuration: Readonly<SetupConfiguration>): boolean {
+    const issues = configuration.features.issues !== false;
+    const pullRequests = configuration.features.pullRequests !== false;
+    const issueComments = configuration.features.issueComments !== false;
+    const pullRequestComments = configuration.features.pullRequestComments !== false;
+    const commits = configuration.features.commits !== false;
+    const automaticAssignees = configuration.repository.desiredAssigneesCount > 0
+        && (issues || pullRequests);
+    const automaticReviewers = configuration.repository.desiredReviewersCount > 0
+        && pullRequests;
+    const protectedIssueAuthorization = issues
+        && configuration.issueWorkflows.enabled.some(kind => kind === 'release' || kind === 'hotfix');
+    const membersOnlyAuthorization = configuration.ai.membersOnly
+        && (issues || pullRequests || commits || issueComments || pullRequestComments);
+    const commentMutationAuthorization = issueComments || pullRequestComments;
+    return automaticAssignees
+        || automaticReviewers
+        || protectedIssueAuthorization
+        || membersOnlyAuthorization
+        || commentMutationAuthorization;
 }
 
 export function normalizePermissionRequirements(

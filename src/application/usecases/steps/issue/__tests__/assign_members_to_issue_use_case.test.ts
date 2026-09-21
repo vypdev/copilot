@@ -32,6 +32,7 @@ describe('AssignMemberToIssueUseCase', () => {
   let useCase: AssignMemberToIssueUseCase;
 
   beforeEach(() => {
+    jest.clearAllMocks();
     useCase = new AssignMemberToIssueUseCase({ getCurrentAssignees: mockGetCurrentAssignees, assignMembersToIssue: mockAssignMembersToIssue }, { getAllMembers: mockGetAllMembers, getRandomMembers: mockGetRandomMembers });
     mockGetAllMembers.mockResolvedValue(['alice', 'bob']);
     mockGetCurrentAssignees.mockResolvedValue([]);
@@ -52,6 +53,16 @@ describe('AssignMemberToIssueUseCase', () => {
     const results = await useCase.invoke(param);
     expect(results.length).toBeGreaterThanOrEqual(1);
     expect(results.some((r) => r.success === true)).toBe(true);
+  });
+
+  it('does not query or mutate membership when automatic assignment is disabled', async () => {
+    const results = await useCase.invoke(baseParam({ desiredAssigneesCount: 0 }));
+
+    expect(results).toEqual([expect.objectContaining({ success: true, executed: false })]);
+    expect(mockGetAllMembers).not.toHaveBeenCalled();
+    expect(mockGetCurrentAssignees).not.toHaveBeenCalled();
+    expect(mockGetRandomMembers).not.toHaveBeenCalled();
+    expect(mockAssignMembersToIssue).not.toHaveBeenCalled();
   });
 
   it('assigns random members when more assignees needed', async () => {
