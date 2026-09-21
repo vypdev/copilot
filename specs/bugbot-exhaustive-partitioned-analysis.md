@@ -203,8 +203,11 @@ publication/reconciliation operation allowed.
    a bounded labelled untrusted-data envelope; runtime types are not trusted
    merely because the application contract declares them.
 3. Split an oversized patch at the last newline that fits the fragment budget.
-   When a single line exceeds the budget, split that line at the hard character
-   boundary. Concatenating fragment payloads MUST reproduce the sanitized patch.
+   When a single line exceeds the budget, split that line at a hard UTF-16
+   boundary moved left when necessary so it never separates a surrogate pair.
+   Every fragment remains within 12,000 UTF-16 code units, starts and ends with
+   a complete Unicode scalar value, and concatenating fragment payloads MUST
+   reproduce the sanitized patch exactly.
 4. Represent an absent/empty provider patch as one explicit assignment naming
    the file and instructing the reviewer to inspect the local diff.
 5. Pack fragment sections in stable order. Start a new partition before adding a
@@ -484,17 +487,17 @@ comments remain untouched.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **40 distinct cases**.
+This SDD owns at least **41 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/pure planning | 13 | empty/single/multi-file, newline/hard split, exact prompt and 64/65 partition boundaries, absent patch, root/nested leading-`**/` ignore parity, stable IDs, order, no character loss, hostile status/count metadata envelope |
+| Domain/pure planning | 14 | empty/single/multi-file, newline/hard split, UTF-16 surrogate-safe hard boundaries, exact prompt and 64/65 partition boundaries, absent patch, root/nested leading-`**/` ignore parity, stable IDs, order, no character loss, hostile status/count metadata envelope |
 | State/application/idempotency/races | 8 | all-complete, one failure, wrong/duplicate ID, wrong SHA, resolution ownership, stale head, replay, empty canonical zero-work |
 | Agent adapter/schema contracts | 4 | required attestation, locale, undefined/invalid result, aggregate bounds |
 | Workflow/architecture/telemetry | 5 | concurrency two, ordered collection, no mutation before complete, positive and zero-partition plan metrics |
 | UI/UX/localization/sanitization | 4 | pending, failed, complete, hostile content/control characters |
 | Integration/security/compatibility | 6 | 44-file regression, oversized patch, provider partial, dry-run, legacy issue-only path, ignored-only canonical no-op |
-| **Total** | **40** | No double counting |
+| **Total** | **41** | No double counting |
 
 Planner, attestation, and aggregate pure policies require 100% enumerated branch
 coverage. Changed analyzer/context modules require at least 95% lines/statements
@@ -560,12 +563,16 @@ token scope, secret, or public input.
 19. Given `**/node_modules/**`, both `node_modules/package.json` and
     `packages/app/node_modules/package.json` are ignored before partitioning,
     while unrelated root and nested paths remain reviewable.
+20. Given an astral Unicode character crosses the 12,000-code-unit hard
+    boundary with no earlier newline, then the boundary moves left, neither
+    fragment contains an orphan surrogate, both stay within budget, and their
+    concatenation exactly reconstructs the sanitized patch.
 
 ## 17. Requirements traceability
 
 | Requirement | Policy/use case/adapter/presentation | Test or evidence | Documentation |
 |---|---|---|---|
-| lossless bounded plan | diff partition policy | reconstruction/boundary/44-file tests | how it works |
+| lossless bounded plan | diff partition policy | reconstruction, surrogate-boundary, budget, and 44-file tests | how it works |
 | root/nested ignore parity | file-ignore policy | leading-`**/` root and nested fixtures | configuration |
 | untrusted diff metadata | diff partition policy + security envelope | hostile filename/status/count/patch fixtures | detection/security |
 | attested atomic execution | partitioned analyzer | failure/identity/concurrency tests | failure scenarios |
@@ -597,7 +604,7 @@ token scope, secret, or public input.
       provider enumeration and every partition respects fixed prompt bounds.
 - [x] Attestation, resolution ownership, concurrency, aggregation, freshness,
       replay, cancellation/failure, and no-prepublication-mutation tests pass.
-- [x] The 40-case floor and changed-module/repository coverage budgets pass.
+- [x] The 41-case floor and changed-module/repository coverage budgets pass.
 - [x] Pending, failed, provider-partial, complete, dry-run, and publication-
       partial surfaces are accurate, localized, accessible, and bounded.
 - [x] No public configuration, permission, credential, or durable-state change

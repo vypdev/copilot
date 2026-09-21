@@ -2,6 +2,7 @@ import {
     buildSetupActionInputs,
     buildSetupCredentialRequirements,
     buildSetupPlan,
+    canKeepExistingSetupResource,
     buildSetupRepositoryVariables,
     createDefaultSetupConfiguration,
     mergeSetupConfiguration,
@@ -320,6 +321,28 @@ describe('setup configuration policy', () => {
         expect(shouldUpsertSetupResource(configuration, 'variable', 'AGENT_PROVIDER', remote)).toBe(false);
         const override = mergeSetupConfiguration(configuration, { storage: { variables: { overrides: { AGENT_PROVIDER: 'repository' } } } });
         expect(shouldUpsertSetupResource(override, 'variable', 'AGENT_PROVIDER', remote)).toBe(true);
+    });
+
+    it('keeps an existing credential only when preservation retains its effective scope', () => {
+        const base = {
+            defaultScope: 'repository' as const,
+            organizationVisibility: 'selected' as const,
+            preserveExisting: true,
+            overrides: {},
+        };
+
+        expect(canKeepExistingSetupResource(undefined, 'OPENAI_API_KEY', 'organization')).toBe(true);
+        expect(canKeepExistingSetupResource(base, 'OPENAI_API_KEY', 'organization')).toBe(true);
+        expect(canKeepExistingSetupResource({ ...base, preserveExisting: false }, 'OPENAI_API_KEY', 'organization')).toBe(false);
+        expect(canKeepExistingSetupResource({
+            ...base,
+            overrides: { OPENAI_API_KEY: 'repository' },
+        }, 'OPENAI_API_KEY', 'organization')).toBe(false);
+        expect(canKeepExistingSetupResource({
+            ...base,
+            overrides: { OPENAI_API_KEY: 'organization' },
+        }, 'OPENAI_API_KEY', 'organization')).toBe(true);
+        expect(canKeepExistingSetupResource(base, 'OPENAI_API_KEY', undefined)).toBe(false);
     });
 
     it('keeps replacement credentials on the effective repository scope unless scope is explicitly overridden', () => {

@@ -19,6 +19,7 @@ import type {
 } from '../../../domain/setup';
 import type { SetupTokenPermissionRequirement } from '../../../domain/setup_token_permissions';
 import {
+    canKeepExistingSetupResource,
     requiresSetupOrganizationInventory,
     requiresSetupRepositoryInventory,
 } from '../../policies/setup_configuration_storage_policy';
@@ -146,7 +147,13 @@ export class SetupCredentialsUseCase {
                     if (remoteCheck.status === 'invalid' && decision !== 'replace' && !hasAlternative(requirement)) {
                         throw new ApplicationError('authorization.credential-invalid', `${requirement.name} is invalid and must be replaced before setup can continue.`);
                     }
-                    if (decision === 'keep' && remoteCheck.status !== 'invalid') {
+                    if (decision === 'keep'
+                        && remoteCheck.status !== 'invalid'
+                        && canKeepExistingSetupResource(
+                            request.secretStoragePolicy,
+                            requirement.name,
+                            sourceScope,
+                        )) {
                         markRequirementSatisfied(requirement, satisfiedGroups);
                         continue;
                     }

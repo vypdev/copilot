@@ -391,7 +391,9 @@ describe('SetupCredentialsUseCase', () => {
 
     it('uses organization inventory when selected Secrets do not depend on repository scope', async () => {
         const prompt = {
-            requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(), requestWorkflowPat: jest.fn(), requestApiKey: jest.fn(),
+            requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(),
+            requestWorkflowPat: jest.fn().mockResolvedValue({ name: 'PAT', value: 'replacement-token' }),
+            requestApiKey: jest.fn(),
             chooseExistingCredential: jest.fn().mockResolvedValue('keep'), showCredentialChecks: jest.fn(),
         };
         const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }), validateCredential: jest.fn() };
@@ -411,13 +413,64 @@ describe('SetupCredentialsUseCase', () => {
             secretStoragePolicy: {
                 defaultScope: 'organization', organizationVisibility: 'selected', preserveExisting: false, overrides: {},
             },
-        })).resolves.toEqual(expect.objectContaining({ collection: { apiKeys: [] } }));
+        })).resolves.toEqual(expect.objectContaining({
+            collection: { workflowPat: { name: 'PAT', value: 'replacement-token' }, apiKeys: [] },
+        }));
 
         expect(prompt.chooseExistingCredential).toHaveBeenCalledWith(
             expect.objectContaining({ name: 'PAT' }),
             expect.objectContaining({ sourceScope: 'organization' }),
         );
+        expect(prompt.requestWorkflowPat).toHaveBeenCalledWith(
+            expect.objectContaining({ name: 'PAT' }),
+            expect.objectContaining({ sourceScope: 'organization' }),
+        );
         expect(secrets.list).not.toHaveBeenCalled();
+    });
+
+    it('requires replacement when an explicit storage override moves an existing credential', async () => {
+        const prompt = {
+            requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(), requestWorkflowPat: jest.fn(),
+            requestApiKey: jest.fn().mockResolvedValue({ name: 'OPENAI_API_KEY', value: 'replacement-key' }),
+            chooseExistingCredential: jest.fn().mockResolvedValue('keep'), showCredentialChecks: jest.fn(),
+        };
+        const validation = {
+            validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }),
+            validateCredential: jest.fn().mockResolvedValue({ name: 'OPENAI_API_KEY', status: 'valid', message: 'replacement ok' }),
+        };
+        const remoteConfiguration = {
+            ownerType: 'Organization' as const, repositoryId: 42, repositoryVisibility: 'private' as const,
+            repositorySecrets: [], repositorySecretsAccess: 'available' as const,
+            organizationSecrets: ['OPENAI_API_KEY'], repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
+            organizationVariables: [], organizationAccess: 'available' as const,
+            organizationSecretsAccess: 'available' as const, organizationVariablesAccess: 'available' as const,
+        };
+
+        const result = await new SetupCredentialsUseCase(
+            prompt,
+            validation,
+            { list: jest.fn() },
+            { validateExisting: jest.fn().mockResolvedValue([
+                { name: 'OPENAI_API_KEY', status: 'valid', message: 'remote ok' },
+            ]) },
+        ).collect({
+            owner: 'owner', repository: 'repo', setupToken: 'setup-token',
+            requirements: [requirement('OPENAI_API_KEY')], manageSecrets: true, remoteConfiguration,
+            secretStoragePolicy: {
+                defaultScope: 'organization', organizationVisibility: 'selected', preserveExisting: true,
+                overrides: { OPENAI_API_KEY: 'repository' },
+            },
+        });
+
+        expect(prompt.requestApiKey).toHaveBeenCalledWith(
+            expect.objectContaining({ name: 'OPENAI_API_KEY' }),
+            expect.objectContaining({ sourceScope: 'organization' }),
+        );
+        expect(validation.validateCredential).toHaveBeenCalledWith(
+            expect.objectContaining({ name: 'OPENAI_API_KEY' }),
+            'replacement-key',
+        );
+        expect(result.collection.apiKeys).toEqual([{ name: 'OPENAI_API_KEY', value: 'replacement-key' }]);
     });
 
     it('blocks preservation when organization Secret inventory is unavailable', async () => {

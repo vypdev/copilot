@@ -342,6 +342,23 @@ describe('Bugbot review context', () => {
     expect(fragments[0].endsWith('\n')).toBe(true);
   });
 
+  it('never splits an astral Unicode character across a hard fragment boundary', () => {
+    const astralCharacter = '😀';
+    const patch = `${'a'.repeat(MAX_REVIEW_DIFF_FRAGMENT_LENGTH - 1)}${astralCharacter}tail`;
+    const fragments = splitReviewDiffPatch(patch);
+    const isHighSurrogate = (value: number) => value >= 0xD800 && value <= 0xDBFF;
+    const isLowSurrogate = (value: number) => value >= 0xDC00 && value <= 0xDFFF;
+
+    expect(fragments.join('')).toBe(patch);
+    expect(fragments.every((fragment) => fragment.length <= MAX_REVIEW_DIFF_FRAGMENT_LENGTH)).toBe(true);
+    expect(fragments[0]).toBe('a'.repeat(MAX_REVIEW_DIFF_FRAGMENT_LENGTH - 1));
+    expect(fragments[1].startsWith(astralCharacter)).toBe(true);
+    for (const fragment of fragments) {
+      expect(isLowSurrogate(fragment.charCodeAt(0))).toBe(false);
+      expect(isHighSurrogate(fragment.charCodeAt(fragment.length - 1))).toBe(false);
+    }
+  });
+
   it('covers a 44-file regression fixture without prompt-budget omissions', () => {
     const plan = buildReviewDiffPlan({
       prHeadSha: 'c'.repeat(40),

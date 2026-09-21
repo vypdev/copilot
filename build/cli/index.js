@@ -40956,7 +40956,8 @@ function splitReviewDiffPatch(patch) {
     const fragments = [];
     let offset = 0;
     while (offset < patch.length) {
-        const maximumEnd = Math.min(offset + exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH, patch.length);
+        const budgetEnd = Math.min(offset + exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH, patch.length);
+        const maximumEnd = moveBeforeSplitSurrogatePair(patch, budgetEnd);
         if (maximumEnd === patch.length) {
             fragments.push(patch.slice(offset));
             break;
@@ -40967,6 +40968,15 @@ function splitReviewDiffPatch(patch) {
         offset = end;
     }
     return fragments;
+}
+function moveBeforeSplitSurrogatePair(value, end) {
+    if (end <= 0 || end >= value.length)
+        return end;
+    const previous = value.charCodeAt(end - 1);
+    const next = value.charCodeAt(end);
+    const splitsPair = previous >= 0xD800 && previous <= 0xDBFF
+        && next >= 0xDC00 && next <= 0xDFFF;
+    return splitsPair ? end - 1 : end;
 }
 function stableDiffPartitionDigest(value) {
     let hash = 0x811c9dc5;
@@ -46522,6 +46532,7 @@ __exportStar(__nccwpck_require__(81182), exports);
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveSetupResourceScope = resolveSetupResourceScope;
+exports.canKeepExistingSetupResource = canKeepExistingSetupResource;
 exports.getSetupResourceStoragePolicy = getSetupResourceStoragePolicy;
 exports.getSetupStorageConfiguration = getSetupStorageConfiguration;
 exports.requiresSetupRepositoryInventory = requiresSetupRepositoryInventory;
@@ -46536,6 +46547,24 @@ exports.validateStorageConfiguration = validateStorageConfiguration;
 const setup_configuration_defaults_1 = __nccwpck_require__(23381);
 function resolveSetupResourceScope(policy, name) {
     return policy.overrides[name] ?? policy.defaultScope;
+}
+/**
+ * Decides whether an existing managed resource may satisfy credential
+ * collection without supplying its value again. An omitted policy preserves
+ * the legacy caller contract; an explicit policy must preserve the exact
+ * effective scope rather than silently moving or replacing the resource.
+ */
+function canKeepExistingSetupResource(policy, name, existingScope) {
+    if (!existingScope)
+        return false;
+    if (!policy)
+        return true;
+    if (!policy.preserveExisting)
+        return false;
+    const override = Object.prototype.hasOwnProperty.call(policy.overrides, name)
+        ? policy.overrides[name]
+        : undefined;
+    return override === undefined || override === existingScope;
 }
 function getSetupResourceStoragePolicy(configuration, kind) {
     return getSetupStorageConfiguration(configuration)[kind === 'secret' ? 'secrets' : 'variables'];
@@ -54992,7 +55021,9 @@ class SetupCredentialsUseCase {
                     if (remoteCheck.status === 'invalid' && decision !== 'replace' && !hasAlternative(requirement)) {
                         throw new application_error_1.ApplicationError('authorization.credential-invalid', `${requirement.name} is invalid and must be replaced before setup can continue.`);
                     }
-                    if (decision === 'keep' && remoteCheck.status !== 'invalid') {
+                    if (decision === 'keep'
+                        && remoteCheck.status !== 'invalid'
+                        && (0, setup_configuration_storage_policy_1.canKeepExistingSetupResource)(request.secretStoragePolicy, requirement.name, sourceScope)) {
                         markRequirementSatisfied(requirement, satisfiedGroups);
                         continue;
                     }
@@ -82382,7 +82413,7 @@ class SetupTokenPermissionQueryAdapter {
             const target = await resolveProbeTarget(owner, repository, requirement, request);
             if (target.status === 'complete')
                 return target.check;
-            return mapProbeResponse(requirement, await request(target.url));
+            return mapProbeResponse(requirement, target.response ?? await request(target.url), target.readEvidence);
         }
         catch {
             return outcome(requirement, 'unverifiable', 'The permission probe was unavailable or timed out.');
@@ -82401,46 +82432,105 @@ function permissionProbeHeaders(token) {
     };
 }
 async function resolveProbeTarget(owner, repository, requirement, request) {
-    if (requirement.scope === 'repository' && requirement.probe === 'checks') {
+    const url = requirement.scope === 'repository' && requirement.probe === 'checks'
+        ? repositoryRoot(owner, repository)
+        : probeUrl(owner, repository, requirement);
+    if (!url) {
+        return {
+            status: 'complete',
+            check: outcome(requirement, 'unverifiable', 'GitHub does not expose a safe read-only proof for this permission.'),
+        };
+    }
+    if (requirement.level === 'write') {
+        return { status: 'ready', url, readEvidence: 'permission-bound' };
+    }
+    if (requiresRepositoryVisibilityProof(requirement)) {
         const metadataResponse = await request(repositoryRoot(owner, repository));
         if (!metadataResponse.ok) {
+            if (requirement.probe === 'metadata') {
+                return {
+                    status: 'ready',
+                    url,
+                    response: metadataResponse,
+                    readEvidence: 'publicly-readable',
+                };
+            }
             return {
                 status: 'complete',
-                check: outcome(requirement, 'unverifiable', 'GitHub could not resolve a safe default branch for the Checks probe.'),
+                check: outcome(requirement, 'unverifiable', requirement.probe === 'checks'
+                    ? 'GitHub could not resolve a safe default branch for the Checks probe.'
+                    : 'GitHub could not establish repository visibility before the read-only capability probe.'),
             };
         }
-        const defaultBranch = await readDefaultBranch(metadataResponse);
-        if (!defaultBranch) {
+        const metadata = await readRepositoryProbeMetadata(metadataResponse);
+        if (!metadata) {
+            return {
+                status: 'complete',
+                check: outcome(requirement, 'unverifiable', requirement.probe === 'checks'
+                    ? 'GitHub repository metadata did not provide a safe default branch for the Checks probe.'
+                    : 'GitHub repository metadata could not establish safe permission evidence.'),
+            };
+        }
+        if (requirement.probe === 'checks' && !metadata.defaultBranch) {
             return {
                 status: 'complete',
                 check: outcome(requirement, 'unverifiable', 'GitHub repository metadata did not provide a safe default branch for the Checks probe.'),
             };
         }
+        if (!metadata.visibility) {
+            return {
+                status: 'complete',
+                check: outcome(requirement, 'unverifiable', 'GitHub repository metadata did not establish whether this read was authentication-bound.'),
+            };
+        }
+        const readEvidence = metadata.visibility === 'private'
+            ? 'permission-bound'
+            : 'publicly-readable';
+        if (requirement.probe === 'metadata') {
+            return { status: 'ready', url, response: metadataResponse, readEvidence };
+        }
+        const targetUrl = requirement.probe === 'checks'
+            ? `${repositoryRoot(owner, repository)}/commits/${encodeURIComponent(metadata.defaultBranch)}/check-runs?per_page=1`
+            : url;
         return {
             status: 'ready',
-            url: `${repositoryRoot(owner, repository)}/commits/${encodeURIComponent(defaultBranch)}/check-runs?per_page=1`,
+            url: targetUrl,
+            readEvidence,
         };
     }
-    const url = probeUrl(owner, repository, requirement);
-    return url
-        ? { status: 'ready', url }
-        : {
-            status: 'complete',
-            check: outcome(requirement, 'unverifiable', 'GitHub does not expose a safe read-only proof for this permission.'),
-        };
+    return {
+        status: 'ready',
+        url,
+        readEvidence: isPubliclyReadableOrganizationProbe(requirement)
+            ? 'publicly-readable'
+            : 'permission-bound',
+    };
 }
-async function readDefaultBranch(response) {
+function requiresRepositoryVisibilityProof(requirement) {
+    return requirement.scope === 'repository'
+        && !['secrets', 'variables'].includes(requirement.probe);
+}
+function isPubliclyReadableOrganizationProbe(requirement) {
+    return requirement.scope === 'organization'
+        && ['members', 'issue-types'].includes(requirement.probe);
+}
+async function readRepositoryProbeMetadata(response) {
     try {
         const payload = await response.json();
         if (typeof payload !== 'object' || payload === null || Array.isArray(payload))
             return undefined;
-        const branch = payload.default_branch;
-        if (typeof branch !== 'string'
-            || branch.length === 0
-            || branch.length > MAX_GITHUB_DEFAULT_BRANCH_LENGTH
-            || containsAsciiControl(branch))
-            return undefined;
-        return branch;
+        const record = payload;
+        const branch = record.default_branch;
+        const defaultBranch = typeof branch === 'string'
+            && branch.length > 0
+            && branch.length <= MAX_GITHUB_DEFAULT_BRANCH_LENGTH
+            && !containsAsciiControl(branch)
+            ? branch
+            : undefined;
+        const visibility = typeof record.private === 'boolean'
+            ? record.private ? 'private' : 'public'
+            : undefined;
+        return { visibility, defaultBranch };
     }
     catch {
         return undefined;
@@ -82452,18 +82542,21 @@ function containsAsciiControl(value) {
         return codePoint !== undefined && (codePoint <= 31 || codePoint === 127);
     });
 }
-async function mapProbeResponse(requirement, response) {
+async function mapProbeResponse(requirement, response, readEvidence) {
     if (response.ok) {
-        return requirement.level === 'read'
-            ? outcome(requirement, 'verified', 'GitHub accepted the read-only capability probe.')
-            : outcome(requirement, 'unverifiable', 'Read access is available, but GitHub exposes no safe proof of write access.');
+        if (requirement.level === 'write') {
+            return outcome(requirement, 'unverifiable', 'Read access is available, but GitHub exposes no safe proof of write access.');
+        }
+        return readEvidence === 'permission-bound'
+            ? outcome(requirement, 'verified', 'GitHub accepted an authentication-bound read-only capability probe.')
+            : outcome(requirement, 'unverifiable', 'GitHub served a publicly readable resource, which does not prove that this token has the requested permission.');
     }
     if (response.status === 409
         && requirement.scope === 'repository'
         && requirement.probe === 'contents') {
-        return requirement.level === 'read'
+        return requirement.level === 'read' && readEvidence === 'permission-bound'
             ? outcome(requirement, 'verified', 'GitHub confirmed that the accessible Git repository is empty.')
-            : outcome(requirement, 'unverifiable', 'GitHub confirmed that the repository is empty, but this read-only probe cannot prove write access.');
+            : outcome(requirement, 'unverifiable', 'GitHub confirmed that the repository is empty, but this read-only response does not prove the requested token permission.');
     }
     if (response.status === 401) {
         return outcome(requirement, 'missing', `GitHub rejected the read-only capability probe (HTTP ${response.status}).`);

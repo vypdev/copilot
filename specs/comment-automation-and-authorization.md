@@ -2,7 +2,7 @@
 
 - Status: Implemented
 - Date: 2026-09-11
-- Last updated: 2026-09-13
+- Last updated: 2026-09-21
 - Owners: Copilot maintainers
 - Scope: parsing and routing issue/PR comments to read-only or mutation-capable use cases
 - Related issues/PRs: Bugbot and branch synchronization SDDs
@@ -316,9 +316,9 @@ branch. Finding dismissal and learned rules require explicit follow-up commands.
 | Workflow/idempotency/races | 18 | fallback, duplicate, branch/push race |
 | Authorization/adapters | 20 | purpose-separated org membership and repository-write permissions, exact personal ownership, unknown-owner fallback for file and member-only routes, collaboration, API errors |
 | Workflow/config contracts | 8 | events, permissions, active roles, inert passive comments |
-| UX/localization/sanitization | 17 | help/errors/links/mentions/Markdown, target locale, complete finding-state status, invalid-evidence recovery |
+| UX/localization/sanitization | 18 | help/errors/links/mentions/Markdown, target locale, complete finding-state status, invalid-evidence recovery, internally consistent mutation-authority copy |
 | Integration/security/migration | 16 | comment→commit/review, exact PR diff, prompt injection |
-| **Total** | **105** | no double counting |
+| **Total** | **106** | no double counting |
 
 Global coverage remains mandatory; command and route policies SHOULD have 100%
 branch coverage. Use fake authorization/agents/git; no live models or waits.
@@ -367,6 +367,10 @@ English/non-English requests.
     unknown, missing, or unsupported type, both file modification and
     member-only automation require `push`, `maintain`, or `admin` repository
     collaborator permission and never use an organization-membership lookup.
+17. Every section of the do-user-request documentation states the same mutation
+    authority: the personal repository owner or a repository collaborator with
+    `push`, `maintain`, or `admin`; organization membership alone is never
+    presented as sufficient, and semantic documentation validation enforces it.
 
 ## 17. Requirements traceability
 
@@ -375,6 +379,7 @@ English/non-English requests.
 | bounded grammar | command domain | command tests | comment commands |
 | safe routing/admission | request/route/workflow policies | entrypoint and use-case tests | comment commands |
 | authorization | authorization port/adapter | organization, user, unknown-owner, and collaborator repository tests | permissions |
+| consistent authorization guidance | documentation contract | required authority sentence and retired contradictory-copy check | permissions/do request |
 | guarded mutation | workspace/git workflows | mutation tests | autofix/do request |
 | safe output | result policies | publication tests | failure scenarios |
 | truthful status evidence | canonical finding-state projection + status renderer | complete/non-clean and malformed status tests | comment commands, Bugbot observability |
@@ -391,7 +396,7 @@ English/non-English requests.
 ## 19. Definition of Done
 
 - [ ] Commands, mentions, authorization, fallback, replay, and races are covered.
-- [x] The 105-case budget, coverage, and architecture checks pass.
+- [x] The 106-case budget, coverage, and architecture checks pass.
 - [ ] No model output or comment can expand authorization or git authority.
 - [ ] All five UI states and help content are reviewed and accessible.
 - [ ] Workflows, documentation, and catalog agree.

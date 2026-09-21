@@ -2,9 +2,9 @@
 
 - Status: Implemented — automated architecture, UX, documentation, and coverage gates complete; controlled live GitHub permission-path evidence remains external
 - Date: 2026-09-11
-- Last updated: 2026-09-20
+- Last updated: 2026-09-21
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-09-20
+- Last verified: 2026-09-21
 - Owners: Copilot maintainers
 - Scope: interactive/non-interactive installation planning, file and resource provisioning, credential validation, and read-only diagnosis
 - Related issues/PRs: merge-queue readiness SDD; architecture quality and
@@ -141,7 +141,13 @@ cancellation, skipped diagnosis, ordering, and read-only authority explicit.
   flags, and credentials, and MUST fail on missing external inputs.
 - `--yes` approves only the final plan and never supplies a missing decision.
 - `--skip-variables` and `--skip-secrets` leave those remote resource classes untouched.
-- Existing valid credentials may be kept; invalid required credentials must be replaced.
+- Existing valid credentials may be kept only when the effective storage policy
+  preserves their current scope. Disabling `preserveExisting`, or selecting an
+  explicit per-resource override that moves the Secret to another scope,
+  converts `keep` into a replacement flow; setup MUST collect and validate the
+  value before provisioning the selected target. An explicit override that
+  names the already-effective scope does not require a redundant rewrite.
+- Invalid required credentials must be replaced.
 - Runner login may satisfy explicitly declared alternative credential groups.
 
 ### 6.3 State model
@@ -275,13 +281,13 @@ manual reversal.
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
-| Defaults/config/storage policy | 24 | bounds, precedence, cross-fields |
+| Defaults/config/storage policy | 26 | bounds, precedence, cross-fields, keep-versus-replace decisions for disabled preservation and scope-moving overrides |
 | Questionnaire/wizard/idempotency | 18 | transitions, immutability, cancel, preserve, replace |
 | Credentials/provider adapters | 18 | valid/invalid/missing/unverifiable/groups |
 | Workflows/assets/schema | 14 | selection, parity, readiness, permissions |
 | Prompt/CLI UX/sanitization/localization | 18 | masking, status order, non-interactive, English default, Spanish exact/base, arbitrary locale, atomic fallback, hostile diagnostic suppression |
 | Integration/security/cutover | 12 | backup, org scope, doctor, no `.env` |
-| **Total** | **104** | no double counting |
+| **Total** | **106** | no double counting |
 
 Global coverage thresholds remain; questionnaire, doctor catalog/report, shared
 merge-readiness message, and doctor presenter policies MUST reach 100%
@@ -319,6 +325,13 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
     artifact falls back to English rather than mixing languages.
 14. Given hostile PAT, credential-health, or rule-provider prose, doctor omits
     the raw value and renders only the catalogued reason and recovery action.
+15. Given an existing valid Secret and `preserveExisting: false`, choosing
+    `keep` cannot satisfy the requirement; setup requests and validates a value
+    and provisions the configured target, or fails before mutation when no
+    value is available.
+16. Given an existing valid organization Secret and an explicit repository
+    override, choosing `keep` follows the same replacement path; an explicit
+    organization override may keep it because the effective scope does not move.
 
 ## 17. Requirements traceability
 
@@ -326,6 +339,7 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 |---|---|---|---|
 | bounded plan | setup policies/wizard | setup wizard tests | how-to-use |
 | credential separation | credential use case/ports | credential tests | credentials |
+| policy-safe existing credentials | storage policy + credential use case | disabled-preservation and scope-move tests | credentials/provisioning |
 | safe files | workspace adapter | workspace tests | provisioning |
 | read-only doctor | doctor use case/composition | doctor tests | workflow-and-cli |
 | readiness | readiness use case | readiness tests | checklist |
@@ -341,7 +355,7 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 ## 19. Definition of Done
 
 - [x] Every new option has default, bounds, precedence, persistence, retirement/rejection, and security rules.
-- [x] The 104-case budget and coverage thresholds pass.
+- [x] The 106-case budget and coverage thresholds pass.
 - [x] Setup cancel/retry/partial state and doctor read-only behavior pass.
 - [x] Secrets are absent from plans, config, logs, errors, and backups.
 - [x] Workflow/assets, documentation, and catalog checks pass.

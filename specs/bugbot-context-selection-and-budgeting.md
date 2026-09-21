@@ -2,7 +2,7 @@
 
 - Status: Implemented
 - Date: 2026-09-11
-- Last updated: 2026-09-20
+- Last updated: 2026-09-21
 - Catalog capability ID: `bugbot-analysis-and-autofix`
 - Last verified: 2026-09-21 on `develop`
 - Owners: Copilot and Bugbot maintainers
@@ -228,7 +228,7 @@ before any item/character budget.
 |---|---:|---:|---:|---|
 | unresolved previous findings | 100 | 48,000 chars including wrappers/note | existing finding body cap | newest unresolved first, render chronological |
 | human conversation | 50 | 24,000 chars including omission note | 2,000 chars | newest first for packing, render chronological |
-| diff | 1,000 files pre-plan; max 64 partitions | 64,000 chars per partition | 12,000 fragment chars | provider file order; ignored files removed first; lossless line/hard splitting |
+| diff | 1,000 files pre-plan; max 64 partitions | 64,000 chars per partition | 12,000 UTF-16 code units per fragment | provider file order; ignored files removed first; lossless line/hard splitting without separating surrogate pairs |
 | review rules | deduplicated | 100,000 chars | 30,000 chars | organization then repository specificity |
 
 Every record gains a normalized `createdAt` and stable provider ID. Combined
@@ -398,7 +398,7 @@ provider page limits and partition execution failures.
 ## 14. Testing strategy and numeric budget
 
 This SDD retains its **18 distinct context-selection cases**. The partitioned
-analysis extension adds the separate 40-case budget in
+analysis extension adds the separate 41-case budget in
 `bugbot-exhaustive-partitioned-analysis.md`; neither budget double-counts cases.
 
 | Area | Minimum cases | Required risks |
@@ -499,7 +499,7 @@ and catalog evidence in the implementation slice.
 - Decision: diff prompt budgets create at most 64 lossless partitions; a larger
   plan fails before the model rather than publishing a partial packing result.
 - Companion: `bugbot-exhaustive-partitioned-analysis.md` owns partition and
-  aggregation details, UX, and its 40-case budget.
+  aggregation details, UX, and its 41-case budget.
 - Implementation evidence: `src/domain/bugbot/context.ts`,
   `src/application/usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts`,
   `src/infrastructure/composition/bugbot_scm_port_factory.ts`, provider

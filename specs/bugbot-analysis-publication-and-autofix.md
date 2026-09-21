@@ -2,7 +2,7 @@
 
 - Status: As-built baseline
 - Date: 2026-09-11
-- Last updated: 2026-09-20
+- Last updated: 2026-09-21
 - Catalog capability ID: `bugbot-analysis-and-autofix`
 - Last verified: 2026-09-21 on `develop`
 - Owners: Copilot maintainers
@@ -183,7 +183,7 @@ transitions are ordered marker-first and repaired by replay.
 
 Confidence floor, schema validation, head guards, path safety, marker ownership,
 publication ordering, independent review, provider page limits/concurrency,
-prompt bounds (100 prior findings/48,000 characters, 50 conversation entries/
+lossless Unicode-safe fragmentation, prompt bounds (100 prior findings/48,000 characters, 50 conversation entries/
 24,000 characters, 1,000 diff files, 12,000-character fragments, 64,000
 characters per partition, 64 partitions, and 2,000 aggregate candidates), retained-only
 resolution eligibility, and credential isolation are not configurable.
@@ -356,7 +356,7 @@ screen reader, and controlled live model samples.
 - [ ] Workflows, docs, reconciliation SDD, and catalog agree.
 - [ ] Controlled live provider and GitHub UX evidence is captured.
 - [x] Prompt-sized canonical PR diffs are reviewed through lossless, attested,
-      atomic partitions under the companion SDD's 40-case budget.
+      atomic partitions under the companion SDD's 41-case budget.
 
 ## 20. References and decisions
 

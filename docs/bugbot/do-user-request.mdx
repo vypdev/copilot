@@ -55,7 +55,7 @@ You can be brief or detailed. The configured execution role will apply the chang
 
 ## Permissions and workflow
 
-- **Who can trigger:** Organization members for organization repositories. For personal repositories, the repository owner or a collaborator with `push`, `maintain`, or `admin` permission. Others get a Think response only.
+- **Who can trigger:** For both organization and personal repositories, the repository owner or a collaborator with `push`, `maintain`, or `admin` permission. Organization membership alone is not enough. Others get a Think response only.
 - **Workflow:** The workflow that runs a branch-authoritative request such as
   `pull_request_review_comment` must grant **`contents: write`** so the action can push.
 - **Branch:** The action uses an authoritative branch from the PR review-comment

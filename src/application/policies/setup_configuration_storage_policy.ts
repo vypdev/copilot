@@ -22,6 +22,26 @@ export function resolveSetupResourceScope(
     return policy.overrides[name] ?? policy.defaultScope;
 }
 
+/**
+ * Decides whether an existing managed resource may satisfy credential
+ * collection without supplying its value again. An omitted policy preserves
+ * the legacy caller contract; an explicit policy must preserve the exact
+ * effective scope rather than silently moving or replacing the resource.
+ */
+export function canKeepExistingSetupResource(
+    policy: Readonly<SetupResourceStoragePolicy> | undefined,
+    name: string,
+    existingScope: SetupResourceScope | undefined,
+): boolean {
+    if (!existingScope) return false;
+    if (!policy) return true;
+    if (!policy.preserveExisting) return false;
+    const override = Object.prototype.hasOwnProperty.call(policy.overrides, name)
+        ? policy.overrides[name]
+        : undefined;
+    return override === undefined || override === existingScope;
+}
+
 export function getSetupResourceStoragePolicy(
     configuration: Readonly<SetupConfiguration>,
     kind: SetupResourceKind,

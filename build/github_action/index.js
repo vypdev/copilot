@@ -43452,7 +43452,8 @@ function splitReviewDiffPatch(patch) {
     const fragments = [];
     let offset = 0;
     while (offset < patch.length) {
-        const maximumEnd = Math.min(offset + exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH, patch.length);
+        const budgetEnd = Math.min(offset + exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH, patch.length);
+        const maximumEnd = moveBeforeSplitSurrogatePair(patch, budgetEnd);
         if (maximumEnd === patch.length) {
             fragments.push(patch.slice(offset));
             break;
@@ -43463,6 +43464,15 @@ function splitReviewDiffPatch(patch) {
         offset = end;
     }
     return fragments;
+}
+function moveBeforeSplitSurrogatePair(value, end) {
+    if (end <= 0 || end >= value.length)
+        return end;
+    const previous = value.charCodeAt(end - 1);
+    const next = value.charCodeAt(end);
+    const splitsPair = previous >= 0xD800 && previous <= 0xDBFF
+        && next >= 0xDC00 && next <= 0xDFFF;
+    return splitsPair ? end - 1 : end;
 }
 function stableDiffPartitionDigest(value) {
     let hash = 0x811c9dc5;
@@ -49282,6 +49292,7 @@ __exportStar(__nccwpck_require__(81182), exports);
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveSetupResourceScope = resolveSetupResourceScope;
+exports.canKeepExistingSetupResource = canKeepExistingSetupResource;
 exports.getSetupResourceStoragePolicy = getSetupResourceStoragePolicy;
 exports.getSetupStorageConfiguration = getSetupStorageConfiguration;
 exports.requiresSetupRepositoryInventory = requiresSetupRepositoryInventory;
@@ -49296,6 +49307,24 @@ exports.validateStorageConfiguration = validateStorageConfiguration;
 const setup_configuration_defaults_1 = __nccwpck_require__(23381);
 function resolveSetupResourceScope(policy, name) {
     return policy.overrides[name] ?? policy.defaultScope;
+}
+/**
+ * Decides whether an existing managed resource may satisfy credential
+ * collection without supplying its value again. An omitted policy preserves
+ * the legacy caller contract; an explicit policy must preserve the exact
+ * effective scope rather than silently moving or replacing the resource.
+ */
+function canKeepExistingSetupResource(policy, name, existingScope) {
+    if (!existingScope)
+        return false;
+    if (!policy)
+        return true;
+    if (!policy.preserveExisting)
+        return false;
+    const override = Object.prototype.hasOwnProperty.call(policy.overrides, name)
+        ? policy.overrides[name]
+        : undefined;
+    return override === undefined || override === existingScope;
 }
 function getSetupResourceStoragePolicy(configuration, kind) {
     return getSetupStorageConfiguration(configuration)[kind === 'secret' ? 'secrets' : 'variables'];

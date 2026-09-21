@@ -356,7 +356,8 @@ function splitReviewDiffPatch(patch) {
     const fragments = [];
     let offset = 0;
     while (offset < patch.length) {
-        const maximumEnd = Math.min(offset + exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH, patch.length);
+        const budgetEnd = Math.min(offset + exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH, patch.length);
+        const maximumEnd = moveBeforeSplitSurrogatePair(patch, budgetEnd);
         if (maximumEnd === patch.length) {
             fragments.push(patch.slice(offset));
             break;
@@ -367,6 +368,15 @@ function splitReviewDiffPatch(patch) {
         offset = end;
     }
     return fragments;
+}
+function moveBeforeSplitSurrogatePair(value, end) {
+    if (end <= 0 || end >= value.length)
+        return end;
+    const previous = value.charCodeAt(end - 1);
+    const next = value.charCodeAt(end);
+    const splitsPair = previous >= 0xD800 && previous <= 0xDBFF
+        && next >= 0xDC00 && next <= 0xDFFF;
+    return splitsPair ? end - 1 : end;
 }
 function stableDiffPartitionDigest(value) {
     let hash = 0x811c9dc5;

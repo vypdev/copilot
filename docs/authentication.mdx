@@ -22,7 +22,7 @@ these states:
 
 | Status | Meaning | Setup behavior |
 |---|---|---|
-| `✅ Verified` | A safe read-only GitHub operation proved the requested read capability. | Continue. |
+| `✅ Verified` | A safe authentication-bound GitHub operation proved the requested read capability. | Continue. |
 | `❌ Missing` | GitHub deterministically rejected a required capability after identity and repository access were established. | Stop before the dependent mutation and name the permission to grant. |
 | `? Unverifiable` | GitHub does not expose a safe non-mutating proof of the requested write level, or the response was ambiguous/transient. | Required reads block. Required writes pause for a separate explicit acknowledgement and remain non-verified. |
 
@@ -33,6 +33,15 @@ generic provider message `Forbidden`, rate-limited responses, SSO-constrained
 responses, and otherwise ambiguous `403` responses remain `Unverifiable`; raw
 provider messages are never printed. Malformed response bodies or unreadable
 provider headers are handled the same way.
+
+A successful `200` is not automatically permission evidence. Repository
+metadata, commits, rulesets, labels, workflows, checks, pull requests, and
+workflow files may be anonymously readable on a public repository. Copilot
+marks those reads `Verified` only when the same bounded probe establishes that
+the repository is private; on a public repository, or when visibility is
+unknown, success remains `Unverifiable`. Secret and Variable inventory
+endpoints are permission-bound and may verify directly. Public organization
+member and issue-type reads remain `Unverifiable`.
 
 The third state is intentional. GitHub's
 `X-Accepted-GitHub-Permissions` response header describes what an endpoint
@@ -61,8 +70,9 @@ existing organization Variable in place therefore still requires organization
 Variables read access for the workflow PAT.
 
 The repository Contents read check uses the read-only commit-list endpoint. A
-documented empty-repository response is accepted as proof that the token can
-read the selected repository, while the corresponding write capability remains
+documented empty-repository response is accepted as proof only after repository
+metadata proves the repository is private. For a public repository that same
+response remains `Unverifiable`; the corresponding write capability is also
 unverifiable and needs the normal explicit acknowledgement. An ambiguous `404`
 is never treated as empty-repository evidence.
 
@@ -92,6 +102,11 @@ continue into plan confirmation, credential collection, workflow comparison,
 target resolution, or mutation.
 
 <Info>GitHub does not reveal Secret values through its API. Copilot validates new credentials with provider metadata requests and validates existing remote Secrets through the read-only `copilot_credential_health.yml` workflow when it is installed on the repository's default branch. The health workflow reports each requested credential independently, but that bounded reachability result is not a permission audit. If `PAT` already exists, interactive setup asks you to re-enter it and runs the complete workflow-PAT permission matrix before provisioning; unattended setup must supply `PAT` again or stops before mutation. Doctor can query and dispatch the installed health workflow but has no bootstrap or repository-mutation authority; temporary workflow bootstrap is available only during setup. A preauthenticated Codex session is runner state, not a Secret: it is accepted only when the runtime preflight can execute `codex login status` successfully.</Info>
+
+For other existing credentials, choosing `keep` works only when the selected
+storage policy preserves the Secret in its current repository or organization
+scope. With `preserveExisting: false`, or an override that moves the Secret,
+setup requests and validates the value again before provisioning the new target.
 
 An Actions API `404` does not by itself mark the credential-health workflow as
 missing. Setup first proves repository Contents visibility, then reads the exact

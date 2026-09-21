@@ -282,6 +282,21 @@ requireText('bugbot/detection.mdx', 'including overflow', 'complete Bugbot aggre
 requireText('bugbot/how-it-works.mdx', 'same HTTPS server and repository', 'safe provider navigation boundary');
 requireText('bugbot/quality-observability.mdx', 'gateway binds provider credentials before service', 'bound public Bugbot gateway');
 requireText('bugbot/quality-observability.mdx', 'provides trusted PR/commit/run navigation', 'public Bugbot navigation capability');
+requireText(
+  'bugbot/do-user-request.mdx',
+  'For both organization and personal repositories, the repository owner or a collaborator with `push`, `maintain`, or `admin` permission. Organization membership alone is not enough.',
+  'repository-write authority for do-user-request',
+);
+requireText(
+  'authentication.mdx',
+  'A successful `200` is not automatically permission evidence.',
+  'public-read PAT evidence boundary',
+);
+requireText(
+  'authentication.mdx',
+  'With `preserveExisting: false`, or an override that moves the Secret,',
+  'storage-policy-safe existing credential reuse',
+);
 requireText('issues/deployment-orchestration.mdx', '**Allowed actions** to permit direct', 'npm direct-publish prerequisite');
 requireText('issues/deployment-orchestration.mdx', '`NPM_VISIBILITY_POLL_INTERVAL_SECONDS`', 'npm polling variable');
 requireText('issues/deployment-orchestration.mdx', '`NPM_VISIBILITY_TIMEOUT_SECONDS`', 'npm timeout variable');
@@ -334,6 +349,7 @@ const obsoleteDocumentation = [
   ['single-actions/deploy-label-and-merge.mdx', 'release-to-default', 'old concurrent release merge flow'],
   ['single-actions/deploy-label-and-merge.mdx', 'direct merge compatibility fallback', 'old direct-merge fallback'],
   ['README.md', 'active findings fail that check', 'obsolete unconditional Bugbot failure'],
+  ['bugbot/do-user-request.mdx', 'Organization members for organization repositories', 'obsolete organization-membership mutation authority'],
 ];
 const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
 for (const [file, phrase, contract] of obsoleteDocumentation) {

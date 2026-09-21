@@ -245,10 +245,12 @@ read-only GitHub queries and presents ordered permission outcomes.
 4. Identity/repository validation and safe read probes run before the value is
    accepted for Secret provisioning.
 5. Repository Contents read is probed through the read-only commit-list endpoint,
-   not the root Contents endpoint. A successful response verifies read access;
-   GitHub's documented `409 Conflict` for an empty Git repository is also
-   accepted as empty-repository evidence after base repository identity/access
-   validation. `404` remains ambiguous and never becomes verified.
+   not the root Contents endpoint. Repository metadata MUST first establish
+   whether a successful target read is authentication-bound. A successful read,
+   including GitHub's documented `409 Conflict` for an empty Git repository,
+   verifies permission only when the repository is private. On a public
+   repository the same target can be anonymously readable and therefore remains
+   `Unverifiable`; `404` also remains ambiguous and never becomes verified.
 6. Repository Checks read MUST resolve the repository's exact `default_branch`
    through a read-only metadata request and use that percent-encoded branch as
    the commit reference for the check-runs request. A literal local alias such
@@ -263,6 +265,19 @@ read-only GitHub queries and presents ordered permission outcomes.
    offer an unaudited keep path. Non-interactive setup MUST fail before mutation
    unless `PAT` is supplied again; GitHub's write-only Secret API is never
    described as permission evidence.
+8. A successful provider read MUST become `Verified` only when the endpoint is
+   permission-bound (for example Secret or Variable inventory), or when
+   repository metadata in the same bounded probe proves that the target
+   repository is private. Publicly readable repository probes, organization
+   member/issue-type reads, and successful reads whose visibility cannot be
+   established remain `Unverifiable`. Visibility resolution and the target
+   read share one concurrency slot and timeout, preserve result order, and
+   never use unauthenticated success as token evidence.
+9. For any existing non-workflow credential, a `keep` choice is authoritative
+   only when the effective Secret storage policy permits preserving that exact
+   scope. Disabled preservation or an override that moves the Secret MUST
+   request and validate a replacement value; non-interactive execution without
+   that value fails before resource mutation.
 
 ### 6.3 Permission states
 
@@ -477,17 +492,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **79 distinct cases**.
+This SDD adds at least **84 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain permission policy | 18 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants, positive and negative organization-membership capability projection including comment-only routes |
 | Application state/blocking | 13 | verified, missing, required-read unverifiable, required-write confirmation, invalid base token, organization-only credential collection, pre-validation audit port, immediate remote-storage blocked handling, zero-count assignment and inactive membership checks |
-| Adapter/provider contracts | 27 | GET-only probes, fixed four-request concurrency with stable result order, commit-list Contents target, empty-repository 409, default-branch Checks resolution plus encoded check-runs target, invalid/missing branch fail-closed behavior, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow, unavailable endpoint state, duplicate-comment deletion fallback regression |
-| Setup/credential integration | 15 | pre-prompt setup table, conditional denial through planning, wizard-owned repository-inventory block plus organization-only continuation, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
+| Adapter/provider contracts | 30 | GET-only probes, fixed four-request concurrency with stable result order, private-versus-public/unknown visibility evidence, protected-endpoint evidence, commit-list Contents target, private empty-repository 409 versus public ambiguity, default-branch Checks resolution plus encoded check-runs target, invalid/missing branch fail-closed behavior, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow, unavailable endpoint state, duplicate-comment deletion fallback regression |
+| Setup/credential integration | 17 | pre-prompt setup table, conditional denial through planning, wizard-owned repository-inventory block plus organization-only continuation, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, preserve-disabled and scope-moving keep rejection, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
 | UI/accessibility | 4 | required/result tables, confirmation-required copy, 40-column wrapping, no-color text |
 | Architecture/security/docs | 2 | query-only boundary, no duplicated catalog, and safe generic/recovery automation examples |
-| **Total** | **79** | No double counting |
+| **Total** | **84** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -572,10 +587,11 @@ at widths 40/80/120 and `NO_COLOR`.
 19. Given guarded approval preserves an existing organization-scoped
     `PR_APPROVAL_POLICY` Variable, the workflow PAT requires organization
     Variables read even though the configured default scope is repository.
-20. Given a base-validated empty repository, the Contents read probe uses the
-    commit-list endpoint and treats its documented `409 Conflict` as verified
-    read evidence; the same result for a write requirement remains
-    `Unverifiable`, and a `404` remains blocked as ambiguous.
+20. Given a metadata-proven private empty repository, the Contents read probe
+    uses the commit-list endpoint and treats its documented `409 Conflict` as
+    verified read evidence; on a public repository the same `409` remains
+    `Unverifiable`, as does the same result for a write requirement, and a `404`
+    remains blocked as ambiguous.
 21. Given existing Secrets require credential-health validation, when the remote
     health workflow is installed, the configured setup PAT requires Actions
     write but omits bootstrap-only Contents and Workflows write; when it is
@@ -613,6 +629,16 @@ at widths 40/80/120 and `NO_COLOR`.
     access. In any shell block across the documentation set, the acknowledgement
     flag appears only in a separate recovery example immediately after an
     instruction to inspect every displayed PAT requirement.
+29. Given a successful read against public repository metadata, commits,
+    rulesets, labels, workflows, checks, pulls, or workflow contents, the row is
+    `Unverifiable`; the equivalent read is `Verified` only when the metadata
+    response proves the repository private. Protected Secret/Variable inventory
+    may verify directly, while organization member/issue-type success remains
+    `Unverifiable`.
+30. Given an existing valid API credential, choosing `keep` with preservation
+    disabled or with an override that moves its scope requests and validates a
+    replacement value; setup cannot report the requirement satisfied without a
+    value for the selected target.
 
 ## 17. Requirements traceability
 
@@ -620,7 +646,7 @@ at widths 40/80/120 and `NO_COLOR`.
 |---|---|---|---|
 | role-specific least privilege | permission policy | policy matrix tests | authentication |
 | pre-prompt table | credential orchestration/presenter | CLI prompt tests | authentication |
-| safe evidence states | validation use case/query adapter | state/error mapping tests | troubleshooting |
+| safe evidence states | validation use case/query adapter | state/error mapping and private/public/protected endpoint tests | troubleshooting |
 | deterministic 403 mapping | provider adapter plus bounded GitHub error policy | rate-limit, SSO, bare, and explicit-denial fixtures | authentication/troubleshooting |
 | context-specific generic 403 handling | setup query adapter plus operational GitHub error policy | setup-probe and duplicate-comment deletion regression fixtures | authentication/troubleshooting |
 | final report before remote-storage block | wizard result contract/CLI orchestration | blocked-result and CLI ordering tests | authentication/troubleshooting |
@@ -630,7 +656,8 @@ at widths 40/80/120 and `NO_COLOR`.
 | feature/effective-target workflow PAT | configuration projection policy | conditional matrix and preserved organization-variable tests | checklist |
 | membership-sensitive workflow PAT | permission policy plus membership-consuming workflows | positive/negative capability matrix and no-query inactive-path tests | authentication/checklist |
 | evidence-based health-workflow absence | remote configuration query adapter | Actions-404 plus Contents-visibility and exact-file readable/missing/unavailable fixtures | authentication/troubleshooting |
-| empty-repository-safe Contents probe | read-only query adapter | commit-list URL, 409 read/write, and 404 tests | authentication/troubleshooting |
+| empty-repository-safe Contents probe | read-only query adapter | private/public commit-list 409, write, and 404 tests | authentication/troubleshooting |
+| policy-safe existing credential reuse | storage policy + credential use case | preserve-disabled and scope-moving override fixtures | authentication/provisioning |
 | valid Checks commit reference | read-only query adapter | default-branch resolution, encoding, and invalid-metadata tests | authentication/troubleshooting |
 | least-privilege credential-health bootstrap | remote configuration query plus permission policy | installed/missing/unavailable inspection and permission-matrix tests | authentication/troubleshooting |
 | no unaudited existing workflow PAT | credential collection use case plus prompt adapter | existing re-entry/audit and non-interactive rejection tests | authentication/troubleshooting |
@@ -654,7 +681,7 @@ at widths 40/80/120 and `NO_COLOR`.
 - [x] No validation request mutates GitHub and no result overclaims write access.
 - [x] Token values and raw provider text are absent from all output/state/errors.
 - [x] Clean Architecture boundaries and their executable test pass.
-- [x] At least 79 distinct cases and stated coverage thresholds pass.
+- [x] At least 84 distinct cases and stated coverage thresholds pass.
 - [x] Authentication, checklist, troubleshooting, and architecture docs agree.
 - [x] Catalog evidence and generated `specs/CATALOG.md` are current.
 - [x] Specification, documentation, typecheck, lint, and test gates pass.

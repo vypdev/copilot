@@ -75,7 +75,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
     });
 
     it('verifies a read permission through a GET-only probe', async () => {
-        const fetcher = jest.fn().mockResolvedValue(response(true, 200));
+        const fetcher = jest.fn().mockResolvedValue(response(true, 200, { payload: { private: true } }));
         const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
             'owner', 'repo', 'secret-token', [requirement()],
         );
@@ -84,6 +84,69 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         expect(JSON.stringify(check)).not.toContain('secret-token');
     });
 
+    it.each([
+        'metadata', 'contents', 'administration', 'issues', 'actions', 'checks',
+        'pull-requests', 'workflows',
+    ] as const)('keeps a successful public repository %s probe unverifiable', async probe => {
+        const fetcher = jest.fn().mockResolvedValue(response(true, 200, {
+            payload: { private: false, default_branch: 'main' },
+        }));
+
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
+            'owner', 'repo', 'secret-token', [requirement('read', probe)],
+        );
+
+        expect(fetcher).toHaveBeenCalledTimes(probe === 'metadata' ? 1 : 2);
+        expect(check).toMatchObject({
+            status: 'unverifiable',
+            message: expect.stringContaining('publicly readable'),
+        });
+    });
+
+    it('fails closed when successful metadata does not establish repository visibility', async () => {
+        const fetcher = jest.fn().mockResolvedValue(response(true, 200, { payload: { default_branch: 'main' } }));
+
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
+            'owner', 'repo', 'secret-token', [requirement('read', 'actions')],
+        );
+
+        expect(fetcher).toHaveBeenCalledTimes(1);
+        expect(check).toMatchObject({
+            status: 'unverifiable',
+            message: expect.stringContaining('did not establish'),
+        });
+    });
+
+    it.each([
+        ['repository', 'secrets'],
+        ['repository', 'variables'],
+        ['organization', 'secrets'],
+        ['organization', 'variables'],
+    ] as const)('verifies a successful permission-bound %s %s inventory probe directly', async (scope, probe) => {
+        const fetcher = jest.fn().mockResolvedValue(response(true, 200));
+
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
+            'owner', 'repo', 'secret-token', [requirement('read', probe, scope)],
+        );
+
+        expect(fetcher).toHaveBeenCalledTimes(1);
+        expect(check).toMatchObject({ status: 'verified' });
+    });
+
+    it.each(['members', 'issue-types'] as const)(
+        'keeps a successful public organization %s probe unverifiable',
+        async probe => {
+            const fetcher = jest.fn().mockResolvedValue(response(true, 200));
+
+            const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
+                'owner', 'repo', 'secret-token', [requirement('read', probe, 'organization')],
+            );
+
+            expect(fetcher).toHaveBeenCalledTimes(1);
+            expect(check).toMatchObject({ status: 'unverifiable' });
+        },
+    );
+
     it('keeps a write level unverifiable after a successful read probe', async () => {
         const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher: jest.fn().mockResolvedValue(response(true, 200)) })
             .inspect('owner', 'repo', 'secret', [requirement('write', 'issues')]);
@@ -91,7 +154,9 @@ describe('SetupTokenPermissionQueryAdapter', () => {
     });
 
     it('verifies Contents read when the commit-list probe identifies an empty repository', async () => {
-        const fetcher = jest.fn().mockResolvedValue(response(false, 409));
+        const fetcher = jest.fn()
+            .mockResolvedValueOnce(response(true, 200, { payload: { private: true } }))
+            .mockResolvedValueOnce(response(false, 409));
         const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher })
             .inspect('owner', 'repo', 'secret', [requirement('read', 'contents')]);
 
@@ -102,11 +167,25 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         expect(check).toMatchObject({ status: 'verified', message: expect.stringContaining('repository is empty') });
     });
 
+    it('keeps an empty public repository response unverifiable', async () => {
+        const fetcher = jest.fn()
+            .mockResolvedValueOnce(response(true, 200, { payload: { private: false } }))
+            .mockResolvedValueOnce(response(false, 409));
+
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher })
+            .inspect('owner', 'repo', 'secret', [requirement('read', 'contents')]);
+
+        expect(check).toMatchObject({
+            status: 'unverifiable',
+            message: expect.stringContaining('does not prove'),
+        });
+    });
+
     it('keeps Contents write unverifiable for an empty repository', async () => {
         const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher: jest.fn().mockResolvedValue(response(false, 409)) })
             .inspect('owner', 'repo', 'secret', [requirement('write', 'contents')]);
 
-        expect(check).toMatchObject({ status: 'unverifiable', message: expect.stringContaining('cannot prove write access') });
+        expect(check).toMatchObject({ status: 'unverifiable', message: expect.stringContaining('does not prove') });
     });
 
     it('keeps a non-Contents 409 unverifiable', async () => {
@@ -118,7 +197,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
 
     it('resolves and encodes the repository default branch before probing Checks', async () => {
         const fetcher = jest.fn()
-            .mockResolvedValueOnce(response(true, 200, { payload: { default_branch: 'release/v1' } }))
+            .mockResolvedValueOnce(response(true, 200, { payload: { default_branch: 'release/v1', private: true } }))
             .mockResolvedValueOnce(response(true, 200));
 
         const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher })
@@ -305,20 +384,22 @@ describe('SetupTokenPermissionQueryAdapter', () => {
     });
 
     it('maps every supported repository probe to a read-only endpoint', async () => {
-        const fetcher = jest.fn().mockResolvedValue(response(true, 200, { payload: { default_branch: 'main' } }));
+        const fetcher = jest.fn().mockResolvedValue(response(true, 200, { payload: { default_branch: 'main', private: true } }));
         const probes: SetupTokenPermissionRequirement['probe'][] = [
             'metadata', 'contents', 'administration', 'issues', 'actions', 'checks',
             'pull-requests', 'variables', 'secrets', 'workflows',
         ];
 
-        await new SetupTokenPermissionQueryAdapter({ fetcher, timeoutMs: 50 }).inspect(
+        const checks = await new SetupTokenPermissionQueryAdapter({ fetcher, timeoutMs: 50 }).inspect(
             'owner/name',
             'repo name',
             'secret-token',
             probes.map(probe => requirement('read', probe)),
         );
 
-        expect(fetcher).toHaveBeenCalledTimes(probes.length + 1);
+        expect(fetcher).toHaveBeenCalledTimes(17);
+        expect(checks).toHaveLength(probes.length);
+        expect(checks.every(check => check.status === 'verified')).toBe(true);
         for (const [url, options] of fetcher.mock.calls) {
             expect(url).toContain('owner%2Fname/repo%20name');
             expect(options).toEqual(expect.objectContaining({ method: 'GET' }));
