@@ -248,6 +248,10 @@ read-only GitHub queries and presents ordered permission outcomes.
    exact workflow file on `configuration.repository.mainBranch`, replacing only
    the workflow state in its remote snapshot. A missing/rejected probe becomes
    `unavailable`, never an inherited default-branch `installed` or `missing`.
+   A successful exact-file response proves `installed` only when its `data` is
+   a non-array file object with a non-empty string `sha`. An empty object,
+   directory array, absent `sha`, or malformed payload is `unavailable`, not
+   proof of installation; this rule also governs the setup-only bootstrap.
    The separate setup-only credential-health bootstrap adapter MUST apply the
    same two-read confirmation on the selected ref before dispatch or creating
    a temporary workflow, even if Actions finds a workflow on the default
@@ -593,17 +597,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **106 distinct cases**.
+This SDD adds at least **108 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain permission policy | 24 | setup/workflow plans, independent selected-feature write grants and all-disabled minimum, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants, positive and negative organization-membership capability projection including comment-only and independently available single-action routes |
 | Application state/blocking | 18 | verified, missing, required-read unverifiable, public-read operational readiness, required-write confirmation, invalid base token, organization-only credential collection, bounded pre-plan inspection failure, accepted/rejected final audit with structured block, selected-ref workflow state refresh, immediate remote-storage blocked handling, zero-count assignment and inactive membership checks |
-| Adapter/provider contracts | 33 | GET-only probes, fixed four-request concurrency with stable result order, private-versus-public/unknown visibility evidence, protected-endpoint evidence, commit-list Contents target, private empty-repository 409 versus public operational usability, default-branch Checks resolution plus encoded check-runs target, invalid/missing branch fail-closed behavior, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow on the selected ref in inspection and bootstrap, unavailable endpoint state, duplicate-comment deletion fallback regression |
+| Adapter/provider contracts | 35 | GET-only probes, fixed four-request concurrency with stable result order, private-versus-public/unknown visibility evidence, protected-endpoint evidence, commit-list Contents target, private empty-repository 409 versus public operational usability, default-branch Checks resolution plus encoded check-runs target, invalid/missing branch fail-closed behavior, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow on the selected ref in inspection and bootstrap, malformed exact-file success remains unavailable, unavailable endpoint state, duplicate-comment deletion fallback regression |
 | Setup/credential integration | 21 | pre-prompt setup table, conditional denial through planning, wizard-owned repository-inventory block plus organization-only continuation, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, absent/failed remote snapshot blocks every subsequent mutation, preserve-disabled and scope-moving keep rejection, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
 | UI/accessibility | 5 | required/result tables, public-read limitation copy, confirmation-required copy, 40-column wrapping, no-color text |
 | Architecture/security/docs | 5 | query-only boundary, no duplicated catalog, safe generic/recovery automation examples, and three nearest-paragraph permission-prerequisite cases |
-| **Total** | **106** | No double counting |
+| **Total** | **108** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -790,6 +794,11 @@ at widths 40/80/120 and `NO_COLOR`.
     exact-file Contents requests. Its `installed`/`missing`/`unavailable` state
     replaces the provisional status before permission planning; absent or
     rejected selected-ref reads never inherit a default-branch status.
+41. Given a Contents exact-file request returns success with `{data:{}}`, an
+    array, an absent/empty `sha`, or another malformed file payload, selected-
+    ref inspection returns `unavailable` rather than `installed`. Bootstrap
+    does not dispatch or mutate on that evidence; a valid non-empty file `sha`
+    may establish installation.
 
 ## 17. Requirements traceability
 
@@ -837,7 +846,7 @@ at widths 40/80/120 and `NO_COLOR`.
 - [x] No validation request mutates GitHub and no result overclaims write access.
 - [x] Token values and raw provider text are absent from all output/state/errors.
 - [x] Clean Architecture boundaries and their executable test pass.
-- [x] At least 106 distinct cases and stated coverage thresholds pass.
+- [x] At least 108 distinct cases and stated coverage thresholds pass.
 - [x] Authentication, checklist, troubleshooting, and architecture docs agree.
 - [x] Catalog evidence and generated `specs/CATALOG.md` are current.
 - [x] Specification, documentation, typecheck, lint, and test gates pass.

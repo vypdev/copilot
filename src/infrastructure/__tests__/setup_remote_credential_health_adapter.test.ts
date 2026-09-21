@@ -152,6 +152,20 @@ describe('setup remote credential health adapters', () => {
         }));
     });
 
+    it('does not dispatch or bootstrap when the selected-ref file response lacks a file sha', async () => {
+        const github = client();
+        github.repos.getContent.mockResolvedValueOnce({ data: [] })
+            .mockResolvedValueOnce({ data: {} });
+
+        const checks = await new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) })
+            .validateExisting('owner', 'repo', 'token', 'release/main', requirements);
+
+        expect(checks).toBeUndefined();
+        expect(github.rest.actions.createWorkflowDispatch).not.toHaveBeenCalled();
+        expect(github.repos.createOrUpdateFileContents).not.toHaveBeenCalled();
+        expect(github.repos.deleteFile).not.toHaveBeenCalled();
+    });
+
     it.each([
         { label: 'root visibility is denied', root: { status: 403 }, exact: undefined },
         { label: 'root visibility is ambiguous', root: { status: 404 }, exact: undefined },

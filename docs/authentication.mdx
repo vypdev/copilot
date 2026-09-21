@@ -131,6 +131,8 @@ adapter independently repeats the selected-ref reads before dispatch or any
 write, even if Actions finds a workflow on the default branch. If the final PAT
 audit denies required access, setup reports a bounded blocked result with the
 selected configuration before storage validation or mutation.
+An exact-file response counts as installed only when it identifies a file with
+a non-empty `sha`; an empty object or directory-like response is unavailable.
 
 <Warning>**When the event actor is the same as the token user**: The action detects this before entering the workflow queue. It completes successfully without waiting or running the normal issue/PR/push pipeline. A valid explicit single action still runs. This avoids the bot reacting to its own actions. Use a dedicated bot account (different from the actor) if you want full pipeline behavior on every event.</Warning>
 

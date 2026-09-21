@@ -31,7 +31,9 @@ export async function inspectCredentialHealthWorkflowAtRef(
     try {
         const exact = await getContent({ ...target, path: `.github/workflows/${SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE}` });
         return typeof exact === 'object' && exact !== null && 'data' in exact
-            && exact.data !== null && exact.data !== undefined ? 'installed' : 'unavailable';
+            && typeof exact.data === 'object' && exact.data !== null && !Array.isArray(exact.data)
+            && 'sha' in exact.data && typeof exact.data.sha === 'string'
+            && exact.data.sha.trim().length > 0 ? 'installed' : 'unavailable';
     } catch (error) {
         return isGithubNotFound(error) ? 'missing' : 'unavailable';
     }

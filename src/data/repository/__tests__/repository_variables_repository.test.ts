@@ -195,6 +195,9 @@ describe('narrow GitHub Actions resource repositories', () => {
         { label: 'installed', exact: { data: { sha: 'file-sha' } }, state: 'installed' },
         { label: 'missing', exact: { status: 404 }, state: 'missing' },
         { label: 'unavailable', exact: { status: 403 }, state: 'unavailable' },
+        { label: 'malformed empty object', exact: { data: {} }, state: 'unavailable' },
+        { label: 'malformed directory array', exact: { data: [] }, state: 'unavailable' },
+        { label: 'empty file sha', exact: { data: { sha: '  ' } }, state: 'unavailable' },
     ])('inspects the exact selected ref when the workflow is $label', async ({ exact, state }) => {
         const getContent = jest.fn().mockResolvedValueOnce({ data: [{ name: '.github' }] });
         if ('status' in exact) getContent.mockRejectedValueOnce(exact);
