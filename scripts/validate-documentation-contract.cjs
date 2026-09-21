@@ -304,7 +304,8 @@ requireText(
   'public-read PAT evidence boundary',
 );
 requireText('authentication.mdx', 'After valid token identity, a successful public repository read can be used', 'public-read operational evidence');
-requireText('authentication.mdx', 'Those bootstrap-only grants appear only when the workflow is independently confirmed missing', 'safe workflow bootstrap authority');
+requireText('authentication.mdx', 'There is no separate Workflows read permission for inspection.', 'Contents-only workflow inspection grant');
+requireText('authentication.mdx', 'Workflows write and Contents write appear only when the workflow is independently confirmed missing', 'safe workflow bootstrap authority');
 requireText('security-operations/operations/troubleshooting.mdx', 'never authorizes bootstrap', 'unavailable workflow non-mutation');
 requireText(
   'authentication.mdx',
@@ -367,6 +368,7 @@ const obsoleteDocumentation = [
   ['bugbot/permissions.mdx', 'Organization member; or repository owner', 'obsolete organization-membership mutation authority'],
   ['bugbot/examples.mdx', 'organization member, or repository owner', 'obsolete organization-membership mutation authority'],
   ['authentication.mdx', 'or its availability cannot be established safely, because setup may need to install', 'unsafe ambiguous bootstrap grant'],
+  ['authentication.mdx', 'Contents/Workflows read', 'unsupported setup Workflows read grant'],
 ];
 const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
 for (const [file, phrase, contract] of obsoleteDocumentation) {

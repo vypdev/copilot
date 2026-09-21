@@ -217,8 +217,13 @@ publication/reconciliation operation allowed.
    Every fragment remains within 12,000 UTF-16 code units, starts and ends with
    a complete Unicode scalar value, and concatenating fragment payloads MUST
    reproduce the sanitized patch exactly.
-4. Represent an absent/empty provider patch as one explicit assignment naming
-   the file and instructing the reviewer to inspect the local diff.
+4. Represent an absent (`undefined`/`null`) or empty provider patch as one
+   explicit assignment naming the file and instructing the reviewer to inspect
+   the local diff. The repository adapter normalizes omitted patches, and the
+   pure planner independently accepts absent values rather than rejecting the
+   whole PR; each assigned file still counts towards fragment/partition budgets.
+   Only actual string patches consume the raw UTF-16 input ceiling. Unexpected
+   non-null, non-string patch payloads remain invalid and fail closed.
 5. Pack fragment sections in stable order. Start a new partition before adding a
    section that would exceed the diff-block budget.
 6. Derive IDs from the reviewed head SHA, partition ordinal/total, and a stable
@@ -496,17 +501,17 @@ comments remain untouched.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **43 distinct cases**.
+This SDD owns at least **45 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/pure planning | 16 | empty/single/multi-file, newline/hard split, UTF-16 surrogate-safe hard boundaries, individual and cumulative raw input ceilings before normalization, exact prompt and 64/65 partition boundaries, absent patch, root/nested leading-`**/` ignore parity, stable IDs, order, no character loss, hostile status/count metadata envelope |
+| Domain/pure planning | 18 | empty/single/multi-file, newline/hard split, UTF-16 surrogate-safe hard boundaries, individual and cumulative raw input ceilings before normalization, exact prompt and 64/65 partition boundaries, omitted/null/empty patch assignments and malformed non-string rejection, root/nested leading-`**/` ignore parity, stable IDs, order, no character loss, hostile status/count metadata envelope |
 | State/application/idempotency/races | 8 | all-complete, one failure, wrong/duplicate ID, wrong SHA, resolution ownership, stale head, replay, empty canonical zero-work |
 | Agent adapter/schema contracts | 4 | required attestation, locale, undefined/invalid result, aggregate bounds |
 | Workflow/architecture/telemetry | 5 | concurrency two, ordered collection, no mutation before complete, positive and zero-partition plan metrics |
 | UI/UX/localization/sanitization | 4 | pending, failed, complete, hostile content/control characters |
 | Integration/security/compatibility | 6 | 44-file regression, oversized patch, provider partial, dry-run, legacy issue-only path, ignored-only canonical no-op |
-| **Total** | **43** | No double counting |
+| **Total** | **45** | No double counting |
 
 Planner, attestation, and aggregate pure policies require 100% enumerated branch
 coverage. Changed analyzer/context modules require at least 95% lines/statements
@@ -537,8 +542,10 @@ token scope, secret, or public input.
    partitions remain within budget.
 2. Given a patch over 12,000 characters, when planned, then ordered fragments
    reconstruct the sanitized patch exactly.
-3. Given an absent provider patch, when planned, then a file-scope local-diff
-   inspection assignment exists.
+3. Given an omitted, null, or empty provider patch alongside an ordinary
+   changed file, when planned, then each file has a bounded assignment and
+   the ordinary patch remains intact; an unexpected numeric/object patch
+   fails closed rather than masquerading as absence.
 4. Given five valid partitions completing out of order, when aggregated, then
    results preserve plan order, normalize/deduplicate/rank globally, and publish once.
 5. Given one failed or invalid partition, then no finding or resolution mutation occurs.
@@ -586,6 +593,7 @@ token scope, secret, or public input.
 | Requirement | Policy/use case/adapter/presentation | Test or evidence | Documentation |
 |---|---|---|---|
 | lossless bounded plan | diff partition policy | reconstruction, surrogate-boundary, raw-input ceiling, budget, and 44-file tests | how it works |
+| absent patch without lost review | repository projection plus pure partition policy | omitted/null/empty mixed-file assignments and malformed payload tests | how it works/failure scenarios |
 | root/nested ignore parity | file-ignore policy | leading-`**/` root and nested fixtures | configuration |
 | untrusted diff metadata | diff partition policy + security envelope | hostile filename/status/count/patch fixtures | detection/security |
 | attested atomic execution | partitioned analyzer | failure/identity/concurrency tests | failure scenarios |
@@ -617,7 +625,7 @@ token scope, secret, or public input.
       provider enumeration and every partition respects fixed prompt bounds.
 - [x] Attestation, resolution ownership, concurrency, aggregation, freshness,
       replay, cancellation/failure, and no-prepublication-mutation tests pass.
-- [x] The 43-case floor and changed-module/repository coverage budgets pass.
+- [x] The 45-case floor and changed-module/repository coverage budgets pass.
 - [x] Pending, failed, provider-partial, complete, dry-run, and publication-
       partial surfaces are accurate, localized, accessible, and bounded.
 - [x] No public configuration, permission, credential, or durable-state change

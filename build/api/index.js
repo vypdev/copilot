@@ -283,7 +283,7 @@ function buildReviewDiffPlan(context, ignorePatterns = []) {
             ignored += 1;
             continue;
         }
-        const rawPatch = change.patch;
+        const rawPatch = change.patch ?? '';
         if (typeof rawPatch !== 'string' || rawPatch.length > exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH - rawPatchTotal) {
             throw new BugbotDiffPlanLimitError();
         }

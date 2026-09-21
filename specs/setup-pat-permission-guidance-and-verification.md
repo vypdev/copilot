@@ -223,6 +223,8 @@ read-only GitHub queries and presents ordered permission outcomes.
    required only when the workflow is independently confirmed missing;
    installed, unavailable, or unknown states MUST NOT trigger those
    bootstrap-only grants because ambiguous absence never authorizes mutation.
+   Workflow-file inspection requires Contents read, not a separate Workflows
+   read permission; the Workflows grant is write-only and bootstrap-specific.
    The remote-configuration summary renders the bounded workflow state.
 9. An Actions `getWorkflow` `404` does not by itself prove absence. Setup MUST
    classify the workflow as `missing` only when an independent Contents read

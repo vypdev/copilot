@@ -15,7 +15,7 @@ export interface BugbotDiffPlanInput {
     readonly status: string;
     readonly additions: number;
     readonly deletions: number;
-    readonly patch: string;
+    readonly patch?: string | null;
   }[];
 }
 
@@ -64,7 +64,7 @@ export function buildReviewDiffPlan(
       ignored += 1;
       continue;
     }
-    const rawPatch = change.patch;
+    const rawPatch = change.patch ?? '';
     if (typeof rawPatch !== 'string' || rawPatch.length > MAX_REVIEW_DIFF_RAW_INPUT_LENGTH - rawPatchTotal) {
       throw new BugbotDiffPlanLimitError();
     }

@@ -148,6 +148,37 @@ describe('Bugbot review context', () => {
     expect(context.block).toContain('[patch unavailable from GitHub;');
   });
 
+  it.each([
+    ['omitted', undefined],
+    ['null', null],
+    ['empty', ''],
+  ] as const)('assigns a %s provider patch without losing adjacent changed files', (_label, patch) => {
+    const plan = buildReviewDiffPlan({
+      prHeadSha: 'a'.repeat(40),
+      changes: [
+        { filename: 'src/binary.png', status: 'added', additions: 0, deletions: 0,
+          ...(patch === undefined ? {} : { patch }) },
+        { filename: 'src/ordinary.ts', status: 'modified', additions: 1, deletions: 0,
+          patch: '@@ -1 +1 @@\n-old\n+new' },
+      ],
+    });
+
+    expect(plan).toEqual(expect.objectContaining({ retained: 2, fragments: 2 }));
+    expect(plan.partitions.flatMap(partition => partition.files)).toEqual([
+      'src/binary.png', 'src/ordinary.ts',
+    ]);
+    expect(plan.partitions[0].block).toContain('[patch unavailable from GitHub;');
+    expect(plan.partitions[0].block).toContain('+new');
+  });
+
+  it.each([42, { message: 'not a patch' }])('rejects a malformed non-string patch instead of disguising it as absence', patch => {
+    expect(() => buildReviewDiffPlan({
+      prHeadSha: 'a'.repeat(40),
+      changes: [{ filename: 'src/untrusted.ts', status: 'modified', additions: 1, deletions: 0,
+        patch: patch as unknown as string }],
+    })).toThrow(BugbotDiffPlanLimitError);
+  });
+
   it('includes human discussion while excluding owned and provider-classified automation', () => {
     const context = buildReviewConversationContext(
       [
