@@ -190,17 +190,14 @@ export function buildWorkflowPatPermissionRequirements(
 function requiresWorkflowOrganizationMembers(configuration: Readonly<SetupConfiguration>): boolean {
     const issues = configuration.features.issues !== false;
     const pullRequests = configuration.features.pullRequests !== false;
-    const issueComments = configuration.features.issueComments !== false;
-    const pullRequestComments = configuration.features.pullRequestComments !== false;
-    const commits = configuration.features.commits !== false;
     const automaticAssignees = configuration.repository.desiredAssigneesCount > 0
         && (issues || pullRequests);
     const automaticReviewers = configuration.repository.desiredReviewersCount > 0
         && pullRequests;
     const protectedIssueAuthorization = issues
         && configuration.issueWorkflows.enabled.some(kind => kind === 'release' || kind === 'hotfix');
-    const membersOnlyAuthorization = configuration.ai.membersOnly
-        && (issues || pullRequests || commits || issueComments || pullRequestComments);
+    // Agent-backed single actions remain available when event routes are disabled.
+    const membersOnlyAuthorization = configuration.ai.membersOnly;
     return automaticAssignees
         || automaticReviewers
         || protectedIssueAuthorization

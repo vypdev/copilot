@@ -194,7 +194,7 @@ For comment-driven assistance, read-only commands are available to anyone who ca
     **If your bot belongs to an organization** set these permissions for the organization:
 
     - **Issue Types**: Read and write only when issue-type automation is enabled
-    - **Members**: Read-only only when an enabled capability performs a membership lookup: automatic issue/PR assignees, automatic PR reviewers, release/hotfix issue authorization, or `ai-members-only` on an enabled issue, pull-request, commit, or comment route. Enabling ordinary issue/PR comment automation alone does not require this grant. Setup also omits it when assignment/reviewer counts are zero and no other membership-consuming route is active.
+    - **Members**: Read-only only when a capability performs a membership lookup: automatic issue/PR assignees, automatic PR reviewers, release/hotfix issue authorization, or `ai-members-only` on an enabled issue, pull-request, commit, or comment route or on an independently available agent-backed single action. Enabling ordinary issue/PR comment automation alone does not require this grant. Setup also omits it when assignment/reviewer counts are zero and no other membership-consuming route is active.
     - **Projects**: Read and write only for the selected organization projects
 
     The runtime PAT does not need organization Secrets, Variables write, Custom repository roles, or Self-hosted runners administration. Organization Variables read is needed only when the approval policy is supplied at organization scope.

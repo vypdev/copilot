@@ -223,7 +223,10 @@ publication/reconciliation operation allowed.
    pure planner independently accepts absent values rather than rejecting the
    whole PR; each assigned file still counts towards fragment/partition budgets.
    Only actual string patches consume the raw UTF-16 input ceiling. Unexpected
-   non-null, non-string patch payloads remain invalid and fail closed.
+   non-null, non-string patch payloads remain invalid and fail closed. Validate
+   the original provider field's type before nullish normalization or length
+   arithmetic; malformed values MUST raise the bounded plan-limit error, never
+   masquerade as an absent patch.
 5. Pack fragment sections in stable order. Start a new partition before adding a
    section that would exceed the diff-block budget.
 6. Derive IDs from the reviewed head SHA, partition ordinal/total, and a stable

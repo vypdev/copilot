@@ -359,6 +359,9 @@ describe('setup token permission policy', () => {
             configuration.features.pullRequestComments = true;
             configuration.ai.membersOnly = true;
         }],
+        ['members-only standalone single actions', (configuration: ReturnType<typeof createDefaultSetupConfiguration>) => {
+            configuration.ai.membersOnly = true;
+        }],
     ] as const)('adds Members read for %s', (_label, enableCapability) => {
         const configuration = createDefaultSetupConfiguration();
         configuration.features.issues = false;

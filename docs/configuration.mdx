@@ -193,9 +193,9 @@ Organization storage is available only for organization-owned repositories and r
 flags, and explicit external inputs. `--yes` approves the final plan but never
 invents a missing token, credential, target, or storage prerequisite. There is
 also a separate `--confirm-unverifiable-write-permissions` acknowledgement for
-unattended runs where identity and required reads are verified but safe probes
-cannot prove required writes. It never bypasses missing or unverifiable read
-access. There is no legacy configuration shape or compatibility alias: unknown keys and removed
+unattended runs where identity and required reads are verified or positively
+operationally usable but safe probes cannot prove required writes. It never
+bypasses missing or unusable unverifiable read access. There is no legacy configuration shape or compatibility alias: unknown keys and removed
 values fail validation.
 
 ## Complete input reference

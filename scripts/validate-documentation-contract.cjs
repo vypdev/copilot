@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const yaml = require('js-yaml');
+const { hasAdjacentInspectedPatPrerequisite } = require('./documentation_pat_exception_policy.cjs');
 
 const root = path.resolve(__dirname, '..');
 const docsRoot = path.join(root, 'docs');
@@ -268,8 +269,7 @@ if (!normalizedInspectedPatRecovery.includes('inspect the displayed requirements
 for (const [file, source] of docsByFile.entries()) {
   for (const match of source.matchAll(/^[ \t]*```(?:bash|sh|shell)\s*\n([\s\S]*?)^[ \t]*```\s*$/gm)) {
     if (!match[1].includes(unverifiableWriteAcknowledgement)) continue;
-    const preamble = source.slice(Math.max(0, match.index - 800), match.index).replace(/\s+/g, ' ');
-    if (!/\binspect(?:ed|ing)?\b/iu.test(preamble) || !/\bonly after\b/iu.test(preamble)) {
+    if (!hasAdjacentInspectedPatPrerequisite(source, match.index)) {
       const line = source.slice(0, match.index).split('\n').length;
       errors.push(`${file}:${line}: shell example may acknowledge unverifiable writes only after an adjacent inspected-PAT prerequisite`);
     }
@@ -306,6 +306,8 @@ requireText(
 requireText('authentication.mdx', 'After valid token identity, a successful public repository read can be used', 'public-read operational evidence');
 requireText('authentication.mdx', 'There is no separate Workflows read permission for inspection.', 'Contents-only workflow inspection grant');
 requireText('authentication.mdx', 'Workflows write and Contents write appear only when the workflow is independently confirmed missing', 'safe workflow bootstrap authority');
+requireText('authentication.mdx', 'on an independently available agent-backed single action', 'members-only standalone action permission');
+requireText('authentication.mdx', 'all required reads are verified or usable', 'public-read operational acknowledgement');
 requireText('security-operations/operations/troubleshooting.mdx', 'never authorizes bootstrap', 'unavailable workflow non-mutation');
 requireText('security-operations/operations/troubleshooting.mdx', 'For the repository Contents row in the PAT permission table, setup probes', 'PAT Contents permission probe distinction');
 requireText('security-operations/operations/troubleshooting.mdx', "repository root (`path: ''`)", 'workflow-presence Contents root probe');

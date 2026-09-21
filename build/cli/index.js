@@ -40883,8 +40883,11 @@ function buildReviewDiffPlan(context, ignorePatterns = []) {
             ignored += 1;
             continue;
         }
+        if (change.patch != null && typeof change.patch !== 'string') {
+            throw new BugbotDiffPlanLimitError();
+        }
         const rawPatch = change.patch ?? '';
-        if (typeof rawPatch !== 'string' || rawPatch.length > exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH - rawPatchTotal) {
+        if (rawPatch.length > exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH - rawPatchTotal) {
             throw new BugbotDiffPlanLimitError();
         }
         rawPatchTotal += rawPatch.length;
@@ -48253,17 +48256,14 @@ function buildWorkflowPatPermissionRequirements(configuration, remote) {
 function requiresWorkflowOrganizationMembers(configuration) {
     const issues = configuration.features.issues !== false;
     const pullRequests = configuration.features.pullRequests !== false;
-    const issueComments = configuration.features.issueComments !== false;
-    const pullRequestComments = configuration.features.pullRequestComments !== false;
-    const commits = configuration.features.commits !== false;
     const automaticAssignees = configuration.repository.desiredAssigneesCount > 0
         && (issues || pullRequests);
     const automaticReviewers = configuration.repository.desiredReviewersCount > 0
         && pullRequests;
     const protectedIssueAuthorization = issues
         && configuration.issueWorkflows.enabled.some(kind => kind === 'release' || kind === 'hotfix');
-    const membersOnlyAuthorization = configuration.ai.membersOnly
-        && (issues || pullRequests || commits || issueComments || pullRequestComments);
+    // Agent-backed single actions remain available when event routes are disabled.
+    const membersOnlyAuthorization = configuration.ai.membersOnly;
     return automaticAssignees
         || automaticReviewers
         || protectedIssueAuthorization

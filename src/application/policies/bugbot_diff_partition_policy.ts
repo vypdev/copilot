@@ -64,8 +64,11 @@ export function buildReviewDiffPlan(
       ignored += 1;
       continue;
     }
+    if (change.patch != null && typeof change.patch !== 'string') {
+      throw new BugbotDiffPlanLimitError();
+    }
     const rawPatch = change.patch ?? '';
-    if (typeof rawPatch !== 'string' || rawPatch.length > MAX_REVIEW_DIFF_RAW_INPUT_LENGTH - rawPatchTotal) {
+    if (rawPatch.length > MAX_REVIEW_DIFF_RAW_INPUT_LENGTH - rawPatchTotal) {
       throw new BugbotDiffPlanLimitError();
     }
     rawPatchTotal += rawPatch.length;
