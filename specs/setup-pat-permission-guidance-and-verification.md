@@ -487,13 +487,15 @@ upsert, dispatch, or temporary-resource operation.
 ### 9.2 Representative views
 
 ```text
-Setup PAT permissions required
+Setup PAT permissions (example: selected Secret and Variable provisioning,
+plus validation of an existing credential)
 
-Permission              Access       Applies to
-Metadata                Read         Repository discovery
-Secrets                  Write        Provision selected Actions Secrets
-Variables                Write        Provision selected Actions Variables
-Actions                  Write        Credential-health workflow
+Permission              Access       Applies when
+Metadata                Read         Always: repository discovery
+Contents                Read         Always: inspect repository files
+Secrets                 Write        If selected Secrets are provisioned
+Variables               Write        If selected Variables are provisioned
+Actions                 Write        If existing credentials need health dispatch
 
 Enter Setup PAT: ********
 
@@ -501,12 +503,20 @@ Setup PAT permission check
 
 Status            Permission              Access
 ✅ Verified        Metadata                Read
-❌ Missing         Secrets                  Write
+✅ Verified        Contents                Read
+? Unverifiable    Secrets                 Write
 ? Unverifiable    Variables                Write
+? Unverifiable    Actions                  Write
 
-Action required: grant Secrets write access to this repository and retry.
-Unverifiable means GitHub offers no safe read-only proof of that write level.
+Action required: inspect the displayed write levels in your PAT settings and
+explicitly confirm them before setup proceeds. Unverifiable is not a pass:
+GitHub offers no safe read-only proof of those write levels.
 ```
+
+The real table is derived from the selected features and remote state; disabled
+Secret/Variable provisioning or absent credential-health validation omits the
+corresponding rows. A confirmed missing health workflow may additionally need
+Contents and Workflows write for temporary bootstrap, never by default.
 
 The workflow-PAT view uses the same structure and the title `Workflow PAT`.
 Tables MUST use status text as well as symbols, fit terminal widths 40/80/120,
