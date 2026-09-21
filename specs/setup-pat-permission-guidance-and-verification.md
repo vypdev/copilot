@@ -245,7 +245,14 @@ read-only GitHub queries and presents ordered permission outcomes.
    GitHub's documented `409 Conflict` for an empty Git repository is also
    accepted as empty-repository evidence after base repository identity/access
    validation. `404` remains ambiguous and never becomes verified.
-6. When the `PAT` Secret already exists, remote credential health is presented
+6. Repository Checks read MUST resolve the repository's exact `default_branch`
+   through a read-only metadata request and use that percent-encoded branch as
+   the commit reference for the check-runs request. A literal local alias such
+   as `HEAD` MUST NOT be sent to GitHub as a repository commit reference. Both
+   reads share one bounded probe slot and timeout. Missing, malformed, empty, or
+   oversized branch metadata, or a failed metadata request, returns bounded
+   `Unverifiable` evidence and MUST NOT start the check-runs request.
+7. When the `PAT` Secret already exists, remote credential health is presented
    as bounded evidence only. Setup MUST require the operator to re-enter the
    workflow PAT, run the same ordered permission audit used for a new value, and
    provision it only after that audit is accepted. Interactive setup MUST NOT
@@ -343,6 +350,12 @@ upsert, dispatch, or temporary-resource operation.
   `409 Conflict` from the commit-list endpoint as verified read evidence. No
   other probe/status pair gains this exception, and a write requirement remains
   `Unverifiable` because the read-only endpoint cannot prove mutation access.
+- Checks-reference mapping: the repository Checks probe first reads bounded
+  repository metadata, accepts only a non-empty `default_branch` of at most 255
+  characters without ASCII control characters, percent-encodes that exact value,
+  and then requests check runs. It never substitutes `HEAD`, an invented branch,
+  or untrusted metadata directly into the URL. The two serial GETs consume one
+  concurrency slot and one timeout budget.
 
 ### 8.3 Executable architecture constraints
 
@@ -460,17 +473,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **76 distinct cases**.
+This SDD adds at least **78 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain permission policy | 18 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants, positive and negative organization-membership capability projection including comment-only routes |
 | Application state/blocking | 13 | verified, missing, required-read unverifiable, required-write confirmation, invalid base token, organization-only credential collection, pre-validation audit port, immediate remote-storage blocked handling, zero-count assignment and inactive membership checks |
-| Adapter/provider contracts | 25 | GET-only probes, fixed four-request concurrency with stable result order, commit-list Contents target, empty-repository 409, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow, unavailable endpoint state, duplicate-comment deletion fallback regression |
+| Adapter/provider contracts | 27 | GET-only probes, fixed four-request concurrency with stable result order, commit-list Contents target, empty-repository 409, default-branch Checks resolution plus encoded check-runs target, invalid/missing branch fail-closed behavior, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow, unavailable endpoint state, duplicate-comment deletion fallback regression |
 | Setup/credential integration | 15 | pre-prompt setup table, conditional denial through planning, wizard-owned repository-inventory block plus organization-only continuation, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
 | UI/accessibility | 4 | required/result tables, confirmation-required copy, 40-column wrapping, no-color text |
 | Architecture/security/docs | 1 | query-only boundary and no duplicated catalog |
-| **Total** | **76** | No double counting |
+| **Total** | **78** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -584,6 +597,11 @@ at widths 40/80/120 and `NO_COLOR`.
     a readable file, absent fallback endpoint, failed visibility proof, or other
     exact-file failure reports `unavailable` and cannot trigger a false
     confirmed-absence path.
+27. Given Checks read is required, the adapter first resolves a bounded
+    `default_branch` from repository metadata and requests check runs for that
+    exact percent-encoded branch, never `HEAD`; missing or invalid branch
+    metadata produces `Unverifiable` without a second request, and the two-read
+    sequence remains inside one probe concurrency slot and timeout.
 
 ## 17. Requirements traceability
 
@@ -602,6 +620,7 @@ at widths 40/80/120 and `NO_COLOR`.
 | membership-sensitive workflow PAT | permission policy plus membership-consuming workflows | positive/negative capability matrix and no-query inactive-path tests | authentication/checklist |
 | evidence-based health-workflow absence | remote configuration query adapter | Actions-404 plus Contents-visibility and exact-file readable/missing/unavailable fixtures | authentication/troubleshooting |
 | empty-repository-safe Contents probe | read-only query adapter | commit-list URL, 409 read/write, and 404 tests | authentication/troubleshooting |
+| valid Checks commit reference | read-only query adapter | default-branch resolution, encoding, and invalid-metadata tests | authentication/troubleshooting |
 | least-privilege credential-health bootstrap | remote configuration query plus permission policy | installed/missing/unavailable inspection and permission-matrix tests | authentication/troubleshooting |
 | no unaudited existing workflow PAT | credential collection use case plus prompt adapter | existing re-entry/audit and non-interactive rejection tests | authentication/troubleshooting |
 
@@ -623,7 +642,7 @@ at widths 40/80/120 and `NO_COLOR`.
 - [x] No validation request mutates GitHub and no result overclaims write access.
 - [x] Token values and raw provider text are absent from all output/state/errors.
 - [x] Clean Architecture boundaries and their executable test pass.
-- [x] At least 76 distinct cases and stated coverage thresholds pass.
+- [x] At least 78 distinct cases and stated coverage thresholds pass.
 - [x] Authentication, checklist, troubleshooting, and architecture docs agree.
 - [x] Catalog evidence and generated `specs/CATALOG.md` are current.
 - [x] Specification, documentation, typecheck, lint, and test gates pass.

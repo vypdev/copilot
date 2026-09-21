@@ -13,7 +13,7 @@ const requirement = (
 function response(
     ok: boolean,
     status: number,
-    options: { message?: string; headers?: Record<string, string> } = {},
+    options: { message?: string; headers?: Record<string, string>; payload?: unknown } = {},
 ): Response {
     const headers = Object.fromEntries(
         Object.entries(options.headers ?? {}).map(([name, value]) => [name.toLowerCase(), value]),
@@ -22,7 +22,7 @@ function response(
         ok,
         status,
         headers: { get: (name: string) => headers[name.toLowerCase()] ?? null },
-        json: jest.fn().mockResolvedValue(options.message ? { message: options.message } : {}),
+        json: jest.fn().mockResolvedValue(options.payload ?? (options.message ? { message: options.message } : {})),
     } as unknown as Response;
 }
 
@@ -62,6 +62,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
             'owner', 'repo', 'secret-token', requirements,
         );
 
+        await new Promise<void>(resolve => setImmediate(resolve));
         expect(fetcher).toHaveBeenCalledTimes(4);
         releases.splice(0).forEach(release => release());
         await new Promise<void>(resolve => setImmediate(resolve));
@@ -113,6 +114,74 @@ describe('SetupTokenPermissionQueryAdapter', () => {
             .inspect('owner', 'repo', 'secret', [requirement('read', 'metadata')]);
 
         expect(check).toMatchObject({ status: 'unverifiable', message: expect.stringContaining('HTTP 409') });
+    });
+
+    it('resolves and encodes the repository default branch before probing Checks', async () => {
+        const fetcher = jest.fn()
+            .mockResolvedValueOnce(response(true, 200, { payload: { default_branch: 'release/v1' } }))
+            .mockResolvedValueOnce(response(true, 200));
+
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher })
+            .inspect('owner', 'repo', 'secret', [requirement('read', 'checks')]);
+
+        expect(fetcher.mock.calls.map(call => call[0])).toEqual([
+            'https://api.github.com/repos/owner/repo',
+            'https://api.github.com/repos/owner/repo/commits/release%2Fv1/check-runs?per_page=1',
+        ]);
+        expect(fetcher.mock.calls.every(([, options]) => options.method === 'GET')).toBe(true);
+        expect(check).toMatchObject({ status: 'verified' });
+    });
+
+    it.each([
+        ['missing', {}],
+        ['non-object', 'main'],
+        ['array', ['main']],
+        ['empty', { default_branch: '' }],
+        ['control-character', { default_branch: 'main\nunsafe' }],
+        ['oversized', { default_branch: 'x'.repeat(256) }],
+    ])('keeps Checks unverifiable when default-branch metadata is %s', async (_label, payload) => {
+        const fetcher = jest.fn().mockResolvedValue(response(true, 200, { payload }));
+
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher })
+            .inspect('owner', 'repo', 'secret', [requirement('read', 'checks')]);
+
+        expect(fetcher).toHaveBeenCalledTimes(1);
+        expect(fetcher).toHaveBeenCalledWith(
+            'https://api.github.com/repos/owner/repo',
+            expect.objectContaining({ method: 'GET' }),
+        );
+        expect(check).toMatchObject({
+            status: 'unverifiable',
+            message: expect.stringContaining('safe default branch'),
+        });
+    });
+
+    it('keeps Checks unverifiable when default-branch metadata cannot be resolved', async () => {
+        const fetcher = jest.fn().mockResolvedValue(response(false, 401));
+
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher })
+            .inspect('owner', 'repo', 'secret', [requirement('read', 'checks')]);
+
+        expect(fetcher).toHaveBeenCalledTimes(1);
+        expect(check).toMatchObject({
+            status: 'unverifiable',
+            message: expect.stringContaining('could not resolve a safe default branch'),
+        });
+    });
+
+    it('keeps Checks unverifiable when default-branch metadata cannot be parsed', async () => {
+        const metadataResponse = {
+            ...response(true, 200),
+            json: jest.fn().mockRejectedValue(new Error('private provider body')),
+        } as unknown as Response;
+        const fetcher = jest.fn().mockResolvedValue(metadataResponse);
+
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher })
+            .inspect('owner', 'repo', 'secret', [requirement('read', 'checks')]);
+
+        expect(fetcher).toHaveBeenCalledTimes(1);
+        expect(check).toMatchObject({ status: 'unverifiable' });
+        expect(check.message).not.toContain('private provider body');
     });
 
     it('maps HTTP 401 to missing permission evidence', async () => {
@@ -195,6 +264,28 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         expect(check.message).not.toContain('secret provider body');
     });
 
+    it('bounds a stalled permission probe with the configured timeout', async () => {
+        jest.useFakeTimers();
+        try {
+            const fetcher = jest.fn((
+                _url: Parameters<typeof fetch>[0],
+                options?: Parameters<typeof fetch>[1],
+            ) => new Promise<Response>((_resolve, reject) => {
+                options?.signal?.addEventListener('abort', () => reject(new Error('aborted provider request')), { once: true });
+            }));
+            const inspection = new SetupTokenPermissionQueryAdapter({ fetcher, timeoutMs: 5 })
+                .inspect('owner', 'repo', 'secret-token', [requirement()]);
+
+            await jest.advanceTimersByTimeAsync(5);
+
+            await expect(inspection).resolves.toEqual([
+                expect.objectContaining({ status: 'unverifiable', message: 'The permission probe was unavailable or timed out.' }),
+            ]);
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+
     it('does not make a request when GitHub has no safe read-only probe', async () => {
         const fetcher = jest.fn();
         const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
@@ -214,7 +305,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
     });
 
     it('maps every supported repository probe to a read-only endpoint', async () => {
-        const fetcher = jest.fn().mockResolvedValue(response(true, 200));
+        const fetcher = jest.fn().mockResolvedValue(response(true, 200, { payload: { default_branch: 'main' } }));
         const probes: SetupTokenPermissionRequirement['probe'][] = [
             'metadata', 'contents', 'administration', 'issues', 'actions', 'checks',
             'pull-requests', 'variables', 'secrets', 'workflows',
@@ -227,14 +318,14 @@ describe('SetupTokenPermissionQueryAdapter', () => {
             probes.map(probe => requirement('read', probe)),
         );
 
-        expect(fetcher).toHaveBeenCalledTimes(probes.length);
+        expect(fetcher).toHaveBeenCalledTimes(probes.length + 1);
         for (const [url, options] of fetcher.mock.calls) {
             expect(url).toContain('owner%2Fname/repo%20name');
             expect(options).toEqual(expect.objectContaining({ method: 'GET' }));
         }
         expect(fetcher.mock.calls.map(call => call[0])).toEqual(expect.arrayContaining([
             'https://api.github.com/repos/owner%2Fname/repo%20name/commits?per_page=1',
-            'https://api.github.com/repos/owner%2Fname/repo%20name/commits/HEAD/check-runs?per_page=1',
+            'https://api.github.com/repos/owner%2Fname/repo%20name/commits/main/check-runs?per_page=1',
             'https://api.github.com/repos/owner%2Fname/repo%20name/contents/.github/workflows',
         ]));
     });
