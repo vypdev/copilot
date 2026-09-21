@@ -206,9 +206,10 @@ These are examples of comments that typically trigger **Bugbot autofix** (fix on
 
 Post read-only review commands on an **issue** or **PR**. Post file-changing
 commands in the intended **PR review thread** (or use an explicit branch-scoped
-execution). The action will run only if you have permission (organization
-member, or repository owner / `push`/`maintain`/`admin` collaborator in a
-personal repository) and the write target is authoritative.
+execution). The action will run only if you own the personal repository or
+have `push`/`maintain`/`admin` collaborator permission in an organization or
+personal repository; organization membership alone is insufficient. The write
+target must also be authoritative.
 
 ---
 

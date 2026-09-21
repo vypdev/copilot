@@ -202,6 +202,15 @@ publication/reconciliation operation allowed.
    filename, status, additions, and deletions metadata MUST each remain inside
    a bounded labelled untrusted-data envelope; runtime types are not trusted
    merely because the application contract declares them.
+   Before any patch normalization or fragment allocation, count raw UTF-16
+   code units for non-ignored patches and reject an individual or cumulative
+   total above the fixed 4,096,000-code-unit input ceiling using the same
+   bounded plan-limit error. This deliberately rejects a PR near the execution
+   ceiling when sanitization/envelopes would expand it; it never silently
+   truncates, schedules a partial review, or starts provider mutation. The
+   provider transport may already have allocated its response; pagination is
+   a file-count bound, not a byte bound, and is not claimed to protect that
+   earlier allocation.
 3. Split an oversized patch at the last newline that fits the fragment budget.
    When a single line exceeds the budget, split that line at a hard UTF-16
    boundary moved left when necessary so it never separates a surrogate pair.
@@ -487,17 +496,17 @@ comments remain untouched.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **41 distinct cases**.
+This SDD owns at least **43 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/pure planning | 14 | empty/single/multi-file, newline/hard split, UTF-16 surrogate-safe hard boundaries, exact prompt and 64/65 partition boundaries, absent patch, root/nested leading-`**/` ignore parity, stable IDs, order, no character loss, hostile status/count metadata envelope |
+| Domain/pure planning | 16 | empty/single/multi-file, newline/hard split, UTF-16 surrogate-safe hard boundaries, individual and cumulative raw input ceilings before normalization, exact prompt and 64/65 partition boundaries, absent patch, root/nested leading-`**/` ignore parity, stable IDs, order, no character loss, hostile status/count metadata envelope |
 | State/application/idempotency/races | 8 | all-complete, one failure, wrong/duplicate ID, wrong SHA, resolution ownership, stale head, replay, empty canonical zero-work |
 | Agent adapter/schema contracts | 4 | required attestation, locale, undefined/invalid result, aggregate bounds |
 | Workflow/architecture/telemetry | 5 | concurrency two, ordered collection, no mutation before complete, positive and zero-partition plan metrics |
 | UI/UX/localization/sanitization | 4 | pending, failed, complete, hostile content/control characters |
 | Integration/security/compatibility | 6 | 44-file regression, oversized patch, provider partial, dry-run, legacy issue-only path, ignored-only canonical no-op |
-| **Total** | **41** | No double counting |
+| **Total** | **43** | No double counting |
 
 Planner, attestation, and aggregate pure policies require 100% enumerated branch
 coverage. Changed analyzer/context modules require at least 95% lines/statements
@@ -567,12 +576,16 @@ token scope, secret, or public input.
     boundary with no earlier newline, then the boundary moves left, neither
     fragment contains an orphan surrogate, both stay within budget, and their
     concatenation exactly reconstructs the sanitized patch.
+21. Given one patch or the cumulative non-ignored patches exceed 4,096,000 raw
+    UTF-16 code units, the planner rejects before normalization, model query,
+    or publication with bounded split-PR guidance; ignored patches consume no
+    plan budget and accepted patches remain lossless.
 
 ## 17. Requirements traceability
 
 | Requirement | Policy/use case/adapter/presentation | Test or evidence | Documentation |
 |---|---|---|---|
-| lossless bounded plan | diff partition policy | reconstruction, surrogate-boundary, budget, and 44-file tests | how it works |
+| lossless bounded plan | diff partition policy | reconstruction, surrogate-boundary, raw-input ceiling, budget, and 44-file tests | how it works |
 | root/nested ignore parity | file-ignore policy | leading-`**/` root and nested fixtures | configuration |
 | untrusted diff metadata | diff partition policy + security envelope | hostile filename/status/count/patch fixtures | detection/security |
 | attested atomic execution | partitioned analyzer | failure/identity/concurrency tests | failure scenarios |
@@ -604,7 +617,7 @@ token scope, secret, or public input.
       provider enumeration and every partition respects fixed prompt bounds.
 - [x] Attestation, resolution ownership, concurrency, aggregation, freshness,
       replay, cancellation/failure, and no-prepublication-mutation tests pass.
-- [x] The 41-case floor and changed-module/repository coverage budgets pass.
+- [x] The 43-case floor and changed-module/repository coverage budgets pass.
 - [x] Pending, failed, provider-partial, complete, dry-run, and publication-
       partial surfaces are accurate, localized, accessible, and bounded.
 - [x] No public configuration, permission, credential, or durable-state change

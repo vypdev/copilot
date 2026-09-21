@@ -316,9 +316,9 @@ branch. Finding dismissal and learned rules require explicit follow-up commands.
 | Workflow/idempotency/races | 18 | fallback, duplicate, branch/push race |
 | Authorization/adapters | 20 | purpose-separated org membership and repository-write permissions, exact personal ownership, unknown-owner fallback for file and member-only routes, collaboration, API errors |
 | Workflow/config contracts | 8 | events, permissions, active roles, inert passive comments |
-| UX/localization/sanitization | 18 | help/errors/links/mentions/Markdown, target locale, complete finding-state status, invalid-evidence recovery, internally consistent mutation-authority copy |
+| UX/localization/sanitization | 19 | help/errors/links/mentions/Markdown, target locale, complete finding-state status, invalid-evidence recovery, internally consistent mutation-authority copy across all Bugbot pages |
 | Integration/security/migration | 16 | comment→commit/review, exact PR diff, prompt injection |
-| **Total** | **106** | no double counting |
+| **Total** | **107** | no double counting |
 
 Global coverage remains mandatory; command and route policies SHOULD have 100%
 branch coverage. Use fake authorization/agents/git; no live models or waits.
@@ -371,6 +371,9 @@ English/non-English requests.
     authority: the personal repository owner or a repository collaborator with
     `push`, `maintain`, or `admin`; organization membership alone is never
     presented as sufficient, and semantic documentation validation enforces it.
+18. The Autofix, Permissions, and Examples pages use the same repository-write
+    rule for organization and personal repositories; membership alone never
+    grants mutation authority in examples or comparison tables.
 
 ## 17. Requirements traceability
 
@@ -379,7 +382,7 @@ English/non-English requests.
 | bounded grammar | command domain | command tests | comment commands |
 | safe routing/admission | request/route/workflow policies | entrypoint and use-case tests | comment commands |
 | authorization | authorization port/adapter | organization, user, unknown-owner, and collaborator repository tests | permissions |
-| consistent authorization guidance | documentation contract | required authority sentence and retired contradictory-copy check | permissions/do request |
+| consistent authorization guidance | documentation contract | required authority sentences across all Bugbot pages and retired contradictory-copy checks | autofix/permissions/examples/do request |
 | guarded mutation | workspace/git workflows | mutation tests | autofix/do request |
 | safe output | result policies | publication tests | failure scenarios |
 | truthful status evidence | canonical finding-state projection + status renderer | complete/non-clean and malformed status tests | comment commands, Bugbot observability |
@@ -396,7 +399,7 @@ English/non-English requests.
 ## 19. Definition of Done
 
 - [ ] Commands, mentions, authorization, fallback, replay, and races are covered.
-- [x] The 106-case budget, coverage, and architecture checks pass.
+- [x] The 107-case budget, coverage, and architecture checks pass.
 - [ ] No model output or comment can expand authorization or git authority.
 - [ ] All five UI states and help content are reviewed and accessible.
 - [ ] Workflows, documentation, and catalog agree.

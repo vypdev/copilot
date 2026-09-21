@@ -356,7 +356,7 @@ screen reader, and controlled live model samples.
 - [ ] Workflows, docs, reconciliation SDD, and catalog agree.
 - [ ] Controlled live provider and GitHub UX evidence is captured.
 - [x] Prompt-sized canonical PR diffs are reviewed through lossless, attested,
-      atomic partitions under the companion SDD's 41-case budget.
+      atomic partitions under the companion SDD's 43-case budget.
 
 ## 20. References and decisions
 

@@ -43344,7 +43344,7 @@ exports.BUGBOT_MIN_SEVERITY = 'low';
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.BugbotDiffPlanLimitError = exports.MAX_REVIEW_DIFF_PARTITIONS = exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH = exports.MAX_REVIEW_DIFF_PARTITION_LENGTH = void 0;
+exports.BugbotDiffPlanLimitError = exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH = exports.MAX_REVIEW_DIFF_PARTITIONS = exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH = exports.MAX_REVIEW_DIFF_PARTITION_LENGTH = void 0;
 exports.buildReviewDiffPlan = buildReviewDiffPlan;
 exports.splitReviewDiffPatch = splitReviewDiffPatch;
 const untrusted_content_1 = __nccwpck_require__(67057);
@@ -43352,11 +43352,12 @@ const file_ignore_policy_1 = __nccwpck_require__(20542);
 exports.MAX_REVIEW_DIFF_PARTITION_LENGTH = 64000;
 exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH = 12000;
 exports.MAX_REVIEW_DIFF_PARTITIONS = 64;
+exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH = exports.MAX_REVIEW_DIFF_PARTITION_LENGTH * exports.MAX_REVIEW_DIFF_PARTITIONS;
 const DIFF_PARTITION_HEADER_RESERVE = 1024;
 const MAX_REVIEW_DIFF_METADATA_LENGTH = 512;
 class BugbotDiffPlanLimitError extends Error {
     constructor() {
-        super(`Bugbot diff requires more than ${exports.MAX_REVIEW_DIFF_PARTITIONS} review partitions.`);
+        super(`Bugbot diff exceeds the fixed ${exports.MAX_REVIEW_DIFF_PARTITIONS}-partition or ${exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH}-character planning limit.`);
         this.name = 'BugbotDiffPlanLimitError';
     }
 }
@@ -43372,13 +43373,19 @@ function buildReviewDiffPlan(context, ignorePatterns = []) {
     const retainedFiles = new Set();
     let ignored = 0;
     let fragmentIndex = 0;
+    let rawPatchTotal = 0;
     for (const change of context.changes) {
         if ((0, file_ignore_policy_1.fileMatchesIgnorePatterns)(change.filename, ignorePatterns)) {
             ignored += 1;
             continue;
         }
+        const rawPatch = change.patch;
+        if (typeof rawPatch !== 'string' || rawPatch.length > exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH - rawPatchTotal) {
+            throw new BugbotDiffPlanLimitError();
+        }
+        rawPatchTotal += rawPatch.length;
         retainedFiles.add(change.filename);
-        const sanitizedPatch = (0, untrusted_content_1.createUntrustedContent)(change.patch, `github.diff.${fragmentIndex + 1}`, Number.MAX_SAFE_INTEGER).text;
+        const sanitizedPatch = (0, untrusted_content_1.createUntrustedContent)(rawPatch, `github.diff.${fragmentIndex + 1}`, Number.MAX_SAFE_INTEGER).text;
         const fragments = sanitizedPatch.length > 0
             ? splitReviewDiffPatch(sanitizedPatch)
             : ['[patch unavailable from GitHub; inspect the exact local diff and current workspace for this assigned file]'];
@@ -52952,13 +52959,17 @@ async function resolveRemoteConfiguration(context, dependencies, setupConfigurat
     catch (error) {
         const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Could not inspect existing GitHub Actions resource scopes.');
         (0, logging_ports_1.logError)(semanticError);
-        if ((0, setup_configuration_policy_1.usesOrganizationStorage)(setupConfiguration))
+        if (setupConfiguration.manageRepositorySecrets || setupConfiguration.manageRepositoryVariables) {
             errors.push(semanticError.message);
+        }
         return undefined;
     }
 }
 /** Groups resources by their resolved storage target so each provider call is scoped explicitly. */
 function groupSetupResources(resources, kind, configuration, remoteConfiguration) {
+    if (resources.length > 0 && !remoteConfiguration) {
+        throw new application_error_1.ApplicationError('provider.unavailable', `GitHub Actions ${kind} inventory is unavailable; resource targets cannot be resolved safely. Restore inventory access and rerun setup.`);
+    }
     const repositoryAccess = kind === 'secret'
         ? remoteConfiguration?.repositorySecretsAccess
         : remoteConfiguration?.repositoryVariablesAccess;
@@ -58632,7 +58643,7 @@ async function loadBugbotContext(request, ports, resolvedPreflight) {
     }
     catch (error) {
         if (error instanceof bugbot_diff_partition_policy_1.BugbotDiffPlanLimitError) {
-            throw new application_error_1.ApplicationError('workflow.failed', `The canonical diff exceeds the fixed ${bugbot_diff_partition_policy_1.MAX_REVIEW_DIFF_PARTITIONS}-partition Bugbot execution limit. Split the pull request and retry; no partial review was started.`, { cause: error });
+            throw new application_error_1.ApplicationError('workflow.failed', `The canonical diff exceeds the fixed ${bugbot_diff_partition_policy_1.MAX_REVIEW_DIFF_PARTITIONS}-partition or raw-input Bugbot planning limit. Split the pull request and retry; no partial review was started.`, { cause: error });
         }
         throw error;
     }

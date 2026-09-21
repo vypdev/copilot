@@ -212,10 +212,13 @@ copilot setup --non-interactive --yes --issue-workflows feature,bugfix,help
 Run these commands without a permission exception first. If the audit stops
 only because required write rows are `Unverifiable`, inspect the displayed
 requirements against both PATs' settings. Only after confirming every required
-row may you explicitly acknowledge that limitation on a rerun:
+row may you explicitly acknowledge that limitation. Repeat the same selections
+if the original run was interactive; for automation, append the flag to the
+original invocation with the same configuration file, flags, and credentials.
+For example, preserving the feature and agent flags from the command above:
 
 ```bash
-copilot setup --non-interactive --yes --confirm-unverifiable-write-permissions
+copilot setup --non-interactive --yes --features issues,pullRequests,commits,issueComments,pullRequestComments --agent codex --confirm-unverifiable-write-permissions
 ```
 
 Without an explicit `--agent-guidance` or config value, non-interactive setup

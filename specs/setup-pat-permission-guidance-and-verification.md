@@ -181,7 +181,11 @@ read-only GitHub queries and presents ordered permission outcomes.
    Generic interactive or unattended setup examples MUST omit that exception
    flag. Documentation may show it only in a separately labelled recovery flow
    whose immediately adjacent prerequisite requires the operator to inspect the
-   displayed PAT settings first.
+   displayed PAT settings first. A recovery rerun MUST preserve the original
+   setup plan: repeat interactive selections, or append the flag to the exact
+   non-interactive invocation with the same configuration file, feature/agent
+   flags, and credential inputs. A bare example that silently selects defaults
+   is forbidden.
    The wizard MUST invoke a configured final-permission-audit port after
    normalization and before final remote storage validation. The wizard then
    MUST apply both organization-storage validation and scope-sensitive managed-
@@ -278,6 +282,11 @@ read-only GitHub queries and presents ordered permission outcomes.
    scope. Disabled preservation or an override that moves the Secret MUST
    request and validate a replacement value; non-interactive execution without
    that value fails before resource mutation.
+10. After approval, the resource-provisioning workflow MUST require an
+    authoritative remote configuration snapshot before grouping any selected
+    Secret or Variable write. A failed or missing inspection cannot fall back
+    to empty inventory, even when the configured target defaults to repository
+    scope; the relevant provider upsert MUST remain untouched.
 
 ### 6.3 Permission states
 
@@ -492,17 +501,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **84 distinct cases**.
+This SDD adds at least **86 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain permission policy | 18 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants, positive and negative organization-membership capability projection including comment-only routes |
 | Application state/blocking | 13 | verified, missing, required-read unverifiable, required-write confirmation, invalid base token, organization-only credential collection, pre-validation audit port, immediate remote-storage blocked handling, zero-count assignment and inactive membership checks |
 | Adapter/provider contracts | 30 | GET-only probes, fixed four-request concurrency with stable result order, private-versus-public/unknown visibility evidence, protected-endpoint evidence, commit-list Contents target, private empty-repository 409 versus public ambiguity, default-branch Checks resolution plus encoded check-runs target, invalid/missing branch fail-closed behavior, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow, unavailable endpoint state, duplicate-comment deletion fallback regression |
-| Setup/credential integration | 17 | pre-prompt setup table, conditional denial through planning, wizard-owned repository-inventory block plus organization-only continuation, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, preserve-disabled and scope-moving keep rejection, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
+| Setup/credential integration | 19 | pre-prompt setup table, conditional denial through planning, wizard-owned repository-inventory block plus organization-only continuation, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, absent/failed remote snapshot blocks selected upserts, preserve-disabled and scope-moving keep rejection, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
 | UI/accessibility | 4 | required/result tables, confirmation-required copy, 40-column wrapping, no-color text |
 | Architecture/security/docs | 2 | query-only boundary, no duplicated catalog, and safe generic/recovery automation examples |
-| **Total** | **84** | No double counting |
+| **Total** | **86** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -628,7 +637,9 @@ at widths 40/80/120 and `NO_COLOR`.
     from public docs, it does not silently acknowledge unverifiable write
     access. In any shell block across the documentation set, the acknowledgement
     flag appears only in a separate recovery example immediately after an
-    instruction to inspect every displayed PAT requirement.
+    instruction to inspect every displayed PAT requirement; the recovery
+    example preserves the original interactive selections or every original
+    unattended configuration/credential input.
 29. Given a successful read against public repository metadata, commits,
     rulesets, labels, workflows, checks, pulls, or workflow contents, the row is
     `Unverifiable`; the equivalent read is `Verified` only when the metadata
@@ -639,6 +650,10 @@ at widths 40/80/120 and `NO_COLOR`.
     disabled or with an override that moves its scope requests and validates a
     replacement value; setup cannot report the requirement satisfied without a
     value for the selected target.
+31. Given selected repository or organization Secrets/Variables and absent or
+    failed remote inspection, grouping returns a bounded failure and invokes
+    no provider upsert, regardless of whether a policy could select a default
+    target without inventory.
 
 ## 17. Requirements traceability
 
@@ -651,6 +666,7 @@ at widths 40/80/120 and `NO_COLOR`.
 | context-specific generic 403 handling | setup query adapter plus operational GitHub error policy | setup-probe and duplicate-comment deletion regression fixtures | authentication/troubleshooting |
 | final report before remote-storage block | wizard result contract/CLI orchestration | blocked-result and CLI ordering tests | authentication/troubleshooting |
 | scope-sensitive inventory gating | storage policy plus setup wizard boundary | wizard-blocked, organization-only, preserve-existing, and mixed-scope tests | authentication/troubleshooting |
+| absent-snapshot fail-closed provisioning | resource grouping and initial setup workflow | missing port, failed inspection, no-upsert tests | troubleshooting/provisioning |
 | no write probes | semantic query port/architecture rule | method/transport tests | architecture |
 | secret safety | all contracts/presenter | redaction fixtures | credentials |
 | feature/effective-target workflow PAT | configuration projection policy | conditional matrix and preserved organization-variable tests | checklist |
@@ -661,7 +677,7 @@ at widths 40/80/120 and `NO_COLOR`.
 | valid Checks commit reference | read-only query adapter | default-branch resolution, encoding, and invalid-metadata tests | authentication/troubleshooting |
 | least-privilege credential-health bootstrap | remote configuration query plus permission policy | installed/missing/unavailable inspection and permission-matrix tests | authentication/troubleshooting |
 | no unaudited existing workflow PAT | credential collection use case plus prompt adapter | existing re-entry/audit and non-interactive rejection tests | authentication/troubleshooting |
-| explicit unverifiable-write acknowledgement | CLI option plus global documentation contract | all public shell examples omit by default; inspected-recovery exception | setup, workflow and CLI pages |
+| explicit unverifiable-write acknowledgement | CLI option plus global documentation contract | all public shell examples omit by default; inspected-recovery exception preserving original setup plan | setup, workflow and CLI pages |
 
 ## 18. Implementation sequence
 
@@ -681,7 +697,7 @@ at widths 40/80/120 and `NO_COLOR`.
 - [x] No validation request mutates GitHub and no result overclaims write access.
 - [x] Token values and raw provider text are absent from all output/state/errors.
 - [x] Clean Architecture boundaries and their executable test pass.
-- [x] At least 84 distinct cases and stated coverage thresholds pass.
+- [x] At least 86 distinct cases and stated coverage thresholds pass.
 - [x] Authentication, checklist, troubleshooting, and architecture docs agree.
 - [x] Catalog evidence and generated `specs/CATALOG.md` are current.
 - [x] Specification, documentation, typecheck, lint, and test gates pass.

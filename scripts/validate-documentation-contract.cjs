@@ -259,8 +259,11 @@ if (!unattendedCredentialProvisioning || unattendedCredentialProvisioning.includ
   errors.push('single-actions/workflow-and-cli.mdx: generic credential-provisioning command must omit unverifiable-write acknowledgement');
 }
 if (!normalizedInspectedPatRecovery.includes('inspect the displayed requirements against both PATs\' settings')
-  || !normalizedInspectedPatRecovery.includes(`copilot setup --non-interactive --yes ${unverifiableWriteAcknowledgement}`)) {
-  errors.push('single-actions/workflow-and-cli.mdx: inspected-PAT recovery must be explicit and adjacent to the exceptional command');
+  || !normalizedInspectedPatRecovery.includes('Repeat the same selections')
+  || !normalizedInspectedPatRecovery.includes('same configuration file, flags, and credentials')
+  || !normalizedInspectedPatRecovery.includes(`copilot setup --non-interactive --yes --features issues,pullRequests,commits,issueComments,pullRequestComments --agent codex ${unverifiableWriteAcknowledgement}`)
+  || normalizedInspectedPatRecovery.includes(`copilot setup --non-interactive --yes ${unverifiableWriteAcknowledgement}`)) {
+  errors.push('single-actions/workflow-and-cli.mdx: inspected-PAT recovery must preserve the original setup plan and be adjacent to the exceptional command');
 }
 for (const [file, source] of docsByFile.entries()) {
   for (const match of source.matchAll(/^[ \t]*```(?:bash|sh|shell)\s*\n([\s\S]*?)^[ \t]*```\s*$/gm)) {
@@ -280,6 +283,14 @@ requireText('bugbot/detection.mdx', 'One stable **Bugbot status** comment', 'can
 requireText('bugbot/detection.mdx', 'the review snapshot is history', 'historical Bugbot review semantics');
 requireText('bugbot/detection.mdx', 'including overflow', 'complete Bugbot aggregate counts');
 requireText('bugbot/how-it-works.mdx', 'same HTTPS server and repository', 'safe provider navigation boundary');
+for (const capability of ['Autofix commit/push', 'User-request changes']) {
+  requireText(
+    'bugbot/permissions.mdx',
+    `| ${capability} | \`contents: write\` | Personal repository owner or \`push\`/\`maintain\`/\`admin\` collaborator in either organization or personal repositories; organization membership alone is insufficient |`,
+    `${capability} repository-write authority`,
+  );
+}
+requireText('bugbot/examples.mdx', 'personal repository; organization membership alone is insufficient.', 'file-changing command authority');
 requireText('bugbot/quality-observability.mdx', 'gateway binds provider credentials before service', 'bound public Bugbot gateway');
 requireText('bugbot/quality-observability.mdx', 'provides trusted PR/commit/run navigation', 'public Bugbot navigation capability');
 requireText(
@@ -350,6 +361,8 @@ const obsoleteDocumentation = [
   ['single-actions/deploy-label-and-merge.mdx', 'direct merge compatibility fallback', 'old direct-merge fallback'],
   ['README.md', 'active findings fail that check', 'obsolete unconditional Bugbot failure'],
   ['bugbot/do-user-request.mdx', 'Organization members for organization repositories', 'obsolete organization-membership mutation authority'],
+  ['bugbot/permissions.mdx', 'Organization member; or repository owner', 'obsolete organization-membership mutation authority'],
+  ['bugbot/examples.mdx', 'organization member, or repository owner', 'obsolete organization-membership mutation authority'],
 ];
 const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
 for (const [file, phrase, contract] of obsoleteDocumentation) {

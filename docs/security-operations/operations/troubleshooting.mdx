@@ -74,6 +74,10 @@ This guide helps you resolve common issues you might encounter while using Copil
     error without starting another audit or inventory validator. It does not run
     plan confirmation,
     credential prompts, workflow comparison, resource targeting, or mutation.
+    If the later provisioning inspection itself fails or its read port is
+    unavailable, selected Secrets and Variables also stop before upsert, even
+    for a repository-scope default. Restore inventory access and rerun setup;
+    an absent snapshot is never treated as an empty repository.
 
     Permission probes use a fixed maximum concurrency of four and preserve the
     table's requirement order. A large permission plan therefore does not launch

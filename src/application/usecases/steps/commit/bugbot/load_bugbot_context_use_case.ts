@@ -119,7 +119,7 @@ export async function loadBugbotContext(
     if (error instanceof BugbotDiffPlanLimitError) {
       throw new ApplicationError(
         'workflow.failed',
-        `The canonical diff exceeds the fixed ${MAX_REVIEW_DIFF_PARTITIONS}-partition Bugbot execution limit. Split the pull request and retry; no partial review was started.`,
+        `The canonical diff exceeds the fixed ${MAX_REVIEW_DIFF_PARTITIONS}-partition or raw-input Bugbot planning limit. Split the pull request and retry; no partial review was started.`,
         { cause: error },
       );
     }

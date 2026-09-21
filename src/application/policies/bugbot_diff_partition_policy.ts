@@ -4,6 +4,7 @@ import { fileMatchesIgnorePatterns } from './file_ignore_policy';
 export const MAX_REVIEW_DIFF_PARTITION_LENGTH = 64_000;
 export const MAX_REVIEW_DIFF_FRAGMENT_LENGTH = 12_000;
 export const MAX_REVIEW_DIFF_PARTITIONS = 64;
+export const MAX_REVIEW_DIFF_RAW_INPUT_LENGTH = MAX_REVIEW_DIFF_PARTITION_LENGTH * MAX_REVIEW_DIFF_PARTITIONS;
 const DIFF_PARTITION_HEADER_RESERVE = 1_024;
 const MAX_REVIEW_DIFF_METADATA_LENGTH = 512;
 
@@ -38,7 +39,7 @@ export interface BuiltBugbotDiffReviewPlan {
 
 export class BugbotDiffPlanLimitError extends Error {
   constructor() {
-    super(`Bugbot diff requires more than ${MAX_REVIEW_DIFF_PARTITIONS} review partitions.`);
+    super(`Bugbot diff exceeds the fixed ${MAX_REVIEW_DIFF_PARTITIONS}-partition or ${MAX_REVIEW_DIFF_RAW_INPUT_LENGTH}-character planning limit.`);
     this.name = 'BugbotDiffPlanLimitError';
   }
 }
@@ -56,15 +57,21 @@ export function buildReviewDiffPlan(
   const retainedFiles = new Set<string>();
   let ignored = 0;
   let fragmentIndex = 0;
+  let rawPatchTotal = 0;
 
   for (const change of context.changes) {
     if (fileMatchesIgnorePatterns(change.filename, ignorePatterns)) {
       ignored += 1;
       continue;
     }
+    const rawPatch = change.patch;
+    if (typeof rawPatch !== 'string' || rawPatch.length > MAX_REVIEW_DIFF_RAW_INPUT_LENGTH - rawPatchTotal) {
+      throw new BugbotDiffPlanLimitError();
+    }
+    rawPatchTotal += rawPatch.length;
     retainedFiles.add(change.filename);
     const sanitizedPatch = createUntrustedContent(
-      change.patch,
+      rawPatch,
       `github.diff.${fragmentIndex + 1}`,
       Number.MAX_SAFE_INTEGER,
     ).text;

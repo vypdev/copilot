@@ -338,6 +338,23 @@ describe('loadBugbotContext', () => {
     expect(reader.loadRules).not.toHaveBeenCalled();
   });
 
+  it('fails before rules or model analysis for oversized raw input even when a small plan could be normalized', async () => {
+    const changes = [{ filename: 'src/huge.ts', status: 'modified', additions: 1, deletions: 0,
+      patch: '\r'.repeat(4_096_001) }];
+    const reader = ports({
+      getReviewDiffSnapshot: jest.fn().mockResolvedValue({
+        value: { changes, filesWithFirstDiffLine: [], filesWithDiffLocations: [] },
+        coverage: coverage('diff', changes.length),
+      }),
+    });
+
+    await expect(loadBugbotContext(request(), reader)).rejects.toMatchObject({
+      code: 'workflow.failed',
+      message: expect.stringContaining('raw-input'),
+    });
+    expect(reader.loadRules).not.toHaveBeenCalled();
+  });
+
   it('propagates an unexpected diff planning error without reclassifying it as a size limit', async () => {
     const corruptChange = {
       filename: 'src/corrupt.ts',

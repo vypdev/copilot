@@ -148,6 +148,11 @@ cancellation, skipped diagnosis, ordering, and read-only authority explicit.
   value before provisioning the selected target. An explicit override that
   names the already-effective scope does not require a redundant rewrite.
 - Invalid required credentials must be replaced.
+- A missing remote resource snapshot is never an empty inventory. Selected
+  Secret/Variable writes MUST stop before target grouping and provider calls
+  when inspection fails or its port is absent; unaffected resource classes may
+  remain disabled. The result names a bounded inspection recovery action and
+  never exposes raw provider errors.
 - Runner login may satisfy explicitly declared alternative credential groups.
 
 ### 6.3 State model
@@ -286,8 +291,8 @@ manual reversal.
 | Credentials/provider adapters | 18 | valid/invalid/missing/unverifiable/groups |
 | Workflows/assets/schema | 14 | selection, parity, readiness, permissions |
 | Prompt/CLI UX/sanitization/localization | 18 | masking, status order, non-interactive, English default, Spanish exact/base, arbitrary locale, atomic fallback, hostile diagnostic suppression |
-| Integration/security/cutover | 12 | backup, org scope, doctor, no `.env` |
-| **Total** | **106** | no double counting |
+| Integration/security/cutover | 14 | backup, org scope, doctor, no `.env`, absent remote snapshot and failed inspection before resource writes |
+| **Total** | **108** | no double counting |
 
 Global coverage thresholds remain; questionnaire, doctor catalog/report, shared
 merge-readiness message, and doctor presenter policies MUST reach 100%
@@ -332,6 +337,9 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 16. Given an existing valid organization Secret and an explicit repository
     override, choosing `keep` follows the same replacement path; an explicit
     organization override may keep it because the effective scope does not move.
+17. Given remote resource inspection fails or is not configured, selected
+    Secret/Variable provisioning reports a bounded error and performs no
+    upsert; absence cannot be interpreted as an empty repository inventory.
 
 ## 17. Requirements traceability
 
@@ -340,6 +348,7 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 | bounded plan | setup policies/wizard | setup wizard tests | how-to-use |
 | credential separation | credential use case/ports | credential tests | credentials |
 | policy-safe existing credentials | storage policy + credential use case | disabled-preservation and scope-move tests | credentials/provisioning |
+| authoritative resource snapshot | resource grouping + initial setup workflow | absent/failed inspection and no-upsert tests | troubleshooting/provisioning |
 | safe files | workspace adapter | workspace tests | provisioning |
 | read-only doctor | doctor use case/composition | doctor tests | workflow-and-cli |
 | readiness | readiness use case | readiness tests | checklist |
@@ -355,7 +364,7 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 ## 19. Definition of Done
 
 - [x] Every new option has default, bounds, precedence, persistence, retirement/rejection, and security rules.
-- [x] The 106-case budget and coverage thresholds pass.
+- [x] The 108-case budget and coverage thresholds pass.
 - [x] Setup cancel/retry/partial state and doctor read-only behavior pass.
 - [x] Secrets are absent from plans, config, logs, errors, and backups.
 - [x] Workflow/assets, documentation, and catalog checks pass.

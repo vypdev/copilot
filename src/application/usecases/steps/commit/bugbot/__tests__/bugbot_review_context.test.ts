@@ -10,6 +10,7 @@ import {
   MAX_REVIEW_DIFF_FRAGMENT_LENGTH,
   MAX_REVIEW_DIFF_PARTITION_LENGTH,
   MAX_REVIEW_DIFF_PARTITIONS,
+  MAX_REVIEW_DIFF_RAW_INPUT_LENGTH,
   splitReviewDiffPatch,
 } from '../../../../../policies/bugbot_diff_partition_policy';
 
@@ -388,6 +389,39 @@ describe('Bugbot review context', () => {
         patch: String(index % 10).repeat(62_000),
       })),
     })).toThrow(BugbotDiffPlanLimitError);
+  });
+
+  it('rejects one raw patch above the fixed input ceiling before normalization', () => {
+    expect(() => buildReviewDiffPlan({
+      prHeadSha: 'a'.repeat(40),
+      changes: [{ filename: 'src/huge.ts', status: 'modified', additions: 1, deletions: 0,
+        patch: 'x'.repeat(MAX_REVIEW_DIFF_RAW_INPUT_LENGTH + 1) }],
+    })).toThrow(BugbotDiffPlanLimitError);
+  });
+
+  it('rejects cumulative raw patches above the ceiling before normalizing the offending patch', () => {
+    expect(() => buildReviewDiffPlan({
+      prHeadSha: 'a'.repeat(40),
+      changes: [
+        { filename: 'src/one.ts', status: 'modified', additions: 1, deletions: 0, patch: 'x'.repeat(1_000_000) },
+        { filename: 'src/two.ts', status: 'modified', additions: 1, deletions: 0,
+          patch: 'x'.repeat(MAX_REVIEW_DIFF_RAW_INPUT_LENGTH - 1_000_000 + 1) },
+      ],
+    })).toThrow(BugbotDiffPlanLimitError);
+  });
+
+  it('excludes intentionally ignored raw patches from the input ceiling', () => {
+    const plan = buildReviewDiffPlan({
+      prHeadSha: 'a'.repeat(40),
+      changes: [
+        { filename: 'node_modules/ignored.ts', status: 'modified', additions: 1, deletions: 0,
+          patch: 'x'.repeat(MAX_REVIEW_DIFF_RAW_INPUT_LENGTH + 1) },
+        { filename: 'src/reviewed.ts', status: 'modified', additions: 1, deletions: 0, patch: '+reviewed' },
+      ],
+    }, ['**/node_modules/**']);
+    expect(plan.ignored).toBe(1);
+    expect(plan.retained).toBe(1);
+    expect(plan.partitions).toHaveLength(1);
   });
 
   it('accepts exactly the documented 64-partition ceiling', () => {

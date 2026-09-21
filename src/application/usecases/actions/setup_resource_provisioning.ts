@@ -11,7 +11,6 @@ import {
     requiresSetupRepositoryInventory,
     resolveSetupResourceTarget,
     shouldUpsertSetupResource,
-    usesOrganizationStorage,
 } from '../../policies/setup_configuration_policy';
 import type {
     BoundSetupRemoteConfigurationReadPort,
@@ -19,7 +18,7 @@ import type {
     BoundSetupRepositoryVariablesCommandPort,
 } from '../../ports/setup_wizard_ports';
 import { logError } from '../../ports/logging_ports';
-import { toApplicationError } from '../../errors/application_error';
+import { ApplicationError, toApplicationError } from '../../errors/application_error';
 
 export interface SetupResourceProvisioningDependencies {
     setupRepositoryVariablesPort?: BoundSetupRepositoryVariablesCommandPort;
@@ -118,7 +117,9 @@ export async function resolveRemoteConfiguration(
             'Could not inspect existing GitHub Actions resource scopes.',
         );
         logError(semanticError);
-        if (usesOrganizationStorage(setupConfiguration)) errors.push(semanticError.message);
+        if (setupConfiguration.manageRepositorySecrets || setupConfiguration.manageRepositoryVariables) {
+            errors.push(semanticError.message);
+        }
         return undefined;
     }
 }
@@ -130,6 +131,12 @@ export function groupSetupResources(
     configuration: SetupConfiguration,
     remoteConfiguration?: SetupRemoteConfiguration,
 ): SetupResourceGroup[] {
+    if (resources.length > 0 && !remoteConfiguration) {
+        throw new ApplicationError(
+            'provider.unavailable',
+            `GitHub Actions ${kind} inventory is unavailable; resource targets cannot be resolved safely. Restore inventory access and rerun setup.`,
+        );
+    }
     const repositoryAccess = kind === 'secret'
         ? remoteConfiguration?.repositorySecretsAccess
         : remoteConfiguration?.repositoryVariablesAccess;

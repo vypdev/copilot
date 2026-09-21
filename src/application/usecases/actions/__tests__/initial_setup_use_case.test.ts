@@ -46,6 +46,13 @@ const mockEnsureIssueTypes = jest.fn();
 const mockSetupPrepare = jest.fn();
 const mockSetupHasValidToken = jest.fn();
 const mockSetupVariablesUpsert = jest.fn();
+const repositorySnapshot = {
+  ownerType: 'User' as const, repositoryVisibility: 'private' as const,
+  repositorySecrets: [], repositorySecretsAccess: 'available' as const,
+  organizationSecrets: [], repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
+  organizationVariables: [], organizationAccess: 'not_applicable' as const,
+  organizationSecretsAccess: 'not_applicable' as const, organizationVariablesAccess: 'not_applicable' as const,
+};
 
 function baseParam(overrides: Record<string, unknown> = {}) {
   const source = {
@@ -168,7 +175,7 @@ describe('InitialSetupUseCase', () => {
     const setupConfiguration = createDefaultSetupConfiguration();
     setupConfiguration.features.release = false;
     setupConfiguration.createInitialTag = false;
-    const results = await useCase.invoke(baseParam({ inputs: { setupConfiguration } }));
+    const results = await useCase.invoke(baseParam({ inputs: { setupConfiguration, setupRemoteConfiguration: repositorySnapshot } }));
 
     expect(results[0].success).toBe(true);
     expect(mockSetupPrepare).toHaveBeenCalledWith({
@@ -218,6 +225,33 @@ describe('InitialSetupUseCase', () => {
       expect.arrayContaining([{ name: 'AGENT_PROVIDER', value: 'codex' }]),
     );
     expect(mockSetupVariablesUpsert).not.toHaveBeenCalled();
+  });
+
+  it('fails closed and does not upsert Variables when repository inventory cannot be inspected', async () => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    setupConfiguration.manageRepositorySecrets = false;
+    setupConfiguration.createInitialTag = false;
+    const inspect = jest.fn().mockRejectedValue(new Error('sensitive provider response'));
+    const readFailureUseCase = new InitialSetupUseCase(
+      { getUser: mockGetUserFromToken, getUserDetails: jest.fn() },
+      { ensureInitialLabels: mockEnsureInitialLabels },
+      { ensureIssueTypes: mockEnsureIssueTypes },
+      { getLatestTag: mockGetLatestTag },
+      { getDefaultBranch: mockGetDefaultBranch } as any,
+      { createTag: mockCreateTag } as any,
+      { prepare: mockSetupPrepare, hasValidToken: mockSetupHasValidToken },
+      { upsert: mockSetupVariablesUpsert },
+      undefined,
+      { inspect },
+    );
+
+    const results = await readFailureUseCase.invoke(baseParam({ inputs: { setupConfiguration } }));
+
+    expect(results[0].success).toBe(false);
+    expect(results[0].errors.map(error => error.message)).toContain('Could not inspect existing GitHub Actions resource scopes.');
+    expect(mockSetupVariablesUpsert).not.toHaveBeenCalled();
+    expect(JSON.stringify(results)).not.toContain('sensitive provider response');
+    expect(inspect).toHaveBeenCalledTimes(1);
   });
 
   it('does not create default tag when repository already has tags', async () => {
