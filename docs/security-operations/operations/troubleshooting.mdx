@@ -54,8 +54,9 @@ This guide helps you resolve common issues you might encounter while using Copil
     workflow files remain `Unverifiable` unless repository metadata proves the
     repository is private. Public organization member and issue-type responses
     are likewise inconclusive.
-    For repository Contents, setup probes the commit list rather than a file
-    path. GitHub's documented empty-repository response verifies read access
+    For the repository Contents row in the PAT permission table, setup probes
+    the read-only commit list; this is not the workflow-presence check described
+    below. GitHub's documented empty-repository response verifies read access
     only for a metadata-proven private repository; on a public repository it
     remains inconclusive and never proves write access. A `404` is still
     ambiguous because it can also mean the token cannot see the repository, so
@@ -93,8 +94,9 @@ This guide helps you resolve common issues you might encounter while using Copil
 
     An Actions API `404` alone does not prove that the credential-health
     workflow is absent because GitHub can hide inaccessible workflows that way.
-    Setup reports `missing` only after an independent Contents request first
-    proves repository visibility and a subsequent lookup of
+    Setup reports `missing` only after an independent Contents request to the
+    repository root (`path: ''`) first proves repository visibility and a
+    subsequent lookup of
     `.github/workflows/copilot_credential_health.yml` returns `404`. A readable
     file, unavailable Contents endpoint, failed visibility proof, denied exact
     lookup, or transient failure reports `unavailable` and skips temporary

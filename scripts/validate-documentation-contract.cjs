@@ -307,6 +307,8 @@ requireText('authentication.mdx', 'After valid token identity, a successful publ
 requireText('authentication.mdx', 'There is no separate Workflows read permission for inspection.', 'Contents-only workflow inspection grant');
 requireText('authentication.mdx', 'Workflows write and Contents write appear only when the workflow is independently confirmed missing', 'safe workflow bootstrap authority');
 requireText('security-operations/operations/troubleshooting.mdx', 'never authorizes bootstrap', 'unavailable workflow non-mutation');
+requireText('security-operations/operations/troubleshooting.mdx', 'For the repository Contents row in the PAT permission table, setup probes', 'PAT Contents permission probe distinction');
+requireText('security-operations/operations/troubleshooting.mdx', "repository root (`path: ''`)", 'workflow-presence Contents root probe');
 requireText(
   'authentication.mdx',
   'With `preserveExisting: false`, or an override that moves the Secret,',

@@ -228,7 +228,8 @@ read-only GitHub queries and presents ordered permission outcomes.
    The remote-configuration summary renders the bounded workflow state.
 9. An Actions `getWorkflow` `404` does not by itself prove absence. Setup MUST
    classify the workflow as `missing` only when an independent Contents read
-   first proves repository Contents visibility and a subsequent exact read of
+   first probes the repository root (`path: ''`) to prove Contents visibility
+   and a subsequent exact read of
    `.github/workflows/copilot_credential_health.yml` returns `404`. A readable
    file, absent Contents endpoint, failed visibility proof, or
    ambiguous/transient exact-file result is `unavailable`, never `missing`.
@@ -236,6 +237,10 @@ read-only GitHub queries and presents ordered permission outcomes.
    same two-read confirmation on the selected ref before creating a temporary
    workflow. Ambiguous reads return unavailable health evidence and MUST NOT
    create, dispatch, or delete a workflow; doctor remains query-only.
+   This remote-configuration absence inspection is distinct from the PAT
+   permission audit's read-only commit-list probe below. Operator guidance
+   MUST identify the correct endpoint for each purpose instead of conflating
+   the two Contents reads.
 
 ### 6.2 Workflow PAT
 
