@@ -179,15 +179,18 @@ read-only GitHub queries and presents ordered permission outcomes.
    defaults to No; non-interactive execution requires
    `--confirm-unverifiable-write-permissions`. `--yes` alone is not evidence.
    The wizard MUST invoke a configured final-permission-audit port after
-   normalization and before remote storage validation. Remote storage validation
-   MUST then return the final configuration and bounded blocking facts rather
-   than throw. The CLI MUST recognize that structured blocked result immediately,
-   report the bounded storage error with the result's exit code, and MUST NOT
-   start another permission audit, inventory revalidation, credential collection,
+   normalization and before final remote storage validation. The wizard then
+   MUST apply both organization-storage validation and scope-sensitive managed-
+   resource inventory validation, using the exact Secret and Variable names
+   derived from the normalized configuration. It MUST return the final
+   configuration and bounded blocking facts rather than throw. The CLI MUST
+   recognize that structured blocked result immediately, report the bounded
+   storage error with the result's exit code, and MUST NOT duplicate either
+   inventory validator or start another permission audit, credential collection,
    workflow comparison, target resolution, or mutation.
 6. If repository or organization Secret or Variable inventory is still
-   unavailable or unknown,
-   setup MUST stop after rendering the final permission table and before
+   unavailable or unknown, the setup wizard MUST stop after rendering the final
+   permission table and before
    credential decisions, resource targeting, or mutation only when at least one
    selected resource may resolve to that scope, or when
    `preserveExisting` requires discovering whether an unoverridden resource
@@ -260,8 +263,9 @@ read-only GitHub queries and presents ordered permission outcomes.
 | unverifiable | write level or ambiguous response cannot be safely proven | no pass/fail claim | block required reads; require explicit acknowledgement for required writes | inspect PAT settings, acknowledge only after checking them, or retry |
 
 Duplicate requirements are normalized to the strongest access level and one
-row. Provider probes MAY complete concurrently, but presentation order remains
-deterministic. Retry creates no durable permission state.
+row. Provider probes MAY complete concurrently with a fixed maximum of four
+in-flight requests, while returned checks and presentation remain in original
+requirement order. Retry creates no durable permission state.
 
 ## 7. User-facing configuration
 
@@ -287,7 +291,7 @@ prints requirements and any available checks without implying mutation access.
 | Layer/boundary | Owns | Must not own/import |
 |---|---|---|
 | Domain/pure policy | permission vocabulary, strongest-level normalization, capability-to-requirement decisions | terminal, fetch, Octokit, tokens |
-| Application | validate-token-permissions use case, ordered result contract, blocking policy | provider endpoints/headers, console |
+| Application | validate-token-permissions use case, ordered result contract, final scope-sensitive inventory blocking | provider endpoints/headers, console |
 | Semantic ports | read-only identity/repository/permission inspection | mutation methods or provider DTOs |
 | Infrastructure adapter | bounded GitHub GET/GraphQL probes, status/error mapping, non-throwing optional resource inventory | feature selection or rendering |
 | CLI presentation | narrow tables, icons plus status text, wrapping/no-color behavior | capability policy or remote calls |
@@ -307,7 +311,8 @@ upsert, dispatch, or temporary-resource operation.
 - Semantic port: one `inspect(owner, repository, token, requirements)` read-only
   operation returning semantic evidence states.
 - Durable state: none; results exist only for the command.
-- Concurrency/idempotency: bounded read probes, stable order, safe repetition.
+- Concurrency/idempotency: at most four read probes in flight, stable returned
+  order, and safe repetition; the fixed limit is not user-configurable.
 - Remote inventory state: repository and organization Secret/Variable access is
   represented separately from the discovered resource names; unavailable or
   unknown access is never projected as a confirmed empty inventory.
@@ -455,17 +460,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **73 distinct cases**.
+This SDD adds at least **76 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain permission policy | 18 | setup/workflow plans, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants, positive and negative organization-membership capability projection including comment-only routes |
 | Application state/blocking | 13 | verified, missing, required-read unverifiable, required-write confirmation, invalid base token, organization-only credential collection, pre-validation audit port, immediate remote-storage blocked handling, zero-count assignment and inactive membership checks |
-| Adapter/provider contracts | 24 | GET-only probes, commit-list Contents target, empty-repository 409, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow, unavailable endpoint state, duplicate-comment deletion fallback regression |
-| Setup/credential integration | 13 | pre-prompt setup table, conditional denial through planning, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
+| Adapter/provider contracts | 25 | GET-only probes, fixed four-request concurrency with stable result order, commit-list Contents target, empty-repository 409, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow, unavailable endpoint state, duplicate-comment deletion fallback regression |
+| Setup/credential integration | 15 | pre-prompt setup table, conditional denial through planning, wizard-owned repository-inventory block plus organization-only continuation, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
 | UI/accessibility | 4 | required/result tables, confirmation-required copy, 40-column wrapping, no-color text |
 | Architecture/security/docs | 1 | query-only boundary and no duplicated catalog |
-| **Total** | **73** | No double counting |
+| **Total** | **76** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -502,9 +507,11 @@ at widths 40/80/120 and `NO_COLOR`.
 6. Given a selected managed Secret or Variable that may resolve to repository
    or organization scope, or whose unoverridden scope must be discovered in
    either location to preserve an existing resource, when the required inventory
-   remains unavailable or unknown, the final table remains visible and setup
-   stops before credential prompts, scope resolution, or mutation without
-   treating the inventory as empty.
+   remains unavailable or unknown, the final table remains visible and the
+   wizard returns its structured blocked result before plan presentation,
+   confirmation, credential prompts, scope resolution, or mutation without
+   treating the inventory as empty. This holds for every wizard caller, not only
+   the CLI entrypoint.
 7. Given every selected Secret or Variable is explicitly organization-scoped,
    or its organization default has `preserveExisting: false`, unavailable
    repository inventory does not block credential collection, target resolution,
@@ -527,8 +534,10 @@ at widths 40/80/120 and `NO_COLOR`.
    their required repository/organization permissions and no unrelated grant.
 12. Given a workflow PAT with invalid identity or repository selection, it is not
    accepted for Secret provisioning.
-13. Given provider 429/5xx/network failure, the affected row is unverifiable, raw
-   provider text is absent, and other rows remain ordered and visible.
+13. Given any permission plan, no more than four provider probes are in flight;
+    completion order cannot change returned or presented requirement order.
+    Given provider 429/5xx/network failure, the affected row is unverifiable, raw
+    provider text is absent, and other rows remain ordered and visible.
 14. Given width 40 or `NO_COLOR`, symbols are accompanied by status text and the
    table remains readable.
 15. Given non-interactive supplied credentials, no prompt is created but the
@@ -586,7 +595,7 @@ at widths 40/80/120 and `NO_COLOR`.
 | deterministic 403 mapping | provider adapter plus bounded GitHub error policy | rate-limit, SSO, bare, and explicit-denial fixtures | authentication/troubleshooting |
 | context-specific generic 403 handling | setup query adapter plus operational GitHub error policy | setup-probe and duplicate-comment deletion regression fixtures | authentication/troubleshooting |
 | final report before remote-storage block | wizard result contract/CLI orchestration | blocked-result and CLI ordering tests | authentication/troubleshooting |
-| scope-sensitive inventory gating | storage policy/credential use case/resource provisioning | organization-only, preserve-existing, and mixed-scope tests | authentication/troubleshooting |
+| scope-sensitive inventory gating | storage policy plus setup wizard boundary | wizard-blocked, organization-only, preserve-existing, and mixed-scope tests | authentication/troubleshooting |
 | no write probes | semantic query port/architecture rule | method/transport tests | architecture |
 | secret safety | all contracts/presenter | redaction fixtures | credentials |
 | feature/effective-target workflow PAT | configuration projection policy | conditional matrix and preserved organization-variable tests | checklist |
@@ -614,7 +623,7 @@ at widths 40/80/120 and `NO_COLOR`.
 - [x] No validation request mutates GitHub and no result overclaims write access.
 - [x] Token values and raw provider text are absent from all output/state/errors.
 - [x] Clean Architecture boundaries and their executable test pass.
-- [x] At least 73 distinct cases and stated coverage thresholds pass.
+- [x] At least 76 distinct cases and stated coverage thresholds pass.
 - [x] Authentication, checklist, troubleshooting, and architecture docs agree.
 - [x] Catalog evidence and generated `specs/CATALOG.md` are current.
 - [x] Specification, documentation, typecheck, lint, and test gates pass.

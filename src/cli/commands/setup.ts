@@ -10,9 +10,7 @@ import { SetupQuestionnaireController, SetupWizardUseCase } from '../../applicat
 import {
   SETUP_FEATURE_DESCRIPTIONS,
   buildSetupCredentialRequirements,
-  buildSetupRepositoryVariables,
   effectiveIssueWorkflowFeatures,
-  validateSetupManagedResourceInventory,
 } from '../../application/policies/setup_configuration_policy';
 import {
   buildConfiguredSetupPatPermissionRequirements,
@@ -191,19 +189,6 @@ export function registerSetupCommand(program: Command): void {
         }
         const { configuration, remoteConfiguration } = result;
         const credentialRequirements = buildSetupCredentialRequirements(configuration);
-        const repositoryVariables = buildSetupRepositoryVariables(configuration);
-        if (remoteConfiguration) {
-          const inventoryErrors = validateSetupManagedResourceInventory(configuration, remoteConfiguration, {
-            secrets: credentialRequirements.map(requirement => requirement.name),
-            variables: repositoryVariables.map(variable => variable.name),
-          });
-          if (inventoryErrors.length > 0) {
-            throw new ApplicationError(
-              'provider.unavailable',
-              `Setup cannot safely continue with unavailable required resource inventory:\n${inventoryErrors.map(error => `- ${error}`).join('\n')}`,
-            );
-          }
-        }
         const workflowComparisons = new SetupDoctorWorkspaceQueryAdapter().compareWorkflows(effectiveIssueWorkflowFeatures(configuration), configuration);
         const updateWorkflows = await workflowPrompt.confirmWorkflowUpdates(workflowComparisons, Boolean(options.updateWorkflows));
         const approvedWorkflowFiles = updateWorkflows

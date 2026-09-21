@@ -164,13 +164,18 @@ PAT permission validation follows the same dependency rule. The application
 `SetupTokenPermissionsUseCase` validates identity before invoking the narrow
 `SetupTokenPermissionQueryPort`; the infrastructure adapter performs only safe
 GitHub GET probes and maps provider outcomes to `verified`, `missing`, or
-`unverifiable`. Write access is never inferred from a successful read. The CLI
+`unverifiable`. It reuses the application bounded-concurrency policy with a
+fixed limit of four and restores original requirement order. Write access is
+never inferred from a successful read. The CLI
 presenter renders the policy-owned requirements and use-case-owned outcomes but
 contains no permission catalog or remote operation. Application `ready` remains
 strict; the terminal adapter owns the separate fail-closed acknowledgement for
 required unverifiable writes, while required unverifiable reads remain blocked.
 The shared storage policy computes repository and organization inventory
-dependencies symmetrically before credential decisions or resource grouping.
+dependencies symmetrically. `SetupWizardUseCase` applies that policy after its
+final permission audit and before plan presentation, so every caller receives
+the same structured block; the CLI consumes that result without duplicating
+inventory validation before credential decisions or resource grouping.
 An architecture test rejects mutation methods on the query port and non-GET
 methods in its adapter.
 

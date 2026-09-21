@@ -66,6 +66,11 @@ read the selected repository, while the corresponding write capability remains
 unverifiable and needs the normal explicit acknowledgement. An ambiguous `404`
 is never treated as empty-repository evidence.
 
+Permission checks use at most four concurrent read-only GitHub probes. Results
+remain in the displayed requirement order even when provider responses complete
+out of order, reducing secondary-rate-limit pressure without making the report
+nondeterministic.
+
 If a conditional repository or organization Secret or Variable inventory read is unavailable
 before feature selection, setup keeps that access state distinct from an empty
 inventory and continues planning. When the approved plan actually needs that
@@ -79,12 +84,12 @@ as an empty list. Repository inventory is not required when every selected
 resource is explicitly organization-scoped, or uses an organization default
 with `preserveExisting: false`; those plans continue from the available
 organization inventory without requesting unrelated repository access.
-If organization storage itself is unavailable, setup recognizes that blocked
-result immediately after the wizard has rendered and run the final setup-PAT
+If required repository or organization inventory is unavailable, the wizard
+recognizes that blocked result immediately after running the final setup-PAT
 permission audit. The CLI reports the storage validation error with a failing
-exit code without starting a second audit. It does not
-continue into generic inventory revalidation, plan confirmation, credential
-collection, workflow comparison, target resolution, or mutation.
+exit code without starting a second audit or inventory validator. It does not
+continue into plan confirmation, credential collection, workflow comparison,
+target resolution, or mutation.
 
 <Info>GitHub does not reveal Secret values through its API. Copilot validates new credentials with provider metadata requests and validates existing remote Secrets through the read-only `copilot_credential_health.yml` workflow when it is installed on the repository's default branch. The health workflow reports each requested credential independently, but that bounded reachability result is not a permission audit. If `PAT` already exists, interactive setup asks you to re-enter it and runs the complete workflow-PAT permission matrix before provisioning; unattended setup must supply `PAT` again or stops before mutation. Doctor can query and dispatch the installed health workflow but has no bootstrap or repository-mutation authority; temporary workflow bootstrap is available only during setup. A preauthenticated Codex session is runner state, not a Secret: it is accepted only when the runtime preflight can execute `codex login status` successfully.</Info>
 

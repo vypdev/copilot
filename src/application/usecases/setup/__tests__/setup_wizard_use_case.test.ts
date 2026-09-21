@@ -235,7 +235,7 @@ describe('SetupWizardUseCase', () => {
       reason: 'remote-storage-unavailable',
       exitCode: 1,
       configuration: expect.objectContaining({ manageRepositoryVariables: true }),
-      errors: [expect.stringContaining('organization variables')],
+      errors: expect.arrayContaining([expect.stringContaining('organization variables')]),
       remoteConfiguration: blockedRemote,
     }));
     expect(deps.planPresenter.present).not.toHaveBeenCalled();
@@ -244,5 +244,52 @@ describe('SetupWizardUseCase', () => {
       expect.objectContaining({ manageRepositoryVariables: true }),
       blockedRemote,
     );
+  });
+
+  it('blocks unavailable required repository inventory inside the wizard boundary', async () => {
+    const blockedRemote = { ...remote, repositoryVariablesAccess: 'unavailable' as const };
+    const deps = dependencies({
+      remoteConfiguration: { inspect: jest.fn().mockResolvedValue(blockedRemote) },
+    });
+
+    const result = await new SetupWizardUseCase(deps).execute({
+      mode: 'non-interactive',
+      overrides: { pullRequestApproval: { mode: 'off' } },
+      skipRepositorySecrets: true,
+      remoteTarget: { owner: 'owner', repository: 'repo', token: 'token' },
+    });
+
+    expect(result).toEqual(expect.objectContaining({
+      status: 'blocked',
+      reason: 'remote-storage-unavailable',
+      exitCode: 1,
+      errors: [expect.stringContaining('Repository Variable inventory is unavailable')],
+      remoteConfiguration: blockedRemote,
+    }));
+    expect(deps.finalPermissionAudit.audit).toHaveBeenCalledTimes(1);
+    expect(deps.planPresenter.present).not.toHaveBeenCalled();
+    expect(deps.confirmation.confirm).not.toHaveBeenCalled();
+  });
+
+  it('does not block organization-only resources on unrelated repository inventory', async () => {
+    const organizationOnlyRemote = { ...remote, repositoryVariablesAccess: 'unavailable' as const };
+    const deps = dependencies({
+      remoteConfiguration: { inspect: jest.fn().mockResolvedValue(organizationOnlyRemote) },
+    });
+
+    const result = await new SetupWizardUseCase(deps).execute({
+      mode: 'non-interactive',
+      overrides: {
+        pullRequestApproval: { mode: 'off' },
+        storage: { variables: { defaultScope: 'organization', preserveExisting: false } },
+      },
+      skipRepositorySecrets: true,
+      remoteTarget: { owner: 'owner', repository: 'repo', token: 'token' },
+    });
+
+    expect(result).toEqual(expect.objectContaining({ status: 'completed', exitCode: 0 }));
+    expect(deps.finalPermissionAudit.audit).toHaveBeenCalledTimes(1);
+    expect(deps.planPresenter.present).toHaveBeenCalledTimes(1);
+    expect(deps.confirmation.confirm).toHaveBeenCalledTimes(1);
   });
 });

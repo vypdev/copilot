@@ -55302,7 +55302,13 @@ class SetupWizardUseCase {
         const configuration = (0, setup_configuration_policy_1.normalizeSetupConfigurationLocales)(collectedConfiguration);
         await this.dependencies.finalPermissionAudit.audit(configuration, remoteConfiguration);
         if (remoteConfiguration) {
-            const remoteStorageErrors = (0, setup_configuration_policy_1.validateSetupStorageAgainstRemote)(configuration, remoteConfiguration);
+            const remoteStorageErrors = [
+                ...(0, setup_configuration_policy_1.validateSetupStorageAgainstRemote)(configuration, remoteConfiguration),
+                ...(0, setup_configuration_policy_1.validateSetupManagedResourceInventory)(configuration, remoteConfiguration, {
+                    secrets: (0, setup_configuration_policy_1.buildSetupCredentialRequirements)(configuration).map(requirement => requirement.name),
+                    variables: (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(configuration).map(variable => variable.name),
+                }),
+            ];
             if (remoteStorageErrors.length > 0) {
                 return {
                     status: 'blocked',
@@ -64898,16 +64904,6 @@ function registerSetupCommand(program) {
             }
             const { configuration, remoteConfiguration } = result;
             const credentialRequirements = (0, setup_configuration_policy_1.buildSetupCredentialRequirements)(configuration);
-            const repositoryVariables = (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(configuration);
-            if (remoteConfiguration) {
-                const inventoryErrors = (0, setup_configuration_policy_1.validateSetupManagedResourceInventory)(configuration, remoteConfiguration, {
-                    secrets: credentialRequirements.map(requirement => requirement.name),
-                    variables: repositoryVariables.map(variable => variable.name),
-                });
-                if (inventoryErrors.length > 0) {
-                    throw new application_error_1.ApplicationError('provider.unavailable', `Setup cannot safely continue with unavailable required resource inventory:\n${inventoryErrors.map(error => `- ${error}`).join('\n')}`);
-                }
-            }
             const workflowComparisons = new setup_workspace_adapter_1.SetupDoctorWorkspaceQueryAdapter().compareWorkflows((0, setup_configuration_policy_1.effectiveIssueWorkflowFeatures)(configuration), configuration);
             const updateWorkflows = await workflowPrompt.confirmWorkflowUpdates(workflowComparisons, Boolean(options.updateWorkflows));
             const approvedWorkflowFiles = updateWorkflows
@@ -82356,6 +82352,8 @@ function readHealthWorkflow() {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupTokenPermissionQueryAdapter = void 0;
 const github_error_policy_1 = __nccwpck_require__(58791);
+const bounded_concurrency_policy_1 = __nccwpck_require__(35596);
+const SETUP_PERMISSION_PROBE_CONCURRENCY = 4;
 /** Maps safe GitHub reads to semantic permission evidence without test mutations. */
 class SetupTokenPermissionQueryAdapter {
     constructor(options = {}) {
@@ -82363,7 +82361,7 @@ class SetupTokenPermissionQueryAdapter {
         this.timeoutMs = options.timeoutMs ?? 10000;
     }
     inspect(owner, repository, token, requirements) {
-        return Promise.all(requirements.map(requirement => this.inspectOne(owner, repository, token, requirement)));
+        return (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(requirements.map(requirement => () => this.inspectOne(owner, repository, token, requirement)), SETUP_PERMISSION_PROBE_CONCURRENCY);
     }
     async inspectOne(owner, repository, token, requirement) {
         const url = probeUrl(owner, repository, requirement);

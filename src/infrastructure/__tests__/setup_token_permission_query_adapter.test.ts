@@ -42,6 +42,37 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         expect(new SetupTokenPermissionQueryAdapter()).toBeInstanceOf(SetupTokenPermissionQueryAdapter);
     });
 
+    it('limits probes to four concurrent requests while preserving requirement order', async () => {
+        let active = 0;
+        let maximumActive = 0;
+        const releases: Array<() => void> = [];
+        const fetcher = jest.fn(async () => {
+            active += 1;
+            maximumActive = Math.max(maximumActive, active);
+            await new Promise<void>(resolve => releases.push(resolve));
+            active -= 1;
+            return response(true, 200);
+        });
+        const requirements = Array.from({ length: 6 }, (_, index) => ({
+            ...requirement(),
+            id: `requirement-${index}`,
+        }));
+
+        const inspection = new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
+            'owner', 'repo', 'secret-token', requirements,
+        );
+
+        expect(fetcher).toHaveBeenCalledTimes(4);
+        releases.splice(0).forEach(release => release());
+        await new Promise<void>(resolve => setImmediate(resolve));
+        expect(fetcher).toHaveBeenCalledTimes(6);
+        expect(maximumActive).toBe(4);
+        releases.splice(0).forEach(release => release());
+
+        const checks = await inspection;
+        expect(checks.map(check => check.id)).toEqual(requirements.map(item => item.id));
+    });
+
     it('verifies a read permission through a GET-only probe', async () => {
         const fetcher = jest.fn().mockResolvedValue(response(true, 200));
         const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(

@@ -4,6 +4,9 @@ import type {
     SetupTokenPermissionRequirement,
 } from '../domain/setup_token_permissions';
 import { isGithubPermissionDenied } from '../data/repository/github/github_error_policy';
+import { runWithConcurrencyLimit } from '../application/policies/bounded_concurrency_policy';
+
+const SETUP_PERMISSION_PROBE_CONCURRENCY = 4;
 
 export interface SetupTokenPermissionQueryOptions {
     fetcher?: typeof fetch;
@@ -26,7 +29,10 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionQue
         token: string,
         requirements: readonly SetupTokenPermissionRequirement[],
     ): Promise<readonly SetupTokenPermissionCheck[]> {
-        return Promise.all(requirements.map(requirement => this.inspectOne(owner, repository, token, requirement)));
+        return runWithConcurrencyLimit(
+            requirements.map(requirement => () => this.inspectOne(owner, repository, token, requirement)),
+            SETUP_PERMISSION_PROBE_CONCURRENCY,
+        );
     }
 
     private async inspectOne(

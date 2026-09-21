@@ -17,6 +17,7 @@ import {
   createDefaultSetupConfiguration,
   mergeSetupConfiguration,
   normalizeSetupConfigurationLocales,
+  validateSetupManagedResourceInventory,
   validateSetupStorageAgainstRemote,
   validateSetupConfiguration,
   type SetupConfigurationOverrides,
@@ -152,7 +153,13 @@ export class SetupWizardUseCase {
     const configuration = normalizeSetupConfigurationLocales(collectedConfiguration);
     await this.dependencies.finalPermissionAudit.audit(configuration, remoteConfiguration);
     if (remoteConfiguration) {
-      const remoteStorageErrors = validateSetupStorageAgainstRemote(configuration, remoteConfiguration);
+      const remoteStorageErrors = [
+        ...validateSetupStorageAgainstRemote(configuration, remoteConfiguration),
+        ...validateSetupManagedResourceInventory(configuration, remoteConfiguration, {
+          secrets: buildSetupCredentialRequirements(configuration).map(requirement => requirement.name),
+          variables: buildSetupRepositoryVariables(configuration).map(variable => variable.name),
+        }),
+      ];
       if (remoteStorageErrors.length > 0) {
         return {
           status: 'blocked',
