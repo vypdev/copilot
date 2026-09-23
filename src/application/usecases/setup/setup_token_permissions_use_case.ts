@@ -7,6 +7,7 @@ import type {
     SetupTokenPermissionCheck,
     SetupTokenPermissionReport,
 } from '../../../domain/setup_token_permissions';
+import { reconcileSetupTokenPermissionEvidence } from '../../policies/setup_token_permission_evidence_policy';
 
 /** Validates PAT identity first, then runs only read-only permission probes. */
 export class SetupTokenPermissionsUseCase {
@@ -36,19 +37,15 @@ export class SetupTokenPermissionsUseCase {
             };
         }
 
-        const byId = new Map((await this.permissions.inspect(
+        const evidence = await this.permissions.inspect(
             request.owner,
             request.repository,
             request.token,
             request.requirements,
-        )).map(check => [check.id, check]));
-        const checks = request.requirements.map<SetupTokenPermissionCheck>(requirement => byId.get(requirement.id) ?? ({
-            ...requirement,
-            status: 'unverifiable',
-            message: 'No safe permission evidence was returned for this requirement.',
-        }));
+        );
+        const checks = reconcileSetupTokenPermissionEvidence(request.requirements, evidence);
         const requiredChecks = checks.filter(check => check.applicability === 'required');
-        const readUsable = (check: SetupTokenPermissionCheck) => check.status === 'verified'
+        const readUsable = (check: SetupTokenPermissionCheck) => (check.status === 'verified' && check.level === 'read')
             || (check.status === 'unverifiable' && check.level === 'read'
                 && check.scope === 'repository' && check.operationallyAvailable === true);
         const ready = requiredChecks.every(readUsable);

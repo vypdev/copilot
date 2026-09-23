@@ -387,7 +387,22 @@ read-only GitHub queries and presents ordered permission outcomes.
 Duplicate requirements are normalized to the strongest access level and one
 row. Provider probes MAY complete concurrently with a fixed maximum of four
 in-flight requests, while returned checks and presentation remain in original
-requirement order. Retry creates no durable permission state.
+requirement order. The immutable requirement remains authoritative for `role`,
+`scope`, `permission`, `level`, `applicability`, `condition`, and `probe`; a
+provider result is evidence, not a replacement requirement. Exactly one result
+with the same stable ID and identical security semantics is required. Missing,
+duplicate, malformed, or semantically mismatched evidence is projected onto
+the canonical requirement as `Unverifiable` with bounded generic guidance.
+Presentation MUST use canonical requirement fields even when provider evidence
+is hostile.
+
+Because the query port is read-only, it MUST NOT establish a write grant. A
+provider result that claims `Verified` for a write requirement is downgraded to
+canonical `Unverifiable` evidence and follows the explicit write-
+acknowledgement flow. `operationallyAvailable` may be retained only for an
+exactly matching repository-scoped read requirement whose status remains
+`Unverifiable`; it cannot make an organization or write requirement usable.
+Retry creates no durable permission state.
 
 ## 7. User-facing configuration
 
@@ -607,17 +622,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **112 distinct cases**.
+This SDD adds at least **117 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain permission policy | 25 | setup/workflow plans, independent selected-feature write grants and all-disabled minimum, enabled comment-route file-mutation potential versus individual answer-only events, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants, positive and negative organization-membership capability projection including comment-only and independently available single-action routes |
-| Application state/blocking | 18 | verified, missing, required-read unverifiable, public-read operational readiness, required-write confirmation, invalid base token, organization-only credential collection, bounded pre-plan inspection failure, accepted/rejected final audit with structured block, selected-ref workflow state refresh, immediate remote-storage blocked handling, zero-count assignment and inactive membership checks |
+| Application state/blocking | 23 | verified, missing, required-read unverifiable, public-read operational readiness, required-write confirmation, canonical reconstruction after semantic mismatch, duplicate evidence rejection, verified-write downgrade, invalid base token, organization-only credential collection, bounded pre-plan inspection failure, accepted/rejected final audit with structured block, selected-ref workflow state refresh, immediate remote-storage blocked handling, zero-count assignment and inactive membership checks |
 | Adapter/provider contracts | 38 | GET-only probes, fixed four-request concurrency with stable result order, private-versus-public/unknown visibility evidence, protected-endpoint evidence, commit-list Contents target, private empty-repository 409 versus public operational usability, default-branch Checks resolution plus encoded check-runs target, invalid/missing branch fail-closed behavior, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow on the selected ref in inspection and bootstrap, malformed root scalar/object success remains unavailable without bootstrap, malformed exact-file success remains unavailable, unavailable endpoint state, duplicate-comment deletion fallback regression |
 | Setup/credential integration | 21 | pre-prompt setup table, conditional denial through planning, wizard-owned repository-inventory block plus organization-only continuation, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, absent/failed remote snapshot blocks every subsequent mutation, preserve-disabled and scope-moving keep rejection, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
 | UI/accessibility | 5 | required/result tables, public-read limitation copy, confirmation-required copy, 40-column wrapping, no-color text |
 | Architecture/security/docs | 5 | query-only boundary, no duplicated catalog, safe generic/recovery automation examples, and three nearest-paragraph permission-prerequisite cases |
-| **Total** | **112** | No double counting |
+| **Total** | **117** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -722,11 +737,11 @@ at widths 40/80/120 and `NO_COLOR`.
 24. Given a workflow permission plan but no permission-audit port, credential
     collection fails closed as an unsupported installation before accepting or
     provisioning the PAT.
-25. Given an organization-owned repository with automatic assignees/reviewers,
-    release/hotfix authorization, and members-only AI disabled, the workflow PAT
-    plan omits Members read even when ordinary comment routes are enabled;
-    enabling any configured route that actually performs a membership lookup
-    adds the grant, and zero-count or inactive runtime paths do not query it.
+25. Given an organization-owned repository, automatic assignees/reviewers or
+    release/hotfix authorization adds Members read for each enabled capability
+    that performs a membership lookup, even when members-only AI is disabled.
+    Ordinary comment routes alone do not add the grant; zero-count or inactive
+    runtime paths omit it unless another enabled membership consumer remains.
 26. Given Actions returns `404` for the credential-health workflow, setup reports
     `missing` only when an independent Contents request first proves repository
     visibility and a subsequent read of the exact workflow file confirms `404`;
@@ -763,7 +778,7 @@ at widths 40/80/120 and `NO_COLOR`.
 32. Given valid identity, public visibility, and a successful repository read,
     the row stays `Unverifiable` but carries positive operational evidence;
     setup may continue when all other required reads are verified/usable and
-    writes are verified or explicitly acknowledged. A denied, unknown-visibility,
+    required writes are explicitly acknowledged. A denied, unknown-visibility,
     organization, or write probe never gains this exception.
 33. Given a rejected or absent pre-plan remote inspection, the wizard supplies
     a bounded unavailable snapshot to planning and final audit; when selected
@@ -809,6 +824,12 @@ at widths 40/80/120 and `NO_COLOR`.
     ref inspection returns `unavailable` rather than `installed`. Bootstrap
     does not dispatch or mutate on that evidence; a valid non-empty file `sha`
     may establish installation.
+42. Given provider evidence reuses a requirement ID but changes any security
+    semantic, appears more than once, is absent, or is malformed, the audit
+    renders the canonical requirement as `Unverifiable` and blocks required
+    reads. Exactly matching read evidence may verify; a claimed verified write
+    is downgraded to `Unverifiable`, and only an exactly matching repository
+    read may retain positive operational availability.
 
 ## 17. Requirements traceability
 
@@ -856,7 +877,7 @@ at widths 40/80/120 and `NO_COLOR`.
 - [x] No validation request mutates GitHub and no result overclaims write access.
 - [x] Token values and raw provider text are absent from all output/state/errors.
 - [x] Clean Architecture boundaries and their executable test pass.
-- [x] At least 112 distinct cases and stated coverage thresholds pass.
+- [x] At least 117 distinct cases and stated coverage thresholds pass.
 - [x] Authentication, checklist, troubleshooting, and architecture docs agree.
 - [x] Catalog evidence and generated `specs/CATALOG.md` are current.
 - [x] Specification, documentation, typecheck, lint, and test gates pass.

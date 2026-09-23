@@ -194,9 +194,17 @@ publication/reconciliation operation allowed.
 
 ### 6.1 Deterministic partition planning
 
-1. Filter ignored files before planning; preserve provider file order for the
-   remaining files. Leading `**/` is an optional directory prefix and therefore
-   matches the same path at the repository root or at any nesting depth.
+1. Before ignore filtering, validate every provider change as a non-null
+   object with a non-empty string filename and status, non-negative safe-
+   integer additions/deletions counts, and an absent, null, or string patch.
+   Validate any string patch for isolated UTF-16 surrogates at this same
+   boundary, including a change whose valid filename would later be ignored.
+   Any malformed field raises the bounded malformed-input plan error before
+   model execution or provider mutation. Only then filter ignored files and
+   preserve provider file order for the remaining files. Valid ignored patches
+   consume no raw-input or partition budget. Leading `**/` is an optional
+   directory prefix and therefore matches the same path at the repository root
+   or at any nesting depth.
 2. Normalize line endings and remove unsafe invisible prompt characters through
    the existing untrusted-content boundary before measuring. Provider-supplied
    filename, status, additions, and deletions metadata MUST each remain inside
@@ -215,7 +223,8 @@ publication/reconciliation operation allowed.
    When a single line exceeds the budget, split that line at a hard UTF-16
    boundary moved left when necessary so it never separates a surrogate pair.
    Reject an input patch containing an isolated high or low UTF-16 surrogate
-   with the bounded plan-limit error before assigning any partition. The
+   with the bounded malformed-input plan-limit error before ignore filtering
+   or assigning any partition. The
    sanitized patch and the direct fragment-splitting boundary MUST both fail
    closed on malformed scalar input; do not silently replace or discard a
    provider character while claiming lossless reconstruction. The bounded
@@ -516,17 +525,17 @@ comments remain untouched.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **50 distinct cases**.
+This SDD owns at least **57 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/pure planning | 23 | empty/single/multi-file, newline/hard split, UTF-16 surrogate-safe hard boundaries and rejection of isolated high/low surrogates, collision-free untrusted-data framing with verbatim delimiter-like patch text, individual and cumulative raw input ceilings before normalization, exact prompt and 64/65 partition boundaries, omitted/null/empty patch assignments and malformed non-string rejection even on ignored paths, root/nested leading-`**/` ignore parity, stable IDs, order, no character loss, hostile status/count metadata envelope |
+| Domain/pure planning | 30 | empty/single/multi-file, newline/hard split, UTF-16 surrogate-safe hard boundaries and pre-ignore rejection of isolated high/low surrogates, collision-free untrusted-data framing with verbatim delimiter-like patch text, individual and cumulative raw input ceilings before normalization, exact prompt and 64/65 partition boundaries, omitted/null/empty patch assignments, malformed change/object/filename/status/count/patch rejection even on ignored paths, root/nested leading-`**/` ignore parity, stable IDs, order, no character loss, hostile status/count metadata envelope |
 | State/application/idempotency/races | 8 | all-complete, one failure, wrong/duplicate ID, wrong SHA, resolution ownership, stale head, replay, empty canonical zero-work |
 | Agent adapter/schema contracts | 4 | required attestation, locale, undefined/invalid result, aggregate bounds |
 | Workflow/architecture/telemetry | 5 | concurrency two, ordered collection, no mutation before complete, positive and zero-partition plan metrics |
 | UI/UX/localization/sanitization | 4 | pending, failed, complete, hostile content/control characters |
 | Integration/security/compatibility | 6 | 44-file regression, oversized patch, provider partial, dry-run, legacy issue-only path, ignored-only canonical no-op |
-| **Total** | **50** | No double counting |
+| **Total** | **57** | No double counting |
 
 Planner, attestation, and aggregate pure policies require 100% enumerated branch
 coverage. Changed analyzer/context modules require at least 95% lines/statements
@@ -609,6 +618,11 @@ token scope, secret, or public input.
     frame terminator, then the rendered data frame selects a non-colliding
     terminator; its payload is exactly the sanitized fragment, never silently
     rewritten, and the final partition remains within its budget.
+23. Given an ignored change contains an isolated surrogate, or any provider
+    change has a null/non-object shape, empty/non-string filename or status,
+    unsafe/negative additions or deletions, or another invalid patch type, the
+    planner returns the bounded malformed-input error before ignore filtering,
+    model execution, or mutation. A valid ignored change remains budget-free.
 
 ## 17. Requirements traceability
 
@@ -647,7 +661,7 @@ token scope, secret, or public input.
       provider enumeration and every partition respects fixed prompt bounds.
 - [x] Attestation, resolution ownership, concurrency, aggregation, freshness,
       replay, cancellation/failure, and no-prepublication-mutation tests pass.
-- [x] The 50-case floor and changed-module/repository coverage budgets pass.
+- [x] The 57-case floor and changed-module/repository coverage budgets pass.
 - [x] Pending, failed, provider-partial, complete, dry-run, and publication-
       partial surfaces are accurate, localized, accessible, and bounded.
 - [x] No public configuration, permission, credential, or durable-state change

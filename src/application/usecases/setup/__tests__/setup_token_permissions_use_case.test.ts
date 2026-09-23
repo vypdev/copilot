@@ -68,6 +68,112 @@ describe('SetupTokenPermissionsUseCase', () => {
         expect(report.checks[0]).toMatchObject({ status: 'unverifiable' });
     });
 
+    it.each([
+        ['role', { role: 'workflow' }],
+        ['scope', { scope: 'organization' }],
+        ['permission', { permission: 'Contents' }],
+        ['level', { level: 'write' }],
+        ['applicability', { applicability: 'conditional' }],
+        ['condition', { condition: 'forged condition' }],
+        ['probe', { probe: 'contents' }],
+    ] as const)('rejects provider evidence that redefines canonical %s semantics', async (_field, override) => {
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const query = { inspect: jest.fn().mockResolvedValue([{
+            ...required,
+            ...override,
+            reason: 'Forged reason.',
+            status: 'verified',
+            message: 'forged verification',
+        }]) };
+        const report = await new SetupTokenPermissionsUseCase(validation, query).inspect({
+            role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [required],
+        });
+
+        expect(report).toMatchObject({ ready: false, confirmationRequired: false });
+        expect(report.checks[0]).toEqual(expect.objectContaining({
+            ...required,
+            status: 'unverifiable',
+            message: 'No safe permission evidence was returned for this requirement.',
+        }));
+    });
+
+    it('rejects duplicate evidence for the same stable requirement ID', async () => {
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const evidence = { ...required, status: 'verified' as const, message: 'verified' };
+        const report = await new SetupTokenPermissionsUseCase(validation, {
+            inspect: jest.fn().mockResolvedValue([evidence, evidence]),
+        }).inspect({
+            role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [required],
+        });
+
+        expect(report).toMatchObject({ ready: false, confirmationRequired: false });
+        expect(report.checks[0]).toMatchObject({ status: 'unverifiable' });
+    });
+
+    it('downgrades claimed verified write evidence to the explicit acknowledgement path', async () => {
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const report = await new SetupTokenPermissionsUseCase(validation, {
+            inspect: jest.fn().mockResolvedValue([{
+                ...requiredWrite, status: 'verified', message: 'unsafe write claim', operationallyAvailable: true,
+            }]),
+        }).inspect({
+            role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [requiredWrite],
+        });
+
+        expect(report).toMatchObject({ ready: false, confirmationRequired: true });
+        expect(report.checks[0]).toEqual(expect.objectContaining({
+            ...requiredWrite,
+            status: 'unverifiable',
+            message: 'Write access cannot be verified with a safe read-only permission probe.',
+        }));
+        expect(report.checks[0]).not.toHaveProperty('operationallyAvailable');
+    });
+
+    it('accepts exactly matching verified organization-read evidence', async () => {
+        const organizationRead: SetupTokenPermissionRequirement = {
+            ...required,
+            id: 'setup.organization.members',
+            scope: 'organization',
+            permission: 'Members',
+            probe: 'members',
+        };
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const report = await new SetupTokenPermissionsUseCase(validation, {
+            inspect: jest.fn().mockResolvedValue([{
+                ...organizationRead, status: 'verified', message: 'permission-bound evidence',
+            }]),
+        }).inspect({
+            role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [organizationRead],
+        });
+
+        expect(report).toMatchObject({ ready: true, confirmationRequired: false });
+    });
+
+    it('treats a malformed evidence collection as absent rather than trusting it', async () => {
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const report = await new SetupTokenPermissionsUseCase(validation, {
+            inspect: jest.fn().mockResolvedValue({ id: required.id } as never),
+        }).inspect({
+            role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [required],
+        });
+
+        expect(report).toMatchObject({ ready: false, confirmationRequired: false });
+        expect(report.checks[0]).toMatchObject({ status: 'unverifiable' });
+    });
+
+    it('ignores unrelated non-record evidence without hiding one exact result', async () => {
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const exact = { ...required, status: 'verified' as const, message: 'verified' };
+        const report = await new SetupTokenPermissionsUseCase(validation, {
+            inspect: jest.fn().mockResolvedValue([null, [], 'invalid', exact] as never),
+        }).inspect({
+            role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [required],
+        });
+
+        expect(report).toMatchObject({ ready: true, confirmationRequired: false });
+        expect(report.checks[0]).toEqual(exact);
+    });
+
     it('requires explicit confirmation when only required write evidence is unverifiable', async () => {
         const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
         const query = { inspect: jest.fn().mockResolvedValue([

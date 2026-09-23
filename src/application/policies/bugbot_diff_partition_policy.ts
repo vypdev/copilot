@@ -10,13 +10,15 @@ const MAX_REVIEW_DIFF_METADATA_LENGTH = 512;
 
 export interface BugbotDiffPlanInput {
   readonly prHeadSha: string;
-  readonly changes?: readonly {
-    readonly filename: string;
-    readonly status: string;
-    readonly additions: number;
-    readonly deletions: number;
-    readonly patch?: string | null;
-  }[];
+  readonly changes?: readonly BugbotDiffChange[];
+}
+
+interface BugbotDiffChange {
+  readonly filename: string;
+  readonly status: string;
+  readonly additions: number;
+  readonly deletions: number;
+  readonly patch?: string | null;
 }
 
 export interface BugbotReviewDiffPartition {
@@ -54,23 +56,24 @@ export function buildReviewDiffPlan(
   context: BugbotDiffPlanInput | null,
   ignorePatterns: readonly string[] = [],
 ): BuiltBugbotDiffReviewPlan {
-  if (!context?.changes?.length) return { partitions: [], ignored: 0, retained: 0, fragments: 0 };
+  if (context?.changes == null) return { partitions: [], ignored: 0, retained: 0, fragments: 0 };
+  if (!Array.isArray(context.changes)) throw new BugbotDiffPlanLimitError('malformed-input');
+  if (context.changes.length === 0) return { partitions: [], ignored: 0, retained: 0, fragments: 0 };
   const sections: Array<{ readonly filename: string; readonly rendered: string }> = [];
   const retainedFiles = new Set<string>();
   let ignored = 0;
   let fragmentIndex = 0;
   let rawPatchTotal = 0;
 
-  for (const change of context.changes) {
-    if (change.patch != null && typeof change.patch !== 'string') {
-      throw new BugbotDiffPlanLimitError('malformed-input');
-    }
+  for (const candidate of context.changes as readonly unknown[]) {
+    if (!isValidDiffChange(candidate)) throw new BugbotDiffPlanLimitError('malformed-input');
+    const change = candidate;
+    const rawPatch = change.patch ?? '';
+    if (hasUnpairedSurrogate(rawPatch)) throw new BugbotDiffPlanLimitError('malformed-input');
     if (fileMatchesIgnorePatterns(change.filename, ignorePatterns)) {
       ignored += 1;
       continue;
     }
-    const rawPatch = change.patch ?? '';
-    if (hasUnpairedSurrogate(rawPatch)) throw new BugbotDiffPlanLimitError('malformed-input');
     if (rawPatch.length > MAX_REVIEW_DIFF_RAW_INPUT_LENGTH - rawPatchTotal) {
       throw new BugbotDiffPlanLimitError();
     }
@@ -162,6 +165,22 @@ export function buildReviewDiffPlan(
     };
   });
   return { partitions, ignored, retained: retainedFiles.size, fragments: sections.length };
+}
+
+function isValidDiffChange(value: unknown): value is BugbotDiffChange {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const change = value as Record<string, unknown>;
+  return typeof change.filename === 'string'
+    && change.filename.trim().length > 0
+    && typeof change.status === 'string'
+    && change.status.trim().length > 0
+    && isNonNegativeSafeInteger(change.additions)
+    && isNonNegativeSafeInteger(change.deletions)
+    && (change.patch == null || typeof change.patch === 'string');
+}
+
+function isNonNegativeSafeInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 }
 
 export function splitReviewDiffPatch(patch: string): string[] {

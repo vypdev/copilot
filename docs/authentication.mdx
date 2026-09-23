@@ -56,8 +56,9 @@ fine-grained PAT. Copilot never creates a temporary label, branch, file,
 Variable, Secret, comment, project item, or workflow run merely to turn that
 unknown into a checkmark.
 
-`ready` requires every selected read to be verified or positively usable, and
-every selected write to be verified. A public read remains visibly
+`ready` is true only when every required row is read-level and each read is
+verified or positively usable; the read-only audit never accepts a provider
+claim that a write row is verified. A public read remains visibly
 `Unverifiable` as token-permission evidence even when setup can use it. When
 identity and all required reads are verified or usable and only required writes
 remain `Unverifiable`,

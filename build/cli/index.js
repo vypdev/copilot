@@ -40874,24 +40874,28 @@ exports.BugbotDiffPlanLimitError = BugbotDiffPlanLimitError;
  * Oversized patches are split without dropping sanitized prompt characters.
  */
 function buildReviewDiffPlan(context, ignorePatterns = []) {
-    if (!context?.changes?.length)
+    if (context?.changes == null)
+        return { partitions: [], ignored: 0, retained: 0, fragments: 0 };
+    if (!Array.isArray(context.changes))
+        throw new BugbotDiffPlanLimitError('malformed-input');
+    if (context.changes.length === 0)
         return { partitions: [], ignored: 0, retained: 0, fragments: 0 };
     const sections = [];
     const retainedFiles = new Set();
     let ignored = 0;
     let fragmentIndex = 0;
     let rawPatchTotal = 0;
-    for (const change of context.changes) {
-        if (change.patch != null && typeof change.patch !== 'string') {
+    for (const candidate of context.changes) {
+        if (!isValidDiffChange(candidate))
             throw new BugbotDiffPlanLimitError('malformed-input');
-        }
+        const change = candidate;
+        const rawPatch = change.patch ?? '';
+        if (hasUnpairedSurrogate(rawPatch))
+            throw new BugbotDiffPlanLimitError('malformed-input');
         if ((0, file_ignore_policy_1.fileMatchesIgnorePatterns)(change.filename, ignorePatterns)) {
             ignored += 1;
             continue;
         }
-        const rawPatch = change.patch ?? '';
-        if (hasUnpairedSurrogate(rawPatch))
-            throw new BugbotDiffPlanLimitError('malformed-input');
         if (rawPatch.length > exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH - rawPatchTotal) {
             throw new BugbotDiffPlanLimitError();
         }
@@ -40975,6 +40979,21 @@ function buildReviewDiffPlan(context, ignorePatterns = []) {
         };
     });
     return { partitions, ignored, retained: retainedFiles.size, fragments: sections.length };
+}
+function isValidDiffChange(value) {
+    if (typeof value !== 'object' || value === null || Array.isArray(value))
+        return false;
+    const change = value;
+    return typeof change.filename === 'string'
+        && change.filename.trim().length > 0
+        && typeof change.status === 'string'
+        && change.status.trim().length > 0
+        && isNonNegativeSafeInteger(change.additions)
+        && isNonNegativeSafeInteger(change.deletions)
+        && (change.patch == null || typeof change.patch === 'string');
+}
+function isNonNegativeSafeInteger(value) {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 }
 function splitReviewDiffPatch(patch) {
     if (hasUnpairedSurrogate(patch))
@@ -48121,6 +48140,70 @@ function projectLabel(field) {
         issueInProgressColumn: 'Project column for issues in progress',
         pullRequestInProgressColumn: 'Project column for pull requests in progress',
     }[field];
+}
+
+
+/***/ }),
+
+/***/ 65640:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.reconcileSetupTokenPermissionEvidence = reconcileSetupTokenPermissionEvidence;
+const NO_SAFE_EVIDENCE_MESSAGE = 'No safe permission evidence was returned for this requirement.';
+const WRITE_NOT_VERIFIABLE_MESSAGE = 'Write access cannot be verified with a safe read-only permission probe.';
+/**
+ * Reconciles untrusted adapter evidence against immutable permission requirements.
+ * Provider output can describe evidence, but cannot redefine what setup requires.
+ */
+function reconcileSetupTokenPermissionEvidence(requirements, evidence) {
+    const rows = Array.isArray(evidence) ? evidence : [];
+    return requirements.map((requirement) => {
+        const candidates = rows.filter((row) => (isRecord(row) && row.id === requirement.id));
+        const candidate = candidates[0];
+        if (candidates.length !== 1 || !isMatchingEvidence(requirement, candidate)) {
+            return unverifiable(requirement, NO_SAFE_EVIDENCE_MESSAGE);
+        }
+        if (requirement.level === 'write' && candidate.status === 'verified') {
+            return unverifiable(requirement, WRITE_NOT_VERIFIABLE_MESSAGE);
+        }
+        return {
+            ...requirement,
+            status: candidate.status,
+            message: candidate.message,
+            ...(candidate.status === 'unverifiable'
+                && requirement.scope === 'repository'
+                && requirement.level === 'read'
+                && candidate.operationallyAvailable === true
+                ? { operationallyAvailable: true }
+                : {}),
+        };
+    });
+}
+function isMatchingEvidence(requirement, value) {
+    return value.id === requirement.id
+        && value.role === requirement.role
+        && value.scope === requirement.scope
+        && value.permission === requirement.permission
+        && value.level === requirement.level
+        && value.applicability === requirement.applicability
+        && value.condition === requirement.condition
+        && value.probe === requirement.probe
+        && isPermissionStatus(value.status)
+        && typeof value.message === 'string'
+        && value.message.trim().length > 0
+        && (value.operationallyAvailable === undefined || value.operationallyAvailable === true);
+}
+function isPermissionStatus(value) {
+    return value === 'verified' || value === 'missing' || value === 'unverifiable';
+}
+function isRecord(value) {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+function unverifiable(requirement, message) {
+    return { ...requirement, status: 'unverifiable', message };
 }
 
 
@@ -55284,12 +55367,13 @@ function toEvent(input) {
 /***/ }),
 
 /***/ 11797:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupTokenPermissionsUseCase = void 0;
+const setup_token_permission_evidence_policy_1 = __nccwpck_require__(65640);
 /** Validates PAT identity first, then runs only read-only permission probes. */
 class SetupTokenPermissionsUseCase {
     constructor(credentials, permissions) {
@@ -55316,14 +55400,10 @@ class SetupTokenPermissionsUseCase {
                 confirmationRequired: false,
             };
         }
-        const byId = new Map((await this.permissions.inspect(request.owner, request.repository, request.token, request.requirements)).map(check => [check.id, check]));
-        const checks = request.requirements.map(requirement => byId.get(requirement.id) ?? ({
-            ...requirement,
-            status: 'unverifiable',
-            message: 'No safe permission evidence was returned for this requirement.',
-        }));
+        const evidence = await this.permissions.inspect(request.owner, request.repository, request.token, request.requirements);
+        const checks = (0, setup_token_permission_evidence_policy_1.reconcileSetupTokenPermissionEvidence)(request.requirements, evidence);
         const requiredChecks = checks.filter(check => check.applicability === 'required');
-        const readUsable = (check) => check.status === 'verified'
+        const readUsable = (check) => (check.status === 'verified' && check.level === 'read')
             || (check.status === 'unverifiable' && check.level === 'read'
                 && check.scope === 'repository' && check.operationallyAvailable === true);
         const ready = requiredChecks.every(readUsable);

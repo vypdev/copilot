@@ -274,24 +274,28 @@ exports.BugbotDiffPlanLimitError = BugbotDiffPlanLimitError;
  * Oversized patches are split without dropping sanitized prompt characters.
  */
 function buildReviewDiffPlan(context, ignorePatterns = []) {
-    if (!context?.changes?.length)
+    if (context?.changes == null)
+        return { partitions: [], ignored: 0, retained: 0, fragments: 0 };
+    if (!Array.isArray(context.changes))
+        throw new BugbotDiffPlanLimitError('malformed-input');
+    if (context.changes.length === 0)
         return { partitions: [], ignored: 0, retained: 0, fragments: 0 };
     const sections = [];
     const retainedFiles = new Set();
     let ignored = 0;
     let fragmentIndex = 0;
     let rawPatchTotal = 0;
-    for (const change of context.changes) {
-        if (change.patch != null && typeof change.patch !== 'string') {
+    for (const candidate of context.changes) {
+        if (!isValidDiffChange(candidate))
             throw new BugbotDiffPlanLimitError('malformed-input');
-        }
+        const change = candidate;
+        const rawPatch = change.patch ?? '';
+        if (hasUnpairedSurrogate(rawPatch))
+            throw new BugbotDiffPlanLimitError('malformed-input');
         if ((0, file_ignore_policy_1.fileMatchesIgnorePatterns)(change.filename, ignorePatterns)) {
             ignored += 1;
             continue;
         }
-        const rawPatch = change.patch ?? '';
-        if (hasUnpairedSurrogate(rawPatch))
-            throw new BugbotDiffPlanLimitError('malformed-input');
         if (rawPatch.length > exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH - rawPatchTotal) {
             throw new BugbotDiffPlanLimitError();
         }
@@ -375,6 +379,21 @@ function buildReviewDiffPlan(context, ignorePatterns = []) {
         };
     });
     return { partitions, ignored, retained: retainedFiles.size, fragments: sections.length };
+}
+function isValidDiffChange(value) {
+    if (typeof value !== 'object' || value === null || Array.isArray(value))
+        return false;
+    const change = value;
+    return typeof change.filename === 'string'
+        && change.filename.trim().length > 0
+        && typeof change.status === 'string'
+        && change.status.trim().length > 0
+        && isNonNegativeSafeInteger(change.additions)
+        && isNonNegativeSafeInteger(change.deletions)
+        && (change.patch == null || typeof change.patch === 'string');
+}
+function isNonNegativeSafeInteger(value) {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 }
 function splitReviewDiffPatch(patch) {
     if (hasUnpairedSurrogate(patch))
