@@ -559,7 +559,12 @@ semantic ports and returns one safe localized artifact.
   and continuation-only state never queries membership. Denial or lookup
   failure prevents both dynamic catalog generation and user-content tasks from
   reaching the provider; presentation falls back through the bounded catalog
-  policy instead of bypassing actor authorization.
+  policy instead of bypassing actor authorization. This gate uses the semantic
+  member-only automation authorization capability, never the file-modification
+  authorization capability. In an organization repository, verified
+  organization membership is therefore sufficient for a locale-only planner
+  even when the actor lacks `push`, `maintain`, or `admin`; any route that also
+  mutates repository files retains its independent, stricter mutation gate.
 - **Application contracts:** `RepositoryLocaleProfile`, `SurfaceLocale`,
   `MessageDescriptorRequest`, `ResolvedCatalogSlice`,
   `LanguageAdaptationRequest/Result`, and `LocalizedUserRequest` are deeply
@@ -1202,6 +1207,9 @@ hyphenated tags and never imply that fallback is a successful translation.
     planner or any user-content task is enabled or prepared. Denial or lookup
     failure reaches no provider-backed task and leaves bounded catalog fallback
     available. No-op, blocked, and continuation-only outcomes never query it.
+    For an organization member without repository write permission, successful
+    membership authorization enables the locale-only planner and the
+    file-modification authorization port is not called.
 
 ## 17. Requirements traceability
 

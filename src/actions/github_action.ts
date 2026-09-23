@@ -95,10 +95,10 @@ export async function runGitHubAction(): Promise<void> {
         ...([localeInputs.repository, localeInputs.issue, localeInputs.pullRequest]
             .some(publicationLocaleNeedsDynamicCatalog) ? ['planner' as const] : []),
     ])];
-    const agentRuntimeAuthorizationRequired = !botAnalysisOnly
+    const memberOnlyAgentTaskAuthorizationRequired = !botAnalysisOnly
         && aiInputs.membersOnly
         && requestedActiveAgentTasks.length > 0;
-    let agentRuntimeAuthorized = !agentRuntimeAuthorizationRequired;
+    let memberOnlyAgentTasksAuthorized = !memberOnlyAgentTaskAuthorizationRequired;
     let languageRuntimeAvailable = false;
 
     const projectBoard = createProjectBoardCompositionRoot();
@@ -113,7 +113,7 @@ export async function runGitHubAction(): Promise<void> {
         singleAction,
         aiInputs,
         activeAgentTasks: requestedActiveAgentTasks,
-        agentRuntimeAuthorized,
+        agentRuntimeAuthorized: memberOnlyAgentTasksAuthorized,
         localeInputs,
     });
     if (botAnalysisOnly) {
@@ -156,19 +156,21 @@ export async function runGitHubAction(): Promise<void> {
                 token,
             });
             if (admittedExecution.issueWorkflowRuntimeMode !== 'execute') return;
-            if (agentRuntimeAuthorizationRequired) {
-                agentRuntimeAuthorized = await createActorAuthorizationRepository()
+            if (memberOnlyAgentTaskAuthorizationRequired) {
+                // Agent-task admission is intentionally membership-based. File-changing
+                // commands enforce their separate repository-write authorization later.
+                memberOnlyAgentTasksAuthorized = await createActorAuthorizationRepository()
                     .isActorAllowedToUseMemberOnlyAutomation(
                         eventInputs.repo.owner,
                         eventInputs.repo.repo,
                         eventInputs.actor,
                         token,
                     );
-                if (agentRuntimeAuthorized) {
+                if (memberOnlyAgentTasksAuthorized) {
                     admittedExecution.ai.enableAuthorizedAgentTasks(aiInputs.requestedAgentTasks);
                 }
             }
-            if (!agentRuntimeAuthorized) {
+            if (!memberOnlyAgentTasksAuthorized) {
                 logInfo('Skipping agent runtime preparation because ai-members-only is enabled and the actor is not authorized.');
                 return;
             }

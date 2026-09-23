@@ -469,6 +469,7 @@ describe('runGitHubAction', () => {
     await runGitHubAction();
 
     expect(mockIsActorAllowedToUseMemberOnlyAutomation).toHaveBeenCalledTimes(1);
+    expect(mockIsActorAllowedToModifyFiles).not.toHaveBeenCalled();
     expect(executionBuilderSpy).toHaveBeenCalledWith(expect.objectContaining({
       agentRuntimeAuthorized: false,
       activeAgentTasks: ['planner'],

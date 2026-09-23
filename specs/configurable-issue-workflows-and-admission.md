@@ -304,6 +304,10 @@ domain changes.
    disabled. Only after live admission returns `execute` may the Action query
    membership and restore the validated requested task configuration; denial
    keeps it disabled and provider failure fails closed before agent preparation.
+   Provider-task admission uses the member-only automation authorization port,
+   not the file-modification authorization port. Organization membership can
+   therefore admit a read-only locale planner without repository write access;
+   workflows that actually mutate files still apply their separate write gate.
 
 ### 6.2 Alternative paths
 
@@ -804,7 +808,10 @@ validated against setup forms and profile fixtures.
     decision performs no membership lookup and prepares no agent. A live
     `execute` decision queries membership afterwards, restores requested task
     models only on authorization, keeps them disabled on denial, and fails
-    closed before preparation when the provider lookup fails.
+    closed before preparation when the provider lookup fails. An authorized
+    organization member without repository write permission can use the
+    locale-only planner, and that path never calls file-modification
+    authorization.
 16. Given automatic assignment is disabled with desired count zero and no
     issue/PR number is available, the assignment step returns a successful
     unexecuted result before target validation and performs no member or
