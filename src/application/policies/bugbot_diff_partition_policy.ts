@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { createUntrustedContent, renderUntrustedContentVerbatim, renderUntrustedField, type UntrustedContent } from '../../domain/security/untrusted_content';
 import { fileMatchesIgnorePatterns } from './file_ignore_policy';
 
@@ -226,10 +227,5 @@ function moveBeforeSplitSurrogatePair(value: string, end: number): number {
 }
 
 function stableDiffPartitionDigest(value: string): string {
-  let hash = 0x811c9dc5;
-  for (const character of value) {
-    hash ^= character.codePointAt(0)!;
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(16).padStart(8, '0');
+  return createHash('sha256').update(value, 'utf8').digest('hex');
 }

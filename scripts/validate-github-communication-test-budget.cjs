@@ -12,7 +12,7 @@ const EXPECTED_BUDGETS = Object.freeze({
     spec: 'specs/semantic-github-publication-and-notification.md',
   }),
   'repository-locale-localization': Object.freeze({
-    requiredCases: 136,
+    requiredCases: 138,
     spec: 'specs/repository-locale-and-localization.md',
   }),
 });

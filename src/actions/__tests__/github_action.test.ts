@@ -233,12 +233,18 @@ describe('runGitHubAction', () => {
     expect(mockMainRun.mock.calls[0][6]).toEqual(expect.any(Function));
   });
 
-  it('does not prepare an agent runtime for continuation-only live-state admission', async () => {
+  it('does not query membership or prepare an agent for continuation-only live-state admission', async () => {
     github.context.eventName = 'issues';
     github.context.payload = {
       action: 'opened',
       issue: { number: 42, labels: [{ name: 'priority: high' }] },
     };
+    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
+      if (key === INPUT_KEYS.AI_MEMBERS_ONLY) return 'true';
+      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'fake-token';
+      return '';
+    });
+    mockIsActorAllowedToUseMemberOnlyAutomation.mockRejectedValue(new Error('membership unavailable'));
     mockMainRun.mockImplementationOnce(async (...args: unknown[]) => {
       const execution = args[0] as { issueWorkflowRuntimeMode: string };
       execution.issueWorkflowRuntimeMode = 'continuation-only';
@@ -249,6 +255,10 @@ describe('runGitHubAction', () => {
 
     await runGitHubAction();
 
+    expect(mockIsActorAllowedToUseMemberOnlyAutomation).not.toHaveBeenCalled();
+    expect(executionBuilderSpy).toHaveBeenCalledWith(expect.objectContaining({
+      agentRuntimeAuthorized: false,
+    }));
     expect(agentProvisioningSpy).not.toHaveBeenCalled();
     expect(mockCreateLanguageQueryPort).not.toHaveBeenCalled();
   });
@@ -362,6 +372,46 @@ describe('runGitHubAction', () => {
       }));
     }
     expect(agentProvisioningSpy).not.toHaveBeenCalled();
+  });
+
+  it('restores requested task models only after admitted members-only authorization', async () => {
+    github.context.eventName = 'issues';
+    github.context.payload = { action: 'opened', issue: { number: 42 } };
+    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
+      if (key === INPUT_KEYS.AI_MEMBERS_ONLY) return 'true';
+      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'fake-token';
+      return '';
+    });
+    mockIsActorAllowedToUseMemberOnlyAutomation.mockResolvedValue(true);
+
+    await runGitHubAction();
+
+    expect(executionBuilderSpy).toHaveBeenCalledWith(expect.objectContaining({
+      agentRuntimeAuthorized: false,
+    }));
+    expect(mockMainRun.mock.invocationCallOrder[0])
+      .toBeLessThan(mockIsActorAllowedToUseMemberOnlyAutomation.mock.invocationCallOrder[0]);
+    for (const task of ['findings', 'fixer', 'planner', 'reviewer', 'tester'] as const) {
+      expect(mockMainRun.mock.calls[0][0].ai.getAgentConfiguration(task).model).not.toBe('');
+    }
+    expect(agentProvisioningSpy).toHaveBeenCalled();
+  });
+
+  it('fails closed after live admission when members-only authorization is unavailable', async () => {
+    github.context.eventName = 'issues';
+    github.context.payload = { action: 'opened', issue: { number: 42 } };
+    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
+      if (key === INPUT_KEYS.AI_MEMBERS_ONLY) return 'true';
+      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'fake-token';
+      return '';
+    });
+    mockIsActorAllowedToUseMemberOnlyAutomation.mockRejectedValue(new Error('membership unavailable'));
+
+    await expect(runGitHubAction()).rejects.toThrow('membership unavailable');
+
+    expect(mockMainRun).toHaveBeenCalledTimes(1);
+    expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(mockMainRun.mock.calls[0][0].ai.getAgentConfiguration('findings').model).toBe('');
   });
 
   it('fails closed when PAT identity cannot be resolved', async () => {

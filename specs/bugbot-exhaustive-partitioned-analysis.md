@@ -250,8 +250,13 @@ publication/reconciliation operation allowed.
    plan-limit error even on ignored paths, never masquerade as an absent patch.
 5. Pack fragment sections in stable order. Start a new partition before adding a
    section that would exceed the diff-block budget.
-6. Derive IDs from the reviewed head SHA, partition ordinal/total, and a stable
-   digest of assigned identities/content. IDs MUST be bounded and safe to echo.
+6. Derive IDs from the reviewed head SHA, partition ordinal/total, and the full
+   lowercase 64-hex-character SHA-256 digest of the canonical assigned
+   identities/content. IDs MUST be deterministic, collision-resistant, bounded
+   to the response schema's 128-character ceiling, and safe to echo. A short or
+   non-cryptographic checksum MUST NOT identify a partition because a collision
+   would make a complete response set indistinguishable or invalidate it only
+   after reviewer execution.
 7. Reject a plan that cannot represent even one fragment within a partition;
    never silently truncate it.
 8. If a canonical PR diff contains zero provider changes, or filtering
@@ -525,17 +530,17 @@ comments remain untouched.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **57 distinct cases**.
+This SDD owns at least **59 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/pure planning | 30 | empty/single/multi-file, newline/hard split, UTF-16 surrogate-safe hard boundaries and pre-ignore rejection of isolated high/low surrogates, collision-free untrusted-data framing with verbatim delimiter-like patch text, individual and cumulative raw input ceilings before normalization, exact prompt and 64/65 partition boundaries, omitted/null/empty patch assignments, malformed change/object/filename/status/count/patch rejection even on ignored paths, root/nested leading-`**/` ignore parity, stable IDs, order, no character loss, hostile status/count metadata envelope |
+| Domain/pure planning | 32 | empty/single/multi-file, newline/hard split, UTF-16 surrogate-safe hard boundaries and pre-ignore rejection of isolated high/low surrogates, collision-free untrusted-data framing with verbatim delimiter-like patch text, individual and cumulative raw input ceilings before normalization, exact prompt and 64/65 partition boundaries, omitted/null/empty patch assignments, malformed change/object/filename/status/count/patch rejection even on ignored paths, root/nested leading-`**/` ignore parity, full SHA-256 ID format plus content/head sensitivity, stable IDs, order, no character loss, hostile status/count metadata envelope |
 | State/application/idempotency/races | 8 | all-complete, one failure, wrong/duplicate ID, wrong SHA, resolution ownership, stale head, replay, empty canonical zero-work |
 | Agent adapter/schema contracts | 4 | required attestation, locale, undefined/invalid result, aggregate bounds |
 | Workflow/architecture/telemetry | 5 | concurrency two, ordered collection, no mutation before complete, positive and zero-partition plan metrics |
 | UI/UX/localization/sanitization | 4 | pending, failed, complete, hostile content/control characters |
 | Integration/security/compatibility | 6 | 44-file regression, oversized patch, provider partial, dry-run, legacy issue-only path, ignored-only canonical no-op |
-| **Total** | **57** | No double counting |
+| **Total** | **59** | No double counting |
 
 Planner, attestation, and aggregate pure policies require 100% enumerated branch
 coverage. Changed analyzer/context modules require at least 95% lines/statements
@@ -623,6 +628,10 @@ token scope, secret, or public input.
     unsafe/negative additions or deletions, or another invalid patch type, the
     planner returns the bounded malformed-input error before ignore filtering,
     model execution, or mutation. A valid ignored change remains budget-free.
+24. Given any accepted partition, its ID ends in the full lowercase SHA-256
+    digest of the canonical reviewed head and rendered assigned content, remains
+    within 128 characters, is stable for identical input, and changes when the
+    head or assigned content changes.
 
 ## 17. Requirements traceability
 
@@ -661,7 +670,7 @@ token scope, secret, or public input.
       provider enumeration and every partition respects fixed prompt bounds.
 - [x] Attestation, resolution ownership, concurrency, aggregation, freshness,
       replay, cancellation/failure, and no-prepublication-mutation tests pass.
-- [x] The 57-case floor and changed-module/repository coverage budgets pass.
+- [x] The 59-case floor and changed-module/repository coverage budgets pass.
 - [x] Pending, failed, provider-partial, complete, dry-run, and publication-
       partial surfaces are accurate, localized, accessible, and bounded.
 - [x] No public configuration, permission, credential, or durable-state change

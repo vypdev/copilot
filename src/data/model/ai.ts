@@ -97,4 +97,9 @@ export class Ai {
     getAgentConfiguration(task: AgentTask): AgentConfiguration {
         return this.agentTasks[task] ?? this.agentTasks.findings;
     }
+
+    /** Restores validated task configuration only after runtime authorization succeeds. */
+    enableAuthorizedAgentTasks(agentTasks: AgentTaskConfiguration): void {
+        this.agentTasks = agentTasks;
+    }
 }

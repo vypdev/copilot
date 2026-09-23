@@ -26,6 +26,21 @@ describe('Ai', () => {
         expect(ai.getBugbotFixVerifyCommands()).toEqual(['pnpm test']);
     });
 
+    it('enables validated task configuration after runtime authorization', () => {
+        const ai = new Ai('unused', 'model', true, [], false, 'low', 10, [], {
+            findings: { provider: 'codex', modelProvider: 'openai', model: '' },
+            fixer: { provider: 'codex', modelProvider: 'openai', model: '' },
+        });
+
+        ai.enableAuthorizedAgentTasks({
+            findings: { provider: 'codex', modelProvider: 'openai', model: 'gpt-5-codex' },
+            fixer: { provider: 'cursor', modelProvider: 'cursor', model: 'cursor-agent' },
+        });
+
+        expect(ai.getAgentConfiguration('findings').model).toBe('gpt-5-codex');
+        expect(ai.getAgentConfiguration('fixer').model).toBe('cursor-agent');
+    });
+
     it('requires a model while the manifest supplies the default executable', () => {
         expect(isAgentConfigurationReady({ provider: 'opencode', model: 'm' })).toBe(true);
         expect(isAgentConfigurationReady({ provider: 'codex', model: 'm', executable: 'codex' })).toBe(true);

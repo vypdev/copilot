@@ -53,6 +53,10 @@ The compact profile is stored in `COPILOT_ISSUE_WORKFLOW_PROFILE` and passed as 
 | disabled with an existing durable deployment | finish or recover that operation only | a new deployment blocks |
 
 An unlinked pull request stays on its PR-native route. Help is always branchless after `in-progress`, including when `issue-managed-branches` is enabled.
+Provider-backed `ai-members-only` authorization runs only after this live
+decision returns `execute`. No-op, blocked, and continuation-only work does not
+query membership or prepare an agent; protected agent task models remain
+disabled until the post-admission lookup authorizes them.
 
 ## Migration and diagnosis
 

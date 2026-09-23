@@ -214,9 +214,11 @@ ownership.
    body schemas, branch policy, native Issue Type projection, and dependencies.
 2. Unknown work MUST NOT default to `feature` or any branch-bearing kind.
 3. More than one recognized kind on a new issue is a conflict and MUST block.
-4. Runtime admission MUST complete before agent runtime preparation, assignment,
-   title/label/type/project changes, branch mutation, deployment, or lifecycle
-   state mutation.
+4. Runtime admission MUST complete before provider-backed actor authorization,
+   agent runtime preparation, assignment, title/label/type/project changes,
+   branch mutation, deployment, or lifecycle state mutation. A no-op, blocked,
+   or continuation-only decision performs no members-only lookup; a lookup
+   failure therefore cannot turn non-executable work into a failed run.
 5. The only allowed pre-admission repository write is one bounded diagnostic
    reply to an explicit addressed command. Passive events use logs and Job
    Summary only.
@@ -293,7 +295,12 @@ domain changes.
 8. Only `eligible` work proceeds to provider-backed project hydration, actor
    authorization, agent runtime preparation, route composition, and normal
    mutation. A side-effect-free base `Execution` value may be assembled before
-   admission so the queue and live-state use case have typed context.
+   admission so the queue and live-state use case have typed context. When an
+   active user-content task is protected by `ai.membersOnly`, that base value
+   keeps every protected task model disabled. Only after live admission returns
+   `execute` may the Action query membership and restore the validated requested
+   task configuration; denial keeps it disabled and provider failure fails
+   closed before agent preparation.
 
 ### 6.2 Alternative paths
 
@@ -657,7 +664,8 @@ existing irreversible release as wholly failed when only reconciliation failed.
    provider output. Secrets never enter setup plans, forms, summaries, or
    durable issue state.
 4. Actor authorization remains mandatory after type admission. Admission proves
-   capability, not permission.
+   capability, not permission. Provider-backed authorization MUST NOT run before
+   live admission or for no-op, blocked, or continuation-only work.
 5. A forged native Issue Type, template-like body, or label cannot bypass the
    enabled profile; a forged profile cannot bypass action/workflow permissions.
 6. Explicit deploy intent retains the authorization, fencing, and idempotency
@@ -712,11 +720,11 @@ rows count only when they assert a distinct decision branch.
 |---|---:|---|
 | Catalog, profile, configuration, classifier | 26 | seven kinds, aliases, all/empty/unknown/duplicate/schema cases, zero/one/multiple groups, no fallback, cross-field rules |
 | Setup planning, selection, rendering, reconciliation | 24 | Space/Enter/All, fallback input, cancel/EOF, dependencies, effective labels, managed/unmanaged drift, retire/backup, idempotency |
-| Runtime admission, state, replay, continuation | 28 | passive/explicit matrix, queue/live state, disabled/unmanaged/conflict, body validation, legacy, continuation, durable operations, unlinked PR |
+| Runtime admission, state, replay, continuation | 31 | passive/explicit matrix, queue/live state, disabled/unmanaged/conflict, body validation, legacy, continuation, durable operations, unlinked PR, deferred members-only lookup, denied/failing authorization with fail-closed task configuration |
 | Adapters and provider contracts | 12 | Variable, issue snapshot, state, labels, org/no-org Issue Types, permission/rate-limit/error mapping |
 | Workflows, packaging, doctor, architecture | 16 | all workflow inputs, package contents, npm smoke, query-only doctor, mutation reachability, single catalog, parser/form contract |
 | UI, localization, security, integration, migration | 18 | five UI states, no-color/narrow, sanitization, comment budget, no secrets, old config/profile migration, dogfood and rollback |
-| **Total** | **124** | No double counting |
+| **Total** | **127** | No double counting |
 
 The issue-workflow domain and setup/rendering decision policies named by the
 `Configurable issue workflows and repository agent guidance` coverage budget
@@ -783,6 +791,12 @@ validated against setup forms and profile fixtures.
     previews drift and requires backed-up replacement approval.
 14. Given doctor runs against any drift above, then it performs no writes and
     reports the exact selection/profile/form/workflow remedy.
+15. Given `ai.membersOnly` and an active user-content task, a live no-op,
+    blocked, or continuation-only decision performs no membership lookup and
+    prepares no agent. A live `execute` decision queries membership afterwards,
+    restores requested task models only on authorization, keeps them disabled
+    on denial, and fails closed before preparation when the provider lookup
+    fails.
 
 ## 17. Requirements traceability
 
@@ -792,7 +806,7 @@ validated against setup forms and profile fixtures.
 | multi-select default All | questionnaire policy + terminal adapter | key-sequence, fallback, cancel tests | setup guide |
 | deterministic setup expansion | planning/reconciliation use cases | plan, effective-label, drift tests | setup and config pages |
 | optional native Issue Types | capability adapter | org/no-org/permission tests | permissions section |
-| pre-mutation admission | admission use case + composition | zero-reachable-mutation integration test | operator decision tree |
+| pre-mutation admission | admission use case + composition | zero-reachable-mutation and deferred-authorization integration tests | operator decision tree |
 | strict release/hotfix bodies | semantic body policy | form/parser contract matrix | release/hotfix pages |
 | no branch for help | kind branch policy | always-on branch regression test | help page |
 | continuation and durable recovery | state policy | disable-mid-flight/replay tests | migration and operations pages |
@@ -824,6 +838,8 @@ validated against setup forms and profile fixtures.
 - [x] The seven-kind catalog is the sole source for setup and runtime semantics.
 - [x] Multi-select, non-interactive configuration, migration, and cancellation pass.
 - [x] Denied admission cannot prepare an agent or reach a domain mutation port.
+- [x] Non-executable live state performs no members-only lookup; executable
+      state authorizes before enabling or preparing protected agent tasks.
 - [x] Help cannot branch; unknown work cannot become feature work.
 - [x] Release/hotfix body and configured-type validation fail closed.
 - [x] Continuation-only and durable-operation recovery pass policy and route tests.

@@ -414,6 +414,42 @@ describe('Bugbot review context', () => {
     );
   });
 
+  it('uses a full SHA-256 digest in every bounded partition identifier', () => {
+    const plan = buildReviewDiffPlan({
+      prHeadSha: 'head-sha',
+      changes: [{
+        filename: 'src/example.ts',
+        status: 'modified',
+        additions: 1,
+        deletions: 0,
+        patch: '+const value = true;',
+      }],
+    });
+
+    expect(plan.partitions).toHaveLength(1);
+    expect(plan.partitions[0].id).toMatch(/^diff-1-of-1-[a-f0-9]{64}$/u);
+    expect(plan.partitions[0].id.length).toBeLessThanOrEqual(128);
+  });
+
+  it('keeps partition identity stable while binding it to the head and assigned content', () => {
+    const buildId = (prHeadSha: string, patch: string): string => buildReviewDiffPlan({
+      prHeadSha,
+      changes: [{
+        filename: 'src/example.ts',
+        status: 'modified',
+        additions: 1,
+        deletions: 0,
+        patch,
+      }],
+    }).partitions[0].id;
+
+    const original = buildId('head-a', '+const value = true;');
+
+    expect(buildId('head-a', '+const value = true;')).toBe(original);
+    expect(buildId('head-b', '+const value = true;')).not.toBe(original);
+    expect(buildId('head-a', '+const value = false;')).not.toBe(original);
+  });
+
   it('splits at line boundaries when possible and reconstructs the sanitized patch exactly', () => {
     const patch = `${'a'.repeat(MAX_REVIEW_DIFF_FRAGMENT_LENGTH - 10)}\n${'b'.repeat(40)}\n${'c'.repeat(MAX_REVIEW_DIFF_FRAGMENT_LENGTH + 5)}`;
     const fragments = splitReviewDiffPatch(patch);

@@ -553,7 +553,10 @@ semantic ports and returns one safe localized artifact.
 - **Runtime authorization:** compute event/single-action agent tasks independently
   of the optional planner capability used only for a dynamic product-copy
   catalog. `ai.membersOnly` checks the actor only when a user-content agent
-  task is active. A locale-only planner on an otherwise inactive event may
+  task is active and live-state admission has returned `execute`. Protected
+  task configurations remain disabled until that post-admission lookup allows
+  them; no-op, blocked, and continuation-only state never queries membership.
+  A locale-only planner on an otherwise inactive event may
   prepare bounded catalog copy without triggering a membership lookup or
   disabling all agent models on a lookup failure; it never grants a denied
   user-content task access. Active tasks still require the normal membership
@@ -1059,7 +1062,7 @@ and irreversible facts.
 
 ## 14. Testing strategy and numeric budget
 
-The implementation requires at least **136 distinct new or materially rewritten
+The implementation requires at least **138 distinct new or materially rewritten
 test cases**. Semantic message timing/count/idempotency belongs to the companion
 SDD and is not double-counted here.
 
@@ -1075,8 +1078,8 @@ contract is enforced by `pnpm run validate:specifications`.
 | Translation/application state | 26 | admission order, command arguments, mention path, matches/translated/ambiguous/failed, one call, output-locale recovery, duplicate request |
 | Adapters/provider contracts | 16 | static/dynamic adapters, schema errors, timeouts, cache key, error mapping, no comment update capability |
 | Workflows/setup/generated schemas | 18 | action defaults, strict setup validation, doctor, issue/PR/run/CLI surface propagation, agent task inventory, release snapshot |
-| UI/UX/security/integration | 22 | five primary states, en/es/fr/ar/zh fixtures, bidi/CJK, quotes, mentions/commands/current markers, fallback, end-to-end paths |
-| **Total** | **136** | No double counting |
+| UI/UX/security/integration | 24 | five primary states, en/es/fr/ar/zh fixtures, bidi/CJK, quotes, mentions/commands/current markers, fallback, end-to-end paths, post-live-admission membership lookup and non-executable no-lookup behavior |
+| **Total** | **138** | No double counting |
 
 Required quality gates:
 
@@ -1187,7 +1190,7 @@ hyphenated tags and never imply that fallback is a successful translation.
 21. Given repository-aware CLI `--json`, then human terminal prose may localize
     but JSON keys, codes, and enums remain stable English machine contracts.
 22. Given implementation completion, then related SDDs, catalog, action/setup
-    defaults, generated bundles, 136-case budget, coverage, documentation, and
+    defaults, generated bundles, 138-case budget, coverage, documentation, and
     all repository validations agree without stale en/es conditionals.
 23. Given an unchanged issue whose valid current plan was produced in a
     different locale, when planning runs in the current effective issue locale,
@@ -1198,7 +1201,9 @@ hyphenated tags and never imply that fallback is a successful translation.
 24. Given an inactive event with a dynamic locale and `ai.membersOnly`, then
     localization-only planner preparation does not query actor membership or
     disable the catalog capability; given an active user-content task under
-    those same inputs, membership is checked before its agent runtime is used.
+    those same inputs, membership is checked only after live-state admission
+    returns `execute` and before its task configuration is enabled or runtime
+    is prepared. No-op, blocked, and continuation-only outcomes never query it.
 
 ## 17. Requirements traceability
 
@@ -1274,7 +1279,7 @@ hyphenated tags and never imply that fallback is a successful translation.
       and bidi tests/manual evidence pass.
 - [x] Architecture, source-string, agent-task, catalog-manifest, and no-comment-
       update constraints are executable and blocking.
-- [x] The 136-case numeric budget and changed-module coverage gates pass without
+- [x] The 138-case numeric budget and changed-module coverage gates pass without
       double counting semantic publication tests.
 - [x] Action/setup/doctor/CLI/workflow schemas, persisted variables, generated
       bundles, examples, and defaults agree.

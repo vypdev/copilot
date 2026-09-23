@@ -40851,6 +40851,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BugbotDiffPlanLimitError = exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH = exports.MAX_REVIEW_DIFF_PARTITIONS = exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH = exports.MAX_REVIEW_DIFF_PARTITION_LENGTH = void 0;
 exports.buildReviewDiffPlan = buildReviewDiffPlan;
 exports.splitReviewDiffPatch = splitReviewDiffPatch;
+const node_crypto_1 = __nccwpck_require__(6005);
 const untrusted_content_1 = __nccwpck_require__(67057);
 const file_ignore_policy_1 = __nccwpck_require__(20542);
 exports.MAX_REVIEW_DIFF_PARTITION_LENGTH = 64000;
@@ -41040,12 +41041,7 @@ function moveBeforeSplitSurrogatePair(value, end) {
     return splitsPair ? end - 1 : end;
 }
 function stableDiffPartitionDigest(value) {
-    let hash = 0x811c9dc5;
-    for (const character of value) {
-        hash ^= character.codePointAt(0);
-        hash = Math.imul(hash, 0x01000193);
-    }
-    return (hash >>> 0).toString(16).padStart(8, '0');
+    return (0, node_crypto_1.createHash)('sha256').update(value, 'utf8').digest('hex');
 }
 
 
@@ -66833,6 +66829,10 @@ class Ai {
     }
     getAgentConfiguration(task) {
         return this.agentTasks[task] ?? this.agentTasks.findings;
+    }
+    /** Restores validated task configuration only after runtime authorization succeeds. */
+    enableAuthorizedAgentTasks(agentTasks) {
+        this.agentTasks = agentTasks;
     }
 }
 exports.Ai = Ai;

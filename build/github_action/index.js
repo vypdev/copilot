@@ -39309,10 +39309,10 @@ async function runGitHubAction() {
             ...([localeInputs.repository, localeInputs.issue, localeInputs.pullRequest]
                 .some(publication_message_catalog_1.publicationLocaleNeedsDynamicCatalog) ? ['planner'] : []),
         ])];
-    const agentRuntimeAuthorized = botAnalysisOnly
-        || !aiInputs.membersOnly
-        || activeRuntimeAgentTasks.length === 0
-        || await (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)().isActorAllowedToUseMemberOnlyAutomation(eventInputs.repo.owner, eventInputs.repo.repo, eventInputs.actor, token);
+    const agentRuntimeAuthorizationRequired = !botAnalysisOnly
+        && aiInputs.membersOnly
+        && activeRuntimeAgentTasks.length > 0;
+    let agentRuntimeAuthorized = !agentRuntimeAuthorizationRequired;
     let languageRuntimeAvailable = false;
     const projectBoard = (0, project_board_composition_root_1.createProjectBoardCompositionRoot)();
     const execution = await (0, github_action_execution_1.buildGithubActionExecution)({
@@ -39359,6 +39359,13 @@ async function runGitHubAction() {
         });
         if (admittedExecution.issueWorkflowRuntimeMode !== 'execute')
             return;
+        if (agentRuntimeAuthorizationRequired) {
+            agentRuntimeAuthorized = await (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)()
+                .isActorAllowedToUseMemberOnlyAutomation(eventInputs.repo.owner, eventInputs.repo.repo, eventInputs.actor, token);
+            if (agentRuntimeAuthorized) {
+                admittedExecution.ai.enableAuthorizedAgentTasks(aiInputs.requestedAgentTasks);
+            }
+        }
         if (!agentRuntimeAuthorized) {
             (0, logger_1.logInfo)('Skipping agent runtime preparation because ai-members-only is enabled and the actor is not authorized.');
             return;
@@ -43348,6 +43355,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BugbotDiffPlanLimitError = exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH = exports.MAX_REVIEW_DIFF_PARTITIONS = exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH = exports.MAX_REVIEW_DIFF_PARTITION_LENGTH = void 0;
 exports.buildReviewDiffPlan = buildReviewDiffPlan;
 exports.splitReviewDiffPatch = splitReviewDiffPatch;
+const node_crypto_1 = __nccwpck_require__(6005);
 const untrusted_content_1 = __nccwpck_require__(67057);
 const file_ignore_policy_1 = __nccwpck_require__(20542);
 exports.MAX_REVIEW_DIFF_PARTITION_LENGTH = 64000;
@@ -43537,12 +43545,7 @@ function moveBeforeSplitSurrogatePair(value, end) {
     return splitsPair ? end - 1 : end;
 }
 function stableDiffPartitionDigest(value) {
-    let hash = 0x811c9dc5;
-    for (const character of value) {
-        hash ^= character.codePointAt(0);
-        hash = Math.imul(hash, 0x01000193);
-    }
-    return (hash >>> 0).toString(16).padStart(8, '0');
+    return (0, node_crypto_1.createHash)('sha256').update(value, 'utf8').digest('hex');
 }
 
 
@@ -65270,6 +65273,10 @@ class Ai {
     }
     getAgentConfiguration(task) {
         return this.agentTasks[task] ?? this.agentTasks.findings;
+    }
+    /** Restores validated task configuration only after runtime authorization succeeds. */
+    enableAuthorizedAgentTasks(agentTasks) {
+        this.agentTasks = agentTasks;
     }
 }
 exports.Ai = Ai;

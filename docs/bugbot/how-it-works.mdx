@@ -62,8 +62,9 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
 
 3. **Build and execute the review plan:** For a canonical PR, the action issues
    one read-only analysis request per diff partition, with at most two requests
-   in flight. Every request is bound to the exact partition id and canonical
-   head SHA, includes repository context, hierarchical rules, human discussion,
+   in flight. Every request is bound to the exact partition id—identified by a
+   full SHA-256 digest of its canonical head and assignment—and canonical head
+   SHA, includes repository context, hierarchical rules, human discussion,
    ignore patterns, and its assigned diff fragments, and may inspect surrounding
    or dependent code in the read-only workspace. Diff fragments use a
    collision-free untrusted-data terminator so literal marker-like source text

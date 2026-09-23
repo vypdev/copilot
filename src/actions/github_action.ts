@@ -95,15 +95,10 @@ export async function runGitHubAction(): Promise<void> {
         ...([localeInputs.repository, localeInputs.issue, localeInputs.pullRequest]
             .some(publicationLocaleNeedsDynamicCatalog) ? ['planner' as const] : []),
     ])];
-    const agentRuntimeAuthorized = botAnalysisOnly
-        || !aiInputs.membersOnly
-        || activeRuntimeAgentTasks.length === 0
-        || await createActorAuthorizationRepository().isActorAllowedToUseMemberOnlyAutomation(
-            eventInputs.repo.owner,
-            eventInputs.repo.repo,
-            eventInputs.actor,
-            token,
-        );
+    const agentRuntimeAuthorizationRequired = !botAnalysisOnly
+        && aiInputs.membersOnly
+        && activeRuntimeAgentTasks.length > 0;
+    let agentRuntimeAuthorized = !agentRuntimeAuthorizationRequired;
     let languageRuntimeAvailable = false;
 
     const projectBoard = createProjectBoardCompositionRoot();
@@ -161,6 +156,18 @@ export async function runGitHubAction(): Promise<void> {
                 token,
             });
             if (admittedExecution.issueWorkflowRuntimeMode !== 'execute') return;
+            if (agentRuntimeAuthorizationRequired) {
+                agentRuntimeAuthorized = await createActorAuthorizationRepository()
+                    .isActorAllowedToUseMemberOnlyAutomation(
+                        eventInputs.repo.owner,
+                        eventInputs.repo.repo,
+                        eventInputs.actor,
+                        token,
+                    );
+                if (agentRuntimeAuthorized) {
+                    admittedExecution.ai.enableAuthorizedAgentTasks(aiInputs.requestedAgentTasks);
+                }
+            }
             if (!agentRuntimeAuthorized) {
                 logInfo('Skipping agent runtime preparation because ai-members-only is enabled and the actor is not authorized.');
                 return;
