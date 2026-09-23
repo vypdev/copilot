@@ -641,7 +641,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       };
     });
     mockFindExactHeadCandidateNumbers.mockResolvedValue([100]);
-    mockGetPullRequestHeadSha.mockResolvedValue("abc123");
+    mockGetPullRequestHeadSha.mockResolvedValue('c'.repeat(40));
     mockGetChangedFiles.mockResolvedValue([
       { filename: "src/bar.ts", status: "modified" },
     ]);
@@ -662,7 +662,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       "owner",
       "repo",
       100,
-      "abc123",
+      'c'.repeat(40),
       expect.stringContaining("## 🤖 Revue Bugbot"),
       expect.arrayContaining([
         expect.objectContaining({
@@ -681,7 +681,7 @@ describe("DetectPotentialProblemsUseCase", () => {
   it("fails presentation closed when an open PR has no trusted author bound", async () => {
     mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
     mockFindExactHeadCandidateNumbers.mockResolvedValue([100]);
-    mockGetPullRequestHeadSha.mockResolvedValue("abc123");
+    mockGetPullRequestHeadSha.mockResolvedValue('c'.repeat(40));
 
     const results = await invokeUseCase(useCase, baseParam({ tokenUser: undefined }));
 
@@ -1124,7 +1124,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       ],
     });
     mockFindExactHeadCandidateNumbers.mockResolvedValue([50]);
-    mockGetPullRequestHeadSha.mockResolvedValue("sha");
+    mockGetPullRequestHeadSha.mockResolvedValue('d'.repeat(40));
     mockGetChangedFiles.mockResolvedValue([
       { filename: "src/a.ts", status: "modified" },
     ]);
@@ -1189,7 +1189,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       ],
     });
     mockFindExactHeadCandidateNumbers.mockResolvedValue([200]);
-    mockGetPullRequestHeadSha.mockResolvedValue("sha1");
+    mockGetPullRequestHeadSha.mockResolvedValue('e'.repeat(40));
     mockGetChangedFiles.mockResolvedValue([
       { filename: "lib/helper.ts", status: "modified" },
     ]);
@@ -1209,13 +1209,13 @@ describe("DetectPotentialProblemsUseCase", () => {
       200,
       expect.stringContaining('Bugbot: review needs verification'),
       'token',
-      { commitSha: 'sha1' },
+      { commitSha: 'e'.repeat(40) },
     );
     expect(mockCreateReviewWithComments).toHaveBeenCalledWith(
       "owner",
       "repo",
       200,
-      "sha1",
+      'e'.repeat(40),
       expect.stringContaining("General issue"),
       [expect.objectContaining({
         path: "lib/helper.ts",
@@ -1246,7 +1246,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         line: 1,
       },
     ]);
-    mockGetPullRequestHeadSha.mockResolvedValue("sha2");
+    mockGetPullRequestHeadSha.mockResolvedValue('f'.repeat(40));
     mockGetChangedFiles.mockResolvedValue([
       { filename: "x.ts", status: "modified" },
     ]);

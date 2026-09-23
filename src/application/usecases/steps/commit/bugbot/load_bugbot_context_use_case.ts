@@ -120,7 +120,7 @@ export async function loadBugbotContext(
       throw new ApplicationError(
         'workflow.failed',
         error.reason === 'malformed-input'
-          ? 'The canonical diff contains malformed provider patch content. Correct the diff source and retry; no partial review was started.'
+          ? 'The canonical diff contains malformed provider data. Correct the provider source and retry; no partial review was started.'
           : `The canonical diff exceeds the fixed ${MAX_REVIEW_DIFF_PARTITIONS}-partition or raw-input Bugbot planning limit. Split the pull request and retry; no partial review was started.`,
         { cause: error },
       );

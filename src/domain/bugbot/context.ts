@@ -1,3 +1,5 @@
+import { canonicalGitObjectId } from '../git_object_id';
+
 export type BugbotContextCoverageStatus = "complete" | "partial";
 
 export type BugbotContextSource =
@@ -76,10 +78,17 @@ export function selectCanonicalBugbotPullRequest(
     return { kind: "stale", reason: "The event pull request could not be verified." };
   }
   const candidate = candidates[0];
-  const mismatch = identityMismatch(target, candidate);
+  const headSha = canonicalGitObjectId(candidate.headSha);
+  if (headSha === undefined) {
+    return { kind: "stale", reason: "The selected pull request head revision is invalid." };
+  }
+  const canonicalCandidate = headSha === candidate.headSha
+    ? candidate
+    : { ...candidate, headSha };
+  const mismatch = identityMismatch(target, canonicalCandidate);
   return mismatch
     ? { kind: "stale", reason: mismatch }
-    : { kind: "canonical", pullRequest: candidate, reason: source };
+    : { kind: "canonical", pullRequest: canonicalCandidate, reason: source };
 }
 
 export function summarizeBugbotCoverage(
@@ -129,9 +138,11 @@ function identityMismatch(
   if (!matchesConstrainedHead(target, candidate)) {
     return "The selected pull request head does not match the review target.";
   }
-  if (target.expectedHeadSha !== undefined
-    && candidate.headSha.toLowerCase() !== target.expectedHeadSha.toLowerCase()) {
-    return "The selected pull request head revision is stale.";
+  if (target.expectedHeadSha !== undefined) {
+    const expectedHeadSha = canonicalGitObjectId(target.expectedHeadSha);
+    if (expectedHeadSha === undefined || candidate.headSha !== expectedHeadSha) {
+      return "The selected pull request head revision is stale.";
+    }
   }
   return undefined;
 }

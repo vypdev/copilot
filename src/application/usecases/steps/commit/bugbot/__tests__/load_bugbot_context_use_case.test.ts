@@ -367,7 +367,7 @@ describe('loadBugbotContext', () => {
 
     await expect(loadBugbotContext(request(), reader)).rejects.toMatchObject({
       code: 'workflow.failed',
-      message: expect.stringContaining('Correct the diff source'),
+      message: expect.stringContaining('Correct the provider source'),
     });
     expect(reader.loadRules).not.toHaveBeenCalled();
   });

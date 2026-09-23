@@ -250,16 +250,24 @@ publication/reconciliation operation allowed.
    plan-limit error even on ignored paths, never masquerade as an absent patch.
 5. Pack fragment sections in stable order. Start a new partition before adding a
    section that would exceed the diff-block budget.
-6. Derive IDs from the reviewed head SHA, partition ordinal/total, and the full
-   lowercase 64-hex-character SHA-256 digest of the canonical assigned
+6. Before planning any provider diff context, canonicalize `prHeadSha` through
+   the shared Git object-ID policy. Only a non-zero 40-hex SHA-1 or 64-hex
+   SHA-256 value is accepted; whitespace and case are normalized before the
+   value reaches an instruction, partition identity, attestation, telemetry, or
+   result contract. Invalid or instruction-like values fail closed through a
+   bounded provider-input error and are never interpolated into trusted prompt
+   text. The partition planner independently revalidates the value and reports
+   malformed input if called outside canonical PR selection.
+7. Derive IDs from the canonical reviewed head SHA, partition ordinal/total,
+   and the full lowercase 64-hex-character SHA-256 digest of the assigned
    identities/content. IDs MUST be deterministic, collision-resistant, bounded
    to the response schema's 128-character ceiling, and safe to echo. A short or
    non-cryptographic checksum MUST NOT identify a partition because a collision
    would make a complete response set indistinguishable or invalidate it only
    after reviewer execution.
-7. Reject a plan that cannot represent even one fragment within a partition;
+8. Reject a plan that cannot represent even one fragment within a partition;
    never silently truncate it.
-8. If a canonical PR diff contains zero provider changes, or filtering
+9. If a canonical PR diff contains zero provider changes, or filtering
    intentionally retains zero files and records ignored files, produce a
    zero-work plan and preserve all available counts for auditability. Do not
    synthesize a partition or reuse the issue/local fallback prompt.
@@ -530,17 +538,17 @@ comments remain untouched.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **59 distinct cases**.
+This SDD owns at least **61 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/pure planning | 32 | empty/single/multi-file, newline/hard split, UTF-16 surrogate-safe hard boundaries and pre-ignore rejection of isolated high/low surrogates, collision-free untrusted-data framing with verbatim delimiter-like patch text, individual and cumulative raw input ceilings before normalization, exact prompt and 64/65 partition boundaries, omitted/null/empty patch assignments, malformed change/object/filename/status/count/patch rejection even on ignored paths, root/nested leading-`**/` ignore parity, full SHA-256 ID format plus content/head sensitivity, stable IDs, order, no character loss, hostile status/count metadata envelope |
+| Domain/pure planning | 34 | empty/single/multi-file, newline/hard split, UTF-16 surrogate-safe hard boundaries and pre-ignore rejection of isolated high/low surrogates, collision-free untrusted-data framing with verbatim delimiter-like patch text, individual and cumulative raw input ceilings before normalization, exact prompt and 64/65 partition boundaries, omitted/null/empty patch assignments, malformed change/object/filename/status/count/patch rejection even on ignored paths, root/nested leading-`**/` ignore parity, canonical SHA-1/SHA-256 head acceptance plus hostile/invalid head rejection before interpolation, full SHA-256 ID format plus content/head sensitivity, stable IDs, order, no character loss, hostile status/count metadata envelope |
 | State/application/idempotency/races | 8 | all-complete, one failure, wrong/duplicate ID, wrong SHA, resolution ownership, stale head, replay, empty canonical zero-work |
 | Agent adapter/schema contracts | 4 | required attestation, locale, undefined/invalid result, aggregate bounds |
 | Workflow/architecture/telemetry | 5 | concurrency two, ordered collection, no mutation before complete, positive and zero-partition plan metrics |
 | UI/UX/localization/sanitization | 4 | pending, failed, complete, hostile content/control characters |
 | Integration/security/compatibility | 6 | 44-file regression, oversized patch, provider partial, dry-run, legacy issue-only path, ignored-only canonical no-op |
-| **Total** | **59** | No double counting |
+| **Total** | **61** | No double counting |
 
 Planner, attestation, and aggregate pure policies require 100% enumerated branch
 coverage. Changed analyzer/context modules require at least 95% lines/statements
@@ -632,6 +640,11 @@ token scope, secret, or public input.
     digest of the canonical reviewed head and rendered assigned content, remains
     within 128 characters, is stable for identical input, and changes when the
     head or assigned content changes.
+25. Given a provider head value, a valid 40-hex SHA-1 or 64-hex SHA-256 value is
+    canonicalized before partition construction; an empty, zero, malformed,
+    oversized, newline-bearing, or instruction-like value fails with a bounded
+    provider-input error before diff rendering, model execution, telemetry
+    identity, or publication; direct planner calls report malformed input.
 
 ## 17. Requirements traceability
 
@@ -670,7 +683,7 @@ token scope, secret, or public input.
       provider enumeration and every partition respects fixed prompt bounds.
 - [x] Attestation, resolution ownership, concurrency, aggregation, freshness,
       replay, cancellation/failure, and no-prepublication-mutation tests pass.
-- [x] The 59-case floor and changed-module/repository coverage budgets pass.
+- [x] The 61-case floor and changed-module/repository coverage budgets pass.
 - [x] Pending, failed, provider-partial, complete, dry-run, and publication-
       partial surfaces are accurate, localized, accessible, and bounded.
 - [x] No public configuration, permission, credential, or durable-state change
