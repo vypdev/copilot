@@ -56,7 +56,7 @@ describe('AssignMemberToIssueUseCase', () => {
   });
 
   it('does not query or mutate membership when automatic assignment is disabled', async () => {
-    const results = await useCase.invoke(baseParam({ desiredAssigneesCount: 0 }));
+    const results = await useCase.invoke(baseParam({ desiredAssigneesCount: 0, number: -1 }));
 
     expect(results).toEqual([expect.objectContaining({ success: true, executed: false })]);
     expect(mockGetAllMembers).not.toHaveBeenCalled();

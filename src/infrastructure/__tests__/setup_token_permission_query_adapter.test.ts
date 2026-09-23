@@ -6,7 +6,10 @@ const requirement = (
     probe: SetupTokenPermissionRequirement['probe'] = 'metadata',
     scope: SetupTokenPermissionRequirement['scope'] = 'repository',
 ): SetupTokenPermissionRequirement => ({
-    id: `setup.${scope}.${probe}`, role: 'setup', scope, permission: probe,
+    id: `setup.${scope}.${probe}`,
+    role: 'setup',
+    scope,
+    permission: probe === 'members' ? 'Members' : probe === 'issue-types' ? 'Issue Types' : probe,
     level, applicability: 'required', reason: 'test', probe,
 });
 
@@ -134,20 +137,28 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         expect(check).toMatchObject({ status: 'verified' });
     });
 
-    it.each(['members', 'issue-types'] as const)(
-        'keeps a successful public organization %s probe unverifiable',
-        async probe => {
-            const fetcher = jest.fn().mockResolvedValue(response(true, 200));
+    it('reports a successful public organization Members read as operational without verifying the PAT grant', async () => {
+        const fetcher = jest.fn().mockResolvedValue(response(true, 200));
 
-            const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
-                'owner', 'repo', 'secret-token', [requirement('read', probe, 'organization')],
-            );
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
+            'owner', 'repo', 'secret-token', [requirement('read', 'members', 'organization')],
+        );
 
-            expect(fetcher).toHaveBeenCalledTimes(1);
-            expect(check).toMatchObject({ status: 'unverifiable' });
-            expect(check.operationallyAvailable).toBeUndefined();
-        },
-    );
+        expect(fetcher).toHaveBeenCalledTimes(1);
+        expect(check).toMatchObject({ status: 'unverifiable', operationallyAvailable: true });
+    });
+
+    it('keeps a successful public organization Issue Types probe unusable as permission evidence', async () => {
+        const fetcher = jest.fn().mockResolvedValue(response(true, 200));
+
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
+            'owner', 'repo', 'secret-token', [requirement('read', 'issue-types', 'organization')],
+        );
+
+        expect(fetcher).toHaveBeenCalledTimes(1);
+        expect(check).toMatchObject({ status: 'unverifiable' });
+        expect(check.operationallyAvailable).toBeUndefined();
+    });
 
     it('keeps a write level unverifiable after a successful read probe', async () => {
         const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher: jest.fn().mockResolvedValue(response(true, 200)) })

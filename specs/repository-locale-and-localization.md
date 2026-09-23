@@ -550,17 +550,16 @@ semantic ports and returns one safe localized artifact.
 - **Pure decisions:** locale canonicalization wrapper, scope selection, catalog
   resolution plan, descriptor completeness, placeholder parity, plural variant
   selection, output-locale validation, and translation disclosure decision.
-- **Runtime authorization:** compute event/single-action agent tasks independently
-  of the optional planner capability used only for a dynamic product-copy
-  catalog. `ai.membersOnly` checks the actor only when a user-content agent
-  task is active and live-state admission has returned `execute`. Protected
-  task configurations remain disabled until that post-admission lookup allows
-  them; no-op, blocked, and continuation-only state never queries membership.
-  A locale-only planner on an otherwise inactive event may
-  prepare bounded catalog copy without triggering a membership lookup or
-  disabling all agent models on a lookup failure; it never grants a denied
-  user-content task access. Active tasks still require the normal membership
-  decision even when the same run also needs a dynamic catalog.
+- **Runtime authorization:** compute event/single-action agent tasks and the
+  optional planner capability used for a dynamic product-copy catalog as one
+  requested provider-task set. `ai.membersOnly` checks the actor whenever that
+  set is non-empty and live-state admission has returned `execute`, including
+  when `planner` is the only requested task. Protected task configurations
+  remain disabled until that post-admission lookup allows them; no-op, blocked,
+  and continuation-only state never queries membership. Denial or lookup
+  failure prevents both dynamic catalog generation and user-content tasks from
+  reaching the provider; presentation falls back through the bounded catalog
+  policy instead of bypassing actor authorization.
 - **Application contracts:** `RepositoryLocaleProfile`, `SurfaceLocale`,
   `MessageDescriptorRequest`, `ResolvedCatalogSlice`,
   `LanguageAdaptationRequest/Result`, and `LocalizedUserRequest` are deeply
@@ -1073,7 +1072,7 @@ contract is enforced by `pnpm run validate:specifications`.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/configuration/pure planning | 26 | defaults, inheritance, canonicalization, invalid tags including underscores, 255-char bound, scope/snapshot, locale equality, independent locale-only planner and user-content task authorization |
+| Domain/configuration/pure planning | 26 | defaults, inheritance, canonicalization, invalid tags including underscores, 255-char bound, scope/snapshot, locale equality, unified provider-task authorization for locale-only planner and user-content tasks |
 | Catalog/renderer contracts | 28 | completeness, exact/base/dynamic/fallback, atomicity, placeholders, plurals, number formatting, expansion, missing/hostile IDs |
 | Translation/application state | 26 | admission order, command arguments, mention path, matches/translated/ambiguous/failed, one call, output-locale recovery, duplicate request |
 | Adapters/provider contracts | 16 | static/dynamic adapters, schema errors, timeouts, cache key, error mapping, no comment update capability |
@@ -1198,12 +1197,11 @@ hyphenated tags and never imply that fallback is a successful translation.
     replacement with the exact target locale, `unchanged` is rejected, and an
     unconfigured run fails closed. State with a missing or invalid locale is
     rejected during configuration restoration before planning begins.
-24. Given an inactive event with a dynamic locale and `ai.membersOnly`, then
-    localization-only planner preparation does not query actor membership or
-    disable the catalog capability; given an active user-content task under
-    those same inputs, membership is checked only after live-state admission
-    returns `execute` and before its task configuration is enabled or runtime
-    is prepared. No-op, blocked, and continuation-only outcomes never query it.
+24. Given an executable event with a dynamic locale and `ai.membersOnly`, then
+    membership is checked after live-state admission and before a locale-only
+    planner or any user-content task is enabled or prepared. Denial or lookup
+    failure reaches no provider-backed task and leaves bounded catalog fallback
+    available. No-op, blocked, and continuation-only outcomes never query it.
 
 ## 17. Requirements traceability
 

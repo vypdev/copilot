@@ -237,6 +237,9 @@ ownership.
 11. Labels required by a selected rendered form MUST exist before that form is
     considered ready. `blank_issues_enabled=false` improves the chooser but does
     not replace runtime classification and schema validation.
+12. Automatic member assignment with a desired count of zero or less is a pure
+    successful no-op before target-number validation or any membership query.
+    A missing issue/PR number is an error only when assignment is enabled.
 
 ## 5. Current versus proposed product journey
 
@@ -296,11 +299,11 @@ domain changes.
    authorization, agent runtime preparation, route composition, and normal
    mutation. A side-effect-free base `Execution` value may be assembled before
    admission so the queue and live-state use case have typed context. When an
-   active user-content task is protected by `ai.membersOnly`, that base value
-   keeps every protected task model disabled. Only after live admission returns
-   `execute` may the Action query membership and restore the validated requested
-   task configuration; denial keeps it disabled and provider failure fails
-   closed before agent preparation.
+   requested provider task is protected by `ai.membersOnly`, including a
+   locale-only catalog planner, that base value keeps every protected task model
+   disabled. Only after live admission returns `execute` may the Action query
+   membership and restore the validated requested task configuration; denial
+   keeps it disabled and provider failure fails closed before agent preparation.
 
 ### 6.2 Alternative paths
 
@@ -319,6 +322,9 @@ domain changes.
   one enabled kind and satisfies that kind's semantic body contract.
 - A passive event for an unmanaged or disabled kind is a successful no-op with
   a Job Summary and no repository comment.
+- A desired assignee count of zero disables assignment independently of target
+  identity. The step succeeds without resolving an issue/PR number and without
+  reading or mutating organization membership.
 - An explicit command, launcher/deploy label, or issue-bound single action for
   an unmanaged or disabled kind is blocked. An addressed comment receives one
   actionable reply; other triggers rely on the failed check and Job Summary.
@@ -664,8 +670,10 @@ existing irreversible release as wholly failed when only reconciliation failed.
    provider output. Secrets never enter setup plans, forms, summaries, or
    durable issue state.
 4. Actor authorization remains mandatory after type admission. Admission proves
-   capability, not permission. Provider-backed authorization MUST NOT run before
-   live admission or for no-op, blocked, or continuation-only work.
+   capability, not permission. Every requested provider task, including a
+   dynamic locale planner, MUST pass members-only authorization after live
+   admission. Provider-backed authorization MUST NOT run before live admission
+   or for no-op, blocked, or continuation-only work.
 5. A forged native Issue Type, template-like body, or label cannot bypass the
    enabled profile; a forged profile cannot bypass action/workflow permissions.
 6. Explicit deploy intent retains the authorization, fencing, and idempotency
@@ -720,11 +728,11 @@ rows count only when they assert a distinct decision branch.
 |---|---:|---|
 | Catalog, profile, configuration, classifier | 26 | seven kinds, aliases, all/empty/unknown/duplicate/schema cases, zero/one/multiple groups, no fallback, cross-field rules |
 | Setup planning, selection, rendering, reconciliation | 24 | Space/Enter/All, fallback input, cancel/EOF, dependencies, effective labels, managed/unmanaged drift, retire/backup, idempotency |
-| Runtime admission, state, replay, continuation | 31 | passive/explicit matrix, queue/live state, disabled/unmanaged/conflict, body validation, legacy, continuation, durable operations, unlinked PR, deferred members-only lookup, denied/failing authorization with fail-closed task configuration |
+| Runtime admission, state, replay, continuation | 32 | passive/explicit matrix, queue/live state, disabled/unmanaged/conflict, body validation, legacy, continuation, durable operations, unlinked PR, zero-count assignment before target validation, deferred members-only lookup for every requested provider task, denied/failing authorization with fail-closed task configuration |
 | Adapters and provider contracts | 12 | Variable, issue snapshot, state, labels, org/no-org Issue Types, permission/rate-limit/error mapping |
 | Workflows, packaging, doctor, architecture | 16 | all workflow inputs, package contents, npm smoke, query-only doctor, mutation reachability, single catalog, parser/form contract |
 | UI, localization, security, integration, migration | 18 | five UI states, no-color/narrow, sanitization, comment budget, no secrets, old config/profile migration, dogfood and rollback |
-| **Total** | **127** | No double counting |
+| **Total** | **128** | No double counting |
 
 The issue-workflow domain and setup/rendering decision policies named by the
 `Configurable issue workflows and repository agent guidance` coverage budget
@@ -791,12 +799,17 @@ validated against setup forms and profile fixtures.
     previews drift and requires backed-up replacement approval.
 14. Given doctor runs against any drift above, then it performs no writes and
     reports the exact selection/profile/form/workflow remedy.
-15. Given `ai.membersOnly` and an active user-content task, a live no-op,
-    blocked, or continuation-only decision performs no membership lookup and
-    prepares no agent. A live `execute` decision queries membership afterwards,
-    restores requested task models only on authorization, keeps them disabled
-    on denial, and fails closed before preparation when the provider lookup
-    fails.
+15. Given `ai.membersOnly` and any requested provider task, including a
+    locale-only catalog planner, a live no-op, blocked, or continuation-only
+    decision performs no membership lookup and prepares no agent. A live
+    `execute` decision queries membership afterwards, restores requested task
+    models only on authorization, keeps them disabled on denial, and fails
+    closed before preparation when the provider lookup fails.
+16. Given automatic assignment is disabled with desired count zero and no
+    issue/PR number is available, the assignment step returns a successful
+    unexecuted result before target validation and performs no member or
+    assignee query or mutation. The same missing number still fails when the
+    desired count is positive.
 
 ## 17. Requirements traceability
 

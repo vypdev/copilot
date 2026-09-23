@@ -53,7 +53,9 @@ This guide helps you resolve common issues you might encounter while using Copil
     metadata, commits, rulesets, labels, workflows, checks, pull requests, and
     workflow files remain `Unverifiable` unless repository metadata proves the
     repository is private. Public organization member and issue-type responses
-    are likewise inconclusive.
+    are likewise inconclusive as PAT evidence. After valid identity, only a
+    successful exact Members read may be operationally usable; Issue Types,
+    ambiguous responses, and writes remain blocking.
     For the repository Contents row in the PAT permission table, setup probes
     the read-only commit list; this is not the workflow-presence check described
     below. GitHub's documented empty-repository response verifies read access
@@ -110,6 +112,10 @@ This guide helps you resolve common issues you might encounter while using Copil
     selected ref is `unavailable`, not an inherited default-branch state.
     An exact-file response without a usable file `sha` is also `unavailable`,
     even if GitHub returns success; it never proves installation.
+    A valid file `sha` proves installation on the selected ref. Setup then
+    dispatches that known workflow path and ref directly; an Actions lookup
+    limited to the default-branch index is not allowed to override the exact
+    Contents evidence.
     Expected missing or unconfirmed final PAT permissions return a blocked
     result with the chosen configuration and stop before storage validation or
     any mutation.

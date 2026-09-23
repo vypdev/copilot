@@ -7,7 +7,10 @@ import type {
     SetupTokenPermissionCheck,
     SetupTokenPermissionReport,
 } from '../../../domain/setup_token_permissions';
-import { reconcileSetupTokenPermissionEvidence } from '../../policies/setup_token_permission_evidence_policy';
+import {
+    isOperationallyAvailableSetupRead,
+    reconcileSetupTokenPermissionEvidence,
+} from '../../policies/setup_token_permission_evidence_policy';
 
 /** Validates PAT identity first, then runs only read-only permission probes. */
 export class SetupTokenPermissionsUseCase {
@@ -47,7 +50,8 @@ export class SetupTokenPermissionsUseCase {
         const requiredChecks = checks.filter(check => check.applicability === 'required');
         const readUsable = (check: SetupTokenPermissionCheck) => (check.status === 'verified' && check.level === 'read')
             || (check.status === 'unverifiable' && check.level === 'read'
-                && check.scope === 'repository' && check.operationallyAvailable === true);
+                && isOperationallyAvailableSetupRead(check)
+                && check.operationallyAvailable === true);
         const ready = requiredChecks.every(readUsable);
         const confirmationRequired = !ready
             && requiredChecks.every(check => readUsable(check)

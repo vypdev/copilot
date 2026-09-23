@@ -104,13 +104,6 @@ export class SetupRemoteCredentialHealthBootstrapAdapter implements SetupRemoteC
     if (selectedWorkflow === 'missing') {
       await this.bootstrapWorkflow(client, owner, repository, ref);
       temporaryWorkflow = true;
-    } else {
-      try {
-        await client.rest.actions.getWorkflow({ owner, repo: repository, workflow_id: WORKFLOW_ID });
-      } catch (error) {
-        if (isNotFound(error)) return undefined;
-        throw error;
-      }
     }
     try {
       return await executeHealthWorkflow(client, owner, repository, ref, requirements, this.options);

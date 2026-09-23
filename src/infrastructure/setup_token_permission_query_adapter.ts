@@ -5,6 +5,7 @@ import type {
 } from '../domain/setup_token_permissions';
 import { isGithubPermissionDenied } from '../data/repository/github/github_error_policy';
 import { runWithConcurrencyLimit } from '../application/policies/bounded_concurrency_policy';
+import { isOperationallyAvailableSetupRead } from '../application/policies/setup_token_permission_evidence_policy';
 
 const SETUP_PERMISSION_PROBE_CONCURRENCY = 4;
 const MAX_GITHUB_DEFAULT_BRANCH_LENGTH = 255;
@@ -233,11 +234,19 @@ async function mapProbeResponse(
         if (requirement.level === 'write') {
             return outcome(requirement, 'unverifiable', 'Read access is available, but GitHub exposes no safe proof of write access.');
         }
-        return readEvidence === 'permission-bound'
-            ? outcome(requirement, 'verified', 'GitHub accepted an authentication-bound read-only capability probe.')
-            : requirement.scope === 'repository'
-                ? { ...outcome(requirement, 'unverifiable', 'This publicly readable repository read succeeded and is operationally available, but does not prove that the PAT has the named permission.'), operationallyAvailable: true }
-                : outcome(requirement, 'unverifiable', 'GitHub served a publicly readable resource, which does not prove that this token has the requested permission.');
+        if (readEvidence === 'permission-bound') {
+            return outcome(requirement, 'verified', 'GitHub accepted an authentication-bound read-only capability probe.');
+        }
+        const publiclyReadable = outcome(
+            requirement,
+            'unverifiable',
+            requirement.scope === 'repository'
+                ? 'This publicly readable repository read succeeded, but does not prove that the PAT has the named permission.'
+                : 'GitHub served a publicly readable organization resource, which does not prove that this token has the requested permission.',
+        );
+        return isOperationallyAvailableSetupRead(requirement)
+            ? { ...publiclyReadable, operationallyAvailable: true }
+            : publiclyReadable;
     }
     if (response.status === 409
         && requirement.scope === 'repository'

@@ -7,6 +7,7 @@ export const MAX_REVIEW_DIFF_PARTITION_LENGTH = 64_000;
 export const MAX_REVIEW_DIFF_FRAGMENT_LENGTH = 12_000;
 export const MAX_REVIEW_DIFF_PARTITIONS = 64;
 export const MAX_REVIEW_DIFF_RAW_INPUT_LENGTH = MAX_REVIEW_DIFF_PARTITION_LENGTH * MAX_REVIEW_DIFF_PARTITIONS;
+export const MAX_REVIEW_DIFF_NORMALIZED_INPUT_LENGTH = MAX_REVIEW_DIFF_RAW_INPUT_LENGTH;
 const DIFF_PARTITION_HEADER_RESERVE = 1_024;
 // This reserve exceeds the maximum header rendered from a 64-partition plan,
 // a 64-hex canonical head and a 64-hex partition digest. Packing against the
@@ -24,6 +25,11 @@ interface BugbotDiffChange {
   readonly additions: number;
   readonly deletions: number;
   readonly patch?: string | null;
+}
+
+interface PreparedBugbotDiffChange {
+  readonly change: BugbotDiffChange;
+  readonly sanitizedPatch: string;
 }
 
 export interface BugbotReviewDiffPartition {
@@ -67,11 +73,10 @@ export function buildReviewDiffPlan(
   if (context.changes == null) return { partitions: [], ignored: 0, retained: 0, fragments: 0 };
   if (!Array.isArray(context.changes)) throw new BugbotDiffPlanLimitError('malformed-input');
   if (context.changes.length === 0) return { partitions: [], ignored: 0, retained: 0, fragments: 0 };
-  const sections: Array<{ readonly filename: string; readonly rendered: string }> = [];
-  const retainedFiles = new Set<string>();
+  const preparedChanges: PreparedBugbotDiffChange[] = [];
   let ignored = 0;
-  let fragmentIndex = 0;
   let rawPatchTotal = 0;
+  let normalizedPatchTotal = 0;
 
   for (const candidate of context.changes as readonly unknown[]) {
     if (!isValidDiffChange(candidate)) throw new BugbotDiffPlanLimitError('malformed-input');
@@ -86,12 +91,23 @@ export function buildReviewDiffPlan(
       throw new BugbotDiffPlanLimitError();
     }
     rawPatchTotal += rawPatch.length;
-    retainedFiles.add(change.filename);
     const sanitizedPatch = createUntrustedContent(
       rawPatch,
-      `github.diff.${fragmentIndex + 1}`,
+      `github.diff.${preparedChanges.length + 1}`,
       Number.MAX_SAFE_INTEGER,
     ).text;
+    if (sanitizedPatch.length > MAX_REVIEW_DIFF_NORMALIZED_INPUT_LENGTH - normalizedPatchTotal) {
+      throw new BugbotDiffPlanLimitError();
+    }
+    normalizedPatchTotal += sanitizedPatch.length;
+    preparedChanges.push({ change, sanitizedPatch });
+  }
+
+  const sections: Array<{ readonly filename: string; readonly rendered: string }> = [];
+  const retainedFiles = new Set<string>();
+  let fragmentIndex = 0;
+  for (const { change, sanitizedPatch } of preparedChanges) {
+    retainedFiles.add(change.filename);
     const fragments = sanitizedPatch.length > 0
       ? splitReviewDiffPatch(sanitizedPatch)
       : ['[patch unavailable from GitHub; inspect the exact local diff and current workspace for this assigned file]'];

@@ -97,7 +97,7 @@ export async function runGitHubAction(): Promise<void> {
     ])];
     const agentRuntimeAuthorizationRequired = !botAnalysisOnly
         && aiInputs.membersOnly
-        && activeRuntimeAgentTasks.length > 0;
+        && requestedActiveAgentTasks.length > 0;
     let agentRuntimeAuthorized = !agentRuntimeAuthorizationRequired;
     let languageRuntimeAvailable = false;
 

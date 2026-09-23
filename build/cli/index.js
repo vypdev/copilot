@@ -40848,7 +40848,7 @@ exports.BUGBOT_MIN_SEVERITY = 'low';
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.BugbotDiffPlanLimitError = exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH = exports.MAX_REVIEW_DIFF_PARTITIONS = exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH = exports.MAX_REVIEW_DIFF_PARTITION_LENGTH = void 0;
+exports.BugbotDiffPlanLimitError = exports.MAX_REVIEW_DIFF_NORMALIZED_INPUT_LENGTH = exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH = exports.MAX_REVIEW_DIFF_PARTITIONS = exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH = exports.MAX_REVIEW_DIFF_PARTITION_LENGTH = void 0;
 exports.buildReviewDiffPlan = buildReviewDiffPlan;
 exports.splitReviewDiffPatch = splitReviewDiffPatch;
 const node_crypto_1 = __nccwpck_require__(6005);
@@ -40859,6 +40859,7 @@ exports.MAX_REVIEW_DIFF_PARTITION_LENGTH = 64000;
 exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH = 12000;
 exports.MAX_REVIEW_DIFF_PARTITIONS = 64;
 exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH = exports.MAX_REVIEW_DIFF_PARTITION_LENGTH * exports.MAX_REVIEW_DIFF_PARTITIONS;
+exports.MAX_REVIEW_DIFF_NORMALIZED_INPUT_LENGTH = exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH;
 const DIFF_PARTITION_HEADER_RESERVE = 1024;
 // This reserve exceeds the maximum header rendered from a 64-partition plan,
 // a 64-hex canonical head and a 64-hex partition digest. Packing against the
@@ -40890,11 +40891,10 @@ function buildReviewDiffPlan(context, ignorePatterns = []) {
         throw new BugbotDiffPlanLimitError('malformed-input');
     if (context.changes.length === 0)
         return { partitions: [], ignored: 0, retained: 0, fragments: 0 };
-    const sections = [];
-    const retainedFiles = new Set();
+    const preparedChanges = [];
     let ignored = 0;
-    let fragmentIndex = 0;
     let rawPatchTotal = 0;
+    let normalizedPatchTotal = 0;
     for (const candidate of context.changes) {
         if (!isValidDiffChange(candidate))
             throw new BugbotDiffPlanLimitError('malformed-input');
@@ -40910,8 +40910,18 @@ function buildReviewDiffPlan(context, ignorePatterns = []) {
             throw new BugbotDiffPlanLimitError();
         }
         rawPatchTotal += rawPatch.length;
+        const sanitizedPatch = (0, untrusted_content_1.createUntrustedContent)(rawPatch, `github.diff.${preparedChanges.length + 1}`, Number.MAX_SAFE_INTEGER).text;
+        if (sanitizedPatch.length > exports.MAX_REVIEW_DIFF_NORMALIZED_INPUT_LENGTH - normalizedPatchTotal) {
+            throw new BugbotDiffPlanLimitError();
+        }
+        normalizedPatchTotal += sanitizedPatch.length;
+        preparedChanges.push({ change, sanitizedPatch });
+    }
+    const sections = [];
+    const retainedFiles = new Set();
+    let fragmentIndex = 0;
+    for (const { change, sanitizedPatch } of preparedChanges) {
         retainedFiles.add(change.filename);
-        const sanitizedPatch = (0, untrusted_content_1.createUntrustedContent)(rawPatch, `github.diff.${fragmentIndex + 1}`, Number.MAX_SAFE_INTEGER).text;
         const fragments = sanitizedPatch.length > 0
             ? splitReviewDiffPatch(sanitizedPatch)
             : ['[patch unavailable from GitHub; inspect the exact local diff and current workspace for this assigned file]'];
@@ -48154,6 +48164,7 @@ function projectLabel(field) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.reconcileSetupTokenPermissionEvidence = reconcileSetupTokenPermissionEvidence;
+exports.isOperationallyAvailableSetupRead = isOperationallyAvailableSetupRead;
 const NO_SAFE_EVIDENCE_MESSAGE = 'No safe permission evidence was returned for this requirement.';
 const WRITE_NOT_VERIFIABLE_MESSAGE = 'Write access cannot be verified with a safe read-only permission probe.';
 /**
@@ -48176,13 +48187,22 @@ function reconcileSetupTokenPermissionEvidence(requirements, evidence) {
             status: candidate.status,
             message: candidate.message,
             ...(candidate.status === 'unverifiable'
-                && requirement.scope === 'repository'
-                && requirement.level === 'read'
+                && isOperationallyAvailableSetupRead(requirement)
                 && candidate.operationallyAvailable === true
                 ? { operationallyAvailable: true }
                 : {}),
         };
     });
+}
+/** Limits positive usability without promoting publicly readable evidence to verified PAT access. */
+function isOperationallyAvailableSetupRead(requirement) {
+    if (requirement.level !== 'read')
+        return false;
+    if (requirement.scope === 'repository')
+        return true;
+    return requirement.scope === 'organization'
+        && requirement.permission === 'Members'
+        && requirement.probe === 'members';
 }
 function isMatchingEvidence(requirement, value) {
     return value.id === requirement.id
@@ -55407,7 +55427,8 @@ class SetupTokenPermissionsUseCase {
         const requiredChecks = checks.filter(check => check.applicability === 'required');
         const readUsable = (check) => (check.status === 'verified' && check.level === 'read')
             || (check.status === 'unverifiable' && check.level === 'read'
-                && check.scope === 'repository' && check.operationallyAvailable === true);
+                && (0, setup_token_permission_evidence_policy_1.isOperationallyAvailableSetupRead)(check)
+                && check.operationallyAvailable === true);
         const ready = requiredChecks.every(readUsable);
         const confirmationRequired = !ready
             && requiredChecks.every(check => readUsable(check)
@@ -61960,10 +61981,10 @@ async function runAssignMembersWorkflow(param, dependencies) {
     const results = [];
     try {
         (0, logging_ports_1.logDebugInfo)(`#${target.number} needs ${target.desiredCount} assignees.`);
-        if (target.number <= 0)
-            return [assignmentResult(false, 'Issue or pull request number is not available.')];
         if (target.desiredCount <= 0)
             return [new result_1.Result({ id: TASK_ID, success: true, executed: false })];
+        if (target.number <= 0)
+            return [assignmentResult(false, 'Issue or pull request number is not available.')];
         const [currentProjectMembers, currentMembers] = await Promise.all([
             dependencies.projectRepository.getAllMembers(),
             dependencies.issueRepository.getCurrentAssignees(target.number),
@@ -82519,16 +82540,6 @@ class SetupRemoteCredentialHealthBootstrapAdapter {
             await this.bootstrapWorkflow(client, owner, repository, ref);
             temporaryWorkflow = true;
         }
-        else {
-            try {
-                await client.rest.actions.getWorkflow({ owner, repo: repository, workflow_id: WORKFLOW_ID });
-            }
-            catch (error) {
-                if (isNotFound(error))
-                    return undefined;
-                throw error;
-            }
-        }
         try {
             return await executeHealthWorkflow(client, owner, repository, ref, requirements, this.options);
         }
@@ -82684,6 +82695,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupTokenPermissionQueryAdapter = void 0;
 const github_error_policy_1 = __nccwpck_require__(58791);
 const bounded_concurrency_policy_1 = __nccwpck_require__(35596);
+const setup_token_permission_evidence_policy_1 = __nccwpck_require__(65640);
 const SETUP_PERMISSION_PROBE_CONCURRENCY = 4;
 const MAX_GITHUB_DEFAULT_BRANCH_LENGTH = 255;
 /** Maps safe GitHub reads to semantic permission evidence without test mutations. */
@@ -82841,11 +82853,15 @@ async function mapProbeResponse(requirement, response, readEvidence) {
         if (requirement.level === 'write') {
             return outcome(requirement, 'unverifiable', 'Read access is available, but GitHub exposes no safe proof of write access.');
         }
-        return readEvidence === 'permission-bound'
-            ? outcome(requirement, 'verified', 'GitHub accepted an authentication-bound read-only capability probe.')
-            : requirement.scope === 'repository'
-                ? { ...outcome(requirement, 'unverifiable', 'This publicly readable repository read succeeded and is operationally available, but does not prove that the PAT has the named permission.'), operationallyAvailable: true }
-                : outcome(requirement, 'unverifiable', 'GitHub served a publicly readable resource, which does not prove that this token has the requested permission.');
+        if (readEvidence === 'permission-bound') {
+            return outcome(requirement, 'verified', 'GitHub accepted an authentication-bound read-only capability probe.');
+        }
+        const publiclyReadable = outcome(requirement, 'unverifiable', requirement.scope === 'repository'
+            ? 'This publicly readable repository read succeeded, but does not prove that the PAT has the named permission.'
+            : 'GitHub served a publicly readable organization resource, which does not prove that this token has the requested permission.');
+        return (0, setup_token_permission_evidence_policy_1.isOperationallyAvailableSetupRead)(requirement)
+            ? { ...publiclyReadable, operationallyAvailable: true }
+            : publiclyReadable;
     }
     if (response.status === 409
         && requirement.scope === 'repository'

@@ -213,12 +213,16 @@ publication/reconciliation operation allowed.
    Before any patch normalization or fragment allocation, count raw UTF-16
    code units for non-ignored patches and reject an individual or cumulative
    total above the fixed 4,096,000-code-unit input ceiling using the same
-   bounded plan-limit error. This deliberately rejects a PR near the execution
-   ceiling when sanitization/envelopes would expand it; it never silently
-   truncates, schedules a partial review, or starts provider mutation. The
-   provider transport may already have allocated its response; pagination is
-   a file-count bound, not a byte bound, and is not claimed to protect that
-   earlier allocation.
+   bounded plan-limit error. After NFKC/control-character normalization, count
+   the actual sanitized patch text independently and reject its individual or
+   cumulative total above the same fixed ceiling before rendering any section
+   or allocating fragments. The raw bound limits provider input while the
+   sanitized bound prevents compatibility normalization from expanding an
+   apparently valid diff into an unbounded or unexpectedly partial prompt.
+   Neither path silently truncates, schedules a partial review, or starts model
+   execution/provider mutation. The provider transport may already have
+   allocated its response; pagination is a file-count bound, not a byte bound,
+   and is not claimed to protect that earlier allocation.
 3. Split an oversized patch at the last newline that fits the fragment budget.
    When a single line exceeds the budget, split that line at a hard UTF-16
    boundary moved left when necessary so it never separates a surrogate pair.
@@ -335,6 +339,8 @@ retain their current semantics.
 |---|---:|---:|---|
 | diff block per partition | 64,000 characters | fixed | one prompt |
 | fragment payload | 12,000 characters | fixed maximum | one fragment |
+| retained raw patch input | 4,096,000 UTF-16 units | fixed maximum | one plan |
+| retained sanitized patch text | 4,096,000 UTF-16 units | fixed maximum | one plan before section rendering |
 | reviewer concurrency | 2 | fixed | one run |
 | resolution owners | 1 | fixed | one plan |
 | partitions per plan | 64 | fixed maximum | one canonical SHA |
@@ -538,17 +544,17 @@ comments remain untouched.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **61 distinct cases**.
+This SDD owns at least **62 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/pure planning | 34 | empty/single/multi-file, newline/hard split, UTF-16 surrogate-safe hard boundaries and pre-ignore rejection of isolated high/low surrogates, collision-free untrusted-data framing with verbatim delimiter-like patch text, individual and cumulative raw input ceilings before normalization, exact prompt and 64/65 partition boundaries, omitted/null/empty patch assignments, malformed change/object/filename/status/count/patch rejection even on ignored paths, root/nested leading-`**/` ignore parity, canonical SHA-1/SHA-256 head acceptance plus hostile/invalid head rejection before interpolation, full SHA-256 ID format plus content/head sensitivity, stable IDs, order, no character loss, hostile status/count metadata envelope |
+| Domain/pure planning | 35 | empty/single/multi-file, newline/hard split, UTF-16 surrogate-safe hard boundaries and pre-ignore rejection of isolated high/low surrogates, collision-free untrusted-data framing with verbatim delimiter-like patch text, individual and cumulative raw input ceilings before normalization, NFKC-expanded sanitized aggregate ceiling before section rendering, exact prompt and 64/65 partition boundaries, omitted/null/empty patch assignments, malformed change/object/filename/status/count/patch rejection even on ignored paths, root/nested leading-`**/` ignore parity, canonical SHA-1/SHA-256 head acceptance plus hostile/invalid head rejection before interpolation, full SHA-256 ID format plus content/head sensitivity, stable IDs, order, no character loss, hostile status/count metadata envelope |
 | State/application/idempotency/races | 8 | all-complete, one failure, wrong/duplicate ID, wrong SHA, resolution ownership, stale head, replay, empty canonical zero-work |
 | Agent adapter/schema contracts | 4 | required attestation, locale, undefined/invalid result, aggregate bounds |
 | Workflow/architecture/telemetry | 5 | concurrency two, ordered collection, no mutation before complete, positive and zero-partition plan metrics |
 | UI/UX/localization/sanitization | 4 | pending, failed, complete, hostile content/control characters |
 | Integration/security/compatibility | 6 | 44-file regression, oversized patch, provider partial, dry-run, legacy issue-only path, ignored-only canonical no-op |
-| **Total** | **61** | No double counting |
+| **Total** | **62** | No double counting |
 
 Planner, attestation, and aggregate pure policies require 100% enumerated branch
 coverage. Changed analyzer/context modules require at least 95% lines/statements
@@ -645,12 +651,17 @@ token scope, secret, or public input.
     oversized, newline-bearing, or instruction-like value fails with a bounded
     provider-input error before diff rendering, model execution, telemetry
     identity, or publication; direct planner calls report malformed input.
+26. Given retained raw patches fit the 4,096,000-unit input ceiling but NFKC
+    normalization expands their sanitized text beyond that ceiling, planning
+    fails with bounded split-PR guidance before any diff section, fragment,
+    reviewer query, telemetry identity, or publication is created. Ignored
+    patches remain outside both size budgets after their shape is validated.
 
 ## 17. Requirements traceability
 
 | Requirement | Policy/use case/adapter/presentation | Test or evidence | Documentation |
 |---|---|---|---|
-| lossless bounded plan | diff partition policy | reconstruction, surrogate-boundary, raw-input ceiling, budget, and 44-file tests | how it works |
+| lossless bounded plan | diff partition policy | reconstruction, surrogate-boundary, raw and normalized-input ceilings, budget, and 44-file tests | how it works |
 | absent patch without lost review | repository projection plus pure partition policy | omitted/null/empty mixed-file assignments and malformed payload tests | how it works/failure scenarios |
 | root/nested ignore parity | file-ignore policy | leading-`**/` root and nested fixtures | configuration |
 | untrusted diff metadata | diff partition policy + security envelope | hostile filename/status/count/patch fixtures | detection/security |

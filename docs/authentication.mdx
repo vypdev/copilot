@@ -24,7 +24,7 @@ these states:
 |---|---|---|
 | `✅ Verified` | A safe authentication-bound GitHub operation proved the requested read capability. | Continue. |
 | `❌ Missing` | GitHub deterministically rejected a required capability after identity and repository access were established. | Stop before the dependent mutation and name the permission to grant. |
-| `? Unverifiable` | GitHub does not expose a safe non-mutating proof of the PAT grant, or the response was ambiguous/transient. | Required reads block unless a successful public repository read has separate operational evidence. Required writes pause for a separate explicit acknowledgement and remain non-verified. |
+| `? Unverifiable` | GitHub does not expose a safe non-mutating proof of the PAT grant, or the response was ambiguous/transient. | Required reads block unless the exact successful public repository or organization Members read has separate operational evidence. Required writes pause for a separate explicit acknowledgement and remain non-verified. |
 
 A `403` is not automatically a missing-permission result. Copilot reports it as
 `Missing` only when bounded GitHub metadata explicitly identifies a permission
@@ -42,12 +42,13 @@ the repository is private; on a public repository, or when visibility is
 unknown, success remains `Unverifiable`. Secret and Variable inventory
 reads are permission-bound; their corresponding write grants remain
 `Unverifiable` because GitHub exposes no safe non-mutating proof of write
-access, so setup requires explicit acknowledgement for those rows. Public organization
-member and issue-type reads remain `Unverifiable`.
+access, so setup requires explicit acknowledgement for those rows. Public
+organization member and issue-type reads remain `Unverifiable` as PAT evidence.
 After valid token identity, a successful public repository read can be used
-for that exact read operation, while its PAT permission row stays
-`Unverifiable`. This positive operational fact is not granted to a failed,
-ambiguous, or visibility-unknown probe, an organization read, or any write.
+for that exact operation while its PAT permission row stays `Unverifiable`. A
+successful exact organization Members read can be used in the same narrow way.
+This positive operational fact is not granted to a failed, ambiguous, or
+visibility-unknown probe, organization Issue Types, or any write.
 
 The third state is intentional. GitHub's
 `X-Accepted-GitHub-Permissions` response header describes what an endpoint
@@ -115,7 +116,7 @@ cannot obtain an authoritative remote snapshot or required selected inventory
 access, it stops before Secrets, Variables, labels, issue types, and tag writes
 with bounded recovery guidance, including for a repository-scope default.
 
-<Info>GitHub does not reveal Secret values through its API. Copilot validates new credentials with provider metadata requests and validates existing remote Secrets through the read-only `copilot_credential_health.yml` workflow when it is installed on the repository's default branch. The health workflow reports each requested credential independently, but that bounded reachability result is not a permission audit. If `PAT` already exists, interactive setup asks you to re-enter it and runs the complete workflow-PAT permission matrix before provisioning; unattended setup must supply `PAT` again or stops before mutation. Doctor can query and dispatch the installed health workflow but has no bootstrap or repository-mutation authority; temporary workflow bootstrap is available only during setup. A preauthenticated Codex session is runner state, not a Secret: it is accepted only when the runtime preflight can execute `codex login status` successfully.</Info>
+<Info>GitHub does not reveal Secret values through its API. Copilot validates new credentials with provider metadata requests and validates existing remote Secrets through the read-only `copilot_credential_health.yml` workflow. Setup proves the exact file on the selected main ref and dispatches that path directly, even when GitHub's default-branch Actions index cannot resolve it; doctor remains query-only and expects the normally indexed installed workflow. The health workflow reports each requested credential independently, but that bounded reachability result is not a permission audit. If `PAT` already exists, interactive setup asks you to re-enter it and runs the complete workflow-PAT permission matrix before provisioning; unattended setup must supply `PAT` again or stops before mutation. Temporary workflow bootstrap is available only during setup. A preauthenticated Codex session is runner state, not a Secret: it is accepted only when the runtime preflight can execute `codex login status` successfully.</Info>
 
 For other existing credentials, choosing `keep` works only when the selected
 storage policy preserves the Secret in its current repository or organization
@@ -136,10 +137,14 @@ audit denies required access, setup reports a bounded blocked result with the
 selected configuration before storage validation or mutation.
 An exact-file response counts as installed only when it identifies a file with
 a non-empty `sha`; an empty object or directory-like response is unavailable.
+Once installed state is proven on the selected ref, setup dispatches the known
+workflow path and that ref without a second lookup in the default-branch
+Actions index. Missing state still follows the bounded temporary-bootstrap
+flow; unavailable state never dispatches or mutates.
 
 <Warning>**When the event actor is the same as the token user**: The action detects this before entering the workflow queue. It completes successfully without waiting or running the normal issue/PR/push pipeline. A valid explicit single action still runs. This avoids the bot reacting to its own actions. Use a dedicated bot account (different from the actor) if you want full pipeline behavior on every event.</Warning>
 
-For comment-driven assistance, read-only commands are available to anyone who can comment unless `ai-members-only` is enabled; with that policy, agent tasks processing repository or user content require an authorized member while non-AI status/help metadata remains available. Localization-only generation of bounded, code-owned product copy on an otherwise inactive event is not a user-content task and does not query actor membership. File-modifying commands use a separate repository-write check: for both organization and personal repositories, the repository owner or a collaborator with `push`, `maintain`, or `admin` permission may request changes. Organization membership alone is not mutation authority. The workflow PAT still needs the relevant `contents: write` permission, and issue comments need an open PR to provide a branch for the change.
+For comment-driven assistance, read-only commands are available to anyone who can comment unless `ai-members-only` is enabled; with that policy, every requested agent task requires an authorized member, including generation of bounded dynamic product copy for a configured locale. Membership is checked only after live admission returns `execute`; no-op, blocked, and continuation-only outcomes do not query it. Non-AI status/help metadata remains available. File-modifying commands use a separate repository-write check: for both organization and personal repositories, the repository owner or a collaborator with `push`, `maintain`, or `admin` permission may request changes. Organization membership alone is not mutation authority. The workflow PAT still needs the relevant `contents: write` permission, and issue comments need an open PR to provide a branch for the change.
 
 <Steps>
   <Step title="Who is the bot?">
@@ -156,8 +161,9 @@ For comment-driven assistance, read-only commands are available to anyone who ca
     Read the required-permissions table before creating the token, then review
     the permission-check table after entry. A `❌ Missing` required row must be
     corrected before setup can continue. An ambiguous required
-    `? Unverifiable` read blocks; a successful public repository read can
-    remain unverified as PAT evidence but operationally usable. A required
+    `? Unverifiable` read blocks; a successful public repository read or exact
+    organization Members read can remain unverified as PAT evidence but
+    operationally usable. A required
     write row means to compare the PAT settings with the
     requested access level and explicitly acknowledge it; it is never a pass.
   </Step>

@@ -8,6 +8,7 @@ import {
   BugbotDiffPlanLimitError,
   buildReviewDiffPlan,
   MAX_REVIEW_DIFF_FRAGMENT_LENGTH,
+  MAX_REVIEW_DIFF_NORMALIZED_INPUT_LENGTH,
   MAX_REVIEW_DIFF_PARTITION_LENGTH,
   MAX_REVIEW_DIFF_PARTITIONS,
   MAX_REVIEW_DIFF_RAW_INPUT_LENGTH,
@@ -555,6 +556,26 @@ describe('Bugbot review context', () => {
         { filename: 'src/two.ts', status: 'modified', additions: 1, deletions: 0,
           patch: 'x'.repeat(MAX_REVIEW_DIFF_RAW_INPUT_LENGTH - 1_000_000 + 1) },
       ],
+    })).toThrow(BugbotDiffPlanLimitError);
+  });
+
+  it('rejects NFKC-expanded patch text above the normalized ceiling before section rendering', () => {
+    const compatibilityLigature = '\uFB03';
+    const rawPatch = compatibilityLigature.repeat(
+      Math.floor(MAX_REVIEW_DIFF_NORMALIZED_INPUT_LENGTH / 3) + 1,
+    );
+
+    expect(rawPatch.length).toBeLessThan(MAX_REVIEW_DIFF_RAW_INPUT_LENGTH);
+    expect(rawPatch.normalize('NFKC').length).toBeGreaterThan(MAX_REVIEW_DIFF_NORMALIZED_INPUT_LENGTH);
+    expect(() => buildReviewDiffPlan({
+      prHeadSha: 'a'.repeat(40),
+      changes: [{
+        filename: 'src/expanding.ts',
+        status: 'modified',
+        additions: 1,
+        deletions: 0,
+        patch: rawPatch,
+      }],
     })).toThrow(BugbotDiffPlanLimitError);
   });
 

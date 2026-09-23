@@ -455,7 +455,7 @@ describe('runGitHubAction', () => {
     expect(mockCreateLanguageQueryPort).toHaveBeenCalledTimes(1);
   });
 
-  it('does not authorize an inactive route merely to prepare a dynamic locale catalog', async () => {
+  it('authorizes a locale-only planner after executable live admission', async () => {
     github.context.eventName = 'issues';
     github.context.payload = { action: 'labeled', issue: { number: 42 } };
     (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
@@ -464,16 +464,38 @@ describe('runGitHubAction', () => {
       if (key === INPUT_KEYS.AI_MEMBERS_ONLY) return 'true';
       return '';
     });
-    mockIsActorAllowedToUseMemberOnlyAutomation.mockRejectedValue(new Error('unavailable'));
+    mockIsActorAllowedToUseMemberOnlyAutomation.mockResolvedValue(true);
 
     await runGitHubAction();
 
-    expect(mockIsActorAllowedToUseMemberOnlyAutomation).not.toHaveBeenCalled();
+    expect(mockIsActorAllowedToUseMemberOnlyAutomation).toHaveBeenCalledTimes(1);
     expect(executionBuilderSpy).toHaveBeenCalledWith(expect.objectContaining({
-      agentRuntimeAuthorized: true,
+      agentRuntimeAuthorized: false,
       activeAgentTasks: ['planner'],
     }));
     expect(agentProvisioningSpy).toHaveBeenCalledWith(expect.anything(), ['planner']);
+  });
+
+  it('does not prepare a locale-only planner when members-only authorization denies it', async () => {
+    github.context.eventName = 'issues';
+    github.context.payload = { action: 'labeled', issue: { number: 42 } };
+    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
+      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'fake-token';
+      if (key === INPUT_KEYS.REPOSITORY_LOCALE) return 'fr-FR';
+      if (key === INPUT_KEYS.AI_MEMBERS_ONLY) return 'true';
+      return '';
+    });
+    mockIsActorAllowedToUseMemberOnlyAutomation.mockResolvedValue(false);
+
+    await runGitHubAction();
+
+    expect(mockIsActorAllowedToUseMemberOnlyAutomation).toHaveBeenCalledTimes(1);
+    expect(executionBuilderSpy).toHaveBeenCalledWith(expect.objectContaining({
+      agentRuntimeAuthorized: false,
+      activeAgentTasks: ['planner'],
+    }));
+    expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(mockCreateLanguageQueryPort).not.toHaveBeenCalled();
   });
 
   it('still checks membership for an active task when a dynamic catalog is also requested', async () => {

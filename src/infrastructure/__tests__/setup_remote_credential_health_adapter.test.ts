@@ -152,6 +152,24 @@ describe('setup remote credential health adapters', () => {
         }));
     });
 
+    it('dispatches an installed selected-ref workflow even when the Actions default-branch index returns 404', async () => {
+        const github = client({ getWorkflow: jest.fn().mockRejectedValue({ status: 404 }) });
+        github.repos.getContent.mockResolvedValueOnce({ data: [] })
+            .mockResolvedValueOnce({ data: { sha: 'selected-ref-workflow' } });
+
+        const checks = await new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) }, {
+            workflowContent: 'name: health', waitMs: 0, pollMs: 0,
+        }).validateExisting('owner', 'repo', 'token', 'release/main', requirements);
+
+        expect(checks?.every(check => check.status === 'valid')).toBe(true);
+        expect(github.rest.actions.getWorkflow).not.toHaveBeenCalled();
+        expect(github.rest.actions.createWorkflowDispatch).toHaveBeenCalledWith(expect.objectContaining({
+            workflow_id: 'copilot_credential_health.yml', ref: 'release/main',
+        }));
+        expect(github.repos.createOrUpdateFileContents).not.toHaveBeenCalled();
+        expect(github.repos.deleteFile).not.toHaveBeenCalled();
+    });
+
     it('does not dispatch or bootstrap when the selected-ref file response lacks a file sha', async () => {
         const github = client();
         github.repos.getContent.mockResolvedValueOnce({ data: [] })
@@ -189,7 +207,6 @@ describe('setup remote credential health adapters', () => {
         { label: 'root visibility is denied', root: { status: 403 }, exact: undefined },
         { label: 'root visibility is ambiguous', root: { status: 404 }, exact: undefined },
         { label: 'root response is malformed', root: undefined, exact: undefined },
-        { label: 'the exact workflow exists', root: undefined, exact: { data: { sha: 'existing' } } },
         { label: 'the exact workflow lookup is denied', root: undefined, exact: { status: 403 } },
     ])('does not bootstrap when $label after Actions 404', async ({ label, root, exact }) => {
         const notFound = { status: 404 };

@@ -22,7 +22,7 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 
 - [ ] Before entering each PAT, the setup terminal table matches the intended repository/organization target, access level, selected features, and storage scope.
 - [ ] After entry, every `❌ Missing` required permission has been corrected; required unverifiable reads have been retried; every `? Unverifiable` required write has been compared manually with the PAT settings and explicitly acknowledged without treating it as a pass.
-- [ ] On a public repository, a successful publicly readable endpoint has not been mistaken for PAT evidence; any required read remains blocked unless the probe is permission-bound or repository metadata proves the target is private.
+- [ ] A publicly readable endpoint has not been mistaken for PAT evidence. After valid identity, only the exact successful public-repository read or organization Members read may be operationally usable while still shown as `Unverifiable`; Issue Types and writes never gain that exception.
 - [ ] If the `PAT` Secret already exists, its value has been re-entered (or supplied again to unattended setup) and the full workflow-PAT permission report has completed; credential-health success alone is not treated as permission evidence.
 - [ ] Permission verification used read-only probes only; no temporary label, branch, file, Variable, Secret, project item, comment, or workflow run was created as a permission test.
 - [ ] Credentials are configured as secrets or as a local self-hosted credential store.
@@ -65,7 +65,7 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 - [ ] `copilot_deployment_orchestration.yml` and every enabled publishing workflow (`release_workflow.yml` and/or `hotfix_workflow.yml`) are committed on the repository's default branch before an operation starts; this project enables both.
 - [ ] The workflow PAT can write Contents, Issues, Pull requests, and Actions; can read Metadata and classic branch-protection Administration policy; and belongs to a bot identity different from the release operator.
 - [ ] For organization repositories, the workflow PAT grants Members read only when automatic assignees/reviewers, release/hotfix issue authorization, or `ai-members-only` on an enabled issue, pull-request, commit, or comment route or on an independently available agent-backed single action performs a membership lookup; ordinary issue/PR comment automation alone does not retain that organization grant.
-- [ ] A credential-health workflow is reported `missing` only when Actions returns `404`, an independent Contents request proves repository visibility, and the subsequent exact-file lookup also returns `404`; readable or unverifiable file state remains `unavailable` and keeps bootstrap permissions fail-closed.
+- [ ] A credential-health workflow is reported `missing` only when an independent Contents request proves repository visibility and the subsequent exact-file lookup on the selected ref returns `404`; a valid file `sha` is `installed` and setup dispatches that path/ref directly without relying on the default-branch Actions index, while unverifiable state keeps bootstrap permissions fail-closed.
 - [ ] Merge commits are allowed when `production-lineage` is selected.
 - [ ] Native auto-merge is enabled when explicitly selecting `auto-merge`.
 - [ ] Every required GitHub Actions check has an exact static job name and `merge_group: checks_requested`; third-party integrations report on `gh-readonly-queue/<base>` branches.

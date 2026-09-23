@@ -7,7 +7,7 @@
       "status": "implemented",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-20",
+      "lastVerified": "2026-09-23",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md"
@@ -637,7 +637,7 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-21",
+      "lastVerified": "2026-09-23",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
@@ -658,6 +658,7 @@
         "src/application/ports/setup_terminal_ports.ts",
         "src/application/ports/setup_wizard_ports.ts",
         "src/application/ports/setup_token_permission_ports.ts",
+        "src/application/policies/setup_token_permission_evidence_policy.ts",
         "src/application/policies/setup_token_permission_policy.ts",
         "src/application/policies/setup_questionnaire_policy.ts",
         "src/application/policies/setup_configuration_plan.ts",
@@ -943,7 +944,7 @@
       "status": "implemented",
       "scope": "Select one canonical PR, exhaustively analyze its bounded diff partitions, publish stable findings atomically, and apply authorized verified fixes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-21",
+      "lastVerified": "2026-09-23",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md",
@@ -1288,7 +1289,7 @@
       "status": "implemented",
       "scope": "Select one canonical set of issue workflows and enforce its forms, dependencies, branch policy, runtime admission, migration, and diagnosis",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-16",
+      "lastVerified": "2026-09-23",
       "specs": [
         "specs/configurable-issue-workflows-and-admission.md"
       ],
@@ -1335,6 +1336,7 @@
         "src/application/usecases/execution/setup_execution_workflow.ts",
         "src/application/usecases/issue_workflow.ts",
         "src/application/usecases/issue_workflow_context.ts",
+        "src/application/usecases/steps/issue/assign_members_workflow.ts",
         "src/actions/setup_execution_boundary.ts",
         "src/actions/github_action_execution.ts",
         "src/data/model/execution.ts",
@@ -1359,6 +1361,7 @@
         "src/application/usecases/execution/__tests__/resolve_github_execution_admission_use_case.test.ts",
         "src/application/usecases/execution/__tests__/setup_execution_workflow.test.ts",
         "src/application/usecases/actions/__tests__/setup_resource_provisioning.test.ts",
+        "src/application/usecases/steps/issue/__tests__/assign_members_to_issue_use_case.test.ts",
         "src/domain/__tests__/issue_workflow_profile.test.ts",
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
         "src/actions/__tests__/common_action.test.ts",
@@ -1376,6 +1379,7 @@
         "docs/configuration-checklist.mdx",
         "docs/issues/configuration.mdx",
         "docs/issues/configurable-workflows.mdx",
+        "docs/issues/assignees-and-projects.mdx",
         "docs/issues/labels-and-branch-types.mdx",
         "docs/issues/type/feature.mdx",
         "docs/issues/type/bugfix.mdx",

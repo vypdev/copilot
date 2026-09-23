@@ -39311,7 +39311,7 @@ async function runGitHubAction() {
         ])];
     const agentRuntimeAuthorizationRequired = !botAnalysisOnly
         && aiInputs.membersOnly
-        && activeRuntimeAgentTasks.length > 0;
+        && requestedActiveAgentTasks.length > 0;
     let agentRuntimeAuthorized = !agentRuntimeAuthorizationRequired;
     let languageRuntimeAvailable = false;
     const projectBoard = (0, project_board_composition_root_1.createProjectBoardCompositionRoot)();
@@ -43352,7 +43352,7 @@ exports.BUGBOT_MIN_SEVERITY = 'low';
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.BugbotDiffPlanLimitError = exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH = exports.MAX_REVIEW_DIFF_PARTITIONS = exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH = exports.MAX_REVIEW_DIFF_PARTITION_LENGTH = void 0;
+exports.BugbotDiffPlanLimitError = exports.MAX_REVIEW_DIFF_NORMALIZED_INPUT_LENGTH = exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH = exports.MAX_REVIEW_DIFF_PARTITIONS = exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH = exports.MAX_REVIEW_DIFF_PARTITION_LENGTH = void 0;
 exports.buildReviewDiffPlan = buildReviewDiffPlan;
 exports.splitReviewDiffPatch = splitReviewDiffPatch;
 const node_crypto_1 = __nccwpck_require__(6005);
@@ -43363,6 +43363,7 @@ exports.MAX_REVIEW_DIFF_PARTITION_LENGTH = 64000;
 exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH = 12000;
 exports.MAX_REVIEW_DIFF_PARTITIONS = 64;
 exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH = exports.MAX_REVIEW_DIFF_PARTITION_LENGTH * exports.MAX_REVIEW_DIFF_PARTITIONS;
+exports.MAX_REVIEW_DIFF_NORMALIZED_INPUT_LENGTH = exports.MAX_REVIEW_DIFF_RAW_INPUT_LENGTH;
 const DIFF_PARTITION_HEADER_RESERVE = 1024;
 // This reserve exceeds the maximum header rendered from a 64-partition plan,
 // a 64-hex canonical head and a 64-hex partition digest. Packing against the
@@ -43394,11 +43395,10 @@ function buildReviewDiffPlan(context, ignorePatterns = []) {
         throw new BugbotDiffPlanLimitError('malformed-input');
     if (context.changes.length === 0)
         return { partitions: [], ignored: 0, retained: 0, fragments: 0 };
-    const sections = [];
-    const retainedFiles = new Set();
+    const preparedChanges = [];
     let ignored = 0;
-    let fragmentIndex = 0;
     let rawPatchTotal = 0;
+    let normalizedPatchTotal = 0;
     for (const candidate of context.changes) {
         if (!isValidDiffChange(candidate))
             throw new BugbotDiffPlanLimitError('malformed-input');
@@ -43414,8 +43414,18 @@ function buildReviewDiffPlan(context, ignorePatterns = []) {
             throw new BugbotDiffPlanLimitError();
         }
         rawPatchTotal += rawPatch.length;
+        const sanitizedPatch = (0, untrusted_content_1.createUntrustedContent)(rawPatch, `github.diff.${preparedChanges.length + 1}`, Number.MAX_SAFE_INTEGER).text;
+        if (sanitizedPatch.length > exports.MAX_REVIEW_DIFF_NORMALIZED_INPUT_LENGTH - normalizedPatchTotal) {
+            throw new BugbotDiffPlanLimitError();
+        }
+        normalizedPatchTotal += sanitizedPatch.length;
+        preparedChanges.push({ change, sanitizedPatch });
+    }
+    const sections = [];
+    const retainedFiles = new Set();
+    let fragmentIndex = 0;
+    for (const { change, sanitizedPatch } of preparedChanges) {
         retainedFiles.add(change.filename);
-        const sanitizedPatch = (0, untrusted_content_1.createUntrustedContent)(rawPatch, `github.diff.${fragmentIndex + 1}`, Number.MAX_SAFE_INTEGER).text;
         const fragments = sanitizedPatch.length > 0
             ? splitReviewDiffPatch(sanitizedPatch)
             : ['[patch unavailable from GitHub; inspect the exact local diff and current workspace for this assigned file]'];
@@ -63130,10 +63140,10 @@ async function runAssignMembersWorkflow(param, dependencies) {
     const results = [];
     try {
         (0, logging_ports_1.logDebugInfo)(`#${target.number} needs ${target.desiredCount} assignees.`);
-        if (target.number <= 0)
-            return [assignmentResult(false, 'Issue or pull request number is not available.')];
         if (target.desiredCount <= 0)
             return [new result_1.Result({ id: TASK_ID, success: true, executed: false })];
+        if (target.number <= 0)
+            return [assignmentResult(false, 'Issue or pull request number is not available.')];
         const [currentProjectMembers, currentMembers] = await Promise.all([
             dependencies.projectRepository.getAllMembers(),
             dependencies.issueRepository.getCurrentAssignees(target.number),

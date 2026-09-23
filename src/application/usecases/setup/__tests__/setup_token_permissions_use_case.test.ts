@@ -149,6 +149,34 @@ describe('SetupTokenPermissionsUseCase', () => {
         expect(report).toMatchObject({ ready: true, confirmationRequired: false });
     });
 
+    it('accepts exact operational organization Members evidence without promoting it to verified', async () => {
+        const organizationRead: SetupTokenPermissionRequirement = {
+            ...required,
+            id: 'workflow.organization.members',
+            role: 'workflow',
+            scope: 'organization',
+            permission: 'Members',
+            probe: 'members',
+        };
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'PAT', status: 'valid', message: 'ok' }) };
+        const report = await new SetupTokenPermissionsUseCase(validation, {
+            inspect: jest.fn().mockResolvedValue([{
+                ...organizationRead,
+                status: 'unverifiable',
+                operationallyAvailable: true,
+                message: 'public member read is operational',
+            }]),
+        }).inspect({
+            role: 'workflow', owner: 'owner', repository: 'repo', token: 'secret', requirements: [organizationRead],
+        });
+
+        expect(report).toMatchObject({ ready: true, confirmationRequired: false });
+        expect(report.checks[0]).toMatchObject({
+            status: 'unverifiable',
+            operationallyAvailable: true,
+        });
+    });
+
     it('treats a malformed evidence collection as absent rather than trusting it', async () => {
         const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
         const report = await new SetupTokenPermissionsUseCase(validation, {

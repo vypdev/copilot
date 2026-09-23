@@ -33,13 +33,23 @@ export function reconcileSetupTokenPermissionEvidence(
             status: candidate.status,
             message: candidate.message,
             ...(candidate.status === 'unverifiable'
-                && requirement.scope === 'repository'
-                && requirement.level === 'read'
+                && isOperationallyAvailableSetupRead(requirement)
                 && candidate.operationallyAvailable === true
                 ? { operationallyAvailable: true as const }
                 : {}),
         };
     });
+}
+
+/** Limits positive usability without promoting publicly readable evidence to verified PAT access. */
+export function isOperationallyAvailableSetupRead(
+    requirement: Pick<SetupTokenPermissionRequirement, 'scope' | 'permission' | 'level' | 'probe'>,
+): boolean {
+    if (requirement.level !== 'read') return false;
+    if (requirement.scope === 'repository') return true;
+    return requirement.scope === 'organization'
+        && requirement.permission === 'Members'
+        && requirement.probe === 'members';
 }
 
 function isMatchingEvidence(
