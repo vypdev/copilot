@@ -3,7 +3,7 @@
 - Status: Implemented — permission UX, deterministic provider mapping, scope-sensitive gating, coverage, and documentation gates complete
 - Date: 2026-09-20
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-09-21
+- Last verified: 2026-09-24
 - Owners: Copilot maintainers and setup operators
 - Scope: show least-privilege permission requirements before collecting setup and workflow PATs, then report evidence-based permission checks without exposing or mutating credentials
 - Related issues/PRs: none recorded
@@ -189,8 +189,9 @@ read-only GitHub queries and presents ordered permission outcomes.
    setup plan: repeat interactive selections, or append the flag to the exact
    non-interactive invocation with the same configuration file, feature/agent
    flags, and credential inputs. A bare example that silently selects defaults
-   is forbidden. The documentation validator MUST enumerate shell fences at
-   any indentation used in repository MDX, including nested `<Steps>` blocks,
+   is forbidden. The documentation validator MUST enumerate shell fences in
+   `README.md` and every public `docs/*.mdx` page, at any indentation used in
+   repository MDX, including nested `<Steps>` blocks,
    and examine only the nearest ordinary prose paragraph before each
    exceptional block. Opening and closing fence indentation and marker MUST
    be paired consistently; text inside an earlier indented backtick or tilde
@@ -654,7 +655,7 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **120 distinct cases**.
+This SDD adds at least **122 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
@@ -663,8 +664,8 @@ This SDD adds at least **120 distinct cases**.
 | Adapter/provider contracts | 40 | GET-only probes, fixed four-request concurrency with stable result order, private-versus-public/unknown visibility evidence, protected-endpoint evidence, exact Members-read operational evidence without permission promotion, commit-list Contents target, private empty-repository 409 versus public operational usability, default-branch Checks resolution plus encoded check-runs target, invalid/missing branch fail-closed behavior, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow on the selected ref in inspection and bootstrap, default-branch dispatchability proof even when Actions-index returns 404, malformed root scalar/object success remains unavailable without bootstrap, malformed exact-file success remains unavailable, unavailable endpoint state, duplicate-comment deletion fallback regression |
 | Setup/credential integration | 21 | pre-prompt setup table, conditional denial through planning, wizard-owned repository-inventory block plus organization-only continuation, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, absent/failed remote snapshot blocks every subsequent mutation, preserve-disabled and scope-moving keep rejection, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
 | UI/accessibility | 5 | required/result tables, public-read limitation copy, confirmation-required copy, 40-column wrapping, no-color text |
-| Architecture/security/docs | 5 | query-only boundary, no duplicated catalog, safe generic/recovery automation examples, and three nearest-paragraph permission-prerequisite cases |
-| **Total** | **120** | No double counting |
+| Architecture/security/docs | 7 | query-only boundary, no duplicated catalog, safe generic/recovery automation examples, nearest-paragraph permission-prerequisite cases, and README plus MDX source enumeration with file-specific diagnostics |
+| **Total** | **122** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -680,7 +681,7 @@ at widths 40/80/120 and `NO_COLOR`.
 | Setup owner | `docs/authentication.mdx` | both matrices, status meanings, provider limitation | docs validation and setup links |
 | Operator | `docs/configuration-checklist.mdx` | preflight and recovery for each status | checklist link validation |
 | Troubleshooter | `docs/security-operations/operations/troubleshooting.mdx` | missing versus unverifiable decision | docs validation |
-| Automation operator | `docs/how-to-use.mdx`, `docs/single-actions/workflow-and-cli.mdx`, `docs/pull-requests/guarded-approval.mdx`, and `docs/issues/configurable-workflows.mdx` | every generic command omits acknowledgement; any inspected-PAT recovery is separately labelled | docs validation |
+| Automation operator | `README.md`, `docs/how-to-use.mdx`, `docs/single-actions/workflow-and-cli.mdx`, `docs/pull-requests/guarded-approval.mdx`, and `docs/issues/configurable-workflows.mdx` | every generic command omits acknowledgement; any inspected-PAT recovery is separately labelled | docs validation |
 | Contributor | `docs/development/architecture.mdx` | policy/use case/query adapter/presenter boundary | architecture test reference |
 
 ## 16. Acceptance scenarios
@@ -901,6 +902,11 @@ at widths 40/80/120 and `NO_COLOR`.
     fence containing prerequisite words does not authorize it, and mismatched
     fence indentation or an unclosed shell fence cannot hide an exceptional
     command.
+49. Given an exceptional acknowledgement command in `README.md`, the same
+    nearest-prose rule applies as for a public MDX page. A missing prerequisite
+    fails documentation validation with `README.md` and the source line, while
+    an adjacent complete prerequisite passes. Source enumeration cannot silently
+    exclude either the README or any public MDX page.
 
 ## 17. Requirements traceability
 
@@ -928,7 +934,7 @@ at widths 40/80/120 and `NO_COLOR`.
 | valid Checks commit reference | read-only query adapter | default-branch resolution, encoding, and invalid-metadata tests | authentication/troubleshooting |
 | least-privilege credential-health bootstrap | remote configuration query plus permission policy | installed/missing/unavailable inspection and permission-matrix tests | authentication/troubleshooting |
 | no unaudited existing workflow PAT | credential collection use case plus prompt adapter | existing re-entry/audit and non-interactive rejection tests | authentication/troubleshooting |
-| explicit unverifiable-write acknowledgement | CLI option plus global documentation contract | all public shell examples omit by default; inspected-recovery exception preserving original setup plan | setup, workflow and CLI pages |
+| explicit unverifiable-write acknowledgement | CLI option plus global documentation contract | README and all public MDX shell examples omit by default; inspected-recovery exception preserving original setup plan | README, setup, workflow and CLI pages |
 
 ## 18. Implementation sequence
 
@@ -948,7 +954,7 @@ at widths 40/80/120 and `NO_COLOR`.
 - [x] No validation request mutates GitHub and no result overclaims write access.
 - [x] Token values and raw provider text are absent from all output/state/errors.
 - [x] Clean Architecture boundaries and their executable test pass.
-- [x] At least 120 distinct cases and stated coverage thresholds pass.
+- [x] At least 122 distinct cases and stated coverage thresholds pass.
 - [x] Authentication, checklist, troubleshooting, and architecture docs agree.
 - [x] Catalog evidence and generated `specs/CATALOG.md` are current.
 - [x] Specification, documentation, typecheck, lint, and test gates pass.

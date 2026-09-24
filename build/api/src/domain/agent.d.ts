@@ -3,7 +3,7 @@ export type AgentTask = 'findings' | 'fixer' | 'planner' | 'reviewer' | 'tester'
 export type AgentCapability = AgentTask | 'language';
 export declare const DEFAULT_AGENT_PROVIDER: AgentProvider;
 export declare const DEFAULT_MODEL_PROVIDER = "openai";
-export declare const DEFAULT_AGENT_MODEL = "gpt-5.6-luna";
+export declare const DEFAULT_AGENT_MODEL = "gpt-6-luna";
 export declare const AGENT_EXECUTABLE_BASENAMES: Readonly<Record<AgentProvider, string>>;
 /**
  * Agent configuration is the provider-neutral contract shared by entrypoints

@@ -3,7 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const yaml = require('js-yaml');
-const { findShellExamples, hasAdjacentInspectedPatPrerequisite } = require('./documentation_pat_exception_policy.cjs');
+const { publicPatDocumentationSources, findUnsafePatShellExamples } = require('./documentation_pat_exception_policy.cjs');
 
 const root = path.resolve(__dirname, '..');
 const docsRoot = path.join(root, 'docs');
@@ -20,8 +20,9 @@ const docsFiles = fs.readdirSync(docsRoot, { recursive: true })
   .map(file => String(file));
 const docsContent = docsFiles.map(file => fs.readFileSync(path.join(docsRoot, file), 'utf8'));
 const docsByFile = new Map(docsFiles.map((file, index) => [file, docsContent[index]]));
+const readmeContent = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
 const allDocumentation = [
-  fs.readFileSync(path.join(root, 'README.md'), 'utf8'),
+  readmeContent,
   ...docsContent,
 ].join('\n');
 const internalDocumentationFiles = [
@@ -266,14 +267,9 @@ if (!normalizedInspectedPatRecovery.includes('inspect the displayed requirements
   || normalizedInspectedPatRecovery.includes(`copilot setup --non-interactive --yes ${unverifiableWriteAcknowledgement}`)) {
   errors.push('single-actions/workflow-and-cli.mdx: inspected-PAT recovery must preserve the original setup plan and be adjacent to the exceptional command');
 }
-for (const [file, source] of docsByFile.entries()) {
-  for (const example of findShellExamples(source)) {
-    if (!example.body.includes(unverifiableWriteAcknowledgement)) continue;
-    if (!hasAdjacentInspectedPatPrerequisite(source, example.start)) {
-      const line = source.slice(0, example.start).split('\n').length;
-      errors.push(`${file}:${line}: shell example may acknowledge unverifiable writes only after an adjacent inspected-PAT prerequisite`);
-    }
-  }
+const publicShellDocumentation = publicPatDocumentationSources(readmeContent, docsByFile);
+for (const { file, line } of findUnsafePatShellExamples(publicShellDocumentation, unverifiableWriteAcknowledgement)) {
+  errors.push(`${file}:${line}: shell example may acknowledge unverifiable writes only after an adjacent inspected-PAT prerequisite`);
 }
 
 requireText('issues/configuration.mdx', '`ai-pull-request-description-mode`: PR body policy', 'canonical PR description policy');

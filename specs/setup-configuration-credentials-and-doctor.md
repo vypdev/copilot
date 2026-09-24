@@ -2,9 +2,9 @@
 
 - Status: Implemented — automated architecture, UX, documentation, and coverage gates complete; controlled live GitHub permission-path evidence remains external
 - Date: 2026-09-11
-- Last updated: 2026-09-21
+- Last updated: 2026-09-24
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-09-21
+- Last verified: 2026-09-24
 - Owners: Copilot maintainers
 - Scope: interactive/non-interactive installation planning, file and resource provisioning, credential validation, and read-only diagnosis
 - Related issues/PRs: merge-queue readiness SDD; architecture quality and
@@ -191,7 +191,7 @@ existing resources and avoid duplicate shadowing.
 | branches | `master`, `develop`, standard prefixes | non-empty, no whitespace | repository Variables |
 | assignment | 1 assignee, 1 reviewer | 0–10 / 0–15 | Variables |
 | locales | repository `en-US`; issue/PR inherit | any valid canonical BCP-47 tag; reviewed `en`/`es`, dynamic otherwise | Variables; repository → issue/PR inheritance |
-| agent roles | `codex` / `openai/gpt-5.6-luna` | `codex`, `opencode`, `cursor` + allowed model | Variables |
+| agent roles | `codex` / `openai/gpt-6-luna` | `codex`, `opencode`, `cursor` + allowed model | Variables |
 | Bugbot | low, smart in setup, non-blocking | bounded enums/1–100 comments | Variables |
 | storage | repository, preserve existing | repository/org per resource | remote GitHub |
 | provisioning | `auto` | `always`, `disabled` | Variable |

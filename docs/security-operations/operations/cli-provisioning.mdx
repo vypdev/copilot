@@ -71,16 +71,16 @@ Map these values only on the Copilot action step, never at workflow or job scope
 with:
   agent-provider: codex
   agent-model-provider: openai
-  agent-model: gpt-5.6-luna
+  agent-model: gpt-6-luna
 env:
   AGENT_ALLOWED_MODEL_PROVIDERS: openai
-  AGENT_ALLOWED_MODELS: openai/gpt-5.6-luna
+  AGENT_ALLOWED_MODELS: openai/gpt-6-luna
 ```
 
 The managed Codex shape includes:
 
 ```text
-codex exec --strict-config --ignore-user-config --ignore-rules --ephemeral --sandbox read-only --model gpt-5.6-luna --config 'model_provider="openai"' -
+codex exec --strict-config --ignore-user-config --ignore-rules --ephemeral --sandbox read-only --model gpt-6-luna --config 'model_provider="openai"' -
 ```
 
 The allowlists are authorization policy, not credentials and not model selectors. A rejected provider/model is a terminal failure.

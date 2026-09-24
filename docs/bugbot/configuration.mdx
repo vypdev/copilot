@@ -13,10 +13,10 @@ Bugbot uses the same explicit agent CLI contract as the other AI features. Confi
 with:
   agent-provider: codex
   agent-model-provider: openai
-  agent-model: gpt-5.6-luna
+  agent-model: gpt-6-luna
 env:
   AGENT_ALLOWED_MODEL_PROVIDERS: openai
-  AGENT_ALLOWED_MODELS: openai/gpt-5.6-luna
+  AGENT_ALLOWED_MODELS: openai/gpt-6-luna
   # Omit when Codex is already authenticated on the controlled runner.
   CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
 ```
@@ -24,7 +24,7 @@ env:
 For this configuration, Bugbot constructs a managed invocation beginning with:
 
 ```text
-codex exec --strict-config --ignore-user-config --ignore-rules --ephemeral --sandbox read-only --model gpt-5.6-luna --config 'model_provider="openai"' -
+codex exec --strict-config --ignore-user-config --ignore-rules --ephemeral --sandbox read-only --model gpt-6-luna --config 'model_provider="openai"' -
 ```
 
 `agent-provider` selects the CLI runtime. `agent-model-provider` and `agent-model` select the qualified model. Allowlists are checked before execution and failures are terminal. Trusted provider policy owns the complete argv, approval, sandbox, no-network, ephemeral, config/rules isolation, plugin/tool, and environment restrictions. For Codex, it enforces `read-only` for reviewer/findings tasks and `workspace-write` for fixer tasks. The child environment contains only safe runtime variables and the credential selected for that provider. See [Agent CLI configuration](/agents/cli-configuration).
@@ -140,9 +140,9 @@ Do not expose provider credentials to fork code, untrusted pull requests, or `pu
 | --- | --- | --- |
 | `agent-provider` | `codex` | Selects the CLI runtime |
 | `agent-model-provider` | `openai` | Selects the model provider |
-| `agent-model` | `gpt-5.6-luna` | Selects the model name |
+| `agent-model` | `gpt-6-luna` | Selects the model name |
 | `AGENT_ALLOWED_MODEL_PROVIDERS` | `openai` | Provider allowlist |
-| `AGENT_ALLOWED_MODELS` | `openai/gpt-5.6-luna` | Exact qualified-model allowlist |
+| `AGENT_ALLOWED_MODELS` | `openai/gpt-6-luna` | Exact qualified-model allowlist |
 | `bugbot-severity` | `low` | Minimum published severity |
 | `bugbot-comment-limit` | `20` | Individual comment limit |
 | `bugbot-fix-verify-commands` | empty | Pre-commit verification |

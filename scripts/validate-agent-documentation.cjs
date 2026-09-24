@@ -30,7 +30,7 @@ if (missingInputs.length) throw new Error(`Missing agent inputs in action.yml: $
 const expectedDefaults = {
   'agent-provider': 'codex',
   'agent-model-provider': 'openai',
-  'agent-model': 'gpt-5.6-luna',
+  'agent-model': 'gpt-6-luna',
 };
 for (const [input, expected] of Object.entries(expectedDefaults)) {
   if (action.inputs[input].default !== expected) {
@@ -187,11 +187,18 @@ if (missingRoutes.length) throw new Error(`Missing docs.json routes: ${missingRo
 
 const workflowFiles = fs.readdirSync(path.join(root, 'setup', 'workflows')).filter(file => file.endsWith('.yml'));
 if (!workflowFiles.length) throw new Error('No workflow files found');
-for (const file of workflowFiles) {
-  const content = fs.readFileSync(path.join(root, 'setup', 'workflows', file), 'utf8');
-  if (!content.includes('AGENT_ALLOWED_MODEL_PROVIDERS')) continue;
-  for (const value of ["'openai'", "'openai/gpt-5.6-luna'"]) {
-    if (!content.includes(value)) throw new Error(`${file} is missing approved fallback ${value}`);
+const defaultModel = expectedDefaults['agent-model'];
+const modelFallback = "agent-model: ${{ vars.AGENT_MODEL || '" + defaultModel + "' }}";
+const allowedFallback = "AGENT_ALLOWED_MODELS: ${{ vars.AGENT_ALLOWED_MODELS || 'openai/" + defaultModel + "' }}";
+for (const directory of ['setup/workflows', '.github/workflows']) {
+  for (const file of fs.readdirSync(path.join(root, directory)).filter(name => name.endsWith('.yml'))) {
+    const content = fs.readFileSync(path.join(root, directory, file), 'utf8');
+    if (content.includes('agent-model:') && !content.includes(modelFallback)) {
+      throw new Error(`${directory}/${file} is missing the approved model fallback ${defaultModel}`);
+    }
+    if (content.includes('AGENT_ALLOWED_MODELS:') && !content.includes(allowedFallback)) {
+      throw new Error(`${directory}/${file} is missing the exact default-model allowlist`);
+    }
   }
 }
 

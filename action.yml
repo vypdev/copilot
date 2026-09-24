@@ -426,7 +426,7 @@ inputs:
 
   agent-model:
     description: "Selected model name without the provider prefix. The provider is configured separately with agent-model-provider."
-    default: "gpt-5.6-luna"
+    default: "gpt-6-luna"
   agent-executable:
     description: "Optional exact CLI basename or absolute executable path. Arguments, wrappers, and alternate basenames are rejected."
     default: ""

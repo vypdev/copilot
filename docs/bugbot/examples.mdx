@@ -39,7 +39,7 @@ jobs:
           project-ids: ${{ vars.PROJECT_IDS }}
           agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
-          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-6-luna' }}
           # Optional: Bugbot-specific
           bugbot-severity: "low"
           bugbot-comment-limit: "20"
@@ -80,7 +80,7 @@ jobs:
           token: ${{ secrets.PAT }}
           agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
-          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-6-luna' }}
           ai-ignore-files: build/*
           bugbot-fix-verify-commands: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}
 ```
@@ -120,7 +120,7 @@ jobs:
           token: ${{ secrets.PAT }}
           agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
-          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-6-luna' }}
           ai-ignore-files: build/*
           bugbot-fix-verify-commands: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}
 ```
@@ -164,7 +164,7 @@ jobs:
           single-action-issue: ${{ github.event.inputs.issue_number }}
           agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
-          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-6-luna' }}
 ```
 
 After the run, findings appear on the issue and, when exact identity is uniquely

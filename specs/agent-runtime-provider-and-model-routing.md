@@ -2,9 +2,9 @@
 
 - Status: Implemented
 - Date: 2026-09-11
-- Last updated: 2026-09-12
+- Last updated: 2026-09-24
 - Catalog capability ID: `agent-runtime`
-- Last verified: 2026-09-12 in the P1-C implementation worktree
+- Last verified: 2026-09-24
 - Owners: Copilot maintainers
 - Scope: resolve, validate, provision, authenticate, authorize, and execute provider-neutral agent roles
 - Related issues/PRs: comment automation, Bugbot, setup, PR lifecycle, and
@@ -18,6 +18,8 @@ Copilot resolves one complete runtime/model tuple for each reachable agent role:
 provider runtime, model provider, model, optional effort, and optional validated
 executable selection.
 Common values may be overridden per planner, findings, reviewer, fixer, or tester.
+The recommended common default is Codex with `openai/gpt-6-luna`; explicit
+repository Variables and role inputs retain precedence over that fallback.
 Only roles reachable from the current event are provisioned and authenticated.
 Invalid configuration or runtime failure is terminal for that capability; no
 silent provider/model/executable fallback is attempted.
@@ -67,8 +69,8 @@ agents running for read-only tasks.
   Installation-manifest upgrades require reviewed fixtures and controlled live
   smoke evidence; credential checks remain environment-specific; cost estimates
   are not product guarantees.
-- Unknown rationale: current default model choice is operational configuration,
-  not a permanent architecture decision.
+- Unknown rationale: the prior `gpt-5.6-luna` default was operational
+  configuration, not a permanent architecture decision.
 - Implemented hardening: provider-specific execution policies and an exhaustive
   compile-time dispatcher are specified in
   [`agent-execution-policy-hardening.md`](./agent-execution-policy-hardening.md),
@@ -170,7 +172,7 @@ not treat a partial installer as authenticated success.
 |---|---|---|---|
 | `agent-provider` | `codex` | `codex`, `opencode`, `cursor` | repository/run |
 | `agent-model-provider` | `openai` | validated identifier + allowlist | repository/run |
-| `agent-model` | `gpt-5.6-luna` | validated unqualified model + allowlist | repository/run |
+| `agent-model` | `gpt-6-luna` | validated unqualified model + allowlist | repository/run |
 | `agent-effort` | empty | validated provider-supported value | repository/run |
 | `agent-executable` | reviewed basename | exact basename or absolute path to it | repository/run |
 | `<role>-*` | inherit common tuple | same bounds | repository/run |
@@ -181,6 +183,14 @@ Model values MUST not repeat provider prefixes. A meaningful alternative is
 OpenCode with an explicitly qualified allowed provider/model. Cursor requires
 the documented credential and a preinstalled runtime. No-fallback, local schema,
 active-role-only, credential isolation, and permission modes are not configurable.
+The same default MUST appear in the action input, setup plan, generated
+workflow fallbacks, and default allowlist (`openai/gpt-6-luna`). A configured
+repository `AGENT_MODEL` or role-specific value is intentional and MUST not be
+silently rewritten by source defaults; operators migrating this repository
+update `AGENT_MODEL` and `AGENT_ALLOWED_MODELS` together. The effective model is
+snapshotted for a run. Existing explicit `gpt-5.6-luna` deployments remain
+supported when exactly allowlisted. Reasoning effort, credentials, and provider
+transport do not change as part of the default migration.
 
 ## 8. Clean Architecture design
 
@@ -209,7 +219,7 @@ allowlist/docs validation, and workflow secret checks MUST prevent erosion.
 ## 9. UI/UX and content contract
 
 ```markdown
-Pending: **Preparing the `reviewer` role.** Runtime `codex`; model `openai/gpt-5.6-luna`.
+Pending: **Preparing the `reviewer` role.** Runtime `codex`; model `openai/gpt-6-luna`.
 Action required: **Codex authentication is missing.** Log in on the runner or configure an approved fallback credential.
 Blocked: **`anthropic/model-x` is outside `AGENT_ALLOWED_MODELS`.** No provider process started.
 Partial: **The provider completed, but its structured result was invalid.** Nothing was published or modified.
@@ -259,7 +269,12 @@ inherit common fields; invalid explicit values fail. A new provider/model is
 rolled out by updating domain types, runtime-support/allowlist policy, provider plan,
 setup/workflows, credentials, docs, tests, and controlled smoke evidence.
 Rollback restores the prior tuple/installation pin; provider-created external effects are
-handled under that provider's policy.
+handled under that provider's policy. For this default-only migration, rollback
+restores both repository Variables (`AGENT_MODEL=gpt-5.6-luna` and
+`AGENT_ALLOWED_MODELS=openai/gpt-5.6-luna`) and the source/workflow defaults;
+changing only one side would fail allowlist preflight. A controlled Codex smoke
+run MUST verify the target model with the runner credential before declaring the
+new effective default healthy.
 
 ## 14. Testing strategy and numeric budget
 
@@ -268,10 +283,10 @@ handled under that provider's policy.
 | Activation/config/runtime support | 30 | event roles, inheritance, formats, allowlists |
 | Provision/auth/execution state | 24 | modes, retries, timeout, partial install |
 | Provider plans/error mapping | 24 | argv/stdin/env/effort/output per provider |
-| Workflow/setup contracts | 16 | secrets, pinned installations, Node prerequisite, active inputs |
+| Workflow/setup contracts | 19 | secrets, pinned installations, Node prerequisite, active inputs, shared model fallback and exact allowlist across action/setup/workflows |
 | UX/sanitization | 12 | phase/errors/redaction/narrow output |
-| Integration/security/cutover | 18 | role→provider, injection, credentials, new provider |
-| **Total** | **124** | no double counting |
+| Integration/security/cutover | 19 | role→provider, injection, credentials, new provider, configured-variable precedence and model smoke |
+| **Total** | **128** | no double counting |
 
 Global thresholds remain; activation/configuration/executable policies SHOULD reach
 100% branch coverage. Use fake executables/processes/credentials and no live
@@ -285,7 +300,7 @@ errors and credential masking.
 |---|---|---|
 | User | execution/runtime/model docs | tuple and defaults |
 | Setup owner | input/CLI configuration | roles, credentials, allowlists |
-| Operator | provisioning/failure docs | readiness/recovery |
+| Operator | provisioning/failure and upgrade/rollback docs | readiness, paired Variable migration, smoke, recovery |
 | Contributor | this SDD/architecture | semantic ports/adapters |
 
 ## 16. Acceptance scenarios
@@ -301,6 +316,13 @@ errors and credential masking.
 9. Adding a provider cannot pass without an exhaustive plan policy, security, workflow, docs, and smoke evidence.
 10. A non-empty operator-owned runtime version is recorded and executed without
     replacement; exact version matching applies only after Copilot installs a package.
+11. With no explicit model override, action/setup/generated workflows choose
+    `gpt-6-luna` and the exact allowlist includes `openai/gpt-6-luna`; a
+    configured model outside that allowlist fails before execution.
+12. With explicit repository or role model configuration, that value retains
+    precedence; changing only the source fallback does not claim to migrate the
+    effective model. Updating both repository Variables and running a controlled
+    smoke test establishes the new effective default without changing effort.
 
 ## 17. Requirements traceability
 
@@ -308,6 +330,7 @@ errors and credential masking.
 |---|---|---|---|
 | active roles | activation policy | activation tests | execution contract |
 | tuple/allowlist | config policies | builder/policy tests | model selection |
+| Luna default and migration | domain default, setup projection, action and workflow fallbacks | default/override/allowlist contract tests and controlled runner smoke | input reference, model selection, upgrade/recovery |
 | provisioning/auth | provisioner/preflight adapters | ownership/install/infra tests | provisioning/credentials |
 | semantic execution | capability adapter/provider plans | policy and process tests | runtime/CLI commands |
 | local validation/security | parsers/schema/environment | security tests | failure/trust docs |
@@ -322,7 +345,7 @@ errors and credential masking.
 
 ## 19. Definition of Done
 
-- [ ] The 124-case budget, coverage, architecture, workflow, and docs gates pass.
+- [ ] The 128-case budget, coverage, architecture, workflow, and docs gates pass.
 - [ ] Every active/inactive, config, provisioning, auth, execution, and validation state is tested.
 - [ ] Credentials, executable selection, output, read/write authority, and no-fallback rules pass security review.
 - [ ] All five UI states and setup/action/CLI surfaces are accessible and redacted.

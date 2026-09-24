@@ -90,6 +90,36 @@ const validWorkflow = {
 };
 
 describe('workflow contract validator', () => {
+  it.each(['.github/workflows', 'setup/workflows'])(
+    'keeps the Codex model fallback and exact allowlist synchronized in %s',
+    directory => {
+      const modelFallback = "${{ vars.AGENT_MODEL || 'gpt-6-luna' }}";
+      const allowedFallback = "${{ vars.AGENT_ALLOWED_MODELS || 'openai/gpt-6-luna' }}";
+      for (const fileName of [
+        'copilot_close_inactive_issues.yml', 'copilot_commit.yml', 'copilot_issue.yml',
+        'copilot_issue_comment.yml', 'copilot_pull_request.yml',
+        'copilot_pull_request_comment.yml', 'copilot_pull_request_review_state.yml',
+      ]) {
+        const workflow = yaml.load(readFileSync(path.join(process.cwd(), directory, fileName), 'utf8')) as MutationWorkflow;
+        const steps = Object.values(workflow.jobs).flatMap(job => job.steps ?? []);
+        const modelInputs = steps.filter(step => step.with?.['agent-model']);
+        expect(modelInputs).not.toHaveLength(0);
+        expect(modelInputs.every(step => step.with['agent-model'] === modelFallback)).toBe(true);
+        if (fileName === 'copilot_close_inactive_issues.yml') continue;
+        const allowlists = steps.filter(step => step.env?.AGENT_ALLOWED_MODELS);
+        expect(allowlists).not.toHaveLength(0);
+        expect(allowlists.every(step => step.env.AGENT_ALLOWED_MODELS === allowedFallback)).toBe(true);
+      }
+    },
+  );
+
+  it('publishes the same default on the action input surface', () => {
+    const manifest = yaml.load(readFileSync(path.join(process.cwd(), 'action.yml'), 'utf8')) as {
+      inputs: Record<string, { default?: string }>;
+    };
+    expect(manifest.inputs['agent-model'].default).toBe('gpt-6-luna');
+  });
+
   it('excludes retired decorative image inputs from the public action contract', () => {
     const manifest = yaml.load(
       readFileSync(path.join(process.cwd(), 'action.yml'), 'utf8'),

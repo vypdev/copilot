@@ -730,6 +730,7 @@
         "src/tooling/__tests__/documentation_pat_exception_policy.test.ts"
       ],
       "documentation": [
+        "README.md",
         "docs/how-to-use.mdx",
         "docs/configuration.mdx",
         "docs/configuration-checklist.mdx",
@@ -1174,7 +1175,7 @@
       "status": "implemented",
       "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-12",
+      "lastVerified": "2026-09-24",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"
@@ -1185,7 +1186,9 @@
         ".github/workflows/copilot_issue.yml",
         ".github/workflows/copilot_pull_request.yml",
         ".github/workflows/copilot_issue_comment.yml",
-        ".github/workflows/copilot_pull_request_comment.yml"
+        ".github/workflows/copilot_pull_request_comment.yml",
+        ".github/workflows/copilot_pull_request_review_state.yml",
+        ".github/workflows/copilot_close_inactive_issues.yml"
       ],
       "entrypoints": [
         "src/actions/agent_configuration_builder.ts",
@@ -1238,7 +1241,8 @@
         "docs/security-operations/operations/cli-runners.mdx",
         "docs/security-operations/operations/cli-provisioning.mdx",
         "docs/security-operations/operations/provisioning.mdx",
-        "docs/security-operations/operations/version-pinning.mdx"
+        "docs/security-operations/operations/version-pinning.mdx",
+        "docs/security-operations/operations/upgrade-rollback.mdx"
       ]
     },
     {

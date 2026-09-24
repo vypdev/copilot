@@ -38,3 +38,11 @@ Use `@latest` only when the latest published release is intentionally selected. 
 5. Re-enable write permissions only after the rollback passes.
 
 Rollback MUST restore a complete known-good tuple; changing only the binary while keeping incompatible command or model settings is not a valid rollback.
+
+For a Codex model-only rollback from the current `gpt-6-luna` default, restore
+both repository Variables to the previous known-good pair:
+`AGENT_MODEL=gpt-5.6-luna` and
+`AGENT_ALLOWED_MODELS=openai/gpt-5.6-luna`. Keep any other explicitly
+allowlisted role models, and verify the effective tuple with a read-only smoke
+run. Source and generated-workflow defaults are changed only by a reviewed
+repository change; setting one Variable alone is not a complete rollback.

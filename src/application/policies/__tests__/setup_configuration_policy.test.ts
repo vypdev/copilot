@@ -28,7 +28,8 @@ describe('setup configuration policy', () => {
         expect(plan.selectedFiles).toContain('AGENTS.md (managed pointer only)');
         expect(plan.variables).toEqual(expect.arrayContaining([
             { name: 'AGENT_PROVIDER', value: 'codex' },
-            { name: 'AGENT_ALLOWED_MODELS', value: 'openai/gpt-5.6-luna' },
+            { name: 'AGENT_MODEL', value: 'gpt-6-luna' },
+            { name: 'AGENT_ALLOWED_MODELS', value: 'openai/gpt-6-luna' },
             { name: 'MAIN_BRANCH', value: 'master' },
             { name: 'AI_IGNORE_FILES', value: 'build/*' },
             { name: 'BUGBOT_FAIL_ON_UNRESOLVED', value: 'false' },
@@ -137,6 +138,18 @@ describe('setup configuration policy', () => {
         });
         expect(buildSetupPlan(configuration).warnings).toEqual(expect.arrayContaining([
             expect.stringContaining('Cursor is an experimental runtime'),
+        ]));
+    });
+
+    it('retains a configured previous model when it is explicitly allowlisted', () => {
+        const configuration = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
+            agents: { findings: { model: 'gpt-5.6-luna' } },
+        });
+        const variables = buildSetupRepositoryVariables(configuration);
+
+        expect(variables).toEqual(expect.arrayContaining([
+            { name: 'AGENT_MODEL', value: 'gpt-5.6-luna' },
+            { name: 'AGENT_ALLOWED_MODELS', value: 'openai/gpt-6-luna,openai/gpt-5.6-luna' },
         ]));
     });
 

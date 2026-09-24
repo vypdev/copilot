@@ -64,4 +64,26 @@ function findShellExamples(source) {
   return examples;
 }
 
-module.exports = { hasAdjacentInspectedPatPrerequisite, findShellExamples };
+/** Apply the same exception rule to every public source, including the README. */
+function publicPatDocumentationSources(readme, docsByFile) {
+  return new Map([['README.md', readme], ...docsByFile]);
+}
+
+function findUnsafePatShellExamples(sources, acknowledgement) {
+  const violations = [];
+  for (const [file, source] of sources) {
+    for (const example of findShellExamples(source)) {
+      if (!example.body.includes(acknowledgement)) continue;
+      if (hasAdjacentInspectedPatPrerequisite(source, example.start)) continue;
+      violations.push({ file, line: source.slice(0, example.start).split('\n').length });
+    }
+  }
+  return violations;
+}
+
+module.exports = {
+  hasAdjacentInspectedPatPrerequisite,
+  findShellExamples,
+  publicPatDocumentationSources,
+  findUnsafePatShellExamples,
+};

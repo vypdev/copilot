@@ -75877,7 +75877,7 @@ exports.AGENT_EXECUTABLE_BASENAMES = exports.DEFAULT_AGENT_MODEL = exports.DEFAU
 exports.isAgentConfigurationReady = isAgentConfigurationReady;
 exports.DEFAULT_AGENT_PROVIDER = 'codex';
 exports.DEFAULT_MODEL_PROVIDER = 'openai';
-exports.DEFAULT_AGENT_MODEL = 'gpt-5.6-luna';
+exports.DEFAULT_AGENT_MODEL = 'gpt-6-luna';
 exports.AGENT_EXECUTABLE_BASENAMES = {
     codex: 'codex',
     opencode: 'opencode',

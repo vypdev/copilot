@@ -1,9 +1,11 @@
 interface PatDocumentationPolicy {
   hasAdjacentInspectedPatPrerequisite(source: string, codeBlockStart: number): boolean;
   findShellExamples(source: string): Array<{ start: number; body: string }>;
+  publicPatDocumentationSources(readme: string, docsByFile: ReadonlyMap<string, string>): Map<string, string>;
+  findUnsafePatShellExamples(sources: ReadonlyMap<string, string>, acknowledgement: string): Array<{ file: string; line: number }>;
 }
 
-const { findShellExamples, hasAdjacentInspectedPatPrerequisite } = require('../../../scripts/documentation_pat_exception_policy.cjs') as PatDocumentationPolicy;
+const { findShellExamples, hasAdjacentInspectedPatPrerequisite, publicPatDocumentationSources, findUnsafePatShellExamples } = require('../../../scripts/documentation_pat_exception_policy.cjs') as PatDocumentationPolicy;
 
 const prerequisite = "Run these commands without a permission exception first. Inspect the displayed requirements against both PATs' settings. Only after confirming every required row may you acknowledge that limitation.";
 const exactPrerequisite = prerequisite.replace('Inspect', 'inspect');
@@ -76,5 +78,21 @@ describe('inspected-PAT documentation exception', () => {
     expect(examples).toHaveLength(1);
     expect(examples[0].body).toContain('--confirm-unverifiable-write-permissions');
     expect(hasAdjacentInspectedPatPrerequisite(source, examples[0].start)).toBe(false);
+  });
+
+  it('reports an unsafe README example with its repository-relative filename and line', () => {
+    const sources = publicPatDocumentationSources(`# Setup\n\n${command}`, new Map([
+      ['how-to-use.mdx', '# No exception here'],
+    ]));
+    expect(findUnsafePatShellExamples(sources, '--confirm-unverifiable-write-permissions'))
+      .toEqual([{ file: 'README.md', line: 3 }]);
+  });
+
+  it('accepts an inspected README example but still scans MDX for unsafe examples', () => {
+    const sources = publicPatDocumentationSources(`${exactPrerequisite}\n\n${command}`, new Map([
+      ['how-to-use.mdx', `# Setup\n\n${command}`],
+    ]));
+    expect(findUnsafePatShellExamples(sources, '--confirm-unverifiable-write-permissions'))
+      .toEqual([{ file: 'how-to-use.mdx', line: 3 }]);
   });
 });
