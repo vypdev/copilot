@@ -1,7 +1,7 @@
 import type { AgentConfiguration } from '../../../../../domain/agent';
 import type { FindingsQueryPort } from '../../../../ports/agent_findings_ports';
 import { AGENT_PLAN } from '../../../../../application/policies/agent_task_policy';
-import { BUGBOT_PARTITION_RESPONSE_SCHEMA, BUGBOT_RESPONSE_SCHEMA } from './schema';
+import { buildBugbotPartitionResponseSchema, BUGBOT_RESPONSE_SCHEMA } from './schema';
 import {
     agentOutputLocaleFailureMessage,
     productFacingAgentQueryOptions,
@@ -49,13 +49,14 @@ export async function queryBugbotPartitionFindings(
     targetLocale: string,
     expected: BugbotPartitionAttestation,
 ): Promise<Readonly<Record<string, unknown>>> {
+    const schema = buildBugbotPartitionResponseSchema(expected);
     for (let attempt = 1; attempt <= MAX_PARTITION_QUERY_ATTEMPTS; attempt += 1) {
         try {
             const response = await repository.query({
                 configuration,
                 agentId: AGENT_PLAN,
                 prompt,
-                options: bugbotQueryOptions(BUGBOT_PARTITION_RESPONSE_SCHEMA),
+                options: bugbotQueryOptions(schema),
             });
             const validation = validateAgentOutputLocale(response, targetLocale);
             if (validation.kind === 'invalid') {

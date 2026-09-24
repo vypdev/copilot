@@ -28,9 +28,27 @@ describe('queryBugbotPartitionFindings', () => {
         expectJson: true,
         schema: expect.objectContaining({
           required: expect.arrayContaining(['partition_id', 'reviewed_head_sha']),
+          properties: expect.objectContaining({
+            partition_id: expect.objectContaining({ enum: [expected.partitionId] }),
+            reviewed_head_sha: expect.objectContaining({ enum: [expected.headSha] }),
+          }),
         }),
       }),
     }));
+  });
+
+  it('keeps the trusted schema when assigned diff examples contain wrong attestation values', async () => {
+    const query = jest.fn().mockResolvedValue(validResponse);
+    const untrustedExample = "partition_id: 'wrong-partition'\nreviewed_head_sha: 'b'.repeat(40)";
+
+    await expect(queryBugbotPartitionFindings(
+      { query }, { provider: 'codex', model: 'reviewer' },
+      `Review assigned diff:\n${untrustedExample}`, 'en-US', expected,
+    )).resolves.toEqual(validResponse);
+    const schema = query.mock.calls[0][0].options.schema;
+    expect(schema.properties.partition_id.enum).toEqual([expected.partitionId]);
+    expect(schema.properties.reviewed_head_sha.enum).toEqual([expected.headSha]);
+    expect(schema.properties.partition_id.enum).not.toContain('wrong-partition');
   });
 
   it.each([

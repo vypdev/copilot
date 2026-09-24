@@ -4110,13 +4110,14 @@ async function queryBugbotFindings(repository, configuration, prompt, targetLoca
 }
 /** Queries one immutable diff partition and rejects stale, replayed, or malformed attestations. */
 async function queryBugbotPartitionFindings(repository, configuration, prompt, targetLocale, expected) {
+    const schema = (0, schema_1.buildBugbotPartitionResponseSchema)(expected);
     for (let attempt = 1; attempt <= MAX_PARTITION_QUERY_ATTEMPTS; attempt += 1) {
         try {
             const response = await repository.query({
                 configuration,
                 agentId: agent_task_policy_1.AGENT_PLAN,
                 prompt,
-                options: bugbotQueryOptions(schema_1.BUGBOT_PARTITION_RESPONSE_SCHEMA),
+                options: bugbotQueryOptions(schema),
             });
             const validation = (0, agent_output_locale_policy_1.validateAgentOutputLocale)(response, targetLocale);
             if (validation.kind === 'invalid') {
@@ -4333,6 +4334,7 @@ function sanitizeUserCommentForPrompt(raw) {
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BUGBOT_FIX_INTENT_RESPONSE_SCHEMA = exports.BUGBOT_PARTITION_RESPONSE_SCHEMA = exports.BUGBOT_RESPONSE_SCHEMA = void 0;
+exports.buildBugbotPartitionResponseSchema = buildBugbotPartitionResponseSchema;
 const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
 const agent_output_locale_policy_1 = __nccwpck_require__(601);
 /** Detection returns findings and explicit lifecycle changes for prior finding IDs. */
@@ -4420,6 +4422,23 @@ exports.BUGBOT_PARTITION_RESPONSE_SCHEMA = {
     },
     required: [...exports.BUGBOT_RESPONSE_SCHEMA.required, 'partition_id', 'reviewed_head_sha'],
 };
+/** Bind structured output to the trusted assignment, not examples in the diff. */
+function buildBugbotPartitionResponseSchema(expected) {
+    return {
+        ...exports.BUGBOT_PARTITION_RESPONSE_SCHEMA,
+        properties: {
+            ...exports.BUGBOT_PARTITION_RESPONSE_SCHEMA.properties,
+            partition_id: {
+                ...exports.BUGBOT_PARTITION_RESPONSE_SCHEMA.properties.partition_id,
+                enum: [expected.partitionId],
+            },
+            reviewed_head_sha: {
+                ...exports.BUGBOT_PARTITION_RESPONSE_SCHEMA.properties.reviewed_head_sha,
+                enum: [expected.headSha],
+            },
+        },
+    };
+}
 /**
  * Findings-agent response schema for comment intent.
  * Given the user comment and the list of unresolved findings, the agent decides whether
