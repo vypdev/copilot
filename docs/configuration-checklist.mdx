@@ -22,7 +22,7 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 
 - [ ] Before entering each PAT, the setup terminal table matches the intended repository/organization target, access level, selected features, and storage scope.
 - [ ] After entry, every `❌ Missing` required permission has been corrected; required unverifiable reads have been retried; every `? Unverifiable` required write has been compared manually with the PAT settings and explicitly acknowledged without treating it as a pass.
-- [ ] A publicly readable endpoint has not been mistaken for PAT evidence. After valid identity, only the exact successful public-repository read or organization Members read may be operationally usable while still shown as `Unverifiable`; Issue Types and writes never gain that exception.
+- [ ] A publicly readable endpoint has not been mistaken for PAT evidence. After valid identity, only the exact successful public-repository read may be operationally usable while still shown as `Unverifiable`; public organization Members, Issue Types and writes never gain that exception. Members read needs a verified, active self-membership response for the selected organization.
 - [ ] If the `PAT` Secret already exists, its value has been re-entered (or supplied again to unattended setup) and the full workflow-PAT permission report has completed; credential-health success alone is not treated as permission evidence.
 - [ ] Permission verification used read-only probes only; no temporary label, branch, file, Variable, Secret, project item, comment, or workflow run was created as a permission test.
 - [ ] Credentials are configured as secrets or as a local self-hosted credential store.

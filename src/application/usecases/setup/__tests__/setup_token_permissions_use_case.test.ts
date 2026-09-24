@@ -149,7 +149,7 @@ describe('SetupTokenPermissionsUseCase', () => {
         expect(report).toMatchObject({ ready: true, confirmationRequired: false });
     });
 
-    it('accepts exact operational organization Members evidence without promoting it to verified', async () => {
+    it('rejects public organization Members evidence as incomplete', async () => {
         const organizationRead: SetupTokenPermissionRequirement = {
             ...required,
             id: 'workflow.organization.members',
@@ -171,11 +171,11 @@ describe('SetupTokenPermissionsUseCase', () => {
             role: 'workflow', owner: 'owner', repository: 'repo', token: 'secret', requirements: [organizationRead],
         });
 
-        expect(report).toMatchObject({ ready: true, confirmationRequired: false });
+        expect(report).toMatchObject({ ready: false, confirmationRequired: false });
         expect(report.checks[0]).toMatchObject({
             status: 'unverifiable',
-            operationallyAvailable: true,
         });
+        expect(report.checks[0].operationallyAvailable).toBeUndefined();
     });
 
     it('treats a malformed evidence collection as absent rather than trusting it', async () => {

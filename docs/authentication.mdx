@@ -24,7 +24,7 @@ these states:
 |---|---|---|
 | `✅ Verified` | A safe authentication-bound GitHub operation proved the requested read capability. | Continue. |
 | `❌ Missing` | GitHub deterministically rejected a required capability after identity and repository access were established. | Stop before the dependent mutation and name the permission to grant. |
-| `? Unverifiable` | GitHub does not expose a safe non-mutating proof of the PAT grant, or the response was ambiguous/transient. | Required reads block unless the exact successful public repository or organization Members read has separate operational evidence. Required writes pause for a separate explicit acknowledgement and remain non-verified. |
+| `? Unverifiable` | GitHub does not expose a safe non-mutating proof of the PAT grant, or the response was ambiguous/transient. | Required reads block unless the exact successful public-repository read has separate operational evidence. Required writes pause for a separate explicit acknowledgement and remain non-verified. |
 
 A `403` is not automatically a missing-permission result. Copilot reports it as
 `Missing` only when bounded GitHub metadata explicitly identifies a permission
@@ -43,10 +43,14 @@ unknown, success remains `Unverifiable`. Secret and Variable inventory
 reads are permission-bound; their corresponding write grants remain
 `Unverifiable` because GitHub exposes no safe non-mutating proof of write
 access, so setup requires explicit acknowledgement for those rows. Public
-organization member and issue-type reads remain `Unverifiable` as PAT evidence.
+organization Issue Types reads remain `Unverifiable` as PAT evidence.
 After valid token identity, a successful public repository read can be used
-for that exact operation while its PAT permission row stays `Unverifiable`. A
-successful exact organization Members read can be used in the same narrow way.
+for that exact operation while its PAT permission row stays `Unverifiable`.
+The public organization members list can omit concealed members, so it cannot
+establish Members-read capability. Copilot instead checks the authenticated
+user's active organization membership through GitHub's permission-bound
+Members-read endpoint; only a valid response for the selected organization
+marks that row `Verified`.
 This positive operational fact is not granted to a failed, ambiguous, or
 visibility-unknown probe, organization Issue Types, or any write.
 
@@ -169,9 +173,8 @@ For comment-driven assistance, read-only commands are available to anyone who ca
     Read the required-permissions table before creating the token, then review
     the permission-check table after entry. A `❌ Missing` required row must be
     corrected before setup can continue. An ambiguous required
-    `? Unverifiable` read blocks; a successful public repository read or exact
-    organization Members read can remain unverified as PAT evidence but
-    operationally usable. A required
+    `? Unverifiable` read blocks; only a successful public-repository read can
+    remain unverified as PAT evidence but operationally usable. A required
     write row means to compare the PAT settings with the
     requested access level and explicitly acknowledge it; it is never a pass.
   </Step>

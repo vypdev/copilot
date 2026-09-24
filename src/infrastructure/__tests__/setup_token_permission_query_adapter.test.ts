@@ -138,16 +138,33 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         expect(check).toMatchObject({ status: 'verified' });
     });
 
-    it('reports a successful public organization Members read as operational without verifying the PAT grant', async () => {
-        const fetcher = jest.fn().mockResolvedValue(response(true, 200));
+    it('verifies Members read only with active self-membership for the selected organization', async () => {
+        const fetcher = jest.fn().mockResolvedValue(response(true, 200, {
+            payload: { state: 'active', organization: { login: 'owner' } },
+        }));
 
         const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
             'owner', 'repo', 'secret-token', [requirement('read', 'members', 'organization')],
         );
 
         expect(fetcher).toHaveBeenCalledTimes(1);
-        expect(check).toMatchObject({ status: 'unverifiable', operationallyAvailable: true,
-            publicReadEvidence: 'public-organization-members' });
+        expect(fetcher).toHaveBeenCalledWith('https://api.github.com/user/memberships/orgs/owner', expect.any(Object));
+        expect(check).toMatchObject({ status: 'verified' });
+        expect(check.operationallyAvailable).toBeUndefined();
+    });
+
+    it.each([
+        ['public-list-shaped', []],
+        ['pending', { state: 'pending', organization: { login: 'owner' } }],
+        ['wrong-organization', { state: 'active', organization: { login: 'other' } }],
+    ] as const)('does not accept %s Members evidence as full-read proof', async (_label, payload) => {
+        const fetcher = jest.fn().mockResolvedValue(response(true, 200, { payload }));
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
+            'owner', 'repo', 'secret-token', [requirement('read', 'members', 'organization')],
+        );
+
+        expect(check).toMatchObject({ status: 'unverifiable' });
+        expect(check.operationallyAvailable).toBeUndefined();
     });
 
     it('keeps a successful public organization Issue Types probe unusable as permission evidence', async () => {
@@ -444,7 +461,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         expect(fetcher.mock.calls.map(call => call[0])).toEqual(expect.arrayContaining([
             'https://api.github.com/orgs/owner/actions/secrets?per_page=1',
             'https://api.github.com/orgs/owner/actions/variables?per_page=1',
-            'https://api.github.com/orgs/owner/members?per_page=1',
+            'https://api.github.com/user/memberships/orgs/owner',
             'https://api.github.com/orgs/owner/issue-types?per_page=1',
         ]));
         expect(checks.at(-1)).toMatchObject({ probe: 'projects', status: 'unverifiable' });

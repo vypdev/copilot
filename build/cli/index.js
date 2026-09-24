@@ -48209,17 +48209,11 @@ function reconcileSetupTokenPermissionEvidence(requirements, evidence) {
 }
 /** Limits positive usability without promoting publicly readable evidence to verified PAT access. */
 function isOperationallyAvailableSetupRead(requirement, evidence) {
-    if (requirement.level !== 'read')
-        return false;
-    if (requirement.scope === 'repository') {
-        return evidence === 'public-repository'
-            && PUBLIC_REPOSITORY_READ_PROBES.has(requirement.probe)
-            && requirement.permission.toLowerCase().replace(/ /gu, '-') === requirement.probe;
-    }
-    return requirement.scope === 'organization'
-        && requirement.permission === 'Members'
-        && requirement.probe === 'members'
-        && evidence === 'public-organization-members';
+    return requirement.level === 'read'
+        && requirement.scope === 'repository'
+        && evidence === 'public-repository'
+        && PUBLIC_REPOSITORY_READ_PROBES.has(requirement.probe)
+        && requirement.permission.toLowerCase().replace(/ /gu, '-') === requirement.probe;
 }
 const PUBLIC_REPOSITORY_READ_PROBES = new Set([
     'metadata', 'contents', 'administration', 'issues', 'actions', 'checks', 'pull-requests', 'workflows',
@@ -48238,8 +48232,7 @@ function isMatchingEvidence(requirement, value) {
         && value.message.trim().length > 0
         && (value.operationallyAvailable === undefined || value.operationallyAvailable === true)
         && (value.publicReadEvidence === undefined
-            || value.publicReadEvidence === 'public-repository'
-            || value.publicReadEvidence === 'public-organization-members');
+            || value.publicReadEvidence === 'public-repository');
 }
 function isPermissionStatus(value) {
     return value === 'verified' || value === 'missing' || value === 'unverifiable';
@@ -82820,7 +82813,7 @@ class SetupTokenPermissionQueryAdapter {
             const target = await resolveProbeTarget(owner, repository, requirement, request);
             if (target.status === 'complete')
                 return target.check;
-            return mapProbeResponse(requirement, target.response ?? await request(target.url), target.readEvidence);
+            return mapProbeResponse(requirement, target.response ?? await request(target.url), target.readEvidence, owner);
         }
         catch {
             return outcome(requirement, 'unverifiable', 'The permission probe was unavailable or timed out.');
@@ -82850,6 +82843,9 @@ async function resolveProbeTarget(owner, repository, requirement, request) {
     }
     if (requirement.level === 'write') {
         return { status: 'ready', url, readEvidence: 'permission-bound' };
+    }
+    if (requirement.scope === 'organization' && requirement.probe === 'members') {
+        return { status: 'ready', url, readEvidence: 'organization-membership' };
     }
     if (requiresRepositoryVisibilityProof(requirement)) {
         const metadataResponse = await request(repositoryRoot(owner, repository));
@@ -82919,7 +82915,7 @@ function requiresRepositoryVisibilityProof(requirement) {
 }
 function isPubliclyReadableOrganizationProbe(requirement) {
     return requirement.scope === 'organization'
-        && ['members', 'issue-types'].includes(requirement.probe);
+        && requirement.probe === 'issue-types';
 }
 async function readRepositoryProbeMetadata(response) {
     try {
@@ -82949,8 +82945,13 @@ function containsAsciiControl(value) {
         return codePoint !== undefined && (codePoint <= 31 || codePoint === 127);
     });
 }
-async function mapProbeResponse(requirement, response, readEvidence) {
+async function mapProbeResponse(requirement, response, readEvidence, owner) {
     if (response.ok) {
+        if (readEvidence === 'organization-membership') {
+            return response.status === 200 && await isActiveOrganizationMembership(response, owner)
+                ? outcome(requirement, 'verified', 'GitHub confirmed active organization membership through a permission-bound Members-read probe.')
+                : outcome(requirement, 'unverifiable', 'GitHub did not confirm active organization membership for the selected organization.');
+        }
         if (requirement.level === 'write') {
             return outcome(requirement, 'unverifiable', 'Read access is available, but GitHub exposes no safe proof of write access.');
         }
@@ -82960,9 +82961,7 @@ async function mapProbeResponse(requirement, response, readEvidence) {
         const publiclyReadable = outcome(requirement, 'unverifiable', requirement.scope === 'repository'
             ? 'This publicly readable repository read succeeded, but does not prove that the PAT has the named permission.'
             : 'GitHub served a publicly readable organization resource, which does not prove that this token has the requested permission.');
-        const publicReadEvidence = requirement.scope === 'repository'
-            ? 'public-repository'
-            : 'public-organization-members';
+        const publicReadEvidence = 'public-repository';
         return (0, setup_token_permission_evidence_policy_1.isOperationallyAvailableSetupRead)(requirement, publicReadEvidence)
             ? { ...publiclyReadable, operationallyAvailable: true, publicReadEvidence }
             : publiclyReadable;
@@ -82993,6 +82992,24 @@ async function mapProbeResponse(requirement, response, readEvidence) {
         return outcome(requirement, 'unverifiable', 'GitHub returned not found, which can mean absent data or hidden permission state.');
     }
     return outcome(requirement, 'unverifiable', `GitHub could not verify this permission safely (HTTP ${response.status}).`);
+}
+async function isActiveOrganizationMembership(response, owner) {
+    try {
+        const payload = await response.json();
+        if (typeof payload !== 'object' || payload === null || Array.isArray(payload))
+            return false;
+        const membership = payload;
+        const organization = membership.organization;
+        return membership.state === 'active'
+            && typeof organization === 'object'
+            && organization !== null
+            && !Array.isArray(organization)
+            && typeof organization.login === 'string'
+            && organization.login.toLowerCase() === owner.toLowerCase();
+    }
+    catch {
+        return false;
+    }
 }
 async function isDeterministicPermissionDenial(response) {
     const message = await readProviderMessage(response);
@@ -83038,7 +83055,7 @@ function probeUrl(owner, repository, requirement) {
         if (requirement.probe === 'variables')
             return `${organizationRoot}/actions/variables?per_page=1`;
         if (requirement.probe === 'members')
-            return `${organizationRoot}/members?per_page=1`;
+            return `https://api.github.com/user/memberships/orgs/${encodedOwner}`;
         if (requirement.probe === 'issue-types')
             return `${organizationRoot}/issue-types?per_page=1`;
         return undefined;

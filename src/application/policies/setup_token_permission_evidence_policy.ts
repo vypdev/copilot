@@ -47,16 +47,11 @@ export function isOperationallyAvailableSetupRead(
     requirement: Pick<SetupTokenPermissionRequirement, 'scope' | 'permission' | 'level' | 'probe'>,
     evidence: SetupTokenPublicReadEvidence | undefined,
 ): boolean {
-    if (requirement.level !== 'read') return false;
-    if (requirement.scope === 'repository') {
-        return evidence === 'public-repository'
-            && PUBLIC_REPOSITORY_READ_PROBES.has(requirement.probe)
-            && requirement.permission.toLowerCase().replace(/ /gu, '-') === requirement.probe;
-    }
-    return requirement.scope === 'organization'
-        && requirement.permission === 'Members'
-        && requirement.probe === 'members'
-        && evidence === 'public-organization-members';
+    return requirement.level === 'read'
+        && requirement.scope === 'repository'
+        && evidence === 'public-repository'
+        && PUBLIC_REPOSITORY_READ_PROBES.has(requirement.probe)
+        && requirement.permission.toLowerCase().replace(/ /gu, '-') === requirement.probe;
 }
 
 const PUBLIC_REPOSITORY_READ_PROBES = new Set<SetupTokenPermissionRequirement['probe']>([
@@ -80,8 +75,7 @@ function isMatchingEvidence(
         && value.message.trim().length > 0
         && (value.operationallyAvailable === undefined || value.operationallyAvailable === true)
         && (value.publicReadEvidence === undefined
-            || value.publicReadEvidence === 'public-repository'
-            || value.publicReadEvidence === 'public-organization-members');
+            || value.publicReadEvidence === 'public-repository');
 }
 
 function isPermissionStatus(value: unknown): value is SetupTokenPermissionStatus {

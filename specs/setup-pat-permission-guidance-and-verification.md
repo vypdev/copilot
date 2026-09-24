@@ -379,13 +379,16 @@ read-only GitHub queries and presents ordered permission outcomes.
    permission-bound (for example Secret or Variable inventory), or when
    repository metadata in the same bounded probe proves that the target
    repository is private. Publicly readable repository probes, organization
-   member/issue-type reads, and successful reads whose visibility cannot be
-   established remain `Unverifiable`. After valid PAT identity, a successful
-   organization Members read may additionally carry the narrow
-   `operationallyAvailable` fact because it is the same read operation consumed
-   by member selection/authorization; this does not verify the named token
-   permission. Organization Issue Types, every write, and failed or ambiguous
-   reads never gain that fact. Visibility resolution and the target read share
+   Issue Types reads, and successful reads whose visibility cannot be established
+   remain `Unverifiable`. The public organization members listing MUST NOT prove
+   Members-read capability: it may omit concealed members. For an organization
+   Members read, use the permission-bound
+   [`GET /user/memberships/orgs/{org}` endpoint](https://docs.github.com/en/rest/orgs/members#get-an-organization-membership-for-the-authenticated-user),
+   which requires Members read for a fine-grained PAT; accept only a successful
+   active membership payload for the exact organization. Malformed, pending,
+   denied, or unavailable membership evidence remains unusable. Organization
+   Issue Types, every write, and failed or ambiguous reads never gain a public
+   operational fact. Visibility resolution and the target read share
    one concurrency slot and timeout, preserve result order, and never use
    unauthenticated success as token permission evidence.
 9. For any existing non-workflow credential, a `keep` choice is authoritative
@@ -407,17 +410,17 @@ read-only GitHub queries and presents ordered permission outcomes.
     remains non-blocking under the shared storage policy.
 12. A successful publicly readable repository GET after valid token identity
     may prove that the selected read operation is usable, while remaining
-    `Unverifiable` as PAT permission evidence. The same is true only for a
-    successful organization Members read after valid identity. This structured
-    usable-read fact may satisfy the matching required read for execution
+    `Unverifiable` as PAT permission evidence. This structured usable-read fact
+    may satisfy only the matching public-repository required read for execution
     readiness; it never upgrades the row to `Verified`, never satisfies
-    organization Issue Types or any write, and never applies to a denied,
+    organization Members, Issue Types or any write, and never applies to a denied,
     ambiguous, malformed, timed-out, or visibility-unknown probe. The terminal
     MUST explain that access is operationally available without claiming the
     PAT has the named grant.
     Positive operational evidence MUST carry an explicit public-read provenance
     created by the query adapter after repository metadata proves public
-    visibility, or after the exact public organization Members probe succeeds.
+    visibility. A public organization Members listing is never operational
+    evidence for the full membership capability.
     Reconciliation accepts that provenance only for the matching bounded public
     permission/probe pair; Secret/Variable inventory, private or unknown repository
     visibility, and arbitrary adapter booleans cannot make a required read ready.
@@ -671,17 +674,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **127 distinct cases**.
+This SDD adds at least **129 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain permission policy | 25 | setup/workflow plans, independent selected-feature write grants and all-disabled minimum, enabled comment-route file-mutation potential versus individual answer-only events, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants, positive and negative organization-membership capability projection including comment-only and independently available single-action routes |
-| Application state/blocking | 28 | verified, missing, required-read unverifiable, bounded public-read provenance and disguised protected permission rejection, public repository and exact organization-Members operational readiness, required-write confirmation including a write-only required plan, canonical reconstruction after semantic mismatch, duplicate evidence rejection, verified-write downgrade, invalid base token, organization-target shadow rejection, bounded pre-plan inspection failure, accepted/rejected final audit with structured block, selected-ref workflow state refresh, immediate remote-storage blocked handling, zero-count assignment and inactive membership checks |
-| Adapter/provider contracts | 40 | GET-only probes, fixed four-request concurrency with stable result order, private-versus-public/unknown visibility evidence, protected-endpoint evidence, exact Members-read operational evidence without permission promotion, commit-list Contents target, private empty-repository 409 versus public operational usability, default-branch Checks resolution plus encoded check-runs target, invalid/missing branch fail-closed behavior, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow on the selected ref in inspection and bootstrap, default-branch dispatchability proof even when Actions-index returns 404, malformed root scalar/object success remains unavailable without bootstrap, malformed exact-file success remains unavailable, unavailable endpoint state, duplicate-comment deletion fallback regression |
+| Application state/blocking | 28 | verified, missing, required-read unverifiable, bounded public-read provenance and disguised protected permission rejection, public repository operational readiness and public-Members rejection, required-write confirmation including a write-only required plan, canonical reconstruction after semantic mismatch, duplicate evidence rejection, verified-write downgrade, invalid base token, organization-target shadow rejection, bounded pre-plan inspection failure, accepted/rejected final audit with structured block, selected-ref workflow state refresh, immediate remote-storage blocked handling, zero-count assignment and inactive membership checks |
+| Adapter/provider contracts | 42 | GET-only probes, fixed four-request concurrency with stable result order, private-versus-public/unknown visibility evidence, protected-endpoint evidence, permission-bound active self-Members membership and malformed/public-list rejection, commit-list Contents target, private empty-repository 409 versus public operational usability, default-branch Checks resolution plus encoded check-runs target, invalid/missing branch fail-closed behavior, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow on the selected ref in inspection and bootstrap, default-branch dispatchability proof even when Actions-index returns 404, malformed root scalar/object success remains unavailable without bootstrap, malformed exact-file success remains unavailable, unavailable endpoint state, duplicate-comment deletion fallback regression |
 | Setup/credential integration | 22 | pre-prompt setup table, conditional denial through planning, wizard-owned repository-inventory block for organization targets and known-shadow rejection, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, absent/failed remote snapshot blocks every subsequent mutation, preserve-disabled and scope-moving keep rejection, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
 | UI/accessibility | 5 | required/result tables, public-read limitation copy, confirmation-required copy, 40-column wrapping, no-color text |
 | Architecture/security/docs | 7 | query-only boundary, no duplicated catalog, safe generic/recovery automation examples, nearest-paragraph permission-prerequisite cases, and README plus MDX source enumeration with file-specific diagnostics |
-| **Total** | **127** | No double counting |
+| **Total** | **129** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -886,13 +889,13 @@ at widths 40/80/120 and `NO_COLOR`.
     renders the canonical requirement as `Unverifiable` and blocks required
     reads. Exactly matching read evidence may verify; a claimed verified write
     is downgraded to `Unverifiable`, and only an exactly matching repository
-    read or organization Members read may retain positive operational
-    availability.
-43. Given PAT identity is valid and the exact organization Members GET
-    succeeds, the row remains `Unverifiable` but carries operational
-    availability and may satisfy that required read. The same claim attached
-    to Issue Types, an organization write, mismatched evidence, or any failed or
-    ambiguous response is discarded and blocks readiness.
+    read may retain positive operational availability; organization Members
+    cannot use a public-read exception.
+43. Given PAT identity is valid and permission-bound self-membership GET
+    returns an active membership for the exact organization, Members read is
+    `Verified`. A public members-list success, pending/malformed membership,
+    Issue Types, organization write, mismatched evidence, or failed/ambiguous
+    response does not satisfy a required Members read.
 44. Given issue workflows remain selected in stored configuration but the
     effective issue route is disabled, neither PAT matrix retains Issues or
     Issue Types write or release/hotfix Administration read solely from that
@@ -940,7 +943,7 @@ at widths 40/80/120 and `NO_COLOR`.
 | scope-sensitive inventory gating | storage policy plus setup wizard boundary | wizard-blocked, organization-target shadow, preserve-existing, and mixed-scope tests | authentication/troubleshooting |
 | absent-snapshot fail-closed provisioning | resource grouping and initial setup workflow | missing port, failed inspection, no-upsert tests | troubleshooting/provisioning |
 | all-provisioning fail-closed boundary | initial setup workflow + storage policy | no local file copy or label/type/tag/Secret/Variable calls after failed inspection | troubleshooting |
-| public-read operational evidence | permission query adapter + evidence policy + readiness use case + presenter | public repository and exact organization-Members success plus ambiguous/denied/Issue-Types/write fixtures | authentication/troubleshooting |
+| public-read and Members evidence | permission query adapter + evidence policy + readiness use case + presenter | public repository provenance; protected active self-membership success; public-list, malformed, pending, denied, Issue-Types and write fixtures | authentication/troubleshooting |
 | safe bootstrap 404 | credential health bootstrap adapter | exact path/visibility proof, create-only SHA ownership, conditional cleanup and no-mutation ambiguous/race fixtures | authentication |
 | no write probes | semantic query port/architecture rule | method/transport tests | architecture |
 | secret safety | all contracts/presenter | redaction fixtures | credentials |

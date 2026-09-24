@@ -53,9 +53,10 @@ This guide helps you resolve common issues you might encounter while using Copil
     metadata, commits, rulesets, labels, workflows, checks, pull requests, and
     workflow files remain `Unverifiable` unless repository metadata proves the
     repository is private. Public organization member and issue-type responses
-    are likewise inconclusive as PAT evidence. After valid identity, only a
-    successful exact Members read may be operationally usable; Issue Types,
-    ambiguous responses, and writes remain blocking.
+    are likewise inconclusive as PAT evidence or full-membership readiness.
+    Members read is verified only by a valid active self-membership response
+    from the permission-bound endpoint; Issue Types, ambiguous responses, and
+    writes remain blocking.
     For the repository Contents row in the PAT permission table, setup probes
     the read-only commit list; this is not the workflow-presence check described
     below. GitHub's documented empty-repository response verifies read access

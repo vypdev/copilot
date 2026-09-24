@@ -3,7 +3,7 @@ export type SetupTokenPermissionScope = 'repository' | 'organization';
 export type SetupTokenPermissionLevel = 'read' | 'write';
 export type SetupTokenPermissionApplicability = 'required' | 'conditional';
 export type SetupTokenPermissionStatus = 'verified' | 'missing' | 'unverifiable';
-export type SetupTokenPublicReadEvidence = 'public-repository' | 'public-organization-members';
+export type SetupTokenPublicReadEvidence = 'public-repository';
 
 export type SetupTokenPermissionProbe =
     | 'metadata'
