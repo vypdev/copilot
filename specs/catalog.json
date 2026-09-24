@@ -364,7 +364,7 @@
       "status": "implemented",
       "scope": "Reconcile review snapshots, findings, threads, comments, and check conclusions",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-16",
+      "lastVerified": "2026-09-24",
       "specs": [
         "specs/bugbot-review-state-reconciliation.md"
       ],
@@ -407,6 +407,7 @@
         "src/application/usecases/steps/commit/bugbot/__tests__/schema.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/prepare_bugbot_findings.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/reconcile_bugbot_review_state_integration.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/synchronize_bugbot_review_presentation_use_case.test.ts",
         "src/application/policies/__tests__/bugbot_result_finding_state_projection_policy.test.ts",
         "src/application/policies/__tests__/bugbot_event_ownership_policy.test.ts",
         "src/application/policies/__tests__/bugbot_telemetry_projection_policy.test.ts",

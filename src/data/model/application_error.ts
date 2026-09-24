@@ -26,6 +26,7 @@ export type ApplicationErrorCode =
     | 'workflow.stale'
     | 'workflow.cancelled'
     | 'workflow.failed'
+    | 'workflow.presentation-pending'
     | 'timeout'
     | 'unexpected';
 
@@ -36,6 +37,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'pull-request-link-base-and-reference-retained',
     'managed-branch-enrichment-failed',
     'inactivity-explanation-failed',
+    'bugbot-review-blocks-pending',
 ] as const);
 
 export type ApplicationErrorRecoveryId = typeof APPLICATION_ERROR_RECOVERY_IDS[number];
@@ -47,6 +49,7 @@ interface ApplicationErrorRecoveryVariables {
     readonly 'pull-request-link-base-and-reference-retained': Readonly<Record<string, never>>;
     readonly 'managed-branch-enrichment-failed': Readonly<{ branchName: string }>;
     readonly 'inactivity-explanation-failed': Readonly<{ issueNumber: number }>;
+    readonly 'bugbot-review-blocks-pending': Readonly<{ pendingCount: number }>;
 }
 
 export type ApplicationErrorRecovery = {
@@ -176,6 +179,12 @@ export const APPLICATION_ERROR_METADATA: Readonly<Record<ApplicationErrorCode, A
         action: 'Inspect the current state and retry the failed step.',
         retainedState: PRESERVED_STATE,
     },
+    'workflow.presentation-pending': {
+        kind: 'workflow', retryable: true,
+        impact: 'Bugbot completed the review, but historical review summaries are not fully synchronized.',
+        action: 'Run a Bugbot recheck to continue the bounded presentation repair.',
+        retainedState: PRESERVED_STATE,
+    },
     timeout: {
         kind: 'workflow', retryable: true,
         impact: 'The operation exceeded its bounded execution time.',
@@ -276,6 +285,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'pull-request-link-base-and-reference-retained': Object.freeze([]),
     'managed-branch-enrichment-failed': Object.freeze(['branchName']),
     'inactivity-explanation-failed': Object.freeze(['issueNumber']),
+    'bugbot-review-blocks-pending': Object.freeze(['pendingCount']),
 });
 
 function normalizeApplicationErrorRecovery(
@@ -302,6 +312,12 @@ function normalizeApplicationErrorRecovery(
             || !Number.isSafeInteger(variables.issueNumber)
             || variables.issueNumber < 1)) {
         throw new TypeError('Application error recovery issue number is invalid.');
+    }
+    if (recovery.id === 'bugbot-review-blocks-pending'
+        && (typeof variables.pendingCount !== 'number'
+            || !Number.isSafeInteger(variables.pendingCount)
+            || variables.pendingCount < 1)) {
+        throw new TypeError('Application error recovery pending count is invalid.');
     }
     return Object.freeze({
         id: recovery.id,

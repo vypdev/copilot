@@ -48,8 +48,8 @@ description: Diagnose terminal failures across detection, publication, autofix, 
   <Accordion title="A manual resolve or reopen is not reflected yet" icon="users">
     Native thread actions do not trigger a supported GitHub Actions event. Run `/copilot recheck` for immediate aggregation, or wait for the next pull-request, push, or explicit review event.
   </Accordion>
-  <Accordion title="More than 20 review cards need repair" icon="layer-group">
-    Bugbot updates 20 historical review blocks per run and reports the exact remainder. Re-run `/copilot recheck` until the pending count reaches zero; the canonical status card remains the aggregate view throughout.
+  <Accordion title="Historical review cards need repair" icon="layer-group">
+    Bugbot updates historical review blocks in sequential batches of 20, up to 100 per run. If more remain, or a batch fails, the status card and Check report the exact unattempted count and the Action uses `workflow.presentation-pending` for a budget remainder. This does not mean the provider is unavailable or that the diff was only partly analyzed. Re-run `/copilot recheck` after inspecting any separate write failure; successful updates are kept and already-current blocks are skipped. The canonical status card remains the aggregate view throughout.
   </Accordion>
 </AccordionGroup>
 

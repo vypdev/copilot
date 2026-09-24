@@ -367,8 +367,10 @@ hide a non-clean or unverifiable destination.
 
 The pure reconciliation plan owns missing-publication and missing-durable-
 evidence decisions. The presentation use case owns only bounded review/status
-writes: at most 20 review summaries are selected per run and writes use bounded
-concurrency. Existing integration scenarios exercise the full pipeline, while
+writes: up to five sequential batches of 20 review summaries are selected per
+run, with at most four concurrent writes per batch. A failed batch stops later
+batches; the exact remainder becomes a workflow presentation diagnostic rather
+than a false provider-outage signal. Existing integration scenarios exercise the full pipeline, while
 snapshot, projection, plan, ownership, and presentation boundaries have focused
 unit tests.
 

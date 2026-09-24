@@ -4515,12 +4515,14 @@ function meetsMinSeverity(findingSeverity, minSeverity) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.synchronizeBugbotReviewPresentation = synchronizeBugbotReviewPresentation;
+const application_error_1 = __nccwpck_require__(5999);
 const bugbot_review_presentation_policy_1 = __nccwpck_require__(3799);
 const bugbot_review_ownership_policy_1 = __nccwpck_require__(3288);
 const review_projection_1 = __nccwpck_require__(859);
 const publication_identity_policy_1 = __nccwpck_require__(5403);
 const bugbot_message_catalog_1 = __nccwpck_require__(7406);
-const MAX_REVIEW_UPDATES_PER_RUN = 20;
+const REVIEW_UPDATE_BATCH_SIZE = 20;
+const MAX_REVIEW_UPDATES_PER_RUN = 100;
 const REVIEW_UPDATE_CONCURRENCY = 4;
 /**
  * Synchronizes only user-facing durable presentation. It receives a completed
@@ -4537,17 +4539,28 @@ async function synchronizeBugbotReviewPresentation(input) {
     }
     const plannedReviewUpdates = planReviewUpdates(input, projection, navigation, catalog);
     const selectedReviewUpdates = plannedReviewUpdates.slice(0, MAX_REVIEW_UPDATES_PER_RUN);
-    const reviewWriteResults = await mapWithConcurrency(selectedReviewUpdates, REVIEW_UPDATE_CONCURRENCY, async ({ ownedReview, body }) => {
-        await input.ports.updatePullRequestReview(input.target.pullRequestNumber, ownedReview.review.identity, body);
-    });
-    const reviewUpdates = reviewWriteResults.filter((result) => result === 'fulfilled').length;
-    const reviewFailures = reviewWriteResults.flatMap((result, index) => result === 'rejected'
-        ? [toPresentationFailure({
-                code: 'review-update-failed',
-                reviewIdentity: selectedReviewUpdates[index].ownedReview.review.identity,
-            })]
-        : []);
-    const pendingReviewUpdates = Math.max(0, plannedReviewUpdates.length - MAX_REVIEW_UPDATES_PER_RUN);
+    let attemptedReviewUpdates = 0;
+    let reviewUpdates = 0;
+    const reviewFailures = [];
+    for (let offset = 0; offset < selectedReviewUpdates.length; offset += REVIEW_UPDATE_BATCH_SIZE) {
+        const batch = selectedReviewUpdates.slice(offset, offset + REVIEW_UPDATE_BATCH_SIZE);
+        const results = await mapWithConcurrency(batch, REVIEW_UPDATE_CONCURRENCY, async ({ ownedReview, body }) => {
+            await input.ports.updatePullRequestReview(input.target.pullRequestNumber, ownedReview.review.identity, body);
+        });
+        attemptedReviewUpdates += batch.length;
+        reviewUpdates += results.filter((result) => result === 'fulfilled').length;
+        results.forEach((result, index) => {
+            if (result === 'rejected') {
+                reviewFailures.push(toPresentationFailure({
+                    code: 'review-update-failed',
+                    reviewIdentity: batch[index].ownedReview.review.identity,
+                }));
+            }
+        });
+        if (results.includes('rejected'))
+            break;
+    }
+    const pendingReviewUpdates = Math.max(0, plannedReviewUpdates.length - attemptedReviewUpdates);
     if (pendingReviewUpdates > 0) {
         reviewFailures.push(toPresentationFailure({
             code: 'review-updates-pending',
@@ -4640,9 +4653,17 @@ function statusFailure() {
     };
 }
 function toPresentationFailure(diagnostic) {
+    const message = (0, bugbot_message_catalog_1.bugbotDiagnosticOperatorMessage)(diagnostic);
     return {
         diagnostic,
-        error: new Error((0, bugbot_message_catalog_1.bugbotDiagnosticOperatorMessage)(diagnostic)),
+        error: diagnostic.code === 'review-updates-pending'
+            ? new application_error_1.ApplicationError('workflow.presentation-pending', message, {
+                recovery: {
+                    id: 'bugbot-review-blocks-pending',
+                    variables: { pendingCount: diagnostic.count },
+                },
+            })
+            : new Error(message),
     };
 }
 function report(projection, reviewUpdates, pendingReviewUpdates, statusCardOperation, errors) {
@@ -5095,6 +5116,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'pull-request-link-base-and-reference-retained',
     'managed-branch-enrichment-failed',
     'inactivity-explanation-failed',
+    'bugbot-review-blocks-pending',
 ]);
 const PRESERVED_STATE = 'Existing persisted state and completed external effects were preserved.';
 const UNCHANGED_STATE = 'No new state or external effect was created.';
@@ -5207,6 +5229,12 @@ exports.APPLICATION_ERROR_METADATA = {
         action: 'Inspect the current state and retry the failed step.',
         retainedState: PRESERVED_STATE,
     },
+    'workflow.presentation-pending': {
+        kind: 'workflow', retryable: true,
+        impact: 'Bugbot completed the review, but historical review summaries are not fully synchronized.',
+        action: 'Run a Bugbot recheck to continue the bounded presentation repair.',
+        retainedState: PRESERVED_STATE,
+    },
     timeout: {
         kind: 'workflow', retryable: true,
         impact: 'The operation exceeded its bounded execution time.',
@@ -5274,6 +5302,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'pull-request-link-base-and-reference-retained': Object.freeze([]),
     'managed-branch-enrichment-failed': Object.freeze(['branchName']),
     'inactivity-explanation-failed': Object.freeze(['issueNumber']),
+    'bugbot-review-blocks-pending': Object.freeze(['pendingCount']),
 });
 function normalizeApplicationErrorRecovery(recovery) {
     if (!recovery)
@@ -5298,6 +5327,12 @@ function normalizeApplicationErrorRecovery(recovery) {
             || !Number.isSafeInteger(variables.issueNumber)
             || variables.issueNumber < 1)) {
         throw new TypeError('Application error recovery issue number is invalid.');
+    }
+    if (recovery.id === 'bugbot-review-blocks-pending'
+        && (typeof variables.pendingCount !== 'number'
+            || !Number.isSafeInteger(variables.pendingCount)
+            || variables.pendingCount < 1)) {
+        throw new TypeError('Application error recovery pending count is invalid.');
     }
     return Object.freeze({
         id: recovery.id,

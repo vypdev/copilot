@@ -68,6 +68,25 @@ function harness() {
   };
 }
 
+function staleReviewSnapshot(count: number): BugbotReconciliationSnapshot {
+  const marker = buildMarker('historical-finding', false, 'fp-11111111', 'sf-11111111');
+  return snapshot({
+    pullRequestComments: Array.from({ length: count }, (_, index) => ({
+      id: index + 1,
+      identity: `PRRC_${index + 1}`,
+      parentReviewIdentity: String(index + 1),
+      authorLogin: 'bugbot',
+      body: marker,
+    })),
+    reviews: Array.from({ length: count }, (_, index) => ({
+      identity: String(index + 1),
+      authorLogin: 'bugbot',
+      body: 'old',
+      commitId: head,
+    })),
+  });
+}
+
 describe('synchronizeBugbotReviewPresentation', () => {
   it('does not mutate presentation when trusted navigation is unavailable', async () => {
     const test = harness();
@@ -159,6 +178,99 @@ describe('synchronizeBugbotReviewPresentation', () => {
       expect.stringContaining('could not fully synchronize'),
       { commitSha: head },
     );
+  });
+
+  it('repairs 42 stale reviews in sequential batches with at most four concurrent writes', async () => {
+    const test = harness();
+    let active = 0;
+    let completed = 0;
+    let maximumConcurrency = 0;
+    let overlappingBatches = false;
+    test.updatePullRequestReview.mockImplementation(async () => {
+      const started = test.updatePullRequestReview.mock.calls.length;
+      if (started > 20 && completed < 20) overlappingBatches = true;
+      if (started > 40 && completed < 40) overlappingBatches = true;
+      active += 1;
+      maximumConcurrency = Math.max(maximumConcurrency, active);
+      await Promise.resolve();
+      completed += 1;
+      active -= 1;
+    });
+
+    const result = await synchronizeBugbotReviewPresentation({
+      target: target(), snapshot: staleReviewSnapshot(42), plan: plan(), ports: test.ports,
+    });
+
+    expect(result.reviewUpdates).toBe(42);
+    expect(result.pendingReviewUpdates).toBe(0);
+    expect(result.errors).toEqual([]);
+    expect(result.projection.outcome).toBe('complete');
+    expect(test.updatePullRequestReview).toHaveBeenCalledTimes(42);
+    expect(maximumConcurrency).toBeLessThanOrEqual(4);
+    expect(overlappingBatches).toBe(false);
+  });
+
+  it('caps one run at 100 attempts and reports the exact remainder as presentation pending', async () => {
+    const test = harness();
+    const result = await synchronizeBugbotReviewPresentation({
+      target: target(), snapshot: staleReviewSnapshot(101), plan: plan(), ports: test.ports,
+    });
+
+    expect(test.updatePullRequestReview).toHaveBeenCalledTimes(100);
+    expect(result.reviewUpdates).toBe(100);
+    expect(result.pendingReviewUpdates).toBe(1);
+    expect(result.projection.outcome).toBe('failed');
+    expect(result.errors).toEqual([expect.objectContaining({
+      code: 'workflow.presentation-pending',
+      message: expect.stringContaining('1 Bugbot review status block'),
+      recovery: { id: 'bugbot-review-blocks-pending', variables: { pendingCount: 1 } },
+    })]);
+    expect(test.addComment).toHaveBeenCalledWith(
+      10, expect.stringContaining('1 Bugbot review status block'), { commitSha: head },
+    );
+  });
+
+  it('stops after a failed batch and leaves unattempted reviews for an idempotent retry', async () => {
+    const test = harness();
+    const currentSnapshot = staleReviewSnapshot(42);
+    const successfulBodies = new Map<string, string>();
+    let firstAttempt = true;
+    test.updatePullRequestReview.mockImplementation(async (_number, identity: string, body: string) => {
+      if (identity === '1' && firstAttempt) throw new Error('provider failure');
+      successfulBodies.set(identity, body);
+    });
+    const result = await synchronizeBugbotReviewPresentation({
+      target: target(), snapshot: currentSnapshot, plan: plan(), ports: test.ports,
+    });
+
+    expect(test.updatePullRequestReview).toHaveBeenCalledTimes(20);
+    expect(result.reviewUpdates).toBe(19);
+    expect(result.pendingReviewUpdates).toBe(22);
+    expect(result.projection.outcome).toBe('failed');
+    expect(result.errors).toEqual(expect.arrayContaining([
+      expect.objectContaining({ message: 'Unable to update Bugbot review 1.' }),
+      expect.objectContaining({ code: 'workflow.presentation-pending' }),
+    ]));
+
+    firstAttempt = false;
+    test.updatePullRequestReview.mockClear();
+    const retry = await synchronizeBugbotReviewPresentation({
+      target: target(),
+      snapshot: snapshot({
+        ...currentSnapshot,
+        reviews: currentSnapshot.reviews.map((review) => ({
+          ...review,
+          body: successfulBodies.get(review.identity) ?? review.body,
+        })),
+      }),
+      plan: plan(),
+      ports: test.ports,
+    });
+    expect(retry.reviewUpdates).toBe(23);
+    expect(retry.pendingReviewUpdates).toBe(0);
+    expect(retry.errors).toEqual([]);
+    expect(test.updatePullRequestReview).toHaveBeenCalledTimes(23);
+    expect(test.updatePullRequestReview.mock.calls.map((call) => call[1])).not.toContain('2');
   });
 
   it('renders recovery diagnostics with the same configured catalog as the status card', async () => {

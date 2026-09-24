@@ -12,7 +12,7 @@ describe('ApplicationError', () => {
     it('exposes the closed semantic contract for every error code', () => {
         const codes = Object.keys(APPLICATION_ERROR_METADATA) as ApplicationErrorCode[];
 
-        expect(codes).toHaveLength(20);
+        expect(codes).toHaveLength(21);
         for (const code of codes) {
             const error = new ApplicationError(code, 'Safe public message.', { correlationId: CORRELATION_ID });
             expect(error).toMatchObject({
@@ -25,6 +25,27 @@ describe('ApplicationError', () => {
             expect(error.impact).not.toBe('');
             expect(error.action).not.toBe('');
             expect(error.retainedState).not.toBe('');
+        }
+    });
+
+    it('explains presentation backlog without claiming the provider is down', () => {
+        const error = new ApplicationError('workflow.presentation-pending',
+            '1 Bugbot review status block remains pending.', {
+                correlationId: CORRELATION_ID,
+                recovery: { id: 'bugbot-review-blocks-pending', variables: { pendingCount: 1 } },
+            });
+        expect(error).toMatchObject({ kind: 'workflow', retryable: true });
+        expect(error.impact).toContain('historical review summaries');
+        expect(error.action).toContain('Bugbot recheck');
+        expect(error.impact).not.toContain('provider');
+        expect(error.recovery).toEqual({
+            id: 'bugbot-review-blocks-pending', variables: { pendingCount: 1 },
+        });
+        for (const pendingCount of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+            expect(() => new ApplicationError('workflow.presentation-pending', 'Invalid.', {
+                correlationId: CORRELATION_ID,
+                recovery: { id: 'bugbot-review-blocks-pending', variables: { pendingCount } },
+            })).toThrow('pending count is invalid');
         }
     });
 

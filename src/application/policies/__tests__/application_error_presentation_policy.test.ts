@@ -52,6 +52,11 @@ const RECOVERY_CASES: readonly Readonly<{
         english: 'Issue #42 remains closed; the completed close will not be repeated.',
         spanish: 'La issue #42 permanece cerrada; el cierre completado no se repetirá.',
     },
+    {
+        recovery: { id: 'bugbot-review-blocks-pending', variables: { pendingCount: 22 } },
+        english: 'The completed analysis and successful review updates were preserved.',
+        spanish: 'Se conservaron el análisis completado y las actualizaciones de revisión correctas.',
+    },
 ];
 
 describe('application error presentation policy', () => {
@@ -120,6 +125,21 @@ describe('application error presentation policy', () => {
     it('covers every closed recovery variant exactly once', () => {
         expect(RECOVERY_CASES.map(({ recovery }) => recovery.id).sort())
             .toEqual([...APPLICATION_ERROR_RECOVERY_IDS].sort());
+    });
+
+    it('renders the exact pending-review count without alleging provider unavailability', () => {
+        const error = new ApplicationError('workflow.presentation-pending', 'Internal detail.', {
+            correlationId: CORRELATION_ID,
+            recovery: { id: 'bugbot-review-blocks-pending', variables: { pendingCount: 22 } },
+        });
+        const english = renderApplicationErrorText(error);
+        const spanish = renderApplicationErrorText(
+            error, resolveStaticApplicationErrorCatalog('es-ES').message,
+        );
+        expect(english).toContain('22 historical review status blocks remain pending');
+        expect(spanish).toContain('quedan 22 bloques de estado');
+        expect(english).not.toContain('The provider was temporarily unavailable');
+        expect(spanish).not.toContain('El proveedor no estaba disponible');
     });
 
     it('renders compact GitHub Markdown from semantic fields without producer prose', () => {

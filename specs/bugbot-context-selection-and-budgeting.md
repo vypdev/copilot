@@ -398,7 +398,7 @@ provider page limits and partition execution failures.
 ## 14. Testing strategy and numeric budget
 
 This SDD retains its **18 distinct context-selection cases**. The partitioned
-analysis extension adds the separate 43-case budget in
+analysis extension adds the separate 67-case budget in
 `bugbot-exhaustive-partitioned-analysis.md`; neither budget double-counts cases.
 
 | Area | Minimum cases | Required risks |
@@ -499,7 +499,7 @@ and catalog evidence in the implementation slice.
 - Decision: diff prompt budgets create at most 64 lossless partitions; a larger
   plan fails before the model rather than publishing a partial packing result.
 - Companion: `bugbot-exhaustive-partitioned-analysis.md` owns partition and
-  aggregation details, UX, and its 43-case budget.
+  aggregation details, UX, and its 67-case budget.
 - Implementation evidence: `src/domain/bugbot/context.ts`,
   `src/application/usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts`,
   `src/infrastructure/composition/bugbot_scm_port_factory.ts`, provider

@@ -7,6 +7,7 @@ import type {
 } from '../../../../contracts/bugbot_reconciliation';
 import type { BugbotPresentationMutationPorts } from '../../../../ports/bugbot_reconciliation_ports';
 import type { BugbotReviewNavigation } from '../../../../ports/bugbot_review_navigation_ports';
+import { ApplicationError } from '../../../../errors/application_error';
 import {
   isBugbotStatusComment,
   renderBugbotReviewSnapshot,
@@ -26,7 +27,8 @@ import {
   type BugbotMessageCatalog,
 } from '../../../../policies/bugbot_message_catalog';
 
-const MAX_REVIEW_UPDATES_PER_RUN = 20;
+const REVIEW_UPDATE_BATCH_SIZE = 20;
+const MAX_REVIEW_UPDATES_PER_RUN = 100;
 const REVIEW_UPDATE_CONCURRENCY = 4;
 
 export type { BugbotPresentationMutationPorts } from '../../../../ports/bugbot_reconciliation_ports';
@@ -67,29 +69,37 @@ export async function synchronizeBugbotReviewPresentation(
 
   const plannedReviewUpdates = planReviewUpdates(input, projection, navigation, catalog);
   const selectedReviewUpdates = plannedReviewUpdates.slice(0, MAX_REVIEW_UPDATES_PER_RUN);
-  const reviewWriteResults = await mapWithConcurrency(
-    selectedReviewUpdates,
-    REVIEW_UPDATE_CONCURRENCY,
-    async ({ ownedReview, body }) => {
-      await input.ports.updatePullRequestReview(
-        input.target.pullRequestNumber,
-        ownedReview.review.identity,
-        body,
-      );
-    },
-  );
-  const reviewUpdates = reviewWriteResults.filter((result) => result === 'fulfilled').length;
-  const reviewFailures = reviewWriteResults.flatMap((result, index) =>
-    result === 'rejected'
-      ? [toPresentationFailure({
+  let attemptedReviewUpdates = 0;
+  let reviewUpdates = 0;
+  const reviewFailures: PresentationFailure[] = [];
+  for (let offset = 0; offset < selectedReviewUpdates.length; offset += REVIEW_UPDATE_BATCH_SIZE) {
+    const batch = selectedReviewUpdates.slice(offset, offset + REVIEW_UPDATE_BATCH_SIZE);
+    const results = await mapWithConcurrency(
+      batch,
+      REVIEW_UPDATE_CONCURRENCY,
+      async ({ ownedReview, body }) => {
+        await input.ports.updatePullRequestReview(
+          input.target.pullRequestNumber,
+          ownedReview.review.identity,
+          body,
+        );
+      },
+    );
+    attemptedReviewUpdates += batch.length;
+    reviewUpdates += results.filter((result) => result === 'fulfilled').length;
+    results.forEach((result, index) => {
+      if (result === 'rejected') {
+        reviewFailures.push(toPresentationFailure({
           code: 'review-update-failed',
-          reviewIdentity: selectedReviewUpdates[index].ownedReview.review.identity,
-        })]
-      : [],
-  );
+          reviewIdentity: batch[index].ownedReview.review.identity,
+        }));
+      }
+    });
+    if (results.includes('rejected')) break;
+  }
   const pendingReviewUpdates = Math.max(
     0,
-    plannedReviewUpdates.length - MAX_REVIEW_UPDATES_PER_RUN,
+    plannedReviewUpdates.length - attemptedReviewUpdates,
   );
   if (pendingReviewUpdates > 0) {
     reviewFailures.push(toPresentationFailure({
@@ -234,9 +244,17 @@ function statusFailure(): {
 }
 
 function toPresentationFailure(diagnostic: BugbotPresentationDiagnostic): PresentationFailure {
+  const message = bugbotDiagnosticOperatorMessage(diagnostic);
   return {
     diagnostic,
-    error: new Error(bugbotDiagnosticOperatorMessage(diagnostic)),
+    error: diagnostic.code === 'review-updates-pending'
+      ? new ApplicationError('workflow.presentation-pending', message, {
+          recovery: {
+            id: 'bugbot-review-blocks-pending',
+            variables: { pendingCount: diagnostic.count },
+          },
+        })
+      : new Error(message),
   };
 }
 
