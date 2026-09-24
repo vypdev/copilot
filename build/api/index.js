@@ -4088,6 +4088,8 @@ const agent_task_policy_1 = __nccwpck_require__(5712);
 const schema_1 = __nccwpck_require__(6808);
 const agent_output_locale_policy_1 = __nccwpck_require__(601);
 const application_error_1 = __nccwpck_require__(5999);
+const logging_ports_1 = __nccwpck_require__(6152);
+const MAX_PARTITION_QUERY_ATTEMPTS = 3;
 function bugbotQueryOptions(schema) {
     return (0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('bugbot-review', schema);
 }
@@ -4108,21 +4110,31 @@ async function queryBugbotFindings(repository, configuration, prompt, targetLoca
 }
 /** Queries one immutable diff partition and rejects stale, replayed, or malformed attestations. */
 async function queryBugbotPartitionFindings(repository, configuration, prompt, targetLocale, expected) {
-    const response = await repository.query({
-        configuration,
-        agentId: agent_task_policy_1.AGENT_PLAN,
-        prompt,
-        options: bugbotQueryOptions(schema_1.BUGBOT_PARTITION_RESPONSE_SCHEMA),
-    });
-    const validation = (0, agent_output_locale_policy_1.validateAgentOutputLocale)(response, targetLocale);
-    if (validation.kind === 'invalid') {
-        throw new application_error_1.ApplicationError('locale.output-invalid', (0, agent_output_locale_policy_1.agentOutputLocaleFailureMessage)(validation));
+    for (let attempt = 1; attempt <= MAX_PARTITION_QUERY_ATTEMPTS; attempt += 1) {
+        try {
+            const response = await repository.query({
+                configuration,
+                agentId: agent_task_policy_1.AGENT_PLAN,
+                prompt,
+                options: bugbotQueryOptions(schema_1.BUGBOT_PARTITION_RESPONSE_SCHEMA),
+            });
+            const validation = (0, agent_output_locale_policy_1.validateAgentOutputLocale)(response, targetLocale);
+            if (validation.kind === 'invalid') {
+                throw new application_error_1.ApplicationError('locale.output-invalid', (0, agent_output_locale_policy_1.agentOutputLocaleFailureMessage)(validation));
+            }
+            if (validation.payload.partition_id !== expected.partitionId
+                || validation.payload.reviewed_head_sha !== expected.headSha) {
+                throw new application_error_1.ApplicationError('agent.failed', `Configured agent returned an invalid Bugbot partition attestation for ${expected.partitionId}.`);
+            }
+            return validation.payload;
+        }
+        catch (error) {
+            if (attempt === MAX_PARTITION_QUERY_ATTEMPTS)
+                throw error;
+            (0, logging_ports_1.logInfo)(`Bugbot reviewer retrying one partition query (${attempt + 1}/${MAX_PARTITION_QUERY_ATTEMPTS}) after unusable agent output.`);
+        }
     }
-    if (validation.payload.partition_id !== expected.partitionId
-        || validation.payload.reviewed_head_sha !== expected.headSha) {
-        throw new application_error_1.ApplicationError('agent.failed', `Configured agent returned an invalid Bugbot partition attestation for ${expected.partitionId}.`);
-    }
-    return validation.payload;
+    throw new application_error_1.ApplicationError('agent.failed', 'Bugbot partition query exhausted its bounded attempts.');
 }
 
 

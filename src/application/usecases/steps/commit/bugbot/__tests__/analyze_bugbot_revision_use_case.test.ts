@@ -134,6 +134,59 @@ describe('analyzeBugbotRevision partition execution', () => {
     }));
   });
 
+  it('keeps a partition retry inside its concurrency slot without rerunning completed partitions', async () => {
+    const partitions = [partition(1, 3), partition(2, 3), partition(3, 3)];
+    const attempts = new Map<string, number>();
+    let active = 0;
+    let maximum = 0;
+    let failFirst: () => void = () => undefined;
+    let finishRetry: () => void = () => undefined;
+    let finishSecond: () => void = () => undefined;
+    const query = jest.fn(({ prompt }: { prompt: string }) => {
+      const id = prompt.match(/Return partition_id exactly as `([^`]+)`/u)?.[1] ?? '';
+      const attempt = (attempts.get(id) ?? 0) + 1;
+      attempts.set(id, attempt);
+      active += 1;
+      maximum = Math.max(maximum, active);
+      if (id === partitions[0].id && attempt === 1) {
+        return new Promise<ReturnType<typeof attestedResponse>>((_, reject) => {
+          failFirst = () => { active -= 1; reject(new Error('temporary CLI failure')); };
+        });
+      }
+      if (id === partitions[0].id && attempt === 2) {
+        return new Promise<ReturnType<typeof attestedResponse>>((resolve) => {
+          finishRetry = () => { active -= 1; resolve(attestedResponse(prompt, 1)); };
+        });
+      }
+      if (id === partitions[1].id) {
+        return new Promise<ReturnType<typeof attestedResponse>>((resolve) => {
+          finishSecond = () => { active -= 1; resolve(attestedResponse(prompt, 2)); };
+        });
+      }
+      active -= 1;
+      return Promise.resolve(attestedResponse(prompt, id === partitions[0].id ? 1 : 3));
+    });
+
+    const resultPromise = analyzeBugbotRevision(operation(), context(partitions), {
+      agent: { query }, telemetry: new BugbotReviewTelemetry(operation()),
+    });
+    await flushMicrotasks();
+    expect(query).toHaveBeenCalledTimes(2);
+    failFirst();
+    await flushMicrotasks();
+    expect(query).toHaveBeenCalledTimes(3);
+    expect(query.mock.calls[2][0].prompt).toContain(partitions[0].id);
+    finishRetry();
+    await flushMicrotasks();
+    expect(query).toHaveBeenCalledTimes(4);
+    finishSecond();
+    const prepared = await resultPromise;
+
+    expect(query).toHaveBeenCalledTimes(4);
+    expect(maximum).toBe(2);
+    expect(prepared?.activeFindings).toHaveLength(3);
+  });
+
   it('fails the aggregate when a non-owner partition returns a resolution claim', async () => {
     const partitions = [partition(1, 2), partition(2, 2)];
     let ordinal = 0;
@@ -179,12 +232,10 @@ describe('analyzeBugbotRevision partition execution', () => {
 
   it('fails without an aggregate when any partition query fails', async () => {
     const partitions = [partition(1, 2), partition(2, 2)];
-    let ordinal = 0;
     const query = jest.fn(({ prompt }: { prompt: string }) => {
-      ordinal += 1;
-      return ordinal === 2
+      return prompt.includes(partitions[1].id)
         ? Promise.reject(new Error('reviewer unavailable'))
-        : Promise.resolve(attestedResponse(prompt, ordinal));
+        : Promise.resolve(attestedResponse(prompt, 1));
     });
 
     const telemetry = new BugbotReviewTelemetry(operation());
@@ -192,6 +243,7 @@ describe('analyzeBugbotRevision partition execution', () => {
       agent: { query },
       telemetry,
     })).rejects.toThrow('reviewer unavailable');
+    expect(query).toHaveBeenCalledTimes(4);
     expect(telemetry.snapshot('failed')).toEqual(expect.objectContaining({
       completedAnalysisPartitions: 1,
       failedAnalysisPartitionOrdinal: 2,

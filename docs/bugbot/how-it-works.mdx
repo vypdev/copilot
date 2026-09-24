@@ -73,8 +73,11 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
    remains intact inside the review payload. Only partition one receives
    **previously reported findings** and owns task 2; every other partition must
    return an empty resolution list. Each structured response must echo its exact
-   partition id and head SHA. A missing, duplicated, stale, malformed, or failed
-   response aborts the aggregate before any GitHub mutation. When no canonical
+   partition id and head SHA. An unusable agent response is retried for that
+   partition at most twice with identical inputs. A still-missing, stale,
+   malformed, or failed response aborts the aggregate after that bound;
+   duplicate partition responses also abort aggregation before any GitHub
+   mutation. When no canonical
    PR diff exists, issue-only/push fallback reviews retain the established
    single-query branch/base or current-commit scope. Plans are capped at 64
    partitions; a larger diff fails before model execution and asks the maintainer

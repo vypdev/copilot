@@ -150,8 +150,10 @@ No behavior change is proposed.
   PR-required route without a verified canonical PR aborts without analysis.
 - Reaching a non-diff/provider context cap is explicit partial coverage; provider read
   failure aborts before the model and is not converted to empty context.
-- Diff prompt overflow creates lossless partitions. A missing/invalid partition
-  aborts the whole aggregate before mutation; a plan over 64 partitions does not start.
+- Diff prompt overflow creates lossless partitions. An agent-call or response-
+  validation failure may be retried twice for that same partition only; a
+  missing/invalid partition after this fixed bound aborts the whole aggregate
+  before mutation. A plan over 64 partitions does not start.
 
 ### 6.3 Finding state model
 

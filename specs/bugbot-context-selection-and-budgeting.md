@@ -251,7 +251,7 @@ partition, fragment, assigned-file, concurrency, and character totals.
 | all applicable reads complete, no cap hit | complete | yes | ordinary policy |
 | comment/history/rule or provider diff cap hit | partial | yes when a safe plan exists | new findings for included evidence; no whole-PR clean; resolve only included IDs with current evidence |
 | diff exceeds 64 partitions | failed | no | no publication/resolution; split PR |
-| one partition/attestation fails | failed | queued work stops; active calls drain | no publication/resolution; retry current head |
+| one partition/attestation fails after at most three identical local attempts | failed | queued work stops; active calls drain | no publication/resolution; retry current head |
 | issue comments fail when issue exists | unavailable | no | none |
 | PR comments or threads fail | unavailable | no | none |
 | diff/identity read fails or PR changes SHA | stale/unavailable | no | none |

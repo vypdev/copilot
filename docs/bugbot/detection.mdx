@@ -230,9 +230,10 @@ findings, so any existing unresolved finding remains open. The legacy
 single-query path is reserved for non-PR issue or commit contexts that have no
 canonical pull-request diff plan.
 
-If any planned partition fails, is missing, returns the wrong identity/SHA, or
-attempts a resolution outside the sole resolution-owner partition, the whole
-analysis fails before finding publication or resolution. A provider file-page
+If any planned partition still fails, is missing, or returns the wrong
+identity/SHA after at most three identical local attempts, or attempts a
+resolution outside the sole resolution-owner partition, the whole analysis
+fails before finding publication or resolution. A provider file-page
 cap is still partial because unenumerated files cannot be planned. Partial analysis
 may still report findings supported by retained evidence, but it never says the
 whole PR is clean, never resolves a prior finding omitted from the prompt, and

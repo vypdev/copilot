@@ -147,8 +147,15 @@ analysis detects every defect.
 8. Global normalization, safety filtering, deduplication, ranking, and comment
    limiting MUST run after responses are combined, never independently per
    partition.
-9. Any missing/duplicate/wrong partition attestation, invalid response, model
-   failure, or stale SHA fails the aggregate closed with no SCM mutation.
+9. Each partition query MAY make at most three identical, sequential attempts
+   when the agent call fails or its response fails locale/attestation
+   validation. The retry is internal to that partition's existing concurrency
+   slot, uses no provider mutation, never accepts or combines a rejected
+   response, and MUST NOT retry aggregate invariants, provider diff reads, or
+   stale SHA. Any missing/duplicate/wrong partition attestation, invalid
+   response, or model failure still present after that fixed bound fails the
+   aggregate closed with no SCM mutation. No retry changes the immutable
+   partition ID, reviewed head, assigned scope, prompt, or output schema.
 10. Provider-incomplete diff enumeration remains partial and can never yield a
    whole-PR clean result.
 11. Repository content, patches, provider file status/count metadata,
@@ -544,17 +551,17 @@ comments remain untouched.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **62 distinct cases**.
+This SDD owns at least **65 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain/pure planning | 35 | empty/single/multi-file, newline/hard split, UTF-16 surrogate-safe hard boundaries and pre-ignore rejection of isolated high/low surrogates, collision-free untrusted-data framing with verbatim delimiter-like patch text, individual and cumulative raw input ceilings before normalization, NFKC-expanded sanitized aggregate ceiling before section rendering, exact prompt and 64/65 partition boundaries, omitted/null/empty patch assignments, malformed change/object/filename/status/count/patch rejection even on ignored paths, root/nested leading-`**/` ignore parity, canonical SHA-1/SHA-256 head acceptance plus hostile/invalid head rejection before interpolation, full SHA-256 ID format plus content/head sensitivity, stable IDs, order, no character loss, hostile status/count metadata envelope |
-| State/application/idempotency/races | 8 | all-complete, one failure, wrong/duplicate ID, wrong SHA, resolution ownership, stale head, replay, empty canonical zero-work |
+| State/application/idempotency/races | 11 | all-complete, one failure, wrong/duplicate ID, wrong SHA, resolution ownership, stale head, replay, empty canonical zero-work, partition-local recovery after agent failure or invalid attestation, bounded exhaustion without publication |
 | Agent adapter/schema contracts | 4 | required attestation, locale, undefined/invalid result, aggregate bounds |
 | Workflow/architecture/telemetry | 5 | concurrency two, ordered collection, no mutation before complete, positive and zero-partition plan metrics |
 | UI/UX/localization/sanitization | 4 | pending, failed, complete, hostile content/control characters |
 | Integration/security/compatibility | 6 | 44-file regression, oversized patch, provider partial, dry-run, legacy issue-only path, ignored-only canonical no-op |
-| **Total** | **62** | No double counting |
+| **Total** | **65** | No double counting |
 
 Planner, attestation, and aggregate pure policies require 100% enumerated branch
 coverage. Changed analyzer/context modules require at least 95% lines/statements
@@ -656,6 +663,18 @@ token scope, secret, or public input.
     fails with bounded split-PR guidance before any diff section, fragment,
     reviewer query, telemetry identity, or publication is created. Ignored
     patches remain outside both size budgets after their shape is validated.
+27. Given a partition agent call fails once or returns a wrong attestation,
+    the reviewer retries only that partition with the exact same prompt,
+    schema, ID, and head; other partitions retain their completed responses,
+    and the aggregate publishes only after a later valid response from every
+    partition.
+28. Given a partition produces three failed or invalid responses, Bugbot stops
+    without publishing or resolving findings, reports the failed partition,
+    and retains all previously published state. The query count for that
+    partition never exceeds three.
+29. Given two partitions run concurrently and one retries, the retry remains
+    inside its occupied slot; at most two agent calls run simultaneously and
+    completed partitions are never queried again within that run.
 
 ## 17. Requirements traceability
 
@@ -665,7 +684,7 @@ token scope, secret, or public input.
 | absent patch without lost review | repository projection plus pure partition policy | omitted/null/empty mixed-file assignments and malformed payload tests | how it works/failure scenarios |
 | root/nested ignore parity | file-ignore policy | leading-`**/` root and nested fixtures | configuration |
 | untrusted diff metadata | diff partition policy + security envelope | hostile filename/status/count/patch fixtures | detection/security |
-| attested atomic execution | partitioned analyzer | failure/identity/concurrency tests | failure scenarios |
+| attested atomic execution | partitioned analyzer and bounded partition query | failure/identity/concurrency plus recovery/exhaustion tests | failure scenarios |
 | global coherent result | aggregate policy + existing preparation | duplicate/rank/limit/resolution tests | detection |
 | same-SHA safety | existing freshness + attestation | stale/replay tests | how it works |
 | content-free progress | telemetry/presentation | schema/render/redaction tests | observability |
@@ -694,7 +713,7 @@ token scope, secret, or public input.
       provider enumeration and every partition respects fixed prompt bounds.
 - [x] Attestation, resolution ownership, concurrency, aggregation, freshness,
       replay, cancellation/failure, and no-prepublication-mutation tests pass.
-- [x] The 62-case floor and changed-module/repository coverage budgets pass.
+- [x] The 65-case floor and changed-module/repository coverage budgets pass.
 - [x] Pending, failed, provider-partial, complete, dry-run, and publication-
       partial surfaces are accurate, localized, accessible, and bounded.
 - [x] No public configuration, permission, credential, or durable-state change

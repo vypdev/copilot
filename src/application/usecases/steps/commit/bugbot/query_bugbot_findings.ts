@@ -8,6 +8,9 @@ import {
     validateAgentOutputLocale,
 } from '../../../../policies/agent_output_locale_policy';
 import { ApplicationError } from '../../../../errors/application_error';
+import { logInfo } from '../../../../ports/logging_ports';
+
+const MAX_PARTITION_QUERY_ATTEMPTS = 3;
 
 function bugbotQueryOptions(schema: Readonly<Record<string, unknown>>) {
     return productFacingAgentQueryOptions('bugbot-review', schema);
@@ -46,22 +49,30 @@ export async function queryBugbotPartitionFindings(
     targetLocale: string,
     expected: BugbotPartitionAttestation,
 ): Promise<Readonly<Record<string, unknown>>> {
-    const response = await repository.query({
-        configuration,
-        agentId: AGENT_PLAN,
-        prompt,
-        options: bugbotQueryOptions(BUGBOT_PARTITION_RESPONSE_SCHEMA),
-    });
-    const validation = validateAgentOutputLocale(response, targetLocale);
-    if (validation.kind === 'invalid') {
-        throw new ApplicationError('locale.output-invalid', agentOutputLocaleFailureMessage(validation));
+    for (let attempt = 1; attempt <= MAX_PARTITION_QUERY_ATTEMPTS; attempt += 1) {
+        try {
+            const response = await repository.query({
+                configuration,
+                agentId: AGENT_PLAN,
+                prompt,
+                options: bugbotQueryOptions(BUGBOT_PARTITION_RESPONSE_SCHEMA),
+            });
+            const validation = validateAgentOutputLocale(response, targetLocale);
+            if (validation.kind === 'invalid') {
+                throw new ApplicationError('locale.output-invalid', agentOutputLocaleFailureMessage(validation));
+            }
+            if (validation.payload.partition_id !== expected.partitionId
+                || validation.payload.reviewed_head_sha !== expected.headSha) {
+                throw new ApplicationError(
+                    'agent.failed',
+                    `Configured agent returned an invalid Bugbot partition attestation for ${expected.partitionId}.`,
+                );
+            }
+            return validation.payload;
+        } catch (error) {
+            if (attempt === MAX_PARTITION_QUERY_ATTEMPTS) throw error;
+            logInfo(`Bugbot reviewer retrying one partition query (${attempt + 1}/${MAX_PARTITION_QUERY_ATTEMPTS}) after unusable agent output.`);
+        }
     }
-    if (validation.payload.partition_id !== expected.partitionId
-        || validation.payload.reviewed_head_sha !== expected.headSha) {
-        throw new ApplicationError(
-            'agent.failed',
-            `Configured agent returned an invalid Bugbot partition attestation for ${expected.partitionId}.`,
-        );
-    }
-    return validation.payload;
+    throw new ApplicationError('agent.failed', 'Bugbot partition query exhausted its bounded attempts.');
 }
