@@ -70,6 +70,12 @@ but unusable, overwrite hand-maintained files, or expose credentials.
   [`architecture-quality-and-scalability-hardening.md`](./architecture-quality-and-scalability-hardening.md).
   Role-specific PAT guidance and safe permission evidence are specified in
   [`setup-pat-permission-guidance-and-verification.md`](./setup-pat-permission-guidance-and-verification.md).
+  Assisted operator PAT creation is proposed in
+  [`temporary-setup-operator-authorization.md`](./temporary-setup-operator-authorization.md),
+  not an implemented setup path.
+  Guided creation of the separate persistent bot PAT is proposed in
+  [`guided-bot-pat-onboarding.md`](./guided-bot-pat-onboarding.md),
+  without a local account manager.
   Transactional rollback across local and GitHub writes requires a separate design.
 
 ## 3. Actors, surfaces, and terminology

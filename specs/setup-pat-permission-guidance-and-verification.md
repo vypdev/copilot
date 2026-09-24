@@ -109,7 +109,12 @@ transient response.
 
 ### 4.2 Non-goals
 
-1. Setup does not enumerate, create, edit, rotate, or revoke GitHub PATs.
+1. The implemented permission-guidance flow does not enumerate, create, edit,
+   rotate, or revoke GitHub PATs. The proposed guided operator PAT flow and
+   its explicit GitHub deletion responsibility are documented in
+   [`temporary-setup-operator-authorization.md`](./temporary-setup-operator-authorization.md).
+   The separate proposed guided workflow PAT is covered by
+   [`guided-bot-pat-onboarding.md`](./guided-bot-pat-onboarding.md).
 2. Setup does not prove write access by creating temporary labels, branches,
    files, Variables, Secrets, comments, projects, or workflow runs.
 3. Existing remote Secret values remain unavailable. Credential-health evidence
