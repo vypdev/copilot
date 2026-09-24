@@ -259,10 +259,18 @@ read-only GitHub queries and presents ordered permission outcomes.
    The separate setup-only credential-health bootstrap adapter MUST apply the
    same two-read confirmation on the selected ref before dispatch or creating
    a temporary workflow, even if Actions finds a workflow on the default
-   branch. A confirmed selected-ref absence may require bootstrap despite
-   default-branch presence; an installed file still needs Actions workflow
-   access before dispatch. Ambiguous reads return unavailable health evidence
-   and MUST NOT create, dispatch, or delete a workflow; doctor remains query-only.
+   branch. Dispatch additionally requires evidence that GitHub can register the
+   workflow from its default branch: either the Actions workflow index resolves
+   the known file, or, when that index returns `404`, repository metadata names
+   a valid default branch and exact Contents inspection proves the workflow
+   installed there. A selected-ref file alone never authorizes dispatch when
+   the default branch lacks the workflow. A confirmed selected-ref absence may
+   require bootstrap despite default-branch presence; if the selected ref is
+   the default branch itself, confirmed absence permits temporary bootstrap
+   there before dispatch. Otherwise, missing or ambiguous default-branch
+   dispatchability evidence returns unavailable without mutation. Ambiguous
+   reads return unavailable health evidence and MUST NOT create, dispatch, or
+   delete a workflow; doctor remains query-only.
    This remote-configuration absence inspection is distinct from the PAT
    permission audit's read-only commit-list probe below. Operator guidance
    MUST identify the correct endpoint for each purpose instead of conflating
@@ -407,8 +415,9 @@ Because the query port is read-only, it MUST NOT establish a write grant. A
 provider result that claims `Verified` for a write requirement is downgraded to
 canonical `Unverifiable` evidence and follows the explicit write-
 acknowledgement flow. `operationallyAvailable` may be retained only for an
-exactly matching repository-scoped read requirement whose status remains
-`Unverifiable`; it cannot make an organization or write requirement usable.
+exactly matching repository-scoped read or organization Members-read
+requirement whose status remains `Unverifiable`; it cannot make organization
+Issue Types or any write requirement usable.
 Retry creates no durable permission state.
 
 ## 7. User-facing configuration
@@ -635,7 +644,7 @@ This SDD adds at least **120 distinct cases**.
 |---|---:|---|
 | Domain permission policy | 25 | setup/workflow plans, independent selected-feature write grants and all-disabled minimum, enabled comment-route file-mutation potential versus individual answer-only events, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants, positive and negative organization-membership capability projection including comment-only and independently available single-action routes |
 | Application state/blocking | 24 | verified, missing, required-read unverifiable, public repository and exact organization-Members operational readiness, required-write confirmation, canonical reconstruction after semantic mismatch, duplicate evidence rejection, verified-write downgrade, invalid base token, organization-only credential collection, bounded pre-plan inspection failure, accepted/rejected final audit with structured block, selected-ref workflow state refresh, immediate remote-storage blocked handling, zero-count assignment and inactive membership checks |
-| Adapter/provider contracts | 40 | GET-only probes, fixed four-request concurrency with stable result order, private-versus-public/unknown visibility evidence, protected-endpoint evidence, exact Members-read operational evidence without permission promotion, commit-list Contents target, private empty-repository 409 versus public operational usability, default-branch Checks resolution plus encoded check-runs target, invalid/missing branch fail-closed behavior, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow on the selected ref in inspection and bootstrap, direct selected-ref dispatch after exact-file proof despite Actions-index 404, malformed root scalar/object success remains unavailable without bootstrap, malformed exact-file success remains unavailable, unavailable endpoint state, duplicate-comment deletion fallback regression |
+| Adapter/provider contracts | 40 | GET-only probes, fixed four-request concurrency with stable result order, private-versus-public/unknown visibility evidence, protected-endpoint evidence, exact Members-read operational evidence without permission promotion, commit-list Contents target, private empty-repository 409 versus public operational usability, default-branch Checks resolution plus encoded check-runs target, invalid/missing branch fail-closed behavior, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow on the selected ref in inspection and bootstrap, default-branch dispatchability proof even when Actions-index returns 404, malformed root scalar/object success remains unavailable without bootstrap, malformed exact-file success remains unavailable, unavailable endpoint state, duplicate-comment deletion fallback regression |
 | Setup/credential integration | 21 | pre-prompt setup table, conditional denial through planning, wizard-owned repository-inventory block plus organization-only continuation, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, absent/failed remote snapshot blocks every subsequent mutation, preserve-disabled and scope-moving keep rejection, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
 | UI/accessibility | 5 | required/result tables, public-read limitation copy, confirmation-required copy, 40-column wrapping, no-color text |
 | Architecture/security/docs | 5 | query-only boundary, no duplicated catalog, safe generic/recovery automation examples, and three nearest-paragraph permission-prerequisite cases |
@@ -797,10 +806,12 @@ at widths 40/80/120 and `NO_COLOR`.
     tags, while unrelated scope unavailability does not stop valid targets.
 35. Given exact Contents inspection proves the credential-health file installed
     on the selected ref, setup dispatches that file path on the selected ref
-    without requiring the default-branch Actions index to resolve it. Given the
+    only when the Actions index resolves it or exact Contents inspection also
+    proves its default-branch definition after an index `404`. Given the
     exact path returns `404`, setup-only credential health bootstraps only after
-    successful Contents visibility on that same ref; unreadable and unsupported
-    cases never create, delete, or dispatch a workflow.
+    successful Contents visibility on that same ref and proof of default-branch
+    dispatchability (or confirmed bootstrap on the default branch itself);
+    unreadable and unsupported cases never create, delete, or dispatch a workflow.
 36. Given all runtime routes are disabled, guarded approval is off, and
     `ai.membersOnly` is off, the
     workflow PAT matrix contains only Metadata read. Enabling a route adds
@@ -815,9 +826,10 @@ at widths 40/80/120 and `NO_COLOR`.
     agent-backed single actions; turning members-only off omits that grant when
     no other membership consumer remains.
 38. Given an exceptional setup shell example, the validator accepts only an
-    immediately preceding prose paragraph that explicitly instructs PAT-setting
-    inspection and confirmation of every required row. Unrelated preceding
-    paragraphs or generic `inspect`/`only after` words cannot authorize it.
+    immediately preceding ordinary prose paragraph that explicitly instructs
+    PAT-setting inspection and confirmation of every required row. Text inside
+    backtick or tilde code fences, unrelated preceding paragraphs, or generic
+    `inspect`/`only after` words cannot authorize it.
 39. Given missing or unconfirmed final setup PAT permissions, the audit returns
     bounded rejection; the wizard returns the normalized configuration and a
     permission-specific `blocked` reason without plan confirmation, credential
@@ -832,8 +844,8 @@ at widths 40/80/120 and `NO_COLOR`.
     array, an absent/empty `sha`, or another malformed file payload, selected-
     ref inspection returns `unavailable` rather than `installed`. Bootstrap
     does not dispatch or mutate on that evidence; a valid non-empty file `sha`
-    establishes installation and permits direct selected-ref dispatch even
-    when the Actions default-branch index would return `404`.
+    establishes installation on that ref but permits dispatch after an Actions
+    index `404` only with separate exact default-branch installation proof.
 42. Given provider evidence reuses a requirement ID but changes any security
     semantic, appears more than once, is absent, or is malformed, the audit
     renders the canonical requirement as `Unverifiable` and blocks required
@@ -846,6 +858,16 @@ at widths 40/80/120 and `NO_COLOR`.
     availability and may satisfy that required read. The same claim attached
     to Issue Types, an organization write, mismatched evidence, or any failed or
     ambiguous response is discarded and blocks readiness.
+44. Given issue workflows remain selected in stored configuration but the
+    effective issue route is disabled, neither PAT matrix retains Issues or
+    Issue Types write or release/hotfix Administration read solely from that
+    stale selection.
+45. Given the selected-ref credential-health file is installed but absent on
+    the default branch and the Actions index returns `404`, setup does not
+    dispatch or mutate. If the selected file is confirmed missing on a
+    nondefault branch, temporary bootstrap likewise requires a dispatchable
+    default-branch definition; missing or malformed branch metadata fails
+    closed. Confirmed absence on the default branch itself may bootstrap there.
 
 ## 17. Requirements traceability
 
@@ -867,7 +889,7 @@ at widths 40/80/120 and `NO_COLOR`.
 | secret safety | all contracts/presenter | redaction fixtures | credentials |
 | feature/effective-target workflow PAT | configuration projection policy | conditional matrix and preserved organization-variable tests | checklist |
 | membership-sensitive workflow PAT | permission policy plus membership-consuming workflows | positive/negative capability matrix and no-query inactive-path tests | authentication/checklist |
-| evidence-based health-workflow state | remote configuration query and setup bootstrap adapters | Actions-404 plus Contents-visibility and exact-file installed/missing/unavailable fixtures, including direct selected-ref dispatch | authentication/troubleshooting |
+| evidence-based health-workflow state | remote configuration query and setup bootstrap adapters | Actions-404 plus Contents-visibility and exact-file installed/missing/unavailable fixtures, including default-branch dispatchability proof | authentication/troubleshooting |
 | empty-repository-safe Contents probe | read-only query adapter | private/public commit-list 409, write, and 404 tests | authentication/troubleshooting |
 | policy-safe existing credential reuse | storage policy + credential use case | preserve-disabled and scope-moving override fixtures | authentication/provisioning |
 | valid Checks commit reference | read-only query adapter | default-branch resolution, encoding, and invalid-metadata tests | authentication/troubleshooting |
@@ -893,7 +915,7 @@ at widths 40/80/120 and `NO_COLOR`.
 - [x] No validation request mutates GitHub and no result overclaims write access.
 - [x] Token values and raw provider text are absent from all output/state/errors.
 - [x] Clean Architecture boundaries and their executable test pass.
-- [x] At least 117 distinct cases and stated coverage thresholds pass.
+- [x] At least 120 distinct cases and stated coverage thresholds pass.
 - [x] Authentication, checklist, troubleshooting, and architecture docs agree.
 - [x] Catalog evidence and generated `specs/CATALOG.md` are current.
 - [x] Specification, documentation, typecheck, lint, and test gates pass.

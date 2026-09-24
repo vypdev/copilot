@@ -48243,6 +48243,7 @@ exports.buildWorkflowPatPermissionRequirements = buildWorkflowPatPermissionRequi
 exports.normalizePermissionRequirements = normalizePermissionRequirements;
 const setup_configuration_plan_1 = __nccwpck_require__(87770);
 const setup_credential_requirement_policy_1 = __nccwpck_require__(43562);
+const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 const setup_configuration_storage_policy_1 = __nccwpck_require__(2554);
 const requirement = (input) => ({
     id: `${input.role}.${input.scope}.${input.permission.toLowerCase().replace(/[^a-z0-9]+/gu, '-')}`,
@@ -48285,10 +48286,11 @@ function buildConfiguredSetupPatPermissionRequirements(configuration, remote) {
     const variableScopes = configuration.manageRepositoryVariables
         ? selectedResourceScopes(configuration, 'variable', repositoryVariableNames, remote)
         : new Set();
-    const enabledIssueWorkflows = configuration.issueWorkflows.enabled.length > 0;
+    const enabledIssueWorkflowKinds = (0, setup_issue_workflow_policy_1.effectiveIssueWorkflowProfile)(configuration).enabled;
+    const enabledIssueWorkflows = enabledIssueWorkflowKinds.length > 0;
     const releaseOrHotfix = configuration.features.release
         || configuration.features.hotfix
-        || configuration.issueWorkflows.enabled.some(kind => kind === 'release' || kind === 'hotfix');
+        || enabledIssueWorkflowKinds.some(kind => kind === 'release' || kind === 'hotfix');
     const guardedApproval = configuration.pullRequestApproval.mode === 'guarded';
     const hasExistingCredential = repositorySecretNames.some(name => remote?.repositorySecrets.includes(name) || remote?.organizationSecrets.includes(name));
     const needsCredentialHealth = configuration.manageRepositorySecrets && hasExistingCredential;
@@ -48350,14 +48352,15 @@ function buildWorkflowPatPermissionRequirements(configuration, remote) {
     const commits = configuration.features.commits !== false;
     const issueComments = configuration.features.issueComments !== false;
     const pullRequestComments = configuration.features.pullRequestComments !== false;
+    const enabledIssueWorkflows = (0, setup_issue_workflow_policy_1.effectiveIssueWorkflowProfile)(configuration).enabled;
     const releaseOrHotfix = configuration.features.release
         || configuration.features.hotfix
-        || (issues && configuration.issueWorkflows.enabled.some(kind => kind === 'release' || kind === 'hotfix'));
+        || enabledIssueWorkflows.some(kind => kind === 'release' || kind === 'hotfix');
     const guardedApproval = configuration.pullRequestApproval.mode === 'guarded';
     const organization = remote?.ownerType === 'Organization';
     const organizationMembers = organization && requiresWorkflowOrganizationMembers(configuration);
     const hasProjects = (issues || pullRequests) && configuration.projects.ids.trim().length > 0;
-    const issueTypes = issues && configuration.issueWorkflows.enabled.length > 0;
+    const issueTypes = enabledIssueWorkflows.length > 0;
     const writesContents = (issues && configuration.repository.issueManagedBranches)
         || issueComments || pullRequestComments || releaseOrHotfix;
     const writesIssues = issues || issueComments || commits
@@ -48397,8 +48400,8 @@ function requiresWorkflowOrganizationMembers(configuration) {
         && (issues || pullRequests);
     const automaticReviewers = configuration.repository.desiredReviewersCount > 0
         && pullRequests;
-    const protectedIssueAuthorization = issues
-        && configuration.issueWorkflows.enabled.some(kind => kind === 'release' || kind === 'hotfix');
+    const protectedIssueAuthorization = (0, setup_issue_workflow_policy_1.effectiveIssueWorkflowProfile)(configuration).enabled
+        .some(kind => kind === 'release' || kind === 'hotfix');
     // Agent-backed single actions remain available when event routes are disabled.
     const membersOnlyAuthorization = configuration.ai.membersOnly;
     return automaticAssignees
@@ -82481,6 +82484,7 @@ exports.SetupRemoteCredentialHealthBootstrapAdapter = exports.SetupRemoteCredent
 const node_fs_1 = __nccwpck_require__(87561);
 const path = __importStar(__nccwpck_require__(49411));
 const setup_workflow_catalog_1 = __nccwpck_require__(24596);
+const deployment_configuration_1 = __nccwpck_require__(22495);
 const credential_health_workflow_visibility_1 = __nccwpck_require__(57628);
 const WORKFLOW_ID = setup_workflow_catalog_1.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE;
 const INPUT_BY_SECRET = {
@@ -82535,6 +82539,8 @@ class SetupRemoteCredentialHealthBootstrapAdapter {
         const selectedWorkflow = await (0, credential_health_workflow_visibility_1.inspectCredentialHealthWorkflowAtRef)(client.repos.getContent, owner, repository, ref);
         if (selectedWorkflow === 'unavailable')
             return undefined;
+        if (!await canDispatchHealthWorkflow(client, owner, repository, ref))
+            return undefined;
         let temporaryWorkflow = false;
         if (selectedWorkflow === 'missing') {
             await this.bootstrapWorkflow(client, owner, repository, ref);
@@ -82580,6 +82586,30 @@ class SetupRemoteCredentialHealthBootstrapAdapter {
     }
 }
 exports.SetupRemoteCredentialHealthBootstrapAdapter = SetupRemoteCredentialHealthBootstrapAdapter;
+/** A selected-ref file is insufficient when GitHub has no default-branch workflow definition. */
+async function canDispatchHealthWorkflow(client, owner, repository, ref) {
+    try {
+        await client.rest.actions.getWorkflow({ owner, repo: repository, workflow_id: WORKFLOW_ID });
+        return true;
+    }
+    catch (error) {
+        if (!isNotFound(error))
+            return false;
+    }
+    let defaultBranch;
+    try {
+        defaultBranch = (await client.repos.get({ owner, repo: repository })).data.default_branch;
+    }
+    catch {
+        return false;
+    }
+    if (typeof defaultBranch !== 'string' || !(0, deployment_configuration_1.isSafeBranchTree)(defaultBranch))
+        return false;
+    // The selected-ref inspection already confirmed a readable file or safe absence.
+    if (defaultBranch === ref)
+        return true;
+    return await (0, credential_health_workflow_visibility_1.inspectCredentialHealthWorkflowAtRef)(client.repos.getContent, owner, repository, defaultBranch) === 'installed';
+}
 async function executeHealthWorkflow(client, owner, repository, ref, requirements, options) {
     const inputs = {};
     for (const requirement of requirements) {

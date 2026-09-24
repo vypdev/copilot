@@ -65,7 +65,7 @@ describe('setup token permission policy', () => {
         ]);
     });
 
-    it('omits managed resource grants and resolves issue-driven administration without remote facts', () => {
+    it('omits stale disabled issue workflows from the configured setup PAT plan', () => {
         const configuration = createDefaultSetupConfiguration();
         configuration.manageRepositorySecrets = false;
         configuration.manageRepositoryVariables = false;
@@ -76,13 +76,31 @@ describe('setup token permission policy', () => {
 
         const permissions = buildConfiguredSetupPatPermissionRequirements(configuration);
 
-        expect(permissions.map(item => item.permission)).toEqual([
-            'Metadata', 'Contents', 'Issues', 'Administration',
-        ]);
+        expect(permissions.map(item => item.permission)).toEqual(['Metadata', 'Contents']);
+
+        configuration.features.release = true;
+        expect(buildConfiguredSetupPatPermissionRequirements(configuration)
+            .map(item => item.permission)).toEqual(['Metadata', 'Contents', 'Issues', 'Administration']);
 
         configuration.issueWorkflows.enabled = ['hotfix'];
+        configuration.features.release = false;
+        configuration.features.hotfix = true;
         expect(buildConfiguredSetupPatPermissionRequirements(configuration)
             .some(item => item.permission === 'Administration')).toBe(true);
+    });
+
+    it('does not require issue setup permissions for selections left behind after disabling issues', () => {
+        const configuration = disabledRuntimeConfiguration();
+        configuration.manageRepositorySecrets = false;
+        configuration.manageRepositoryVariables = false;
+        configuration.createInitialTag = false;
+        configuration.issueWorkflows.enabled = ['feature', 'release'];
+
+        const setupPermissions = buildConfiguredSetupPatPermissionRequirements(configuration, organization);
+        const workflowPermissions = buildWorkflowPatPermissionRequirements(configuration, organization);
+
+        expect(setupPermissions.map(item => item.permission)).toEqual(['Metadata', 'Contents']);
+        expect(workflowPermissions.map(item => item.permission)).toEqual(['Metadata']);
     });
 
     it('detects repository credential health and selected organization Projects in the final setup plan', () => {
@@ -288,7 +306,7 @@ describe('setup token permission policy', () => {
         expect(requirement).toMatchObject({ level: 'read', scope: 'repository' });
     });
 
-    it('derives Administration read from hotfix and issue-workflow choices independently', () => {
+    it('derives Administration read from enabled hotfix automation but not a disabled issue selection', () => {
         const hotfixConfiguration = createDefaultSetupConfiguration();
         hotfixConfiguration.features.release = false;
         hotfixConfiguration.features.hotfix = true;
@@ -303,7 +321,7 @@ describe('setup token permission policy', () => {
         issueConfiguration.issueWorkflows.enabled = ['hotfix'];
         issueConfiguration.pullRequestApproval = { ...issueConfiguration.pullRequestApproval, mode: 'off' };
         expect(buildWorkflowPatPermissionRequirements(issueConfiguration)
-            .some(item => item.permission === 'Administration')).toBe(true);
+            .some(item => item.permission === 'Administration')).toBe(false);
     });
 
     it('adds Checks and Variables read for guarded approval', () => {

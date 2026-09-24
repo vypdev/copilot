@@ -12,6 +12,7 @@ import type {
   GithubWorkflowRun,
 } from './github/ports/github_credential_health_protocol';
 import { SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE } from '../domain/setup_workflow_catalog';
+import { isSafeBranchTree } from '../domain/deployment_configuration';
 import { inspectCredentialHealthWorkflowAtRef } from '../data/repository/github/credential_health_workflow_visibility';
 
 const WORKFLOW_ID = SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE;
@@ -100,6 +101,7 @@ export class SetupRemoteCredentialHealthBootstrapAdapter implements SetupRemoteC
       client.repos.getContent, owner, repository, ref,
     );
     if (selectedWorkflow === 'unavailable') return undefined;
+    if (!await canDispatchHealthWorkflow(client, owner, repository, ref)) return undefined;
     let temporaryWorkflow = false;
     if (selectedWorkflow === 'missing') {
       await this.bootstrapWorkflow(client, owner, repository, ref);
@@ -151,6 +153,34 @@ export class SetupRemoteCredentialHealthBootstrapAdapter implements SetupRemoteC
       branch: ref,
     });
   }
+}
+
+/** A selected-ref file is insufficient when GitHub has no default-branch workflow definition. */
+async function canDispatchHealthWorkflow(
+  client: GithubCredentialHealthClient,
+  owner: string,
+  repository: string,
+  ref: string,
+): Promise<boolean> {
+  try {
+    await client.rest.actions.getWorkflow({ owner, repo: repository, workflow_id: WORKFLOW_ID });
+    return true;
+  } catch (error) {
+    if (!isNotFound(error)) return false;
+  }
+
+  let defaultBranch: unknown;
+  try {
+    defaultBranch = (await client.repos.get({ owner, repo: repository })).data.default_branch;
+  } catch {
+    return false;
+  }
+  if (typeof defaultBranch !== 'string' || !isSafeBranchTree(defaultBranch)) return false;
+  // The selected-ref inspection already confirmed a readable file or safe absence.
+  if (defaultBranch === ref) return true;
+  return await inspectCredentialHealthWorkflowAtRef(
+    client.repos.getContent, owner, repository, defaultBranch,
+  ) === 'installed';
 }
 
 async function executeHealthWorkflow(

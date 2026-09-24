@@ -23,4 +23,19 @@ describe('inspected-PAT documentation exception', () => {
     const source = `Inspect settings; use this only after thinking about it.\n\n${command}`;
     expect(hasAdjacentInspectedPatPrerequisite(source, source.indexOf('```bash'))).toBe(false);
   });
+
+  it.each(['```', '~~~'])('does not accept prerequisite text inside a %s code fence', marker => {
+    const source = `${marker}text\n${exactPrerequisite}\n${marker}\n\n${command}`;
+    expect(hasAdjacentInspectedPatPrerequisite(source, source.lastIndexOf('```bash'))).toBe(false);
+  });
+
+  it('accepts a real adjacent prose paragraph after an earlier fenced example', () => {
+    const source = `~~~text\nUnrelated example\n~~~\n\n${exactPrerequisite}\n\n${command}`;
+    expect(hasAdjacentInspectedPatPrerequisite(source, source.indexOf('```bash'))).toBe(true);
+  });
+
+  it('rejects an apparent shell block nested inside an unclosed fence', () => {
+    const source = `~~~~text\n${exactPrerequisite}\n\n${command}`;
+    expect(hasAdjacentInspectedPatPrerequisite(source, source.indexOf('```bash'))).toBe(false);
+  });
 });

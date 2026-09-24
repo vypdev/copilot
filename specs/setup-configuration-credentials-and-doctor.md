@@ -141,12 +141,15 @@ cancellation, skipped diagnosis, ordering, and read-only authority explicit.
   flags, and credentials, and MUST fail on missing external inputs.
 - `--yes` approves only the final plan and never supplies a missing decision.
 - `--skip-variables` and `--skip-secrets` leave those remote resource classes untouched.
-- Existing valid credentials may be kept only when the effective storage policy
+- Existing valid non-workflow credentials may be kept only when the effective storage policy
   preserves their current scope. Disabling `preserveExisting`, or selecting an
   explicit per-resource override that moves the Secret to another scope,
   converts `keep` into a replacement flow; setup MUST collect and validate the
   value before provisioning the selected target. An explicit override that
   names the already-effective scope does not require a redundant rewrite.
+- An existing workflow `PAT` is an exception: setup requires re-entry and a
+  complete permission audit before provisioning; credential health and storage
+  preservation do not authorize an unaudited keep path.
 - Invalid required credentials must be replaced.
 - A missing remote resource snapshot is never an empty inventory. Selected
   Secret/Variable management MUST stop before all remote resource, label,

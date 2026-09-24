@@ -694,7 +694,7 @@ token scope, secret, or public input.
       provider enumeration and every partition respects fixed prompt bounds.
 - [x] Attestation, resolution ownership, concurrency, aggregation, freshness,
       replay, cancellation/failure, and no-prepublication-mutation tests pass.
-- [x] The 61-case floor and changed-module/repository coverage budgets pass.
+- [x] The 62-case floor and changed-module/repository coverage budgets pass.
 - [x] Pending, failed, provider-partial, complete, dry-run, and publication-
       partial surfaces are accurate, localized, accessible, and bounded.
 - [x] No public configuration, permission, credential, or durable-state change

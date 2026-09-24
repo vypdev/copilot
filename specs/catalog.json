@@ -643,7 +643,7 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-23",
+      "lastVerified": "2026-09-24",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
@@ -697,7 +697,8 @@
         "src/infrastructure/composition/setup_credentials_composition_root.ts",
         "src/infrastructure/composition/setup_token_permissions_composition_root.ts",
         "src/infrastructure/composition/setup_doctor_composition_root.ts",
-        "scripts/coverage-budgets.json"
+        "scripts/coverage-budgets.json",
+        "scripts/documentation_pat_exception_policy.cjs"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
@@ -722,7 +723,8 @@
         "src/cli/__tests__/setup_token_permission_presenter.test.ts",
         "src/__tests__/cli.test.ts",
         "src/cli/__tests__/setup_terminal_driver.test.ts",
-        "src/architecture/__tests__/setup_doctor_boundaries.test.ts"
+        "src/architecture/__tests__/setup_doctor_boundaries.test.ts",
+        "src/tooling/__tests__/documentation_pat_exception_policy.test.ts"
       ],
       "documentation": [
         "docs/how-to-use.mdx",
@@ -950,7 +952,7 @@
       "status": "implemented",
       "scope": "Select one canonical PR, exhaustively analyze its bounded diff partitions, publish stable findings atomically, and apply authorized verified fixes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-23",
+      "lastVerified": "2026-09-24",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md",

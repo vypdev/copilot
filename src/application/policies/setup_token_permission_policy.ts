@@ -1,6 +1,7 @@
 import type { SetupConfiguration, SetupRemoteConfiguration } from '../../domain/setup';
 import { buildSetupRepositoryVariables } from './setup_configuration_plan';
 import { buildSetupCredentialRequirements } from './setup_credential_requirement_policy';
+import { effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
 import {
     getSetupResourceStoragePolicy,
     requiresSetupOrganizationInventory,
@@ -73,10 +74,11 @@ export function buildConfiguredSetupPatPermissionRequirements(
     const variableScopes = configuration.manageRepositoryVariables
         ? selectedResourceScopes(configuration, 'variable', repositoryVariableNames, remote)
         : new Set<SetupTokenPermissionScope>();
-    const enabledIssueWorkflows = configuration.issueWorkflows.enabled.length > 0;
+    const enabledIssueWorkflowKinds = effectiveIssueWorkflowProfile(configuration).enabled;
+    const enabledIssueWorkflows = enabledIssueWorkflowKinds.length > 0;
     const releaseOrHotfix = configuration.features.release
         || configuration.features.hotfix
-        || configuration.issueWorkflows.enabled.some(kind => kind === 'release' || kind === 'hotfix');
+        || enabledIssueWorkflowKinds.some(kind => kind === 'release' || kind === 'hotfix');
     const guardedApproval = configuration.pullRequestApproval.mode === 'guarded';
     const hasExistingCredential = repositorySecretNames.some(name =>
         remote?.repositorySecrets.includes(name) || remote?.organizationSecrets.includes(name),
@@ -145,14 +147,15 @@ export function buildWorkflowPatPermissionRequirements(
     const commits = configuration.features.commits !== false;
     const issueComments = configuration.features.issueComments !== false;
     const pullRequestComments = configuration.features.pullRequestComments !== false;
+    const enabledIssueWorkflows = effectiveIssueWorkflowProfile(configuration).enabled;
     const releaseOrHotfix = configuration.features.release
         || configuration.features.hotfix
-        || (issues && configuration.issueWorkflows.enabled.some(kind => kind === 'release' || kind === 'hotfix'));
+        || enabledIssueWorkflows.some(kind => kind === 'release' || kind === 'hotfix');
     const guardedApproval = configuration.pullRequestApproval.mode === 'guarded';
     const organization = remote?.ownerType === 'Organization';
     const organizationMembers = organization && requiresWorkflowOrganizationMembers(configuration);
     const hasProjects = (issues || pullRequests) && configuration.projects.ids.trim().length > 0;
-    const issueTypes = issues && configuration.issueWorkflows.enabled.length > 0;
+    const issueTypes = enabledIssueWorkflows.length > 0;
     const writesContents = (issues && configuration.repository.issueManagedBranches)
         || issueComments || pullRequestComments || releaseOrHotfix;
     const writesIssues = issues || issueComments || commits
@@ -194,8 +197,8 @@ function requiresWorkflowOrganizationMembers(configuration: Readonly<SetupConfig
         && (issues || pullRequests);
     const automaticReviewers = configuration.repository.desiredReviewersCount > 0
         && pullRequests;
-    const protectedIssueAuthorization = issues
-        && configuration.issueWorkflows.enabled.some(kind => kind === 'release' || kind === 'hotfix');
+    const protectedIssueAuthorization = effectiveIssueWorkflowProfile(configuration).enabled
+        .some(kind => kind === 'release' || kind === 'hotfix');
     // Agent-backed single actions remain available when event routes are disabled.
     const membersOnlyAuthorization = configuration.ai.membersOnly;
     return automaticAssignees

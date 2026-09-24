@@ -116,7 +116,7 @@ cannot obtain an authoritative remote snapshot or required selected inventory
 access, it stops before Secrets, Variables, labels, issue types, and tag writes
 with bounded recovery guidance, including for a repository-scope default.
 
-<Info>GitHub does not reveal Secret values through its API. Copilot validates new credentials with provider metadata requests and validates existing remote Secrets through the read-only `copilot_credential_health.yml` workflow. Setup proves the exact file on the selected main ref and dispatches that path directly, even when GitHub's default-branch Actions index cannot resolve it; doctor remains query-only and expects the normally indexed installed workflow. The health workflow reports each requested credential independently, but that bounded reachability result is not a permission audit. If `PAT` already exists, interactive setup asks you to re-enter it and runs the complete workflow-PAT permission matrix before provisioning; unattended setup must supply `PAT` again or stops before mutation. Temporary workflow bootstrap is available only during setup. A preauthenticated Codex session is runner state, not a Secret: it is accepted only when the runtime preflight can execute `codex login status` successfully.</Info>
+<Info>GitHub does not reveal Secret values through its API. Copilot validates new credentials with provider metadata requests and validates existing remote Secrets through the read-only `copilot_credential_health.yml` workflow. Setup proves the exact file on the selected main ref and dispatches that path only when the workflow is also registered or installed on GitHub's default branch; doctor remains query-only and expects the normally indexed installed workflow. The health workflow reports each requested credential independently, but that bounded reachability result is not a permission audit. If `PAT` already exists, interactive setup asks you to re-enter it and runs the complete workflow-PAT permission matrix before provisioning; unattended setup must supply `PAT` again or stops before mutation. Temporary workflow bootstrap is available only during setup. A preauthenticated Codex session is runner state, not a Secret: it is accepted only when the runtime preflight can execute `codex login status` successfully.</Info>
 
 For other existing credentials, choosing `keep` works only when the selected
 storage policy preserves the Secret in its current repository or organization
@@ -137,10 +137,13 @@ audit denies required access, setup reports a bounded blocked result with the
 selected configuration before storage validation or mutation.
 An exact-file response counts as installed only when it identifies a file with
 a non-empty `sha`; an empty object or directory-like response is unavailable.
-Once installed state is proven on the selected ref, setup dispatches the known
-workflow path and that ref without a second lookup in the default-branch
-Actions index. Missing state still follows the bounded temporary-bootstrap
-flow; unavailable state never dispatches or mutates.
+Once installed state is proven on the selected ref, setup dispatches that path
+and ref only if GitHub's Actions index resolves the workflow or, after an index
+`404`, exact Contents inspection also proves it installed on the default
+branch. A selected-ref-only file cannot be dispatched. Missing state follows
+the bounded temporary-bootstrap flow only when a default-branch definition is
+available, or when setup can install the temporary file on the default branch
+itself; unavailable state never dispatches or mutates.
 
 <Warning>**When the event actor is the same as the token user**: The action detects this before entering the workflow queue. It completes successfully without waiting or running the normal issue/PR/push pipeline. A valid explicit single action still runs. This avoids the bot reacting to its own actions. Use a dedicated bot account (different from the actor) if you want full pipeline behavior on every event.</Warning>
 

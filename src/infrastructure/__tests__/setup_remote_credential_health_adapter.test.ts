@@ -21,7 +21,8 @@ function client(overrides: Record<string, unknown> = {}) {
             },
         },
         repos: {
-            get: jest.fn(), getContent: jest.fn(), createOrUpdateFileContents: jest.fn(), deleteFile: jest.fn(),
+            get: jest.fn().mockResolvedValue({ data: { default_branch: 'main' } }),
+            getContent: jest.fn(), createOrUpdateFileContents: jest.fn(), deleteFile: jest.fn(),
         },
     };
 }
@@ -152,22 +153,72 @@ describe('setup remote credential health adapters', () => {
         }));
     });
 
-    it('dispatches an installed selected-ref workflow even when the Actions default-branch index returns 404', async () => {
+    it('dispatches an installed selected-ref workflow after proving the default-branch file despite an Actions index 404', async () => {
         const github = client({ getWorkflow: jest.fn().mockRejectedValue({ status: 404 }) });
         github.repos.getContent.mockResolvedValueOnce({ data: [] })
-            .mockResolvedValueOnce({ data: { sha: 'selected-ref-workflow' } });
+            .mockResolvedValueOnce({ data: { sha: 'selected-ref-workflow' } })
+            .mockResolvedValueOnce({ data: [] })
+            .mockResolvedValueOnce({ data: { sha: 'default-branch-workflow' } });
 
         const checks = await new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) }, {
             workflowContent: 'name: health', waitMs: 0, pollMs: 0,
         }).validateExisting('owner', 'repo', 'token', 'release/main', requirements);
 
         expect(checks?.every(check => check.status === 'valid')).toBe(true);
-        expect(github.rest.actions.getWorkflow).not.toHaveBeenCalled();
+        expect(github.rest.actions.getWorkflow).toHaveBeenCalled();
+        expect(github.repos.getContent).toHaveBeenNthCalledWith(4, {
+            owner: 'owner', repo: 'repo', path: '.github/workflows/copilot_credential_health.yml', ref: 'main',
+        });
         expect(github.rest.actions.createWorkflowDispatch).toHaveBeenCalledWith(expect.objectContaining({
             workflow_id: 'copilot_credential_health.yml', ref: 'release/main',
         }));
         expect(github.repos.createOrUpdateFileContents).not.toHaveBeenCalled();
         expect(github.repos.deleteFile).not.toHaveBeenCalled();
+    });
+
+    it('does not dispatch a selected-ref-only workflow when the default-branch definition is missing', async () => {
+        const github = client({ getWorkflow: jest.fn().mockRejectedValue({ status: 404 }) });
+        github.repos.getContent.mockResolvedValueOnce({ data: [] })
+            .mockResolvedValueOnce({ data: { sha: 'selected-ref-workflow' } })
+            .mockResolvedValueOnce({ data: [] })
+            .mockRejectedValueOnce({ status: 404 });
+
+        const checks = await new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) })
+            .validateExisting('owner', 'repo', 'token', 'release/main', requirements);
+
+        expect(checks).toBeUndefined();
+        expect(github.rest.actions.createWorkflowDispatch).not.toHaveBeenCalled();
+        expect(github.repos.createOrUpdateFileContents).not.toHaveBeenCalled();
+    });
+
+    it('does not bootstrap a missing nondefault ref without a default-branch definition', async () => {
+        const github = client({ getWorkflow: jest.fn().mockRejectedValue({ status: 404 }) });
+        github.repos.getContent.mockResolvedValueOnce({ data: [] })
+            .mockRejectedValueOnce({ status: 404 })
+            .mockResolvedValueOnce({ data: [] })
+            .mockRejectedValueOnce({ status: 404 });
+
+        const checks = await new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) }, {
+            workflowContent: 'name: health',
+        }).validateExisting('owner', 'repo', 'token', 'release/main', requirements);
+
+        expect(checks).toBeUndefined();
+        expect(github.repos.createOrUpdateFileContents).not.toHaveBeenCalled();
+        expect(github.rest.actions.createWorkflowDispatch).not.toHaveBeenCalled();
+    });
+
+    it('fails closed on malformed default-branch metadata after an Actions index 404', async () => {
+        const github = client({ getWorkflow: jest.fn().mockRejectedValue({ status: 404 }) });
+        github.repos.get.mockResolvedValue({ data: { default_branch: '../invalid' } });
+        github.repos.getContent.mockResolvedValueOnce({ data: [] })
+            .mockResolvedValueOnce({ data: { sha: 'selected-ref-workflow' } });
+
+        const checks = await new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) })
+            .validateExisting('owner', 'repo', 'token', 'release/main', requirements);
+
+        expect(checks).toBeUndefined();
+        expect(github.repos.getContent).toHaveBeenCalledTimes(2);
+        expect(github.rest.actions.createWorkflowDispatch).not.toHaveBeenCalled();
     });
 
     it('does not dispatch or bootstrap when the selected-ref file response lacks a file sha', async () => {
