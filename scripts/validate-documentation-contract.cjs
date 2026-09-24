@@ -3,7 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const yaml = require('js-yaml');
-const { hasAdjacentInspectedPatPrerequisite } = require('./documentation_pat_exception_policy.cjs');
+const { findShellExamples, hasAdjacentInspectedPatPrerequisite } = require('./documentation_pat_exception_policy.cjs');
 
 const root = path.resolve(__dirname, '..');
 const docsRoot = path.join(root, 'docs');
@@ -267,10 +267,10 @@ if (!normalizedInspectedPatRecovery.includes('inspect the displayed requirements
   errors.push('single-actions/workflow-and-cli.mdx: inspected-PAT recovery must preserve the original setup plan and be adjacent to the exceptional command');
 }
 for (const [file, source] of docsByFile.entries()) {
-  for (const match of source.matchAll(/^[ \t]*```(?:bash|sh|shell)\s*\n([\s\S]*?)^[ \t]*```\s*$/gm)) {
-    if (!match[1].includes(unverifiableWriteAcknowledgement)) continue;
-    if (!hasAdjacentInspectedPatPrerequisite(source, match.index)) {
-      const line = source.slice(0, match.index).split('\n').length;
+  for (const example of findShellExamples(source)) {
+    if (!example.body.includes(unverifiableWriteAcknowledgement)) continue;
+    if (!hasAdjacentInspectedPatPrerequisite(source, example.start)) {
+      const line = source.slice(0, example.start).split('\n').length;
       errors.push(`${file}:${line}: shell example may acknowledge unverifiable writes only after an adjacent inspected-PAT prerequisite`);
     }
   }

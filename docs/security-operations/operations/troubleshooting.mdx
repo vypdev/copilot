@@ -79,8 +79,9 @@ This guide helps you resolve common issues you might encounter while using Copil
     plan confirmation,
     credential prompts, workflow comparison, resource targeting, or mutation.
     If the later provisioning inspection itself fails or its read port is
-    unavailable, setup stops before Secrets, Variables, labels, issue types,
-    and tags, even for a repository-scope default. Restore inventory access
+    unavailable, setup stops before copying local setup files or provisioning
+    Secrets, Variables, labels, issue types, and tags, even for a
+    repository-scope default. Restore inventory access
     and rerun setup; an absent snapshot is never treated as an empty repository.
 
     Permission probes use a fixed maximum concurrency of four and preserve the
@@ -119,6 +120,9 @@ This guide helps you resolve common issues you might encounter while using Copil
     unavailable and does not dispatch or create a temporary workflow. A
     missing selected-ref file may be bootstrapped only with a default-branch
     definition already present or by installing it on the default branch.
+    If another actor creates or changes the temporary workflow, setup does not
+    overwrite or remove that actor's file; inspect the selected branch before
+    retrying a reported cleanup failure.
     Expected missing or unconfirmed final PAT permissions return a blocked
     result with the chosen configuration and stop before storage validation or
     any mutation.

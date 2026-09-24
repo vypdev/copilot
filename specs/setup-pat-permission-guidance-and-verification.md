@@ -189,9 +189,14 @@ read-only GitHub queries and presents ordered permission outcomes.
    setup plan: repeat interactive selections, or append the flag to the exact
    non-interactive invocation with the same configuration file, feature/agent
    flags, and credential inputs. A bare example that silently selects defaults
-   is forbidden. The documentation validator MUST examine the nearest prose
-   paragraph before an exceptional shell block and match its explicit
-   inspected-PAT prerequisite; unrelated earlier prose cannot authorize it.
+   is forbidden. The documentation validator MUST enumerate shell fences at
+   any indentation used in repository MDX, including nested `<Steps>` blocks,
+   and examine only the nearest ordinary prose paragraph before each
+   exceptional block. Opening and closing fence indentation and marker MUST
+   be paired consistently; text inside an earlier indented backtick or tilde
+   fence and unrelated prose cannot authorize the exception. An exceptional
+   shell fence that reaches end of file without a closing marker is still
+   inspected rather than silently skipped.
    The wizard MUST invoke a configured final-permission-audit port after
    normalization and before final remote storage validation. Expected missing
    or unconfirmed permissions return a bounded rejection outcome from this
@@ -271,6 +276,14 @@ read-only GitHub queries and presents ordered permission outcomes.
    dispatchability evidence returns unavailable without mutation. Ambiguous
    reads return unavailable health evidence and MUST NOT create, dispatch, or
    delete a workflow; doctor remains query-only.
+   Temporary bootstrap MUST use create-only semantics (no existing-file SHA)
+   and retain the non-empty file SHA returned by the successful creation. If
+   creation races with another actor or the returned SHA is unavailable, setup
+   MUST NOT dispatch or infer ownership. Cleanup MUST reread the exact file on
+   the selected ref and delete it only if its SHA still equals the SHA created
+   by this run; the delete request MUST use that same SHA so a later concurrent
+   edit fails safely. A missing, changed, or unreadable file remains untouched
+   and produces bounded cleanup guidance without raw provider detail.
    This remote-configuration absence inspection is distinct from the PAT
    permission audit's read-only commit-list probe below. Operator guidance
    MUST identify the correct endpoint for each purpose instead of conflating
@@ -377,8 +390,11 @@ read-only GitHub queries and presents ordered permission outcomes.
     scope; the relevant provider upsert MUST remain untouched.
 11. Once a selected managed Secret/Variable inventory is absent or required
     access is unavailable, initial setup MUST return a structured failure before
-    any remote Secret, Variable, label, issue-type, or tag mutation. An unrelated
-    unavailable scope remains non-blocking under the shared storage policy.
+    local setup-file copying or any remote Secret, Variable, label, issue-type,
+    or tag mutation. GitHub identity and selected inventory preflight MUST
+    precede workspace preparation; a successful preflight then permits the
+    existing file-first provisioning order. An unrelated unavailable scope
+    remains non-blocking under the shared storage policy.
 12. A successful publicly readable repository GET after valid token identity
     may prove that the selected read operation is usable, while remaining
     `Unverifiable` as PAT permission evidence. The same is true only for a
@@ -868,6 +884,23 @@ at widths 40/80/120 and `NO_COLOR`.
     nondefault branch, temporary bootstrap likewise requires a dispatchable
     default-branch definition; missing or malformed branch metadata fails
     closed. Confirmed absence on the default branch itself may bootstrap there.
+46. Given confirmed workflow absence, setup creates a temporary file without
+    an existing-file SHA and records the non-empty created SHA. A concurrent
+    create or missing creation SHA prevents dispatch. After dispatch, cleanup
+    deletes only when the current exact-file SHA still matches the created SHA;
+    changed, missing, or unreadable files are left intact with bounded guidance,
+    and a change between reread and conditional delete cannot remove another
+    actor's revision.
+47. Given GitHub identity or selected remote inventory cannot be verified,
+    initial setup returns a bounded failure before preparing or copying any
+    local files and before all remote mutations. On successful preflight, setup
+    copies the approved files before provisioning remote resources.
+48. Given an exceptional acknowledgement command inside an indented MDX shell
+    fence, including a `<Steps>` block, the validator applies the same nearest-
+    prose prerequisite as for a root-level fence. An earlier indented code
+    fence containing prerequisite words does not authorize it, and mismatched
+    fence indentation or an unclosed shell fence cannot hide an exceptional
+    command.
 
 ## 17. Requirements traceability
 
@@ -882,9 +915,9 @@ at widths 40/80/120 and `NO_COLOR`.
 | final report before remote-storage block | wizard result contract/CLI orchestration | blocked-result and CLI ordering tests | authentication/troubleshooting |
 | scope-sensitive inventory gating | storage policy plus setup wizard boundary | wizard-blocked, organization-only, preserve-existing, and mixed-scope tests | authentication/troubleshooting |
 | absent-snapshot fail-closed provisioning | resource grouping and initial setup workflow | missing port, failed inspection, no-upsert tests | troubleshooting/provisioning |
-| all-provisioning fail-closed boundary | initial setup workflow + storage policy | no label/type/tag/Secret/Variable calls after failed inspection | troubleshooting |
+| all-provisioning fail-closed boundary | initial setup workflow + storage policy | no local file copy or label/type/tag/Secret/Variable calls after failed inspection | troubleshooting |
 | public-read operational evidence | permission query adapter + evidence policy + readiness use case + presenter | public repository and exact organization-Members success plus ambiguous/denied/Issue-Types/write fixtures | authentication/troubleshooting |
-| safe bootstrap 404 | credential health bootstrap adapter | exact path/visibility proof and no-mutation ambiguous fixtures | authentication |
+| safe bootstrap 404 | credential health bootstrap adapter | exact path/visibility proof, create-only SHA ownership, conditional cleanup and no-mutation ambiguous/race fixtures | authentication |
 | no write probes | semantic query port/architecture rule | method/transport tests | architecture |
 | secret safety | all contracts/presenter | redaction fixtures | credentials |
 | feature/effective-target workflow PAT | configuration projection policy | conditional matrix and preserved organization-variable tests | checklist |

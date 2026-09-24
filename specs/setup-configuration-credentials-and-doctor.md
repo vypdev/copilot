@@ -133,7 +133,10 @@ cancellation, skipped diagnosis, ordering, and read-only authority explicit.
 1. Load defaults plus bounded overrides.
 2. Inspect remote state and choose repository/organization storage.
 3. Validate config, merge queue, setup PAT, workflow PAT, and required agent credentials.
-4. Show selected files/resources/warnings, confirm, provision, and verify.
+4. Show selected files/resources/warnings and confirm. Verify GitHub identity and
+   every required remote Secret/Variable inventory before copying local setup
+   files; rejected or unavailable inventory leaves the workspace untouched.
+5. Prepare the selected files, provision remote resources, and verify.
 
 ### 6.2 Alternative paths
 

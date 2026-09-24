@@ -51979,17 +51979,6 @@ async function runInitialSetupWorkflow(request, dependencies) {
             errors.push(new application_error_1.ApplicationError('authorization.credential-invalid', 'A valid setup PAT must be provided to run setup. It is separate from the workflow PAT Secret.'));
             return [buildResult(errors, steps)];
         }
-        (0, logging_ports_1.logInfo)('📋 Ensuring .github and copying setup files...');
-        const workspaceSelection = {
-            features: setupConfiguration?.features,
-            setupConfiguration,
-            ...(request.workflowUpdates.length > 0 ? {
-                updateExistingWorkflows: true,
-                approvedWorkflowFiles: request.workflowUpdates,
-            } : {}),
-        };
-        const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
-        steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
         (0, logging_ports_1.logInfo)('🔐 Checking GitHub access...');
         const githubAccess = await verifyGitHubAccess(request, dependencies.authenticatedUserPort);
         if (!githubAccess.success) {
@@ -52019,6 +52008,17 @@ async function runInitialSetupWorkflow(request, dependencies) {
                 return [buildResult(errors, steps)];
             }
         }
+        (0, logging_ports_1.logInfo)('📋 Ensuring .github and copying setup files...');
+        const workspaceSelection = {
+            features: setupConfiguration?.features,
+            setupConfiguration,
+            ...(request.workflowUpdates.length > 0 ? {
+                updateExistingWorkflows: true,
+                approvedWorkflowFiles: request.workflowUpdates,
+            } : {}),
+        };
+        const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
+        steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
         const secrets = await (0, setup_resource_provisioning_1.ensureRepositorySecrets)(request, dependencies, setupConfiguration, remoteConfiguration);
         if (secrets.step)
             steps.push(secrets.step);

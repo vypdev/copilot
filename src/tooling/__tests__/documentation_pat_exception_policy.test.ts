@@ -1,8 +1,9 @@
 interface PatDocumentationPolicy {
   hasAdjacentInspectedPatPrerequisite(source: string, codeBlockStart: number): boolean;
+  findShellExamples(source: string): Array<{ start: number; body: string }>;
 }
 
-const { hasAdjacentInspectedPatPrerequisite } = require('../../../scripts/documentation_pat_exception_policy.cjs') as PatDocumentationPolicy;
+const { findShellExamples, hasAdjacentInspectedPatPrerequisite } = require('../../../scripts/documentation_pat_exception_policy.cjs') as PatDocumentationPolicy;
 
 const prerequisite = "Run these commands without a permission exception first. Inspect the displayed requirements against both PATs' settings. Only after confirming every required row may you acknowledge that limitation.";
 const exactPrerequisite = prerequisite.replace('Inspect', 'inspect');
@@ -37,5 +38,43 @@ describe('inspected-PAT documentation exception', () => {
   it('rejects an apparent shell block nested inside an unclosed fence', () => {
     const source = `~~~~text\n${exactPrerequisite}\n\n${command}`;
     expect(hasAdjacentInspectedPatPrerequisite(source, source.indexOf('```bash'))).toBe(false);
+  });
+
+  it('enumerates an indented exceptional shell example and rejects it without adjacent prose', () => {
+    const source = `<Steps>\n    \`\`\`bash\n    copilot setup --confirm-unverifiable-write-permissions\n    \`\`\`\n</Steps>`;
+    const examples = findShellExamples(source);
+    expect(examples).toHaveLength(1);
+    expect(examples[0].body).toContain('--confirm-unverifiable-write-permissions');
+    expect(hasAdjacentInspectedPatPrerequisite(source, examples[0].start)).toBe(false);
+  });
+
+  it('rejects prerequisite words inside an earlier indented fence', () => {
+    const source = `    ~~~text\n    ${exactPrerequisite}\n    ~~~\n\n    \`\`\`bash\n    copilot setup --confirm-unverifiable-write-permissions\n    \`\`\``;
+    const examples = findShellExamples(source);
+    expect(examples).toHaveLength(1);
+    expect(hasAdjacentInspectedPatPrerequisite(source, examples[0].start)).toBe(false);
+  });
+
+  it('accepts an indented shell example after a real adjacent prerequisite', () => {
+    const source = `    ${exactPrerequisite}\n\n    \`\`\`sh\n    copilot setup --confirm-unverifiable-write-permissions\n    \`\`\``;
+    const examples = findShellExamples(source);
+    expect(examples).toHaveLength(1);
+    expect(hasAdjacentInspectedPatPrerequisite(source, examples[0].start)).toBe(true);
+  });
+
+  it('does not skip a shell example when closing indentation differs', () => {
+    const source = `    \`\`\`bash\ncopilot setup --confirm-unverifiable-write-permissions\n  \`\`\``;
+    expect(findShellExamples(source)).toEqual([{
+      start: 0,
+      body: expect.stringContaining('--confirm-unverifiable-write-permissions'),
+    }]);
+  });
+
+  it('inspects an exceptional shell fence even when its closing marker is missing', () => {
+    const source = '    ```bash\n    copilot setup --confirm-unverifiable-write-permissions';
+    const examples = findShellExamples(source);
+    expect(examples).toHaveLength(1);
+    expect(examples[0].body).toContain('--confirm-unverifiable-write-permissions');
+    expect(hasAdjacentInspectedPatPrerequisite(source, examples[0].start)).toBe(false);
   });
 });

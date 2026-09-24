@@ -60,17 +60,6 @@ export async function runInitialSetupWorkflow(
             errors.push(new ApplicationError('authorization.credential-invalid', 'A valid setup PAT must be provided to run setup. It is separate from the workflow PAT Secret.'));
             return [buildResult(errors, steps)];
         }
-        logInfo('📋 Ensuring .github and copying setup files...');
-        const workspaceSelection = {
-            features: setupConfiguration?.features,
-            setupConfiguration,
-            ...(request.workflowUpdates.length > 0 ? {
-                updateExistingWorkflows: true,
-                approvedWorkflowFiles: request.workflowUpdates,
-            } : {}),
-        };
-        const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
-        steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
         logInfo('🔐 Checking GitHub access...');
         const githubAccess = await verifyGitHubAccess(request, dependencies.authenticatedUserPort);
         if (!githubAccess.success) {
@@ -106,6 +95,18 @@ export async function runInitialSetupWorkflow(
                 return [buildResult(errors, steps)];
             }
         }
+
+        logInfo('📋 Ensuring .github and copying setup files...');
+        const workspaceSelection = {
+            features: setupConfiguration?.features,
+            setupConfiguration,
+            ...(request.workflowUpdates.length > 0 ? {
+                updateExistingWorkflows: true,
+                approvedWorkflowFiles: request.workflowUpdates,
+            } : {}),
+        };
+        const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
+        steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
 
         const secrets = await ensureRepositorySecrets(request, dependencies, setupConfiguration, remoteConfiguration);
         if (secrets.step) steps.push(secrets.step);

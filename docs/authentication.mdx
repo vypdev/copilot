@@ -143,7 +143,10 @@ and ref only if GitHub's Actions index resolves the workflow or, after an index
 branch. A selected-ref-only file cannot be dispatched. Missing state follows
 the bounded temporary-bootstrap flow only when a default-branch definition is
 available, or when setup can install the temporary file on the default branch
-itself; unavailable state never dispatches or mutates.
+itself. Temporary creation is create-only; setup records the created file SHA
+and removes it only if the selected-ref file still has that same SHA. A
+concurrent change is left intact with bounded cleanup guidance. Unavailable
+state never dispatches or mutates.
 
 <Warning>**When the event actor is the same as the token user**: The action detects this before entering the workflow queue. It completes successfully without waiting or running the normal issue/PR/push pipeline. A valid explicit single action still runs. This avoids the bot reacting to its own actions. Use a dedicated bot account (different from the actor) if you want full pipeline behavior on every event.</Warning>
 

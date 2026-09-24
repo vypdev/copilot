@@ -102,15 +102,16 @@ export class SetupRemoteCredentialHealthBootstrapAdapter implements SetupRemoteC
     );
     if (selectedWorkflow === 'unavailable') return undefined;
     if (!await canDispatchHealthWorkflow(client, owner, repository, ref)) return undefined;
-    let temporaryWorkflow = false;
+    let temporaryWorkflowSha: string | undefined;
     if (selectedWorkflow === 'missing') {
-      await this.bootstrapWorkflow(client, owner, repository, ref);
-      temporaryWorkflow = true;
+      temporaryWorkflowSha = await this.bootstrapWorkflow(client, owner, repository, ref);
     }
     try {
       return await executeHealthWorkflow(client, owner, repository, ref, requirements, this.options);
     } finally {
-      if (temporaryWorkflow) await this.removeTemporaryWorkflow(client, owner, repository, ref);
+      if (temporaryWorkflowSha) {
+        await this.removeTemporaryWorkflow(client, owner, repository, ref, temporaryWorkflowSha);
+      }
     }
   }
 
@@ -119,16 +120,26 @@ export class SetupRemoteCredentialHealthBootstrapAdapter implements SetupRemoteC
     owner: string,
     repository: string,
     ref: string,
-  ): Promise<void> {
+  ): Promise<string> {
     if (!this.workflowContent) throw new Error('Credential health workflow template is unavailable.');
-    await client.repos.createOrUpdateFileContents({
-      owner,
-      repo: repository,
-      path: `.github/workflows/${WORKFLOW_ID}`,
-      message: 'chore: temporarily validate Copilot credentials',
-      content: Buffer.from(this.workflowContent, 'utf8').toString('base64'),
-      branch: ref,
-    });
+    let created: Awaited<ReturnType<GithubCredentialHealthClient['repos']['createOrUpdateFileContents']>>;
+    try {
+      created = await client.repos.createOrUpdateFileContents({
+        owner,
+        repo: repository,
+        path: `.github/workflows/${WORKFLOW_ID}`,
+        message: 'chore: temporarily validate Copilot credentials',
+        content: Buffer.from(this.workflowContent, 'utf8').toString('base64'),
+        branch: ref,
+      });
+    } catch {
+      throw new Error('Could not create the temporary credential health workflow safely; inspect the selected branch before retrying.');
+    }
+    const createdSha = created?.data?.content?.sha;
+    if (!createdSha?.trim()) {
+      throw new Error('The temporary credential health workflow revision is unavailable; inspect the selected branch before retrying.');
+    }
+    return createdSha;
   }
 
   private async removeTemporaryWorkflow(
@@ -136,22 +147,34 @@ export class SetupRemoteCredentialHealthBootstrapAdapter implements SetupRemoteC
     owner: string,
     repository: string,
     ref: string,
+    createdSha: string,
   ): Promise<void> {
-    const content = await client.repos.getContent({
-      owner,
-      repo: repository,
-      path: `.github/workflows/${WORKFLOW_ID}`,
-      ref,
-    });
-    if (!content.data.sha) throw new Error('Could not resolve the temporary health workflow revision for cleanup.');
-    await client.repos.deleteFile({
-      owner,
-      repo: repository,
-      path: `.github/workflows/${WORKFLOW_ID}`,
-      message: 'chore: remove temporary Copilot credential health workflow',
-      sha: content.data.sha,
-      branch: ref,
-    });
+    let currentSha: string | undefined;
+    try {
+      currentSha = (await client.repos.getContent({
+        owner,
+        repo: repository,
+        path: `.github/workflows/${WORKFLOW_ID}`,
+        ref,
+      })).data.sha;
+    } catch {
+      throw new Error('Could not verify the temporary credential health workflow for cleanup; it was left untouched.');
+    }
+    if (currentSha !== createdSha) {
+      throw new Error('The temporary credential health workflow changed before cleanup; it was left untouched.');
+    }
+    try {
+      await client.repos.deleteFile({
+        owner,
+        repo: repository,
+        path: `.github/workflows/${WORKFLOW_ID}`,
+        message: 'chore: remove temporary Copilot credential health workflow',
+        sha: createdSha,
+        branch: ref,
+      });
+    } catch {
+      throw new Error('Could not safely remove the temporary credential health workflow; inspect the selected branch.');
+    }
   }
 }
 

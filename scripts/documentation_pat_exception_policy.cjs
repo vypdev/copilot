@@ -5,12 +5,12 @@ function hasAdjacentInspectedPatPrerequisite(source, codeBlockStart) {
   let fence;
   for (const line of lines) {
     if (fence) {
-      const closing = /^ {0,3}(`+|~+)[ \t]*$/u.exec(line);
+      const closing = /^[ \t]*(`+|~+)[ \t]*$/u.exec(line);
       if (closing && closing[1][0] === fence.marker && closing[1].length >= fence.length) fence = undefined;
       visible.push({ kind: 'code' });
       continue;
     }
-    const opening = /^ {0,3}(`{3,}|~{3,})/u.exec(line);
+    const opening = /^[ \t]*(`{3,}|~{3,})/u.exec(line);
     if (opening) {
       fence = { marker: opening[1][0], length: opening[1].length };
       visible.push({ kind: 'code' });
@@ -32,4 +32,36 @@ function hasAdjacentInspectedPatPrerequisite(source, codeBlockStart) {
     && nearestParagraph.includes('Only after confirming every required row');
 }
 
-module.exports = { hasAdjacentInspectedPatPrerequisite };
+/** Enumerate shell fences at any MDX indentation, without visiting fences inside code. */
+function findShellExamples(source) {
+  const examples = [];
+  let fence;
+  let offset = 0;
+  for (const rawLine of source.split('\n')) {
+    const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine;
+    if (fence) {
+      const closing = /^[ \t]*(`+|~+)[ \t]*$/u.exec(line);
+      if (closing && closing[1][0] === fence.marker && closing[1].length >= fence.length) {
+        if (fence.shell) examples.push({ start: fence.start, body: source.slice(fence.bodyStart, offset) });
+        fence = undefined;
+      }
+    } else {
+      const opening = /^[ \t]*(`{3,}|~{3,})([^\r\n]*)$/u.exec(line);
+      if (opening) {
+        const language = opening[2].trim().split(/\s+/u)[0];
+        fence = {
+          marker: opening[1][0],
+          length: opening[1].length,
+          shell: ['bash', 'sh', 'shell'].includes(language),
+          start: offset,
+          bodyStart: offset + rawLine.length + 1,
+        };
+      }
+    }
+    offset += rawLine.length + 1;
+  }
+  if (fence?.shell) examples.push({ start: fence.start, body: source.slice(fence.bodyStart) });
+  return examples;
+}
+
+module.exports = { hasAdjacentInspectedPatPrerequisite, findShellExamples };

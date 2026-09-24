@@ -677,6 +677,7 @@
         "src/application/usecases/setup/setup_token_permissions_use_case.ts",
         "src/application/usecases/setup/doctor_use_case.ts",
         "src/application/usecases/setup/merge_queue_readiness_use_case.ts",
+        "src/application/usecases/actions/initial_setup_workflow.ts",
         "src/application/usecases/actions/setup_resource_provisioning.ts",
         "src/application/ports/message_catalog_ports.ts",
         "src/application/usecases/localization/resolve_message_catalog_use_case.ts",
@@ -698,7 +699,8 @@
         "src/infrastructure/composition/setup_token_permissions_composition_root.ts",
         "src/infrastructure/composition/setup_doctor_composition_root.ts",
         "scripts/coverage-budgets.json",
-        "scripts/documentation_pat_exception_policy.cjs"
+        "scripts/documentation_pat_exception_policy.cjs",
+        "scripts/validate-documentation-contract.cjs"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
@@ -712,6 +714,7 @@
         "src/application/usecases/setup/__tests__/setup_token_permissions_use_case.test.ts",
         "src/application/usecases/setup/__tests__/doctor_use_case.test.ts",
         "src/application/usecases/setup/__tests__/merge_queue_readiness_use_case.test.ts",
+        "src/application/usecases/actions/__tests__/initial_setup_use_case.test.ts",
         "src/application/usecases/actions/__tests__/setup_resource_provisioning.test.ts",
         "src/infrastructure/__tests__/setup_workspace_adapter.test.ts",
         "src/infrastructure/__tests__/setup_remote_credential_health_adapter.test.ts",

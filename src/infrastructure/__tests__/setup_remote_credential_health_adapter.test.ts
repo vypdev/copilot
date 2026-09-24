@@ -22,7 +22,9 @@ function client(overrides: Record<string, unknown> = {}) {
         },
         repos: {
             get: jest.fn().mockResolvedValue({ data: { default_branch: 'main' } }),
-            getContent: jest.fn(), createOrUpdateFileContents: jest.fn(), deleteFile: jest.fn(),
+            getContent: jest.fn(),
+            createOrUpdateFileContents: jest.fn().mockResolvedValue({ data: { content: { sha: 'created-sha' } } }),
+            deleteFile: jest.fn(),
         },
     };
 }
@@ -119,7 +121,7 @@ describe('setup remote credential health adapters', () => {
         const github = client({ getWorkflow: jest.fn().mockRejectedValue(error) });
         github.repos.getContent.mockResolvedValueOnce({ data: [{ name: '.github' }] })
             .mockRejectedValueOnce(error)
-            .mockResolvedValueOnce({ data: { sha: 'temporary-sha' } });
+            .mockResolvedValueOnce({ data: { sha: 'created-sha' } });
         const checks = await new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) }, {
             workflowContent: 'name: health', waitMs: 0, pollMs: 0,
         }).validateExisting('owner', 'repo', 'token', 'main', requirements);
@@ -131,14 +133,15 @@ describe('setup remote credential health adapters', () => {
             owner: 'owner', repo: 'repo', path: '.github/workflows/copilot_credential_health.yml', ref: 'main',
         });
         expect(github.repos.createOrUpdateFileContents).toHaveBeenCalledWith(expect.objectContaining({ branch: 'main' }));
-        expect(github.repos.deleteFile).toHaveBeenCalledWith(expect.objectContaining({ sha: 'temporary-sha', branch: 'main' }));
+        expect(github.repos.createOrUpdateFileContents).toHaveBeenCalledWith(expect.not.objectContaining({ sha: expect.anything() }));
+        expect(github.repos.deleteFile).toHaveBeenCalledWith(expect.objectContaining({ sha: 'created-sha', branch: 'main' }));
     });
 
     it('bootstraps a missing selected ref even when Actions finds the workflow on the default branch', async () => {
         const github = client();
         github.repos.getContent.mockResolvedValueOnce({ data: [] })
             .mockRejectedValueOnce({ status: 404 })
-            .mockResolvedValueOnce({ data: { sha: 'selected-ref-temporary-sha' } });
+            .mockResolvedValueOnce({ data: { sha: 'created-sha' } });
 
         const checks = await new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) }, {
             workflowContent: 'name: health', waitMs: 0, pollMs: 0,
@@ -149,8 +152,75 @@ describe('setup remote credential health adapters', () => {
             branch: 'release/main',
         }));
         expect(github.repos.deleteFile).toHaveBeenCalledWith(expect.objectContaining({
-            branch: 'release/main', sha: 'selected-ref-temporary-sha',
+            branch: 'release/main', sha: 'created-sha',
         }));
+    });
+
+    it('does not dispatch or delete when another actor creates the workflow before create-only bootstrap', async () => {
+        const github = client();
+        github.repos.getContent.mockResolvedValueOnce({ data: [] }).mockRejectedValueOnce({ status: 404 });
+        github.repos.createOrUpdateFileContents.mockRejectedValueOnce({ status: 422, message: 'provider detail' });
+
+        await expect(new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) }, {
+            workflowContent: 'name: health',
+        }).validateExisting('owner', 'repo', 'token', 'main', requirements))
+            .rejects.toThrow('Could not create the temporary credential health workflow safely');
+        expect(github.rest.actions.createWorkflowDispatch).not.toHaveBeenCalled();
+        expect(github.repos.deleteFile).not.toHaveBeenCalled();
+    });
+
+    it('does not dispatch or delete when creation omits the owned file revision', async () => {
+        const github = client();
+        github.repos.getContent.mockResolvedValueOnce({ data: [] }).mockRejectedValueOnce({ status: 404 });
+        github.repos.createOrUpdateFileContents.mockResolvedValueOnce({ data: { content: {} } });
+
+        await expect(new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) }, {
+            workflowContent: 'name: health',
+        }).validateExisting('owner', 'repo', 'token', 'main', requirements))
+            .rejects.toThrow('revision is unavailable');
+        expect(github.rest.actions.createWorkflowDispatch).not.toHaveBeenCalled();
+        expect(github.repos.deleteFile).not.toHaveBeenCalled();
+    });
+
+    it('leaves a concurrently changed workflow intact during cleanup', async () => {
+        const github = client();
+        github.repos.getContent.mockResolvedValueOnce({ data: [] })
+            .mockRejectedValueOnce({ status: 404 })
+            .mockResolvedValueOnce({ data: { sha: 'another-actor-sha' } });
+
+        await expect(new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) }, {
+            workflowContent: 'name: health', waitMs: 0, pollMs: 0,
+        }).validateExisting('owner', 'repo', 'token', 'main', requirements))
+            .rejects.toThrow('changed before cleanup; it was left untouched');
+        expect(github.rest.actions.createWorkflowDispatch).toHaveBeenCalledTimes(1);
+        expect(github.repos.deleteFile).not.toHaveBeenCalled();
+    });
+
+    it('does not delete when the temporary workflow disappears before cleanup', async () => {
+        const github = client();
+        github.repos.getContent.mockResolvedValueOnce({ data: [] })
+            .mockRejectedValueOnce({ status: 404 })
+            .mockRejectedValueOnce({ status: 404, message: 'provider detail' });
+
+        await expect(new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) }, {
+            workflowContent: 'name: health', waitMs: 0, pollMs: 0,
+        }).validateExisting('owner', 'repo', 'token', 'main', requirements))
+            .rejects.toThrow('Could not verify the temporary credential health workflow for cleanup');
+        expect(github.repos.deleteFile).not.toHaveBeenCalled();
+    });
+
+    it('uses the created SHA for conditional deletion and reports a later edit safely', async () => {
+        const github = client();
+        github.repos.getContent.mockResolvedValueOnce({ data: [] })
+            .mockRejectedValueOnce({ status: 404 })
+            .mockResolvedValueOnce({ data: { sha: 'created-sha' } });
+        github.repos.deleteFile.mockRejectedValueOnce({ status: 409, message: 'provider detail' });
+
+        await expect(new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) }, {
+            workflowContent: 'name: health', waitMs: 0, pollMs: 0,
+        }).validateExisting('owner', 'repo', 'token', 'main', requirements))
+            .rejects.toThrow('Could not safely remove the temporary credential health workflow');
+        expect(github.repos.deleteFile).toHaveBeenCalledWith(expect.objectContaining({ sha: 'created-sha' }));
     });
 
     it('dispatches an installed selected-ref workflow after proving the default-branch file despite an Actions index 404', async () => {

@@ -50417,17 +50417,6 @@ async function runInitialSetupWorkflow(request, dependencies) {
             errors.push(new application_error_1.ApplicationError('authorization.credential-invalid', 'A valid setup PAT must be provided to run setup. It is separate from the workflow PAT Secret.'));
             return [buildResult(errors, steps)];
         }
-        (0, logging_ports_1.logInfo)('📋 Ensuring .github and copying setup files...');
-        const workspaceSelection = {
-            features: setupConfiguration?.features,
-            setupConfiguration,
-            ...(request.workflowUpdates.length > 0 ? {
-                updateExistingWorkflows: true,
-                approvedWorkflowFiles: request.workflowUpdates,
-            } : {}),
-        };
-        const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
-        steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
         (0, logging_ports_1.logInfo)('🔐 Checking GitHub access...');
         const githubAccess = await verifyGitHubAccess(request, dependencies.authenticatedUserPort);
         if (!githubAccess.success) {
@@ -50457,6 +50446,17 @@ async function runInitialSetupWorkflow(request, dependencies) {
                 return [buildResult(errors, steps)];
             }
         }
+        (0, logging_ports_1.logInfo)('📋 Ensuring .github and copying setup files...');
+        const workspaceSelection = {
+            features: setupConfiguration?.features,
+            setupConfiguration,
+            ...(request.workflowUpdates.length > 0 ? {
+                updateExistingWorkflows: true,
+                approvedWorkflowFiles: request.workflowUpdates,
+            } : {}),
+        };
+        const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
+        steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
         const secrets = await (0, setup_resource_provisioning_1.ensureRepositorySecrets)(request, dependencies, setupConfiguration, remoteConfiguration);
         if (secrets.step)
             steps.push(secrets.step);
@@ -82541,48 +82541,71 @@ class SetupRemoteCredentialHealthBootstrapAdapter {
             return undefined;
         if (!await canDispatchHealthWorkflow(client, owner, repository, ref))
             return undefined;
-        let temporaryWorkflow = false;
+        let temporaryWorkflowSha;
         if (selectedWorkflow === 'missing') {
-            await this.bootstrapWorkflow(client, owner, repository, ref);
-            temporaryWorkflow = true;
+            temporaryWorkflowSha = await this.bootstrapWorkflow(client, owner, repository, ref);
         }
         try {
             return await executeHealthWorkflow(client, owner, repository, ref, requirements, this.options);
         }
         finally {
-            if (temporaryWorkflow)
-                await this.removeTemporaryWorkflow(client, owner, repository, ref);
+            if (temporaryWorkflowSha) {
+                await this.removeTemporaryWorkflow(client, owner, repository, ref, temporaryWorkflowSha);
+            }
         }
     }
     async bootstrapWorkflow(client, owner, repository, ref) {
         if (!this.workflowContent)
             throw new Error('Credential health workflow template is unavailable.');
-        await client.repos.createOrUpdateFileContents({
-            owner,
-            repo: repository,
-            path: `.github/workflows/${WORKFLOW_ID}`,
-            message: 'chore: temporarily validate Copilot credentials',
-            content: Buffer.from(this.workflowContent, 'utf8').toString('base64'),
-            branch: ref,
-        });
+        let created;
+        try {
+            created = await client.repos.createOrUpdateFileContents({
+                owner,
+                repo: repository,
+                path: `.github/workflows/${WORKFLOW_ID}`,
+                message: 'chore: temporarily validate Copilot credentials',
+                content: Buffer.from(this.workflowContent, 'utf8').toString('base64'),
+                branch: ref,
+            });
+        }
+        catch {
+            throw new Error('Could not create the temporary credential health workflow safely; inspect the selected branch before retrying.');
+        }
+        const createdSha = created?.data?.content?.sha;
+        if (!createdSha?.trim()) {
+            throw new Error('The temporary credential health workflow revision is unavailable; inspect the selected branch before retrying.');
+        }
+        return createdSha;
     }
-    async removeTemporaryWorkflow(client, owner, repository, ref) {
-        const content = await client.repos.getContent({
-            owner,
-            repo: repository,
-            path: `.github/workflows/${WORKFLOW_ID}`,
-            ref,
-        });
-        if (!content.data.sha)
-            throw new Error('Could not resolve the temporary health workflow revision for cleanup.');
-        await client.repos.deleteFile({
-            owner,
-            repo: repository,
-            path: `.github/workflows/${WORKFLOW_ID}`,
-            message: 'chore: remove temporary Copilot credential health workflow',
-            sha: content.data.sha,
-            branch: ref,
-        });
+    async removeTemporaryWorkflow(client, owner, repository, ref, createdSha) {
+        let currentSha;
+        try {
+            currentSha = (await client.repos.getContent({
+                owner,
+                repo: repository,
+                path: `.github/workflows/${WORKFLOW_ID}`,
+                ref,
+            })).data.sha;
+        }
+        catch {
+            throw new Error('Could not verify the temporary credential health workflow for cleanup; it was left untouched.');
+        }
+        if (currentSha !== createdSha) {
+            throw new Error('The temporary credential health workflow changed before cleanup; it was left untouched.');
+        }
+        try {
+            await client.repos.deleteFile({
+                owner,
+                repo: repository,
+                path: `.github/workflows/${WORKFLOW_ID}`,
+                message: 'chore: remove temporary Copilot credential health workflow',
+                sha: createdSha,
+                branch: ref,
+            });
+        }
+        catch {
+            throw new Error('Could not safely remove the temporary credential health workflow; inspect the selected branch.');
+        }
     }
 }
 exports.SetupRemoteCredentialHealthBootstrapAdapter = SetupRemoteCredentialHealthBootstrapAdapter;
