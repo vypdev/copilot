@@ -47731,6 +47731,7 @@ const QUERY_PERMISSIONS = {
         Variables: 'organization_actions_variables',
         'Issue Types': 'issue_types',
         Projects: 'organization_projects',
+        // GitHub's PAT form documents this organization permission as "members".
         Members: 'members',
     },
 };
