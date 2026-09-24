@@ -55,7 +55,7 @@ for (const value of forbidden) {
 }
 for (const value of [
   'AGENT_ALLOWED_MODEL_PROVIDERS', 'AGENT_ALLOWED_MODELS', 'opencode run --pure',
-  'agent-executable', 'codex-cli 0.153.4', '1.18.3', '2026.09.10-fd3934a',
+  'agent-executable', 'codex-cli 0.156.1', '1.18.3', '2026.09.10-fd3934a',
 ]) {
   if (!docs.includes(value)) throw new Error(`Missing normative documentation reference: ${value}`);
 }

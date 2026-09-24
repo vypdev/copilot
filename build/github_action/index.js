@@ -90844,7 +90844,7 @@ module.exports = JSON.parse('{"single":{"topLeft":"┌","top":"─","topRight":"
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"revision":"2026-09-12.p1-c.2","providers":{"codex":{"executable":"codex","reviewedVersion":"codex-cli 0.153.4","installation":{"package":"@openai/codex","version":"0.153.4"}},"opencode":{"executable":"opencode","reviewedVersion":"1.18.3","installation":{"package":"opencode-ai","version":"1.18.3"}},"cursor":{"executable":"agent","reviewedVersion":"2026.09.10-fd3934a"}}}');
+module.exports = JSON.parse('{"revision":"2026-09-24.p1-c.3","providers":{"codex":{"executable":"codex","reviewedVersion":"codex-cli 0.156.1","installation":{"package":"@openai/codex","version":"0.156.1"}},"opencode":{"executable":"opencode","reviewedVersion":"1.18.3","installation":{"package":"opencode-ai","version":"1.18.3"}},"cursor":{"executable":"agent","reviewedVersion":"2026.09.10-fd3934a"}}}');
 
 /***/ })
 

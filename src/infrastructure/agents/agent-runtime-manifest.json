@@ -1,12 +1,12 @@
 {
-  "revision": "2026-09-12.p1-c.2",
+  "revision": "2026-09-24.p1-c.3",
   "providers": {
     "codex": {
       "executable": "codex",
-      "reviewedVersion": "codex-cli 0.153.4",
+      "reviewedVersion": "codex-cli 0.156.1",
       "installation": {
         "package": "@openai/codex",
-        "version": "0.153.4"
+        "version": "0.156.1"
       }
     },
     "opencode": {

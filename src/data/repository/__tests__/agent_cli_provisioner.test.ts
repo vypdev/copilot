@@ -12,7 +12,7 @@ jest.mock('node:child_process', () => ({ execFileSync: jest.fn() }));
 
 function provisioningSystem(
     executableAvailable: boolean | readonly boolean[] = false,
-    version = 'codex-cli 0.153.4',
+    version = 'codex-cli 0.156.1',
 ): AgentCliProvisioningSystem & { installPackage: jest.Mock; readVersion: jest.Mock } {
     const availability = Array.isArray(executableAvailable) ? [...executableAvailable] : [executableAvailable];
     return {
@@ -46,7 +46,7 @@ describe('AgentCliProvisioner', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-cli-test-'));
         const executable = join(directory, 'codex');
         try {
-            writeFileSync(executable, '#!/bin/sh\necho "codex-cli 0.153.4"\n');
+            writeFileSync(executable, '#!/bin/sh\necho "codex-cli 0.156.1"\n');
             chmodSync(executable, 0o755);
             expect(() => new AgentCliProvisioner().provision({ provider: 'codex', executable }, { PATH: directory })).not.toThrow();
         } finally {
@@ -62,7 +62,7 @@ describe('AgentCliProvisioner', () => {
             chmodSync(executable, 0o755);
             (execFileSync as unknown as jest.Mock).mockImplementation((command: string, args: string[]) => {
                 if (command === 'npm') return Buffer.alloc(0);
-                if (command === 'codex' && args[0] === '--version') return 'codex-cli 0.153.4\n';
+                if (command === 'codex' && args[0] === '--version') return 'codex-cli 0.156.1\n';
                 throw new Error(`Unexpected command: ${command}`);
             });
 
@@ -73,7 +73,7 @@ describe('AgentCliProvisioner', () => {
 
             expect(execFileSync).toHaveBeenCalledWith(
                 'npm',
-                ['install', '--global', '@openai/codex@0.153.4'],
+                ['install', '--global', '@openai/codex@0.156.1'],
                 { stdio: 'inherit' },
             );
             expect(execFileSync).toHaveBeenCalledWith(
@@ -157,7 +157,7 @@ describe('AgentCliProvisioner', () => {
     });
 
     it.each([
-        ['codex', '@openai/codex', '0.153.4', 'codex-cli 0.153.4'],
+        ['codex', '@openai/codex', '0.156.1', 'codex-cli 0.156.1'],
         ['opencode', 'opencode-ai', '1.18.3', '1.18.3'],
     ] as const)('provisions missing %s from its pinned installation', (provider, packageName, version, output) => {
         const system = provisioningSystem([false, true], output);
@@ -168,7 +168,7 @@ describe('AgentCliProvisioner', () => {
     it('always reinstalls and then validates the exact version', () => {
         const system = provisioningSystem(true);
         new AgentCliProvisioner(system).provision('codex', { AGENT_PROVISIONING: 'always' });
-        expect(system.installPackage).toHaveBeenCalledWith('@openai/codex', '0.153.4');
+        expect(system.installPackage).toHaveBeenCalledWith('@openai/codex', '0.156.1');
         expect(system.readVersion).toHaveBeenCalledTimes(1);
     });
 

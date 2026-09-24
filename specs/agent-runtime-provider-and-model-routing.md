@@ -275,6 +275,12 @@ restores both repository Variables (`AGENT_MODEL=gpt-5.6-luna` and
 changing only one side would fail allowlist preflight. A controlled Codex smoke
 run MUST verify the target model with the runner credential before declaring the
 new effective default healthy.
+The reviewed Codex installation pin and generated provisioning workflow MUST
+advance together when the default model requires newer CLI model metadata. The
+`0.153.4` CLI rejects `gpt-6-luna`; the reviewed `0.156.1` CLI passes a local
+authenticated `codex exec` smoke. Repository Actions must still prove the same
+tuple with their own credential. An installed operator-owned CLI is never silently
+replaced; its version and model smoke remain an explicit operator responsibility.
 
 ## 14. Testing strategy and numeric budget
 
@@ -283,10 +289,10 @@ new effective default healthy.
 | Activation/config/runtime support | 30 | event roles, inheritance, formats, allowlists |
 | Provision/auth/execution state | 24 | modes, retries, timeout, partial install |
 | Provider plans/error mapping | 24 | argv/stdin/env/effort/output per provider |
-| Workflow/setup contracts | 19 | secrets, pinned installations, Node prerequisite, active inputs, shared model fallback and exact allowlist across action/setup/workflows |
+| Workflow/setup contracts | 21 | secrets, pinned installations synchronized with manifest, Node prerequisite, active inputs, shared model fallback and exact allowlist across action/setup/workflows |
 | UX/sanitization | 12 | phase/errors/redaction/narrow output |
 | Integration/security/cutover | 19 | role→provider, injection, credentials, new provider, configured-variable precedence and model smoke |
-| **Total** | **128** | no double counting |
+| **Total** | **130** | no double counting |
 
 Global thresholds remain; activation/configuration/executable policies SHOULD reach
 100% branch coverage. Use fake executables/processes/credentials and no live
@@ -323,6 +329,9 @@ errors and credential masking.
     precedence; changing only the source fallback does not claim to migrate the
     effective model. Updating both repository Variables and running a controlled
     smoke test establishes the new effective default without changing effort.
+13. The manifest, generated provisioning workflow, and operator documentation
+    pin Codex `0.156.1`; a version-sync contract test fails if they diverge. The
+    old `0.153.4` binary cannot be presented as a Luna-compatible default.
 
 ## 17. Requirements traceability
 
@@ -331,6 +340,7 @@ errors and credential masking.
 | active roles | activation policy | activation tests | execution contract |
 | tuple/allowlist | config policies | builder/policy tests | model selection |
 | Luna default and migration | domain default, setup projection, action and workflow fallbacks | default/override/allowlist contract tests and controlled runner smoke | input reference, model selection, upgrade/recovery |
+| Luna-compatible Codex pin | runtime manifest and generated provisioning workflow | exact-version and version-sync tests; same-version local and Action smoke | CLI provisioning, version pinning, recovery |
 | provisioning/auth | provisioner/preflight adapters | ownership/install/infra tests | provisioning/credentials |
 | semantic execution | capability adapter/provider plans | policy and process tests | runtime/CLI commands |
 | local validation/security | parsers/schema/environment | security tests | failure/trust docs |
