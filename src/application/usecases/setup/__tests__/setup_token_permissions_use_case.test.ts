@@ -215,6 +215,18 @@ describe('SetupTokenPermissionsUseCase', () => {
         expect(report).toMatchObject({ ready: false, confirmationRequired: true });
     });
 
+    it('never marks a write-only required plan ready without explicit acknowledgement', async () => {
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const query = { inspect: jest.fn().mockResolvedValue([
+            { ...requiredWrite, status: 'unverifiable', message: 'no safe write proof' },
+        ]) };
+        const report = await new SetupTokenPermissionsUseCase(validation, query).inspect({
+            role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [requiredWrite],
+        });
+
+        expect(report).toMatchObject({ ready: false, confirmationRequired: true });
+    });
+
     it('accepts a usable public repository read without misreporting its PAT permission as verified', async () => {
         const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
         const query = { inspect: jest.fn().mockResolvedValue([{

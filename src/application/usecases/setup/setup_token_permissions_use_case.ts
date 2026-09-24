@@ -48,15 +48,17 @@ export class SetupTokenPermissionsUseCase {
         );
         const checks = reconcileSetupTokenPermissionEvidence(request.requirements, evidence);
         const requiredChecks = checks.filter(check => check.applicability === 'required');
+        const requiredReads = requiredChecks.filter(check => check.level === 'read');
+        const requiredWrites = requiredChecks.filter(check => check.level === 'write');
         const readUsable = (check: SetupTokenPermissionCheck) => (check.status === 'verified' && check.level === 'read')
             || (check.status === 'unverifiable' && check.level === 'read'
                 && isOperationallyAvailableSetupRead(check)
                 && check.operationallyAvailable === true);
-        const ready = requiredChecks.every(readUsable);
-        const confirmationRequired = !ready
-            && requiredChecks.every(check => readUsable(check)
-                || (check.level === 'write' && check.status === 'unverifiable'))
-            && requiredChecks.some(check => check.level === 'write' && check.status === 'unverifiable');
+        const readsUsable = requiredReads.every(readUsable);
+        const ready = readsUsable && requiredWrites.length === 0;
+        const confirmationRequired = readsUsable
+            && requiredWrites.length > 0
+            && requiredWrites.every(check => check.status === 'unverifiable');
         return {
             role: request.role,
             ...(identity.account ? { account: identity.account } : {}),

@@ -182,6 +182,14 @@ read-only GitHub queries and presents ordered permission outcomes.
    PAT was configured with the displayed access. Interactive acknowledgement
    defaults to No; non-interactive execution requires
    `--confirm-unverifiable-write-permissions`. `--yes` alone is not evidence.
+   Readiness is computed over **all** required rows: `ready` is true only when
+   every required row is a usable read (including the zero-row case). A required
+   write is never ready by itself, even when every read is usable;
+   `confirmationRequired` is true only when all required reads are usable, at
+   least one required write exists, and every required write is unverifiable.
+   A missing write never enters the acknowledgement path. This distinction is
+   enforced in the application use case before the CLI or credential collector
+   can accept the report.
    Generic interactive or unattended setup examples MUST omit that exception
    flag. Documentation may show it only in a separately labelled recovery flow
    whose immediately adjacent prerequisite requires the operator to inspect the
@@ -655,17 +663,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **122 distinct cases**.
+This SDD adds at least **123 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain permission policy | 25 | setup/workflow plans, independent selected-feature write grants and all-disabled minimum, enabled comment-route file-mutation potential versus individual answer-only events, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants, positive and negative organization-membership capability projection including comment-only and independently available single-action routes |
-| Application state/blocking | 24 | verified, missing, required-read unverifiable, public repository and exact organization-Members operational readiness, required-write confirmation, canonical reconstruction after semantic mismatch, duplicate evidence rejection, verified-write downgrade, invalid base token, organization-only credential collection, bounded pre-plan inspection failure, accepted/rejected final audit with structured block, selected-ref workflow state refresh, immediate remote-storage blocked handling, zero-count assignment and inactive membership checks |
+| Application state/blocking | 25 | verified, missing, required-read unverifiable, public repository and exact organization-Members operational readiness, required-write confirmation including a write-only required plan, canonical reconstruction after semantic mismatch, duplicate evidence rejection, verified-write downgrade, invalid base token, organization-only credential collection, bounded pre-plan inspection failure, accepted/rejected final audit with structured block, selected-ref workflow state refresh, immediate remote-storage blocked handling, zero-count assignment and inactive membership checks |
 | Adapter/provider contracts | 40 | GET-only probes, fixed four-request concurrency with stable result order, private-versus-public/unknown visibility evidence, protected-endpoint evidence, exact Members-read operational evidence without permission promotion, commit-list Contents target, private empty-repository 409 versus public operational usability, default-branch Checks resolution plus encoded check-runs target, invalid/missing branch fail-closed behavior, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow on the selected ref in inspection and bootstrap, default-branch dispatchability proof even when Actions-index returns 404, malformed root scalar/object success remains unavailable without bootstrap, malformed exact-file success remains unavailable, unavailable endpoint state, duplicate-comment deletion fallback regression |
 | Setup/credential integration | 21 | pre-prompt setup table, conditional denial through planning, wizard-owned repository-inventory block plus organization-only continuation, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, absent/failed remote snapshot blocks every subsequent mutation, preserve-disabled and scope-moving keep rejection, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
 | UI/accessibility | 5 | required/result tables, public-read limitation copy, confirmation-required copy, 40-column wrapping, no-color text |
 | Architecture/security/docs | 7 | query-only boundary, no duplicated catalog, safe generic/recovery automation examples, nearest-paragraph permission-prerequisite cases, and README plus MDX source enumeration with file-specific diagnostics |
-| **Total** | **122** | No double counting |
+| **Total** | **123** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -723,7 +731,8 @@ at widths 40/80/120 and `NO_COLOR`.
    plan confirmation, credential prompts, workflow comparison, target resolution,
    or mutation.
 10. Given a write permission that GitHub cannot prove without mutation, the row
-   shows `Unverifiable`; `ready` remains false, no write probe occurs, and no
+   shows `Unverifiable`; `ready` remains false even if all required reads are
+   usable or the write is the only required row, no write probe occurs, and no
    dependent work starts until the operator explicitly acknowledges the exact
    displayed write requirements. `--yes` alone does not acknowledge them.
 11. Given the final selected features, the workflow PAT table contains exactly
