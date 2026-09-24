@@ -46612,6 +46612,7 @@ exports.requiresSetupRepositoryInventory = requiresSetupRepositoryInventory;
 exports.requiresSetupOrganizationInventory = requiresSetupOrganizationInventory;
 exports.resolveSetupResourceTarget = resolveSetupResourceTarget;
 exports.setupResourceExists = setupResourceExists;
+exports.findSetupOrganizationShadows = findSetupOrganizationShadows;
 exports.shouldUpsertSetupResource = shouldUpsertSetupResource;
 exports.validateSetupStorageAgainstRemote = validateSetupStorageAgainstRemote;
 exports.validateSetupManagedResourceInventory = validateSetupManagedResourceInventory;
@@ -46650,17 +46651,11 @@ function getSetupStorageConfiguration(configuration) {
     };
 }
 /**
- * Repository inventory is needed only when a selected resource can target the
- * repository or when preserving an unoverridden resource requires discovering
- * whether it already exists there.
+ * Every selected resource needs repository inventory. A repository value takes
+ * precedence even when setup targets organization storage explicitly.
  */
-function requiresSetupRepositoryInventory(policy, names) {
-    return names.some(name => {
-        if (Object.prototype.hasOwnProperty.call(policy.overrides, name)) {
-            return policy.overrides[name] === 'repository';
-        }
-        return policy.defaultScope === 'repository' || policy.preserveExisting;
-    });
+function requiresSetupRepositoryInventory(names) {
+    return names.length > 0;
 }
 /**
  * Organization inventory is needed when a selected resource can target the
@@ -46680,11 +46675,7 @@ function requiresSetupOrganizationInventory(policy, names, repositoryExistingNam
 }
 function resolveSetupResourceTarget(configuration, kind, name, remote) {
     const policy = getSetupResourceStoragePolicy(configuration, kind);
-    const explicitOverride = Object.prototype.hasOwnProperty.call(policy.overrides, name);
-    const existingScope = setupResourceExists(remote, kind, name).effective;
-    const scope = existingScope && policy.preserveExisting && !explicitOverride
-        ? existingScope
-        : resolveSetupResourceScope(policy, name);
+    const scope = selectSetupResourceScope(policy, kind, name, remote);
     return {
         scope,
         organizationVisibility: policy.organizationVisibility,
@@ -46708,6 +46699,18 @@ function setupResourceExists(remote, kind, name) {
         organization,
         effective: repository ? 'repository' : organization ? 'organization' : undefined,
     };
+}
+/** An organization target would be ignored at runtime by a same-name repository value. */
+function findSetupOrganizationShadows(policy, kind, names, remote) {
+    return names.filter(name => selectSetupResourceScope(policy, kind, name, remote) === 'organization'
+        && setupResourceExists(remote, kind, name).repository);
+}
+function selectSetupResourceScope(policy, kind, name, remote) {
+    const explicitOverride = Object.prototype.hasOwnProperty.call(policy.overrides, name);
+    const existingScope = setupResourceExists(remote, kind, name).effective;
+    return existingScope && policy.preserveExisting && !explicitOverride
+        ? existingScope
+        : resolveSetupResourceScope(policy, name);
 }
 function shouldUpsertSetupResource(configuration, kind, name, remote) {
     const policy = getSetupResourceStoragePolicy(configuration, kind);
@@ -46754,9 +46757,9 @@ function validateSetupStorageAgainstRemote(configuration, remote) {
 function validateSetupManagedResourceInventory(configuration, remote, resources) {
     const errors = [];
     const secretsRequireRepositoryInventory = configuration.manageRepositorySecrets
-        && requiresSetupRepositoryInventory(getSetupResourceStoragePolicy(configuration, 'secret'), resources.secrets);
+        && requiresSetupRepositoryInventory(resources.secrets);
     const variablesRequireRepositoryInventory = configuration.manageRepositoryVariables
-        && requiresSetupRepositoryInventory(getSetupResourceStoragePolicy(configuration, 'variable'), resources.variables);
+        && requiresSetupRepositoryInventory(resources.variables);
     const secretsRequireOrganizationInventory = remote.ownerType === 'Organization'
         && configuration.manageRepositorySecrets
         && requiresSetupOrganizationInventory(getSetupResourceStoragePolicy(configuration, 'secret'), resources.secrets, remote.repositorySecrets);
@@ -46768,6 +46771,16 @@ function validateSetupManagedResourceInventory(configuration, remote, resources)
     }
     if (variablesRequireRepositoryInventory && remote.repositoryVariablesAccess !== 'available') {
         errors.push(`Repository Variable inventory is ${remote.repositoryVariablesAccess}; setup cannot safely preserve existing Variable scopes and values.`);
+    }
+    if (remote.repositorySecretsAccess === 'available' && configuration.manageRepositorySecrets) {
+        for (const name of findSetupOrganizationShadows(getSetupResourceStoragePolicy(configuration, 'secret'), 'secret', resources.secrets, remote)) {
+            errors.push(`Repository Secret ${name} shadows the selected organization Secret; choose repository scope or remove the shadow before setup.`);
+        }
+    }
+    if (remote.repositoryVariablesAccess === 'available' && configuration.manageRepositoryVariables) {
+        for (const name of findSetupOrganizationShadows(getSetupResourceStoragePolicy(configuration, 'variable'), 'variable', resources.variables, remote)) {
+            errors.push(`Repository Variable ${name} shadows the selected organization Variable; choose repository scope or remove the shadow before setup.`);
+        }
     }
     if (secretsRequireOrganizationInventory && remote.organizationSecretsAccess !== 'available') {
         errors.push(`Organization Secret inventory is ${remote.organizationSecretsAccess}; setup cannot safely decide whether to preserve or replace existing Secrets.`);
@@ -48187,23 +48200,30 @@ function reconcileSetupTokenPermissionEvidence(requirements, evidence) {
             status: candidate.status,
             message: candidate.message,
             ...(candidate.status === 'unverifiable'
-                && isOperationallyAvailableSetupRead(requirement)
                 && candidate.operationallyAvailable === true
-                ? { operationallyAvailable: true }
+                && isOperationallyAvailableSetupRead(requirement, candidate.publicReadEvidence)
+                ? { operationallyAvailable: true, publicReadEvidence: candidate.publicReadEvidence }
                 : {}),
         };
     });
 }
 /** Limits positive usability without promoting publicly readable evidence to verified PAT access. */
-function isOperationallyAvailableSetupRead(requirement) {
+function isOperationallyAvailableSetupRead(requirement, evidence) {
     if (requirement.level !== 'read')
         return false;
-    if (requirement.scope === 'repository')
-        return true;
+    if (requirement.scope === 'repository') {
+        return evidence === 'public-repository'
+            && PUBLIC_REPOSITORY_READ_PROBES.has(requirement.probe)
+            && requirement.permission.toLowerCase().replace(/ /gu, '-') === requirement.probe;
+    }
     return requirement.scope === 'organization'
         && requirement.permission === 'Members'
-        && requirement.probe === 'members';
+        && requirement.probe === 'members'
+        && evidence === 'public-organization-members';
 }
+const PUBLIC_REPOSITORY_READ_PROBES = new Set([
+    'metadata', 'contents', 'administration', 'issues', 'actions', 'checks', 'pull-requests', 'workflows',
+]);
 function isMatchingEvidence(requirement, value) {
     return value.id === requirement.id
         && value.role === requirement.role
@@ -48216,7 +48236,10 @@ function isMatchingEvidence(requirement, value) {
         && isPermissionStatus(value.status)
         && typeof value.message === 'string'
         && value.message.trim().length > 0
-        && (value.operationallyAvailable === undefined || value.operationallyAvailable === true);
+        && (value.operationallyAvailable === undefined || value.operationallyAvailable === true)
+        && (value.publicReadEvidence === undefined
+            || value.publicReadEvidence === 'public-repository'
+            || value.publicReadEvidence === 'public-organization-members');
 }
 function isPermissionStatus(value) {
     return value === 'verified' || value === 'missing' || value === 'unverifiable';
@@ -48425,7 +48448,7 @@ function normalizePermissionRequirements(requirements) {
 }
 function selectedResourceScopes(configuration, kind, names, remote) {
     const scopes = new Set(names.map(name => (0, setup_configuration_storage_policy_1.resolveSetupResourceTarget)(configuration, kind, name, remote).scope));
-    if ((0, setup_configuration_storage_policy_1.requiresSetupRepositoryInventory)((0, setup_configuration_storage_policy_1.getSetupResourceStoragePolicy)(configuration, kind), names)) {
+    if ((0, setup_configuration_storage_policy_1.requiresSetupRepositoryInventory)(names)) {
         scopes.add('repository');
     }
     if (remote?.ownerType === 'Organization' && (0, setup_configuration_storage_policy_1.requiresSetupOrganizationInventory)((0, setup_configuration_storage_policy_1.getSetupResourceStoragePolicy)(configuration, kind), names, kind === 'secret'
@@ -51509,7 +51532,7 @@ function groupSetupResources(resources, kind, configuration, remoteConfiguration
     const repositoryAccess = kind === 'secret'
         ? remoteConfiguration?.repositorySecretsAccess
         : remoteConfiguration?.repositoryVariablesAccess;
-    const requiresRepositoryInventory = (0, setup_configuration_policy_1.requiresSetupRepositoryInventory)((0, setup_configuration_policy_1.getSetupResourceStoragePolicy)(configuration, kind), resources.map(resource => resource.name));
+    const requiresRepositoryInventory = (0, setup_configuration_policy_1.requiresSetupRepositoryInventory)(resources.map(resource => resource.name));
     if (remoteConfiguration && requiresRepositoryInventory && repositoryAccess !== 'available') {
         throw new Error(`Repository ${kind} inventory is ${repositoryAccess}; resource targets cannot be resolved safely.`);
     }
@@ -51522,6 +51545,12 @@ function groupSetupResources(resources, kind, configuration, remoteConfiguration
             : remoteConfiguration.repositoryVariables.map(variable => variable.name));
     if (requiresOrganizationInventory && organizationAccess !== 'available') {
         throw new Error(`Organization ${kind} inventory is ${organizationAccess}; resource targets cannot be resolved safely.`);
+    }
+    if (remoteConfiguration && repositoryAccess === 'available') {
+        const shadows = (0, setup_configuration_policy_1.findSetupOrganizationShadows)((0, setup_configuration_policy_1.getSetupResourceStoragePolicy)(configuration, kind), kind, resources.map(resource => resource.name), remoteConfiguration);
+        if (shadows.length > 0) {
+            throw new application_error_1.ApplicationError('configuration.invalid', `Repository ${kind} ${shadows[0]} shadows the selected organization target; choose repository scope or remove the shadow before setup.`);
+        }
     }
     const groups = new Map();
     for (const resource of resources) {
@@ -55147,8 +55176,7 @@ class SetupCredentialsUseCase {
         if (!this.secrets)
             throw new application_error_1.ApplicationError('configuration.unsupported', 'Repository Secret provisioning is not available in this installation.');
         const requirements = request.requirements.filter(requirement => requirement.name !== 'SETUP_PAT');
-        const requiresRepositoryInventory = request.secretStoragePolicy === undefined
-            || (0, setup_configuration_storage_policy_1.requiresSetupRepositoryInventory)(request.secretStoragePolicy, requirements.map(requirement => requirement.name));
+        const requiresRepositoryInventory = (0, setup_configuration_storage_policy_1.requiresSetupRepositoryInventory)(requirements.map(requirement => requirement.name));
         const requiresOrganizationInventory = request.remoteConfiguration?.ownerType === 'Organization'
             && (request.secretStoragePolicy === undefined
                 || (0, setup_configuration_storage_policy_1.requiresSetupOrganizationInventory)(request.secretStoragePolicy, requirements.map(requirement => requirement.name), request.remoteConfiguration.repositorySecrets));
@@ -55161,6 +55189,12 @@ class SetupCredentialsUseCase {
             && request.remoteConfiguration
             && request.remoteConfiguration.organizationSecretsAccess !== 'available') {
             throw new application_error_1.ApplicationError('provider.unavailable', `Organization Secret inventory is ${request.remoteConfiguration.organizationSecretsAccess}; credential collection cannot safely preserve existing Secrets.`);
+        }
+        if (request.secretStoragePolicy && request.remoteConfiguration?.repositorySecretsAccess === 'available') {
+            const shadows = (0, setup_configuration_storage_policy_1.findSetupOrganizationShadows)(request.secretStoragePolicy, 'secret', requirements.map(requirement => requirement.name), request.remoteConfiguration);
+            if (shadows.length > 0) {
+                throw new application_error_1.ApplicationError('configuration.invalid', `Repository Secret ${shadows[0]} shadows the selected organization Secret; choose repository scope or remove the shadow before setup.`);
+            }
         }
         const existingSecretNames = request.remoteConfiguration?.repositorySecrets
             ? [...request.remoteConfiguration.repositorySecrets]
@@ -55432,7 +55466,7 @@ class SetupTokenPermissionsUseCase {
         const requiredWrites = requiredChecks.filter(check => check.level === 'write');
         const readUsable = (check) => (check.status === 'verified' && check.level === 'read')
             || (check.status === 'unverifiable' && check.level === 'read'
-                && (0, setup_token_permission_evidence_policy_1.isOperationallyAvailableSetupRead)(check)
+                && (0, setup_token_permission_evidence_policy_1.isOperationallyAvailableSetupRead)(check, check.publicReadEvidence)
                 && check.operationallyAvailable === true);
         const readsUsable = requiredReads.every(readUsable);
         const ready = readsUsable && requiredWrites.length === 0;
@@ -82926,8 +82960,11 @@ async function mapProbeResponse(requirement, response, readEvidence) {
         const publiclyReadable = outcome(requirement, 'unverifiable', requirement.scope === 'repository'
             ? 'This publicly readable repository read succeeded, but does not prove that the PAT has the named permission.'
             : 'GitHub served a publicly readable organization resource, which does not prove that this token has the requested permission.');
-        return (0, setup_token_permission_evidence_policy_1.isOperationallyAvailableSetupRead)(requirement)
-            ? { ...publiclyReadable, operationallyAvailable: true }
+        const publicReadEvidence = requirement.scope === 'repository'
+            ? 'public-repository'
+            : 'public-organization-members';
+        return (0, setup_token_permission_evidence_policy_1.isOperationallyAvailableSetupRead)(requirement, publicReadEvidence)
+            ? { ...publiclyReadable, operationallyAvailable: true, publicReadEvidence }
             : publiclyReadable;
     }
     if (response.status === 409
@@ -82937,7 +82974,7 @@ async function mapProbeResponse(requirement, response, readEvidence) {
             return outcome(requirement, 'verified', 'GitHub confirmed that the accessible Git repository is empty.');
         }
         return requirement.level === 'read' && readEvidence === 'publicly-readable'
-            ? { ...outcome(requirement, 'unverifiable', 'This public repository is empty; its read is operationally available, but does not prove the PAT permission.'), operationallyAvailable: true }
+            ? { ...outcome(requirement, 'unverifiable', 'This public repository is empty; its read is operationally available, but does not prove the PAT permission.'), operationallyAvailable: true, publicReadEvidence: 'public-repository' }
             : outcome(requirement, 'unverifiable', 'GitHub confirmed that the repository is empty, but this read-only response does not prove the requested token permission.');
     }
     if (response.status === 401) {

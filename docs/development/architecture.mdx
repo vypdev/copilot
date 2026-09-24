@@ -171,8 +171,13 @@ presenter renders the policy-owned requirements and use-case-owned outcomes but
 contains no permission catalog or remote operation. Application `ready` remains
 strict; the terminal adapter owns the separate fail-closed acknowledgement for
 required unverifiable writes, while required unverifiable reads remain blocked.
-The shared storage policy computes repository and organization inventory
-dependencies symmetrically. `SetupWizardUseCase` applies that policy after its
+Public-read usability requires adapter-derived provenance tied to a confirmed
+public repository or the exact public organization Members probe; an arbitrary
+unverifiable row cannot carry a usable flag through reconciliation. The shared
+storage policy requires repository inventory for every managed Secret/Variable
+to rule out a value that would shadow an organization target. Organization
+inventory is required only when the selected scope or preservation needs it.
+`SetupWizardUseCase` applies that policy after its
 final permission audit and before plan presentation, so every caller receives
 the same structured block; the CLI consumes that result without duplicating
 inventory validation before credential decisions or resource grouping.

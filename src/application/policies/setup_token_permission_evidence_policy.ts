@@ -2,6 +2,7 @@ import type {
     SetupTokenPermissionCheck,
     SetupTokenPermissionRequirement,
     SetupTokenPermissionStatus,
+    SetupTokenPublicReadEvidence,
 } from '../../domain/setup_token_permissions';
 
 const NO_SAFE_EVIDENCE_MESSAGE = 'No safe permission evidence was returned for this requirement.';
@@ -33,9 +34,9 @@ export function reconcileSetupTokenPermissionEvidence(
             status: candidate.status,
             message: candidate.message,
             ...(candidate.status === 'unverifiable'
-                && isOperationallyAvailableSetupRead(requirement)
                 && candidate.operationallyAvailable === true
-                ? { operationallyAvailable: true as const }
+                && isOperationallyAvailableSetupRead(requirement, candidate.publicReadEvidence)
+                ? { operationallyAvailable: true as const, publicReadEvidence: candidate.publicReadEvidence }
                 : {}),
         };
     });
@@ -44,13 +45,23 @@ export function reconcileSetupTokenPermissionEvidence(
 /** Limits positive usability without promoting publicly readable evidence to verified PAT access. */
 export function isOperationallyAvailableSetupRead(
     requirement: Pick<SetupTokenPermissionRequirement, 'scope' | 'permission' | 'level' | 'probe'>,
+    evidence: SetupTokenPublicReadEvidence | undefined,
 ): boolean {
     if (requirement.level !== 'read') return false;
-    if (requirement.scope === 'repository') return true;
+    if (requirement.scope === 'repository') {
+        return evidence === 'public-repository'
+            && PUBLIC_REPOSITORY_READ_PROBES.has(requirement.probe)
+            && requirement.permission.toLowerCase().replace(/ /gu, '-') === requirement.probe;
+    }
     return requirement.scope === 'organization'
         && requirement.permission === 'Members'
-        && requirement.probe === 'members';
+        && requirement.probe === 'members'
+        && evidence === 'public-organization-members';
 }
+
+const PUBLIC_REPOSITORY_READ_PROBES = new Set<SetupTokenPermissionRequirement['probe']>([
+    'metadata', 'contents', 'administration', 'issues', 'actions', 'checks', 'pull-requests', 'workflows',
+]);
 
 function isMatchingEvidence(
     requirement: SetupTokenPermissionRequirement,
@@ -67,7 +78,10 @@ function isMatchingEvidence(
         && isPermissionStatus(value.status)
         && typeof value.message === 'string'
         && value.message.trim().length > 0
-        && (value.operationallyAvailable === undefined || value.operationallyAvailable === true);
+        && (value.operationallyAvailable === undefined || value.operationallyAvailable === true)
+        && (value.publicReadEvidence === undefined
+            || value.publicReadEvidence === 'public-repository'
+            || value.publicReadEvidence === 'public-organization-members');
 }
 
 function isPermissionStatus(value: unknown): value is SetupTokenPermissionStatus {

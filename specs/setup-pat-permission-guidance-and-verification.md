@@ -233,11 +233,12 @@ read-only GitHub queries and presents ordered permission outcomes.
    NOT imply absence. Repository resources take precedence: once every
    unoverridden selected name is verified as already present in repository
    inventory, organization inventory is not required merely for preservation.
-7. A selected resource with an explicit organization override does not depend
-   on repository inventory. When every selected resource is forced to
-   organization scope, including a policy with `preserveExisting: false`, setup
-   MUST continue from the available organization inventory and MUST NOT request
-   or block on unrelated repository Secret or Variable access.
+7. A selected resource with an explicit organization override still depends on
+   repository inventory for that resource class: a same-name repository value
+   would shadow the organization target. Even when every selected resource is
+   forced to organization scope with `preserveExisting: false`, setup MUST block
+   on unavailable repository inventory or a known same-name shadow before
+   credential collection or provisioning.
 8. Remote setup inspection records whether `copilot_credential_health.yml` is
    installed, confirmed missing, unavailable, or unknown without mutating the
    repository. When existing Secrets require health validation, Actions write
@@ -414,6 +415,12 @@ read-only GitHub queries and presents ordered permission outcomes.
     ambiguous, malformed, timed-out, or visibility-unknown probe. The terminal
     MUST explain that access is operationally available without claiming the
     PAT has the named grant.
+    Positive operational evidence MUST carry an explicit public-read provenance
+    created by the query adapter after repository metadata proves public
+    visibility, or after the exact public organization Members probe succeeds.
+    Reconciliation accepts that provenance only for the matching bounded public
+    permission/probe pair; Secret/Variable inventory, private or unknown repository
+    visibility, and arbitrary adapter booleans cannot make a required read ready.
 
 ### 6.3 Permission states
 
@@ -497,11 +504,12 @@ upsert, dispatch, or temporary-resource operation.
   unknown access is never projected as a confirmed empty inventory.
 - Fail-closed consumers: final audit, credential collection, and resource
   provisioning reject unavailable/unknown repository or organization inventory
-  only when the shared storage policy says a selected resource can resolve
-  there or requires discovery in that scope for preservation. Explicitly
-  organization-only targets do not gain an unrelated repository dependency,
-  and explicitly repository-only targets do not gain an unrelated organization
-  dependency.
+  when the selected resource needs that scope. Every managed Secret or Variable
+  also needs repository inventory to rule out a same-name repository value
+  shadowing an organization target at workflow runtime. A known shadow blocks
+  organization provisioning with a named recovery action; it is never treated
+  as successful organization configuration. Repository-only targets do not
+  gain an unrelated organization inventory dependency.
 - Public-read usability is a separate, positive semantic fact on one successful
   repository read. Neither generic `Unverifiable` nor a public URL alone
   authorizes a read; invalid token identity, denied/ambiguous probes, protected
@@ -625,7 +633,7 @@ No durable marker or notification is created.
 | final configuration or preservation has unavailable organization storage | final setup-PAT requirements and results remain visible, then setup stops before credential decisions, target resolution, or mutation | approved configuration, bounded storage facts, permission table | no | grant the named organization permission and retry | none |
 | optional repository inventory denied before selection | wizard continues with unavailable/unknown inventory; the final audit blocks if the capability becomes required | access state and completed permission rows | no | select features, then grant any required permission named by the final table | none |
 | required repository inventory remains unavailable after final audit | setup stops before credential prompts, target resolution, or mutation; no empty inventory is inferred | final permission table and bounded access state | no | retry after provider recovery or correct the named PAT permission | none |
-| unrelated repository inventory unavailable for organization-only resources | setup continues using available organization inventory; no repository absence is inferred or needed | final permission table and bounded access states | no | none | none |
+| repository inventory unavailable for organization-only resources | setup blocks because a repository Secret/Variable could shadow the organization target | final permission table and bounded access states | no | restore repository inventory access | none |
 | required write level unverifiable | setup pauses before dependent work; the row remains non-verified | verified identity/read facts | no | inspect PAT settings, then confirm interactively or pass the dedicated non-interactive acknowledgement flag | none |
 | existing workflow PAT cannot be read | setup requests the PAT again before accepting or reprovisioning it; non-interactive setup without `PAT` stops | bounded remote-health result only | no | re-enter or supply `PAT`, then complete its permission audit | none |
 | rate limit/network/5xx | no false missing result | other completed rows | bounded provider retry only | retry later | none |
@@ -663,17 +671,17 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **123 distinct cases**.
+This SDD adds at least **127 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain permission policy | 25 | setup/workflow plans, independent selected-feature write grants and all-disabled minimum, enabled comment-route file-mutation potential versus individual answer-only events, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants, positive and negative organization-membership capability projection including comment-only and independently available single-action routes |
-| Application state/blocking | 25 | verified, missing, required-read unverifiable, public repository and exact organization-Members operational readiness, required-write confirmation including a write-only required plan, canonical reconstruction after semantic mismatch, duplicate evidence rejection, verified-write downgrade, invalid base token, organization-only credential collection, bounded pre-plan inspection failure, accepted/rejected final audit with structured block, selected-ref workflow state refresh, immediate remote-storage blocked handling, zero-count assignment and inactive membership checks |
+| Application state/blocking | 28 | verified, missing, required-read unverifiable, bounded public-read provenance and disguised protected permission rejection, public repository and exact organization-Members operational readiness, required-write confirmation including a write-only required plan, canonical reconstruction after semantic mismatch, duplicate evidence rejection, verified-write downgrade, invalid base token, organization-target shadow rejection, bounded pre-plan inspection failure, accepted/rejected final audit with structured block, selected-ref workflow state refresh, immediate remote-storage blocked handling, zero-count assignment and inactive membership checks |
 | Adapter/provider contracts | 40 | GET-only probes, fixed four-request concurrency with stable result order, private-versus-public/unknown visibility evidence, protected-endpoint evidence, exact Members-read operational evidence without permission promotion, commit-list Contents target, private empty-repository 409 versus public operational usability, default-branch Checks resolution plus encoded check-runs target, invalid/missing branch fail-closed behavior, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow on the selected ref in inspection and bootstrap, default-branch dispatchability proof even when Actions-index returns 404, malformed root scalar/object success remains unavailable without bootstrap, malformed exact-file success remains unavailable, unavailable endpoint state, duplicate-comment deletion fallback regression |
-| Setup/credential integration | 21 | pre-prompt setup table, conditional denial through planning, wizard-owned repository-inventory block plus organization-only continuation, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, absent/failed remote snapshot blocks every subsequent mutation, preserve-disabled and scope-moving keep rejection, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
+| Setup/credential integration | 22 | pre-prompt setup table, conditional denial through planning, wizard-owned repository-inventory block for organization targets and known-shadow rejection, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, absent/failed remote snapshot blocks every subsequent mutation, preserve-disabled and scope-moving keep rejection, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
 | UI/accessibility | 5 | required/result tables, public-read limitation copy, confirmation-required copy, 40-column wrapping, no-color text |
 | Architecture/security/docs | 7 | query-only boundary, no duplicated catalog, safe generic/recovery automation examples, nearest-paragraph permission-prerequisite cases, and README plus MDX source enumeration with file-specific diagnostics |
-| **Total** | **123** | No double counting |
+| **Total** | **127** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -716,11 +724,12 @@ at widths 40/80/120 and `NO_COLOR`.
    confirmation, credential prompts, scope resolution, or mutation without
    treating the inventory as empty. This holds for every wizard caller, not only
    the CLI entrypoint.
-7. Given every selected Secret or Variable is explicitly organization-scoped,
-   or its organization default has `preserveExisting: false`, unavailable
-   repository inventory does not block credential collection, target resolution,
-   or organization provisioning when the corresponding organization inventory
-   is available.
+7. Given any selected organization-scoped Secret or Variable, unavailable
+   repository inventory blocks credential collection, target resolution, and
+   provisioning even when organization inventory is available and
+   `preserveExisting` is false. Given available repository inventory with the
+   same resource name, organization provisioning blocks with a named shadow
+   conflict before mutation; it cannot report the organization target as active.
 8. Given a mixed storage policy with any selected repository-scoped or
    preservation-dependent resource, unavailable repository inventory still
    blocks all dependent work before mutation.
@@ -928,7 +937,7 @@ at widths 40/80/120 and `NO_COLOR`.
 | deterministic 403 mapping | provider adapter plus bounded GitHub error policy | rate-limit, SSO, bare, and explicit-denial fixtures | authentication/troubleshooting |
 | context-specific generic 403 handling | setup query adapter plus operational GitHub error policy | setup-probe and duplicate-comment deletion regression fixtures | authentication/troubleshooting |
 | final report before remote-storage block | wizard result contract/CLI orchestration | blocked-result and CLI ordering tests | authentication/troubleshooting |
-| scope-sensitive inventory gating | storage policy plus setup wizard boundary | wizard-blocked, organization-only, preserve-existing, and mixed-scope tests | authentication/troubleshooting |
+| scope-sensitive inventory gating | storage policy plus setup wizard boundary | wizard-blocked, organization-target shadow, preserve-existing, and mixed-scope tests | authentication/troubleshooting |
 | absent-snapshot fail-closed provisioning | resource grouping and initial setup workflow | missing port, failed inspection, no-upsert tests | troubleshooting/provisioning |
 | all-provisioning fail-closed boundary | initial setup workflow + storage policy | no local file copy or label/type/tag/Secret/Variable calls after failed inspection | troubleshooting |
 | public-read operational evidence | permission query adapter + evidence policy + readiness use case + presenter | public repository and exact organization-Members success plus ambiguous/denied/Issue-Types/write fixtures | authentication/troubleshooting |

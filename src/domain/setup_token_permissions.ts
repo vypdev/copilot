@@ -3,6 +3,7 @@ export type SetupTokenPermissionScope = 'repository' | 'organization';
 export type SetupTokenPermissionLevel = 'read' | 'write';
 export type SetupTokenPermissionApplicability = 'required' | 'conditional';
 export type SetupTokenPermissionStatus = 'verified' | 'missing' | 'unverifiable';
+export type SetupTokenPublicReadEvidence = 'public-repository' | 'public-organization-members';
 
 export type SetupTokenPermissionProbe =
     | 'metadata'
@@ -37,6 +38,8 @@ export interface SetupTokenPermissionCheck extends SetupTokenPermissionRequireme
     message: string;
     /** A successful public repository read is usable, but does not prove a PAT grant. */
     operationallyAvailable?: true;
+    /** Adapter-derived public-read provenance, never a PAT permission claim. */
+    publicReadEvidence?: SetupTokenPublicReadEvidence;
 }
 
 export interface SetupTokenPermissionReport {

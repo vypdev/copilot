@@ -235,10 +235,7 @@ function selectedResourceScopes(
         name,
         remote,
     ).scope));
-    if (requiresSetupRepositoryInventory(
-        getSetupResourceStoragePolicy(configuration, kind),
-        names,
-    )) {
+    if (requiresSetupRepositoryInventory(names)) {
         scopes.add('repository');
     }
     if (remote?.ownerType === 'Organization' && requiresSetupOrganizationInventory(

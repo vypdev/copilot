@@ -423,22 +423,10 @@ describe('setup configuration policy', () => {
         expect(validateSetupManagedResourceInventory(configuration, remote, resources)).toEqual([]);
     });
 
-    it('requires repository inventory only for selected scopes or preservation discovery', () => {
-        const configuration = createDefaultSetupConfiguration();
-        const policy = configuration.storage.secrets;
-
-        policy.defaultScope = 'organization';
-        policy.preserveExisting = false;
-        expect(requiresSetupRepositoryInventory(policy, ['PAT'])).toBe(false);
-
-        policy.preserveExisting = true;
-        expect(requiresSetupRepositoryInventory(policy, ['PAT'])).toBe(true);
-
-        policy.overrides.PAT = 'organization';
-        expect(requiresSetupRepositoryInventory(policy, ['PAT'])).toBe(false);
-
-        policy.overrides.OPENAI_API_KEY = 'repository';
-        expect(requiresSetupRepositoryInventory(policy, ['PAT', 'OPENAI_API_KEY'])).toBe(true);
+    it('requires repository inventory for every selected name to rule out organization shadowing', () => {
+        expect(requiresSetupRepositoryInventory([])).toBe(false);
+        expect(requiresSetupRepositoryInventory(['PAT'])).toBe(true);
+        expect(requiresSetupRepositoryInventory(['PAT', 'OPENAI_API_KEY'])).toBe(true);
     });
 
     it('requires organization inventory only for selected scopes or preservation discovery', () => {
@@ -463,7 +451,7 @@ describe('setup configuration policy', () => {
         expect(requiresSetupOrganizationInventory(policy, ['PAT', 'OPENAI_API_KEY'])).toBe(true);
     });
 
-    it('allows unavailable repository inventory when every selected resource is organization-only', () => {
+    it('blocks unavailable repository inventory even when every selected resource is organization-only', () => {
         const configuration = createDefaultSetupConfiguration();
         configuration.storage.secrets.defaultScope = 'organization';
         configuration.storage.secrets.preserveExisting = false;
@@ -480,7 +468,32 @@ describe('setup configuration policy', () => {
         expect(validateSetupManagedResourceInventory(configuration, remote, {
             secrets: ['PAT'],
             variables: ['AGENT_PROVIDER'],
-        })).toEqual([]);
+        })).toEqual([
+            expect.stringContaining('Repository Secret inventory is unavailable'),
+            expect.stringContaining('Repository Variable inventory is unknown'),
+        ]);
+    });
+
+    it('blocks known repository values that shadow selected organization targets', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.storage.secrets.defaultScope = 'organization';
+        configuration.storage.secrets.preserveExisting = false;
+        configuration.storage.variables.defaultScope = 'organization';
+        configuration.storage.variables.preserveExisting = false;
+        const remote = {
+            ownerType: 'Organization' as const, repositoryId: 42, repositoryVisibility: 'private' as const,
+            repositorySecrets: ['PAT'], repositorySecretsAccess: 'available' as const,
+            organizationSecrets: [], repositoryVariables: [{ name: 'AGENT_MODEL', value: 'old' }], repositoryVariablesAccess: 'available' as const,
+            organizationVariables: [], organizationAccess: 'available' as const,
+            organizationSecretsAccess: 'available' as const, organizationVariablesAccess: 'available' as const,
+        };
+
+        expect(validateSetupManagedResourceInventory(configuration, remote, {
+            secrets: ['PAT'], variables: ['AGENT_MODEL'],
+        })).toEqual([
+            expect.stringContaining('Repository Secret PAT shadows'),
+            expect.stringContaining('Repository Variable AGENT_MODEL shadows'),
+        ]);
     });
 
     it('rejects unavailable organization inventory needed to preserve repository-default resources', () => {

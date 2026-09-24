@@ -384,7 +384,7 @@ describe('SetupWizardUseCase', () => {
     expect(JSON.stringify(result)).not.toContain('private provider body');
   });
 
-  it('does not block organization-only resources on unrelated repository inventory', async () => {
+  it('blocks organization-only resources when repository shadow inventory is unavailable', async () => {
     const organizationOnlyRemote = { ...remote, repositoryVariablesAccess: 'unavailable' as const };
     const deps = dependencies({
       remoteConfiguration: { inspect: jest.fn().mockResolvedValue(organizationOnlyRemote) },
@@ -400,9 +400,10 @@ describe('SetupWizardUseCase', () => {
       remoteTarget: { owner: 'owner', repository: 'repo', token: 'token' },
     });
 
-    expect(result).toEqual(expect.objectContaining({ status: 'completed', exitCode: 0 }));
+    expect(result).toMatchObject({ status: 'blocked', exitCode: 1,
+      errors: expect.arrayContaining([expect.stringContaining('Repository Variable inventory is unavailable')]) });
     expect(deps.finalPermissionAudit.audit).toHaveBeenCalledTimes(1);
-    expect(deps.planPresenter.present).toHaveBeenCalledTimes(1);
-    expect(deps.confirmation.confirm).toHaveBeenCalledTimes(1);
+    expect(deps.planPresenter.present).not.toHaveBeenCalled();
+    expect(deps.confirmation.confirm).not.toHaveBeenCalled();
   });
 });

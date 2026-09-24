@@ -104,6 +104,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
             status: 'unverifiable',
             message: expect.stringContaining('publicly readable'),
             operationallyAvailable: true,
+            publicReadEvidence: 'public-repository',
         });
     });
 
@@ -145,7 +146,8 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         );
 
         expect(fetcher).toHaveBeenCalledTimes(1);
-        expect(check).toMatchObject({ status: 'unverifiable', operationallyAvailable: true });
+        expect(check).toMatchObject({ status: 'unverifiable', operationallyAvailable: true,
+            publicReadEvidence: 'public-organization-members' });
     });
 
     it('keeps a successful public organization Issue Types probe unusable as permission evidence', async () => {
@@ -192,6 +194,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         expect(check).toMatchObject({
             status: 'unverifiable',
             operationallyAvailable: true,
+            publicReadEvidence: 'public-repository',
             message: expect.stringContaining('does not prove'),
         });
     });

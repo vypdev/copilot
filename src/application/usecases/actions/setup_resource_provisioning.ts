@@ -6,6 +6,7 @@ import type {
 } from '../../../domain/setup';
 import {
     buildSetupRepositoryVariables,
+    findSetupOrganizationShadows,
     getSetupResourceStoragePolicy,
     requiresSetupOrganizationInventory,
     requiresSetupRepositoryInventory,
@@ -140,10 +141,7 @@ export function groupSetupResources(
     const repositoryAccess = kind === 'secret'
         ? remoteConfiguration?.repositorySecretsAccess
         : remoteConfiguration?.repositoryVariablesAccess;
-    const requiresRepositoryInventory = requiresSetupRepositoryInventory(
-        getSetupResourceStoragePolicy(configuration, kind),
-        resources.map(resource => resource.name),
-    );
+    const requiresRepositoryInventory = requiresSetupRepositoryInventory(resources.map(resource => resource.name));
     if (remoteConfiguration && requiresRepositoryInventory && repositoryAccess !== 'available') {
         throw new Error(`Repository ${kind} inventory is ${repositoryAccess}; resource targets cannot be resolved safely.`);
     }
@@ -160,6 +158,18 @@ export function groupSetupResources(
         );
     if (requiresOrganizationInventory && organizationAccess !== 'available') {
         throw new Error(`Organization ${kind} inventory is ${organizationAccess}; resource targets cannot be resolved safely.`);
+    }
+    if (remoteConfiguration && repositoryAccess === 'available') {
+        const shadows = findSetupOrganizationShadows(
+            getSetupResourceStoragePolicy(configuration, kind), kind,
+            resources.map(resource => resource.name), remoteConfiguration,
+        );
+        if (shadows.length > 0) {
+            throw new ApplicationError(
+                'configuration.invalid',
+                `Repository ${kind} ${shadows[0]} shadows the selected organization target; choose repository scope or remove the shadow before setup.`,
+            );
+        }
     }
     const groups = new Map<string, SetupResourceGroup>();
     for (const resource of resources) {

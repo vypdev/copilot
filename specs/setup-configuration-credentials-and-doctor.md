@@ -158,8 +158,12 @@ cancellation, skipped diagnosis, ordering, and read-only authority explicit.
   Secret/Variable management MUST stop before all remote resource, label,
   issue-type, and tag calls when inspection fails, its port is absent, or a
   selected inventory access state is unavailable. The questionnaire receives
-  bounded unavailable facts before final scope-sensitive validation; unrelated
-  access states may remain unavailable without blocking valid targets. The
+  bounded unavailable facts before final scope-sensitive validation. Selected
+  Secret/Variable names require repository inventory even when targeting
+  organization scope, because a repository value of the same name wins at
+  workflow runtime; a known shadow blocks that organization target before
+  mutation. Unrelated organization access may remain unavailable for
+  repository-only targets. The
   result names a bounded inspection recovery action and never exposes raw
   provider errors.
 - Runner login may satisfy explicitly declared alternative credential groups.
@@ -196,7 +200,10 @@ existing resources and avoid duplicate shadowing.
 | storage | repository, preserve existing | repository/org per resource | remote GitHub |
 | provisioning | `auto` | `always`, `disabled` | Variable |
 
-Repository values take precedence at runtime over organization values. Storage
+Repository values take precedence at runtime over organization values. Setup
+therefore requires repository inventory for every selected Secret/Variable name
+and rejects a same-name repository shadow before provisioning an organization
+target; it never reports a shadowed organization value as effective. Storage
 scope, visibility (`selected` recommended), and per-resource overrides are
 validated. Branch names, counts, enum values, model identifiers, rule length,
 deployment combinations, and storage combinations reject invalid input. Safety
@@ -295,13 +302,13 @@ manual reversal.
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
-| Defaults/config/storage policy | 26 | bounds, precedence, cross-fields, keep-versus-replace decisions for disabled preservation and scope-moving overrides |
+| Defaults/config/storage policy | 27 | bounds, precedence, cross-fields, organization-target shadow detection, keep-versus-replace decisions for disabled preservation and scope-moving overrides |
 | Questionnaire/wizard/idempotency | 18 | transitions, immutability, cancel, preserve, replace |
 | Credentials/provider adapters | 18 | valid/invalid/missing/unverifiable/groups |
 | Workflows/assets/schema | 14 | selection, parity, readiness, permissions |
 | Prompt/CLI UX/sanitization/localization | 18 | masking, status order, non-interactive, English default, Spanish exact/base, arbitrary locale, atomic fallback, hostile diagnostic suppression |
-| Integration/security/cutover | 16 | backup, org scope, doctor, no `.env`, bounded pre-plan inspection and no remote provisioning after selected inventory fails |
-| **Total** | **110** | no double counting |
+| Integration/security/cutover | 17 | backup, org scope, doctor, no `.env`, bounded pre-plan inspection and no remote provisioning after selected inventory or shadow validation fails |
+| **Total** | **112** | no double counting |
 
 Global coverage thresholds remain; questionnaire, doctor catalog/report, shared
 merge-readiness message, and doctor presenter policies MUST reach 100%
@@ -351,6 +358,10 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
     Secret/Variable/label/issue-type/tag mutation; absence cannot be
     interpreted as an empty repository inventory. Pre-plan failures still
     reach the final audit as bounded unavailable access facts.
+18. Given an organization Secret or Variable target, repository inventory is
+    available and confirms that no same-name repository resource exists;
+    otherwise setup blocks before credential collection or mutation, even with
+    an explicit organization override or `preserveExisting: false`.
 
 ## 17. Requirements traceability
 
@@ -375,7 +386,7 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 ## 19. Definition of Done
 
 - [x] Every new option has default, bounds, precedence, persistence, retirement/rejection, and security rules.
-- [x] The 110-case budget and coverage thresholds pass.
+- [x] The 112-case budget and coverage thresholds pass.
 - [x] Setup cancel/retry/partial state and doctor read-only behavior pass.
 - [x] Secrets are absent from plans, config, logs, errors, and backups.
 - [x] Workflow/assets, documentation, and catalog checks pass.

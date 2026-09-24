@@ -52,7 +52,7 @@ export class SetupTokenPermissionsUseCase {
         const requiredWrites = requiredChecks.filter(check => check.level === 'write');
         const readUsable = (check: SetupTokenPermissionCheck) => (check.status === 'verified' && check.level === 'read')
             || (check.status === 'unverifiable' && check.level === 'read'
-                && isOperationallyAvailableSetupRead(check)
+                && isOperationallyAvailableSetupRead(check, check.publicReadEvidence)
                 && check.operationallyAvailable === true);
         const readsUsable = requiredReads.every(readUsable);
         const ready = readsUsable && requiredWrites.length === 0;

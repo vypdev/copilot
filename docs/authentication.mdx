@@ -101,10 +101,12 @@ before any dependent write until the named permission is corrected. If GitHub
 can only report the permission as unverifiable and the required inventory
 remains unavailable, setup still fails closed after the final table and before
 credential choices or resource targeting; it never treats the missing inventory
-as an empty list. Repository inventory is not required when every selected
-resource is explicitly organization-scoped, or uses an organization default
-with `preserveExisting: false`; those plans continue from the available
-organization inventory without requesting unrelated repository access.
+as an empty list. Repository inventory is required even when every selected
+resource is explicitly organization-scoped or uses an organization default
+with `preserveExisting: false`: a same-name repository resource takes
+precedence at runtime. If the repository inventory is unavailable, or it
+reveals a same-name shadow, setup blocks before provisioning the organization
+target. Choose repository scope or remove the shadow after inspecting it.
 If required repository or organization inventory is unavailable, the wizard
 recognizes that blocked result immediately after running the final setup-PAT
 permission audit. The CLI reports the storage validation error with a failing

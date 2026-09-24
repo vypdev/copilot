@@ -150,7 +150,7 @@ describe('setup token permission policy', () => {
         expect(permissions).not.toContain('Workflows:write');
     });
 
-    it('includes organization-only storage without unrelated repository grants when preservation is disabled', () => {
+    it('retains repository inventory grants for organization storage shadow checks', () => {
         const configuration = createDefaultSetupConfiguration();
         configuration.storage.secrets.defaultScope = 'organization';
         configuration.storage.secrets.preserveExisting = false;
@@ -169,13 +169,11 @@ describe('setup token permission policy', () => {
             'repository:Actions:write',
             'repository:Contents:write',
             'repository:Workflows:write',
+            'repository:Secrets:write',
+            'repository:Variables:write',
             'organization:Secrets:write',
             'organization:Variables:write',
             'organization:Issue Types:write',
-        ]));
-        expect(permissions).not.toEqual(expect.arrayContaining([
-            'repository:Secrets:write',
-            'repository:Variables:write',
         ]));
     });
 

@@ -164,6 +164,7 @@ describe('SetupTokenPermissionsUseCase', () => {
                 ...organizationRead,
                 status: 'unverifiable',
                 operationallyAvailable: true,
+                publicReadEvidence: 'public-organization-members',
                 message: 'public member read is operational',
             }]),
         }).inspect({
@@ -230,7 +231,8 @@ describe('SetupTokenPermissionsUseCase', () => {
     it('accepts a usable public repository read without misreporting its PAT permission as verified', async () => {
         const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
         const query = { inspect: jest.fn().mockResolvedValue([{
-            ...required, status: 'unverifiable', operationallyAvailable: true, message: 'public read usable',
+            ...required, status: 'unverifiable', operationallyAvailable: true,
+            publicReadEvidence: 'public-repository', message: 'public read usable',
         }]) };
         const report = await new SetupTokenPermissionsUseCase(validation, query).inspect({
             role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [required],
@@ -239,10 +241,61 @@ describe('SetupTokenPermissionsUseCase', () => {
         expect(report.checks[0]).toMatchObject({ status: 'unverifiable', operationallyAvailable: true });
     });
 
+    it('does not trust an operational flag without public-read provenance', async () => {
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const report = await new SetupTokenPermissionsUseCase(validation, {
+            inspect: jest.fn().mockResolvedValue([{
+                ...required, status: 'unverifiable', operationallyAvailable: true, message: 'unproven public read',
+            }]),
+        }).inspect({
+            role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [required],
+        });
+
+        expect(report).toMatchObject({ ready: false, confirmationRequired: false });
+        expect(report.checks[0].operationallyAvailable).toBeUndefined();
+    });
+
+    it('rejects public-read provenance for protected repository inventory', async () => {
+        const protectedRead: SetupTokenPermissionRequirement = {
+            ...required, id: 'setup.repository.secrets', permission: 'Secrets', probe: 'secrets',
+        };
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const report = await new SetupTokenPermissionsUseCase(validation, {
+            inspect: jest.fn().mockResolvedValue([{
+                ...protectedRead, status: 'unverifiable', operationallyAvailable: true,
+                publicReadEvidence: 'public-repository', message: 'forged public-read marker',
+            }]),
+        }).inspect({
+            role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [protectedRead],
+        });
+
+        expect(report).toMatchObject({ ready: false, confirmationRequired: false });
+        expect(report.checks[0].operationallyAvailable).toBeUndefined();
+    });
+
+    it('rejects a protected permission disguised as a public metadata probe', async () => {
+        const disguisedRead: SetupTokenPermissionRequirement = {
+            ...required, id: 'setup.repository.secrets-disguised', permission: 'Secrets', probe: 'metadata',
+        };
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const report = await new SetupTokenPermissionsUseCase(validation, {
+            inspect: jest.fn().mockResolvedValue([{
+                ...disguisedRead, status: 'unverifiable', operationallyAvailable: true,
+                publicReadEvidence: 'public-repository', message: 'disguised metadata read',
+            }]),
+        }).inspect({
+            role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [disguisedRead],
+        });
+
+        expect(report).toMatchObject({ ready: false, confirmationRequired: false });
+        expect(report.checks[0].operationallyAvailable).toBeUndefined();
+    });
+
     it('allows write acknowledgement after a usable public read but never promotes the write', async () => {
         const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
         const query = { inspect: jest.fn().mockResolvedValue([
-            { ...required, status: 'unverifiable', operationallyAvailable: true, message: 'public read usable' },
+            { ...required, status: 'unverifiable', operationallyAvailable: true,
+                publicReadEvidence: 'public-repository', message: 'public read usable' },
             { ...requiredWrite, status: 'unverifiable', message: 'write unproven' },
         ]) };
         const report = await new SetupTokenPermissionsUseCase(validation, query).inspect({

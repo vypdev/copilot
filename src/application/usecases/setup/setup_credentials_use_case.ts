@@ -20,6 +20,7 @@ import type {
 import type { SetupTokenPermissionRequirement } from '../../../domain/setup_token_permissions';
 import {
     canKeepExistingSetupResource,
+    findSetupOrganizationShadows,
     requiresSetupOrganizationInventory,
     requiresSetupRepositoryInventory,
 } from '../../policies/setup_configuration_storage_policy';
@@ -64,11 +65,7 @@ export class SetupCredentialsUseCase {
         }
         if (!this.secrets) throw new ApplicationError('configuration.unsupported', 'Repository Secret provisioning is not available in this installation.');
         const requirements = request.requirements.filter(requirement => requirement.name !== 'SETUP_PAT');
-        const requiresRepositoryInventory = request.secretStoragePolicy === undefined
-            || requiresSetupRepositoryInventory(
-                request.secretStoragePolicy,
-                requirements.map(requirement => requirement.name),
-            );
+        const requiresRepositoryInventory = requiresSetupRepositoryInventory(requirements.map(requirement => requirement.name));
         const requiresOrganizationInventory = request.remoteConfiguration?.ownerType === 'Organization'
             && (request.secretStoragePolicy === undefined
                 || requiresSetupOrganizationInventory(
@@ -91,6 +88,18 @@ export class SetupCredentialsUseCase {
                 'provider.unavailable',
                 `Organization Secret inventory is ${request.remoteConfiguration.organizationSecretsAccess}; credential collection cannot safely preserve existing Secrets.`,
             );
+        }
+        if (request.secretStoragePolicy && request.remoteConfiguration?.repositorySecretsAccess === 'available') {
+            const shadows = findSetupOrganizationShadows(
+                request.secretStoragePolicy, 'secret', requirements.map(requirement => requirement.name),
+                request.remoteConfiguration,
+            );
+            if (shadows.length > 0) {
+                throw new ApplicationError(
+                    'configuration.invalid',
+                    `Repository Secret ${shadows[0]} shadows the selected organization Secret; choose repository scope or remove the shadow before setup.`,
+                );
+            }
         }
 
         const existingSecretNames = request.remoteConfiguration?.repositorySecrets

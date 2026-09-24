@@ -215,21 +215,49 @@ describe('setup resource provisioning policy', () => {
         expect(upsertSecrets).not.toHaveBeenCalled();
     });
 
-    it('groups organization-only resources without unrelated repository inventory', () => {
+    it('blocks organization-only resources without repository shadow inventory', () => {
         const configuration = createDefaultSetupConfiguration();
         configuration.storage.variables.defaultScope = 'organization';
         configuration.storage.variables.preserveExisting = false;
 
-        expect(groupSetupResources([{ name: 'AGENT_MODEL', value: 'gpt-5.6' }], 'variable', configuration, {
+        expect(() => groupSetupResources([{ name: 'AGENT_MODEL', value: 'gpt-5.6' }], 'variable', configuration, {
             ownerType: 'Organization', repositoryId: 42, repositoryVisibility: 'private',
             repositorySecrets: [], repositorySecretsAccess: 'available', organizationSecrets: [],
             repositoryVariables: [], repositoryVariablesAccess: 'unavailable', organizationVariables: [],
             organizationAccess: 'available', organizationSecretsAccess: 'available',
             organizationVariablesAccess: 'available',
+        })).toThrow('Repository variable inventory is unavailable');
+    });
+
+    it('groups organization resources only when repository inventory proves no shadow', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.storage.variables.defaultScope = 'organization';
+        configuration.storage.variables.preserveExisting = false;
+
+        expect(groupSetupResources([{ name: 'AGENT_MODEL', value: 'gpt-6-luna' }], 'variable', configuration, {
+            ownerType: 'Organization', repositoryId: 42, repositoryVisibility: 'private',
+            repositorySecrets: [], repositorySecretsAccess: 'available', organizationSecrets: [],
+            repositoryVariables: [], repositoryVariablesAccess: 'available', organizationVariables: [],
+            organizationAccess: 'available', organizationSecretsAccess: 'available',
+            organizationVariablesAccess: 'available',
         })).toEqual([{
             target: { scope: 'organization', organizationVisibility: 'selected', repositoryId: 42 },
-            resources: [{ name: 'AGENT_MODEL', value: 'gpt-5.6' }],
+            resources: [{ name: 'AGENT_MODEL', value: 'gpt-6-luna' }],
         }]);
+    });
+
+    it('rejects a known repository value that would shadow an organization target', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.storage.variables.defaultScope = 'organization';
+        configuration.storage.variables.preserveExisting = false;
+
+        expect(() => groupSetupResources([{ name: 'AGENT_MODEL', value: 'gpt-6-luna' }], 'variable', configuration, {
+            ownerType: 'Organization', repositoryId: 42, repositoryVisibility: 'private',
+            repositorySecrets: [], repositorySecretsAccess: 'available', organizationSecrets: [],
+            repositoryVariables: [{ name: 'AGENT_MODEL', value: 'old' }], repositoryVariablesAccess: 'available',
+            organizationVariables: [], organizationAccess: 'available',
+            organizationSecretsAccess: 'available', organizationVariablesAccess: 'available',
+        })).toThrow('Repository variable AGENT_MODEL shadows');
     });
 
     it('blocks preservation when organization inventory is unavailable', () => {
