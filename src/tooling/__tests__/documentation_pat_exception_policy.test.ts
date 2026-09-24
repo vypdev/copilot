@@ -80,6 +80,40 @@ describe('inspected-PAT documentation exception', () => {
     expect(hasAdjacentInspectedPatPrerequisite(source, examples[0].start)).toBe(false);
   });
 
+  it.each([
+    ['```', '> '],
+    ['~~~', '  > > '],
+  ])('rejects an unacknowledged %s shell example inside a %s blockquote', (marker, quote) => {
+    const source = ['# Setup', '', `${quote}${marker}bash`, `${quote}copilot setup --confirm-unverifiable-write-permissions`, `${quote}${marker}`].join('\n');
+    expect(findUnsafePatShellExamples(new Map([['setup.mdx', source]]), '--confirm-unverifiable-write-permissions'))
+      .toEqual([{ file: 'setup.mdx', line: 3 }]);
+  });
+
+  it('does not treat prerequisite text inside an earlier quoted fence as prose', () => {
+    const source = [`> ~~~text`, `> ${exactPrerequisite}`, `> ~~~`, '', '> ```bash', '> copilot setup --confirm-unverifiable-write-permissions', '> ```'].join('\n');
+    const examples = findShellExamples(source);
+    expect(examples).toHaveLength(1);
+    expect(hasAdjacentInspectedPatPrerequisite(source, examples[0].start)).toBe(false);
+  });
+
+  it('accepts an adjacent visible prerequisite before a quoted shell example', () => {
+    const source = [exactPrerequisite, '', '> ```bash', '> copilot setup --confirm-unverifiable-write-permissions', '> ```'].join('\n');
+    expect(findUnsafePatShellExamples(new Map([['setup.mdx', source]]), '--confirm-unverifiable-write-permissions'))
+      .toEqual([]);
+  });
+
+  it('does not let an unclosed quoted text fence hide a later shell block', () => {
+    const source = ['> ~~~text', '> unrelated code', '', '```bash', 'copilot setup --confirm-unverifiable-write-permissions', '```'].join('\n');
+    expect(findUnsafePatShellExamples(new Map([['setup.mdx', source]]), '--confirm-unverifiable-write-permissions'))
+      .toEqual([{ file: 'setup.mdx', line: 4 }]);
+  });
+
+  it('inspects an exceptional quoted shell fence when its blockquote ends without a closer', () => {
+    const source = ['> ```bash', '> copilot setup --confirm-unverifiable-write-permissions', '', 'Ordinary prose outside the quote.'].join('\n');
+    expect(findUnsafePatShellExamples(new Map([['setup.mdx', source]]), '--confirm-unverifiable-write-permissions'))
+      .toEqual([{ file: 'setup.mdx', line: 1 }]);
+  });
+
   it('reports an unsafe README example with its repository-relative filename and line', () => {
     const sources = publicPatDocumentationSources(`# Setup\n\n${command}`, new Map([
       ['how-to-use.mdx', '# No exception here'],

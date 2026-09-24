@@ -199,11 +199,16 @@ read-only GitHub queries and presents ordered permission outcomes.
    flags, and credential inputs. A bare example that silently selects defaults
    is forbidden. The documentation validator MUST enumerate shell fences in
    `README.md` and every public `docs/*.mdx` page, at any indentation used in
-   repository MDX, including nested `<Steps>` blocks,
+   repository MDX, including nested `<Steps>` blocks and one or more Markdown
+   blockquote prefixes (`>`, with optional indentation),
    and examine only the nearest ordinary prose paragraph before each
    exceptional block. Opening and closing fence indentation and marker MUST
    be paired consistently; text inside an earlier indented backtick or tilde
-   fence and unrelated prose cannot authorize the exception. An exceptional
+   fence, including a blockquoted fence, and unrelated prose cannot authorize
+   the exception. A quoted fence stops containing later content when its
+   blockquote level ends, even without a matching closing marker, so it cannot
+   hide a subsequent shell example. A quoted shell example still requires the
+   same adjacent visible prerequisite. An exceptional
    shell fence that reaches end of file without a closing marker is still
    inspected rather than silently skipped.
    The wizard MUST invoke a configured final-permission-audit port after
@@ -674,7 +679,7 @@ permission prose in the CLI.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **129 distinct cases**.
+This SDD adds at least **135 distinct cases**.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
@@ -683,8 +688,8 @@ This SDD adds at least **129 distinct cases**.
 | Adapter/provider contracts | 42 | GET-only probes, fixed four-request concurrency with stable result order, private-versus-public/unknown visibility evidence, protected-endpoint evidence, permission-bound active self-Members membership and malformed/public-list rejection, commit-list Contents target, private empty-repository 409 versus public operational usability, default-branch Checks resolution plus encoded check-runs target, invalid/missing branch fail-closed behavior, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow on the selected ref in inspection and bootstrap, default-branch dispatchability proof even when Actions-index returns 404, malformed root scalar/object success remains unavailable without bootstrap, malformed exact-file success remains unavailable, unavailable endpoint state, duplicate-comment deletion fallback regression |
 | Setup/credential integration | 22 | pre-prompt setup table, conditional denial through planning, wizard-owned repository-inventory block for organization targets and known-shadow rejection, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, absent/failed remote snapshot blocks every subsequent mutation, preserve-disabled and scope-moving keep rejection, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
 | UI/accessibility | 5 | required/result tables, public-read limitation copy, confirmation-required copy, 40-column wrapping, no-color text |
-| Architecture/security/docs | 7 | query-only boundary, no duplicated catalog, safe generic/recovery automation examples, nearest-paragraph permission-prerequisite cases, and README plus MDX source enumeration with file-specific diagnostics |
-| **Total** | **129** | No double counting |
+| Architecture/security/docs | 13 | query-only boundary, no duplicated catalog, safe generic/recovery automation examples, nearest-paragraph permission-prerequisite cases, blockquoted backtick/tilde shell fences, quote-level transitions and quoted-prerequisite spoofing, and README plus MDX source enumeration with file-specific diagnostics |
+| **Total** | **135** | No double counting |
 
 The pure policy requires 100% statements/branches/functions/lines. Changed
 application modules require at least 95% statements and 90% branches; terminal
@@ -928,6 +933,14 @@ at widths 40/80/120 and `NO_COLOR`.
     fails documentation validation with `README.md` and the source line, while
     an adjacent complete prerequisite passes. Source enumeration cannot silently
     exclude either the README or any public MDX page.
+50. Given a shell fence inside one or more Markdown blockquotes, with backtick
+    or tilde markers and optional indentation, the documentation validator
+    detects an exceptional PAT acknowledgement and reports its source line when
+    the adjacent prerequisite is absent. A prerequisite phrase inside an earlier
+    quoted code fence cannot authorize it; a real adjacent prose prerequisite
+    still can. An unclosed quoted fence cannot hide a later shell block after
+    the blockquote level ends, and an exceptional quoted shell fence remains
+    inspectable if its container ends without a closing marker.
 
 ## 17. Requirements traceability
 
