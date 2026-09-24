@@ -355,7 +355,7 @@ errors and credential masking.
 
 ## 19. Definition of Done
 
-- [ ] The 128-case budget, coverage, architecture, workflow, and docs gates pass.
+- [ ] The 130-case budget, coverage, architecture, workflow, and docs gates pass.
 - [ ] Every active/inactive, config, provisioning, auth, execution, and validation state is tested.
 - [ ] Credentials, executable selection, output, read/write authority, and no-fallback rules pass security review.
 - [ ] All five UI states and setup/action/CLI surfaces are accessible and redacted.
