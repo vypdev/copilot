@@ -6,6 +6,7 @@ import { DEFAULT_BUGBOT_REVIEW_CONFIGURATION } from '../../../../../../domain/bu
 import type { BugbotContext } from "../types";
 import { buildBugbotPrompt } from "../build_bugbot_prompt";
 import type { BugbotReviewOperationContext } from '../bugbot_review_operation_context';
+import type { BugbotReviewDiffPartition } from '../types';
 
 function mockExecution(overrides: {
     target?: Partial<BugbotReviewOperationContext['target']>;
@@ -160,14 +161,53 @@ describe("buildBugbotPrompt", () => {
         expect(prompt).not.toContain('0'.repeat(40));
     });
 
-    it('uses the canonical GitHub diff for a full pull-request review', () => {
+  it('uses the canonical GitHub diff for a full pull-request review', () => {
         const prompt = buildBugbotPrompt(mockExecution({
             target: { pullRequestAction: 'opened', headBranch: 'feature/42-real-head' },
             trigger: { kind: 'pull_request' },
         }), mockContext({ reviewDiffBlock: 'canonical diff' }));
 
         expect(prompt).toContain('Review the canonical pull-request diff for "feature/42-real-head" compared to "develop"');
-    });
+  });
+
+  it('binds a partition prompt to its exact id, head, scope, and resolution owner', () => {
+    const partition: BugbotReviewDiffPartition = {
+      id: 'diff-1-of-2-12345678',
+      ordinal: 1,
+      total: 2,
+      headSha: 'a'.repeat(40),
+      block: 'assigned canonical fragment',
+      files: ['src/a.ts'],
+      fragmentCount: 2,
+      ownsResolution: true,
+    };
+    const prompt = buildBugbotPrompt(
+      mockExecution({ target: { isPullRequest: true, pullRequestNumber: 42 } }),
+      mockContext({ previousFindingsBlock: 'previous finding id old-1' }),
+      { partition },
+    );
+
+    expect(prompt).toContain('assigned canonical fragment');
+    expect(prompt).toContain(`partition_id exactly as \`${partition.id}\``);
+    expect(prompt).toContain(`reviewed_head_sha exactly as \`${partition.headSha}\``);
+    expect(prompt).toContain('sole resolution owner');
+    expect(prompt).toContain('previous finding id old-1');
+  });
+
+  it('forbids a non-owner partition from resolving prior findings', () => {
+    const partition: BugbotReviewDiffPartition = {
+      id: 'diff-2-of-2-87654321', ordinal: 2, total: 2, headSha: 'b'.repeat(40),
+      block: 'second fragment', files: ['src/b.ts'], fragmentCount: 1, ownsResolution: false,
+    };
+    const prompt = buildBugbotPrompt(
+      mockExecution({ target: { isPullRequest: true, pullRequestNumber: 42 } }),
+      mockContext({ previousFindingsBlock: 'secret previous finding' }),
+      { partition },
+    );
+
+    expect(prompt).toContain('must return an empty resolved_findings array');
+    expect(prompt).not.toContain('secret previous finding');
+  });
 
     it("uses develop when parentBranch and branches.development are missing", () => {
         const prompt = buildBugbotPrompt(

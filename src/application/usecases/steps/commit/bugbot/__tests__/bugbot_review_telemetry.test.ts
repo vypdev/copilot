@@ -116,4 +116,36 @@ describe('Bugbot review telemetry', () => {
             unknown: 1,
         }));
     });
+
+    it('retains the earliest failed partition when later partitions also fail', () => {
+        const telemetry = new BugbotReviewTelemetry(operationContext());
+        telemetry.observePartitionPlan(3, 3, 3);
+        telemetry.beginPartition();
+        telemetry.endPartition(false, { ordinal: 2, category: 'agent.failed' });
+        telemetry.beginPartition();
+        telemetry.endPartition(false, { ordinal: 3, category: 'provider.unavailable' });
+
+        expect(telemetry.snapshot('failed')).toEqual(expect.objectContaining({
+            failedAnalysisPartitionOrdinal: 2,
+            failedAnalysisPartitionCategory: 'agent.failed',
+            maximumAnalysisConcurrency: 1,
+        }));
+    });
+
+    it('records an observed zero-partition plan while leaving legacy telemetry unpartitioned', () => {
+        const partitioned = new BugbotReviewTelemetry(operationContext());
+        partitioned.observePartitionPlan(0, 0, 0);
+
+        expect(partitioned.snapshot('no-findings')).toEqual(expect.objectContaining({
+            analysisPartitions: 0,
+            completedAnalysisPartitions: 0,
+            analysisDiffFragments: 0,
+            analysisAssignedFiles: 0,
+            maximumAnalysisConcurrency: 0,
+        }));
+
+        const legacy = new BugbotReviewTelemetry(operationContext()).snapshot('no-findings');
+        expect(legacy).not.toHaveProperty('analysisPartitions');
+        expect(legacy).not.toHaveProperty('completedAnalysisPartitions');
+    });
 });

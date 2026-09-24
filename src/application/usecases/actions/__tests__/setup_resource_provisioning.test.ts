@@ -9,6 +9,17 @@ import {
 const context = {
     setupCredentials: undefined,
 };
+const repositorySnapshot = {
+    ownerType: 'User' as const,
+    repositoryVisibility: 'private' as const,
+    repositorySecrets: [], repositorySecretsAccess: 'available' as const,
+    organizationSecrets: [],
+    repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
+    organizationVariables: [],
+    organizationAccess: 'not_applicable' as const,
+    organizationSecretsAccess: 'not_applicable' as const,
+    organizationVariablesAccess: 'not_applicable' as const,
+};
 
 describe('setup resource provisioning policy', () => {
     it('keeps an effective inherited variable instead of shadowing it', () => {
@@ -22,8 +33,10 @@ describe('setup resource provisioning policy', () => {
             repositoryId: 42,
             repositoryVisibility: 'private',
             repositorySecrets: [],
+            repositorySecretsAccess: 'available',
             organizationSecrets: [],
             repositoryVariables: [{ name: 'AGENT_MODEL', value: 'inherited' }],
+            repositoryVariablesAccess: 'available',
             organizationVariables: [],
             organizationAccess: 'available',
             organizationSecretsAccess: 'available',
@@ -48,8 +61,10 @@ describe('setup resource provisioning policy', () => {
             repositoryId: 7,
             repositoryVisibility: 'private',
             repositorySecrets: [],
+            repositorySecretsAccess: 'available',
             organizationSecrets: [],
             repositoryVariables: [],
+            repositoryVariablesAccess: 'available',
             organizationVariables: [],
             organizationAccess: 'available',
             organizationSecretsAccess: 'available',
@@ -82,6 +97,7 @@ describe('setup resource provisioning policy', () => {
             },
             { setupRepositorySecretsPort: { upsertSecrets } },
             configuration,
+            repositorySnapshot,
         );
 
         expect(result.errors).toEqual([]);
@@ -117,8 +133,10 @@ describe('setup resource provisioning policy', () => {
                 repositoryId: 42,
                 repositoryVisibility: 'private',
                 repositorySecrets: [],
+                repositorySecretsAccess: 'available',
                 organizationSecrets: [],
                 repositoryVariables: [],
+                repositoryVariablesAccess: 'available',
                 organizationVariables: [],
                 organizationAccess: 'available',
                 organizationSecretsAccess: 'available',
@@ -136,8 +154,10 @@ describe('setup resource provisioning policy', () => {
             ownerType: 'User' as const,
             repositoryVisibility: 'public' as const,
             repositorySecrets: [],
+            repositorySecretsAccess: 'available' as const,
             organizationSecrets: [],
             repositoryVariables: [],
+            repositoryVariablesAccess: 'available' as const,
             organizationVariables: [],
             organizationAccess: 'not_applicable' as const,
             organizationSecretsAccess: 'not_applicable' as const,
@@ -155,6 +175,105 @@ describe('setup resource provisioning policy', () => {
         expect(inspect).not.toHaveBeenCalled();
     });
 
+    it('blocks resource grouping when selected repository inventory is unavailable', () => {
+        const configuration = createDefaultSetupConfiguration();
+        expect(() => groupSetupResources([{ name: 'AGENT_MODEL', value: 'gpt-5.6' }], 'variable', configuration, {
+            ownerType: 'User',
+            repositoryVisibility: 'private',
+            repositorySecrets: [],
+            repositorySecretsAccess: 'available',
+            organizationSecrets: [],
+            repositoryVariables: [],
+            repositoryVariablesAccess: 'unavailable',
+            organizationVariables: [],
+            organizationAccess: 'not_applicable',
+            organizationSecretsAccess: 'not_applicable',
+            organizationVariablesAccess: 'not_applicable',
+        })).toThrow('resource targets cannot be resolved safely');
+    });
+
+    it.each(['secret', 'variable'] as const)('fails closed without any %s inventory snapshot', kind => {
+        const configuration = createDefaultSetupConfiguration();
+        expect(() => groupSetupResources([{ name: 'AGENT_MODEL', value: 'gpt-5.6' }], kind, configuration))
+            .toThrow('resource targets cannot be resolved safely');
+        expect(groupSetupResources([], kind, configuration)).toEqual([]);
+    });
+
+    it('never upserts selected variables or credentials when inventory is absent', async () => {
+        const configuration = createDefaultSetupConfiguration();
+        const upsert = jest.fn();
+        const upsertSecrets = jest.fn();
+        const variables = await ensureRepositoryVariables(context, { setupRepositoryVariablesPort: { upsert } }, configuration);
+        const secrets = await ensureRepositorySecrets(
+            { setupCredentials: { workflowPat: { name: 'PAT', value: 'token' }, apiKeys: [] } },
+            { setupRepositorySecretsPort: { upsertSecrets } },
+            configuration,
+        );
+        expect(variables.errors).toEqual([expect.stringContaining('Restore inventory access and rerun setup.')]);
+        expect(secrets.errors).toEqual([expect.stringContaining('Restore inventory access and rerun setup.')]);
+        expect(upsert).not.toHaveBeenCalled();
+        expect(upsertSecrets).not.toHaveBeenCalled();
+    });
+
+    it('blocks organization-only resources without repository shadow inventory', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.storage.variables.defaultScope = 'organization';
+        configuration.storage.variables.preserveExisting = false;
+
+        expect(() => groupSetupResources([{ name: 'AGENT_MODEL', value: 'gpt-5.6' }], 'variable', configuration, {
+            ownerType: 'Organization', repositoryId: 42, repositoryVisibility: 'private',
+            repositorySecrets: [], repositorySecretsAccess: 'available', organizationSecrets: [],
+            repositoryVariables: [], repositoryVariablesAccess: 'unavailable', organizationVariables: [],
+            organizationAccess: 'available', organizationSecretsAccess: 'available',
+            organizationVariablesAccess: 'available',
+        })).toThrow('Repository variable inventory is unavailable');
+    });
+
+    it('groups organization resources only when repository inventory proves no shadow', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.storage.variables.defaultScope = 'organization';
+        configuration.storage.variables.preserveExisting = false;
+
+        expect(groupSetupResources([{ name: 'AGENT_MODEL', value: 'gpt-6-luna' }], 'variable', configuration, {
+            ownerType: 'Organization', repositoryId: 42, repositoryVisibility: 'private',
+            repositorySecrets: [], repositorySecretsAccess: 'available', organizationSecrets: [],
+            repositoryVariables: [], repositoryVariablesAccess: 'available', organizationVariables: [],
+            organizationAccess: 'available', organizationSecretsAccess: 'available',
+            organizationVariablesAccess: 'available',
+        })).toEqual([{
+            target: { scope: 'organization', organizationVisibility: 'selected', repositoryId: 42 },
+            resources: [{ name: 'AGENT_MODEL', value: 'gpt-6-luna' }],
+        }]);
+    });
+
+    it('rejects a known repository value that would shadow an organization target', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.storage.variables.defaultScope = 'organization';
+        configuration.storage.variables.preserveExisting = false;
+
+        expect(() => groupSetupResources([{ name: 'AGENT_MODEL', value: 'gpt-6-luna' }], 'variable', configuration, {
+            ownerType: 'Organization', repositoryId: 42, repositoryVisibility: 'private',
+            repositorySecrets: [], repositorySecretsAccess: 'available', organizationSecrets: [],
+            repositoryVariables: [{ name: 'AGENT_MODEL', value: 'old' }], repositoryVariablesAccess: 'available',
+            organizationVariables: [], organizationAccess: 'available',
+            organizationSecretsAccess: 'available', organizationVariablesAccess: 'available',
+        })).toThrow('Repository variable AGENT_MODEL shadows');
+    });
+
+    it('blocks preservation when organization inventory is unavailable', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.storage.variables.defaultScope = 'repository';
+        configuration.storage.variables.preserveExisting = true;
+
+        expect(() => groupSetupResources([{ name: 'AGENT_MODEL', value: 'gpt-5.6' }], 'variable', configuration, {
+            ownerType: 'Organization', repositoryId: 42, repositoryVisibility: 'private',
+            repositorySecrets: [], repositorySecretsAccess: 'available', organizationSecrets: [],
+            repositoryVariables: [], repositoryVariablesAccess: 'available', organizationVariables: [],
+            organizationAccess: 'unavailable', organizationSecretsAccess: 'available',
+            organizationVariablesAccess: 'unavailable',
+        })).toThrow('Organization variable inventory is unavailable');
+    });
+
     it('does not expose a raw variable-provider failure', async () => {
         const configuration = createDefaultSetupConfiguration();
         const result = await ensureRepositoryVariables(
@@ -163,6 +282,7 @@ describe('setup resource provisioning policy', () => {
                 upsert: jest.fn().mockRejectedValue(new Error('variable-secret-marker')),
             } },
             configuration,
+            repositorySnapshot,
         );
         expect(result.errors).toEqual(['Unable to configure GitHub Actions Variables.']);
         expect(JSON.stringify(result)).not.toContain('variable-secret-marker');
@@ -179,6 +299,7 @@ describe('setup resource provisioning policy', () => {
                 upsertSecrets: jest.fn().mockRejectedValue(new Error('secret-provider-marker')),
             } },
             configuration,
+            repositorySnapshot,
         );
         expect(result.errors).toEqual(['Unable to configure GitHub Actions Secrets.']);
         expect(JSON.stringify(result)).not.toContain('secret-provider-marker');
@@ -200,7 +321,7 @@ describe('setup resource provisioning policy', () => {
         expect(JSON.stringify(errors)).not.toContain('remote-scope-marker');
     });
 
-    it('keeps a repository-scoped inspection failure advisory instead of blocking setup', async () => {
+    it('reports a repository-scoped inspection failure as blocking', async () => {
         const errors: string[] = [];
         await expect(resolveRemoteConfiguration(
             context,
@@ -211,6 +332,6 @@ describe('setup resource provisioning policy', () => {
             errors,
         )).resolves.toBeUndefined();
 
-        expect(errors).toEqual([]);
+        expect(errors).toEqual(['Could not inspect existing GitHub Actions resource scopes.']);
     });
 });

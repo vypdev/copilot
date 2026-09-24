@@ -8,10 +8,19 @@ Set the provider and model independently:
 
 ```yaml
 agent-model-provider: openai
-agent-model: gpt-5.6-luna
+agent-model: gpt-6-luna
 ```
 
-The effective qualified model is `openai/gpt-5.6-luna`. The provider prefix MUST NOT be duplicated in `agent-model`. A blank or malformed value fails before the CLI starts.
+The effective qualified model is `openai/gpt-6-luna`. The provider prefix MUST NOT be duplicated in `agent-model`. A blank or malformed value fails before the CLI starts.
+
+The action input, setup defaults, and generated workflow fallback use this model.
+An existing repository `AGENT_MODEL` Variable or role-specific model still wins;
+changing the fallback does not rewrite those settings. To adopt the new default
+in an already configured repository, set `AGENT_MODEL=gpt-6-luna` and
+`AGENT_ALLOWED_MODELS=openai/gpt-6-luna` together, then run a read-only Codex
+smoke test with the runner's credential. If other roles use explicitly selected
+models, retain their qualified names in the allowlist. An explicitly selected
+`gpt-5.6-luna` remains valid when allowlisted.
 
 Set the optional effort or provider-specific variant explicitly when the selected model supports it:
 

@@ -148,6 +148,29 @@ function normalizeSnapshots(value: unknown): BugbotReviewTelemetrySnapshot[] {
             contextLogicalProviderReads: numeric(snapshot.contextLogicalProviderReads),
             contextRawProviderRequests: numeric(snapshot.contextRawProviderRequests),
             contextConcurrencyLimit: 2,
+            ...(isNonNegativeFinite(snapshot.analysisPartitions)
+                ? { analysisPartitions: snapshot.analysisPartitions }
+                : {}),
+            ...(isNonNegativeFinite(snapshot.completedAnalysisPartitions)
+                ? { completedAnalysisPartitions: snapshot.completedAnalysisPartitions }
+                : {}),
+            ...(isNonNegativeFinite(snapshot.analysisDiffFragments)
+                ? { analysisDiffFragments: snapshot.analysisDiffFragments }
+                : {}),
+            ...(isNonNegativeFinite(snapshot.analysisAssignedFiles)
+                ? { analysisAssignedFiles: snapshot.analysisAssignedFiles }
+                : {}),
+            ...(isNonNegativeFinite(snapshot.maximumAnalysisConcurrency)
+                ? { maximumAnalysisConcurrency: snapshot.maximumAnalysisConcurrency }
+                : {}),
+            ...(isNonNegativeFinite(snapshot.failedAnalysisPartitionOrdinal)
+                && snapshot.failedAnalysisPartitionOrdinal >= 1
+                ? { failedAnalysisPartitionOrdinal: snapshot.failedAnalysisPartitionOrdinal }
+                : {}),
+            ...(typeof snapshot.failedAnalysisPartitionCategory === 'string'
+                && snapshot.failedAnalysisPartitionCategory.trim()
+                ? { failedAnalysisPartitionCategory: snapshot.failedAnalysisPartitionCategory.slice(0, 80) }
+                : {}),
             candidateFindings: numeric(snapshot.candidateFindings),
             publishedFindings: numeric(snapshot.publishedFindings),
             overflowFindings: numeric(snapshot.overflowFindings),

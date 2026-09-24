@@ -10,16 +10,27 @@ import { getBugbotPrompt } from "../../../../../prompts";
 import { PROJECT_CONTEXT_INSTRUCTION } from "../../../../../utils/project_context_instruction";
 import type { BugbotContext } from "./types";
 import { resolveBugbotReviewEffort } from '../../../../../domain/bugbot/review_configuration';
-import { fileMatchesIgnorePatterns } from './file_ignore';
+import { fileMatchesIgnorePatterns } from '../../../../policies/file_ignore_policy';
 import type { BugbotReviewOperationContext } from './bugbot_review_operation_context';
+import type { BugbotReviewDiffPartition } from './types';
 
 const MAX_IGNORE_BLOCK_LENGTH = 2000;
 const GIT_OBJECT_ID = /^[0-9a-f]{7,64}$/i;
 
-export function buildBugbotPrompt(param: BugbotReviewOperationContext, context: BugbotContext): string {
+export interface BugbotPromptPartitionAssignment {
+    readonly partition: BugbotReviewDiffPartition;
+}
+
+export function buildBugbotPrompt(
+    param: BugbotReviewOperationContext,
+    context: BugbotContext,
+    assignment?: BugbotPromptPartitionAssignment,
+): string {
     const headBranch = param.target.headBranch || 'unknown';
     const baseBranch = param.target.baseBranch;
-    const previousBlock = context.previousFindingsBlock;
+    const previousBlock = !assignment || assignment.partition.ownsResolution
+        ? context.previousFindingsBlock
+        : '';
     const ignorePatterns = param.ignorePatterns;
     const ignoreBlock =
         ignorePatterns.length > 0
@@ -53,22 +64,28 @@ export function buildBugbotPrompt(param: BugbotReviewOperationContext, context: 
             param,
             headBranch,
             baseBranch,
-            (context.reviewDiffBlock ?? '').trim().length > 0,
+            Boolean(assignment || (context.reviewDiffBlock ?? '').trim().length > 0),
+            assignment?.partition,
         ),
         ignoreBlock,
-        coverageBlock: buildCoverageBlock(context),
+        coverageBlock: buildCoverageBlock(context, assignment?.partition),
         previousBlock,
-        diffBlock: context.reviewDiffBlock,
+        diffBlock: assignment?.partition.block ?? context.reviewDiffBlock,
         reviewConversationBlock: context.reviewConversationBlock,
         rulesBlock: context.reviewRulesBlock,
         effortBlock: `**Review effort:** ${resolvedEffort}. ${resolvedEffort === 'high' ? 'Perform deeper cross-file and adversarial analysis.' : resolvedEffort === 'low' ? 'Prioritize high-signal changed-code defects and avoid speculative breadth.' : 'Balance depth, latency, and false-positive control.'}`,
+        partitionBlock: assignment ? buildPartitionInstruction(assignment.partition) : undefined,
+        outputContractBlock: assignment ? buildPartitionOutputContract(assignment.partition) : undefined,
         targetLocale: context.prContext && context.canonicalPullRequest
             ? param.locale.pullRequest
             : param.locale.issue ?? param.locale.pullRequest,
     });
 }
 
-function buildCoverageBlock(context: BugbotContext): string {
+function buildCoverageBlock(
+    context: BugbotContext,
+    partition?: BugbotReviewDiffPartition,
+): string {
     const limitedSources = context.coverage.sources
         .filter((source) => source.status === 'partial')
         .map((source) => {
@@ -80,14 +97,19 @@ function buildCoverageBlock(context: BugbotContext): string {
             ];
             return `- ${source.source}: ${details.join(', ')}`;
         });
-    if (limitedSources.length === 0) {
-        return '**Context coverage:** complete within every fixed provider and prompt budget.';
-    }
-    return [
-        '**Context coverage:** partial.',
+    const coverage = limitedSources.length === 0
+        ? ['**Context coverage:** complete within every fixed provider budget.']
+        : [
+        '**Context coverage:** partial outside the partition plan.',
         ...limitedSources,
         'Analyze retained evidence, but do not claim that the whole pull request is clean. Only resolve prior finding ids explicitly included in the previous-findings section.',
-    ].join('\n');
+    ];
+    if (partition) {
+        coverage.push(
+            `**Diff-plan progress:** this request owns partition ${partition.ordinal}/${partition.total}. Whole-PR diff completion is decided only after every partition for head ${partition.headSha} validates.`,
+        );
+    }
+    return coverage.join('\n');
 }
 
 function buildChangeScopeInstruction(
@@ -95,7 +117,11 @@ function buildChangeScopeInstruction(
     headBranch: string,
     baseBranch: string,
     hasCanonicalPullRequestDiff: boolean,
+    partition?: BugbotReviewDiffPartition,
 ): string {
+    if (partition) {
+        return `Review every assigned changed-code fragment in canonical diff partition ${partition.ordinal}/${partition.total}. Use the read-only workspace and local Git history for surrounding code, exact current lines, missing provider patches, and cross-file dependencies needed to prove a defect. Report only defects introduced or exposed by changed code assigned to this partition. Do not report a duplicate merely because dependent code belongs to another partition.${partition.ownsResolution ? ' Task 2 is global: independently inspect the current workspace for every retained prior finding before deciding whether it is fixed or obsolete.' : ' This partition does not own task 2 and must return an empty resolved_findings array.'}`;
+    }
     const before = normalizedObjectId(param.trigger.before);
     const after = normalizedObjectId(param.trigger.after);
     const eventName = param.trigger.kind;
@@ -118,6 +144,23 @@ function buildChangeScopeInstruction(
     }
 
     return `No canonical pull-request diff is available. Determine the current change scope from the read-only local Git checkout: compare "${headBranch}" with "${baseBranch}" when both refs are available, otherwise inspect the current commit against its parent. Review only those changes and the surrounding code needed to prove a finding.`;
+}
+
+function buildPartitionInstruction(partition: BugbotReviewDiffPartition): string {
+    return [
+        '**Partition integrity contract:**',
+        `- Return partition_id exactly as \`${partition.id}\`.`,
+        `- Return reviewed_head_sha exactly as \`${partition.headSha}\`.`,
+        `- This is partition ${partition.ordinal}/${partition.total} with ${partition.fragmentCount} assigned ${partition.fragmentCount === 1 ? 'fragment' : 'fragments'}.`,
+        partition.ownsResolution
+            ? '- This partition is the sole resolution owner and may resolve only exact IDs from the retained previous-findings list.'
+            : '- This partition is not the resolution owner; resolved_findings must be an empty array.',
+        '- Do not claim or infer that any other partition was reviewed.',
+    ].join('\n');
+}
+
+function buildPartitionOutputContract(partition: BugbotReviewDiffPartition): string {
+    return `**Output:** Return a JSON object with "outputLocale", "partition_id" (exactly "${partition.id}"), "reviewed_head_sha" (exactly "${partition.headSha}"), "findings" (new/current problems from this assigned partition), and "resolved_findings" (objects containing an exact retained prior finding id and either "fixed" or "obsolete"). Always return both arrays.${partition.ownsResolution ? ' Never resolve an id that was not included in the previous-findings list.' : ' Return an empty resolved_findings array because this partition is not the resolution owner.'}`;
 }
 
 function normalizedObjectId(value: unknown): string | undefined {

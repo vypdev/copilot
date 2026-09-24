@@ -8,6 +8,9 @@ import type {
   BugbotContextCoverage,
   BugbotPullRequestIdentity,
 } from '../../../../../domain/bugbot/context';
+import type { BugbotReviewDiffPartition } from '../../../../policies/bugbot_diff_partition_policy';
+
+export type { BugbotReviewDiffPartition } from '../../../../policies/bugbot_diff_partition_policy';
 
 /** PR metadata used only when publishing findings to GitHub. */
 export interface BugbotPrContext {
@@ -50,8 +53,13 @@ export interface BugbotContext {
   eligibleResolutionIds: ReadonlySet<string>;
   /** Bounded text sent to the configured findings agent. */
   previousFindingsBlock: string;
-  /** Canonical, bounded PR diff supplied by the GitHub API. */
+  /** Legacy single-query diff block used only when no partition plan exists. */
   reviewDiffBlock?: string;
+  /** Immutable bounded assignments that collectively cover the canonical PR diff. */
+  reviewDiffPartitions?: readonly BugbotReviewDiffPartition[];
+  reviewDiffFragmentCount?: number;
+  reviewDiffFileCount?: number;
+  reviewDiffIgnoredFileCount?: number;
   /** Bounded human review discussion that may affect finding validity. */
   reviewConversationBlock?: string;
   prContext: BugbotPrContext | null;

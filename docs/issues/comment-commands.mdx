@@ -153,7 +153,7 @@ that reply uses the complete English fallback so it cannot mix languages.
 ## Authorization and safety
 
 - Read-only commands and answers can be requested by any participant who can comment.
-- File-modifying requests require the comment author to be an organization member for organization-owned repositories.
+- File- and finding-state-modifying requests require the comment author to be the repository owner or have `push`, `maintain`, or `admin` permission; organization membership alone is not sufficient. `ai-members-only` remains a separate membership gate.
 - In personal repositories, the author must be the repository owner or a collaborator with `push`, `maintain`, or `admin` permission.
 - `/copilot dismiss` does not edit files, but it changes finding state and therefore uses the same authorization guard.
 - File-changing commands require an authoritative PR review-thread branch or an

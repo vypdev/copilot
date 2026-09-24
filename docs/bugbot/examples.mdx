@@ -39,7 +39,7 @@ jobs:
           project-ids: ${{ vars.PROJECT_IDS }}
           agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
-          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-6-luna' }}
           # Optional: Bugbot-specific
           bugbot-severity: "low"
           bugbot-comment-limit: "20"
@@ -80,7 +80,7 @@ jobs:
           token: ${{ secrets.PAT }}
           agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
-          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-6-luna' }}
           ai-ignore-files: build/*
           bugbot-fix-verify-commands: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}
 ```
@@ -120,7 +120,7 @@ jobs:
           token: ${{ secrets.PAT }}
           agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
-          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-6-luna' }}
           ai-ignore-files: build/*
           bugbot-fix-verify-commands: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}
 ```
@@ -164,7 +164,7 @@ jobs:
           single-action-issue: ${{ github.event.inputs.issue_number }}
           agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
-          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-6-luna' }}
 ```
 
 After the run, findings appear on the issue and, when exact identity is uniquely
@@ -206,9 +206,10 @@ These are examples of comments that typically trigger **Bugbot autofix** (fix on
 
 Post read-only review commands on an **issue** or **PR**. Post file-changing
 commands in the intended **PR review thread** (or use an explicit branch-scoped
-execution). The action will run only if you have permission (organization
-member, or repository owner / `push`/`maintain`/`admin` collaborator in a
-personal repository) and the write target is authoritative.
+execution). The action will run only if you own the personal repository or
+have `push`/`maintain`/`admin` collaborator permission in an organization or
+personal repository; organization membership alone is insufficient. The write
+target must also be authoritative.
 
 ---
 
@@ -224,7 +225,7 @@ These are examples of comments that typically trigger **do user request** (gener
 | `implement the missing validation in the form` | Add validation logic. |
 | `add error handling for the API call` | Wrap or extend the API call with error handling. |
 
-Same permission and workflow requirements as autofix: `contents: write` and an organization member, or repository owner / `push`/`maintain`/`admin` collaborator in a personal repository. Natural-language requests should mention `@vypbot`; use `/copilot implement <request>` when you want an explicit command.
+Same permission and workflow requirements as autofix: `contents: write` plus repository ownership or `push`/`maintain`/`admin` collaborator permission in either an organization or personal repository. Organization membership alone is not enough. Natural-language requests should mention `@vypbot`; use `/copilot implement <request>` when you want an explicit command.
 
 ---
 

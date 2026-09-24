@@ -31,7 +31,7 @@
     {
       "id": "repository-locale-localization",
       "spec": "specs/repository-locale-and-localization.md",
-      "requiredCases": 136,
+      "requiredCases": 138,
       "allocatedCases": 141,
       "files": [
         { "path": "src/actions/__tests__/github_action_locale_inputs.test.ts", "qualifyingCases": 4 },

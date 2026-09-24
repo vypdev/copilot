@@ -10,8 +10,20 @@ import type {
     SetupRepositorySecretNamesQueryPort,
     SetupRemoteCredentialHealthPort,
 } from '../../ports/setup_wizard_ports';
+import type { SetupTokenPermissionAuditPort, SetupTokenPermissionPresenterPort } from '../../ports/setup_token_permission_ports';
 import { ApplicationError } from '../../errors/application_error';
-import type { SetupRemoteConfiguration, SetupResourceScope } from '../../../domain/setup';
+import type {
+    SetupRemoteConfiguration,
+    SetupResourceScope,
+    SetupResourceStoragePolicy,
+} from '../../../domain/setup';
+import type { SetupTokenPermissionRequirement } from '../../../domain/setup_token_permissions';
+import {
+    canKeepExistingSetupResource,
+    findSetupOrganizationShadows,
+    requiresSetupOrganizationInventory,
+    requiresSetupRepositoryInventory,
+} from '../../policies/setup_configuration_storage_policy';
 
 export interface SetupCredentialsRequest {
     owner: string;
@@ -19,8 +31,10 @@ export interface SetupCredentialsRequest {
     setupToken: string;
     requirements: readonly SetupCredentialRequirement[];
     manageSecrets: boolean;
+    secretStoragePolicy?: Readonly<SetupResourceStoragePolicy>;
     ref?: string;
     remoteConfiguration?: SetupRemoteConfiguration;
+    workflowTokenPermissions?: readonly SetupTokenPermissionRequirement[];
 }
 
 export interface SetupCredentialsResult {
@@ -36,6 +50,8 @@ export class SetupCredentialsUseCase {
         private readonly validation: SetupCredentialValidationPort,
         private readonly secrets?: SetupRepositorySecretNamesQueryPort,
         private readonly remoteHealth?: SetupRemoteCredentialHealthPort,
+        private readonly tokenPermissions?: SetupTokenPermissionAuditPort,
+        private readonly permissionPresenter?: SetupTokenPermissionPresenterPort,
     ) {}
 
     async collect(request: SetupCredentialsRequest): Promise<SetupCredentialsResult> {
@@ -48,13 +64,53 @@ export class SetupCredentialsUseCase {
             return { collection: { apiKeys: [] }, checks: [setupCheck], existingSecretNames: [] };
         }
         if (!this.secrets) throw new ApplicationError('configuration.unsupported', 'Repository Secret provisioning is not available in this installation.');
+        const requirements = request.requirements.filter(requirement => requirement.name !== 'SETUP_PAT');
+        const requiresRepositoryInventory = requiresSetupRepositoryInventory(requirements.map(requirement => requirement.name));
+        const requiresOrganizationInventory = request.remoteConfiguration?.ownerType === 'Organization'
+            && (request.secretStoragePolicy === undefined
+                || requiresSetupOrganizationInventory(
+                    request.secretStoragePolicy,
+                    requirements.map(requirement => requirement.name),
+                    request.remoteConfiguration.repositorySecrets,
+                ));
+        if (requiresRepositoryInventory
+            && request.remoteConfiguration
+            && request.remoteConfiguration.repositorySecretsAccess !== 'available') {
+            throw new ApplicationError(
+                'provider.unavailable',
+                `Repository Secret inventory is ${request.remoteConfiguration.repositorySecretsAccess}; credential collection cannot safely preserve existing Secrets.`,
+            );
+        }
+        if (requiresOrganizationInventory
+            && request.remoteConfiguration
+            && request.remoteConfiguration.organizationSecretsAccess !== 'available') {
+            throw new ApplicationError(
+                'provider.unavailable',
+                `Organization Secret inventory is ${request.remoteConfiguration.organizationSecretsAccess}; credential collection cannot safely preserve existing Secrets.`,
+            );
+        }
+        if (request.secretStoragePolicy && request.remoteConfiguration?.repositorySecretsAccess === 'available') {
+            const shadows = findSetupOrganizationShadows(
+                request.secretStoragePolicy, 'secret', requirements.map(requirement => requirement.name),
+                request.remoteConfiguration,
+            );
+            if (shadows.length > 0) {
+                throw new ApplicationError(
+                    'configuration.invalid',
+                    `Repository Secret ${shadows[0]} shadows the selected organization Secret; choose repository scope or remove the shadow before setup.`,
+                );
+            }
+        }
 
         const existingSecretNames = request.remoteConfiguration?.repositorySecrets
             ? [...request.remoteConfiguration.repositorySecrets]
             : await this.secrets.list(request.owner, request.repository, request.setupToken);
         const existingOrganizationSecretNames = request.remoteConfiguration?.organizationSecrets ?? [];
-        const requirements = request.requirements.filter(requirement => requirement.name !== 'SETUP_PAT');
+        const workflowTokenPermissions = request.workflowTokenPermissions ?? [];
         this.prompt.explainCredentialSeparation(requirements);
+        if (workflowTokenPermissions.length > 0) {
+            this.permissionPresenter?.showRequirements('workflow', workflowTokenPermissions);
+        }
         const existingRequirements = requirements.filter(requirement =>
             existingSecretNames.includes(requirement.name) || existingOrganizationSecretNames.includes(requirement.name),
         );
@@ -82,29 +138,48 @@ export class SetupCredentialsUseCase {
                 : organizationExisting
                     ? 'organization'
                     : undefined;
+            const workflowPermissionAuditRequired = requirement.kind === 'workflowPat'
+                && workflowTokenPermissions.length > 0;
+            let existingCheckIndex: number | undefined;
             if (existing) {
                 const remoteCheck: SetupCredentialCheck = remoteCheckByName.get(requirement.name) ?? {
                     name: requirement.name,
                     status: 'unverifiable',
                     message: 'The remote health workflow is not available yet; GitHub does not reveal Secret values.',
                 };
-                const scopedCheck = { ...remoteCheck, sourceScope };
-                checks.push(scopedCheck);
-                const decision = await this.prompt.chooseExistingCredential(requirement, scopedCheck);
-                if (remoteCheck.status === 'invalid' && decision !== 'replace' && !hasAlternative(requirement)) {
-                    throw new ApplicationError('authorization.credential-invalid', `${requirement.name} is invalid and must be replaced before setup can continue.`);
+                const scopedCheck = workflowPermissionAuditRequired
+                    ? workflowPatReentryCheck(remoteCheck, sourceScope)
+                    : { ...remoteCheck, sourceScope };
+                existingCheckIndex = checks.push(scopedCheck) - 1;
+                if (!workflowPermissionAuditRequired) {
+                    const decision = await this.prompt.chooseExistingCredential(requirement, scopedCheck);
+                    if (remoteCheck.status === 'invalid' && decision !== 'replace' && !hasAlternative(requirement)) {
+                        throw new ApplicationError('authorization.credential-invalid', `${requirement.name} is invalid and must be replaced before setup can continue.`);
+                    }
+                    if (decision === 'keep'
+                        && remoteCheck.status !== 'invalid'
+                        && canKeepExistingSetupResource(
+                            request.secretStoragePolicy,
+                            requirement.name,
+                            sourceScope,
+                        )) {
+                        markRequirementSatisfied(requirement, satisfiedGroups);
+                        continue;
+                    }
+                    if (decision === 'skip') continue;
                 }
-                if (decision === 'keep' && remoteCheck.status !== 'invalid') {
-                    markRequirementSatisfied(requirement, satisfiedGroups);
-                    continue;
-                }
-                if (decision === 'skip') continue;
             }
 
             const value = requirement.kind === 'workflowPat'
                 ? await this.prompt.requestWorkflowPat(requirement, existing ? checks[checks.length - 1] : undefined)
                 : await this.prompt.requestApiKey(requirement, existing ? checks[checks.length - 1] : undefined);
             if (!value) {
+                if (existing && workflowPermissionAuditRequired) {
+                    throw new ApplicationError(
+                        'authorization.credential-invalid',
+                        'Existing PAT cannot be permission-audited because GitHub does not reveal Secret values; re-enter or supply PAT before setup can continue.',
+                    );
+                }
                 if (!existing) checks.push(runnerAuthenticationCanSatisfyRequirement(requirement)
                     ? {
                         name: requirement.name,
@@ -115,10 +190,43 @@ export class SetupCredentialsUseCase {
                 if (hasAlternative(requirement)) continue;
                 throw new ApplicationError('authorization.credential-invalid', `${requirement.name} is required by the selected workflows.`);
             }
-            const check = requirement.kind === 'workflowPat'
-                ? await this.validation.validateSetupPat(request.owner, request.repository, value.value)
-                : await this.validation.validateCredential(requirement, value.value);
-            checks.push({ ...check, name: requirement.name });
+            let check: SetupCredentialCheck;
+            if (workflowPermissionAuditRequired) {
+                if (!this.tokenPermissions) {
+                    throw new ApplicationError(
+                        'configuration.unsupported',
+                        'Workflow PAT permission auditing is not available in this installation.',
+                    );
+                }
+                const report = await this.tokenPermissions.inspect({
+                    role: 'workflow',
+                    owner: request.owner,
+                    repository: request.repository,
+                    token: value.value,
+                    requirements: workflowTokenPermissions,
+                });
+                this.permissionPresenter?.showReport(report);
+                const permissionAccepted = report.ready
+                    || (report.confirmationRequired
+                        && await this.prompt.confirmUnverifiableTokenPermissions?.(report) === true);
+                check = {
+                    name: requirement.name,
+                    status: permissionAccepted && report.identityStatus === 'valid' ? 'valid' : 'invalid',
+                    message: permissionAccepted
+                        ? report.ready
+                            ? 'GitHub identity, repository access, and safely verifiable permissions were checked.'
+                            : 'GitHub identity and required reads were verified; the operator explicitly acknowledged unverifiable write permissions.'
+                        : 'The workflow PAT has missing, unverifiable-read, or unconfirmed required GitHub access.',
+                    ...(report.account ? { account: report.account } : {}),
+                };
+            } else {
+                check = requirement.kind === 'workflowPat'
+                    ? await this.validation.validateSetupPat(request.owner, request.repository, value.value)
+                    : await this.validation.validateCredential(requirement, value.value);
+            }
+            const namedCheck = { ...check, name: requirement.name };
+            if (existingCheckIndex !== undefined) checks[existingCheckIndex] = namedCheck;
+            else checks.push(namedCheck);
             if (!isAcceptedCredentialCheck(requirement, check)) {
                 if (hasAlternative(requirement)) continue;
                 throw new ApplicationError('authorization.credential-invalid', `${requirement.name} validation failed: ${check.message}`);
@@ -146,6 +254,18 @@ export class SetupCredentialsUseCase {
             existingSecretNames,
         };
     }
+}
+
+function workflowPatReentryCheck(
+    check: SetupCredentialCheck,
+    sourceScope: SetupResourceScope | undefined,
+): SetupCredentialCheck {
+    return {
+        ...check,
+        sourceScope,
+        status: check.status === 'invalid' ? 'invalid' : 'unverifiable',
+        message: `${check.message} GitHub does not reveal existing Secret values; re-enter the workflow PAT to audit its required permissions.`,
+    };
 }
 
 function hasAlternative(requirement: SetupCredentialRequirement): boolean {

@@ -27,7 +27,7 @@ jobs:
           single-action-issue: "123"
           agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
-          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-6-luna' }}
 ```
 
 ## Workflow: Bugbot (detect potential problems)
@@ -49,7 +49,7 @@ jobs:
           single-action-issue: "456"
           agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
-          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-6-luna' }}
 ```
 
 See [Bugbot](/bugbot) for full documentation.
@@ -68,7 +68,7 @@ effective issue locale (English by default), and is reused on later runs:
     single-action-issue: "789"
     agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
     agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
-    agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
+    agent-model: ${{ vars.AGENT_MODEL || 'gpt-6-luna' }}
 ```
 
 ## Workflow: think (no issue)

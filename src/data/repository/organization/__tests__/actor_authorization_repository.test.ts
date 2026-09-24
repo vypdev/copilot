@@ -25,24 +25,40 @@ describe('ActorAuthorizationRepository', () => {
     getCollaboratorPermissionLevel.mockResolvedValue({ data: { permission: 'pull' } });
   });
 
-  it('allows an organization actor when membership succeeds', async () => {
-    await expect(repository.isActorAllowedToModifyFiles('acme', 'project', 'alice', 'token')).resolves.toBe(true);
+  it('allows member-only automation for an organization actor when membership succeeds', async () => {
+    await expect(repository.isActorAllowedToUseMemberOnlyAutomation('acme', 'project', 'alice', 'token')).resolves.toBe(true);
     expect(checkMembershipForUser).toHaveBeenCalledWith({ org: 'acme', username: 'alice' });
   });
 
-  it('denies an organization actor when membership returns not found', async () => {
+  it('denies member-only automation when organization membership returns not found', async () => {
     checkMembershipForUser.mockRejectedValue({ status: 404 });
-    await expect(repository.isActorAllowedToModifyFiles('acme', 'project', 'alice', 'token')).resolves.toBe(false);
+    await expect(repository.isActorAllowedToUseMemberOnlyAutomation('acme', 'project', 'alice', 'token')).resolves.toBe(false);
   });
 
   it('denies and logs unexpected membership failures', async () => {
     checkMembershipForUser.mockRejectedValue(new Error('membership unavailable'));
-    await expect(repository.isActorAllowedToModifyFiles('acme', 'project', 'alice', 'token')).resolves.toBe(false);
+    await expect(repository.isActorAllowedToUseMemberOnlyAutomation('acme', 'project', 'alice', 'token')).resolves.toBe(false);
   });
 
   it('denies and logs a non-Error membership failure', async () => {
     checkMembershipForUser.mockRejectedValue({ status: 500, message: 'membership unavailable' });
+    await expect(repository.isActorAllowedToUseMemberOnlyAutomation('acme', 'project', 'alice', 'token')).resolves.toBe(false);
+  });
+
+  it('allows organization file modification only with repository write permission', async () => {
+    getCollaboratorPermissionLevel.mockResolvedValue({ data: { permission: 'push' } });
+
+    await expect(repository.isActorAllowedToModifyFiles('acme', 'project', 'alice', 'token')).resolves.toBe(true);
+    expect(getCollaboratorPermissionLevel).toHaveBeenCalledWith({ owner: 'acme', repo: 'project', username: 'alice' });
+    expect(checkMembershipForUser).not.toHaveBeenCalled();
+  });
+
+  it('denies an organization member without repository write permission', async () => {
+    checkMembershipForUser.mockResolvedValue({});
+    getCollaboratorPermissionLevel.mockResolvedValue({ data: { permission: 'pull' } });
+
     await expect(repository.isActorAllowedToModifyFiles('acme', 'project', 'alice', 'token')).resolves.toBe(false);
+    expect(checkMembershipForUser).not.toHaveBeenCalled();
   });
 
   it('allows the owner of a user repository without membership lookup', async () => {
@@ -52,12 +68,41 @@ describe('ActorAuthorizationRepository', () => {
     expect(getCollaboratorPermissionLevel).not.toHaveBeenCalled();
   });
 
+  it('allows member-only automation for the owner of a user repository', async () => {
+    getByUsername.mockResolvedValue({ data: { type: 'User' } });
+    await expect(repository.isActorAllowedToUseMemberOnlyAutomation('alice', 'project', 'alice', 'token')).resolves.toBe(true);
+    expect(getCollaboratorPermissionLevel).not.toHaveBeenCalled();
+  });
+
+  it('allows member-only automation for a write collaborator on a user repository', async () => {
+    getByUsername.mockResolvedValue({ data: { type: 'User' } });
+    getCollaboratorPermissionLevel.mockResolvedValue({ data: { permission: 'maintain' } });
+    await expect(repository.isActorAllowedToUseMemberOnlyAutomation('alice', 'project', 'bob', 'token')).resolves.toBe(true);
+  });
+
   it('allows a write collaborator on a user repository', async () => {
     getByUsername.mockResolvedValue({ data: { type: 'User' } });
     getCollaboratorPermissionLevel.mockResolvedValue({ data: { permission: 'push' } });
     await expect(repository.isActorAllowedToModifyFiles('alice', 'project', 'bob', 'token')).resolves.toBe(true);
     expect(checkMembershipForUser).not.toHaveBeenCalled();
     expect(getCollaboratorPermissionLevel).toHaveBeenCalledWith({ owner: 'alice', repo: 'project', username: 'bob' });
+  });
+
+  it('requires collaborator permission when an unsupported owner type matches the actor', async () => {
+    getByUsername.mockResolvedValue({ data: { type: 'Enterprise' } });
+
+    await expect(repository.isActorAllowedToModifyFiles('alice', 'project', 'alice', 'token')).resolves.toBe(false);
+    expect(checkMembershipForUser).not.toHaveBeenCalled();
+    expect(getCollaboratorPermissionLevel).toHaveBeenCalledWith({ owner: 'alice', repo: 'project', username: 'alice' });
+  });
+
+  it('uses collaborator permission instead of membership for unknown owner types', async () => {
+    getByUsername.mockResolvedValue({ data: { type: 'Unknown' } });
+    getCollaboratorPermissionLevel.mockResolvedValue({ data: { permission: 'maintain' } });
+
+    await expect(repository.isActorAllowedToUseMemberOnlyAutomation('alice', 'project', 'alice', 'token')).resolves.toBe(true);
+    expect(checkMembershipForUser).not.toHaveBeenCalled();
+    expect(getCollaboratorPermissionLevel).toHaveBeenCalledWith({ owner: 'alice', repo: 'project', username: 'alice' });
   });
 
   it('denies a read-only collaborator on a user repository', async () => {
@@ -91,5 +136,10 @@ describe('ActorAuthorizationRepository', () => {
   it('denies when owner lookup fails', async () => {
     getByUsername.mockRejectedValue(new Error('lookup unavailable'));
     await expect(repository.isActorAllowedToModifyFiles('acme', 'project', 'alice', 'token')).resolves.toBe(false);
+  });
+
+  it('denies member-only automation when owner lookup fails', async () => {
+    getByUsername.mockRejectedValue(new Error('lookup unavailable'));
+    await expect(repository.isActorAllowedToUseMemberOnlyAutomation('acme', 'project', 'alice', 'token')).resolves.toBe(false);
   });
 });

@@ -4,6 +4,7 @@ import type {
   SetupPlanPresenterPort,
 } from '../../ports/setup_terminal_ports';
 import type {
+  SetupFinalPermissionAuditPort,
   SetupMergeQueueReadinessPort,
   SetupRemoteConfigurationReadPort,
 } from '../../ports/setup_wizard_ports';
@@ -16,6 +17,7 @@ import {
   createDefaultSetupConfiguration,
   mergeSetupConfiguration,
   normalizeSetupConfigurationLocales,
+  validateSetupManagedResourceInventory,
   validateSetupStorageAgainstRemote,
   validateSetupConfiguration,
   type SetupConfigurationOverrides,
@@ -58,12 +60,29 @@ export type SetupWizardResult =
       reason: 'questionnaire-cancelled' | 'confirmation-cancelled' | 'confirmation-declined';
       exitCode: 0 | 130;
       remoteConfiguration?: SetupRemoteConfiguration;
+    }
+  | {
+      status: 'blocked';
+      reason: 'remote-storage-unavailable';
+      exitCode: 1;
+      configuration: SetupConfiguration;
+      errors: readonly string[];
+      remoteConfiguration: SetupRemoteConfiguration;
+    }
+  | {
+      status: 'blocked';
+      reason: 'setup-permissions-unavailable';
+      exitCode: 1;
+      configuration: SetupConfiguration;
+      errors: readonly string[];
+      remoteConfiguration?: SetupRemoteConfiguration;
     };
 
 export interface SetupWizardDependencies {
   collector?: SetupConfigurationCollectorPort;
   planPresenter: SetupPlanPresenterPort;
   confirmation: SetupPlanConfirmationPort;
+  finalPermissionAudit: SetupFinalPermissionAuditPort;
   remoteConfiguration?: SetupRemoteConfigurationReadPort;
   mergeQueueReadiness?: SetupMergeQueueReadinessPort;
   approvalReadiness?: SetupApprovalReadinessPort;
@@ -94,13 +113,18 @@ export class SetupWizardUseCase {
     if (defaults.features.pullRequests === false && effectiveOverrides?.pullRequestApproval?.mode === undefined) {
       defaults.pullRequestApproval = { ...defaults.pullRequestApproval, mode: 'off' };
     }
-    const remoteConfiguration = request.remoteTarget && this.dependencies.remoteConfiguration
-      ? await this.dependencies.remoteConfiguration.inspect(
+    let remoteConfiguration: SetupRemoteConfiguration | undefined;
+    if (request.remoteTarget) {
+      try {
+        remoteConfiguration = await this.dependencies.remoteConfiguration?.inspect(
           request.remoteTarget.owner,
           request.remoteTarget.repository,
           request.remoteTarget.token,
-        )
-      : undefined;
+        ) ?? unavailableRemoteConfiguration();
+      } catch {
+        remoteConfiguration = unavailableRemoteConfiguration();
+      }
+    }
     const defaultValidationErrors = validateSetupConfiguration(defaults, { allowIncompleteApproval: true });
     if (defaultValidationErrors.length > 0) {
       throw new ApplicationError(
@@ -133,17 +157,56 @@ export class SetupWizardUseCase {
       collectedConfiguration.pullRequestApproval = { ...collectedConfiguration.pullRequestApproval, mode: 'off' };
     }
     const validationErrors = validateSetupConfiguration(collectedConfiguration, { allowIncompleteApproval: request.previewOnly === true });
-    const configuration = validationErrors.length === 0
-      ? normalizeSetupConfigurationLocales(collectedConfiguration)
-      : collectedConfiguration;
-    if (remoteConfiguration) {
-      validationErrors.push(...validateSetupStorageAgainstRemote(configuration, remoteConfiguration));
-    }
     if (validationErrors.length > 0) {
       throw new ApplicationError(
         'configuration.invalid',
         `Invalid setup configuration:\n${validationErrors.map((error) => `- ${error}`).join('\n')}`,
       );
+    }
+    const configuration = normalizeSetupConfigurationLocales(collectedConfiguration);
+    if (request.remoteTarget && remoteConfiguration) {
+      let selectedWorkflowState: 'installed' | 'missing' | 'unavailable' = 'unavailable';
+      try {
+        selectedWorkflowState = await this.dependencies.remoteConfiguration?.inspectCredentialHealthWorkflow?.(
+          request.remoteTarget.owner,
+          request.remoteTarget.repository,
+          request.remoteTarget.token,
+          configuration.repository.mainBranch,
+        ) ?? 'unavailable';
+      } catch {
+        // A failed selected-ref read cannot inherit the provisional default-branch state.
+      }
+      remoteConfiguration = { ...remoteConfiguration, credentialHealthWorkflow: selectedWorkflowState };
+    }
+    const audit = await this.dependencies.finalPermissionAudit.audit(configuration, remoteConfiguration);
+    if (audit.status === 'blocked') {
+      return {
+        status: 'blocked',
+        reason: 'setup-permissions-unavailable',
+        exitCode: 1,
+        configuration: cloneSetupConfiguration(configuration),
+        errors: audit.errors,
+        ...(remoteConfiguration ? { remoteConfiguration } : {}),
+      };
+    }
+    if (remoteConfiguration) {
+      const remoteStorageErrors = [
+        ...validateSetupStorageAgainstRemote(configuration, remoteConfiguration),
+        ...validateSetupManagedResourceInventory(configuration, remoteConfiguration, {
+          secrets: buildSetupCredentialRequirements(configuration).map(requirement => requirement.name),
+          variables: buildSetupRepositoryVariables(configuration).map(variable => variable.name),
+        }),
+      ];
+      if (remoteStorageErrors.length > 0) {
+        return {
+          status: 'blocked',
+          reason: 'remote-storage-unavailable',
+          exitCode: 1,
+          configuration: cloneSetupConfiguration(configuration),
+          errors: remoteStorageErrors,
+          remoteConfiguration,
+        };
+      }
     }
 
     const readiness = request.remoteTarget && this.dependencies.mergeQueueReadiness
@@ -229,4 +292,16 @@ export class SetupWizardUseCase {
     }
     return this.dependencies.collector.collect(createSetupQuestionnaire(defaults, context), context);
   }
+}
+
+/** An unavailable read is explicit, never an authoritative empty inventory. */
+function unavailableRemoteConfiguration(): SetupRemoteConfiguration {
+  return {
+    ownerType: 'Unknown', repositoryVisibility: 'unknown',
+    repositorySecrets: [], repositorySecretsAccess: 'unavailable',
+    organizationSecrets: [], organizationSecretsAccess: 'unavailable',
+    repositoryVariables: [], repositoryVariablesAccess: 'unavailable',
+    organizationVariables: [], organizationVariablesAccess: 'unavailable',
+    organizationAccess: 'unavailable', credentialHealthWorkflow: 'unavailable',
+  };
 }

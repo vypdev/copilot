@@ -122,7 +122,10 @@ plus the smallest state patch the route may apply.
 2. Credentials and provider mutation scope are captured once in composition and
    never returned by a port. Bounded repository identity may remain a display or
    authorization fact, but it cannot retarget a bound port.
-3. Agent authorization precedes every agent-backed capability exactly as today.
+3. Agent authorization precedes construction of every agent-backed capability.
+   A denied members-only decision is projected into `Execution` by disabling all
+   configured agent task models before route admission; skipping runtime
+   provisioning alone is insufficient.
 4. Branch sync revalidates remote heads after agent work and before push.
 5. Inactivity closure rereads authoritative state immediately before mutation.
 6. A route applies a returned patch only for the outcome that owns it.
@@ -349,22 +352,22 @@ idempotency keys and recovery behavior.
 
 ## 14. Testing strategy and numeric budget
 
-P2-F owns at least **20 distinct cases**, exceeding the parent floor of 8 because
+P2-F owns at least **21 distinct cases**, exceeding the parent floor of 8 because
 the risk inventory spans credentials, state ownership, races, and nine dispatch
-families. The implemented P2-F ledger contains **66 dedicated cases**: 36
-context projection/policy cases, 14 authority-binding cases, and 16 direct
+families. The implemented P2-F ledger contains **69 dedicated cases**: 36
+context projection/policy cases, 14 authority-binding cases, and 19 direct
 single-action dispatch/outcome cases, plus strengthened route/coordinator tests
 and five architecture ratchet cases in the shared suite.
 
 | Area | Minimum cases | Behaviors/risks covered |
 |---|---:|---|
 | Projection and pure policy | 5 | copy/freeze, no token, release continuation, recommendation patch, conflict eligibility |
-| Push and single-action orchestration | 5 | dispatch parity, invalid action, authorization, ordered push, thrown failure |
+| Push and single-action orchestration | 6 | dispatch parity, invalid action, pre-construction authorization with disabled task models, ordered push, thrown failure |
 | Provider binding and setup | 4 | repository scope capture, setup token validation, secret non-disclosure, publication commands |
 | Races and partial state | 3 | inactivity reread, branch head fence/abort, partial setup |
 | Issue/PR/comment integration | 2 | recommendation patch ownership, user-request/branch-sync contexts |
 | Architecture/security | 1 | zero owned leaf aggregate imports and credential-shaped contexts |
-| **Total** | **20** | No double counting |
+| **Total** | **21** | No double counting |
 
 Repository thresholds remain 90% lines/statements, 88% functions, and 82%
 branches. P2-F owned executable modules require at least 95% lines/statements and
@@ -392,8 +395,9 @@ credential-shaped application requests.
 
 1. Given a valid push, notify, size, progress, and review execute in the current
    order using separate immutable inputs.
-2. Given an unauthorized actor with members-only enabled, no push or
-   single-action agent is called.
+2. Given an unauthorized actor with members-only enabled, the entrypoint passes
+   a denied runtime fact into execution construction, every configured agent
+   task model is disabled, and no push or single-action agent is called.
 3. Given each valid single action, exactly its matching narrow context is
    dispatched; invalid or unavailable actions remain no-ops.
 4. Given an unchanged recommendation, no duplicate comment is produced and only
@@ -419,6 +423,7 @@ credential-shaped application requests.
 | bound authority | P2-F composition binding | binding scope tests | dependency rules |
 | explicit mutations | recommendation/activity/issue outcomes | route ownership tests | architecture |
 | dispatch parity | push/single-action coordinators | focused route and integration suites | existing action docs |
+| denied runtime projection | GitHub Action entrypoint plus execution builder | unauthorized members-only execution/task-model test | permissions |
 | race safety | inactivity and branch-sync workflows | reread/head-fence tests | existing operations docs |
 | final topology readiness | AST ratchet and P2-F validator | exact inventory plus Graphify/RepoWise | SDD/catalog |
 
@@ -442,7 +447,7 @@ credential-shaped application requests.
 - [x] All P2-F leaves have zero direct or indirect `Execution` dependency.
 - [x] No P2-F context contains repository credentials or mutable route-owned model objects.
 - [x] Every former leaf mutation is an explicit outcome applied by a route.
-- [x] At least 20 distinct budget cases are implemented; the dedicated ledger contains 66.
+- [x] At least 21 distinct budget cases are implemented; the dedicated ledger contains 69.
 - [x] Push, single-action, comment-command, issue, and PR dispatch parity is covered.
 - [x] Setup, inactivity, branch-sync, release/tag, and provider failure edges are covered.
 - [x] Public docs, catalog, generated bundles, and architecture baseline agree.

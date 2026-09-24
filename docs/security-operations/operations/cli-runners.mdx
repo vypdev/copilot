@@ -29,11 +29,11 @@ Every JSON-backed capability is parsed as exactly one object and validated local
 with:
   agent-provider: codex
   agent-model-provider: openai
-  agent-model: gpt-5.6-luna
+  agent-model: gpt-6-luna
   agent-effort: high
 ```
 
-For OpenCode, Copilot validates and passes `openai/gpt-5.6-luna` explicitly. Repository-local OpenCode configuration and implicit defaults cannot replace that selection.
+For OpenCode, Copilot validates and passes `openai/gpt-6-luna` explicitly. Repository-local OpenCode configuration and implicit defaults cannot replace that selection.
 
 ## Provisioning contract
 
@@ -72,7 +72,7 @@ The verifier reports executable availability, headless help status, and sanitize
 Use an explicit qualified model. For the recommended policy:
 
 ```bash
-opencode run --pure --model openai/gpt-5.6-luna 'Reply with exactly READY.'
+opencode run --pure --model openai/gpt-6-luna 'Reply with exactly READY.'
 ```
 
 ### Codex

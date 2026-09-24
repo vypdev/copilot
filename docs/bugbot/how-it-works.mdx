@@ -39,7 +39,7 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
    verification before it can be considered clean. The action builds:
    - A map of **existing findings** (id → issue comment id, PR comment id, resolved).
    - A **previous findings block** (id, title, description) to send to the configured agent so it can report which are now **resolved**.
-   - For the target PR: one canonical GitHub diff snapshot containing the changed-file manifest, bounded patches, and every addressable left/right diff location. All projections come from one paginated file traversal.
+   - For the target PR: one canonical GitHub diff snapshot containing the changed-file manifest, provider patches, and every addressable left/right diff location. All projections come from one paginated file traversal. Bugbot converts every non-ignored file into a deterministic, lossless partition plan: patches over 12,000 characters are split at line boundaries (or a hard character boundary for a single oversized line), and bounded fragments are packed into diff blocks of at most 64,000 characters. Both retained raw patches and their actual NFKC/control-sanitized prompt text have an independent 4,096,000-UTF-16-unit plan ceiling. Exceeding either ceiling fails before fragment/section construction or reviewer execution and asks the maintainer to split the PR; compatibility normalization can never expand a nominally valid diff into hidden extra partitions. A file whose provider patch is absent still receives an explicit assignment to inspect its exact local diff and current workspace.
    - A bounded block of human review discussion. It is treated as untrusted context and every claim must be verified against code.
    - Organization, repository, path-specific, and explicitly learned rules in stable precedence order.
 
@@ -54,14 +54,46 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
    uses at most ten pages of 100 files; and at most two independent detail reads
    run concurrently. Conversation packing keeps the newest 50 entries within
    24,000 characters and renders the retained entries chronologically. Reaching
-   a fixed cap produces explicit **partial coverage**. A provider error instead
-   aborts before the agent or any finding mutation.
+   a fixed non-diff context cap produces explicit **partial coverage**. The
+   per-prompt diff cap creates another partition instead of omitting changed
+   patches. GitHub's 1,000-file enumeration cap still produces partial coverage
+   because files the provider did not enumerate cannot be assigned. A provider
+   error instead aborts before the agent or any finding mutation.
 
-3. **Build prompt:** The action builds a prompt for the configured agent's analysis role with repository context, hierarchical repository rules, the canonical diff, human discussion, optional ignore patterns (`ai-ignore-files`), and **previously reported findings**. PR `synchronize` and push events with valid Git object ids use the exact `before..after` range. Initial or reopened PR reviews use the canonical PR diff; when no canonical diff exists, on-demand and fallback reviews derive a bounded branch/base or current-commit scope from the read-only checkout. The agent is asked to:
+3. **Build and execute the review plan:** For a canonical PR, the action issues
+   one read-only analysis request per diff partition, with at most two requests
+   in flight. Before any prompt is built, the provider head is validated and
+   canonicalized as a non-zero SHA-1 or SHA-256 Git object ID. Every request is
+   then bound to the exact partition id—identified by a full SHA-256 digest of
+   its canonical head and assignment—and canonical head SHA, includes repository
+   context, hierarchical rules, human discussion,
+   ignore patterns, and its assigned diff fragments, and may inspect surrounding
+   or dependent code in the read-only workspace. Diff fragments use a
+   collision-free untrusted-data terminator so literal marker-like source text
+   remains intact inside the review payload. Only partition one receives
+   **previously reported findings** and owns task 2; every other partition must
+   return an empty resolution list. Each structured response must echo its exact
+   partition id and head SHA. An unusable agent response is retried for that
+   partition at most twice with identical inputs. A still-missing, stale,
+   malformed, or failed response aborts the aggregate after that bound;
+   duplicate partition responses also abort aggregation before any GitHub
+   mutation. When no canonical
+   PR diff exists, issue-only/push fallback reviews retain the established
+   single-query branch/base or current-commit scope. Plans are capped at 64
+   partitions; a larger diff fails before model execution and asks the maintainer
+   to split the PR instead of publishing a partial review. The agent is asked to:
    - **Task 1:** Return only actionable, changed-code defects with a causal explanation, evidence, category, severity, confidence, exact file/line or range, and a practical fix. Findings below 0.70 confidence, style comments, and speculative concerns are excluded.
    - **Task 2:** Return **resolved_findings**: exact retained finding ids paired with `fixed` or `obsolete`. The array is empty when nothing was resolved.
 
-4. **Filter and limit:** The response is validated again locally even when the CLI claims schema support. Secrets are redacted before publication. Unsafe paths, malformed identities, unsupported enum values, low-confidence items, ignored files, and findings below `bugbot-severity` are rejected. Distinct root causes on the same line are retained; semantic duplicates are removed. Findings are ranked by severity and confidence before `bugbot-comment-limit` is applied.
+4. **Aggregate, filter, and limit:** Bugbot waits for every attested partition,
+   combines candidate arrays in plan order, then validates, normalizes,
+   deduplicates, ranks, and limits exactly once. It never publishes a
+   partition-local intermediate result. Secrets are redacted before publication.
+   Unsafe paths, malformed identities, unsupported enum values, low-confidence
+   items, ignored files, and findings below `bugbot-severity` are rejected.
+   Distinct root causes on the same line are retained; semantic duplicates
+   across partitions are removed. Findings are ranked by severity and confidence
+   before `bugbot-comment-limit` is applied.
 
 5. **Publish active findings:** The PR head SHA is checked before analysis and again immediately before publication. Superseded runs exit successfully without publishing or resolving anything. After analysis and before the first mutation, Bugbot resolves one complete message catalog for the effective issue or pull-request locale. English (`en-US`) is the authoritative default, Spanish language variants use the reviewed Spanish catalog, and any other valid BCP-47 locale uses one schema-constrained localization request or falls back atomically to English. Skip, superseded, dry-run, and issue-only no-mutation paths do not resolve presentation copy. For issue-only work, each finding is added or updated as an issue comment. For a PR, Bugbot creates **one historical review snapshot** with child line/range or file-level comments; it does not add a duplicate finding comment in the PR conversation. Existing findings are updated in place and overflow remains in the snapshot while still contributing to current aggregate counts. When reopening a finding, the open marker is stored before the native thread is reopened, so an interrupted run cannot falsely claim a completed transition.
 
@@ -85,7 +117,10 @@ Review and Commit workflow templates use distinct repository-and-branch concurre
 
 Every exit path emits optional content-free telemetry, including canonical
 selection reason, logical and raw request counts, the fixed concurrency limit,
-and retained/omitted/truncated counts per context source. A partial run can
+retained/omitted/truncated counts per context source, total/completed analysis
+partitions, diff fragments, assigned files, and maximum observed reviewer
+concurrency. Prompt and response character totals are aggregated across the
+plan. A partial non-diff-context run can
 publish findings supported by retained evidence, but its status explicitly says
 that it cannot declare the whole PR clean; its Review Check is neutral, as are
 skipped and superseded reviews. `bugbot-dry-run` stops after the
@@ -107,7 +142,7 @@ When you post a comment on an **issue** or **pull request** (or reply in a PR re
    - **is_do_request:** whether you are asking for a general code change (not tied to findings).
    - **is_review_request:** whether you are asking for a read-only review or vulnerability analysis.
 
-2. **Permission check:** The action checks if the **comment author** is allowed to modify files: **organization member** (for org repos), or **repository owner / collaborator with `push`, `maintain`, or `admin` permission** (for personal repos). If not, it does **not** run autofix or do-user-request; it can still run **Think** or a read-only review.
+2. **Permission check:** The action checks whether the **comment author** is the repository owner or has `push`, `maintain`, or `admin` permission, for both organization and personal repositories. Organization membership alone is not file-modification authority. If the repository permission check fails, the action does **not** run autofix or do-user-request; it can still run **Think** or a read-only review. `ai-members-only` remains a separate organization-membership gate for AI routes.
 
 3. **Mutation target:** Autofix and do-user-request require an authoritative
    branch from a pull-request review-comment event or from an execution that

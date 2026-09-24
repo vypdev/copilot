@@ -49,15 +49,14 @@ export async function runCheckPermissionsWorkflow(
   if (inactiveResult) return [inactiveResult];
 
   try {
-    const currentProjectMembers = await ports.organizationMembersPort.getAllMembers();
-    const creator = param.target.creator;
-    const creatorIsTeamMember = creator.length > 0 && currentProjectMembers.includes(creator);
-
     if (!param.mandatoryBranchRequired) {
       logDebugInfo("Skipping permission enforcement because a mandatory branch is not required.");
       return [new Result({ id: taskId, success: true, executed: true })];
     }
 
+    const currentProjectMembers = await ports.organizationMembersPort.getAllMembers();
+    const creator = param.target.creator;
+    const creatorIsTeamMember = creator.length > 0 && currentProjectMembers.includes(creator);
     logDebugInfo("Checking permissions because a mandatory branch is required.");
     if (creatorIsTeamMember) {
       return [new Result({ id: taskId, success: true, executed: true })];

@@ -11,6 +11,11 @@ Copilot can **assign members** to issues and **link issues to GitHub Project** b
 
 When the action runs on an issue (e.g. opened or labeled), it can assign **up to N members** of the organization or repository. This is controlled by **`desired-assignees-count`** (default: `1`, max: `10`).
 
+Set `desired-assignees-count: 0` to disable automatic assignment. That setting
+is a successful no-op before the action resolves a target number or reads
+organization membership, so non-assignment routes do not fail merely because
+they have no issue or pull-request target.
+
 ### How assignees are chosen
 
 - The **issue creator** is assigned first **if** they belong to the organization (or are the repo owner for user repos).

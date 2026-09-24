@@ -153,9 +153,36 @@ The setup policy is intentionally split by responsibility:
 - `setup_configuration_clone_policy.ts` owns reference-isolated configuration copies.
 - `setup_questionnaire_policy.ts` owns setup states, questions, transitions, and answers.
 - `setup_configuration_plan.ts` owns the reviewable provisioning plan.
+- `setup_token_permission_policy.ts` owns the setup/workflow PAT permission
+  catalogs, conditional capability projection, strongest-level normalization,
+  and stable order without knowing terminal or GitHub endpoints.
 - `setup_doctor_report_policy.ts` owns stable check validation and aggregation.
 - `setup_resource_provisioning.ts` owns grouping and port calls for Variables
   and Secrets.
+
+PAT permission validation follows the same dependency rule. The application
+`SetupTokenPermissionsUseCase` validates identity before invoking the narrow
+`SetupTokenPermissionQueryPort`; the infrastructure adapter performs only safe
+GitHub GET probes and maps provider outcomes to `verified`, `missing`, or
+`unverifiable`. It reuses the application bounded-concurrency policy with a
+fixed limit of four and restores original requirement order. Write access is
+never inferred from a successful read. The CLI
+presenter renders the policy-owned requirements and use-case-owned outcomes but
+contains no permission catalog or remote operation. Application `ready` remains
+strict; the terminal adapter owns the separate fail-closed acknowledgement for
+required unverifiable writes, while required unverifiable reads remain blocked.
+Public-read usability requires adapter-derived provenance tied to a confirmed
+public repository; an arbitrary
+unverifiable row cannot carry a usable flag through reconciliation. The shared
+storage policy requires repository inventory for every managed Secret/Variable
+to rule out a value that would shadow an organization target. Organization
+inventory is required only when the selected scope or preservation needs it.
+`SetupWizardUseCase` applies that policy after its
+final permission audit and before plan presentation, so every caller receives
+the same structured block; the CLI consumes that result without duplicating
+inventory validation before credential decisions or resource grouping.
+An architecture test rejects mutation methods on the query port and non-GET
+methods in its adapter.
 
 There are no installed users or persisted setup state to migrate, so this is a
 greenfield contract: no legacy prompt facade, compatibility overload, dual
@@ -340,8 +367,10 @@ hide a non-clean or unverifiable destination.
 
 The pure reconciliation plan owns missing-publication and missing-durable-
 evidence decisions. The presentation use case owns only bounded review/status
-writes: at most 20 review summaries are selected per run and writes use bounded
-concurrency. Existing integration scenarios exercise the full pipeline, while
+writes: up to five sequential batches of 20 review summaries are selected per
+run, with at most four concurrent writes per batch. A failed batch stops later
+batches; the exact remainder becomes a workflow presentation diagnostic rather
+than a false provider-outage signal. Existing integration scenarios exercise the full pipeline, while
 snapshot, projection, plan, ownership, and presentation boundaries have focused
 unit tests.
 

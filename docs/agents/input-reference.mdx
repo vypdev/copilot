@@ -11,13 +11,13 @@ description: Strict reference for structured agent selection and effective defau
 | --- | --- | --- | --- | --- |
 | `agent-provider` | No | `codex` | Runtime: `codex`, `opencode`, or `cursor` | No |
 | `agent-model-provider` | No | `openai` | Provider serving the selected model | No |
-| `agent-model` | No | `gpt-5.6-luna` | Model without provider prefix | No |
+| `agent-model` | No | `gpt-6-luna` | Model without provider prefix | No |
 | `agent-effort` | No | empty | Supported reasoning effort or variant | No |
 | `agent-executable` | No | Manifest basename | Exact basename or absolute path to that basename | No |
 
 Each task supports the corresponding `findings-*`, `fixer-*`, `planner-*`, `reviewer-*`, and `tester-*` overrides, including `*-executable`. Empty role overrides inherit the common selection. There is no input for command text, arguments, sandbox, permissions, network, plugins, MCP, subagents, environment, persistence, limits, or versions.
 
-The qualified model is `<agent-model-provider>/<agent-model>`; the default is `openai/gpt-5.6-luna`.
+The qualified model is `<agent-model-provider>/<agent-model>`; the default is `openai/gpt-6-luna`.
 
 ## Authorization variables
 
@@ -26,7 +26,7 @@ The isolated PR approval observer uses `pr-approval-observer` (`false` by defaul
 | Variable | Example | Meaning |
 | --- | --- | --- |
 | `AGENT_ALLOWED_MODEL_PROVIDERS` | `openai` | Comma-separated provider allowlist |
-| `AGENT_ALLOWED_MODELS` | `openai/gpt-5.6-luna` | Exact qualified-model allowlist |
+| `AGENT_ALLOWED_MODELS` | `openai/gpt-6-luna` | Exact qualified-model allowlist |
 | `AGENT_PROVISIONING` | `auto` | `auto`, `always`, or `disabled`; only Copilot-owned installations are manifest-pinned |
 
 Allowlists authorize a selection; they do not select runtime, model, executable, or credential.
@@ -46,7 +46,7 @@ Values must be supplied through the runner's secret/environment mechanism and sc
 | Runtime | Executable | Reviewed identity / pinned installation |
 | --- | --- | --- |
 | OpenCode | `opencode` | `1.18.3` / `opencode-ai@1.18.3` |
-| Codex | `codex` | `codex-cli 0.153.4` / `@openai/codex@0.153.4` |
+| Codex | `codex` | `codex-cli 0.156.1` / `@openai/codex@0.156.1` |
 | Cursor | `agent` | `2026.09.10-fd3934a` / no automatic installer |
 
 An available operator-owned runtime is recorded and never replaced merely

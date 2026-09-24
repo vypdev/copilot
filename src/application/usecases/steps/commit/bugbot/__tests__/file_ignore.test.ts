@@ -2,7 +2,7 @@
  * Unit tests for file_ignore: fileMatchesIgnorePatterns (glob-style path matching).
  */
 
-import { fileMatchesIgnorePatterns } from '../file_ignore';
+import { fileMatchesIgnorePatterns } from '../../../../../policies/file_ignore_policy';
 
 describe('fileMatchesIgnorePatterns', () => {
     it('returns false when filePath is undefined or empty', () => {
@@ -37,6 +37,14 @@ describe('fileMatchesIgnorePatterns', () => {
         // Implementation: pattern ending with /* becomes (\/.*)? so "src/utils/*" matches "src/utils" and "src/utils/anything"
         expect(fileMatchesIgnorePatterns('src/utils/helper.ts', ['src/utils/*'])).toBe(true);
         expect(fileMatchesIgnorePatterns('src/utils/deep/helper.ts', ['src/utils/*'])).toBe(true);
+    });
+
+    it('treats a leading **/ as an optional root or nested directory prefix', () => {
+        const patterns = ['**/node_modules/**'];
+        expect(fileMatchesIgnorePatterns('node_modules/package.json', patterns)).toBe(true);
+        expect(fileMatchesIgnorePatterns('packages/app/node_modules/package.json', patterns)).toBe(true);
+        expect(fileMatchesIgnorePatterns('packages/app/node_modules-cache/package.json', patterns)).toBe(false);
+        expect(fileMatchesIgnorePatterns('packages/app/package.json', patterns)).toBe(false);
     });
 
     it('trims file path and patterns', () => {

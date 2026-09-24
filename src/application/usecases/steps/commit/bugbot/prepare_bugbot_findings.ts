@@ -8,8 +8,9 @@ export function prepareBugbotFindings(
     ignorePatterns: readonly string[],
     minSeverityValue: string | undefined,
     maxComments: number,
+    maxAgentFindings?: number,
 ): PreparedBugbotFindings | undefined {
-    const normalized = normalizeBugbotResponse(response as BugbotResponse | undefined);
+    const normalized = normalizeBugbotResponse(response as BugbotResponse | undefined, maxAgentFindings);
     return normalized === undefined
         ? undefined
         : {

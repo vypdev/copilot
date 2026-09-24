@@ -43,12 +43,14 @@ jest.mock("../steps/commit/bugbot/bugbot_autofix_use_case", () => ({
 }));
 
 const mockIsActorAllowedToModifyFiles = jest.fn();
+const mockIsActorAllowedToUseMemberOnlyAutomation = jest.fn();
 
 jest.mock(
   "../../../data/repository/organization/actor_authorization_repository",
   () => ({
     ActorAuthorizationRepository: jest.fn().mockImplementation(() => ({
       isActorAllowedToModifyFiles: mockIsActorAllowedToModifyFiles,
+      isActorAllowedToUseMemberOnlyAutomation: mockIsActorAllowedToUseMemberOnlyAutomation,
     })),
   }),
 );
@@ -153,7 +155,10 @@ describe("PullRequestReviewCommentUseCase", () => {
       { taskId: "ThinkUseCase", invoke: mockThinkInvoke },
       { taskId: "BugbotAutofixUseCase", invoke: mockAutofixInvoke },
       { taskId: "DoUserRequestUseCase", invoke: mockDoUserRequestInvoke },
-      { isActorAllowedToModifyFiles: mockIsActorAllowedToModifyFiles },
+      {
+        isActorAllowedToModifyFiles: mockIsActorAllowedToModifyFiles,
+        isActorAllowedToUseMemberOnlyAutomation: mockIsActorAllowedToUseMemberOnlyAutomation,
+      },
       {
         execute: jest.fn(),
         getAuthenticatedUserDetails: jest.fn(),
@@ -167,6 +172,7 @@ describe("PullRequestReviewCommentUseCase", () => {
     );
     mockLogInfo.mockClear();
     mockIsActorAllowedToModifyFiles.mockReset().mockResolvedValue(true);
+    mockIsActorAllowedToUseMemberOnlyAutomation.mockReset().mockResolvedValue(true);
     mockCheckLanguageInvoke.mockReset().mockResolvedValue([
       new Result({
         id: "CheckPullRequestCommentLanguageUseCase",
@@ -216,6 +222,28 @@ describe("PullRequestReviewCommentUseCase", () => {
     expect(mockDetectIntentInvoke).toHaveBeenCalledTimes(1);
     expect(mockThinkInvoke).toHaveBeenCalledTimes(1);
     expect(mockAutofixInvoke).not.toHaveBeenCalled();
+  });
+
+  it("binds the member-only authorization check to the review-comment execution context", async () => {
+    mockIsActorAllowedToUseMemberOnlyAutomation.mockResolvedValue(false);
+
+    const results = await useCase.invoke(baseExecution({
+      actor: "outsider",
+      ai: new Ai("", "model", true, [], false, "low", 20),
+    }));
+
+    expect(mockIsActorAllowedToUseMemberOnlyAutomation).toHaveBeenCalledWith(
+      "o",
+      "r",
+      "outsider",
+      "t",
+    );
+    expect(mockCheckLanguageInvoke).not.toHaveBeenCalled();
+    expect(mockDetectIntentInvoke).not.toHaveBeenCalled();
+    expect(mockThinkInvoke).not.toHaveBeenCalled();
+    expect(results).toEqual([
+      expect.objectContaining({ success: true, executed: false }),
+    ]);
   });
 
   it("when intent has no payload, runs Think and skips autofix", async () => {
@@ -556,7 +584,10 @@ describe("PullRequestReviewCommentUseCase", () => {
       { invoke: mockThinkInvoke } as never,
       { invoke: mockAutofixInvoke } as never,
       { invoke: mockDoUserRequestInvoke } as never,
-      { isActorAllowedToModifyFiles: mockIsActorAllowedToModifyFiles },
+      {
+        isActorAllowedToModifyFiles: mockIsActorAllowedToModifyFiles,
+        isActorAllowedToUseMemberOnlyAutomation: mockIsActorAllowedToUseMemberOnlyAutomation,
+      },
       {} as never,
       undefined,
       undefined,

@@ -6,6 +6,26 @@ import {
 } from '../repository_variables_repository';
 import { randomBytes } from 'node:crypto';
 
+function remoteInspectionClient(getWorkflow: jest.Mock, getContent?: jest.Mock) {
+    return {
+        rest: {
+            repos: {
+                get: jest.fn().mockResolvedValue({ data: { id: 42, visibility: 'private', owner: { type: 'User' } } }),
+                ...(getContent ? { getContent } : {}),
+            },
+            actions: {
+                getWorkflow,
+                listRepoVariables: jest.fn().mockResolvedValue({ data: { variables: [] } }),
+                createRepoVariable: jest.fn(), updateRepoVariable: jest.fn(),
+            },
+            secrets: {
+                listRepoSecrets: jest.fn().mockResolvedValue({ data: { secrets: [] } }),
+                getRepoPublicKey: jest.fn(), createOrUpdateRepoSecret: jest.fn(),
+            },
+        },
+    };
+}
+
 describe('narrow GitHub Actions resource repositories', () => {
     it('creates missing variables and updates existing variables', async () => {
         const listRepoVariables = jest.fn().mockResolvedValue({ data: { variables: [{ name: 'EXISTING' }] } });
@@ -120,10 +140,12 @@ describe('narrow GitHub Actions resource repositories', () => {
     it('inspects repository and organization resources without exposing secret values', async () => {
         const listRepoOrganizationVariables = jest.fn().mockResolvedValue({ data: { variables: [{ name: 'ORG_VAR', value: 'org' }] } });
         const listRepoOrganizationSecrets = jest.fn().mockResolvedValue({ data: { secrets: [{ name: 'ORG_SECRET' }] } });
+        const getWorkflow = jest.fn().mockResolvedValue({ data: { id: 1 } });
         const client = {
             rest: {
                 repos: { get: jest.fn().mockResolvedValue({ data: { id: 42, visibility: 'private', owner: { type: 'Organization' } } }) },
                 actions: {
+                    getWorkflow,
                     listRepoVariables: jest.fn().mockResolvedValue({ data: { variables: [{ name: 'REPO_VAR', value: 'repo' }] } }),
                     createRepoVariable: jest.fn(), updateRepoVariable: jest.fn(),
                     listRepoOrganizationVariables,
@@ -142,10 +164,164 @@ describe('narrow GitHub Actions resource repositories', () => {
             repositorySecrets: ['REPO_SECRET'], organizationSecrets: ['ORG_SECRET'],
             repositoryVariables: [{ name: 'REPO_VAR', value: 'repo' }],
             organizationVariables: [{ name: 'ORG_VAR', value: 'org' }],
+            repositorySecretsAccess: 'available', repositoryVariablesAccess: 'available',
             organizationSecretsAccess: 'available', organizationVariablesAccess: 'available',
+            credentialHealthWorkflow: 'installed',
         }));
+        expect(getWorkflow).toHaveBeenCalledWith({
+            owner: 'owner', repo: 'repo', workflow_id: 'copilot_credential_health.yml',
+        });
         expect(listRepoOrganizationSecrets).toHaveBeenCalledWith({ repository_id: 42, per_page: 30 });
         expect(listRepoOrganizationVariables).toHaveBeenCalledWith({ repository_id: 42, per_page: 30 });
+    });
+
+    it('records the workflow as missing only after Contents visibility and an exact-file 404', async () => {
+        const getContent = jest.fn()
+            .mockResolvedValueOnce({ data: [{ name: '.github' }] })
+            .mockRejectedValueOnce({ status: 404 });
+        const client = remoteInspectionClient(jest.fn().mockRejectedValue({ status: 404 }), getContent);
+
+        await expect(new SetupRemoteConfigurationQueryRepository({ getClient: jest.fn(() => client) })
+            .inspect('owner', 'repo', 'token')).resolves.toEqual(expect.objectContaining({
+                credentialHealthWorkflow: 'missing',
+            }));
+        expect(getContent).toHaveBeenNthCalledWith(1, { owner: 'owner', repo: 'repo', path: '' });
+        expect(getContent).toHaveBeenNthCalledWith(2, {
+            owner: 'owner', repo: 'repo', path: '.github/workflows/copilot_credential_health.yml',
+        });
+    });
+
+    it.each([
+        { label: 'object', payload: {} },
+        { label: 'scalar', payload: 'unexpected' },
+        { label: 'absent', payload: undefined },
+        { label: 'malformed directory entry', payload: [{}] },
+    ])('does not infer selected-ref absence from a malformed root $label payload', async ({ payload }) => {
+        const getContent = jest.fn().mockResolvedValueOnce({ data: payload })
+            .mockRejectedValueOnce({ status: 404 });
+        const client = remoteInspectionClient(jest.fn(), getContent);
+        const repository = new SetupRemoteConfigurationQueryRepository({ getClient: jest.fn(() => client) });
+
+        await expect(repository.inspectCredentialHealthWorkflow('owner', 'repo', 'token', 'main'))
+            .resolves.toBe('unavailable');
+        expect(getContent).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+        { label: 'installed', exact: { data: { sha: 'file-sha' } }, state: 'installed' },
+        { label: 'missing', exact: { status: 404 }, state: 'missing' },
+        { label: 'unavailable', exact: { status: 403 }, state: 'unavailable' },
+        { label: 'malformed empty object', exact: { data: {} }, state: 'unavailable' },
+        { label: 'malformed directory array', exact: { data: [] }, state: 'unavailable' },
+        { label: 'empty file sha', exact: { data: { sha: '  ' } }, state: 'unavailable' },
+    ])('inspects the exact selected ref when the workflow is $label', async ({ exact, state }) => {
+        const getContent = jest.fn().mockResolvedValueOnce({ data: [{ name: '.github' }] });
+        if ('status' in exact) getContent.mockRejectedValueOnce(exact);
+        else getContent.mockResolvedValueOnce(exact);
+        const client = remoteInspectionClient(jest.fn(), getContent);
+        const repository = new SetupRemoteConfigurationQueryRepository({ getClient: jest.fn(() => client) });
+
+        await expect(repository.inspectCredentialHealthWorkflow('owner', 'repo', 'token', 'release/main'))
+            .resolves.toBe(state);
+        expect(getContent).toHaveBeenNthCalledWith(1, {
+            owner: 'owner', repo: 'repo', ref: 'release/main', path: '',
+        });
+        expect(getContent).toHaveBeenNthCalledWith(2, {
+            owner: 'owner', repo: 'repo', ref: 'release/main',
+            path: '.github/workflows/copilot_credential_health.yml',
+        });
+    });
+
+    it.each([
+        { label: 'the exact workflow file is readable', exactResult: { data: {} }, rejects: false },
+        { label: 'the exact workflow file lookup is denied', exactResult: { status: 403 }, rejects: true },
+    ])('records the credential-health workflow as unavailable when $label', async ({ exactResult, rejects }) => {
+        const getContent = jest.fn().mockResolvedValueOnce({ data: [{ name: '.github' }] });
+        if (rejects) getContent.mockRejectedValueOnce(exactResult);
+        else getContent.mockResolvedValueOnce(exactResult);
+        const client = remoteInspectionClient(jest.fn().mockRejectedValue({ status: 404 }), getContent);
+
+        await expect(new SetupRemoteConfigurationQueryRepository({ getClient: jest.fn(() => client) })
+            .inspect('owner', 'repo', 'token')).resolves.toEqual(expect.objectContaining({
+                credentialHealthWorkflow: 'unavailable',
+            }));
+        expect(getContent).toHaveBeenNthCalledWith(1, { owner: 'owner', repo: 'repo', path: '' });
+        expect(getContent).toHaveBeenNthCalledWith(2, {
+            owner: 'owner', repo: 'repo', path: '.github/workflows/copilot_credential_health.yml',
+        });
+    });
+
+    it('records a workflow API 404 as unavailable when Contents visibility cannot be proved', async () => {
+        const getContent = jest.fn().mockRejectedValue({ status: 404 });
+        const client = remoteInspectionClient(jest.fn().mockRejectedValue({ status: 404 }), getContent);
+
+        await expect(new SetupRemoteConfigurationQueryRepository({ getClient: jest.fn(() => client) })
+            .inspect('owner', 'repo', 'token')).resolves.toEqual(expect.objectContaining({
+                credentialHealthWorkflow: 'unavailable',
+            }));
+        expect(getContent).toHaveBeenCalledTimes(1);
+        expect(getContent).toHaveBeenCalledWith({ owner: 'owner', repo: 'repo', path: '' });
+    });
+
+    it('records a workflow API 404 as unavailable when exact file inspection is unsupported', async () => {
+        const client = remoteInspectionClient(jest.fn().mockRejectedValue({ status: 404 }));
+
+        await expect(new SetupRemoteConfigurationQueryRepository({ getClient: jest.fn(() => client) })
+            .inspect('owner', 'repo', 'token')).resolves.toEqual(expect.objectContaining({
+                credentialHealthWorkflow: 'unavailable',
+            }));
+    });
+
+    it('records a non-404 workflow API failure as unavailable without inspecting repository contents', async () => {
+        const getContent = jest.fn();
+        const client = remoteInspectionClient(jest.fn().mockRejectedValue(new Error('workflow API unavailable')), getContent);
+
+        await expect(new SetupRemoteConfigurationQueryRepository({ getClient: jest.fn(() => client) })
+            .inspect('owner', 'repo', 'token')).resolves.toEqual(expect.objectContaining({
+                credentialHealthWorkflow: 'unavailable',
+            }));
+        expect(getContent).not.toHaveBeenCalled();
+    });
+
+    it('keeps denied repository inventory distinct from a confirmed empty inventory', async () => {
+        const client = {
+            rest: {
+                repos: { get: jest.fn().mockResolvedValue({ data: { id: 42, visibility: 'private', owner: { type: 'User' } } }) },
+                actions: {
+                    listRepoVariables: jest.fn().mockRejectedValue(new Error('variables forbidden')),
+                    createRepoVariable: jest.fn(), updateRepoVariable: jest.fn(),
+                },
+                secrets: {
+                    listRepoSecrets: jest.fn().mockRejectedValue(new Error('secrets forbidden')),
+                    getRepoPublicKey: jest.fn(), createOrUpdateRepoSecret: jest.fn(),
+                },
+            },
+        };
+        const repository = new SetupRemoteConfigurationQueryRepository({ getClient: jest.fn(() => client) });
+
+        await expect(repository.inspect('owner', 'repo', 'token')).resolves.toEqual(expect.objectContaining({
+            repositorySecrets: [], repositorySecretsAccess: 'unavailable',
+            repositoryVariables: [], repositoryVariablesAccess: 'unavailable',
+        }));
+    });
+
+    it('reports repository Secret inventory as unknown when the provider endpoint is absent', async () => {
+        const client = {
+            rest: {
+                repos: { get: jest.fn().mockResolvedValue({ data: { id: 42, visibility: 'private', owner: { type: 'User' } } }) },
+                actions: {
+                    listRepoVariables: jest.fn().mockResolvedValue({ data: { variables: [] } }),
+                    createRepoVariable: jest.fn(), updateRepoVariable: jest.fn(),
+                },
+            },
+        };
+        const repository = new SetupRemoteConfigurationQueryRepository({ getClient: jest.fn(() => client) });
+
+        await expect(repository.inspect('owner', 'repo', 'token')).resolves.toEqual(expect.objectContaining({
+            repositorySecrets: [], repositorySecretsAccess: 'unknown',
+            repositoryVariables: [], repositoryVariablesAccess: 'available',
+            credentialHealthWorkflow: 'unknown',
+        }));
     });
 
     it('upserts selected organization secrets and variables with the repository access grant', async () => {

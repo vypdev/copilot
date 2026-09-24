@@ -9,6 +9,9 @@ function snapshot(elapsedMs: number, outcome: BugbotReviewTelemetrySnapshot['out
         rulesLoaded: 1, contextSelectionReason: 'event', contextCandidateBucket: '1', contextCoverageStatus: 'complete',
         contextCoverage: { selection: { status: 'complete', pagesFetched: 1, itemsFetched: 1, itemsRetained: 1, omittedItems: 0, truncatedItems: 0, limitReached: false } },
         contextLogicalProviderReads: 4, contextRawProviderRequests: 6, contextConcurrencyLimit: 2,
+        analysisPartitions: 3, completedAnalysisPartitions: 3, analysisDiffFragments: 7,
+        analysisAssignedFiles: 4, maximumAnalysisConcurrency: 2,
+        failedAnalysisPartitionOrdinal: 2, failedAnalysisPartitionCategory: 'agent.failed',
         candidateFindings: 2, publishedFindings: outcome === 'completed' || outcome === 'partial' ? 1 : 0, overflowFindings: 0,
         resolvedFindings: 1, findingStates: { open: 0, fixed: 1, obsolete: 0, dismissed: 0, reopened: 0 }, outcome,
     };
@@ -56,6 +59,15 @@ describe('Bugbot analytics', () => {
         const parsed = parseBugbotTelemetry(JSON.stringify([first]));
         expect(parsed).toHaveLength(1);
         expect(parsed[0].contextCoverage).toEqual(first.contextCoverage);
+        expect(parsed[0]).toEqual(expect.objectContaining({
+            analysisPartitions: 3,
+            completedAnalysisPartitions: 3,
+            analysisDiffFragments: 7,
+            analysisAssignedFiles: 4,
+            maximumAnalysisConcurrency: 2,
+            failedAnalysisPartitionOrdinal: 2,
+            failedAnalysisPartitionCategory: 'agent.failed',
+        }));
         expect(parseBugbotTelemetry(`noise\n[bugbot.telemetry] ${JSON.stringify(first)}`)).toHaveLength(1);
     });
 

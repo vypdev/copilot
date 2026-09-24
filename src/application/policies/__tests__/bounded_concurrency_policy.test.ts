@@ -60,4 +60,40 @@ describe('bounded concurrency policy', () => {
 
     expect(queued).not.toHaveBeenCalled();
   });
+
+  it('drains already active work before exposing a failure', async () => {
+    let releaseActive!: () => void;
+    const active = new Promise<void>((resolve) => { releaseActive = resolve; });
+    let rejected = false;
+    const run = runWithConcurrencyLimit([
+      async () => { throw new Error('provider failed'); },
+      async () => { await active; return 2; },
+    ], 2).catch((error: unknown) => {
+      rejected = true;
+      throw error;
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(rejected).toBe(false);
+    releaseActive();
+    await expect(run).rejects.toThrow('provider failed');
+  });
+
+  it('retains the first failure while draining another failing active task', async () => {
+    let releaseFirst!: () => void;
+    let releaseSecond!: () => void;
+    const first = new Promise<void>((resolve) => { releaseFirst = resolve; });
+    const second = new Promise<void>((resolve) => { releaseSecond = resolve; });
+    const run = runWithConcurrencyLimit([
+      async () => { await first; throw new Error('first failure'); },
+      async () => { await second; throw new Error('second failure'); },
+    ], 2);
+
+    releaseFirst();
+    await Promise.resolve();
+    await Promise.resolve();
+    releaseSecond();
+    await expect(run).rejects.toThrow('first failure');
+  });
 });

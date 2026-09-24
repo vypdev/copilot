@@ -46,6 +46,13 @@ const mockEnsureIssueTypes = jest.fn();
 const mockSetupPrepare = jest.fn();
 const mockSetupHasValidToken = jest.fn();
 const mockSetupVariablesUpsert = jest.fn();
+const repositorySnapshot = {
+  ownerType: 'User' as const, repositoryVisibility: 'private' as const,
+  repositorySecrets: [], repositorySecretsAccess: 'available' as const,
+  organizationSecrets: [], repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
+  organizationVariables: [], organizationAccess: 'not_applicable' as const,
+  organizationSecretsAccess: 'not_applicable' as const, organizationVariablesAccess: 'not_applicable' as const,
+};
 
 function baseParam(overrides: Record<string, unknown> = {}) {
   const source = {
@@ -132,9 +139,20 @@ describe('InitialSetupUseCase', () => {
         expect.stringMatching(/GitHub access verified/)
       );
       expect(mockSetupHasValidToken).toHaveBeenCalledTimes(1);
+      expect(mockSetupPrepare).not.toHaveBeenCalled();
     } finally {
       mockSetupHasValidToken.mockReturnValue(true);
     }
+  });
+
+  it('does not copy local files when GitHub identity verification fails', async () => {
+    mockGetUserFromToken.mockRejectedValueOnce(new Error('provider detail'));
+
+    const results = await useCase.invoke(baseParam());
+
+    expect(results[0].success).toBe(false);
+    expect(mockSetupPrepare).not.toHaveBeenCalled();
+    expect(mockEnsureInitialLabels).not.toHaveBeenCalled();
   });
 
   it('returns success and steps including setup files when all steps succeed', async () => {
@@ -168,7 +186,7 @@ describe('InitialSetupUseCase', () => {
     const setupConfiguration = createDefaultSetupConfiguration();
     setupConfiguration.features.release = false;
     setupConfiguration.createInitialTag = false;
-    const results = await useCase.invoke(baseParam({ inputs: { setupConfiguration } }));
+    const results = await useCase.invoke(baseParam({ inputs: { setupConfiguration, setupRemoteConfiguration: repositorySnapshot } }));
 
     expect(results[0].success).toBe(true);
     expect(mockSetupPrepare).toHaveBeenCalledWith({
@@ -192,10 +210,12 @@ describe('InitialSetupUseCase', () => {
       ownerType: 'Organization' as const,
       repositoryId: 42,
       repositoryVisibility: 'private' as const,
-      repositorySecrets: [], organizationSecrets: [], repositoryVariables: [], organizationVariables: [],
+      repositorySecrets: [], repositorySecretsAccess: 'available' as const, organizationSecrets: [],
+      repositoryVariables: [], repositoryVariablesAccess: 'available' as const, organizationVariables: [],
       organizationAccess: 'available' as const, organizationSecretsAccess: 'available' as const,
       organizationVariablesAccess: 'available' as const,
     };
+    const inspect = jest.fn().mockResolvedValue(remoteConfiguration);
     const scopedUseCase = new InitialSetupUseCase(
       { getUser: mockGetUserFromToken, getUserDetails: jest.fn() },
       { ensureInitialLabels: mockEnsureInitialLabels },
@@ -206,17 +226,81 @@ describe('InitialSetupUseCase', () => {
       { prepare: mockSetupPrepare, hasValidToken: mockSetupHasValidToken },
       { upsert: mockSetupVariablesUpsert, upsertScopedVariables: scopedUpsert },
       undefined,
-      { inspect: jest.fn().mockResolvedValue(remoteConfiguration) },
+      { inspect },
     );
 
     const results = await scopedUseCase.invoke(baseParam({ inputs: { setupConfiguration } }));
 
     expect(results[0].success).toBe(true);
+    expect(inspect.mock.invocationCallOrder[0]).toBeLessThan(mockSetupPrepare.mock.invocationCallOrder[0]);
     expect(scopedUpsert).toHaveBeenCalledWith(
       expect.objectContaining({ scope: 'organization', repositoryId: 42 }),
       expect.arrayContaining([{ name: 'AGENT_PROVIDER', value: 'codex' }]),
     );
     expect(mockSetupVariablesUpsert).not.toHaveBeenCalled();
+    expect(mockSetupPrepare).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails closed and does not upsert Variables when repository inventory cannot be inspected', async () => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    setupConfiguration.manageRepositorySecrets = false;
+    setupConfiguration.createInitialTag = false;
+    const inspect = jest.fn().mockRejectedValue(new Error('sensitive provider response'));
+    const readFailureUseCase = new InitialSetupUseCase(
+      { getUser: mockGetUserFromToken, getUserDetails: jest.fn() },
+      { ensureInitialLabels: mockEnsureInitialLabels },
+      { ensureIssueTypes: mockEnsureIssueTypes },
+      { getLatestTag: mockGetLatestTag },
+      { getDefaultBranch: mockGetDefaultBranch } as any,
+      { createTag: mockCreateTag } as any,
+      { prepare: mockSetupPrepare, hasValidToken: mockSetupHasValidToken },
+      { upsert: mockSetupVariablesUpsert },
+      undefined,
+      { inspect },
+    );
+
+    const results = await readFailureUseCase.invoke(baseParam({ inputs: { setupConfiguration } }));
+
+    expect(results[0].success).toBe(false);
+    expect(results[0].errors.map(error => error.message)).toContain('Could not inspect existing GitHub Actions resource scopes.');
+    expect(mockSetupVariablesUpsert).not.toHaveBeenCalled();
+    expect(mockSetupPrepare).not.toHaveBeenCalled();
+    expect(mockEnsureInitialLabels).not.toHaveBeenCalled();
+    expect(mockEnsureIssueTypes).not.toHaveBeenCalled();
+    expect(mockCreateTag).not.toHaveBeenCalled();
+    expect(JSON.stringify(results)).not.toContain('sensitive provider response');
+    expect(inspect).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not mutate remote resources when the inventory read port is absent', async () => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    setupConfiguration.manageRepositorySecrets = false;
+    const results = await useCase.invoke(baseParam({ inputs: { setupConfiguration } }));
+
+    expect(results[0].success).toBe(false);
+    expect(results[0].errors.map(error => error.message)).toContain(
+      'Could not inspect existing GitHub Actions resource scopes. Restore inventory access and rerun setup.',
+    );
+    expect(mockSetupVariablesUpsert).not.toHaveBeenCalled();
+    expect(mockSetupPrepare).not.toHaveBeenCalled();
+    expect(mockEnsureInitialLabels).not.toHaveBeenCalled();
+    expect(mockEnsureIssueTypes).not.toHaveBeenCalled();
+    expect(mockCreateTag).not.toHaveBeenCalled();
+  });
+
+  it('blocks every remote provisioning step when a selected inventory access state is unavailable', async () => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    setupConfiguration.manageRepositorySecrets = false;
+    const inventory = { ...repositorySnapshot, repositoryVariablesAccess: 'unavailable' as const };
+    const results = await useCase.invoke(baseParam({ inputs: {
+      setupConfiguration, setupRemoteConfiguration: inventory,
+    } }));
+    expect(results[0].success).toBe(false);
+    expect(mockSetupPrepare).not.toHaveBeenCalled();
+    expect(mockSetupVariablesUpsert).not.toHaveBeenCalled();
+    expect(mockEnsureInitialLabels).not.toHaveBeenCalled();
+    expect(mockEnsureIssueTypes).not.toHaveBeenCalled();
+    expect(mockCreateTag).not.toHaveBeenCalled();
   });
 
   it('does not create default tag when repository already has tags', async () => {

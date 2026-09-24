@@ -56,7 +56,7 @@ export class SingleActionUseCase implements ParamUseCase<Execution, Result[]> {
       return [];
     }
     if (isAgentBackedSingleAction(param) && param.ai.getAiMembersOnly()) {
-      const allowed = Boolean(this.actorAuthorizationPort && await this.actorAuthorizationPort.isActorAllowedToModifyFiles(
+      const allowed = Boolean(this.actorAuthorizationPort && await this.actorAuthorizationPort.isActorAllowedToUseMemberOnlyAutomation(
         param.owner,
         param.repo,
         param.actor,

@@ -77,6 +77,10 @@ sandbox behavior are not a versioned executable contract.
   read-write paths and default-deny network.
 - Verified local baseline versions on 2026-09-11: Codex CLI `0.153.4`, OpenCode
   `1.18.3`, and Cursor Agent `2026.09.10-fd3934a`.
+  The Codex installation baseline moves to `0.156.1` for the `gpt-6-luna`
+  default; the older version remains historical evidence, not a supported
+  provisioned default for that model. Confirm the model using the exact pinned
+  binary and the Action runner credential before rollout.
 
 ### 2.4 Retrospective classification
 
@@ -306,7 +310,7 @@ known-good identities and reproducible installation recipes:
 
 | Provider | Reviewed identity / pinned installation | Required smoke |
 |---|---|---|
-| Codex | `codex-cli 0.153.4` / `@openai/codex@0.153.4` | read/write boundary, network deny, approval deny, no MCP/plugin/subagent, schema |
+| Codex | `codex-cli 0.156.1` / `@openai/codex@0.156.1` | read/write boundary, network deny, approval deny, no MCP/plugin/subagent, schema and configured model |
 | OpenCode | `1.18.3` / `opencode-ai@1.18.3` | readonly/fixer permissions, no bash/web/task/plugin, config isolation, JSON |
 | Cursor | `2026.09.10-fd3934a` / no automatic installer | readonly/fixer path boundary, network deny, no shell/MCP/plugin/subagent, noninteractive completion |
 

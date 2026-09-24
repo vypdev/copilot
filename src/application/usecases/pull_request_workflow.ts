@@ -106,7 +106,7 @@ async function canUseAgent(
 ): Promise<boolean> {
   if (!context.membersOnly) return true;
   if (!authorization) return false;
-  return authorization.isActorAllowedToModifyFiles(context.actor);
+  return authorization.isActorAllowedToUseMemberOnlyAutomation(context.actor);
 }
 
 async function runPullRequestReview(

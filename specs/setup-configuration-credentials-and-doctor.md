@@ -2,9 +2,9 @@
 
 - Status: Implemented — automated architecture, UX, documentation, and coverage gates complete; controlled live GitHub permission-path evidence remains external
 - Date: 2026-09-11
-- Last updated: 2026-09-14
+- Last updated: 2026-09-24
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-09-14
+- Last verified: 2026-09-24
 - Owners: Copilot maintainers
 - Scope: interactive/non-interactive installation planning, file and resource provisioning, credential validation, and read-only diagnosis
 - Related issues/PRs: merge-queue readiness SDD; architecture quality and
@@ -57,9 +57,10 @@ but unusable, overwrite hand-maintained files, or expose credentials.
   and doctor commands, setup adapters, and `setup/` assets.
 - Intentional contract: preview/confirmation, separate credentials, bounded
   configuration, preserve-existing storage, backups, and read-only doctor.
-- Known limitations: GitHub cannot reveal Secret values; health may be
-  `unverifiable`; remote organization access depends on PAT permissions; live
-  GitHub permission-path UX remains an external rollout check.
+- Known limitations: GitHub cannot reveal Secret values or a complete inventory
+  of fine-grained PAT grants; health and write permission evidence may be
+  `unverifiable`; controlled live GitHub permission-path evidence remains an
+  external rollout check.
 - Unknown rationale: historic defaults predating the typed wizard are not
   assumed intentional unless represented by current policy and docs.
 - Implemented hardening: questionnaire/terminal separation, named doctor checks,
@@ -67,6 +68,8 @@ but unusable, overwrite hand-maintained files, or expose credentials.
   [`setup-doctor-architecture-hardening.md`](./setup-doctor-architecture-hardening.md),
   under the shared gates in
   [`architecture-quality-and-scalability-hardening.md`](./architecture-quality-and-scalability-hardening.md).
+  Role-specific PAT guidance and safe permission evidence are specified in
+  [`setup-pat-permission-guidance-and-verification.md`](./setup-pat-permission-guidance-and-verification.md).
   Transactional rollback across local and GitHub writes requires a separate design.
 
 ## 3. Actors, surfaces, and terminology
@@ -130,7 +133,10 @@ cancellation, skipped diagnosis, ordering, and read-only authority explicit.
 1. Load defaults plus bounded overrides.
 2. Inspect remote state and choose repository/organization storage.
 3. Validate config, merge queue, setup PAT, workflow PAT, and required agent credentials.
-4. Show selected files/resources/warnings, confirm, provision, and verify.
+4. Show selected files/resources/warnings and confirm. Verify GitHub identity and
+   every required remote Secret/Variable inventory before copying local setup
+   files; rejected or unavailable inventory leaves the workspace untouched.
+5. Prepare the selected files, provision remote resources, and verify.
 
 ### 6.2 Alternative paths
 
@@ -138,7 +144,28 @@ cancellation, skipped diagnosis, ordering, and read-only authority explicit.
   flags, and credentials, and MUST fail on missing external inputs.
 - `--yes` approves only the final plan and never supplies a missing decision.
 - `--skip-variables` and `--skip-secrets` leave those remote resource classes untouched.
-- Existing valid credentials may be kept; invalid required credentials must be replaced.
+- Existing valid non-workflow credentials may be kept only when the effective storage policy
+  preserves their current scope. Disabling `preserveExisting`, or selecting an
+  explicit per-resource override that moves the Secret to another scope,
+  converts `keep` into a replacement flow; setup MUST collect and validate the
+  value before provisioning the selected target. An explicit override that
+  names the already-effective scope does not require a redundant rewrite.
+- An existing workflow `PAT` is an exception: setup requires re-entry and a
+  complete permission audit before provisioning; credential health and storage
+  preservation do not authorize an unaudited keep path.
+- Invalid required credentials must be replaced.
+- A missing remote resource snapshot is never an empty inventory. Selected
+  Secret/Variable management MUST stop before all remote resource, label,
+  issue-type, and tag calls when inspection fails, its port is absent, or a
+  selected inventory access state is unavailable. The questionnaire receives
+  bounded unavailable facts before final scope-sensitive validation. Selected
+  Secret/Variable names require repository inventory even when targeting
+  organization scope, because a repository value of the same name wins at
+  workflow runtime; a known shadow blocks that organization target before
+  mutation. Unrelated organization access may remain unavailable for
+  repository-only targets. The
+  result names a bounded inspection recovery action and never exposes raw
+  provider errors.
 - Runner login may satisfy explicitly declared alternative credential groups.
 
 ### 6.3 State model
@@ -168,12 +195,15 @@ existing resources and avoid duplicate shadowing.
 | branches | `master`, `develop`, standard prefixes | non-empty, no whitespace | repository Variables |
 | assignment | 1 assignee, 1 reviewer | 0–10 / 0–15 | Variables |
 | locales | repository `en-US`; issue/PR inherit | any valid canonical BCP-47 tag; reviewed `en`/`es`, dynamic otherwise | Variables; repository → issue/PR inheritance |
-| agent roles | `codex` / `openai/gpt-5.6-luna` | `codex`, `opencode`, `cursor` + allowed model | Variables |
+| agent roles | `codex` / `openai/gpt-6-luna` | `codex`, `opencode`, `cursor` + allowed model | Variables |
 | Bugbot | low, smart in setup, non-blocking | bounded enums/1–100 comments | Variables |
 | storage | repository, preserve existing | repository/org per resource | remote GitHub |
 | provisioning | `auto` | `always`, `disabled` | Variable |
 
-Repository values take precedence at runtime over organization values. Storage
+Repository values take precedence at runtime over organization values. Setup
+therefore requires repository inventory for every selected Secret/Variable name
+and rejects a same-name repository shadow before provisioning an organization
+target; it never reports a shadowed organization value as effective. Storage
 scope, visibility (`selected` recommended), and per-resource overrides are
 validated. Branch names, counts, enum values, model identifiers, rule length,
 deployment combinations, and storage combinations reject invalid input. Safety
@@ -272,13 +302,13 @@ manual reversal.
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
-| Defaults/config/storage policy | 24 | bounds, precedence, cross-fields |
+| Defaults/config/storage policy | 27 | bounds, precedence, cross-fields, organization-target shadow detection, keep-versus-replace decisions for disabled preservation and scope-moving overrides |
 | Questionnaire/wizard/idempotency | 18 | transitions, immutability, cancel, preserve, replace |
 | Credentials/provider adapters | 18 | valid/invalid/missing/unverifiable/groups |
 | Workflows/assets/schema | 14 | selection, parity, readiness, permissions |
 | Prompt/CLI UX/sanitization/localization | 18 | masking, status order, non-interactive, English default, Spanish exact/base, arbitrary locale, atomic fallback, hostile diagnostic suppression |
-| Integration/security/cutover | 12 | backup, org scope, doctor, no `.env` |
-| **Total** | **104** | no double counting |
+| Integration/security/cutover | 17 | backup, org scope, doctor, no `.env`, bounded pre-plan inspection and no remote provisioning after selected inventory or shadow validation fails |
+| **Total** | **112** | no double counting |
 
 Global coverage thresholds remain; questionnaire, doctor catalog/report, shared
 merge-readiness message, and doctor presenter policies MUST reach 100%
@@ -316,6 +346,22 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
     artifact falls back to English rather than mixing languages.
 14. Given hostile PAT, credential-health, or rule-provider prose, doctor omits
     the raw value and renders only the catalogued reason and recovery action.
+15. Given an existing valid Secret and `preserveExisting: false`, choosing
+    `keep` cannot satisfy the requirement; setup requests and validates a value
+    and provisions the configured target, or fails before mutation when no
+    value is available.
+16. Given an existing valid organization Secret and an explicit repository
+    override, choosing `keep` follows the same replacement path; an explicit
+    organization override may keep it because the effective scope does not move.
+17. Given remote resource inspection fails or is not configured, selected
+    Secret/Variable provisioning reports a bounded error and performs no
+    Secret/Variable/label/issue-type/tag mutation; absence cannot be
+    interpreted as an empty repository inventory. Pre-plan failures still
+    reach the final audit as bounded unavailable access facts.
+18. Given an organization Secret or Variable target, repository inventory is
+    available and confirms that no same-name repository resource exists;
+    otherwise setup blocks before credential collection or mutation, even with
+    an explicit organization override or `preserveExisting: false`.
 
 ## 17. Requirements traceability
 
@@ -323,6 +369,8 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 |---|---|---|---|
 | bounded plan | setup policies/wizard | setup wizard tests | how-to-use |
 | credential separation | credential use case/ports | credential tests | credentials |
+| policy-safe existing credentials | storage policy + credential use case | disabled-preservation and scope-move tests | credentials/provisioning |
+| authoritative resource snapshot | wizard, resource grouping + initial setup workflow | bounded pre-plan inspection and no remote mutation after failed inspection | troubleshooting/provisioning |
 | safe files | workspace adapter | workspace tests | provisioning |
 | read-only doctor | doctor use case/composition | doctor tests | workflow-and-cli |
 | readiness | readiness use case | readiness tests | checklist |
@@ -338,7 +386,7 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 ## 19. Definition of Done
 
 - [x] Every new option has default, bounds, precedence, persistence, retirement/rejection, and security rules.
-- [x] The 104-case budget and coverage thresholds pass.
+- [x] The 112-case budget and coverage thresholds pass.
 - [x] Setup cancel/retry/partial state and doctor read-only behavior pass.
 - [x] Secrets are absent from plans, config, logs, errors, and backups.
 - [x] Workflow/assets, documentation, and catalog checks pass.
@@ -351,6 +399,9 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 - Implemented hardening: `setup-doctor-architecture-hardening.md` owns setup questionnaire,
   doctor, and remote configuration adapter decomposition; the architecture
   hardening SDD owns shared sequencing and verification gates.
+- Permission companion: `setup-pat-permission-guidance-and-verification.md`
+  owns the pre-prompt matrices, post-entry evidence states, and read-only probe
+  boundary for setup and workflow PATs.
 - Decision: one configuration policy serves setup, doctor, and workflow inputs.
 - Rejected: storing credentials in YAML/JSON or silently overwriting managed files.
 - Follow-up: cross-provider transactional rollback is outside this baseline.

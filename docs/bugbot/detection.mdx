@@ -196,7 +196,7 @@ missing state, unexpected state, invalid count, or aggregate overflow fails the
 Action and Check closed; `/copilot status` reports the evidence as invalid
 instead of inventing clean counts.
 
-At most 20 stale historical review blocks are repaired in one run. If more remain, the status card and Check show the exact pending count and `/copilot recheck` continues the idempotent repair. Duplicate trusted status cards are not deleted: the oldest becomes canonical and later copies are converted to redirects.
+Bugbot repairs historical review blocks in sequential batches of at most 20, up to 100 per run, with no more than four concurrent writes in a batch. A 42-review backlog therefore completes in the same run as the analysis. If more than 100 remain or a batch fails, the status card and Check show the exact pending count and `/copilot recheck` continues the idempotent repair. The Action uses `workflow.presentation-pending` for a budget remainder, not `provider.unavailable`; a genuine provider write failure remains separate. Duplicate trusted status cards are not deleted: the oldest becomes canonical and later copies are converted to redirects.
 
 The shipped PR workflow grants `checks: write` only to its short-lived `github.token` and exposes it to the Action as `COPILOT_EVIDENCE_TOKEN`. That token is used only for Check Run publication and is excluded from every agent child environment. The separate PAT remains responsible for configured repository and project operations.
 
@@ -214,7 +214,27 @@ identifier invented in its response.
 Bugbot's status card contains a context-coverage section. `complete` means every
 applicable bounded source finished without reaching a fixed cap. `partial`
 means the run retained a deterministic subset—for example the newest 200
-comments, newest 200 thread records, or first 1,000 diff files. Partial analysis
+comments, newest 200 thread records, or first 1,000 diff files. The per-prompt
+diff character budget does **not** omit later files: Bugbot splits every
+non-ignored provider patch into bounded fragments, reviews every partition for
+the same head SHA with at most two concurrent reviewer calls, verifies each
+partition attestation, and aggregates once before publication. Large patches
+are split without dropping sanitized patch characters; missing provider patches
+become explicit local-diff inspection assignments.
+
+When every changed file in a canonical pull request matches
+`ai-ignore-files`, the exhaustive plan contains zero partitions by design.
+Bugbot records the ignored-file count and completes without invoking the
+reviewer. It neither creates findings nor asks the model to resolve earlier
+findings, so any existing unresolved finding remains open. The legacy
+single-query path is reserved for non-PR issue or commit contexts that have no
+canonical pull-request diff plan.
+
+If any planned partition still fails, is missing, or returns the wrong
+identity/SHA after at most three identical local attempts, or attempts a
+resolution outside the sole resolution-owner partition, the whole analysis
+fails before finding publication or resolution. A provider file-page
+cap is still partial because unenumerated files cannot be planned. Partial analysis
 may still report findings supported by retained evidence, but it never says the
 whole PR is clean, never resolves a prior finding omitted from the prompt, and
 never receives a successful Review Check conclusion.
@@ -224,8 +244,9 @@ stale `state:ready` label with `state:blocked` and
 reduce the change scope; zero findings in the retained subset is not a ready
 decision.
 
-A GitHub read error is not partial context: the run fails before agent analysis
-or finding mutation. For a cap, inspect the named omitted source, split an
+A GitHub read error or incomplete partition set is not a successful partial
+review: the run fails before finding publication or resolution. For a cap,
+inspect the named omitted source, split an
 oversized PR when appropriate, and run `/copilot recheck`. For an ambiguous PR
 head, close the obsolete PR or invoke the review from the intended PR event.
 

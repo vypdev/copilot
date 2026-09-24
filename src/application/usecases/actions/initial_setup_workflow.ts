@@ -21,6 +21,12 @@ import {
 } from './setup_resource_provisioning';
 import { ApplicationError, type ApplicationErrorCode, toApplicationError } from '../../errors/application_error';
 import { selectedInitialIssueTypes, selectedInitialLabels } from '../../policies/setup_issue_resource_policy';
+import {
+    buildSetupCredentialRequirements,
+    buildSetupRepositoryVariables,
+    validateSetupManagedResourceInventory,
+    validateSetupStorageAgainstRemote,
+} from '../../policies/setup_configuration_policy';
 
 export interface InitialSetupWorkflowDependencies extends SetupResourceProvisioningDependencies {
     authenticatedUserPort: BoundAuthenticatedUserPort;
@@ -54,17 +60,6 @@ export async function runInitialSetupWorkflow(
             errors.push(new ApplicationError('authorization.credential-invalid', 'A valid setup PAT must be provided to run setup. It is separate from the workflow PAT Secret.'));
             return [buildResult(errors, steps)];
         }
-        logInfo('📋 Ensuring .github and copying setup files...');
-        const workspaceSelection = {
-            features: setupConfiguration?.features,
-            setupConfiguration,
-            ...(request.workflowUpdates.length > 0 ? {
-                updateExistingWorkflows: true,
-                approvedWorkflowFiles: request.workflowUpdates,
-            } : {}),
-        };
-        const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
-        steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
         logInfo('🔐 Checking GitHub access...');
         const githubAccess = await verifyGitHubAccess(request, dependencies.authenticatedUserPort);
         if (!githubAccess.success) {
@@ -81,6 +76,37 @@ export async function runInitialSetupWorkflow(
             remoteConfigurationErrors,
         );
         errors.push(...fromMessages(remoteConfigurationErrors, 'provider.unavailable'));
+        if (setupConfiguration && (setupConfiguration.manageRepositorySecrets || setupConfiguration.manageRepositoryVariables)) {
+            if (!remoteConfiguration) {
+                if (remoteConfigurationErrors.length === 0) {
+                    errors.push(new ApplicationError('provider.unavailable', 'Could not inspect existing GitHub Actions resource scopes. Restore inventory access and rerun setup.'));
+                }
+                return [buildResult(errors, steps)];
+            }
+            const inventoryErrors = [
+                ...validateSetupStorageAgainstRemote(setupConfiguration, remoteConfiguration),
+                ...validateSetupManagedResourceInventory(setupConfiguration, remoteConfiguration, {
+                    secrets: buildSetupCredentialRequirements(setupConfiguration).map(requirement => requirement.name),
+                    variables: buildSetupRepositoryVariables(setupConfiguration).map(variable => variable.name),
+                }),
+            ];
+            if (inventoryErrors.length > 0) {
+                errors.push(...fromMessages(inventoryErrors, 'provider.unavailable'));
+                return [buildResult(errors, steps)];
+            }
+        }
+
+        logInfo('📋 Ensuring .github and copying setup files...');
+        const workspaceSelection = {
+            features: setupConfiguration?.features,
+            setupConfiguration,
+            ...(request.workflowUpdates.length > 0 ? {
+                updateExistingWorkflows: true,
+                approvedWorkflowFiles: request.workflowUpdates,
+            } : {}),
+        };
+        const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
+        steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
 
         const secrets = await ensureRepositorySecrets(request, dependencies, setupConfiguration, remoteConfiguration);
         if (secrets.step) steps.push(secrets.step);

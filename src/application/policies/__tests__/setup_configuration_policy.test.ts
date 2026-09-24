@@ -2,12 +2,16 @@ import {
     buildSetupActionInputs,
     buildSetupCredentialRequirements,
     buildSetupPlan,
+    canKeepExistingSetupResource,
     buildSetupRepositoryVariables,
     createDefaultSetupConfiguration,
     mergeSetupConfiguration,
     normalizeSetupConfigurationLocales,
+    requiresSetupRepositoryInventory,
+    requiresSetupOrganizationInventory,
     resolveSetupResourceTarget,
     shouldUpsertSetupResource,
+    validateSetupManagedResourceInventory,
     validateSetupStorageAgainstRemote,
     validateSetupConfiguration,
 } from '../setup_configuration_policy';
@@ -24,7 +28,8 @@ describe('setup configuration policy', () => {
         expect(plan.selectedFiles).toContain('AGENTS.md (managed pointer only)');
         expect(plan.variables).toEqual(expect.arrayContaining([
             { name: 'AGENT_PROVIDER', value: 'codex' },
-            { name: 'AGENT_ALLOWED_MODELS', value: 'openai/gpt-5.6-luna' },
+            { name: 'AGENT_MODEL', value: 'gpt-6-luna' },
+            { name: 'AGENT_ALLOWED_MODELS', value: 'openai/gpt-6-luna' },
             { name: 'MAIN_BRANCH', value: 'master' },
             { name: 'AI_IGNORE_FILES', value: 'build/*' },
             { name: 'BUGBOT_FAIL_ON_UNRESOLVED', value: 'false' },
@@ -133,6 +138,18 @@ describe('setup configuration policy', () => {
         });
         expect(buildSetupPlan(configuration).warnings).toEqual(expect.arrayContaining([
             expect.stringContaining('Cursor is an experimental runtime'),
+        ]));
+    });
+
+    it('retains a configured previous model when it is explicitly allowlisted', () => {
+        const configuration = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
+            agents: { findings: { model: 'gpt-5.6-luna' } },
+        });
+        const variables = buildSetupRepositoryVariables(configuration);
+
+        expect(variables).toEqual(expect.arrayContaining([
+            { name: 'AGENT_MODEL', value: 'gpt-5.6-luna' },
+            { name: 'AGENT_ALLOWED_MODELS', value: 'openai/gpt-6-luna,openai/gpt-5.6-luna' },
         ]));
     });
 
@@ -281,9 +298,9 @@ describe('setup configuration policy', () => {
             ownerType: 'Organization' as const,
             repositoryId: 42,
             repositoryVisibility: 'private' as const,
-            repositorySecrets: [],
+            repositorySecrets: [], repositorySecretsAccess: 'available' as const,
             organizationSecrets: ['PAT'],
-            repositoryVariables: [],
+            repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
             organizationVariables: [{ name: 'AGENT_PROVIDER', value: 'codex' }],
             organizationAccess: 'available' as const,
             organizationSecretsAccess: 'available' as const,
@@ -305,9 +322,9 @@ describe('setup configuration policy', () => {
             ownerType: 'Organization' as const,
             repositoryId: 42,
             repositoryVisibility: 'private' as const,
-            repositorySecrets: [],
+            repositorySecrets: [], repositorySecretsAccess: 'available' as const,
             organizationSecrets: [],
-            repositoryVariables: [],
+            repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
             organizationVariables: [{ name: 'AGENT_PROVIDER', value: 'codex' }],
             organizationAccess: 'available' as const,
             organizationSecretsAccess: 'available' as const,
@@ -319,6 +336,28 @@ describe('setup configuration policy', () => {
         expect(shouldUpsertSetupResource(override, 'variable', 'AGENT_PROVIDER', remote)).toBe(true);
     });
 
+    it('keeps an existing credential only when preservation retains its effective scope', () => {
+        const base = {
+            defaultScope: 'repository' as const,
+            organizationVisibility: 'selected' as const,
+            preserveExisting: true,
+            overrides: {},
+        };
+
+        expect(canKeepExistingSetupResource(undefined, 'OPENAI_API_KEY', 'organization')).toBe(true);
+        expect(canKeepExistingSetupResource(base, 'OPENAI_API_KEY', 'organization')).toBe(true);
+        expect(canKeepExistingSetupResource({ ...base, preserveExisting: false }, 'OPENAI_API_KEY', 'organization')).toBe(false);
+        expect(canKeepExistingSetupResource({
+            ...base,
+            overrides: { OPENAI_API_KEY: 'repository' },
+        }, 'OPENAI_API_KEY', 'organization')).toBe(false);
+        expect(canKeepExistingSetupResource({
+            ...base,
+            overrides: { OPENAI_API_KEY: 'organization' },
+        }, 'OPENAI_API_KEY', 'organization')).toBe(true);
+        expect(canKeepExistingSetupResource(base, 'OPENAI_API_KEY', undefined)).toBe(false);
+    });
+
     it('keeps replacement credentials on the effective repository scope unless scope is explicitly overridden', () => {
         const configuration = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
             storage: { secrets: { defaultScope: 'organization' } },
@@ -327,7 +366,9 @@ describe('setup configuration policy', () => {
             ownerType: 'Organization' as const,
             repositoryId: 42,
             repositoryVisibility: 'private' as const,
-            repositorySecrets: ['PAT'], organizationSecrets: [], repositoryVariables: [], organizationVariables: [],
+            repositorySecrets: ['PAT'], repositorySecretsAccess: 'available' as const,
+            organizationSecrets: [], repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
+            organizationVariables: [],
             organizationAccess: 'available' as const, organizationSecretsAccess: 'available' as const,
             organizationVariablesAccess: 'available' as const,
         };
@@ -345,7 +386,9 @@ describe('setup configuration policy', () => {
             ownerType: 'User' as const,
             repositoryId: 42,
             repositoryVisibility: 'private' as const,
-            repositorySecrets: [], organizationSecrets: [], repositoryVariables: [], organizationVariables: [],
+            repositorySecrets: [], repositorySecretsAccess: 'available' as const,
+            organizationSecrets: [], repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
+            organizationVariables: [],
             organizationAccess: 'not_applicable' as const,
             organizationSecretsAccess: 'not_applicable' as const,
             organizationVariablesAccess: 'not_applicable' as const,
@@ -357,6 +400,122 @@ describe('setup configuration policy', () => {
         const unavailableRemote = { ...personalRemote, ownerType: 'Organization' as const, organizationVariablesAccess: 'unavailable' as const };
         expect(validateSetupStorageAgainstRemote(configuration, unavailableRemote)).toEqual([
             'The setup PAT cannot inspect organization variables for this repository. Organization variable permissions are required.',
+        ]);
+    });
+
+    it('rejects unavailable managed repository inventory after the final permission audit', () => {
+        const configuration = createDefaultSetupConfiguration();
+        const remote = {
+            ownerType: 'User' as const, repositoryVisibility: 'private' as const,
+            repositorySecrets: [], repositorySecretsAccess: 'unknown' as const,
+            organizationSecrets: [], repositoryVariables: [], repositoryVariablesAccess: 'unavailable' as const,
+            organizationVariables: [], organizationAccess: 'not_applicable' as const,
+            organizationSecretsAccess: 'not_applicable' as const, organizationVariablesAccess: 'not_applicable' as const,
+        };
+
+        const resources = { secrets: ['PAT'], variables: ['AGENT_PROVIDER'] };
+        expect(validateSetupManagedResourceInventory(configuration, remote, resources)).toEqual([
+            expect.stringContaining('Repository Secret inventory is unknown'),
+            expect.stringContaining('Repository Variable inventory is unavailable'),
+        ]);
+        configuration.manageRepositorySecrets = false;
+        configuration.manageRepositoryVariables = false;
+        expect(validateSetupManagedResourceInventory(configuration, remote, resources)).toEqual([]);
+    });
+
+    it('requires repository inventory for every selected name to rule out organization shadowing', () => {
+        expect(requiresSetupRepositoryInventory([])).toBe(false);
+        expect(requiresSetupRepositoryInventory(['PAT'])).toBe(true);
+        expect(requiresSetupRepositoryInventory(['PAT', 'OPENAI_API_KEY'])).toBe(true);
+    });
+
+    it('requires organization inventory only for selected scopes or preservation discovery', () => {
+        const configuration = createDefaultSetupConfiguration();
+        const policy = configuration.storage.secrets;
+
+        policy.defaultScope = 'repository';
+        policy.preserveExisting = false;
+        expect(requiresSetupOrganizationInventory(policy, ['PAT'])).toBe(false);
+
+        policy.preserveExisting = true;
+        expect(requiresSetupOrganizationInventory(policy, ['PAT'])).toBe(true);
+        expect(requiresSetupOrganizationInventory(policy, ['PAT'], ['PAT'])).toBe(false);
+
+        policy.defaultScope = 'organization';
+        expect(requiresSetupOrganizationInventory(policy, ['PAT'], ['PAT'])).toBe(false);
+
+        policy.overrides.PAT = 'repository';
+        expect(requiresSetupOrganizationInventory(policy, ['PAT'])).toBe(false);
+
+        policy.overrides.OPENAI_API_KEY = 'organization';
+        expect(requiresSetupOrganizationInventory(policy, ['PAT', 'OPENAI_API_KEY'])).toBe(true);
+    });
+
+    it('blocks unavailable repository inventory even when every selected resource is organization-only', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.storage.secrets.defaultScope = 'organization';
+        configuration.storage.secrets.preserveExisting = false;
+        configuration.storage.variables.overrides.AGENT_PROVIDER = 'organization';
+        configuration.storage.variables.preserveExisting = true;
+        const remote = {
+            ownerType: 'Organization' as const, repositoryId: 42, repositoryVisibility: 'private' as const,
+            repositorySecrets: [], repositorySecretsAccess: 'unavailable' as const,
+            organizationSecrets: [], repositoryVariables: [], repositoryVariablesAccess: 'unknown' as const,
+            organizationVariables: [], organizationAccess: 'available' as const,
+            organizationSecretsAccess: 'available' as const, organizationVariablesAccess: 'available' as const,
+        };
+
+        expect(validateSetupManagedResourceInventory(configuration, remote, {
+            secrets: ['PAT'],
+            variables: ['AGENT_PROVIDER'],
+        })).toEqual([
+            expect.stringContaining('Repository Secret inventory is unavailable'),
+            expect.stringContaining('Repository Variable inventory is unknown'),
+        ]);
+    });
+
+    it('blocks known repository values that shadow selected organization targets', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.storage.secrets.defaultScope = 'organization';
+        configuration.storage.secrets.preserveExisting = false;
+        configuration.storage.variables.defaultScope = 'organization';
+        configuration.storage.variables.preserveExisting = false;
+        const remote = {
+            ownerType: 'Organization' as const, repositoryId: 42, repositoryVisibility: 'private' as const,
+            repositorySecrets: ['PAT'], repositorySecretsAccess: 'available' as const,
+            organizationSecrets: [], repositoryVariables: [{ name: 'AGENT_MODEL', value: 'old' }], repositoryVariablesAccess: 'available' as const,
+            organizationVariables: [], organizationAccess: 'available' as const,
+            organizationSecretsAccess: 'available' as const, organizationVariablesAccess: 'available' as const,
+        };
+
+        expect(validateSetupManagedResourceInventory(configuration, remote, {
+            secrets: ['PAT'], variables: ['AGENT_MODEL'],
+        })).toEqual([
+            expect.stringContaining('Repository Secret PAT shadows'),
+            expect.stringContaining('Repository Variable AGENT_MODEL shadows'),
+        ]);
+    });
+
+    it('rejects unavailable organization inventory needed to preserve repository-default resources', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.storage.secrets.defaultScope = 'repository';
+        configuration.storage.secrets.preserveExisting = true;
+        configuration.storage.variables.defaultScope = 'repository';
+        configuration.storage.variables.preserveExisting = true;
+        const remote = {
+            ownerType: 'Organization' as const, repositoryId: 42, repositoryVisibility: 'private' as const,
+            repositorySecrets: [], repositorySecretsAccess: 'available' as const,
+            organizationSecrets: [], repositoryVariables: [{ name: 'EXISTING_REPOSITORY_VARIABLE', value: 'kept' }], repositoryVariablesAccess: 'available' as const,
+            organizationVariables: [], organizationAccess: 'unavailable' as const,
+            organizationSecretsAccess: 'unavailable' as const, organizationVariablesAccess: 'unknown' as const,
+        };
+
+        expect(validateSetupManagedResourceInventory(configuration, remote, {
+            secrets: ['PAT'],
+            variables: ['AGENT_PROVIDER'],
+        })).toEqual([
+            expect.stringContaining('Organization Secret inventory is unavailable'),
+            expect.stringContaining('Organization Variable inventory is unknown'),
         ]);
     });
 
@@ -380,7 +539,9 @@ describe('setup configuration policy', () => {
         });
         const remote = {
             ownerType: 'Organization' as const, repositoryVisibility: 'private' as const,
-            repositorySecrets: [], organizationSecrets: [], repositoryVariables: [], organizationVariables: [],
+            repositorySecrets: [], repositorySecretsAccess: 'available' as const,
+            organizationSecrets: [], repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
+            organizationVariables: [],
             organizationAccess: 'available' as const, organizationSecretsAccess: 'available' as const,
             organizationVariablesAccess: 'available' as const,
         };

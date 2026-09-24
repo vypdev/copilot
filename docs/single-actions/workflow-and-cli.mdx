@@ -176,6 +176,7 @@ Setup is the profile-creation surface, so its questionnaire, plan, confirmation,
 | `--config <path>` | No | Load non-secret YAML/JSON setup overrides. Interactive answers can still refine them. |
 | `--non-interactive` | No | Use defaults, flags, config-file values, and explicit credentials without creating a terminal or prompting. |
 | `--yes` | No | Approve only the final plan; it does not fill missing configuration or credentials. |
+| `--confirm-unverifiable-write-permissions` | No | Explicitly acknowledge, after inspecting the PAT settings, required write rows that safe read-only probes cannot verify. It never accepts missing access or unverifiable required reads. |
 | `--dry-run` | No | Print the complete plan without changing files or GitHub. A token is not required. |
 | `--skip-variables` | No | Copy files and provision metadata without changing Repository Variables. |
 | `--skip-secrets` | No | Do not validate or create/update repository Secrets. |
@@ -206,6 +207,18 @@ copilot setup --non-interactive --yes
 copilot setup --dry-run
 copilot setup --non-interactive --yes --features issues,pullRequests,commits,issueComments,pullRequestComments --agent codex
 copilot setup --non-interactive --yes --issue-workflows feature,bugfix,help
+```
+
+Run these commands without a permission exception first. If the audit stops
+only because required write rows are `Unverifiable`, inspect the displayed
+requirements against both PATs' settings. Only after confirming every required
+row may you explicitly acknowledge that limitation. Repeat the same selections
+if the original run was interactive; for automation, append the flag to the
+original invocation with the same configuration file, flags, and credentials.
+For example, preserving the feature and agent flags from the command above:
+
+```bash
+copilot setup --non-interactive --yes --features issues,pullRequests,commits,issueComments,pullRequestComments --agent codex --confirm-unverifiable-write-permissions
 ```
 
 Without an explicit `--agent-guidance` or config value, non-interactive setup
@@ -310,7 +323,7 @@ agents:
   planner:
     provider: codex
     modelProvider: openai
-    model: gpt-5.6-luna
+    model: gpt-6-luna
   reviewer:
     provider: opencode
     modelProvider: anthropic

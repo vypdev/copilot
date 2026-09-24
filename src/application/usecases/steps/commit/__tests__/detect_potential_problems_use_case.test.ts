@@ -248,7 +248,11 @@ describe("DetectPotentialProblemsUseCase", () => {
             request.prompt,
             request.options,
           )).then((response) => response && typeof response === 'object' && !Array.isArray(response)
-            ? { outputLocale: 'en-US', ...response }
+            ? {
+                outputLocale: 'en-US',
+                ...partitionAttestation(request.prompt, response as Record<string, unknown>),
+                ...response,
+              }
             : response),
       },
       {
@@ -637,7 +641,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       };
     });
     mockFindExactHeadCandidateNumbers.mockResolvedValue([100]);
-    mockGetPullRequestHeadSha.mockResolvedValue("abc123");
+    mockGetPullRequestHeadSha.mockResolvedValue('c'.repeat(40));
     mockGetChangedFiles.mockResolvedValue([
       { filename: "src/bar.ts", status: "modified" },
     ]);
@@ -658,7 +662,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       "owner",
       "repo",
       100,
-      "abc123",
+      'c'.repeat(40),
       expect.stringContaining("## 🤖 Revue Bugbot"),
       expect.arrayContaining([
         expect.objectContaining({
@@ -677,7 +681,7 @@ describe("DetectPotentialProblemsUseCase", () => {
   it("fails presentation closed when an open PR has no trusted author bound", async () => {
     mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
     mockFindExactHeadCandidateNumbers.mockResolvedValue([100]);
-    mockGetPullRequestHeadSha.mockResolvedValue("abc123");
+    mockGetPullRequestHeadSha.mockResolvedValue('c'.repeat(40));
 
     const results = await invokeUseCase(useCase, baseParam({ tokenUser: undefined }));
 
@@ -826,6 +830,9 @@ describe("DetectPotentialProblemsUseCase", () => {
   it("when the agent returns resolved_findings, updates the PR review comment to resolved", async () => {
     mockListIssueComments.mockResolvedValue([]);
     mockFindExactHeadCandidateNumbers.mockResolvedValue([50]);
+    mockGetChangedFiles.mockResolvedValue([
+      { filename: "src/a.ts", status: "modified" },
+    ]);
     mockListPullRequestReviewComments.mockResolvedValue([
       {
         id: 777,
@@ -868,6 +875,9 @@ describe("DetectPotentialProblemsUseCase", () => {
     const { logError } = require("../../../../../utils/logger");
     mockListIssueComments.mockResolvedValue([]);
     mockFindExactHeadCandidateNumbers.mockResolvedValue([50]);
+    mockGetChangedFiles.mockResolvedValue([
+      { filename: "src/a.ts", status: "modified" },
+    ]);
     mockListPullRequestReviewComments.mockResolvedValue([
       {
         id: 777,
@@ -1063,12 +1073,18 @@ describe("DetectPotentialProblemsUseCase", () => {
           prompt: string;
           options?: unknown;
         }) =>
-          mockAskAgent(
+          Promise.resolve(mockAskAgent(
             request.configuration,
             request.agentId,
             request.prompt,
             request.options,
-          ),
+          )).then((response) => response && typeof response === 'object' && !Array.isArray(response)
+            ? {
+                outputLocale: 'en-US',
+                ...partitionAttestation(request.prompt, response as Record<string, unknown>),
+                ...response,
+              }
+            : response),
       },
       {
         context,
@@ -1108,7 +1124,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       ],
     });
     mockFindExactHeadCandidateNumbers.mockResolvedValue([50]);
-    mockGetPullRequestHeadSha.mockResolvedValue("sha");
+    mockGetPullRequestHeadSha.mockResolvedValue('d'.repeat(40));
     mockGetChangedFiles.mockResolvedValue([
       { filename: "src/a.ts", status: "modified" },
     ]);
@@ -1173,7 +1189,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       ],
     });
     mockFindExactHeadCandidateNumbers.mockResolvedValue([200]);
-    mockGetPullRequestHeadSha.mockResolvedValue("sha1");
+    mockGetPullRequestHeadSha.mockResolvedValue('e'.repeat(40));
     mockGetChangedFiles.mockResolvedValue([
       { filename: "lib/helper.ts", status: "modified" },
     ]);
@@ -1193,13 +1209,13 @@ describe("DetectPotentialProblemsUseCase", () => {
       200,
       expect.stringContaining('Bugbot: review needs verification'),
       'token',
-      { commitSha: 'sha1' },
+      { commitSha: 'e'.repeat(40) },
     );
     expect(mockCreateReviewWithComments).toHaveBeenCalledWith(
       "owner",
       "repo",
       200,
-      "sha1",
+      'e'.repeat(40),
       expect.stringContaining("General issue"),
       [expect.objectContaining({
         path: "lib/helper.ts",
@@ -1230,7 +1246,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         line: 1,
       },
     ]);
-    mockGetPullRequestHeadSha.mockResolvedValue("sha2");
+    mockGetPullRequestHeadSha.mockResolvedValue('f'.repeat(40));
     mockGetChangedFiles.mockResolvedValue([
       { filename: "x.ts", status: "modified" },
     ]);
@@ -1344,6 +1360,9 @@ describe("DetectPotentialProblemsUseCase", () => {
     it("replaces marker in PR review comment when marker has extra whitespace", async () => {
       mockListIssueComments.mockResolvedValue([]);
       mockFindExactHeadCandidateNumbers.mockResolvedValue([80]);
+      mockGetChangedFiles.mockResolvedValue([
+        { filename: "src/b.ts", status: "modified" },
+      ]);
       mockListPullRequestReviewComments
         .mockResolvedValueOnce([
           {
@@ -1578,3 +1597,18 @@ describe("DetectPotentialProblemsUseCase", () => {
     });
   });
 });
+
+function partitionAttestation(
+  prompt: string,
+  response: Record<string, unknown>,
+): Record<string, unknown> {
+  const partitionId = prompt.match(/Return partition_id exactly as `([^`]+)`/u)?.[1];
+  const headSha = prompt.match(/Return reviewed_head_sha exactly as `([^`]+)`/u)?.[1];
+  return partitionId && headSha
+      ? {
+        ...(response.partition_id === undefined ? { partition_id: partitionId } : {}),
+        ...(response.reviewed_head_sha === undefined ? { reviewed_head_sha: headSha } : {}),
+        ...(response.resolved_findings === undefined ? { resolved_findings: [] } : {}),
+      }
+    : {};
+}

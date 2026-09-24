@@ -10,13 +10,25 @@ import type {
     SetupRemoteConfiguration,
 } from '../../domain/setup';
 import type { SetupDoctorMessageCatalog } from '../policies/setup_doctor_message_catalog';
+import type { SetupTokenPermissionReport } from '../../domain/setup_token_permissions';
 
 export interface SetupRemoteConfigurationReadPort {
     inspect(owner: string, repository: string, token: string): Promise<SetupRemoteConfiguration>;
+    inspectCredentialHealthWorkflow?(
+        owner: string, repository: string, token: string, ref: string,
+    ): Promise<'installed' | 'missing' | 'unavailable'>;
+}
+
+export interface SetupFinalPermissionAuditPort {
+    audit(
+        configuration: Readonly<SetupConfiguration>,
+        remoteConfiguration?: Readonly<SetupRemoteConfiguration>,
+    ): Promise<{ status: 'accepted' } | { status: 'blocked'; errors: readonly string[] }>;
 }
 
 export interface SetupCredentialPromptPort {
     requestSetupPat(): Promise<string | undefined>;
+    confirmUnverifiableTokenPermissions?(report: SetupTokenPermissionReport): Promise<boolean>;
     explainCredentialSeparation(requirements: readonly SetupCredentialRequirement[]): void;
     requestWorkflowPat(requirement: SetupCredentialRequirement, current?: SetupCredentialCheck): Promise<SetupCredentialValue | undefined>;
     requestApiKey(requirement: SetupCredentialRequirement, current?: SetupCredentialCheck): Promise<SetupCredentialValue | undefined>;

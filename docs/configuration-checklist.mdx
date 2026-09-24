@@ -20,6 +20,11 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 
 ## Credentials
 
+- [ ] Before entering each PAT, the setup terminal table matches the intended repository/organization target, access level, selected features, and storage scope.
+- [ ] After entry, every `❌ Missing` required permission has been corrected; required unverifiable reads have been retried; every `? Unverifiable` required write has been compared manually with the PAT settings and explicitly acknowledged without treating it as a pass.
+- [ ] A publicly readable endpoint has not been mistaken for PAT evidence. After valid identity, only the exact successful public-repository read may be operationally usable while still shown as `Unverifiable`; public organization Members, Issue Types and writes never gain that exception. Members read needs a verified, active self-membership response for the selected organization.
+- [ ] If the `PAT` Secret already exists, its value has been re-entered (or supplied again to unattended setup) and the full workflow-PAT permission report has completed; credential-health success alone is not treated as permission evidence.
+- [ ] Permission verification used read-only probes only; no temporary label, branch, file, Variable, Secret, project item, comment, or workflow run was created as a permission test.
 - [ ] Credentials are configured as secrets or as a local self-hosted credential store.
 - [ ] No session file or token is copied into GitHub Secrets.
 - [ ] Secret values are never placed in `.copilot-setup.yml`, command configuration, or Variables.
@@ -46,9 +51,10 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 - [ ] `copilot doctor` reports the effective repository, issue, and pull-request locales plus `exact`, `base`, `dynamic`, or `fallback` catalog paths.
 - [ ] Doctor headings, summaries, states, and actions use one repository-locale catalog; raw PAT, credential-health, rule, and workflow-provider prose is absent, and any dynamic-catalog failure produces a complete English report.
 - [ ] Every configured locale is a valid hyphenated BCP-47 tag such as `pt-BR`; underscore forms such as `pt_BR` are rejected before setup planning.
-- [ ] Unattended setup uses `--non-interactive --yes` plus every required external credential; `--yes` is treated only as plan approval.
+- [ ] Unattended setup uses `--non-interactive --yes` plus every required external credential; when safe probes cannot prove required writes, `--confirm-unverifiable-write-permissions` records the separate manual PAT-settings acknowledgement and `--yes` remains plan approval only.
 - [ ] Cancellation (`Ctrl-C` or EOF) has been observed to exit 130 with no writes; declining the final plan exits 0 with no writes.
 - [ ] Setup review lists Secret names only and no secret value appears in config, plan, logs, errors, reports, fixtures, or backups.
+- [ ] Setup PAT and workflow PAT permission reports contain only stable permission IDs, target scopes, access levels, semantic statuses, and bounded reasons; tokens and raw provider responses are absent.
 - [ ] `copilot doctor` reports stable check IDs with `pass`, `warn`, `fail`, or dependency-blocked `skipped` and exits non-zero only for `fail`.
 - [ ] Invalid setup-PAT diagnosis still returns independent local checks; remote dependants identify their blocking check.
 - [ ] Doctor is wired only to query ports. Temporary credential-health workflow bootstrap remains setup-only.
@@ -58,6 +64,8 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 
 - [ ] `copilot_deployment_orchestration.yml` and every enabled publishing workflow (`release_workflow.yml` and/or `hotfix_workflow.yml`) are committed on the repository's default branch before an operation starts; this project enables both.
 - [ ] The workflow PAT can write Contents, Issues, Pull requests, and Actions; can read Metadata and classic branch-protection Administration policy; and belongs to a bot identity different from the release operator.
+- [ ] For organization repositories, the workflow PAT grants Members read only when automatic assignees/reviewers, release/hotfix issue authorization, or `ai-members-only` on an enabled issue, pull-request, commit, or comment route or on an independently available agent-backed single action performs a membership lookup; ordinary issue/PR comment automation alone does not retain that organization grant.
+- [ ] A credential-health workflow is reported `missing` only when an independent Contents request proves repository visibility and the subsequent exact-file lookup on the selected ref returns `404`; a valid file `sha` is `installed` there, but dispatch additionally requires the Actions index or exact default-branch file proof after its `404`. A selected-ref-only file does not dispatch, and unverifiable state keeps bootstrap permissions fail-closed.
 - [ ] Merge commits are allowed when `production-lineage` is selected.
 - [ ] Native auto-merge is enabled when explicitly selecting `auto-merge`.
 - [ ] Every required GitHub Actions check has an exact static job name and `merge_group: checks_requested`; third-party integrations report on `gh-readonly-queue/<base>` branches.

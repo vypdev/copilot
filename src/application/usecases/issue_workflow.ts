@@ -173,7 +173,7 @@ export async function runIssueWorkflow(
 
   const agentAllowed = !context.membersOnly || Boolean(
     ports.actorAuthorizationPort
-    && await ports.actorAuthorizationPort.isActorAllowedToModifyFiles(context.actor),
+    && await ports.actorAuthorizationPort.isActorAllowedToUseMemberOnlyAutomation(context.actor),
   );
   const recommendation = context.started && !sddWaiting && (!context.sddRequired || branchReady) && agentAllowed
     ? context.recommendation : undefined;

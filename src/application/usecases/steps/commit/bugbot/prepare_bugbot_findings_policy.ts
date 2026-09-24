@@ -1,5 +1,5 @@
 import { deduplicateFindings } from './deduplicate_findings';
-import { fileMatchesIgnorePatterns } from './file_ignore';
+import { fileMatchesIgnorePatterns } from '../../../../policies/file_ignore_policy';
 import { applyCommentLimit, type ApplyLimitResult } from './limit_comments';
 import { normalizeFindingIdForMarker } from '../../../../policies/bugbot_finding_marker_policy';
 import { isSafeFindingFilePath } from './path_validation';
@@ -31,7 +31,7 @@ export const MAX_AGENT_FINDINGS = 500;
 export const MAX_AGENT_RESOLVED_FINDINGS = 500;
 export const MIN_AGENT_FINDING_CONFIDENCE = 0.70;
 
-export function normalizeBugbotResponse(response: unknown): {
+export function normalizeBugbotResponse(response: unknown, maxFindings: number = MAX_AGENT_FINDINGS): {
     findings: BugbotFinding[];
     resolvedFindingIds: Set<string>;
     resolvedFindingResolutions: ReadonlyMap<string, BugbotFindingResolution>;
@@ -41,7 +41,7 @@ export function normalizeBugbotResponse(response: unknown): {
     if (!Array.isArray(payload.findings)) return undefined;
     const resolvedFindingResolutions = normalizeResolvedFindings(payload.resolved_findings);
     return {
-        findings: normalizeFindings(payload.findings),
+        findings: normalizeFindings(payload.findings, maxFindings),
         resolvedFindingIds: new Set(resolvedFindingResolutions.keys()),
         resolvedFindingResolutions,
     };
@@ -67,8 +67,11 @@ export function prepareFindings(
     return { ...applyCommentLimit(filteredFindings, maxComments), activeFindings: filteredFindings };
 }
 
-function normalizeFindings(findings: unknown): BugbotFinding[] {
-    return (Array.isArray(findings) ? findings : []).slice(0, MAX_AGENT_FINDINGS).flatMap(value => {
+function normalizeFindings(findings: readonly unknown[], maxFindings: number): BugbotFinding[] {
+    const boundedMaximum = Number.isSafeInteger(maxFindings) && maxFindings > 0
+        ? maxFindings
+        : MAX_AGENT_FINDINGS;
+    return findings.slice(0, boundedMaximum).flatMap(value => {
         if (!isRecord(value)) return [];
         const normalizedId = typeof value.id === 'string' ? normalizeFindingIdForMarker(value.id) : null;
         const title = boundedText(value.title, 500);

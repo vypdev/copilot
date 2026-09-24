@@ -11,8 +11,11 @@ import type {
   GithubCredentialHealthQueryClient,
   GithubWorkflowRun,
 } from './github/ports/github_credential_health_protocol';
+import { SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE } from '../domain/setup_workflow_catalog';
+import { isSafeBranchTree } from '../domain/deployment_configuration';
+import { inspectCredentialHealthWorkflowAtRef } from '../data/repository/github/credential_health_workflow_visibility';
 
-const WORKFLOW_ID = 'copilot_credential_health.yml';
+const WORKFLOW_ID = SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE;
 const INPUT_BY_SECRET: Readonly<Record<string, string>> = {
   PAT: 'check_pat',
   OPENAI_API_KEY: 'check_openai',
@@ -94,18 +97,21 @@ export class SetupRemoteCredentialHealthBootstrapAdapter implements SetupRemoteC
     requirements: readonly SetupCredentialRequirement[],
   ): Promise<readonly SetupCredentialCheck[] | undefined> {
     const client = this.githubClient.getClient(token);
-    let temporaryWorkflow = false;
-    try {
-      await client.rest.actions.getWorkflow({ owner, repo: repository, workflow_id: WORKFLOW_ID });
-    } catch (error) {
-      if (!isNotFound(error)) throw error;
-      await this.bootstrapWorkflow(client, owner, repository, ref);
-      temporaryWorkflow = true;
+    const selectedWorkflow = await inspectCredentialHealthWorkflowAtRef(
+      client.repos.getContent, owner, repository, ref,
+    );
+    if (selectedWorkflow === 'unavailable') return undefined;
+    if (!await canDispatchHealthWorkflow(client, owner, repository, ref)) return undefined;
+    let temporaryWorkflowSha: string | undefined;
+    if (selectedWorkflow === 'missing') {
+      temporaryWorkflowSha = await this.bootstrapWorkflow(client, owner, repository, ref);
     }
     try {
       return await executeHealthWorkflow(client, owner, repository, ref, requirements, this.options);
     } finally {
-      if (temporaryWorkflow) await this.removeTemporaryWorkflow(client, owner, repository, ref);
+      if (temporaryWorkflowSha) {
+        await this.removeTemporaryWorkflow(client, owner, repository, ref, temporaryWorkflowSha);
+      }
     }
   }
 
@@ -114,16 +120,26 @@ export class SetupRemoteCredentialHealthBootstrapAdapter implements SetupRemoteC
     owner: string,
     repository: string,
     ref: string,
-  ): Promise<void> {
+  ): Promise<string> {
     if (!this.workflowContent) throw new Error('Credential health workflow template is unavailable.');
-    await client.repos.createOrUpdateFileContents({
-      owner,
-      repo: repository,
-      path: `.github/workflows/${WORKFLOW_ID}`,
-      message: 'chore: temporarily validate Copilot credentials',
-      content: Buffer.from(this.workflowContent, 'utf8').toString('base64'),
-      branch: ref,
-    });
+    let created: Awaited<ReturnType<GithubCredentialHealthClient['repos']['createOrUpdateFileContents']>>;
+    try {
+      created = await client.repos.createOrUpdateFileContents({
+        owner,
+        repo: repository,
+        path: `.github/workflows/${WORKFLOW_ID}`,
+        message: 'chore: temporarily validate Copilot credentials',
+        content: Buffer.from(this.workflowContent, 'utf8').toString('base64'),
+        branch: ref,
+      });
+    } catch {
+      throw new Error('Could not create the temporary credential health workflow safely; inspect the selected branch before retrying.');
+    }
+    const createdSha = created?.data?.content?.sha;
+    if (!createdSha?.trim()) {
+      throw new Error('The temporary credential health workflow revision is unavailable; inspect the selected branch before retrying.');
+    }
+    return createdSha;
   }
 
   private async removeTemporaryWorkflow(
@@ -131,23 +147,63 @@ export class SetupRemoteCredentialHealthBootstrapAdapter implements SetupRemoteC
     owner: string,
     repository: string,
     ref: string,
+    createdSha: string,
   ): Promise<void> {
-    const content = await client.repos.getContent({
-      owner,
-      repo: repository,
-      path: `.github/workflows/${WORKFLOW_ID}`,
-      ref,
-    });
-    if (!content.data.sha) throw new Error('Could not resolve the temporary health workflow revision for cleanup.');
-    await client.repos.deleteFile({
-      owner,
-      repo: repository,
-      path: `.github/workflows/${WORKFLOW_ID}`,
-      message: 'chore: remove temporary Copilot credential health workflow',
-      sha: content.data.sha,
-      branch: ref,
-    });
+    let currentSha: string | undefined;
+    try {
+      currentSha = (await client.repos.getContent({
+        owner,
+        repo: repository,
+        path: `.github/workflows/${WORKFLOW_ID}`,
+        ref,
+      })).data.sha;
+    } catch {
+      throw new Error('Could not verify the temporary credential health workflow for cleanup; it was left untouched.');
+    }
+    if (currentSha !== createdSha) {
+      throw new Error('The temporary credential health workflow changed before cleanup; it was left untouched.');
+    }
+    try {
+      await client.repos.deleteFile({
+        owner,
+        repo: repository,
+        path: `.github/workflows/${WORKFLOW_ID}`,
+        message: 'chore: remove temporary Copilot credential health workflow',
+        sha: createdSha,
+        branch: ref,
+      });
+    } catch {
+      throw new Error('Could not safely remove the temporary credential health workflow; inspect the selected branch.');
+    }
   }
+}
+
+/** A selected-ref file is insufficient when GitHub has no default-branch workflow definition. */
+async function canDispatchHealthWorkflow(
+  client: GithubCredentialHealthClient,
+  owner: string,
+  repository: string,
+  ref: string,
+): Promise<boolean> {
+  try {
+    await client.rest.actions.getWorkflow({ owner, repo: repository, workflow_id: WORKFLOW_ID });
+    return true;
+  } catch (error) {
+    if (!isNotFound(error)) return false;
+  }
+
+  let defaultBranch: unknown;
+  try {
+    defaultBranch = (await client.repos.get({ owner, repo: repository })).data.default_branch;
+  } catch {
+    return false;
+  }
+  if (typeof defaultBranch !== 'string' || !isSafeBranchTree(defaultBranch)) return false;
+  // The selected-ref inspection already confirmed a readable file or safe absence.
+  if (defaultBranch === ref) return true;
+  return await inspectCredentialHealthWorkflowAtRef(
+    client.repos.getContent, owner, repository, defaultBranch,
+  ) === 'installed';
 }
 
 async function executeHealthWorkflow(

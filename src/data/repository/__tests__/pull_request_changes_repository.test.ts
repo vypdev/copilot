@@ -52,6 +52,22 @@ describe('PullRequestChangesRepository', () => {
     ]));
   });
 
+  it('retains a changed file whose provider patch is omitted alongside a normal diff', async () => {
+    const { provider } = createClient([[
+      { filename: 'assets/binary.png', status: 'added', additions: 0, deletions: 0 },
+      { filename: 'src/main.ts', status: 'modified', additions: 1, deletions: 0,
+        patch: '@@ -1 +1 @@\n-old\n+new' },
+    ]]);
+    const snapshot = await new PullRequestChangesRepository(provider)
+      .getReviewDiffSnapshot('owner', 'repo', 7, 'token');
+
+    expect(snapshot.changes).toEqual([
+      expect.objectContaining({ filename: 'assets/binary.png', patch: '' }),
+      expect.objectContaining({ filename: 'src/main.ts', patch: expect.stringContaining('+new') }),
+    ]);
+    expect(snapshot.filesWithFirstDiffLine).toEqual([{ path: 'src/main.ts', firstLine: 1 }]);
+  });
+
   it('uses every paginated file page in the consolidated diff snapshot', async () => {
     const { provider, iterator } = createClient([
       [{ filename: 'first.ts', status: 'modified', additions: 1, deletions: 0, patch: '@@ -1,1 +8,2 @@' }],

@@ -104,6 +104,7 @@ describe("issue use case composition root", () => {
     }));
     expect(dependencies[4]).toEqual(expect.objectContaining({
       isActorAllowedToModifyFiles: expect.any(Function),
+      isActorAllowedToUseMemberOnlyAutomation: expect.any(Function),
     }));
     expect(dependencies[5]).toEqual(expect.objectContaining({
       begin: expect.any(Function),

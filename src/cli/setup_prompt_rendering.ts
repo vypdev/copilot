@@ -115,10 +115,11 @@ export function renderRemoteConfiguration(
 ): string {
     const lines = [
         `Target owner: ${remote.ownerType}; repository visibility: ${remote.repositoryVisibility}; repository ID: ${remote.repositoryId ?? 'unknown'}`,
-        `Repository Secrets: ${remote.repositorySecrets.length > 0 ? remote.repositorySecrets.join(', ') : '(none detected)'}`,
+        `Repository Secrets: ${renderRepositoryInventory(remote.repositorySecrets, remote.repositorySecretsAccess)}`,
         `Organization Secrets available here: ${remote.organizationSecrets.length > 0 ? remote.organizationSecrets.join(', ') : '(none detected)'}`,
-        `Repository Variables: ${remote.repositoryVariables.length > 0 ? remote.repositoryVariables.map(variable => variable.name).join(', ') : '(none detected)'}`,
+        `Repository Variables: ${renderRepositoryInventory(remote.repositoryVariables.map(variable => variable.name), remote.repositoryVariablesAccess)}`,
         `Organization Variables available here: ${remote.organizationVariables.length > 0 ? remote.organizationVariables.map(variable => variable.name).join(', ') : '(none detected)'}`,
+        `Credential health workflow: ${remote.credentialHealthWorkflow ?? 'unknown'}`,
         `Required Secrets: ${requirements.map(requirement => requirement.name).join(', ')}`,
         `Required Variables: ${variables.map(variable => variable.name).join(', ')}`,
         remote.organizationAccess === 'available'
@@ -127,6 +128,15 @@ export function renderRemoteConfiguration(
         'Repository-level resources take precedence over organization-level resources. Secret values are never displayed.',
     ];
     return lines.join('\n');
+}
+
+function renderRepositoryInventory(
+    names: readonly string[],
+    access: SetupRemoteConfiguration['repositorySecretsAccess'],
+): string {
+    if (access === 'unavailable') return '(unavailable; review the PAT permission table)';
+    if (access === 'unknown') return '(unknown; repository inspection is unavailable)';
+    return names.length > 0 ? names.join(', ') : '(none detected)';
 }
 
 function stripAnsi(value: string): string {

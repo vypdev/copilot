@@ -166,7 +166,10 @@ function scmPorts(provider: InMemoryReviewProvider) {
   };
 }
 
-function execution(mode: 'publish' | 'dry-run' = 'publish'): Execution {
+function execution(
+  mode: 'publish' | 'dry-run' = 'publish',
+  ignorePatterns: readonly string[] = [],
+): Execution {
   return {
     owner: 'org', repo: 'repo', issueNumber: -1, tokenUser: 'bot', tokens: { token: 'token' },
     locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
@@ -174,7 +177,7 @@ function execution(mode: 'publish' | 'dry-run' = 'publish'): Execution {
     inputs: { eventName: 'pull_request', pull_request: { head: { sha: 'a'.repeat(40) } } },
     pullRequest: { number: 7, head: 'feature/review', action: 'opened' },
     commit: { branch: 'feature/review' }, currentConfiguration: { parentBranch: 'main' }, branches: { development: 'main' },
-    ai: new Ai('', 'model', false, [], false, 'low', 20, [], undefined, undefined, { publicationMode: mode, traceRules: true }),
+    ai: new Ai('', 'model', false, [...ignorePatterns], false, 'low', 20, [], undefined, undefined, { publicationMode: mode, traceRules: true }),
   } as unknown as Execution;
 }
 
@@ -183,6 +186,17 @@ function finding(id = 'unchecked-token', file = 'src/auth.ts') {
     id, title: 'Unchecked token', description: 'The token is used before validation.',
     file, line: 10, severity: 'high', confidence: 0.95, category: 'security',
     symbol: 'authorize', codeSnippet: 'return token.admin', suggestedCode: 'return token?.admin === true',
+  };
+}
+
+function attestPartitionResponse(
+  prompt: string,
+  response: { outputLocale: string; findings: ReturnType<typeof finding>[]; resolved_findings: unknown[] },
+) {
+  return {
+    ...response,
+    partition_id: prompt.match(/Return partition_id exactly as `([^`]+)`/u)?.[1],
+    reviewed_head_sha: 'a'.repeat(40),
   };
 }
 
@@ -195,7 +209,7 @@ describe('Bugbot review lifecycle E2E contract', () => {
     ];
     const telemetry: unknown[] = [];
     const useCase = new DetectPotentialProblemsUseCase(
-      { query: jest.fn(async () => responses.shift()) },
+      { query: jest.fn(async ({ prompt }) => attestPartitionResponse(prompt, responses.shift()!)) },
       scmPorts(provider),
       { publish: (snapshot) => { telemetry.push(snapshot); } },
     );
@@ -218,7 +232,11 @@ describe('Bugbot review lifecycle E2E contract', () => {
   it('executes analysis in dry-run mode without any provider mutation', async () => {
     const provider = new InMemoryReviewProvider();
     const useCase = new DetectPotentialProblemsUseCase(
-      { query: jest.fn(async () => ({ outputLocale: 'en-US', findings: [finding()], resolved_findings: [] })) },
+      {
+        query: jest.fn(async ({ prompt }) => attestPartitionResponse(prompt, {
+          outputLocale: 'en-US', findings: [finding()], resolved_findings: [],
+        })),
+      },
       scmPorts(provider),
     );
 
@@ -228,5 +246,51 @@ describe('Bugbot review lifecycle E2E contract', () => {
     expect(provider.reviews).toEqual([]);
     expect(provider.comments).toEqual([]);
     expect(results[0].payload).toEqual(expect.objectContaining({ dryRun: true, findings: [expect.objectContaining({ id: 'unchecked-token' })] }));
+  });
+
+  it('keeps an existing finding open when the canonical diff becomes ignored-only', async () => {
+    const provider = new InMemoryReviewProvider();
+    const query = jest.fn(async ({ prompt }) => attestPartitionResponse(prompt, {
+      outputLocale: 'en-US', findings: [finding()], resolved_findings: [],
+    }));
+    const useCase = new DetectPotentialProblemsUseCase({ query }, scmPorts(provider));
+
+    await useCase.invoke(projectBugbotReviewOperationContext(execution()));
+    const findingIdentity = provider.comments[0].identity;
+
+    const results = await useCase.invoke(
+      projectBugbotReviewOperationContext(execution('publish', ['src/auth.ts'])),
+    );
+
+    expect(query).toHaveBeenCalledTimes(1);
+    expect(provider.comments).toHaveLength(1);
+    expect(provider.threadStates[findingIdentity]).toEqual({ resolved: false });
+    expect(provider.comments[0].body).toContain('resolved:false');
+    expect(results[0].payload).toEqual(expect.objectContaining({
+      findingStates: expect.objectContaining({ open: 1, fixed: 0, obsolete: 0 }),
+    }));
+  });
+
+  it('publishes nothing when a partition attestation is invalid', async () => {
+    const provider = new InMemoryReviewProvider();
+    const useCase = new DetectPotentialProblemsUseCase(
+      {
+        query: jest.fn(async () => ({
+          outputLocale: 'en-US',
+          partition_id: 'wrong-partition',
+          reviewed_head_sha: provider.headSha,
+          findings: [finding()],
+          resolved_findings: [],
+        })),
+      },
+      scmPorts(provider),
+    );
+
+    const results = await useCase.invoke(projectBugbotReviewOperationContext(execution()));
+
+    expect(results[0].success).toBe(false);
+    expect(provider.reviews).toEqual([]);
+    expect(provider.comments).toEqual([]);
+    expect(provider.statusComments).toEqual([]);
   });
 });

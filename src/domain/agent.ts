@@ -5,7 +5,7 @@ export type AgentCapability = AgentTask | 'language';
 
 export const DEFAULT_AGENT_PROVIDER: AgentProvider = 'codex';
 export const DEFAULT_MODEL_PROVIDER = 'openai';
-export const DEFAULT_AGENT_MODEL = 'gpt-5.6-luna';
+export const DEFAULT_AGENT_MODEL = 'gpt-6-luna';
 export const AGENT_EXECUTABLE_BASENAMES: Readonly<Record<AgentProvider, string>> = {
     codex: 'codex',
     opencode: 'opencode',

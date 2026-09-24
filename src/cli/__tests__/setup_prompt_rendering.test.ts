@@ -90,18 +90,22 @@ describe('setup prompt rendering', () => {
                 repositoryId: 42,
                 repositoryVisibility: 'private',
                 repositorySecrets: ['PAT'],
+                repositorySecretsAccess: 'available',
                 organizationSecrets: ['OPENAI_API_KEY'],
                 repositoryVariables: [{ name: 'AGENT_MODEL', value: 'gpt-5.6' }],
+                repositoryVariablesAccess: 'available',
                 organizationVariables: [{ name: 'AGENT_PROVIDER', value: 'codex' }],
                 organizationAccess: 'available',
                 organizationSecretsAccess: 'available',
                 organizationVariablesAccess: 'available',
+                credentialHealthWorkflow: 'installed',
             },
             [{ name: 'AGENT_MODEL', value: 'gpt-5.6' }],
             [{ name: 'PAT', kind: 'workflowPat', description: 'workflow token' }],
         );
 
         expect(rendered).toContain('Organization resources can be inspected');
+        expect(rendered).toContain('Credential health workflow: installed');
         expect(rendered).toContain('PAT');
         expect(rendered).not.toContain('credential-value');
     });
@@ -112,8 +116,10 @@ describe('setup prompt rendering', () => {
                 ownerType: 'User',
                 repositoryVisibility: 'unknown',
                 repositorySecrets: [],
+                repositorySecretsAccess: 'available',
                 organizationSecrets: [],
                 repositoryVariables: [],
+                repositoryVariablesAccess: 'available',
                 organizationVariables: [],
                 organizationAccess: 'unavailable',
                 organizationSecretsAccess: 'unavailable',
@@ -126,5 +132,54 @@ describe('setup prompt rendering', () => {
         expect(rendered).toContain('repository ID: unknown');
         expect(rendered).toContain('(none detected)');
         expect(rendered).toContain('Organization resource inspection: unavailable.');
+        expect(rendered).toContain('Credential health workflow: unknown');
+    });
+
+    it('renders denied repository inventory as unavailable instead of empty', () => {
+        const rendered = renderRemoteConfiguration(
+            {
+                ownerType: 'User',
+                repositoryVisibility: 'private',
+                repositorySecrets: [],
+                repositorySecretsAccess: 'unavailable',
+                organizationSecrets: [],
+                repositoryVariables: [],
+                repositoryVariablesAccess: 'unavailable',
+                organizationVariables: [],
+                organizationAccess: 'not_applicable',
+                organizationSecretsAccess: 'not_applicable',
+                organizationVariablesAccess: 'not_applicable',
+            },
+            [],
+            [],
+        );
+
+        expect(rendered).toContain('Repository Secrets: (unavailable; review the PAT permission table)');
+        expect(rendered).toContain('Repository Variables: (unavailable; review the PAT permission table)');
+        expect(rendered).not.toContain('Repository Secrets: (none detected)');
+        expect(rendered).not.toContain('Repository Variables: (none detected)');
+    });
+
+    it('renders missing repository endpoints as unknown instead of empty', () => {
+        const rendered = renderRemoteConfiguration(
+            {
+                ownerType: 'User',
+                repositoryVisibility: 'private',
+                repositorySecrets: [],
+                repositorySecretsAccess: 'unknown',
+                organizationSecrets: [],
+                repositoryVariables: [],
+                repositoryVariablesAccess: 'unknown',
+                organizationVariables: [],
+                organizationAccess: 'not_applicable',
+                organizationSecretsAccess: 'not_applicable',
+                organizationVariablesAccess: 'not_applicable',
+            },
+            [],
+            [],
+        );
+
+        expect(rendered).toContain('Repository Secrets: (unknown; repository inspection is unavailable)');
+        expect(rendered).toContain('Repository Variables: (unknown; repository inspection is unavailable)');
     });
 });

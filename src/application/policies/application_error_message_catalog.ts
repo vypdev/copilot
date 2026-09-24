@@ -178,6 +178,11 @@ const SPANISH_CONTENT: ErrorContent = Object.freeze({
     action: 'Revisa el estado actual y reintenta el paso fallido.',
     retainedState: PRESERVED_STATE_ES,
   }),
+  'workflow.presentation-pending': Object.freeze({
+    impact: 'Bugbot completó la revisión, pero los resúmenes históricos de revisión aún no están totalmente sincronizados.',
+    action: 'Ejecuta una nueva revisión de Bugbot para continuar la reparación limitada de la presentación.',
+    retainedState: PRESERVED_STATE_ES,
+  }),
   timeout: Object.freeze({
     impact: 'La operación superó su tiempo de ejecución limitado.',
     action: 'Verifica el estado actual antes de reintentarlo.',
@@ -221,6 +226,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Inspect issue #{issueNumber} and add the explanation manually if the missing context matters.',
     retainedState: 'Issue #{issueNumber} remains closed; the completed close will not be repeated.',
   }),
+  'bugbot-review-blocks-pending': Object.freeze({
+    impact: 'Bugbot completed the review, but {pendingCount} historical review status blocks remain pending.',
+    action: 'Run a Bugbot recheck to continue the bounded presentation repair.',
+    retainedState: 'The completed analysis and successful review updates were preserved.',
+  }),
 });
 
 const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
@@ -253,6 +263,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'La issue #{issueNumber} se cerró sin su explicación final sobre la inactividad.',
     action: 'Revisa la issue #{issueNumber} y añade la explicación manualmente si falta contexto importante.',
     retainedState: 'La issue #{issueNumber} permanece cerrada; el cierre completado no se repetirá.',
+  }),
+  'bugbot-review-blocks-pending': Object.freeze({
+    impact: 'Bugbot completó la revisión, pero quedan {pendingCount} bloques de estado de revisiones históricas pendientes.',
+    action: 'Ejecuta una nueva revisión de Bugbot para continuar la reparación limitada de la presentación.',
+    retainedState: 'Se conservaron el análisis completado y las actualizaciones de revisión correctas.',
   }),
 });
 

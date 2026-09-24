@@ -17,8 +17,13 @@ import {
   type BugbotComment,
 } from "./bugbot_finding_context";
 import { buildPreviousFindingsContext } from "./bugbot_previous_findings_context";
-import { buildReviewConversationContext, buildReviewDiffContext } from "./bugbot_review_context";
-import { fileMatchesIgnorePatterns } from "./file_ignore";
+import {
+  BugbotDiffPlanLimitError,
+  buildReviewDiffPlan,
+  MAX_REVIEW_DIFF_PARTITIONS,
+} from "../../../../policies/bugbot_diff_partition_policy";
+import { buildReviewConversationContext } from "./bugbot_review_context";
+import { fileMatchesIgnorePatterns } from "../../../../policies/file_ignore_policy";
 import { buildBugbotReviewRuleSet } from "./bugbot_review_rules";
 import type { BugbotContextRequest } from "./bugbot_context_request";
 import type { BugbotContext, BugbotPrContext } from "./types";
@@ -107,7 +112,21 @@ export async function loadBugbotContext(
   );
   const previousContext = buildPreviousFindingsContext(previousFindings);
   const prContext = canonicalPullRequest && diff ? toPrContext(canonicalPullRequest, diff) : null;
-  const diffContext = buildReviewDiffContext(prContext, request.ignorePatterns);
+  let diffPlan: ReturnType<typeof buildReviewDiffPlan>;
+  try {
+    diffPlan = buildReviewDiffPlan(prContext, request.ignorePatterns);
+  } catch (error) {
+    if (error instanceof BugbotDiffPlanLimitError) {
+      throw new ApplicationError(
+        'workflow.failed',
+        error.reason === 'malformed-input'
+          ? 'The canonical diff contains malformed provider data. Correct the provider source and retry; no partial review was started.'
+          : `The canonical diff exceeds the fixed ${MAX_REVIEW_DIFF_PARTITIONS}-partition or raw-input Bugbot planning limit. Split the pull request and retry; no partial review was started.`,
+        { cause: error },
+      );
+    }
+    throw error;
+  }
   const conversationContext = buildReviewConversationContext(
     issueComments,
     pullRequestCommentsByNumber,
@@ -124,13 +143,7 @@ export async function loadBugbotContext(
     ...loaded.map((source) => source.kind === "diff"
       ? {
           ...source.coverage,
-          status: source.coverage.status === "partial" || diffContext.omitted > 0 || diffContext.truncated > 0
-            ? "partial" as const
-            : "complete" as const,
-          itemsRetained: diffContext.retained,
-          omittedItems: source.coverage.omittedItems + diffContext.omitted,
-          truncatedItems: source.coverage.truncatedItems + diffContext.truncated,
-          limitReached: source.coverage.limitReached || diffContext.omitted > 0 || diffContext.truncated > 0,
+          itemsRetained: diffPlan.retained,
         }
       : source.coverage),
     {
@@ -155,7 +168,7 @@ export async function loadBugbotContext(
     },
   ]);
   logDebugInfo(
-    `LoadBugbotContext: selection=${selectionReason}, coverage=${coverage.status}, existing findings=${Object.keys(parsedComments.existingByFindingId).length}, retained previous findings=${previousContext.selected.length}, diff files=${prContext?.changes?.length ?? 0}.`,
+    `LoadBugbotContext: selection=${selectionReason}, coverage=${coverage.status}, existing findings=${Object.keys(parsedComments.existingByFindingId).length}, retained previous findings=${previousContext.selected.length}, diff files=${prContext?.changes?.length ?? 0}, diff partitions=${diffPlan.partitions.length}.`,
   );
   return {
     existingByFindingId: parsedComments.existingByFindingId,
@@ -165,7 +178,10 @@ export async function loadBugbotContext(
     coverage,
     eligibleResolutionIds: new Set(previousContext.selected.map((finding) => finding.id)),
     previousFindingsBlock: previousContext.block,
-    reviewDiffBlock: diffContext.block,
+    reviewDiffPartitions: diffPlan.partitions,
+    reviewDiffFragmentCount: diffPlan.fragments,
+    reviewDiffFileCount: diffPlan.retained,
+    reviewDiffIgnoredFileCount: diffPlan.ignored,
     reviewConversationBlock: conversationContext.block,
     prContext,
     unresolvedFindingsWithBody: previousContext.selected.map((finding) => ({

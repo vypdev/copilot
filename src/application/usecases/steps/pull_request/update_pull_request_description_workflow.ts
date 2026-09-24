@@ -71,14 +71,16 @@ export async function runUpdatePullRequestDescriptionWorkflow(
             ? (await dependencies.issueDescriptionQueryPort.getDescription(linkedIssueNumber)) ?? ''
             : '';
 
-        const currentProjectMembers = await dependencies.organizationMembersPort.getAllMembers();
-        const creatorIsTeamMember = context.pullRequest.creator.length > 0
-            && currentProjectMembers.includes(context.pullRequest.creator);
-        if (!creatorIsTeamMember && context.membersOnly) {
-            return skipped(
-                taskId,
-                `The pull request creator @${context.pullRequest.creator} is not a team member and \`AI members only\` is enabled. Skipping update pull request description.`,
-            );
+        if (context.membersOnly) {
+            const currentProjectMembers = await dependencies.organizationMembersPort.getAllMembers();
+            const creatorIsTeamMember = context.pullRequest.creator.length > 0
+                && currentProjectMembers.includes(context.pullRequest.creator);
+            if (!creatorIsTeamMember) {
+                return skipped(
+                    taskId,
+                    `The pull request creator @${context.pullRequest.creator} is not a team member and \`AI members only\` is enabled. Skipping update pull request description.`,
+                );
+            }
         }
 
         const prompt = getUpdatePullRequestDescriptionPrompt({

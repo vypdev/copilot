@@ -20,7 +20,7 @@ function plan(script: string, overrides: Partial<AgentExecutionPlan> = {}): Agen
         maxPromptBytes: 512 * 1024, maxOutputBytes: 4 * 1024 * 1024,
         environment: { PATH: process.env.PATH || '' }, runtimeDirectory,
         artifacts: [{ path: artifactPath, sha256: createHash('sha256').update('').digest('hex'), purpose: 'git-config' }],
-        runtimeContract: { provider: 'codex', version: 'codex-cli 0.153.4', manifestRevision: 'test' },
+        runtimeContract: { provider: 'codex', version: 'codex-cli 0.156.1', manifestRevision: 'test' },
         ...overrides,
     };
 }
@@ -52,7 +52,7 @@ describe('AgentCliClient admitted process execution', () => {
         });
         expect(observe).toHaveBeenNthCalledWith(2, expect.objectContaining({
             state: 'admitted', phase: 'preflight', manifestRevision: 'test',
-            version: 'codex-cli 0.153.4', workspaceMode: 'read-only', outputContract: 'text',
+            version: 'codex-cli 0.156.1', workspaceMode: 'read-only', outputContract: 'text',
             artifactHashes: [executionPlan.artifacts[0].sha256],
         }));
         expect(observe).toHaveBeenNthCalledWith(3, expect.objectContaining({

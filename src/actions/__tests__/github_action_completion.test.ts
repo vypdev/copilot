@@ -764,6 +764,27 @@ describe('finishGithubAction', () => {
         expect(core.setFailed).toHaveBeenCalledWith(expect.stringMatching(/Reference: [0-9a-f-]{36}/));
     });
 
+    it('reports pending Bugbot review blocks without claiming a provider outage', async () => {
+        const failed = new Result({
+            id: 'DetectPotentialProblemsUseCase',
+            success: false,
+            executed: true,
+            errors: [new ApplicationError('workflow.presentation-pending', 'Review summaries remain pending.', {
+                recovery: {
+                    id: 'bugbot-review-blocks-pending',
+                    variables: { pendingCount: 21 },
+                },
+            })],
+        });
+
+        await finishGithubAction(execution(), [failed], {} as never, {} as never);
+
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: workflow.presentation-pending'));
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('21 historical review status blocks remain pending'));
+        expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('provider.unavailable'));
+        expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('Retry when the provider is available'));
+    });
+
     it('renders the complete failure atomically in the repository locale', async () => {
         const action = Object.assign(execution(), {
             locale: { repository: 'es-MX', issue: 'es-MX', pullRequest: 'es-MX' },

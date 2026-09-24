@@ -558,8 +558,9 @@ Invalid combinations and fixed rules:
 - No input may disable status reconciliation while publication remains enabled.
 - No input may trust arbitrary authors, marker prefixes, URLs, Markdown, or
   resolver identities.
-- The update batch, body-size, retry, and sanitization limits are fixed safety
-  constants and are not public knobs.
+- Review updates use fixed, non-configurable limits of 20 per batch, four
+  concurrent writes per batch, and 100 attempted reviews per run. Body-size,
+  retry, and sanitization limits are also fixed safety constants.
 
 Recommended configuration remains the shipped defaults. A meaningful
 alternative is `bugbot-fail-on-unresolved=true` for repositories that want the
@@ -645,8 +646,11 @@ The orchestration is decomposed without creating a second pipeline:
 - `buildBugbotReconciliationPlan` is pure and owns malformed, missing durable,
   missing expected-publication, and overflow decisions.
 - `synchronizeBugbotReviewPresentation` owns only bounded review-summary and
-  canonical-card writes. It updates at most 20 reviews per run with concurrency
-  bounded to four and returns a complete/partial/failed report.
+  canonical-card writes. It processes deterministic batches of at most 20
+  reviews sequentially, with concurrency bounded to four within each batch
+  and 100 attempted reviews per run. A failed batch stops later batches but
+  not the canonical-card update; the report distinguishes failed attempts from
+  the exact unattempted pending count.
 - `reconcileBugbotReviewState` is the small orchestration shell joining those
   collaborators; it performs no direct provider read or write.
 - The workflow produces the final `Result` and telemetry only from that report.
@@ -761,9 +765,13 @@ presentation pattern:
   publish no same-name Check and therefore cannot supersede the latest analyzed
   head in GitHub's latest-by-name rollup. Their native workflow check and Job
   Summary remain independently visible.
-- Review-summary updates are deterministic and bounded to 20 per run. If more
-  remain, the status card and Check report the exact pending count and instruct
-  `/copilot recheck`; later runs continue from provider state.
+- Review-summary updates are deterministic and bounded to five sequential
+  20-review batches per run. For example, 42 stale summaries complete as
+  `20 -> 20 -> 2` before the one canonical status card and Check are written.
+  If more than 100 remain, or a batch fails, the status card and Check report
+  the exact unattempted pending count; successful writes remain durable and
+  later runs continue idempotently from provider state. A pending-limit result
+  is a workflow presentation state, never mislabeled provider unavailability.
 - Provider retries honor `Retry-After`, use bounded attempts with jitter supplied
   through an injected delay port, and never use real waits in tests.
 
@@ -1068,6 +1076,13 @@ The final projection exposes:
 - `verification-required`: same actionable policy, clearly labeled.
 - Analysis failure, unknown state, or incomplete required presentation:
   `failure` regardless of the unresolved policy.
+- If a fixed presentation budget leaves review blocks pending, the Check fails
+  with the exact remainder while the Action uses
+  `workflow.presentation-pending` with a validated, numeric recovery descriptor
+  that renders the exact remainder and Bugbot recheck guidance in both
+  supported locales; the canonical card retains the literal `/copilot recheck`
+  command. It does not claim a provider outage; a real provider write failure
+  retains its provider diagnostic.
 - Superseded: successful non-current result with no mutation.
 - Dry-run: mutation-free result reported only on its invocation surface.
 
@@ -1075,8 +1090,9 @@ The final projection exposes:
 
 - Reads remain paginated and bounded by current previous-finding limits.
 - Body updates are skipped by digest when unchanged.
-- Review status updates are sequential or use a small fixed concurrency and
-  stop on a secondary-rate-limit signal.
+- Review status updates use sequential 20-item batches with four-way bounded
+  concurrency. A failed batch, including an exhausted secondary-rate-limit
+  retry, stops later batches and reports both failures and unattempted work.
 - `Retry-After` is presented as an approximate next safe retry time.
 - No polling loop or runner sleep is added to the normal review lifecycle.
 
@@ -1141,12 +1157,12 @@ counted across rows.
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain lifecycle, transition planning, and projection | 32 | every state, resolver precedence, fixed/obsolete/dismissed/reopened, partial-coverage blocking, per-destination projection, conservative cross-destination fold, canonical result shape, required-outcome absence, telemetry set validity, invalid numeric bounds, overflow, aggregate counts, deterministic digests |
-| Application ordering, idempotency, replay, cancellation, and races | 35 | active-before-resolution, mutation head guards, double snapshot head guard, read-after-write, per-surface completeness, missing durable evidence, resolved omission, duplicate same-head, newer-head supersession, partial mutations, retry convergence, PR close/reopen, metadata-during-review ordering |
+| Application ordering, idempotency, replay, cancellation, and races | 38 | active-before-resolution, mutation head guards, double snapshot head guard, read-after-write, per-surface completeness, missing durable evidence, resolved omission, duplicate same-head, newer-head supersession, partial mutations, retry convergence, PR close/reopen, metadata-during-review ordering, 42-review multi-batch completion, 101-review cap, failed-batch stop and replay |
 | Adapters and provider error mapping | 18 | pagination, parent review id/URL, resolver identity, create/update review, status-card upsert, 401/403/404/409/422, malformed response, rate limit |
-| Workflow, composition, public API, and schema contracts | 13 | shared concurrency key, conditional metadata non-preemption in active/setup copies, malformed-sibling telemetry cardinality, negative unconditional-cancel fixture, bot guard, permissions, trigger contract, strict finding/resolution schema, composition wiring, API declarations, package exports |
+| Workflow, composition, public API, and schema contracts | 15 | shared concurrency key, conditional metadata non-preemption in active/setup copies, malformed-sibling telemetry cardinality, negative unconditional-cancel fixture, bot guard, permissions, trigger contract, strict finding/resolution schema, presentation-pending error code and validated count recovery, composition wiring, API declarations, package exports |
 | UI/UX, localization, accessibility, links, and sanitization | 22 | pending, active, clean, failed, partial, skipped, superseded, metadata-only Check/generic-comment omission, missing/invalid summary and status output, every non-clean count, historical snapshot, en/es/fallback, narrow content, markers, mentions, unsafe Markdown |
 | Integration, security, greenfield cutover, and live-shaped replay | 14 | PR #358 replay, new PR lifecycle, multiple reviews, overflow/unanchored, manual resolve/unresolve, identity rotation, duplicate card repair, dry-run/fork trust, missing-state completion fail-closed, latest-by-name PR #363 replay |
-| **Total** | **134** | No double counting |
+| **Total** | **139** | No double counting |
 
 Coverage requirements:
 
@@ -1276,9 +1292,14 @@ examples should reuse the same fixtures as presentation tests where practical.
     only the stale projection.
 12. Given status-card permission failure, then the Action/Check fail as partial,
     preserve completed finding mutations, and link the permission recovery.
-13. Given more than 20 stale review summaries, then exactly the bounded batch is
-    updated, the remaining count is visible, and later runs continue
-    idempotently.
+13. Given 42 stale review summaries on one verified head, then sequential
+    batches of 20, 20, and 2 update all 42 before the status card and Check;
+    pending is zero and no repeat analysis is required for presentation repair.
+    Given 101 stale summaries, at most 100 are attempted, one remains visibly
+    pending, and the Check uses a presentation-pending workflow error rather
+    than `provider.unavailable`. Given a failed batch, no later batch starts,
+    successful writes remain durable, and a later run skips already-current
+    review bodies.
 14. Given two status cards from a race, then the oldest trusted marker becomes
     canonical and the other becomes a non-authoritative redirect without
     deletion.

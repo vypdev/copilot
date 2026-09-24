@@ -20,6 +20,7 @@ describe("github error policy", () => {
     it.each([
         { status: 403, message: 'Forbidden' },
         { status: 403, message: 'Resource not accessible by integration' },
+        { status: 403, message: 'Resource not accessible by personal access token' },
         { status: 403, message: 'Write permission is required' },
         { status: 403, message: 'Comment deletion is not permitted' },
         { status: 403, message: 'This operation is not allowed' },
@@ -34,6 +35,7 @@ describe("github error policy", () => {
         { status: 403, message: 'You have exceeded a secondary rate limit.' },
         { status: 403, message: 'Forbidden', response: { headers: { 'retry-after': '60' } } },
         { status: 403, message: 'Forbidden', response: { headers: { 'X-RateLimit-Remaining': 0 } } },
+        { status: 403, message: 'Forbidden', response: { headers: { 'X-GitHub-SSO': 'required' } } },
     ])('does not misclassify authentication or rate-limit failures: %j', (error) => {
         expect(isGithubPermissionDenied(error)).toBe(false);
     });

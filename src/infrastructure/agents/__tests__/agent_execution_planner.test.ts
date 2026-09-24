@@ -18,7 +18,7 @@ describe('AgentExecutionPlanner', () => {
     it('uses the default system for canonical workspace, PATH, executable, and runtime identity preflight', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-default-system-'));
         const executable = join(directory, 'codex');
-        writeFileSync(executable, '#!/bin/sh\nprintf "codex-cli 0.153.4\\n"\n');
+        writeFileSync(executable, '#!/bin/sh\nprintf "codex-cli 0.156.1\\n"\n');
         chmodSync(executable, 0o700);
         const planner = new AgentExecutionPlanner();
         const plan = planner.prepare({
@@ -27,7 +27,7 @@ describe('AgentExecutionPlanner', () => {
         });
         try {
             expect(plan.executable).toBe(realpathSync(executable));
-            expect(plan.runtimeContract.version).toBe('codex-cli 0.153.4');
+            expect(plan.runtimeContract.version).toBe('codex-cli 0.156.1');
         } finally {
             rmSync(plan.runtimeDirectory, { recursive: true, force: true });
             rmSync(directory, { recursive: true, force: true });
@@ -37,7 +37,7 @@ describe('AgentExecutionPlanner', () => {
     it('supports an exact absolute executable and rejects missing PATH candidates', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-absolute-system-'));
         const executable = join(directory, 'codex');
-        writeFileSync(executable, '#!/bin/sh\nprintf "codex-cli 0.153.4\\n"\n');
+        writeFileSync(executable, '#!/bin/sh\nprintf "codex-cli 0.156.1\\n"\n');
         chmodSync(executable, 0o700);
         const planner = new AgentExecutionPlanner();
         const plan = planner.prepare({

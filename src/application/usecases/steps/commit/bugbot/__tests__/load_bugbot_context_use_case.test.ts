@@ -284,6 +284,119 @@ describe('loadBugbotContext', () => {
     }));
   });
 
+  it('turns prompt-sized diff overflow into complete lossless partitions', async () => {
+    const changes = Array.from({ length: 8 }, (_, index) => ({
+      filename: `src/file-${index}.ts`,
+      status: 'modified',
+      additions: 1,
+      deletions: 0,
+      patch: `${index}`.repeat(12_000),
+    }));
+    const reader = ports({
+      getReviewDiffSnapshot: jest.fn().mockResolvedValue({
+        value: { changes, filesWithFirstDiffLine: [], filesWithDiffLocations: [] },
+        coverage: coverage('diff', changes.length),
+      }),
+    });
+
+    const loaded = await loadBugbotContext(request(), reader);
+    const diffCoverage = loaded.coverage.sources.find((source) => source.source === 'diff');
+
+    expect(loaded.reviewDiffPartitions?.length).toBeGreaterThan(1);
+    expect(loaded.reviewDiffFileCount).toBe(8);
+    expect(loaded.reviewDiffFragmentCount).toBe(8);
+    expect(diffCoverage).toEqual(expect.objectContaining({
+      status: 'complete',
+      itemsFetched: 8,
+      itemsRetained: 8,
+      omittedItems: 0,
+      truncatedItems: 0,
+      limitReached: false,
+    }));
+    expect(loaded.coverage.status).toBe('complete');
+  });
+
+  it('fails before model analysis when the exhaustive plan exceeds the execution ceiling', async () => {
+    const changes = Array.from({ length: 65 }, (_, index) => ({
+      filename: `src/oversized/file-${index}.ts`,
+      status: 'modified',
+      additions: 1,
+      deletions: 0,
+      patch: String(index % 10).repeat(62_000),
+    }));
+    const reader = ports({
+      getReviewDiffSnapshot: jest.fn().mockResolvedValue({
+        value: { changes, filesWithFirstDiffLine: [], filesWithDiffLocations: [] },
+        coverage: coverage('diff', changes.length),
+      }),
+    });
+
+    await expect(loadBugbotContext(request(), reader)).rejects.toMatchObject({
+      code: 'workflow.failed',
+      message: expect.stringContaining('64-partition'),
+    });
+    expect(reader.loadRules).not.toHaveBeenCalled();
+  });
+
+  it('fails before rules or model analysis for oversized raw input even when a small plan could be normalized', async () => {
+    const changes = [{ filename: 'src/huge.ts', status: 'modified', additions: 1, deletions: 0,
+      patch: '\r'.repeat(4_096_001) }];
+    const reader = ports({
+      getReviewDiffSnapshot: jest.fn().mockResolvedValue({
+        value: { changes, filesWithFirstDiffLine: [], filesWithDiffLocations: [] },
+        coverage: coverage('diff', changes.length),
+      }),
+    });
+
+    await expect(loadBugbotContext(request(), reader)).rejects.toMatchObject({
+      code: 'workflow.failed',
+      message: expect.stringContaining('raw-input'),
+    });
+    expect(reader.loadRules).not.toHaveBeenCalled();
+  });
+
+  it('reports malformed UTF-16 provider input without misleading split-PR guidance', async () => {
+    const changes = [{ filename: 'src/malformed.ts', status: 'modified', additions: 1, deletions: 0,
+      patch: '+\uD83D' }];
+    const reader = ports({
+      getReviewDiffSnapshot: jest.fn().mockResolvedValue({
+        value: { changes, filesWithFirstDiffLine: [], filesWithDiffLocations: [] },
+        coverage: coverage('diff', changes.length),
+      }),
+    });
+
+    await expect(loadBugbotContext(request(), reader)).rejects.toMatchObject({
+      code: 'workflow.failed',
+      message: expect.stringContaining('Correct the provider source'),
+    });
+    expect(reader.loadRules).not.toHaveBeenCalled();
+  });
+
+  it('propagates an unexpected diff planning error without reclassifying it as a size limit', async () => {
+    const corruptChange = {
+      filename: 'src/corrupt.ts',
+      status: 'modified',
+      additions: 1,
+      deletions: 0,
+      get patch(): string {
+        throw new Error('corrupt provider patch');
+      },
+    };
+    const reader = ports({
+      getReviewDiffSnapshot: jest.fn().mockResolvedValue({
+        value: {
+          changes: [corruptChange],
+          filesWithFirstDiffLine: [],
+          filesWithDiffLocations: [],
+        },
+        coverage: coverage('diff', 1),
+      }),
+    });
+
+    await expect(loadBugbotContext(request(), reader)).rejects.toThrow('corrupt provider patch');
+    expect(reader.loadRules).not.toHaveBeenCalled();
+  });
+
   it('makes only retained previous findings eligible for resolution', async () => {
     const issueComments = Array.from({ length: 101 }, (_, index) => ({
       id: index + 1,

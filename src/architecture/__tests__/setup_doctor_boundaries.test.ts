@@ -65,6 +65,19 @@ describe('setup and doctor architecture boundaries', () => {
 
     expect(sources).not.toMatch(/producer\.reason|problem\.message|result\.message|check\.message/u);
   });
+
+  it('keeps PAT permission decisions pure and permission inspection read-only', () => {
+    const policy = read('src/application/policies/setup_token_permission_policy.ts');
+    const ports = read('src/application/ports/setup_token_permission_ports.ts');
+    const adapter = read('src/infrastructure/setup_token_permission_query_adapter.ts');
+    const queryPort = ports.match(/export interface SetupTokenPermissionQueryPort \{([\s\S]*?)\n\}/u)?.[1] ?? '';
+
+    expect(policy).not.toMatch(/from ['"]node:|\/cli\/|\/infrastructure\/|octokit|fetch\(/u);
+    expect(queryPort).toContain('inspect(');
+    expect(queryPort).not.toMatch(/\b(?:create|update|delete|upsert|dispatch|write)\w*\s*\(/iu);
+    expect(adapter).toContain("method: 'GET'");
+    expect(adapter).not.toMatch(/method:\s*['"](?:POST|PUT|PATCH|DELETE)['"]/u);
+  });
 });
 
 function read(relativePath: string): string {

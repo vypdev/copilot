@@ -1213,7 +1213,7 @@ describe('Bugbot review reconciliation integration', () => {
     expect(test.updatePullRequestReview).not.toHaveBeenCalled();
   });
 
-  it('bounds review updates to twenty and exposes the exact pending count', async () => {
+  it('repairs review updates beyond one batch before publishing a complete projection', async () => {
     const comments = Array.from({ length: 22 }, (_, index): PullRequestReviewComment => ({
       id: index + 1,
       identity: `PRRC_${index}`,
@@ -1239,9 +1239,9 @@ describe('Bugbot review reconciliation integration', () => {
       contextPorts: test.contextPorts,
       publicationPorts: test.publicationPorts,
     });
-    expect(report?.reviewUpdates).toBe(20);
-    expect(report?.pendingReviewUpdates).toBe(2);
-    expect(report?.projection.outcome).toBe('partial');
+    expect(report?.reviewUpdates).toBe(22);
+    expect(report?.pendingReviewUpdates).toBe(0);
+    expect(report?.projection.outcome).toBe('complete');
   });
 
   it('preserves a bounded mutation diagnostic in the final projection', async () => {

@@ -36,6 +36,7 @@ import {
     resolveBugbotCatalog,
     type BugbotMessageCatalog,
 } from '../../../policies/bugbot_message_catalog';
+import { formatBugbotPartitionCompletion } from '../../../policies/bugbot_partition_completion_policy';
 
 export interface DetectPotentialProblemsWorkflowDependencies {
     aiRepository: FindingsQueryPort;
@@ -212,6 +213,7 @@ function skippedDraftResult(): Result {
 
 function dryRunResult(prepared: PreparedBugbotFindings, context: BugbotContext): Result {
     const acceptedCount = prepared.activeFindings?.length ?? 0;
+    const partitionCompletion = formatBugbotPartitionCompletion(context);
     const statuses = projectBugbotFindingStatuses(
         context.existingByFindingId,
         prepared.activeFindings ?? prepared.toPublish,
@@ -222,7 +224,7 @@ function dryRunResult(prepared: PreparedBugbotFindings, context: BugbotContext):
         id: TASK_ID,
         success: true,
         executed: true,
-        steps: [`Bugbot dry-run completed with ${acceptedCount} accepted ${acceptedCount === 1 ? 'finding' : 'findings'}; no SCM mutations performed.`],
+        steps: [`Bugbot dry-run completed${partitionCompletion.dryRunSuffix} with ${acceptedCount} accepted ${acceptedCount === 1 ? 'finding' : 'findings'}; no SCM mutations performed.`],
         payload: {
             dryRun: true,
             findings: prepared.activeFindings ?? prepared.toPublish,
@@ -320,6 +322,8 @@ function detectionResult(
     if (context.coverage.status === 'partial') {
         stepParts.push('partial context coverage; this run does not declare the complete target clean');
     }
+    const partitionCompletion = formatBugbotPartitionCompletion(context);
+    if (partitionCompletion.resultStep) stepParts.push(partitionCompletion.resultStep);
     const statusSummary = presentation?.projection ?? projectBugbotFindingStatuses(
             context.existingByFindingId,
             prepared.activeFindings ?? prepared.toPublish,

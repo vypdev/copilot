@@ -32,7 +32,7 @@ describe('do command policy', () => {
       const tasks = buildDoAgentTasks({});
       expect(tasks.findings.provider).toBe('codex');
       expect(tasks.findings.modelProvider).toBe('openai');
-      expect(tasks.findings.model).toBe('gpt-5.6-luna');
+      expect(tasks.findings.model).toBe('gpt-6-luna');
     } finally {
       if (previousProvider === undefined) delete process.env.AGENT_PROVIDER; else process.env.AGENT_PROVIDER = previousProvider;
       if (previousModelProvider === undefined) delete process.env.AGENT_MODEL_PROVIDER; else process.env.AGENT_MODEL_PROVIDER = previousModelProvider;

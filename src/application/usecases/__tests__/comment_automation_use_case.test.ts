@@ -7,6 +7,9 @@ import type { ActorAuthorizationPort } from '../../ports/actor_authorization_por
 import { projectCommentAutomationContext } from '../comment_automation_context';
 import { projectCommentLanguageRequest } from '../steps/common/comment_language_translation_workflow';
 
+type TestActorAuthorizationPort = Pick<ActorAuthorizationPort, 'isActorAllowedToModifyFiles'>
+  & Partial<Pick<ActorAuthorizationPort, 'isActorAllowedToUseMemberOnlyAutomation'>>;
+
 type TestCommentAutomationOptions = Omit<
   CommentAutomationOptions,
   'bugbotGitMutationPort' | 'updatePullRequestDescriptionUseCase'
@@ -55,7 +58,7 @@ function configuredAi(options: { membersOnly?: boolean; fixVerifyCommands?: stri
 function runCommentAutomation(
   execution: Execution,
   options: TestCommentAutomationOptions,
-  actorAuthorizationPort: ActorAuthorizationPort,
+  actorAuthorizationPort: TestActorAuthorizationPort,
   authenticatedUserPort?: {
     getTokenUserDetails?(): Promise<{ name: string; email: string }>;
   },
@@ -113,6 +116,15 @@ function runCommentAutomation(
     updatePullRequestDescriptionUseCase,
   }, {
     isActorAllowedToModifyFiles: (actor) => actorAuthorizationPort.isActorAllowedToModifyFiles(
+      source.owner,
+      source.repo,
+      actor,
+      source.tokens.token,
+    ),
+    isActorAllowedToUseMemberOnlyAutomation: (actor) => (
+      actorAuthorizationPort.isActorAllowedToUseMemberOnlyAutomation
+      ?? actorAuthorizationPort.isActorAllowedToModifyFiles
+    )(
       source.owner,
       source.repo,
       actor,
@@ -500,7 +512,10 @@ describe("runCommentAutomation", () => {
 
   it("honors ai-members-only before invoking comment automation", async () => {
     const language = { invoke: jest.fn() };
-    const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(false) };
+    const authorization = {
+      isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true),
+      isActorAllowedToUseMemberOnlyAutomation: jest.fn().mockResolvedValue(false),
+    };
     const results = await runCommentAutomation(
       {
         owner: 'o',
@@ -525,7 +540,8 @@ describe("runCommentAutomation", () => {
     );
 
     expect(results[0]).toMatchObject({ success: true, executed: false });
-    expect(authorization.isActorAllowedToModifyFiles).toHaveBeenCalledWith('o', 'r', 'outsider', 't');
+    expect(authorization.isActorAllowedToUseMemberOnlyAutomation).toHaveBeenCalledWith('o', 'r', 'outsider', 't');
+    expect(authorization.isActorAllowedToModifyFiles).not.toHaveBeenCalled();
     expect(language.invoke).not.toHaveBeenCalled();
   });
 

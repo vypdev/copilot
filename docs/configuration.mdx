@@ -19,7 +19,7 @@ PR bot approval uses the versioned `pullRequestApproval` setup object and `PR_AP
 
     - `agent-provider`: CLI runtime (`codex`, `opencode`, or `cursor`; default: `codex`)
     - `agent-model-provider`: provider serving the selected model (default: `openai`)
-    - `agent-model`: model name without the provider prefix (for example `gpt-5.6-luna`)
+    - `agent-model`: model name without the provider prefix (for example `gpt-6-luna`)
     - `agent-effort`: optional reasoning effort or provider-specific model variant
     - `agent-executable`: optional exact provider executable basename or absolute path; arguments and wrappers are rejected
     - `findings-provider`, `findings-model-provider`, `findings-model`, `findings-effort`, `findings-executable`: optional findings override
@@ -192,7 +192,10 @@ Organization storage is available only for organization-owned repositories and r
 `--non-interactive` constructs no terminal and resolves only defaults, config,
 flags, and explicit external inputs. `--yes` approves the final plan but never
 invents a missing token, credential, target, or storage prerequisite. There is
-no legacy configuration shape or compatibility alias: unknown keys and removed
+also a separate `--confirm-unverifiable-write-permissions` acknowledgement for
+unattended runs where identity and required reads are verified or positively
+operationally usable but safe probes cannot prove required writes. It never
+bypasses missing or unusable unverifiable read access. There is no legacy configuration shape or compatibility alias: unknown keys and removed
 values fail validation.
 
 ## Complete input reference

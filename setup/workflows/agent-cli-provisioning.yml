@@ -48,7 +48,7 @@ jobs:
             [[ -z "${provider// }" ]] && continue
             case "$provider" in
               opencode) expected_executable=opencode; expected_version=1.18.3 ;;
-              codex) expected_executable=codex; expected_version='codex-cli 0.153.4' ;;
+              codex) expected_executable=codex; expected_version='codex-cli 0.156.1' ;;
               cursor) expected_executable=agent; expected_version='2026.09.10-fd3934a' ;;
               *) echo "Unsupported agent provider: $provider" >&2; exit 1 ;;
             esac
@@ -58,7 +58,7 @@ jobs:
             if ! command -v "$executable" >/dev/null 2>&1; then
               [[ "$executable" == "$expected_executable" ]] || { echo "Configured executable is missing: $executable" >&2; exit 1; }
               case "$provider" in
-                codex) npm install --global '@openai/codex@0.153.4' ;;
+                codex) npm install --global '@openai/codex@0.156.1' ;;
                 opencode) npm install --global 'opencode-ai@1.18.3' ;;
                 cursor) echo 'Cursor Agent must be preinstalled; no reviewed automatic installer is available.' >&2; exit 1 ;;
               esac

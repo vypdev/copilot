@@ -7,21 +7,32 @@ import { getGitInfo, isInsideGitRepo } from '../../cli_context';
 import { buildSetupParams } from './setup_policy';
 import { loadSetupConfigurationOverrides } from '../setup_config_file';
 import { SetupQuestionnaireController, SetupWizardUseCase } from '../../application/usecases/setup';
-import { SETUP_FEATURE_DESCRIPTIONS, buildSetupCredentialRequirements, effectiveIssueWorkflowFeatures } from '../../application/policies/setup_configuration_policy';
+import {
+  SETUP_FEATURE_DESCRIPTIONS,
+  buildSetupCredentialRequirements,
+  effectiveIssueWorkflowFeatures,
+} from '../../application/policies/setup_configuration_policy';
+import {
+  buildConfiguredSetupPatPermissionRequirements,
+  buildSetupPatPermissionRequirements,
+  buildWorkflowPatPermissionRequirements,
+} from '../../application/policies/setup_token_permission_policy';
 import type { SetupConfigurationOverrides } from '../../application/policies/setup_configuration_policy';
 import { createSetupCredentialsUseCase, createSetupRemoteConfigurationReadPort } from '../../infrastructure/composition/setup_credentials_composition_root';
 import { createSetupMergeQueueReadinessUseCase } from '../../infrastructure/composition/setup_doctor_composition_root';
 import { SetupDoctorWorkspaceQueryAdapter } from '../../infrastructure/setup_workspace_adapter';
 import { GithubSetupApprovalReadinessAdapter } from '../../infrastructure/setup_approval_readiness_adapter';
-import type { SetupResourceScope } from '../../domain/setup';
+import type { SetupConfiguration, SetupRemoteConfiguration, SetupResourceScope } from '../../domain/setup';
 import { ISSUE_WORKFLOW_KINDS, type IssueWorkflowKind } from '../../domain/issue_workflow_profile';
-import { toApplicationError } from '../../application/errors/application_error';
+import { ApplicationError, toApplicationError } from '../../application/errors/application_error';
 import { createInteractiveTerminalDriver } from '../setup_terminal_driver';
 import { ConsoleSetupQuestionRenderer } from '../setup_question_renderer';
 import { ConsoleSetupPlanPresenter } from '../setup_plan_presenter';
 import { DryRunSetupPlanConfirmation, SetupPlanConfirmationAdapter } from '../setup_confirmation_adapter';
 import { SetupCredentialPromptAdapter, SetupTerminalCancelledError } from '../setup_credential_prompt_adapter';
 import { SetupWorkflowUpdatePromptAdapter } from '../setup_workflow_update_prompt_adapter';
+import { ConsoleSetupTokenPermissionPresenter } from '../setup_token_permission_presenter';
+import { createSetupTokenPermissionsUseCase } from '../../infrastructure/composition/setup_token_permissions_composition_root';
 
 export function registerSetupCommand(program: Command): void {
   program
@@ -40,6 +51,7 @@ export function registerSetupCommand(program: Command): void {
     .option('--pr-approval-attest-producer', 'Confirm exact check/App/workflow identity and a coverage-enforcing CI step', false)
     .option('--non-interactive', 'Use defaults and config-file values without prompting', false)
     .option('--yes', 'Apply the plan without the final confirmation prompt', false)
+    .option('--confirm-unverifiable-write-permissions', 'Confirm that required PAT write permissions shown as Unverifiable were configured exactly as displayed', false)
     .option('--dry-run', 'Show the setup plan without changing files or GitHub', false)
     .option('--skip-variables', 'Do not create or update GitHub Repository Variables', false)
     .option('--skip-secrets', 'Do not validate or create/update GitHub Repository Secrets', false)
@@ -57,7 +69,9 @@ export function registerSetupCommand(program: Command): void {
       const credentialPrompt = new SetupCredentialPromptAdapter(terminal, {
         ...(options.workflowPat ? { PAT: options.workflowPat } : {}),
         ...options.secret,
-      });
+      }, Boolean(options.confirmUnverifiableWritePermissions));
+      const permissionPresenter = new ConsoleSetupTokenPermissionPresenter();
+      const tokenPermissions = createSetupTokenPermissionsUseCase();
       const workflowPrompt = new SetupWorkflowUpdatePromptAdapter(terminal);
       const cwd = process.cwd();
       try {
@@ -81,6 +95,8 @@ export function registerSetupCommand(program: Command): void {
           return;
         }
         logInfo(`📦 Repository: ${gitInfo.owner}/${gitInfo.repo}`);
+        const setupPatPermissions = buildSetupPatPermissionRequirements();
+        permissionPresenter.showRequirements('setup', setupPatPermissions);
         let token = getSetupToken(cwd, options.token);
         if (!token && !options.nonInteractive && !options.dryRun) token = await credentialPrompt.requestSetupPat();
         if (!token && !options.dryRun) {
@@ -91,7 +107,48 @@ export function registerSetupCommand(program: Command): void {
           process.exitCode = 1;
           return;
         }
+        if (token) {
+          const permissionReport = await tokenPermissions.inspect({
+            role: 'setup',
+            owner: gitInfo.owner,
+            repository: gitInfo.repo,
+            token,
+            requirements: setupPatPermissions,
+          });
+          permissionPresenter.showReport(permissionReport);
+          const permissionAccepted = permissionReport.ready
+            || (permissionReport.confirmationRequired
+              && await credentialPrompt.confirmUnverifiableTokenPermissions(permissionReport));
+          if (!permissionAccepted || permissionReport.identityStatus !== 'valid') {
+            throw new ApplicationError(
+              'authorization.credential-invalid',
+              'The setup PAT has missing or unconfirmed required access. Grant or explicitly confirm the permissions shown above and retry.',
+            );
+          }
+        }
         logInfo(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
+        const auditConfiguredSetupPat = async (
+          configuration: Readonly<SetupConfiguration>,
+          remoteConfiguration?: Readonly<SetupRemoteConfiguration>,
+        ): Promise<{ status: 'accepted' } | { status: 'blocked'; errors: readonly string[] }> => {
+          const configuredSetupPatPermissions = buildConfiguredSetupPatPermissionRequirements(configuration, remoteConfiguration);
+          permissionPresenter.showRequirements('setup', configuredSetupPatPermissions);
+          if (!token) return { status: 'accepted' };
+          const permissionReport = await tokenPermissions.inspect({
+            role: 'setup', owner: gitInfo.owner, repository: gitInfo.repo, token,
+            requirements: configuredSetupPatPermissions,
+          });
+          permissionPresenter.showReport(permissionReport);
+          const permissionAccepted = permissionReport.ready
+            || (permissionReport.confirmationRequired
+              && await credentialPrompt.confirmUnverifiableTokenPermissions(permissionReport));
+          if (!permissionAccepted || permissionReport.identityStatus !== 'valid') {
+            return { status: 'blocked', errors: [
+              'The setup PAT has missing or unconfirmed access required by the approved setup plan. Grant or explicitly confirm the permissions shown above and retry.',
+            ] };
+          }
+          return { status: 'accepted' };
+        };
         const remoteConfigurationReader = createSetupRemoteConfigurationReadPort();
         const wizard = new SetupWizardUseCase({
           ...(terminal ? {
@@ -101,6 +158,7 @@ export function registerSetupCommand(program: Command): void {
           confirmation: options.dryRun
             ? new DryRunSetupPlanConfirmation()
             : new SetupPlanConfirmationAdapter(terminal, Boolean(options.yes)),
+          finalPermissionAudit: { audit: auditConfiguredSetupPat },
           remoteConfiguration: remoteConfigurationReader,
           mergeQueueReadiness: createSetupMergeQueueReadinessUseCase(),
           approvalReadiness: new GithubSetupApprovalReadinessAdapter(),
@@ -121,7 +179,18 @@ export function registerSetupCommand(program: Command): void {
           if (result.exitCode !== 0) process.exitCode = result.exitCode;
           return;
         }
+        if (result.status === 'blocked') {
+          logError(new ApplicationError(
+            result.reason === 'setup-permissions-unavailable' ? 'authorization.credential-invalid' : 'provider.unavailable',
+            `${result.reason === 'setup-permissions-unavailable'
+              ? 'Setup is blocked by missing or unconfirmed PAT permissions:'
+              : 'Setup is blocked by unavailable remote storage:'}\n${result.errors.map(error => `- ${error}`).join('\n')}`,
+          ));
+          process.exitCode = result.exitCode;
+          return;
+        }
         const { configuration, remoteConfiguration } = result;
+        const credentialRequirements = buildSetupCredentialRequirements(configuration);
         const workflowComparisons = new SetupDoctorWorkspaceQueryAdapter().compareWorkflows(effectiveIssueWorkflowFeatures(configuration), configuration);
         const updateWorkflows = await workflowPrompt.confirmWorkflowUpdates(workflowComparisons, Boolean(options.updateWorkflows));
         const approvedWorkflowFiles = updateWorkflows
@@ -131,14 +200,16 @@ export function registerSetupCommand(program: Command): void {
           logInfo('✅ Dry run complete. No files or GitHub resources were changed.');
           return;
         }
-        const credentials = await createSetupCredentialsUseCase(credentialPrompt).collect({
+        const credentials = await createSetupCredentialsUseCase(credentialPrompt, permissionPresenter).collect({
           owner: gitInfo.owner,
           repository: gitInfo.repo,
           setupToken: token ?? '',
-          requirements: buildSetupCredentialRequirements(configuration),
+          requirements: credentialRequirements,
           manageSecrets: !options.skipSecrets && configuration.manageRepositorySecrets,
+          secretStoragePolicy: configuration.storage.secrets,
           ref: configuration.repository.mainBranch,
           remoteConfiguration,
+          workflowTokenPermissions: buildWorkflowPatPermissionRequirements(configuration, remoteConfiguration),
         });
         logInfo('⚙️  Applying the approved setup plan...');
         const params = buildSetupParams(

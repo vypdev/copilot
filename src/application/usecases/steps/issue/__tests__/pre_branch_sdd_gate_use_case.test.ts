@@ -43,6 +43,7 @@ function harness() {
   });
   const setLabels = jest.fn(async (_issue: number, next: readonly string[]) => { labels = [...next]; });
   const isActorAllowedToModifyFiles = jest.fn().mockResolvedValue(true);
+  const isActorAllowedToUseMemberOnlyAutomation = jest.fn().mockResolvedValue(true);
   const getDescription = jest.fn().mockResolvedValue('The payment flow must change.');
   const getTitle = jest.fn().mockResolvedValue('Change payments');
   const getLinkedBranch = jest.fn().mockResolvedValue({ name: 'feature/42-change', headSha: baseSha });
@@ -51,7 +52,7 @@ function harness() {
     { loadSnapshot, readSdd, validateDraft, publish, recoverPublished, verifyPublication },
     { listIssueComments: jest.fn(async () => comments), addComment, updateComment },
     { getLabels: jest.fn(async () => labels), setLabels },
-    { isActorAllowedToModifyFiles },
+    { isActorAllowedToModifyFiles, isActorAllowedToUseMemberOnlyAutomation },
     { getDescription },
     { getTitle } as never,
     { getLinkedBranch },

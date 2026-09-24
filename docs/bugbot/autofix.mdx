@@ -65,8 +65,11 @@ want an authorized file-changing operation.
 
 Only **certain users** can trigger file-modifying actions (autofix and [do user request](/bugbot/do-user-request)):
 
-- **Organization repositories:** The comment author must be a **member of the organization** (checked via GitHub’s `orgs.checkMembershipForUser`). If the author is not a member, the action does **not** run autofix; it can still run **Think** and reply with an answer.
-- **User (personal) repositories:** The **repository owner** or a collaborator with `push`, `maintain`, or `admin` permission can trigger autofix. Other users get a Think response only.
+- **Organization repositories:** The comment author must have `push`, `maintain`, or `admin` permission on the repository. Organization membership alone is not enough.
+- **User (personal) repositories:** The **repository owner** or a collaborator with `push`, `maintain`, or `admin` permission can trigger autofix.
+
+Other users get a Think response only. When `ai-members-only` is enabled, its
+organization-membership check is an additional, separate gate for AI routes.
 
 This avoids random contributors or external users pushing commits via comments. There is no separate “Bugbot role”; the same rule applies to both autofix and do-user-request.
 

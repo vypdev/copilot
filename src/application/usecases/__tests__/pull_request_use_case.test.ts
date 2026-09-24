@@ -189,7 +189,10 @@ describe("PullRequestUseCase", () => {
   });
 
   it('authorizes the projected actor before member-only PR review', async () => {
-    const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) };
+    const authorization = {
+      isActorAllowedToModifyFiles: jest.fn(),
+      isActorAllowedToUseMemberOnlyAutomation: jest.fn().mockResolvedValue(true),
+    };
     const useCase = new PullRequestUseCase(
       { taskId: 'UpdatePullRequestDescriptionUseCase', invoke: mockUpdateDescriptionInvoke },
       workflowSteps,
@@ -203,7 +206,8 @@ describe("PullRequestUseCase", () => {
 
     await useCase.invoke(param);
 
-    expect(authorization.isActorAllowedToModifyFiles).toHaveBeenCalledWith('alice');
+    expect(authorization.isActorAllowedToUseMemberOnlyAutomation).toHaveBeenCalledWith('alice');
+    expect(authorization.isActorAllowedToModifyFiles).not.toHaveBeenCalled();
     expect(mockReviewPotentialProblemsInvoke).toHaveBeenCalledTimes(1);
   });
 

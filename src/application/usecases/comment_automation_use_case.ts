@@ -34,7 +34,8 @@ export async function runCommentAutomation(
     }
     const isPublicMetadataCommand = command.kind === 'command'
       && (command.command.name === 'help' || command.command.name === 'status');
-    if (!isPublicMetadataCommand && param.membersOnly && !await actorAuthorizationPort.isActorAllowedToModifyFiles(param.actor)) {
+    if (!isPublicMetadataCommand && param.membersOnly
+      && !await actorAuthorizationPort.isActorAllowedToUseMemberOnlyAutomation(param.actor)) {
       logInfo('Skipping agent automation because ai-members-only is enabled and the actor is not authorized.');
       return [new Result({ id: options.taskId, success: true, executed: false })];
     }

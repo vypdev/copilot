@@ -50,13 +50,13 @@ not replace it. If the default executable is missing, `auto` installs the exact
 manifest package and validates that new installation:
 
 ```text
-@openai/codex@0.153.4
+@openai/codex@0.156.1
 ```
 
 The approved package installation shape is:
 
 ```bash
-npm install --global "@openai/codex@0.153.4"
+npm install --global "@openai/codex@0.156.1"
 ```
 
 Verify the executable before a real request:
@@ -72,10 +72,10 @@ codex exec --help
 with:
   agent-provider: codex
   agent-model-provider: openai
-  agent-model: gpt-5.6-luna
+  agent-model: gpt-6-luna
 env:
   AGENT_ALLOWED_MODEL_PROVIDERS: openai
-  AGENT_ALLOWED_MODELS: openai/gpt-5.6-luna
+  AGENT_ALLOWED_MODELS: openai/gpt-6-luna
   # Omit when the controlled runner is already authenticated.
   CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
 ```

@@ -1,4 +1,6 @@
 import { AGENT_EXECUTABLE_BASENAMES } from '../../../domain/agent';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
     assertInstalledAgentRuntimeVersion,
     getAgentRuntimeManifest,
@@ -8,12 +10,12 @@ import {
 describe('agent runtime manifest', () => {
     it('separates reviewed runtime identity from reproducible package installation', () => {
         const manifest = getAgentRuntimeManifest();
-        expect(manifest.revision).toBe('2026-09-12.p1-c.2');
+        expect(manifest.revision).toBe('2026-09-24.p1-c.3');
         expect(manifest.providers).toEqual({
             codex: {
                 executable: 'codex',
-                reviewedVersion: 'codex-cli 0.153.4',
-                installation: { package: '@openai/codex', version: '0.153.4' },
+                reviewedVersion: 'codex-cli 0.156.1',
+                installation: { package: '@openai/codex', version: '0.156.1' },
             },
             opencode: {
                 executable: 'opencode',
@@ -25,8 +27,17 @@ describe('agent runtime manifest', () => {
         expect(Object.fromEntries(Object.entries(manifest.providers).map(([provider, entry]) => [provider, entry.executable]))).toEqual(AGENT_EXECUTABLE_BASENAMES);
     });
 
+    it.each(['codex', 'opencode'] as const)('keeps the %s workflow installer synchronized with the runtime manifest', (provider) => {
+        const workflow = readFileSync(join(process.cwd(), 'setup/workflows/agent-cli-provisioning.yml'), 'utf8');
+        const entry = getAgentRuntimeManifest().providers[provider];
+        expect(entry.installation).toBeDefined();
+        const expectedVersion = provider === 'codex' ? `'${entry.reviewedVersion}'` : entry.reviewedVersion;
+        expect(workflow).toContain(`${provider}) expected_executable=${entry.executable}; expected_version=${expectedVersion}`);
+        expect(workflow).toContain(`${provider}) npm install --global '${entry.installation!.package}@${entry.installation!.version}'`);
+    });
+
     it.each([
-        ['codex', 'codex-cli 0.153.4\n'],
+        ['codex', 'codex-cli 0.156.1\n'],
         ['opencode', '1.18.3'],
         ['cursor', '2026.09.10-fd3934a\r\n'],
     ] as const)('verifies an exact %s version after Copilot installs it', (provider, output) => {

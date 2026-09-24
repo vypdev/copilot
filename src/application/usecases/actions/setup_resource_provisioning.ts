@@ -6,9 +6,12 @@ import type {
 } from '../../../domain/setup';
 import {
     buildSetupRepositoryVariables,
+    findSetupOrganizationShadows,
+    getSetupResourceStoragePolicy,
+    requiresSetupOrganizationInventory,
+    requiresSetupRepositoryInventory,
     resolveSetupResourceTarget,
     shouldUpsertSetupResource,
-    usesOrganizationStorage,
 } from '../../policies/setup_configuration_policy';
 import type {
     BoundSetupRemoteConfigurationReadPort,
@@ -16,7 +19,7 @@ import type {
     BoundSetupRepositoryVariablesCommandPort,
 } from '../../ports/setup_wizard_ports';
 import { logError } from '../../ports/logging_ports';
-import { toApplicationError } from '../../errors/application_error';
+import { ApplicationError, toApplicationError } from '../../errors/application_error';
 
 export interface SetupResourceProvisioningDependencies {
     setupRepositoryVariablesPort?: BoundSetupRepositoryVariablesCommandPort;
@@ -115,7 +118,9 @@ export async function resolveRemoteConfiguration(
             'Could not inspect existing GitHub Actions resource scopes.',
         );
         logError(semanticError);
-        if (usesOrganizationStorage(setupConfiguration)) errors.push(semanticError.message);
+        if (setupConfiguration.manageRepositorySecrets || setupConfiguration.manageRepositoryVariables) {
+            errors.push(semanticError.message);
+        }
         return undefined;
     }
 }
@@ -127,6 +132,45 @@ export function groupSetupResources(
     configuration: SetupConfiguration,
     remoteConfiguration?: SetupRemoteConfiguration,
 ): SetupResourceGroup[] {
+    if (resources.length > 0 && !remoteConfiguration) {
+        throw new ApplicationError(
+            'provider.unavailable',
+            `GitHub Actions ${kind} inventory is unavailable; resource targets cannot be resolved safely. Restore inventory access and rerun setup.`,
+        );
+    }
+    const repositoryAccess = kind === 'secret'
+        ? remoteConfiguration?.repositorySecretsAccess
+        : remoteConfiguration?.repositoryVariablesAccess;
+    const requiresRepositoryInventory = requiresSetupRepositoryInventory(resources.map(resource => resource.name));
+    if (remoteConfiguration && requiresRepositoryInventory && repositoryAccess !== 'available') {
+        throw new Error(`Repository ${kind} inventory is ${repositoryAccess}; resource targets cannot be resolved safely.`);
+    }
+    const organizationAccess = kind === 'secret'
+        ? remoteConfiguration?.organizationSecretsAccess
+        : remoteConfiguration?.organizationVariablesAccess;
+    const requiresOrganizationInventory = remoteConfiguration?.ownerType === 'Organization'
+        && requiresSetupOrganizationInventory(
+            getSetupResourceStoragePolicy(configuration, kind),
+            resources.map(resource => resource.name),
+            kind === 'secret'
+                ? remoteConfiguration.repositorySecrets
+                : remoteConfiguration.repositoryVariables.map(variable => variable.name),
+        );
+    if (requiresOrganizationInventory && organizationAccess !== 'available') {
+        throw new Error(`Organization ${kind} inventory is ${organizationAccess}; resource targets cannot be resolved safely.`);
+    }
+    if (remoteConfiguration && repositoryAccess === 'available') {
+        const shadows = findSetupOrganizationShadows(
+            getSetupResourceStoragePolicy(configuration, kind), kind,
+            resources.map(resource => resource.name), remoteConfiguration,
+        );
+        if (shadows.length > 0) {
+            throw new ApplicationError(
+                'configuration.invalid',
+                `Repository ${kind} ${shadows[0]} shadows the selected organization target; choose repository scope or remove the shadow before setup.`,
+            );
+        }
+    }
     const groups = new Map<string, SetupResourceGroup>();
     for (const resource of resources) {
         // Secret values reach this workflow only after the user chose keep/replace.

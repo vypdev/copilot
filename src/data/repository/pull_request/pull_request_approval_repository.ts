@@ -13,7 +13,7 @@ import type {
 } from '../../../application/ports/pull_request_approval_ports';
 import { parsePullRequestApprovalPolicy } from '../../../domain/pull_request_approval_policy';
 import { parseApprovalCoverageZip } from './approval_coverage_artifact';
-import { fileMatchesIgnorePatterns } from '../../../application/usecases/steps/commit/bugbot/file_ignore';
+import { fileMatchesIgnorePatterns } from '../../../application/policies/file_ignore_policy';
 import { renderApprovalAssessment } from '../../../application/policies/pull_request_approval_presentation_policy';
 
 export interface ApprovalRepositorySettings {

@@ -1,5 +1,8 @@
 import { logDebugInfo } from "../../../utils/logger";
-import { authorizationForFileModification } from "../actor_modification_policy";
+import {
+    authorizationForFileModification,
+    authorizationForMemberOnlyAutomation,
+} from "../actor_modification_policy";
 import type { ActorAuthorizationPort } from "../../../application/ports/actor_authorization_ports";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubActorAuthorizationClient } from "../../../infrastructure/github/ports/github_identity_provider_ports";
@@ -12,6 +15,24 @@ export class ActorAuthorizationRepository implements ActorAuthorizationPort {
             const octokit = this.githubClient.getClient(token);
             const { data: ownerUser } = await octokit.rest.users.getByUsername({ username: owner });
             const authorization = authorizationForFileModification(owner, actor, ownerUser.type);
+            if (authorization.ownerMatches) return true;
+            return this.checkUserRepositoryPermission(octokit, owner, actor, repo);
+        } catch (err) {
+            logDebugInfo(toApplicationError(err, 'authorization.denied', 'Unable to verify actor authorization.').message);
+            return false;
+        }
+    };
+
+    isActorAllowedToUseMemberOnlyAutomation = async (
+        owner: string,
+        repo: string,
+        actor: string,
+        token: string,
+    ): Promise<boolean> => {
+        try {
+            const octokit = this.githubClient.getClient(token);
+            const { data: ownerUser } = await octokit.rest.users.getByUsername({ username: owner });
+            const authorization = authorizationForMemberOnlyAutomation(owner, actor, ownerUser.type);
             if (authorization.kind === 'organization-membership') {
                 return this.checkOrganizationMembership(octokit, authorization.organization, authorization.actor, owner, actor);
             }
