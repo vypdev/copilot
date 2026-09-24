@@ -12,6 +12,34 @@ For [guarded PR approval](/pull-requests/guarded-approval), this same runtime PA
 
 The setup PAT and workflow PAT may have different owners and permissions. Do not paste the workflow PAT into the setup prompt unless you intentionally want the same token to perform both roles.
 
+## Assisted creation in the terminal
+
+When `copilot setup` needs a PAT interactively, it offers a guided link (the
+default) or manual entry. The setup link contains only bootstrap permissions
+known before the questionnaire; it is **provisional**. If the final plan needs
+additional grants, setup stops before applying it and prints a corrected link.
+Update the PAT in GitHub or create a replacement, then rerun setup. Guided
+setup shows the account returned by GitHub and asks you to confirm it.
+
+After the plan, the bot link uses the selected workflow permissions. Enter the
+expected bot login first: setup resolves its GitHub numeric ID, then checks the
+PAT's own `/user` identity against that ID before any Secret write. A manual or
+non-interactive PAT retains the existing permission audit but does **not** gain
+this extra identity binding. A wrong bot account blocks installation.
+
+Both links use GitHub's [documented fine-grained PAT form](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
+They do not sign you in, complete 2FA, generate or revoke a token, or choose
+an individual repository. Check the active browser account, select only the
+target repository, and review the final GitHub form. A guided setup PAT uses a
+one-day suggested expiry; delete it yourself in [GitHub PAT Settings](https://github.com/settings/personal-access-tokens)
+afterward. The bot PAT uses a 90-day suggested expiry, may be shortened by
+organization policy, and remains in Actions Secret `PAT`; arrange renewal
+before it expires. If guarded approval requires `Checks`, GitHub's fine-grained
+PAT cannot prefill or provide that permission. Setup omits the guided bot link
+for that plan; review a compatible manually created credential and the
+permission audit instead. Existing command-line token flags also remain, but
+putting a PAT in a command can expose it in shell history or process listings.
+
 ## Permission tables in `copilot setup`
 
 Immediately before each hidden PAT prompt, interactive setup prints a

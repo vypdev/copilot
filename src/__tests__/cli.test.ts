@@ -15,7 +15,7 @@ jest.mock('child_process', () => ({
 }));
 
 jest.mock('../actions/local_action', () => ({
-  runLocalAction: jest.fn().mockResolvedValue(undefined),
+  runLocalAction: jest.fn().mockResolvedValue([]),
 }));
 
 jest.mock('../utils/logger', () => ({
@@ -112,7 +112,7 @@ describe('CLI', () => {
         ? 'a'.repeat(40)
         : 'https://github.com/test-owner/test-repo.git',
     ));
-    (runLocalAction as jest.Mock).mockResolvedValue(undefined);
+    (runLocalAction as jest.Mock).mockResolvedValue([]);
     mockIsIssue.mockResolvedValue(true);
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -487,6 +487,18 @@ describe('CLI', () => {
       const params = (runLocalAction as jest.Mock).mock.calls[0][0];
       expect(params[INPUT_KEYS.TOKEN]).toBe('ghp_abcdefghijklmnopqrstuvwxyz12');
       expect(params[INPUT_KEYS.SINGLE_ACTION]).toBe(ACTIONS.INITIAL_SETUP);
+    });
+
+    it('reports partial application when the local setup action returns a failed result', async () => {
+      (runLocalAction as jest.Mock).mockResolvedValueOnce([{ success: false, errors: [] }]);
+      await program.parseAsync([
+        'node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12',
+        '--skip-secrets', '--non-interactive', '--pr-approval-mode', 'off', '--yes',
+      ]);
+      const { logInfo } = require('../utils/logger');
+      expect(runLocalAction).toHaveBeenCalledTimes(1);
+      expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('Secret may already have been written'));
+      expect(process.exitCode).toBe(1);
     });
 
     it.each([

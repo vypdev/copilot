@@ -7,6 +7,7 @@ import type {
   SetupCredentialValue,
 } from '../domain/setup';
 import type { SetupTokenPermissionReport } from '../domain/setup_token_permissions';
+import type { SetupGithubIdentity } from '../application/ports/setup_pat_identity_ports';
 import { color, renderBox, statusIcon } from './setup_prompt_rendering';
 
 export class SetupTerminalCancelledError extends Error {
@@ -17,14 +18,68 @@ export class SetupTerminalCancelledError extends Error {
 }
 
 export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
+  private setupPatGuide?: string;
+  private workflowPatGuide?: string;
+  private resolveBotIdentity?: (login: string) => Promise<SetupGithubIdentity>;
+  private guidedSetup = false;
+  private guidedBotIdentity?: SetupGithubIdentity;
+
   constructor(
     private readonly terminal: TerminalDriver | undefined,
     private readonly credentialValues: Readonly<Record<string, string>>,
     private readonly confirmUnverifiableWritePermissions = false,
   ) {}
 
+  configureSetupPatGuide(url: string): void { this.setupPatGuide = url; }
+  get usedGuidedSetupPat(): boolean { return this.guidedSetup; }
+  configureWorkflowPatGuide(url: string, resolveIdentity: (login: string) => Promise<SetupGithubIdentity>): void {
+    this.workflowPatGuide = url;
+    this.resolveBotIdentity = resolveIdentity;
+  }
+  get guidedWorkflowBotIdentity(): SetupGithubIdentity | undefined { return this.guidedBotIdentity; }
+
+  async confirmGuidedSetupAccount(account?: string): Promise<boolean> {
+    if (!this.guidedSetup || !this.terminal) return true;
+    if (!account || !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(account)) return false;
+    console.log(`GitHub authenticated the setup PAT as @${account}.`);
+    return (await this.readChoice('Is this the account you intended to configure with?', ['yes', 'no'], 'yes')) === 'yes';
+  }
+
+  showSetupPatCleanupReminder(): void {
+    if (!this.guidedSetup) return;
+    console.log(renderBox(
+      'The setup PAT was not revoked automatically. After setup finishes or is cancelled, delete it in GitHub → Settings → Developer settings → Personal access tokens. Ending this process does not remove the token from GitHub.',
+      'Revoke temporary setup PAT',
+      33,
+    ));
+    console.log('https://github.com/settings/personal-access-tokens');
+  }
+
+  showUpdatedSetupPatLink(url: string, stage: 'bootstrap' | 'final'): void {
+    if (!this.guidedSetup) return;
+    console.log(renderBox(
+      stage === 'bootstrap'
+        ? 'The setup PAT did not pass the initial access check; no setup plan has been applied. Review its grants in GitHub or create a replacement with this link, then rerun. Select only the intended repository in GitHub.'
+        : 'The selected plan requires access this PAT did not prove; no plan mutation has started. Update its grants in GitHub or create a replacement with this link, then rerun. Select only the intended repository in GitHub.',
+      stage === 'bootstrap' ? 'Setup PAT access needs attention' : 'Setup PAT permissions changed',
+      33,
+    ));
+    console.log(url);
+  }
+
   async requestSetupPat(): Promise<string | undefined> {
     if (!this.terminal) return undefined;
+    if (this.setupPatGuide) {
+      this.guidedSetup = (await this.readChoice('How would you like to provide the setup PAT?', ['guided link', 'manual PAT'], 'guided link')) === 'guided link';
+      if (this.guidedSetup) {
+        console.log(renderBox(
+          'Provisional link: Open this GitHub link in your browser, sign in as the account configuring this repository, complete any 2FA or SSO, and review the prefilled fine-grained permissions. GitHub owns token creation; Copilot never handles your web session. Select ONLY this repository manually. The permissions may need updating after the setup questionnaire.',
+          'Create setup PAT in GitHub', 33,
+        ));
+        console.log(this.setupPatGuide);
+        console.log('Copy the one-time token from GitHub and paste it below. It is hidden and used only for this setup run.');
+      }
+    }
     console.log(renderBox(
       'Enter a GitHub setup PAT. It is used in memory for this run only and is never stored. The workflow PAT is a different bot-account token and is requested separately.',
       'Setup PAT',
@@ -73,11 +128,36 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
     console.log(`Credential options: ${requirements.map((requirement) => requirement.name).join(', ')}`);
   }
 
-  requestWorkflowPat(
+  async requestWorkflowPat(
     requirement: SetupCredentialRequirement,
     current?: SetupCredentialCheck,
   ): Promise<SetupCredentialValue | undefined> {
+    if (this.terminal && !this.credentialValues[requirement.name]?.trim() && this.workflowPatGuide) {
+      const guided = (await this.readChoice('How would you like to provide the bot workflow PAT?', ['guided link', 'manual PAT'], 'guided link')) === 'guided link';
+      if (guided) {
+        const login = await this.readBotLogin();
+        const identity = await this.resolveBotIdentity!(login);
+        this.guidedBotIdentity = identity;
+        console.log(`Expected bot account resolved: @${identity.login} (GitHub account ID ${identity.id}).`);
+        console.log(renderBox(
+          `Open this link in a separate/private browser session, sign in as @${login} (the bot account), and complete its 2FA or SSO. Review every grant and select ONLY the intended repository manually. GitHub creates the PAT; Copilot does not store bot web credentials. The suggested expiry is 90 days—renew the token and update the Actions Secret before then.`,
+          'Create bot PAT in GitHub', 33,
+        ));
+        console.log(this.workflowPatGuide);
+        console.log('Copy the one-time bot token and paste it below. It will be validated before any Secret is written.');
+      }
+    }
     return this.requestSecretForRequirement(requirement, current, 'workflow PAT owned by the bot account');
+  }
+
+  private async readBotLogin(): Promise<string> {
+    while (true) {
+      const result = await this.terminal!.readText('Expected GitHub bot login (without @): ');
+      if (result.kind !== 'value') throw new SetupTerminalCancelledError();
+      const login = result.value.trim();
+      if (/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(login)) return login;
+      console.log(color('Enter a valid GitHub account login.', 33));
+    }
   }
 
   requestApiKey(

@@ -60,6 +60,10 @@ on the exact existing branch and push normal commits, but do not create, rename,
 delete, replace, or force-push managed branches.
 
 The setup PAT entered by the operator is separate from the workflow `PAT` Secret.
+Interactive setup can guide creation of both via GitHub's prefilled PAT form:
+the operator creates a temporary setup token, and the bot account creates the
+persistent workflow token. GitHub handles account switching, 2FA, repository
+selection, and final creation; Copilot never creates or revokes either token.
 Use `copilot setup --dry-run` to inspect the plan before making local or remote
 changes. See the complete [How to use](https://docs.page/vypdev/copilot/how-to-use)
 guide and [Authentication](https://docs.page/vypdev/copilot/authentication).

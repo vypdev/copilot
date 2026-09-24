@@ -1,6 +1,6 @@
 # Guided Bot PAT Onboarding
 
-- Status: Draft — guided form is viable; runtime expiry and identity UX need review
+- Status: Draft — guided implementation in progress; controlled GitHub UX and full test budget remain unverified
 - Date: 2026-09-24
 - Catalog capability ID: `guided-bot-pat-onboarding`
 - Last verified: Not applicable; prospective change
@@ -8,7 +8,7 @@
 - Scope: guide creation and installation of the workflow/bot PAT when operator and bot are different GitHub accounts
 - Related issues/PRs: none; no Action dogfooding for this design
 - Required review gates: product UX, architecture, testing, documentation, credential security, GitHub form compatibility
-- Open decisions blocking readiness: runtime PAT expiration default/rotation owner; behavior when organization PAT approval is pending; supported non-interactive identity assertion
+- Open decisions blocking readiness: controlled GitHub UX, organization approval evidence, non-interactive identity extension, and full test-budget evidence
 
 ## 1. Executive summary
 
@@ -259,16 +259,16 @@ or to overwrite the Secret without a new approved value.
 |---|---|---|---|---|
 | PAT creation help | interactive choice | guided | `guided`, `manual` | one setup run; not saved |
 | Operator PAT expiry | integer days | `1` for a one-run token | defined by companion operator SDD | link only |
-| Bot PAT expiry | integer days | proposed `90`, subject to review and org policy | 1–366 per GitHub, no `none` in generated link | link only; not a new config Secret |
+| Bot PAT expiry | integer days | `90`, with bot owner responsible for renewal before expiry | 1–366 per GitHub, no `none` in generated link | link only; not a new config Secret |
 | Expected bot | GitHub login and resolved ID | explicit selection | one valid GitHub user | one run; non-secret display |
 | Secret scope | existing setup storage policy | repository | repository or organization as already supported | approved setup plan |
 
 The final runtime permission policy is the sole source of URL grants. The
 existing `--workflow-pat`/`--secret PAT=...` values override interactive input
 and retain their current permission validation; they cannot silently enter
-guided mode without an expected bot identity. The bot expiry default is
-an open product decision; it cannot be shipped as a fixed value until rotation
-ownership is documented. No link may select `none` silently. Invalid owner,
+guided mode without an expected bot identity. The bot account owner must renew
+the suggested 90-day PAT and replace Secret `PAT` before expiration; the
+organization may impose a shorter limit. No link may select `none` silently. Invalid owner,
 permission name/level, URL length, account, or scope blocks link generation.
 There is no migration of existing PAT Secrets or account state. Role separation,
 no embedded secret, and exact identity checking within guided mode are not
@@ -551,3 +551,10 @@ PAT, and the bot PAT remains active after setup.
   owner rather than trusting the browser or local CLI account. Legacy paths
   keep their current checks pending a migration. Automatic bot PAT creation
   needs a future supported GitHub API and is not claimed here.
+- Implementation snapshot (2026-09-24): guided/manual bot prompt, final-plan
+  URL, expected login resolution before token entry, numeric-ID comparison
+  before Secret mutation, and a 90-day suggested expiry are implemented
+  locally. Unsupported `Checks` in guarded plans suppresses the fine-grained
+  link and directs users to manual credential compatibility review. Human
+  two-account/2FA acceptance, organization approval evidence, and the full
+  numeric test budget remain open review gates.

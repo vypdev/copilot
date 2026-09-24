@@ -760,19 +760,29 @@
       ],
       "code": [
         "src/application/policies/setup_token_permission_policy.ts",
+        "src/application/policies/setup_pat_creation_url_policy.ts",
+        "src/application/ports/setup_pat_identity_ports.ts",
+        "src/application/usecases/setup/verify_guided_workflow_pat_identity_use_case.ts",
+        "src/infrastructure/setup_github_identity_query_adapter.ts",
         "src/application/usecases/setup/setup_credentials_use_case.ts",
         "src/cli/setup_credential_prompt_adapter.ts",
         "src/data/repository/repository_variables_repository.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_token_permission_policy.test.ts",
+        "src/application/policies/__tests__/setup_pat_creation_url_policy.test.ts",
+        "src/application/usecases/setup/__tests__/verify_guided_workflow_pat_identity_use_case.test.ts",
+        "src/infrastructure/__tests__/setup_github_identity_query_adapter.test.ts",
         "src/application/usecases/setup/__tests__/setup_credentials_use_case.test.ts",
         "src/cli/__tests__/setup_presenters.test.ts",
         "src/data/repository/__tests__/repository_variables_repository.test.ts"
       ],
       "documentation": [
+        "README.md",
         "docs/authentication.mdx",
         "docs/how-to-use.mdx",
+        "docs/configuration.mdx",
+        "docs/development/architecture.mdx",
         "docs/security-operations/operations/troubleshooting.mdx"
       ]
     },
@@ -792,19 +802,24 @@
       ],
       "code": [
         "src/cli/setup_credential_prompt_adapter.ts",
+        "src/application/policies/setup_pat_creation_url_policy.ts",
         "src/application/usecases/setup/setup_token_permissions_use_case.ts",
         "src/infrastructure/setup_token_permission_query_adapter.ts",
         "src/utils/setup_files.ts"
       ],
       "tests": [
         "src/cli/__tests__/setup_presenters.test.ts",
+        "src/application/policies/__tests__/setup_pat_creation_url_policy.test.ts",
         "src/application/usecases/setup/__tests__/setup_token_permissions_use_case.test.ts",
         "src/infrastructure/__tests__/setup_token_permission_query_adapter.test.ts",
         "src/utils/__tests__/setup_files.test.ts"
       ],
       "documentation": [
+        "README.md",
         "docs/how-to-use.mdx",
         "docs/authentication.mdx",
+        "docs/configuration.mdx",
+        "docs/development/architecture.mdx",
         "docs/security-operations/operations/troubleshooting.mdx"
       ]
     },

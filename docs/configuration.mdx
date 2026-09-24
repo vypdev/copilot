@@ -189,6 +189,15 @@ The immutable questionnaire first inspects the repository and reports repository
 
 Organization storage is available only for organization-owned repositories and requires organization Actions permissions on the setup PAT. If only one class should be global, set that class to `organization` and leave the other at `repository`. `--skip-secrets` and `--skip-variables` disable their respective setup operations without changing the other class.
 
+Interactive PAT guidance does not add configuration keys: it is a one-run
+choice at each hidden prompt. The initial setup-PAT form link contains only
+bootstrap grants and may need correction after the questionnaire. The bot-PAT
+link is built from the final workflow permission policy and suggests a 90-day
+expiry; the bot account owner must renew it and replace Secret `PAT` before
+expiration. Manual and non-interactive token inputs keep their existing
+precedence and validation. See [authentication](/authentication) for the
+GitHub-owned creation, account verification, and deletion steps.
+
 `--non-interactive` constructs no terminal and resolves only defaults, config,
 flags, and explicit external inputs. `--yes` approves the final plan but never
 invents a missing token, credential, target, or storage prerequisite. There is

@@ -38,6 +38,18 @@ If the checkout does not include the compiled `build/` folder (e.g. it is gitign
 
 Once installed, the `copilot` command is available globally. Repository-dependent commands such as `copilot setup`, `copilot doctor`, `copilot check-progress`, `copilot think`, and `copilot do` must be run **from the root of the target repository**. The `copilot upgrade`, `copilot --version`, and help flows can run from any directory. Commands that access GitHub accept `--token` or `PERSONAL_ACCESS_TOKEN` from the environment. `copilot setup` and `copilot doctor` securely prompt for the setup PAT when run interactively; no `.env` file is read or created. `copilot setup --dry-run` is the only setup mode that can run without a token. See [CLI commands](/single-actions/workflow-and-cli).
 
+Interactive `copilot setup` offers a guided GitHub link or manual entry for each
+PAT. The first link prepares a short-lived **setup PAT** for the person
+configuring the repository; the second, after the setup plan, prepares the
+**workflow PAT** for the bot account. Open each link in the appropriate GitHub
+account, complete GitHub's sign-in/2FA, **select only the intended repository**
+on the form, review the grants, and paste the generated value into the hidden
+terminal prompt. The links prefill fields; they neither create a PAT nor select
+an individual repository. The setup PAT is suggested for one day and must be
+deleted by you in GitHub after the run. The bot PAT is suggested for 90 days,
+remains active as Actions Secret `PAT`, and needs renewal before expiry. See
+[authentication](/authentication) for permission and recovery details.
+
 If you previously installed Copilot from a local checkout, installing the published
 package with pnpm switches the same `copilot` command to the published package.
 Check which executable and package are active:

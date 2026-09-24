@@ -160,6 +160,17 @@ The setup policy is intentionally split by responsibility:
 - `setup_resource_provisioning.ts` owns grouping and port calls for Variables
   and Secrets.
 
+Assisted PAT creation uses the existing permission policy as its only grant
+source. The pure `setup_pat_creation_url_policy.ts` maps required grants to
+documented GitHub form parameters and rejects unsupported grants; it never
+receives token material. `setup.ts` wires the terminal choice and hidden input
+to that policy. In guided bot mode, the identity query adapter resolves the
+chosen login through GitHub and identifies the supplied PAT through `/user`;
+the application use case compares immutable numeric IDs before local setup
+can write Secrets. GitHub owns the browser session, 2FA, token generation, and
+deletion. Manual and unattended inputs retain the prior audit without the new
+bot-ID assertion.
+
 PAT permission validation follows the same dependency rule. The application
 `SetupTokenPermissionsUseCase` validates identity before invoking the narrow
 `SetupTokenPermissionQueryPort`; the infrastructure adapter performs only safe
