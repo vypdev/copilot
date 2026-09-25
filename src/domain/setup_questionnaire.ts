@@ -38,6 +38,8 @@ export interface SetupQuestionnaireState {
   readonly validation?: string;
   readonly terminal: 'collecting' | 'review' | 'confirmation' | 'completed' | 'cancelled';
   readonly configureIndependently: boolean;
+  readonly phase?: 'full' | 'permission-intent';
+  readonly answeredQuestionIds?: readonly string[];
 }
 
 export type SetupQuestionnaireEvent =
@@ -49,4 +51,5 @@ export interface SetupQuestionnaireContext {
   readonly remote?: SetupRemoteConfiguration;
   readonly variableNames?: readonly string[];
   readonly secretNames?: readonly string[];
+  readonly skipQuestionIds?: readonly string[];
 }

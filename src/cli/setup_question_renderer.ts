@@ -4,7 +4,16 @@ import { color, renderBox } from './setup_prompt_rendering';
 import { setupQuestionnaireStateLabel } from '../application/policies/setup_questionnaire_policy';
 
 export class ConsoleSetupQuestionRenderer implements SetupQuestionRenderer {
+  constructor(private readonly phase: 'full' | 'permission-intent' = 'full') {}
+
   showIntroduction(): void {
+    if (this.phase === 'permission-intent') {
+      console.log(renderBox(
+        'First, choose the setup options that affect your temporary PAT permissions. These answers will carry into the full wizard and will not be asked again. No GitHub changes happen in this step.',
+        'Setup PAT permission intent',
+      ));
+      return;
+    }
     console.log(renderBox(
       'This wizard configures repository workflows, GitHub Actions resources, AI agents, and operational defaults.\n\nThe setup PAT is used in memory only. Runtime credentials are collected separately after the plan is approved.',
       'Copilot Setup',

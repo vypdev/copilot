@@ -15,8 +15,14 @@ The setup PAT and workflow PAT may have different owners and permissions. Do not
 ## Assisted creation in the terminal
 
 When `copilot setup` needs a PAT interactively, it offers a guided link (the
-default) or manual entry. The setup link contains only bootstrap permissions
-known before the questionnaire; it is **provisional**. If the final plan needs
+default) or manual entry. In guided mode it first asks the setup choices that
+determine PAT permissions: issue workflows, initial tag, Secret and Variable
+management and storage scope, PR approval mode, and Projects. Choices already
+fixed by flags or `--config` are not asked. You review the resulting grants
+before the link appears; these answers carry into the full wizard without being
+asked twice. The link is still **provisional** for facts that require GitHub
+inspection, such as existing Secrets, inherited organization resources, and a
+missing credential-health workflow. If the final plan needs
 additional grants, setup stops before applying it and prints a corrected link.
 Update the PAT in GitHub or create a replacement, then rerun setup. Guided
 setup shows the account returned by GitHub and asks you to confirm it.
@@ -29,7 +35,8 @@ this extra identity binding. A wrong bot account blocks installation.
 
 Both links use GitHub's [documented fine-grained PAT form](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
 They do not sign you in, complete 2FA, generate or revoke a token, or choose
-an individual repository. Check the active browser account, select only the
+an individual repository. Check the active browser account, change **All
+repositories** to **Only select repositories**, select only the
 target repository, and review the final GitHub form. A guided setup PAT uses a
 one-day suggested expiry; delete it yourself in [GitHub PAT Settings](https://github.com/settings/personal-access-tokens)
 afterward. The bot PAT uses a 90-day suggested expiry, may be shortened by

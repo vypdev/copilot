@@ -1,4 +1,4 @@
-import { SetupWizardUseCase } from '../setup_wizard_use_case';
+import { buildInitialSetupConfiguration, SetupWizardUseCase } from '../setup_wizard_use_case';
 import {
   buildSetupCredentialRequirements,
   buildSetupRepositoryVariables,
@@ -31,6 +31,24 @@ function dependencies(overrides: Record<string, unknown> = {}) {
 }
 
 describe('SetupWizardUseCase', () => {
+  it('starts the main questionnaire from reviewed permission intent and skips its answered questions', async () => {
+    const draft = buildInitialSetupConfiguration({ mode: 'interactive', overrides: { pullRequestApproval: { mode: 'off' } } });
+    draft.createInitialTag = false;
+    draft.manageRepositorySecrets = false;
+    const collect = jest.fn(async (state, _context) => createSetupReviewState(state.draft));
+    const result = await new SetupWizardUseCase(dependencies({ collector: { collect } })).execute({
+      mode: 'interactive', overrides: { pullRequestApproval: { mode: 'off' } },
+      permissionIntent: { draft, answeredQuestionIds: ['createInitialTag', 'manageRepositorySecrets', 'features.issues'] },
+    });
+    expect(result.status).toBe('completed');
+    if (result.status === 'completed') {
+      expect(result.configuration.createInitialTag).toBe(false);
+      expect(result.configuration.manageRepositorySecrets).toBe(false);
+    }
+    expect(collect.mock.calls[0][0].question?.id).not.toBe('features.issues');
+    expect(collect.mock.calls[0][1].skipQuestionIds).toEqual(['createInitialTag', 'manageRepositorySecrets', 'features.issues']);
+  });
+
   it('requires an explicit exact CI producer in non-interactive guarded setup', async () => {
     await expect(new SetupWizardUseCase(dependencies()).execute({ mode: 'non-interactive' }))
       .rejects.toThrow('guarded/recommend mode requires 1–8 exact test checks');

@@ -22,6 +22,7 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
   private workflowPatGuide?: string;
   private resolveBotIdentity?: (login: string) => Promise<SetupGithubIdentity>;
   private guidedSetup = false;
+  private setupMethodChosen = false;
   private guidedBotIdentity?: SetupGithubIdentity;
 
   constructor(
@@ -32,6 +33,22 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
 
   configureSetupPatGuide(url: string): void { this.setupPatGuide = url; }
   get usedGuidedSetupPat(): boolean { return this.guidedSetup; }
+  async chooseSetupPatMethod(): Promise<'guided' | 'manual'> {
+    if (!this.terminal) return 'manual';
+    this.setupMethodChosen = true;
+    this.guidedSetup = (await this.readChoice('How would you like to provide the setup PAT?', ['guided link', 'manual PAT'], 'guided link')) === 'guided link';
+    return this.guidedSetup ? 'guided' : 'manual';
+  }
+  useManualSetupPat(): void { this.guidedSetup = false; this.setupPatGuide = undefined; this.setupMethodChosen = true; }
+  async chooseSetupOwnerKind(): Promise<'Organization' | 'User' | 'unknown'> {
+    if (!this.terminal) return 'unknown';
+    const choice = await this.readChoice('Is the GitHub repository owner an organization or a personal account?', ['organization', 'personal account', 'not sure']);
+    return choice === 'organization' ? 'Organization' : choice === 'personal account' ? 'User' : 'unknown';
+  }
+  async reviewSetupPatIntent(): Promise<'continue' | 'revise' | 'manual'> {
+    if (!this.terminal) return 'manual';
+    return await this.readChoice('Review these intended grants before opening GitHub. Continue, revise choices, or enter a PAT manually?', ['continue', 'revise', 'manual']) as 'continue' | 'revise' | 'manual';
+  }
   configureWorkflowPatGuide(url: string, resolveIdentity: (login: string) => Promise<SetupGithubIdentity>): void {
     this.workflowPatGuide = url;
     this.resolveBotIdentity = resolveIdentity;
@@ -46,7 +63,7 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
   }
 
   showSetupPatCleanupReminder(): void {
-    if (!this.guidedSetup) return;
+    if (!this.guidedSetup || !this.setupPatGuide) return;
     console.log(renderBox(
       'The setup PAT was not revoked automatically. After setup finishes or is cancelled, delete it in GitHub → Settings → Developer settings → Personal access tokens. Ending this process does not remove the token from GitHub.',
       'Revoke temporary setup PAT',
@@ -55,7 +72,7 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
     console.log('https://github.com/settings/personal-access-tokens');
   }
 
-  showUpdatedSetupPatLink(url: string, stage: 'bootstrap' | 'final'): void {
+  showUpdatedSetupPatLink(url: string, stage: 'bootstrap' | 'final', delta?: readonly string[]): void {
     if (!this.guidedSetup) return;
     console.log(renderBox(
       stage === 'bootstrap'
@@ -64,21 +81,30 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
       stage === 'bootstrap' ? 'Setup PAT access needs attention' : 'Setup PAT permissions changed',
       33,
     ));
+    if (delta?.length) console.log(delta.map(item => `  - ${item}`).join('\n'));
     console.log(url);
   }
 
   async requestSetupPat(): Promise<string | undefined> {
     if (!this.terminal) return undefined;
-    if (this.setupPatGuide) {
+    if (this.setupPatGuide && !this.setupMethodChosen) {
       this.guidedSetup = (await this.readChoice('How would you like to provide the setup PAT?', ['guided link', 'manual PAT'], 'guided link')) === 'guided link';
       if (this.guidedSetup) {
         console.log(renderBox(
-          'Provisional link: Open this GitHub link in your browser, sign in as the account configuring this repository, complete any 2FA or SSO, and review the prefilled fine-grained permissions. GitHub owns token creation; Copilot never handles your web session. Select ONLY this repository manually. The permissions may need updating after the setup questionnaire.',
+          'Provisional link: Open this GitHub link in your browser, sign in as the account configuring this repository, complete any 2FA or SSO, and review the prefilled fine-grained permissions. GitHub owns token creation; Copilot never handles your web session. Change All repositories to Only select repositories and select ONLY this repository. Remote inspection may require a corrected token later.',
           'Create setup PAT in GitHub', 33,
         ));
         console.log(this.setupPatGuide);
         console.log('Copy the one-time token from GitHub and paste it below. It is hidden and used only for this setup run.');
       }
+    }
+    if (this.setupMethodChosen && this.guidedSetup && this.setupPatGuide) {
+      console.log(renderBox(
+        'Open this GitHub link as the account configuring this repository; complete any 2FA or SSO. Review the prefilled grants. Change All repositories to Only select repositories and select ONLY this repository. GitHub creates the PAT; Copilot does not handle your browser session. Remote inspection may require a corrected token later.',
+        'Create setup PAT in GitHub', 33,
+      ));
+      console.log(this.setupPatGuide);
+      console.log('Copy the one-time token from GitHub and paste it below. It is hidden and used only for this setup run.');
     }
     console.log(renderBox(
       'Enter a GitHub setup PAT. It is used in memory for this run only and is never stored. The workflow PAT is a different bot-account token and is requested separately.',
@@ -212,7 +238,7 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
   private async readChoice(
     label: string,
     choices: readonly string[],
-    defaultValue: string,
+    defaultValue?: string,
   ): Promise<string> {
     while (true) {
       const lines = choices.map((choice, index) =>
@@ -220,10 +246,10 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
       const result = await this.terminal!.readText([
         label,
         ...lines,
-        `Select 1-${choices.length} ${color(`[${choices.indexOf(defaultValue) + 1}]`, 90)}: `,
+        `Select 1-${choices.length}${defaultValue ? ` ${color(`[${choices.indexOf(defaultValue) + 1}]`, 90)}` : ''}: `,
       ].join('\n'));
       if (result.kind !== 'value') throw new SetupTerminalCancelledError();
-      if (!result.value.trim()) return defaultValue;
+      if (!result.value.trim() && defaultValue) return defaultValue;
       const index = Number(result.value) - 1;
       if (Number.isInteger(index) && choices[index]) return choices[index];
       console.log(color('Select one of the listed options.', 33));

@@ -40,9 +40,13 @@ Once installed, the `copilot` command is available globally. Repository-dependen
 
 Interactive `copilot setup` offers a guided GitHub link or manual entry for each
 PAT. The first link prepares a short-lived **setup PAT** for the person
-configuring the repository; the second, after the setup plan, prepares the
+configuring the repository. Before showing it, guided setup asks only the local
+choices that affect its grants, shows an exact permission preview and notes
+what remains unknown until GitHub is inspected. The later questionnaire reuses
+those answers. The second link, after the setup plan, prepares the
 **workflow PAT** for the bot account. Open each link in the appropriate GitHub
-account, complete GitHub's sign-in/2FA, **select only the intended repository**
+account, complete GitHub's sign-in/2FA, change **All repositories** to **Only
+select repositories**, and **select only the intended repository**
 on the form, review the grants, and paste the generated value into the hidden
 terminal prompt. The links prefill fields; they neither create a PAT nor select
 an individual repository. The setup PAT is suggested for one day and must be
@@ -124,14 +128,14 @@ The complete command reference, including every supported option, is in [Workflo
     copilot setup
     ```
 
-    Before applying the plan, the wizard securely asks for the setup PAT. For automation, pass it explicitly or through the environment:
+    In guided interactive setup, answer the short permission-intent questions and review the proposed grants before creating the setup PAT in GitHub. The wizard then securely asks for the token and continues with the remaining plan questions. For automation, pass it explicitly or through the environment:
 
     ```bash
     PERSONAL_ACCESS_TOKEN=your_setup_pat copilot setup --non-interactive --yes --skip-secrets
     # or: copilot setup --token your_setup_pat
     ```
 
-    The wizard shows a reviewable plan and asks for confirmation. Its forward-only questionnaire keeps defaults and every answer immutable; cancel and rerun if you need to revise an earlier stage. `Ctrl-C` or end-of-input exits 130 with no writes, while declining the final plan exits 0 with no writes. Use `copilot setup --dry-run` to inspect the plan without a token or changes.
+    The wizard shows a reviewable plan and asks for confirmation. You may revise the pre-PAT intent before opening GitHub; after entering the PAT, the remaining questionnaire is forward-only. Cancel and rerun to revise an earlier stage. `Ctrl-C` or end-of-input exits 130 with no writes before application, while declining the final plan exits 0 with no writes. Use `copilot setup --dry-run` to inspect the plan without a token or changes.
 
     In automation, `--non-interactive` creates no terminal. `--yes` approves only the final plan: it does not supply a missing setup PAT, workflow credential, provider credential, target, organization prerequisite, or permission acknowledgement. If every required read is verified or positively operationally usable but safe probes cannot prove required writes, inspect the PAT settings first and pass the separate `--confirm-unverifiable-write-permissions` flag. It never bypasses missing or unusable unverifiable read access.
 

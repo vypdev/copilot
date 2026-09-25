@@ -1,12 +1,12 @@
 # Guided Bot PAT Onboarding
 
 - Status: Draft — guided implementation in progress; controlled GitHub UX and full test budget remain unverified
-- Date: 2026-09-24
+- Date: 2026-09-25
 - Catalog capability ID: `guided-bot-pat-onboarding`
 - Last verified: Not applicable; prospective change
 - Owners: Copilot maintainers and setup operators
 - Scope: guide creation and installation of the workflow/bot PAT when operator and bot are different GitHub accounts
-- Related issues/PRs: none; no Action dogfooding for this design
+- Related issues/PRs: [PR #402](https://github.com/vypdev/copilot/pull/402); no Action dogfooding for this design
 - Required review gates: product UX, architecture, testing, documentation, credential security, GitHub form compatibility
 - Open decisions blocking readiness: controlled GitHub UX, organization approval evidence, non-interactive identity extension, and full test-budget evidence
 
@@ -25,10 +25,14 @@ This uses [GitHub's documented PAT URL parameters](https://docs.github.com/en/au
 The URL does **not** choose an individual repository or press Generate for the
 user. It also cannot switch the browser's GitHub account. Therefore the UI
 calls this **guided creation**, not automatic PAT issuance. There is no local
-account manager or browser credential collection in this scope.
+account manager or browser credential collection in this scope. The new
+pre-PAT permission-intent questions in the [operator SDD](./temporary-setup-operator-authorization.md)
+are for the *setup* PAT only: they seed the same setup plan that later produces
+the bot's exact runtime permission set. They MUST NOT cause the bot URL or PAT
+to be requested before the final plan and remote facts are known.
 
 ```text
-operator PAT: guided link -> user creates PAT -> verify operator -> setup plan
+operator PAT: local intent -> guided link -> user creates PAT -> verify -> final setup plan
 bot PAT: final runtime grants -> guided link -> user switches browser to bot
        -> user selects repository and creates PAT -> verify bot -> Secret PAT
 ```
@@ -155,7 +159,7 @@ API accepted the value; it does not prove a later workflow has run.
 
 | Stage | Current | Proposed | User effect |
 |---|---|---|---|
-| Operator access | permission table + masked prompt | official prefilled link + existing prompt | less manual form setup |
+| Operator access | permission table + masked prompt | local permission-intent review, then official prefilled link + existing prompt | setup grants are prepared before GitHub |
 | Bot identity | implicit in docs and PAT value | ask expected bot login; resolve and display ID | wrong account detected |
 | Bot grants | exact table before prompt | table + guided/manual choice and link from same policy result | fewer transcription errors |
 | Bot browser | no explicit check | tell user to select bot in GitHub account switcher | handles separate accounts |
@@ -168,7 +172,7 @@ sequenceDiagram
     participant C as Copilot CLI
     participant G as GitHub
     participant S as Actions Secret
-    C->>U: Show operator PAT link and masked prompt
+    C->>U: Ask setup permission intent, then show operator PAT link and masked prompt
     U->>G: Create operator PAT in GitHub
     U->>C: Enter operator PAT
     C->>G: Verify operator and build final setup plan
@@ -190,10 +194,14 @@ and stores the bot PAT in the selected Actions Secret scope.
 ### 6.1 Normal path
 
 1. Complete the separate [operator PAT journey](./temporary-setup-operator-authorization.md),
-   including its local preflight and final permission audit. Do not reuse the
+   including its local preflight, reuse of early answers, authenticated remote
+   inspection, and final permission audit. If that audit requires a corrected
+   operator PAT, resolve it before presenting the bot link. Do not reuse the
    operator token as the Action credential.
 2. Once setup choices and remote targets are final, use the existing workflow
-   permission policy to build the bot PAT link. Its name/description identify
+   permission policy to build the bot PAT link. Do not project the setup PAT's
+   preflight grants into the bot role: identical feature answers can imply
+   different setup and runtime levels. Its name/description identify
    purpose and repository; `target_name` is the repository owner; `expires_in`
    is a reviewed runtime expiration; each permission uses GitHub's documented
    query name and level.
@@ -226,6 +234,9 @@ and stores the bot PAT in the selected Actions Secret scope.
   before identity binding can become mandatory there.
 - `--dry-run` generates a plan without a PAT; it may display an example link
   only when its permission set is complete and clearly marked provisional.
+- Revising a pre-PAT setup answer after operator authorization invalidates
+  the operator link and requires its final audit before the bot URL is shown;
+  it never silently reuses an earlier bot URL.
 - If organization policy requires approval, setup stops before writing Secret
   `PAT` until target access is verified. It reports `pending approval` only
   when GitHub provides explicit evidence; otherwise it reports unavailable
@@ -238,7 +249,7 @@ and stores the bot PAT in the selected Actions Secret scope.
 | State | Entered when | User-visible meaning | Next | Owner |
 |---|---|---|---|---|
 | `operator-pat-needed` | bootstrap grants known | create/paste operator PAT | `operator-verified`, `cancelled` | user |
-| `operator-verified` | identity/grants accepted | finish plan choices | `bot-pat-needed` | CLI/user |
+| `operator-verified` | identity/grants accepted | reuse preflight intent, finish plan and resolve any operator grant correction | `bot-pat-needed`, `blocked` | CLI/user |
 | `bot-pat-needed` | final grants and expected bot ID known | open GitHub as bot, create PAT | `bot-pat-verified`, `blocked`, `cancelled` | bot user |
 | `bot-pat-verified` | ID and grants accepted | Secret ready to write after approval | `secret-writing` | operator |
 | `secret-writing` | remote call started | provisioning | `installed`, `partial`, `blocked` | CLI |
@@ -264,6 +275,10 @@ or to overwrite the Secret without a new approved value.
 | Secret scope | existing setup storage policy | repository | repository or organization as already supported | approved setup plan |
 
 The final runtime permission policy is the sole source of URL grants. The
+operator preflight's temporary intent snapshot is consumed by the final setup
+configuration, not a second bot-specific questionnaire or persistent account
+profile. Any later change to a permission-driving choice requires both
+role-specific plans to be recalculated before the relevant link is used. The
 existing `--workflow-pat`/`--secret PAT=...` values override interactive input
 and retain their current permission validation; they cannot silently enter
 guided mode without an expected bot identity. The bot account owner must renew
@@ -318,6 +333,10 @@ identity and grants; the existing Secret writer installs the runtime PAT.
 - In guided mode, bot token identity comes from GitHub `/user` using that
   token. Compare numeric user IDs and verify repository access, then invoke
   the existing permission audit.
+- The bot URL builder consumes only the finalized workflow-role grant set. A
+  contract test compares that set with the link after preflight choices are
+  reused and remote facts are incorporated; no setup-only Secret, Variable,
+  or health-workflow grant can leak into the bot link by role confusion.
 - No durable local state is introduced. The remote Secret is the only durable
   bot PAT copy Copilot creates. Browser state is owned by GitHub, not Copilot.
 
@@ -348,7 +367,8 @@ Expected bot account: vypbot
 Expected account resolved: @vypbot (GitHub ID 5678)
 
 Action required: In GitHub, switch to vypbot and complete 2FA if asked.
-Select only vypdev/copilot; review the prepared permissions, then Generate.
+GitHub may initially select All repositories: change to Only select repositories
+and select vypdev/copilot; review the prepared permissions, then Generate.
 PAT creation URL:
 https://github.com/settings/personal-access-tokens/new?name=...&target_name=vypdev&expires_in=...&...
 Workflow PAT (hidden):
@@ -442,7 +462,7 @@ operator SDD are not counted again here.
 
 | Area | Minimum cases | Key behavior |
 |---|---:|---|
-| Domain/configuration/pure URL mapping | 8 | bot-only permission keys/levels, owner, expiry, invalid grants |
+| Domain/configuration/pure URL mapping | 8 | bot-only permission keys/levels, owner, expiry, invalid grants, no setup-only grant leakage after preflight |
 | State/application/idempotency | 7 | plan change, cancellation, re-entry, retry, Secret partial state |
 | Provider adapters/contracts | 5 | token `/user`, ID mismatch, repository access, Secret response |
 | Setup/permissions/schema | 5 | operator/bot role separation, final policy, org scope, existing Secret |
@@ -475,8 +495,9 @@ PAT, and the bot PAT remains active after setup.
 
 1. Given the selected setup features, each role receives a documented PAT URL
    with exactly its own needed permission levels and no token material.
-2. Given local-only choices change, the operator link changes before a PAT is
-   requested; final remote inspection revalidates its grants.
+2. Given pre-PAT local intent choices, only the operator link is generated
+   before authorization; the answers are reused in the final plan, and only
+   then is the bot runtime link generated from final grants and remote facts.
 3. Given a bot account chosen by name, Copilot resolves and displays its
    immutable ID before accepting the bot PAT.
 4. Given the browser uses another account, a PAT created there fails `/user`
@@ -505,6 +526,7 @@ PAT, and the bot PAT remains active after setup.
 | Requirement | Owner | Verification | Documentation |
 |---|---|---|---|
 | Role-specific link (§4.1, §6.1) | policy + URL builder | scenarios 1–2 | how-to-use/authentication |
+| Setup-preflight handoff (§1, §6.1) | wizard + role-specific permission policies | scenario 2 and no cross-role-grant fixture | how-to-use/architecture |
 | Bot ID and grants (§4.3, §6.1) | identity port + existing audit | scenarios 3–6 | authentication |
 | Secret lifecycle (§4.3, §10) | existing credential/Secret use cases | scenarios 7–10 | setup/troubleshooting |
 | Compatibility (§6.2, §13) | setup CLI | scenario 11 | CLI guide |
@@ -512,8 +534,9 @@ PAT, and the bot PAT remains active after setup.
 
 ## 18. Implementation sequence
 
-1. Resolve operator pre-auth planning and bot PAT expiration policy. Validate
-   the official permission-key mapping with GitHub's current documentation.
+1. Reuse the operator SDD's local pre-auth planning and preserve bot PAT
+   generation after the final setup audit. Validate the official
+   permission-key mapping with GitHub's current documentation.
 2. Implement a pure, role-specific URL builder and contract tests using the
    existing permission policy; keep URL generation separate from token input.
 3. Add expected bot ID resolution and exact-token `/user` comparison before
@@ -558,3 +581,9 @@ PAT, and the bot PAT remains active after setup.
   link and directs users to manual credential compatibility review. Human
   two-account/2FA acceptance, organization approval evidence, and the full
   numeric test budget remain open review gates.
+- Implementation update (2026-09-25): the operator permission-intent preflight
+  now seeds the same final setup draft, but the bot URL is still built only
+  after final plan review and setup-PAT audit. The bot URL continues to use
+  its separate workflow-role policy; no bot-account browser session or token
+  is created by Copilot. Controlled browser acceptance and the full numeric
+  test budget remain open gates.
