@@ -9,6 +9,20 @@ If guarded PR approval is missing, run `copilot doctor` and inspect the ordered 
 
 This guide helps you resolve common issues you might encounter while using Copilot. Expand the section that matches your problem.
 
+If the guided setup PAT belongs to the wrong account, decline the account
+confirmation, delete the unintended PAT in [GitHub PAT Settings](https://github.com/settings/personal-access-tokens),
+and rerun setup in the correct browser account. If the final permission table
+requires more than the reviewed local-intent link, inspect the named grant
+delta, use the corrected link printed by setup, and rerun; no approved setup
+mutation has started. If the final plan removes grants, your existing PAT may
+have excess access; replace it for strict least privilege. A guided bot PAT
+created while signed into another account fails the numeric-ID check before
+the Secret is written. Delete that unused PAT and create one as the chosen bot.
+If setup fails after applying changes, inspect the Actions Secret name and
+scope before revoking or replacing the bot PAT: it may already be active.
+Cancelling setup never revokes either PAT. Delete an unused setup PAT in GitHub;
+renew an installed bot PAT before its suggested 90-day expiry.
+
 <AccordionGroup>
   <Accordion title="Setup is cancelled or doctor shows skipped checks" icon="circle-exclamation">
     **Setup cancellation:** `Ctrl-C` or end-of-input intentionally exits 130 and

@@ -64,6 +64,38 @@ export function buildConfiguredSetupPatPermissionRequirements(
     configuration: Readonly<SetupConfiguration>,
     remote?: Readonly<SetupRemoteConfiguration>,
 ): SetupTokenPermissionRequirement[] {
+    return buildSetupPatRequirements(configuration, remote?.ownerType === 'Organization', remote);
+}
+
+/** Grants justified by local choices alone; remote-only conditions stay unresolved. */
+export function buildSetupPatIntentPermissionRequirements(
+    configuration: Readonly<SetupConfiguration>,
+    ownerKind: 'Organization' | 'User',
+): SetupTokenPermissionRequirement[] {
+    return buildSetupPatRequirements(configuration, ownerKind === 'Organization');
+}
+
+export function buildSetupPatIntentUncertainty(configuration: Readonly<SetupConfiguration>, ownerKind: 'Organization' | 'User'): string[] {
+    const unknown: string[] = [];
+    if (configuration.manageRepositorySecrets) {
+        unknown.push('Existing managed Secrets may require repository Actions write for credential-health checks. A confirmed missing health workflow may also require repository Contents write and Workflows write.');
+    }
+    if (ownerKind === 'Organization') {
+        for (const kind of ['secrets', 'variables'] as const) {
+            const managed = kind === 'secrets' ? configuration.manageRepositorySecrets : configuration.manageRepositoryVariables;
+            if (managed && configuration.storage[kind].preserveExisting && configuration.storage[kind].defaultScope === 'repository') {
+                unknown.push(`Inherited organization ${kind} may require organization ${kind === 'secrets' ? 'Secrets' : 'Variables'} write after inventory inspection.`);
+            }
+        }
+    }
+    return unknown;
+}
+
+function buildSetupPatRequirements(
+    configuration: Readonly<SetupConfiguration>,
+    organization: boolean,
+    remote?: Readonly<SetupRemoteConfiguration>,
+): SetupTokenPermissionRequirement[] {
     const repositorySecretNames = buildSetupCredentialRequirements(configuration)
         .map(credential => credential.name);
     const repositoryVariableNames = buildSetupRepositoryVariables(configuration)
@@ -86,7 +118,6 @@ export function buildConfiguredSetupPatPermissionRequirements(
     const needsCredentialHealth = configuration.manageRepositorySecrets && hasExistingCredential;
     const needsCredentialHealthBootstrap = needsCredentialHealth
         && remote?.credentialHealthWorkflow === 'missing';
-    const organization = remote?.ownerType === 'Organization';
 
     return normalizePermissionRequirements([
         requirement({ role: 'setup', scope: 'repository', permission: 'Metadata', level: 'read', reason: 'Resolve repository identity and visibility.', probe: 'metadata' }),

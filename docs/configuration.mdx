@@ -185,9 +185,19 @@ storage:
       OPENAI_API_KEY: organization
 ```
 
-The immutable questionnaire first inspects the repository and reports repository-scoped resources, organization resources available to that repository, repository visibility, and access errors. It then asks separately about Secret and Variable storage. Each accepted answer creates a fresh configuration snapshot; defaults, overrides, prior answers, and the result do not share mutable nested references. Repository resources take precedence over organization resources. With `preserveExisting: true`, an effective organization resource is inherited instead of being shadowed by a new repository value; add a name under `storage.secrets.overrides` or `storage.variables.overrides` when a repository-specific value is intentional.
+Guided setup asks the permission-affecting Secret and Variable management and default-scope questions before the setup PAT is created. After token authentication, the remaining questionnaire inspects the repository and reports repository-scoped resources, organization resources available to that repository, visibility, and access errors. Remote-dependent inherited-resource overrides are asked then; they may require a corrected PAT. Each accepted answer creates a fresh configuration snapshot; defaults, overrides, prior answers, and the result do not share mutable nested references. Repository resources take precedence over organization resources. With `preserveExisting: true`, an effective organization resource is inherited instead of being shadowed by a new repository value; add a name under `storage.secrets.overrides` or `storage.variables.overrides` when a repository-specific value is intentional.
 
 Organization storage is available only for organization-owned repositories and requires organization Actions permissions on the setup PAT. If only one class should be global, set that class to `organization` and leave the other at `repository`. `--skip-secrets` and `--skip-variables` disable their respective setup operations without changing the other class.
+
+Interactive PAT guidance does not add configuration keys: it is a one-run
+choice at each hidden prompt. The setup-PAT form link contains grants derived
+from reviewed local intent; remote-only conditions are disclosed separately
+and may require correction after inspection. The bot-PAT
+link is built from the final workflow permission policy and suggests a 90-day
+expiry; the bot account owner must renew it and replace Secret `PAT` before
+expiration. Manual and non-interactive token inputs keep their existing
+precedence and validation. See [authentication](/authentication) for the
+GitHub-owned creation, account verification, and deletion steps.
 
 `--non-interactive` constructs no terminal and resolves only defaults, config,
 flags, and explicit external inputs. `--yes` approves the final plan but never

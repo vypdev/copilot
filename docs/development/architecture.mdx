@@ -152,6 +152,7 @@ The setup policy is intentionally split by responsibility:
   resolution and effective-resource preservation.
 - `setup_configuration_clone_policy.ts` owns reference-isolated configuration copies.
 - `setup_questionnaire_policy.ts` owns setup states, questions, transitions, and answers.
+- `setup_pat_intent_policy.ts` identifies setup choices fixed by local inputs and owner-kind conflicts.
 - `setup_configuration_plan.ts` owns the reviewable provisioning plan.
 - `setup_token_permission_policy.ts` owns the setup/workflow PAT permission
   catalogs, conditional capability projection, strongest-level normalization,
@@ -159,6 +160,21 @@ The setup policy is intentionally split by responsibility:
 - `setup_doctor_report_policy.ts` owns stable check validation and aggregation.
 - `setup_resource_provisioning.ts` owns grouping and port calls for Variables
   and Secrets.
+
+Assisted PAT creation uses the existing permission policy as its only grant
+source. Guided setup runs a permission-intent phase of the same questionnaire
+before token entry, projects local choices through the setup permission policy,
+and carries the draft and answered IDs into the remaining questionnaire. The
+projection leaves remote-only grants unresolved for the final audit. The pure
+`setup_pat_creation_url_policy.ts` maps required grants to
+documented GitHub form parameters and rejects unsupported grants; it never
+receives token material. `setup.ts` wires the terminal choice and hidden input
+to that policy. In guided bot mode, the identity query adapter resolves the
+chosen login through GitHub and identifies the supplied PAT through `/user`;
+the application use case compares immutable numeric IDs before local setup
+can write Secrets. GitHub owns the browser session, 2FA, token generation, and
+deletion. Manual and unattended inputs retain the prior audit without the new
+bot-ID assertion.
 
 PAT permission validation follows the same dependency rule. The application
 `SetupTokenPermissionsUseCase` validates identity before invoking the narrow

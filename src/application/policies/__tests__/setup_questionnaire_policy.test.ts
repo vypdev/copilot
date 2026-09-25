@@ -1,6 +1,7 @@
 import { createDefaultSetupConfiguration } from '../setup_configuration_policy';
 import {
   createSetupQuestionnaire,
+  createSetupPermissionIntentQuestionnaire,
   createSetupReviewState,
   enterSetupConfirmation,
   finishSetupQuestionnaire,
@@ -10,6 +11,47 @@ import {
 import type { SetupQuestionnaireContext, SetupQuestionnaireState } from '../../../domain/setup_questionnaire';
 
 describe('setup questionnaire policy', () => {
+  it('collects only permission-driving questions and reuses their answers in the full wizard', () => {
+    const defaults = createDefaultSetupConfiguration();
+    const intentContext = { skipQuestionIds: ['createInitialTag', 'manageRepositorySecrets'] };
+    let state = createSetupPermissionIntentQuestionnaire(defaults, intentContext);
+    const visited: string[] = [];
+    while (state.terminal === 'collecting') {
+      visited.push(state.question!.id);
+      const value = state.question!.id === 'features.pullRequests' ? 'no' : '';
+      state = transitionSetupQuestionnaire(state, { kind: 'answer', value }, intentContext);
+    }
+    expect(visited).toContain('features.issues');
+    expect(visited).toContain('issueWorkflows.enabled');
+    expect(visited).not.toContain('pullRequestApproval.mode');
+    expect(visited).not.toContain('createInitialTag');
+    expect(visited).not.toContain('manageRepositorySecrets');
+    expect(visited).not.toContain('agents.findings.model');
+    expect(state.draft.features.pullRequests).toBe(false);
+    const full = createSetupQuestionnaire(state.draft, { skipQuestionIds: [...intentContext.skipQuestionIds, ...(state.answeredQuestionIds ?? [])] });
+    expect(full.question?.id).not.toBe('features.issues');
+    expect(full.draft.features.pullRequests).toBe(false);
+  });
+
+  it('uses the current draft when permission intent is revised', () => {
+    const first = createSetupPermissionIntentQuestionnaire(createDefaultSetupConfiguration());
+    const changed = transitionSetupQuestionnaire(first, { kind: 'answer', value: 'no' });
+    const revised = createSetupPermissionIntentQuestionnaire(changed.draft);
+    expect(revised.question?.defaultValue).toBe(false);
+    expect(revised.phase).toBe('permission-intent');
+  });
+
+  it('drops release and hotfix intent when issue automation is turned off', () => {
+    const state = transitionSetupQuestionnaire(
+      createSetupPermissionIntentQuestionnaire(createDefaultSetupConfiguration()),
+      { kind: 'answer', value: 'no' },
+    );
+    expect(state.draft.features.issues).toBe(false);
+    expect(state.draft.features.release).toBe(false);
+    expect(state.draft.features.hotfix).toBe(false);
+    expect(state.draft.issueWorkflows.enabled).toEqual([]);
+  });
+
   it('walks the declared applicable sections in deterministic order', () => {
     const visited: string[] = [];
     let state = createSetupQuestionnaire(createDefaultSetupConfiguration());

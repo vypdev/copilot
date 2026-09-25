@@ -13,6 +13,13 @@ import { ISSUE_WORKFLOW_KINDS, ISSUE_WORKFLOW_CATALOG, createIssueWorkflowProfil
 
 const AGENT_PROVIDERS = ['codex', 'opencode', 'cursor'] as const;
 const MODEL_PROVIDERS = ['openai', 'anthropic', 'google', 'openrouter', 'opencode', 'local'] as const;
+const PERMISSION_INTENT_QUESTION_IDS = new Set([
+  'features.issues', 'features.pullRequests', 'issueWorkflows.enabled',
+  'pullRequestApproval.mode', 'projects.ids', 'createInitialTag',
+  'manageRepositoryVariables', 'manageRepositorySecrets',
+  'storage.variables.defaultScope', 'storage.variables.preserveExisting',
+  'storage.secrets.defaultScope', 'storage.secrets.preserveExisting',
+]);
 
 interface QuestionDefinition {
   readonly stateId: SetupQuestion['stateId'];
@@ -29,8 +36,21 @@ export function createSetupQuestionnaire(
   context: SetupQuestionnaireContext = {},
 ): SetupQuestionnaireState {
   const draft = cloneSetupConfiguration(configuration);
-  const question = questions(draft, false, context)[0];
-  return { stateId: question.stateId, draft, question, terminal: 'collecting', configureIndependently: false };
+  const question = questions(draft, false, context, 'full')[0];
+  return question
+    ? { stateId: question.stateId, draft, question, terminal: 'collecting', configureIndependently: false, phase: 'full' }
+    : { stateId: 'review', draft, terminal: 'review', configureIndependently: false, phase: 'full' };
+}
+
+export function createSetupPermissionIntentQuestionnaire(
+  configuration: SetupConfiguration,
+  context: SetupQuestionnaireContext = {},
+): SetupQuestionnaireState {
+  const draft = cloneSetupConfiguration(configuration);
+  const question = questions(draft, false, context, 'permission-intent')[0];
+  return question
+    ? { stateId: question.stateId, draft, question, terminal: 'collecting', configureIndependently: false, phase: 'permission-intent', answeredQuestionIds: [] }
+    : { stateId: 'review', draft, terminal: 'review', configureIndependently: false, phase: 'permission-intent', answeredQuestionIds: [] };
 }
 
 export function createSetupReviewState(configuration: SetupConfiguration): SetupQuestionnaireState {
@@ -54,6 +74,8 @@ export function transitionSetupQuestionnaire(
       draft: cloneSetupConfiguration(state.draft),
       terminal: 'cancelled',
       configureIndependently: state.configureIndependently,
+      phase: state.phase,
+      answeredQuestionIds: state.answeredQuestionIds,
     };
   }
   const parsed = parseAnswer(state.question, event.value);
@@ -68,7 +90,8 @@ export function transitionSetupQuestionnaire(
     ? Boolean(parsed.value)
     : state.configureIndependently;
   const draft = applyAnswer(state.draft, state.question, parsed.value);
-  const nextQuestions = questions(draft, configureIndependently, context);
+  const answeredQuestionIds = [...(state.answeredQuestionIds ?? []), state.question.id];
+  const nextQuestions = questions(draft, configureIndependently, context, state.phase ?? 'full');
   const nextIndex = nextQuestions.findIndex((question) => question.id === state.question?.id);
   const next = nextQuestions[nextIndex + 1];
   return next
@@ -78,8 +101,10 @@ export function transitionSetupQuestionnaire(
         question: next,
         terminal: 'collecting',
         configureIndependently,
+        phase: state.phase,
+        answeredQuestionIds,
       }
-    : { stateId: 'review', draft, terminal: 'review', configureIndependently };
+    : { stateId: 'review', draft, terminal: 'review', configureIndependently, phase: state.phase, answeredQuestionIds };
 }
 
 export function enterSetupConfirmation(state: SetupQuestionnaireState): SetupQuestionnaireState {
@@ -124,8 +149,12 @@ function questions(
   draft: SetupConfiguration,
   independently: boolean,
   context: SetupQuestionnaireContext,
+  phase: 'full' | 'permission-intent',
 ): SetupQuestion[] {
-  return definitions().filter((definition) => definition.applies?.(draft, independently, context) ?? true)
+  return definitions().filter((definition) =>
+    (phase === 'full' || PERMISSION_INTENT_QUESTION_IDS.has(definition.id))
+    && !context.skipQuestionIds?.includes(definition.id)
+    && (definition.applies?.(draft, independently, context) ?? true))
     .map((definition) => toQuestion(definition, draft, context));
 }
 
@@ -412,6 +441,13 @@ function applyAnswer(
 ): SetupConfiguration {
   const draft = cloneSetupConfiguration(configuration);
   if (question.id === 'agents.configureIndependently') return draft;
+  if (question.id === 'features.issues' && value === false) {
+    draft.features.issues = false;
+    draft.features.release = false;
+    draft.features.hotfix = false;
+    draft.issueWorkflows = createIssueWorkflowProfile([]);
+    return draft;
+  }
   if (question.id === 'features.pullRequests' && value === false) {
     draft.features.pullRequests = false;
     draft.pullRequestApproval = { ...draft.pullRequestApproval, mode: 'off' };

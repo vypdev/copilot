@@ -237,6 +237,114 @@ describe('setup presenters and prompt-specific adapters', () => {
     log.mockRestore();
   });
 
+  it('guides setup PAT creation, confirms the authenticated account, and gives an honest cleanup reminder', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([
+        { kind: 'value', value: '' },
+        { kind: 'value', value: 'setup-token' },
+        { kind: 'value', value: '' },
+      ]);
+      const adapter = new SetupCredentialPromptAdapter(input, {});
+      adapter.configureSetupPatGuide('https://github.com/settings/personal-access-tokens/new?expires_in=1');
+      await expect(adapter.requestSetupPat()).resolves.toBe('setup-token');
+      await expect(adapter.confirmGuidedSetupAccount('operator')).resolves.toBe(true);
+      adapter.showSetupPatCleanupReminder();
+      const output = log.mock.calls.flat().join('\n');
+      expect(output).toContain('https://github.com/settings/personal-access-tokens/new?expires_in=1');
+      expect(output).toContain('Provisional');
+      expect(output).toContain('@operator');
+      expect(output).toContain('not revoked automatically');
+      expect(output).not.toContain('setup-token');
+      expect(input.readSecret).toHaveBeenCalledTimes(1);
+    } finally { log.mockRestore(); }
+  });
+
+  it('keeps manual setup PAT choice free of link and cleanup claims', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const adapter = new SetupCredentialPromptAdapter(terminal([
+        { kind: 'value', value: '2' },
+        { kind: 'value', value: 'manual-token' },
+      ]), {});
+      adapter.configureSetupPatGuide('https://github.com/settings/personal-access-tokens/new');
+      await expect(adapter.requestSetupPat()).resolves.toBe('manual-token');
+      adapter.showSetupPatCleanupReminder();
+      const output = log.mock.calls.flat().join('\n');
+      expect(output).not.toContain('https://github.com/settings/personal-access-tokens/new');
+      expect(output).not.toContain('not revoked automatically');
+    } finally { log.mockRestore(); }
+  });
+
+  it('distinguishes an initial PAT failure from a blocked final plan', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const adapter = new SetupCredentialPromptAdapter(terminal([
+        { kind: 'value', value: '1' }, { kind: 'value', value: 'setup-token' },
+      ]), {});
+      adapter.configureSetupPatGuide('https://github.com/settings/personal-access-tokens/new');
+      await adapter.requestSetupPat();
+      log.mockClear();
+      adapter.showUpdatedSetupPatLink('https://github.com/settings/personal-access-tokens/new?contents=read', 'bootstrap');
+      expect(log.mock.calls.flat().join('\n')).toContain('no setup plan has been applied');
+      log.mockClear();
+      adapter.showUpdatedSetupPatLink('https://github.com/settings/personal-access-tokens/new?contents=write', 'final');
+      expect(log.mock.calls.flat().join('\n')).toContain('no plan mutation has started');
+    } finally { log.mockRestore(); }
+  });
+
+  it('rejects an unintended setup account before continuing', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const adapter = new SetupCredentialPromptAdapter(terminal([
+        { kind: 'value', value: '1' },
+        { kind: 'value', value: 'setup-token' },
+        { kind: 'value', value: '2' },
+      ]), {});
+      adapter.configureSetupPatGuide('https://github.com/settings/personal-access-tokens/new');
+      await adapter.requestSetupPat();
+      await expect(adapter.confirmGuidedSetupAccount('wrong-account')).resolves.toBe(false);
+    } finally { log.mockRestore(); }
+  });
+
+  it('resolves the intended bot ID before accepting a guided workflow PAT', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([
+        { kind: 'value', value: '' },
+        { kind: 'value', value: 'bad/login' },
+        { kind: 'value', value: 'vypbot' },
+        { kind: 'value', value: 'bot-token' },
+      ]);
+      const resolve = jest.fn(async () => ({ id: 42, login: 'vypbot' }));
+      const adapter = new SetupCredentialPromptAdapter(input, {});
+      adapter.configureWorkflowPatGuide('https://github.com/settings/personal-access-tokens/new?expires_in=90', resolve);
+      const requirement = { name: 'PAT', kind: 'workflowPat' as const, description: 'Runtime token' };
+      await expect(adapter.requestWorkflowPat(requirement)).resolves.toEqual({ name: 'PAT', value: 'bot-token' });
+      expect(resolve).toHaveBeenCalledWith('vypbot');
+      expect(adapter.guidedWorkflowBotIdentity).toEqual({ id: 42, login: 'vypbot' });
+      const output = log.mock.calls.flat().join('\n');
+      expect(output).toContain('GitHub account ID 42');
+      expect(output).toContain('https://github.com/settings/personal-access-tokens/new?expires_in=90');
+      expect(output).not.toContain('bot-token');
+    } finally { log.mockRestore(); }
+  });
+
+  it('manual bot PAT entry does not assert a guided bot identity', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const adapter = new SetupCredentialPromptAdapter(terminal([
+        { kind: 'value', value: '2' }, { kind: 'value', value: 'manual-bot-token' },
+      ]), {});
+      const resolve = jest.fn();
+      adapter.configureWorkflowPatGuide('https://github.com/settings/personal-access-tokens/new', resolve);
+      await expect(adapter.requestWorkflowPat({ name: 'PAT', kind: 'workflowPat', description: 'Runtime token' }))
+        .resolves.toEqual({ name: 'PAT', value: 'manual-bot-token' });
+      expect(resolve).not.toHaveBeenCalled();
+      expect(adapter.guidedWorkflowBotIdentity).toBeUndefined();
+    } finally { log.mockRestore(); }
+  });
+
   it('supports explicit existing-credential choices and propagates interrupted secret input', async () => {
     const log = jest.spyOn(console, 'log').mockImplementation();
     const requirement = { name: 'PAT', kind: 'workflowPat' as const, description: 'Runtime token' };

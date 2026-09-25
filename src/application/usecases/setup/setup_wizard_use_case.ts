@@ -10,6 +10,7 @@ import type {
 } from '../../ports/setup_wizard_ports';
 import { ApplicationError } from '../../errors/application_error';
 import type { SetupConfiguration, SetupPlan, SetupRemoteConfiguration } from '../../../domain/setup';
+import type { SetupQuestionnaireContext } from '../../../domain/setup_questionnaire';
 import {
   buildSetupCredentialRequirements,
   buildSetupRepositoryVariables,
@@ -45,6 +46,7 @@ export interface SetupWizardRequest {
     repository: string;
     token: string;
   };
+  permissionIntent?: { draft: SetupConfiguration; answeredQuestionIds: readonly string[] };
 }
 
 export type SetupWizardResult =
@@ -92,27 +94,9 @@ export class SetupWizardUseCase {
   constructor(private readonly dependencies: SetupWizardDependencies) {}
 
   async execute(request: SetupWizardRequest): Promise<SetupWizardResult> {
-    const effectiveOverrides = request.mode === 'non-interactive'
-      && request.overrides?.repositoryAgentGuidance?.agentsPointer === undefined
-      ? {
-          ...request.overrides,
-          repositoryAgentGuidance: {
-            ...request.overrides?.repositoryAgentGuidance,
-            agentsPointer: 'create-if-missing' as const,
-          },
-        }
-      : request.overrides;
-    const defaults = mergeSetupConfiguration(
-      mergeSetupConfiguration(createDefaultSetupConfiguration(), { pullRequestApproval: DEFAULT_PULL_REQUEST_APPROVAL_POLICY }),
-      {
-        ...effectiveOverrides,
-        ...(request.skipRepositoryVariables ? { manageRepositoryVariables: false } : {}),
-        ...(request.skipRepositorySecrets ? { manageRepositorySecrets: false } : {}),
-      },
-    );
-    if (defaults.features.pullRequests === false && effectiveOverrides?.pullRequestApproval?.mode === undefined) {
-      defaults.pullRequestApproval = { ...defaults.pullRequestApproval, mode: 'off' };
-    }
+    const defaults = buildInitialSetupConfiguration(request);
+    const effectiveOverrides = request.overrides;
+    const initial = request.permissionIntent ? cloneSetupConfiguration(request.permissionIntent.draft) : defaults;
     let remoteConfiguration: SetupRemoteConfiguration | undefined;
     if (request.remoteTarget) {
       try {
@@ -125,21 +109,22 @@ export class SetupWizardUseCase {
         remoteConfiguration = unavailableRemoteConfiguration();
       }
     }
-    const defaultValidationErrors = validateSetupConfiguration(defaults, { allowIncompleteApproval: true });
+    const defaultValidationErrors = validateSetupConfiguration(initial, { allowIncompleteApproval: true });
     if (defaultValidationErrors.length > 0) {
       throw new ApplicationError(
         'configuration.invalid',
         `Invalid setup configuration:\n${defaultValidationErrors.map((error) => `- ${error}`).join('\n')}`,
       );
     }
-    const context = {
+    const context: SetupQuestionnaireContext = {
       ...(remoteConfiguration ? { remote: remoteConfiguration } : {}),
-      variableNames: buildSetupRepositoryVariables(defaults).map((variable) => variable.name),
-      secretNames: buildSetupCredentialRequirements(defaults).map((requirement) => requirement.name),
+      variableNames: buildSetupRepositoryVariables(initial).map((variable) => variable.name),
+      secretNames: buildSetupCredentialRequirements(initial).map((requirement) => requirement.name),
+      ...(request.permissionIntent ? { skipQuestionIds: request.permissionIntent.answeredQuestionIds } : {}),
     };
     const questionnaire = request.mode === 'interactive'
-      ? await this.collectInteractive(defaults, context)
-      : createSetupReviewState(defaults);
+      ? await this.collectInteractive(initial, context)
+      : createSetupReviewState(initial);
     if (questionnaire.terminal === 'cancelled') {
       return {
         status: 'cancelled',
@@ -292,6 +277,32 @@ export class SetupWizardUseCase {
     }
     return this.dependencies.collector.collect(createSetupQuestionnaire(defaults, context), context);
   }
+}
+
+export function buildInitialSetupConfiguration(request: Pick<SetupWizardRequest,
+  'mode' | 'overrides' | 'skipRepositoryVariables' | 'skipRepositorySecrets'>): SetupConfiguration {
+    const effectiveOverrides = request.mode === 'non-interactive'
+      && request.overrides?.repositoryAgentGuidance?.agentsPointer === undefined
+      ? {
+          ...request.overrides,
+          repositoryAgentGuidance: {
+            ...request.overrides?.repositoryAgentGuidance,
+            agentsPointer: 'create-if-missing' as const,
+          },
+        }
+      : request.overrides;
+    const defaults = mergeSetupConfiguration(
+      mergeSetupConfiguration(createDefaultSetupConfiguration(), { pullRequestApproval: DEFAULT_PULL_REQUEST_APPROVAL_POLICY }),
+      {
+        ...effectiveOverrides,
+        ...(request.skipRepositoryVariables ? { manageRepositoryVariables: false } : {}),
+        ...(request.skipRepositorySecrets ? { manageRepositorySecrets: false } : {}),
+      },
+    );
+    if (defaults.features.pullRequests === false && effectiveOverrides?.pullRequestApproval?.mode === undefined) {
+      defaults.pullRequestApproval = { ...defaults.pullRequestApproval, mode: 'off' };
+    }
+    return defaults;
 }
 
 /** An unavailable read is explicit, never an authoritative empty inventory. */
