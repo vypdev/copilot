@@ -67,6 +67,50 @@ describe('setup PAT permission intent', () => {
     ]));
   });
 
+  it('recognizes fixed approval, Projects, and preservation values without treating defaults as fixed', () => {
+    expect(fixedSetupPatIntentQuestionIds({}, false, false)).toEqual([]);
+    expect(fixedSetupPatIntentQuestionIds({
+      pullRequestApproval: { mode: 'off' }, projects: { ids: '' },
+      storage: { secrets: { preserveExisting: false }, variables: { preserveExisting: true } },
+    }, false, false)).toEqual(expect.arrayContaining([
+      'pullRequestApproval.mode', 'projects.ids',
+      'storage.secrets.preserveExisting', 'storage.variables.preserveExisting',
+    ]));
+  });
+
+  it('asks owner kind for possible inherited resources even with no definite organization grant', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.features.issues = false;
+    configuration.features.release = false;
+    configuration.features.hotfix = false;
+    configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'off' };
+    expect(grants(configuration, 'Organization').some(item => item.startsWith('organization:'))).toBe(false);
+    expect(setupPatIntentNeedsOwnerKind(configuration)).toBe(true);
+    configuration.manageRepositorySecrets = false;
+    configuration.manageRepositoryVariables = false;
+    expect(setupPatIntentNeedsOwnerKind(configuration)).toBe(false);
+  });
+
+  it('omits unresolved remote conditions when management is disabled or owner is personal', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.manageRepositorySecrets = false;
+    expect(buildSetupPatIntentUncertainty(configuration, 'User')).toEqual([]);
+    expect(buildSetupPatIntentUncertainty(configuration, 'Organization')).toEqual([
+      expect.stringContaining('organization Variables write'),
+    ]);
+    configuration.manageRepositoryVariables = false;
+    expect(buildSetupPatIntentUncertainty(configuration, 'Organization')).toEqual([]);
+  });
+
+  it('does not predict organization inventory for explicitly organization-scoped defaults', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.storage.secrets.defaultScope = 'organization';
+    configuration.storage.variables.preserveExisting = false;
+    expect(buildSetupPatIntentUncertainty(configuration, 'Organization')).toEqual([
+      expect.stringContaining('Actions write'),
+    ]);
+  });
+
   it('projects the reviewed grants to documented URL parameters without selecting a repository', () => {
     const configuration = createDefaultSetupConfiguration();
     configuration.features.issues = false;

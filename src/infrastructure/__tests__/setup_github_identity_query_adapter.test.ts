@@ -26,4 +26,23 @@ describe('SetupGithubIdentityQueryAdapter', () => {
         await expect(new SetupGithubIdentityQueryAdapter(fetcher as unknown as typeof fetch)
             .identify('workflow-token')).rejects.toThrow('invalid identity');
     });
+
+    it.each([
+        { ok: false, json: async () => ({ message: 'sensitive provider text' }) },
+        { ok: true, json: async () => null },
+        { ok: true, json: async () => [] },
+    ])('rejects non-success and non-object identities without leaking provider content', async response => {
+        const fetcher = jest.fn().mockResolvedValue(response);
+        await expect(new SetupGithubIdentityQueryAdapter(fetcher as unknown as typeof fetch)
+            .identify('workflow-token')).rejects.toThrow('No Secret was written');
+    });
+
+    it('wraps network failures while preserving the cause privately', async () => {
+        const failure = new Error('sensitive provider text');
+        const fetcher = jest.fn().mockRejectedValue(failure);
+        await expect(new SetupGithubIdentityQueryAdapter(fetcher as unknown as typeof fetch)
+            .identify('workflow-token')).rejects.toMatchObject({
+                message: expect.stringContaining('network access'), cause: failure,
+            });
+    });
 });

@@ -65,6 +65,15 @@ describe('buildSetupPatCreationUrl', () => {
         })).toThrow(UnsupportedSetupPatLinkError);
     });
 
+    it.each([
+        ['Metadata', 'write'], ['Workflows', 'read'],
+    ] as const)('rejects an unsupported %s %s access level', (name, level) => {
+        expect(() => buildSetupPatCreationUrl({
+            role: 'setup', owner: 'vypdev', repository: 'copilot', expiresIn: 1,
+            requirements: [permission('setup', 'repository', name, level)],
+        })).toThrow(UnsupportedSetupPatLinkError);
+    });
+
     it.each(['bad/owner', '', 'a'.repeat(40)])('rejects unsafe or invalid owner %s', owner => {
         expect(() => buildSetupPatCreationUrl({ role: 'setup', owner, repository: 'copilot', expiresIn: 1, requirements: [] })).toThrow();
     });

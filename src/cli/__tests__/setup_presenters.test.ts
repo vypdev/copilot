@@ -260,6 +260,56 @@ describe('setup presenters and prompt-specific adapters', () => {
     } finally { log.mockRestore(); }
   });
 
+  it('keeps missing-terminal setup choices on the manual path', async () => {
+    const adapter = new SetupCredentialPromptAdapter(undefined, {});
+    await expect(adapter.chooseSetupPatMethod()).resolves.toBe('manual');
+    await expect(adapter.chooseSetupOwnerKind()).resolves.toBe('unknown');
+    await expect(adapter.reviewSetupPatIntent()).resolves.toBe('manual');
+    await expect(adapter.requestSetupPat()).resolves.toBeUndefined();
+    await expect(adapter.confirmGuidedSetupAccount()).resolves.toBe(true);
+  });
+
+  it.each([
+    ['1', 'Organization'], ['2', 'User'], ['3', 'unknown'],
+  ] as const)('requires an explicit owner-kind selection %s', async (selection, expected) => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([{ kind: 'value', value: '' }, { kind: 'value', value: selection }]);
+      await expect(new SetupCredentialPromptAdapter(input, {}).chooseSetupOwnerKind()).resolves.toBe(expected);
+      expect(input.readText).toHaveBeenCalledTimes(2);
+    } finally { log.mockRestore(); }
+  });
+
+  it('reviews intent explicitly, supports revision, and can fall back to manual input', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([
+        { kind: 'value', value: '1' },
+        { kind: 'value', value: '2' },
+        { kind: 'value', value: '3' },
+        { kind: 'value', value: 'manual-token' },
+      ]);
+      const adapter = new SetupCredentialPromptAdapter(input, {});
+      await expect(adapter.chooseSetupPatMethod()).resolves.toBe('guided');
+      await expect(adapter.reviewSetupPatIntent()).resolves.toBe('revise');
+      await expect(adapter.reviewSetupPatIntent()).resolves.toBe('manual');
+      adapter.configureSetupPatGuide('https://github.com/settings/personal-access-tokens/new');
+      adapter.useManualSetupPat();
+      await expect(adapter.requestSetupPat()).resolves.toBe('manual-token');
+      adapter.showSetupPatCleanupReminder();
+      expect(adapter.usedGuidedSetupPat).toBe(false);
+      expect(log.mock.calls.flat().join('\n')).not.toContain('Revoke temporary setup PAT');
+    } finally { log.mockRestore(); }
+  });
+
+  it('rejects an invalid authenticated setup account without prompting', async () => {
+    const input = terminal([{ kind: 'value', value: '1' }]);
+    const adapter = new SetupCredentialPromptAdapter(input, {});
+    await adapter.chooseSetupPatMethod();
+    await expect(adapter.confirmGuidedSetupAccount('bad/account')).resolves.toBe(false);
+    expect(input.readText).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps manual setup PAT choice free of link and cleanup claims', async () => {
     const log = jest.spyOn(console, 'log').mockImplementation();
     try {
@@ -290,6 +340,17 @@ describe('setup presenters and prompt-specific adapters', () => {
       log.mockClear();
       adapter.showUpdatedSetupPatLink('https://github.com/settings/personal-access-tokens/new?contents=write', 'final');
       expect(log.mock.calls.flat().join('\n')).toContain('no plan mutation has started');
+      log.mockClear();
+      adapter.showUpdatedSetupPatLink('https://github.com/settings/personal-access-tokens/new?contents=write', 'final', ['repository Contents write']);
+      expect(log.mock.calls.flat().join('\n')).toContain('repository Contents write');
+    } finally { log.mockRestore(); }
+  });
+
+  it('does not show a correction link before guided mode is selected', () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      new SetupCredentialPromptAdapter(undefined, {}).showUpdatedSetupPatLink('https://github.com/settings/personal-access-tokens/new', 'final');
+      expect(log).not.toHaveBeenCalled();
     } finally { log.mockRestore(); }
   });
 
@@ -327,6 +388,18 @@ describe('setup presenters and prompt-specific adapters', () => {
       expect(output).toContain('GitHub account ID 42');
       expect(output).toContain('https://github.com/settings/personal-access-tokens/new?expires_in=90');
       expect(output).not.toContain('bot-token');
+    } finally { log.mockRestore(); }
+  });
+
+  it('propagates cancellation before a bot login can be resolved', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const adapter = new SetupCredentialPromptAdapter(terminal([
+        { kind: 'value', value: '1' }, { kind: 'cancel' },
+      ]), {});
+      adapter.configureWorkflowPatGuide('https://github.com/settings/personal-access-tokens/new', jest.fn());
+      await expect(adapter.requestWorkflowPat({ name: 'PAT', kind: 'workflowPat', description: 'Runtime token' }))
+        .rejects.toBeInstanceOf(SetupTerminalCancelledError);
     } finally { log.mockRestore(); }
   });
 

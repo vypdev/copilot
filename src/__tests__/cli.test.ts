@@ -73,7 +73,7 @@ jest.mock('../infrastructure/composition/setup_token_permissions_composition_roo
   createSetupTokenPermissionsUseCase: () => ({ inspect: mockTokenPermissionInspect }),
 }));
 
-const mockRemoteConfigurationInspect = jest.fn().mockResolvedValue({
+const defaultRemoteConfiguration = {
   ownerType: 'User',
   repositoryVisibility: 'private',
   repositorySecrets: [],
@@ -85,9 +85,13 @@ const mockRemoteConfigurationInspect = jest.fn().mockResolvedValue({
   organizationAccess: 'not_applicable',
   organizationSecretsAccess: 'not_applicable',
   organizationVariablesAccess: 'not_applicable',
+};
+const mockRemoteConfigurationInspect = jest.fn().mockResolvedValue(defaultRemoteConfiguration);
+const mockSetupCredentialsCollect = jest.fn().mockResolvedValue({
+  collection: { apiKeys: [] }, checks: [], existingSecretNames: [],
 });
 jest.mock('../infrastructure/composition/setup_credentials_composition_root', () => ({
-  createSetupCredentialsUseCase: () => ({ collect: jest.fn().mockResolvedValue({ collection: { apiKeys: [] }, checks: [], existingSecretNames: [] }) }),
+  createSetupCredentialsUseCase: () => ({ collect: mockSetupCredentialsCollect }),
   createSetupRemoteConfigurationReadPort: () => ({
     inspect: mockRemoteConfigurationInspect,
   }),
@@ -100,6 +104,7 @@ describe('CLI', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSetupCredentialsCollect.mockResolvedValue({ collection: { apiKeys: [] }, checks: [], existingSecretNames: [] });
     process.exitCode = undefined;
     process.env.AGENT_PROVIDER = 'opencode';
     process.env.AGENT_MODEL = 'test-model';
@@ -453,6 +458,335 @@ describe('CLI', () => {
   describe('setup', () => {
     // Token check: hasValidSetupToken/setupEnvFileExists and message variants are covered in
     // setup_files.test.ts and initial_setup_use_case.test.ts.
+    beforeEach(() => {
+      const setupCommand = program.commands.find(command => command.name() === 'setup')!;
+      for (const option of setupCommand.options) {
+        setupCommand.setOptionValue(option.attributeName(), option.defaultValue);
+      }
+    });
+    const guidedTerminal = (answer?: (prompt: string) => string | undefined) => ({
+      isInteractive: () => true,
+      readText: jest.fn(async (prompt: string) => ({ kind: 'value' as const, value: answer?.(prompt)
+        ?? (prompt.includes('repository owner an organization') ? '2'
+          : prompt.includes('Review these intended grants') ? '1' : '') })),
+      readSecret: jest.fn().mockResolvedValue({ kind: 'value', value: 'github_pat_guided_setup_test_token' }),
+      close: jest.fn(),
+    });
+
+    const acceptedSetupPatReport = () => ({
+      role: 'setup' as const, identityStatus: 'valid' as const, identityMessage: 'verified',
+      account: 'operator', ready: true, confirmationRequired: false, checks: [],
+    });
+
+    it('carries guided intent through the final audit and prepares the separate bot link', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const promptModule = require('../cli/setup_credential_prompt_adapter') as typeof import('../cli/setup_credential_prompt_adapter');
+      const input = guidedTerminal();
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      const botGuide = jest.spyOn(promptModule.SetupCredentialPromptAdapter.prototype, 'configureWorkflowPatGuide');
+      mockTokenPermissionInspect.mockResolvedValueOnce(acceptedSetupPatReport());
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off', '--skip-secrets']);
+        expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
+        expect(mockTokenPermissionInspect.mock.calls[0][0].requirements).toEqual(expect.arrayContaining([
+          expect.objectContaining({ scope: 'repository', permission: 'Contents', level: 'write', applicability: 'required' }),
+        ]));
+        expect(botGuide).toHaveBeenCalledTimes(1);
+        expect(runLocalAction).toHaveBeenCalledTimes(1);
+        expect(process.exitCode).toBeUndefined();
+      } finally {
+        botGuide.mockRestore();
+        createTerminal.mockRestore();
+      }
+    });
+
+    it('falls back to manual PAT entry when the owner kind cannot be confirmed', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const input = guidedTerminal(prompt => prompt.includes('repository owner an organization') ? '3' : '');
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      mockTokenPermissionInspect.mockResolvedValueOnce({ ...acceptedSetupPatReport(), ready: false });
+      try {
+        await program.parseAsync(['node', 'cli', 'setup']);
+        const { logInfo } = require('../utils/logger');
+        expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('Owner type was not confirmed'));
+        expect(input.readText).not.toHaveBeenCalledWith(expect.stringContaining('Review these intended grants'));
+        expect(input.readSecret).toHaveBeenCalledWith('Setup PAT');
+        expect(consoleLogSpy.mock.calls.flat().join('\n')).not.toContain('Revoke temporary setup PAT');
+        expect(process.exitCode).toBe(1);
+      } finally { createTerminal.mockRestore(); }
+    });
+
+    it('allows the operator to choose manual entry after reviewing local intent', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const input = guidedTerminal(prompt => prompt.includes('Review these intended grants') ? '3'
+        : prompt.includes('repository owner an organization') ? '2' : '');
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      mockTokenPermissionInspect.mockResolvedValueOnce({ ...acceptedSetupPatReport(), ready: false });
+      try {
+        await program.parseAsync(['node', 'cli', 'setup']);
+        expect(input.readSecret).toHaveBeenCalledWith('Setup PAT');
+        expect(consoleLogSpy.mock.calls.flat().join('\n')).not.toContain('Revoke temporary setup PAT');
+        expect(process.exitCode).toBe(1);
+      } finally { createTerminal.mockRestore(); }
+    });
+
+    it('revises permission intent before the link and drops the initial-tag write grant', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      let reviews = 0;
+      let tags = 0;
+      const input = guidedTerminal(prompt => {
+        if (prompt.includes('repository owner an organization')) return '2';
+        if (prompt.includes('Review these intended grants')) return ++reviews === 1 ? '2' : '1';
+        if (prompt.includes('Create v1.0.0')) return ++tags === 2 ? 'no' : '';
+        return '';
+      });
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      mockTokenPermissionInspect.mockResolvedValueOnce({ ...acceptedSetupPatReport(), ready: false });
+      try {
+        await program.parseAsync(['node', 'cli', 'setup']);
+        expect(reviews).toBe(2);
+        expect(tags).toBe(2);
+        expect(mockTokenPermissionInspect.mock.calls[0][0].requirements).toEqual(expect.arrayContaining([
+          expect.objectContaining({ permission: 'Contents', level: 'read' }),
+        ]));
+        expect(consoleLogSpy.mock.calls.flat().join('\n')).toContain('contents=read');
+        expect(process.exitCode).toBe(1);
+      } finally { createTerminal.mockRestore(); }
+    });
+
+    it('blocks a personal owner paired with organization storage before requesting a PAT', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const input = guidedTerminal();
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--secrets-scope', 'organization']);
+        const { logInfo } = require('../utils/logger');
+        expect((logInfo as jest.Mock).mock.calls.flat()).toContainEqual(expect.stringContaining('declared a personal account'));
+        expect(input.readSecret).not.toHaveBeenCalled();
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+      } finally { createTerminal.mockRestore(); }
+    });
+
+    it('reports invalid fixed local configuration before making a guided PAT link', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const configFile = require('../cli/setup_config_file') as typeof import('../cli/setup_config_file');
+      const loadConfig = jest.spyOn(configFile, 'loadSetupConfigurationOverrides')
+        .mockReturnValue({ repository: { mainBranch: 'invalid branch' } });
+      const input = guidedTerminal();
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--config', 'invalid-local-config.yml', '--pr-approval-mode', 'off']);
+        const { logInfo } = require('../utils/logger');
+        expect((logInfo as jest.Mock).mock.calls.flat()).toContainEqual(expect.stringContaining('configuration needs correction'));
+        expect(input.readSecret).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+      } finally { loadConfig.mockRestore(); createTerminal.mockRestore(); }
+    });
+
+    it('accepts a minimal personal-repository intent without asking the owner kind', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const input = guidedTerminal(prompt => {
+        if (prompt.includes('Issue automation:') || prompt.includes('Pull request automation:')
+          || prompt.includes('Create v1.0.0') || prompt.includes('Create/update GitHub Actions Variables?')
+          || prompt.includes('Validate and provision required GitHub Actions Secrets?')) return 'no';
+        if (prompt.includes('Review these intended grants')) return '1';
+        return '';
+      });
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      mockTokenPermissionInspect.mockResolvedValueOnce({ ...acceptedSetupPatReport(), ready: false });
+      try {
+        await program.parseAsync(['node', 'cli', 'setup']);
+        expect(input.readText.mock.calls.some(([prompt]) => String(prompt).includes('repository owner an organization'))).toBe(false);
+        expect(mockTokenPermissionInspect.mock.calls[0][0].requirements.map((item: SetupTokenPermissionRequirement) => item.permission))
+          .toEqual(['Metadata', 'Contents']);
+        expect(process.exitCode).toBe(1);
+      } finally { createTerminal.mockRestore(); }
+    });
+
+    it('falls back to manual entry when the setup PAT form cannot express a grant', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const urlPolicy = require('../application/policies/setup_pat_creation_url_policy') as typeof import('../application/policies/setup_pat_creation_url_policy');
+      const buildLink = jest.spyOn(urlPolicy, 'buildSetupPatCreationUrl')
+        .mockImplementation(() => { throw new urlPolicy.UnsupportedSetupPatLinkError(['repository Unsupported write']); });
+      const input = guidedTerminal();
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      mockTokenPermissionInspect.mockResolvedValueOnce({ ...acceptedSetupPatReport(), ready: false });
+      try {
+        await program.parseAsync(['node', 'cli', 'setup']);
+        const { logInfo } = require('../utils/logger');
+        expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('guided setup PAT link is unavailable'));
+        expect(input.readSecret).toHaveBeenCalledWith('Setup PAT');
+        expect(consoleLogSpy.mock.calls.flat().join('\n')).not.toContain('Revoke temporary setup PAT');
+        expect(process.exitCode).toBe(1);
+      } finally { buildLink.mockRestore(); createTerminal.mockRestore(); }
+    });
+
+    it('does not turn an unexpected setup-link failure into a misleading manual fallback', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const urlPolicy = require('../application/policies/setup_pat_creation_url_policy') as typeof import('../application/policies/setup_pat_creation_url_policy');
+      const buildLink = jest.spyOn(urlPolicy, 'buildSetupPatCreationUrl')
+        .mockImplementation(() => { throw new Error('unexpected link failure'); });
+      const input = guidedTerminal();
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      try {
+        await program.parseAsync(['node', 'cli', 'setup']);
+        expect(input.readSecret).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+      } finally { buildLink.mockRestore(); createTerminal.mockRestore(); }
+    });
+
+    it('retains setup progress when the final bot PAT form is unsupported', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const urlPolicy = require('../application/policies/setup_pat_creation_url_policy') as typeof import('../application/policies/setup_pat_creation_url_policy');
+      const original = urlPolicy.buildSetupPatCreationUrl;
+      const buildLink = jest.spyOn(urlPolicy, 'buildSetupPatCreationUrl')
+        .mockImplementation(input => input.role === 'workflow'
+          ? (() => { throw new urlPolicy.UnsupportedSetupPatLinkError(['repository Checks read']); })()
+          : original(input));
+      const input = guidedTerminal();
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      mockTokenPermissionInspect.mockResolvedValueOnce(acceptedSetupPatReport());
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off', '--skip-secrets']);
+        const { logInfo } = require('../utils/logger');
+        expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('guided fine-grained bot PAT link is unavailable'));
+        expect(runLocalAction).toHaveBeenCalledTimes(1);
+      } finally { buildLink.mockRestore(); createTerminal.mockRestore(); }
+    });
+
+    it('blocks a guided plan when GitHub reports a different owner kind', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const input = guidedTerminal(prompt => prompt.includes('repository owner an organization') ? '1' : undefined);
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      mockTokenPermissionInspect.mockResolvedValueOnce(acceptedSetupPatReport());
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off', '--skip-secrets']);
+        const { logInfo } = require('../utils/logger');
+        expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('GitHub reports User'));
+        expect(consoleLogSpy.mock.calls.flat().join('\n')).toContain('Setup PAT permissions changed');
+        expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(1);
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+      } finally { createTerminal.mockRestore(); }
+    });
+
+    it('shows the corrected grants and blocks before mutation when the final PAT audit fails', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const input = guidedTerminal();
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      mockTokenPermissionInspect
+        .mockResolvedValueOnce(acceptedSetupPatReport())
+        .mockResolvedValueOnce({ ...acceptedSetupPatReport(), ready: false });
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off', '--skip-secrets']);
+        expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
+        expect(consoleLogSpy.mock.calls.flat().join('\n')).toContain('Setup PAT permissions changed');
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+      } finally { createTerminal.mockRestore(); }
+    });
+
+    it('lists remote-only grants added after discovering an existing Secret', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const input = guidedTerminal();
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      mockRemoteConfigurationInspect.mockResolvedValueOnce({
+        ...defaultRemoteConfiguration,
+        repositorySecrets: ['PAT'],
+      });
+      mockTokenPermissionInspect
+        .mockResolvedValueOnce(acceptedSetupPatReport())
+        .mockResolvedValueOnce({ ...acceptedSetupPatReport(), ready: false });
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off']);
+        const output = consoleLogSpy.mock.calls.flat().join('\n');
+        expect(output).toContain('Setup PAT permissions changed');
+        expect(output).toContain('repository Actions write');
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+      } finally { createTerminal.mockRestore(); }
+    });
+
+    it('verifies the guided bot PAT account before applying setup and warns on account reuse', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const promptModule = require('../cli/setup_credential_prompt_adapter') as typeof import('../cli/setup_credential_prompt_adapter');
+      const identityModule = require('../infrastructure/setup_github_identity_query_adapter') as typeof import('../infrastructure/setup_github_identity_query_adapter');
+      const input = guidedTerminal();
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      const botIdentity = jest.spyOn(promptModule.SetupCredentialPromptAdapter.prototype, 'guidedWorkflowBotIdentity', 'get')
+        .mockReturnValue({ id: 42, login: 'operator' });
+      const identify = jest.spyOn(identityModule.SetupGithubIdentityQueryAdapter.prototype, 'identify')
+        .mockResolvedValue({ id: 42, login: 'operator' });
+      mockSetupCredentialsCollect.mockResolvedValueOnce({
+        collection: { apiKeys: [], workflowPat: { name: 'PAT', value: 'bot-pat' } }, checks: [], existingSecretNames: [],
+      });
+      mockTokenPermissionInspect.mockResolvedValueOnce(acceptedSetupPatReport());
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off', '--skip-secrets']);
+        const { logInfo } = require('../utils/logger');
+        expect(identify).toHaveBeenCalledWith('bot-pat');
+        expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('Workflow PAT owner verified as @operator'));
+        expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('same GitHub account'));
+        expect(runLocalAction).toHaveBeenCalledTimes(1);
+      } finally { identify.mockRestore(); botIdentity.mockRestore(); createTerminal.mockRestore(); }
+    });
+
+    it('does not mutate when the guided bot PAT identity check fails', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const promptModule = require('../cli/setup_credential_prompt_adapter') as typeof import('../cli/setup_credential_prompt_adapter');
+      const identityModule = require('../infrastructure/setup_github_identity_query_adapter') as typeof import('../infrastructure/setup_github_identity_query_adapter');
+      const input = guidedTerminal();
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      const botIdentity = jest.spyOn(promptModule.SetupCredentialPromptAdapter.prototype, 'guidedWorkflowBotIdentity', 'get')
+        .mockReturnValue({ id: 42, login: 'bot-account' });
+      const identify = jest.spyOn(identityModule.SetupGithubIdentityQueryAdapter.prototype, 'identify')
+        .mockResolvedValue({ id: 43, login: 'wrong-account' });
+      mockSetupCredentialsCollect.mockResolvedValueOnce({
+        collection: { apiKeys: [], workflowPat: { name: 'PAT', value: 'bot-pat' } }, checks: [], existingSecretNames: [],
+      });
+      mockTokenPermissionInspect.mockResolvedValueOnce(acceptedSetupPatReport());
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off', '--skip-secrets']);
+        const { logInfo } = require('../utils/logger');
+        expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('No setup mutation started'));
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+      } finally { identify.mockRestore(); botIdentity.mockRestore(); createTerminal.mockRestore(); }
+    });
+
+    it('warns that a guided bot PAT may be stored if applying setup fails', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const promptModule = require('../cli/setup_credential_prompt_adapter') as typeof import('../cli/setup_credential_prompt_adapter');
+      const input = guidedTerminal();
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      const botIdentity = jest.spyOn(promptModule.SetupCredentialPromptAdapter.prototype, 'guidedWorkflowBotIdentity', 'get')
+        .mockReturnValue({ id: 42, login: 'bot-account' });
+      mockTokenPermissionInspect.mockResolvedValueOnce(acceptedSetupPatReport());
+      (runLocalAction as jest.Mock).mockRejectedValueOnce(new Error('setup failed after mutation started'));
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off', '--skip-secrets']);
+        const { logInfo } = require('../utils/logger');
+        expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('Setup may be partially applied'));
+        expect(process.exitCode).toBe(1);
+      } finally { botIdentity.mockRestore(); createTerminal.mockRestore(); }
+    });
     it('offers the guided setup PAT link and a repair link when its initial audit fails', async () => {
       const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
       const terminal = {

@@ -52,6 +52,23 @@ describe('setup questionnaire policy', () => {
     expect(state.draft.issueWorkflows.enabled).toEqual([]);
   });
 
+  it('enters review immediately when the permission-intent phase has no open questions', () => {
+    const ids = [
+      'features.issues', 'features.pullRequests', 'issueWorkflows.enabled', 'pullRequestApproval.mode',
+      'projects.ids', 'createInitialTag', 'manageRepositoryVariables', 'manageRepositorySecrets',
+      'storage.variables.defaultScope', 'storage.variables.preserveExisting',
+      'storage.secrets.defaultScope', 'storage.secrets.preserveExisting',
+    ];
+    const state = createSetupPermissionIntentQuestionnaire(createDefaultSetupConfiguration(), { skipQuestionIds: ids });
+    expect(state).toEqual(expect.objectContaining({ terminal: 'review', phase: 'permission-intent', answeredQuestionIds: [] }));
+  });
+
+  it('supports a legacy collecting state without an explicit phase', () => {
+    const { phase: _phase, ...legacy } = createSetupQuestionnaire(createDefaultSetupConfiguration());
+    const next = transitionSetupQuestionnaire(legacy, { kind: 'answer', value: '' });
+    expect(next.question?.id).toBe('features.pullRequests');
+  });
+
   it('walks the declared applicable sections in deterministic order', () => {
     const visited: string[] = [];
     let state = createSetupQuestionnaire(createDefaultSetupConfiguration());
