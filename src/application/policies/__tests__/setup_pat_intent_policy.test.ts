@@ -95,6 +95,27 @@ describe('setup PAT permission intent', () => {
     expect(setupPatIntentNeedsOwnerKind(configuration)).toBe(false);
   });
 
+  it('asks owner kind for Projects even when all other organization grants are disabled', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.createInitialTag = false;
+    configuration.features.issues = false;
+    configuration.features.release = false;
+    configuration.features.hotfix = false;
+    configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'off' };
+    configuration.manageRepositorySecrets = false;
+    configuration.manageRepositoryVariables = false;
+    configuration.projects.ids = 'PVT_example';
+
+    expect(grants(configuration, 'Organization').filter(item => item.startsWith('organization:')))
+      .toEqual(['organization:Projects:write']);
+    expect(setupPatIntentNeedsOwnerKind(configuration)).toBe(true);
+    expect(setupPatIntentOwnerConflict(configuration, 'User')).toBe(true);
+    expect(setupPatIntentOwnerConflict(configuration, 'Organization')).toBe(false);
+
+    configuration.projects.ids = '   ';
+    expect(setupPatIntentNeedsOwnerKind(configuration)).toBe(false);
+  });
+
   it('omits unresolved remote conditions when management is disabled or owner is personal', () => {
     const configuration = createDefaultSetupConfiguration();
     configuration.manageRepositorySecrets = false;

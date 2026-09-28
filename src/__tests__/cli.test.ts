@@ -611,6 +611,29 @@ describe('CLI', () => {
       } finally { createTerminal.mockRestore(); }
     });
 
+    it('asks the owner kind and includes Projects when no other organization grant is selected', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const configFile = require('../cli/setup_config_file') as typeof import('../cli/setup_config_file');
+      const loadConfig = jest.spyOn(configFile, 'loadSetupConfigurationOverrides').mockReturnValue({
+        createInitialTag: false,
+        features: { issues: false, release: false, hotfix: false },
+        projects: { ids: 'PVT_example' },
+      });
+      const input = guidedTerminal(prompt => prompt.includes('repository owner an organization') ? '1' : undefined);
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      mockTokenPermissionInspect.mockResolvedValueOnce({ ...acceptedSetupPatReport(), ready: false });
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--config', 'projects-only.yml',
+          '--skip-variables', '--skip-secrets', '--pr-approval-mode', 'off']);
+        expect(input.readText.mock.calls.some(([prompt]) => String(prompt).includes('repository owner an organization'))).toBe(true);
+        expect(mockTokenPermissionInspect.mock.calls[0][0].requirements.filter((item: SetupTokenPermissionRequirement) => item.scope === 'organization'))
+          .toEqual([expect.objectContaining({ permission: 'Projects', level: 'write' })]);
+        expect(input.readSecret).toHaveBeenCalledWith('Setup PAT');
+        expect(process.exitCode).toBe(1);
+      } finally { loadConfig.mockRestore(); createTerminal.mockRestore(); }
+    });
+
     it('describes an explicitly empty issue-workflow selection as none', async () => {
       const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
       const configFile = require('../cli/setup_config_file') as typeof import('../cli/setup_config_file');
