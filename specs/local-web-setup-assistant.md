@@ -213,13 +213,17 @@ exactly what completed and what remains.
    dead, the CLI MUST fail closed, print the exact lock path, and require an
    operator to verify no setup process is running before removing that one
    file manually. It MUST NOT unlink a stale lock automatically: another
-   process can replace it between a read and an unlink. Web
+   process can replace it between a read and an unlink. Publish a fully
+   written lock record atomically; failed writes MUST NOT leave a blocking
+   empty lock. Web
    mode does not require a TTY: the browser is the interactive surface, and
    a printed local URL is available if automatic opening is unavailable.
 2. Bind `127.0.0.1:0`, record the assigned port, create an unpredictable
-   one-run capability and first controller lease in process memory, and open
-   the default browser to `http://127.0.0.1:<port>/`. If opening fails, print
-   that local URL and instructions; serving continues. If binding or packaged
+   one-run session key and first controller lease in process memory, and open
+   the default browser to `http://127.0.0.1:<port>/#setup-key=<random>`.
+   If opening fails, print that private URL and instructions; serving
+   continues. The key-bearing URL MUST NOT enter accumulated diagnostic logs.
+   If binding or packaged
    assets fail, stop without a partial UI and suggest `copilot setup`.
 3. Show the six stages already used by terminal setup. Import one immutable
    snapshot of defaults, config file, and non-secret flags. Mark supplied
@@ -631,21 +635,28 @@ for the temporary setup PAT and to bot-PAT rotation guidance separately.
 
 ## 11. Security, permissions, and privacy
 
-1. **Boundary:** the web server is loopback-only, for the launching OS user;
-   a hostile website and another browser tab are in scope. A malicious
-   process already running as that same OS user, browser extensions with
-   page access, or a compromised browser are outside the isolation that a
-   loopback HTTP server can guarantee. The product must say so honestly.
+1. **Boundary:** the web server is loopback-only, but TCP loopback does not
+   identify or isolate the launching OS user: another local user can connect
+   to the port. A cryptographically random URL-fragment key is required for
+   every API read and mutation, including bootstrap and takeover. Possession
+   of the private URL grants local session access, so it must not be shared.
+   A malicious process that can read that URL, browser extensions with page
+   access, or a compromised browser remain outside this boundary. The
+   product must say so honestly.
 2. **Request defense:** reject `Host` not exactly `127.0.0.1:<bound-port>`,
    proxy/forwarded host headers, unexpected `Origin`/`Referer` on mutations,
    cross-site Fetch Metadata, unsupported methods/content types, and requests
    over size/time limits. No wildcard CORS or credentials cross-origin.
-   State-changing requests require a one-run, cryptographically random
-   capability in a custom header plus a revision check; capability is
-   delivered only by a same-origin no-store bootstrap response, never a URL,
-   cookie, localStorage, or sessionStorage. Reject missing/invalid capability
-   and rotate it on tab takeover. These controls defend cross-site requests
-   and DNS-rebinding-style host confusion; they are not OS-user isolation.
+   The URL-fragment session key is not sent in an HTTP URL, stored in a
+   cookie/localStorage/sessionStorage, or returned to unauthenticated callers;
+   the browser sends it in a custom header to every API route. In addition,
+   state-changing requests require a separate one-run, cryptographically
+   random controller capability in a custom header plus a revision check;
+   that capability is delivered only by an authenticated same-origin no-store
+   bootstrap response, never a URL or browser storage. Reject missing/invalid
+   keys or capabilities and rotate the controller capability on tab takeover.
+   These controls defend cross-site requests and host confusion, but do not
+   prove the identity of a local OS user.
    The local server sets no cookies and ignores, never logs, any Cookie header
    another application on the same hostname may have caused the browser to
    send.
@@ -672,7 +683,7 @@ for the temporary setup PAT and to bot-PAT rotation guidance separately.
    Numeric bot-ID and setup-account checks are preserved; unknown access
    does not become success. The final Apply approval cannot be bypassed by
    `--yes` or a forged/stale browser event.
-6. **Abuse/failure:** bound concurrent clients, read/write time, body and
+6. **Abuse/failure:** cap simultaneous TCP clients at 16 and bound read/write time, body and
    field sizes, retries, and progress buffer. Avoid exposing arbitrary local
    files, project paths, source maps, stack traces, or provider responses.
    Expired/invalid capability is a 403-like local error with no secret data;
@@ -718,7 +729,7 @@ existing CLI tests are retained, not re-counted as new web evidence.
 | CLI/packaging/workflow contracts | 10 | flag combinations, browser-open fallback, asset manifest, npm pack/global install, unchanged Action/API bundles |
 | UI/accessibility/localization/content | 18 | pending/action/blocked/partial/complete, plan diff, narrow/zoom/keyboard/focus/no-color, both palettes/system toggle and contrast, English fallback, escaping |
 | Integration/compatibility/recovery | 12 | terminal-web parity, manual/environment/dry-run, drift, partial write, doctor reconciliation |
-| Security/abuse | 18 | Host/Origin/CSRF, CORS, replay, path traversal, XSS/CSP, secret leaks, no GET mutation, body/time/concurrency limits |
+| Security/abuse | 18 | Host/Origin/CSRF, private launch-key enforcement on every API route, CORS, replay, path traversal, XSS/CSP, secret leaks, no GET mutation, body/time/connection limits, atomic lock publication |
 | **Total** | **102** | No double counting |
 
 Within the 18 UI cases, cover at least one render/interaction for each prompt
@@ -794,12 +805,16 @@ help for `--web` explains local-only scope and the `--non-interactive` conflict.
 11. Given a Secret write succeeds and a later setup operation fails, the
     result lists the Secret's name/scope as possibly active, never prints its
     value, and requires inspection before retry or bot PAT deletion.
-12. Given hostile Host/Origin/cross-site requests, missing or replayed session
-    capability, path traversal, oversized body, or injected account/provider
-    text, the server rejects/escapes it without mutation or secret disclosure.
+12. Given hostile Host/Origin/cross-site requests, a missing/incorrect private
+    launch key on bootstrap, state, or mutations, a missing/replayed controller
+    capability, excess simultaneous clients, path traversal, oversized body,
+    or injected account/provider text, the server rejects/escapes it without
+    mutation or secret disclosure. A failed lock write leaves no published
+    lock; an orphaned lock is never removed automatically.
 13. Given a browser refresh, the same live process restores redacted state
-    only; PAT values, session capability, and plan approval are never stored
-    in browser storage or URLs. The final page never calls local disposal
+    only; PAT values, controller capability, and plan approval are never stored
+    in browser storage or URLs. The private launch key remains only in the
+    URL fragment and browser memory. The final page never calls local disposal
     GitHub revocation or Secret installation verified Action health.
 14. Given narrow width, 200% zoom, keyboard-only and reduced-motion settings,
     every primary state and recovery action remains understandable without

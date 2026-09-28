@@ -14,7 +14,13 @@ interface Bootstrap {
   takeoverTicket: string;
 }
 
-export function createSetupSession() {
+export function sessionKeyFromFragment(fragment: string): string {
+  return new URLSearchParams(fragment.replace(/^#/, '')).get('setup-key') ?? '';
+}
+
+export function createSetupSession(sessionKey = sessionKeyFromFragment(
+  (globalThis as { location?: { hash?: string } }).location?.hash ?? '',
+)) {
   const state = writable<SessionState>({ controller: false, busy: false, error: '' });
   let capability: string | undefined;
   let takeoverTicket = '';
@@ -30,7 +36,7 @@ export function createSetupSession() {
     if (loading) return;
     loading = true;
     try {
-      const response = await fetch('/api/state', { cache: 'no-store' } as RequestInit);
+      const response = await fetch('/api/state', { cache: 'no-store', headers: { 'X-Setup-Session-Key': sessionKey } } as RequestInit);
       if (!response.ok) throw new Error('The local setup session is unavailable.');
       set({ view: await response.json() as WebSetupView, ...(preserveError ? {} : { error: '' }) });
     } catch {
@@ -42,7 +48,7 @@ export function createSetupSession() {
 
   async function connect(): Promise<void> {
     try {
-      const response = await fetch('/api/bootstrap', { cache: 'no-store' } as RequestInit);
+      const response = await fetch('/api/bootstrap', { cache: 'no-store', headers: { 'X-Setup-Session-Key': sessionKey } } as RequestInit);
       if (!response.ok) throw new Error('Could not join this local session.');
       const bootstrap = await response.json() as Bootstrap;
       capability = bootstrap.capability;
@@ -59,7 +65,8 @@ export function createSetupSession() {
   async function post(path: string, body: Record<string, unknown>, authorized = true): Promise<Record<string, unknown>> {
     const response = await fetch(path, {
       method: 'POST', cache: 'no-store',
-      headers: { 'Content-Type': 'application/json', ...(authorized && capability ? { 'X-Setup-Capability': capability } : {}) },
+      headers: { 'Content-Type': 'application/json', 'X-Setup-Session-Key': sessionKey,
+        ...(authorized && capability ? { 'X-Setup-Capability': capability } : {}) },
       body: JSON.stringify(body),
     } as RequestInit);
     const data = await response.json() as Record<string, unknown>;

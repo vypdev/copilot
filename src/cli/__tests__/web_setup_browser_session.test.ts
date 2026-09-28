@@ -1,4 +1,4 @@
-import { createSetupSession } from '../../../web/src/session/setupSession';
+import { createSetupSession, sessionKeyFromFragment } from '../../../web/src/session/setupSession';
 import type { WebSetupView } from '../../application/contracts/web_setup_view';
 
 jest.mock('svelte/store', () => ({
@@ -22,6 +22,11 @@ describe('browser session transport', () => {
 
   afterEach(() => { globalThis.fetch = originalFetch; });
 
+  test('reads the one-run key from the fragment without putting it in observable session state', () => {
+    expect(sessionKeyFromFragment('#setup-key=private-key')).toBe('private-key');
+    expect(sessionKeyFromFragment('#other=value')).toBe('');
+  });
+
   test('bootstrap and revision-bound submission keep the PAT out of observable state', async () => {
     const requests: Array<{ path: string; options?: RequestInit }> = [];
     globalThis.fetch = jest.fn(async (path: string, options?: RequestInit) => {
@@ -32,16 +37,20 @@ describe('browser session transport', () => {
       throw new Error('Unexpected route');
     }) as typeof fetch;
 
-    const session = createSetupSession();
+    const session = createSetupSession('private-session-key');
     let latest = '';
     session.subscribe(state => { latest = JSON.stringify(state); });
     await session.connect();
     await session.submit(7, 'ghp_example_secret');
 
     expect(requests.map(request => request.path)).toEqual(['/api/bootstrap', '/api/state', '/api/answer', '/api/state']);
+    for (const request of requests) {
+      expect(request.options?.headers).toEqual(expect.objectContaining({ 'X-Setup-Session-Key': 'private-session-key' }));
+    }
     expect(requests[2].options?.headers).toEqual(expect.objectContaining({ 'X-Setup-Capability': 'one-run-capability' }));
     expect(JSON.parse(String(requests[2].options?.body))).toEqual({ revision: 7, value: 'ghp_example_secret' });
     expect(latest).not.toContain('ghp_example_secret');
+    expect(latest).not.toContain('private-session-key');
     await session.submit(6, 'stale');
     expect(requests).toHaveLength(4);
   });

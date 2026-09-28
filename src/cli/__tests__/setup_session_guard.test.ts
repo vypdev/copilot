@@ -1,8 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { acquireSetupSessionGuard } from '../setup_session_guard';
 
 describe('setup session guard', () => {
@@ -72,5 +72,18 @@ describe('setup session guard', () => {
     } finally {
       open.mockRestore();
     }
+  });
+
+  test('a failed staged write never publishes an empty lock or leaves a staging file', () => {
+    const write = jest.spyOn(require('node:fs'), 'writeFileSync').mockImplementationOnce(() => {
+      throw Object.assign(new Error('Disk full'), { code: 'ENOSPC' });
+    });
+    try {
+      expect(() => acquireSetupSessionGuard(root)).toThrow('Disk full');
+      expect(existsSync(lockPath())).toBe(false);
+      expect(readdirSync(tmpdir()).filter(name => name.startsWith(`${basename(lockPath())}.`))).toEqual([]);
+    } finally { write.mockRestore(); }
+    const release = acquireSetupSessionGuard(root);
+    release();
   });
 });

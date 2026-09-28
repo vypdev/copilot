@@ -125,9 +125,9 @@ export function registerSetupCommand(program: Command): void {
           webBridge.setRepository(`${gitInfo.owner}/${gitInfo.repo}`);
           webBridge.setJourney(buildSetupJourneyView(`${gitInfo.owner}/${gitInfo.repo}`, 'repository', false));
           webServer = await startWebSetupServer(webBridge);
-          logInfo(`🌐 Local setup assistant: ${webServer.url}`);
+          logInfo(`🌐 Private local setup assistant: ${webServer.launchUrl}`, false, undefined, true);
           logInfo('If the browser does not open, copy this URL into a browser on this computer. The terminal setup remains available with copilot setup.');
-          openWebSetupBrowser(webServer.url);
+          openWebSetupBrowser(webServer.launchUrl);
         }
         if (!options.nonInteractive) {
           journey = new SetupJourneyUseCase(`${gitInfo.owner}/${gitInfo.repo}`,

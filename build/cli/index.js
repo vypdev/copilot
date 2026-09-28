@@ -65940,9 +65940,9 @@ function registerSetupCommand(program) {
                 webBridge.setRepository(`${gitInfo.owner}/${gitInfo.repo}`);
                 webBridge.setJourney((0, setup_journey_policy_1.buildSetupJourneyView)(`${gitInfo.owner}/${gitInfo.repo}`, 'repository', false));
                 webServer = await (0, web_setup_server_1.startWebSetupServer)(webBridge);
-                (0, logger_1.logInfo)(`🌐 Local setup assistant: ${webServer.url}`);
+                (0, logger_1.logInfo)(`🌐 Private local setup assistant: ${webServer.launchUrl}`, false, undefined, true);
                 (0, logger_1.logInfo)('If the browser does not open, copy this URL into a browser on this computer. The terminal setup remains available with copilot setup.');
-                (0, web_setup_server_1.openWebSetupBrowser)(webServer.url);
+                (0, web_setup_server_1.openWebSetupBrowser)(webServer.launchUrl);
             }
             if (!options.nonInteractive) {
                 journey = new setup_journey_use_case_1.SetupJourneyUseCase(`${gitInfo.owner}/${gitInfo.repo}`, webBridge ? new web_setup_adapters_1.WebSetupJourneyPresenter(webBridge) : new setup_journey_presenter_1.ConsoleSetupJourneyPresenter());
@@ -67602,26 +67602,26 @@ function acquireSetupSessionGuard(cwd) {
     const hash = (0, node_crypto_1.createHash)('sha256').update(repository).digest('hex').slice(0, 32);
     const lockPath = (0, node_path_1.join)((0, node_os_1.tmpdir)(), `copilot-setup-${hash}.lock`);
     const record = { pid: process.pid, nonce: (0, node_crypto_1.randomBytes)(16).toString('hex'), repository };
+    const stagedPath = `${lockPath}.${record.nonce}.tmp`;
+    writeStagedLock(stagedPath, record);
+    let published = false;
+    let collision;
     try {
-        const fd = (0, node_fs_1.openSync)(lockPath, 'wx', 0o600);
-        try {
-            (0, node_fs_1.writeFileSync)(fd, JSON.stringify(record));
-        }
-        finally {
-            (0, node_fs_1.closeSync)(fd);
-        }
-        return () => {
-            try {
-                const current = JSON.parse((0, node_fs_1.readFileSync)(lockPath, 'utf8'));
-                if (current.pid === record.pid && current.nonce === record.nonce && current.repository === record.repository)
-                    (0, node_fs_1.unlinkSync)(lockPath);
-            }
-            catch { /* Missing or replaced lock is not ours to remove. */ }
-        };
+        (0, node_fs_1.linkSync)(stagedPath, lockPath); // Atomic publication of a fully written record.
+        published = true;
     }
     catch (cause) {
-        if (!cause || typeof cause !== 'object' || !('code' in cause) || cause.code !== 'EEXIST')
-            throw cause;
+        collision = cause;
+    }
+    finally {
+        try {
+            (0, node_fs_1.unlinkSync)(stagedPath);
+        }
+        catch { /* A staging-file cleanup failure does not invalidate the published lock. */ }
+    }
+    if (!published) {
+        if (!collision || typeof collision !== 'object' || !('code' in collision) || collision.code !== 'EEXIST')
+            throw collision;
         let existing;
         try {
             existing = JSON.parse((0, node_fs_1.readFileSync)(lockPath, 'utf8'));
@@ -67630,19 +67630,44 @@ function acquireSetupSessionGuard(cwd) {
             throw new Error('A setup lock exists but cannot be verified. Inspect it before retrying.');
         }
         if (!Number.isSafeInteger(existing.pid) || existing.pid <= 0 || existing.repository !== repository || !existing.nonce) {
-            throw setupLockError('A setup lock has unexpected contents. Inspect it before retrying.', cause);
+            throw setupLockError('A setup lock has unexpected contents. Inspect it before retrying.', collision);
         }
         try {
             process.kill(existing.pid, 0);
-            throw setupLockError(`Another setup process (${existing.pid}) is active for this checkout. Finish or stop it before starting a second setup.`, cause);
+            throw setupLockError(`Another setup process (${existing.pid}) is active for this checkout. Finish or stop it before starting a second setup.`, collision);
         }
         catch (checkError) {
             if (!checkError || typeof checkError !== 'object' || !('code' in checkError) || checkError.code !== 'ESRCH')
                 throw checkError;
         }
-        // Filesystem reads and unlink are not atomic. Never remove a dead owner's lock here:
-        // another setup process may already have replaced it after our read.
-        throw setupLockError(`A setup lock for a stopped process (${existing.pid}) remains at ${lockPath}. Verify no setup is running, remove only that file manually, then retry.`, cause);
+        // Filesystem reads and unlink are not atomic. Never remove a dead owner's lock here.
+        throw setupLockError(`A setup lock for a stopped process (${existing.pid}) remains at ${lockPath}. Verify no setup is running, remove only that file manually, then retry.`, collision);
+    }
+    return () => {
+        try {
+            const current = JSON.parse((0, node_fs_1.readFileSync)(lockPath, 'utf8'));
+            if (current.pid === record.pid && current.nonce === record.nonce && current.repository === record.repository)
+                (0, node_fs_1.unlinkSync)(lockPath);
+        }
+        catch { /* Missing or replaced lock is not ours to remove. */ }
+    };
+}
+function writeStagedLock(path, record) {
+    const fd = (0, node_fs_1.openSync)(path, 'wx', 0o600);
+    try {
+        (0, node_fs_1.writeFileSync)(fd, JSON.stringify(record));
+        (0, node_fs_1.closeSync)(fd);
+    }
+    catch (cause) {
+        try {
+            (0, node_fs_1.closeSync)(fd);
+        }
+        catch { /* Already closed or unavailable. */ }
+        try {
+            (0, node_fs_1.unlinkSync)(path);
+        }
+        catch { /* Preserve the write failure. */ }
+        throw cause;
     }
 }
 function setupLockError(message, cause) {
@@ -68348,11 +68373,13 @@ const node_http_1 = __nccwpck_require__(88849);
 const promises_1 = __nccwpck_require__(93977);
 const node_path_1 = __nccwpck_require__(49411);
 const node_child_process_1 = __nccwpck_require__(17718);
+const node_crypto_1 = __nccwpck_require__(6005);
 const MAX_BODY_BYTES = 8192;
 const MAX_ANSWER_LENGTH = 4096;
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 /** Transport only: setup policy and credential decisions live behind the bridge. */
 async function startWebSetupServer(bridge, assets = (0, node_path_1.join)(__dirname, '..', 'web')) {
+    const sessionKey = (0, node_crypto_1.randomBytes)(32);
     const assetRoot = await (0, promises_1.realpath)(assets);
     if (!(await (0, promises_1.realpath)((0, node_path_1.join)(assetRoot, 'index.html'))).startsWith(`${assetRoot}${node_path_1.sep}`)) {
         throw new Error('Local setup index must be inside its packaged asset directory.');
@@ -68401,6 +68428,10 @@ async function startWebSetupServer(bridge, assets = (0, node_path_1.join)(__dirn
             if (request.method === 'POST' && (request.headers.origin !== origin
                 || (request.headers.referer && !request.headers.referer.startsWith(`${origin}/`)))) {
                 respond(response, 403, { error: 'Invalid request origin.' });
+                return;
+            }
+            if (request.url?.startsWith('/api/') && !authorizedSessionKey(request.headers['x-setup-session-key'], sessionKey)) {
+                respond(response, 403, { error: 'Open the private setup URL printed by the CLI.' });
                 return;
             }
             if (request.method === 'GET' && request.url === '/api/bootstrap') {
@@ -68523,6 +68554,7 @@ async function startWebSetupServer(bridge, assets = (0, node_path_1.join)(__dirn
     server.requestTimeout = 15000;
     server.headersTimeout = 15000;
     server.maxRequestsPerSocket = 250;
+    server.maxConnections = 16;
     await new Promise((resolveListen, reject) => {
         server.once('error', reject);
         server.listen(0, '127.0.0.1', () => { server.off('error', reject); resolveListen(); });
@@ -68531,6 +68563,7 @@ async function startWebSetupServer(bridge, assets = (0, node_path_1.join)(__dirn
     if (!address || typeof address === 'string')
         throw new Error('Unable to bind local setup server.');
     const url = `http://127.0.0.1:${address.port}/`;
+    const launchUrl = `${url}#setup-key=${sessionKey.toString('hex')}`;
     const close = async () => {
         if (closing)
             return closed;
@@ -68557,7 +68590,11 @@ async function startWebSetupServer(bridge, assets = (0, node_path_1.join)(__dirn
         if (view.outcome && !resultTimer)
             resultTimer = setTimeout(() => void close(), 10 * 60 * 1000);
     });
-    return { url, closed, close };
+    return { url, launchUrl, closed, close };
+}
+function authorizedSessionKey(value, expected) {
+    return typeof value === 'string' && /^[a-f0-9]{64}$/.test(value)
+        && (0, node_crypto_1.timingSafeEqual)(Buffer.from(value, 'hex'), expected);
 }
 function respond(response, status, body) {
     response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });

@@ -25,6 +25,9 @@ renew an installed bot PAT before its suggested 90-day expiry.
 
 For `copilot setup --web`, an inaccessible page or failed browser launch does
 not imply a setup failure: open the exact `127.0.0.1` URL printed by the CLI.
+Do not share the printed `#setup-key` fragment. TCP loopback can be reached
+by other local OS users; the private link, not OS-user identification, grants
+access to this setup session.
 If the local bind or bundled assets fail, stop and use `copilot setup` in the
 terminal. A second browser tab is read-only until you select **Take control
 in this tab**; the former tab then cannot submit decisions. A rejected stale

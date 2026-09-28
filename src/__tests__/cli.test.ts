@@ -32,7 +32,7 @@ jest.mock('../cli/setup_session_guard', () => ({
 }));
 
 jest.mock('../cli/web_setup_server', () => ({
-  startWebSetupServer: jest.fn(async () => ({ url: 'http://127.0.0.1:40000/', closed: Promise.resolve(), close: jest.fn() })),
+  startWebSetupServer: jest.fn(async () => ({ url: 'http://127.0.0.1:40000/', launchUrl: 'http://127.0.0.1:40000/#setup-key=test', closed: Promise.resolve(), close: jest.fn() })),
   openWebSetupBrowser: jest.fn(),
 }));
 
@@ -521,7 +521,9 @@ describe('CLI', () => {
       it('uses one browser session through PAT, plan, revalidation, and Apply', async () => {
         await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
         expect(startWebSetupServer).toHaveBeenCalledTimes(1);
-        expect(openWebSetupBrowser).toHaveBeenCalledWith('http://127.0.0.1:40000/');
+        expect(openWebSetupBrowser).toHaveBeenCalledWith('http://127.0.0.1:40000/#setup-key=test');
+        const { logInfo } = require('../utils/logger');
+        expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('#setup-key=test'), false, undefined, true);
         expect(ask.mock.calls.map(call => call[0].title)).toEqual(expect.arrayContaining([
           'Confirm this repository', 'How will you provide your setup PAT?', 'Temporary setup PAT',
           'Review your setup plan', 'Apply this setup now?',

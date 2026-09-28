@@ -41,6 +41,10 @@ Once installed, the `copilot` command is available globally. Repository-dependen
 Prefer a visual walkthrough? Run `copilot setup --web` from the repository
 root. The CLI starts a short-lived page on `127.0.0.1` and opens your browser;
 if opening fails, paste the printed local URL into a browser on this computer.
+Treat that entire URL, including its `#setup-key` fragment, as private:
+loopback by itself does not restrict access to your OS account, and anyone
+with the URL on this computer could access the setup session. The fragment
+is used for local API authorization and is not sent to GitHub.
 The page shows the same six setup stages, keeps the review pass visibly part
 of the current run, presents permissions and the final plan, and asks for a
 separate final **Apply setup** approval. Use the System/Light/Dark control in

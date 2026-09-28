@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { readFile, realpath } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 import { spawn } from 'node:child_process';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { WebSetupBridge } from './web_setup_bridge';
 
 const MAX_BODY_BYTES = 8192;
@@ -10,12 +11,14 @@ const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 's
 
 export interface WebSetupServer {
   readonly url: string;
+  readonly launchUrl: string;
   readonly closed: Promise<void>;
   close(): Promise<void>;
 }
 
 /** Transport only: setup policy and credential decisions live behind the bridge. */
 export async function startWebSetupServer(bridge: WebSetupBridge, assets = join(__dirname, '..', 'web')): Promise<WebSetupServer> {
+  const sessionKey = randomBytes(32);
   const assetRoot = await realpath(assets);
   if (!(await realpath(join(assetRoot, 'index.html'))).startsWith(`${assetRoot}${sep}`)) {
     throw new Error('Local setup index must be inside its packaged asset directory.');
@@ -61,6 +64,10 @@ export async function startWebSetupServer(bridge: WebSetupBridge, assets = join(
       if (request.method === 'POST' && (request.headers.origin !== origin
         || (request.headers.referer && !request.headers.referer.startsWith(`${origin}/`)))) {
         respond(response, 403, { error: 'Invalid request origin.' });
+        return;
+      }
+      if (request.url?.startsWith('/api/') && !authorizedSessionKey(request.headers['x-setup-session-key'], sessionKey)) {
+        respond(response, 403, { error: 'Open the private setup URL printed by the CLI.' });
         return;
       }
       if (request.method === 'GET' && request.url === '/api/bootstrap') {
@@ -148,6 +155,7 @@ export async function startWebSetupServer(bridge: WebSetupBridge, assets = join(
   server.requestTimeout = 15_000;
   server.headersTimeout = 15_000;
   server.maxRequestsPerSocket = 250;
+  server.maxConnections = 16;
   await new Promise<void>((resolveListen, reject) => {
     server.once('error', reject);
     server.listen(0, '127.0.0.1', () => { server.off('error', reject); resolveListen(); });
@@ -155,6 +163,7 @@ export async function startWebSetupServer(bridge: WebSetupBridge, assets = join(
   const address = server.address();
   if (!address || typeof address === 'string') throw new Error('Unable to bind local setup server.');
   const url = `http://127.0.0.1:${address.port}/`;
+  const launchUrl = `${url}#setup-key=${sessionKey.toString('hex')}`;
   const close = async (): Promise<void> => {
     if (closing) return closed;
     closing = true;
@@ -176,7 +185,12 @@ export async function startWebSetupServer(bridge: WebSetupBridge, assets = join(
   const unsubscribe = bridge.subscribe(view => {
     if (view.outcome && !resultTimer) resultTimer = setTimeout(() => void close(), 10 * 60 * 1000);
   });
-  return { url, closed, close };
+  return { url, launchUrl, closed, close };
+}
+
+function authorizedSessionKey(value: string | string[] | undefined, expected: Buffer): boolean {
+  return typeof value === 'string' && /^[a-f0-9]{64}$/.test(value)
+    && timingSafeEqual(Buffer.from(value, 'hex'), expected);
 }
 
 function respond(response: ServerResponse, status: number, body: unknown): void {

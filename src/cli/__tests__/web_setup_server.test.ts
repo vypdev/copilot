@@ -2,8 +2,24 @@ import { mkdtempSync, mkdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { request } from 'node:http';
+import { connect, type Socket } from 'node:net';
 import { WebSetupBridge } from '../web_setup_bridge';
 import { startWebSetupServer, type WebSetupServer } from '../web_setup_server';
+
+const sessionKeys = new Map<string, string>();
+const registerSession = (session: WebSetupServer): void => {
+  const launch = new URL(session.launchUrl);
+  sessionKeys.set(launch.origin, new URLSearchParams(launch.hash.slice(1)).get('setup-key')!);
+};
+const fetch: typeof globalThis.fetch = (input, init) => {
+  const url = new URL(input instanceof Request ? input.url : String(input));
+  const headers = new Headers(init?.headers);
+  if (url.pathname.startsWith('/api/')) {
+    const key = sessionKeys.get(url.origin);
+    if (key) headers.set('X-Setup-Session-Key', key);
+  }
+  return globalThis.fetch(input, { ...init, headers });
+};
 
 describe('local web setup server', () => {
   let root: string;
@@ -18,8 +34,9 @@ describe('local web setup server', () => {
     writeFileSync(join(root, 'assets', 'app.css'), ':root { color: black; }');
     bridge = new WebSetupBridge('owner/repo');
     server = await startWebSetupServer(bridge, root);
+    registerSession(server);
   });
-  afterEach(async () => { if (server) await server.close(); rmSync(root, { recursive: true, force: true }); });
+  afterEach(async () => { if (server) await server.close(); sessionKeys.clear(); rmSync(root, { recursive: true, force: true }); });
 
   const jsonPost = (url: string, path: string, body: unknown, headers: Record<string, string> = {}) => fetch(`${url}${path}`, {
     method: 'POST', headers: { Origin: url.slice(0, -1), 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body),
@@ -35,6 +52,58 @@ describe('local web setup server', () => {
     writeFileSync(join(root, 'assets', 'unlisted.js'), 'alert(1)');
     expect((await fetch(`${server.url}assets/unlisted.js`)).status).toBe(404);
     expect((await fetch(`${server.url}assets/%2e%2e/index.html`)).status).toBe(404);
+  });
+
+  test('a private launch fragment is required before any local API state or controller lease is exposed', async () => {
+    const launch = new URL(server.launchUrl);
+    const key = new URLSearchParams(launch.hash.slice(1)).get('setup-key');
+    expect(key).toMatch(/^[a-f0-9]{64}$/);
+    expect(launch.origin).toBe(new URL(server.url).origin);
+    for (const path of ['api/bootstrap', 'api/state']) {
+      const missing = await globalThis.fetch(`${server.url}${path}`);
+      expect(missing.status).toBe(403);
+      expect(await missing.text()).not.toContain(key!);
+      expect((await globalThis.fetch(`${server.url}${path}`, { headers: { 'X-Setup-Session-Key': '0'.repeat(64) } })).status).toBe(403);
+    }
+    expect((await globalThis.fetch(`${server.url}api/takeover`, {
+      method: 'POST', headers: { Origin: launch.origin, 'Content-Type': 'application/json' }, body: '{}',
+    })).status).toBe(403);
+    expect(bridge.snapshot().prompt).toBeUndefined();
+    expect((await fetch(`${server.url}api/bootstrap`)).status).toBe(200);
+  });
+
+  test('a key from a different local setup run cannot bootstrap this session', async () => {
+    const other = await startWebSetupServer(new WebSetupBridge('owner/other'), root);
+    try {
+      const firstKey = sessionKeys.get(new URL(server.url).origin)!;
+      const otherKey = new URLSearchParams(new URL(other.launchUrl).hash.slice(1)).get('setup-key')!;
+      expect(otherKey).not.toBe(firstKey);
+      expect((await globalThis.fetch(`${other.url}api/bootstrap`, {
+        headers: { 'X-Setup-Session-Key': firstKey },
+      })).status).toBe(403);
+      expect((await globalThis.fetch(`${other.url}api/bootstrap`, {
+        headers: { 'X-Setup-Session-Key': otherKey },
+      })).status).toBe(200);
+    } finally { await other.close(); }
+  });
+
+  test('bounds simultaneous loopback connections', async () => {
+    const { port } = new URL(server.url);
+    const sockets: Socket[] = [];
+    const open = () => new Promise<Socket>((resolveSocket, reject) => {
+      const socket = connect(Number(port), '127.0.0.1');
+      socket.once('connect', () => resolveSocket(socket));
+      socket.once('error', reject);
+    });
+    try {
+      sockets.push(...await Promise.all(Array.from({ length: 16 }, open)));
+      const overflow = await open();
+      sockets.push(overflow);
+      await expect(new Promise<void>((resolveClose, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Excess connection was not closed.')), 1000);
+        overflow.once('close', () => { clearTimeout(timeout); resolveClose(); });
+      })).resolves.toBeUndefined();
+    } finally { for (const socket of sockets) socket.destroy(); }
   });
 
   test('rejects forged hosts and cross-origin mutation', async () => {
@@ -110,6 +179,7 @@ describe('local web setup server', () => {
 
     const secondBridge = new WebSetupBridge('owner/repo');
     const secondServer = await startWebSetupServer(secondBridge, root);
+    registerSession(secondServer);
     try {
       const nextCapability = (await (await fetch(`${secondServer.url}api/bootstrap`)).json() as { capability: string }).capability;
       secondBridge.setJourney({ repository: 'owner/repo', position: 6, total: 6, current: 'Apply', complete: [], pending: [], mutationStarted: true, choiceReviewPass: 1 });
@@ -238,6 +308,7 @@ describe('local web setup server', () => {
     try {
       bridge = new WebSetupBridge('owner/repo');
       server = await startWebSetupServer(bridge, root);
+      registerSession(server);
       const pending = bridge.ask({ kind: 'secret', title: 'Setup PAT' });
       const revision = bridge.snapshot().promptRevision!;
       await jest.advanceTimersByTimeAsync(30 * 60 * 1000);
@@ -257,6 +328,7 @@ describe('local web setup server', () => {
     try {
       bridge = new WebSetupBridge('owner/repo');
       server = await startWebSetupServer(bridge, root);
+      registerSession(server);
       bridge.setJourney({ repository: 'owner/repo', position: 6, total: 6, current: 'Apply',
         complete: [], pending: [], mutationStarted: true, choiceReviewPass: 1 });
       await jest.advanceTimersByTimeAsync(4 * 60 * 60 * 1000);
@@ -273,6 +345,7 @@ describe('local web setup server', () => {
     try {
       bridge = new WebSetupBridge('owner/repo');
       server = await startWebSetupServer(bridge, root);
+      registerSession(server);
       const applying = { repository: 'owner/repo', position: 6, total: 6, current: 'Apply',
         complete: [] as string[], pending: [] as string[], mutationStarted: true, choiceReviewPass: 1 };
       bridge.setJourney(applying);
@@ -293,6 +366,7 @@ describe('local web setup server', () => {
     try {
       bridge = new WebSetupBridge('owner/repo');
       server = await startWebSetupServer(bridge, root);
+      registerSession(server);
       bridge.finish('complete', 'done');
       await jest.advanceTimersByTimeAsync(10 * 60 * 1000);
       await expect(server.closed).resolves.toBeUndefined();
