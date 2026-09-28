@@ -611,6 +611,21 @@ describe('CLI', () => {
       } finally { createTerminal.mockRestore(); }
     });
 
+    it('describes an explicitly empty issue-workflow selection as none', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const configFile = require('../cli/setup_config_file') as typeof import('../cli/setup_config_file');
+      const loadConfig = jest.spyOn(configFile, 'loadSetupConfigurationOverrides')
+        .mockReturnValue({ issueWorkflows: { enabled: [] }, pullRequestApproval: { mode: 'off' } });
+      const input = guidedTerminal();
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--config', 'empty-issue-workflows.yml']);
+        const { logInfo } = require('../utils/logger');
+        expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('issue workflows: none'));
+      } finally { loadConfig.mockRestore(); createTerminal.mockRestore(); }
+    });
+
     it('falls back to manual entry when the setup PAT form cannot express a grant', async () => {
       const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
       const urlPolicy = require('../application/policies/setup_pat_creation_url_policy') as typeof import('../application/policies/setup_pat_creation_url_policy');
@@ -662,6 +677,26 @@ describe('CLI', () => {
         const { logInfo } = require('../utils/logger');
         expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('guided fine-grained bot PAT link is unavailable'));
         expect(runLocalAction).toHaveBeenCalledTimes(1);
+      } finally { buildLink.mockRestore(); createTerminal.mockRestore(); }
+    });
+
+    it('surfaces an unexpected bot-link failure instead of silently entering manual mode', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const urlPolicy = require('../application/policies/setup_pat_creation_url_policy') as typeof import('../application/policies/setup_pat_creation_url_policy');
+      const original = urlPolicy.buildSetupPatCreationUrl;
+      const buildLink = jest.spyOn(urlPolicy, 'buildSetupPatCreationUrl')
+        .mockImplementation(input => {
+          if (input.role === 'workflow') throw new Error('unexpected bot link failure');
+          return original(input);
+        });
+      const input = guidedTerminal();
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      mockTokenPermissionInspect.mockResolvedValueOnce(acceptedSetupPatReport());
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off', '--skip-secrets']);
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
       } finally { buildLink.mockRestore(); createTerminal.mockRestore(); }
     });
 
@@ -721,7 +756,23 @@ describe('CLI', () => {
       } finally { createTerminal.mockRestore(); }
     });
 
-    it('verifies the guided bot PAT account before applying setup and warns on account reuse', async () => {
+    it('warns about excess organization grants if remote owner type cannot be resolved', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const input = guidedTerminal(prompt => prompt.includes('repository owner an organization') ? '1' : undefined);
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      mockRemoteConfigurationInspect.mockResolvedValueOnce({ ...defaultRemoteConfiguration, ownerType: 'Unknown' });
+      mockTokenPermissionInspect.mockResolvedValueOnce(acceptedSetupPatReport());
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off', '--skip-secrets']);
+        const { logInfo } = require('../utils/logger');
+        expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('PAT may have excess access'));
+      } finally { createTerminal.mockRestore(); }
+    });
+
+    it.each([
+      ['operator', true], ['separate-bot', false],
+    ])('verifies the guided bot PAT account @%s before applying setup', async (login, reusedAccount) => {
       const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
       const promptModule = require('../cli/setup_credential_prompt_adapter') as typeof import('../cli/setup_credential_prompt_adapter');
       const identityModule = require('../infrastructure/setup_github_identity_query_adapter') as typeof import('../infrastructure/setup_github_identity_query_adapter');
@@ -729,9 +780,9 @@ describe('CLI', () => {
       const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
         .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
       const botIdentity = jest.spyOn(promptModule.SetupCredentialPromptAdapter.prototype, 'guidedWorkflowBotIdentity', 'get')
-        .mockReturnValue({ id: 42, login: 'operator' });
+        .mockReturnValue({ id: 42, login });
       const identify = jest.spyOn(identityModule.SetupGithubIdentityQueryAdapter.prototype, 'identify')
-        .mockResolvedValue({ id: 42, login: 'operator' });
+        .mockResolvedValue({ id: 42, login });
       mockSetupCredentialsCollect.mockResolvedValueOnce({
         collection: { apiKeys: [], workflowPat: { name: 'PAT', value: 'bot-pat' } }, checks: [], existingSecretNames: [],
       });
@@ -740,8 +791,9 @@ describe('CLI', () => {
         await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off', '--skip-secrets']);
         const { logInfo } = require('../utils/logger');
         expect(identify).toHaveBeenCalledWith('bot-pat');
-        expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('Workflow PAT owner verified as @operator'));
-        expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('same GitHub account'));
+        expect(logInfo).toHaveBeenCalledWith(expect.stringContaining(`Workflow PAT owner verified as @${login}`));
+        expect((logInfo as jest.Mock).mock.calls.flat().some((message: unknown) => String(message).includes('same GitHub account')))
+          .toBe(reusedAccount);
         expect(runLocalAction).toHaveBeenCalledTimes(1);
       } finally { identify.mockRestore(); botIdentity.mockRestore(); createTerminal.mockRestore(); }
     });
@@ -786,6 +838,21 @@ describe('CLI', () => {
         expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('Setup may be partially applied'));
         expect(process.exitCode).toBe(1);
       } finally { botIdentity.mockRestore(); createTerminal.mockRestore(); }
+    });
+
+    it('reports partial completion when an action succeeds but returns errors', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const input = guidedTerminal();
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      mockTokenPermissionInspect.mockResolvedValueOnce(acceptedSetupPatReport());
+      (runLocalAction as jest.Mock).mockResolvedValueOnce([{ success: true, errors: ['partial failure'] }]);
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off', '--skip-secrets']);
+        const { logInfo } = require('../utils/logger');
+        expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('partial completion'));
+        expect(process.exitCode).toBe(1);
+      } finally { createTerminal.mockRestore(); }
     });
     it('offers the guided setup PAT link and a repair link when its initial audit fails', async () => {
       const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');

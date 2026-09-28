@@ -165,7 +165,7 @@ export function registerSetupCommand(program: Command): void {
                 credentialPrompt.configureSetupPatGuide(url);
                 setupPatPermissions = preview;
                 assertedOwnerKind = ownerKind;
-                permissionIntent = { draft, answeredQuestionIds: [...new Set([...fixedQuestionIds, ...(intent.answeredQuestionIds ?? [])])] };
+                permissionIntent = { draft, answeredQuestionIds: [...new Set([...fixedQuestionIds, ...intent.answeredQuestionIds!])] };
               } catch (error) {
                 if (!(error instanceof UnsupportedSetupPatLinkError)) throw error;
                 logInfo('A guided setup PAT link is unavailable for this owner or permission set. Enter a manually created PAT using the table above.');
@@ -221,7 +221,7 @@ export function registerSetupCommand(program: Command): void {
           if (assertedOwnerKind && remoteConfiguration && remoteConfiguration.ownerType !== 'Unknown'
             && remoteConfiguration.ownerType !== assertedOwnerKind) {
             logInfo(`The owner was declared ${assertedOwnerKind}, but GitHub reports ${remoteConfiguration.ownerType}. The guided link is no longer valid for this plan.`);
-            if (credentialPrompt.usedGuidedSetupPat) credentialPrompt.showUpdatedSetupPatLink(buildSetupPatCreationUrl({
+            credentialPrompt.showUpdatedSetupPatLink(buildSetupPatCreationUrl({
               role: 'setup', owner: gitInfo.owner, repository: gitInfo.repo, expiresIn: 1,
               requirements: configuredSetupPatPermissions,
             }), 'final', setupPatPermissionDelta(setupPatPermissions, configuredSetupPatPermissions));
@@ -310,7 +310,7 @@ export function registerSetupCommand(program: Command): void {
               role: 'workflow', owner: gitInfo.owner, repository: gitInfo.repo, expiresIn: 90,
               requirements: workflowTokenPermissions,
             });
-            credentialPrompt.configureWorkflowPatGuide(workflowPatGuide, login => githubIdentities.resolve(login, token ?? ''));
+            credentialPrompt.configureWorkflowPatGuide(workflowPatGuide, login => githubIdentities.resolve(login, token!));
           } catch (error) {
             if (!(error instanceof UnsupportedSetupPatLinkError)) throw error;
             logInfo('A guided fine-grained bot PAT link is unavailable for one or more required permissions. Use the permission table and manual path; review whether a classic PAT is required for this plan.');

@@ -70,7 +70,6 @@ export function buildSetupPatCreationUrl(input: Readonly<{
     for (const [key, level] of [...grants].sort(([left], [right]) => left.localeCompare(right))) {
         url.searchParams.set(key, level);
     }
-    const result = url.toString();
-    if (result.length > 2_048) throw new Error('PAT form URL exceeds the supported terminal length; create the PAT manually.');
-    return result;
+    // Owner/repository lengths and the finite permission map bound this URL well below terminal limits.
+    return url.toString();
 }

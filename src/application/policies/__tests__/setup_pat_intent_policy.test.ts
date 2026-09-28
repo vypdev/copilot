@@ -87,6 +87,10 @@ describe('setup PAT permission intent', () => {
     expect(grants(configuration, 'Organization').some(item => item.startsWith('organization:'))).toBe(false);
     expect(setupPatIntentNeedsOwnerKind(configuration)).toBe(true);
     configuration.manageRepositorySecrets = false;
+    expect(setupPatIntentNeedsOwnerKind(configuration)).toBe(true);
+    configuration.storage.variables.preserveExisting = false;
+    expect(setupPatIntentNeedsOwnerKind(configuration)).toBe(false);
+    configuration.storage.variables.preserveExisting = true;
     configuration.manageRepositoryVariables = false;
     expect(setupPatIntentNeedsOwnerKind(configuration)).toBe(false);
   });

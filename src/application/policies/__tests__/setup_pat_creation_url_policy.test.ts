@@ -58,6 +58,20 @@ describe('buildSetupPatCreationUrl', () => {
         expect(url.searchParams.get('contents')).toBe('write');
     });
 
+    it('keeps even the largest valid owner, repository, and grant set within a practical terminal URL', () => {
+        const grants = [
+            ...['Metadata', 'Contents', 'Secrets', 'Variables', 'Issues', 'Actions', 'Administration', 'Workflows', 'Pull requests']
+                .map(name => permission('workflow', 'repository', name, name === 'Metadata' ? 'read' : 'write')),
+            ...['Secrets', 'Variables', 'Issue Types', 'Projects', 'Members']
+                .map(name => permission('workflow', 'organization', name, 'write')),
+        ];
+        const url = buildSetupPatCreationUrl({
+            role: 'workflow', owner: 'a'.repeat(39), repository: 'r'.repeat(100), expiresIn: 366,
+            requirements: grants,
+        });
+        expect(url.length).toBeLessThan(2_048);
+    });
+
     it('rejects unsupported Checks instead of producing an incomplete guarded link', () => {
         expect(() => buildSetupPatCreationUrl({
             role: 'workflow', owner: 'vypdev', repository: 'copilot', expiresIn: 90,

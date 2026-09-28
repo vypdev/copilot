@@ -63,6 +63,19 @@ describe('setup questionnaire policy', () => {
     expect(state).toEqual(expect.objectContaining({ terminal: 'review', phase: 'permission-intent', answeredQuestionIds: [] }));
   });
 
+  it('enters the full review immediately when all questions are already fixed', () => {
+    const configuration = createDefaultSetupConfiguration();
+    const ids: string[] = [];
+    let state = createSetupQuestionnaire(configuration);
+    while (state.terminal === 'collecting') {
+      ids.push(state.question!.id);
+      state = transitionSetupQuestionnaire(state, { kind: 'answer', value: '' });
+    }
+    expect(createSetupQuestionnaire(configuration, { skipQuestionIds: ids })).toEqual(
+      expect.objectContaining({ terminal: 'review', phase: 'full' }),
+    );
+  });
+
   it('supports a legacy collecting state without an explicit phase', () => {
     const { phase: _phase, ...legacy } = createSetupQuestionnaire(createDefaultSetupConfiguration());
     const next = transitionSetupQuestionnaire(legacy, { kind: 'answer', value: '' });
