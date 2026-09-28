@@ -39,7 +39,9 @@ If the checkout does not include the compiled `build/` folder (e.g. it is gitign
 Once installed, the `copilot` command is available globally. Repository-dependent commands such as `copilot setup`, `copilot doctor`, `copilot check-progress`, `copilot think`, and `copilot do` must be run **from the root of the target repository**. The `copilot upgrade`, `copilot --version`, and help flows can run from any directory. Commands that access GitHub accept `--token` or `PERSONAL_ACCESS_TOKEN` from the environment. `copilot setup` and `copilot doctor` securely prompt for the setup PAT when run interactively; no `.env` file is read or created. `copilot setup --dry-run` is the only setup mode that can run without a token. See [CLI commands](/single-actions/workflow-and-cli).
 
 Prefer a visual walkthrough? Run `copilot setup --web` from the repository
-root. The CLI starts a short-lived page on `127.0.0.1` and opens your browser;
+root on an attached Git branch. A detached HEAD is rejected before credentials
+are requested; check out a branch first. The CLI starts a short-lived page on
+`127.0.0.1` and opens your browser;
 if opening fails, paste the printed local URL into a browser on this computer.
 Enter the 16-character pairing code shown in the terminal before setup state
 appears. The URL contains no secret; keep the pairing code private. Loopback

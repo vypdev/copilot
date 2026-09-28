@@ -3,7 +3,7 @@ import { runLocalAction } from '../../actions/local_action';
 import { TITLE } from '../../application/contracts/product_identity';
 import { getSetupToken } from '../../utils/setup_files';
 import { logError, logInfo } from '../../utils/logger';
-import { getCurrentBranch, getCurrentHeadSha, getGitInfo, getGitRepositoryRoot, isInsideGitRepo } from '../../cli_context';
+import { getCurrentAttachedBranch, getCurrentHeadSha, getGitInfo, getGitRepositoryRoot, isInsideGitRepo } from '../../cli_context';
 import { buildSetupParams } from './setup_policy';
 import { collectApprovalCheck, collectScope, collectSecret, loadSetupOverrides } from '../setup_command_options';
 import { SetupQuestionnaireController, SetupWizardUseCase } from '../../application/usecases/setup';
@@ -116,10 +116,10 @@ export function registerSetupCommand(program: Command): void {
         logInfo(`📦 Repository: ${gitInfo.owner}/${gitInfo.repo}`);
         releaseSetupGuard = acquireSetupSessionGuard(cwd);
         const checkoutRoot = webBridge ? getGitRepositoryRoot(cwd) : cwd;
-        const initialBranch = webBridge ? getCurrentBranch() : undefined;
+        const initialBranch = webBridge ? getCurrentAttachedBranch(cwd) : undefined;
         const initialHead = webBridge ? getCurrentHeadSha() : undefined;
-        if (webBridge && !initialHead) {
-          throw new ApplicationError('configuration.invalid', 'The current Git revision could not be verified. No local setup session started.');
+        if (webBridge && (!initialBranch || !initialHead)) {
+          throw new ApplicationError('configuration.invalid', 'An attached Git branch and revision are required for web setup. Check out a branch before creating PATs. No local setup session started.');
         }
         if (webBridge) {
           webBridge.setRepository(`${gitInfo.owner}/${gitInfo.repo}`);
@@ -349,7 +349,7 @@ export function registerSetupCommand(program: Command): void {
               const current = getGitInfo();
               return 'error' in current ? undefined : {
                 owner: current.owner, repository: current.repo, checkoutRoot: getGitRepositoryRoot(cwd),
-                branch: getCurrentBranch(), head: getCurrentHeadSha() ?? '',
+                branch: getCurrentAttachedBranch(cwd) ?? '', head: getCurrentHeadSha() ?? '',
               };
             },
             fileSnapshotMatches: setupApplySnapshotMatches,

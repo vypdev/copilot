@@ -65931,10 +65931,10 @@ function registerSetupCommand(program) {
             (0, logger_1.logInfo)(`📦 Repository: ${gitInfo.owner}/${gitInfo.repo}`);
             releaseSetupGuard = (0, setup_session_guard_1.acquireSetupSessionGuard)(cwd);
             const checkoutRoot = webBridge ? (0, cli_context_1.getGitRepositoryRoot)(cwd) : cwd;
-            const initialBranch = webBridge ? (0, cli_context_1.getCurrentBranch)() : undefined;
+            const initialBranch = webBridge ? (0, cli_context_1.getCurrentAttachedBranch)(cwd) : undefined;
             const initialHead = webBridge ? (0, cli_context_1.getCurrentHeadSha)() : undefined;
-            if (webBridge && !initialHead) {
-                throw new application_error_1.ApplicationError('configuration.invalid', 'The current Git revision could not be verified. No local setup session started.');
+            if (webBridge && (!initialBranch || !initialHead)) {
+                throw new application_error_1.ApplicationError('configuration.invalid', 'An attached Git branch and revision are required for web setup. Check out a branch before creating PATs. No local setup session started.');
             }
             if (webBridge) {
                 webBridge.setRepository(`${gitInfo.owner}/${gitInfo.repo}`);
@@ -66181,7 +66181,7 @@ function registerSetupCommand(program) {
                         const current = (0, cli_context_1.getGitInfo)();
                         return 'error' in current ? undefined : {
                             owner: current.owner, repository: current.repo, checkoutRoot: (0, cli_context_1.getGitRepositoryRoot)(cwd),
-                            branch: (0, cli_context_1.getCurrentBranch)(), head: (0, cli_context_1.getCurrentHeadSha)() ?? '',
+                            branch: (0, cli_context_1.getCurrentAttachedBranch)(cwd) ?? '', head: (0, cli_context_1.getCurrentHeadSha)() ?? '',
                         };
                     },
                     fileSnapshotMatches: setup_apply_snapshot_1.setupApplySnapshotMatches,
@@ -68661,6 +68661,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.cleanCliArg = cleanCliArg;
 exports.getGitInfo = getGitInfo;
 exports.getCurrentBranch = getCurrentBranch;
+exports.getCurrentAttachedBranch = getCurrentAttachedBranch;
 exports.getCurrentHeadSha = getCurrentHeadSha;
 exports.isInsideGitRepo = isInsideGitRepo;
 exports.getGitRepositoryRoot = getGitRepositoryRoot;
@@ -68693,6 +68694,16 @@ function getCurrentBranch() {
     }
     catch {
         return 'main';
+    }
+}
+/** A verified branch name for web setup; detached HEAD and failed git reads are not guessed. */
+function getCurrentAttachedBranch(cwd) {
+    try {
+        const branch = (0, child_process_1.execSync)('git symbolic-ref --quiet --short HEAD', { cwd }).toString().trim();
+        return branch && branch !== 'HEAD' ? branch : undefined;
+    }
+    catch {
+        return undefined;
     }
 }
 /** Returns the canonical object ID for the workspace revision being analyzed. */

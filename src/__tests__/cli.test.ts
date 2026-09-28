@@ -508,7 +508,7 @@ describe('CLI', () => {
         (execSync as jest.Mock).mockImplementation((command: string) => Buffer.from(
           command === 'git rev-parse HEAD' ? 'a'.repeat(40)
             : command === 'git rev-parse --show-toplevel' ? process.cwd()
-              : command === 'git rev-parse --abbrev-ref HEAD' ? 'develop'
+              : command === 'git rev-parse --abbrev-ref HEAD' || command === 'git symbolic-ref --quiet --short HEAD' ? 'develop'
                 : 'https://github.com/test-owner/test-repo.git',
         ));
         ask = jest.spyOn(WebSetupBridge.prototype, 'ask').mockImplementation(answerWebPrompt);
@@ -540,6 +540,24 @@ describe('CLI', () => {
         await program.parseAsync(['node', 'cli', 'setup', '--web']);
         expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
         expect(runLocalAction).not.toHaveBeenCalled();
+      });
+
+      it('rejects detached HEAD before opening the browser or collecting a PAT', async () => {
+        (execSync as jest.Mock).mockImplementation((command: string) => {
+          if (command === 'git symbolic-ref --quiet --short HEAD') throw new Error('detached HEAD');
+          return Buffer.from(command === 'git rev-parse HEAD' ? 'a'.repeat(40)
+            : command === 'git rev-parse --show-toplevel' ? process.cwd()
+              : 'https://github.com/test-owner/test-repo.git');
+        });
+        await program.parseAsync(['node', 'cli', 'setup', '--web']);
+        expect(startWebSetupServer).not.toHaveBeenCalled();
+        expect(openWebSetupBrowser).not.toHaveBeenCalled();
+        expect(ask).not.toHaveBeenCalled();
+        expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+        const { logError } = require('../utils/logger');
+        expect(logError).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('Check out a branch') }));
       });
 
       it.each([

@@ -218,6 +218,10 @@ exactly what completed and what remains.
    empty lock. Web
    mode does not require a TTY: the browser is the interactive surface, and
    a printed local URL is available if automatic opening is unavailable.
+   Web setup MUST verify an attached Git branch and canonical HEAD before
+   opening the browser or collecting credentials. Detached HEAD or an unreadable
+   branch fails immediately with checkout guidance; no fallback branch name
+   may be inferred for this guarded session.
 2. Bind `127.0.0.1:0`, record the assigned port, create an unpredictable
    one-run session key, a separate 16-hex-character pairing code, and first
    controller lease in process memory. Print the pairing code only in the
@@ -777,9 +781,11 @@ help for `--web` explains local-only scope and the `--non-interactive` conflict.
 
 ## 16. Acceptance scenarios
 
-1. Given an installed npm package and an eligible checkout, `copilot setup
+1. Given an installed npm package and an eligible checkout on an attached
+   branch, `copilot setup
    --web` opens a bundled local page showing the exact repository and six
-   stages; no source checkout or Vite server is needed.
+   stages; no source checkout or Vite server is needed. A detached HEAD is
+   rejected before a browser opens or any PAT is requested.
 2. Given a failed browser opener, the CLI prints the loopback URL and keeps
    serving; given a failed bind or missing assets, it stops without a false
    partial setup claim and offers terminal fallback.
@@ -884,12 +890,13 @@ catalog stays `proposed` until the definition of done is evidenced. Existing
 terminal policy/use cases remain the authority; the current web path does not
 introduce its own permission catalog.
 
-The latest full local run on 2026-09-28 passed 501 Jest suites / 5,347 tests,
-with 95.93% statements, 90.83% branches, 96.51% functions, and 97.24% lines
+The latest full local run on 2026-09-28 passed 502 Jest suites / 5,388 tests,
+with 95.95% statements, 90.88% branches, 96.53% functions, and 97.26% lines
 repository-wide. The new setup-PAT intent, bootstrap audit, configured audit,
 remote-fact comparison, and override merge modules each reached 100% in all
 four metrics; final web Apply authorization reached 100% lines and 95.83%
-branches. The local HTTP server reached 99.33% lines and 92.26% branches.
+branches. The browser session transport reached 100% in all four metrics.
+The local HTTP server reached 99.41% lines and 92.46% branches.
 Focused tests additionally cover the CLI handoff, semantic Svelte/Vite renders,
 empty issue-workflow selection, drift, cancellation, and package isolation.
 Typecheck, lint, Svelte diagnostics, full build, catalog, documentation,

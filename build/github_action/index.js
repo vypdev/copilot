@@ -65235,6 +65235,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.cleanCliArg = cleanCliArg;
 exports.getGitInfo = getGitInfo;
 exports.getCurrentBranch = getCurrentBranch;
+exports.getCurrentAttachedBranch = getCurrentAttachedBranch;
 exports.getCurrentHeadSha = getCurrentHeadSha;
 exports.isInsideGitRepo = isInsideGitRepo;
 exports.getGitRepositoryRoot = getGitRepositoryRoot;
@@ -65267,6 +65268,16 @@ function getCurrentBranch() {
     }
     catch {
         return 'main';
+    }
+}
+/** A verified branch name for web setup; detached HEAD and failed git reads are not guessed. */
+function getCurrentAttachedBranch(cwd) {
+    try {
+        const branch = (0, child_process_1.execSync)('git symbolic-ref --quiet --short HEAD', { cwd }).toString().trim();
+        return branch && branch !== 'HEAD' ? branch : undefined;
+    }
+    catch {
+        return undefined;
     }
 }
 /** Returns the canonical object ID for the workspace revision being analyzed. */

@@ -807,6 +807,7 @@
       ],
       "tests": [
         "src/__tests__/cli.test.ts",
+        "src/__tests__/cli_context_branch.test.ts",
         "src/__tests__/cli_context_root.test.ts",
         "src/cli/__tests__/web_setup_bridge.test.ts",
         "src/cli/__tests__/web_setup_adapters.test.ts",

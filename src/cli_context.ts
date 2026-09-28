@@ -30,6 +30,16 @@ export function getCurrentBranch(): string {
   }
 }
 
+/** A verified branch name for web setup; detached HEAD and failed git reads are not guessed. */
+export function getCurrentAttachedBranch(cwd: string): string | undefined {
+  try {
+    const branch = execSync('git symbolic-ref --quiet --short HEAD', { cwd }).toString().trim();
+    return branch && branch !== 'HEAD' ? branch : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Returns the canonical object ID for the workspace revision being analyzed. */
 export function getCurrentHeadSha(): string | undefined {
   try {
