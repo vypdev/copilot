@@ -2,9 +2,9 @@
 
 - Status: Implemented — automated architecture, UX, documentation, and coverage gates complete; controlled live GitHub permission-path evidence remains external
 - Date: 2026-09-11
-- Last updated: 2026-09-24
+- Last updated: 2026-09-28
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-09-24
+- Last verified: 2026-09-28 (automated journey/presentation gates; live GitHub path remains external)
 - Owners: Copilot maintainers
 - Scope: interactive/non-interactive installation planning, file and resource provisioning, credential validation, and read-only diagnosis
 - Related issues/PRs: merge-queue readiness SDD; architecture quality and
@@ -240,6 +240,52 @@ Architecture tests and workflow/catalog validators enforce dependencies and
 asset parity.
 
 ## 9. UI/UX and content contract
+
+### Interactive journey presentation (2026-09-28 amendment)
+
+Interactive `copilot setup` MUST show a bounded, text-first six-stage journey:
+`Repository → Setup choices → Setup PAT → Plan → Bot PAT & credentials → Apply`.
+The active stage is named in words, previously completed stages are marked
+complete, and later stages remain pending. A stage number describes position,
+not a percentage or a count of questions. Show the journey at meaningful
+transitions, not after every answer. Never mark `Apply` complete until the
+action reports success; failure after application begins is **Partial**, not
+`No changes`. Before application begins, say `No changes have been applied`.
+Cancellation or a blocked audit does not advance the journey. Dry-run ends
+after plan review with an explicit `No changes` result; unattended input keeps
+its existing non-interactive output rather than receiving interactive prompts.
+
+```text
+Copilot setup · owner/repo
+Stage 2/6 · Setup choices
+Complete: Repository
+Now: Setup choices
+Next: Setup PAT → Plan → Bot PAT & credentials → Apply
+No changes have been applied.
+```
+
+Text equivalent: the named current phase follows repository detection; all
+other phases are explicitly complete or pending, and no remote mutation has
+started. In a narrow terminal, each status remains on its own wrapped line.
+Icons and color may reinforce the state but MUST NOT be its only carrier.
+The journey is a view of existing setup state, not a new questionnaire or
+source of permission truth. The application boundary owns stage ordering and
+transition validity; the terminal adapter owns width, wrapping, and ANSI.
+Do not persist phase state or print credentials. Detailed permission tables
+remain available on explicit request and for manual/unattended paths; the
+interactive guided review defaults to an exact compact grant summary.
+
+The presentation introduces no new flags or persisted configuration. It has
+no effect on GitHub Actions, issues, PRs, comments, or checks. Rollback removes
+the stage renderer and restores the existing table-first presentation without
+changing saved setup state. The amendment adds a minimum **12 distinct tests**:
+four pure transition/view-model cases, three terminal width/color cases,
+three guided/manual detail cases, and two end-to-end dry-run/partial-state
+cases. Changed presentation code targets 95% line and 90% branch coverage.
+Acceptance requires stage ordering, accurate no-change/partial claims, no
+duplicate intent questions, exact summary-to-table grants, and secret-free
+output in both wide and narrow no-color terminals. User and contributor docs
+MUST describe the phases and where the full permission table can be opened.
 
 ```markdown
 Pending: **Inspecting existing Copilot resources.** No changes have been made.

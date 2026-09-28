@@ -1,6 +1,7 @@
 import {
     renderSetupTokenPermissionReport,
     renderSetupTokenPermissionRequirements,
+    renderSetupTokenPermissionSummary,
 } from '../setup_token_permission_presenter';
 import type { SetupTokenPermissionRequirement } from '../../domain/setup_token_permissions';
 
@@ -15,6 +16,14 @@ const secrets: SetupTokenPermissionRequirement = {
 };
 
 describe('setup token permission presenter', () => {
+    it('summarizes only required URL grants and counts conditional rows without changing policy', () => {
+        const output = renderSetupTokenPermissionSummary('setup', [metadata, secrets], 80);
+        expect(output).toContain('Required now: Metadata read (repository)');
+        expect(output).toContain('Conditional permissions: 1');
+        expect(output).not.toContain('Provision Actions Secrets.');
+        expect(renderSetupTokenPermissionRequirements('setup', [metadata, secrets])).toContain('Provision Actions Secrets.');
+        expect(renderSetupTokenPermissionSummary('setup', [], 80)).toContain('Required now: none');
+    });
     it('renders the requirement matrix before setup PAT input', () => {
         const output = renderSetupTokenPermissionRequirements('setup', [metadata, secrets], 120);
         expect(output).toContain('Setup PAT permissions required');

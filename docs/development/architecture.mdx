@@ -8,6 +8,13 @@ Guarded PR approval uses a separate trusted observer entrypoint, a pure domain d
 
 The repository separates semantic application ports from provider-specific adapters.
 
+Interactive setup milestones are tracked by the application-layer
+`SetupJourneyUseCase`; its pure stage view model is rendered by the terminal
+adapter. The terminal does not decide whether a PAT is valid or which grant is
+required. Compact summaries project the same requirement objects used for the
+guided URL and the full permission table. The setup command advances stages
+only at existing audited boundaries; non-interactive setup keeps its own output.
+
 GitHub conversation output crosses a closed publication boundary. Capabilities
 produce typed `none`, `reply`, `status`, `transition`, or `inline-finding`
 intents; the publication layer maps only reviewed semantic payloads and can

@@ -47705,6 +47705,45 @@ function effectiveIssueFormLabels(configuration) {
 
 /***/ }),
 
+/***/ 53289:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SETUP_JOURNEY_STAGES = void 0;
+exports.buildSetupJourneyView = buildSetupJourneyView;
+exports.SETUP_JOURNEY_STAGES = [
+    'repository', 'choices', 'setup-pat', 'plan', 'credentials', 'apply',
+];
+const labels = {
+    repository: 'Repository',
+    choices: 'Setup choices',
+    'setup-pat': 'Setup PAT',
+    plan: 'Plan',
+    credentials: 'Bot PAT & credentials',
+    apply: 'Apply',
+};
+function buildSetupJourneyView(repository, stage, mutationStarted, outcome) {
+    const position = exports.SETUP_JOURNEY_STAGES.indexOf(stage);
+    return {
+        repository: [...repository].map(character => {
+            const codePoint = character.codePointAt(0);
+            return codePoint < 32 || (codePoint >= 127 && codePoint <= 159) ? '?' : character;
+        }).join('').slice(0, 120),
+        position: position + 1,
+        total: exports.SETUP_JOURNEY_STAGES.length,
+        current: labels[stage],
+        complete: exports.SETUP_JOURNEY_STAGES.slice(0, position).map(item => labels[item]),
+        pending: exports.SETUP_JOURNEY_STAGES.slice(position + 1).map(item => labels[item]),
+        ...(outcome ? { outcome } : {}),
+        mutationStarted,
+    };
+}
+
+
+/***/ }),
+
 /***/ 54718:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -47834,6 +47873,25 @@ function setupPatIntentOwnerConflict(configuration, ownerKind) {
         || (configuration.manageRepositoryVariables && (configuration.storage.variables.defaultScope === 'organization'
             || Object.values(configuration.storage.variables.overrides).includes('organization')))
         || configuration.projects.ids.trim().length > 0);
+}
+
+
+/***/ }),
+
+/***/ 10267:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.summarizeSetupPermissions = summarizeSetupPermissions;
+/** A lossless required-grant view of the same requirements used for URL creation. */
+function summarizeSetupPermissions(requirements) {
+    return {
+        required: requirements.filter(item => item.applicability === 'required')
+            .map(item => `${item.permission} ${item.level} (${item.scope})`),
+        conditionalCount: requirements.filter(item => item.applicability === 'conditional').length,
+    };
 }
 
 
@@ -55568,6 +55626,60 @@ function isAcceptedCredentialCheck(requirement, check) {
     return check.status === 'valid'
         || (check.status === 'unverifiable' && requirement.validation === 'unverifiable');
 }
+
+
+/***/ }),
+
+/***/ 8419:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupJourneyUseCase = void 0;
+const setup_journey_policy_1 = __nccwpck_require__(53289);
+/** Tracks semantic milestones, independently of the CLI's rendering. */
+class SetupJourneyUseCase {
+    constructor(repository, presenter) {
+        this.repository = repository;
+        this.presenter = presenter;
+        this.stage = 'repository';
+        this.mutationStarted = false;
+    }
+    advance(stage) {
+        if (this.outcome)
+            throw new Error('Cannot advance a finished setup journey.');
+        const next = setup_journey_policy_1.SETUP_JOURNEY_STAGES.indexOf(stage);
+        if (next < setup_journey_policy_1.SETUP_JOURNEY_STAGES.indexOf(this.stage))
+            throw new Error('Setup journey cannot move backwards.');
+        if (next === setup_journey_policy_1.SETUP_JOURNEY_STAGES.indexOf(this.stage))
+            return;
+        this.stage = stage;
+        this.present();
+    }
+    markMutationStarted() {
+        if (this.stage !== 'apply' || this.outcome)
+            throw new Error('Setup mutation must start in the apply stage.');
+        this.mutationStarted = true;
+        this.present();
+    }
+    finish(outcome) {
+        if (this.outcome)
+            return;
+        if (outcome === 'complete' && (this.stage !== 'apply' || !this.mutationStarted)) {
+            throw new Error('Setup cannot be complete before applying the plan.');
+        }
+        if (outcome === 'partial' && !this.mutationStarted) {
+            throw new Error('Setup cannot be partial before mutation starts.');
+        }
+        this.outcome = outcome;
+        this.present();
+    }
+    present() {
+        this.presenter.present((0, setup_journey_policy_1.buildSetupJourneyView)(this.repository, this.stage, this.mutationStarted, this.outcome));
+    }
+}
+exports.SetupJourneyUseCase = SetupJourneyUseCase;
 
 
 /***/ }),
@@ -65346,6 +65458,8 @@ const setup_token_permissions_composition_root_1 = __nccwpck_require__(64132);
 const setup_pat_creation_url_policy_1 = __nccwpck_require__(54718);
 const setup_github_identity_query_adapter_1 = __nccwpck_require__(56098);
 const verify_guided_workflow_pat_identity_use_case_1 = __nccwpck_require__(35697);
+const setup_journey_use_case_1 = __nccwpck_require__(8419);
+const setup_journey_presenter_1 = __nccwpck_require__(20462);
 function registerSetupCommand(program) {
     program
         .command('setup')
@@ -65382,11 +65496,12 @@ function registerSetupCommand(program) {
             ...(options.workflowPat ? { PAT: options.workflowPat } : {}),
             ...options.secret,
         }, Boolean(options.confirmUnverifiableWritePermissions));
-        const permissionPresenter = new setup_token_permission_presenter_1.ConsoleSetupTokenPermissionPresenter();
+        const permissionPresenter = new setup_token_permission_presenter_1.ConsoleSetupTokenPermissionPresenter(options.nonInteractive ? 'full' : 'summary');
         const tokenPermissions = (0, setup_token_permissions_composition_root_1.createSetupTokenPermissionsUseCase)();
         const workflowPrompt = new setup_workflow_update_prompt_adapter_1.SetupWorkflowUpdatePromptAdapter(terminal);
         const cwd = process.cwd();
         let setupMutationStarted = false;
+        let journey;
         try {
             if (!options.nonInteractive && !terminal) {
                 (0, logger_1.logError)('Interactive setup requires a terminal. Use --non-interactive with explicit configuration.');
@@ -65408,10 +65523,17 @@ function registerSetupCommand(program) {
                 return;
             }
             (0, logger_1.logInfo)(`📦 Repository: ${gitInfo.owner}/${gitInfo.repo}`);
+            if (!options.nonInteractive) {
+                journey = new setup_journey_use_case_1.SetupJourneyUseCase(`${gitInfo.owner}/${gitInfo.repo}`, new setup_journey_presenter_1.ConsoleSetupJourneyPresenter());
+                journey.advance('choices');
+            }
             const overrides = loadSetupOverrides(options);
             let setupPatPermissions = (0, setup_token_permission_policy_1.buildSetupPatPermissionRequirements)();
-            permissionPresenter.showRequirements('setup', setupPatPermissions);
             let token = (0, setup_files_1.getSetupToken)(cwd, options.token);
+            if (token || options.nonInteractive)
+                permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
+            else
+                permissionPresenter.showRequirements('setup', setupPatPermissions);
             let setupPatAccount;
             let permissionIntent;
             let assertedOwnerKind;
@@ -65435,6 +65557,7 @@ function registerSetupCommand(program) {
                         if (ownerKind === 'unknown') {
                             (0, logger_1.logInfo)('Owner type was not confirmed. Use the manual PAT table, or check whether the GitHub owner is an organization before retrying guided setup.');
                             credentialPrompt.useManualSetupPat();
+                            permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
                             break;
                         }
                         if ((0, setup_pat_intent_policy_1.setupPatIntentOwnerConflict)(draft, ownerKind)) {
@@ -65445,6 +65568,7 @@ function registerSetupCommand(program) {
                             (0, logger_1.logInfo)(`The selected local configuration needs correction before a guided link can be generated:\n${intentErrors.map(item => `  - ${item}`).join('\n')}`);
                         }
                         const preview = (0, setup_token_permission_policy_1.buildSetupPatIntentPermissionRequirements)(draft, ownerKind);
+                        journey?.advance('setup-pat');
                         (0, logger_1.logInfo)('Permission intent:');
                         (0, logger_1.logInfo)(`  Initial tag: ${draft.createInitialTag ? 'yes' : 'no'}; issue workflows: ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval: ${draft.pullRequestApproval.mode}`);
                         (0, logger_1.logInfo)(`  Secrets: ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables: ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects: ${draft.projects.ids.trim() || 'none'}`);
@@ -65452,9 +65576,15 @@ function registerSetupCommand(program) {
                         const uncertain = (0, setup_token_permission_policy_1.buildSetupPatIntentUncertainty)(draft, ownerKind);
                         if (uncertain.length)
                             (0, logger_1.logInfo)(`May need after GitHub inspection:\n${uncertain.map(item => `  - ${item}`).join('\n')}`);
-                        const decision = await credentialPrompt.reviewSetupPatIntent();
+                        let decision;
+                        do {
+                            decision = await credentialPrompt.reviewSetupPatIntent();
+                            if (decision === 'details')
+                                permissionPresenter.showDetailedRequirements('setup', preview);
+                        } while (decision === 'details');
                         if (decision === 'manual') {
                             credentialPrompt.useManualSetupPat();
+                            permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
                             break;
                         }
                         if (decision === 'revise')
@@ -65477,11 +65607,20 @@ function registerSetupCommand(program) {
                                 throw error;
                             (0, logger_1.logInfo)('A guided setup PAT link is unavailable for this owner or permission set. Enter a manually created PAT using the table above.');
                             credentialPrompt.useManualSetupPat();
+                            permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
                         }
                         break;
                     }
                 }
+                else {
+                    journey?.advance('setup-pat');
+                    permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
+                }
             }
+            if (options.dryRun && !token)
+                journey?.advance('plan');
+            if (!token && !options.dryRun)
+                journey?.advance('setup-pat');
             if (!token && !options.nonInteractive && !options.dryRun)
                 token = await credentialPrompt.requestSetupPat();
             if (!token && !options.dryRun) {
@@ -65493,6 +65632,7 @@ function registerSetupCommand(program) {
                 return;
             }
             if (token) {
+                journey?.advance('setup-pat');
                 const permissionReport = await tokenPermissions.inspect({
                     role: 'setup',
                     owner: gitInfo.owner,
@@ -65516,6 +65656,7 @@ function registerSetupCommand(program) {
                     throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT belongs to an unintended account. Revoke it in GitHub and retry with the correct account.');
                 }
                 setupPatAccount = permissionReport.account;
+                journey?.advance('plan');
             }
             (0, logger_1.logInfo)(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
             const auditConfiguredSetupPat = async (configuration, remoteConfiguration) => {
@@ -65581,6 +65722,7 @@ function registerSetupCommand(program) {
                 ...(token ? { remoteTarget: { owner: gitInfo.owner, repository: gitInfo.repo, token } } : {}),
             });
             if (result.status === 'cancelled') {
+                journey?.finish('cancelled');
                 if (result.reason !== 'questionnaire-cancelled') {
                     (0, logger_1.logInfo)('⏭️  Setup cancelled. No changes were applied.');
                 }
@@ -65589,6 +65731,7 @@ function registerSetupCommand(program) {
                 return;
             }
             if (result.status === 'blocked') {
+                journey?.finish('blocked');
                 (0, logger_1.logError)(new application_error_1.ApplicationError(result.reason === 'setup-permissions-unavailable' ? 'authorization.credential-invalid' : 'provider.unavailable', `${result.reason === 'setup-permissions-unavailable'
                     ? 'Setup is blocked by missing or unconfirmed PAT permissions:'
                     : 'Setup is blocked by unavailable remote storage:'}\n${result.errors.map(error => `- ${error}`).join('\n')}`));
@@ -65603,9 +65746,11 @@ function registerSetupCommand(program) {
                 ? workflowComparisons.filter(comparison => comparison.status === 'changed').map(comparison => comparison.file)
                 : [];
             if (options.dryRun) {
+                journey?.finish('dry-run');
                 (0, logger_1.logInfo)('✅ Dry run complete. No files or GitHub resources were changed.');
                 return;
             }
+            journey?.advance('credentials');
             const workflowTokenPermissions = (0, setup_token_permission_policy_1.buildWorkflowPatPermissionRequirements)(configuration, remoteConfiguration);
             const githubIdentities = new setup_github_identity_query_adapter_1.SetupGithubIdentityQueryAdapter();
             if (!options.nonInteractive && !options.workflowPat && !options.secret?.PAT) {
@@ -65614,12 +65759,13 @@ function registerSetupCommand(program) {
                         role: 'workflow', owner: gitInfo.owner, repository: gitInfo.repo, expiresIn: 90,
                         requirements: workflowTokenPermissions,
                     });
-                    credentialPrompt.configureWorkflowPatGuide(workflowPatGuide, login => githubIdentities.resolve(login, token));
+                    credentialPrompt.configureWorkflowPatGuide(workflowPatGuide, login => githubIdentities.resolve(login, token), workflowTokenPermissions);
                 }
                 catch (error) {
                     if (!(error instanceof setup_pat_creation_url_policy_1.UnsupportedSetupPatLinkError))
                         throw error;
                     (0, logger_1.logInfo)('A guided fine-grained bot PAT link is unavailable for one or more required permissions. Use the permission table and manual path; review whether a classic PAT is required for this plan.');
+                    permissionPresenter.showDetailedRequirements('workflow', workflowTokenPermissions);
                 }
             }
             const credentials = await (0, setup_credentials_composition_root_1.createSetupCredentialsUseCase)(credentialPrompt, permissionPresenter).collect({
@@ -65643,17 +65789,26 @@ function registerSetupCommand(program) {
                 }
             }
             (0, logger_1.logInfo)('⚙️  Applying the approved setup plan...');
+            journey?.advance('apply');
             const params = (0, setup_policy_1.buildSetupParams)(options, gitInfo, token ?? '', configuration, credentials.collection, approvedWorkflowFiles, remoteConfiguration);
-            if (!params)
+            if (!params) {
+                journey?.finish('blocked');
                 return;
+            }
             setupMutationStarted = true;
+            journey?.markMutationStarted();
             const actionResults = await (0, local_action_1.runLocalAction)(params);
             if (actionResults.some(actionResult => !actionResult.success || actionResult.errors.length > 0)) {
+                journey?.finish('partial');
                 (0, logger_1.logInfo)('Setup reported failures or partial completion. If a bot PAT was supplied, its Secret may already have been written; inspect the result and GitHub Secret name/scope before retrying or revoking it.');
                 process.exitCode = 1;
             }
+            else {
+                journey?.finish('complete');
+            }
         }
         catch (error) {
+            journey?.finish(setupMutationStarted ? 'partial' : error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError ? 'cancelled' : 'blocked');
             if (credentialPrompt.guidedWorkflowBotIdentity) {
                 (0, logger_1.logInfo)(setupMutationStarted
                     ? 'Setup may be partially applied. Inspect the GitHub Secret before deleting or replacing the bot PAT.'
@@ -66324,6 +66479,7 @@ exports.DryRunSetupPlanConfirmation = DryRunSetupPlanConfirmation;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupCredentialPromptAdapter = exports.SetupTerminalCancelledError = void 0;
 const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+const setup_token_permission_presenter_1 = __nccwpck_require__(63206);
 class SetupTerminalCancelledError extends Error {
     constructor() {
         super('Setup input was cancelled.');
@@ -66358,11 +66514,12 @@ class SetupCredentialPromptAdapter {
     async reviewSetupPatIntent() {
         if (!this.terminal)
             return 'manual';
-        return await this.readChoice('Review these intended grants before opening GitHub. Continue, revise choices, or enter a PAT manually?', ['continue', 'revise', 'manual']);
+        return await this.readChoice('Review these intended grants before opening GitHub. Continue, revise choices, view full permission table, or enter a PAT manually?', ['continue', 'revise', 'manual', 'details']);
     }
-    configureWorkflowPatGuide(url, resolveIdentity) {
+    configureWorkflowPatGuide(url, resolveIdentity, requirements) {
         this.workflowPatGuide = url;
         this.resolveBotIdentity = resolveIdentity;
+        this.workflowPatRequirements = requirements;
     }
     get guidedWorkflowBotIdentity() { return this.guidedBotIdentity; }
     async confirmGuidedSetupAccount(account) {
@@ -66446,7 +66603,14 @@ class SetupCredentialPromptAdapter {
     }
     async requestWorkflowPat(requirement, current) {
         if (this.terminal && !this.credentialValues[requirement.name]?.trim() && this.workflowPatGuide) {
-            const guided = (await this.readChoice('How would you like to provide the bot workflow PAT?', ['guided link', 'manual PAT'], 'guided link')) === 'guided link';
+            let choice;
+            do {
+                choice = await this.readChoice('How would you like to provide the bot workflow PAT?', ['guided link', 'manual PAT', 'view full permission table'], 'guided link');
+                if (choice === 'view full permission table' && this.workflowPatRequirements) {
+                    console.log((0, setup_token_permission_presenter_1.renderSetupTokenPermissionRequirements)('workflow', this.workflowPatRequirements));
+                }
+            } while (choice === 'view full permission table');
+            const guided = choice === 'guided link';
             if (guided) {
                 const login = await this.readBotLogin();
                 const identity = await this.resolveBotIdentity(login);
@@ -66455,6 +66619,9 @@ class SetupCredentialPromptAdapter {
                 console.log((0, setup_prompt_rendering_1.renderBox)(`Open this link in a separate/private browser session, sign in as @${login} (the bot account), and complete its 2FA or SSO. Review every grant and select ONLY the intended repository manually. GitHub creates the PAT; Copilot does not store bot web credentials. The suggested expiry is 90 days—renew the token and update the Actions Secret before then.`, 'Create bot PAT in GitHub', 33));
                 console.log(this.workflowPatGuide);
                 console.log('Copy the one-time bot token and paste it below. It will be validated before any Secret is written.');
+            }
+            else if (this.workflowPatRequirements) {
+                console.log((0, setup_token_permission_presenter_1.renderSetupTokenPermissionRequirements)('workflow', this.workflowPatRequirements));
             }
         }
         return this.requestSecretForRequirement(requirement, current, 'workflow PAT owned by the bot account');
@@ -66607,6 +66774,42 @@ function doctorCheckLabel(id, catalog = (0, setup_doctor_message_catalog_1.resol
         });
     }
     return id;
+}
+
+
+/***/ }),
+
+/***/ 20462:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ConsoleSetupJourneyPresenter = void 0;
+exports.renderSetupJourney = renderSetupJourney;
+const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+class ConsoleSetupJourneyPresenter {
+    present(view) {
+        console.log(renderSetupJourney(view));
+    }
+}
+exports.ConsoleSetupJourneyPresenter = ConsoleSetupJourneyPresenter;
+function renderSetupJourney(view, maximumWidth) {
+    const state = view.outcome === 'complete' ? 'Complete: setup applied successfully.'
+        : view.outcome === 'dry-run' ? 'Complete: dry run only; no changes were applied.'
+            : view.outcome === 'partial' ? 'Partial: application started; inspect the result before retrying.'
+                : view.outcome === 'blocked' ? 'Blocked: setup cannot continue.'
+                    : view.outcome === 'cancelled' ? 'Cancelled: setup stopped.'
+                        : view.mutationStarted ? 'Applying the approved plan; changes may already exist.'
+                            : 'No changes have been applied.';
+    return (0, setup_prompt_rendering_1.renderBox)([
+        `Repository: ${view.repository}`,
+        `Stage ${view.position}/${view.total} · ${view.current}`,
+        `Complete: ${view.complete.join(' → ') || 'none'}`,
+        `Now: ${view.current}`,
+        `Next: ${view.pending.join(' → ') || 'none'}`,
+        state,
+    ].join('\n'), 'Copilot setup', 36, maximumWidth);
 }
 
 
@@ -67103,12 +67306,22 @@ function isAbortError(error) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ConsoleSetupTokenPermissionPresenter = void 0;
+exports.renderSetupTokenPermissionSummary = renderSetupTokenPermissionSummary;
 exports.renderSetupTokenPermissionRequirements = renderSetupTokenPermissionRequirements;
 exports.renderSetupTokenPermissionReport = renderSetupTokenPermissionReport;
 const node_process_1 = __nccwpck_require__(97742);
 const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+const setup_permission_summary_policy_1 = __nccwpck_require__(10267);
 class ConsoleSetupTokenPermissionPresenter {
+    constructor(mode = 'full') {
+        this.mode = mode;
+    }
     showRequirements(role, requirements) {
+        console.log(this.mode === 'summary'
+            ? renderSetupTokenPermissionSummary(role, requirements)
+            : renderSetupTokenPermissionRequirements(role, requirements));
+    }
+    showDetailedRequirements(role, requirements) {
         console.log(renderSetupTokenPermissionRequirements(role, requirements));
     }
     showReport(report) {
@@ -67116,6 +67329,13 @@ class ConsoleSetupTokenPermissionPresenter {
     }
 }
 exports.ConsoleSetupTokenPermissionPresenter = ConsoleSetupTokenPermissionPresenter;
+function renderSetupTokenPermissionSummary(role, requirements, maximumWidth = node_process_1.stdout.columns ?? 120) {
+    const summary = (0, setup_permission_summary_policy_1.summarizeSetupPermissions)(requirements);
+    return (0, setup_prompt_rendering_1.renderBox)([
+        `Required now: ${summary.required.join(' · ') || 'none'}`,
+        `Conditional permissions: ${summary.conditionalCount}. View the full table for reasons and triggers.`,
+    ].join('\n'), `${roleTitle(role)} PAT permission summary`, 36, maximumWidth);
+}
 function renderSetupTokenPermissionRequirements(role, requirements, maximumWidth = node_process_1.stdout.columns ?? 120) {
     const rows = maximumWidth >= 88
         ? renderWideRequirements(requirements)

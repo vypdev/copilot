@@ -20,7 +20,12 @@ determine PAT permissions: issue workflows, initial tag, Secret and Variable
 management and storage scope, PR approval mode, and Projects. Choices already
 fixed by flags or `--config` are not asked. You review the resulting grants
 before the link appears; these answers carry into the full wizard without being
-asked twice. The link is still **provisional** for facts that require GitHub
+asked twice. The terminal first shows a short summary of required grants;
+choose **view full permission table** at review to inspect every grant, reason,
+and condition, then return to the same review without repeating setup choices.
+Choosing manual PAT entry shows the full table directly. The later bot PAT
+prompt has its own full-table option based on the finalized workflow grants,
+not on the temporary setup PAT. The link is still **provisional** for facts that require GitHub
 inspection, such as existing Secrets, inherited organization resources, and a
 missing credential-health workflow. If the final plan needs
 additional grants, setup stops before applying it and prints a corrected link.

@@ -43,6 +43,8 @@ import { buildSetupPatCreationUrl, UnsupportedSetupPatLinkError } from '../../ap
 import { SetupGithubIdentityQueryAdapter } from '../../infrastructure/setup_github_identity_query_adapter';
 import { VerifyGuidedWorkflowPatIdentityUseCase } from '../../application/usecases/setup/verify_guided_workflow_pat_identity_use_case';
 import type { SetupTokenPermissionRequirement } from '../../domain/setup_token_permissions';
+import { SetupJourneyUseCase } from '../../application/usecases/setup/setup_journey_use_case';
+import { ConsoleSetupJourneyPresenter } from '../setup_journey_presenter';
 
 export function registerSetupCommand(program: Command): void {
   program
@@ -80,11 +82,12 @@ export function registerSetupCommand(program: Command): void {
         ...(options.workflowPat ? { PAT: options.workflowPat } : {}),
         ...options.secret,
       }, Boolean(options.confirmUnverifiableWritePermissions));
-      const permissionPresenter = new ConsoleSetupTokenPermissionPresenter();
+      const permissionPresenter = new ConsoleSetupTokenPermissionPresenter(options.nonInteractive ? 'full' : 'summary');
       const tokenPermissions = createSetupTokenPermissionsUseCase();
       const workflowPrompt = new SetupWorkflowUpdatePromptAdapter(terminal);
       const cwd = process.cwd();
       let setupMutationStarted = false;
+      let journey: SetupJourneyUseCase | undefined;
       try {
         if (!options.nonInteractive && !terminal) {
           logError('Interactive setup requires a terminal. Use --non-interactive with explicit configuration.');
@@ -106,10 +109,15 @@ export function registerSetupCommand(program: Command): void {
           return;
         }
         logInfo(`📦 Repository: ${gitInfo.owner}/${gitInfo.repo}`);
+        if (!options.nonInteractive) {
+          journey = new SetupJourneyUseCase(`${gitInfo.owner}/${gitInfo.repo}`, new ConsoleSetupJourneyPresenter());
+          journey.advance('choices');
+        }
         const overrides = loadSetupOverrides(options);
         let setupPatPermissions = buildSetupPatPermissionRequirements();
-        permissionPresenter.showRequirements('setup', setupPatPermissions);
         let token = getSetupToken(cwd, options.token);
+        if (token || options.nonInteractive) permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
+        else permissionPresenter.showRequirements('setup', setupPatPermissions);
         let setupPatAccount: string | undefined;
         let permissionIntent: { draft: SetupConfiguration; answeredQuestionIds: readonly string[] } | undefined;
         let assertedOwnerKind: 'Organization' | 'User' | undefined;
@@ -132,6 +140,7 @@ export function registerSetupCommand(program: Command): void {
               if (ownerKind === 'unknown') {
                 logInfo('Owner type was not confirmed. Use the manual PAT table, or check whether the GitHub owner is an organization before retrying guided setup.');
                 credentialPrompt.useManualSetupPat();
+                permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
                 break;
               }
               if (setupPatIntentOwnerConflict(draft, ownerKind)) {
@@ -142,15 +151,21 @@ export function registerSetupCommand(program: Command): void {
                 logInfo(`The selected local configuration needs correction before a guided link can be generated:\n${intentErrors.map(item => `  - ${item}`).join('\n')}`);
               }
               const preview = buildSetupPatIntentPermissionRequirements(draft, ownerKind);
+              journey?.advance('setup-pat');
               logInfo('Permission intent:');
               logInfo(`  Initial tag: ${draft.createInitialTag ? 'yes' : 'no'}; issue workflows: ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval: ${draft.pullRequestApproval.mode}`);
               logInfo(`  Secrets: ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables: ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects: ${draft.projects.ids.trim() || 'none'}`);
               permissionPresenter.showRequirements('setup', preview);
               const uncertain = buildSetupPatIntentUncertainty(draft, ownerKind);
               if (uncertain.length) logInfo(`May need after GitHub inspection:\n${uncertain.map(item => `  - ${item}`).join('\n')}`);
-              const decision = await credentialPrompt.reviewSetupPatIntent();
+              let decision: Awaited<ReturnType<typeof credentialPrompt.reviewSetupPatIntent>>;
+              do {
+                decision = await credentialPrompt.reviewSetupPatIntent();
+                if (decision === 'details') permissionPresenter.showDetailedRequirements('setup', preview);
+              } while (decision === 'details');
               if (decision === 'manual') {
                 credentialPrompt.useManualSetupPat();
+                permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
                 break;
               }
               if (decision === 'revise') continue;
@@ -170,11 +185,17 @@ export function registerSetupCommand(program: Command): void {
                 if (!(error instanceof UnsupportedSetupPatLinkError)) throw error;
                 logInfo('A guided setup PAT link is unavailable for this owner or permission set. Enter a manually created PAT using the table above.');
                 credentialPrompt.useManualSetupPat();
+                permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
               }
               break;
             }
+          } else {
+            journey?.advance('setup-pat');
+            permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
           }
         }
+        if (options.dryRun && !token) journey?.advance('plan');
+        if (!token && !options.dryRun) journey?.advance('setup-pat');
         if (!token && !options.nonInteractive && !options.dryRun) token = await credentialPrompt.requestSetupPat();
         if (!token && !options.dryRun) {
           logError('🛑 Setup requires PERSONAL_ACCESS_TOKEN with a valid token.');
@@ -185,6 +206,7 @@ export function registerSetupCommand(program: Command): void {
           return;
         }
         if (token) {
+          journey?.advance('setup-pat');
           const permissionReport = await tokenPermissions.inspect({
             role: 'setup',
             owner: gitInfo.owner,
@@ -210,6 +232,7 @@ export function registerSetupCommand(program: Command): void {
             throw new ApplicationError('authorization.credential-invalid', 'The setup PAT belongs to an unintended account. Revoke it in GitHub and retry with the correct account.');
           }
           setupPatAccount = permissionReport.account;
+          journey?.advance('plan');
         }
         logInfo(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
         const auditConfiguredSetupPat = async (
@@ -275,6 +298,7 @@ export function registerSetupCommand(program: Command): void {
           ...(token ? { remoteTarget: { owner: gitInfo.owner, repository: gitInfo.repo, token } } : {}),
         });
         if (result.status === 'cancelled') {
+          journey?.finish('cancelled');
           if (result.reason !== 'questionnaire-cancelled') {
             logInfo('⏭️  Setup cancelled. No changes were applied.');
           }
@@ -282,6 +306,7 @@ export function registerSetupCommand(program: Command): void {
           return;
         }
         if (result.status === 'blocked') {
+          journey?.finish('blocked');
           logError(new ApplicationError(
             result.reason === 'setup-permissions-unavailable' ? 'authorization.credential-invalid' : 'provider.unavailable',
             `${result.reason === 'setup-permissions-unavailable'
@@ -299,9 +324,11 @@ export function registerSetupCommand(program: Command): void {
           ? workflowComparisons.filter(comparison => comparison.status === 'changed').map(comparison => comparison.file)
           : [];
         if (options.dryRun) {
+          journey?.finish('dry-run');
           logInfo('✅ Dry run complete. No files or GitHub resources were changed.');
           return;
         }
+        journey?.advance('credentials');
         const workflowTokenPermissions = buildWorkflowPatPermissionRequirements(configuration, remoteConfiguration);
         const githubIdentities = new SetupGithubIdentityQueryAdapter();
         if (!options.nonInteractive && !options.workflowPat && !options.secret?.PAT) {
@@ -310,10 +337,11 @@ export function registerSetupCommand(program: Command): void {
               role: 'workflow', owner: gitInfo.owner, repository: gitInfo.repo, expiresIn: 90,
               requirements: workflowTokenPermissions,
             });
-            credentialPrompt.configureWorkflowPatGuide(workflowPatGuide, login => githubIdentities.resolve(login, token!));
+            credentialPrompt.configureWorkflowPatGuide(workflowPatGuide, login => githubIdentities.resolve(login, token!), workflowTokenPermissions);
           } catch (error) {
             if (!(error instanceof UnsupportedSetupPatLinkError)) throw error;
             logInfo('A guided fine-grained bot PAT link is unavailable for one or more required permissions. Use the permission table and manual path; review whether a classic PAT is required for this plan.');
+            permissionPresenter.showDetailedRequirements('workflow', workflowTokenPermissions);
           }
         }
         const credentials = await createSetupCredentialsUseCase(credentialPrompt, permissionPresenter).collect({
@@ -337,6 +365,7 @@ export function registerSetupCommand(program: Command): void {
           }
         }
         logInfo('⚙️  Applying the approved setup plan...');
+        journey?.advance('apply');
         const params = buildSetupParams(
           options,
           gitInfo,
@@ -346,14 +375,22 @@ export function registerSetupCommand(program: Command): void {
           approvedWorkflowFiles,
           remoteConfiguration,
         );
-        if (!params) return;
+        if (!params) {
+          journey?.finish('blocked');
+          return;
+        }
         setupMutationStarted = true;
+        journey?.markMutationStarted();
         const actionResults = await runLocalAction(params);
         if (actionResults.some(actionResult => !actionResult.success || actionResult.errors.length > 0)) {
+          journey?.finish('partial');
           logInfo('Setup reported failures or partial completion. If a bot PAT was supplied, its Secret may already have been written; inspect the result and GitHub Secret name/scope before retrying or revoking it.');
           process.exitCode = 1;
+        } else {
+          journey?.finish('complete');
         }
       } catch (error) {
+        journey?.finish(setupMutationStarted ? 'partial' : error instanceof SetupTerminalCancelledError ? 'cancelled' : 'blocked');
         if (credentialPrompt.guidedWorkflowBotIdentity) {
           logInfo(setupMutationStarted
             ? 'Setup may be partially applied. Inspect the GitHub Secret before deleting or replacing the bot PAT.'

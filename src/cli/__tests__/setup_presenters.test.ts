@@ -302,6 +302,12 @@ describe('setup presenters and prompt-specific adapters', () => {
     } finally { log.mockRestore(); }
   });
 
+  it('offers the full setup permission table as a review action', async () => {
+    const input = terminal([{ kind: 'value', value: '4' }]);
+    await expect(new SetupCredentialPromptAdapter(input, {}).reviewSetupPatIntent()).resolves.toBe('details');
+    expect(input.readText).toHaveBeenCalledWith(expect.stringContaining('view full permission table'));
+  });
+
   it('rejects an invalid authenticated setup account without prompting', async () => {
     const input = terminal([{ kind: 'value', value: '1' }]);
     const adapter = new SetupCredentialPromptAdapter(input, {});
@@ -388,6 +394,29 @@ describe('setup presenters and prompt-specific adapters', () => {
       expect(output).toContain('GitHub account ID 42');
       expect(output).toContain('https://github.com/settings/personal-access-tokens/new?expires_in=90');
       expect(output).not.toContain('bot-token');
+    } finally { log.mockRestore(); }
+  });
+
+  it('shows bot permission details on demand without asking for the bot identity twice', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([
+        { kind: 'value', value: '3' },
+        { kind: 'value', value: '1' },
+        { kind: 'value', value: 'vypbot' },
+        { kind: 'value', value: 'bot-token' },
+      ]);
+      const resolve = jest.fn(async () => ({ id: 42, login: 'vypbot' }));
+      const adapter = new SetupCredentialPromptAdapter(input, {});
+      adapter.configureWorkflowPatGuide('https://github.com/settings/personal-access-tokens/new', resolve, [{
+        id: 'workflow.repository.contents', role: 'workflow', scope: 'repository', permission: 'Contents',
+        level: 'write', applicability: 'required', reason: 'Manage branches.', probe: 'contents',
+      }]);
+      await expect(adapter.requestWorkflowPat({ name: 'PAT', kind: 'workflowPat', description: 'Runtime token' }))
+        .resolves.toEqual({ name: 'PAT', value: 'bot-token' });
+      expect(resolve).toHaveBeenCalledTimes(1);
+      expect(input.readText.mock.calls.filter(([prompt]) => String(prompt).includes('Expected GitHub bot login'))).toHaveLength(1);
+      expect(log.mock.calls.flat().join('\n')).toContain('Workflow PAT permissions required');
     } finally { log.mockRestore(); }
   });
 

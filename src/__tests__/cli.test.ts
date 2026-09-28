@@ -513,6 +513,7 @@ describe('CLI', () => {
         expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('Owner type was not confirmed'));
         expect(input.readText).not.toHaveBeenCalledWith(expect.stringContaining('Review these intended grants'));
         expect(input.readSecret).toHaveBeenCalledWith('Setup PAT');
+        expect(consoleLogSpy.mock.calls.flat().join('\n')).toContain('Setup PAT permissions required');
         expect(consoleLogSpy.mock.calls.flat().join('\n')).not.toContain('Revoke temporary setup PAT');
         expect(process.exitCode).toBe(1);
       } finally { createTerminal.mockRestore(); }
@@ -530,6 +531,20 @@ describe('CLI', () => {
         expect(input.readSecret).toHaveBeenCalledWith('Setup PAT');
         expect(consoleLogSpy.mock.calls.flat().join('\n')).not.toContain('Revoke temporary setup PAT');
         expect(process.exitCode).toBe(1);
+      } finally { createTerminal.mockRestore(); }
+    });
+
+    it('shows the full permission table immediately for manual setup PAT entry', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const input = guidedTerminal(prompt => prompt.includes('How would you like to provide the setup PAT?') ? '2' : '');
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      mockTokenPermissionInspect.mockResolvedValueOnce({ ...acceptedSetupPatReport(), ready: false });
+      try {
+        await program.parseAsync(['node', 'cli', 'setup']);
+        const output = consoleLogSpy.mock.calls.flat().join('\n');
+        expect(output).toContain('Setup PAT permissions required');
+        expect(output).toContain('Stage 3/6 · Setup PAT');
       } finally { createTerminal.mockRestore(); }
     });
 
@@ -555,6 +570,28 @@ describe('CLI', () => {
         ]));
         expect(consoleLogSpy.mock.calls.flat().join('\n')).toContain('contents=read');
         expect(process.exitCode).toBe(1);
+      } finally { createTerminal.mockRestore(); }
+    });
+
+    it('shows setup permission details on demand without repeating the intent questionnaire', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      let reviews = 0;
+      const input = guidedTerminal(prompt => {
+        if (prompt.includes('repository owner an organization')) return '2';
+        if (prompt.includes('Review these intended grants')) return ++reviews === 1 ? '4' : '1';
+        return '';
+      });
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      mockTokenPermissionInspect.mockResolvedValueOnce({ ...acceptedSetupPatReport(), ready: false });
+      try {
+        await program.parseAsync(['node', 'cli', 'setup']);
+        expect(reviews).toBe(2);
+        expect(input.readText.mock.calls.filter(([prompt]) => String(prompt).includes('Create v1.0.0'))).toHaveLength(1);
+        const output = consoleLogSpy.mock.calls.flat().join('\n');
+        expect(output).toContain('Setup PAT permission summary');
+        expect(output).toContain('Setup PAT permissions required');
+        expect(output).toContain('Stage 3/6 · Setup PAT');
       } finally { createTerminal.mockRestore(); }
     });
 

@@ -402,6 +402,35 @@ final grant acceptance.
 
 ## 9. Terminal UI and content contract
 
+The [setup journey presentation contract](./setup-configuration-credentials-and-doctor.md#9-uiux-and-content-contract)
+applies across both PAT roles. Before interactive guided intent, show the
+bootstrap grants compactly, not the complete conditional table. After choices,
+show every currently required grant and a count of conditional/remote-unknown
+grants. The review choices are `Continue`, `Revise choices`, `View full permission
+table`, and `Enter a PAT manually`. Selecting detail prints the same policy
+requirements with reasons and returns to review **without rerunning questions**.
+Manual entry shows the full bootstrap table immediately; supplied-token and
+non-interactive paths keep the existing table and audit. The raw GitHub URL
+remains on one copyable line outside a box. The active journey stage stays
+`Setup PAT` until the entered credential passes the initial audit; a failed
+audit or cancellation cannot make it look complete.
+
+```text
+Stage 3/6 · Setup PAT
+Required now: Metadata read · Contents write · Secrets write (repository)
+May need after GitHub inspection: 2 conditional grants
+No changes have been applied.
+1) Continue  2) Revise choices  3) View full permission table  4) Enter a PAT manually
+```
+
+Text equivalent: the URL will contain the exact required grants in the
+summary, while two remote-dependent grants are unresolved; the user can
+inspect reasons before accepting. Labels, counts, and detailed rows derive
+from the same requirement objects and may not be edited independently.
+Add five operator-specific cases to the journey budget: detail returns to
+review, manual shows full table, revision changes the summary, cancellation
+preserves the no-change state, and narrow no-color output remains readable.
+
 The current CLI is English; this example is illustrative and follows its
 existing text-first styling. Preserve one primary action per state.
 

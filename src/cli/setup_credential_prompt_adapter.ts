@@ -9,6 +9,8 @@ import type {
 import type { SetupTokenPermissionReport } from '../domain/setup_token_permissions';
 import type { SetupGithubIdentity } from '../application/ports/setup_pat_identity_ports';
 import { color, renderBox, statusIcon } from './setup_prompt_rendering';
+import type { SetupTokenPermissionRequirement } from '../domain/setup_token_permissions';
+import { renderSetupTokenPermissionRequirements } from './setup_token_permission_presenter';
 
 export class SetupTerminalCancelledError extends Error {
   constructor() {
@@ -24,6 +26,7 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
   private guidedSetup = false;
   private setupMethodChosen = false;
   private guidedBotIdentity?: SetupGithubIdentity;
+  private workflowPatRequirements?: readonly SetupTokenPermissionRequirement[];
 
   constructor(
     private readonly terminal: TerminalDriver | undefined,
@@ -45,13 +48,14 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
     const choice = await this.readChoice('Is the GitHub repository owner an organization or a personal account?', ['organization', 'personal account', 'not sure']);
     return choice === 'organization' ? 'Organization' : choice === 'personal account' ? 'User' : 'unknown';
   }
-  async reviewSetupPatIntent(): Promise<'continue' | 'revise' | 'manual'> {
+  async reviewSetupPatIntent(): Promise<'continue' | 'revise' | 'manual' | 'details'> {
     if (!this.terminal) return 'manual';
-    return await this.readChoice('Review these intended grants before opening GitHub. Continue, revise choices, or enter a PAT manually?', ['continue', 'revise', 'manual']) as 'continue' | 'revise' | 'manual';
+    return await this.readChoice('Review these intended grants before opening GitHub. Continue, revise choices, view full permission table, or enter a PAT manually?', ['continue', 'revise', 'manual', 'details']) as 'continue' | 'revise' | 'manual' | 'details';
   }
-  configureWorkflowPatGuide(url: string, resolveIdentity: (login: string) => Promise<SetupGithubIdentity>): void {
+  configureWorkflowPatGuide(url: string, resolveIdentity: (login: string) => Promise<SetupGithubIdentity>, requirements?: readonly SetupTokenPermissionRequirement[]): void {
     this.workflowPatGuide = url;
     this.resolveBotIdentity = resolveIdentity;
+    this.workflowPatRequirements = requirements;
   }
   get guidedWorkflowBotIdentity(): SetupGithubIdentity | undefined { return this.guidedBotIdentity; }
 
@@ -159,7 +163,14 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
     current?: SetupCredentialCheck,
   ): Promise<SetupCredentialValue | undefined> {
     if (this.terminal && !this.credentialValues[requirement.name]?.trim() && this.workflowPatGuide) {
-      const guided = (await this.readChoice('How would you like to provide the bot workflow PAT?', ['guided link', 'manual PAT'], 'guided link')) === 'guided link';
+      let choice: string;
+      do {
+        choice = await this.readChoice('How would you like to provide the bot workflow PAT?', ['guided link', 'manual PAT', 'view full permission table'], 'guided link');
+        if (choice === 'view full permission table' && this.workflowPatRequirements) {
+          console.log(renderSetupTokenPermissionRequirements('workflow', this.workflowPatRequirements));
+        }
+      } while (choice === 'view full permission table');
+      const guided = choice === 'guided link';
       if (guided) {
         const login = await this.readBotLogin();
         const identity = await this.resolveBotIdentity!(login);
@@ -171,6 +182,8 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
         ));
         console.log(this.workflowPatGuide);
         console.log('Copy the one-time bot token and paste it below. It will be validated before any Secret is written.');
+      } else if (this.workflowPatRequirements) {
+        console.log(renderSetupTokenPermissionRequirements('workflow', this.workflowPatRequirements));
       }
     }
     return this.requestSecretForRequirement(requirement, current, 'workflow PAT owned by the bot account');

@@ -351,6 +351,21 @@ precedes bot identity verification, and no operator token is used as runtime
 
 ## 9. UI/UX and content contract
 
+The [setup journey presentation contract](./setup-configuration-credentials-and-doctor.md#9-uiux-and-content-contract)
+also covers the later `Bot PAT & credentials` phase. Show a compact,
+role-labelled runtime-grant summary before asking how to obtain the bot PAT;
+the user can view the full policy table on demand in guided mode, while manual
+mode retains the complete table. The summary and detailed rows MUST use the
+same final workflow-role permission objects, never the operator preview.
+The phase remains active until credential collection and identity validation
+finish; successful Secret installation is only reported after the apply step.
+If a later apply fails after a Secret write, report partial state rather than
+claiming the credential was discarded or the setup was complete. No bot token
+value appears in the phase view. Add three bot-specific cases to the journey
+budget: final role separation, detail-to-review without repeated identity
+input, and partial Secret-write wording. The six-stage model and terminal
+accessibility tests are shared with the setup baseline, not counted twice.
+
 The CLI first shows the role, expected account, repository, permission purpose,
 remaining action, and cleanup ownership. The following English example matches
 the current CLI language; it is illustrative. The URL is plain, complete, and

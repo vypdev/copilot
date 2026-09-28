@@ -644,7 +644,7 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-24",
+      "lastVerified": "2026-09-28",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
@@ -672,7 +672,10 @@
         "src/application/policies/setup_configuration_storage_policy.ts",
         "src/application/policies/setup_doctor_message_catalog.ts",
         "src/application/policies/setup_doctor_report_policy.ts",
+        "src/application/policies/setup_journey_policy.ts",
+        "src/application/policies/setup_permission_summary_policy.ts",
         "src/application/usecases/setup/setup_wizard_use_case.ts",
+        "src/application/usecases/setup/setup_journey_use_case.ts",
         "src/application/usecases/setup/setup_questionnaire_controller.ts",
         "src/application/usecases/setup/setup_credentials_use_case.ts",
         "src/application/usecases/setup/setup_token_permissions_use_case.ts",
@@ -691,6 +694,7 @@
         "src/infrastructure/setup_token_permission_query_adapter.ts",
         "src/cli/setup_terminal_driver.ts",
         "src/cli/setup_question_renderer.ts",
+        "src/cli/setup_journey_presenter.ts",
         "src/cli/setup_plan_presenter.ts",
         "src/cli/setup_doctor_presenter.ts",
         "src/cli/setup_prompt_rendering.ts",
@@ -711,6 +715,7 @@
         "src/application/policies/__tests__/setup_doctor_report_policy.test.ts",
         "src/application/usecases/setup/__tests__/setup_questionnaire_controller.test.ts",
         "src/application/usecases/setup/__tests__/setup_wizard_use_case.test.ts",
+        "src/application/usecases/setup/__tests__/setup_journey_use_case.test.ts",
         "src/application/usecases/setup/__tests__/setup_credentials_use_case.test.ts",
         "src/application/usecases/setup/__tests__/setup_token_permissions_use_case.test.ts",
         "src/application/usecases/setup/__tests__/doctor_use_case.test.ts",
@@ -723,6 +728,7 @@
         "src/infrastructure/composition/__tests__/setup_token_permissions_composition_root.test.ts",
         "src/data/repository/__tests__/repository_variables_repository.test.ts",
         "src/cli/__tests__/setup_presenters.test.ts",
+        "src/cli/__tests__/setup_journey_presenter.test.ts",
         "src/cli/__tests__/setup_prompt_rendering.test.ts",
         "src/cli/__tests__/setup_token_permission_presenter.test.ts",
         "src/__tests__/cli.test.ts",
@@ -760,12 +766,14 @@
       ],
       "code": [
         "src/application/policies/setup_token_permission_policy.ts",
+        "src/application/policies/setup_permission_summary_policy.ts",
         "src/application/policies/setup_pat_creation_url_policy.ts",
         "src/application/ports/setup_pat_identity_ports.ts",
         "src/application/usecases/setup/verify_guided_workflow_pat_identity_use_case.ts",
         "src/infrastructure/setup_github_identity_query_adapter.ts",
         "src/application/usecases/setup/setup_credentials_use_case.ts",
         "src/cli/setup_credential_prompt_adapter.ts",
+        "src/cli/setup_journey_presenter.ts",
         "src/data/repository/repository_variables_repository.ts"
       ],
       "tests": [
@@ -775,6 +783,7 @@
         "src/infrastructure/__tests__/setup_github_identity_query_adapter.test.ts",
         "src/application/usecases/setup/__tests__/setup_credentials_use_case.test.ts",
         "src/cli/__tests__/setup_presenters.test.ts",
+        "src/cli/__tests__/setup_journey_presenter.test.ts",
         "src/data/repository/__tests__/repository_variables_repository.test.ts"
       ],
       "documentation": [
@@ -802,6 +811,7 @@
       ],
       "code": [
         "src/cli/setup_credential_prompt_adapter.ts",
+        "src/cli/setup_journey_presenter.ts",
         "src/application/policies/setup_pat_intent_policy.ts",
         "src/application/policies/setup_questionnaire_policy.ts",
         "src/application/policies/setup_token_permission_policy.ts",
@@ -813,6 +823,7 @@
       ],
       "tests": [
         "src/cli/__tests__/setup_presenters.test.ts",
+        "src/cli/__tests__/setup_journey_presenter.test.ts",
         "src/__tests__/cli.test.ts",
         "src/application/policies/__tests__/setup_pat_intent_policy.test.ts",
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
