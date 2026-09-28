@@ -14,13 +14,16 @@ import { createSetupTokenPermissionsUseCase } from './setup_token_permissions_co
 export function createSetupCredentialsUseCase(
     prompt: SetupCredentialPromptPort,
     permissionPresenter?: SetupTokenPermissionPresenterPort,
+    options: { allowPreApplyHealthWorkflow?: boolean } = {},
 ): SetupCredentialsUseCase {
     const secretNames = new RepositorySecretNamesQueryRepository(createRepositoryVariablesClient());
     return new SetupCredentialsUseCase(
         prompt,
         new SetupCredentialValidationAdapter(),
         secretNames,
-        new SetupRemoteCredentialHealthBootstrapAdapter(new OctokitCredentialHealthClientAdapter()),
+        options.allowPreApplyHealthWorkflow === false
+            ? undefined
+            : new SetupRemoteCredentialHealthBootstrapAdapter(new OctokitCredentialHealthClientAdapter()),
         createSetupTokenPermissionsUseCase(),
         permissionPresenter,
     );

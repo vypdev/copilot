@@ -20,4 +20,13 @@ describe('setup token permission composition roots', () => {
         expect(createSetupCredentialsUseCase(prompt, presenter)).toBeInstanceOf(SetupCredentialsUseCase);
         expect(createSetupRemoteConfigurationReadPort()).toBeDefined();
     });
+
+    it('omits workflow dispatch/bootstrap only in the web pre-Apply composition', () => {
+        const prompt = {} as SetupCredentialPromptPort;
+        const remoteHealth = (useCase: SetupCredentialsUseCase) =>
+            (useCase as unknown as { remoteHealth?: unknown }).remoteHealth;
+
+        expect(remoteHealth(createSetupCredentialsUseCase(prompt))).toBeDefined();
+        expect(remoteHealth(createSetupCredentialsUseCase(prompt, undefined, { allowPreApplyHealthWorkflow: false }))).toBeUndefined();
+    });
 });

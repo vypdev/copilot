@@ -183,6 +183,38 @@ can write Secrets. GitHub owns the browser session, 2FA, token generation, and
 deletion. Manual and unattended inputs retain the prior audit without the new
 bot-ID assertion.
 
+The optional `setup --web` presentation compiles Svelte/Vite into packaged
+`build/web` assets. The CLI serves those assets from a loopback-only Node HTTP
+server; the browser sends bounded semantic answers to an in-memory bridge.
+The bridge exposes the existing questionnaire policy state, credential ports,
+`SetupWizardUseCase`, permission audits, and local Action application, rather
+than parsing terminal output. It returns redacted views only: token values are
+never serialized to the page or persisted in browser storage. The server
+checks exact Host/Origin, a per-controller capability, prompt revision,
+content type and body size, sets a restrictive CSP, and serves only bundled
+asset paths. Before web Apply, the CLI rechecks repository identity, selected
+file hashes, remote facts and final setup PAT access. The terminal path remains
+the default and neither Action nor Bugbot API bundles import Svelte runtime.
+The shared pre-PAT intent, initial and configured-PAT audits, and final web Apply decisions
+live in application use cases with semantic ports; the command wires concrete
+presenters, Git/remote readers, and the mutation entrypoint. CLI flag/file
+merging uses a pure application policy behind a CLI parsing adapter. Import
+graph tests reject transitive dependencies from these use cases into CLI,
+infrastructure, Action, or browser code, and browser components can import
+only redacted application contracts as types.
+
+Inside `web/src`, `App.svelte` is only the page shell. The session client owns
+same-origin bootstrap, polling and revision-bound commands; it holds no pasted
+PAT in a store. Presenters in `components/` render progress, prompts, context,
+status and results from redacted views and callbacks, without network or
+provider imports. A new prompt kind goes in its presenter, not the shell.
+`style.css` imports layered palette, foundation, layout, controls, feedback
+and responsive styles; shared card/button/banner patterns and semantic color
+tokens cover both light and dark themes. The browser architecture test guards
+these dependencies and file-size budgets. The application-level setup-session
+coordinator extraction and full web acceptance budget remain open per the
+[web setup SDD](../../specs/local-web-setup-assistant.md).
+
 PAT permission validation follows the same dependency rule. The application
 `SetupTokenPermissionsUseCase` validates identity before invoking the narrow
 `SetupTokenPermissionQueryPort`; the infrastructure adapter performs only safe

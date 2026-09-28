@@ -1,0 +1,1 @@
+<section class="card waiting-card"><div class="spinner" aria-hidden="true"></div><h2>Working on the next step</h2><p>The local process is checking your answers and preparing the next decision. Keep this page open.</p></section>

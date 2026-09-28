@@ -159,8 +159,8 @@ function isInside(root, candidate) {
 function matchesFieldBoundary(field, relativePath) {
   if (field === 'specs') return /^specs\/(?!README\.md$|_template\.md$|CATALOG\.md$).+\.md$/.test(relativePath);
   if (field === 'workflows') return /^(?:\.github|setup)\/workflows\/.+\.ya?ml$/.test(relativePath);
-  if (field === 'entrypoints') return /^(?:src\/.+|action\.yml|package\.json)$/.test(relativePath);
-  if (field === 'code') return /^(?:src|scripts)\//.test(relativePath);
+  if (field === 'entrypoints') return /^(?:src\/.+|web\/src\/main\.ts|action\.yml|package\.json)$/.test(relativePath);
+  if (field === 'code') return /^(?:(?:src|scripts)\/|web\/src\/.+\.(?:ts|svelte|css)$)/.test(relativePath);
   if (field === 'tests') return /^src\/.*(?:__tests__\/.*\.test\.ts|\.test\.ts)$/.test(relativePath);
   if (field === 'documentation') return /^(?:docs\/.*\.(?:md|mdx)|README\.md|CONTRIBUTING\.md)$/.test(relativePath);
   return false;

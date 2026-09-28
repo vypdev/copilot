@@ -49091,6 +49091,7 @@ function normalizeSetupConfigurationLocales(configuration) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildSetupCredentialRequirements = void 0;
 exports.buildSetupPlan = buildSetupPlan;
+exports.setupPlanGuardPaths = setupPlanGuardPaths;
 exports.buildSetupRepositoryVariables = buildSetupRepositoryVariables;
 exports.buildSetupActionInputs = buildSetupActionInputs;
 const pull_request_description_1 = __nccwpck_require__(45315);
@@ -49139,6 +49140,31 @@ function buildSetupPlan(configuration, mergeQueueReadiness = [], approvalReadine
         approvalReadiness: [...approvalReadiness],
         warnings: buildSetupWarnings(configuration),
     };
+}
+/** Actual checkout destinations covered by a web Apply drift check.
+ * The presentation plan uses package-source labels for workflows/forms;
+ * comparing those labels as checkout paths would silently miss local edits.
+ */
+function setupPlanGuardPaths(plan) {
+    const selected = plan.selectedFiles.map(file => {
+        if (file.startsWith('workflows/'))
+            return `.github/${file}`;
+        if (file.startsWith('ISSUE_TEMPLATE/'))
+            return `.github/${file}`;
+        if (file === 'pull_request_template.md')
+            return '.github/pull_request_template.md';
+        if (file === 'AGENTS.md (managed pointer only)')
+            return 'AGENTS.md';
+        return file;
+    });
+    // Deselected managed assets can be retired to setup-backups during Apply.
+    const retiredCandidates = [
+        ...['config.yml', ...issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS.map(kind => issue_workflow_profile_1.ISSUE_WORKFLOW_CATALOG[kind].formFile)]
+            .map(file => `.github/ISSUE_TEMPLATE/${file}`),
+        ...['release_workflow.yml', 'hotfix_workflow.yml', 'copilot_deployment_orchestration.yml']
+            .map(file => `.github/workflows/${file}`),
+    ];
+    return [...new Set([...selected, ...retiredCandidates])].sort();
 }
 function buildSetupRepositoryVariables(configuration) {
     const variables = [];
@@ -65211,6 +65237,7 @@ exports.getGitInfo = getGitInfo;
 exports.getCurrentBranch = getCurrentBranch;
 exports.getCurrentHeadSha = getCurrentHeadSha;
 exports.isInsideGitRepo = isInsideGitRepo;
+exports.getGitRepositoryRoot = getGitRepositoryRoot;
 exports.isGitRepositoryRoot = isGitRepositoryRoot;
 const child_process_1 = __nccwpck_require__(32081);
 const node_fs_1 = __nccwpck_require__(87561);
@@ -65260,10 +65287,14 @@ function isInsideGitRepo(cwd) {
         return false;
     }
 }
+/** Canonical checkout root for plans whose file paths are repository-relative. */
+function getGitRepositoryRoot(cwd) {
+    const root = (0, child_process_1.execSync)('git rev-parse --show-toplevel', { cwd, stdio: 'pipe' }).toString().trim();
+    return (0, node_fs_1.realpathSync)(root);
+}
 function isGitRepositoryRoot(cwd) {
     try {
-        const root = (0, child_process_1.execSync)('git rev-parse --show-toplevel', { cwd, stdio: 'pipe' }).toString().trim();
-        return (0, node_fs_1.realpathSync)(root) === (0, node_fs_1.realpathSync)(cwd);
+        return getGitRepositoryRoot(cwd) === (0, node_fs_1.realpathSync)(cwd);
     }
     catch {
         return false;
@@ -84025,8 +84056,8 @@ function isInside(root, candidate) {
 function matchesFieldBoundary(field, relativePath) {
   if (field === 'specs') return /^specs\/(?!README\.md$|_template\.md$|CATALOG\.md$).+\.md$/.test(relativePath);
   if (field === 'workflows') return /^(?:\.github|setup)\/workflows\/.+\.ya?ml$/.test(relativePath);
-  if (field === 'entrypoints') return /^(?:src\/.+|action\.yml|package\.json)$/.test(relativePath);
-  if (field === 'code') return /^(?:src|scripts)\//.test(relativePath);
+  if (field === 'entrypoints') return /^(?:src\/.+|web\/src\/main\.ts|action\.yml|package\.json)$/.test(relativePath);
+  if (field === 'code') return /^(?:(?:src|scripts)\/|web\/src\/.+\.(?:ts|svelte|css)$)/.test(relativePath);
   if (field === 'tests') return /^src\/.*(?:__tests__\/.*\.test\.ts|\.test\.ts)$/.test(relativePath);
   if (field === 'documentation') return /^(?:docs\/.*\.(?:md|mdx)|README\.md|CONTRIBUTING\.md)$/.test(relativePath);
   return false;

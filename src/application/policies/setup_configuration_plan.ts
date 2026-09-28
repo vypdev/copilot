@@ -13,7 +13,7 @@ import {
 import { usesOrganizationStorage } from './setup_configuration_storage_policy';
 import { buildSetupCredentialRequirements } from './setup_credential_requirement_policy';
 import { resolveLocaleProfile } from '../../domain/locale';
-import { issueWorkflowFormFiles, serializeIssueWorkflowProfile } from '../../domain/issue_workflow_profile';
+import { ISSUE_WORKFLOW_CATALOG, ISSUE_WORKFLOW_KINDS, issueWorkflowFormFiles, serializeIssueWorkflowProfile } from '../../domain/issue_workflow_profile';
 import { effectiveIssueWorkflowFeatures, effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
 
 export { buildSetupCredentialRequirements };
@@ -59,6 +59,28 @@ export function buildSetupPlan(
         approvalReadiness: [...approvalReadiness],
         warnings: buildSetupWarnings(configuration),
     };
+}
+
+/** Actual checkout destinations covered by a web Apply drift check.
+ * The presentation plan uses package-source labels for workflows/forms;
+ * comparing those labels as checkout paths would silently miss local edits.
+ */
+export function setupPlanGuardPaths(plan: Readonly<SetupPlan>): string[] {
+    const selected = plan.selectedFiles.map(file => {
+        if (file.startsWith('workflows/')) return `.github/${file}`;
+        if (file.startsWith('ISSUE_TEMPLATE/')) return `.github/${file}`;
+        if (file === 'pull_request_template.md') return '.github/pull_request_template.md';
+        if (file === 'AGENTS.md (managed pointer only)') return 'AGENTS.md';
+        return file;
+    });
+    // Deselected managed assets can be retired to setup-backups during Apply.
+    const retiredCandidates = [
+        ...['config.yml', ...ISSUE_WORKFLOW_KINDS.map(kind => ISSUE_WORKFLOW_CATALOG[kind].formFile)]
+            .map(file => `.github/ISSUE_TEMPLATE/${file}`),
+        ...['release_workflow.yml', 'hotfix_workflow.yml', 'copilot_deployment_orchestration.yml']
+            .map(file => `.github/workflows/${file}`),
+    ];
+    return [...new Set([...selected, ...retiredCandidates])].sort();
 }
 
 export function buildSetupRepositoryVariables(configuration: SetupConfiguration): SetupVariable[] {

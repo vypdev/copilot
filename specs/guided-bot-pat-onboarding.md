@@ -581,6 +581,10 @@ PAT, and the bot PAT remains active after setup.
 - Related specs: [temporary setup operator authorization](./temporary-setup-operator-authorization.md),
   [setup baseline](./setup-configuration-credentials-and-doctor.md), and
   [PAT permission guidance](./setup-pat-permission-guidance-and-verification.md).
+- Future presentation: [local web setup assistant](./local-web-setup-assistant.md)
+  must preserve final-plan bot grants, numeric-ID verification, and the
+  installed Secret's persistent lifecycle. This SDD does not claim a web
+  implementation today.
 - Primary sources: [PAT form and URL templates](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens),
   [browser account switcher](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/switching-between-accounts),
   [organization PAT endpoints](https://docs.github.com/en/rest/orgs/personal-access-tokens).

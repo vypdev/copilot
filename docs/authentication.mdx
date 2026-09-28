@@ -12,6 +12,24 @@ For [guarded PR approval](/pull-requests/guarded-approval), this same runtime PA
 
 The setup PAT and workflow PAT may have different owners and permissions. Do not paste the workflow PAT into the setup prompt unless you intentionally want the same token to perform both roles.
 
+`copilot setup --web` offers the same guided or manual PAT choices in a local
+browser page. It has separate masked inputs for the temporary operator PAT and
+the bot PAT, displays the relevant grants next to each step, and verifies
+identity and access through the same setup use cases as the terminal. The
+browser never calls GitHub with a PAT directly or stores PAT values. GitHub's
+own tab handles account switching, 2FA, repository selection, and creation.
+The local page cannot prove that a browser extension or another process under
+your OS user cannot see the value while you paste it. Afterward, delete the
+temporary setup PAT in GitHub yourself; do not delete the bot PAT while the
+installed Actions Secret still depends on it.
+
+The web assistant does not dispatch or temporarily install a credential-health
+workflow before you press **Apply setup**. Existing Secret values cannot be
+read back: re-enter the bot PAT to check its grants, and treat any preserved
+optional provider Secret marked `unverifiable` as unknown until a later
+`copilot doctor`/workflow check. The terminal setup retains its existing
+credential-health behavior.
+
 ## Assisted creation in the terminal
 
 When `copilot setup` needs a PAT interactively, it offers a guided link (the

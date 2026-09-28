@@ -72,6 +72,16 @@ describe('specification catalog validator', () => {
     expect(errors.some(error => error.includes('does not resolve to an existing file'))).toBe(true);
   });
 
+  it('catalogues shipped browser sources but rejects browser paths outside the source tree', () => {
+    const catalog = cloneCatalog();
+    const capability = catalog.capabilities.find(item => item.id === 'local-web-setup-assistant')!;
+    expect(capability.entrypoints).toContain('web/src/main.ts');
+    expect(capability.code).toContain('web/src/components/PromptCard.svelte');
+    capability.code.push('web/vite.config.mts');
+    const errors = validator.validateCatalog(root, catalog);
+    expect(errors.some(error => error.includes('outside the code boundary: web/vite.config.mts'))).toBe(true);
+  });
+
   it('rejects an invalid status and verification date', () => {
     const catalog = cloneCatalog();
     catalog.capabilities[0].status = 'done';

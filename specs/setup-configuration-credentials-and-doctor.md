@@ -487,6 +487,10 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 - Permission companion: `setup-pat-permission-guidance-and-verification.md`
   owns the pre-prompt matrices, post-entry evidence states, and read-only probe
   boundary for setup and workflow PATs.
+- Future interface companion: [local web setup assistant](./local-web-setup-assistant.md)
+  specifies an optional, loopback-only `--web` adapter over the same setup
+  policies and application gates. This baseline describes the shipped CLI;
+  the web mode is not implemented by this amendment.
 - Decision: one configuration policy serves setup, doctor, and workflow inputs.
 - Rejected: storing credentials in YAML/JSON or silently overwriting managed files.
 - Follow-up: cross-provider transactional rollback is outside this baseline.

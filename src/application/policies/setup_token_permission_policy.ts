@@ -91,6 +91,19 @@ export function buildSetupPatIntentUncertainty(configuration: Readonly<SetupConf
     return unknown;
 }
 
+/** Required grants newly introduced (or upgraded) after the provisional review. */
+export function requiredSetupPatPermissionDelta(
+    before: readonly SetupTokenPermissionRequirement[],
+    after: readonly SetupTokenPermissionRequirement[],
+): string[] {
+    const previous = new Map(before.filter(item => item.applicability === 'required')
+        .map(item => [`${item.scope}:${item.permission.toLowerCase()}`, item.level]));
+    return after.filter(item => item.applicability === 'required'
+        && (previous.get(`${item.scope}:${item.permission.toLowerCase()}`) === undefined
+            || (previous.get(`${item.scope}:${item.permission.toLowerCase()}`) === 'read' && item.level === 'write')))
+        .map(item => `${item.scope} ${item.permission} ${item.level}`);
+}
+
 function buildSetupPatRequirements(
     configuration: Readonly<SetupConfiguration>,
     organization: boolean,

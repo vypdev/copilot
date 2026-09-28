@@ -39,6 +39,8 @@ pnpm add --global @vypdev/copilot
 copilot --version
 cd /path/to/your/repository
 copilot setup
+# Optional local visual assistant, in the same repository:
+copilot setup --web
 ```
 
 `@vypdev/copilot` contains both the `copilot` CLI and the compiled GitHub Action.
@@ -67,6 +69,14 @@ selection, and final creation; Copilot never creates or revokes either token.
 Use `copilot setup --dry-run` to inspect the plan before making local or remote
 changes. See the complete [How to use](https://docs.page/vypdev/copilot/how-to-use)
 guide and [Authentication](https://docs.page/vypdev/copilot/authentication).
+
+`--web` opens an ephemeral, loopback-only setup page with a six-stage progress
+rail, plan review, separate masked inputs for the two PAT roles, and a
+System/Light/Dark theme control. If the browser does not open, use the local
+URL printed in the terminal. The page does not create PATs: GitHub owns the
+form, account switch, 2FA, and token issuance. You must explicitly approve
+the plan and Apply; `--web` cannot be combined with unattended approval or
+secret-bearing command-line flags. The terminal wizard remains the default.
 
 ### Manual workflow integration (advanced)
 

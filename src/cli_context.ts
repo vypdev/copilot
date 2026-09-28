@@ -48,10 +48,15 @@ export function isInsideGitRepo(cwd: string): boolean {
   }
 }
 
+/** Canonical checkout root for plans whose file paths are repository-relative. */
+export function getGitRepositoryRoot(cwd: string): string {
+  const root = execSync('git rev-parse --show-toplevel', { cwd, stdio: 'pipe' }).toString().trim();
+  return realpathSync(root);
+}
+
 export function isGitRepositoryRoot(cwd: string): boolean {
   try {
-    const root = execSync('git rev-parse --show-toplevel', { cwd, stdio: 'pipe' }).toString().trim();
-    return realpathSync(root) === realpathSync(cwd);
+    return getGitRepositoryRoot(cwd) === realpathSync(cwd);
   } catch {
     return false;
   }

@@ -713,6 +713,10 @@ Secret renewal.
 - Related: [guided bot PAT onboarding](./guided-bot-pat-onboarding.md),
   [setup baseline](./setup-configuration-credentials-and-doctor.md), and
   [PAT permission guidance](./setup-pat-permission-guidance-and-verification.md).
+- Future presentation: [local web setup assistant](./local-web-setup-assistant.md)
+  reuses this role's grant, audit, and cleanup rules; it does not change the
+  browser-owned PAT issuance or GitHub deletion contract. Its new `--web`
+  flag is separate from this terminal-focused first release.
 - Primary sources: [GitHub PAT form and URL parameters](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens),
   [GitHub browser account switcher](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/switching-between-accounts).
 - Decision: ship guided PAT creation for both roles; do not present automatic

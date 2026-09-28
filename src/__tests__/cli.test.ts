@@ -9,6 +9,13 @@ import { runLocalAction } from '../actions/local_action';
 import { ACTIONS } from '../data/model/action_types';
 import { INPUT_KEYS } from '../application/contracts/input_keys';
 import type { SetupTokenPermissionReport, SetupTokenPermissionRequirement } from '../domain/setup_token_permissions';
+import { WebSetupBridge } from '../cli/web_setup_bridge';
+import { WebSetupQuestionnaireCollector } from '../cli/web_setup_adapters';
+import { startWebSetupServer, openWebSetupBrowser } from '../cli/web_setup_server';
+import { captureSetupApplySnapshot, setupApplySnapshotMatches } from '../cli/setup_apply_snapshot';
+import { createSetupReviewState } from '../application/policies/setup_questionnaire_policy';
+import type { WebSetupPrompt } from '../application/contracts/web_setup_view';
+import { SetupDoctorWorkspaceQueryAdapter } from '../infrastructure/setup_workspace_adapter';
 
 jest.mock('child_process', () => ({
   execSync: jest.fn(),
@@ -16,6 +23,22 @@ jest.mock('child_process', () => ({
 
 jest.mock('../actions/local_action', () => ({
   runLocalAction: jest.fn().mockResolvedValue([]),
+}));
+
+// Setup serialization is exercised against temporary Git repositories in its
+// dedicated adapter tests; CLI command tests mock the filesystem boundary.
+jest.mock('../cli/setup_session_guard', () => ({
+  acquireSetupSessionGuard: jest.fn(() => jest.fn()),
+}));
+
+jest.mock('../cli/web_setup_server', () => ({
+  startWebSetupServer: jest.fn(async () => ({ url: 'http://127.0.0.1:40000/', closed: Promise.resolve(), close: jest.fn() })),
+  openWebSetupBrowser: jest.fn(),
+}));
+
+jest.mock('../cli/setup_apply_snapshot', () => ({
+  captureSetupApplySnapshot: jest.fn(() => ({})),
+  setupApplySnapshotMatches: jest.fn(() => true),
 }));
 
 jest.mock('../utils/logger', () => ({
@@ -61,7 +84,7 @@ jest.mock('../cli/setup_doctor_presenter', () => ({
   }),
 }));
 
-const mockTokenPermissionInspect = jest.fn(async (request: { role: 'setup' | 'workflow'; requirements: readonly SetupTokenPermissionRequirement[] }): Promise<SetupTokenPermissionReport> => ({
+const mockTokenPermissionInspect = jest.fn(async (request: { role: 'setup' | 'workflow'; token: string; requirements: readonly SetupTokenPermissionRequirement[] }): Promise<SetupTokenPermissionReport> => ({
   role: request.role,
   identityStatus: 'valid' as const,
   identityMessage: 'verified',
@@ -94,6 +117,7 @@ jest.mock('../infrastructure/composition/setup_credentials_composition_root', ()
   createSetupCredentialsUseCase: () => ({ collect: mockSetupCredentialsCollect }),
   createSetupRemoteConfigurationReadPort: () => ({
     inspect: mockRemoteConfigurationInspect,
+    inspectCredentialHealthWorkflow: jest.fn(async () => 'installed'),
   }),
 }));
 
@@ -463,6 +487,176 @@ describe('CLI', () => {
       for (const option of setupCommand.options) {
         setupCommand.setOptionValue(option.attributeName(), option.defaultValue);
       }
+    });
+
+    describe('local web command handoff', () => {
+      let ask: jest.SpyInstance;
+      let collect: jest.SpyInstance;
+
+      const answerWebPrompt = async (prompt: WebSetupPrompt): Promise<string> => {
+        if (prompt.title === 'Confirm this repository') return 'Yes, this is my repository';
+        if (prompt.title === 'How will you provide your setup PAT?') return 'Manual PAT';
+        if (prompt.title === 'Temporary setup PAT') return 'github_pat_web_setup_test_token';
+        if (prompt.kind === 'plan') return 'approve';
+        if (prompt.title === 'Apply this setup now?') return 'Apply setup';
+        if (prompt.title === 'Update existing workflows?') return 'Keep existing';
+        throw new Error(`Unexpected browser prompt: ${prompt.title}`);
+      };
+
+      beforeEach(() => {
+        (setupApplySnapshotMatches as jest.Mock).mockReturnValue(true);
+        (execSync as jest.Mock).mockImplementation((command: string) => Buffer.from(
+          command === 'git rev-parse HEAD' ? 'a'.repeat(40)
+            : command === 'git rev-parse --show-toplevel' ? process.cwd()
+              : command === 'git rev-parse --abbrev-ref HEAD' ? 'develop'
+                : 'https://github.com/test-owner/test-repo.git',
+        ));
+        ask = jest.spyOn(WebSetupBridge.prototype, 'ask').mockImplementation(answerWebPrompt);
+        collect = jest.spyOn(WebSetupQuestionnaireCollector.prototype, 'collect')
+          .mockImplementation(async initial => createSetupReviewState(initial.draft));
+      });
+
+      afterEach(() => { ask.mockRestore(); collect.mockRestore(); });
+
+      it('uses one browser session through PAT, plan, revalidation, and Apply', async () => {
+        await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
+        expect(startWebSetupServer).toHaveBeenCalledTimes(1);
+        expect(openWebSetupBrowser).toHaveBeenCalledWith('http://127.0.0.1:40000/');
+        expect(ask.mock.calls.map(call => call[0].title)).toEqual(expect.arrayContaining([
+          'Confirm this repository', 'How will you provide your setup PAT?', 'Temporary setup PAT',
+          'Review your setup plan', 'Apply this setup now?',
+        ]));
+        expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(3);
+        expect(captureSetupApplySnapshot).toHaveBeenCalledTimes(1);
+        expect(setupApplySnapshotMatches).toHaveBeenCalledTimes(1);
+        expect(runLocalAction).toHaveBeenCalledTimes(1);
+        expect(process.exitCode).toBeUndefined();
+      });
+
+      it('stops before acquiring a PAT when repository confirmation is declined', async () => {
+        ask.mockResolvedValueOnce('Stop and choose another checkout');
+        await program.parseAsync(['node', 'cli', 'setup', '--web']);
+        expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
+        expect(runLocalAction).not.toHaveBeenCalled();
+      });
+
+      it.each([
+        [undefined, 130],
+        ['decline', undefined],
+      ] as const)('honors a %s browser plan decision before credentials or Apply', async (answer, exitCode) => {
+        ask.mockImplementation(async (prompt: WebSetupPrompt) => prompt.kind === 'plan'
+          ? answer : answerWebPrompt(prompt));
+        await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(exitCode);
+        expect(ask.mock.calls.map(call => call[0].title)).not.toContain('Apply this setup now?');
+      });
+
+      it('guides setup PAT review and confirms the audited operator account before planning', async () => {
+        ask.mockImplementation(async (prompt: WebSetupPrompt) => {
+          if (prompt.title === 'How will you provide your setup PAT?') return 'Guided GitHub link';
+          if (prompt.title === 'What kind of GitHub account owns this repository?') return 'Personal account';
+          if (prompt.title === 'Review these provisional setup PAT grants') return 'Continue to GitHub';
+          if (prompt.title.includes('Is that the intended operator account?')) return 'Yes, continue';
+          return answerWebPrompt(prompt);
+        });
+        mockTokenPermissionInspect.mockResolvedValueOnce({
+          role: 'setup', account: 'operator', identityStatus: 'valid', identityMessage: 'verified',
+          ready: true, confirmationRequired: false, checks: [],
+        });
+        await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
+        expect(ask.mock.calls.map(call => call[0].title)).toEqual(expect.arrayContaining([
+          'Review these provisional setup PAT grants',
+          expect.stringContaining('Is that the intended operator account?'),
+        ]));
+        expect(runLocalAction).toHaveBeenCalledTimes(1);
+      });
+
+      it('keeps web dry-run local and never asks for either PAT or Apply', async () => {
+        await program.parseAsync(['node', 'cli', 'setup', '--web', '--dry-run', '--pr-approval-mode', 'off']);
+        expect(ask.mock.calls.map(call => call[0].title)).not.toContain('Temporary setup PAT');
+        expect(ask.mock.calls.map(call => call[0].title)).not.toContain('Apply this setup now?');
+        expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBeUndefined();
+      });
+
+      it('requires explicit selection before using an environment PAT', async () => {
+        mockGetSetupToken.mockReturnValueOnce('github_pat_from_environment_test');
+        ask.mockImplementation(async (prompt: WebSetupPrompt) => prompt.title === 'An environment setup PAT is available'
+          ? 'Use the environment PAT' : answerWebPrompt(prompt));
+        await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
+        expect(ask.mock.calls.map(call => call[0].title)).toContain('An environment setup PAT is available');
+        expect(ask.mock.calls.map(call => call[0].title)).not.toContain('Temporary setup PAT');
+        expect(mockTokenPermissionInspect.mock.calls[0][0].token).toBe('github_pat_from_environment_test');
+        expect(runLocalAction).toHaveBeenCalledTimes(1);
+      });
+
+      it('does not use an environment PAT when the browser choice is cancelled', async () => {
+        mockGetSetupToken.mockReturnValueOnce('github_pat_from_environment_test');
+        ask.mockImplementation(async (prompt: WebSetupPrompt) => prompt.title === 'An environment setup PAT is available'
+          ? undefined : answerWebPrompt(prompt));
+        await program.parseAsync(['node', 'cli', 'setup', '--web']);
+        expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(130);
+      });
+
+      it('blocks final Apply if GitHub facts changed after the reviewed plan', async () => {
+        mockRemoteConfigurationInspect.mockResolvedValueOnce(defaultRemoteConfiguration)
+          .mockResolvedValueOnce({ ...defaultRemoteConfiguration, repositoryVisibility: 'public' });
+        await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+      });
+
+      it('does not enter the mutation boundary when final Apply is declined', async () => {
+        ask.mockImplementation(async (prompt: WebSetupPrompt) => prompt.title === 'Apply this setup now?'
+          ? 'Stop without applying' : answerWebPrompt(prompt));
+        await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBeUndefined();
+      });
+
+      it('passes only explicitly approved changed workflows to the mutation boundary', async () => {
+        const comparison = jest.spyOn(SetupDoctorWorkspaceQueryAdapter.prototype, 'compareWorkflows')
+          .mockReturnValue([
+            { file: 'copilot_issue.yml', destination: '.github/workflows/copilot_issue.yml', status: 'changed' },
+            { file: 'unmanaged.yml', destination: '.github/workflows/unmanaged.yml', status: 'unmanaged' },
+          ]);
+        ask.mockImplementation(async (prompt: WebSetupPrompt) => prompt.title === 'Update existing workflows?'
+          ? 'Update setup-managed workflows' : answerWebPrompt(prompt));
+        try {
+          await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
+          expect(runLocalAction).toHaveBeenCalledWith(expect.objectContaining({ setupWorkflowUpdates: ['copilot_issue.yml'] }));
+        } finally { comparison.mockRestore(); }
+      });
+
+      it('refuses to launch a browser session without a verified HEAD', async () => {
+        (execSync as jest.Mock).mockImplementation((command: string) => {
+          if (command === 'git rev-parse HEAD') throw new Error('missing HEAD');
+          return Buffer.from(command === 'git rev-parse --show-toplevel' ? process.cwd()
+            : 'https://github.com/test-owner/test-repo.git');
+        });
+        await program.parseAsync(['node', 'cli', 'setup', '--web']);
+        expect(startWebSetupServer).not.toHaveBeenCalled();
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+      });
+
+      it('fails closed when selected files drift after browser plan approval', async () => {
+        (setupApplySnapshotMatches as jest.Mock).mockReturnValue(false);
+        await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+      });
+
+      it('rejects unattended CLI approval flags in web mode', async () => {
+        await program.parseAsync(['node', 'cli', 'setup', '--web', '--yes']);
+        expect(startWebSetupServer).not.toHaveBeenCalled();
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+      });
     });
     const guidedTerminal = (answer?: (prompt: string) => string | undefined) => ({
       isInteractive: () => true,

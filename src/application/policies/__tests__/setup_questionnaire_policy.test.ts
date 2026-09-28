@@ -52,6 +52,12 @@ describe('setup questionnaire policy', () => {
     expect(state.draft.issueWorkflows.enabled).toEqual([]);
   });
 
+  it('lets either presentation explicitly clear every issue workflow', () => {
+    const state = advanceTo(createSetupQuestionnaire(createDefaultSetupConfiguration()), 'issueWorkflows.enabled');
+    const cleared = transitionSetupQuestionnaire(state, { kind: 'answer', value: 'none' });
+    expect(cleared.draft.issueWorkflows.enabled).toEqual([]);
+  });
+
   it('enters review immediately when the permission-intent phase has no open questions', () => {
     const ids = [
       'features.issues', 'features.pullRequests', 'issueWorkflows.enabled', 'pullRequestApproval.mode',

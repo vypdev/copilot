@@ -23,6 +23,16 @@ scope before revoking or replacing the bot PAT: it may already be active.
 Cancelling setup never revokes either PAT. Delete an unused setup PAT in GitHub;
 renew an installed bot PAT before its suggested 90-day expiry.
 
+For `copilot setup --web`, an inaccessible page or failed browser launch does
+not imply a setup failure: open the exact `127.0.0.1` URL printed by the CLI.
+If the local bind or bundled assets fail, stop and use `copilot setup` in the
+terminal. A second browser tab is read-only until you select **Take control
+in this tab**; the former tab then cannot submit decisions. A rejected stale
+answer means the page should refresh to the current decision, not replay it.
+If the page closes during Apply, inspect the terminal result and run
+`copilot doctor` before retrying; do not assume that completed local or remote
+writes were rolled back. No local session shutdown revokes a PAT in GitHub.
+
 <AccordionGroup>
   <Accordion title="Setup is cancelled or doctor shows skipped checks" icon="circle-exclamation">
     **Setup cancellation:** `Ctrl-C` or end-of-input intentionally exits 130 and

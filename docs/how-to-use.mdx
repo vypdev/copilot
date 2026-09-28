@@ -38,6 +38,35 @@ If the checkout does not include the compiled `build/` folder (e.g. it is gitign
 
 Once installed, the `copilot` command is available globally. Repository-dependent commands such as `copilot setup`, `copilot doctor`, `copilot check-progress`, `copilot think`, and `copilot do` must be run **from the root of the target repository**. The `copilot upgrade`, `copilot --version`, and help flows can run from any directory. Commands that access GitHub accept `--token` or `PERSONAL_ACCESS_TOKEN` from the environment. `copilot setup` and `copilot doctor` securely prompt for the setup PAT when run interactively; no `.env` file is read or created. `copilot setup --dry-run` is the only setup mode that can run without a token. See [CLI commands](/single-actions/workflow-and-cli).
 
+Prefer a visual walkthrough? Run `copilot setup --web` from the repository
+root. The CLI starts a short-lived page on `127.0.0.1` and opens your browser;
+if opening fails, paste the printed local URL into a browser on this computer.
+The page shows the same six setup stages, keeps the review pass visibly part
+of the current run, presents permissions and the final plan, and asks for a
+separate final **Apply setup** approval. Use the System/Light/Dark control in
+the top bar to choose a readable palette; the choice lasts only in that tab.
+PAT values are submitted to the local process through masked fields and are
+not restored after refreshing the page. A second tab is read-only until you
+explicitly take control there. The terminal remains the default with
+`copilot setup`.
+
+The web mode still opens GitHub's official form in a separate tab for each
+PAT; it cannot pick your GitHub account, complete 2FA, select an individual
+repository, generate a PAT, or revoke it. Confirm the account and repository
+on GitHub yourself. If `PERSONAL_ACCESS_TOKEN` is available in your
+environment, the web page asks whether to use it without revealing its value;
+closing Copilot cannot unset the parent shell variable. `--web` cannot be
+combined with `--non-interactive`, `--yes`, `--token`, `--workflow-pat`,
+`--secret`, or `--confirm-unverifiable-write-permissions`: provide those
+decisions in the browser or use the terminal setup instead. `--dry-run --web`
+shows a no-change preview.
+
+Before its final Apply approval, the web mode performs read-only GitHub
+inspection and PAT checks; it does not dispatch or temporarily install a
+credential-health workflow. Re-enter an existing bot PAT for its grant audit.
+An optional existing provider Secret that you choose to keep may remain
+`unverifiable`; check runtime health with `copilot doctor` after installation.
+
 Interactive `copilot setup` offers a guided GitHub link or manual entry for each
 PAT. The first link prepares a short-lived **setup PAT** for the person
 configuring the repository. Before showing it, guided setup asks only the local

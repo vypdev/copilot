@@ -1,0 +1,304 @@
+import { mkdtempSync, mkdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { request } from 'node:http';
+import { WebSetupBridge } from '../web_setup_bridge';
+import { startWebSetupServer, type WebSetupServer } from '../web_setup_server';
+
+describe('local web setup server', () => {
+  let root: string;
+  let bridge: WebSetupBridge;
+  let server: WebSetupServer;
+
+  beforeEach(async () => {
+    root = mkdtempSync(join(tmpdir(), 'copilot-web-server-test-'));
+    mkdirSync(join(root, 'assets'));
+    writeFileSync(join(root, 'index.html'), '<!doctype html><link href="./assets/app.css" rel="stylesheet"><script src="./assets/app.js"></script><title>Test setup</title>');
+    writeFileSync(join(root, 'assets', 'app.js'), 'const ready = true;');
+    writeFileSync(join(root, 'assets', 'app.css'), ':root { color: black; }');
+    bridge = new WebSetupBridge('owner/repo');
+    server = await startWebSetupServer(bridge, root);
+  });
+  afterEach(async () => { if (server) await server.close(); rmSync(root, { recursive: true, force: true }); });
+
+  const jsonPost = (url: string, path: string, body: unknown, headers: Record<string, string> = {}) => fetch(`${url}${path}`, {
+    method: 'POST', headers: { Origin: url.slice(0, -1), 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body),
+  });
+
+  test('serves only bundled local files with restrictive headers', async () => {
+    const page = await fetch(server.url);
+    expect(page.status).toBe(200);
+    expect(page.headers.get('content-security-policy')).toContain("default-src 'none'");
+    expect(page.headers.get('cache-control')).toBe('no-store');
+    expect(page.headers.get('access-control-allow-origin')).toBeNull();
+    expect((await fetch(`${server.url}assets/app.js`)).status).toBe(200);
+    writeFileSync(join(root, 'assets', 'unlisted.js'), 'alert(1)');
+    expect((await fetch(`${server.url}assets/unlisted.js`)).status).toBe(404);
+    expect((await fetch(`${server.url}assets/%2e%2e/index.html`)).status).toBe(404);
+  });
+
+  test('rejects forged hosts and cross-origin mutation', async () => {
+    const forgedStatus = await new Promise<number>((resolveStatus, reject) => {
+      const forged = request(server.url, { headers: { Host: 'evil.example' } }, response => {
+        response.resume(); resolveStatus(response.statusCode ?? 0);
+      });
+      forged.on('error', reject); forged.end();
+    });
+    expect(forgedStatus).toBe(403);
+    const boot = await (await fetch(`${server.url}api/bootstrap`)).json() as { capability: string };
+    const pending = bridge.ask({ kind: 'secret', title: 'PAT' });
+    const revision = bridge.snapshot().promptRevision!;
+    expect((await jsonPost(server.url, 'api/answer', { revision, value: 'sensitive' }, {
+      Origin: 'https://evil.example', 'X-Setup-Capability': boot.capability,
+    })).status).toBe(403);
+    expect((await jsonPost(server.url, 'api/answer', { revision, value: 'sensitive' }, {
+      'X-Setup-Capability': 'wrong',
+    })).status).toBe(403);
+    expect(bridge.answer(revision, 'allowed')).toBe(true);
+    expect(await pending).toBe('allowed');
+  });
+
+  test('accepts one authorized answer and never returns the submitted PAT', async () => {
+    const boot = await (await fetch(`${server.url}api/bootstrap`)).json() as { capability: string };
+    const pending = bridge.ask({ kind: 'secret', title: 'Setup PAT' });
+    const revision = bridge.snapshot().promptRevision!;
+    const response = await jsonPost(server.url, 'api/answer', { revision, value: 'ghp_private' }, { 'X-Setup-Capability': boot.capability });
+    expect(response.status).toBe(200);
+    expect(await response.text()).not.toContain('ghp_private');
+    expect(await pending).toBe('ghp_private');
+    const duplicate = await jsonPost(server.url, 'api/answer', { revision, value: 'again' }, { 'X-Setup-Capability': boot.capability });
+    expect(duplicate.status).toBe(200);
+    expect(await duplicate.json()).toMatchObject({ accepted: true, duplicate: true });
+    expect((await jsonPost(server.url, 'api/answer', { revision: revision + 1, value: 'again' }, { 'X-Setup-Capability': boot.capability })).status).toBe(409);
+    expect(await (await fetch(`${server.url}api/state`)).text()).not.toContain('ghp_private');
+  });
+
+  test('rejects oversized answers, wrong method, and unsupported content type', async () => {
+    const boot = await (await fetch(`${server.url}api/bootstrap`)).json() as { capability: string };
+    const pending = bridge.ask({ kind: 'text', title: 'Answer' });
+    const revision = bridge.snapshot().promptRevision!;
+    expect((await jsonPost(server.url, 'api/answer', { revision, value: 'x'.repeat(5000) }, { 'X-Setup-Capability': boot.capability })).status).toBe(400);
+    expect((await fetch(`${server.url}api/answer`)).status).toBe(404);
+    expect((await fetch(`${server.url}api/answer`, { method: 'POST', headers: { Origin: server.url.slice(0, -1), 'Content-Type': 'text/plain', 'X-Setup-Capability': boot.capability }, body: '{}' })).status).toBe(415);
+    bridge.cancel();
+    await pending;
+  });
+
+  test('a second tab explicitly takes over and invalidates the first tab capability', async () => {
+    const first = await (await fetch(`${server.url}api/bootstrap`)).json() as { capability: string };
+    const second = await (await fetch(`${server.url}api/bootstrap`)).json() as { controller: boolean; takeoverTicket: string };
+    expect(second.controller).toBe(false);
+    expect((await jsonPost(server.url, 'api/takeover', { ticket: 'wrong' })).status).toBe(403);
+    const takeover = await jsonPost(server.url, 'api/takeover', { ticket: second.takeoverTicket });
+    expect(takeover.status).toBe(200);
+    const { capability } = await takeover.json() as { capability: string };
+    const pending = bridge.ask({ kind: 'choice', title: 'Proceed?', choices: ['yes', 'no'] });
+    const revision = bridge.snapshot().promptRevision;
+    expect((await jsonPost(server.url, 'api/answer', { revision, value: 'yes' }, { 'X-Setup-Capability': first.capability })).status).toBe(403);
+    expect((await jsonPost(server.url, 'api/answer', { revision, value: 'yes' }, { 'X-Setup-Capability': capability })).status).toBe(200);
+    expect(await pending).toBe('yes');
+    expect((await jsonPost(server.url, 'api/takeover', { ticket: second.takeoverTicket })).status).toBe(403);
+  });
+
+  test('cancel requires the controller and never claims to cancel in-flight Apply', async () => {
+    const { capability } = await (await fetch(`${server.url}api/bootstrap`)).json() as { capability: string };
+    const pending = bridge.ask({ kind: 'text', title: 'Answer' });
+    expect((await jsonPost(server.url, 'api/cancel', {}, { 'X-Setup-Capability': 'wrong' })).status).toBe(403);
+    expect((await jsonPost(server.url, 'api/cancel', {}, { 'X-Setup-Capability': capability })).status).toBe(200);
+    expect(await pending).toBeUndefined();
+    expect(bridge.snapshot().outcome).toBe('cancelled');
+
+    const secondBridge = new WebSetupBridge('owner/repo');
+    const secondServer = await startWebSetupServer(secondBridge, root);
+    try {
+      const nextCapability = (await (await fetch(`${secondServer.url}api/bootstrap`)).json() as { capability: string }).capability;
+      secondBridge.setJourney({ repository: 'owner/repo', position: 6, total: 6, current: 'Apply', complete: [], pending: [], mutationStarted: true, choiceReviewPass: 1 });
+      expect((await jsonPost(secondServer.url, 'api/cancel', {}, { 'X-Setup-Capability': nextCapability })).status).toBe(409);
+      expect(secondBridge.snapshot().outcome).toBeUndefined();
+    } finally { await secondServer.close(); }
+  });
+
+  test('close is rejected before a result and succeeds for the finished controller', async () => {
+    const { capability } = await (await fetch(`${server.url}api/bootstrap`)).json() as { capability: string };
+    expect((await jsonPost(server.url, 'api/close', {}, { 'X-Setup-Capability': capability })).status).toBe(403);
+    bridge.finish('complete', 'done');
+    expect((await jsonPost(server.url, 'api/close', {}, { 'X-Setup-Capability': 'wrong' })).status).toBe(403);
+    expect((await jsonPost(server.url, 'api/close', {}, { 'X-Setup-Capability': capability })).status).toBe(200);
+    await server.closed;
+  });
+
+  test.each([
+    [{ 'X-Forwarded-Host': 'evil.example' }, 403],
+    [{ 'X-Forwarded-Proto': 'https' }, 403],
+    [{ Forwarded: 'host=evil.example' }, 403],
+    [{ 'Sec-Fetch-Site': 'cross-site' }, 403],
+  ])('rejects proxy or cross-site context %j', async (headers, expected) => {
+    expect((await fetch(server.url, { headers })).status).toBe(expected);
+  });
+
+  test('rejects foreign Referer, malformed JSON and wrong API methods', async () => {
+    const { capability } = await (await fetch(`${server.url}api/bootstrap`)).json() as { capability: string };
+    expect((await jsonPost(server.url, 'api/answer', { revision: 1, value: 'x' }, {
+      Referer: 'https://evil.example/', 'X-Setup-Capability': capability,
+    })).status).toBe(403);
+    expect((await fetch(`${server.url}api/state`, { method: 'POST', headers: { Origin: server.url.slice(0, -1), 'Content-Type': 'application/json' }, body: '{}' })).status).toBe(405);
+    expect((await fetch(`${server.url}api/answer`, {
+      method: 'POST', headers: { Origin: server.url.slice(0, -1), 'Content-Type': 'application/json', 'X-Setup-Capability': capability }, body: '{invalid',
+    })).status).toBe(400);
+    expect((await fetch(`${server.url}api/not-a-route`)).status).toBe(404);
+  });
+
+  test('rejects invalid payload types and bodies beyond the byte limit', async () => {
+    const { capability } = await (await fetch(`${server.url}api/bootstrap`)).json() as { capability: string };
+    const pending = bridge.ask({ kind: 'secret', title: 'PAT' });
+    const revision = bridge.snapshot().promptRevision;
+    for (const invalid of [{ revision: '1', value: 'x' }, { revision, value: 7 }, { revision: -1, value: 'x' }]) {
+      expect((await jsonPost(server.url, 'api/answer', invalid, { 'X-Setup-Capability': capability })).status).toBe(400);
+    }
+    expect((await jsonPost(server.url, 'api/answer', [], { 'X-Setup-Capability': capability })).status).toBe(400);
+    expect((await jsonPost(server.url, 'api/answer', { revision, value: 'x'.repeat(8500) }, { 'X-Setup-Capability': capability })).status).toBe(400);
+    bridge.cancel();
+    await pending;
+  });
+
+  test('startup refuses missing or symlinked packaged assets', async () => {
+    const invalid = mkdtempSync(join(tmpdir(), 'copilot-web-assets-test-'));
+    try {
+      writeFileSync(join(invalid, 'index.html'), '<title>No assets</title>');
+      await expect(startWebSetupServer(new WebSetupBridge('owner/repo'), invalid)).rejects.toThrow('incomplete');
+      mkdirSync(join(invalid, 'assets'));
+      writeFileSync(join(invalid, 'index.html'), '<link href="./assets/app.css"><script src="./assets/app.js"></script>');
+      writeFileSync(join(invalid, 'assets/app.css'), 'body {}');
+      symlinkSync(join(root, 'assets/app.js'), join(invalid, 'assets/app.js'));
+      await expect(startWebSetupServer(new WebSetupBridge('owner/repo'), invalid)).rejects.toThrow('escapes');
+    } finally { rmSync(invalid, { recursive: true, force: true }); }
+  });
+
+  test('startup refuses an index symlink outside the asset root', async () => {
+    const invalid = mkdtempSync(join(tmpdir(), 'copilot-web-index-test-'));
+    try {
+      symlinkSync(join(root, 'index.html'), join(invalid, 'index.html'));
+      await expect(startWebSetupServer(new WebSetupBridge('owner/repo'), invalid)).rejects.toThrow('index must be inside');
+    } finally { rmSync(invalid, { recursive: true, force: true }); }
+  });
+
+  test('an asset replaced by an escaping symlink is not served', async () => {
+    unlinkSync(join(root, 'assets', 'app.js'));
+    const outside = mkdtempSync(join(tmpdir(), 'copilot-asset-escape-test-'));
+    try {
+      writeFileSync(join(outside, 'app.js'), 'alert(1)');
+      symlinkSync(join(outside, 'app.js'), join(root, 'assets', 'app.js'));
+      expect((await fetch(`${server.url}assets/app.js`)).status).toBe(404);
+    } finally { rmSync(outside, { recursive: true, force: true }); }
+  });
+
+  test('all mutating endpoints require an exact JSON content type', async () => {
+    const { capability } = await (await fetch(`${server.url}api/bootstrap`)).json() as { capability: string };
+    const wrongType = (path: string) => fetch(`${server.url}${path}`, {
+      method: 'POST', headers: { Origin: server.url.slice(0, -1), 'Content-Type': 'text/plain', 'X-Setup-Capability': capability }, body: '{}',
+    });
+    expect((await wrongType('api/takeover')).status).toBe(415);
+    expect((await wrongType('api/cancel')).status).toBe(415);
+    bridge.finish('complete', 'done');
+    expect((await wrongType('api/close')).status).toBe(415);
+  });
+
+  test('mutating requests without a controller capability or a takeover ticket do nothing', async () => {
+    const origin = server.url.slice(0, -1);
+    const pending = bridge.ask({ kind: 'secret', title: 'PAT' });
+    const revision = bridge.snapshot().promptRevision;
+    expect((await jsonPost(server.url, 'api/answer', { revision, value: 'ignored' })).status).toBe(403);
+    expect((await jsonPost(server.url, 'api/cancel', {})).status).toBe(403);
+    expect((await jsonPost(server.url, 'api/takeover', { ticket: 42 })).status).toBe(403);
+    expect((await fetch(`${server.url}api/answer`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ revision, value: 'ignored' }) })).status).toBe(403);
+    expect(origin).toContain('127.0.0.1');
+    bridge.cancel();
+    await pending;
+  });
+
+  test.each(['api/answer', 'api/cancel', 'api/close'])('rejects control transferred while reading %s', async path => {
+    const { capability } = await (await fetch(`${server.url}api/bootstrap`)).json() as { capability: string };
+    if (path === 'api/answer') void bridge.ask({ kind: 'secret', title: 'PAT' });
+    if (path === 'api/close') bridge.finish('complete', 'done');
+    const controller = jest.spyOn(bridge, 'isController').mockReturnValueOnce(true).mockReturnValueOnce(false);
+    try {
+      const response = await jsonPost(server.url, path, path === 'api/answer'
+        ? { revision: bridge.snapshot().promptRevision, value: 'unaccepted' } : {}, { 'X-Setup-Capability': capability });
+      expect(response.status).toBe(403);
+      if (path === 'api/answer') expect(bridge.snapshot().prompt?.kind).toBe('secret');
+    } finally {
+      controller.mockRestore();
+      if (path === 'api/answer') bridge.cancel();
+    }
+  });
+
+  test('an unanswered pre-Apply prompt expires without accepting a late answer', async () => {
+    await server.close();
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+    try {
+      bridge = new WebSetupBridge('owner/repo');
+      server = await startWebSetupServer(bridge, root);
+      const pending = bridge.ask({ kind: 'secret', title: 'Setup PAT' });
+      const revision = bridge.snapshot().promptRevision!;
+      await jest.advanceTimersByTimeAsync(30 * 60 * 1000);
+      expect(bridge.snapshot().outcome).toBe('blocked');
+      expect(await pending).toBeUndefined();
+      expect(bridge.answer(revision, 'late-token')).toBe(false);
+      expect(JSON.stringify(bridge.snapshot())).not.toContain('late-token');
+    } finally {
+      await server.close();
+      jest.useRealTimers();
+    }
+  });
+
+  test('the idle limit does not interrupt a mutation already in progress', async () => {
+    await server.close();
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+    try {
+      bridge = new WebSetupBridge('owner/repo');
+      server = await startWebSetupServer(bridge, root);
+      bridge.setJourney({ repository: 'owner/repo', position: 6, total: 6, current: 'Apply',
+        complete: [], pending: [], mutationStarted: true, choiceReviewPass: 1 });
+      await jest.advanceTimersByTimeAsync(4 * 60 * 60 * 1000);
+      expect(bridge.snapshot().outcome).toBeUndefined();
+    } finally {
+      await server.close();
+      jest.useRealTimers();
+    }
+  });
+
+  test('the absolute lifetime expires a pre-Apply session even after an earlier active interval', async () => {
+    await server.close();
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+    try {
+      bridge = new WebSetupBridge('owner/repo');
+      server = await startWebSetupServer(bridge, root);
+      const applying = { repository: 'owner/repo', position: 6, total: 6, current: 'Apply',
+        complete: [] as string[], pending: [] as string[], mutationStarted: true, choiceReviewPass: 1 };
+      bridge.setJourney(applying);
+      await jest.advanceTimersByTimeAsync(30 * 60 * 1000);
+      bridge.setJourney({ ...applying, mutationStarted: false });
+      await jest.advanceTimersByTimeAsync(3.5 * 60 * 60 * 1000);
+      expect(bridge.snapshot().outcome).toBe('blocked');
+      expect(bridge.snapshot().message?.text).toContain('four-hour limit');
+    } finally {
+      await server.close();
+      jest.useRealTimers();
+    }
+  });
+
+  test('a finished session closes itself after its result-reading window', async () => {
+    await server.close();
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+    try {
+      bridge = new WebSetupBridge('owner/repo');
+      server = await startWebSetupServer(bridge, root);
+      bridge.finish('complete', 'done');
+      await jest.advanceTimersByTimeAsync(10 * 60 * 1000);
+      await expect(server.closed).resolves.toBeUndefined();
+    } finally {
+      await server.close();
+      jest.useRealTimers();
+    }
+  });
+});

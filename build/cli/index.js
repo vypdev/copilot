@@ -39180,6 +39180,25 @@ function runAtApplicationErrorBoundary(operation) {
 
 /***/ }),
 
+/***/ 38313:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupInteractionCancelledError = void 0;
+/** Shared cancellation signal for terminal and browser setup presenters. */
+class SetupInteractionCancelledError extends Error {
+    constructor() {
+        super('Setup input was cancelled.');
+        this.name = 'SetupInteractionCancelledError';
+    }
+}
+exports.SetupInteractionCancelledError = SetupInteractionCancelledError;
+
+
+/***/ }),
+
 /***/ 79966:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -44268,6 +44287,42 @@ function boundedMergeQueueDiagnostic(value) {
 
 /***/ }),
 
+/***/ 39267:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.mergeSetupOverrides = mergeSetupOverrides;
+/** Explicit CLI flags override only their fields; file-only settings remain intact. */
+function mergeSetupOverrides(fileOverrides, flagOverrides) {
+    return {
+        ...fileOverrides,
+        ...flagOverrides,
+        features: { ...fileOverrides.features, ...flagOverrides.features },
+        agents: { ...fileOverrides.agents, ...flagOverrides.agents },
+        repository: { ...fileOverrides.repository, ...flagOverrides.repository },
+        ai: { ...fileOverrides.ai, ...flagOverrides.ai },
+        pullRequestApproval: {
+            ...fileOverrides.pullRequestApproval,
+            ...flagOverrides.pullRequestApproval,
+            coverage: { ...fileOverrides.pullRequestApproval?.coverage, ...flagOverrides.pullRequestApproval?.coverage },
+        },
+        projects: { ...fileOverrides.projects, ...flagOverrides.projects },
+        issueWorkflows: { ...fileOverrides.issueWorkflows, ...flagOverrides.issueWorkflows },
+        repositoryAgentGuidance: { ...fileOverrides.repositoryAgentGuidance, ...flagOverrides.repositoryAgentGuidance },
+        storage: {
+            ...fileOverrides.storage,
+            ...flagOverrides.storage,
+            secrets: { ...fileOverrides.storage?.secrets, ...flagOverrides.storage?.secrets, overrides: { ...fileOverrides.storage?.secrets?.overrides, ...flagOverrides.storage?.secrets?.overrides } },
+            variables: { ...fileOverrides.storage?.variables, ...flagOverrides.storage?.variables, overrides: { ...fileOverrides.storage?.variables?.overrides, ...flagOverrides.storage?.variables?.overrides } },
+        },
+    };
+}
+
+
+/***/ }),
+
 /***/ 97890:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -46321,6 +46376,7 @@ function normalizeSetupConfigurationLocales(configuration) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildSetupCredentialRequirements = void 0;
 exports.buildSetupPlan = buildSetupPlan;
+exports.setupPlanGuardPaths = setupPlanGuardPaths;
 exports.buildSetupRepositoryVariables = buildSetupRepositoryVariables;
 exports.buildSetupActionInputs = buildSetupActionInputs;
 const pull_request_description_1 = __nccwpck_require__(45315);
@@ -46369,6 +46425,31 @@ function buildSetupPlan(configuration, mergeQueueReadiness = [], approvalReadine
         approvalReadiness: [...approvalReadiness],
         warnings: buildSetupWarnings(configuration),
     };
+}
+/** Actual checkout destinations covered by a web Apply drift check.
+ * The presentation plan uses package-source labels for workflows/forms;
+ * comparing those labels as checkout paths would silently miss local edits.
+ */
+function setupPlanGuardPaths(plan) {
+    const selected = plan.selectedFiles.map(file => {
+        if (file.startsWith('workflows/'))
+            return `.github/${file}`;
+        if (file.startsWith('ISSUE_TEMPLATE/'))
+            return `.github/${file}`;
+        if (file === 'pull_request_template.md')
+            return '.github/pull_request_template.md';
+        if (file === 'AGENTS.md (managed pointer only)')
+            return 'AGENTS.md';
+        return file;
+    });
+    // Deselected managed assets can be retired to setup-backups during Apply.
+    const retiredCandidates = [
+        ...['config.yml', ...issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS.map(kind => issue_workflow_profile_1.ISSUE_WORKFLOW_CATALOG[kind].formFile)]
+            .map(file => `.github/ISSUE_TEMPLATE/${file}`),
+        ...['release_workflow.yml', 'hotfix_workflow.yml', 'copilot_deployment_orchestration.yml']
+            .map(file => `.github/workflows/${file}`),
+    ];
+    return [...new Set([...selected, ...retiredCandidates])].sort();
 }
 function buildSetupRepositoryVariables(configuration) {
     const variables = [];
@@ -48358,6 +48439,8 @@ function applyAnswer(configuration, question, value) {
 }
 function parseWorkflowSelection(raw) {
     const normalized = raw.trim().toLowerCase();
+    if (normalized === 'none')
+        return { value: [] };
     if (!normalized || normalized === 'all')
         return { value: [...issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS] };
     const requested = normalized.split(',').map(item => item.trim()).filter(Boolean)
@@ -48404,6 +48487,38 @@ function projectLabel(field) {
         issueInProgressColumn: 'Project column for issues in progress',
         pullRequestInProgressColumn: 'Project column for pull requests in progress',
     }[field];
+}
+
+
+/***/ }),
+
+/***/ 92567:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.sameSetupRemoteFacts = sameSetupRemoteFacts;
+/** Compare the semantic GitHub facts used by setup, not object/response ordering. */
+function sameSetupRemoteFacts(left, right) {
+    const variables = (items) => items
+        .map(item => JSON.stringify([item.name, item.value])).sort();
+    const normalize = (facts) => ({
+        ownerType: facts.ownerType,
+        repositoryId: facts.repositoryId,
+        repositoryVisibility: facts.repositoryVisibility,
+        repositorySecrets: [...facts.repositorySecrets].sort(),
+        repositorySecretsAccess: facts.repositorySecretsAccess,
+        organizationSecrets: [...facts.organizationSecrets].sort(),
+        repositoryVariables: variables(facts.repositoryVariables),
+        repositoryVariablesAccess: facts.repositoryVariablesAccess,
+        organizationVariables: variables(facts.organizationVariables),
+        organizationAccess: facts.organizationAccess,
+        organizationSecretsAccess: facts.organizationSecretsAccess,
+        organizationVariablesAccess: facts.organizationVariablesAccess,
+        credentialHealthWorkflow: facts.credentialHealthWorkflow,
+    });
+    return JSON.stringify(normalize(left)) === JSON.stringify(normalize(right));
 }
 
 
@@ -48496,6 +48611,7 @@ exports.buildSetupPatPermissionRequirements = buildSetupPatPermissionRequirement
 exports.buildConfiguredSetupPatPermissionRequirements = buildConfiguredSetupPatPermissionRequirements;
 exports.buildSetupPatIntentPermissionRequirements = buildSetupPatIntentPermissionRequirements;
 exports.buildSetupPatIntentUncertainty = buildSetupPatIntentUncertainty;
+exports.requiredSetupPatPermissionDelta = requiredSetupPatPermissionDelta;
 exports.buildWorkflowPatPermissionRequirements = buildWorkflowPatPermissionRequirements;
 exports.normalizePermissionRequirements = normalizePermissionRequirements;
 const setup_configuration_plan_1 = __nccwpck_require__(87770);
@@ -48553,6 +48669,15 @@ function buildSetupPatIntentUncertainty(configuration, ownerKind) {
         }
     }
     return unknown;
+}
+/** Required grants newly introduced (or upgraded) after the provisional review. */
+function requiredSetupPatPermissionDelta(before, after) {
+    const previous = new Map(before.filter(item => item.applicability === 'required')
+        .map(item => [`${item.scope}:${item.permission.toLowerCase()}`, item.level]));
+    return after.filter(item => item.applicability === 'required'
+        && (previous.get(`${item.scope}:${item.permission.toLowerCase()}`) === undefined
+            || (previous.get(`${item.scope}:${item.permission.toLowerCase()}`) === 'read' && item.level === 'write')))
+        .map(item => `${item.scope} ${item.permission} ${item.level}`);
 }
 function buildSetupPatRequirements(configuration, organization, remote) {
     const repositorySecretNames = (0, setup_credential_requirement_policy_1.buildSetupCredentialRequirements)(configuration)
@@ -54806,6 +54931,64 @@ function buildDraftPrompt(context, snapshot, plan, answers, currentSdd) {
 
 /***/ }),
 
+/***/ 60830:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AuditConfiguredSetupPatUseCase = void 0;
+const setup_pat_creation_url_policy_1 = __nccwpck_require__(54718);
+const setup_token_permission_policy_1 = __nccwpck_require__(99590);
+/** Rechecks the final plan without granting permission based on the browser preview. */
+class AuditConfiguredSetupPatUseCase {
+    constructor(context, ports) {
+        this.context = context;
+        this.ports = ports;
+    }
+    async audit(configuration, remote) {
+        const required = (0, setup_token_permission_policy_1.buildConfiguredSetupPatPermissionRequirements)(configuration, remote);
+        this.ports.presenter.showRequirements('setup', required);
+        if (this.context.assertedOwnerKind && remote && remote.ownerType !== 'Unknown'
+            && remote.ownerType !== this.context.assertedOwnerKind) {
+            this.ports.showOwnerMismatch(this.context.assertedOwnerKind, remote.ownerType);
+            this.showCorrectedLink(required);
+            return { status: 'blocked', errors: ['Repository owner type differs from the pre-PAT selection. Rerun setup with the correct owner type and PAT.'] };
+        }
+        if (this.context.guided) {
+            const removed = (0, setup_token_permission_policy_1.requiredSetupPatPermissionDelta)(required, this.context.provisionalRequirements);
+            if (removed.length)
+                this.ports.showExcessGrants(removed);
+        }
+        if (!this.context.token)
+            return { status: 'accepted' };
+        const report = await this.ports.permissions.inspect({
+            role: 'setup', owner: this.context.owner, repository: this.context.repository,
+            token: this.context.token, requirements: required,
+        });
+        this.ports.presenter.showReport(report);
+        const accepted = report.ready || (report.confirmationRequired && await this.ports.confirmUnverifiable(report));
+        if (!accepted || report.identityStatus !== 'valid') {
+            if (this.context.guided)
+                this.showCorrectedLink(required);
+            return { status: 'blocked', errors: [
+                    'The setup PAT has missing or unconfirmed access required by the approved setup plan. Grant or explicitly confirm the permissions shown above and retry.',
+                ] };
+        }
+        return { status: 'accepted' };
+    }
+    showCorrectedLink(required) {
+        this.ports.showUpdatedLink((0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({
+            role: 'setup', owner: this.context.owner, repository: this.context.repository,
+            expiresIn: 1, requirements: required,
+        }), (0, setup_token_permission_policy_1.requiredSetupPatPermissionDelta)(this.context.provisionalRequirements, required));
+    }
+}
+exports.AuditConfiguredSetupPatUseCase = AuditConfiguredSetupPatUseCase;
+
+
+/***/ }),
+
 /***/ 87328:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -55396,6 +55579,99 @@ function uniqueTargets(targets) {
         return true;
     });
 }
+
+
+/***/ }),
+
+/***/ 69277:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PrepareSetupPatIntentUseCase = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+const setup_interaction_cancelled_error_1 = __nccwpck_require__(38313);
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
+const setup_pat_intent_policy_1 = __nccwpck_require__(30748);
+const setup_token_permission_policy_1 = __nccwpck_require__(99590);
+const setup_pat_creation_url_policy_1 = __nccwpck_require__(54718);
+const setup_wizard_use_case_1 = __nccwpck_require__(43433);
+/** Frontend-neutral preparation; GitHub still issues the PAT in its own UI. */
+class PrepareSetupPatIntentUseCase {
+    constructor(ports) {
+        this.ports = ports;
+    }
+    async execute(request) {
+        const fixedQuestionIds = (0, setup_pat_intent_policy_1.fixedSetupPatIntentQuestionIds)(request.overrides, request.skipRepositoryVariables, request.skipRepositorySecrets);
+        let draft = (0, setup_wizard_use_case_1.buildInitialSetupConfiguration)({
+            mode: 'interactive', overrides: request.overrides,
+            skipRepositoryVariables: request.skipRepositoryVariables,
+            skipRepositorySecrets: request.skipRepositorySecrets,
+        });
+        let pass = 1;
+        while (true) {
+            const context = { skipQuestionIds: fixedQuestionIds };
+            const intent = await this.ports.collect((0, setup_questionnaire_policy_1.createSetupPermissionIntentQuestionnaire)(draft, context), context, pass);
+            if (intent.terminal === 'cancelled')
+                throw new setup_interaction_cancelled_error_1.SetupInteractionCancelledError();
+            draft = intent.draft;
+            const ownerKind = (0, setup_pat_intent_policy_1.setupPatIntentNeedsOwnerKind)(draft) ? await this.ports.chooseOwnerKind() : 'User';
+            if (ownerKind === 'unknown') {
+                this.ports.onManual('owner-unknown');
+                return { kind: 'manual' };
+            }
+            const ownerConflict = (0, setup_pat_intent_policy_1.setupPatIntentOwnerConflict)(draft, ownerKind);
+            const errors = (0, setup_configuration_policy_1.validateSetupConfiguration)(draft, { allowIncompleteApproval: true });
+            const requirements = (0, setup_token_permission_policy_1.buildSetupPatIntentPermissionRequirements)(draft, ownerKind);
+            this.ports.advanceToSetupPat();
+            this.ports.showPreview({
+                draft, requirements, uncertain: (0, setup_token_permission_policy_1.buildSetupPatIntentUncertainty)(draft, ownerKind),
+                ownerConflict, errors, pass,
+            });
+            let decision;
+            do {
+                decision = await this.ports.review();
+                if (decision === 'details')
+                    this.ports.showDetails(requirements);
+            } while (decision === 'details');
+            if (decision === 'manual') {
+                this.ports.onManual('chosen');
+                return { kind: 'manual' };
+            }
+            if (decision === 'revise') {
+                pass = this.ports.revisitChoices();
+                continue;
+            }
+            if (ownerConflict || errors.length > 0) {
+                throw new application_error_1.ApplicationError('configuration.invalid', 'Correct the reported setup intent or local --config/flags, then retry guided setup. No PAT was requested.');
+            }
+            try {
+                return {
+                    kind: 'guided',
+                    url: (0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({
+                        role: 'setup', owner: request.owner, repository: request.repository, expiresIn: 1,
+                        requirements,
+                    }),
+                    requirements,
+                    ownerKind,
+                    permissionIntent: {
+                        draft,
+                        answeredQuestionIds: [...new Set([...fixedQuestionIds, ...(intent.answeredQuestionIds ?? [])])],
+                    },
+                };
+            }
+            catch (error) {
+                if (!(error instanceof setup_pat_creation_url_policy_1.UnsupportedSetupPatLinkError))
+                    throw error;
+                this.ports.onManual('unsupported');
+                return { kind: 'manual' };
+            }
+        }
+    }
+}
+exports.PrepareSetupPatIntentUseCase = PrepareSetupPatIntentUseCase;
 
 
 /***/ }),
@@ -56051,6 +56327,113 @@ class VerifyGuidedWorkflowPatIdentityUseCase {
     }
 }
 exports.VerifyGuidedWorkflowPatIdentityUseCase = VerifyGuidedWorkflowPatIdentityUseCase;
+
+
+/***/ }),
+
+/***/ 23388:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VerifySetupPatBootstrapUseCase = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+const setup_pat_creation_url_policy_1 = __nccwpck_require__(54718);
+/** Initial read-only gate shared by terminal and browser setup presentations. */
+class VerifySetupPatBootstrapUseCase {
+    constructor(ports) {
+        this.ports = ports;
+    }
+    async execute(request) {
+        const report = await this.ports.permissions.inspect({
+            role: 'setup', owner: request.owner, repository: request.repository,
+            token: request.token, requirements: request.requirements,
+        });
+        this.ports.presenter.showReport(report);
+        const accepted = report.ready
+            || (report.confirmationRequired && await this.ports.confirmUnverifiable(report));
+        if (!accepted || report.identityStatus !== 'valid') {
+            if (request.guided)
+                this.ports.showCorrectedLink((0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({
+                    role: 'setup', owner: request.owner, repository: request.repository,
+                    expiresIn: 1, requirements: request.requirements,
+                }));
+            throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT has missing or unconfirmed required access. Grant or explicitly confirm the permissions shown above and retry.');
+        }
+        if (!await this.ports.confirmAccount(report.account)) {
+            throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT belongs to an unintended account. Revoke it in GitHub and retry with the correct account.');
+        }
+        return report.account;
+    }
+}
+exports.VerifySetupPatBootstrapUseCase = VerifySetupPatBootstrapUseCase;
+
+
+/***/ }),
+
+/***/ 5303:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VerifyWebSetupApplyUseCase = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+const setup_interaction_cancelled_error_1 = __nccwpck_require__(38313);
+const setup_remote_facts_policy_1 = __nccwpck_require__(92567);
+/** Authorizes one web Apply against the facts the operator actually reviewed. */
+class VerifyWebSetupApplyUseCase {
+    constructor(ports) {
+        this.ports = ports;
+    }
+    async execute(request) {
+        const decision = await this.ports.confirm();
+        if (decision === undefined)
+            return 'cancelled';
+        if (decision === 'stop')
+            return 'declined';
+        this.assertActive();
+        const current = this.ports.readRepositoryFacts();
+        const expected = request.repository;
+        if (!current || current.owner !== expected.owner || current.repository !== expected.repository
+            || current.checkoutRoot !== expected.checkoutRoot || current.branch !== expected.branch
+            || current.head !== expected.head) {
+            throw new application_error_1.ApplicationError('configuration.invalid', 'The repository identity changed during setup. No mutation started; restart and review a new plan.');
+        }
+        if (!this.ports.fileSnapshotMatches(expected.checkoutRoot, request.selectedFiles, request.fileSnapshot)) {
+            throw new application_error_1.ApplicationError('configuration.invalid', 'Selected repository files changed since plan review. No mutation started; restart and review a new plan.');
+        }
+        let remote = await this.ports.remote.inspect(expected.owner, expected.repository, request.setupToken);
+        this.assertActive();
+        let credentialHealthWorkflow = 'unavailable';
+        try {
+            credentialHealthWorkflow = await this.ports.remote.inspectCredentialHealthWorkflow?.(expected.owner, expected.repository, request.setupToken, request.configuration.repository.mainBranch) ?? 'unavailable';
+        }
+        catch { /* Unknown selected-ref state must not inherit a provisional value. */ }
+        this.assertActive();
+        remote = { ...remote, credentialHealthWorkflow };
+        if (!(0, setup_remote_facts_policy_1.sameSetupRemoteFacts)(remote, request.approvedRemote)) {
+            throw new application_error_1.ApplicationError('configuration.invalid', 'GitHub repository facts changed since plan review. No mutation started; restart and review a new plan.');
+        }
+        const audit = await this.ports.permissionAudit.audit(request.configuration, remote);
+        this.assertActive();
+        if (audit.status === 'blocked') {
+            throw new application_error_1.ApplicationError('authorization.credential-invalid', 'Setup PAT access changed since plan review. No mutation started; correct the PAT and review a new plan.');
+        }
+        return 'approved';
+    }
+    assertActive() {
+        const state = this.ports.sessionState();
+        if (state === 'cancelled') {
+            throw new setup_interaction_cancelled_error_1.SetupInteractionCancelledError();
+        }
+        if (state === 'ended') {
+            throw new application_error_1.ApplicationError('configuration.invalid', 'The local setup session expired during final checks. No mutation started; start a new run and review a fresh plan.');
+        }
+    }
+}
+exports.VerifyWebSetupApplyUseCase = VerifyWebSetupApplyUseCase;
 
 
 /***/ }),
@@ -65446,18 +65829,18 @@ const setup_files_1 = __nccwpck_require__(59126);
 const logger_1 = __nccwpck_require__(91151);
 const cli_context_1 = __nccwpck_require__(21307);
 const setup_policy_1 = __nccwpck_require__(28732);
-const setup_config_file_1 = __nccwpck_require__(11196);
+const setup_command_options_1 = __nccwpck_require__(99254);
 const setup_1 = __nccwpck_require__(36888);
-const setup_wizard_use_case_1 = __nccwpck_require__(43433);
-const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
-const setup_pat_intent_policy_1 = __nccwpck_require__(30748);
+const setup_configuration_plan_1 = __nccwpck_require__(87770);
+const prepare_setup_pat_intent_use_case_1 = __nccwpck_require__(69277);
+const audit_configured_setup_pat_use_case_1 = __nccwpck_require__(60830);
+const verify_setup_pat_bootstrap_use_case_1 = __nccwpck_require__(23388);
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const setup_token_permission_policy_1 = __nccwpck_require__(99590);
 const setup_credentials_composition_root_1 = __nccwpck_require__(69084);
 const setup_doctor_composition_root_1 = __nccwpck_require__(56360);
 const setup_workspace_adapter_1 = __nccwpck_require__(5729);
 const setup_approval_readiness_adapter_1 = __nccwpck_require__(78572);
-const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const application_error_1 = __nccwpck_require__(75999);
 const setup_terminal_driver_1 = __nccwpck_require__(5462);
 const setup_question_renderer_1 = __nccwpck_require__(89481);
@@ -65470,8 +65853,15 @@ const setup_token_permissions_composition_root_1 = __nccwpck_require__(64132);
 const setup_pat_creation_url_policy_1 = __nccwpck_require__(54718);
 const setup_github_identity_query_adapter_1 = __nccwpck_require__(56098);
 const verify_guided_workflow_pat_identity_use_case_1 = __nccwpck_require__(35697);
+const verify_web_setup_apply_use_case_1 = __nccwpck_require__(5303);
 const setup_journey_use_case_1 = __nccwpck_require__(8419);
+const setup_journey_policy_1 = __nccwpck_require__(53289);
 const setup_journey_presenter_1 = __nccwpck_require__(20462);
+const web_setup_bridge_1 = __nccwpck_require__(21518);
+const setup_apply_snapshot_1 = __nccwpck_require__(84136);
+const setup_session_guard_1 = __nccwpck_require__(53104);
+const web_setup_server_1 = __nccwpck_require__(63080);
+const web_setup_adapters_1 = __nccwpck_require__(60574);
 function registerSetupCommand(program) {
     program
         .command('setup')
@@ -65484,10 +65874,11 @@ function registerSetupCommand(program) {
         .option('--agent-guidance <mode>', 'Generated agent guidance mode (prompt|create-if-missing|disabled)')
         .option('--config <path>', 'YAML or JSON file with setup overrides')
         .option('--pr-approval-mode <mode>', 'PR bot approval: recommend (new setup default), guarded, or off')
-        .option('--pr-approval-check <identity>', 'Exact test producer name|source-App-ID|workflow-name; repeat for multiple checks', collectApprovalCheck, [])
+        .option('--pr-approval-check <identity>', 'Exact test producer name|source-App-ID|workflow-name; repeat for multiple checks', setup_command_options_1.collectApprovalCheck, [])
         .option('--pr-approval-coverage-check <name>', 'Exact selected check that enforces the coverage budget')
         .option('--pr-approval-attest-producer', 'Confirm exact check/App/workflow identity and a coverage-enforcing CI step', false)
         .option('--non-interactive', 'Use defaults and config-file values without prompting', false)
+        .option('--web', 'Run the optional local browser setup assistant (127.0.0.1 only)', false)
         .option('--yes', 'Apply the plan without the final confirmation prompt', false)
         .option('--confirm-unverifiable-write-permissions', 'Confirm that required PAT write permissions shown as Unverifiable were configured exactly as displayed', false)
         .option('--dry-run', 'Show the setup plan without changing files or GitHub', false)
@@ -65497,28 +65888,31 @@ function registerSetupCommand(program) {
         .option('--secrets-scope <scope>', 'Default Secret scope (repository|organization)')
         .option('--variables-visibility <visibility>', 'Organization Variable visibility (selected|private|all)')
         .option('--secrets-visibility <visibility>', 'Organization Secret visibility (selected|private|all)')
-        .option('--variable-scope <name=scope>', 'Per-variable scope override; repeat as needed', collectScope, {})
-        .option('--secret-scope <name=scope>', 'Per-secret scope override; repeat as needed', collectScope, {})
+        .option('--variable-scope <name=scope>', 'Per-variable scope override; repeat as needed', setup_command_options_1.collectScope, {})
+        .option('--secret-scope <name=scope>', 'Per-secret scope override; repeat as needed', setup_command_options_1.collectScope, {})
         .option('--update-workflows', 'Allow setup-managed workflows already in the repository to be updated', false)
         .option('--workflow-pat <token>', 'Workflow PAT for the bot account (prefer the hidden interactive prompt)')
-        .option('--secret <name=value>', 'Secret value for non-interactive setup; repeat for each API key', collectSecret, {})
+        .option('--secret <name=value>', 'Secret value for non-interactive setup; repeat for each API key', setup_command_options_1.collectSecret, {})
         .action(async (options) => {
-        const terminal = options.nonInteractive ? undefined : (0, setup_terminal_driver_1.createInteractiveTerminalDriver)();
-        const credentialPrompt = new setup_credential_prompt_adapter_1.SetupCredentialPromptAdapter(terminal, {
+        const terminal = options.nonInteractive || options.web ? undefined : (0, setup_terminal_driver_1.createInteractiveTerminalDriver)();
+        const webBridge = options.web ? new web_setup_bridge_1.WebSetupBridge('Resolving repository…') : undefined;
+        let webServer;
+        const credentialPrompt = webBridge ? new web_setup_adapters_1.WebSetupCredentialPrompt(webBridge) : new setup_credential_prompt_adapter_1.SetupCredentialPromptAdapter(terminal, {
             ...(options.workflowPat ? { PAT: options.workflowPat } : {}),
             ...options.secret,
         }, Boolean(options.confirmUnverifiableWritePermissions));
-        const permissionPresenter = new setup_token_permission_presenter_1.ConsoleSetupTokenPermissionPresenter(options.nonInteractive ? 'full' : 'summary');
+        const permissionPresenter = webBridge ? new web_setup_adapters_1.WebSetupPermissionPresenter(webBridge)
+            : new setup_token_permission_presenter_1.ConsoleSetupTokenPermissionPresenter(options.nonInteractive ? 'full' : 'summary');
         const tokenPermissions = (0, setup_token_permissions_composition_root_1.createSetupTokenPermissionsUseCase)();
-        const workflowPrompt = new setup_workflow_update_prompt_adapter_1.SetupWorkflowUpdatePromptAdapter(terminal);
+        const workflowPrompt = webBridge ? new web_setup_adapters_1.WebSetupWorkflowUpdatePrompt(webBridge) : new setup_workflow_update_prompt_adapter_1.SetupWorkflowUpdatePromptAdapter(terminal);
         const cwd = process.cwd();
         let setupMutationStarted = false;
+        let releaseSetupGuard;
         let journey;
         try {
-            if (!options.nonInteractive && !terminal) {
-                (0, logger_1.logError)('Interactive setup requires a terminal. Use --non-interactive with explicit configuration.');
-                process.exitCode = 1;
-                return;
+            if (options.web && (options.nonInteractive || options.yes || options.token || options.workflowPat
+                || Object.keys(options.secret ?? {}).length || options.confirmUnverifiableWritePermissions)) {
+                throw new application_error_1.ApplicationError('configuration.invalid', '--web cannot be combined with --non-interactive, --yes, --token, --workflow-pat, --secret, or --confirm-unverifiable-write-permissions. Use the browser for these decisions or run copilot setup in the terminal.');
             }
             (0, logger_1.logInfo)('🔍 Checking we are inside a git repository...');
             if (!(0, cli_context_1.isInsideGitRepo)(cwd)) {
@@ -65535,13 +65929,48 @@ function registerSetupCommand(program) {
                 return;
             }
             (0, logger_1.logInfo)(`📦 Repository: ${gitInfo.owner}/${gitInfo.repo}`);
+            releaseSetupGuard = (0, setup_session_guard_1.acquireSetupSessionGuard)(cwd);
+            const checkoutRoot = webBridge ? (0, cli_context_1.getGitRepositoryRoot)(cwd) : cwd;
+            const initialBranch = webBridge ? (0, cli_context_1.getCurrentBranch)() : undefined;
+            const initialHead = webBridge ? (0, cli_context_1.getCurrentHeadSha)() : undefined;
+            if (webBridge && !initialHead) {
+                throw new application_error_1.ApplicationError('configuration.invalid', 'The current Git revision could not be verified. No local setup session started.');
+            }
+            if (webBridge) {
+                webBridge.setRepository(`${gitInfo.owner}/${gitInfo.repo}`);
+                webBridge.setJourney((0, setup_journey_policy_1.buildSetupJourneyView)(`${gitInfo.owner}/${gitInfo.repo}`, 'repository', false));
+                webServer = await (0, web_setup_server_1.startWebSetupServer)(webBridge);
+                (0, logger_1.logInfo)(`🌐 Local setup assistant: ${webServer.url}`);
+                (0, logger_1.logInfo)('If the browser does not open, copy this URL into a browser on this computer. The terminal setup remains available with copilot setup.');
+                (0, web_setup_server_1.openWebSetupBrowser)(webServer.url);
+            }
             if (!options.nonInteractive) {
-                journey = new setup_journey_use_case_1.SetupJourneyUseCase(`${gitInfo.owner}/${gitInfo.repo}`, new setup_journey_presenter_1.ConsoleSetupJourneyPresenter());
+                journey = new setup_journey_use_case_1.SetupJourneyUseCase(`${gitInfo.owner}/${gitInfo.repo}`, webBridge ? new web_setup_adapters_1.WebSetupJourneyPresenter(webBridge) : new setup_journey_presenter_1.ConsoleSetupJourneyPresenter());
+                if (webBridge) {
+                    const target = await webBridge.ask({ kind: 'confirm', title: 'Confirm this repository',
+                        description: `This local checkout resolves to ${gitInfo.owner}/${gitInfo.repo} on branch ${initialBranch}. Confirm the target before configuring PAT access or files.`,
+                        choices: ['Yes, this is my repository', 'Stop and choose another checkout'] });
+                    if (target === undefined)
+                        throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
+                    if (target !== 'Yes, this is my repository') {
+                        journey.finish('cancelled');
+                        return;
+                    }
+                }
                 journey.advance('choices');
             }
-            const overrides = loadSetupOverrides(options);
+            const overrides = (0, setup_command_options_1.loadSetupOverrides)(options);
             let setupPatPermissions = (0, setup_token_permission_policy_1.buildSetupPatPermissionRequirements)();
             let token = (0, setup_files_1.getSetupToken)(cwd, options.token);
+            if (webBridge && token) {
+                const choice = await webBridge.ask({ kind: 'choice', title: 'An environment setup PAT is available',
+                    description: 'Its value stays in the CLI process and is never sent to this page. Exiting Copilot cannot unset your parent shell variable.',
+                    choices: ['Use the environment PAT', 'Create or enter a different PAT'] });
+                if (choice === undefined)
+                    throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
+                if (choice !== 'Use the environment PAT')
+                    token = undefined;
+            }
             if (token || options.nonInteractive)
                 permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
             else
@@ -65551,82 +65980,49 @@ function registerSetupCommand(program) {
             let assertedOwnerKind;
             if (!token && !options.nonInteractive && !options.dryRun) {
                 if (await credentialPrompt.chooseSetupPatMethod() === 'guided') {
-                    const fixedQuestionIds = (0, setup_pat_intent_policy_1.fixedSetupPatIntentQuestionIds)(overrides, Boolean(options.skipVariables), Boolean(options.skipSecrets));
-                    let draft = (0, setup_wizard_use_case_1.buildInitialSetupConfiguration)({
-                        mode: 'interactive', overrides,
+                    const prepared = await new prepare_setup_pat_intent_use_case_1.PrepareSetupPatIntentUseCase({
+                        collect: (initial, context, pass) => (webBridge
+                            ? new web_setup_adapters_1.WebSetupQuestionnaireCollector(webBridge, pass)
+                            : new setup_1.SetupQuestionnaireController(terminal, new setup_question_renderer_1.ConsoleSetupQuestionRenderer('permission-intent', pass)))
+                            .collect(initial, context),
+                        chooseOwnerKind: () => credentialPrompt.chooseSetupOwnerKind(),
+                        review: () => credentialPrompt.reviewSetupPatIntent(),
+                        showPreview: ({ draft, requirements, uncertain, ownerConflict, errors, pass }) => {
+                            if (ownerConflict)
+                                (0, logger_1.logInfo)('This plan selects organization storage or Projects, but the owner was declared a personal account. Revise the choices or use the manual PAT path.');
+                            if (errors.length)
+                                (0, logger_1.logInfo)(`The selected local configuration needs correction before a guided link can be generated:\n${errors.map(item => `  - ${item}`).join('\n')}`);
+                            if (pass > 1)
+                                (0, logger_1.logInfo)('Choice review complete. Returning to setup PAT permission review.');
+                            (0, logger_1.logInfo)('Permission intent:');
+                            (0, logger_1.logInfo)(`  Initial tag: ${draft.createInitialTag ? 'yes' : 'no'}; issue workflows: ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval: ${draft.pullRequestApproval.mode}`);
+                            (0, logger_1.logInfo)(`  Secrets: ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables: ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects: ${draft.projects.ids.trim() || 'none'}`);
+                            webBridge?.message(`Permission preview: issue workflows ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval ${draft.pullRequestApproval.mode}; Secrets ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects ${draft.projects.ids.trim() || 'none'}.`, 'info');
+                            permissionPresenter.showRequirements('setup', requirements);
+                            if (uncertain.length)
+                                (0, logger_1.logInfo)(`May need after GitHub inspection:\n${uncertain.map(item => `  - ${item}`).join('\n')}`);
+                        },
+                        showDetails: requirements => permissionPresenter.showDetailedRequirements('setup', requirements),
+                        onManual: reason => {
+                            if (reason === 'owner-unknown')
+                                (0, logger_1.logInfo)('Owner type was not confirmed. Use the manual PAT table, or check whether the GitHub owner is an organization before retrying guided setup.');
+                            if (reason === 'unsupported')
+                                (0, logger_1.logInfo)('A guided setup PAT link is unavailable for this owner or permission set. Enter a manually created PAT using the table above.');
+                            credentialPrompt.useManualSetupPat();
+                            permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
+                        },
+                        advanceToSetupPat: () => { journey?.advance('setup-pat'); },
+                        revisitChoices: () => journey.revisitChoices(),
+                    }).execute({
+                        owner: gitInfo.owner, repository: gitInfo.repo, overrides,
                         skipRepositoryVariables: Boolean(options.skipVariables),
                         skipRepositorySecrets: Boolean(options.skipSecrets),
                     });
-                    let choiceReviewPass = 1;
-                    while (true) {
-                        const context = { skipQuestionIds: fixedQuestionIds };
-                        const collector = new setup_1.SetupQuestionnaireController(terminal, new setup_question_renderer_1.ConsoleSetupQuestionRenderer('permission-intent', choiceReviewPass));
-                        const intent = await collector.collect((0, setup_questionnaire_policy_1.createSetupPermissionIntentQuestionnaire)(draft, context), context);
-                        if (intent.terminal === 'cancelled')
-                            throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
-                        draft = intent.draft;
-                        const ownerKind = (0, setup_pat_intent_policy_1.setupPatIntentNeedsOwnerKind)(draft)
-                            ? await credentialPrompt.chooseSetupOwnerKind() : 'User';
-                        if (ownerKind === 'unknown') {
-                            (0, logger_1.logInfo)('Owner type was not confirmed. Use the manual PAT table, or check whether the GitHub owner is an organization before retrying guided setup.');
-                            credentialPrompt.useManualSetupPat();
-                            permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
-                            break;
-                        }
-                        if ((0, setup_pat_intent_policy_1.setupPatIntentOwnerConflict)(draft, ownerKind)) {
-                            (0, logger_1.logInfo)('This plan selects organization storage or Projects, but the owner was declared a personal account. Revise the choices or use the manual PAT path.');
-                        }
-                        const intentErrors = (0, setup_configuration_policy_1.validateSetupConfiguration)(draft, { allowIncompleteApproval: true });
-                        if (intentErrors.length > 0) {
-                            (0, logger_1.logInfo)(`The selected local configuration needs correction before a guided link can be generated:\n${intentErrors.map(item => `  - ${item}`).join('\n')}`);
-                        }
-                        const preview = (0, setup_token_permission_policy_1.buildSetupPatIntentPermissionRequirements)(draft, ownerKind);
-                        if (choiceReviewPass > 1)
-                            (0, logger_1.logInfo)('Choice review complete. Returning to setup PAT permission review.');
-                        journey?.advance('setup-pat');
-                        (0, logger_1.logInfo)('Permission intent:');
-                        (0, logger_1.logInfo)(`  Initial tag: ${draft.createInitialTag ? 'yes' : 'no'}; issue workflows: ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval: ${draft.pullRequestApproval.mode}`);
-                        (0, logger_1.logInfo)(`  Secrets: ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables: ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects: ${draft.projects.ids.trim() || 'none'}`);
-                        permissionPresenter.showRequirements('setup', preview);
-                        const uncertain = (0, setup_token_permission_policy_1.buildSetupPatIntentUncertainty)(draft, ownerKind);
-                        if (uncertain.length)
-                            (0, logger_1.logInfo)(`May need after GitHub inspection:\n${uncertain.map(item => `  - ${item}`).join('\n')}`);
-                        let decision;
-                        do {
-                            decision = await credentialPrompt.reviewSetupPatIntent();
-                            if (decision === 'details')
-                                permissionPresenter.showDetailedRequirements('setup', preview);
-                        } while (decision === 'details');
-                        if (decision === 'manual') {
-                            credentialPrompt.useManualSetupPat();
-                            permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
-                            break;
-                        }
-                        if (decision === 'revise') {
-                            choiceReviewPass = journey?.revisitChoices() ?? choiceReviewPass + 1;
-                            continue;
-                        }
-                        if ((0, setup_pat_intent_policy_1.setupPatIntentOwnerConflict)(draft, ownerKind) || intentErrors.length > 0) {
-                            throw new application_error_1.ApplicationError('configuration.invalid', 'Correct the reported setup intent or local --config/flags, then retry guided setup. No PAT was requested.');
-                        }
-                        try {
-                            const url = (0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({
-                                role: 'setup', owner: gitInfo.owner, repository: gitInfo.repo, expiresIn: 1,
-                                requirements: preview,
-                            });
-                            credentialPrompt.configureSetupPatGuide(url);
-                            setupPatPermissions = preview;
-                            assertedOwnerKind = ownerKind;
-                            permissionIntent = { draft, answeredQuestionIds: [...new Set([...fixedQuestionIds, ...intent.answeredQuestionIds])] };
-                        }
-                        catch (error) {
-                            if (!(error instanceof setup_pat_creation_url_policy_1.UnsupportedSetupPatLinkError))
-                                throw error;
-                            (0, logger_1.logInfo)('A guided setup PAT link is unavailable for this owner or permission set. Enter a manually created PAT using the table above.');
-                            credentialPrompt.useManualSetupPat();
-                            permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
-                        }
-                        break;
+                    if (prepared.kind === 'guided') {
+                        credentialPrompt.configureSetupPatGuide(prepared.url);
+                        setupPatPermissions = [...prepared.requirements];
+                        assertedOwnerKind = prepared.ownerKind;
+                        permissionIntent = prepared.permissionIntent;
                     }
                 }
                 else {
@@ -65634,7 +66030,7 @@ function registerSetupCommand(program) {
                     permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
                 }
             }
-            if (options.dryRun && !token)
+            if (options.dryRun && !token && !webBridge)
                 journey?.advance('plan');
             if (!token && !options.dryRun)
                 journey?.advance('setup-pat');
@@ -65650,81 +66046,41 @@ function registerSetupCommand(program) {
             }
             if (token) {
                 journey?.advance('setup-pat');
-                const permissionReport = await tokenPermissions.inspect({
-                    role: 'setup',
-                    owner: gitInfo.owner,
-                    repository: gitInfo.repo,
-                    token,
-                    requirements: setupPatPermissions,
-                });
-                permissionPresenter.showReport(permissionReport);
-                const permissionAccepted = permissionReport.ready
-                    || (permissionReport.confirmationRequired
-                        && await credentialPrompt.confirmUnverifiableTokenPermissions(permissionReport));
-                if (!permissionAccepted || permissionReport.identityStatus !== 'valid') {
-                    if (credentialPrompt.usedGuidedSetupPat)
-                        credentialPrompt.showUpdatedSetupPatLink((0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({
-                            role: 'setup', owner: gitInfo.owner, repository: gitInfo.repo, expiresIn: 1,
-                            requirements: setupPatPermissions,
-                        }), 'bootstrap');
-                    throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT has missing or unconfirmed required access. Grant or explicitly confirm the permissions shown above and retry.');
-                }
-                if (!await credentialPrompt.confirmGuidedSetupAccount(permissionReport.account)) {
-                    throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT belongs to an unintended account. Revoke it in GitHub and retry with the correct account.');
-                }
-                setupPatAccount = permissionReport.account;
+                setupPatAccount = await new verify_setup_pat_bootstrap_use_case_1.VerifySetupPatBootstrapUseCase({
+                    permissions: tokenPermissions,
+                    presenter: permissionPresenter,
+                    confirmUnverifiable: report => credentialPrompt.confirmUnverifiableTokenPermissions(report),
+                    confirmAccount: account => credentialPrompt.confirmGuidedSetupAccount(account),
+                    showCorrectedLink: url => credentialPrompt.showUpdatedSetupPatLink(url, 'bootstrap'),
+                }).execute({ owner: gitInfo.owner, repository: gitInfo.repo, token,
+                    requirements: setupPatPermissions, guided: credentialPrompt.usedGuidedSetupPat });
                 journey?.advance('plan');
             }
             (0, logger_1.logInfo)(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
-            const auditConfiguredSetupPat = async (configuration, remoteConfiguration) => {
-                const configuredSetupPatPermissions = (0, setup_token_permission_policy_1.buildConfiguredSetupPatPermissionRequirements)(configuration, remoteConfiguration);
-                permissionPresenter.showRequirements('setup', configuredSetupPatPermissions);
-                if (assertedOwnerKind && remoteConfiguration && remoteConfiguration.ownerType !== 'Unknown'
-                    && remoteConfiguration.ownerType !== assertedOwnerKind) {
-                    (0, logger_1.logInfo)(`The owner was declared ${assertedOwnerKind}, but GitHub reports ${remoteConfiguration.ownerType}. The guided link is no longer valid for this plan.`);
-                    credentialPrompt.showUpdatedSetupPatLink((0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({
-                        role: 'setup', owner: gitInfo.owner, repository: gitInfo.repo, expiresIn: 1,
-                        requirements: configuredSetupPatPermissions,
-                    }), 'final', setupPatPermissionDelta(setupPatPermissions, configuredSetupPatPermissions));
-                    return { status: 'blocked', errors: ['Repository owner type differs from the pre-PAT selection. Rerun setup with the correct owner type and PAT.'] };
-                }
-                if (credentialPrompt.usedGuidedSetupPat) {
-                    const removed = setupPatPermissionDelta(configuredSetupPatPermissions, setupPatPermissions);
-                    if (removed.length)
-                        (0, logger_1.logInfo)(`The final plan no longer requires grants suggested earlier: ${removed.join(', ')}. Your PAT may have excess access; replace it in GitHub if least privilege is required.`);
-                }
-                if (!token)
-                    return { status: 'accepted' };
-                const permissionReport = await tokenPermissions.inspect({
-                    role: 'setup', owner: gitInfo.owner, repository: gitInfo.repo, token,
-                    requirements: configuredSetupPatPermissions,
-                });
-                permissionPresenter.showReport(permissionReport);
-                const permissionAccepted = permissionReport.ready
-                    || (permissionReport.confirmationRequired
-                        && await credentialPrompt.confirmUnverifiableTokenPermissions(permissionReport));
-                if (!permissionAccepted || permissionReport.identityStatus !== 'valid') {
-                    if (credentialPrompt.usedGuidedSetupPat)
-                        credentialPrompt.showUpdatedSetupPatLink((0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({
-                            role: 'setup', owner: gitInfo.owner, repository: gitInfo.repo, expiresIn: 1,
-                            requirements: configuredSetupPatPermissions,
-                        }), 'final', setupPatPermissionDelta(setupPatPermissions, configuredSetupPatPermissions));
-                    return { status: 'blocked', errors: [
-                            'The setup PAT has missing or unconfirmed access required by the approved setup plan. Grant or explicitly confirm the permissions shown above and retry.',
-                        ] };
-                }
-                return { status: 'accepted' };
-            };
+            const auditConfiguredSetupPat = new audit_configured_setup_pat_use_case_1.AuditConfiguredSetupPatUseCase({
+                owner: gitInfo.owner, repository: gitInfo.repo, token,
+                provisionalRequirements: setupPatPermissions, assertedOwnerKind,
+                guided: credentialPrompt.usedGuidedSetupPat,
+            }, {
+                permissions: tokenPermissions,
+                presenter: permissionPresenter,
+                confirmUnverifiable: report => credentialPrompt.confirmUnverifiableTokenPermissions(report),
+                showOwnerMismatch: (asserted, actual) => (0, logger_1.logInfo)(`The owner was declared ${asserted}, but GitHub reports ${actual}. The guided link is no longer valid for this plan.`),
+                showExcessGrants: grants => (0, logger_1.logInfo)(`The final plan no longer requires grants suggested earlier: ${grants.join(', ')}. Your PAT may have excess access; replace it in GitHub if least privilege is required.`),
+                showUpdatedLink: (url, grants) => credentialPrompt.showUpdatedSetupPatLink(url, 'final', grants),
+            });
             const remoteConfigurationReader = (0, setup_credentials_composition_root_1.createSetupRemoteConfigurationReadPort)();
             const wizard = new setup_1.SetupWizardUseCase({
-                ...(terminal ? {
-                    collector: new setup_1.SetupQuestionnaireController(terminal, new setup_question_renderer_1.ConsoleSetupQuestionRenderer()),
+                ...(terminal || webBridge ? {
+                    collector: webBridge ? new web_setup_adapters_1.WebSetupQuestionnaireCollector(webBridge)
+                        : new setup_1.SetupQuestionnaireController(terminal, new setup_question_renderer_1.ConsoleSetupQuestionRenderer()),
                 } : {}),
-                planPresenter: new setup_plan_presenter_1.ConsoleSetupPlanPresenter(),
+                planPresenter: webBridge ? new web_setup_adapters_1.WebSetupPlanPresenter(webBridge) : new setup_plan_presenter_1.ConsoleSetupPlanPresenter(),
                 confirmation: options.dryRun
                     ? new setup_confirmation_adapter_1.DryRunSetupPlanConfirmation()
-                    : new setup_confirmation_adapter_1.SetupPlanConfirmationAdapter(terminal, Boolean(options.yes)),
-                finalPermissionAudit: { audit: auditConfiguredSetupPat },
+                    : webBridge ? new web_setup_adapters_1.WebSetupPlanConfirmation(webBridge)
+                        : new setup_confirmation_adapter_1.SetupPlanConfirmationAdapter(terminal, Boolean(options.yes)),
+                finalPermissionAudit: auditConfiguredSetupPat,
                 remoteConfiguration: remoteConfigurationReader,
                 mergeQueueReadiness: (0, setup_doctor_composition_root_1.createSetupMergeQueueReadinessUseCase)(),
                 approvalReadiness: new setup_approval_readiness_adapter_1.GithubSetupApprovalReadinessAdapter(),
@@ -65756,6 +66112,8 @@ function registerSetupCommand(program) {
                 return;
             }
             const { configuration, remoteConfiguration } = result;
+            const guardedFiles = webBridge ? (0, setup_configuration_plan_1.setupPlanGuardPaths)(result.plan) : undefined;
+            const webApplySnapshot = guardedFiles ? (0, setup_apply_snapshot_1.captureSetupApplySnapshot)(checkoutRoot, guardedFiles) : undefined;
             const credentialRequirements = (0, setup_configuration_policy_1.buildSetupCredentialRequirements)(configuration);
             const workflowComparisons = new setup_workspace_adapter_1.SetupDoctorWorkspaceQueryAdapter().compareWorkflows((0, setup_configuration_policy_1.effectiveIssueWorkflowFeatures)(configuration), configuration);
             const updateWorkflows = await workflowPrompt.confirmWorkflowUpdates(workflowComparisons, Boolean(options.updateWorkflows));
@@ -65763,6 +66121,8 @@ function registerSetupCommand(program) {
                 ? workflowComparisons.filter(comparison => comparison.status === 'changed').map(comparison => comparison.file)
                 : [];
             if (options.dryRun) {
+                if (webBridge)
+                    journey?.advance('plan');
                 journey?.finish('dry-run');
                 (0, logger_1.logInfo)('✅ Dry run complete. No files or GitHub resources were changed.');
                 return;
@@ -65785,7 +66145,7 @@ function registerSetupCommand(program) {
                     permissionPresenter.showDetailedRequirements('workflow', workflowTokenPermissions);
                 }
             }
-            const credentials = await (0, setup_credentials_composition_root_1.createSetupCredentialsUseCase)(credentialPrompt, permissionPresenter).collect({
+            const credentials = await (0, setup_credentials_composition_root_1.createSetupCredentialsUseCase)(credentialPrompt, permissionPresenter, webBridge ? { allowPreApplyHealthWorkflow: false } : undefined).collect({
                 owner: gitInfo.owner,
                 repository: gitInfo.repo,
                 setupToken: token ?? '',
@@ -65803,6 +66163,42 @@ function registerSetupCommand(program) {
                 (0, logger_1.logInfo)(`✅ Workflow PAT owner verified as @${verifiedBot.login} (GitHub account ID ${verifiedBot.id}).`);
                 if (setupPatAccount?.toLowerCase() === verifiedBot.login.toLowerCase()) {
                     (0, logger_1.logInfo)('The workflow PAT and setup PAT use the same GitHub account. If this account authors PRs, bot-generated events and guarded self-approval may not behave as intended; use a dedicated bot account where required.');
+                }
+            }
+            if (webBridge) {
+                if (!remoteConfiguration || !guardedFiles || !webApplySnapshot || !initialBranch || !initialHead || !token) {
+                    throw new application_error_1.ApplicationError('configuration.invalid', 'The approved setup evidence is incomplete. No mutation started; restart and review a new plan.');
+                }
+                const authorization = await new verify_web_setup_apply_use_case_1.VerifyWebSetupApplyUseCase({
+                    confirm: async () => {
+                        const answer = await webBridge.ask({ kind: 'confirm', title: 'Apply this setup now?',
+                            description: 'This is the final approval. Local files and selected GitHub resources may change. A partial result may require inspection before retrying.',
+                            choices: ['Apply setup', 'Stop without applying'] });
+                        return answer === undefined ? undefined : answer === 'Apply setup' ? 'apply' : 'stop';
+                    },
+                    readRepositoryFacts: () => {
+                        const current = (0, cli_context_1.getGitInfo)();
+                        return 'error' in current ? undefined : {
+                            owner: current.owner, repository: current.repo, checkoutRoot: (0, cli_context_1.getGitRepositoryRoot)(cwd),
+                            branch: (0, cli_context_1.getCurrentBranch)(), head: (0, cli_context_1.getCurrentHeadSha)() ?? '',
+                        };
+                    },
+                    fileSnapshotMatches: setup_apply_snapshot_1.setupApplySnapshotMatches,
+                    remote: remoteConfigurationReader,
+                    permissionAudit: auditConfiguredSetupPat,
+                    sessionState: () => webBridge.snapshot().outcome === 'cancelled' ? 'cancelled'
+                        : webBridge.snapshot().outcome ? 'ended' : 'active',
+                }).execute({
+                    repository: { owner: gitInfo.owner, repository: gitInfo.repo, checkoutRoot,
+                        branch: initialBranch, head: initialHead },
+                    selectedFiles: guardedFiles, fileSnapshot: webApplySnapshot, approvedRemote: remoteConfiguration,
+                    configuration, setupToken: token,
+                });
+                if (authorization === 'cancelled')
+                    throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
+                if (authorization === 'declined') {
+                    journey?.finish('cancelled');
+                    return;
                 }
             }
             (0, logger_1.logInfo)('⚙️  Applying the approved setup plan...');
@@ -65842,147 +66238,19 @@ function registerSetupCommand(program) {
         finally {
             credentialPrompt.showSetupPatCleanupReminder();
             terminal?.close();
+            if (webBridge && webServer) {
+                const outcome = webBridge.snapshot().journey?.outcome ?? (process.exitCode ? 'blocked' : 'cancelled');
+                webBridge.finish(outcome, outcome === 'complete'
+                    ? 'Setup completed. Delete the temporary setup PAT in GitHub; keep the bot PAT while its Secret is in use.'
+                    : outcome === 'dry-run' ? 'Dry run complete. No files or GitHub resources changed.'
+                        : outcome === 'partial' ? 'Setup may be partial. Inspect GitHub resources and run copilot doctor before retrying.'
+                            : 'No further setup changes will be applied. Any PAT already created in GitHub still exists until you delete it there.');
+                (0, logger_1.logInfo)('The local browser page shows the result. Choose “Close local session” there, or stop this command with Ctrl+C.');
+                await webServer.closed;
+            }
+            releaseSetupGuard?.();
         }
     });
-}
-function collectSecret(value, previous) {
-    const separator = value.indexOf('=');
-    if (separator <= 0)
-        throw new Error('--secret must use NAME=VALUE syntax.');
-    const name = value.slice(0, separator).trim();
-    const secret = value.slice(separator + 1);
-    if (!/^[A-Z][A-Z0-9_]*$/.test(name) || !secret)
-        throw new Error('--secret must use a non-empty NAME=VALUE with an uppercase secret name.');
-    return { ...previous, [name]: secret };
-}
-function collectApprovalCheck(value, previous) {
-    return [...previous, value];
-}
-function setupPatPermissionDelta(before, after) {
-    const previous = new Map(before.filter(item => item.applicability === 'required')
-        .map(item => [`${item.scope}:${item.permission.toLowerCase()}`, item.level]));
-    return after.filter(item => item.applicability === 'required'
-        && (previous.get(`${item.scope}:${item.permission.toLowerCase()}`) === undefined
-            || (previous.get(`${item.scope}:${item.permission.toLowerCase()}`) === 'read' && item.level === 'write')))
-        .map(item => `${item.scope} ${item.permission} ${item.level}`);
-}
-function loadSetupOverrides(options) {
-    const fromFile = options.config ? (0, setup_config_file_1.loadSetupConfigurationOverrides)(options.config) : {};
-    const fromFlags = {};
-    if (options.prApprovalMode || options.prApprovalCheck?.length || options.prApprovalCoverageCheck || options.prApprovalAttestProducer) {
-        if (options.prApprovalMode && !['off', 'recommend', 'guarded'].includes(options.prApprovalMode)) {
-            throw new Error('--pr-approval-mode must be guarded, recommend, or off.');
-        }
-        const checks = options.prApprovalCheck?.map(value => {
-            const [name, appId, workflowName] = value.split('|').map(item => item.trim());
-            return { name, sourceAppId: Number(appId), workflowName };
-        });
-        fromFlags.pullRequestApproval = {
-            ...(options.prApprovalMode ? { mode: options.prApprovalMode } : {}),
-            ...(checks?.length ? { testChecks: checks } : {}),
-            ...(options.prApprovalAttestProducer ? { producerAttested: true } : {}),
-            ...(options.prApprovalCoverageCheck ? { coverage: { mode: 'check', checkName: options.prApprovalCoverageCheck } } : {}),
-        };
-    }
-    if (options.agent) {
-        if (!['codex', 'opencode', 'cursor'].includes(options.agent)) {
-            throw new Error('--agent must be one of: codex, opencode, cursor.');
-        }
-        fromFlags.agents = Object.fromEntries(['planner', 'findings', 'reviewer', 'fixer', 'tester'].map(task => [task, { provider: options.agent }]));
-    }
-    if (options.features) {
-        if (options.features.trim().toLowerCase() === 'all') {
-            fromFlags.features = Object.fromEntries(Object.keys(setup_configuration_policy_1.SETUP_FEATURE_DESCRIPTIONS).map(feature => [feature, true]));
-        }
-        else {
-            const requested = options.features.split(',').map(feature => feature.trim()).filter(Boolean);
-            const unknown = requested.filter(feature => !Object.prototype.hasOwnProperty.call(setup_configuration_policy_1.SETUP_FEATURE_DESCRIPTIONS, feature));
-            if (unknown.length > 0)
-                throw new Error(`Unknown setup feature(s): ${unknown.join(', ')}.`);
-            fromFlags.features = Object.fromEntries(Object.keys(setup_configuration_policy_1.SETUP_FEATURE_DESCRIPTIONS).map(feature => [feature, requested.includes(feature)]));
-        }
-    }
-    if (options.issueWorkflows) {
-        const raw = options.issueWorkflows.trim().toLowerCase();
-        const requested = raw === 'all' ? [...issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS] : raw.split(',').map(item => item.trim()).filter(Boolean);
-        const unknown = requested.filter(item => !issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS.includes(item));
-        if (unknown.length > 0)
-            throw new Error(`Unknown issue workflow(s): ${unknown.join(', ')}.`);
-        if (new Set(requested).size !== requested.length)
-            throw new Error('Issue workflow selection cannot contain duplicates.');
-        fromFlags.issueWorkflows = { enabled: requested };
-    }
-    if (options.agentGuidance) {
-        const mode = options.agentGuidance.trim().toLowerCase();
-        if (!['prompt', 'create-if-missing', 'disabled'].includes(mode))
-            throw new Error('--agent-guidance must be prompt, create-if-missing, or disabled.');
-        fromFlags.repositoryAgentGuidance = { agentsPointer: mode, enabled: mode !== 'disabled' };
-    }
-    const storage = {};
-    if (options.variablesScope || options.variablesVisibility || Object.keys(options.variableScope ?? {}).length > 0) {
-        storage.variables = {
-            ...(options.variablesScope ? { defaultScope: parseScope(options.variablesScope, '--variables-scope') } : {}),
-            ...(options.variablesVisibility ? { organizationVisibility: parseVisibility(options.variablesVisibility, '--variables-visibility') } : {}),
-            ...(Object.keys(options.variableScope ?? {}).length > 0 ? { overrides: options.variableScope } : {}),
-        };
-    }
-    if (options.secretsScope || options.secretsVisibility || Object.keys(options.secretScope ?? {}).length > 0) {
-        storage.secrets = {
-            ...(options.secretsScope ? { defaultScope: parseScope(options.secretsScope, '--secrets-scope') } : {}),
-            ...(options.secretsVisibility ? { organizationVisibility: parseVisibility(options.secretsVisibility, '--secrets-visibility') } : {}),
-            ...(Object.keys(options.secretScope ?? {}).length > 0 ? { overrides: options.secretScope } : {}),
-        };
-    }
-    if (Object.keys(storage).length > 0)
-        fromFlags.storage = storage;
-    return mergeSetupOverrides(fromFile, fromFlags);
-}
-function mergeSetupOverrides(fileOverrides, flagOverrides) {
-    return {
-        ...fileOverrides,
-        ...flagOverrides,
-        features: { ...fileOverrides.features, ...flagOverrides.features },
-        agents: { ...fileOverrides.agents, ...flagOverrides.agents },
-        repository: { ...fileOverrides.repository, ...flagOverrides.repository },
-        ai: { ...fileOverrides.ai, ...flagOverrides.ai },
-        pullRequestApproval: {
-            ...fileOverrides.pullRequestApproval,
-            ...flagOverrides.pullRequestApproval,
-            coverage: { ...fileOverrides.pullRequestApproval?.coverage, ...flagOverrides.pullRequestApproval?.coverage },
-        },
-        projects: { ...fileOverrides.projects, ...flagOverrides.projects },
-        issueWorkflows: { ...fileOverrides.issueWorkflows, ...flagOverrides.issueWorkflows },
-        repositoryAgentGuidance: { ...fileOverrides.repositoryAgentGuidance, ...flagOverrides.repositoryAgentGuidance },
-        storage: {
-            ...fileOverrides.storage,
-            ...flagOverrides.storage,
-            secrets: { ...fileOverrides.storage?.secrets, ...flagOverrides.storage?.secrets, overrides: { ...fileOverrides.storage?.secrets?.overrides, ...flagOverrides.storage?.secrets?.overrides } },
-            variables: { ...fileOverrides.storage?.variables, ...flagOverrides.storage?.variables, overrides: { ...fileOverrides.storage?.variables?.overrides, ...flagOverrides.storage?.variables?.overrides } },
-        },
-    };
-}
-function collectScope(value, previous) {
-    const separator = value.indexOf('=');
-    if (separator <= 0)
-        throw new Error('Scope overrides must use NAME=repository or NAME=organization syntax.');
-    const name = value.slice(0, separator).trim();
-    const scope = value.slice(separator + 1).trim().toLowerCase();
-    if (!/^[A-Z][A-Z0-9_]*$/.test(name) || !['repository', 'organization'].includes(scope)) {
-        throw new Error('Scope overrides must use an uppercase NAME and repository or organization scope.');
-    }
-    return { ...previous, [name]: scope };
-}
-function parseScope(value, flag) {
-    const normalized = value.trim().toLowerCase();
-    if (normalized !== 'repository' && normalized !== 'organization')
-        throw new Error(`${flag} must be repository or organization.`);
-    return normalized;
-}
-function parseVisibility(value, flag) {
-    const normalized = value.trim().toLowerCase();
-    if (!['all', 'private', 'selected'].includes(normalized))
-        throw new Error(`${flag} must be selected, private, or all.`);
-    return normalized;
 }
 
 
@@ -66138,6 +66406,191 @@ function registerUpgradeCommand(program) {
         .command('upgrade')
         .description('Upgrade the global @vypdev/copilot installation to the latest published version')
         .action(() => runUpgradeCommand());
+}
+
+
+/***/ }),
+
+/***/ 84136:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.captureSetupApplySnapshot = captureSetupApplySnapshot;
+exports.setupApplySnapshotMatches = setupApplySnapshotMatches;
+const node_crypto_1 = __nccwpck_require__(6005);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+/** Captures only the selected setup paths. Missing files are part of the snapshot. */
+function captureSetupApplySnapshot(repositoryRoot, selectedFiles) {
+    const root = (0, node_path_1.resolve)(repositoryRoot);
+    const result = {};
+    for (const name of [...new Set(selectedFiles)].sort()) {
+        const path = (0, node_path_1.resolve)(root, name);
+        const inside = (0, node_path_1.relative)(root, path);
+        if ((0, node_path_1.isAbsolute)(name) || !inside || inside === '..' || inside.startsWith(`..${node_path_1.sep}`)) {
+            throw new Error('The setup plan contains a path outside the repository.');
+        }
+        // A lexically in-repository path can still escape through a parent symlink.
+        let prefix = root;
+        for (const segment of inside.split(node_path_1.sep)) {
+            prefix = (0, node_path_1.resolve)(prefix, segment);
+            try {
+                if ((0, node_fs_1.lstatSync)(prefix).isSymbolicLink())
+                    throw new Error(`Setup path ${name} traverses a symbolic link.`);
+            }
+            catch (cause) {
+                if (cause && typeof cause === 'object' && 'code' in cause && cause.code === 'ENOENT')
+                    break;
+                throw cause;
+            }
+        }
+        try {
+            const stat = (0, node_fs_1.lstatSync)(path);
+            if (stat.isFile() && stat.size <= 5 * 1024 * 1024) {
+                result[name] = `file:${(0, node_crypto_1.createHash)('sha256').update((0, node_fs_1.readFileSync)(path)).digest('hex')}`;
+            }
+            else
+                throw new Error(`Cannot safely snapshot setup file ${name}.`);
+        }
+        catch (cause) {
+            if (cause && typeof cause === 'object' && 'code' in cause && cause.code === 'ENOENT')
+                result[name] = 'missing';
+            else
+                throw cause;
+        }
+    }
+    return result;
+}
+function setupApplySnapshotMatches(repositoryRoot, selectedFiles, expected) {
+    const current = captureSetupApplySnapshot(repositoryRoot, selectedFiles);
+    return JSON.stringify(current) === JSON.stringify(expected);
+}
+
+
+/***/ }),
+
+/***/ 99254:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.collectSecret = collectSecret;
+exports.collectApprovalCheck = collectApprovalCheck;
+exports.loadSetupOverrides = loadSetupOverrides;
+exports.collectScope = collectScope;
+const setup_config_file_1 = __nccwpck_require__(11196);
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const merge_setup_overrides_policy_1 = __nccwpck_require__(39267);
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+function collectSecret(value, previous) {
+    const separator = value.indexOf('=');
+    if (separator <= 0)
+        throw new Error('--secret must use NAME=VALUE syntax.');
+    const name = value.slice(0, separator).trim();
+    const secret = value.slice(separator + 1);
+    if (!/^[A-Z][A-Z0-9_]*$/.test(name) || !secret)
+        throw new Error('--secret must use a non-empty NAME=VALUE with an uppercase secret name.');
+    return { ...previous, [name]: secret };
+}
+function collectApprovalCheck(value, previous) {
+    return [...previous, value];
+}
+function loadSetupOverrides(options) {
+    const fromFile = options.config ? (0, setup_config_file_1.loadSetupConfigurationOverrides)(options.config) : {};
+    const fromFlags = {};
+    if (options.prApprovalMode || options.prApprovalCheck?.length || options.prApprovalCoverageCheck || options.prApprovalAttestProducer) {
+        if (options.prApprovalMode && !['off', 'recommend', 'guarded'].includes(options.prApprovalMode)) {
+            throw new Error('--pr-approval-mode must be guarded, recommend, or off.');
+        }
+        const checks = options.prApprovalCheck?.map(value => {
+            const [name, appId, workflowName] = value.split('|').map(item => item.trim());
+            return { name, sourceAppId: Number(appId), workflowName };
+        });
+        fromFlags.pullRequestApproval = {
+            ...(options.prApprovalMode ? { mode: options.prApprovalMode } : {}),
+            ...(checks?.length ? { testChecks: checks } : {}),
+            ...(options.prApprovalAttestProducer ? { producerAttested: true } : {}),
+            ...(options.prApprovalCoverageCheck ? { coverage: { mode: 'check', checkName: options.prApprovalCoverageCheck } } : {}),
+        };
+    }
+    if (options.agent) {
+        if (!['codex', 'opencode', 'cursor'].includes(options.agent)) {
+            throw new Error('--agent must be one of: codex, opencode, cursor.');
+        }
+        fromFlags.agents = Object.fromEntries(['planner', 'findings', 'reviewer', 'fixer', 'tester'].map(task => [task, { provider: options.agent }]));
+    }
+    if (options.features) {
+        if (options.features.trim().toLowerCase() === 'all') {
+            fromFlags.features = Object.fromEntries(Object.keys(setup_configuration_policy_1.SETUP_FEATURE_DESCRIPTIONS).map(feature => [feature, true]));
+        }
+        else {
+            const requested = options.features.split(',').map(feature => feature.trim()).filter(Boolean);
+            const unknown = requested.filter(feature => !Object.prototype.hasOwnProperty.call(setup_configuration_policy_1.SETUP_FEATURE_DESCRIPTIONS, feature));
+            if (unknown.length > 0)
+                throw new Error(`Unknown setup feature(s): ${unknown.join(', ')}.`);
+            fromFlags.features = Object.fromEntries(Object.keys(setup_configuration_policy_1.SETUP_FEATURE_DESCRIPTIONS).map(feature => [feature, requested.includes(feature)]));
+        }
+    }
+    if (options.issueWorkflows) {
+        const raw = options.issueWorkflows.trim().toLowerCase();
+        const requested = raw === 'all' ? [...issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS] : raw.split(',').map(item => item.trim()).filter(Boolean);
+        const unknown = requested.filter(item => !issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS.includes(item));
+        if (unknown.length > 0)
+            throw new Error(`Unknown issue workflow(s): ${unknown.join(', ')}.`);
+        if (new Set(requested).size !== requested.length)
+            throw new Error('Issue workflow selection cannot contain duplicates.');
+        fromFlags.issueWorkflows = { enabled: requested };
+    }
+    if (options.agentGuidance) {
+        const mode = options.agentGuidance.trim().toLowerCase();
+        if (!['prompt', 'create-if-missing', 'disabled'].includes(mode))
+            throw new Error('--agent-guidance must be prompt, create-if-missing, or disabled.');
+        fromFlags.repositoryAgentGuidance = { agentsPointer: mode, enabled: mode !== 'disabled' };
+    }
+    const storage = {};
+    if (options.variablesScope || options.variablesVisibility || Object.keys(options.variableScope ?? {}).length > 0) {
+        storage.variables = {
+            ...(options.variablesScope ? { defaultScope: parseScope(options.variablesScope, '--variables-scope') } : {}),
+            ...(options.variablesVisibility ? { organizationVisibility: parseVisibility(options.variablesVisibility, '--variables-visibility') } : {}),
+            ...(Object.keys(options.variableScope ?? {}).length > 0 ? { overrides: options.variableScope } : {}),
+        };
+    }
+    if (options.secretsScope || options.secretsVisibility || Object.keys(options.secretScope ?? {}).length > 0) {
+        storage.secrets = {
+            ...(options.secretsScope ? { defaultScope: parseScope(options.secretsScope, '--secrets-scope') } : {}),
+            ...(options.secretsVisibility ? { organizationVisibility: parseVisibility(options.secretsVisibility, '--secrets-visibility') } : {}),
+            ...(Object.keys(options.secretScope ?? {}).length > 0 ? { overrides: options.secretScope } : {}),
+        };
+    }
+    if (Object.keys(storage).length > 0)
+        fromFlags.storage = storage;
+    return (0, merge_setup_overrides_policy_1.mergeSetupOverrides)(fromFile, fromFlags);
+}
+function collectScope(value, previous) {
+    const separator = value.indexOf('=');
+    if (separator <= 0)
+        throw new Error('Scope overrides must use NAME=repository or NAME=organization syntax.');
+    const name = value.slice(0, separator).trim();
+    const scope = value.slice(separator + 1).trim().toLowerCase();
+    if (!/^[A-Z][A-Z0-9_]*$/.test(name) || !['repository', 'organization'].includes(scope)) {
+        throw new Error('Scope overrides must use an uppercase NAME and repository or organization scope.');
+    }
+    return { ...previous, [name]: scope };
+}
+function parseScope(value, flag) {
+    const normalized = value.trim().toLowerCase();
+    if (normalized !== 'repository' && normalized !== 'organization')
+        throw new Error(`${flag} must be repository or organization.`);
+    return normalized;
+}
+function parseVisibility(value, flag) {
+    const normalized = value.trim().toLowerCase();
+    if (!['all', 'private', 'selected'].includes(normalized))
+        throw new Error(`${flag} must be selected, private, or all.`);
+    return normalized;
 }
 
 
@@ -66497,13 +66950,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupCredentialPromptAdapter = exports.SetupTerminalCancelledError = void 0;
 const setup_prompt_rendering_1 = __nccwpck_require__(83434);
 const setup_token_permission_presenter_1 = __nccwpck_require__(63206);
-class SetupTerminalCancelledError extends Error {
-    constructor() {
-        super('Setup input was cancelled.');
-        this.name = 'SetupTerminalCancelledError';
-    }
-}
-exports.SetupTerminalCancelledError = SetupTerminalCancelledError;
+const setup_interaction_cancelled_error_1 = __nccwpck_require__(38313);
+/** @deprecated Use the presentation-neutral cancellation signal in new adapters. */
+exports.SetupTerminalCancelledError = setup_interaction_cancelled_error_1.SetupInteractionCancelledError;
 class SetupCredentialPromptAdapter {
     constructor(terminal, credentialValues, confirmUnverifiableWritePermissions = false) {
         this.terminal = terminal;
@@ -66610,7 +67059,7 @@ class SetupCredentialPromptAdapter {
                 `Confirm that the PAT was configured exactly as shown above? ${(0, setup_prompt_rendering_1.color)('[N]', 90)}: `,
             ].join('\n'));
             if (result.kind !== 'value')
-                throw new SetupTerminalCancelledError();
+                throw new exports.SetupTerminalCancelledError();
             const value = result.value.normalize('NFKC').trim().toLowerCase();
             if (!value || ['n', 'no', 'false', '0'].includes(value))
                 return false;
@@ -66654,7 +67103,7 @@ class SetupCredentialPromptAdapter {
         while (true) {
             const result = await this.terminal.readText('Expected GitHub bot login (without @): ');
             if (result.kind !== 'value')
-                throw new SetupTerminalCancelledError();
+                throw new exports.SetupTerminalCancelledError();
             const login = result.value.trim();
             if (/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(login))
                 return login;
@@ -66691,7 +67140,7 @@ class SetupCredentialPromptAdapter {
     async readSecret(label) {
         const result = await this.terminal.readSecret(label);
         if (result.kind !== 'value')
-            throw new SetupTerminalCancelledError();
+            throw new exports.SetupTerminalCancelledError();
         return result.value.trim();
     }
     async readChoice(label, choices, defaultValue) {
@@ -66703,7 +67152,7 @@ class SetupCredentialPromptAdapter {
                 `Select 1-${choices.length}${defaultValue ? ` ${(0, setup_prompt_rendering_1.color)(`[${choices.indexOf(defaultValue) + 1}]`, 90)}` : ''}: `,
             ].join('\n'));
             if (result.kind !== 'value')
-                throw new SetupTerminalCancelledError();
+                throw new exports.SetupTerminalCancelledError();
             if (!result.value.trim() && defaultValue)
                 return defaultValue;
             const index = Number(result.value) - 1;
@@ -67134,6 +67583,78 @@ function formatDefault(value) {
 
 /***/ }),
 
+/***/ 53104:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.acquireSetupSessionGuard = acquireSetupSessionGuard;
+const node_crypto_1 = __nccwpck_require__(6005);
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_os_1 = __nccwpck_require__(70612);
+const node_path_1 = __nccwpck_require__(49411);
+/** One cooperative setup process per canonical checkout; no credential is stored in the lock. */
+function acquireSetupSessionGuard(cwd) {
+    const top = (0, node_child_process_1.execFileSync)('git', ['-C', cwd, 'rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
+    const repository = (0, node_fs_1.realpathSync)(top);
+    const hash = (0, node_crypto_1.createHash)('sha256').update(repository).digest('hex').slice(0, 32);
+    const lockPath = (0, node_path_1.join)((0, node_os_1.tmpdir)(), `copilot-setup-${hash}.lock`);
+    const record = { pid: process.pid, nonce: (0, node_crypto_1.randomBytes)(16).toString('hex'), repository };
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+            const fd = (0, node_fs_1.openSync)(lockPath, 'wx', 0o600);
+            try {
+                (0, node_fs_1.writeFileSync)(fd, JSON.stringify(record));
+            }
+            finally {
+                (0, node_fs_1.closeSync)(fd);
+            }
+            return () => {
+                try {
+                    const current = JSON.parse((0, node_fs_1.readFileSync)(lockPath, 'utf8'));
+                    if (current.pid === record.pid && current.nonce === record.nonce && current.repository === record.repository)
+                        (0, node_fs_1.unlinkSync)(lockPath);
+                }
+                catch { /* Missing or replaced lock is not ours to remove. */ }
+            };
+        }
+        catch (cause) {
+            if (!cause || typeof cause !== 'object' || !('code' in cause) || cause.code !== 'EEXIST')
+                throw cause;
+            let existing;
+            try {
+                existing = JSON.parse((0, node_fs_1.readFileSync)(lockPath, 'utf8'));
+            }
+            catch {
+                throw new Error('A setup lock exists but cannot be verified. Inspect it before retrying.');
+            }
+            if (!Number.isSafeInteger(existing.pid) || existing.pid <= 0 || existing.repository !== repository || !existing.nonce) {
+                throw setupLockError('A setup lock has unexpected contents. Inspect it before retrying.', cause);
+            }
+            try {
+                process.kill(existing.pid, 0);
+                throw setupLockError(`Another setup process (${existing.pid}) is active for this checkout. Finish or stop it before starting a second setup.`, cause);
+            }
+            catch (checkError) {
+                if (!checkError || typeof checkError !== 'object' || !('code' in checkError) || checkError.code !== 'ESRCH')
+                    throw checkError;
+            }
+            // Recover only a verified dead owner and only if the lock has not changed meanwhile.
+            if ((0, node_fs_1.existsSync)(lockPath) && (0, node_fs_1.readFileSync)(lockPath, 'utf8') === JSON.stringify(existing))
+                (0, node_fs_1.unlinkSync)(lockPath);
+        }
+    }
+    throw new Error('Could not acquire the local setup lock.');
+}
+function setupLockError(message, cause) {
+    return Object.assign(new Error(message), { cause });
+}
+
+
+/***/ }),
+
 /***/ 5462:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -67507,6 +68028,570 @@ exports.SetupWorkflowUpdatePromptAdapter = SetupWorkflowUpdatePromptAdapter;
 
 /***/ }),
 
+/***/ 60574:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WebSetupCredentialPrompt = exports.WebSetupJourneyPresenter = exports.WebSetupPermissionPresenter = exports.WebSetupWorkflowUpdatePrompt = exports.WebSetupPlanConfirmation = exports.WebSetupPlanPresenter = exports.WebSetupQuestionnaireCollector = void 0;
+const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
+const setup_interaction_cancelled_error_1 = __nccwpck_require__(38313);
+const web_setup_bridge_1 = __nccwpck_require__(21518);
+class WebSetupQuestionnaireCollector {
+    constructor(bridge, pass = 1) {
+        this.bridge = bridge;
+        this.pass = pass;
+    }
+    async collect(initial, context) {
+        let state = initial;
+        while (state.terminal === 'collecting' && state.question) {
+            if (state.validation)
+                this.bridge.message(state.validation, 'warning');
+            const value = await this.bridge.ask({
+                kind: 'question', title: (0, setup_questionnaire_policy_1.setupQuestionnaireStateLabel)(state.stateId),
+                question: state.question, phase: state.phase ?? 'full', pass: this.pass,
+            });
+            state = (0, setup_questionnaire_policy_1.transitionSetupQuestionnaire)(state, value === undefined ? { kind: 'cancel' } : { kind: 'answer', value }, context);
+        }
+        return state;
+    }
+}
+exports.WebSetupQuestionnaireCollector = WebSetupQuestionnaireCollector;
+class WebSetupPlanPresenter {
+    constructor(bridge) {
+        this.bridge = bridge;
+    }
+    present(plan) {
+        this.bridge.message(`Plan ready: ${plan.selectedFiles.length} files, ${plan.variables.length} Variables and ${plan.requiredSecrets.length} Secret names. Review it before continuing.`);
+    }
+}
+exports.WebSetupPlanPresenter = WebSetupPlanPresenter;
+class WebSetupPlanConfirmation {
+    constructor(bridge) {
+        this.bridge = bridge;
+    }
+    async confirm(plan) {
+        const response = await this.bridge.ask({ kind: 'plan', title: 'Review your setup plan', plan: (0, web_setup_bridge_1.toWebSetupPlan)(plan) });
+        return { kind: response === undefined ? 'cancelled' : response === 'approve' ? 'approved' : 'declined' };
+    }
+}
+exports.WebSetupPlanConfirmation = WebSetupPlanConfirmation;
+class WebSetupWorkflowUpdatePrompt {
+    constructor(bridge) {
+        this.bridge = bridge;
+    }
+    async confirmWorkflowUpdates(comparisons, forcedByFlag) {
+        const changed = comparisons.filter(item => item.status === 'changed' || item.status === 'unmanaged');
+        if (!changed.length)
+            return false;
+        if (forcedByFlag)
+            return true;
+        const answer = await this.bridge.ask({
+            kind: 'confirm', title: 'Update existing workflows?',
+            description: changed.map(item => `${item.destination} (${item.status})`).join('\n'),
+            choices: ['Keep existing', 'Update setup-managed workflows'],
+        });
+        if (answer === undefined)
+            throw new setup_interaction_cancelled_error_1.SetupInteractionCancelledError();
+        return answer === 'Update setup-managed workflows';
+    }
+}
+exports.WebSetupWorkflowUpdatePrompt = WebSetupWorkflowUpdatePrompt;
+class WebSetupPermissionPresenter {
+    constructor(bridge) {
+        this.bridge = bridge;
+    }
+    showRequirements(role, requirements) { this.bridge.requirements(role, requirements); }
+    showDetailedRequirements(role, requirements) { this.bridge.requirements(role, requirements); }
+    showReport(report) { this.bridge.report(report); }
+}
+exports.WebSetupPermissionPresenter = WebSetupPermissionPresenter;
+class WebSetupJourneyPresenter {
+    constructor(bridge) {
+        this.bridge = bridge;
+    }
+    present(view) { this.bridge.setJourney(view); }
+}
+exports.WebSetupJourneyPresenter = WebSetupJourneyPresenter;
+class WebSetupCredentialPrompt {
+    constructor(bridge) {
+        this.bridge = bridge;
+        this.guidedSetup = false;
+    }
+    get usedGuidedSetupPat() { return this.guidedSetup; }
+    get guidedWorkflowBotIdentity() { return this.botIdentity; }
+    configureSetupPatGuide(url) { this.setupGuide = url; }
+    useManualSetupPat() { this.guidedSetup = false; this.setupGuide = undefined; }
+    async chooseSetupPatMethod() {
+        this.guidedSetup = await this.choice('How will you provide your setup PAT?', ['Guided GitHub link', 'Manual PAT']) === 'Guided GitHub link';
+        return this.guidedSetup ? 'guided' : 'manual';
+    }
+    async chooseSetupOwnerKind() {
+        const answer = await this.choice('What kind of GitHub account owns this repository?', ['Organization', 'Personal account', 'Not sure']);
+        return answer === 'Organization' ? 'Organization' : answer === 'Personal account' ? 'User' : 'unknown';
+    }
+    async reviewSetupPatIntent() {
+        const answer = await this.choice('Review these provisional setup PAT grants', ['Continue to GitHub', 'Review setup choices again', 'View full permission table', 'Enter a PAT manually']);
+        return answer === 'Review setup choices again' ? 'revise' : answer === 'View full permission table' ? 'details'
+            : answer === 'Enter a PAT manually' ? 'manual' : 'continue';
+    }
+    async requestSetupPat() {
+        return this.secret('Temporary setup PAT', 'Use the operator account in GitHub. Complete 2FA there, switch to Only select repositories, select this repository, and copy the generated token here. This token is for this run only; delete it in GitHub afterwards.', this.guidedSetup ? this.setupGuide : undefined);
+    }
+    async confirmGuidedSetupAccount(account) {
+        if (!this.guidedSetup)
+            return true;
+        if (!account)
+            return false;
+        return await this.choice(`GitHub authenticated the setup PAT as @${account}. Is that the intended operator account?`, ['Yes, continue', 'No, stop']) === 'Yes, continue';
+    }
+    showUpdatedSetupPatLink(url, stage, delta) {
+        this.bridge.message(`Setup PAT ${stage === 'final' ? 'permissions changed' : 'access failed'}. No setup mutation started. ${delta?.join(', ') ?? ''} Create a corrected PAT using the updated GitHub link.`, 'warning', url);
+    }
+    showSetupPatCleanupReminder() {
+        if (this.guidedSetup)
+            this.bridge.message('Delete the temporary setup PAT in GitHub Settings after this run. Closing Copilot does not revoke it.', 'warning', 'https://github.com/settings/personal-access-tokens');
+    }
+    async confirmUnverifiableTokenPermissions(report) {
+        const writes = report.checks.filter(item => item.applicability === 'required' && item.level === 'write' && item.status === 'unverifiable');
+        if (!report.confirmationRequired || writes.length === 0)
+            return false;
+        return await this.choice('GitHub cannot safely prove these write grants without a mutation. Confirm they are configured exactly as shown.', ['No, stop', 'Yes, I checked them']) === 'Yes, I checked them';
+    }
+    configureWorkflowPatGuide(url, resolveIdentity, requirements) {
+        this.workflowGuide = url;
+        this.resolveBot = resolveIdentity;
+        this.workflowRequirements = requirements;
+    }
+    explainCredentialSeparation(requirements) {
+        this.bridge.message(`The bot PAT is separate from your setup PAT. Runtime credentials (${requirements.map(item => item.name).join(', ')}) become GitHub Actions Secrets; existing Secret values cannot be read back. This browser flow will not dispatch or install a credential-health workflow before Apply. Re-enter an existing bot PAT so its grants can be audited.`, 'info');
+    }
+    async requestWorkflowPat(requirement, current) {
+        let guide;
+        let botInfo = '';
+        if (this.workflowGuide) {
+            const method = await this.choice('How will you provide the bot PAT?', ['Guided GitHub link', 'Manual PAT']);
+            if (method === 'Guided GitHub link') {
+                const login = await this.text('Expected GitHub bot login', 'Enter the bot account login, without @. We will verify its numeric account ID against the token.');
+                if (!login || !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(login))
+                    throw new Error('Enter a valid GitHub bot login.');
+                this.botIdentity = await this.resolveBot(login);
+                guide = this.workflowGuide;
+                botInfo = `Expected bot account: @${this.botIdentity.login} (GitHub ID ${this.botIdentity.id}). Open GitHub as this account, not the setup operator. `;
+            }
+            else if (this.workflowRequirements)
+                this.bridge.requirements('workflow', this.workflowRequirements);
+        }
+        const value = await this.secret(`${requirement.name} — bot account PAT`, `${botInfo}Use the bot account, select only the intended repository and review all grants. Suggested expiry is 90 days. ${current ? `Existing Secret: ${current.status}; its value cannot be read back.` : ''}`, guide);
+        return value ? { name: requirement.name, value } : undefined;
+    }
+    async requestApiKey(requirement, current) {
+        const value = await this.secret(`${requirement.name} — ${requirement.provider ?? 'provider'} API key`, current?.message, undefined, Boolean(requirement.alternativeGroups?.length));
+        return value ? { name: requirement.name, value } : undefined;
+    }
+    async chooseExistingCredential(requirement, check) {
+        const answer = await this.choice(`Existing ${requirement.name}: ${check.status}`, ['keep', 'replace', 'skip'], check.message);
+        return answer;
+    }
+    showCredentialChecks(checks) {
+        this.bridge.message(checks.map(item => `${item.name}: ${item.status} — ${item.message}`).join('\n'), checks.some(item => item.status === 'invalid') ? 'warning' : 'success');
+    }
+    async choice(title, choices, description) {
+        const answer = await this.bridge.ask({ kind: 'choice', title, choices, description });
+        if (answer === undefined)
+            throw new setup_interaction_cancelled_error_1.SetupInteractionCancelledError();
+        if (!choices.includes(answer))
+            throw new Error('Invalid setup choice.');
+        return answer;
+    }
+    async text(title, description) {
+        const answer = await this.bridge.ask({ kind: 'text', title, description });
+        if (answer === undefined)
+            throw new setup_interaction_cancelled_error_1.SetupInteractionCancelledError();
+        return answer.trim();
+    }
+    async secret(title, description, link, optional = false) {
+        const answer = await this.bridge.ask({ kind: 'secret', title, description, optional, link });
+        if (answer === undefined)
+            throw new setup_interaction_cancelled_error_1.SetupInteractionCancelledError();
+        return answer.trim();
+    }
+}
+exports.WebSetupCredentialPrompt = WebSetupCredentialPrompt;
+
+
+/***/ }),
+
+/***/ 21518:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WebSetupBridge = void 0;
+exports.toWebSetupPlan = toWebSetupPlan;
+const node_crypto_1 = __nccwpck_require__(6005);
+/** A one-run, in-memory handoff. Values submitted by the browser are never part of a view. */
+class WebSetupBridge {
+    constructor(repository) {
+        this.revision = 0;
+        this.subscribers = new Set();
+        this.takeoverTicket = (0, node_crypto_1.randomBytes)(32).toString('hex');
+        this.bootstrapped = false;
+        this.view = { revision: 0, repository };
+    }
+    snapshot() { return this.view; }
+    setRepository(repository) { this.publish({ repository }); }
+    subscribe(listener) {
+        this.subscribers.add(listener);
+        return () => this.subscribers.delete(listener);
+    }
+    bootstrap() {
+        if (!this.controller)
+            this.controller = (0, node_crypto_1.randomBytes)(32).toString('hex');
+        // A second tab starts read-only. Its explicit takeover rotates the controller capability.
+        const first = !this.bootstrapped;
+        this.bootstrapped = true;
+        return { controller: first, ...(first ? { capability: this.controller } : {}), takeoverTicket: this.takeoverTicket };
+    }
+    takeOver(ticket) {
+        if (!sameCapability(ticket, this.takeoverTicket))
+            return undefined;
+        this.controller = (0, node_crypto_1.randomBytes)(32).toString('hex');
+        this.takeoverTicket = (0, node_crypto_1.randomBytes)(32).toString('hex');
+        this.publish({ message: { tone: 'info', text: 'Control moved to this tab. The previous tab is now read-only.' } });
+        return this.controller;
+    }
+    isController(capability) {
+        return Boolean(this.controller && sameCapability(capability, this.controller));
+    }
+    async ask(prompt) {
+        if (this.pending || this.view.outcome)
+            throw new Error('A setup decision is already pending or the session has ended.');
+        const revision = this.revision + 1;
+        this.publish({ prompt, promptRevision: revision });
+        return new Promise(resolve => { this.pending = { revision, resolve }; });
+    }
+    answer(revision, value) {
+        if (!this.pending || this.pending.revision !== revision || this.view.outcome)
+            return false;
+        const prompt = this.view.prompt;
+        if (prompt && (prompt.kind === 'choice' || prompt.kind === 'confirm') && !prompt.choices.includes(value))
+            return false;
+        const pending = this.pending;
+        this.pending = undefined;
+        this.lastAnsweredRevision = revision;
+        this.publish({ prompt: undefined, promptRevision: undefined });
+        pending.resolve(value);
+        return true;
+    }
+    wasAnswered(revision) { return this.lastAnsweredRevision === revision; }
+    cancel() {
+        if (this.view.journey?.mutationStarted || this.view.outcome)
+            return false;
+        const pending = this.pending;
+        this.pending = undefined;
+        this.publish({ prompt: undefined, promptRevision: undefined, outcome: 'cancelled', message: { tone: 'warning', text: 'Setup cancelled before applying further changes. Any PAT created at GitHub still exists until you delete it there.' } });
+        pending?.resolve(undefined);
+        return true;
+    }
+    setJourney(journey) { this.publish({ journey }); }
+    message(text, tone = 'info', link) {
+        this.publish({ message: { tone, text, ...(link ? { link } : {}) } });
+    }
+    requirements(role, requirements) {
+        this.publish({ permissions: { role, requirements, report: undefined } });
+    }
+    report(report) {
+        this.publish({ permissions: { role: report.role, requirements: this.view.permissions?.requirements, report } });
+    }
+    finish(outcome, text) {
+        if (this.view.outcome)
+            return;
+        this.pending?.resolve(undefined);
+        this.pending = undefined;
+        this.publish({ prompt: undefined, promptRevision: undefined, outcome, message: { tone: outcome === 'complete' || outcome === 'dry-run' ? 'success' : 'warning', text } });
+    }
+    publish(change) {
+        this.revision += 1;
+        this.view = { ...this.view, ...change, revision: this.revision };
+        for (const listener of this.subscribers)
+            listener(this.view);
+    }
+}
+exports.WebSetupBridge = WebSetupBridge;
+function sameCapability(provided, expected) {
+    if (!/^[a-f0-9]{64}$/.test(provided))
+        return false;
+    return (0, node_crypto_1.timingSafeEqual)(Buffer.from(provided, 'hex'), Buffer.from(expected, 'hex'));
+}
+function toWebSetupPlan(plan) {
+    return {
+        files: plan.selectedFiles,
+        workflows: plan.workflowFiles,
+        variables: plan.variables.map(variable => variable.name),
+        secrets: plan.requiredSecrets,
+        warnings: plan.warnings,
+    };
+}
+
+
+/***/ }),
+
+/***/ 63080:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.startWebSetupServer = startWebSetupServer;
+exports.openWebSetupBrowser = openWebSetupBrowser;
+const node_http_1 = __nccwpck_require__(88849);
+const promises_1 = __nccwpck_require__(93977);
+const node_path_1 = __nccwpck_require__(49411);
+const node_child_process_1 = __nccwpck_require__(17718);
+const MAX_BODY_BYTES = 8192;
+const MAX_ANSWER_LENGTH = 4096;
+const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+/** Transport only: setup policy and credential decisions live behind the bridge. */
+async function startWebSetupServer(bridge, assets = (0, node_path_1.join)(__dirname, '..', 'web')) {
+    const assetRoot = await (0, promises_1.realpath)(assets);
+    if (!(await (0, promises_1.realpath)((0, node_path_1.join)(assetRoot, 'index.html'))).startsWith(`${assetRoot}${node_path_1.sep}`)) {
+        throw new Error('Local setup index must be inside its packaged asset directory.');
+    }
+    const indexHtml = (await (0, promises_1.readFile)((0, node_path_1.join)(assetRoot, 'index.html'))).toString('utf8');
+    const allowedAssets = new Set([...indexHtml.matchAll(/(?:\.\/)?(assets\/[A-Za-z0-9._-]+\.(?:js|css))/g)]
+        .map(match => match[1]));
+    if (allowedAssets.size < 2)
+        throw new Error('Local setup web assets are incomplete. Reinstall Copilot or use terminal setup.');
+    for (const asset of allowedAssets) {
+        const packagedPath = await (0, promises_1.realpath)((0, node_path_1.join)(assetRoot, asset));
+        if (!packagedPath.startsWith(`${assetRoot}${node_path_1.sep}`))
+            throw new Error('Local setup asset escapes its packaged directory.');
+        await (0, promises_1.readFile)(packagedPath);
+    }
+    let closeResolver = () => undefined;
+    const closed = new Promise(resolveClosed => { closeResolver = resolveClosed; });
+    let closing = false;
+    let idleTimer;
+    let resultTimer;
+    const armIdle = () => {
+        if (idleTimer)
+            clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+            if (!bridge.snapshot().journey?.mutationStarted && !bridge.snapshot().outcome) {
+                bridge.finish('blocked', 'This local setup session expired after 30 minutes without a decision. Start a new setup run; GitHub PATs are not revoked automatically.');
+            }
+        }, 30 * 60 * 1000);
+    };
+    const server = (0, node_http_1.createServer)(async (request, response) => {
+        const address = server.address();
+        const origin = `http://127.0.0.1:${typeof address === 'object' && address ? address.port : 0}`;
+        const host = `127.0.0.1:${typeof address === 'object' && address ? address.port : 0}`;
+        response.setHeader('Content-Security-Policy', CSP);
+        response.setHeader('X-Content-Type-Options', 'nosniff');
+        response.setHeader('Referrer-Policy', 'no-referrer');
+        response.setHeader('Cache-Control', 'no-store');
+        response.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+        response.setHeader('X-Frame-Options', 'DENY');
+        try {
+            if (request.headers.host !== host || request.headers['x-forwarded-host'] || request.headers.forwarded
+                || request.headers['x-forwarded-proto'] || request.headers['sec-fetch-site'] === 'cross-site') {
+                respond(response, 403, { error: 'Invalid local host or request context.' });
+                return;
+            }
+            if (request.method === 'POST' && (request.headers.origin !== origin
+                || (request.headers.referer && !request.headers.referer.startsWith(`${origin}/`)))) {
+                respond(response, 403, { error: 'Invalid request origin.' });
+                return;
+            }
+            if (request.method === 'GET' && request.url === '/api/bootstrap') {
+                respond(response, 200, bridge.bootstrap());
+                return;
+            }
+            if (request.method === 'GET' && request.url === '/api/state') {
+                respond(response, 200, bridge.snapshot());
+                return;
+            }
+            if (request.method === 'POST' && request.url === '/api/takeover') {
+                if (request.headers['content-type'] !== 'application/json') {
+                    respond(response, 415, { error: 'JSON required.' });
+                    return;
+                }
+                const body = await readJson(request);
+                const ticket = typeof body.ticket === 'string' ? body.ticket : '';
+                const capability = bridge.takeOver(ticket);
+                if (capability)
+                    armIdle();
+                respond(response, capability ? 200 : 403, capability ? { capability } : { error: 'Invalid takeover ticket.' });
+                return;
+            }
+            if (request.method === 'POST' && request.url === '/api/answer') {
+                if (!bridge.isController(String(request.headers['x-setup-capability'] ?? ''))) {
+                    respond(response, 403, { error: 'This tab is read-only.' });
+                    return;
+                }
+                if (request.headers['content-type'] !== 'application/json') {
+                    respond(response, 415, { error: 'JSON required.' });
+                    return;
+                }
+                const body = await readJson(request);
+                if (!Number.isSafeInteger(body.revision) || body.revision <= 0 || typeof body.value !== 'string' || body.value.length > MAX_ANSWER_LENGTH) {
+                    respond(response, 400, { error: 'Invalid answer.' });
+                    return;
+                }
+                if (!bridge.isController(String(request.headers['x-setup-capability'] ?? ''))) {
+                    respond(response, 403, { error: 'Control moved to another tab.' });
+                    return;
+                }
+                const accepted = bridge.answer(body.revision, body.value);
+                const duplicate = !accepted && bridge.wasAnswered(body.revision);
+                if (accepted)
+                    armIdle();
+                respond(response, accepted || duplicate ? 200 : 409, accepted || duplicate ? { accepted: true, ...(duplicate ? { duplicate: true } : {}) }
+                    : { error: 'This question changed. Refresh the current state.' });
+                return;
+            }
+            if (request.method === 'POST' && request.url === '/api/cancel') {
+                if (!bridge.isController(String(request.headers['x-setup-capability'] ?? ''))) {
+                    respond(response, 403, { error: 'This tab is read-only.' });
+                    return;
+                }
+                if (request.headers['content-type'] !== 'application/json') {
+                    respond(response, 415, { error: 'JSON required.' });
+                    return;
+                }
+                await readJson(request);
+                if (!bridge.isController(String(request.headers['x-setup-capability'] ?? ''))) {
+                    respond(response, 403, { error: 'Control moved to another tab.' });
+                    return;
+                }
+                const cancelled = bridge.cancel();
+                respond(response, cancelled ? 200 : 409, cancelled ? { cancelled: true } : { error: 'This setup has already started applying or ended.' });
+                return;
+            }
+            if (request.method === 'POST' && request.url === '/api/close') {
+                if (!bridge.isController(String(request.headers['x-setup-capability'] ?? '')) || !bridge.snapshot().outcome) {
+                    respond(response, 403, { error: 'Only the controller can close a finished session.' });
+                    return;
+                }
+                if (request.headers['content-type'] !== 'application/json') {
+                    respond(response, 415, { error: 'JSON required.' });
+                    return;
+                }
+                await readJson(request);
+                if (!bridge.isController(String(request.headers['x-setup-capability'] ?? ''))) {
+                    respond(response, 403, { error: 'Control moved to another tab.' });
+                    return;
+                }
+                respond(response, 200, { closed: true });
+                setImmediate(() => void close());
+                return;
+            }
+            if (request.method !== 'GET') {
+                respond(response, 405, { error: 'Method not allowed.' });
+                return;
+            }
+            const pathname = request.url ?? '';
+            if (pathname !== '/' && !/^\/assets\/[A-Za-z0-9._-]+$/.test(pathname)) {
+                respond(response, 404, { error: 'Not found.' });
+                return;
+            }
+            const relative = pathname === '/' ? 'index.html' : pathname.slice(1);
+            if (relative !== 'index.html' && !allowedAssets.has(relative)) {
+                respond(response, 404, { error: 'Not found.' });
+                return;
+            }
+            const file = (0, node_path_1.resolve)(assetRoot, relative);
+            const realFile = await (0, promises_1.realpath)(file);
+            if (!realFile.startsWith(`${assetRoot}${node_path_1.sep}`)) {
+                respond(response, 404, { error: 'Not found.' });
+                return;
+            }
+            const content = await (0, promises_1.readFile)(realFile);
+            const contentType = file.endsWith('.js') ? 'text/javascript; charset=utf-8'
+                : file.endsWith('.css') ? 'text/css; charset=utf-8'
+                    : 'text/html; charset=utf-8';
+            response.writeHead(200, { 'Content-Type': contentType });
+            response.end(content);
+        }
+        catch {
+            if (!response.headersSent)
+                respond(response, 400, { error: 'Invalid local request.' });
+            else
+                response.end();
+        }
+    });
+    server.requestTimeout = 15000;
+    server.headersTimeout = 15000;
+    server.maxRequestsPerSocket = 250;
+    await new Promise((resolveListen, reject) => {
+        server.once('error', reject);
+        server.listen(0, '127.0.0.1', () => { server.off('error', reject); resolveListen(); });
+    });
+    const address = server.address();
+    if (!address || typeof address === 'string')
+        throw new Error('Unable to bind local setup server.');
+    const url = `http://127.0.0.1:${address.port}/`;
+    const close = async () => {
+        if (closing)
+            return closed;
+        closing = true;
+        if (idleTimer)
+            clearTimeout(idleTimer);
+        if (hardTimer)
+            clearTimeout(hardTimer);
+        if (resultTimer)
+            clearTimeout(resultTimer);
+        unsubscribe?.();
+        bridge.cancel();
+        server.closeAllConnections();
+        await new Promise(resolveClose => server.close(() => resolveClose()));
+        closeResolver();
+    };
+    armIdle();
+    const hardTimer = setTimeout(() => {
+        if (!bridge.snapshot().journey?.mutationStarted && !bridge.snapshot().outcome) {
+            bridge.finish('blocked', 'This local setup session reached its four-hour limit. Start a new run; no prior approval can be replayed.');
+        }
+    }, 4 * 60 * 60 * 1000);
+    const unsubscribe = bridge.subscribe(view => {
+        if (view.outcome && !resultTimer)
+            resultTimer = setTimeout(() => void close(), 10 * 60 * 1000);
+    });
+    return { url, closed, close };
+}
+function respond(response, status, body) {
+    response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
+    response.end(JSON.stringify(body));
+}
+async function readJson(request) {
+    let size = 0;
+    const chunks = [];
+    for await (const chunk of request) {
+        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        size += buffer.length;
+        if (size > MAX_BODY_BYTES)
+            throw new Error('Body too large.');
+        chunks.push(buffer);
+    }
+    const parsed = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object')
+        throw new Error('JSON object required.');
+    return parsed;
+}
+function openWebSetupBrowser(url) {
+    const command = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'cmd' : 'xdg-open';
+    const args = process.platform === 'win32' ? ['/c', 'start', '', url] : [url];
+    const child = (0, node_child_process_1.spawn)(command, args, { stdio: 'ignore', detached: true, windowsHide: true });
+    child.on('error', () => { });
+    child.unref();
+}
+
+
+/***/ }),
+
 /***/ 21307:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -67518,6 +68603,7 @@ exports.getGitInfo = getGitInfo;
 exports.getCurrentBranch = getCurrentBranch;
 exports.getCurrentHeadSha = getCurrentHeadSha;
 exports.isInsideGitRepo = isInsideGitRepo;
+exports.getGitRepositoryRoot = getGitRepositoryRoot;
 exports.isGitRepositoryRoot = isGitRepositoryRoot;
 const child_process_1 = __nccwpck_require__(32081);
 const node_fs_1 = __nccwpck_require__(87561);
@@ -67567,10 +68653,14 @@ function isInsideGitRepo(cwd) {
         return false;
     }
 }
+/** Canonical checkout root for plans whose file paths are repository-relative. */
+function getGitRepositoryRoot(cwd) {
+    const root = (0, child_process_1.execSync)('git rev-parse --show-toplevel', { cwd, stdio: 'pipe' }).toString().trim();
+    return (0, node_fs_1.realpathSync)(root);
+}
 function isGitRepositoryRoot(cwd) {
     try {
-        const root = (0, child_process_1.execSync)('git rev-parse --show-toplevel', { cwd, stdio: 'pipe' }).toString().trim();
-        return (0, node_fs_1.realpathSync)(root) === (0, node_fs_1.realpathSync)(cwd);
+        return getGitRepositoryRoot(cwd) === (0, node_fs_1.realpathSync)(cwd);
     }
     catch {
         return false;
@@ -81763,9 +82853,11 @@ const github_identity_client_factory_1 = __nccwpck_require__(93081);
 const setup_remote_credential_health_adapter_1 = __nccwpck_require__(1489);
 const octokit_credential_health_adapter_1 = __nccwpck_require__(41760);
 const setup_token_permissions_composition_root_1 = __nccwpck_require__(64132);
-function createSetupCredentialsUseCase(prompt, permissionPresenter) {
+function createSetupCredentialsUseCase(prompt, permissionPresenter, options = {}) {
     const secretNames = new repository_variables_repository_1.RepositorySecretNamesQueryRepository((0, github_identity_client_factory_1.createRepositoryVariablesClient)());
-    return new setup_credentials_use_case_1.SetupCredentialsUseCase(prompt, new setup_credential_validation_adapter_1.SetupCredentialValidationAdapter(), secretNames, new setup_remote_credential_health_adapter_1.SetupRemoteCredentialHealthBootstrapAdapter(new octokit_credential_health_adapter_1.OctokitCredentialHealthClientAdapter()), (0, setup_token_permissions_composition_root_1.createSetupTokenPermissionsUseCase)(), permissionPresenter);
+    return new setup_credentials_use_case_1.SetupCredentialsUseCase(prompt, new setup_credential_validation_adapter_1.SetupCredentialValidationAdapter(), secretNames, options.allowPreApplyHealthWorkflow === false
+        ? undefined
+        : new setup_remote_credential_health_adapter_1.SetupRemoteCredentialHealthBootstrapAdapter(new octokit_credential_health_adapter_1.OctokitCredentialHealthClientAdapter()), (0, setup_token_permissions_composition_root_1.createSetupTokenPermissionsUseCase)(), permissionPresenter);
 }
 function createSetupRemoteConfigurationReadPort() {
     return new repository_variables_repository_1.SetupRemoteConfigurationQueryRepository((0, github_identity_client_factory_1.createRepositoryVariablesClient)());
@@ -91083,8 +92175,8 @@ function isInside(root, candidate) {
 function matchesFieldBoundary(field, relativePath) {
   if (field === 'specs') return /^specs\/(?!README\.md$|_template\.md$|CATALOG\.md$).+\.md$/.test(relativePath);
   if (field === 'workflows') return /^(?:\.github|setup)\/workflows\/.+\.ya?ml$/.test(relativePath);
-  if (field === 'entrypoints') return /^(?:src\/.+|action\.yml|package\.json)$/.test(relativePath);
-  if (field === 'code') return /^(?:src|scripts)\//.test(relativePath);
+  if (field === 'entrypoints') return /^(?:src\/.+|web\/src\/main\.ts|action\.yml|package\.json)$/.test(relativePath);
+  if (field === 'code') return /^(?:(?:src|scripts)\/|web\/src\/.+\.(?:ts|svelte|css)$)/.test(relativePath);
   if (field === 'tests') return /^src\/.*(?:__tests__\/.*\.test\.ts|\.test\.ts)$/.test(relativePath);
   if (field === 'documentation') return /^(?:docs\/.*\.(?:md|mdx)|README\.md|CONTRIBUTING\.md)$/.test(relativePath);
   return false;

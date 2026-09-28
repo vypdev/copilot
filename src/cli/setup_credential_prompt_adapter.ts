@@ -11,13 +11,10 @@ import type { SetupGithubIdentity } from '../application/ports/setup_pat_identit
 import { color, renderBox, statusIcon } from './setup_prompt_rendering';
 import type { SetupTokenPermissionRequirement } from '../domain/setup_token_permissions';
 import { renderSetupTokenPermissionRequirements } from './setup_token_permission_presenter';
+import { SetupInteractionCancelledError } from '../application/errors/setup_interaction_cancelled_error';
 
-export class SetupTerminalCancelledError extends Error {
-  constructor() {
-    super('Setup input was cancelled.');
-    this.name = 'SetupTerminalCancelledError';
-  }
-}
+/** @deprecated Use the presentation-neutral cancellation signal in new adapters. */
+export const SetupTerminalCancelledError = SetupInteractionCancelledError;
 
 export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
   private setupPatGuide?: string;

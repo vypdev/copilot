@@ -4,6 +4,7 @@ import {
     buildSetupPatPermissionRequirements,
     buildWorkflowPatPermissionRequirements,
     normalizePermissionRequirements,
+    requiredSetupPatPermissionDelta,
 } from '../setup_token_permission_policy';
 import type { SetupRemoteConfiguration } from '../../../domain/setup';
 import type { SetupTokenPermissionRequirement } from '../../../domain/setup_token_permissions';
@@ -23,6 +24,19 @@ function disabledRuntimeConfiguration() {
 }
 
 describe('setup token permission policy', () => {
+    it('reports only newly required or upgraded grants after guided review', () => {
+        const baseline = buildSetupPatPermissionRequirements();
+        const metadata = baseline.find(item => item.permission === 'Metadata')!;
+        const contents = baseline.find(item => item.permission === 'Contents')!;
+        const secrets = baseline.find(item => item.permission === 'Secrets' && item.scope === 'repository')!;
+        const final = [metadata, { ...contents, permission: 'contents', level: 'write' as const },
+            { ...secrets, applicability: 'required' as const }];
+        expect(requiredSetupPatPermissionDelta([metadata, contents, secrets], final)).toEqual([
+            'repository contents write', 'repository Secrets write',
+        ]);
+        expect(requiredSetupPatPermissionDelta(final, [metadata, contents, secrets])).toEqual([]);
+    });
+
     it('describes the complete setup PAT permission catalog before the prompt', () => {
         const requirements = buildSetupPatPermissionRequirements();
         expect(requirements.map(item => `${item.scope}:${item.permission}:${item.level}`)).toEqual([
