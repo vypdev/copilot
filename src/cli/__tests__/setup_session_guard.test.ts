@@ -31,14 +31,29 @@ describe('setup session guard', () => {
     releaseThird();
   });
 
-  test('recovers a verified dead owner without reusing its nonce', () => {
-    writeFileSync(lockPath(), JSON.stringify({ pid: 99999999, nonce: 'old-owner', repository: realpathSync(root) }));
+  test('fails closed on a verified dead owner until the operator removes its exact lock', () => {
+    const oldRecord = JSON.stringify({ pid: 99999999, nonce: 'old-owner', repository: realpathSync(root) });
+    writeFileSync(lockPath(), oldRecord);
+    expect(() => acquireSetupSessionGuard(root)).toThrow(`remove only that file manually`);
+    expect(readFileSync(lockPath(), 'utf8')).toBe(oldRecord);
+    unlinkSync(lockPath()); // Simulates explicit operator recovery after verifying no setup is running.
     const release = acquireSetupSessionGuard(root);
-    const current = JSON.parse(readFileSync(lockPath(), 'utf8')) as { pid: number; nonce: string };
-    expect(current.pid).toBe(process.pid);
-    expect(current.nonce).not.toBe('old-owner');
+    expect(JSON.parse(readFileSync(lockPath(), 'utf8')).pid).toBe(process.pid);
     release();
-    expect(existsSync(lockPath())).toBe(false);
+  });
+
+  test('a replacement lock is never unlinked after a stale-owner probe', () => {
+    writeFileSync(lockPath(), JSON.stringify({ pid: 99999999, nonce: 'old-owner', repository: realpathSync(root) }));
+    const newRecord = JSON.stringify({ pid: process.pid, nonce: 'new-owner', repository: realpathSync(root) });
+    const probe = jest.spyOn(process, 'kill').mockImplementationOnce(() => {
+      unlinkSync(lockPath());
+      writeFileSync(lockPath(), newRecord); // Another process won the race after our read.
+      throw Object.assign(new Error('No such process'), { code: 'ESRCH' });
+    });
+    try {
+      expect(() => acquireSetupSessionGuard(root)).toThrow('remove only that file manually');
+      expect(readFileSync(lockPath(), 'utf8')).toBe(newRecord);
+    } finally { probe.mockRestore(); }
   });
 
   test.each([

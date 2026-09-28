@@ -135,6 +135,119 @@ describe('browser session transport', () => {
     expect(JSON.parse(latest)).toMatchObject({ controller: true, busy: false, view });
   });
 
+  test('successful cancellation shows the server result and clears the busy indicator', async () => {
+    const cancelled: WebSetupView = { revision: 4, repository: 'owner/repo', outcome: 'cancelled' };
+    let stateReads = 0;
+    globalThis.fetch = jest.fn(async (path: string) => {
+      if (path === '/api/bootstrap') return response({ controller: true, capability: 'controller', takeoverTicket: 'ticket' });
+      if (path === '/api/state') return response(++stateReads === 1 ? view : cancelled);
+      if (path === '/api/cancel') return response({ cancelled: true });
+      throw new Error('Unexpected route');
+    }) as typeof fetch;
+
+    const session = createSetupSession();
+    let latest: { busy: boolean; view?: WebSetupView } | undefined;
+    session.subscribe(state => { latest = state; });
+    await session.connect();
+    await session.cancel();
+    expect(latest).toMatchObject({ busy: false, view: cancelled });
+  });
+
+  test('a server rejection without a message gives a bounded generic error', async () => {
+    globalThis.fetch = jest.fn(async (path: string) => {
+      if (path === '/api/bootstrap') return response({ controller: true, capability: 'controller', takeoverTicket: 'ticket' });
+      if (path === '/api/state') return response(view);
+      if (path === '/api/answer') return response({}, 409);
+      throw new Error('Unexpected route');
+    }) as typeof fetch;
+
+    const session = createSetupSession();
+    let latest = '';
+    session.subscribe(state => { latest = JSON.stringify(state); });
+    await session.connect();
+    await session.submit(7, 'fake-secret');
+    expect(latest).toContain('The request was rejected.');
+    expect(latest).not.toContain('fake-secret');
+  });
+
+  test('non-Error transport failures still give safe submission and cancellation messages', async () => {
+    globalThis.fetch = jest.fn(async (path: string) => {
+      if (path === '/api/bootstrap') return response({ controller: true, capability: 'controller', takeoverTicket: 'ticket' });
+      if (path === '/api/state') return response(view);
+      if (path === '/api/answer' || path === '/api/cancel') throw 'transport unavailable';
+      throw new Error('Unexpected route');
+    }) as typeof fetch;
+
+    const session = createSetupSession();
+    let latest = '';
+    session.subscribe(state => { latest = JSON.stringify(state); });
+    await session.connect();
+    await session.submit(7, 'fake-secret');
+    expect(latest).toContain('Could not submit this answer.');
+    expect(latest).not.toContain('fake-secret');
+    await session.cancel();
+    expect(latest).toContain('Cancellation failed.');
+  });
+
+  test('an unexpected takeover transport failure rechecks who controls the session', async () => {
+    let bootstrapReads = 0;
+    globalThis.fetch = jest.fn(async (path: string) => {
+      if (path === '/api/bootstrap') { bootstrapReads += 1; return response({ controller: false, takeoverTicket: 'ticket' }); }
+      if (path === '/api/state') return response(view);
+      if (path === '/api/takeover') throw 'transport unavailable';
+      throw new Error('Unexpected route');
+    }) as typeof fetch;
+
+    const session = createSetupSession();
+    let controller = true;
+    session.subscribe(state => { controller = state.controller; });
+    await session.connect();
+    await session.takeOver();
+    expect(bootstrapReads).toBe(2);
+    expect(controller).toBe(false);
+  });
+
+  test('a busy submission cannot send a second answer or cancel concurrently', async () => {
+    let resolveAnswer: ((value: Response) => void) | undefined;
+    const pendingAnswer = new Promise<Response>(resolve => { resolveAnswer = resolve; });
+    const requests: string[] = [];
+    globalThis.fetch = jest.fn(async (path: string) => {
+      requests.push(path);
+      if (path === '/api/bootstrap') return response({ controller: true, capability: 'controller', takeoverTicket: 'ticket' });
+      if (path === '/api/state') return response(view);
+      if (path === '/api/answer') return pendingAnswer;
+      throw new Error('Unexpected route');
+    }) as typeof fetch;
+
+    const session = createSetupSession();
+    await session.connect();
+    const first = session.submit(7, 'first');
+    await session.submit(7, 'duplicate');
+    await session.cancel();
+    expect(requests.filter(path => path === '/api/answer')).toHaveLength(1);
+    expect(requests).not.toContain('/api/cancel');
+    resolveAnswer!(response({ accepted: true }));
+    await first;
+  });
+
+  test('overlapping refresh calls do not race to replace the current view', async () => {
+    let resolveState: ((value: Response) => void) | undefined;
+    const pendingState = new Promise<Response>(resolve => { resolveState = resolve; });
+    const requests: string[] = [];
+    globalThis.fetch = jest.fn(async (path: string) => {
+      requests.push(path);
+      if (path === '/api/state') return pendingState;
+      throw new Error('Unexpected route');
+    }) as typeof fetch;
+
+    const session = createSetupSession();
+    const first = session.refresh();
+    await session.refresh();
+    expect(requests).toEqual(['/api/state']);
+    resolveState!(response(view));
+    await first;
+  });
+
   test('a failed takeover re-reads the current controller instead of retaining authority', async () => {
     const requests: string[] = [];
     globalThis.fetch = jest.fn(async (path: string) => {

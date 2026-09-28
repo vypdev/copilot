@@ -16,6 +16,15 @@ describe('web setup presentation helpers', () => {
     });
   });
 
+  test('a multi-select without choices starts empty and never invents an option', () => {
+    const prompt = question('multi-select', 'one');
+    expect(initialQuestionAnswer({ ...prompt, question: { ...prompt.question, choices: undefined } }).selected).toEqual([]);
+  });
+
+  test('a plain text question retains its default without a selection', () => {
+    expect(initialQuestionAnswer(question('text', 'hello'))).toEqual({ value: 'hello', selected: [] });
+  });
+
   test('scope overrides preserve explicit names and serialize an empty set as none', () => {
     const prompt = question('scope-overrides', 'one,two');
     expect(initialQuestionAnswer(prompt).selected).toEqual(['one', 'two']);
@@ -37,6 +46,7 @@ describe('web setup presentation helpers', () => {
   });
 
   test.each([
+    [undefined, false],
     ['https://github.com/settings/personal-access-tokens/new?name=Setup', true],
     ['https://github.com/settings/personal-access-tokens', true],
     ['https://evil.example/settings/personal-access-tokens', false],

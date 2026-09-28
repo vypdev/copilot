@@ -67602,51 +67602,48 @@ function acquireSetupSessionGuard(cwd) {
     const hash = (0, node_crypto_1.createHash)('sha256').update(repository).digest('hex').slice(0, 32);
     const lockPath = (0, node_path_1.join)((0, node_os_1.tmpdir)(), `copilot-setup-${hash}.lock`);
     const record = { pid: process.pid, nonce: (0, node_crypto_1.randomBytes)(16).toString('hex'), repository };
-    for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+        const fd = (0, node_fs_1.openSync)(lockPath, 'wx', 0o600);
         try {
-            const fd = (0, node_fs_1.openSync)(lockPath, 'wx', 0o600);
-            try {
-                (0, node_fs_1.writeFileSync)(fd, JSON.stringify(record));
-            }
-            finally {
-                (0, node_fs_1.closeSync)(fd);
-            }
-            return () => {
-                try {
-                    const current = JSON.parse((0, node_fs_1.readFileSync)(lockPath, 'utf8'));
-                    if (current.pid === record.pid && current.nonce === record.nonce && current.repository === record.repository)
-                        (0, node_fs_1.unlinkSync)(lockPath);
-                }
-                catch { /* Missing or replaced lock is not ours to remove. */ }
-            };
+            (0, node_fs_1.writeFileSync)(fd, JSON.stringify(record));
         }
-        catch (cause) {
-            if (!cause || typeof cause !== 'object' || !('code' in cause) || cause.code !== 'EEXIST')
-                throw cause;
-            let existing;
-            try {
-                existing = JSON.parse((0, node_fs_1.readFileSync)(lockPath, 'utf8'));
-            }
-            catch {
-                throw new Error('A setup lock exists but cannot be verified. Inspect it before retrying.');
-            }
-            if (!Number.isSafeInteger(existing.pid) || existing.pid <= 0 || existing.repository !== repository || !existing.nonce) {
-                throw setupLockError('A setup lock has unexpected contents. Inspect it before retrying.', cause);
-            }
-            try {
-                process.kill(existing.pid, 0);
-                throw setupLockError(`Another setup process (${existing.pid}) is active for this checkout. Finish or stop it before starting a second setup.`, cause);
-            }
-            catch (checkError) {
-                if (!checkError || typeof checkError !== 'object' || !('code' in checkError) || checkError.code !== 'ESRCH')
-                    throw checkError;
-            }
-            // Recover only a verified dead owner and only if the lock has not changed meanwhile.
-            if ((0, node_fs_1.existsSync)(lockPath) && (0, node_fs_1.readFileSync)(lockPath, 'utf8') === JSON.stringify(existing))
-                (0, node_fs_1.unlinkSync)(lockPath);
+        finally {
+            (0, node_fs_1.closeSync)(fd);
         }
+        return () => {
+            try {
+                const current = JSON.parse((0, node_fs_1.readFileSync)(lockPath, 'utf8'));
+                if (current.pid === record.pid && current.nonce === record.nonce && current.repository === record.repository)
+                    (0, node_fs_1.unlinkSync)(lockPath);
+            }
+            catch { /* Missing or replaced lock is not ours to remove. */ }
+        };
     }
-    throw new Error('Could not acquire the local setup lock.');
+    catch (cause) {
+        if (!cause || typeof cause !== 'object' || !('code' in cause) || cause.code !== 'EEXIST')
+            throw cause;
+        let existing;
+        try {
+            existing = JSON.parse((0, node_fs_1.readFileSync)(lockPath, 'utf8'));
+        }
+        catch {
+            throw new Error('A setup lock exists but cannot be verified. Inspect it before retrying.');
+        }
+        if (!Number.isSafeInteger(existing.pid) || existing.pid <= 0 || existing.repository !== repository || !existing.nonce) {
+            throw setupLockError('A setup lock has unexpected contents. Inspect it before retrying.', cause);
+        }
+        try {
+            process.kill(existing.pid, 0);
+            throw setupLockError(`Another setup process (${existing.pid}) is active for this checkout. Finish or stop it before starting a second setup.`, cause);
+        }
+        catch (checkError) {
+            if (!checkError || typeof checkError !== 'object' || !('code' in checkError) || checkError.code !== 'ESRCH')
+                throw checkError;
+        }
+        // Filesystem reads and unlink are not atomic. Never remove a dead owner's lock here:
+        // another setup process may already have replaced it after our read.
+        throw setupLockError(`A setup lock for a stopped process (${existing.pid}) remains at ${lockPath}. Verify no setup is running, remove only that file manually, then retry.`, cause);
+    }
 }
 function setupLockError(message, cause) {
     return Object.assign(new Error(message), { cause });

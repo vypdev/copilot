@@ -33,6 +33,13 @@ If the page closes during Apply, inspect the terminal result and run
 `copilot doctor` before retrying; do not assume that completed local or remote
 writes were rolled back. No local session shutdown revokes a PAT in GitHub.
 
+If setup reports a lock belonging to a stopped process, it will not delete
+that lock automatically: another setup could have acquired the same path in
+the meantime. Verify that no setup process for this checkout is running,
+then remove **only the exact lock file path printed in the error** and retry.
+Never remove a lock for an active process or clear the entire temporary
+directory. The lock contains no PAT or other credential.
+
 <AccordionGroup>
   <Accordion title="Setup is cancelled or doctor shows skipped checks" icon="circle-exclamation">
     **Setup cancellation:** `Ctrl-C` or end-of-input intentionally exits 130 and

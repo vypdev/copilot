@@ -3,7 +3,7 @@ import type { WebSetupPrompt } from '../../../src/application/contracts/web_setu
 type QuestionPrompt = Extract<WebSetupPrompt, { kind: 'question' }>;
 
 export function initialQuestionAnswer(prompt: QuestionPrompt): { value: string; selected: string[] } {
-  const value = String(prompt.question.defaultValue ?? '');
+  const value = String(prompt.question.defaultValue);
   const defaults = value.split(',').map(item => item.trim()).filter(Boolean);
   const selected = prompt.question.kind === 'multi-select'
     ? (prompt.question.choices ?? []).filter(item => item !== 'All' && defaults.includes(item.split(' — ')[0]))

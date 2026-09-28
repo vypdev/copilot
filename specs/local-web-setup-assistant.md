@@ -209,8 +209,11 @@ exactly what completed and what remains.
    ambiguous/missing remotes block rather than guessing. Acquire a per-checkout
    local setup-session guard shared by terminal and web modes so a second
    setup process cannot apply to the same checkout concurrently. A lock has
-   no credentials and is released on normal exit; an orphaned lock requires
-   verified dead-owner recovery. Web
+   no credentials and is released on normal exit. If the recorded owner is
+   dead, the CLI MUST fail closed, print the exact lock path, and require an
+   operator to verify no setup process is running before removing that one
+   file manually. It MUST NOT unlink a stale lock automatically: another
+   process can replace it between a read and an unlink. Web
    mode does not require a TTY: the browser is the interactive surface, and
    a printed local URL is available if automatic opening is unavailable.
 2. Bind `127.0.0.1:0`, record the assigned port, create an unpredictable
@@ -608,6 +611,7 @@ architecture guide documents these boundaries for future steps.
 | Bind/assets/packaged path failure | web mode never starts | none | run terminal setup; report installation problem |
 | Unsupported browser/JS disabled | no secret submitted; no mutation | none | terminal setup; no partial web fallback |
 | Second setup process/tab | only one checkout operation/controller; previous state intact | none | stop first process or explicitly take over tab |
+| Orphaned local setup lock | no automatic unlink, no setup mutation | none | verify no setup process is running; remove only the printed lock path and retry |
 | Tab closes, laptop sleeps, session idles | live session may remain until 30-minute idle cap; no implied cancellation | no mutation replay | reopen while live; otherwise restart and clean up GitHub PATs |
 | Git remote/ref/file/config changes mid-session | reviewed plan is stale; no Apply | re-read once on request | review new plan or restart to adopt changed config |
 | Wrong GitHub account or wrong repository | PAT audit fails; no dependent mutation | no automatic PAT creation | switch account/select repository and generate/correct PAT; delete unused one |
@@ -709,7 +713,7 @@ existing CLI tests are retained, not re-counted as new web evidence.
 | Area | Minimum cases | Risk covered |
 |---|---:|---|
 | Pure choices/config/grant/plan projection | 14 | source locks, defaults, conditional questions, two PAT roles, grants, revision invalidation |
-| Session/use cases/idempotency/races | 20 | stages, saved-review pass, tab takeover, stale events, single-flight Apply, cancel, idle/crash replay boundaries |
+| Session/use cases/idempotency/races | 20 | stages, saved-review pass, tab takeover, stale events, single-flight Apply, cancel, idle/crash replay boundaries, replacement-lock race |
 | GitHub/workspace/HTTP adapters | 10 | identity, missing/unknown grants, org approval, Secret scope, bounded errors and provider mapping |
 | CLI/packaging/workflow contracts | 10 | flag combinations, browser-open fallback, asset manifest, npm pack/global install, unchanged Action/API bundles |
 | UI/accessibility/localization/content | 18 | pending/action/blocked/partial/complete, plan diff, narrow/zoom/keyboard/focus/no-color, both palettes/system toggle and contrast, English fallback, escaping |
