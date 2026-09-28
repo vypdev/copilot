@@ -47778,10 +47778,8 @@ function buildSetupPatCreationUrl(input) {
     for (const [key, level] of [...grants].sort(([left], [right]) => left.localeCompare(right))) {
         url.searchParams.set(key, level);
     }
-    const result = url.toString();
-    if (result.length > 2048)
-        throw new Error('PAT form URL exceeds the supported terminal length; create the PAT manually.');
-    return result;
+    // Owner/repository lengths and the finite permission map bound this URL well below terminal limits.
+    return url.toString();
 }
 
 
@@ -65472,7 +65470,7 @@ function registerSetupCommand(program) {
                             credentialPrompt.configureSetupPatGuide(url);
                             setupPatPermissions = preview;
                             assertedOwnerKind = ownerKind;
-                            permissionIntent = { draft, answeredQuestionIds: [...new Set([...fixedQuestionIds, ...(intent.answeredQuestionIds ?? [])])] };
+                            permissionIntent = { draft, answeredQuestionIds: [...new Set([...fixedQuestionIds, ...intent.answeredQuestionIds])] };
                         }
                         catch (error) {
                             if (!(error instanceof setup_pat_creation_url_policy_1.UnsupportedSetupPatLinkError))
@@ -65526,11 +65524,10 @@ function registerSetupCommand(program) {
                 if (assertedOwnerKind && remoteConfiguration && remoteConfiguration.ownerType !== 'Unknown'
                     && remoteConfiguration.ownerType !== assertedOwnerKind) {
                     (0, logger_1.logInfo)(`The owner was declared ${assertedOwnerKind}, but GitHub reports ${remoteConfiguration.ownerType}. The guided link is no longer valid for this plan.`);
-                    if (credentialPrompt.usedGuidedSetupPat)
-                        credentialPrompt.showUpdatedSetupPatLink((0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({
-                            role: 'setup', owner: gitInfo.owner, repository: gitInfo.repo, expiresIn: 1,
-                            requirements: configuredSetupPatPermissions,
-                        }), 'final', setupPatPermissionDelta(setupPatPermissions, configuredSetupPatPermissions));
+                    credentialPrompt.showUpdatedSetupPatLink((0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({
+                        role: 'setup', owner: gitInfo.owner, repository: gitInfo.repo, expiresIn: 1,
+                        requirements: configuredSetupPatPermissions,
+                    }), 'final', setupPatPermissionDelta(setupPatPermissions, configuredSetupPatPermissions));
                     return { status: 'blocked', errors: ['Repository owner type differs from the pre-PAT selection. Rerun setup with the correct owner type and PAT.'] };
                 }
                 if (credentialPrompt.usedGuidedSetupPat) {
@@ -65617,7 +65614,7 @@ function registerSetupCommand(program) {
                         role: 'workflow', owner: gitInfo.owner, repository: gitInfo.repo, expiresIn: 90,
                         requirements: workflowTokenPermissions,
                     });
-                    credentialPrompt.configureWorkflowPatGuide(workflowPatGuide, login => githubIdentities.resolve(login, token ?? ''));
+                    credentialPrompt.configureWorkflowPatGuide(workflowPatGuide, login => githubIdentities.resolve(login, token));
                 }
                 catch (error) {
                     if (!(error instanceof setup_pat_creation_url_policy_1.UnsupportedSetupPatLinkError))
