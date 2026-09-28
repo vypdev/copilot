@@ -43,6 +43,7 @@ describe('web setup presentation helpers', () => {
     ['http://github.com/settings/personal-access-tokens', false],
     ['https://github.com/settings/keys', false],
     ['javascript:alert(1)', false],
+    ['not-a-url', false],
   ])('allowlisted GitHub link %s: %s', (link, allowed) => {
     expect(Boolean(safeGithubLink(link))).toBe(allowed);
   });

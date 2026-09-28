@@ -6,6 +6,8 @@ module.exports = {
   passWithNoTests: true,
   collectCoverageFrom: [
     'src/**/*.ts',
+    'web/src/**/*.ts',
+    '!web/src/main.ts',
     '!src/**/*.d.ts',
     '!src/**/__tests__/**',
     '!src/**/*.test.ts'
@@ -16,6 +18,12 @@ module.exports = {
       statements: 90,
       functions: 88,
       branches: 82
+    },
+    './web/src/': {
+      lines: 98,
+      statements: 95,
+      functions: 100,
+      branches: 85
     }
   },
   coverageDirectory: 'coverage',

@@ -34,7 +34,7 @@ export function createSetupSession() {
       if (!response.ok) throw new Error('The local setup session is unavailable.');
       set({ view: await response.json() as WebSetupView, ...(preserveError ? {} : { error: '' }) });
     } catch {
-      set({ error: 'Connection lost. The CLI may have stopped. Check the terminal before trying again.' });
+      set({ view: undefined, error: 'Connection lost. The CLI may have stopped. Check the terminal before trying again.' });
     } finally {
       loading = false;
     }
@@ -50,7 +50,9 @@ export function createSetupSession() {
       set({ controller: bootstrap.controller, error: '' });
       await refresh();
     } catch {
-      set({ error: 'Could not connect to the local setup session. Check the terminal.' });
+      capability = undefined;
+      takeoverTicket = '';
+      set({ view: undefined, controller: false, error: 'Could not connect to the local setup session. Check the terminal.' });
     }
   }
 
