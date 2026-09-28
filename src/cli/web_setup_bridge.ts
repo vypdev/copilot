@@ -98,7 +98,10 @@ export class WebSetupBridge {
   private publish(change: Partial<WebSetupView>): void {
     this.revision += 1;
     this.view = { ...this.view, ...change, revision: this.revision };
-    for (const listener of this.subscribers) listener(this.view);
+    for (const listener of this.subscribers) {
+      try { listener(this.view); }
+      catch { this.subscribers.delete(listener); /* Observers cannot abort a setup decision. */ }
+    }
   }
 }
 

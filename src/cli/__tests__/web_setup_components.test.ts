@@ -10,6 +10,14 @@ function markup(name: string, props: Record<string, unknown>): string {
 const noOp = async (): Promise<void> => undefined;
 
 describe('web setup component semantics', () => {
+  test('pairing screen explains terminal code without exposing a key in the URL', () => {
+    const html = markup('PairingPanel', { busy: false });
+    expect(html).toContain('Pair this browser');
+    expect(html).toContain('Pairing code from terminal');
+    expect(html).toContain('16-character pairing code');
+    expect(html).toContain('After refreshing');
+    expect(html).not.toContain('setup-key');
+  });
   test.each([
     ['complete', 'Your configuration was applied', 'not revoked automatically'],
     ['dry-run', 'No changes were made', 'did not begin applying'],

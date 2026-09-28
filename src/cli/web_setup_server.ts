@@ -11,7 +11,7 @@ const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 's
 
 export interface WebSetupServer {
   readonly url: string;
-  readonly launchUrl: string;
+  readonly pairingCode: string;
   readonly closed: Promise<void>;
   close(): Promise<void>;
 }
@@ -19,6 +19,8 @@ export interface WebSetupServer {
 /** Transport only: setup policy and credential decisions live behind the bridge. */
 export async function startWebSetupServer(bridge: WebSetupBridge, assets = join(__dirname, '..', 'web')): Promise<WebSetupServer> {
   const sessionKey = randomBytes(32);
+  const pairingCode = randomBytes(8);
+  let failedPairings = 0;
   const assetRoot = await realpath(assets);
   if (!(await realpath(join(assetRoot, 'index.html'))).startsWith(`${assetRoot}${sep}`)) {
     throw new Error('Local setup index must be inside its packaged asset directory.');
@@ -66,8 +68,20 @@ export async function startWebSetupServer(bridge: WebSetupBridge, assets = join(
         respond(response, 403, { error: 'Invalid request origin.' });
         return;
       }
-      if (request.url?.startsWith('/api/') && !authorizedSessionKey(request.headers['x-setup-session-key'], sessionKey)) {
-        respond(response, 403, { error: 'Open the private setup URL printed by the CLI.' });
+      if (request.method === 'POST' && request.url === '/api/pair') {
+        if (request.headers['content-type'] !== 'application/json') { respond(response, 415, { error: 'JSON required.' }); return; }
+        if (failedPairings >= 5) { respond(response, 429, { error: 'Too many pairing attempts. Restart setup.' }); return; }
+        const body = await readJson(request);
+        if (!matchesHexSecret(body.code, pairingCode)) {
+          failedPairings += 1;
+          respond(response, 403, { error: 'Incorrect pairing code. Check the terminal.' });
+          return;
+        }
+        respond(response, 200, { sessionKey: sessionKey.toString('hex') });
+        return;
+      }
+      if (request.url?.startsWith('/api/') && !matchesHexSecret(request.headers['x-setup-session-key'], sessionKey)) {
+        respond(response, 403, { error: 'Pair this browser using the code printed by the CLI.' });
         return;
       }
       if (request.method === 'GET' && request.url === '/api/bootstrap') {
@@ -163,7 +177,6 @@ export async function startWebSetupServer(bridge: WebSetupBridge, assets = join(
   const address = server.address();
   if (!address || typeof address === 'string') throw new Error('Unable to bind local setup server.');
   const url = `http://127.0.0.1:${address.port}/`;
-  const launchUrl = `${url}#setup-key=${sessionKey.toString('hex')}`;
   const close = async (): Promise<void> => {
     if (closing) return closed;
     closing = true;
@@ -185,11 +198,11 @@ export async function startWebSetupServer(bridge: WebSetupBridge, assets = join(
   const unsubscribe = bridge.subscribe(view => {
     if (view.outcome && !resultTimer) resultTimer = setTimeout(() => void close(), 10 * 60 * 1000);
   });
-  return { url, launchUrl, closed, close };
+  return { url, pairingCode: pairingCode.toString('hex'), closed, close };
 }
 
-function authorizedSessionKey(value: string | string[] | undefined, expected: Buffer): boolean {
-  return typeof value === 'string' && /^[a-f0-9]{64}$/.test(value)
+function matchesHexSecret(value: unknown, expected: Buffer): boolean {
+  return typeof value === 'string' && value.length === expected.length * 2 && /^[a-f0-9]+$/.test(value)
     && timingSafeEqual(Buffer.from(value, 'hex'), expected);
 }
 

@@ -3,6 +3,7 @@ import type { WebSetupView } from '../../../src/application/contracts/web_setup_
 
 interface SessionState {
   view?: WebSetupView;
+  paired: boolean;
   controller: boolean;
   busy: boolean;
   error: string;
@@ -14,17 +15,12 @@ interface Bootstrap {
   takeoverTicket: string;
 }
 
-export function sessionKeyFromFragment(fragment: string): string {
-  return new URLSearchParams(fragment.replace(/^#/, '')).get('setup-key') ?? '';
-}
-
-export function createSetupSession(sessionKey = sessionKeyFromFragment(
-  (globalThis as { location?: { hash?: string } }).location?.hash ?? '',
-)) {
-  const state = writable<SessionState>({ controller: false, busy: false, error: '' });
+export function createSetupSession(initialSessionKey?: string) {
+  const state = writable<SessionState>({ paired: Boolean(initialSessionKey), controller: false, busy: false, error: '' });
+  let sessionKey = initialSessionKey;
   let capability: string | undefined;
   let takeoverTicket = '';
-  let current: SessionState = { controller: false, busy: false, error: '' };
+  let current: SessionState = { paired: Boolean(initialSessionKey), controller: false, busy: false, error: '' };
   let loading = false;
 
   function set(patch: Partial<SessionState>): void {
@@ -33,7 +29,7 @@ export function createSetupSession(sessionKey = sessionKeyFromFragment(
   }
 
   async function refresh(preserveError = false): Promise<void> {
-    if (loading) return;
+    if (loading || !sessionKey) return;
     loading = true;
     try {
       const response = await fetch('/api/state', { cache: 'no-store', headers: { 'X-Setup-Session-Key': sessionKey } } as RequestInit);
@@ -47,6 +43,7 @@ export function createSetupSession(sessionKey = sessionKeyFromFragment(
   }
 
   async function connect(): Promise<void> {
+    if (!sessionKey) return;
     try {
       const response = await fetch('/api/bootstrap', { cache: 'no-store', headers: { 'X-Setup-Session-Key': sessionKey } } as RequestInit);
       if (!response.ok) throw new Error('Could not join this local session.');
@@ -56,9 +53,31 @@ export function createSetupSession(sessionKey = sessionKeyFromFragment(
       set({ controller: bootstrap.controller, error: '' });
       await refresh();
     } catch {
+      sessionKey = undefined;
       capability = undefined;
       takeoverTicket = '';
-      set({ view: undefined, controller: false, error: 'Could not connect to the local setup session. Check the terminal.' });
+      set({ view: undefined, paired: false, controller: false, error: 'Could not connect to the local setup session. Check the terminal and pair again.' });
+    }
+  }
+
+  async function pair(code: string): Promise<void> {
+    if (current.busy || current.paired) return;
+    set({ busy: true, error: '' });
+    try {
+      const response = await fetch('/api/pair', {
+        method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code.trim().toLowerCase() }),
+      } as RequestInit);
+      const data = await response.json() as Record<string, unknown>;
+      if (!response.ok) throw new Error(String(data.error ?? 'Pairing was rejected.'));
+      if (typeof data.sessionKey !== 'string' || !/^[a-f0-9]{64}$/.test(data.sessionKey)) throw new Error('Invalid local pairing response.');
+      sessionKey = data.sessionKey;
+      set({ paired: true, error: '' });
+      await connect();
+    } catch (cause) {
+      set({ error: cause instanceof Error ? cause.message : 'Could not pair this browser.' });
+    } finally {
+      set({ busy: false });
     }
   }
 
@@ -122,5 +141,5 @@ export function createSetupSession(sessionKey = sessionKeyFromFragment(
     catch { /* The CLI can also be stopped in the terminal. */ }
   }
 
-  return { subscribe: state.subscribe, connect, refresh, submit, cancel, takeOver, close };
+  return { subscribe: state.subscribe, pair, connect, refresh, submit, cancel, takeOver, close };
 }

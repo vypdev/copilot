@@ -56,6 +56,22 @@ describe('WebSetupBridge', () => {
     expect(bridge.snapshot().repository).toBe('owner/repo');
   });
 
+  test('a failing subscriber is detached without losing prompts or blocking healthy observers', async () => {
+    const bridge = new WebSetupBridge('owner/repo');
+    const failed = jest.fn(() => { throw new Error('Observer failed'); });
+    const seen: number[] = [];
+    bridge.subscribe(failed);
+    bridge.subscribe(view => seen.push(view.revision));
+    const pending = bridge.ask({ kind: 'text', title: 'Continue setup' });
+    const revision = bridge.snapshot().promptRevision!;
+    expect(seen).toEqual([revision]);
+    expect(bridge.answer(revision, 'yes')).toBe(true);
+    expect(await pending).toBe('yes');
+    bridge.message('Next step');
+    expect(failed).toHaveBeenCalledTimes(1);
+    expect(seen).toEqual([revision, revision + 1, revision + 2]);
+  });
+
   test('only one semantic decision can be pending at a time', async () => {
     const bridge = new WebSetupBridge('owner/repo');
     const pending = bridge.ask({ kind: 'choice', title: 'A', choices: ['yes'] });

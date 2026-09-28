@@ -1,4 +1,4 @@
-import { createSetupSession, sessionKeyFromFragment } from '../../../web/src/session/setupSession';
+import { createSetupSession } from '../../../web/src/session/setupSession';
 import type { WebSetupView } from '../../application/contracts/web_setup_view';
 
 jest.mock('svelte/store', () => ({
@@ -17,14 +17,117 @@ function response(body: unknown, status = 200): Response {
 }
 
 describe('browser session transport', () => {
+  const TEST_SESSION_KEY = 'a'.repeat(64);
   const view: WebSetupView = { revision: 3, promptRevision: 7, repository: 'owner/repo', prompt: { kind: 'secret', title: 'Setup PAT' } };
   const originalFetch = globalThis.fetch;
 
   afterEach(() => { globalThis.fetch = originalFetch; });
 
-  test('reads the one-run key from the fragment without putting it in observable session state', () => {
-    expect(sessionKeyFromFragment('#setup-key=private-key')).toBe('private-key');
-    expect(sessionKeyFromFragment('#other=value')).toBe('');
+  test('starts unpaired, and does not contact the API until terminal pairing', async () => {
+    globalThis.fetch = jest.fn() as typeof fetch;
+    const session = createSetupSession();
+    let state = {} as { paired: boolean };
+    session.subscribe(next => { state = next; });
+    await session.connect();
+    await session.refresh();
+    expect(state.paired).toBe(false);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  test('pairs through same-origin POST and keeps code and key out of observable state', async () => {
+    const requests: Array<{ path: string; options?: RequestInit }> = [];
+    globalThis.fetch = jest.fn(async (path: string, options?: RequestInit) => {
+      requests.push({ path, options });
+      if (path === '/api/pair') return response({ sessionKey: TEST_SESSION_KEY });
+      if (path === '/api/bootstrap') return response({ controller: true, capability: 'controller', takeoverTicket: 'ticket' });
+      if (path === '/api/state') return response(view);
+      throw new Error('Unexpected route');
+    }) as typeof fetch;
+    const session = createSetupSession();
+    let latest = '';
+    session.subscribe(next => { latest = JSON.stringify(next); });
+    await session.pair(' 0123456789ABCDEF ');
+    expect(requests.map(request => request.path)).toEqual(['/api/pair', '/api/bootstrap', '/api/state']);
+    expect(JSON.parse(String(requests[0].options?.body))).toEqual({ code: '0123456789abcdef' });
+    expect(requests[1].options?.headers).toEqual(expect.objectContaining({ 'X-Setup-Session-Key': TEST_SESSION_KEY }));
+    expect(latest).toContain('"paired":true');
+    expect(latest).not.toContain('0123456789abcdef');
+    expect(latest).not.toContain(TEST_SESSION_KEY);
+  });
+
+  test('invalid pairing response never enables the setup UI', async () => {
+    globalThis.fetch = jest.fn(async () => response({ sessionKey: 'not-a-key' })) as typeof fetch;
+    const session = createSetupSession();
+    let latest = '';
+    session.subscribe(next => { latest = JSON.stringify(next); });
+    await session.pair('0123456789abcdef');
+    expect(latest).toContain('Invalid local pairing response');
+    expect(latest).toContain('"paired":false');
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test('failed bootstrap after pairing returns to unpaired state', async () => {
+    globalThis.fetch = jest.fn(async (path: string) => path === '/api/pair'
+      ? response({ sessionKey: TEST_SESSION_KEY }) : response({ error: 'No session' }, 403)) as typeof fetch;
+    const session = createSetupSession();
+    let latest = '';
+    session.subscribe(next => { latest = JSON.stringify(next); });
+    await session.pair('0123456789abcdef');
+    expect(latest).toContain('"paired":false');
+    expect(latest).toContain('pair again');
+  });
+
+  test('incorrect code is shown as an error without disclosing the code', async () => {
+    globalThis.fetch = jest.fn(async () => response({ error: 'Incorrect pairing code.' }, 403)) as typeof fetch;
+    const session = createSetupSession();
+    let latest = '';
+    session.subscribe(next => { latest = JSON.stringify(next); });
+    await session.pair('0123456789abcdef');
+    expect(latest).toContain('Incorrect pairing code.');
+    expect(latest).toContain('"paired":false');
+    expect(latest).not.toContain('0123456789abcdef');
+  });
+
+  test('pairing does not run concurrently or repeat after success', async () => {
+    let resolvePair!: (value: Response) => void;
+    const pendingPair = new Promise<Response>(resolve => { resolvePair = resolve; });
+    const requests: string[] = [];
+    globalThis.fetch = jest.fn(async (path: string) => {
+      requests.push(path);
+      if (path === '/api/pair') return pendingPair;
+      if (path === '/api/bootstrap') return response({ controller: true, capability: 'controller', takeoverTicket: 'ticket' });
+      if (path === '/api/state') return response(view);
+      throw new Error('Unexpected route');
+    }) as typeof fetch;
+    const session = createSetupSession();
+    const first = session.pair('0123456789abcdef');
+    await session.pair('0123456789abcdef');
+    expect(requests).toEqual(['/api/pair']);
+    resolvePair(response({ sessionKey: TEST_SESSION_KEY }));
+    await first;
+    await session.pair('0123456789abcdef');
+    expect(requests).toEqual(['/api/pair', '/api/bootstrap', '/api/state']);
+  });
+
+  test('pairing failures use a bounded generic message when the server omits one', async () => {
+    globalThis.fetch = jest.fn(async () => response({}, 403)) as typeof fetch;
+    const session = createSetupSession();
+    let latest = '';
+    session.subscribe(next => { latest = JSON.stringify(next); });
+    await session.pair('0123456789abcdef');
+    expect(latest).toContain('Pairing was rejected.');
+    expect(latest).toContain('"paired":false');
+  });
+
+  test('a non-Error pairing failure stays generic and keeps the page unpaired', async () => {
+    globalThis.fetch = jest.fn(async () => { throw 'network unavailable'; }) as typeof fetch;
+    const session = createSetupSession();
+    let latest = '';
+    session.subscribe(next => { latest = JSON.stringify(next); });
+    await session.pair('0123456789abcdef');
+    expect(latest).toContain('Could not pair this browser.');
+    expect(latest).not.toContain('network unavailable');
+    expect(latest).toContain('"paired":false');
   });
 
   test('bootstrap and revision-bound submission keep the PAT out of observable state', async () => {
@@ -66,7 +169,7 @@ describe('browser session transport', () => {
       throw new Error('Unexpected route');
     }) as typeof fetch;
 
-    const session = createSetupSession();
+    const session = createSetupSession(TEST_SESSION_KEY);
     let controller = false;
     session.subscribe(state => { controller = state.controller; });
     await session.connect();
@@ -89,7 +192,7 @@ describe('browser session transport', () => {
       throw new Error('Unexpected route');
     }) as typeof fetch;
 
-    const session = createSetupSession();
+    const session = createSetupSession(TEST_SESSION_KEY);
     let latest = '';
     session.subscribe(state => { latest = JSON.stringify(state); });
     await session.connect();
@@ -115,7 +218,7 @@ describe('browser session transport', () => {
       throw new Error('Unexpected route');
     }) as typeof fetch;
 
-    const session = createSetupSession();
+    const session = createSetupSession(TEST_SESSION_KEY);
     let latest: { controller: boolean; busy: boolean } | undefined;
     session.subscribe(state => { latest = state; });
     await session.connect();
@@ -134,7 +237,7 @@ describe('browser session transport', () => {
       throw new Error('Unexpected route');
     }) as typeof fetch;
 
-    const session = createSetupSession();
+    const session = createSetupSession(TEST_SESSION_KEY);
     let latest = '';
     session.subscribe(state => { latest = JSON.stringify(state); });
     await session.connect();
@@ -154,7 +257,7 @@ describe('browser session transport', () => {
       throw new Error('Unexpected route');
     }) as typeof fetch;
 
-    const session = createSetupSession();
+    const session = createSetupSession(TEST_SESSION_KEY);
     let latest: { busy: boolean; view?: WebSetupView } | undefined;
     session.subscribe(state => { latest = state; });
     await session.connect();
@@ -170,7 +273,7 @@ describe('browser session transport', () => {
       throw new Error('Unexpected route');
     }) as typeof fetch;
 
-    const session = createSetupSession();
+    const session = createSetupSession(TEST_SESSION_KEY);
     let latest = '';
     session.subscribe(state => { latest = JSON.stringify(state); });
     await session.connect();
@@ -187,7 +290,7 @@ describe('browser session transport', () => {
       throw new Error('Unexpected route');
     }) as typeof fetch;
 
-    const session = createSetupSession();
+    const session = createSetupSession(TEST_SESSION_KEY);
     let latest = '';
     session.subscribe(state => { latest = JSON.stringify(state); });
     await session.connect();
@@ -207,7 +310,7 @@ describe('browser session transport', () => {
       throw new Error('Unexpected route');
     }) as typeof fetch;
 
-    const session = createSetupSession();
+    const session = createSetupSession(TEST_SESSION_KEY);
     let controller = true;
     session.subscribe(state => { controller = state.controller; });
     await session.connect();
@@ -228,7 +331,7 @@ describe('browser session transport', () => {
       throw new Error('Unexpected route');
     }) as typeof fetch;
 
-    const session = createSetupSession();
+    const session = createSetupSession(TEST_SESSION_KEY);
     await session.connect();
     const first = session.submit(7, 'first');
     await session.submit(7, 'duplicate');
@@ -249,7 +352,7 @@ describe('browser session transport', () => {
       throw new Error('Unexpected route');
     }) as typeof fetch;
 
-    const session = createSetupSession();
+    const session = createSetupSession(TEST_SESSION_KEY);
     const first = session.refresh();
     await session.refresh();
     expect(requests).toEqual(['/api/state']);
@@ -267,7 +370,7 @@ describe('browser session transport', () => {
       throw new Error('Unexpected route');
     }) as typeof fetch;
 
-    const session = createSetupSession();
+    const session = createSetupSession(TEST_SESSION_KEY);
     let latest: { controller: boolean; busy: boolean } | undefined;
     session.subscribe(state => { latest = state; });
     await session.connect();
@@ -280,7 +383,7 @@ describe('browser session transport', () => {
   test('failed bootstrap and state requests are reported without claiming a live session', async () => {
     globalThis.fetch = jest.fn(async (path: string) => path === '/api/bootstrap'
       ? response({ error: 'Unavailable' }, 503) : response(view)) as typeof fetch;
-    const session = createSetupSession();
+    const session = createSetupSession(TEST_SESSION_KEY);
     let latest = '';
     session.subscribe(state => { latest = JSON.stringify(state); });
     await session.connect();
@@ -288,7 +391,9 @@ describe('browser session transport', () => {
     expect(JSON.parse(latest).controller).toBe(false);
 
     globalThis.fetch = jest.fn(async () => response({ error: 'Unavailable' }, 503)) as typeof fetch;
-    await session.refresh();
+    const stillPaired = createSetupSession(TEST_SESSION_KEY);
+    stillPaired.subscribe(state => { latest = JSON.stringify(state); });
+    await stillPaired.refresh();
     expect(latest).toContain('Connection lost');
     expect(JSON.parse(latest).view).toBeUndefined();
   });
@@ -305,7 +410,7 @@ describe('browser session transport', () => {
       throw new Error('Unexpected route');
     }) as typeof fetch;
 
-    const session = createSetupSession();
+    const session = createSetupSession(TEST_SESSION_KEY);
     let latest: { controller: boolean; error: string; view?: WebSetupView } | undefined;
     session.subscribe(state => { latest = state; });
     await session.connect();
@@ -326,7 +431,7 @@ describe('browser session transport', () => {
       if (path === '/api/cancel') return response({ error: 'Control moved to another tab.' }, 403);
       throw new Error('Unexpected route');
     }) as typeof fetch;
-    const session = createSetupSession();
+    const session = createSetupSession(TEST_SESSION_KEY);
     let latest: { controller: boolean; busy: boolean } | undefined;
     session.subscribe(state => { latest = state; });
     await session.connect();
@@ -337,6 +442,6 @@ describe('browser session transport', () => {
 
   test('failure to close the browser session can be handled in the terminal', async () => {
     globalThis.fetch = jest.fn(async () => { throw new Error('CLI stopped'); }) as typeof fetch;
-    await expect(createSetupSession().close()).resolves.toBeUndefined();
+    await expect(createSetupSession(TEST_SESSION_KEY).close()).resolves.toBeUndefined();
   });
 });

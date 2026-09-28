@@ -219,10 +219,15 @@ exactly what completed and what remains.
    mode does not require a TTY: the browser is the interactive surface, and
    a printed local URL is available if automatic opening is unavailable.
 2. Bind `127.0.0.1:0`, record the assigned port, create an unpredictable
-   one-run session key and first controller lease in process memory, and open
-   the default browser to `http://127.0.0.1:<port>/#setup-key=<random>`.
-   If opening fails, print that private URL and instructions; serving
-   continues. The key-bearing URL MUST NOT enter accumulated diagnostic logs.
+   one-run session key, a separate 16-hex-character pairing code, and first
+   controller lease in process memory. Print the pairing code only in the
+   terminal, without adding it to accumulated diagnostics, then open the
+   default browser to the public `http://127.0.0.1:<port>/` URL. The initial
+   page asks for the code before any setup state is shown. A same-origin POST
+   exchanges it for the session key held only in browser memory; five invalid
+   attempts lock pairing until a new setup run. If opening fails, print the
+   public URL and instructions; serving continues. Neither code nor key may
+   appear in URL, history, cookies, browser storage, or accumulated logs.
    If binding or packaged
    assets fail, stop without a partial UI and suggest `copilot setup`.
 3. Show the six stages already used by terminal setup. Import one immutable
@@ -637,19 +642,22 @@ for the temporary setup PAT and to bot-PAT rotation guidance separately.
 
 1. **Boundary:** the web server is loopback-only, but TCP loopback does not
    identify or isolate the launching OS user: another local user can connect
-   to the port. A cryptographically random URL-fragment key is required for
-   every API read and mutation, including bootstrap and takeover. Possession
-   of the private URL grants local session access, so it must not be shared.
-   A malicious process that can read that URL, browser extensions with page
-   access, or a compromised browser remain outside this boundary. The
-   product must say so honestly.
+   to the port. The browser must enter a cryptographically random code shown
+   only in the launching terminal; the server exchanges it for a one-run
+   session key. That key is required for every API read and mutation, including
+   bootstrap and takeover. Possession of the pairing code grants local session
+   access, so it must not be shared. A malicious process that can read the
+   terminal, browser extensions with page access, or a compromised browser
+   remain outside this boundary. The product must say so honestly.
 2. **Request defense:** reject `Host` not exactly `127.0.0.1:<bound-port>`,
    proxy/forwarded host headers, unexpected `Origin`/`Referer` on mutations,
    cross-site Fetch Metadata, unsupported methods/content types, and requests
    over size/time limits. No wildcard CORS or credentials cross-origin.
-   The URL-fragment session key is not sent in an HTTP URL, stored in a
-   cookie/localStorage/sessionStorage, or returned to unauthenticated callers;
-   the browser sends it in a custom header to every API route. In addition,
+   The pairing endpoint accepts only same-origin JSON POST, bounds wrong-code
+   attempts, and returns the session key only for the correct code. The code
+   and key are not sent in an HTTP URL or stored in a cookie/localStorage/
+   sessionStorage; the browser sends the key in a custom header to every
+   subsequent API route. In addition,
    state-changing requests require a separate one-run, cryptographically
    random controller capability in a custom header plus a revision check;
    that capability is delivered only by an authenticated same-origin no-store
@@ -729,7 +737,7 @@ existing CLI tests are retained, not re-counted as new web evidence.
 | CLI/packaging/workflow contracts | 10 | flag combinations, browser-open fallback, asset manifest, npm pack/global install, unchanged Action/API bundles |
 | UI/accessibility/localization/content | 18 | pending/action/blocked/partial/complete, plan diff, narrow/zoom/keyboard/focus/no-color, both palettes/system toggle and contrast, English fallback, escaping |
 | Integration/compatibility/recovery | 12 | terminal-web parity, manual/environment/dry-run, drift, partial write, doctor reconciliation |
-| Security/abuse | 18 | Host/Origin/CSRF, private launch-key enforcement on every API route, CORS, replay, path traversal, XSS/CSP, secret leaks, no GET mutation, body/time/connection limits, atomic lock publication |
+| Security/abuse | 18 | Host/Origin/CSRF, terminal pairing and attempt cap, session-key enforcement on every other API route, CORS, replay, path traversal, XSS/CSP, secret leaks, no GET mutation, body/time/connection limits, atomic lock publication |
 | **Total** | **102** | No double counting |
 
 Within the 18 UI cases, cover at least one render/interaction for each prompt
@@ -805,16 +813,16 @@ help for `--web` explains local-only scope and the `--non-interactive` conflict.
 11. Given a Secret write succeeds and a later setup operation fails, the
     result lists the Secret's name/scope as possibly active, never prints its
     value, and requires inspection before retry or bot PAT deletion.
-12. Given hostile Host/Origin/cross-site requests, a missing/incorrect private
-    launch key on bootstrap, state, or mutations, a missing/replayed controller
+12. Given hostile Host/Origin/cross-site requests, missing/incorrect pairing
+    codes or a missing session key on bootstrap, state, or mutations, a missing/replayed controller
     capability, excess simultaneous clients, path traversal, oversized body,
     or injected account/provider text, the server rejects/escapes it without
     mutation or secret disclosure. A failed lock write leaves no published
     lock; an orphaned lock is never removed automatically.
-13. Given a browser refresh, the same live process restores redacted state
-    only; PAT values, controller capability, and plan approval are never stored
-    in browser storage or URLs. The private launch key remains only in the
-    URL fragment and browser memory. The final page never calls local disposal
+13. Given a browser refresh, the user re-enters the terminal pairing code and
+    the same live process restores redacted state only; PAT values, controller
+    capability, and plan approval are never stored in browser storage or URLs.
+    Neither the code nor the session key appears in browser history. The final page never calls local disposal
     GitHub revocation or Secret installation verified Action health.
 14. Given narrow width, 200% zoom, keyboard-only and reduced-motion settings,
     every primary state and recovery action remains understandable without

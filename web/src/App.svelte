@@ -9,11 +9,11 @@
   import ContextPanel from './components/ContextPanel.svelte';
   import ResultPanel from './components/ResultPanel.svelte';
   import WaitingPanel from './components/WaitingPanel.svelte';
+  import PairingPanel from './components/PairingPanel.svelte';
 
   const session = createSetupSession();
   onMount(() => {
-    void session.connect();
-    const interval = window.setInterval(() => { if (!$session.view?.outcome) void session.refresh(); }, 900);
+    const interval = window.setInterval(() => { if ($session.paired && !$session.view?.outcome) void session.refresh(); }, 900);
     return () => window.clearInterval(interval);
   });
 
@@ -36,7 +36,7 @@
   <main class="main">
     <SetupHeader repository={$session.view?.repository} />
     <div class="content">
-      <SetupIntro view={$session.view} />
+      {#if $session.paired}<SetupIntro view={$session.view} />{/if}
       {#if $session.view?.journey?.choiceReviewPass && $session.view.journey.choiceReviewPass > 1 && !$session.view.outcome}
         <div class="review-pass" role="status"><span aria-hidden="true">↺</span> Reviewing saved choices — pass {$session.view.journey.choiceReviewPass}. This is the same setup run, not a restart.</div>
       {/if}
@@ -48,7 +48,9 @@
         <StatusBanner tone={$session.view.message.tone} title={$session.view.message.tone === 'success' ? 'Checked' : $session.view.message.tone === 'warning' ? 'Please note' : $session.view.message.tone === 'error' ? 'Needs attention' : 'Progress update'} message={$session.view.message.text} link={$session.view.message.link} />
       {/if}
 
-      {#if $session.view?.outcome}
+      {#if !$session.paired}
+        <PairingPanel busy={$session.busy} onPair={session.pair} />
+      {:else if $session.view?.outcome}
         <ResultPanel outcome={$session.view.outcome} controller={$session.controller} onClose={session.close} />
       {:else if $session.view?.prompt}
         <div class="workspace-grid">

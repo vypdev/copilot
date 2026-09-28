@@ -65940,9 +65940,10 @@ function registerSetupCommand(program) {
                 webBridge.setRepository(`${gitInfo.owner}/${gitInfo.repo}`);
                 webBridge.setJourney((0, setup_journey_policy_1.buildSetupJourneyView)(`${gitInfo.owner}/${gitInfo.repo}`, 'repository', false));
                 webServer = await (0, web_setup_server_1.startWebSetupServer)(webBridge);
-                (0, logger_1.logInfo)(`🌐 Private local setup assistant: ${webServer.launchUrl}`, false, undefined, true);
-                (0, logger_1.logInfo)('If the browser does not open, copy this URL into a browser on this computer. The terminal setup remains available with copilot setup.');
-                (0, web_setup_server_1.openWebSetupBrowser)(webServer.launchUrl);
+                (0, logger_1.logInfo)(`🌐 Local setup assistant: ${webServer.url}`);
+                (0, logger_1.logInfo)(`🔑 Browser pairing code: ${webServer.pairingCode}`, false, undefined, true);
+                (0, logger_1.logInfo)('If the browser does not open, copy this URL into a browser on this computer, then enter the pairing code shown above. The terminal setup remains available with copilot setup.');
+                (0, web_setup_server_1.openWebSetupBrowser)(webServer.url);
             }
             if (!options.nonInteractive) {
                 journey = new setup_journey_use_case_1.SetupJourneyUseCase(`${gitInfo.owner}/${gitInfo.repo}`, webBridge ? new web_setup_adapters_1.WebSetupJourneyPresenter(webBridge) : new setup_journey_presenter_1.ConsoleSetupJourneyPresenter());
@@ -68338,8 +68339,14 @@ class WebSetupBridge {
     publish(change) {
         this.revision += 1;
         this.view = { ...this.view, ...change, revision: this.revision };
-        for (const listener of this.subscribers)
-            listener(this.view);
+        for (const listener of this.subscribers) {
+            try {
+                listener(this.view);
+            }
+            catch {
+                this.subscribers.delete(listener); /* Observers cannot abort a setup decision. */
+            }
+        }
     }
 }
 exports.WebSetupBridge = WebSetupBridge;
@@ -68380,6 +68387,8 @@ const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 's
 /** Transport only: setup policy and credential decisions live behind the bridge. */
 async function startWebSetupServer(bridge, assets = (0, node_path_1.join)(__dirname, '..', 'web')) {
     const sessionKey = (0, node_crypto_1.randomBytes)(32);
+    const pairingCode = (0, node_crypto_1.randomBytes)(8);
+    let failedPairings = 0;
     const assetRoot = await (0, promises_1.realpath)(assets);
     if (!(await (0, promises_1.realpath)((0, node_path_1.join)(assetRoot, 'index.html'))).startsWith(`${assetRoot}${node_path_1.sep}`)) {
         throw new Error('Local setup index must be inside its packaged asset directory.');
@@ -68430,8 +68439,26 @@ async function startWebSetupServer(bridge, assets = (0, node_path_1.join)(__dirn
                 respond(response, 403, { error: 'Invalid request origin.' });
                 return;
             }
-            if (request.url?.startsWith('/api/') && !authorizedSessionKey(request.headers['x-setup-session-key'], sessionKey)) {
-                respond(response, 403, { error: 'Open the private setup URL printed by the CLI.' });
+            if (request.method === 'POST' && request.url === '/api/pair') {
+                if (request.headers['content-type'] !== 'application/json') {
+                    respond(response, 415, { error: 'JSON required.' });
+                    return;
+                }
+                if (failedPairings >= 5) {
+                    respond(response, 429, { error: 'Too many pairing attempts. Restart setup.' });
+                    return;
+                }
+                const body = await readJson(request);
+                if (!matchesHexSecret(body.code, pairingCode)) {
+                    failedPairings += 1;
+                    respond(response, 403, { error: 'Incorrect pairing code. Check the terminal.' });
+                    return;
+                }
+                respond(response, 200, { sessionKey: sessionKey.toString('hex') });
+                return;
+            }
+            if (request.url?.startsWith('/api/') && !matchesHexSecret(request.headers['x-setup-session-key'], sessionKey)) {
+                respond(response, 403, { error: 'Pair this browser using the code printed by the CLI.' });
                 return;
             }
             if (request.method === 'GET' && request.url === '/api/bootstrap') {
@@ -68563,7 +68590,6 @@ async function startWebSetupServer(bridge, assets = (0, node_path_1.join)(__dirn
     if (!address || typeof address === 'string')
         throw new Error('Unable to bind local setup server.');
     const url = `http://127.0.0.1:${address.port}/`;
-    const launchUrl = `${url}#setup-key=${sessionKey.toString('hex')}`;
     const close = async () => {
         if (closing)
             return closed;
@@ -68590,10 +68616,10 @@ async function startWebSetupServer(bridge, assets = (0, node_path_1.join)(__dirn
         if (view.outcome && !resultTimer)
             resultTimer = setTimeout(() => void close(), 10 * 60 * 1000);
     });
-    return { url, launchUrl, closed, close };
+    return { url, pairingCode: pairingCode.toString('hex'), closed, close };
 }
-function authorizedSessionKey(value, expected) {
-    return typeof value === 'string' && /^[a-f0-9]{64}$/.test(value)
+function matchesHexSecret(value, expected) {
+    return typeof value === 'string' && value.length === expected.length * 2 && /^[a-f0-9]+$/.test(value)
         && (0, node_crypto_1.timingSafeEqual)(Buffer.from(value, 'hex'), expected);
 }
 function respond(response, status, body) {

@@ -16,7 +16,7 @@ async function main() {
     // Use the same Svelte SSR runtime as the Vite-transformed component.
     const { render } = await server.ssrLoadModule('svelte/server');
     const props = JSON.parse(encodedProps);
-    for (const key of ['onSubmit', 'onClose', 'onAction']) props[key] = async () => undefined;
+    for (const key of ['onSubmit', 'onClose', 'onAction', 'onPair']) props[key] = async () => undefined;
     process.stdout.write(render(component.default, { props }).body);
   } finally {
     await server.close();
