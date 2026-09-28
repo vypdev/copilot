@@ -202,6 +202,12 @@ history before retrying. An ambiguous create failure is treated conservatively
 as a possible remote change. The browser setup path does not perform this
 pre-Apply bootstrap.
 
+The final setup-PAT audit requires GitHub to verify whether the repository
+owner is a person or an organization. If that remote owner type is unknown or
+unavailable, setup stops before provisioning and asks you to retry inspection;
+the owner type you selected earlier for a guided link is only provisional.
+Potential organization grants remain visible in the permission preview.
+
 For other existing credentials, choosing `keep` works only when the selected
 storage policy preserves the Secret in its current repository or organization
 scope. With `preserveExisting: false`, or an override that moves the Secret,

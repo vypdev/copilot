@@ -48649,7 +48649,9 @@ function buildSetupPatPermissionRequirements() {
  * selected setup operation or its read-only preflight.
  */
 function buildConfiguredSetupPatPermissionRequirements(configuration, remote) {
-    return buildSetupPatRequirements(configuration, remote?.ownerType === 'Organization', remote);
+    // Unknown is not evidence of a personal owner: keep possible organization
+    // grants visible until the final audit can verify the actual owner type.
+    return buildSetupPatRequirements(configuration, remote?.ownerType === 'Organization' || remote?.ownerType === 'Unknown', remote);
 }
 /** Grants justified by local choices alone; remote-only conditions stay unresolved. */
 function buildSetupPatIntentPermissionRequirements(configuration, ownerKind) {
@@ -54949,6 +54951,11 @@ class AuditConfiguredSetupPatUseCase {
     async audit(configuration, remote) {
         const required = (0, setup_token_permission_policy_1.buildConfiguredSetupPatPermissionRequirements)(configuration, remote);
         this.ports.presenter.showRequirements('setup', required);
+        if (this.context.token && (!remote || remote.ownerType === 'Unknown')) {
+            return { status: 'blocked', errors: [
+                    'GitHub could not verify whether this repository is owned by an organization or a user. Retry remote inspection before applying setup; the pre-PAT owner selection is not authorization evidence.',
+                ] };
+        }
         if (this.context.assertedOwnerKind && remote && remote.ownerType !== 'Unknown'
             && remote.ownerType !== this.context.assertedOwnerKind) {
             this.ports.showOwnerMismatch(this.context.assertedOwnerKind, remote.ownerType);

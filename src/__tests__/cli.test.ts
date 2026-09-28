@@ -1093,7 +1093,7 @@ describe('CLI', () => {
       } finally { createTerminal.mockRestore(); }
     });
 
-    it('warns about excess organization grants if remote owner type cannot be resolved', async () => {
+    it('blocks before mutation if GitHub cannot verify the owner type despite guided organization intent', async () => {
       const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
       const input = guidedTerminal(prompt => prompt.includes('repository owner an organization') ? '1' : undefined);
       const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
@@ -1102,8 +1102,12 @@ describe('CLI', () => {
       mockTokenPermissionInspect.mockResolvedValueOnce(acceptedSetupPatReport());
       try {
         await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off', '--skip-secrets']);
-        const { logInfo } = require('../utils/logger');
-        expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('PAT may have excess access'));
+        const { logError } = require('../utils/logger');
+        expect(logError).toHaveBeenCalledWith(expect.objectContaining({
+          message: expect.stringContaining('could not verify whether this repository is owned'),
+        }));
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
       } finally { createTerminal.mockRestore(); }
     });
 

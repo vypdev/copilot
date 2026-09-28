@@ -64,7 +64,10 @@ export function buildConfiguredSetupPatPermissionRequirements(
     configuration: Readonly<SetupConfiguration>,
     remote?: Readonly<SetupRemoteConfiguration>,
 ): SetupTokenPermissionRequirement[] {
-    return buildSetupPatRequirements(configuration, remote?.ownerType === 'Organization', remote);
+    // Unknown is not evidence of a personal owner: keep possible organization
+    // grants visible until the final audit can verify the actual owner type.
+    return buildSetupPatRequirements(configuration,
+        remote?.ownerType === 'Organization' || remote?.ownerType === 'Unknown', remote);
 }
 
 /** Grants justified by local choices alone; remote-only conditions stay unresolved. */

@@ -59,9 +59,30 @@ describe('AuditConfiguredSetupPatUseCase', () => {
     expect(ports.permissions.inspect).not.toHaveBeenCalled();
   });
 
-  test('unknown owner type does not fabricate a mismatch', async () => {
+  test.each(['Organization', 'User'] as const)('unknown owner type blocks token-backed audit despite %s assertion', async assertedOwnerKind => {
+    const { ports, useCase } = harness({ token: 'test-token', guided: true, assertedOwnerKind });
+    const result = await useCase.audit(configuration, { ...remote, ownerType: 'Unknown' });
+    expect(result).toEqual({ status: 'blocked', errors: [expect.stringContaining('could not verify')] });
+    expect(ports.showOwnerMismatch).not.toHaveBeenCalled();
+    expect(ports.showUpdatedLink).not.toHaveBeenCalled();
+    expect(ports.permissions.inspect).not.toHaveBeenCalled();
+    expect(ports.presenter.showRequirements).toHaveBeenCalledWith('setup', expect.arrayContaining([
+      expect.objectContaining({ scope: 'organization', permission: 'Issue Types' }),
+    ]));
+  });
+
+  test('unavailable owner inspection blocks a token-backed audit before permission probes', async () => {
+    const { ports, useCase } = harness({ token: 'test-token' });
+    expect(await useCase.audit(configuration)).toEqual({
+      status: 'blocked', errors: [expect.stringContaining('could not verify')],
+    });
+    expect(ports.permissions.inspect).not.toHaveBeenCalled();
+  });
+
+  test('dry-run preview without a token may show unknown owner grants without authorizing mutations', async () => {
     const { ports, useCase } = harness({ assertedOwnerKind: 'User' });
     expect(await useCase.audit(configuration, { ...remote, ownerType: 'Unknown' })).toEqual({ status: 'accepted' });
+    expect(ports.permissions.inspect).not.toHaveBeenCalled();
     expect(ports.showOwnerMismatch).not.toHaveBeenCalled();
   });
 

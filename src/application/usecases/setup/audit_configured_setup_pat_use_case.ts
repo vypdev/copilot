@@ -36,6 +36,11 @@ export class AuditConfiguredSetupPatUseCase implements SetupFinalPermissionAudit
   ): Promise<{ status: 'accepted' } | { status: 'blocked'; errors: readonly string[] }> {
     const required = buildConfiguredSetupPatPermissionRequirements(configuration, remote);
     this.ports.presenter.showRequirements('setup', required);
+    if (this.context.token && (!remote || remote.ownerType === 'Unknown')) {
+      return { status: 'blocked', errors: [
+        'GitHub could not verify whether this repository is owned by an organization or a user. Retry remote inspection before applying setup; the pre-PAT owner selection is not authorization evidence.',
+      ] };
+    }
     if (this.context.assertedOwnerKind && remote && remote.ownerType !== 'Unknown'
       && remote.ownerType !== this.context.assertedOwnerKind) {
       this.ports.showOwnerMismatch(this.context.assertedOwnerKind, remote.ownerType);

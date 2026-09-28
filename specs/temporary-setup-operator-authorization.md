@@ -169,6 +169,11 @@ means authenticated remote facts may require a corrected grant after entry.
 6. Preflight answers are operator intent, not GitHub facts or authorization.
    Unknown owner type, remote inventory, approval, and workflow status MUST
    never be fabricated from defaults or treated as proven by a user answer.
+   An unknown or unavailable authenticated owner type MUST block a token-backed
+   final setup-PAT audit before provisioning. The operator's preflight owner
+   assertion may shape a provisional link but cannot replace verified GitHub
+   owner evidence. The final requirement preview MUST retain potential
+   organization grants rather than silently treating `Unknown` as `User`.
 
 ## 5. Current versus proposed product journey
 
@@ -667,6 +672,11 @@ Secret renewal.
     that GitHub form choice.
 14. All primary states remain readable without color at narrow width and the
     full URL is copyable.
+15. Given authenticated remote owner type is `Unknown` (or unavailable), a
+    token-backed final audit blocks before provisioning even if the operator
+    asserted `Organization` or `User` earlier. The preview keeps possible
+    organization grants visible and asks for a fresh GitHub inspection; it
+    never presents the asserted kind as verified evidence.
 
 ## 17. Requirements traceability
 
@@ -675,7 +685,7 @@ Secret renewal.
 | Guided/manual choice (§4.1) | setup CLI + presenter | scenarios 1–2, 8 | how-to-use |
 | Intent collection/reuse (§4.1, §6.1) | questionnaire + pure projection | scenarios 3–4, 9 | how-to-use/configuration |
 | Exact/provisional grants (§4.1–4.3) | permission policy + URL builder | scenarios 4–5, 7, 12–13 | authentication/configuration |
-| Actual token audit (§4.1) | existing permission use case | scenarios 6–7 | troubleshooting |
+| Actual token audit (§4.1) | existing permission use case | scenarios 6–7, 15 | troubleshooting |
 | Cleanup truth (§4.1–4.3) | setup result presenter | scenarios 9–11 | authentication/troubleshooting |
 | Accessible UI (§9) | terminal renderer | scenario 14 | how-to-use |
 

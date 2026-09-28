@@ -79,6 +79,22 @@ describe('setup token permission policy', () => {
         ]);
     });
 
+    it('keeps possible organization grants visible when remote owner type is unknown', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.projects.ids = 'PVT_example';
+        configuration.storage.secrets.defaultScope = 'organization';
+        const unknown = buildConfiguredSetupPatPermissionRequirements(configuration, {
+            ...organization, ownerType: 'Unknown',
+        }).map(item => `${item.scope}:${item.permission}:${item.level}`);
+        expect(unknown).toEqual(expect.arrayContaining([
+            'organization:Secrets:write', 'organization:Issue Types:write', 'organization:Projects:write',
+        ]));
+        const personal = buildConfiguredSetupPatPermissionRequirements(configuration, {
+            ...organization, ownerType: 'User',
+        });
+        expect(personal.some(item => item.scope === 'organization')).toBe(false);
+    });
+
     it('omits stale disabled issue workflows from the configured setup PAT plan', () => {
         const configuration = createDefaultSetupConfiguration();
         configuration.manageRepositorySecrets = false;
