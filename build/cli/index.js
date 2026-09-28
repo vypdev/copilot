@@ -47724,7 +47724,7 @@ const labels = {
     credentials: 'Bot PAT & credentials',
     apply: 'Apply',
 };
-function buildSetupJourneyView(repository, stage, mutationStarted, outcome) {
+function buildSetupJourneyView(repository, stage, mutationStarted, outcome, choiceReviewPass = 1) {
     const position = exports.SETUP_JOURNEY_STAGES.indexOf(stage);
     return {
         repository: [...repository].map(character => {
@@ -47738,6 +47738,7 @@ function buildSetupJourneyView(repository, stage, mutationStarted, outcome) {
         pending: exports.SETUP_JOURNEY_STAGES.slice(position + 1).map(item => labels[item]),
         ...(outcome ? { outcome } : {}),
         mutationStarted,
+        choiceReviewPass,
     };
 }
 
@@ -55645,6 +55646,7 @@ class SetupJourneyUseCase {
         this.presenter = presenter;
         this.stage = 'repository';
         this.mutationStarted = false;
+        this.choiceReviewPass = 1;
     }
     advance(stage) {
         if (this.outcome)
@@ -55656,6 +55658,16 @@ class SetupJourneyUseCase {
             return;
         this.stage = stage;
         this.present();
+    }
+    /** The only deliberate backwards transition: revisit local choices before PAT entry. */
+    revisitChoices() {
+        if (this.stage !== 'setup-pat' || this.outcome || this.mutationStarted) {
+            throw new Error('Setup choices can be revisited only from pre-PAT review.');
+        }
+        this.choiceReviewPass += 1;
+        this.stage = 'choices';
+        this.present();
+        return this.choiceReviewPass;
     }
     markMutationStarted() {
         if (this.stage !== 'apply' || this.outcome)
@@ -55676,7 +55688,7 @@ class SetupJourneyUseCase {
         this.present();
     }
     present() {
-        this.presenter.present((0, setup_journey_policy_1.buildSetupJourneyView)(this.repository, this.stage, this.mutationStarted, this.outcome));
+        this.presenter.present((0, setup_journey_policy_1.buildSetupJourneyView)(this.repository, this.stage, this.mutationStarted, this.outcome, this.choiceReviewPass));
     }
 }
 exports.SetupJourneyUseCase = SetupJourneyUseCase;
@@ -65545,9 +65557,10 @@ function registerSetupCommand(program) {
                         skipRepositoryVariables: Boolean(options.skipVariables),
                         skipRepositorySecrets: Boolean(options.skipSecrets),
                     });
+                    let choiceReviewPass = 1;
                     while (true) {
                         const context = { skipQuestionIds: fixedQuestionIds };
-                        const collector = new setup_1.SetupQuestionnaireController(terminal, new setup_question_renderer_1.ConsoleSetupQuestionRenderer('permission-intent'));
+                        const collector = new setup_1.SetupQuestionnaireController(terminal, new setup_question_renderer_1.ConsoleSetupQuestionRenderer('permission-intent', choiceReviewPass));
                         const intent = await collector.collect((0, setup_questionnaire_policy_1.createSetupPermissionIntentQuestionnaire)(draft, context), context);
                         if (intent.terminal === 'cancelled')
                             throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
@@ -65568,6 +65581,8 @@ function registerSetupCommand(program) {
                             (0, logger_1.logInfo)(`The selected local configuration needs correction before a guided link can be generated:\n${intentErrors.map(item => `  - ${item}`).join('\n')}`);
                         }
                         const preview = (0, setup_token_permission_policy_1.buildSetupPatIntentPermissionRequirements)(draft, ownerKind);
+                        if (choiceReviewPass > 1)
+                            (0, logger_1.logInfo)('Choice review complete. Returning to setup PAT permission review.');
                         journey?.advance('setup-pat');
                         (0, logger_1.logInfo)('Permission intent:');
                         (0, logger_1.logInfo)(`  Initial tag: ${draft.createInitialTag ? 'yes' : 'no'}; issue workflows: ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval: ${draft.pullRequestApproval.mode}`);
@@ -65587,8 +65602,10 @@ function registerSetupCommand(program) {
                             permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
                             break;
                         }
-                        if (decision === 'revise')
+                        if (decision === 'revise') {
+                            choiceReviewPass = journey?.revisitChoices() ?? choiceReviewPass + 1;
                             continue;
+                        }
                         if ((0, setup_pat_intent_policy_1.setupPatIntentOwnerConflict)(draft, ownerKind) || intentErrors.length > 0) {
                             throw new application_error_1.ApplicationError('configuration.invalid', 'Correct the reported setup intent or local --config/flags, then retry guided setup. No PAT was requested.');
                         }
@@ -66514,7 +66531,14 @@ class SetupCredentialPromptAdapter {
     async reviewSetupPatIntent() {
         if (!this.terminal)
             return 'manual';
-        return await this.readChoice('Review these intended grants before opening GitHub. Continue, revise choices, view full permission table, or enter a PAT manually?', ['continue', 'revise', 'manual', 'details']);
+        const choice = await this.readChoice('Review these intended grants before opening GitHub. What would you like to do?', ['continue to GitHub', 'review all setup choices again', 'view full permission table', 'enter a PAT manually']);
+        if (choice === 'review all setup choices again')
+            return 'revise';
+        if (choice === 'view full permission table')
+            return 'details';
+        if (choice === 'enter a PAT manually')
+            return 'manual';
+        return 'continue';
     }
     configureWorkflowPatGuide(url, resolveIdentity, requirements) {
         this.workflowPatGuide = url;
@@ -66795,6 +66819,7 @@ class ConsoleSetupJourneyPresenter {
 }
 exports.ConsoleSetupJourneyPresenter = ConsoleSetupJourneyPresenter;
 function renderSetupJourney(view, maximumWidth) {
+    const revisitingChoices = view.current === 'Setup choices' && view.choiceReviewPass > 1;
     const state = view.outcome === 'complete' ? 'Complete: setup applied successfully.'
         : view.outcome === 'dry-run' ? 'Complete: dry run only; no changes were applied.'
             : view.outcome === 'partial' ? 'Partial: application started; inspect the result before retrying.'
@@ -66804,9 +66829,9 @@ function renderSetupJourney(view, maximumWidth) {
                             : 'No changes have been applied.';
     return (0, setup_prompt_rendering_1.renderBox)([
         `Repository: ${view.repository}`,
-        `Stage ${view.position}/${view.total} · ${view.current}`,
+        `Stage ${view.position}/${view.total} · ${view.current}${revisitingChoices ? ` · review pass ${view.choiceReviewPass}` : ''}`,
         `Complete: ${view.complete.join(' → ') || 'none'}`,
-        `Now: ${view.current}`,
+        `Now: ${revisitingChoices ? 'reviewing saved setup choices' : view.current}`,
         `Next: ${view.pending.join(' → ') || 'none'}`,
         state,
     ].join('\n'), 'Copilot setup', 36, maximumWidth);
@@ -67044,12 +67069,25 @@ exports.ConsoleSetupQuestionRenderer = void 0;
 const setup_prompt_rendering_1 = __nccwpck_require__(83434);
 const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
 class ConsoleSetupQuestionRenderer {
-    constructor(phase = 'full') {
+    constructor(phase = 'full', choiceReviewPass = 1) {
         this.phase = phase;
+        this.choiceReviewPass = choiceReviewPass;
     }
     showIntroduction() {
         if (this.phase === 'permission-intent') {
-            console.log((0, setup_prompt_rendering_1.renderBox)('First, choose the setup options that affect your temporary PAT permissions. These answers will carry into the full wizard and will not be asked again. No GitHub changes happen in this step.', 'Setup PAT permission intent'));
+            console.log((0, setup_prompt_rendering_1.renderBox)(this.choiceReviewPass > 1
+                ? [
+                    `Reviewing your setup choices again (pass ${this.choiceReviewPass}).`,
+                    'This is the same setup run. Your answers are saved as defaults.',
+                    'Press Enter to keep each answer, or enter a new value.',
+                    'After this pass you return to the setup PAT permission review.',
+                    'No setup changes have been applied.',
+                ].join('\n')
+                : [
+                    'First, choose the setup options that affect your temporary PAT permissions.',
+                    'These answers carry into the later full wizard and are not asked there again',
+                    'unless you choose to review them here. No GitHub changes happen in this step.',
+                ].join('\n'), this.choiceReviewPass > 1 ? 'Review saved setup choices' : 'Setup PAT permission intent'));
             return;
         }
         console.log((0, setup_prompt_rendering_1.renderBox)('This wizard configures repository workflows, GitHub Actions resources, AI agents, and operational defaults.\n\nThe setup PAT is used in memory only. Runtime credentials are collected separately after the plan is approved.', 'Copilot Setup'));

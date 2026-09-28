@@ -43,6 +43,22 @@ describe('setup presenters and prompt-specific adapters', () => {
     log.mockRestore();
   });
 
+  it('distinguishes the first permission-intent pass from a deliberate second pass', () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      new ConsoleSetupQuestionRenderer('permission-intent').showIntroduction();
+      expect(log.mock.calls.flat().join('\n')).toContain('later full wizard');
+      log.mockClear();
+      new ConsoleSetupQuestionRenderer('permission-intent', 2).showIntroduction();
+      const output = log.mock.calls.flat().join('\n');
+      expect(output).toContain('Reviewing your setup choices again (pass 2)');
+      expect(output).toContain('same setup run');
+      expect(output).toContain('Press Enter to keep each answer');
+      expect(output).toContain('return to the setup PAT permission review');
+      expect(output).not.toContain('First, choose');
+    } finally { log.mockRestore(); }
+  });
+
   it('renders every doctor presentation label in the resolved repository locale', () => {
     const catalog = resolveStaticSetupDoctorCatalog('es-ES');
     const rendered = renderDoctorReport(buildDoctorReport([
@@ -286,7 +302,7 @@ describe('setup presenters and prompt-specific adapters', () => {
       const input = terminal([
         { kind: 'value', value: '1' },
         { kind: 'value', value: '2' },
-        { kind: 'value', value: '3' },
+        { kind: 'value', value: '4' },
         { kind: 'value', value: 'manual-token' },
       ]);
       const adapter = new SetupCredentialPromptAdapter(input, {});
@@ -303,9 +319,16 @@ describe('setup presenters and prompt-specific adapters', () => {
   });
 
   it('offers the full setup permission table as a review action', async () => {
-    const input = terminal([{ kind: 'value', value: '4' }]);
+    const input = terminal([{ kind: 'value', value: '3' }]);
     await expect(new SetupCredentialPromptAdapter(input, {}).reviewSetupPatIntent()).resolves.toBe('details');
     expect(input.readText).toHaveBeenCalledWith(expect.stringContaining('view full permission table'));
+  });
+
+  it('lists PAT review actions in the same order as the numbered menu', async () => {
+    const input = terminal([{ kind: 'value', value: '3' }]);
+    await new SetupCredentialPromptAdapter(input, {}).reviewSetupPatIntent();
+    const prompt = String(input.readText.mock.calls[0][0]);
+    expect(prompt).toMatch(/1\) continue to GitHub[\s\S]*2\) review all setup choices again[\s\S]*3\) view full permission table[\s\S]*4\) enter a PAT manually/u);
   });
 
   it('rejects an invalid authenticated setup account without prompting', async () => {

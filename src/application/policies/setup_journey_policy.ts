@@ -23,6 +23,7 @@ export interface SetupJourneyView {
   readonly pending: readonly string[];
   readonly outcome?: SetupJourneyOutcome;
   readonly mutationStarted: boolean;
+  readonly choiceReviewPass: number;
 }
 
 export function buildSetupJourneyView(
@@ -30,6 +31,7 @@ export function buildSetupJourneyView(
   stage: SetupJourneyStage,
   mutationStarted: boolean,
   outcome?: SetupJourneyOutcome,
+  choiceReviewPass = 1,
 ): SetupJourneyView {
   const position = SETUP_JOURNEY_STAGES.indexOf(stage);
   return {
@@ -44,5 +46,6 @@ export function buildSetupJourneyView(
     pending: SETUP_JOURNEY_STAGES.slice(position + 1).map(item => labels[item]),
     ...(outcome ? { outcome } : {}),
     mutationStarted,
+    choiceReviewPass,
   };
 }

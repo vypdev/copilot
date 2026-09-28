@@ -32,6 +32,12 @@ additional grants, setup stops before applying it and prints a corrected link.
 Update the PAT in GitHub or create a replacement, then rerun setup. Guided
 setup shows the account returned by GitHub and asks you to confirm it.
 
+If you choose **Review all setup choices again** at the permission preview,
+the terminal clearly marks a second pass over your saved answers. Press Enter
+to keep an answer, or change it; afterward you return to the same PAT review
+with permissions recalculated. No PAT link has been accepted and no setup
+mutation has started merely because you revisited these choices.
+
 After the plan, the bot link uses the selected workflow permissions. Enter the
 expected bot login first: setup resolves its GitHub numeric ID, then checks the
 PAT's own `/user` identity against that ID before any Secret write. A manual or

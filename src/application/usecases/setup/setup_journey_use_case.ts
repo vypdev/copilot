@@ -10,6 +10,7 @@ export class SetupJourneyUseCase {
   private stage: SetupJourneyStage = 'repository';
   private outcome?: SetupJourneyOutcome;
   private mutationStarted = false;
+  private choiceReviewPass = 1;
 
   constructor(private readonly repository: string, private readonly presenter: SetupJourneyPresenterPort) {}
 
@@ -20,6 +21,17 @@ export class SetupJourneyUseCase {
     if (next === SETUP_JOURNEY_STAGES.indexOf(this.stage)) return;
     this.stage = stage;
     this.present();
+  }
+
+  /** The only deliberate backwards transition: revisit local choices before PAT entry. */
+  revisitChoices(): number {
+    if (this.stage !== 'setup-pat' || this.outcome || this.mutationStarted) {
+      throw new Error('Setup choices can be revisited only from pre-PAT review.');
+    }
+    this.choiceReviewPass += 1;
+    this.stage = 'choices';
+    this.present();
+    return this.choiceReviewPass;
   }
 
   markMutationStarted(): void {
@@ -41,6 +53,8 @@ export class SetupJourneyUseCase {
   }
 
   private present(): void {
-    this.presenter.present(buildSetupJourneyView(this.repository, this.stage, this.mutationStarted, this.outcome));
+    this.presenter.present(buildSetupJourneyView(
+      this.repository, this.stage, this.mutationStarted, this.outcome, this.choiceReviewPass,
+    ));
   }
 }

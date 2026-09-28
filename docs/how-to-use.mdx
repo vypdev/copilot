@@ -56,6 +56,14 @@ review to see reasons and conditional grants without restarting the questions;
 manual PAT entry shows that table directly. Supplied-token and unattended paths
 retain the full table. This display never includes token values.
 
+At the setup PAT permission review, **Review all setup choices again** starts
+another pass over the same in-memory answers. The terminal marks it as a review
+pass, temporarily returns to the Setup choices phase, and explains that Enter
+keeps each previous answer. When the pass ends, you return to the setup PAT
+permission summary with any changed grants recalculated. This is not a new
+setup run; no repository changes occur during these passes. The later full
+wizard still reuses these answers instead of asking them again.
+
 Open each link in the appropriate GitHub
 account, complete GitHub's sign-in/2FA, change **All repositories** to **Only
 select repositories**, and **select only the intended repository**

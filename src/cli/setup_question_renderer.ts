@@ -4,13 +4,28 @@ import { color, renderBox } from './setup_prompt_rendering';
 import { setupQuestionnaireStateLabel } from '../application/policies/setup_questionnaire_policy';
 
 export class ConsoleSetupQuestionRenderer implements SetupQuestionRenderer {
-  constructor(private readonly phase: 'full' | 'permission-intent' = 'full') {}
+  constructor(
+    private readonly phase: 'full' | 'permission-intent' = 'full',
+    private readonly choiceReviewPass = 1,
+  ) {}
 
   showIntroduction(): void {
     if (this.phase === 'permission-intent') {
       console.log(renderBox(
-        'First, choose the setup options that affect your temporary PAT permissions. These answers will carry into the full wizard and will not be asked again. No GitHub changes happen in this step.',
-        'Setup PAT permission intent',
+        this.choiceReviewPass > 1
+          ? [
+              `Reviewing your setup choices again (pass ${this.choiceReviewPass}).`,
+              'This is the same setup run. Your answers are saved as defaults.',
+              'Press Enter to keep each answer, or enter a new value.',
+              'After this pass you return to the setup PAT permission review.',
+              'No setup changes have been applied.',
+            ].join('\n')
+          : [
+              'First, choose the setup options that affect your temporary PAT permissions.',
+              'These answers carry into the later full wizard and are not asked there again',
+              'unless you choose to review them here. No GitHub changes happen in this step.',
+            ].join('\n'),
+        this.choiceReviewPass > 1 ? 'Review saved setup choices' : 'Setup PAT permission intent',
       ));
       return;
     }

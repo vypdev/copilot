@@ -50,7 +50,14 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
   }
   async reviewSetupPatIntent(): Promise<'continue' | 'revise' | 'manual' | 'details'> {
     if (!this.terminal) return 'manual';
-    return await this.readChoice('Review these intended grants before opening GitHub. Continue, revise choices, view full permission table, or enter a PAT manually?', ['continue', 'revise', 'manual', 'details']) as 'continue' | 'revise' | 'manual' | 'details';
+    const choice = await this.readChoice(
+      'Review these intended grants before opening GitHub. What would you like to do?',
+      ['continue to GitHub', 'review all setup choices again', 'view full permission table', 'enter a PAT manually'],
+    );
+    if (choice === 'review all setup choices again') return 'revise';
+    if (choice === 'view full permission table') return 'details';
+    if (choice === 'enter a PAT manually') return 'manual';
+    return 'continue';
   }
   configureWorkflowPatGuide(url: string, resolveIdentity: (login: string) => Promise<SetupGithubIdentity>, requirements?: readonly SetupTokenPermissionRequirement[]): void {
     this.workflowPatGuide = url;

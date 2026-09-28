@@ -23,6 +23,15 @@ describe('setup journey presenter', () => {
     expect(output).toContain('dry run only; no changes were applied');
   });
 
+  it('labels the second choice pass and stays readable at narrow width without color', () => {
+    const output = renderSetupJourney(buildSetupJourneyView('owner/repo', 'choices', false, undefined, 2), 48);
+    expect(output).toContain('Stage 2/6 · Setup choices · review pass 2');
+    expect(output).toContain('Now: reviewing saved setup choices');
+    expect(output).toContain('Next: Setup PAT');
+    expect(output).toContain('No changes have been applied.');
+    expect(output.split('\n').every(line => line.length <= 50)).toBe(true);
+  });
+
   it('renders the active mutation state and the first-stage pending list', () => {
     const applying = renderSetupJourney(buildSetupJourneyView('owner/repo', 'apply', true), 80);
     expect(applying).toContain('changes may already exist');

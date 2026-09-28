@@ -189,6 +189,12 @@ by policy when irrelevant; there is no legacy state alias or back-navigation
 mode. After questionnaire completion, credential validation and provisioning
 remain separate application flows.
 
+The pre-PAT intent review may start a **new questionnaire pass** over the
+current in-memory draft. Each pass remains forward-only; this explicit review
+loop is not an implicit reset or back-navigation inside a questionnaire. The
+journey presentation reopens `Setup choices` only before PAT entry and returns
+to `Setup PAT` when that pass finishes.
+
 Cancellation before confirmation writes nothing. Partial remote provisioning
 retains successful facts and reports remaining work; retries MUST preserve valid
 existing resources and avoid duplicate shadowing.
@@ -274,6 +280,33 @@ transition validity; the terminal adapter owns width, wrapping, and ANSI.
 Do not persist phase state or print credentials. Detailed permission tables
 remain available on explicit request and for manual/unattended paths; the
 interactive guided review defaults to an exact compact grant summary.
+
+If the operator chooses to review intent again, the journey MUST visibly
+reopen `Setup choices`, label the review pass, and mark `Setup PAT` pending
+until the repeated questions finish. This is the only backwards journey
+transition and is allowed only before PAT entry and before mutation. The
+terminal MUST explain that existing answers remain as defaults, Enter keeps
+them, the flow returns to PAT review afterward, and no setup changes have
+been applied. It MUST NOT reuse the first-pass introduction. On completion,
+show an explicit return to `Setup PAT` and recalculate the permission preview.
+The later full wizard still does not re-ask the pre-PAT answers. No fixed
+question counter or percentage is displayed because the set is conditional.
+
+```text
+Copilot setup · owner/repo
+Stage 2/6 · Setup choices · review pass 2
+Complete: Repository
+Now: reviewing saved setup choices
+Next: Setup PAT → Plan → Bot PAT & credentials → Apply
+No changes have been applied.
+```
+
+Text equivalent: the operator deliberately returned to a second pass over
+saved choices, will reach PAT review afterward, and has not begun mutation.
+This amendment adds at least **eight distinct cases** beyond the original
+journey budget: three transition/guard cases, two introduction and narrow
+no-color presentation cases, and three CLI return/cancellation/permission
+preview integration cases. The existing coverage thresholds remain.
 
 The presentation introduces no new flags or persisted configuration. It has
 no effect on GitHub Actions, issues, PRs, comments, or checks. Rollback removes

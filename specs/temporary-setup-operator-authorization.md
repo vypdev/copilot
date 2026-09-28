@@ -315,6 +315,14 @@ answers cannot modify a reviewed draft. A changed plan invalidates the old
 link. A crash cannot guarantee GitHub deletion; restart and recovery
 instructions must not imply otherwise.
 
+Choosing `Review all setup choices again` from `intent-review` starts an
+explicit second (or later) pass over the existing draft, not a fresh setup
+run. The user is told this before the first repeated question. Previously
+answered values remain defaults; local flags/config still fix their original
+fields. This loop never creates a PAT, inspects GitHub, or applies setup. Its
+journey stage reopens `Setup choices`, then returns to `Setup PAT` with a newly
+computed grant preview. Cancellation ends the run with no setup mutation.
+
 ## 7. User-facing configuration
 
 | Input | Type | Recommended default | Allowed values | Scope/persistence |
@@ -406,8 +414,9 @@ The [setup journey presentation contract](./setup-configuration-credentials-and-
 applies across both PAT roles. Before interactive guided intent, show the
 bootstrap grants compactly, not the complete conditional table. After choices,
 show every currently required grant and a count of conditional/remote-unknown
-grants. The review choices are `Continue`, `Revise choices`, `View full permission
-table`, and `Enter a PAT manually`. Selecting detail prints the same policy
+grants. The review choices are `Continue to GitHub`, `Review all setup choices
+again`, `View full permission table`, and `Enter a PAT manually`, in precisely
+that numbered order. Selecting detail prints the same policy
 requirements with reasons and returns to review **without rerunning questions**.
 Manual entry shows the full bootstrap table immediately; supplied-token and
 non-interactive paths keep the existing table and audit. The raw GitHub URL
@@ -430,6 +439,24 @@ from the same requirement objects and may not be edited independently.
 Add five operator-specific cases to the journey budget: detail returns to
 review, manual shows full table, revision changes the summary, cancellation
 preserves the no-change state, and narrow no-color output remains readable.
+
+When choice 2 is selected, the terminal MUST show a transition message before
+repeating any question:
+
+```text
+Reviewing your setup choices again (pass 2).
+This is the same setup run. Your answers are saved as defaults; press Enter
+to keep one or enter a new value. After this pass you return to the setup PAT
+permission review. No setup changes have been applied.
+Stage 2/6 · Setup choices · review pass 2
+```
+
+Text equivalent: this is a deliberate second pass over saved answers, with
+no repository mutation, followed by a return to the PAT grant review. After
+the pass, print `Choice review complete. Returning to setup PAT permission
+review.` before the recalculated preview. No new command, persisted setting,
+browser action, or account state is introduced. The review counter is one-run
+presentation state; it cannot be used as authorization or grant evidence.
 
 The current CLI is English; this example is illustrative and follows its
 existing text-first styling. Preserve one primary action per state.

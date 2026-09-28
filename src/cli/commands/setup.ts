@@ -129,9 +129,10 @@ export function registerSetupCommand(program: Command): void {
               skipRepositoryVariables: Boolean(options.skipVariables),
               skipRepositorySecrets: Boolean(options.skipSecrets),
             });
+            let choiceReviewPass = 1;
             while (true) {
               const context = { skipQuestionIds: fixedQuestionIds };
-              const collector = new SetupQuestionnaireController(terminal!, new ConsoleSetupQuestionRenderer('permission-intent'));
+              const collector = new SetupQuestionnaireController(terminal!, new ConsoleSetupQuestionRenderer('permission-intent', choiceReviewPass));
               const intent = await collector.collect(createSetupPermissionIntentQuestionnaire(draft, context), context);
               if (intent.terminal === 'cancelled') throw new SetupTerminalCancelledError();
               draft = intent.draft;
@@ -151,6 +152,7 @@ export function registerSetupCommand(program: Command): void {
                 logInfo(`The selected local configuration needs correction before a guided link can be generated:\n${intentErrors.map(item => `  - ${item}`).join('\n')}`);
               }
               const preview = buildSetupPatIntentPermissionRequirements(draft, ownerKind);
+              if (choiceReviewPass > 1) logInfo('Choice review complete. Returning to setup PAT permission review.');
               journey?.advance('setup-pat');
               logInfo('Permission intent:');
               logInfo(`  Initial tag: ${draft.createInitialTag ? 'yes' : 'no'}; issue workflows: ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval: ${draft.pullRequestApproval.mode}`);
@@ -168,7 +170,10 @@ export function registerSetupCommand(program: Command): void {
                 permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
                 break;
               }
-              if (decision === 'revise') continue;
+              if (decision === 'revise') {
+                choiceReviewPass = journey?.revisitChoices() ?? choiceReviewPass + 1;
+                continue;
+              }
               if (setupPatIntentOwnerConflict(draft, ownerKind) || intentErrors.length > 0) {
                 throw new ApplicationError('configuration.invalid', 'Correct the reported setup intent or local --config/flags, then retry guided setup. No PAT was requested.');
               }

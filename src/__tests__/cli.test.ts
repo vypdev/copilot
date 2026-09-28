@@ -521,7 +521,7 @@ describe('CLI', () => {
 
     it('allows the operator to choose manual entry after reviewing local intent', async () => {
       const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
-      const input = guidedTerminal(prompt => prompt.includes('Review these intended grants') ? '3'
+      const input = guidedTerminal(prompt => prompt.includes('Review these intended grants') ? '4'
         : prompt.includes('repository owner an organization') ? '2' : '');
       const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
         .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
@@ -568,8 +568,67 @@ describe('CLI', () => {
         expect(mockTokenPermissionInspect.mock.calls[0][0].requirements).toEqual(expect.arrayContaining([
           expect.objectContaining({ permission: 'Contents', level: 'read' }),
         ]));
-        expect(consoleLogSpy.mock.calls.flat().join('\n')).toContain('contents=read');
+        const output = consoleLogSpy.mock.calls.flat().join('\n');
+        expect(output).toContain('contents=read');
+        expect(output).toContain('Stage 2/6 · Setup choices · review pass 2');
+        expect(output).toContain('This is the same setup run. Your answers are saved as defaults');
+        const { logInfo } = require('../utils/logger');
+        expect(logInfo).toHaveBeenCalledWith('Choice review complete. Returning to setup PAT permission review.');
+        const firstPatReview = output.indexOf('Stage 3/6 · Setup PAT');
+        const choiceReview = output.indexOf('Stage 2/6 · Setup choices · review pass 2');
+        const returnedPatReview = output.indexOf('Stage 3/6 · Setup PAT', choiceReview + 1);
+        expect(firstPatReview).toBeLessThan(choiceReview);
+        expect(choiceReview).toBeLessThan(returnedPatReview);
         expect(process.exitCode).toBe(1);
+      } finally { createTerminal.mockRestore(); }
+    });
+
+    it('keeps fixed flag choices out of every review pass', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      let reviews = 0;
+      const input = guidedTerminal(prompt => {
+        if (prompt.includes('repository owner an organization')) return '2';
+        if (prompt.includes('Review these intended grants')) return ++reviews === 1 ? '2' : '1';
+        return '';
+      });
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      mockTokenPermissionInspect.mockResolvedValueOnce({ ...acceptedSetupPatReport(), ready: false });
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--skip-secrets', '--pr-approval-mode', 'off']);
+        expect(reviews).toBe(2);
+        expect(input.readText.mock.calls.some(([prompt]) => String(prompt).includes('Validate and provision required GitHub Actions Secrets?'))).toBe(false);
+        expect(input.readText.mock.calls.some(([prompt]) => String(prompt).includes('Bot PR approval mode'))).toBe(false);
+        expect(consoleLogSpy.mock.calls.flat().join('\n')).toContain('review pass 2');
+      } finally { createTerminal.mockRestore(); }
+    });
+
+    it('cancels safely during a repeated choice pass without requesting a PAT', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      let revisiting = false;
+      const terminal = {
+        isInteractive: () => true,
+        readText: jest.fn(async (prompt: string) => {
+          if (prompt.includes('Review these intended grants')) {
+            revisiting = true;
+            return { kind: 'value' as const, value: '2' };
+          }
+          if (revisiting && prompt.includes('Issue automation:')) return { kind: 'end-of-input' as const };
+          return { kind: 'value' as const, value: prompt.includes('repository owner an organization') ? '2' : '' };
+        }),
+        readSecret: jest.fn(),
+        close: jest.fn(),
+      };
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(terminal as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      try {
+        await program.parseAsync(['node', 'cli', 'setup']);
+        const output = consoleLogSpy.mock.calls.flat().join('\n');
+        expect(output).toContain('Stage 2/6 · Setup choices · review pass 2');
+        expect(output).toContain('Cancelled: setup stopped.');
+        expect(terminal.readSecret).not.toHaveBeenCalled();
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(130);
       } finally { createTerminal.mockRestore(); }
     });
 
@@ -578,7 +637,7 @@ describe('CLI', () => {
       let reviews = 0;
       const input = guidedTerminal(prompt => {
         if (prompt.includes('repository owner an organization')) return '2';
-        if (prompt.includes('Review these intended grants')) return ++reviews === 1 ? '4' : '1';
+        if (prompt.includes('Review these intended grants')) return ++reviews === 1 ? '3' : '1';
         return '';
       });
       const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')

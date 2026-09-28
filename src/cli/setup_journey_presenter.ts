@@ -9,6 +9,7 @@ export class ConsoleSetupJourneyPresenter implements SetupJourneyPresenterPort {
 }
 
 export function renderSetupJourney(view: SetupJourneyView, maximumWidth?: number): string {
+  const revisitingChoices = view.current === 'Setup choices' && view.choiceReviewPass > 1;
   const state = view.outcome === 'complete' ? 'Complete: setup applied successfully.'
     : view.outcome === 'dry-run' ? 'Complete: dry run only; no changes were applied.'
       : view.outcome === 'partial' ? 'Partial: application started; inspect the result before retrying.'
@@ -18,9 +19,9 @@ export function renderSetupJourney(view: SetupJourneyView, maximumWidth?: number
               : 'No changes have been applied.';
   return renderBox([
     `Repository: ${view.repository}`,
-    `Stage ${view.position}/${view.total} · ${view.current}`,
+    `Stage ${view.position}/${view.total} · ${view.current}${revisitingChoices ? ` · review pass ${view.choiceReviewPass}` : ''}`,
     `Complete: ${view.complete.join(' → ') || 'none'}`,
-    `Now: ${view.current}`,
+    `Now: ${revisitingChoices ? 'reviewing saved setup choices' : view.current}`,
     `Next: ${view.pending.join(' → ') || 'none'}`,
     state,
   ].join('\n'), 'Copilot setup', 36, maximumWidth);

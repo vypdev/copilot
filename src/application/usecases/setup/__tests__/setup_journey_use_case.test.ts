@@ -60,4 +60,37 @@ describe('setup journey', () => {
     expect(present).toHaveBeenCalledTimes(1);
     expect(present.mock.lastCall?.[0]).toMatchObject({ current: 'Setup choices', complete: ['Repository'] });
   });
+
+  it('reopens only pre-PAT choices and returns to PAT review without resetting the run', () => {
+    const present = jest.fn();
+    const journey = new SetupJourneyUseCase('owner/repo', { present });
+    journey.advance('choices');
+    journey.advance('setup-pat');
+    expect(journey.revisitChoices()).toBe(2);
+    expect(present.mock.lastCall?.[0]).toMatchObject({
+      current: 'Setup choices', choiceReviewPass: 2, complete: ['Repository'],
+      pending: ['Setup PAT', 'Plan', 'Bot PAT & credentials', 'Apply'], mutationStarted: false,
+    });
+    journey.advance('setup-pat');
+    expect(present.mock.lastCall?.[0]).toMatchObject({ current: 'Setup PAT', choiceReviewPass: 2 });
+    expect(journey.revisitChoices()).toBe(3);
+  });
+
+  it('rejects a review loop outside pre-PAT review or after cancellation', () => {
+    const journey = new SetupJourneyUseCase('owner/repo', { present: jest.fn() });
+    expect(() => journey.revisitChoices()).toThrow('pre-PAT');
+    journey.advance('setup-pat');
+    journey.finish('cancelled');
+    expect(() => journey.revisitChoices()).toThrow('pre-PAT');
+    const later = new SetupJourneyUseCase('owner/repo', { present: jest.fn() });
+    later.advance('plan');
+    expect(() => later.revisitChoices()).toThrow('pre-PAT');
+  });
+
+  it('cannot reopen choices once application has begun', () => {
+    const journey = new SetupJourneyUseCase('owner/repo', { present: jest.fn() });
+    journey.advance('apply');
+    journey.markMutationStarted();
+    expect(() => journey.revisitChoices()).toThrow('pre-PAT');
+  });
 });
