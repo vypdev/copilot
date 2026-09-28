@@ -11,14 +11,13 @@ export function createInteractiveTerminalDriver(): TerminalDriver | undefined {
 }
 
 export class NodeTerminalDriver implements TerminalDriver {
-  private readonly readline: Interface;
+  private readline?: Interface;
   private closed = false;
 
   constructor() {
     if (!interactiveTerminalAvailable()) {
       throw new Error('An interactive terminal is required.');
     }
-    this.readline = createInterface({ input: stdin, output: stdout });
   }
 
   isInteractive(): boolean {
@@ -27,6 +26,8 @@ export class NodeTerminalDriver implements TerminalDriver {
 
   async readText(prompt: string): Promise<TerminalReadResult> {
     if (this.closed) return { kind: 'end-of-input' };
+    const readline = createInterface({ input: stdin, output: stdout });
+    this.readline = readline;
     const abort = new AbortController();
     let interrupted = false;
     let ended = false;
@@ -38,17 +39,19 @@ export class NodeTerminalDriver implements TerminalDriver {
       ended = true;
       abort.abort();
     };
-    this.readline.once('SIGINT', onInterrupt);
-    this.readline.once('close', onClose);
+    readline.once('SIGINT', onInterrupt);
+    readline.once('close', onClose);
     try {
-      return { kind: 'value', value: await this.readline.question(prompt, { signal: abort.signal }) };
+      return { kind: 'value', value: await readline.question(prompt, { signal: abort.signal }) };
     } catch (error) {
       if (interrupted) return { kind: 'cancel' };
       if (ended || this.closed || isAbortError(error)) return { kind: 'end-of-input' };
       throw error;
     } finally {
-      this.readline.off('SIGINT', onInterrupt);
-      this.readline.off('close', onClose);
+      readline.off('SIGINT', onInterrupt);
+      readline.off('close', onClose);
+      readline.close();
+      if (this.readline === readline) this.readline = undefined;
     }
   }
 
@@ -154,7 +157,7 @@ export class NodeTerminalDriver implements TerminalDriver {
   close(): void {
     if (this.closed) return;
     this.closed = true;
-    this.readline.close();
+    this.readline?.close();
   }
 }
 

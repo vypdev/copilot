@@ -66916,7 +66916,6 @@ class NodeTerminalDriver {
         if (!interactiveTerminalAvailable()) {
             throw new Error('An interactive terminal is required.');
         }
-        this.readline = (0, promises_1.createInterface)({ input: node_process_1.stdin, output: node_process_1.stdout });
     }
     isInteractive() {
         return !this.closed;
@@ -66924,6 +66923,8 @@ class NodeTerminalDriver {
     async readText(prompt) {
         if (this.closed)
             return { kind: 'end-of-input' };
+        const readline = (0, promises_1.createInterface)({ input: node_process_1.stdin, output: node_process_1.stdout });
+        this.readline = readline;
         const abort = new AbortController();
         let interrupted = false;
         let ended = false;
@@ -66935,10 +66936,10 @@ class NodeTerminalDriver {
             ended = true;
             abort.abort();
         };
-        this.readline.once('SIGINT', onInterrupt);
-        this.readline.once('close', onClose);
+        readline.once('SIGINT', onInterrupt);
+        readline.once('close', onClose);
         try {
-            return { kind: 'value', value: await this.readline.question(prompt, { signal: abort.signal }) };
+            return { kind: 'value', value: await readline.question(prompt, { signal: abort.signal }) };
         }
         catch (error) {
             if (interrupted)
@@ -66948,8 +66949,11 @@ class NodeTerminalDriver {
             throw error;
         }
         finally {
-            this.readline.off('SIGINT', onInterrupt);
-            this.readline.off('close', onClose);
+            readline.off('SIGINT', onInterrupt);
+            readline.off('close', onClose);
+            readline.close();
+            if (this.readline === readline)
+                this.readline = undefined;
         }
     }
     async readSecret(prompt) {
@@ -67081,7 +67085,7 @@ class NodeTerminalDriver {
         if (this.closed)
             return;
         this.closed = true;
-        this.readline.close();
+        this.readline?.close();
     }
 }
 exports.NodeTerminalDriver = NodeTerminalDriver;
