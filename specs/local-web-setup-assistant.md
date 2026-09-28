@@ -439,8 +439,10 @@ storage. `web/src/components/` contains cohesive presenters for progress,
 header/theme, status, prompt kinds, context, and outcome. Components receive
 the redacted view and callbacks; they never call `fetch`, import provider or
 policy modules, or infer authority from local UI state. Prompt inputs keep
-only transient local values, clear secrets before submission, and remount when
-the server prompt revision changes. Small pure helpers may normalize defaults
+only transient local values, clear secrets before submission, and the prompt
+presenter is keyed by the server prompt revision inside `PromptCard`. A new
+question remounts with its own defaults; ordinary polling or session-message
+revisions do not erase an answer in progress. Small pure helpers may normalize defaults
 and allowlisted links. Adding a prompt kind belongs in its presenter rather
 than growing the page shell; avoid one-file-per-element indirection with no
 reuse. Architecture tests guard dependency direction and bound shell and
@@ -892,7 +894,7 @@ catalog stays `proposed` until the definition of done is evidenced. Existing
 terminal policy/use cases remain the authority; the current web path does not
 introduce its own permission catalog.
 
-The latest full local run on 2026-09-28 passed 502 Jest suites / 5,389 tests,
+The latest full local run on 2026-09-28 passed 502 Jest suites / 5,390 tests,
 with 95.95% statements, 90.88% branches, 96.53% functions, and 97.26% lines
 repository-wide. The new setup-PAT intent, bootstrap audit, configured audit,
 remote-fact comparison, and override merge modules each reached 100% in all

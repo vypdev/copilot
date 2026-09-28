@@ -141,7 +141,9 @@ describe('local web setup architecture', () => {
       }
     }
     expect(readFileSync(join(browser, 'App.svelte'), 'utf8')).toContain('createSetupSession');
+    expect(readFileSync(join(browser, 'App.svelte'), 'utf8')).toContain('promptRevision={$session.view.promptRevision!}');
     expect(readFileSync(join(browser, 'components', 'PromptCard.svelte'), 'utf8')).toContain('CredentialPrompt');
+    expect(readFileSync(join(browser, 'components', 'PromptCard.svelte'), 'utf8')).toContain('{#key promptRevision}');
   });
 
   test('page shell and presenters remain small and styles have one explicit entrypoint', () => {

@@ -54,9 +54,7 @@
         <ResultPanel outcome={$session.view.outcome} controller={$session.controller} onClose={session.close} />
       {:else if $session.view?.prompt}
         <div class="workspace-grid">
-          {#key $session.view.promptRevision}
-            <PromptCard prompt={$session.view.prompt} revision={$session.view.revision} controller={$session.controller} busy={$session.busy} onSubmit={submit} />
-          {/key}
+          <PromptCard prompt={$session.view.prompt} revision={$session.view.revision} promptRevision={$session.view.promptRevision!} controller={$session.controller} busy={$session.busy} onSubmit={submit} />
           <ContextPanel view={$session.view} />
         </div>
         {#if $session.controller && $session.view.journey?.current !== 'Apply'}<button class="cancel-link" onclick={cancel} disabled={$session.busy}>Cancel setup</button>{/if}

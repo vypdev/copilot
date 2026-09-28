@@ -138,6 +138,20 @@ describe('web setup component semantics', () => {
     expect(html).not.toMatch(/<button[^>]*disabled[^>]*>Continue/);
   });
 
+  test('successive question revisions render their own default values', () => {
+    const question = (id: string, defaultValue: string) => ({
+      kind: 'question', title: 'Question', phase: 'full', pass: 1,
+      question: { stateId: 'repository', id, label: id, kind: 'text', defaultValue },
+    });
+    const first = markup('PromptCard', { promptRevision: 7, revision: 7,
+      prompt: question('first', 'alpha'), controller: true, busy: false });
+    const second = markup('PromptCard', { promptRevision: 9, revision: 9,
+      prompt: question('second', 'beta'), controller: true, busy: false });
+    expect(first).toContain('value="alpha"');
+    expect(second).toContain('value="beta"');
+    expect(second).not.toContain('value="alpha"');
+  });
+
   test('waiting state never implies that setup has completed', () => {
     const html = markup('WaitingPanel', {});
     expect(html).not.toContain('Setup completed');
