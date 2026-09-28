@@ -18,16 +18,41 @@ function browserSources(directory: string): string[] {
   });
 }
 
-function moduleImports(path: string): Array<{ specifier: string; typeOnly: boolean }> {
-  const raw = readFileSync(path, 'utf8');
+function moduleImports(path: string, text = readFileSync(path, 'utf8')): Array<{ specifier: string; typeOnly: boolean }> {
+  const raw = text;
   const source = path.endsWith('.svelte')
     ? [...raw.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map(match => match[1]).join('\n')
     : raw;
   const ast = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-  return ast.statements.filter(ts.isImportDeclaration).map(node => ({
-    specifier: (node.moduleSpecifier as ts.StringLiteral).text,
-    typeOnly: node.importClause?.isTypeOnly === true,
-  }));
+  const dependencies: Array<{ specifier: string; typeOnly: boolean }> = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+      const named = node.importClause?.namedBindings;
+      dependencies.push({ specifier: node.moduleSpecifier.text,
+        typeOnly: node.importClause?.isTypeOnly === true || (named && ts.isNamedImports(named)
+          && named.elements.length > 0 && named.elements.every(element => element.isTypeOnly)) === true });
+      return;
+    }
+    if (ts.isExportDeclaration(node) && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
+      const named = node.exportClause;
+      dependencies.push({ specifier: node.moduleSpecifier.text,
+        typeOnly: node.isTypeOnly || (named && ts.isNamedExports(named)
+          && named.elements.length > 0 && named.elements.every(element => element.isTypeOnly)) === true });
+      return;
+    }
+    if (ts.isCallExpression(node) && node.arguments.length === 1 && ts.isStringLiteral(node.arguments[0])
+      && ((ts.isIdentifier(node.expression) && node.expression.text === 'require')
+        || node.expression.kind === ts.SyntaxKind.ImportKeyword)) {
+      dependencies.push({ specifier: node.arguments[0].text, typeOnly: false });
+    }
+    if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)
+      && ts.isStringLiteral(node.argument.literal)) {
+      dependencies.push({ specifier: node.argument.literal.text, typeOnly: true });
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(ast);
+  return dependencies;
 }
 
 function localModule(from: string, specifier: string): string | undefined {
@@ -38,6 +63,27 @@ function localModule(from: string, specifier: string): string | undefined {
 }
 
 describe('local web setup architecture', () => {
+  test('dependency reader includes re-exports, require, dynamic import and type-only forms', () => {
+    expect(moduleImports('fixture.ts', `
+      import { type Input } from './types';
+      export * from './runtime';
+      export { Adapter } from './adapter';
+      export type { Contract } from './contract';
+      export { type View } from './view';
+      const runtime = require('./commonjs');
+      const later = import('./lazy');
+      type LazyType = import('./type-import').Shape;
+    `)).toEqual([
+      { specifier: './types', typeOnly: true },
+      { specifier: './runtime', typeOnly: false },
+      { specifier: './adapter', typeOnly: false },
+      { specifier: './contract', typeOnly: true },
+      { specifier: './view', typeOnly: true },
+      { specifier: './commonjs', typeOnly: false },
+      { specifier: './lazy', typeOnly: false },
+      { specifier: './type-import', typeOnly: true },
+    ]);
+  });
   test('browser imports only redacted application contracts, as types, across the actual dependency graph', () => {
     const browser = join(root, 'web', 'src');
     const contract = join(root, 'src', 'application', 'contracts', 'web_setup_view');

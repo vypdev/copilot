@@ -485,7 +485,8 @@ Both terminal and web routes use the same questionnaire parser for this choice.
 
 ### 8.3 Executable architecture and packaging constraints
 
-1. A dependency test MUST reject `src/domain`/`src/application` imports of
+1. A dependency test MUST reject `src/domain`/`src/application` imports,
+   re-exports, and literal lazy/CommonJS dependencies on
    Svelte, Vite, DOM, `node:http`, terminal presenters, Octokit concrete
    adapters, and CLI modules; Svelte modules MUST import only public
    view/contracts and never provider or mutation modules.
@@ -754,7 +755,8 @@ Repository-wide Jest/coverage, lint, typecheck, build, documentation,
 workflow, catalog, and npm-package gates remain. New pure policies target
 100% branch coverage; changed application/server/credential modules target
 at least 95% statements/lines and 90% branches/functions, with no regression
-to higher existing budgets. Architecture tests parse imports and contract
+to higher existing budgets. Architecture tests parse imports, re-exports,
+literal lazy/CommonJS dependencies, and contract
 schemas, not prose. Use deterministic fake clock/IDs, temp repositories,
 fake GitHub ports, fake browsers/HTTP clients, and adversarial origins;
 never use real PATs, issue/Action test resources, external services, or
@@ -890,7 +892,7 @@ catalog stays `proposed` until the definition of done is evidenced. Existing
 terminal policy/use cases remain the authority; the current web path does not
 introduce its own permission catalog.
 
-The latest full local run on 2026-09-28 passed 502 Jest suites / 5,388 tests,
+The latest full local run on 2026-09-28 passed 502 Jest suites / 5,389 tests,
 with 95.95% statements, 90.88% branches, 96.53% functions, and 97.26% lines
 repository-wide. The new setup-PAT intent, bootstrap audit, configured audit,
 remote-fact comparison, and override merge modules each reached 100% in all

@@ -25,7 +25,10 @@ but cannot import provider adapters, mutation use cases, Node HTTP, or PAT
 permission tables. `src/cli/web_setup_server.ts` owns loopback transport and
 static assets; `src/cli/web_setup_adapters.ts` maps semantic browser decisions
 to the existing application ports. Domain/application policy modules must not
-import the browser, Vite, Node HTTP, or terminal renderers.
+import or re-export the browser, Vite, Node HTTP, or terminal renderers. The
+web setup boundary test follows imports, re-exports, literal `require()` and
+dynamic `import()` calls, including type-only forms, so a barrel or lazy load
+cannot hide an outer-layer dependency.
 
 ## Current physical layers
 
