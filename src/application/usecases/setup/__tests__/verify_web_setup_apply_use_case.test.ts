@@ -40,6 +40,8 @@ describe('VerifyWebSetupApplyUseCase', () => {
     const { ports, useCase } = harness();
     expect(await useCase.execute(request)).toBe('approved');
     expect(ports.fileSnapshotMatches).toHaveBeenCalledWith(repository.checkoutRoot, request.selectedFiles, request.fileSnapshot);
+    expect(ports.readRepositoryFacts).toHaveBeenCalledTimes(2);
+    expect(ports.fileSnapshotMatches).toHaveBeenCalledTimes(2);
     expect(ports.remote.inspect).toHaveBeenCalledWith('owner', 'repo', 'test-token');
     expect(ports.remote.inspectCredentialHealthWorkflow).toHaveBeenCalledWith('owner', 'repo', 'test-token', request.configuration.repository.mainBranch);
     expect(ports.permissionAudit.audit).toHaveBeenCalledWith(request.configuration, approvedRemote);
@@ -77,6 +79,26 @@ describe('VerifyWebSetupApplyUseCase', () => {
     jest.spyOn(ports, 'fileSnapshotMatches').mockReturnValue(false);
     await expect(useCase.execute(request)).rejects.toThrow('Selected repository files changed');
     expect(ports.remote.inspect).not.toHaveBeenCalled();
+  });
+
+  test('rejects a changed HEAD after asynchronous GitHub and permission checks', async () => {
+    const { ports, useCase } = harness();
+    const read = jest.spyOn(ports, 'readRepositoryFacts')
+      .mockReturnValueOnce({ ...repository })
+      .mockReturnValue({ ...repository, head: 'b'.repeat(40) });
+    await expect(useCase.execute(request)).rejects.toThrow('repository identity changed');
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(ports.permissionAudit.audit).toHaveBeenCalledTimes(1);
+  });
+
+  test('rejects a selected-file change after asynchronous final checks', async () => {
+    const { ports, useCase } = harness();
+    const matches = jest.spyOn(ports, 'fileSnapshotMatches')
+      .mockReturnValueOnce(true)
+      .mockReturnValue(false);
+    await expect(useCase.execute(request)).rejects.toThrow('Selected repository files changed');
+    expect(matches).toHaveBeenCalledTimes(2);
+    expect(ports.permissionAudit.audit).toHaveBeenCalledTimes(1);
   });
 
   test('fails closed when GitHub facts changed', async () => {

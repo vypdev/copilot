@@ -56394,21 +56394,12 @@ class VerifyWebSetupApplyUseCase {
         if (decision === 'stop')
             return 'declined';
         this.assertActive();
-        const current = this.ports.readRepositoryFacts();
-        const expected = request.repository;
-        if (!current || current.owner !== expected.owner || current.repository !== expected.repository
-            || current.checkoutRoot !== expected.checkoutRoot || current.branch !== expected.branch
-            || current.head !== expected.head) {
-            throw new application_error_1.ApplicationError('configuration.invalid', 'The repository identity changed during setup. No mutation started; restart and review a new plan.');
-        }
-        if (!this.ports.fileSnapshotMatches(expected.checkoutRoot, request.selectedFiles, request.fileSnapshot)) {
-            throw new application_error_1.ApplicationError('configuration.invalid', 'Selected repository files changed since plan review. No mutation started; restart and review a new plan.');
-        }
-        let remote = await this.ports.remote.inspect(expected.owner, expected.repository, request.setupToken);
+        this.assertLocalSnapshot(request);
+        let remote = await this.ports.remote.inspect(request.repository.owner, request.repository.repository, request.setupToken);
         this.assertActive();
         let credentialHealthWorkflow = 'unavailable';
         try {
-            credentialHealthWorkflow = await this.ports.remote.inspectCredentialHealthWorkflow?.(expected.owner, expected.repository, request.setupToken, request.configuration.repository.mainBranch) ?? 'unavailable';
+            credentialHealthWorkflow = await this.ports.remote.inspectCredentialHealthWorkflow?.(request.repository.owner, request.repository.repository, request.setupToken, request.configuration.repository.mainBranch) ?? 'unavailable';
         }
         catch { /* Unknown selected-ref state must not inherit a provisional value. */ }
         this.assertActive();
@@ -56421,7 +56412,21 @@ class VerifyWebSetupApplyUseCase {
         if (audit.status === 'blocked') {
             throw new application_error_1.ApplicationError('authorization.credential-invalid', 'Setup PAT access changed since plan review. No mutation started; correct the PAT and review a new plan.');
         }
+        // The remote reads above can take time. Close that window before the caller applies.
+        this.assertLocalSnapshot(request);
         return 'approved';
+    }
+    assertLocalSnapshot(request) {
+        const current = this.ports.readRepositoryFacts();
+        const expected = request.repository;
+        if (!current || current.owner !== expected.owner || current.repository !== expected.repository
+            || current.checkoutRoot !== expected.checkoutRoot || current.branch !== expected.branch
+            || current.head !== expected.head) {
+            throw new application_error_1.ApplicationError('configuration.invalid', 'The repository identity changed during setup. No mutation started; restart and review a new plan.');
+        }
+        if (!this.ports.fileSnapshotMatches(expected.checkoutRoot, request.selectedFiles, request.fileSnapshot)) {
+            throw new application_error_1.ApplicationError('configuration.invalid', 'Selected repository files changed since plan review. No mutation started; restart and review a new plan.');
+        }
     }
     assertActive() {
         const state = this.ports.sessionState();

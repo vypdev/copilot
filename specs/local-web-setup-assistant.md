@@ -406,6 +406,9 @@ The final web Apply authorization is one application use case with injected
 repository-facts, selected-file snapshot, remote-facts, permission-audit,
 approval, and live-session ports. It must fail closed on missing/drifted facts
 or a session that was cancelled/expired while asynchronous reads were running.
+It checks repository identity and selected-file digests before remote reads
+and again after the final asynchronous permission audit, immediately before
+returning approval; drift during those awaits cannot inherit earlier proof.
 The CLI supplies Git/HTTP/provider adapters, but must not reimplement this
 decision as an inline sequence. The subsequent mutation boundary remains
 single-flight and cannot be entered if the approval use case did not return an
@@ -473,8 +476,9 @@ Both terminal and web routes use the same questionnaire parser for this choice.
   invalidated according to their dependencies; the UI explains why it
   returned to an earlier stage.
 - The repository path is fixed after launch. Recheck canonical path, git
-  owner/repo, selected branch/ref, relevant file digests, and remote facts
-  immediately before Apply. Unexpected drift yields a new plan revision and
+  owner/repo, selected branch/ref, and relevant file digests both before and
+  after asynchronous remote/PAT checks; recheck remote facts during those
+  checks, immediately before Apply. Unexpected drift yields a new plan revision and
   requires fresh human review; never apply from a stale browser response.
   Repository-relative plan labels such as `workflows/name.yml` and
   `ISSUE_TEMPLATE/name.yml` MUST be translated to their actual checkout
@@ -894,8 +898,8 @@ catalog stays `proposed` until the definition of done is evidenced. Existing
 terminal policy/use cases remain the authority; the current web path does not
 introduce its own permission catalog.
 
-The latest full local run on 2026-09-28 passed 502 Jest suites / 5,390 tests,
-with 95.95% statements, 90.88% branches, 96.53% functions, and 97.26% lines
+The latest full local run on 2026-09-28 passed 502 Jest suites / 5,392 tests,
+with 95.95% statements, 90.88% branches, 96.53% functions, and 97.27% lines
 repository-wide. The new setup-PAT intent, bootstrap audit, configured audit,
 remote-fact comparison, and override merge modules each reached 100% in all
 four metrics; final web Apply authorization reached 100% lines and 95.83%

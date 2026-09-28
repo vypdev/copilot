@@ -530,7 +530,7 @@ describe('CLI', () => {
         ]));
         expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(3);
         expect(captureSetupApplySnapshot).toHaveBeenCalledTimes(1);
-        expect(setupApplySnapshotMatches).toHaveBeenCalledTimes(1);
+        expect(setupApplySnapshotMatches).toHaveBeenCalledTimes(2);
         expect(runLocalAction).toHaveBeenCalledTimes(1);
         expect(process.exitCode).toBeUndefined();
       });
