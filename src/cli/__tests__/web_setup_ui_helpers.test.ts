@@ -16,6 +16,20 @@ describe('web setup presentation helpers', () => {
     });
   });
 
+  test('preserves the documented All default until explicitly deselected', () => {
+    const prompt = question('multi-select', 'All');
+    const initial = initialQuestionAnswer(prompt);
+    expect(initial).toEqual({ value: 'All', selected: ['All'] });
+    expect(submittedQuestionAnswer(prompt, initial.value, initial.selected)).toBe('All');
+    expect(submittedQuestionAnswer(prompt, initial.value, toggleSelection(initial.selected, 'All'))).toBe('none');
+    expect(submittedQuestionAnswer(prompt, initial.value, toggleSelection(initial.selected, 'One — details'))).toBe('One — details');
+  });
+
+  test('never invents an All selection when the choices do not offer it', () => {
+    const prompt = question('multi-select', 'All');
+    expect(initialQuestionAnswer({ ...prompt, question: { ...prompt.question, choices: ['One — details'] } }).selected).toEqual([]);
+  });
+
   test('a multi-select without choices starts empty and never invents an option', () => {
     const prompt = question('multi-select', 'one');
     expect(initialQuestionAnswer({ ...prompt, question: { ...prompt.question, choices: undefined } }).selected).toEqual([]);

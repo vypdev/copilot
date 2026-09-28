@@ -194,6 +194,14 @@ with bounded recovery guidance, including for a repository-scope default.
 
 <Info>GitHub does not reveal Secret values through its API. Copilot validates new credentials with provider metadata requests and validates existing remote Secrets through the read-only `copilot_credential_health.yml` workflow. Setup proves the exact file on the selected main ref and dispatches that path only when the workflow is also registered or installed on GitHub's default branch; doctor remains query-only and expects the normally indexed installed workflow. The health workflow reports each requested credential independently, but that bounded reachability result is not a permission audit. If `PAT` already exists, interactive setup asks you to re-enter it and runs the complete workflow-PAT permission matrix before provisioning; unattended setup must supply `PAT` again or stops before mutation. Temporary workflow bootstrap is available only during setup. A preauthenticated Codex session is runner state, not a Secret: it is accepted only when the runtime preflight can execute `codex login status` successfully.</Info>
 
+Terminal setup may attempt a temporary credential-health workflow creation before
+final Apply when checking existing Secrets. That request can create Git commits
+even if the workflow is later removed. If setup stops after this attempt, it
+reports a partial outcome: inspect the selected branch and GitHub workflow
+history before retrying. An ambiguous create failure is treated conservatively
+as a possible remote change. The browser setup path does not perform this
+pre-Apply bootstrap.
+
 For other existing credentials, choosing `keep` works only when the selected
 storage policy preserves the Secret in its current repository or organization
 scope. With `preserveExisting: false`, or an override that moves the Secret,

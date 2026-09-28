@@ -113,8 +113,12 @@ const mockRemoteConfigurationInspect = jest.fn().mockResolvedValue(defaultRemote
 const mockSetupCredentialsCollect = jest.fn().mockResolvedValue({
   collection: { apiKeys: [] }, checks: [], existingSecretNames: [],
 });
+const mockSetupCredentialsOptions = jest.fn();
 jest.mock('../infrastructure/composition/setup_credentials_composition_root', () => ({
-  createSetupCredentialsUseCase: () => ({ collect: mockSetupCredentialsCollect }),
+  createSetupCredentialsUseCase: (_prompt: unknown, _presenter: unknown, options: unknown) => {
+    mockSetupCredentialsOptions(options);
+    return { collect: mockSetupCredentialsCollect };
+  },
   createSetupRemoteConfigurationReadPort: () => ({
     inspect: mockRemoteConfigurationInspect,
     inspectCredentialHealthWorkflow: jest.fn(async () => 'installed'),
@@ -1149,7 +1153,7 @@ describe('CLI', () => {
       try {
         await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off', '--skip-secrets']);
         const { logInfo } = require('../utils/logger');
-        expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('No setup mutation started'));
+        expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('No bot Secret write started'));
         expect(runLocalAction).not.toHaveBeenCalled();
         expect(process.exitCode).toBe(1);
       } finally { identify.mockRestore(); botIdentity.mockRestore(); createTerminal.mockRestore(); }
@@ -1342,6 +1346,63 @@ describe('CLI', () => {
       expect(runLocalAction).toHaveBeenCalledTimes(1);
       expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('Secret may already have been written'));
       expect(process.exitCode).toBe(1);
+    });
+
+    it('reports a possible pre-Apply GitHub mutation if temporary health workflow creation was attempted', async () => {
+      mockSetupCredentialsCollect.mockImplementationOnce(async () => {
+        mockSetupCredentialsOptions.mock.lastCall?.[0].onTemporaryWorkflowMutationAttempt();
+        throw new Error('Could not safely remove the temporary credential health workflow');
+      });
+      await program.parseAsync([
+        'node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12',
+        '--skip-secrets', '--non-interactive', '--pr-approval-mode', 'off', '--yes',
+      ]);
+      const { logInfo } = require('../utils/logger');
+      expect(logInfo.mock.calls.flat().join('\n')).toContain('temporary credential-health workflow create was attempted before Apply');
+      expect(logInfo.mock.calls.flat().join('\n')).not.toContain('No changes were applied');
+      expect(runLocalAction).not.toHaveBeenCalled();
+      expect(process.exitCode).toBe(1);
+    });
+
+    it('shows a partial journey when terminal credential validation may have mutated GitHub', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const input = guidedTerminal();
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      mockTokenPermissionInspect.mockResolvedValueOnce(acceptedSetupPatReport());
+      mockSetupCredentialsCollect.mockImplementationOnce(async () => {
+        mockSetupCredentialsOptions.mock.lastCall?.[0].onTemporaryWorkflowMutationAttempt();
+        throw new Error('Could not safely remove the temporary credential health workflow');
+      });
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off', '--skip-secrets']);
+        const output = consoleLogSpy.mock.calls.flat().join('\n');
+        expect(output).toContain('Partial: changes may exist');
+        expect(output).not.toContain('Partial: application started');
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+      } finally { createTerminal.mockRestore(); }
+    });
+
+    it('does not claim a clean cancellation after temporary workflow creation was attempted', async () => {
+      const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const { SetupTerminalCancelledError } = require('../cli/setup_credential_prompt_adapter');
+      const input = guidedTerminal();
+      const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
+        .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
+      mockTokenPermissionInspect.mockResolvedValueOnce(acceptedSetupPatReport());
+      mockSetupCredentialsCollect.mockImplementationOnce(async () => {
+        mockSetupCredentialsOptions.mock.lastCall?.[0].onTemporaryWorkflowMutationAttempt();
+        throw new SetupTerminalCancelledError();
+      });
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off', '--skip-secrets']);
+        const { logInfo } = require('../utils/logger');
+        expect(logInfo.mock.calls.flat().join('\n')).toContain('Setup stopped after a possible credential-health workflow change');
+        expect(logInfo.mock.calls.flat().join('\n')).not.toContain('Setup cancelled. No changes were applied.');
+        expect(consoleLogSpy.mock.calls.flat().join('\n')).toContain('Partial: changes may exist');
+        expect(process.exitCode).toBe(130);
+      } finally { createTerminal.mockRestore(); }
     });
 
     it.each([

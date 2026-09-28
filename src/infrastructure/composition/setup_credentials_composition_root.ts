@@ -14,7 +14,7 @@ import { createSetupTokenPermissionsUseCase } from './setup_token_permissions_co
 export function createSetupCredentialsUseCase(
     prompt: SetupCredentialPromptPort,
     permissionPresenter?: SetupTokenPermissionPresenterPort,
-    options: { allowPreApplyHealthWorkflow?: boolean } = {},
+    options: { allowPreApplyHealthWorkflow?: boolean; onTemporaryWorkflowMutationAttempt?: () => void } = {},
 ): SetupCredentialsUseCase {
     const secretNames = new RepositorySecretNamesQueryRepository(createRepositoryVariablesClient());
     return new SetupCredentialsUseCase(
@@ -23,7 +23,9 @@ export function createSetupCredentialsUseCase(
         secretNames,
         options.allowPreApplyHealthWorkflow === false
             ? undefined
-            : new SetupRemoteCredentialHealthBootstrapAdapter(new OctokitCredentialHealthClientAdapter()),
+            : new SetupRemoteCredentialHealthBootstrapAdapter(new OctokitCredentialHealthClientAdapter(), {
+                onTemporaryWorkflowMutationAttempt: options.onTemporaryWorkflowMutationAttempt,
+            }),
         createSetupTokenPermissionsUseCase(),
         permissionPresenter,
     );

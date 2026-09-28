@@ -92,6 +92,7 @@ export function registerSetupCommand(program: Command): void {
       const workflowPrompt = webBridge ? new WebSetupWorkflowUpdatePrompt(webBridge) : new SetupWorkflowUpdatePromptAdapter(terminal);
       const cwd = process.cwd();
       let setupMutationStarted = false;
+      let setupApplyStarted = false;
       let releaseSetupGuard: (() => void) | undefined;
       let journey: SetupJourneyUseCase | undefined;
       try {
@@ -314,7 +315,12 @@ export function registerSetupCommand(program: Command): void {
           }
         }
         const credentials = await createSetupCredentialsUseCase(credentialPrompt, permissionPresenter,
-          webBridge ? { allowPreApplyHealthWorkflow: false } : undefined).collect({
+          webBridge ? { allowPreApplyHealthWorkflow: false } : {
+            onTemporaryWorkflowMutationAttempt: () => {
+              setupMutationStarted = true;
+              journey?.markMutationStarted();
+            },
+          }).collect({
           owner: gitInfo.owner,
           repository: gitInfo.repo,
           setupToken: token ?? '',
@@ -383,6 +389,7 @@ export function registerSetupCommand(program: Command): void {
         }
         setupMutationStarted = true;
         journey?.markMutationStarted();
+        setupApplyStarted = true;
         const actionResults = await runLocalAction(params);
         if (actionResults.some(actionResult => !actionResult.success || actionResult.errors.length > 0)) {
           journey?.finish('partial');
@@ -393,13 +400,18 @@ export function registerSetupCommand(program: Command): void {
         }
       } catch (error) {
         journey?.finish(setupMutationStarted ? 'partial' : error instanceof SetupTerminalCancelledError ? 'cancelled' : 'blocked');
+        if (setupMutationStarted && !setupApplyStarted) {
+          logInfo('A temporary credential-health workflow create was attempted before Apply. Inspect the selected branch and GitHub workflow history before retrying; a failed request may still have reached GitHub.');
+        }
         if (credentialPrompt.guidedWorkflowBotIdentity) {
-          logInfo(setupMutationStarted
+          logInfo(setupApplyStarted
             ? 'Setup may be partially applied. Inspect the GitHub Secret before deleting or replacing the bot PAT.'
-            : 'No setup mutation started. If you generated an unused bot PAT in GitHub, delete it there; Copilot cannot revoke it.');
+            : 'No bot Secret write started. If you generated an unused bot PAT in GitHub, delete it there; Copilot cannot revoke it.');
         }
         if (error instanceof SetupTerminalCancelledError) {
-          logInfo('Setup cancelled. No changes were applied.');
+          logInfo(setupMutationStarted
+            ? 'Setup stopped after a possible credential-health workflow change. Inspect the selected branch and GitHub workflow history before retrying.'
+            : 'Setup cancelled. No changes were applied.');
           process.exitCode = 130;
           return;
         }

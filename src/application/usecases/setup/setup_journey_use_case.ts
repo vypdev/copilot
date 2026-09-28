@@ -35,7 +35,10 @@ export class SetupJourneyUseCase {
   }
 
   markMutationStarted(): void {
-    if (this.stage !== 'apply' || this.outcome) throw new Error('Setup mutation must start in the apply stage.');
+    if ((this.stage !== 'credentials' && this.stage !== 'apply') || this.outcome) {
+      throw new Error('Setup mutation can start only during credential validation or apply.');
+    }
+    if (this.mutationStarted) return;
     this.mutationStarted = true;
     this.present();
   }

@@ -11,7 +11,7 @@ describe('setup journey presenter', () => {
 
   it('keeps narrow output readable and distinguishes partial from complete', () => {
     const partial = renderSetupJourney(buildSetupJourneyView('owner/repo', 'apply', true, 'partial'), 40);
-    expect(partial).toContain('Partial: application started');
+    expect(partial).toContain('Partial: changes may exist');
     expect(partial).not.toContain('No changes have been applied.');
     expect(partial.split('\n').every(line => line.length <= 42)).toBe(true);
     const complete = renderSetupJourney(buildSetupJourneyView('owner/repo', 'apply', true, 'complete'), 80);
@@ -38,6 +38,15 @@ describe('setup journey presenter', () => {
     const starting = renderSetupJourney(buildSetupJourneyView('owner/repo', 'repository', false), 80);
     expect(starting).toContain('Complete: none');
     expect(starting).toContain('Next: Setup choices');
+  });
+
+  it('explains a pre-Apply credential-health mutation without claiming final Apply began', () => {
+    const validating = renderSetupJourney(buildSetupJourneyView('owner/repo', 'credentials', true), 95);
+    expect(validating).toContain('temporary GitHub workflow change may exist');
+    expect(validating).not.toContain('Applying the approved plan');
+    const partial = renderSetupJourney(buildSetupJourneyView('owner/repo', 'credentials', true, 'partial'), 95);
+    expect(partial).toContain('Partial: changes may exist');
+    expect(partial).not.toContain('No changes have been applied');
   });
 
   it('does not echo terminal control characters from a repository label', () => {

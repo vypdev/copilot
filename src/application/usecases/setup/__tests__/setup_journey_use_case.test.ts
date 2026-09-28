@@ -20,7 +20,7 @@ describe('setup journey', () => {
     expect(() => journey.advance('choices')).toThrow('backwards');
     expect(() => journey.finish('complete')).toThrow('before applying');
     expect(() => journey.finish('partial')).toThrow('before mutation');
-    expect(() => journey.markMutationStarted()).toThrow('apply stage');
+    expect(() => journey.markMutationStarted()).toThrow('credential validation or apply');
   });
 
   it('distinguishes dry-run, blocked, cancelled, and post-mutation partial state', () => {
@@ -38,6 +38,18 @@ describe('setup journey', () => {
     journey.markMutationStarted();
     journey.finish('partial');
     expect(present.mock.lastCall?.[0]).toMatchObject({ outcome: 'partial', mutationStarted: true });
+  });
+
+  it('records a possible temporary workflow mutation during credential validation and allows a partial result', () => {
+    const present = jest.fn();
+    const journey = new SetupJourneyUseCase('owner/repo', { present });
+    journey.advance('credentials');
+    journey.markMutationStarted();
+    journey.markMutationStarted();
+    expect(present.mock.lastCall?.[0]).toMatchObject({ current: 'Bot PAT & credentials', mutationStarted: true });
+    journey.finish('partial');
+    expect(present.mock.lastCall?.[0]).toMatchObject({ outcome: 'partial', mutationStarted: true });
+    expect(() => journey.advance('apply')).toThrow('finished');
   });
 
   it('reports completion only after mutation starts and ignores duplicate finish', () => {

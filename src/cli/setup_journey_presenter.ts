@@ -12,10 +12,12 @@ export function renderSetupJourney(view: SetupJourneyView, maximumWidth?: number
   const revisitingChoices = view.current === 'Setup choices' && view.choiceReviewPass > 1;
   const state = view.outcome === 'complete' ? 'Complete: setup applied successfully.'
     : view.outcome === 'dry-run' ? 'Complete: dry run only; no changes were applied.'
-      : view.outcome === 'partial' ? 'Partial: application started; inspect the result before retrying.'
+      : view.outcome === 'partial' ? 'Partial: changes may exist; inspect the branch and GitHub resources before retrying.'
         : view.outcome === 'blocked' ? 'Blocked: setup cannot continue.'
           : view.outcome === 'cancelled' ? 'Cancelled: setup stopped.'
-            : view.mutationStarted ? 'Applying the approved plan; changes may already exist.'
+            : view.mutationStarted ? view.current === 'Bot PAT & credentials'
+              ? 'Checking credentials; a temporary GitHub workflow change may exist.'
+              : 'Applying the approved plan; changes may already exist.'
               : 'No changes have been applied.';
   return renderBox([
     `Repository: ${view.repository}`,

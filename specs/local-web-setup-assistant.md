@@ -453,6 +453,11 @@ presenter sizes, with reviewed exceptions only when cohesion justifies them.
 
 An empty issue-workflow multi-selection MUST submit an explicit `none` answer,
 not an empty answer that reuses defaults or silently selects every workflow.
+When the questionnaire's multi-select default is `All`, the browser MUST
+visibly preselect `All` and submit `All` if the operator continues unchanged;
+explicitly deselecting it MUST still submit `none`. `All` remains mutually
+exclusive with individual workflow choices. This is a pure presentation
+initialization/serialization rule, not a second questionnaire parser.
 Both terminal and web routes use the same questionnaire parser for this choice.
 
 ### 8.2 Contracts, ownership, and trust

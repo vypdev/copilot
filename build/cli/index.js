@@ -55946,8 +55946,11 @@ class SetupJourneyUseCase {
         return this.choiceReviewPass;
     }
     markMutationStarted() {
-        if (this.stage !== 'apply' || this.outcome)
-            throw new Error('Setup mutation must start in the apply stage.');
+        if ((this.stage !== 'credentials' && this.stage !== 'apply') || this.outcome) {
+            throw new Error('Setup mutation can start only during credential validation or apply.');
+        }
+        if (this.mutationStarted)
+            return;
         this.mutationStarted = true;
         this.present();
     }
@@ -65912,6 +65915,7 @@ function registerSetupCommand(program) {
         const workflowPrompt = webBridge ? new web_setup_adapters_1.WebSetupWorkflowUpdatePrompt(webBridge) : new setup_workflow_update_prompt_adapter_1.SetupWorkflowUpdatePromptAdapter(terminal);
         const cwd = process.cwd();
         let setupMutationStarted = false;
+        let setupApplyStarted = false;
         let releaseSetupGuard;
         let journey;
         try {
@@ -66151,7 +66155,12 @@ function registerSetupCommand(program) {
                     permissionPresenter.showDetailedRequirements('workflow', workflowTokenPermissions);
                 }
             }
-            const credentials = await (0, setup_credentials_composition_root_1.createSetupCredentialsUseCase)(credentialPrompt, permissionPresenter, webBridge ? { allowPreApplyHealthWorkflow: false } : undefined).collect({
+            const credentials = await (0, setup_credentials_composition_root_1.createSetupCredentialsUseCase)(credentialPrompt, permissionPresenter, webBridge ? { allowPreApplyHealthWorkflow: false } : {
+                onTemporaryWorkflowMutationAttempt: () => {
+                    setupMutationStarted = true;
+                    journey?.markMutationStarted();
+                },
+            }).collect({
                 owner: gitInfo.owner,
                 repository: gitInfo.repo,
                 setupToken: token ?? '',
@@ -66216,6 +66225,7 @@ function registerSetupCommand(program) {
             }
             setupMutationStarted = true;
             journey?.markMutationStarted();
+            setupApplyStarted = true;
             const actionResults = await (0, local_action_1.runLocalAction)(params);
             if (actionResults.some(actionResult => !actionResult.success || actionResult.errors.length > 0)) {
                 journey?.finish('partial');
@@ -66228,13 +66238,18 @@ function registerSetupCommand(program) {
         }
         catch (error) {
             journey?.finish(setupMutationStarted ? 'partial' : error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError ? 'cancelled' : 'blocked');
+            if (setupMutationStarted && !setupApplyStarted) {
+                (0, logger_1.logInfo)('A temporary credential-health workflow create was attempted before Apply. Inspect the selected branch and GitHub workflow history before retrying; a failed request may still have reached GitHub.');
+            }
             if (credentialPrompt.guidedWorkflowBotIdentity) {
-                (0, logger_1.logInfo)(setupMutationStarted
+                (0, logger_1.logInfo)(setupApplyStarted
                     ? 'Setup may be partially applied. Inspect the GitHub Secret before deleting or replacing the bot PAT.'
-                    : 'No setup mutation started. If you generated an unused bot PAT in GitHub, delete it there; Copilot cannot revoke it.');
+                    : 'No bot Secret write started. If you generated an unused bot PAT in GitHub, delete it there; Copilot cannot revoke it.');
             }
             if (error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError) {
-                (0, logger_1.logInfo)('Setup cancelled. No changes were applied.');
+                (0, logger_1.logInfo)(setupMutationStarted
+                    ? 'Setup stopped after a possible credential-health workflow change. Inspect the selected branch and GitHub workflow history before retrying.'
+                    : 'Setup cancelled. No changes were applied.');
                 process.exitCode = 130;
                 return;
             }
@@ -67277,10 +67292,12 @@ function renderSetupJourney(view, maximumWidth) {
     const revisitingChoices = view.current === 'Setup choices' && view.choiceReviewPass > 1;
     const state = view.outcome === 'complete' ? 'Complete: setup applied successfully.'
         : view.outcome === 'dry-run' ? 'Complete: dry run only; no changes were applied.'
-            : view.outcome === 'partial' ? 'Partial: application started; inspect the result before retrying.'
+            : view.outcome === 'partial' ? 'Partial: changes may exist; inspect the branch and GitHub resources before retrying.'
                 : view.outcome === 'blocked' ? 'Blocked: setup cannot continue.'
                     : view.outcome === 'cancelled' ? 'Cancelled: setup stopped.'
-                        : view.mutationStarted ? 'Applying the approved plan; changes may already exist.'
+                        : view.mutationStarted ? view.current === 'Bot PAT & credentials'
+                            ? 'Checking credentials; a temporary GitHub workflow change may exist.'
+                            : 'Applying the approved plan; changes may already exist.'
                             : 'No changes have been applied.';
     return (0, setup_prompt_rendering_1.renderBox)([
         `Repository: ${view.repository}`,
@@ -82933,7 +82950,9 @@ function createSetupCredentialsUseCase(prompt, permissionPresenter, options = {}
     const secretNames = new repository_variables_repository_1.RepositorySecretNamesQueryRepository((0, github_identity_client_factory_1.createRepositoryVariablesClient)());
     return new setup_credentials_use_case_1.SetupCredentialsUseCase(prompt, new setup_credential_validation_adapter_1.SetupCredentialValidationAdapter(), secretNames, options.allowPreApplyHealthWorkflow === false
         ? undefined
-        : new setup_remote_credential_health_adapter_1.SetupRemoteCredentialHealthBootstrapAdapter(new octokit_credential_health_adapter_1.OctokitCredentialHealthClientAdapter()), (0, setup_token_permissions_composition_root_1.createSetupTokenPermissionsUseCase)(), permissionPresenter);
+        : new setup_remote_credential_health_adapter_1.SetupRemoteCredentialHealthBootstrapAdapter(new octokit_credential_health_adapter_1.OctokitCredentialHealthClientAdapter(), {
+            onTemporaryWorkflowMutationAttempt: options.onTemporaryWorkflowMutationAttempt,
+        }), (0, setup_token_permissions_composition_root_1.createSetupTokenPermissionsUseCase)(), permissionPresenter);
 }
 function createSetupRemoteConfigurationReadPort() {
     return new repository_variables_repository_1.SetupRemoteConfigurationQueryRepository((0, github_identity_client_factory_1.createRepositoryVariablesClient)());
@@ -84600,6 +84619,7 @@ class SetupRemoteCredentialHealthBootstrapAdapter {
         this.githubClient = githubClient;
         this.options = resolveOptions(options);
         this.workflowContent = options.workflowContent ?? readHealthWorkflow();
+        this.onTemporaryWorkflowMutationAttempt = options.onTemporaryWorkflowMutationAttempt;
     }
     async validateExisting(owner, repository, token, ref, requirements) {
         const client = this.githubClient.getClient(token);
@@ -84625,6 +84645,7 @@ class SetupRemoteCredentialHealthBootstrapAdapter {
         if (!this.workflowContent)
             throw new Error('Credential health workflow template is unavailable.');
         let created;
+        this.onTemporaryWorkflowMutationAttempt?.();
         try {
             created = await client.repos.createOrUpdateFileContents({
                 owner,

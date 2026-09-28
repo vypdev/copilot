@@ -75,6 +75,9 @@ inspection and PAT checks; it does not dispatch or temporarily install a
 credential-health workflow. Re-enter an existing bot PAT for its grant audit.
 An optional existing provider Secret that you choose to keep may remain
 `unverifiable`; check runtime health with `copilot doctor` after installation.
+In the browser questionnaire, an issue-workflow choice defaulted to **All**
+stays selected if you continue unchanged; clearing that selection submits
+**none** explicitly.
 
 Interactive `copilot setup` offers a guided GitHub link or manual entry for each
 PAT. The first link prepares a short-lived **setup PAT** for the person
@@ -86,8 +89,11 @@ those answers. The second link, after the setup plan, prepares the
 
 The interactive terminal also shows your current phase: Repository → Setup
 choices → Setup PAT → Plan → Bot PAT & credentials → Apply. These are milestones,
-not a percentage or a fixed number of questions. Before Apply, it says that no
-changes have been made; after Apply starts, a failed run is marked partial so
+not a percentage or a fixed number of questions. Before a remote mutation
+attempt, it says that no changes have been made. Checking existing Secrets may
+attempt a temporary credential-health workflow before final Apply; from that
+point a failed run is marked partial, with branch-inspection guidance. After
+Apply starts, a failed run is likewise marked partial so
 you can inspect what was installed. The initial and guided PAT views show a
 compact list of required grants. Choose **view full permission table** during
 review to see reasons and conditional grants without restarting the questions;

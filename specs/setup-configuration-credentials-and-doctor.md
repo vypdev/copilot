@@ -160,6 +160,15 @@ cancellation, skipped diagnosis, ordering, and read-only authority explicit.
   complete permission audit before provisioning; credential health and storage
   preservation do not authorize an unaudited keep path.
 - Invalid required credentials must be replaced.
+- Terminal credential-health validation MAY temporarily create and remove the
+  selected-branch health workflow before final Apply. As soon as the create
+  request is attempted, the journey MUST disclose a possible remote mutation;
+  a subsequent failure or cancellation MUST report a partial outcome and
+  direct the operator to inspect the selected branch, even if cleanup appeared
+  successful, because the create/delete commits remain in history. A failed
+  create request is conservatively classified as possible mutation when its
+  remote outcome is uncertain. The browser path does not bootstrap a workflow
+  before Apply and retains its no-mutation pre-approval guarantee.
 - A missing remote resource snapshot is never an empty inventory. Selected
   Secret/Variable management MUST stop before all remote resource, label,
   issue-type, and tag calls when inspection fails, its port is absent, or a
@@ -417,7 +426,9 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 2. Given non-interactive missing required input, setup fails without prompting or writes.
 3. Given valid organization Secret and preserve-existing, no repository shadow is created.
 4. Given invalid required existing credential, setup requires replacement.
-5. Given canceled confirmation, local and GitHub state are unchanged.
+5. Given canceled confirmation without a prior credential-health bootstrap
+   attempt, local and GitHub state are unchanged. With such an attempt, setup
+   reports a partial result and requires branch/history inspection.
 6. Given a changed managed file, setup backs up before approved replacement.
 7. Given doctor, no mutation port is called and unhealthy state returns non-zero.
 8. Given merge-queue without proven support, setup/doctor reports fail closed.
@@ -443,6 +454,11 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
     Secret/Variable/label/issue-type/tag mutation; absence cannot be
     interpreted as an empty repository inventory. Pre-plan failures still
     reach the final audit as bounded unavailable access facts.
+18. Given terminal credential-health bootstrap was attempted and cleanup
+    fails, setup reports `partial` with branch-inspection guidance rather
+    than `blocked` or "no changes applied"; the same conservative outcome
+    applies when creation times out ambiguously. Without a bootstrap attempt,
+    pre-Apply cancellation remains `cancelled`.
 18. Given an organization Secret or Variable target, repository inventory is
     available and confirms that no same-name repository resource exists;
     otherwise setup blocks before credential collection or mutation, even with
