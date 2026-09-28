@@ -41,16 +41,17 @@ target repository, and review the final GitHub form. A guided setup PAT uses a
 one-day suggested expiry; delete it yourself in [GitHub PAT Settings](https://github.com/settings/personal-access-tokens)
 afterward. The bot PAT uses a 90-day suggested expiry, may be shortened by
 organization policy, and remains in Actions Secret `PAT`; arrange renewal
-before it expires. GitHub [lists the Checks API among fine-grained PAT
-limitations](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#fine-grained-personal-access-tokens-limitations)
-and does not list `Checks` in its [supported PAT form
-permissions](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#repository-permissions).
-If guarded approval requires `Checks` read, setup cannot offer a guided
-fine-grained bot PAT link for that plan. Do not assume that creating a
-fine-grained PAT manually will bypass this limitation: use a compatible
-credential and confirm its access with the permission audit. Existing
-command-line token flags also remain, but putting a PAT in a command can
-expose it in shell history or process listings.
+before it expires. GitHub's documentation is inconsistent: its [PAT limitations
+list](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#fine-grained-personal-access-tokens-limitations)
+calls out the Checks API, while the [check-runs endpoint
+reference](https://docs.github.com/en/rest/checks/runs#list-check-runs-for-a-git-reference)
+lists fine-grained PATs with `Checks` read. The documented [PAT form
+parameters](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#repository-permissions)
+do not include `Checks`, so setup cannot prefill a guided bot link for guarded
+approval. If your manual fine-grained PAT form offers `Checks` read, select it;
+otherwise use a compatible credential. In either case, confirm access with the
+permission audit. Existing command-line token flags also remain, but putting
+a PAT in a command can expose it in shell history or process listings.
 
 ## Permission tables in `copilot setup`
 
