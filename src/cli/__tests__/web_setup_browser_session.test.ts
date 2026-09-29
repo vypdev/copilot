@@ -183,6 +183,31 @@ describe('browser session transport', () => {
     expect(requests.find(request => request.path === '/api/answer')?.options?.headers).toEqual(expect.objectContaining({ 'X-Setup-Capability': 'new-capability' }));
   });
 
+  test('takeover cannot start before pairing, from the controller tab, or twice concurrently', async () => {
+    const unpaired = createSetupSession();
+    globalThis.fetch = jest.fn() as typeof fetch;
+    await unpaired.takeOver('0123456789abcdef');
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+
+    let releaseTakeover!: (response: Response) => void;
+    const pendingTakeover = new Promise<Response>(resolve => { releaseTakeover = resolve; });
+    globalThis.fetch = jest.fn(async (path: string) => {
+      if (path === '/api/bootstrap') return response({ controller: false });
+      if (path === '/api/state') return response(view);
+      if (path === '/api/takeover') return pendingTakeover;
+      throw new Error('Unexpected route');
+    }) as typeof fetch;
+    const session = createSetupSession(TEST_SESSION_KEY);
+    await session.connect();
+    const first = session.takeOver('0123456789abcdef');
+    await session.takeOver('0123456789abcdef');
+    expect((globalThis.fetch as jest.Mock).mock.calls.filter(([path]) => path === '/api/takeover')).toHaveLength(1);
+    releaseTakeover(response({ capability: 'new-controller' }));
+    await first;
+    await session.takeOver('0123456789abcdef');
+    expect((globalThis.fetch as jest.Mock).mock.calls.filter(([path]) => path === '/api/takeover')).toHaveLength(1);
+  });
+
   test('a rejected answer refreshes the question while keeping the error visible and the PAT private', async () => {
     const requests: string[] = [];
     globalThis.fetch = jest.fn(async (path: string) => {
