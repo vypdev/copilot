@@ -1,4 +1,5 @@
 import { createDefaultSetupConfiguration } from '../setup_configuration_policy';
+import { validateSetupConfiguration } from '../setup_configuration_validation';
 import {
   createSetupQuestionnaire,
   createSetupPermissionIntentQuestionnaire,
@@ -56,6 +57,9 @@ describe('setup questionnaire policy', () => {
     const state = advanceTo(createSetupQuestionnaire(createDefaultSetupConfiguration()), 'issueWorkflows.enabled');
     const cleared = transitionSetupQuestionnaire(state, { kind: 'answer', value: 'none' });
     expect(cleared.draft.issueWorkflows.enabled).toEqual([]);
+    expect(validateSetupConfiguration(cleared.draft)).toContain(
+      'At least one issue workflow must be enabled when issue automation is enabled.',
+    );
   });
 
   it('enters review immediately when the permission-intent phase has no open questions', () => {

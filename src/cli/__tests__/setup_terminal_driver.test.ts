@@ -128,6 +128,23 @@ describe('NodeTerminalDriver', () => {
     expect(mockStdin.setRawMode).toHaveBeenLastCalledWith(false);
   });
 
+  it('keeps the default All selection on unchanged Enter', async () => {
+    const pending = new NodeTerminalDriver().readMultiSelect(
+      'Issue workflows', ['All', 'feature — Feature', 'help — Help'], ['feature', 'help'],
+    );
+    mockInputHandlers.get('data')?.(Buffer.from('\n'));
+    await expect(pending).resolves.toEqual({ kind: 'value', value: 'feature,help' });
+  });
+
+  it('submits explicit none when the owner clears All and confirms', async () => {
+    const pending = new NodeTerminalDriver().readMultiSelect(
+      'Issue workflows', ['All', 'feature — Feature', 'help — Help'], ['feature', 'help'],
+    );
+    mockInputHandlers.get('data')?.(Buffer.from(' \n'));
+    await expect(pending).resolves.toEqual({ kind: 'value', value: 'none' });
+    expect(mockStdin.setRawMode).toHaveBeenLastCalledWith(false);
+  });
+
   it.each([
     ['data', '\u0003', 'cancel'],
     ['data', '\u0004', 'end-of-input'],

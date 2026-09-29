@@ -143,7 +143,7 @@ export class NodeTerminalDriver implements TerminalDriver {
             else value.add(id);
             render();
           } else if (character === '\r' || character === '\n') {
-            finish({ kind: 'value', value: [...value].join(',') });
+            finish({ kind: 'value', value: value.size === 0 ? 'none' : [...value].join(',') });
             return;
           }
         }
