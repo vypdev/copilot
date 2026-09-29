@@ -546,6 +546,14 @@ describe('CLI', () => {
         expect(runLocalAction).not.toHaveBeenCalled();
       });
 
+      it('treats a dismissed repository confirmation as cancellation', async () => {
+        ask.mockResolvedValueOnce(undefined);
+        await program.parseAsync(['node', 'cli', 'setup', '--web']);
+        expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(130);
+      });
+
       it('rejects detached HEAD before opening the browser or collecting a PAT', async () => {
         (execSync as jest.Mock).mockImplementation((command: string) => {
           if (command === 'git symbolic-ref --quiet --short HEAD') throw new Error('detached HEAD');
@@ -616,6 +624,16 @@ describe('CLI', () => {
         expect(runLocalAction).toHaveBeenCalledTimes(1);
       });
 
+      it('discards an environment PAT when the operator chooses a different one', async () => {
+        mockGetSetupToken.mockReturnValueOnce('github_pat_from_environment_test');
+        ask.mockImplementation(async (prompt: WebSetupPrompt) => prompt.title === 'An environment setup PAT is available'
+          ? 'Create or enter a different PAT' : answerWebPrompt(prompt));
+        await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
+        expect(ask.mock.calls.map(call => call[0].title)).toContain('Temporary setup PAT');
+        expect(mockTokenPermissionInspect.mock.calls[0][0].token).toBe('github_pat_web_setup_test_token');
+        expect(runLocalAction).toHaveBeenCalledTimes(1);
+      });
+
       it('does not use an environment PAT when the browser choice is cancelled', async () => {
         mockGetSetupToken.mockReturnValueOnce('github_pat_from_environment_test');
         ask.mockImplementation(async (prompt: WebSetupPrompt) => prompt.title === 'An environment setup PAT is available'
@@ -640,6 +658,23 @@ describe('CLI', () => {
         await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
         expect(runLocalAction).not.toHaveBeenCalled();
         expect(process.exitCode).toBeUndefined();
+      });
+
+      it('treats a dismissed final Apply prompt as cancellation', async () => {
+        ask.mockImplementation(async (prompt: WebSetupPrompt) => prompt.title === 'Apply this setup now?'
+          ? undefined : answerWebPrompt(prompt));
+        await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(130);
+      });
+
+      it('reports partial completion when an approved action fails', async () => {
+        (runLocalAction as jest.Mock).mockResolvedValueOnce([{ success: false, errors: ['provider failed'] }]);
+        await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
+        expect(runLocalAction).toHaveBeenCalledTimes(1);
+        expect(process.exitCode).toBe(1);
+        const { logInfo } = require('../utils/logger');
+        expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('partial completion'));
       });
 
       it('passes only explicitly approved changed workflows to the mutation boundary', async () => {

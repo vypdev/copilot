@@ -272,6 +272,12 @@ describe('semantic web setup adapters', () => {
     await expect(token).rejects.toThrow('cancelled');
   });
 
+  test('rejects an out-of-contract choice even if the bridge supplies one', async () => {
+    const bridge = new WebSetupBridge('owner/repo');
+    jest.spyOn(bridge, 'ask').mockResolvedValueOnce('unlisted choice');
+    await expect(new WebSetupCredentialPrompt(bridge).chooseSetupPatMethod()).rejects.toThrow('Invalid setup choice');
+  });
+
   test('guided setup account requires a reported identity and a positive operator decision', async () => {
     const bridge = new WebSetupBridge('owner/repo');
     const prompt = new WebSetupCredentialPrompt(bridge);

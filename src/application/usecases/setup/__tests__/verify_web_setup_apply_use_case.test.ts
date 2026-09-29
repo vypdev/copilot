@@ -141,6 +141,13 @@ describe('VerifyWebSetupApplyUseCase', () => {
     expect(ports.permissionAudit.audit).not.toHaveBeenCalled();
   });
 
+  test('treats an unavailable workflow inspection port as unknown rather than reusing stale evidence', async () => {
+    const { ports, useCase } = harness();
+    delete (ports.remote as { inspectCredentialHealthWorkflow?: unknown }).inspectCredentialHealthWorkflow;
+    await expect(useCase.execute(request)).rejects.toThrow('GitHub repository facts changed');
+    expect(ports.permissionAudit.audit).not.toHaveBeenCalled();
+  });
+
   test('blocks when the final PAT audit loses a required grant', async () => {
     const { ports, useCase } = harness();
     jest.spyOn(ports.permissionAudit, 'audit').mockResolvedValue({ status: 'blocked', errors: ['missing'] });

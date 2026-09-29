@@ -1,4 +1,5 @@
 import {
+    ConsoleSetupTokenPermissionPresenter,
     renderSetupTokenPermissionReport,
     renderSetupTokenPermissionRequirements,
     renderSetupTokenPermissionSummary,
@@ -16,6 +17,17 @@ const secrets: SetupTokenPermissionRequirement = {
 };
 
 describe('setup token permission presenter', () => {
+    it('uses the full requirement table by default and summary only when requested', () => {
+        const log = jest.spyOn(console, 'log').mockImplementation();
+        try {
+            new ConsoleSetupTokenPermissionPresenter().showRequirements('setup', [metadata, secrets]);
+            expect(log.mock.calls.flat().join('\n')).toContain('Provision Actions Secrets.');
+            log.mockClear();
+            new ConsoleSetupTokenPermissionPresenter('summary').showRequirements('setup', [metadata, secrets]);
+            expect(log.mock.calls.flat().join('\n')).toContain('Conditional permissions: 1');
+            expect(log.mock.calls.flat().join('\n')).not.toContain('Provision Actions Secrets.');
+        } finally { log.mockRestore(); }
+    });
     it('summarizes only required URL grants and counts conditional rows without changing policy', () => {
         const output = renderSetupTokenPermissionSummary('setup', [metadata, secrets], 80);
         expect(output).toContain('Required now: Metadata read (repository)');

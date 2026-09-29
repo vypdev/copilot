@@ -383,10 +383,6 @@ export function registerSetupCommand(program: Command): void {
           approvedWorkflowFiles,
           remoteConfiguration,
         );
-        if (!params) {
-          journey?.finish('blocked');
-          return;
-        }
         setupMutationStarted = true;
         journey?.markMutationStarted();
         setupApplyStarted = true;

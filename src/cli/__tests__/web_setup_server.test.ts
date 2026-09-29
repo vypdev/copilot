@@ -55,6 +55,9 @@ describe('local web setup server', () => {
     expect(page.headers.get('cache-control')).toBe('no-store');
     expect(page.headers.get('access-control-allow-origin')).toBeNull();
     expect((await fetch(`${server.url}assets/app.js`)).status).toBe(200);
+    const css = await fetch(`${server.url}assets/app.css`);
+    expect(css.status).toBe(200);
+    expect(css.headers.get('content-type')).toBe('text/css; charset=utf-8');
     writeFileSync(join(root, 'assets', 'unlisted.js'), 'alert(1)');
     expect((await fetch(`${server.url}assets/unlisted.js`)).status).toBe(404);
     expect((await fetch(`${server.url}assets/%2e%2e/index.html`)).status).toBe(404);
@@ -108,6 +111,16 @@ describe('local web setup server', () => {
     expect(wrong.status).toBe(403);
     expect(await wrong.text()).not.toContain(sessionKeys.get(origin)!);
     expect((await post(server.pairingCode)).status).toBe(200);
+  });
+
+  test('pairing requires JSON even for a valid code', async () => {
+    const response = await globalThis.fetch(`${server.url}api/pair`, {
+      method: 'POST',
+      headers: { Origin: new URL(server.url).origin, 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ code: server.pairingCode }),
+    });
+    expect(response.status).toBe(415);
+    expect(await response.text()).not.toContain(sessionKeys.get(new URL(server.url).origin)!);
   });
 
   test('five incorrect pairing attempts lock out even the valid code for this run', async () => {

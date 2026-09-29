@@ -462,11 +462,15 @@ describe('setup presenters and prompt-specific adapters', () => {
         { kind: 'value', value: '2' }, { kind: 'value', value: 'manual-bot-token' },
       ]), {});
       const resolve = jest.fn();
-      adapter.configureWorkflowPatGuide('https://github.com/settings/personal-access-tokens/new', resolve);
+      adapter.configureWorkflowPatGuide('https://github.com/settings/personal-access-tokens/new', resolve, [{
+        id: 'workflow.repository.contents', role: 'workflow', scope: 'repository', permission: 'Contents',
+        level: 'write', applicability: 'required', reason: 'Manage branches.', probe: 'contents',
+      }]);
       await expect(adapter.requestWorkflowPat({ name: 'PAT', kind: 'workflowPat', description: 'Runtime token' }))
         .resolves.toEqual({ name: 'PAT', value: 'manual-bot-token' });
       expect(resolve).not.toHaveBeenCalled();
       expect(adapter.guidedWorkflowBotIdentity).toBeUndefined();
+      expect(log.mock.calls.flat().join('\n')).toContain('Workflow PAT permissions required');
     } finally { log.mockRestore(); }
   });
 

@@ -74,6 +74,17 @@ describe('setup session guard', () => {
     }
   });
 
+  test('does not mistake a failed atomic link for an existing setup session', () => {
+    const link = jest.spyOn(require('node:fs'), 'linkSync').mockImplementationOnce(() => {
+      throw Object.assign(new Error('Filesystem is read-only'), { code: 'EROFS' });
+    });
+    try {
+      expect(() => acquireSetupSessionGuard(root)).toThrow('Filesystem is read-only');
+      expect(existsSync(lockPath())).toBe(false);
+      expect(readdirSync(tmpdir()).filter(name => name.startsWith(`${basename(lockPath())}.`))).toEqual([]);
+    } finally { link.mockRestore(); }
+  });
+
   test('a failed staged write never publishes an empty lock or leaves a staging file', () => {
     const write = jest.spyOn(require('node:fs'), 'writeFileSync').mockImplementationOnce(() => {
       throw Object.assign(new Error('Disk full'), { code: 'ENOSPC' });
