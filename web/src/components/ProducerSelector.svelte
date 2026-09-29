@@ -5,6 +5,7 @@
   import { safeGithubRunLink, safeGithubRulesetLink } from '../lib/githubLink';
   import { toggleSelection } from '../lib/questionAnswer';
   import { checkConclusionLabel } from '../i18n/checkEvidence';
+  import { manualProducerIdentity } from '../lib/manualProducerIdentity';
   export let candidates: readonly SetupApprovalCheckCandidate[];
   export let selected: string[];
   export let controller: boolean;
@@ -15,13 +16,9 @@
   $: known = new Set(candidates.map(candidate => `${candidate.name}|${candidate.sourceAppId}|${candidate.workflowName}`));
   $: manual = selected.filter(identity => !known.has(identity));
   function add(): void {
-    const name = checkName.trim();
-    const workflow = workflowName.trim();
-    const id = Number(appId.trim());
-    error = !name || !workflow || name.length > 100 || workflow.length > 100 || /[|;\r\n]/u.test(name + workflow)
-      || !/^[1-9]\d*$/u.test(appId.trim()) || !Number.isSafeInteger(id) || selected.length >= 8;
-    if (error) return;
-    const identity = `${name}|${id}|${workflow}`;
+    const identity = manualProducerIdentity(checkName, appId, workflowName);
+    if (!identity || selected.length >= 8) { error = true; return; }
+    error = false;
     if (!selected.includes(identity)) selected = [...selected, identity];
     checkName = ''; appId = ''; workflowName = '';
   }
@@ -44,7 +41,7 @@
 <p class="field-help">{tr('producerManualHelp', $setupLocale)}</p>
 <div class="producer-manual-fields">
   <label for="producer-name">{tr('producerName', $setupLocale)}<input id="producer-name" type="text" bind:value={checkName} disabled={!controller} autocomplete="off" /></label>
-  <label for="producer-app-id">{tr('producerAppId', $setupLocale)}<input id="producer-app-id" type="number" min="1" bind:value={appId} disabled={!controller} autocomplete="off" /></label>
+  <label for="producer-app-id">{tr('producerAppId', $setupLocale)}<input id="producer-app-id" type="text" inputmode="numeric" pattern="[1-9][0-9]*" bind:value={appId} disabled={!controller} autocomplete="off" /></label>
   <label for="producer-workflow">{tr('producerWorkflow', $setupLocale)}<input id="producer-workflow" type="text" bind:value={workflowName} disabled={!controller} autocomplete="off" /></label>
 </div>
 <button type="button" onclick={add} disabled={!controller}>{tr('producerAdd', $setupLocale)}</button>

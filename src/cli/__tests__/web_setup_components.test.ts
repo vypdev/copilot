@@ -170,6 +170,12 @@ describe('web setup component semantics', () => {
     expect(html).toContain('Required by branch rule: not checked');
   });
 
+  test('manual producer App ID remains string-bound while offering a numeric keyboard', () => {
+    const html = markup('ProducerSelector', { candidates: [], selected: [], controller: true });
+    expect(html).toMatch(/id="producer-app-id"[^>]*type="text"[^>]*inputmode="numeric"/u);
+    expect(html).toContain('pattern="[1-9][0-9]*"');
+  });
+
   test('a Project retained across discovery refresh remains visible as unverified and removable', () => {
     const html = markup('ProjectSelector', { candidates: [], selected: ['12'], value: '', controller: true }, 'en');
     expect(html).toContain('#12');

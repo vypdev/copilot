@@ -49899,6 +49899,20 @@ function sameSetupRemoteFacts(left, right) {
 
 /***/ }),
 
+/***/ 64662:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.safeTerminalChoiceText = safeTerminalChoiceText;
+function safeTerminalChoiceText(value) {
+    return value.replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu, '');
+}
+
+
+/***/ }),
+
 /***/ 65640:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -57420,6 +57434,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupQuestionnaireController = void 0;
 const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
 const application_error_1 = __nccwpck_require__(75999);
+const setup_terminal_choice_policy_1 = __nccwpck_require__(64662);
 class SetupQuestionnaireController {
     constructor(terminal, renderer) {
         this.terminal = terminal;
@@ -57443,7 +57458,7 @@ class SetupQuestionnaireController {
                 this.renderer.showValidation(state.validation);
             let input = (state.question.kind === 'multi-select' || state.question.kind === 'project-select') && this.terminal.readMultiSelect
                 ? await this.terminal.readMultiSelect(this.renderer.renderPrompt(state.question, (0, setup_questionnaire_policy_1.setupQuestionnaireProgress)(state, currentContext)), state.question.kind === 'project-select'
-                    ? [...(state.question.projectCandidates ?? []).map(candidate => `${candidate.number} — ${candidate.title} (${candidate.url})`), 'manual — Enter Project number or URL',
+                    ? [...(state.question.projectCandidates ?? []).map(candidate => `${candidate.number} — ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(candidate.title)} (${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(candidate.url)})`), 'manual — Enter Project number or URL',
                         ...(state.question.discoveryRetryRemaining ? ['retry — Retry GitHub Project discovery'] : [])]
                     : state.question.choices ?? [], state.question.kind === 'project-select' && pendingProjectSelection
                     ? pendingProjectSelection : parseSelectedDefaults(state.question.defaultValue), this.renderer.renderHelp(state.question))
@@ -69501,6 +69516,10 @@ const node_process_1 = __nccwpck_require__(97742);
 function interactiveTerminalAvailable() {
     return Boolean(node_process_1.stdin.isTTY && node_process_1.stdout.isTTY && !process.env.JEST_WORKER_ID);
 }
+// Keep this boundary safe even when choices are not constructed by the setup controller.
+function safeTerminalChoiceText(value) {
+    return value.replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu, '');
+}
 function createInteractiveTerminalDriver() {
     return interactiveTerminalAvailable() ? new NodeTerminalDriver() : undefined;
 }
@@ -69612,7 +69631,7 @@ class NodeTerminalDriver {
                 const lines = choices.map((choice, choiceIndex) => {
                     const id = choice === 'All' ? 'all' : choice.split(' — ')[0];
                     const checked = id === 'all' ? value.size === choices.length - 1 : value.has(id);
-                    return `${choiceIndex === index ? '❯' : ' '} ${checked ? '●' : '○'} ${choice}`;
+                    return `${choiceIndex === index ? '❯' : ' '} ${checked ? '●' : '○'} ${safeTerminalChoiceText(choice)}`;
                 });
                 node_process_1.stdout.write(`${rendered ? `\x1b[${choices.length}A\x1b[0J` : ''}${lines.join('\n')}\n`);
                 rendered = true;

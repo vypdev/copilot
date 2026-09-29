@@ -117,4 +117,19 @@ describe('SetupQuestionnaireController', () => {
     expect(input.readMultiSelect).toHaveBeenCalledTimes(2);
     expect(input.readMultiSelect.mock.calls[1][1]).toEqual(expect.arrayContaining([expect.stringContaining('Roadmap')]));
   });
+
+  it('removes terminal controls and bidirectional overrides from discovered Project choices', async () => {
+    const context = { skipQuestionIds: setupQuestionContentInventory().map(item => item.id).filter(id => id !== 'projects.ids'),
+      projectOwner: 'owner', projectDiscovery: { status: 'observed' as const,
+        candidates: [{ number: 5, title: 'Roadmap\u001b[2J\nFake\u202e', owner: 'owner',
+          url: 'https://github.com/orgs/owner/projects/5\u001b[1m' }] } };
+    const input = { ...terminal([]), readMultiSelect: jest.fn().mockResolvedValue({ kind: 'value', value: 'none' }) };
+    await new SetupQuestionnaireController(input, renderer()).collect(
+      createSetupQuestionnaire(createDefaultSetupConfiguration(), context), context,
+    );
+    const choices = input.readMultiSelect.mock.calls[0][1] as string[];
+    expect(choices[0]).toContain('5 — Roadmap[2JFake');
+    expect(choices[0]).not.toMatch(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u);
+    expect(choices[0]).toContain('https://github.com/orgs/owner/projects/5[1m');
+  });
 });

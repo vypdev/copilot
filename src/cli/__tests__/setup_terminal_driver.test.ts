@@ -128,6 +128,19 @@ describe('NodeTerminalDriver', () => {
     expect(mockStdin.setRawMode).toHaveBeenLastCalledWith(false);
   });
 
+  it('never writes provider-controlled terminal sequences from a choice', async () => {
+    const pending = new NodeTerminalDriver().readMultiSelect(
+      'Projects', ['5 — Roadmap\u001b[2J\nFake\u202e'], [],
+    );
+    const rendered = mockStdout.write.mock.calls.map(([chunk]) => String(chunk)).join('');
+    expect(rendered).toContain('5 — Roadmap[2JFake');
+    expect(rendered).not.toContain('\u001b[2J');
+    expect(rendered).not.toContain('Roadmap\nFake');
+    expect(rendered).not.toContain('\u202e');
+    mockInputHandlers.get('data')?.(Buffer.from(' \n'));
+    await expect(pending).resolves.toEqual({ kind: 'value', value: '5' });
+  });
+
   it('keeps the default All selection on unchanged Enter', async () => {
     const pending = new NodeTerminalDriver().readMultiSelect(
       'Issue workflows', ['All', 'feature — Feature', 'help — Help'], ['feature', 'help'],

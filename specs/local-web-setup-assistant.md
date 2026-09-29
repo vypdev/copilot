@@ -812,6 +812,12 @@ next action before asking for a manual tuple. A network/API failure must not
 masquerade as an empty repository. The manual path labels check name, numeric
 source App ID, and workflow name separately (or gives an equivalent CLI
 template), validates the exact tuple, and never treats it as verified.
+The web App ID field MUST remain string-bound (with a numeric keyboard hint)
+and normalize both string and numeric values before validation; an edited
+number MUST NOT throw or silently drop a valid producer. Observed check
+conclusions, including GitHub's `stale` and `startup_failure`, MUST have
+distinct localized labels in every supported locale. Unknown future values
+retain an honest unknown-outcome fallback.
 
 Private-repository discovery needs GitHub `Checks: read` and `Actions: read`
 from the setup PAT; these conditional read grants MUST be disclosed in the
@@ -825,6 +831,13 @@ receives the PAT. See [check runs](https://docs.github.com/en/rest/checks/runs)
 and [workflows](https://docs.github.com/en/rest/actions/workflows).
 
 ### 9.4a GitHub Projects without opaque IDs
+
+GitHub-supplied Project titles and URLs shown as terminal selector choices
+MUST have terminal controls, line separators, and bidirectional override
+characters removed before display. The terminal driver applies the same
+sanitization at its output boundary to all choices without altering the
+underlying selected Project number. Provider text never becomes terminal
+markup or a second apparent choice.
 
 The permission-intent pass asks only whether Projects integration is wanted;
 it must not ask for numbers before the setup PAT exists. The post-PAT pass
@@ -1565,6 +1578,13 @@ The CLI orchestration has not yet been extracted into the prescribed
 frontend-neutral coordinator. Until these gates are evidenced, the catalog
 remains `proposed` and the non-English browser notice remains a translation
 preview, not an unconditional release-quality claim.
+
+The PR #402 follow-up hardens three observed edge cases: numeric App ID input
+in the manual CI producer selector, complete GitHub check-conclusion labels in
+all four locales, and terminal-control sanitization for discovered Project
+choices. Focused regressions cover the normalized tuple, rendered input type,
+every new locale label, and raw terminal output. These corrections do not
+change the still-open release acceptance gates above.
 
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.

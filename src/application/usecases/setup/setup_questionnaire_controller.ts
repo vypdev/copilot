@@ -12,6 +12,7 @@ import type {
 } from '../../../domain/setup_questionnaire';
 import { refreshSetupQuestionnaireQuestion, setupQuestionnaireProgress, transitionSetupQuestionnaire } from '../../policies/setup_questionnaire_policy';
 import { ApplicationError } from '../../errors/application_error';
+import { safeTerminalChoiceText } from '../../policies/setup_terminal_choice_policy';
 
 export class SetupQuestionnaireController implements SetupConfigurationCollectorPort {
   constructor(
@@ -45,7 +46,7 @@ export class SetupQuestionnaireController implements SetupConfigurationCollector
         ? await this.terminal.readMultiSelect(
           this.renderer.renderPrompt(state.question, setupQuestionnaireProgress(state, currentContext)),
           state.question.kind === 'project-select'
-            ? [...(state.question.projectCandidates ?? []).map(candidate => `${candidate.number} — ${candidate.title} (${candidate.url})`), 'manual — Enter Project number or URL',
+            ? [...(state.question.projectCandidates ?? []).map(candidate => `${candidate.number} — ${safeTerminalChoiceText(candidate.title)} (${safeTerminalChoiceText(candidate.url)})`), 'manual — Enter Project number or URL',
               ...(state.question.discoveryRetryRemaining ? ['retry — Retry GitHub Project discovery'] : [])]
             : state.question.choices ?? [],
           state.question.kind === 'project-select' && pendingProjectSelection

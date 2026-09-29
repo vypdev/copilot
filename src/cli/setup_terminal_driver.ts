@@ -6,6 +6,11 @@ export function interactiveTerminalAvailable(): boolean {
   return Boolean(stdin.isTTY && stdout.isTTY && !process.env.JEST_WORKER_ID);
 }
 
+// Keep this boundary safe even when choices are not constructed by the setup controller.
+function safeTerminalChoiceText(value: string): string {
+  return value.replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu, '');
+}
+
 export function createInteractiveTerminalDriver(): TerminalDriver | undefined {
   return interactiveTerminalAvailable() ? new NodeTerminalDriver() : undefined;
 }
@@ -113,7 +118,7 @@ export class NodeTerminalDriver implements TerminalDriver {
         const lines = choices.map((choice, choiceIndex) => {
           const id = choice === 'All' ? 'all' : choice.split(' — ')[0];
           const checked = id === 'all' ? value.size === choices.length - 1 : value.has(id);
-          return `${choiceIndex === index ? '❯' : ' '} ${checked ? '●' : '○'} ${choice}`;
+          return `${choiceIndex === index ? '❯' : ' '} ${checked ? '●' : '○'} ${safeTerminalChoiceText(choice)}`;
         });
         stdout.write(`${rendered ? `\x1b[${choices.length}A\x1b[0J` : ''}${lines.join('\n')}\n`);
         rendered = true;

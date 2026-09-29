@@ -1,6 +1,7 @@
 import type { WebSetupPrompt } from '../../application/contracts/web_setup_view';
 import { safeGithubLink, safeGithubRunLink, safeGithubProjectLink, safeGithubRulesetLink } from '../../../web/src/lib/githubLink';
 import { checkConclusionLabel } from '../../../web/src/i18n/checkEvidence';
+import { manualProducerIdentity } from '../../../web/src/lib/manualProducerIdentity';
 import { featureName } from '../../../web/src/i18n/featureNames';
 import { focusOnRevision } from '../../../web/src/lib/focusOnRevision';
 import { safeHelpLink } from '../../../web/src/lib/helpLink';
@@ -35,6 +36,24 @@ describe('web setup presentation helpers', () => {
     expect(checkConclusionLabel('future-state', 'fr')).toBe('Résultat inconnu');
     expect(featureName('credentialHealth', 'pt')).toBe('Estado das credenciais');
     expect(featureName('future-capability', 'en')).toBe('future-capability');
+  });
+  test.each([
+    ['en', 'Stale', 'Failed to start'],
+    ['es', 'Obsoleto', 'Falló al iniciar'],
+    ['fr', 'Obsolète', 'Échec au démarrage'],
+    ['pt', 'Obsoleto', 'Falha ao iniciar'],
+  ] as const)('%s labels both uncommon GitHub check conclusions', (locale, stale, startup) => {
+    expect(checkConclusionLabel('stale', locale)).toBe(stale);
+    expect(checkConclusionLabel('startup_failure', locale)).toBe(startup);
+  });
+
+  test('manual producer identity accepts a numeric App ID without calling string methods on it', () => {
+    expect(manualProducerIdentity(' Test ', 42, ' CI ')).toBe('Test|42|CI');
+    expect(manualProducerIdentity('Test', '42', 'CI')).toBe('Test|42|CI');
+    for (const invalid of [undefined, 0, -2, 1.5, '1e2', '9007199254740992']) {
+      expect(manualProducerIdentity('Test', invalid, 'CI')).toBeUndefined();
+    }
+    expect(manualProducerIdentity('Bad|name', '42', 'CI')).toBeUndefined();
   });
 
   test.each([
