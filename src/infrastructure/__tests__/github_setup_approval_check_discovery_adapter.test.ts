@@ -82,4 +82,25 @@ describe('GitHub setup approval check discovery', () => {
     expect(await new GithubSetupApprovalCheckDiscoveryAdapter().discover(owner, repository, 'secret'))
       .toEqual({ status: 'unavailable', candidates: [] });
   });
+
+  test('does not claim ruleset evidence when rules are malformed or GitHub denies inspection', async () => {
+    const calls = arrange([{ id: 42, name: 'CI', head_sha: sha, run_attempt: 1, status: 'completed' }],
+      [{ id: 90, name: 'Tests', app: { id: 12 }, head_sha: sha, conclusion: 'success' }],
+      [{ name: 'Tests', check_run_url: 'https://api.github.com/repos/acme/project/check-runs/90' }]);
+    calls.request.mockResolvedValueOnce({ data: [{ type: 'required_status_checks', ruleset_id: 0,
+      ruleset_source_type: 'Repository', ruleset_source: 'acme/project',
+      parameters: { required_status_checks: [{ context: 'Tests', integration_id: 12 }] } }] });
+    expect((await new GithubSetupApprovalCheckDiscoveryAdapter().discover(owner, repository, 'secret', 'develop'))
+      .candidates[0].requiredByRuleset).toBeUndefined();
+    calls.request.mockRejectedValueOnce(Object.assign(new Error('denied'), { status: 403 }));
+    expect((await new GithubSetupApprovalCheckDiscoveryAdapter().discover(owner, repository, 'secret', 'develop'))
+      .candidates[0].requiredByRuleset).toBeUndefined();
+  });
+
+  test('maps a later Check Runs failure to a nonempty error status instead of an empty trusted list', async () => {
+    const calls = arrange([{ id: 42, name: 'CI', head_sha: sha, run_attempt: 1, status: 'completed' }], [], []);
+    calls.listForRef.mockRejectedValueOnce(Object.assign(new Error('denied'), { status: 403 }));
+    expect(await new GithubSetupApprovalCheckDiscoveryAdapter().discover(owner, repository, 'secret'))
+      .toEqual({ status: 'permission-denied', candidates: [] });
+  });
 });

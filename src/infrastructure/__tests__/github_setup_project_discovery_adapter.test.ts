@@ -70,6 +70,14 @@ describe('GitHub setup Project discovery', () => {
     expect(request.mock.calls.filter(([route]) => route === 'GET /orgs/{org}/projectsV2')).toHaveLength(1);
   });
 
+  test('ignores a malformed next-page URL without making another request', async () => {
+    const request = jest.fn().mockResolvedValue({ data: [{ number: 2, title: 'First' }],
+      headers: { link: '<not-a-url>; rel="next"' } });
+    arrange(request);
+    expect((await adapter.discover(owner, 'Organization', 'secret')).candidates).toHaveLength(1);
+    expect(request.mock.calls.filter(([route]) => route === 'GET /orgs/{org}/projectsV2')).toHaveLength(1);
+  });
+
   test('distinguishes personal-owner unsupported, empty, denied and provider unavailable', async () => {
     expect(await adapter.discover(owner, 'User', 'secret')).toEqual({ status: 'unsupported', candidates: [] });
     expect(github.getOctokit).not.toHaveBeenCalled();

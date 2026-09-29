@@ -71,6 +71,17 @@ describe('SetupQuestionnaireController', () => {
     expect(initial.answeredQuestionIds).toBeUndefined();
   });
 
+  it('explains :back at the first CLI question without losing the current draft', async () => {
+    const output = renderer();
+    const input = terminal([{ kind: 'value', value: ':back' }, { kind: 'value', value: '' }]);
+    const result = await new SetupQuestionnaireController(input, output).collect(
+      createSetupQuestionnaire(createDefaultSetupConfiguration()), {},
+    );
+    expect(result.terminal).toBe('review');
+    expect(output.showValidation).toHaveBeenCalledWith('This is the first question in this pass. Review it or cancel setup.');
+    expect(input.readText.mock.calls[0][0]).toBe(input.readText.mock.calls[1][0]);
+  });
+
   it.each([
     ['Ctrl-C', { kind: 'cancel' } as const],
     ['EOF', { kind: 'end-of-input' } as const],
@@ -166,5 +177,46 @@ describe('SetupQuestionnaireController', () => {
     expect(result.terminal).toBe('review');
     expect(result.draft.projects.ids).toBe('5');
     expect(input.readText.mock.calls[0][0]).toContain('Current selection: 5');
+  });
+
+  it('combines selected Projects with manually entered URLs or numbers', async () => {
+    const context = { skipQuestionIds: setupQuestionContentInventory().map(item => item.id).filter(id => id !== 'projects.ids'),
+      projectOwner: 'owner', projectDiscovery: { status: 'observed' as const,
+        candidates: [{ number: 5, title: 'Roadmap', owner: 'owner', url: 'https://github.com/orgs/owner/projects/5' }] } };
+    const input = { ...terminal([{ kind: 'value', value: 'https://github.com/orgs/owner/projects/7' }]),
+      readMultiSelect: jest.fn().mockResolvedValue({ kind: 'value', value: '5,manual' }) };
+    const result = await new SetupQuestionnaireController(input, renderer()).collect(
+      createSetupQuestionnaire(createDefaultSetupConfiguration(), context), context,
+    );
+    expect(result.terminal).toBe('review');
+    expect(result.draft.projects.ids).toBe('5,7');
+    expect(input.readText).toHaveBeenCalledWith(expect.stringContaining('Enter additional Project numbers'));
+  });
+
+  it('cancels safely if manual Project entry reaches end of input', async () => {
+    const context = { skipQuestionIds: setupQuestionContentInventory().map(item => item.id).filter(id => id !== 'projects.ids'),
+      projectOwner: 'owner' };
+    const input = { ...terminal([{ kind: 'end-of-input' }]),
+      readMultiSelect: jest.fn().mockResolvedValue({ kind: 'value', value: 'manual' }) };
+    const output = renderer();
+    const result = await new SetupQuestionnaireController(input, output).collect(
+      createSetupQuestionnaire(createDefaultSetupConfiguration(), context), context,
+    );
+    expect(result.terminal).toBe('cancelled');
+    expect(output.showCancelled).toHaveBeenCalledTimes(1);
+  });
+
+  it('explains exhausted discovery retries and lets the operator continue', async () => {
+    const context = { skipQuestionIds: setupQuestionContentInventory().map(item => item.id).filter(id => id !== 'projects.ids'),
+      projectOwner: 'owner', discoveryRetryRemaining: { checks: 0, projects: 0 } };
+    const input = { ...terminal([]), readMultiSelect: jest.fn()
+      .mockResolvedValueOnce({ kind: 'value', value: 'retry' })
+      .mockResolvedValueOnce({ kind: 'value', value: 'none' }) };
+    const output = renderer();
+    const result = await new SetupQuestionnaireController(input, output).collect(
+      createSetupQuestionnaire(createDefaultSetupConfiguration(), context), context,
+    );
+    expect(result.terminal).toBe('review');
+    expect(output.showValidation).toHaveBeenCalledWith(expect.stringContaining('No discovery retries remain'));
   });
 });

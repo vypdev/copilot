@@ -1,7 +1,7 @@
 import { WebSetupBridge } from '../web_setup_bridge';
 import { WebSetupCredentialPrompt, WebSetupJourneyPresenter, WebSetupPermissionPresenter, WebSetupPlanConfirmation, WebSetupPlanPresenter, WebSetupQuestionnaireCollector, WebSetupWorkflowUpdatePrompt } from '../web_setup_adapters';
 import { buildInitialSetupConfiguration } from '../../application/usecases/setup/setup_wizard_use_case';
-import { createSetupPermissionIntentQuestionnaire } from '../../application/policies/setup_questionnaire_policy';
+import { createSetupPermissionIntentQuestionnaire, createSetupQuestionnaire, setupQuestionContentInventory } from '../../application/policies/setup_questionnaire_policy';
 import type { SetupPlan } from '../../domain/setup';
 import type { SetupTokenPermissionReport } from '../../domain/setup_token_permissions';
 import type { SetupCredentialCheck } from '../../domain/setup';
@@ -68,6 +68,43 @@ describe('semantic web setup adapters', () => {
     expect((await result).terminal).toBe('cancelled');
   });
 
+  test('a web discovery retry refreshes the current Project question without restarting the questionnaire', async () => {
+    const bridge = new WebSetupBridge('owner/repo');
+    const context = { skipQuestionIds: setupQuestionContentInventory().map(item => item.id).filter(id => id !== 'projects.ids'),
+      projectOwner: 'owner', projectDiscovery: { status: 'unavailable' as const, candidates: [] },
+      discoveryRetryRemaining: { checks: 0, projects: 1 } };
+    const initial = createSetupQuestionnaire(buildInitialSetupConfiguration({ mode: 'interactive' }), context);
+    const refreshed = { ...context, projectDiscovery: { status: 'observed' as const, candidates: [
+      { number: 5, owner: 'owner', title: 'Roadmap', url: 'https://github.com/orgs/owner/projects/5' },
+    ] }, discoveryRetryRemaining: { checks: 0, projects: 0 } };
+    const refresh = jest.fn(async () => refreshed);
+    const pending = new WebSetupQuestionnaireCollector(bridge).collect(initial, context, { refresh });
+    const revision = bridge.snapshot().promptRevision!;
+    expect(await bridge.retryDiscovery(revision)).toBe('updated');
+    expect(refresh).toHaveBeenCalledWith('projects');
+    const prompt = bridge.snapshot().prompt;
+    expect(prompt?.kind).toBe('question');
+    if (prompt?.kind === 'question') expect(prompt.question.projectCandidates?.[0].title).toBe('Roadmap');
+    answer(bridge, '5');
+    expect((await pending).draft.projects.ids).toBe('5');
+  });
+
+  test('back navigation shows the earlier web question within the same run', async () => {
+    const bridge = new WebSetupBridge('owner/repo');
+    const initial = createSetupPermissionIntentQuestionnaire(buildInitialSetupConfiguration({ mode: 'interactive' }));
+    const firstId = initial.question?.id;
+    const pending = new WebSetupQuestionnaireCollector(bridge).collect(initial, {});
+    answer(bridge, '');
+    await next();
+    expect(bridge.snapshot().prompt?.kind).toBe('question');
+    expect(bridge.snapshot().promptRevision).toBeGreaterThan(1);
+    expect(bridge.back(bridge.snapshot().promptRevision!)).toBe('updated');
+    const returned = bridge.snapshot().prompt;
+    expect(returned?.kind === 'question' && returned.question.id).toBe(firstId);
+    bridge.cancel();
+    expect((await pending).terminal).toBe('cancelled');
+  });
+
   test.each([['approve', 'approved'], ['decline', 'declined']])('plan %s maps to %s', async (reply, expected) => {
     const bridge = new WebSetupBridge('owner/repo');
     const confirmation = new WebSetupPlanConfirmation(bridge);
@@ -77,6 +114,40 @@ describe('semantic web setup adapters', () => {
     if (planPrompt?.kind === 'plan') expect(planPrompt.plan.secrets).toEqual(['PAT']);
     answer(bridge, reply);
     expect((await pending).kind).toBe(expected);
+  });
+
+  test('the web plan displays exact trusted check producers and rejects unknown edit groups', async () => {
+    const bridge = new WebSetupBridge('owner/repo');
+    const base = emptyPlan();
+    const plan = { ...base, configuration: { ...base.configuration,
+      pullRequestApproval: { ...base.configuration.pullRequestApproval,
+        testChecks: [{ name: 'tests', sourceAppId: 42, workflowName: 'CI' }] } } };
+    const pending = new WebSetupPlanConfirmation(bridge).confirm(plan);
+    const prompt = bridge.snapshot().prompt;
+    expect(prompt?.kind).toBe('plan');
+    if (prompt?.kind === 'plan') expect(prompt.plan.decisions.trustedChecks).toEqual([
+      { name: 'tests', sourceAppId: 42, workflowName: 'CI' },
+    ]);
+    const revision = bridge.snapshot().promptRevision!;
+    expect(bridge.answer(revision, 'revise:unlisted')).toBe(false);
+    expect(bridge.snapshot().promptRevision).toBe(revision);
+    answer(bridge, 'approve');
+    expect((await pending).kind).toBe('approved');
+  });
+
+  test('web plan revision only accepts a section actually offered in the current plan', async () => {
+    const bridge = new WebSetupBridge('owner/repo');
+    const pending = new WebSetupPlanConfirmation(bridge).confirm(emptyPlan());
+    const prompt = bridge.snapshot().prompt;
+    expect(prompt?.kind).toBe('plan');
+    const group = prompt?.kind === 'plan' ? prompt.editGroups?.[0] : undefined;
+    expect(group).toBeDefined();
+    answer(bridge, `revise:${group}`);
+    expect(await pending).toEqual({ kind: 'revise', group });
+
+    const invalidBridge = new WebSetupBridge('owner/repo');
+    jest.spyOn(invalidBridge, 'ask').mockResolvedValueOnce('revise:unlisted');
+    await expect(new WebSetupPlanConfirmation(invalidBridge).confirm(emptyPlan())).rejects.toThrow('Invalid setup section.');
   });
 
   test('guided bot token uses distinct GitHub link, numeric identity, and masked handoff', async () => {

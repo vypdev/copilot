@@ -8,6 +8,7 @@ import { ConsoleSetupPlanPresenter, renderSetupPlan } from '../setup_plan_presen
 import { ConsoleSetupQuestionRenderer } from '../setup_question_renderer';
 import { SetupWorkflowUpdatePromptAdapter } from '../setup_workflow_update_prompt_adapter';
 import { resolveStaticSetupDoctorCatalog } from '../../application/policies/setup_doctor_message_catalog';
+import { setupEditableGroups } from '../../application/policies/setup_questionnaire_policy';
 
 function terminal(results: readonly TerminalReadResult[]): jest.Mocked<TerminalDriver> {
   let index = 0;
@@ -171,6 +172,39 @@ describe('setup presenters and prompt-specific adapters', () => {
     log.mockRestore();
   });
 
+  it('shows full check identities, bounded discovery evidence, and Project Status warnings', () => {
+    const renderer = new ConsoleSetupQuestionRenderer();
+    const coverage = renderer.renderPrompt({ stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.checkName',
+      label: 'Coverage check', kind: 'choice', defaultValue: 'coverage', choices: ['coverage', 'other'],
+      trustedProducers: [{ name: 'coverage', sourceAppId: 42, workflowName: 'CI' }] });
+    expect(coverage).toContain('coverage — CI · App 42');
+    const checks = renderer.renderPrompt({ stateId: 'pull-request-approval', id: 'pullRequestApproval.testChecks',
+      label: 'Trusted checks', kind: 'producer-select', defaultValue: '', discoveryStatus: 'observed',
+      discoveryTruncated: true, discoveryRetryRemaining: 1,
+      producerCandidates: [{ name: 'tests', sourceAppId: 42, workflowName: 'CI', conclusion: 'success',
+        headSha: 'abcdef123', runUrl: 'https://github.com/owner/repo/actions/runs/1',
+        requiredByRuleset: { branch: 'develop', sourceUrl: 'https://github.com/owner/repo/rules/1' } }] });
+    expect(checks).toContain('tests · App 42 · CI · success · abcdef1');
+    expect(checks).toContain('Required on develop by active ruleset');
+    expect(checks).toContain('Only a bounded sample was inspected');
+    expect(checks).toContain('Type r to retry GitHub discovery');
+    const projects = renderer.renderPrompt({ stateId: 'projects', id: 'projects.ids', label: 'Projects',
+      kind: 'project-select', defaultValue: '', discoveryStatus: 'empty' });
+    expect(projects).toContain('no open, accessible Projects');
+    expect(projects).toContain('at most 30 open, accessible organization Projects');
+    const status = renderer.renderPrompt({ stateId: 'projects', id: 'projects.issueCreatedColumn', label: 'Status',
+      kind: 'text', defaultValue: 'Todo', statusOptionState: 'unavailable',
+      projectStatusValues: [{ transition: 'issueCreated', value: 'Todo' }] });
+    expect(status).toContain('Verify these exact Status values');
+    expect(status).toContain('Status options could not be verified');
+    expect(renderer.renderPrompt({ stateId: 'projects', id: 'projects.issueCreatedColumn', label: 'Status',
+      kind: 'text', defaultValue: 'Todo', statusOptionState: 'incompatible' })).toContain('no common Status values');
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    renderer.showHelp({ stateId: 'projects', id: 'projects.ids', label: 'Projects', kind: 'project-select', defaultValue: '' });
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('About this setup choice'));
+    log.mockRestore();
+  });
+
   it('distinguishes approval, decline, and interrupted confirmation', async () => {
     const input = terminal([
       { kind: 'value', value: 'maybe' },
@@ -199,6 +233,24 @@ describe('setup presenters and prompt-specific adapters', () => {
       expect(output).toContain('PATs created on GitHub are not deleted automatically');
       expect(output).toContain('https://docs.page/vypdev/copilot/how-to-use');
     } finally { log.mockRestore(); }
+  });
+
+  it('lists editable plan sections, rejects an invalid number, and returns the chosen group', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const plan = buildSetupPlan(createDefaultSetupConfiguration());
+      const input = terminal([{ kind: 'value', value: ':edit' }, { kind: 'value', value: '99' },
+        { kind: 'value', value: ':edit' }, { kind: 'value', value: '1' }]);
+      await expect(new SetupPlanConfirmationAdapter(input, false).confirm(plan))
+        .resolves.toEqual({ kind: 'revise', group: setupEditableGroups(plan.configuration)[0] });
+      expect(log.mock.calls.flat().join('\n')).toContain('Choose one of the listed section numbers');
+    } finally { log.mockRestore(); }
+  });
+
+  it('cancels rather than applying when section selection is interrupted', async () => {
+    const input = terminal([{ kind: 'value', value: ':edit' }, { kind: 'end-of-input' }]);
+    await expect(new SetupPlanConfirmationAdapter(input, false).confirm(buildSetupPlan(createDefaultSetupConfiguration())))
+      .resolves.toEqual({ kind: 'cancelled' });
   });
 
   it('keeps non-interactive credential values separate from questionnaire and plan state', async () => {

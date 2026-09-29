@@ -258,6 +258,28 @@ describe('local web setup server', () => {
     expect(await pending).toBe('selected');
   });
 
+  test('authorizes back navigation by revision without replaying the entire setup session', async () => {
+    const boot = await (await fetch(`${server.url}api/bootstrap`)).json() as { capability: string };
+    const commit = jest.fn();
+    const pending = bridge.ask({ kind: 'text', title: 'Current question' }, undefined, () => ({
+      prompt: { kind: 'text', title: 'Previous question' }, commit,
+    }));
+    const revision = bridge.snapshot().promptRevision!;
+    expect((await jsonPost(server.url, 'api/back', { revision }, { 'X-Setup-Capability': 'wrong' })).status).toBe(403);
+    expect((await fetch(`${server.url}api/back`, { method: 'POST', headers: {
+      Origin: server.url.slice(0, -1), 'Content-Type': 'text/plain', 'X-Setup-Capability': boot.capability,
+    }, body: '{}' })).status).toBe(415);
+    expect((await jsonPost(server.url, 'api/back', { revision: 'invalid' }, { 'X-Setup-Capability': boot.capability })).status).toBe(400);
+    expect((await jsonPost(server.url, 'api/back', { revision: revision + 1 }, { 'X-Setup-Capability': boot.capability })).status).toBe(409);
+    expect((await jsonPost(server.url, 'api/back', { revision }, { 'X-Setup-Capability': boot.capability })).status).toBe(200);
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect(bridge.snapshot().prompt?.title).toBe('Previous question');
+    expect((await jsonPost(server.url, 'api/back', { revision }, { 'X-Setup-Capability': boot.capability })).status).toBe(409);
+    expect((await jsonPost(server.url, 'api/answer', { revision: bridge.snapshot().promptRevision, value: 'answer' },
+      { 'X-Setup-Capability': boot.capability })).status).toBe(200);
+    expect(await pending).toBe('answer');
+  });
+
   test('rejects oversized answers, wrong method, and unsupported content type', async () => {
     const boot = await (await fetch(`${server.url}api/bootstrap`)).json() as { capability: string };
     const pending = bridge.ask({ kind: 'text', title: 'Answer' });

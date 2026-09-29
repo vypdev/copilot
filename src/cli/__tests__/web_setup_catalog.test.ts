@@ -280,4 +280,23 @@ describe('web setup localization catalog', () => {
     }
     expect(localizedPlanWarning('Unreviewed English warning', 'es')).toBe(tr('planUnknownWarning', 'es'));
   });
+
+  test('unknown server-side validation is not mislabeled as a known translated rule', () => {
+    expect(validationCopy('A future validation rule.')).toBeUndefined();
+  });
+
+  test('localized release and hotfix warnings distinguish installed automation from disabled events', () => {
+    const warnings = [
+      'Release automation is installed, but release issue events are disabled by the selected issue workflow profile.',
+      'Hotfix automation is installed, but hotfix issue events are disabled by the selected issue workflow profile.',
+    ];
+    const installedPhrases = { en: 'is installed', es: 'ya está instalada', fr: 'est déjà installée', pt: 'já está instalada' } as const;
+    for (const locale of setupLocales) {
+      for (const warning of warnings) {
+        const translated = localizedPlanWarning(warning, locale);
+        expect(translated).toContain(installedPhrases[locale]);
+        expect(translated).toMatch(/disable|desactiva|désactive|desativa/u);
+      }
+    }
+  });
 });

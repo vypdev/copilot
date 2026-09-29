@@ -309,6 +309,29 @@ describe('SetupWizardUseCase', () => {
     expect(discover).toHaveBeenNthCalledWith(3, 'owner', 'Organization', 'setup-token');
   });
 
+  it('keeps provider failures explicit during initial CI/Project discovery and bounded retries', async () => {
+    const draft = buildInitialSetupConfiguration({ mode: 'interactive', overrides: { pullRequestApproval: { mode: 'recommend' } } });
+    const approvalDiscover = jest.fn().mockRejectedValue(new Error('CI provider unavailable'));
+    const projectDiscover = jest.fn().mockRejectedValue(new Error('Projects provider unavailable'));
+    const collect = jest.fn(async (state, context, refresh) => {
+      expect(context.approvalCheckDiscoveryStatus).toBe('unavailable');
+      expect(context.projectDiscovery?.status).toBe('unavailable');
+      expect((await refresh.refresh('checks'))?.approvalCheckDiscoveryStatus).toBe('unavailable');
+      expect((await refresh.refresh('projects'))?.projectDiscovery?.status).toBe('unavailable');
+      return { ...state, terminal: 'cancelled' as const };
+    });
+    const result = await new SetupWizardUseCase(dependencies({ collector: { collect },
+      remoteConfiguration: { inspect: jest.fn().mockResolvedValue(remote) },
+      approvalCheckDiscovery: { discover: approvalDiscover }, projectDiscovery: { discover: projectDiscover } })).execute({
+      mode: 'interactive', overrides: { pullRequestApproval: { mode: 'recommend' } },
+      permissionIntent: { draft, answeredQuestionIds: ['projects.enabled'], projectsWanted: true },
+      remoteTarget: { owner: 'owner', repository: 'repo', token: 'setup-token' },
+    });
+    expect(result.status).toBe('cancelled');
+    expect(approvalDiscover).toHaveBeenCalledTimes(2);
+    expect(projectDiscover).toHaveBeenCalledTimes(2);
+  });
+
   it('adds live merge-queue readiness to the setup plan', async () => {
     const check = {
       id: 'github.merge-queue.production',

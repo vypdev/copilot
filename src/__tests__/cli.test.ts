@@ -544,6 +544,12 @@ describe('CLI', () => {
         expect(setupApplySnapshotMatches).toHaveBeenCalledTimes(2);
         expect(runLocalAction).toHaveBeenCalledTimes(1);
         expect(process.exitCode).toBeUndefined();
+        const bridge = (startWebSetupServer as jest.Mock).mock.calls[0][0] as WebSetupBridge;
+        expect(await bridge.runReadOnlyDoctor()).toBe('complete');
+        expect(mockDoctorExecute).toHaveBeenCalledWith(expect.objectContaining({
+          owner: 'test-owner', repository: 'test-repo', setupToken: 'github_pat_web_setup_test_token', readOnly: true,
+        }));
+        expect(bridge.snapshot().doctor).toEqual({ status: 'complete', healthy: true, pass: 0, warn: 0, fail: 0, skipped: 0 });
       });
 
       it('prints the pairing code to stdout even without an interactive TTY', async () => {
