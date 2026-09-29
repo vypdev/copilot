@@ -65945,8 +65945,11 @@ function registerSetupCommand(program) {
                 return;
             }
             (0, logger_1.logInfo)(`📦 Repository: ${gitInfo.owner}/${gitInfo.repo}`);
-            releaseSetupGuard = (0, setup_session_guard_1.acquireSetupSessionGuard)(cwd);
             const checkoutRoot = webBridge ? (0, cli_context_1.getGitRepositoryRoot)(cwd) : cwd;
+            if (webBridge && !(0, cli_context_1.isGitRepositoryRoot)(cwd)) {
+                throw new application_error_1.ApplicationError('configuration.invalid', `Web setup must start from the repository root (${checkoutRoot}). Change to that directory and rerun before creating PATs. No local setup session started.`);
+            }
+            releaseSetupGuard = (0, setup_session_guard_1.acquireSetupSessionGuard)(cwd);
             const initialBranch = webBridge ? (0, cli_context_1.getCurrentAttachedBranch)(cwd) : undefined;
             const initialHead = webBridge ? (0, cli_context_1.getCurrentHeadSha)() : undefined;
             if (webBridge && (!initialBranch || !initialHead)) {
