@@ -14,6 +14,7 @@ export const sessionErrorsEn = {
   'Invalid request origin.': 'The request came from another origin. Open the exact local URL printed in the terminal.',
   'JSON required.': 'The local request format was invalid. Refresh the page and try again.',
   'Too many pairing attempts. Restart setup.': 'Too many incorrect pairing attempts. Restart setup from the terminal.',
+  'Too many pairing attempts. Wait 30 seconds and retry.': 'Too many incorrect pairing attempts. Wait 30 seconds and try the code again; terminal setup remains available.',
   'Incorrect pairing code. Check the terminal.': 'Incorrect pairing code. Check the launching terminal.',
   'Incorrect pairing code. Check the launching output.': 'Incorrect pairing code. Check the launching output.',
   'Pair this browser using the code printed by the CLI.': 'Pair this browser using the code printed by the CLI.',

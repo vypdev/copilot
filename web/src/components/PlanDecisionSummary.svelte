@@ -1,15 +1,12 @@
 <script lang="ts">
   import type { WebSetupPlan } from '../../../src/application/contracts/web_setup_view';
-  import { tr, type SetupMessageKey } from '../i18n/catalog';
+  import { tr } from '../i18n/catalog';
+  import { projectTransitionKey } from '../i18n/projectTransitions';
   import { setupLocale } from '../i18n/localeStore';
   import { featureName } from '../i18n/featureNames';
   import { agentRoleName } from '../i18n/agentRoleNames';
   import { questionOptionLabel } from '../i18n/questionOptions';
   export let decisions: WebSetupPlan['decisions'];
-  const transitionKey: Record<string, SetupMessageKey> = {
-    issueCreated: 'projectTransitionIssueCreated', pullRequestCreated: 'projectTransitionPullRequestCreated',
-    issueInProgress: 'projectTransitionIssueInProgress', pullRequestInProgress: 'projectTransitionPullRequestInProgress',
-  };
   function scopeLabel(value: string): string {
     return tr(value === 'repository' ? 'scopeRepository' : value === 'organization' ? 'scopeOrganization' : 'scopeDisabled', $setupLocale);
   }
@@ -36,7 +33,7 @@
       {/if}
     {/if}
     <div><dt>{tr('editProjects', $setupLocale)}</dt><dd>{decisions.projectNumbers.length ? decisions.projectNumbers.map(item => `#${item}`).join(', ') : tr('none', $setupLocale)}</dd></div>
-    {#if decisions.projectNumbers.length}<div><dt>{tr('planProjectStatuses', $setupLocale)}</dt><dd><ul>{#each decisions.projectStatuses as status}<li>{tr(transitionKey[status.transition], $setupLocale)}: <bdi>{status.value}</bdi></li>{/each}</ul></dd></div>{/if}
+    {#if decisions.projectNumbers.length}<div><dt>{tr('planProjectStatuses', $setupLocale)}</dt><dd><ul>{#each decisions.projectStatuses as status}<li>{tr(projectTransitionKey[status.transition], $setupLocale)}: <bdi>{status.value}</bdi></li>{/each}</ul></dd></div>{/if}
     <div><dt>{tr('planVariableScope', $setupLocale)}</dt><dd>{scopeLabel(decisions.variableScope)}</dd></div>
     <div><dt>{tr('planSecretScope', $setupLocale)}</dt><dd>{scopeLabel(decisions.secretScope)}</dd></div>
     <div><dt>{tr('planIssueResources', $setupLocale)}</dt><dd>{tr('planIssueResourcesValue', $setupLocale)}</dd></div>

@@ -16,6 +16,7 @@ export const sessionErrorsPt: Readonly<Record<keyof typeof sessionErrorsEn, stri
   'Invalid request origin.': 'O pedido veio de outra origem. Abra o URL local exato do terminal.',
   'JSON required.': 'O formato do pedido local é inválido. Atualize a página e tente novamente.',
   'Too many pairing attempts. Restart setup.': 'Demasiadas tentativas incorretas de emparelhamento. Reinicie a configuração no terminal.',
+  'Too many pairing attempts. Wait 30 seconds and retry.': 'Demasiadas tentativas incorretas de emparelhamento. Aguarde 30 segundos e volte a introduzir o código; a configuração no terminal continua disponível.',
   'Incorrect pairing code. Check the terminal.': 'Código de emparelhamento incorreto. Verifique o terminal de lançamento.',
   'Incorrect pairing code. Check the launching output.': 'Código de emparelhamento incorreto. Verifique a saída de lançamento.',
   'Pair this browser using the code printed by the CLI.': 'Emparelhe este navegador com o código apresentado pelo CLI.',

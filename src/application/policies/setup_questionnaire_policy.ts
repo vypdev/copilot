@@ -190,6 +190,19 @@ export function transitionSetupQuestionnaire(
       validation: parsed.error,
     };
   }
+  if (state.question.id === 'features.issues' && parsed.value === false
+    && (context.fixedWorkflowFeatures?.release === true || context.fixedWorkflowFeatures?.hotfix === true)) {
+    return { ...state, validation: 'Issue automation is required by an explicit release or hotfix override. Keep Issues enabled or edit your configuration.' };
+  }
+  if (state.question.id === 'issueWorkflows.enabled') {
+    const selected = new Set(String(parsed.value).split(','));
+    for (const kind of ['release', 'hotfix'] as const) {
+      const fixed = context.fixedWorkflowFeatures?.[kind];
+      if (fixed !== undefined && selected.has(kind) !== fixed) {
+        return { ...state, validation: `The ${kind} workflow must ${fixed ? 'remain enabled' : 'remain disabled'} because it is fixed by your configuration. Match that choice or edit your configuration.` };
+      }
+    }
+  }
   const configureIndependently = state.question.id === 'agents.configureIndependently'
     ? Boolean(parsed.value)
     : state.configureIndependently;
@@ -546,6 +559,8 @@ function toQuestion(definition: QuestionDefinition, draft: SetupConfiguration, c
       ? { suggestionSource: context.branchSources.main } : {}),
     ...(definition.id === 'repository.developmentBranch' && context.branchSources
       ? { suggestionSource: context.branchSources.development } : {}),
+    ...((definition.id === 'issueWorkflows.enabled' || definition.id === 'features.issues') && context.fixedWorkflowFeatures
+      ? { fixedWorkflowFeatures: context.fixedWorkflowFeatures } : {}),
   };
 }
 

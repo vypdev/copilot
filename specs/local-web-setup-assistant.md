@@ -240,10 +240,12 @@ exactly what completed and what remains.
    default browser to the public `http://127.0.0.1:<port>/` URL. The initial
    page asks for the code before any setup state is shown. A same-origin POST
    exchanges it for the session key held only in browser memory; five invalid
-   attempts lock pairing until a new setup run. A second paired tab remains
+   attempts cause a 30-second cooldown, not a permanent session lockout. The
+   counter resets after the cooldown, so unauthenticated loopback traffic
+   cannot permanently consume the operator's pairing opportunity. A second paired tab remains
    read-only until its operator explicitly re-enters that same code for a
    takeover POST; no takeover ticket is distributed in bootstrap. Failed
-   takeover codes share the bounded attempt counter. A successful takeover
+   takeover codes share the bounded attempt counter and cooldown. A successful takeover
    rotates the controller capability and invalidates the previous tab.
    If opening fails, print the
    public URL and instructions; serving continues. Neither code nor key may
@@ -440,6 +442,15 @@ command only wires them and handles the resulting guided/manual outcome. This
 keeps the grant decision out of a presentation-specific entrypoint and lets
 pure fake-port tests cover repeated review, conflicts, fallback, and invalid
 local configuration without creating a GitHub PAT.
+Explicit `--config`/CLI `features.release` and `features.hotfix` values remain
+fixed during the permission-intent pass. Its issue-workflow selector shows
+those constraints before input and rejects a contradictory selection without
+changing the draft or recalculating a misleading PAT grant. An explicit
+enabled release/hotfix workflow also prevents disabling the parent Issues
+capability; the operator may edit the originating config/flag and restart.
+The resulting fixed inputs carry into the full wizard without a second,
+silent override. Web validation and pre-answer guidance are localized in all
+four supported languages; CLI explains the same constraints in English.
 
 The initial setup-PAT identity/access gate is an application use case shared by
 both presentations; it requires explicit acknowledgement for unverifiable
@@ -1163,7 +1174,8 @@ for the temporary setup PAT and to bot-PAT rotation guidance separately.
    cross-site Fetch Metadata, unsupported methods/content types, and requests
    over size/time limits. No wildcard CORS or credentials cross-origin.
    The pairing endpoint accepts only same-origin JSON POST, bounds wrong-code
-   attempts, and returns the session key only for the correct code. The code
+   attempts with a 30-second recoverable cooldown, and returns the session key
+   only for the correct code. The code
    and key are not sent in an HTTP URL or stored in a cookie/localStorage/
    sessionStorage; the browser sends the key in a custom header to every
    subsequent API route. In addition,
@@ -1538,8 +1550,8 @@ contains counts only. `copilot doctor --read-only` is the matching terminal
 path and never dispatches credential-health Actions; plain doctor may dispatch
 the already-installed health workflow. The session/error and result copy has
 matching English, Spanish, French, and Portuguese catalogs. The latest full
-local run passed 509 Jest suites / 5,636 tests with 95.61% statements, 90.4%
-branches, 96.32% functions, and 97.05% lines overall; instrumented web
+local run passed 509 Jest suites / 5,646 tests with 95.66% statements, 90.41%
+branches, 96.41% functions, and 97.08% lines overall; instrumented web
 TypeScript reached 100% statements, functions, and lines. Svelte components
 are not included in that TypeScript coverage claim. The result/doctor tests
 use fake ports and local loopback fixtures; no PAT, repository setup, test

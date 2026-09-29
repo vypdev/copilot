@@ -32,5 +32,8 @@ export const messageCopyEs: Readonly<Record<WebSetupMessageCopyId, string>> = {
   'validation.projectNumber': 'Introduce el número positivo del Project que aparece en su URL, no un ID GraphQL PVT_.',
   'validation.projectNumberRange': 'El número del Project debe ser un entero positivo no mayor de 2147483647.',
   'validation.projectDuplicate': 'Has seleccionado el Project {number} más de una vez.',
+  'validation.fixedIssues': 'Tu configuración activa expresamente release o hotfix. Mantén Issues activado o cambia antes la configuración.',
+  'validation.fixedWorkflowEnabled': 'Tu configuración activa {kind}. Mantén ese flujo seleccionado o cambia antes la configuración.',
+  'validation.fixedWorkflowDisabled': 'Tu configuración desactiva {kind}. Desmarca ese flujo o cambia antes la configuración.',
   'validation.unknown': 'No se pudo aceptar esta respuesta. Revisa la pregunta y su ayuda; la terminal contiene el detalle técnico.',
 };

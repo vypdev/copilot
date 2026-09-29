@@ -47942,7 +47942,7 @@ const setup_token_permission_policy_1 = __nccwpck_require__(99590);
 /** Local inputs with explicit precedence are decisions, not questions. */
 function fixedSetupPatIntentQuestionIds(overrides, skipVariables, skipSecrets) {
     const fixed = [];
-    for (const feature of ['issues', 'pullRequests']) {
+    for (const feature of ['issues', 'pullRequests', 'release', 'hotfix']) {
         if (overrides.features?.[feature] !== undefined)
             fixed.push(`features.${feature}`);
     }
@@ -49300,6 +49300,19 @@ function transitionSetupQuestionnaire(state, event, context = {}) {
             validation: parsed.error,
         };
     }
+    if (state.question.id === 'features.issues' && parsed.value === false
+        && (context.fixedWorkflowFeatures?.release === true || context.fixedWorkflowFeatures?.hotfix === true)) {
+        return { ...state, validation: 'Issue automation is required by an explicit release or hotfix override. Keep Issues enabled or edit your configuration.' };
+    }
+    if (state.question.id === 'issueWorkflows.enabled') {
+        const selected = new Set(String(parsed.value).split(','));
+        for (const kind of ['release', 'hotfix']) {
+            const fixed = context.fixedWorkflowFeatures?.[kind];
+            if (fixed !== undefined && selected.has(kind) !== fixed) {
+                return { ...state, validation: `The ${kind} workflow must ${fixed ? 'remain enabled' : 'remain disabled'} because it is fixed by your configuration. Match that choice or edit your configuration.` };
+            }
+        }
+    }
     const configureIndependently = state.question.id === 'agents.configureIndependently'
         ? Boolean(parsed.value)
         : state.configureIndependently;
@@ -49633,6 +49646,8 @@ function toQuestion(definition, draft, context) {
             ? { suggestionSource: context.branchSources.main } : {}),
         ...(definition.id === 'repository.developmentBranch' && context.branchSources
             ? { suggestionSource: context.branchSources.development } : {}),
+        ...((definition.id === 'issueWorkflows.enabled' || definition.id === 'features.issues') && context.fixedWorkflowFeatures
+            ? { fixedWorkflowFeatures: context.fixedWorkflowFeatures } : {}),
     };
 }
 function readPath(configuration, path, allowedNames) {
@@ -57030,7 +57045,8 @@ class PrepareSetupPatIntentUseCase {
         let pass = 1;
         let projectsWanted = Boolean(draft.projects.ids.trim());
         while (true) {
-            const context = { skipQuestionIds: fixedQuestionIds, projectsWanted };
+            const context = { skipQuestionIds: fixedQuestionIds, projectsWanted,
+                fixedWorkflowFeatures: { release: request.overrides.features?.release, hotfix: request.overrides.features?.hotfix } };
             const intent = await this.ports.collect((0, setup_questionnaire_policy_1.createSetupPermissionIntentQuestionnaire)(draft, context), context, pass);
             if (intent.terminal === 'cancelled')
                 throw new setup_interaction_cancelled_error_1.SetupInteractionCancelledError();
@@ -69207,7 +69223,13 @@ class ConsoleSetupQuestionRenderer {
             : question.suggestionSource === 'local' ? ' (observed in this local checkout; confirm it exists on GitHub)'
                 : question.suggestionSource === 'configuration' ? ' (provided by your configuration)'
                     : question.suggestionSource === 'default' ? ' (product default; not verified against GitHub)' : '';
-        const heading = `${step}${question.label}\n  ${help.summary}\n  Suggested: ${formatDefault(question.defaultValue)}${source}. ${help.documentation.title}: ${help.documentation.url}\n  Type ? for detailed help; type :back to return to the previous question without clearing saved answers.${discoveryNote(question)}`;
+        const fixedWorkflowNote = question.id === 'features.issues' && (question.fixedWorkflowFeatures?.release || question.fixedWorkflowFeatures?.hotfix)
+            ? '  Configuration explicitly enables release or hotfix; keep Issues enabled unless you edit --config/flags.'
+            : ['release', 'hotfix'].flatMap(kind => {
+                const fixed = question.fixedWorkflowFeatures?.[kind];
+                return fixed === undefined ? [] : [`  Configuration fixes features.${kind}=${fixed}; ${fixed ? 'keep' : 'leave'} ${kind} ${fixed ? 'selected' : 'unselected'} unless you edit --config/flags.`];
+            }).join('\n');
+        const heading = `${step}${question.label}\n  ${help.summary}\n  Suggested: ${formatDefault(question.defaultValue)}${source}. ${help.documentation.title}: ${help.documentation.url}\n  Type ? for detailed help; type :back to return to the previous question without clearing saved answers.${fixedWorkflowNote ? `\n${fixedWorkflowNote}` : ''}${discoveryNote(question)}`;
         const reviewedStatuses = question.projectStatusValues?.map(item => `  ${item.transition}: ${item.value}`).join('\n');
         const fallback = formatDefault(question.defaultValue);
         if (question.kind === 'choice') {
@@ -70096,9 +70118,14 @@ function validationCopy(message) {
         'Enter a valid GitHub Project URL or positive Project number.': 'validation.projectUrl',
         'Enter the positive Project number from its GitHub URL, not a PVT_ GraphQL ID.': 'validation.projectNumber',
         'Project numbers must be positive integers at most 2147483647.': 'validation.projectNumberRange',
+        'Issue automation is required by an explicit release or hotfix override. Keep Issues enabled or edit your configuration.': 'validation.fixedIssues',
     };
     if (fixed[message])
         return { id: fixed[message] };
+    const fixedWorkflow = message.match(/^The (release|hotfix) workflow must (remain enabled|remain disabled) because it is fixed by your configuration\. Match that choice or edit your configuration\.$/u);
+    if (fixedWorkflow)
+        return { id: fixedWorkflow[2] === 'remain enabled' ? 'validation.fixedWorkflowEnabled' : 'validation.fixedWorkflowDisabled',
+            values: { kind: fixedWorkflow[1] } };
     const inherited = message.match(/^Unknown inherited resource name\(s\): (.+)\.$/u);
     if (inherited)
         return { id: 'validation.unknownResource', values: { names: inherited[1] } };
@@ -70376,12 +70403,26 @@ const node_child_process_1 = __nccwpck_require__(17718);
 const node_crypto_1 = __nccwpck_require__(6005);
 const MAX_BODY_BYTES = 8192;
 const MAX_ANSWER_LENGTH = 4096;
+const PAIRING_COOLDOWN_MS = 30000;
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 /** Transport only: setup policy and credential decisions live behind the bridge. */
 async function startWebSetupServer(bridge, assets = (0, node_path_1.join)(__dirname, '..', 'web')) {
     const sessionKey = (0, node_crypto_1.randomBytes)(32);
     const pairingCode = (0, node_crypto_1.randomBytes)(8);
     let failedPairings = 0;
+    let pairingLockedUntil = 0;
+    const pairingCoolingDown = () => {
+        if (pairingLockedUntil && Date.now() >= pairingLockedUntil) {
+            pairingLockedUntil = 0;
+            failedPairings = 0;
+        }
+        return pairingLockedUntil > Date.now();
+    };
+    const recordInvalidPairing = () => {
+        failedPairings += 1;
+        if (failedPairings >= 5)
+            pairingLockedUntil = Date.now() + PAIRING_COOLDOWN_MS;
+    };
     const assetRoot = await (0, promises_1.realpath)(assets);
     if (!(await (0, promises_1.realpath)((0, node_path_1.join)(assetRoot, 'index.html'))).startsWith(`${assetRoot}${node_path_1.sep}`)) {
         throw new Error('Local setup index must be inside its packaged asset directory.');
@@ -70438,16 +70479,17 @@ async function startWebSetupServer(bridge, assets = (0, node_path_1.join)(__dirn
                     respond(response, 415, { error: 'JSON required.' });
                     return;
                 }
-                if (failedPairings >= 5) {
-                    respond(response, 429, { error: 'Too many pairing attempts. Restart setup.' });
+                if (pairingCoolingDown()) {
+                    respond(response, 429, { error: 'Too many pairing attempts. Wait 30 seconds and retry.' });
                     return;
                 }
                 const body = await readJson(request);
                 if (!matchesHexSecret(body.code, pairingCode)) {
-                    failedPairings += 1;
+                    recordInvalidPairing();
                     respond(response, 403, { error: 'Incorrect pairing code. Check the terminal.' });
                     return;
                 }
+                failedPairings = 0;
                 respond(response, 200, { sessionKey: sessionKey.toString('hex') });
                 return;
             }
@@ -70469,15 +70511,16 @@ async function startWebSetupServer(bridge, assets = (0, node_path_1.join)(__dirn
                     return;
                 }
                 const body = await readJson(request);
-                if (failedPairings >= 5) {
-                    respond(response, 429, { error: 'Too many pairing attempts. Restart setup.' });
+                if (pairingCoolingDown()) {
+                    respond(response, 429, { error: 'Too many pairing attempts. Wait 30 seconds and retry.' });
                     return;
                 }
                 if (!matchesHexSecret(body.code, pairingCode)) {
-                    failedPairings += 1;
+                    recordInvalidPairing();
                     respond(response, 403, { error: 'Incorrect pairing code. Check the launching output.' });
                     return;
                 }
+                failedPairings = 0;
                 const capability = bridge.takeOver();
                 armIdle();
                 respond(response, 200, { capability });

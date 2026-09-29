@@ -66,7 +66,8 @@ export class PrepareSetupPatIntentUseCase {
     let pass = 1;
     let projectsWanted = Boolean(draft.projects.ids.trim());
     while (true) {
-      const context = { skipQuestionIds: fixedQuestionIds, projectsWanted };
+      const context = { skipQuestionIds: fixedQuestionIds, projectsWanted,
+        fixedWorkflowFeatures: { release: request.overrides.features?.release, hotfix: request.overrides.features?.hotfix } };
       const intent = await this.ports.collect(createSetupPermissionIntentQuestionnaire(draft, context), context, pass);
       if (intent.terminal === 'cancelled') throw new SetupInteractionCancelledError();
       draft = intent.draft;

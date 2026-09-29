@@ -47,7 +47,13 @@ export class ConsoleSetupQuestionRenderer implements SetupQuestionRenderer {
       : question.suggestionSource === 'local' ? ' (observed in this local checkout; confirm it exists on GitHub)'
       : question.suggestionSource === 'configuration' ? ' (provided by your configuration)'
         : question.suggestionSource === 'default' ? ' (product default; not verified against GitHub)' : '';
-    const heading = `${step}${question.label}\n  ${help.summary}\n  Suggested: ${formatDefault(question.defaultValue)}${source}. ${help.documentation.title}: ${help.documentation.url}\n  Type ? for detailed help; type :back to return to the previous question without clearing saved answers.${discoveryNote(question)}`;
+    const fixedWorkflowNote = question.id === 'features.issues' && (question.fixedWorkflowFeatures?.release || question.fixedWorkflowFeatures?.hotfix)
+      ? '  Configuration explicitly enables release or hotfix; keep Issues enabled unless you edit --config/flags.'
+      : (['release', 'hotfix'] as const).flatMap(kind => {
+        const fixed = question.fixedWorkflowFeatures?.[kind];
+        return fixed === undefined ? [] : [`  Configuration fixes features.${kind}=${fixed}; ${fixed ? 'keep' : 'leave'} ${kind} ${fixed ? 'selected' : 'unselected'} unless you edit --config/flags.`];
+      }).join('\n');
+    const heading = `${step}${question.label}\n  ${help.summary}\n  Suggested: ${formatDefault(question.defaultValue)}${source}. ${help.documentation.title}: ${help.documentation.url}\n  Type ? for detailed help; type :back to return to the previous question without clearing saved answers.${fixedWorkflowNote ? `\n${fixedWorkflowNote}` : ''}${discoveryNote(question)}`;
     const reviewedStatuses = question.projectStatusValues?.map(item => `  ${item.transition}: ${item.value}`).join('\n');
     const fallback = formatDefault(question.defaultValue);
     if (question.kind === 'choice') {

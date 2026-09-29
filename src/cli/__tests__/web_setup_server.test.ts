@@ -151,19 +151,37 @@ describe('local web setup server', () => {
     expect(await response.text()).not.toContain(sessionKeys.get(new URL(server.url).origin)!);
   });
 
-  test('five incorrect pairing attempts lock out even the valid code for this run', async () => {
+  test('five incorrect pairing attempts cause a recoverable cooldown, not a permanent lockout', async () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(100_000);
+    try {
+      const endpoint = `${server.url}api/pair`;
+      const origin = new URL(server.url).origin;
+      const post = (code: string) => globalThis.fetch(endpoint, {
+        method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify({ code }),
+      });
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        expect((await post('0'.repeat(16))).status).toBe(403);
+      }
+      const locked = await post(server.pairingCode);
+      expect(locked.status).toBe(429);
+      expect(await locked.clone().text()).toContain('Wait 30 seconds');
+      expect(await locked.text()).not.toContain(sessionKeys.get(origin)!);
+      expect((await fetch(`${server.url}api/bootstrap`)).status).toBe(200);
+      now.mockReturnValue(130_001);
+      expect((await post(server.pairingCode)).status).toBe(200);
+    } finally { now.mockRestore(); }
+  });
+
+  test('a correct pairing resets prior wrong-code attempts', async () => {
     const endpoint = `${server.url}api/pair`;
     const origin = new URL(server.url).origin;
     const post = (code: string) => globalThis.fetch(endpoint, {
       method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify({ code }),
     });
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      expect((await post('0'.repeat(16))).status).toBe(403);
-    }
-    const locked = await post(server.pairingCode);
-    expect(locked.status).toBe(429);
-    expect(await locked.text()).not.toContain(sessionKeys.get(origin)!);
-    expect((await fetch(`${server.url}api/bootstrap`)).status).toBe(200);
+    for (let attempt = 0; attempt < 4; attempt += 1) expect((await post('0'.repeat(16))).status).toBe(403);
+    expect((await post(server.pairingCode)).status).toBe(200);
+    for (let attempt = 0; attempt < 4; attempt += 1) expect((await post('0'.repeat(16))).status).toBe(403);
+    expect((await post(server.pairingCode)).status).toBe(200);
   });
 
   test('bounds simultaneous loopback connections', async () => {
@@ -268,15 +286,20 @@ describe('local web setup server', () => {
     expect(await pending).toBe('yes');
   });
 
-  test('limits wrong-code takeover attempts without returning a controller capability', async () => {
-    await fetch(`${server.url}api/bootstrap`);
-    await fetch(`${server.url}api/bootstrap`);
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      const rejected = await jsonPost(server.url, 'api/takeover', { code: 'wrong' });
-      expect(rejected.status).toBe(403);
-      expect(await rejected.json()).not.toHaveProperty('capability');
-    }
-    expect((await jsonPost(server.url, 'api/takeover', { code: server.pairingCode })).status).toBe(429);
+  test('limits wrong-code takeover attempts temporarily without returning a controller capability', async () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(100_000);
+    try {
+      await fetch(`${server.url}api/bootstrap`);
+      await fetch(`${server.url}api/bootstrap`);
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const rejected = await jsonPost(server.url, 'api/takeover', { code: 'wrong' });
+        expect(rejected.status).toBe(403);
+        expect(await rejected.json()).not.toHaveProperty('capability');
+      }
+      expect((await jsonPost(server.url, 'api/takeover', { code: server.pairingCode })).status).toBe(429);
+      now.mockReturnValue(130_001);
+      expect((await jsonPost(server.url, 'api/takeover', { code: server.pairingCode })).status).toBe(200);
+    } finally { now.mockRestore(); }
   });
 
   test('cancel requires the controller and never claims to cancel in-flight Apply', async () => {

@@ -76,6 +76,17 @@ describe('setup command option adapter', () => {
 });
 
 describe('setup override merge policy', () => {
+  test('CLI storage scope, visibility and per-name flags override conflicting file values', () => {
+    const merged = mergeSetupOverrides({ storage: {
+      secrets: { defaultScope: 'repository', organizationVisibility: 'private', overrides: { PAT: 'repository' } },
+      variables: { defaultScope: 'repository', organizationVisibility: 'private', overrides: { API_KEY: 'repository' } },
+    } }, { storage: {
+      secrets: { defaultScope: 'organization', organizationVisibility: 'selected', overrides: { PAT: 'organization' } },
+      variables: { defaultScope: 'organization', organizationVisibility: 'all', overrides: { API_KEY: 'organization' } },
+    } });
+    expect(merged.storage?.secrets).toMatchObject({ defaultScope: 'organization', organizationVisibility: 'selected', overrides: { PAT: 'organization' } });
+    expect(merged.storage?.variables).toMatchObject({ defaultScope: 'organization', organizationVisibility: 'all', overrides: { API_KEY: 'organization' } });
+  });
   test('flag fields win while unrelated file-only fields survive at every nested boundary', () => {
     const merged = mergeSetupOverrides({
       features: { issues: true }, agents: { planner: { provider: 'codex' } },

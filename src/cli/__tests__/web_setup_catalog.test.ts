@@ -12,6 +12,7 @@ import { messageCopyCatalogs, localizedMessage } from '../../../web/src/i18n/mes
 import { localizedSessionError, sessionErrorCatalogs } from '../../../web/src/i18n/sessionErrors';
 import { localizedPlanWarning, planWarningCatalogs } from '../../../web/src/i18n/planWarningCopy';
 import { agentRoleName, agentRoleNames } from '../../../web/src/i18n/agentRoleNames';
+import { projectTransitionKey } from '../../../web/src/i18n/projectTransitions';
 import { validationCopy } from '../web_setup_adapters';
 
 describe('web setup localization catalog', () => {
@@ -72,6 +73,9 @@ describe('web setup localization catalog', () => {
       'Enter the positive Project number from its GitHub URL, not a PVT_ GraphQL ID.',
       'Project numbers must be positive integers at most 2147483647.',
       'Project 7 was selected more than once.',
+      'Issue automation is required by an explicit release or hotfix override. Keep Issues enabled or edit your configuration.',
+      'The release workflow must remain enabled because it is fixed by your configuration. Match that choice or edit your configuration.',
+      'The hotfix workflow must remain disabled because it is fixed by your configuration. Match that choice or edit your configuration.',
     ];
     for (const message of messages) {
       const copy = validationCopy(message);
@@ -142,6 +146,15 @@ describe('web setup localization catalog', () => {
     }
     expect(agentRoleName('planner', 'es')).toBe('Planificador');
     expect(agentRoleName('findings', 'fr')).toBe('Analyste des problèmes');
+  });
+
+  test('question and plan presenters share the same localized Project Status transition labels', () => {
+    expect(Object.keys(projectTransitionKey).sort()).toEqual([
+      'issueCreated', 'issueInProgress', 'pullRequestCreated', 'pullRequestInProgress',
+    ]);
+    for (const locale of setupLocales) {
+      for (const key of Object.values(projectTransitionKey)) expect(tr(key, locale).trim()).not.toBe('');
+    }
   });
 
   test('every literal permission reason and condition has exactly one translated key', () => {

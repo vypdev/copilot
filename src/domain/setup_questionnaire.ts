@@ -69,6 +69,7 @@ export interface SetupQuestion {
   readonly statusOptionState?: 'observed' | 'unavailable' | 'incompatible';
   readonly projectStatusValues?: readonly { readonly transition: 'issueCreated' | 'pullRequestCreated' | 'issueInProgress' | 'pullRequestInProgress'; readonly value: string }[];
   readonly suggestionSource?: 'github' | 'local' | 'configuration' | 'default';
+  readonly fixedWorkflowFeatures?: Readonly<{ release?: boolean; hotfix?: boolean }>;
 }
 
 export interface SetupQuestionnaireState {
@@ -110,4 +111,5 @@ export interface SetupQuestionnaireContext {
   readonly projectsWanted?: boolean;
   readonly discoveryRetryRemaining?: Readonly<{ checks: number; projects: number }>;
   readonly branchSources?: Readonly<{ main: 'github' | 'configuration' | 'default'; development: 'local' | 'configuration' | 'default' }>;
+  readonly fixedWorkflowFeatures?: Readonly<{ release?: boolean; hotfix?: boolean }>;
 }

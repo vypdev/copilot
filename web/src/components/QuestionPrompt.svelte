@@ -2,7 +2,8 @@
   import type { WebSetupPrompt } from '../../../src/application/contracts/web_setup_view';
   import { initialQuestionAnswer, submittedQuestionAnswer, toggleSelection } from '../lib/questionAnswer';
   import ActionButton from './ActionButton.svelte';
-  import { tr, type SetupMessageKey } from '../i18n/catalog';
+  import { tr } from '../i18n/catalog';
+  import { projectTransitionKey } from '../i18n/projectTransitions';
   import { setupLocale } from '../i18n/localeStore';
   import { safeHelpLink } from '../lib/helpLink';
   import { questionOptionLabel } from '../i18n/questionOptions';
@@ -11,6 +12,7 @@
   import ProjectSelector from './ProjectSelector.svelte';
   import QuestionGuidance from './QuestionGuidance.svelte';
   import CoverageCheckEvidence from './CoverageCheckEvidence.svelte';
+  import FixedWorkflowNotice from './FixedWorkflowNotice.svelte';
   type Prompt = Extract<WebSetupPrompt, { kind: 'question' }>;
   export let prompt: Prompt;
   export let controller: boolean;
@@ -27,10 +29,6 @@
       : prompt.question.kind === 'choice' || prompt.question.kind === 'multi-select'
         ? questionOptionLabel(prompt.question.id, String(prompt.question.defaultValue), $setupLocale)
         : String(prompt.question.defaultValue);
-  const transitionKey: Record<NonNullable<Prompt['question']['projectStatusValues']>[number]['transition'], SetupMessageKey> = {
-    issueCreated: 'projectTransitionIssueCreated', pullRequestCreated: 'projectTransitionPullRequestCreated',
-    issueInProgress: 'projectTransitionIssueInProgress', pullRequestInProgress: 'projectTransitionPullRequestInProgress',
-  };
 </script>
 <div class="question-heading"><h2>{explanation?.label ?? prompt.question.label.replace(' (Space toggles, Enter confirms)', '')}</h2>{#if prompt.phase === 'permission-intent'}<span class="phase-tag">{tr('permissionPreview', $setupLocale)}</span>{/if}</div>
 {#if prompt.progress}<p class="field-help" role="status">{tr('questionProgress', $setupLocale, { current: String(prompt.progress.groupPosition), total: String(prompt.progress.groupTotal), overall: String(prompt.progress.position), all: String(prompt.progress.total) })}</p>{/if}
@@ -50,7 +48,8 @@
 {#if prompt.question.statusOptionState === 'unavailable'}<p class="discovery-notice" role="status">{tr('projectStatusUnavailable', $setupLocale)}</p>{/if}
 {#if prompt.question.statusOptionState === 'incompatible'}<p class="discovery-notice" role="alert">{tr('projectStatusIncompatible', $setupLocale)}</p>{/if}
 {#if prompt.question.id === 'projects.ids'}<p class="field-help">{tr('projectSharedStatus', $setupLocale)}</p>{/if}
-{#if prompt.question.projectStatusValues}<ul class="status-review-list">{#each prompt.question.projectStatusValues as item}<li>{tr(transitionKey[item.transition], $setupLocale)}: <strong><bdi>{item.value}</bdi></strong></li>{/each}</ul>{/if}
+<FixedWorkflowNotice question={prompt.question} />
+{#if prompt.question.projectStatusValues}<ul class="status-review-list">{#each prompt.question.projectStatusValues as item}<li>{tr(projectTransitionKey[item.transition], $setupLocale)}: <strong><bdi>{item.value}</bdi></strong></li>{/each}</ul>{/if}
 {#if prompt.question.kind === 'boolean'}
   <div class="segmented" role="group" aria-label={explanation?.label ?? prompt.question.label}><button class:selected={value === 'yes' || value === 'true'} aria-pressed={value === 'yes' || value === 'true'} onclick={() => value = 'yes'} disabled={!controller}>{tr('yes', $setupLocale)}</button><button class:selected={value === 'no' || value === 'false'} aria-pressed={value === 'no' || value === 'false'} onclick={() => value = 'no'} disabled={!controller}>{tr('no', $setupLocale)}</button></div>
 {:else if prompt.question.kind === 'choice'}

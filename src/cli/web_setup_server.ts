@@ -7,6 +7,7 @@ import { WebSetupBridge } from './web_setup_bridge';
 
 const MAX_BODY_BYTES = 8192;
 const MAX_ANSWER_LENGTH = 4096;
+const PAIRING_COOLDOWN_MS = 30_000;
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 
 export interface WebSetupServer {
@@ -21,6 +22,18 @@ export async function startWebSetupServer(bridge: WebSetupBridge, assets = join(
   const sessionKey = randomBytes(32);
   const pairingCode = randomBytes(8);
   let failedPairings = 0;
+  let pairingLockedUntil = 0;
+  const pairingCoolingDown = (): boolean => {
+    if (pairingLockedUntil && Date.now() >= pairingLockedUntil) {
+      pairingLockedUntil = 0;
+      failedPairings = 0;
+    }
+    return pairingLockedUntil > Date.now();
+  };
+  const recordInvalidPairing = (): void => {
+    failedPairings += 1;
+    if (failedPairings >= 5) pairingLockedUntil = Date.now() + PAIRING_COOLDOWN_MS;
+  };
   const assetRoot = await realpath(assets);
   if (!(await realpath(join(assetRoot, 'index.html'))).startsWith(`${assetRoot}${sep}`)) {
     throw new Error('Local setup index must be inside its packaged asset directory.');
@@ -71,13 +84,14 @@ export async function startWebSetupServer(bridge: WebSetupBridge, assets = join(
       }
       if (request.method === 'POST' && request.url === '/api/pair') {
         if (request.headers['content-type'] !== 'application/json') { respond(response, 415, { error: 'JSON required.' }); return; }
-        if (failedPairings >= 5) { respond(response, 429, { error: 'Too many pairing attempts. Restart setup.' }); return; }
+        if (pairingCoolingDown()) { respond(response, 429, { error: 'Too many pairing attempts. Wait 30 seconds and retry.' }); return; }
         const body = await readJson(request);
         if (!matchesHexSecret(body.code, pairingCode)) {
-          failedPairings += 1;
+          recordInvalidPairing();
           respond(response, 403, { error: 'Incorrect pairing code. Check the terminal.' });
           return;
         }
+        failedPairings = 0;
         respond(response, 200, { sessionKey: sessionKey.toString('hex') });
         return;
       }
@@ -96,12 +110,13 @@ export async function startWebSetupServer(bridge: WebSetupBridge, assets = join(
       if (request.method === 'POST' && request.url === '/api/takeover') {
         if (request.headers['content-type'] !== 'application/json') { respond(response, 415, { error: 'JSON required.' }); return; }
         const body = await readJson(request);
-        if (failedPairings >= 5) { respond(response, 429, { error: 'Too many pairing attempts. Restart setup.' }); return; }
+        if (pairingCoolingDown()) { respond(response, 429, { error: 'Too many pairing attempts. Wait 30 seconds and retry.' }); return; }
         if (!matchesHexSecret(body.code, pairingCode)) {
-          failedPairings += 1;
+          recordInvalidPairing();
           respond(response, 403, { error: 'Incorrect pairing code. Check the launching output.' });
           return;
         }
+        failedPairings = 0;
         const capability = bridge.takeOver();
         armIdle();
         respond(response, 200, { capability });

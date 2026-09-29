@@ -67,6 +67,11 @@ describe('setup PAT permission intent', () => {
     ]));
   });
 
+  it('records explicit release and hotfix feature overrides as fixed intent inputs', () => {
+    expect(fixedSetupPatIntentQuestionIds({ features: { release: false, hotfix: true } }, false, false))
+      .toEqual(expect.arrayContaining(['features.release', 'features.hotfix']));
+  });
+
   it('recognizes fixed approval, Projects, and preservation values without treating defaults as fixed', () => {
     expect(fixedSetupPatIntentQuestionIds({}, false, false)).toEqual([]);
     expect(fixedSetupPatIntentQuestionIds({

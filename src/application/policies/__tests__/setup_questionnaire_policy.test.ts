@@ -124,6 +124,32 @@ describe('setup questionnaire policy', () => {
     );
   });
 
+  it('explains fixed release/hotfix overrides and rejects conflicting PAT-intent answers without changing them', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.features.release = true;
+    configuration.features.hotfix = false;
+    configuration.issueWorkflows.enabled = ['feature', 'bugfix', 'release'];
+    const context = { fixedWorkflowFeatures: { release: true, hotfix: false } };
+    const first = createSetupPermissionIntentQuestionnaire(configuration, context);
+    expect(first.question?.fixedWorkflowFeatures).toEqual(context.fixedWorkflowFeatures);
+    const disabled = transitionSetupQuestionnaire(first, { kind: 'answer', value: 'no' }, context);
+    expect(disabled.validation).toContain('release or hotfix override');
+    expect(disabled.draft).toEqual(first.draft);
+
+    const workflows = advanceTo(first, 'issueWorkflows.enabled', context);
+    expect(workflows.question?.fixedWorkflowFeatures).toEqual(context.fixedWorkflowFeatures);
+    const missingRelease = transitionSetupQuestionnaire(workflows, { kind: 'answer', value: 'feature,bugfix' }, context);
+    expect(missingRelease.validation).toContain('release workflow must remain enabled');
+    expect(missingRelease.draft).toEqual(workflows.draft);
+    const extraHotfix = transitionSetupQuestionnaire(workflows, { kind: 'answer', value: 'feature,release,hotfix' }, context);
+    expect(extraHotfix.validation).toContain('hotfix workflow must remain disabled');
+    expect(extraHotfix.draft).toEqual(workflows.draft);
+    const accepted = transitionSetupQuestionnaire(workflows, { kind: 'answer', value: 'feature,release' }, context);
+    expect(accepted.validation).toBeUndefined();
+    expect(accepted.draft.features.release).toBe(true);
+    expect(accepted.draft.features.hotfix).toBe(false);
+  });
+
   it('enters review immediately when the permission-intent phase has no open questions', () => {
     const ids = [
       'features.issues', 'features.pullRequests', 'issueWorkflows.enabled', 'pullRequestApproval.mode',

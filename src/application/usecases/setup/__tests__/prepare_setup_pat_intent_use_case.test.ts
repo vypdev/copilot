@@ -37,6 +37,18 @@ describe('PrepareSetupPatIntentUseCase', () => {
     expect(ports.showPreview).toHaveBeenCalledWith(expect.objectContaining({ pass: 1, requirements: result.requirements }));
   });
 
+  test('passes explicit release/hotfix constraints to the intent questionnaire and retains their fixed provenance', async () => {
+    const { ports, useCase } = harness();
+    const result = await useCase.execute({ ...request, overrides: { features: { release: true, hotfix: false } } });
+    expect(ports.collect).toHaveBeenCalledWith(expect.any(Object), expect.objectContaining({
+      fixedWorkflowFeatures: { release: true, hotfix: false },
+      skipQuestionIds: expect.arrayContaining(['features.release', 'features.hotfix']),
+    }), 1);
+    expect(result.kind).toBe('guided');
+    if (result.kind === 'guided') expect(result.permissionIntent.answeredQuestionIds)
+      .toEqual(expect.arrayContaining(['features.release', 'features.hotfix']));
+  });
+
   test('review details is non-terminal and uses the same provisional grants', async () => {
     const { ports, useCase } = harness();
     jest.spyOn(ports, 'review').mockResolvedValueOnce('details').mockResolvedValueOnce('continue');

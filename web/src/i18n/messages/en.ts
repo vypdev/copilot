@@ -32,5 +32,8 @@ export const messageCopyEn: Readonly<Record<WebSetupMessageCopyId, string>> = {
   'validation.projectNumber': 'Enter the positive Project number from its GitHub URL, not a PVT_ GraphQL ID.',
   'validation.projectNumberRange': 'Project numbers must be positive integers at most 2147483647.',
   'validation.projectDuplicate': 'Project {number} was selected more than once.',
+  'validation.fixedIssues': 'Your configuration explicitly enables release or hotfix automation. Keep Issues enabled or edit that configuration first.',
+  'validation.fixedWorkflowEnabled': 'Your configuration enables {kind}. Keep that workflow selected or edit the configuration first.',
+  'validation.fixedWorkflowDisabled': 'Your configuration disables {kind}. Deselect that workflow or edit the configuration first.',
   'validation.unknown': 'This answer could not be accepted. Review the question and its help; the terminal has the technical detail.',
 };

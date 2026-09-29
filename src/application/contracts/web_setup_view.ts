@@ -45,7 +45,8 @@ export type WebSetupMessageCopyId =
   | 'validation.duplicateProducer' | 'validation.savedStatus' | 'validation.projectIncompatible'
   | 'validation.projectLimit' | 'validation.projectOwnerNeeded' | 'validation.projectOwnerMismatch'
   | 'validation.projectUrl' | 'validation.projectNumber' | 'validation.projectNumberRange'
-  | 'validation.projectDuplicate' | 'validation.unknown';
+  | 'validation.projectDuplicate' | 'validation.unknown'
+  | 'validation.fixedIssues' | 'validation.fixedWorkflowEnabled' | 'validation.fixedWorkflowDisabled';
 
 export type WebSetupPrompt =
   | ({ kind: 'question'; title: string; question: SetupQuestion; presentation?: SetupQuestionPresentation; phase: string; pass: number;

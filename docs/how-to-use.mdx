@@ -50,6 +50,9 @@ appears. The URL contains no secret; keep the pairing code private. Loopback
 by itself does not restrict access to your OS account, and anyone on this
 computer with the code could join the session. After a page refresh, enter
 the code again. Neither the code nor the session key is sent to GitHub.
+After five incorrect codes, pairing and takeover pause for 30 seconds; the
+session is not permanently locked. Wait and retry the code shown in the
+launching terminal. Terminal setup remains available.
 An input TTY is not required for `--web`, but you must be able to read the
 launcher's stdout (or a privately captured task log) to obtain the code. If
 that output was discarded, stop and relaunch from a readable terminal; there
@@ -181,6 +184,14 @@ values; if they use different Status vocabularies, choose compatible Projects
 or configure them separately. The assistant does not claim that a single value
 works in every Project when discovery shows otherwise. The bot PAT needs
 Project write access later, when the workflow runs.
+
+Explicit `features.release` and `features.hotfix` values from `--config` or
+CLI flags remain fixed during the pre-PAT permission review. The issue-workflow
+question shows those fixed choices before you answer and rejects a selection
+that contradicts them; it never quietly changes the configured feature or
+the PAT grant. If either is explicitly enabled, Issues must stay enabled.
+Edit the configuration or flags and restart if you intend to change that
+policy.
 
 The interactive terminal also shows your current phase: Repository → Setup
 choices → Setup PAT → Plan → Bot PAT & credentials → Apply. These are milestones,

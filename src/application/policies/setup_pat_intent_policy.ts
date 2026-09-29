@@ -9,7 +9,7 @@ export function fixedSetupPatIntentQuestionIds(
   skipSecrets: boolean,
 ): string[] {
   const fixed: string[] = [];
-  for (const feature of ['issues', 'pullRequests'] as const) {
+  for (const feature of ['issues', 'pullRequests', 'release', 'hotfix'] as const) {
     if (overrides.features?.[feature] !== undefined) fixed.push(`features.${feature}`);
   }
   if (overrides.issueWorkflows?.enabled !== undefined) fixed.push('issueWorkflows.enabled');

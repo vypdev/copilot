@@ -225,8 +225,12 @@ export function validationCopy(message: string): { id: WebSetupMessageCopyId; va
     'Enter a valid GitHub Project URL or positive Project number.': 'validation.projectUrl',
     'Enter the positive Project number from its GitHub URL, not a PVT_ GraphQL ID.': 'validation.projectNumber',
     'Project numbers must be positive integers at most 2147483647.': 'validation.projectNumberRange',
+    'Issue automation is required by an explicit release or hotfix override. Keep Issues enabled or edit your configuration.': 'validation.fixedIssues',
   };
   if (fixed[message]) return { id: fixed[message] };
+  const fixedWorkflow = message.match(/^The (release|hotfix) workflow must (remain enabled|remain disabled) because it is fixed by your configuration\. Match that choice or edit your configuration\.$/u);
+  if (fixedWorkflow) return { id: fixedWorkflow[2] === 'remain enabled' ? 'validation.fixedWorkflowEnabled' : 'validation.fixedWorkflowDisabled',
+    values: { kind: fixedWorkflow[1] } };
   const inherited = message.match(/^Unknown inherited resource name\(s\): (.+)\.$/u);
   if (inherited) return { id: 'validation.unknownResource', values: { names: inherited[1] } };
   const workflows = message.match(/^Unknown issue workflow\(s\): (.+)\.$/u);

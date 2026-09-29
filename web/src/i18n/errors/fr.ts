@@ -16,6 +16,7 @@ export const sessionErrorsFr: Readonly<Record<keyof typeof sessionErrorsEn, stri
   'Invalid request origin.': 'La demande vient d’une autre origine. Ouvrez l’URL locale exacte du terminal.',
   'JSON required.': 'Le format de la demande locale est invalide. Actualisez la page et réessayez.',
   'Too many pairing attempts. Restart setup.': 'Trop de tentatives d’association incorrectes. Relancez la configuration depuis le terminal.',
+  'Too many pairing attempts. Wait 30 seconds and retry.': 'Trop de tentatives d’association incorrectes. Attendez 30 secondes puis ressaisissez le code ; la configuration par terminal reste disponible.',
   'Incorrect pairing code. Check the terminal.': 'Code d’association incorrect. Vérifiez le terminal de lancement.',
   'Incorrect pairing code. Check the launching output.': 'Code d’association incorrect. Vérifiez la sortie de lancement.',
   'Pair this browser using the code printed by the CLI.': 'Associez ce navigateur avec le code affiché par le CLI.',

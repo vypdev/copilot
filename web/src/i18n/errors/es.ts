@@ -16,6 +16,7 @@ export const sessionErrorsEs: Readonly<Record<keyof typeof sessionErrorsEn, stri
   'Invalid request origin.': 'La petición llegó desde otro origen. Abre la URL local exacta de la terminal.',
   'JSON required.': 'El formato de la petición local no es válido. Actualiza la página y reinténtalo.',
   'Too many pairing attempts. Restart setup.': 'Demasiados intentos de vinculación fallidos. Reinicia la configuración desde la terminal.',
+  'Too many pairing attempts. Wait 30 seconds and retry.': 'Demasiados intentos de vinculación fallidos. Espera 30 segundos y vuelve a probar el código; puedes seguir con el setup en la terminal.',
   'Incorrect pairing code. Check the terminal.': 'Código de vinculación incorrecto. Comprueba la terminal inicial.',
   'Incorrect pairing code. Check the launching output.': 'Código de vinculación incorrecto. Comprueba la salida de inicio.',
   'Pair this browser using the code printed by the CLI.': 'Vincula este navegador con el código mostrado por el CLI.',

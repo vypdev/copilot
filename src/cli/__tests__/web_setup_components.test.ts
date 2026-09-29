@@ -93,6 +93,18 @@ describe('web setup component semantics', () => {
     expect(html).not.toContain('Detailed guidance below is currently available in English');
   });
 
+  test.each([
+    ['en', 'Keep release selected'], ['es', 'Mantén release seleccionado'],
+    ['fr', 'Gardez release sélectionné'], ['pt', 'Mantenha release selecionado'],
+  ])('%s PAT-intent workflow question explains fixed feature overrides before input', (locale, expected) => {
+    const html = markup('QuestionPrompt', { prompt: { kind: 'question', title: 'Issue workflows', phase: 'permission-intent', pass: 1,
+      question: { stateId: 'capabilities', id: 'issueWorkflows.enabled', label: 'Issue workflows', kind: 'multi-select',
+        defaultValue: 'feature,release', choices: ['feature', 'release', 'hotfix'],
+        fixedWorkflowFeatures: { release: true, hotfix: false } } }, controller: true, busy: false }, locale);
+    expect(html).toContain(expected);
+    expect(html).toContain('features.hotfix=false');
+  });
+
   test('question details explain where, how and why, with a safe contextual link', () => {
     const html = markup('QuestionPrompt', { prompt: {
       kind: 'question', title: 'Repository', phase: 'full', pass: 1,
