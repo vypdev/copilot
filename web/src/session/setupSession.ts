@@ -39,6 +39,7 @@ export function createSetupSession(initialSessionKey?: string) {
       loading = false;
     }
   }
+  const poll = (): Promise<void> => refresh(true);
   async function connect(): Promise<void> {
     if (!sessionKey) return;
     try {
@@ -174,6 +175,5 @@ export function createSetupSession(initialSessionKey?: string) {
     catch (cause) { set({ error: cause instanceof Error ? cause.message : 'Read-only verification failed.' }); }
     finally { await refresh(true); set({ busy: false }); }
   }
-
-  return { subscribe: state.subscribe, pair, connect, refresh, submit, retryDiscovery, back, cancel, takeOver, close, runDoctor };
+  return { subscribe: state.subscribe, pair, connect, refresh, poll, submit, retryDiscovery, back, cancel, takeOver, close, runDoctor };
 }

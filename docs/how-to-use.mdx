@@ -164,6 +164,8 @@ before retrying. If a requested Secrets or Variables writer is unavailable,
 setup stops before changing any setup resource and marks operations **not
 started**. An attempted write that fails is marked **needs inspection**, since
 GitHub may have applied it before reporting the error.
+An error shown after a rejected browser action stays visible during background
+updates; a successful next action clears it.
 
 Interactive `copilot setup` offers a guided GitHub link or manual entry for each
 PAT. The first link prepares a short-lived **setup PAT** for the person

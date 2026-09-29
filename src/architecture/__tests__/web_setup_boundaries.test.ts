@@ -141,6 +141,7 @@ describe('local web setup architecture', () => {
       }
     }
     expect(readFileSync(join(browser, 'App.svelte'), 'utf8')).toContain('createSetupSession');
+    expect(readFileSync(join(browser, 'App.svelte'), 'utf8')).toContain('void session.poll()');
     expect(readFileSync(join(browser, 'App.svelte'), 'utf8')).toContain('promptRevision={$session.view.promptRevision!}');
     expect(readFileSync(join(browser, 'components', 'PromptCard.svelte'), 'utf8')).toContain('CredentialPrompt');
     expect(readFileSync(join(browser, 'components', 'PromptCard.svelte'), 'utf8')).toContain('{#key promptRevision}');

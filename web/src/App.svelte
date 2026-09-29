@@ -22,7 +22,7 @@
       document.documentElement.dir = 'ltr';
       document.title = `Copilot · ${tr('studio', language)}`;
     });
-    const interval = window.setInterval(() => { if ($session.paired && !$session.view?.outcome) void session.refresh(); }, 900);
+    const interval = window.setInterval(() => { if ($session.paired && !$session.view?.outcome) void session.poll(); }, 900);
     return () => { window.clearInterval(interval); unsubscribe(); };
   });
 

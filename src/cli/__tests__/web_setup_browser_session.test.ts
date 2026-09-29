@@ -210,11 +210,14 @@ describe('browser session transport', () => {
 
   test('a rejected answer refreshes the question while keeping the error visible and the PAT private', async () => {
     const requests: string[] = [];
+    let rejectAnswer = true;
     globalThis.fetch = jest.fn(async (path: string) => {
       requests.push(path);
       if (path === '/api/bootstrap') return response({ controller: true, capability: 'controller', takeoverTicket: 'ticket' });
       if (path === '/api/state') return response(view);
-      if (path === '/api/answer') return response({ error: 'This question changed. Refresh the current state.' }, 409);
+      if (path === '/api/answer') return rejectAnswer
+        ? response({ error: 'This question changed. Refresh the current state.' }, 409)
+        : response({ accepted: true });
       throw new Error('Unexpected route');
     }) as typeof fetch;
 
@@ -228,6 +231,12 @@ describe('browser session transport', () => {
     expect(latest).toContain('This question changed');
     expect(latest).not.toContain('ghp_fake_rejected');
     expect(JSON.parse(latest).busy).toBe(false);
+    await session.poll();
+    expect(requests.at(-1)).toBe('/api/state');
+    expect(latest).toContain('This question changed');
+    rejectAnswer = false;
+    await session.submit(7, 'safe-answer');
+    expect(JSON.parse(latest).error).toBe('');
   });
 
   test('a discovery retry sends only the revision and controller capability, then reads updated state', async () => {
@@ -267,6 +276,8 @@ describe('browser session transport', () => {
     expect(latest.error).toContain('manual option');
     expect(latest.view?.promptRevision).toBe(7);
     expect(latest.busy).toBe(false);
+    await session.poll();
+    expect(latest.error).toContain('manual option');
   });
 
   test('controller transfer during a discovery retry reconnects read-only and never replays it', async () => {
@@ -479,6 +490,8 @@ describe('browser session transport', () => {
 
     expect(requests.filter(path => path === '/api/bootstrap')).toHaveLength(1);
     expect(latest).toMatchObject({ controller: false, busy: false, error: 'Incorrect pairing code.' });
+    await session.poll();
+    expect(latest?.error).toBe('Incorrect pairing code.');
   });
 
   test('failed bootstrap and state requests are reported without claiming a live session', async () => {

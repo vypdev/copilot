@@ -481,7 +481,10 @@ policy modules, or infer authority from local UI state. Prompt inputs keep
 only transient local values, clear secrets before submission, and the prompt
 presenter is keyed by the server prompt revision inside `PromptCard`. A new
 question remounts with its own defaults; ordinary polling or session-message
-revisions do not erase an answer in progress. Small pure helpers may normalize defaults
+revisions do not erase an answer in progress. Background polling also preserves
+an action-error banner across successful state reads until a user-initiated
+action succeeds; a new connection failure may replace it with the connection
+error. Small pure helpers may normalize defaults
 and allowlisted links. Adding a prompt kind belongs in its presenter rather
 than growing the page shell; avoid one-file-per-element indirection with no
 reuse. Architecture tests guard dependency direction and bound shell and
@@ -1411,6 +1414,9 @@ help for `--web` explains local-only scope and the `--non-interactive` conflict.
     capability, and plan approval are never stored in browser storage or URLs.
     Neither the code nor the session key appears in browser history. The final page never calls local disposal
     GitHub revocation or Secret installation verified Action health.
+    Given a rejected answer, bounded retry, or takeover, ordinary background
+    polling keeps its error readable; a subsequent successful user action
+    clears it. Polling cannot silently dismiss the banner after 900 ms.
 14. Given narrow width, 200% zoom, keyboard-only and reduced-motion settings,
     every primary state and recovery action remains understandable without
     color, sound, hover, or developer tools; English fallback is complete.
