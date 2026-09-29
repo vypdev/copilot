@@ -241,6 +241,10 @@ exactly what completed and what remains.
    page asks for the code before any setup state is shown. A same-origin POST
    exchanges it for the session key held only in browser memory; five invalid
    attempts cause a 30-second cooldown, not a permanent session lockout. The
+   page MUST use the same 16-hex-character and busy-state guard for button
+   clicks and Enter/form submission, including takeover. Incomplete or
+   non-hex text must not consume a server attempt; the server still validates
+   every request independently.
    counter resets after the cooldown, so unauthenticated loopback traffic
    cannot permanently consume the operator's pairing opportunity. A second paired tab remains
    read-only until its operator explicitly re-enters that same code for a
@@ -1600,6 +1604,11 @@ remote-facts comparison and keeps discovered Project choices usable in both
 optional-driver and raw-mode-unavailable text fallbacks. Fake-port and
 terminal-driver regressions exercise branch drift, visible Project numbers,
 retry, sanitized output, and unchanged selection semantics.
+
+A final pairing follow-up shares one client-side validity predicate between
+button state and form submission, so Enter cannot consume invalid attempts or
+bypass a busy state. Structural tests cover accepted hex input, incomplete and
+non-hex input, and the busy state. Server-side rate limiting remains authoritative.
 
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.

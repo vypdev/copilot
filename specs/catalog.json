@@ -772,6 +772,7 @@
         "web/src/session/setupSession.ts",
         "web/src/components/ActionButton.svelte",
         "web/src/components/PairingPanel.svelte",
+        "web/src/lib/pairingCode.ts",
         "web/src/components/ContextPanel.svelte",
         "web/src/components/PromptCard.svelte",
         "web/src/components/ResultPanel.svelte",

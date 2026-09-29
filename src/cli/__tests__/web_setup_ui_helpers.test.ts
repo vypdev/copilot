@@ -2,6 +2,7 @@ import type { WebSetupPrompt } from '../../application/contracts/web_setup_view'
 import { safeGithubLink, safeGithubRunLink, safeGithubProjectLink, safeGithubRulesetLink } from '../../../web/src/lib/githubLink';
 import { checkConclusionLabel } from '../../../web/src/i18n/checkEvidence';
 import { manualProducerIdentity } from '../../../web/src/lib/manualProducerIdentity';
+import { canSubmitPairingCode } from '../../../web/src/lib/pairingCode';
 import { featureName } from '../../../web/src/i18n/featureNames';
 import { focusOnRevision } from '../../../web/src/lib/focusOnRevision';
 import { safeHelpLink } from '../../../web/src/lib/helpLink';
@@ -15,6 +16,15 @@ function question(kind: Extract<WebSetupPrompt, { kind: 'question' }>['question'
 }
 
 describe('web setup presentation helpers', () => {
+  test('Enter and button pairing share strict code and busy validation', () => {
+    expect(canSubmitPairingCode('0123456789abcdef', false)).toBe(true);
+    expect(canSubmitPairingCode('0123456789ABCDEF', false)).toBe(true);
+    expect(canSubmitPairingCode(' 0123456789abcdef ', false)).toBe(true);
+    for (const invalid of ['', '0123456789abcde', '0123456789abcdef0', '0123456789abcdeg']) {
+      expect(canSubmitPairingCode(invalid, false)).toBe(false);
+    }
+    expect(canSubmitPairingCode('0123456789abcdef', true)).toBe(false);
+  });
   test('focus follows a new prompt revision but not background status polls', async () => {
     const focus = jest.fn();
     const action = focusOnRevision({ isConnected: true, focus }, 1);

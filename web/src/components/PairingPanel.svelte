@@ -2,13 +2,15 @@
   import ActionButton from './ActionButton.svelte';
   import { tr } from '../i18n/catalog';
   import { setupLocale } from '../i18n/localeStore';
+  import { canSubmitPairingCode } from '../lib/pairingCode';
   export let busy: boolean;
   export let onPair: (code: string) => Promise<void>;
   export let mode: 'pair' | 'takeover' = 'pair';
   let code = '';
 
   function submit(): void {
-    const entered = code;
+    if (!canSubmitPairingCode(code, busy)) return;
+    const entered = code.trim();
     code = '';
     void onPair(entered);
   }
@@ -22,6 +24,6 @@
     <label for="pairing-code">{tr('pairLabel', $setupLocale)}</label>
     <input id="pairing-code" type="text" bind:value={code} maxlength="16" autocomplete="off" autocapitalize="off" spellcheck="false" disabled={busy} placeholder={tr('pairPlaceholder', $setupLocale)} />
     <p class="field-help">{tr('pairHelp', $setupLocale)}</p>
-    <ActionButton label={tr(mode === 'pair' ? 'pairButton' : 'takeOver', $setupLocale)} arrow onClick={submit} disabled={busy || code.trim().length !== 16} />
+    <ActionButton label={tr(mode === 'pair' ? 'pairButton' : 'takeOver', $setupLocale)} arrow onClick={submit} disabled={!canSubmitPairingCode(code, busy)} />
   </form>
 </section>
