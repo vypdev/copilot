@@ -869,6 +869,10 @@ organization `Projects: read` for discovery. Setup only reads Projects and
 stores their selected numbers/Status names in repository configuration, so its
 PAT does not need `Projects: write`. The separate runtime bot PAT needs
 `Projects: write` when automation later updates Project items.
+The bounded adapter follows both GitHub REST `Link: rel="next"` forms (`page`
+and `after`) for at most two inventory pages. It must report truncation if
+another page remains, reject non-GitHub/unsafe pagination URLs, and not treat
+a partially paginated Status-field response as a complete set of options.
 The discovery adapter MUST exclude Projects whose `closed_at` is non-null
 (and any row explicitly marked `state: closed`); the UI and CLI state that
 only open, accessible Projects are suggested. A closed Project must not be
@@ -923,6 +927,7 @@ owner checks, incompatible Status options, four locales, CLI parity, safe
 links and no PAT in browser views. User documentation shows a Project URL,
 explains number versus GraphQL ID, and says `Status` rather than “column”.
 Provider evidence: [GitHub Projects REST](https://docs.github.com/en/rest/projects/projects)
+and [REST pagination](https://docs.github.com/en/rest/using-the-rest-api/using-pagination-in-the-rest-api)
 and [Project fields](https://docs.github.com/en/rest/projects/fields).
 
 Representative recovery copy, with the same meaning in each advertised web

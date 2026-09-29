@@ -86106,12 +86106,12 @@ class GithubSetupProjectDiscoveryAdapter {
             return { status: 'unavailable', candidates: [] };
         const octokit = github.getOctokit(token);
         const candidates = [];
-        let after;
+        let nextPage;
         let truncated = false;
         try {
             for (let page = 0; page < 2; page += 1) {
                 const response = await octokit.request('GET /orgs/{org}/projectsV2', {
-                    org: owner, per_page: 50, ...(after ? { after } : {}),
+                    org: owner, per_page: 50, ...(nextPage ?? {}),
                 });
                 for (const row of response.data) {
                     if (!Number.isSafeInteger(row.number) || Number(row.number) < 1 || row.state === 'closed' || row.closed_at != null
@@ -86121,8 +86121,8 @@ class GithubSetupProjectDiscoveryAdapter {
                     candidates.push({ number, title: row.title, owner,
                         url: `https://github.com/orgs/${encodeURIComponent(owner)}/projects/${number}` });
                 }
-                after = nextCursor(response.headers.link);
-                if (!after)
+                nextPage = nextPagination(response.headers.link);
+                if (!nextPage)
                     break;
                 if (candidates.length >= 30) {
                     truncated = true;
@@ -86143,7 +86143,7 @@ class GithubSetupProjectDiscoveryAdapter {
                 const response = await octokit.request('GET /orgs/{org}/projectsV2/{project_number}/fields', {
                     org: owner, project_number: candidate.number, per_page: 100,
                 });
-                if (nextCursor(response.headers.link))
+                if (nextPagination(response.headers.link))
                     return candidate;
                 const status = response.data.find(field => field.name === 'Status' && field.data_type === 'single_select');
                 const options = status?.options?.map(option => typeof option.name === 'string' ? option.name : option.name?.raw)
@@ -86158,7 +86158,7 @@ class GithubSetupProjectDiscoveryAdapter {
     }
 }
 exports.GithubSetupProjectDiscoveryAdapter = GithubSetupProjectDiscoveryAdapter;
-function nextCursor(link) {
+function nextPagination(link) {
     if (typeof link !== 'string')
         return undefined;
     const next = link.split(',').find(part => /;\s*rel="next"/u.test(part));
@@ -86167,8 +86167,13 @@ function nextCursor(link) {
         return undefined;
     try {
         const url = new URL(urlText);
+        if (url.protocol !== 'https:' || url.hostname !== 'api.github.com' || url.username || url.password)
+            return undefined;
         const cursor = url.searchParams.get('after');
-        return url.hostname === 'api.github.com' && cursor && cursor.length <= 200 ? cursor : undefined;
+        if (cursor)
+            return cursor.length <= 200 ? { after: cursor } : undefined;
+        const page = url.searchParams.get('page');
+        return page && /^[1-9]\d{0,5}$/u.test(page) ? { page: Number(page) } : undefined;
     }
     catch {
         return undefined;

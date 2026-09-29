@@ -58,6 +58,8 @@ organization `Projects: read` grant and the Project owner, then use a verified
 number or URL if the Project still does not appear. Personal-owner Projects
 cannot be listed through this fine-grained-PAT endpoint, so enter their URL
 number manually. See [GitHub's Projects API](https://docs.github.com/en/rest/projects/projects).
+Discovery reads at most two pages; if the list is marked truncated, a Project
+not shown may still be available. Enter its verified URL or number manually.
 
 All selected Projects must contain each Status value you configure for issue
 creation, PR creation and the two in-progress transitions. The wizard proposes

@@ -41,6 +41,35 @@ describe('GitHub setup Project discovery', () => {
     expect(request).toHaveBeenNthCalledWith(2, 'GET /orgs/{org}/projectsV2', { org: owner, per_page: 50, after: 'cursor2' });
   });
 
+  test('follows REST page links, reports a truncated inventory, and does not trust partial field listings', async () => {
+    const request = jest.fn().mockImplementation(async (route: string, params: { page?: number }) => {
+      if (route.endsWith('/fields')) return { data: [
+        { name: 'Status', data_type: 'single_select', options: [{ name: 'Todo' }] },
+      ], headers: { link: '<https://api.github.com/orgs/acme/projectsV2/2/fields?page=2>; rel="next"' } };
+      if (params.page === 2) return { data: [{ number: 3, title: 'Second' }],
+        headers: { link: '<https://api.github.com/orgs/acme/projectsV2?page=3>; rel="next"' } };
+      return { data: [{ number: 2, title: 'First' }],
+        headers: { link: '<https://api.github.com/orgs/acme/projectsV2?page=2>; rel="next"' } };
+    });
+    arrange(request);
+    const result = await adapter.discover(owner, 'Organization', 'secret');
+    expect(result).toMatchObject({ status: 'observed', truncated: true, candidates: [
+      { number: 2, title: 'First' }, { number: 3, title: 'Second' },
+    ] });
+    expect(result.candidates.every(candidate => candidate.statusOptions === undefined)).toBe(true);
+    expect(request).toHaveBeenNthCalledWith(2, 'GET /orgs/{org}/projectsV2', { org: owner, per_page: 50, page: 2 });
+    expect(request.mock.calls.filter(([route]) => route === 'GET /orgs/{org}/projectsV2')).toHaveLength(2);
+  });
+
+  test('ignores unsafe or invalid REST pagination links', async () => {
+    const request = jest.fn().mockResolvedValue({ data: [{ number: 2, title: 'First' }], headers: {
+      link: '<https://untrusted.example/orgs/acme/projectsV2?page=2>; rel="next", <https://api.github.com/orgs/acme/projectsV2?page=0>; rel="last"',
+    } });
+    arrange(request);
+    expect(await adapter.discover(owner, 'Organization', 'secret')).toMatchObject({ status: 'observed', candidates: [{ number: 2 }] });
+    expect(request.mock.calls.filter(([route]) => route === 'GET /orgs/{org}/projectsV2')).toHaveLength(1);
+  });
+
   test('distinguishes personal-owner unsupported, empty, denied and provider unavailable', async () => {
     expect(await adapter.discover(owner, 'User', 'secret')).toEqual({ status: 'unsupported', candidates: [] });
     expect(github.getOctokit).not.toHaveBeenCalled();
