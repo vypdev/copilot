@@ -7,15 +7,36 @@ import type {
     SetupTokenRole,
 } from '../domain/setup_token_permissions';
 import { renderBox } from './setup_prompt_rendering';
+import { summarizeSetupPermissions } from '../application/policies/setup_permission_summary_policy';
 
 export class ConsoleSetupTokenPermissionPresenter implements SetupTokenPermissionPresenterPort {
+    constructor(private readonly mode: 'full' | 'summary' = 'full') {}
+
     showRequirements(role: SetupTokenRole, requirements: readonly SetupTokenPermissionRequirement[]): void {
+        console.log(this.mode === 'summary'
+            ? renderSetupTokenPermissionSummary(role, requirements)
+            : renderSetupTokenPermissionRequirements(role, requirements));
+    }
+
+    showDetailedRequirements(role: SetupTokenRole, requirements: readonly SetupTokenPermissionRequirement[]): void {
         console.log(renderSetupTokenPermissionRequirements(role, requirements));
     }
 
     showReport(report: SetupTokenPermissionReport): void {
         console.log(renderSetupTokenPermissionReport(report));
     }
+}
+
+export function renderSetupTokenPermissionSummary(
+    role: SetupTokenRole,
+    requirements: readonly SetupTokenPermissionRequirement[],
+    maximumWidth = stdout.columns ?? 120,
+): string {
+    const summary = summarizeSetupPermissions(requirements);
+    return renderBox([
+        `Required now: ${summary.required.join(' · ') || 'none'}`,
+        `Conditional permissions: ${summary.conditionalCount}. View the full table for reasons and triggers.`,
+    ].join('\n'), `${roleTitle(role)} PAT permission summary`, 36, maximumWidth);
 }
 
 export function renderSetupTokenPermissionRequirements(

@@ -2,11 +2,11 @@
 
 - Status: Implemented — automated architecture, UX, documentation, and coverage gates complete; controlled live GitHub permission-path evidence remains external
 - Date: 2026-09-11
-- Last updated: 2026-09-24
+- Last updated: 2026-09-28
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-09-24
+- Last verified: 2026-09-28 (automated journey/presentation gates; live GitHub path remains external)
 - Owners: Copilot maintainers
-- Scope: interactive/non-interactive installation planning, file and resource provisioning, credential validation, and read-only diagnosis
+- Scope: interactive/non-interactive installation planning, file and resource provisioning, credential validation, and metadata-only diagnosis
 - Related issues/PRs: merge-queue readiness SDD; architecture quality and
   scalability hardening SDD
 - Required review gates: product UX, architecture, testing, documentation, security/operations
@@ -17,7 +17,10 @@
 `copilot setup` builds and previews a validated installation plan before writing
 workflows, templates, Variables, Secrets, labels, issue types, projects, or the
 initial tag. `copilot doctor` inspects the expected contract without changing
-repository configuration. The setup PAT is separate from the workflow PAT and
+repository configuration, but its normal credential check may dispatch an
+installed GitHub Action. `copilot doctor --read-only` skips that dispatch,
+reports Secret values as unverified, and performs only read operations. The
+setup PAT is separate from the workflow PAT and
 provider credentials; secret values never enter config files or plan objects.
 
 ```text
@@ -70,6 +73,12 @@ but unusable, overwrite hand-maintained files, or expose credentials.
   [`architecture-quality-and-scalability-hardening.md`](./architecture-quality-and-scalability-hardening.md).
   Role-specific PAT guidance and safe permission evidence are specified in
   [`setup-pat-permission-guidance-and-verification.md`](./setup-pat-permission-guidance-and-verification.md).
+  Assisted operator PAT creation is proposed in
+  [`temporary-setup-operator-authorization.md`](./temporary-setup-operator-authorization.md),
+  not an implemented setup path.
+  Guided creation of the separate persistent bot PAT is proposed in
+  [`guided-bot-pat-onboarding.md`](./guided-bot-pat-onboarding.md),
+  without a local account manager.
   Transactional rollback across local and GitHub writes requires a separate design.
 
 ## 3. Actors, surfaces, and terminology
@@ -121,7 +130,7 @@ organization value that GitHub Actions will expose.
 | Credentials | one ambiguous token | setup/workflow/provider separation | least privilege |
 | Remote state | overwrite assumptions | inspect + preserve/replace decision | controlled drift |
 | Readiness | discovered during release | setup and doctor checks | earlier action |
-| Diagnosis | mutation required | read-only doctor | safe audit |
+| Diagnosis | mutation required | explicit metadata-only `doctor --read-only`; ordinary doctor may dispatch the installed health Action | safe inspection or separately authorized active check |
 
 The architecture hardening preserves the product contract while making
 cancellation, skipped diagnosis, ordering, and read-only authority explicit.
@@ -154,6 +163,15 @@ cancellation, skipped diagnosis, ordering, and read-only authority explicit.
   complete permission audit before provisioning; credential health and storage
   preservation do not authorize an unaudited keep path.
 - Invalid required credentials must be replaced.
+- Terminal credential-health validation MAY temporarily create and remove the
+  selected-branch health workflow before final Apply. As soon as the create
+  request is attempted, the journey MUST disclose a possible remote mutation;
+  a subsequent failure or cancellation MUST report a partial outcome and
+  direct the operator to inspect the selected branch, even if cleanup appeared
+  successful, because the create/delete commits remain in history. A failed
+  create request is conservatively classified as possible mutation when its
+  remote outcome is uncertain. The browser path does not bootstrap a workflow
+  before Apply and retains its no-mutation pre-approval guarantee.
 - A missing remote resource snapshot is never an empty inventory. Selected
   Secret/Variable management MUST stop before all remote resource, label,
   issue-type, and tag calls when inspection fails, its port is absent, or a
@@ -182,6 +200,12 @@ Any active state can transition to `cancelled`. Conditional states are skipped
 by policy when irrelevant; there is no legacy state alias or back-navigation
 mode. After questionnaire completion, credential validation and provisioning
 remain separate application flows.
+
+The pre-PAT intent review may start a **new questionnaire pass** over the
+current in-memory draft. Each pass remains forward-only; this explicit review
+loop is not an implicit reset or back-navigation inside a questionnaire. The
+journey presentation reopens `Setup choices` only before PAT entry and returns
+to `Setup PAT` when that pass finishes.
 
 Cancellation before confirmation writes nothing. Partial remote provisioning
 retains successful facts and reports remaining work; retries MUST preserve valid
@@ -235,6 +259,79 @@ asset parity.
 
 ## 9. UI/UX and content contract
 
+### Interactive journey presentation (2026-09-28 amendment)
+
+Interactive `copilot setup` MUST show a bounded, text-first six-stage journey:
+`Repository → Setup choices → Setup PAT → Plan → Bot PAT & credentials → Apply`.
+The active stage is named in words, previously completed stages are marked
+complete, and later stages remain pending. A stage number describes position,
+not a percentage or a count of questions. Show the journey at meaningful
+transitions, not after every answer. Never mark `Apply` complete until the
+action reports success; failure after application begins is **Partial**, not
+`No changes`. Before application begins, say `No changes have been applied`.
+Cancellation or a blocked audit does not advance the journey. Dry-run ends
+after plan review with an explicit `No changes` result; unattended input keeps
+its existing non-interactive output rather than receiving interactive prompts.
+
+```text
+Copilot setup · owner/repo
+Stage 2/6 · Setup choices
+Complete: Repository
+Now: Setup choices
+Next: Setup PAT → Plan → Bot PAT & credentials → Apply
+No changes have been applied.
+```
+
+Text equivalent: the named current phase follows repository detection; all
+other phases are explicitly complete or pending, and no remote mutation has
+started. In a narrow terminal, each status remains on its own wrapped line.
+Icons and color may reinforce the state but MUST NOT be its only carrier.
+The journey is a view of existing setup state, not a new questionnaire or
+source of permission truth. The application boundary owns stage ordering and
+transition validity; the terminal adapter owns width, wrapping, and ANSI.
+Do not persist phase state or print credentials. Detailed permission tables
+remain available on explicit request and for manual/unattended paths; the
+interactive guided review defaults to an exact compact grant summary.
+
+If the operator chooses to review intent again, the journey MUST visibly
+reopen `Setup choices`, label the review pass, and mark `Setup PAT` pending
+until the repeated questions finish. This is the only backwards journey
+transition and is allowed only before PAT entry and before mutation. The
+terminal MUST explain that existing answers remain as defaults, Enter keeps
+them, the flow returns to PAT review afterward, and no setup changes have
+been applied. It MUST NOT reuse the first-pass introduction. On completion,
+show an explicit return to `Setup PAT` and recalculate the permission preview.
+The later full wizard still does not re-ask the pre-PAT answers. No fixed
+question counter or percentage is displayed because the set is conditional.
+
+```text
+Copilot setup · owner/repo
+Stage 2/6 · Setup choices · review pass 2
+Complete: Repository
+Now: reviewing saved setup choices
+Next: Setup PAT → Plan → Bot PAT & credentials → Apply
+No changes have been applied.
+```
+
+Text equivalent: the operator deliberately returned to a second pass over
+saved choices, will reach PAT review afterward, and has not begun mutation.
+This amendment adds at least **eight distinct cases** beyond the original
+journey budget: three transition/guard cases, two introduction and narrow
+no-color presentation cases, and three CLI return/cancellation/permission
+preview integration cases. The existing coverage thresholds remain.
+
+The presentation introduces no new flags or persisted configuration. It has
+no effect on GitHub Actions, issues, PRs, comments, or checks. Rollback removes
+the stage renderer and restores the existing table-first presentation without
+changing saved setup state. The amendment adds a minimum **12 distinct tests**:
+four pure transition/view-model cases, three terminal width/color cases,
+three guided/manual detail cases, and two end-to-end dry-run/partial-state
+cases. Changed presentation code targets 95% line and 90% branch coverage.
+Acceptance requires stage ordering, accurate no-change/partial claims, no
+duplicate intent questions, exact summary-to-table grants, and secret-free
+output in both wide and narrow no-color terminals. User and contributor docs
+MUST describe the phases and where the full permission table can be opened.
+
 ```markdown
 Pending: **Inspecting existing Copilot resources.** No changes have been made.
 Action required: **The workflow `PAT` Secret is missing.** Add or enter it to enable release workflows.
@@ -265,7 +362,7 @@ arbitrary warning text into the pure plan builder.
 | unverifiable credential | feature may be unsafe | name/scope only | yes | run health/manual check | none |
 | denied changed file | file unchanged | backup status | yes | approve/adapt | remove unused backup manually |
 | partial GitHub writes | subset installed | resource names/status | yes | rerun preserve-existing | no destructive rollback |
-| doctor fail | no mutation | diagnostic report | yes | run setup/fix access | none |
+| read-only doctor fail | no mutation or Action dispatch | diagnostic report | yes | fix access and rerun | none |
 
 ## 11. Security, permissions, and privacy
 
@@ -332,9 +429,14 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 2. Given non-interactive missing required input, setup fails without prompting or writes.
 3. Given valid organization Secret and preserve-existing, no repository shadow is created.
 4. Given invalid required existing credential, setup requires replacement.
-5. Given canceled confirmation, local and GitHub state are unchanged.
+5. Given canceled confirmation without a prior credential-health bootstrap
+   attempt, local and GitHub state are unchanged. With such an attempt, setup
+   reports a partial result and requires branch/history inspection.
 6. Given a changed managed file, setup backs up before approved replacement.
-7. Given doctor, no mutation port is called and unhealthy state returns non-zero.
+7. Given `doctor --read-only`, no mutation or credential-health dispatch port
+   is called; installed Secret names are inspected but values are unverified,
+   and unhealthy state returns non-zero. Given ordinary doctor, any installed
+   credential-health dispatch is an explicit, separately chosen active check.
 8. Given merge-queue without proven support, setup/doctor reports fail closed.
 9. Given output inspection, no secret value appears.
 10. Given no explicit locale, doctor renders one complete English report.
@@ -358,6 +460,11 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
     Secret/Variable/label/issue-type/tag mutation; absence cannot be
     interpreted as an empty repository inventory. Pre-plan failures still
     reach the final audit as bounded unavailable access facts.
+18. Given terminal credential-health bootstrap was attempted and cleanup
+    fails, setup reports `partial` with branch-inspection guidance rather
+    than `blocked` or "no changes applied"; the same conservative outcome
+    applies when creation times out ambiguously. Without a bootstrap attempt,
+    pre-Apply cancellation remains `cancelled`.
 18. Given an organization Secret or Variable target, repository inventory is
     available and confirms that no same-name repository resource exists;
     otherwise setup blocks before credential collection or mutation, even with
@@ -387,7 +494,8 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 
 - [x] Every new option has default, bounds, precedence, persistence, retirement/rejection, and security rules.
 - [x] The 112-case budget and coverage thresholds pass.
-- [x] Setup cancel/retry/partial state and doctor read-only behavior pass.
+- [x] Setup cancel/retry/partial state and metadata-only `doctor --read-only`
+      behavior pass; ordinary doctor dispatch is disclosed separately.
 - [x] Secrets are absent from plans, config, logs, errors, and backups.
 - [x] Workflow/assets, documentation, and catalog checks pass.
 - [ ] Human terminal and permission-path UX evidence is captured.
@@ -402,6 +510,10 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 - Permission companion: `setup-pat-permission-guidance-and-verification.md`
   owns the pre-prompt matrices, post-entry evidence states, and read-only probe
   boundary for setup and workflow PATs.
+- Future interface companion: [local web setup assistant](./local-web-setup-assistant.md)
+  specifies an optional, loopback-only `--web` adapter over the same setup
+  policies and application gates. This baseline describes the shipped CLI;
+  the web mode is not implemented by this amendment.
 - Decision: one configuration policy serves setup, doctor, and workflow inputs.
 - Rejected: storing credentials in YAML/JSON or silently overwriting managed files.
 - Follow-up: cross-provider transactional rollback is outside this baseline.

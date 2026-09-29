@@ -14,6 +14,7 @@ export interface GithubRepositoryMetadata {
     id?: number;
     visibility?: string;
     owner?: { type?: string };
+    default_branch?: string;
 }
 
 export interface GithubActionsPublicKey {

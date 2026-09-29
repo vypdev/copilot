@@ -30,6 +30,7 @@
   "files": [
     "action.yml",
     "build/cli/index.js",
+    "build/web/",
     "build/github_action/index.js",
     "build/api/index.js",
     "build/api/src/",
@@ -48,7 +49,9 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "node scripts/clean-generated-bundles.cjs && ncc build src/actions/github_action.ts -o build/github_action && ncc build src/cli.ts -o build/cli && ncc build src/api.ts -o build/api && node scripts/prepare-generated-bundles.cjs && chmod +x build/cli/index.js",
+    "build": "node scripts/clean-generated-bundles.cjs && pnpm run build:web && ncc build src/actions/github_action.ts -o build/github_action && ncc build src/cli.ts -o build/cli && ncc build src/api.ts -o build/api && node scripts/prepare-generated-bundles.cjs && chmod +x build/cli/index.js",
+    "build:web": "vite build --config web/vite.config.mts",
+    "check:web": "svelte-check --tsconfig web/tsconfig.json && vite build --config web/vite.config.mts",
     "validate:build": "node scripts/validate-build.cjs",
     "validate:npm-package": "node scripts/validate-npm-package.cjs",
     "smoke:npm-package": "node scripts/smoke-test-npm-package.cjs",
@@ -84,13 +87,17 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.9.1",
     "@vercel/ncc": "^0.36.1",
     "eslint": "^10.10.0",
     "jest": "^30.5.1",
+    "svelte": "^5.57.1",
+    "svelte-check": "^4.7.6",
     "ts-jest": "^29.4.5",
     "typescript": "^5.2.2",
-    "typescript-eslint": "^8.70.0"
+    "typescript-eslint": "^8.70.0",
+    "vite": "^8.3.1"
   }
 }

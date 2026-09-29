@@ -10,14 +10,13 @@ export interface SetupCommandOptions {
 
 export function buildSetupParams(
   options: SetupCommandOptions,
-  gitInfo: GitInfo,
+  gitInfo: Extract<GitInfo, { owner: string }>,
   token: string,
   configuration?: SetupConfiguration,
   credentials?: SetupCredentialCollection,
   approvedWorkflowFiles: readonly string[] = [],
   remoteConfiguration?: SetupRemoteConfiguration,
-): Record<string, unknown> | undefined {
-  if ('error' in gitInfo) return undefined;
+): Record<string, unknown> {
   return {
     ...(configuration ? buildSetupActionInputs(configuration) : {}),
     [INPUT_KEYS.DEBUG]: options.debug?.toString() ?? 'false',

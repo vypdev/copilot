@@ -16,6 +16,7 @@ import type {
 } from '../../infrastructure/github/ports/github_repository_variables_protocol';
 import nacl from 'tweetnacl';
 import { createHash } from 'node:crypto';
+import { isSafeBranchTree } from '../../domain/deployment_configuration';
 
 class GithubActionsResourceTransport {
     constructor(private readonly githubClient: GithubClientPort<GithubRepositoryVariablesClient>) {}
@@ -52,6 +53,8 @@ class GithubActionsResourceTransport {
         const credentialHealthWorkflow = await this.inspectDefaultCredentialHealthWorkflow(client, owner, repository);
         return {
             ownerType,
+            ...(typeof metadata.default_branch === 'string' && isSafeBranchTree(metadata.default_branch)
+                ? { defaultBranch: metadata.default_branch } : {}),
             repositoryId: metadata.id,
             repositoryVisibility,
             repositorySecrets: repositorySecretsResult.resources,

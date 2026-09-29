@@ -49091,6 +49091,7 @@ function normalizeSetupConfigurationLocales(configuration) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildSetupCredentialRequirements = void 0;
 exports.buildSetupPlan = buildSetupPlan;
+exports.setupPlanGuardPaths = setupPlanGuardPaths;
 exports.buildSetupRepositoryVariables = buildSetupRepositoryVariables;
 exports.buildSetupActionInputs = buildSetupActionInputs;
 const pull_request_description_1 = __nccwpck_require__(45315);
@@ -49102,6 +49103,7 @@ Object.defineProperty(exports, "buildSetupCredentialRequirements", ({ enumerable
 const locale_1 = __nccwpck_require__(15386);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
+const repository_agent_guidance_policy_1 = __nccwpck_require__(67402);
 function buildSetupPlan(configuration, mergeQueueReadiness = [], approvalReadiness = []) {
     const workflowFiles = (0, setup_workflow_catalog_1.enabledSetupWorkflowFiles)((0, setup_issue_workflow_policy_1.effectiveIssueWorkflowFeatures)(configuration))
         .filter(file => file !== 'copilot_pull_request_approval.yml' || configuration.pullRequestApproval.mode !== 'off');
@@ -49139,6 +49141,40 @@ function buildSetupPlan(configuration, mergeQueueReadiness = [], approvalReadine
         approvalReadiness: [...approvalReadiness],
         warnings: buildSetupWarnings(configuration),
     };
+}
+/** Actual checkout destinations covered by a web Apply drift check.
+ * The presentation plan uses package-source labels for workflows/forms;
+ * comparing those labels as checkout paths would silently miss local edits.
+ */
+function setupPlanGuardPaths(plan) {
+    const selected = plan.selectedFiles.map(file => {
+        if (file.startsWith('workflows/'))
+            return `.github/${file}`;
+        if (file.startsWith('ISSUE_TEMPLATE/'))
+            return `.github/${file}`;
+        if (file === 'pull_request_template.md')
+            return '.github/pull_request_template.md';
+        if (file === 'AGENTS.md (managed pointer only)')
+            return 'AGENTS.md';
+        return file;
+    });
+    // Deselected managed assets can be retired to setup-backups during Apply.
+    const retiredCandidates = [
+        ...['config.yml', ...issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS.map(kind => issue_workflow_profile_1.ISSUE_WORKFLOW_CATALOG[kind].formFile)]
+            .map(file => `.github/ISSUE_TEMPLATE/${file}`),
+        ...['release_workflow.yml', 'hotfix_workflow.yml', 'copilot_deployment_orchestration.yml']
+            .map(file => `.github/workflows/${file}`),
+    ];
+    // The manifest can authorize retirement even when guidance is disabled and
+    // its artifacts are absent from the presentation plan.
+    const guidanceCandidates = [
+        repository_agent_guidance_policy_1.REPOSITORY_AGENT_MANIFEST_PATH,
+        repository_agent_guidance_policy_1.REPOSITORY_AGENT_PROFILE_PATH,
+        repository_agent_guidance_policy_1.REPOSITORY_AGENT_GUIDE_PATH,
+        repository_agent_guidance_policy_1.REPOSITORY_AGENT_SKILL_PATH,
+        repository_agent_guidance_policy_1.REPOSITORY_AGENT_POINTER_PATH,
+    ];
+    return [...new Set([...selected, ...retiredCandidates, ...guidanceCandidates])].sort();
 }
 function buildSetupRepositoryVariables(configuration) {
     const variables = [];
@@ -49336,7 +49372,7 @@ function buildSetupWarnings(configuration) {
         warnings.push('Inactive issue closure is enabled; waiting issues are closed after the configured inactivity threshold and can be reopened with a new comment.');
     }
     if (configuration.projects.ids.trim()) {
-        warnings.push('Project IDs must be accessible to the PAT and use the expected project column names.');
+        warnings.push('Selected Project numbers must be accessible to the bot PAT, and all four configured Status values must exist in every selected Project.');
     }
     if ((0, setup_configuration_defaults_1.setupAgentTasksForFeatures)(configuration).some(task => configuration.agents[task].provider === 'cursor')) {
         warnings.push('Cursor is an experimental runtime in Copilot and requires a compatible preinstalled CLI plus CURSOR_API_KEY; Copilot has no automatic Cursor installer.');
@@ -49630,8 +49666,20 @@ const locale_1 = __nccwpck_require__(15386);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+const setup_project_selection_policy_1 = __nccwpck_require__(73750);
 function validateSetupConfiguration(configuration, options = {}) {
     const errors = [];
+    const projectSelection = (0, setup_project_selection_policy_1.parseSetupProjectSelection)(configuration.projects.ids);
+    if ('error' in projectSelection || projectSelection.value !== configuration.projects.ids) {
+        errors.push('Project IDs must be a comma-separated list of 1–10 distinct positive Project URL numbers; PVT_ node IDs are not accepted.');
+    }
+    if (configuration.projects.ids) {
+        for (const [name, value] of Object.entries(configuration.projects).filter(([name]) => name.endsWith('Column'))) {
+            if (typeof value !== 'string' || !value.trim() || value.length > 100 || /[\p{Cc}\p{Cf}]/u.test(value)) {
+                errors.push(`Project ${name} must name one existing single-line Status option (1–100 characters).`);
+            }
+        }
+    }
     errors.push(...(0, pull_request_approval_policy_1.validatePullRequestApprovalPolicy)(configuration.pullRequestApproval, options.allowIncompleteApproval === true));
     if (configuration.actionInputs['pr-approval-policy'] !== undefined) {
         errors.push('pr-approval-policy cannot be overridden through actionInputs.');
@@ -50027,6 +50075,80 @@ function effectiveIssueFormLabels(configuration) {
         hotfix: Object.freeze([...labels.hotfix, priority.high]),
         release: Object.freeze([...labels.release, priority.medium]),
     });
+}
+
+
+/***/ }),
+
+/***/ 73750:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parseSetupProjectSelection = parseSetupProjectSelection;
+exports.sharedProjectStatusOptions = sharedProjectStatusOptions;
+exports.validateDiscoveredProjectStatuses = validateDiscoveredProjectStatuses;
+function parseSetupProjectSelection(raw, owner) {
+    const input = raw.normalize('NFKC').trim();
+    if (!input || input.toLowerCase() === 'none')
+        return { value: '' };
+    const parts = input.split(',').map(part => part.trim());
+    if (parts.length > 10 || parts.some(part => !part))
+        return { error: 'Choose at most 10 Projects; separate numbers or URLs with commas.' };
+    const numbers = [];
+    for (const part of parts) {
+        let numberText = part;
+        if (part.startsWith('https://')) {
+            if (!owner)
+                return { error: 'A Project URL needs a known repository owner; enter its positive number instead.' };
+            try {
+                const url = new URL(part);
+                const match = url.pathname.match(/^\/(?:orgs|users)\/([^/]+)\/projects\/([1-9]\d*)\/?$/u);
+                if (url.origin !== 'https://github.com' || url.search || url.hash || url.username || url.password
+                    || !match || decodeURIComponent(match[1]).toLowerCase() !== owner.toLowerCase()) {
+                    return { error: `Use a GitHub Project URL belonging to ${owner}, without query parameters.` };
+                }
+                numberText = match[2];
+            }
+            catch {
+                return { error: 'Enter a valid GitHub Project URL or positive Project number.' };
+            }
+        }
+        if (!/^[1-9]\d*$/u.test(numberText))
+            return { error: 'Enter the positive Project number from its GitHub URL, not a PVT_ GraphQL ID.' };
+        const number = Number(numberText);
+        if (!Number.isSafeInteger(number) || number > 2147483647)
+            return { error: 'Project numbers must be positive integers at most 2147483647.' };
+        if (numbers.includes(number))
+            return { error: `Project ${number} was selected more than once.` };
+        numbers.push(number);
+    }
+    return { value: numbers.join(',') };
+}
+function sharedProjectStatusOptions(projectNumbers, projects) {
+    const numbers = projectNumbers.split(',').map(Number).filter(Boolean);
+    if (!numbers.length)
+        return { state: 'unavailable', options: [] };
+    const selected = numbers.map(number => projects.find(project => project.number === number));
+    if (selected.some(project => !project?.statusOptions?.length))
+        return { state: 'unavailable', options: [] };
+    const [first, ...rest] = selected;
+    const common = first.statusOptions.filter(option => rest.every(project => project.statusOptions.includes(option)));
+    return common.length ? { state: 'observed', options: common } : { state: 'incompatible', options: [] };
+}
+/** A discovered mismatch is unsafe even if values arrived through --config rather than the interactive selector. */
+function validateDiscoveredProjectStatuses(configuration, discovery) {
+    if (!configuration.projects.ids || !discovery || discovery.status !== 'observed')
+        return [];
+    const common = sharedProjectStatusOptions(configuration.projects.ids, discovery.candidates);
+    if (common.state === 'incompatible')
+        return ['Selected Projects have no common Status option. Choose compatible Projects.'];
+    if (common.state !== 'observed')
+        return [];
+    const names = [configuration.projects.issueCreatedColumn, configuration.projects.pullRequestCreatedColumn,
+        configuration.projects.issueInProgressColumn, configuration.projects.pullRequestInProgressColumn];
+    return names.filter(name => !common.options.includes(name)).map(name => `Status value "${name}" is not available in every selected Project.`);
 }
 
 
@@ -52000,20 +52122,46 @@ async function runInitialSetupWorkflow(request, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(TASK_ID)} Executing ${TASK_ID}.`);
     const steps = [];
     const errors = [];
+    const configuration = request.setupConfiguration;
+    const effects = [
+        { id: 'files', state: 'not-started', scope: 'local' },
+        { id: 'secrets', state: 'not-started', scope: resourceScope(configuration, 'secrets') },
+        { id: 'labels', state: 'not-started', scope: 'repository' },
+        { id: 'issue-types', state: 'not-started', scope: 'repository' },
+        { id: 'variables', state: 'not-started', scope: resourceScope(configuration, 'variables') },
+        { id: 'initial-tag', state: 'not-started', scope: 'repository' },
+    ];
+    const mark = (id, state) => {
+        const index = effects.findIndex(effect => effect.id === id);
+        effects[index] = { ...effects[index], state };
+    };
+    const receipt = () => buildResult(errors, steps, effects);
     try {
         const setupConfiguration = request.setupConfiguration;
         if (!dependencies.setupWorkspacePort.hasValidToken()) {
             (0, logging_ports_1.logInfo)('  🛑 Setup requires the setup PAT provided for this command with a valid token.');
             errors.push(new application_error_1.ApplicationError('authorization.credential-invalid', 'A valid setup PAT must be provided to run setup. It is separate from the workflow PAT Secret.'));
-            return [buildResult(errors, steps)];
+            return [receipt()];
         }
         (0, logging_ports_1.logInfo)('🔐 Checking GitHub access...');
         const githubAccess = await verifyGitHubAccess(request, dependencies.authenticatedUserPort);
         if (!githubAccess.success) {
             errors.push(...githubAccess.errors);
-            return [buildResult(errors, steps)];
+            return [receipt()];
         }
         steps.push(`✅ GitHub access verified: ${githubAccess.user}`);
+        const secretValues = Number(Boolean(request.setupCredentials?.workflowPat)) + (request.setupCredentials?.apiKeys.length ?? 0);
+        const missingProvisioningPorts = [];
+        if (setupConfiguration?.manageRepositorySecrets && secretValues > 0 && !dependencies.setupRepositorySecretsPort) {
+            missingProvisioningPorts.push(new application_error_1.ApplicationError('provider.unavailable', setup_resource_provisioning_1.SECRET_PROVISIONING_UNAVAILABLE));
+        }
+        if (setupConfiguration?.manageRepositoryVariables && !dependencies.setupRepositoryVariablesPort) {
+            missingProvisioningPorts.push(new application_error_1.ApplicationError('provider.unavailable', setup_resource_provisioning_1.VARIABLE_PROVISIONING_UNAVAILABLE));
+        }
+        if (missingProvisioningPorts.length > 0) {
+            errors.push(...missingProvisioningPorts);
+            return [receipt()];
+        }
         const remoteConfigurationErrors = [];
         const remoteConfiguration = await (0, setup_resource_provisioning_1.resolveRemoteConfiguration)(request, dependencies, setupConfiguration, remoteConfigurationErrors);
         errors.push(...fromMessages(remoteConfigurationErrors, 'provider.unavailable'));
@@ -52022,7 +52170,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
                 if (remoteConfigurationErrors.length === 0) {
                     errors.push(new application_error_1.ApplicationError('provider.unavailable', 'Could not inspect existing GitHub Actions resource scopes. Restore inventory access and rerun setup.'));
                 }
-                return [buildResult(errors, steps)];
+                return [receipt()];
             }
             const inventoryErrors = [
                 ...(0, setup_configuration_policy_1.validateSetupStorageAgainstRemote)(setupConfiguration, remoteConfiguration),
@@ -52033,7 +52181,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
             ];
             if (inventoryErrors.length > 0) {
                 errors.push(...fromMessages(inventoryErrors, 'provider.unavailable'));
-                return [buildResult(errors, steps)];
+                return [receipt()];
             }
         }
         (0, logging_ports_1.logInfo)('📋 Ensuring .github and copying setup files...');
@@ -52045,15 +52193,23 @@ async function runInitialSetupWorkflow(request, dependencies) {
                 approvedWorkflowFiles: request.workflowUpdates,
             } : {}),
         };
+        mark('files', 'needs-inspection');
         const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
+        mark('files', filesResult.copied > 0 ? 'completed' : 'skipped');
         steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
+        if (setupConfiguration?.manageRepositorySecrets && secretValues > 0)
+            mark('secrets', 'needs-inspection');
         const secrets = await (0, setup_resource_provisioning_1.ensureRepositorySecrets)(request, dependencies, setupConfiguration, remoteConfiguration);
+        mark('secrets', secrets.errors.length ? 'needs-inspection' : secrets.writes > 0 ? 'completed' : 'skipped');
         if (secrets.step)
             steps.push(secrets.step);
         if (secrets.errors.length > 0)
             errors.push(...fromMessages(secrets.errors, 'authorization.credential-invalid'));
         (0, logging_ports_1.logInfo)('🏷️  Checking configured and progress labels...');
+        mark('labels', 'needs-inspection');
         const labels = await ensureInitialLabels(request, dependencies.initialLabelProvisioningPort, setupConfiguration);
+        mark('labels', !labels.completed || labels.configured.errors.length || labels.progress.errors.length
+            ? 'needs-inspection' : labels.configured.created + labels.progress.created > 0 ? 'completed' : 'skipped');
         if (!labels.completed) {
             errors.push(labels.error);
         }
@@ -52062,30 +52218,39 @@ async function runInitialSetupWorkflow(request, dependencies) {
             appendLabelSummary(steps, errors, labels.progress, 'Progress labels');
         }
         (0, logging_ports_1.logInfo)('📋 Checking issue types...');
+        mark('issue-types', 'needs-inspection');
         const issueTypes = await ensureIssueTypes(request, dependencies.issueTypeProvisioningPort, setupConfiguration);
+        mark('issue-types', !issueTypes.success ? 'needs-inspection' : issueTypes.created > 0 ? 'completed' : 'skipped');
         if (!issueTypes.success) {
             errors.push(...fromMessages(issueTypes.errors, 'provider.unavailable'));
         }
         else {
             steps.push(`✅ Issue types checked: ${issueTypes.created} created, ${issueTypes.existing} already existed`);
         }
+        if (setupConfiguration?.manageRepositoryVariables)
+            mark('variables', 'needs-inspection');
         const variables = await (0, setup_resource_provisioning_1.ensureRepositoryVariables)(request, dependencies, setupConfiguration, remoteConfiguration);
+        mark('variables', variables.errors.length ? 'needs-inspection' : variables.writes > 0 ? 'completed' : 'skipped');
         if (variables.step)
             steps.push(variables.step);
         if (variables.errors.length > 0)
             errors.push(...fromMessages(variables.errors, 'provider.unavailable'));
+        if (setupConfiguration?.createInitialTag !== false)
+            mark('initial-tag', 'needs-inspection');
         const defaultVersion = await ensureDefaultVersion(request, dependencies, setupConfiguration);
+        mark('initial-tag', defaultVersion.error ? 'needs-inspection'
+            : defaultVersion.step?.includes('created on branch') ? 'completed' : 'skipped');
         if (defaultVersion.step)
             steps.push(defaultVersion.step);
         if (defaultVersion.error)
             errors.push(defaultVersion.error);
-        return [buildResult(errors, steps)];
+        return [receipt()];
     }
     catch (error) {
         const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Error running initial setup.');
         (0, logging_ports_1.logError)(semanticError);
         errors.push(semanticError);
-        return [buildResult(errors, steps)];
+        return [receipt()];
     }
 }
 async function verifyGitHubAccess(_request, repository) {
@@ -52163,14 +52328,21 @@ function appendLabelSummary(steps, errors, summary, labelType) {
         steps.push(`✅ ${labelType} checked: ${summary.created} created, ${summary.existing} already existed`);
     }
 }
-function buildResult(errors, steps) {
+function buildResult(errors, steps, effects) {
     return new result_1.Result({
         id: TASK_ID,
         success: errors.length === 0,
         executed: true,
         steps,
+        payload: { setupReceipt: { version: 1, effects: effects.map(effect => ({ ...effect })) } },
         errors: errors.length > 0 ? errors : undefined,
     });
+}
+function resourceScope(configuration, kind) {
+    const policy = configuration?.storage[kind];
+    if (!policy)
+        return 'repository';
+    return Object.values(policy.overrides).some(scope => scope !== policy.defaultScope) ? 'mixed' : policy.defaultScope;
 }
 function fromMessages(messages, code) {
     return messages.map(message => new application_error_1.ApplicationError(code, message));
@@ -53016,6 +53188,7 @@ function failure(taskId, message, code) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SECRET_PROVISIONING_UNAVAILABLE = exports.VARIABLE_PROVISIONING_UNAVAILABLE = void 0;
 exports.ensureRepositoryVariables = ensureRepositoryVariables;
 exports.ensureRepositorySecrets = ensureRepositorySecrets;
 exports.resolveRemoteConfiguration = resolveRemoteConfiguration;
@@ -53023,55 +53196,71 @@ exports.groupSetupResources = groupSetupResources;
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
+exports.VARIABLE_PROVISIONING_UNAVAILABLE = 'GitHub Actions Variable provisioning is unavailable; no Variables were changed.';
+exports.SECRET_PROVISIONING_UNAVAILABLE = 'GitHub Actions Secret provisioning is unavailable; no Secrets were changed.';
 async function ensureRepositoryVariables(context, dependencies, setupConfiguration, remoteConfiguration) {
-    if (!setupConfiguration?.manageRepositoryVariables || !dependencies.setupRepositoryVariablesPort) {
-        return { errors: [] };
+    if (!setupConfiguration?.manageRepositoryVariables) {
+        return { errors: [], writes: 0 };
+    }
+    if (!dependencies.setupRepositoryVariablesPort) {
+        return { errors: [exports.VARIABLE_PROVISIONING_UNAVAILABLE], writes: 0 };
     }
     try {
         const desired = (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(setupConfiguration);
         const groups = groupSetupResources(desired, 'variable', setupConfiguration, remoteConfiguration);
         const result = await upsertVariableGroups(context, dependencies.setupRepositoryVariablesPort, groups);
+        const writes = result.created + result.updated;
         if (result.errors.length > 0)
-            return { errors: result.errors };
+            return { errors: result.errors, writes };
         return {
-            step: `✅ GitHub Actions Variables: ${result.created} created, ${result.updated} updated; existing effective values preserved when no override was selected.`,
+            step: writes > 0
+                ? `✅ GitHub Actions Variables: ${result.created} created, ${result.updated} updated; existing effective values preserved when no override was selected.`
+                : '✅ GitHub Actions Variables kept unchanged; no values were created or updated.',
             errors: [],
+            writes,
         };
     }
     catch (error) {
         const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to configure GitHub Actions Variables.');
         (0, logging_ports_1.logError)(semanticError);
-        return { errors: [semanticError.message] };
+        return { errors: [semanticError.message], writes: 0 };
     }
 }
 async function ensureRepositorySecrets(context, dependencies, setupConfiguration, remoteConfiguration) {
-    if (!setupConfiguration?.manageRepositorySecrets || !dependencies.setupRepositorySecretsPort) {
-        return { errors: [] };
+    if (!setupConfiguration?.manageRepositorySecrets) {
+        return { errors: [], writes: 0 };
     }
     const credentials = context.setupCredentials;
     if (!credentials) {
-        return { step: '⚠️  Repository Secrets were not changed: run interactive setup to validate and provide credentials.', errors: [] };
+        return { step: '⚠️  Repository Secrets were not changed: run interactive setup to validate and provide credentials.', errors: [], writes: 0 };
     }
     const values = [
         ...(credentials.workflowPat ? [credentials.workflowPat] : []),
         ...credentials.apiKeys,
     ];
     if (values.length === 0)
-        return { step: '✅ Existing Repository Secrets kept unchanged.', errors: [] };
+        return { step: '✅ Existing Repository Secrets kept unchanged.', errors: [], writes: 0 };
+    if (!dependencies.setupRepositorySecretsPort) {
+        return { errors: [exports.SECRET_PROVISIONING_UNAVAILABLE], writes: 0 };
+    }
     try {
         const groups = groupSetupResources(values, 'secret', setupConfiguration, remoteConfiguration);
         const result = await upsertSecretGroups(context, dependencies.setupRepositorySecretsPort, groups);
+        const writes = result.created + result.updated;
         if (result.errors.length > 0)
-            return { errors: result.errors };
+            return { errors: result.errors, writes };
         return {
-            step: `✅ GitHub Actions Secrets: ${result.created} created, ${result.updated} updated; existing effective values kept when no replacement was selected.`,
+            step: writes > 0
+                ? `✅ GitHub Actions Secrets: ${result.created} created, ${result.updated} updated; existing effective values kept when no replacement was selected.`
+                : '✅ Existing GitHub Actions Secrets kept unchanged; no values were created or updated.',
             errors: [],
+            writes,
         };
     }
     catch (error) {
         const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to configure GitHub Actions Secrets.');
         (0, logging_ports_1.logError)(semanticError);
-        return { errors: [semanticError.message] };
+        return { errors: [semanticError.message], writes: 0 };
     }
 }
 async function resolveRemoteConfiguration(context, dependencies, setupConfiguration, errors) {
@@ -65209,8 +65398,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.cleanCliArg = cleanCliArg;
 exports.getGitInfo = getGitInfo;
 exports.getCurrentBranch = getCurrentBranch;
+exports.getCurrentAttachedBranch = getCurrentAttachedBranch;
+exports.hasLocalOrTrackedGitBranch = hasLocalOrTrackedGitBranch;
 exports.getCurrentHeadSha = getCurrentHeadSha;
 exports.isInsideGitRepo = isInsideGitRepo;
+exports.getGitRepositoryRoot = getGitRepositoryRoot;
 exports.isGitRepositoryRoot = isGitRepositoryRoot;
 const child_process_1 = __nccwpck_require__(32081);
 const node_fs_1 = __nccwpck_require__(87561);
@@ -65242,6 +65434,29 @@ function getCurrentBranch() {
         return 'main';
     }
 }
+/** A verified branch name for web setup; detached HEAD and failed git reads are not guessed. */
+function getCurrentAttachedBranch(cwd) {
+    try {
+        const branch = (0, child_process_1.execSync)('git symbolic-ref --quiet --short HEAD', { cwd }).toString().trim();
+        return branch && branch !== 'HEAD' ? branch : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+/** Positive local evidence only; a missing ref says nothing about remote branches. */
+function hasLocalOrTrackedGitBranch(cwd, branch) {
+    if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$/u.test(branch) || branch.includes('..') || branch.endsWith('.lock'))
+        return false;
+    for (const ref of [`refs/heads/${branch}`, `refs/remotes/origin/${branch}`]) {
+        try {
+            (0, child_process_1.execFileSync)('git', ['show-ref', '--verify', '--quiet', ref], { cwd, stdio: 'pipe' });
+            return true;
+        }
+        catch { /* Try the other explicit ref. */ }
+    }
+    return false;
+}
 /** Returns the canonical object ID for the workspace revision being analyzed. */
 function getCurrentHeadSha() {
     try {
@@ -65260,10 +65475,14 @@ function isInsideGitRepo(cwd) {
         return false;
     }
 }
+/** Canonical checkout root for plans whose file paths are repository-relative. */
+function getGitRepositoryRoot(cwd) {
+    const root = (0, child_process_1.execSync)('git rev-parse --show-toplevel', { cwd, stdio: 'pipe' }).toString().trim();
+    return (0, node_fs_1.realpathSync)(root);
+}
 function isGitRepositoryRoot(cwd) {
     try {
-        const root = (0, child_process_1.execSync)('git rev-parse --show-toplevel', { cwd, stdio: 'pipe' }).toString().trim();
-        return (0, node_fs_1.realpathSync)(root) === (0, node_fs_1.realpathSync)(cwd);
+        return getGitRepositoryRoot(cwd) === (0, node_fs_1.realpathSync)(cwd);
     }
     catch {
         return false;
@@ -74329,6 +74548,7 @@ const github_error_policy_1 = __nccwpck_require__(58791);
 const credential_health_workflow_visibility_1 = __nccwpck_require__(57628);
 const tweetnacl_1 = __importDefault(__nccwpck_require__(24258));
 const node_crypto_1 = __nccwpck_require__(6005);
+const deployment_configuration_1 = __nccwpck_require__(22495);
 class GithubActionsResourceTransport {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -74364,6 +74584,8 @@ class GithubActionsResourceTransport {
         const credentialHealthWorkflow = await this.inspectDefaultCredentialHealthWorkflow(client, owner, repository);
         return {
             ownerType,
+            ...(typeof metadata.default_branch === 'string' && (0, deployment_configuration_1.isSafeBranchTree)(metadata.default_branch)
+                ? { defaultBranch: metadata.default_branch } : {}),
             repositoryId: metadata.id,
             repositoryVisibility,
             repositorySecrets: repositorySecretsResult.resources,
@@ -77710,6 +77932,7 @@ function validatePullRequestApprovalPolicy(value, allowIncomplete = false) {
     }
     else {
         const identities = new Set();
+        const names = new Set();
         for (const item of value.testChecks) {
             if (!isRecord(item)) {
                 errors.push('Each test check must be an object.');
@@ -77723,6 +77946,9 @@ function validatePullRequestApprovalPolicy(value, allowIncomplete = false) {
             if (identities.has(identity))
                 errors.push('Test checks cannot contain duplicate producer identities.');
             identities.add(identity);
+            if (value.mode !== 'off' && !allowIncomplete && names.has(String(item.name)))
+                errors.push('Trusted check names must be unique because coverage stores only a check name.');
+            names.add(String(item.name));
         }
     }
     if (typeof value.producerAttested !== 'boolean')
@@ -84025,8 +84251,8 @@ function isInside(root, candidate) {
 function matchesFieldBoundary(field, relativePath) {
   if (field === 'specs') return /^specs\/(?!README\.md$|_template\.md$|CATALOG\.md$).+\.md$/.test(relativePath);
   if (field === 'workflows') return /^(?:\.github|setup)\/workflows\/.+\.ya?ml$/.test(relativePath);
-  if (field === 'entrypoints') return /^(?:src\/.+|action\.yml|package\.json)$/.test(relativePath);
-  if (field === 'code') return /^(?:src|scripts)\//.test(relativePath);
+  if (field === 'entrypoints') return /^(?:src\/.+|web\/src\/main\.ts|action\.yml|package\.json)$/.test(relativePath);
+  if (field === 'code') return /^(?:(?:src|scripts)\/|web\/src\/.+\.(?:ts|svelte|css)$)/.test(relativePath);
   if (field === 'tests') return /^src\/.*(?:__tests__\/.*\.test\.ts|\.test\.ts)$/.test(relativePath);
   if (field === 'documentation') return /^(?:docs\/.*\.(?:md|mdx)|README\.md|CONTRIBUTING\.md)$/.test(relativePath);
   return false;

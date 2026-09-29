@@ -12,6 +12,90 @@ For [guarded PR approval](/pull-requests/guarded-approval), this same runtime PA
 
 The setup PAT and workflow PAT may have different owners and permissions. Do not paste the workflow PAT into the setup prompt unless you intentionally want the same token to perform both roles.
 
+`copilot setup --web` offers the same guided or manual PAT choices in a local
+browser page. It has separate masked inputs for the temporary operator PAT and
+the bot PAT, displays the relevant grants next to each step, and verifies
+identity and access through the same setup use cases as the terminal. The
+browser never calls GitHub with a PAT directly or stores PAT values. GitHub's
+own tab handles account switching, 2FA, repository selection, and creation.
+The local page cannot prove that a browser extension or another process under
+your OS user cannot see the value while you paste it. Afterward, delete the
+temporary setup PAT in GitHub yourself; do not delete the bot PAT while the
+installed Actions Secret still depends on it.
+
+The web assistant does not dispatch or temporarily install a credential-health
+workflow before you press **Apply setup**. Existing Secret values cannot be
+read back: re-enter the bot PAT to check its grants, and treat any preserved
+optional provider Secret marked `unverifiable` as unknown until a later
+`copilot doctor`/workflow check. The terminal setup retains its existing
+credential-health behavior.
+
+## Assisted creation in the terminal
+
+When `copilot setup` needs a PAT interactively, it offers a guided link (the
+default) or manual entry. In guided mode it first asks the setup choices that
+determine PAT permissions: issue workflows, initial tag, Secret and Variable
+management and storage scope, PR approval mode, and Projects. Choices already
+fixed by flags or `--config` are not asked. You review the resulting grants
+before the link appears; these answers carry into the full wizard without being
+asked twice. The terminal first shows a short summary of required grants;
+choose **view full permission table** at review to inspect every grant, reason,
+and condition, then return to the same review without repeating setup choices.
+Choosing manual PAT entry shows the full table directly. The later bot PAT
+prompt has its own full-table option based on the finalized workflow grants,
+not on the temporary setup PAT. The link is still **provisional** for facts that require GitHub
+inspection, such as existing Secrets, inherited organization resources, and a
+missing credential-health workflow. If the final plan needs
+additional grants, setup stops before applying it and prints a corrected link.
+Update the PAT in GitHub or create a replacement, then rerun setup. Guided
+setup shows the account returned by GitHub and asks you to confirm it.
+
+For Projects, this early choice is only **whether you want the integration**.
+Listing private organization Projects requires authorization, so the assistant
+cannot reliably ask you to select Project numbers before the setup PAT exists.
+If you opt in, the guided setup PAT requests organization **Projects: read**.
+After you enter that PAT, the assistant lists the accessible Projects and lets
+you choose their numeric Project numbers and, when available, their Status
+options. You can enter a Project URL or number manually if discovery is
+unavailable, and must verify that the bot account can access each chosen
+Project. The separate bot PAT needs **Projects: read and write** to add and
+update items when the workflows run. Fine-grained PATs cannot use the same
+personal-Projects listing endpoint as organization Projects; personal-owner
+setups use the documented manual path rather than pretending to discover them.
+
+If you choose **Review all setup choices again** at the permission preview,
+the terminal clearly marks a second pass over your saved answers. Press Enter
+to keep an answer, or change it; afterward you return to the same PAT review
+with permissions recalculated. No PAT link has been accepted and no setup
+mutation has started merely because you revisited these choices.
+
+After the plan, the bot link uses the selected workflow permissions. Enter the
+expected bot login first: setup resolves its GitHub numeric ID, then checks the
+PAT's own `/user` identity against that ID before any Secret write. A manual or
+non-interactive PAT retains the existing permission audit but does **not** gain
+this extra identity binding. A wrong bot account blocks installation.
+
+Both links use GitHub's [documented fine-grained PAT form](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
+They do not sign you in, complete 2FA, generate or revoke a token, or choose
+an individual repository. Check the active browser account, change **All
+repositories** to **Only select repositories**, select only the
+target repository, and review the final GitHub form. A guided setup PAT uses a
+one-day suggested expiry; delete it yourself in [GitHub PAT Settings](https://github.com/settings/personal-access-tokens)
+afterward. The bot PAT uses a 90-day suggested expiry, may be shortened by
+organization policy, and remains in Actions Secret `PAT`; arrange renewal
+before it expires. GitHub's documentation is inconsistent: its [PAT limitations
+list](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#fine-grained-personal-access-tokens-limitations)
+calls out the Checks API, while the [check-runs endpoint
+reference](https://docs.github.com/en/rest/checks/runs#list-check-runs-for-a-git-reference)
+lists fine-grained PATs with `Checks: read`. The published [PAT URL-permission
+table](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#repository-permissions)
+does not list `checks`, although the form may currently accept `checks=read`.
+The guided setup and bot links include it when required, but you must inspect
+the final GitHub form and permission audit. If the form ignores that field,
+select `Checks: read` manually or use a compatible credential. Setup never
+assumes that a prefilled URL proves API access. Existing command-line token flags also remain, but putting
+a PAT in a command can expose it in shell history or process listings.
+
 ## Permission tables in `copilot setup`
 
 Immediately before each hidden PAT prompt, interactive setup prints a
@@ -122,7 +206,21 @@ cannot obtain an authoritative remote snapshot or required selected inventory
 access, it stops before Secrets, Variables, labels, issue types, and tag writes
 with bounded recovery guidance, including for a repository-scope default.
 
-<Info>GitHub does not reveal Secret values through its API. Copilot validates new credentials with provider metadata requests and validates existing remote Secrets through the read-only `copilot_credential_health.yml` workflow. Setup proves the exact file on the selected main ref and dispatches that path only when the workflow is also registered or installed on GitHub's default branch; doctor remains query-only and expects the normally indexed installed workflow. The health workflow reports each requested credential independently, but that bounded reachability result is not a permission audit. If `PAT` already exists, interactive setup asks you to re-enter it and runs the complete workflow-PAT permission matrix before provisioning; unattended setup must supply `PAT` again or stops before mutation. Temporary workflow bootstrap is available only during setup. A preauthenticated Codex session is runner state, not a Secret: it is accepted only when the runtime preflight can execute `codex login status` successfully.</Info>
+<Info>GitHub does not reveal Secret values through its API. Copilot validates new credentials with provider metadata requests and may validate existing remote Secrets by dispatching the installed `copilot_credential_health.yml` workflow. Setup proves the exact file on the selected main ref and dispatches that path only when the workflow is also registered or installed on GitHub's default branch. Plain `copilot doctor` may create an Actions run; `copilot doctor --read-only` never dispatches it and leaves Secret values unverified. The health workflow reports each requested credential independently, but that bounded reachability result is not a permission audit. If `PAT` already exists, interactive setup asks you to re-enter it and runs the complete workflow-PAT permission matrix before provisioning; unattended setup must supply `PAT` again or stops before mutation. Temporary workflow bootstrap is available only during setup. A preauthenticated Codex session is runner state, not a Secret: it is accepted only when the runtime preflight can execute `codex login status` successfully.</Info>
+
+Terminal setup may attempt a temporary credential-health workflow creation before
+final Apply when checking existing Secrets. That request can create Git commits
+even if the workflow is later removed. If setup stops after this attempt, it
+reports a partial outcome: inspect the selected branch and GitHub workflow
+history before retrying. An ambiguous create failure is treated conservatively
+as a possible remote change. The browser setup path does not perform this
+pre-Apply bootstrap.
+
+The final setup-PAT audit requires GitHub to verify whether the repository
+owner is a person or an organization. If that remote owner type is unknown or
+unavailable, setup stops before provisioning and asks you to retry inspection;
+the owner type you selected earlier for a guided link is only provisional.
+Potential organization grants remain visible in the permission preview.
 
 For other existing credentials, choosing `keep` works only when the selected
 storage policy preserves the Secret in its current repository or organization
@@ -166,7 +264,7 @@ For comment-driven assistance, read-only commands are available to anyone who ca
   </Step>
 
   <Step title="Create the setup PAT">
-    The person running setup needs a separate fine-grained PAT. Give it only the permissions required by the selected setup features: repository Metadata read and Contents read for inspecting repository files and installed workflows; Administration read when release/hotfix setup or doctor must inspect classic branch protection; Issues write for labels; Variables write for Repository Variables; Secrets read/write when provisioning Secrets; Actions read/write when checking or dispatching credential health; and organization Issue Types or Projects permissions only when those integrations are selected. There is no separate Workflows read permission for inspection. If setup will use organization-level Actions Secrets or Variables, the token also needs the corresponding organization Actions Secrets/Variables read and write permissions. Organization scope is valid only for repositories owned by an organization; setup detects personal repositories and stops before attempting organization writes. For existing Secrets, an installed `copilot_credential_health.yml` requires Actions write for dispatch but does not require Contents or Workflows write. Workflows write and Contents write appear only when the workflow is independently confirmed missing and temporary bootstrap is required; unavailable or unknown workflow state never authorizes temporary creation. Contents write can also be required for an initial tag or another explicitly selected repository mutation.
+    The person running setup needs a separate fine-grained PAT. Give it only the permissions required by the selected setup features: repository Metadata read and Contents read for inspecting repository files and installed workflows; Administration read when release/hotfix setup or doctor must inspect classic branch protection; Issues write for labels; Variables write for Repository Variables; Secrets read/write when provisioning Secrets; Actions read/write when checking or dispatching credential health; and organization Issue Types or Projects permissions only when those integrations are selected. Setup uses organization Projects **read**, not write, to list Projects after the PAT is entered. There is no separate Workflows read permission for inspection. If setup will use organization-level Actions Secrets or Variables, the token also needs the corresponding organization Actions Secrets/Variables read and write permissions. Organization scope is valid only for repositories owned by an organization; setup detects personal repositories and stops before attempting organization writes. For existing Secrets, an installed `copilot_credential_health.yml` requires Actions write for dispatch but does not require Contents or Workflows write. Workflows write and Contents write appear only when the workflow is independently confirmed missing and temporary bootstrap is required; unavailable or unknown workflow state never authorizes temporary creation. Contents write can also be required for an initial tag or another explicitly selected repository mutation.
 
     Enter it in the hidden prompt, or use `--token`/`PERSONAL_ACCESS_TOKEN` for automation. It remains in memory for the command and is not written to `.env`, a config file, or the `PAT` Secret.
 

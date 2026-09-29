@@ -1,5 +1,5 @@
 import { InitialSetupUseCase } from '../initial_setup_use_case';
-import { Result } from '../../../../data/model/result';
+import { Result, getResultPayload } from '../../../../data/model/result';
 import type { Execution } from '../../../../data/model/execution';
 import { createDefaultSetupConfiguration } from '../../../policies/setup_configuration_policy';
 import { projectInitialSetupContext } from '../../push_single_action_contexts';
@@ -140,6 +140,8 @@ describe('InitialSetupUseCase', () => {
       );
       expect(mockSetupHasValidToken).toHaveBeenCalledTimes(1);
       expect(mockSetupPrepare).not.toHaveBeenCalled();
+      expect(getResultPayload(getResultPayload(results[0].payload)?.setupReceipt)?.effects)
+        .toEqual(expect.arrayContaining([{ id: 'files', state: 'not-started', scope: 'local' }]));
     } finally {
       mockSetupHasValidToken.mockReturnValue(true);
     }
@@ -170,6 +172,126 @@ describe('InitialSetupUseCase', () => {
       param.labels,
     );
     expect(results[0].steps?.some((s) => s.includes('Issue types'))).toBe(true);
+    expect(getResultPayload(getResultPayload(results[0].payload)?.setupReceipt)?.effects).toEqual([
+      { id: 'files', state: 'completed', scope: 'local' },
+      { id: 'secrets', state: 'skipped', scope: 'repository' },
+      { id: 'labels', state: 'skipped', scope: 'repository' },
+      { id: 'issue-types', state: 'skipped', scope: 'repository' },
+      { id: 'variables', state: 'skipped', scope: 'repository' },
+      { id: 'initial-tag', state: 'skipped', scope: 'repository' },
+    ]);
+  });
+
+  it('distinguishes skipped files from newly created labels and issue types in the receipt', async () => {
+    mockSetupPrepare.mockReturnValueOnce({ copied: 0, skipped: 2 });
+    mockEnsureInitialLabels.mockResolvedValueOnce({
+      configured: { created: 1, existing: 4, errors: [] }, progress: { created: 0, existing: 21, errors: [] },
+    });
+    mockEnsureIssueTypes.mockResolvedValueOnce({ success: true, created: 2, existing: 1, errors: [] });
+    const result = await useCase.invoke(baseParam());
+    const effects = getResultPayload(getResultPayload(result[0].payload)?.setupReceipt)?.effects;
+    expect(effects).toEqual(expect.arrayContaining([
+      { id: 'files', state: 'skipped', scope: 'local' },
+      { id: 'labels', state: 'completed', scope: 'repository' },
+      { id: 'issue-types', state: 'completed', scope: 'repository' },
+    ]));
+  });
+
+  it('reports provisioned Secrets and keeps a failed Secret write marked for inspection', async () => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    const secretPort = { upsertSecrets: jest.fn().mockResolvedValueOnce({ created: 1, updated: 0, skipped: 0, errors: [] })
+      .mockResolvedValueOnce({ created: 0, updated: 0, skipped: 0, errors: ['Secret write denied'] }) };
+    const withSecrets = new InitialSetupUseCase(
+      { getUser: mockGetUserFromToken, getUserDetails: jest.fn() },
+      { ensureInitialLabels: mockEnsureInitialLabels }, { ensureIssueTypes: mockEnsureIssueTypes },
+      { getLatestTag: mockGetLatestTag }, { getDefaultBranch: mockGetDefaultBranch } as any,
+      { createTag: mockCreateTag } as any,
+      { prepare: mockSetupPrepare, hasValidToken: mockSetupHasValidToken },
+      { upsert: mockSetupVariablesUpsert }, secretPort,
+    );
+    const param = baseParam({ inputs: { setupConfiguration, setupRemoteConfiguration: repositorySnapshot,
+      setupCredentials: { workflowPat: { name: 'PAT', value: 'fake-workflow-token' }, apiKeys: [] } } });
+    const completed = await withSecrets.invoke(param);
+    expect(getResultPayload(getResultPayload(completed[0].payload)?.setupReceipt)?.effects)
+      .toContainEqual({ id: 'secrets', state: 'completed', scope: 'repository' });
+    const failed = await withSecrets.invoke(param);
+    expect(failed[0].success).toBe(false);
+    expect(getResultPayload(getResultPayload(failed[0].payload)?.setupReceipt)?.effects)
+      .toContainEqual({ id: 'secrets', state: 'needs-inspection', scope: 'repository' });
+    expect(secretPort.upsertSecrets).toHaveBeenCalledTimes(2);
+  });
+
+  it('marks Secrets and Variables skipped when providers report no created or updated values', async () => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    mockSetupVariablesUpsert.mockResolvedValueOnce({ created: 0, updated: 0, errors: [] });
+    const secretPort = { upsertSecrets: jest.fn().mockResolvedValue({ created: 0, updated: 0, skipped: 1, errors: [] }) };
+    const noOpProvisioning = new InitialSetupUseCase(
+      { getUser: mockGetUserFromToken, getUserDetails: jest.fn() },
+      { ensureInitialLabels: mockEnsureInitialLabels }, { ensureIssueTypes: mockEnsureIssueTypes },
+      { getLatestTag: mockGetLatestTag }, { getDefaultBranch: mockGetDefaultBranch } as any,
+      { createTag: mockCreateTag } as any,
+      { prepare: mockSetupPrepare, hasValidToken: mockSetupHasValidToken },
+      { upsert: mockSetupVariablesUpsert }, secretPort,
+    );
+    const result = await noOpProvisioning.invoke(baseParam({ inputs: { setupConfiguration, setupRemoteConfiguration: repositorySnapshot,
+      setupCredentials: { workflowPat: { name: 'PAT', value: 'fake-workflow-token' }, apiKeys: [] } } }));
+    expect(result[0].success).toBe(true);
+    expect(secretPort.upsertSecrets).toHaveBeenCalledTimes(1);
+    expect(mockSetupVariablesUpsert).toHaveBeenCalledTimes(1);
+    expect(getResultPayload(getResultPayload(result[0].payload)?.setupReceipt)?.effects).toEqual(expect.arrayContaining([
+      { id: 'secrets', state: 'skipped', scope: 'repository' },
+      { id: 'variables', state: 'skipped', scope: 'repository' },
+    ]));
+  });
+
+  it('marks a failed Variable write for inspection and retains mixed scope even when setup stops early', async () => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    setupConfiguration.storage.variables.overrides = { AGENT_PROVIDER: 'organization' };
+    mockSetupHasValidToken.mockReturnValueOnce(false);
+    const stopped = await useCase.invoke(baseParam({ inputs: { setupConfiguration } }));
+    expect(getResultPayload(getResultPayload(stopped[0].payload)?.setupReceipt)?.effects)
+      .toContainEqual({ id: 'variables', state: 'not-started', scope: 'mixed' });
+    setupConfiguration.storage.variables.overrides = {};
+    mockSetupVariablesUpsert.mockResolvedValueOnce({ created: 0, updated: 0, errors: ['Variable write denied'] });
+    const failed = await useCase.invoke(baseParam({ inputs: { setupConfiguration, setupRemoteConfiguration: repositorySnapshot } }));
+    expect(getResultPayload(getResultPayload(failed[0].payload)?.setupReceipt)?.effects)
+      .toContainEqual({ id: 'variables', state: 'needs-inspection', scope: 'repository' });
+  });
+
+  it('never reports Variables or Secrets completed when their provisioning adapters are absent', async () => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    const noProvisioningPorts = new InitialSetupUseCase(
+      { getUser: mockGetUserFromToken, getUserDetails: jest.fn() },
+      { ensureInitialLabels: mockEnsureInitialLabels }, { ensureIssueTypes: mockEnsureIssueTypes },
+      { getLatestTag: mockGetLatestTag }, { getDefaultBranch: mockGetDefaultBranch } as any,
+      { createTag: mockCreateTag } as any,
+      { prepare: mockSetupPrepare, hasValidToken: mockSetupHasValidToken },
+    );
+    const inputs = { setupConfiguration, setupRemoteConfiguration: repositorySnapshot,
+      setupCredentials: { workflowPat: { name: 'PAT', value: 'fake-workflow-token' }, apiKeys: [] } };
+    const result = await noProvisioningPorts.invoke(baseParam({ inputs }));
+    expect(result[0].success).toBe(false);
+    expect(mockSetupPrepare).not.toHaveBeenCalled();
+    expect(result[0].errors?.map(error => error.message)).toEqual(expect.arrayContaining([
+      'GitHub Actions Variable provisioning is unavailable; no Variables were changed.',
+      'GitHub Actions Secret provisioning is unavailable; no Secrets were changed.',
+    ]));
+    expect(getResultPayload(getResultPayload(result[0].payload)?.setupReceipt)?.effects).toEqual(expect.arrayContaining([
+      { id: 'variables', state: 'not-started', scope: 'repository' },
+      { id: 'secrets', state: 'not-started', scope: 'repository' },
+    ]));
+  });
+
+  it('marks a failed local write as needing inspection and later resources as not started', async () => {
+    mockSetupPrepare.mockImplementationOnce(() => { throw new Error('write may have happened'); });
+    const results = await useCase.invoke(baseParam());
+    const effects = getResultPayload(getResultPayload(results[0].payload)?.setupReceipt)?.effects;
+    expect(results[0].success).toBe(false);
+    expect(effects).toEqual(expect.arrayContaining([
+      { id: 'files', state: 'needs-inspection', scope: 'local' },
+      { id: 'secrets', state: 'not-started', scope: 'repository' },
+      { id: 'labels', state: 'not-started', scope: 'repository' },
+    ]));
   });
 
   it('creates default tag v1.0.0 when no version tags exist', async () => {
@@ -197,6 +319,9 @@ describe('InitialSetupUseCase', () => {
       expect.arrayContaining([{ name: 'AGENT_PROVIDER', value: 'codex' }]),
     );
     expect(results[0].steps).toContain('⏭️  Initial version tag creation disabled by setup configuration.');
+    expect(getResultPayload(getResultPayload(results[0].payload)?.setupReceipt)?.effects)
+      .toEqual(expect.arrayContaining([{ id: 'initial-tag', state: 'skipped', scope: 'repository' },
+        { id: 'variables', state: 'completed', scope: 'repository' }]));
   });
 
   it('provisions Variables at organization scope when the configuration selects it', async () => {

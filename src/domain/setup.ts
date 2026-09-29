@@ -197,6 +197,8 @@ export type SetupCredentialHealthWorkflowState = 'installed' | 'missing' | 'unav
 
 export interface SetupRemoteConfiguration {
     ownerType: SetupOwnerType;
+    /** Read from authenticated GitHub metadata, not inferred from local branch names. */
+    defaultBranch?: string;
     repositoryId?: number;
     repositoryVisibility: SetupRepositoryVisibility;
     repositorySecrets: readonly string[];
@@ -241,6 +243,8 @@ export interface SetupVariable {
 }
 
 export interface SetupPlan {
+    /** Informational only: advanced defaults not asked in basic presentation. */
+    presentationDefaults?: readonly { group: string; count: number }[];
     configuration: SetupConfiguration;
     workflowFiles: string[];
     issueTemplateFiles: string[];
@@ -251,4 +255,11 @@ export interface SetupPlan {
     mergeQueueReadiness: DoctorCheck[];
     approvalReadiness: DoctorCheck[];
     warnings: string[];
+}
+
+/** Structured, value-free receipt for the local setup workflow. */
+export interface SetupOperationEffect {
+    readonly id: 'files' | 'secrets' | 'labels' | 'issue-types' | 'variables' | 'initial-tag';
+    readonly state: 'completed' | 'skipped' | 'needs-inspection' | 'not-started';
+    readonly scope: 'local' | 'repository' | 'organization' | 'mixed';
 }

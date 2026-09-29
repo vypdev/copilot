@@ -109,7 +109,12 @@ transient response.
 
 ### 4.2 Non-goals
 
-1. Setup does not enumerate, create, edit, rotate, or revoke GitHub PATs.
+1. The implemented permission-guidance flow does not enumerate, create, edit,
+   rotate, or revoke GitHub PATs. The proposed guided operator PAT flow and
+   its explicit GitHub deletion responsibility are documented in
+   [`temporary-setup-operator-authorization.md`](./temporary-setup-operator-authorization.md).
+   The separate proposed guided workflow PAT is covered by
+   [`guided-bot-pat-onboarding.md`](./guided-bot-pat-onboarding.md).
 2. Setup does not prove write access by creating temporary labels, branches,
    files, Variables, Secrets, comments, projects, or workflow runs.
 3. Existing remote Secret values remain unavailable. Credential-health evidence
@@ -473,6 +478,11 @@ derived from the existing immutable configuration, repository owner type,
 storage targets, and selected features. The permission catalog, status
 semantics, maximum probe concurrency, and prohibition on write probes are not
 configurable.
+If authenticated repository inspection cannot establish whether the owner is
+an organization or a user, the final token-backed setup audit MUST stop before
+all provisioning, with a retry/inspection action. The preview may display
+potential organization grants, but neither a guided owner assertion nor an
+accepted PAT probe may convert unknown ownership into verified scope.
 
 Recommended interactive use remains `copilot setup`. Non-interactive setup
 prints permission results for supplied PATs but never prompts. `--dry-run`
@@ -941,6 +951,12 @@ at widths 40/80/120 and `NO_COLOR`.
     still can. An unclosed quoted fence cannot hide a later shell block after
     the blockquote level ends, and an exceptional quoted shell fence remains
     inspectable if its container ends without a closing marker.
+51. Given authenticated remote owner type is `Unknown`, the setup permission
+    preview retains potential organization grants for selected issue workflows,
+    Projects, and organization storage, but a token-backed final audit blocks
+    before permission probes or provisioning. A guided owner assertion cannot
+    bypass this; once GitHub verifies `User` or `Organization`, the requirements
+    are recomputed for that actual type.
 
 ## 17. Requirements traceability
 

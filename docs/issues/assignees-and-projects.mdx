@@ -41,8 +41,34 @@ Linking issues to **GitHub Project** boards requires a **Personal Access Token (
 
 ### project-ids
 
-- **Format:** Comma-separated list of **project IDs** (numeric). You find the project ID in the project URL or via the API; it is **not** the project name.
-- **Effect:** When the action runs (e.g. on issue opened or edited), it **links the issue** to each of these projects and can **move the issue** to a column (e.g. "Todo", "In Progress") based on **`project-column-issue-created`** and **`project-column-issue-in-progress`** (see [Configuration](/configuration)).
+- **Format:** Comma-separated list of numeric **Project numbers**. For example, `https://github.com/orgs/ACME/projects/12` has Project number `12`. This is not the Project title or its GraphQL `PVT_` node ID.
+- **Effect:** When the action runs (e.g. on issue opened or edited), it **links the issue** to each of these projects and can set its **Status** field (e.g. "Todo", "In Progress") based on **`project-column-issue-created`** and **`project-column-issue-in-progress`** (see [Configuration](/configuration)). Despite their legacy `column` names, these inputs name Status single-select options, not visual board columns.
+
+During guided setup, first choose whether Projects integration is needed. That
+lets the setup PAT request organization **Projects: read**; the assistant can
+then list open, accessible Projects for selection; closed Projects are excluded.
+If discovery is unavailable, enter
+the Project URL or number manually and confirm the account and Status options
+in GitHub. The workflow's bot PAT separately needs Projects **read and write**.
+Use **Retry GitHub discovery** (or `r` in the CLI) to query again without
+restarting setup; this is read-only and does not ask for another PAT. A list
+with no entries means no *open, accessible* Projects were returned by the bounded
+query, not that the organization definitely has none. Check the setup PAT's
+organization `Projects: read` grant and the Project owner, then use a verified
+number or URL if the Project still does not appear. Personal-owner Projects
+cannot be listed through this fine-grained-PAT endpoint, so enter their URL
+number manually. See [GitHub's Projects API](https://docs.github.com/en/rest/projects/projects).
+Discovery reads at most two pages; if the list is marked truncated, a Project
+not shown may still be available. Enter its verified URL or number manually.
+
+All selected Projects must contain each Status value you configure for issue
+creation, PR creation and the two in-progress transitions. The wizard proposes
+common options when GitHub lets it inspect them. It cannot map different
+Status vocabularies per Project; choose compatible Projects or configure them
+separately. For manually entered Projects, check each option in GitHub before
+you apply the plan. The interactive wizard asks you to confirm all four exact
+values after inspecting each Project; accepting a suggestion is not
+verification. See [GitHub Project fields](https://docs.github.com/en/rest/projects/fields).
 
 The column update uses the exact ProjectV2 item returned by GitHub when the
 issue is added. It does not wait and re-list the board, so normal Project

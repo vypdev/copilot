@@ -550,6 +550,19 @@ describe('setup configuration policy', () => {
         ]);
     });
 
+    it('rejects opaque Project IDs and invalid Status option names before Apply', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.projects.ids = 'PVT_example';
+        expect(validateSetupConfiguration(configuration)).toContain(
+            'Project IDs must be a comma-separated list of 1–10 distinct positive Project URL numbers; PVT_ node IDs are not accepted.',
+        );
+        configuration.projects.ids = '2';
+        configuration.projects.issueCreatedColumn = 'Invalid\nStatus';
+        expect(validateSetupConfiguration(configuration)).toContain(
+            'Project issueCreatedColumn must name one existing single-line Status option (1–100 characters).',
+        );
+    });
+
     it('adds warnings for organization storage, projects, and always-provision mode', () => {
         const configuration = createDefaultSetupConfiguration();
         configuration.features.release = false;
@@ -560,7 +573,7 @@ describe('setup configuration policy', () => {
         configuration.agents.findings.provider = 'cursor';
 
         expect(buildSetupPlan(configuration).warnings).toEqual(expect.arrayContaining([
-            expect.stringContaining('Project IDs'),
+            expect.stringContaining('Selected Project numbers'),
             expect.stringContaining('Always-provision mode reinstalls only default Codex/OpenCode runtimes'),
             expect.stringContaining('no automatic Cursor installer'),
             expect.stringContaining('Organization-level'),

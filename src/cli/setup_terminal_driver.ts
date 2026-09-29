@@ -6,19 +6,23 @@ export function interactiveTerminalAvailable(): boolean {
   return Boolean(stdin.isTTY && stdout.isTTY && !process.env.JEST_WORKER_ID);
 }
 
+// Keep this boundary safe even when choices are not constructed by the setup controller.
+function safeTerminalChoiceText(value: string): string {
+  return value.replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu, '');
+}
+
 export function createInteractiveTerminalDriver(): TerminalDriver | undefined {
   return interactiveTerminalAvailable() ? new NodeTerminalDriver() : undefined;
 }
 
 export class NodeTerminalDriver implements TerminalDriver {
-  private readonly readline: Interface;
+  private readline?: Interface;
   private closed = false;
 
   constructor() {
     if (!interactiveTerminalAvailable()) {
       throw new Error('An interactive terminal is required.');
     }
-    this.readline = createInterface({ input: stdin, output: stdout });
   }
 
   isInteractive(): boolean {
@@ -27,6 +31,8 @@ export class NodeTerminalDriver implements TerminalDriver {
 
   async readText(prompt: string): Promise<TerminalReadResult> {
     if (this.closed) return { kind: 'end-of-input' };
+    const readline = createInterface({ input: stdin, output: stdout });
+    this.readline = readline;
     const abort = new AbortController();
     let interrupted = false;
     let ended = false;
@@ -38,17 +44,19 @@ export class NodeTerminalDriver implements TerminalDriver {
       ended = true;
       abort.abort();
     };
-    this.readline.once('SIGINT', onInterrupt);
-    this.readline.once('close', onClose);
+    readline.once('SIGINT', onInterrupt);
+    readline.once('close', onClose);
     try {
-      return { kind: 'value', value: await this.readline.question(prompt, { signal: abort.signal }) };
+      return { kind: 'value', value: await readline.question(prompt, { signal: abort.signal }) };
     } catch (error) {
       if (interrupted) return { kind: 'cancel' };
       if (ended || this.closed || isAbortError(error)) return { kind: 'end-of-input' };
       throw error;
     } finally {
-      this.readline.off('SIGINT', onInterrupt);
-      this.readline.off('close', onClose);
+      readline.off('SIGINT', onInterrupt);
+      readline.off('close', onClose);
+      readline.close();
+      if (this.readline === readline) this.readline = undefined;
     }
   }
 
@@ -91,11 +99,16 @@ export class NodeTerminalDriver implements TerminalDriver {
     prompt: string,
     choices: readonly string[],
     selected: readonly string[],
+    helpText?: string,
   ): Promise<TerminalReadResult> {
     if (this.closed) return { kind: 'end-of-input' };
     const input = stdin as typeof stdin & { setRawMode?: (mode: boolean) => void };
     if (!input.setRawMode) {
-      return this.readText(`${prompt}\nEnter comma-separated IDs (or "all"): `);
+      return this.readText([prompt, 'Available IDs:',
+        ...choices.map(choice => `  ${safeTerminalChoiceText(choice)}`),
+        `Current selection: ${safeTerminalChoiceText(selected.join(', ') || 'none')}`,
+        'Enter IDs shown before “—”, separated by commas; use manual or retry when offered, none to clear, or Enter to keep the default: ',
+      ].join('\n'));
     }
     stdout.write(`${prompt}\n`);
     input.setRawMode(true);
@@ -109,7 +122,7 @@ export class NodeTerminalDriver implements TerminalDriver {
         const lines = choices.map((choice, choiceIndex) => {
           const id = choice === 'All' ? 'all' : choice.split(' — ')[0];
           const checked = id === 'all' ? value.size === choices.length - 1 : value.has(id);
-          return `${choiceIndex === index ? '❯' : ' '} ${checked ? '●' : '○'} ${choice}`;
+          return `${choiceIndex === index ? '❯' : ' '} ${checked ? '●' : '○'} ${safeTerminalChoiceText(choice)}`;
         });
         stdout.write(`${rendered ? `\x1b[${choices.length}A\x1b[0J` : ''}${lines.join('\n')}\n`);
         rendered = true;
@@ -133,6 +146,13 @@ export class NodeTerminalDriver implements TerminalDriver {
           if (data.startsWith('\u001b[B', offset)) { index = Math.min(choices.length - 1, index + 1); offset += 2; render(); continue; }
           if (character === '\u0003') { finish({ kind: 'cancel' }); return; }
           if (character === '\u0004') { finish({ kind: 'end-of-input' }); return; }
+          if (character === 'b' || character === 'B') { finish({ kind: 'value', value: ':back' }); return; }
+          if (character === '?' && helpText) {
+            stdout.write(`\n${helpText}\n\n`);
+            rendered = false;
+            render();
+            continue;
+          }
           if (character === ' ') {
             const id = choices[index] === 'All' ? 'all' : choices[index].split(' — ')[0];
             if (id === 'all') value = value.size === choices.length - 1 ? new Set() : new Set(choices.slice(1).map(choice => choice.split(' — ')[0]));
@@ -140,7 +160,7 @@ export class NodeTerminalDriver implements TerminalDriver {
             else value.add(id);
             render();
           } else if (character === '\r' || character === '\n') {
-            finish({ kind: 'value', value: [...value].join(',') });
+            finish({ kind: 'value', value: value.size === 0 ? 'none' : [...value].join(',') });
             return;
           }
         }
@@ -154,7 +174,7 @@ export class NodeTerminalDriver implements TerminalDriver {
   close(): void {
     if (this.closed) return;
     this.closed = true;
-    this.readline.close();
+    this.readline?.close();
   }
 }
 

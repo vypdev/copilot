@@ -36,6 +36,8 @@ export function renderSetupPlan(plan: SetupPlan): string {
     `  Outcome: ${approval.mode === 'off' ? 'disabled' : approval.mode === 'recommend' ? 'recommendation only' : 'eligible PRs may be approved after default-branch installation and live evidence'}`,
     '  Native approval still requires readable stale-dismissal rules and a distinct runtime PAT bot.', '',
     color('Repository changes', 36),
+    `  Production/development branches: ${plan.configuration.repository.mainBranch} / ${plan.configuration.repository.developmentBranch}`,
+    `  Projects: ${plan.configuration.projects.ids || '(none)'}`,
     `  Files selected: ${plan.selectedFiles.length}`,
     `  Variables to upsert: ${plan.configuration.manageRepositoryVariables ? plan.variables.length : 0}`,
     `  Secret options to validate/provision: ${plan.configuration.manageRepositorySecrets ? plan.credentialRequirements.length : 0}`,
@@ -43,6 +45,8 @@ export function renderSetupPlan(plan: SetupPlan): string {
     `  Secret storage: ${storageLabel(plan.configuration.storage.secrets)}`,
     '  Labels and issue types: always checked by Copilot setup',
     `  Initial tag: ${plan.configuration.createInitialTag ? 'v1.0.0 when no version tag exists' : 'disabled'}`, '',
+    ...(plan.presentationDefaults?.length ? [color('Advanced defaults retained in basic setup', 36),
+      ...plan.presentationDefaults.map(item => `  ${item.group}: ${item.count} settings not asked; use :edit at plan confirmation to review or change.`), ''] : []),
     ...(plan.mergeQueueReadiness.length > 0 ? [
       color('Merge queue readiness', 36),
       ...plan.mergeQueueReadiness.map((check) => `  ${doctorIcon(check.status)} ${check.id}: ${check.summary}`),

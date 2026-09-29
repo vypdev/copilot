@@ -4,6 +4,7 @@ import {
     buildSetupPatPermissionRequirements,
     buildWorkflowPatPermissionRequirements,
     normalizePermissionRequirements,
+    requiredSetupPatPermissionDelta,
 } from '../setup_token_permission_policy';
 import type { SetupRemoteConfiguration } from '../../../domain/setup';
 import type { SetupTokenPermissionRequirement } from '../../../domain/setup_token_permissions';
@@ -23,14 +24,28 @@ function disabledRuntimeConfiguration() {
 }
 
 describe('setup token permission policy', () => {
+    it('reports only newly required or upgraded grants after guided review', () => {
+        const baseline = buildSetupPatPermissionRequirements();
+        const metadata = baseline.find(item => item.permission === 'Metadata')!;
+        const contents = baseline.find(item => item.permission === 'Contents')!;
+        const secrets = baseline.find(item => item.permission === 'Secrets' && item.scope === 'repository')!;
+        const final = [metadata, { ...contents, permission: 'contents', level: 'write' as const },
+            { ...secrets, applicability: 'required' as const }];
+        expect(requiredSetupPatPermissionDelta([metadata, contents, secrets], final)).toEqual([
+            'repository contents write', 'repository Secrets write',
+        ]);
+        expect(requiredSetupPatPermissionDelta(final, [metadata, contents, secrets])).toEqual([]);
+    });
+
     it('describes the complete setup PAT permission catalog before the prompt', () => {
         const requirements = buildSetupPatPermissionRequirements();
         expect(requirements.map(item => `${item.scope}:${item.permission}:${item.level}`)).toEqual([
             'repository:Metadata:read', 'repository:Contents:read', 'repository:Secrets:write',
-            'repository:Variables:write', 'repository:Issues:write', 'repository:Actions:write',
+            'repository:Variables:write', 'repository:Issues:write', 'repository:Actions:write', 'repository:Actions:read',
+            'repository:Checks:read',
             'repository:Administration:read', 'repository:Workflows:write',
             'organization:Secrets:write', 'organization:Variables:write',
-            'organization:Issue Types:write', 'organization:Projects:write',
+            'organization:Issue Types:write', 'organization:Projects:read',
         ]);
     });
 
@@ -44,6 +59,8 @@ describe('setup token permission policy', () => {
     it('keeps feature-dependent setup grants conditional with visible conditions', () => {
         const administration = buildSetupPatPermissionRequirements().find(item => item.permission === 'Administration');
         expect(administration).toMatchObject({ applicability: 'conditional', condition: expect.stringContaining('Release') });
+        const approvalRead = buildSetupPatPermissionRequirements().find(item => item.permission === 'Actions' && item.level === 'read');
+        expect(approvalRead).toMatchObject({ applicability: 'conditional', condition: 'Pull-request approval enabled' });
     });
 
     it('recomputes only repository setup mutations selected by the approved configuration', () => {
@@ -63,6 +80,22 @@ describe('setup token permission policy', () => {
             'repository:Contents:read',
             'repository:Variables:write',
         ]);
+    });
+
+    it('keeps possible organization grants visible when remote owner type is unknown', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.projects.ids = 'PVT_example';
+        configuration.storage.secrets.defaultScope = 'organization';
+        const unknown = buildConfiguredSetupPatPermissionRequirements(configuration, {
+            ...organization, ownerType: 'Unknown',
+        }).map(item => `${item.scope}:${item.permission}:${item.level}`);
+        expect(unknown).toEqual(expect.arrayContaining([
+            'organization:Secrets:write', 'organization:Issue Types:write', 'organization:Projects:read',
+        ]));
+        const personal = buildConfiguredSetupPatPermissionRequirements(configuration, {
+            ...organization, ownerType: 'User',
+        });
+        expect(personal.some(item => item.scope === 'organization')).toBe(false);
     });
 
     it('omits stale disabled issue workflows from the configured setup PAT plan', () => {
@@ -118,7 +151,7 @@ describe('setup token permission policy', () => {
         expect(permissions).toEqual(expect.arrayContaining([
             'repository:Actions:write',
             'repository:Workflows:write',
-            'organization:Projects:write',
+            'organization:Projects:read',
         ]));
     });
 

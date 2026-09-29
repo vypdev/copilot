@@ -38,6 +38,199 @@ If the checkout does not include the compiled `build/` folder (e.g. it is gitign
 
 Once installed, the `copilot` command is available globally. Repository-dependent commands such as `copilot setup`, `copilot doctor`, `copilot check-progress`, `copilot think`, and `copilot do` must be run **from the root of the target repository**. The `copilot upgrade`, `copilot --version`, and help flows can run from any directory. Commands that access GitHub accept `--token` or `PERSONAL_ACCESS_TOKEN` from the environment. `copilot setup` and `copilot doctor` securely prompt for the setup PAT when run interactively; no `.env` file is read or created. `copilot setup --dry-run` is the only setup mode that can run without a token. See [CLI commands](/single-actions/workflow-and-cli).
 
+Prefer a visual walkthrough? Run `copilot setup --web` from the repository
+root on an attached Git branch. A detached HEAD is rejected before credentials
+are requested; check out a branch first. Running from a subdirectory is also
+rejected before the browser opens or a PAT is requested; change to the
+repository root printed in the error and rerun. The CLI starts a short-lived page on
+`127.0.0.1` and opens your browser;
+if opening fails, paste the printed local URL into a browser on this computer.
+Enter the 16-character pairing code shown in the terminal before setup state
+appears. The URL contains no secret; keep the pairing code private. Loopback
+by itself does not restrict access to your OS account, and anyone on this
+computer with the code could join the session. After a page refresh, enter
+the code again. Neither the code nor the session key is sent to GitHub.
+After five incorrect codes, pairing and takeover pause for 30 seconds; the
+session is not permanently locked. Wait and retry the code shown in the
+launching terminal. Terminal setup remains available.
+An input TTY is not required for `--web`, but you must be able to read the
+launcher's stdout (or a privately captured task log) to obtain the code. If
+that output was discarded, stop and relaunch from a readable terminal; there
+is no code-recovery link in the browser. Treat any captured output as private.
+The page shows the same six setup stages, keeps the review pass visibly part
+of the current run, presents permissions and the final plan, and asks for a
+separate final **Apply setup** approval. Use the System/Light/Dark control in
+the top bar to choose a readable palette; the choice lasts only in that tab.
+After a successful Apply, **Verify installed setup (read-only)** performs a
+separate metadata inspection in the same local session and shows only summary
+counts. It does not dispatch an Action or read Secret values; if you have
+already deleted the setup PAT in GitHub, run `copilot doctor --read-only`
+with a valid setup PAT instead. A failed or partial Apply does
+not offer this button: inspect the itemized result and use the CLI command
+after resolving the uncertain resources.
+The language selector starts in English and offers Spanish, French, and
+Portuguese. Switching language does not change the repository locale or reset
+your answers. Question headings, explanations, options, permission details,
+plan warnings, local errors, and credential status summaries are translated.
+A persistent review notice remains in non-English modes while rare dynamic
+GitHub/provider diagnostics and the end-to-end language review are completed.
+GitHub's own PAT form uses the language
+configured on GitHub, independently of this page.
+After confirming the checkout, choose **Basic guided setup** (recommended) or
+**Customize every setting**. Basic retains explicit permission, security,
+branch-role, Project, approval, and storage decisions; only selected advanced
+agent, branch-prefix, and Bugbot values stay at their defaults. Explicit
+non-default configuration is still asked. Each section shows question-level
+progress and has a Previous question control; the final plan summarizes key
+decisions and names sections whose advanced defaults were retained. Use its
+Change controls to reopen any section and recheck the plan and setup PAT
+permissions before approving. A return to a previous section is the same run,
+not a new setup attempt. No GitHub change starts by reviewing or editing.
+PAT values are submitted to the local process through masked fields and are
+not restored after refreshing the page. A new setup question starts with its
+own suggested answer; status updates do not erase an answer you are typing.
+A second tab is read-only until you explicitly re-enter the launcher's pairing
+code there to take control; this invalidates the first tab's control. The
+pairing code authorizes this takeover, so share it only with someone you trust
+to control the setup. The terminal remains the default with
+`copilot setup`.
+
+In the terminal wizard, each question shows a short explanation, the suggested
+answer, and a related documentation URL. Type `?` at a text, number, or
+single-choice prompt to open detailed **what/when/where/how/why/example/effect/
+verification** guidance without recording an answer. At a multi-selection
+prompt, press `?` to see the same guidance without losing the current selection;
+press `B` to revisit the previous question, and press Enter only when you are
+ready to confirm it. At text, number and single-choice prompts, enter `:back`
+to return without clearing other answers. At the final plan, enter `:edit`
+and select a section to correct it before approving. Documentation opens only if
+you choose to follow its URL; setup does not automatically browse to those
+pages. The setup/bot PAT method, repository-owner and bot-login prompts also
+accept `?` for English help without making a choice. The setup PAT prompt prints
+both the authentication guide and GitHub PAT settings for manual cleanup. At
+the final Apply confirmation, `?` explains which resources may change and how
+to inspect a partial failure; it never approves the plan.
+
+The web mode still opens GitHub's official form in a separate tab for each
+PAT; it cannot pick your GitHub account, complete 2FA, select an individual
+repository, generate a PAT, or revoke it. Confirm the account and repository
+on GitHub yourself. If `PERSONAL_ACCESS_TOKEN` is available in your
+environment, the web page asks whether to use it without revealing its value;
+closing Copilot cannot unset the parent shell variable. `--web` cannot be
+combined with `--non-interactive`, `--yes`, `--token`, `--workflow-pat`,
+`--secret`, or `--confirm-unverifiable-write-permissions`: provide those
+decisions in the browser or use the terminal setup instead. `--dry-run --web`
+shows a no-change preview.
+
+Before its final Apply approval, the web mode performs read-only GitHub
+inspection and PAT checks; it does not dispatch or temporarily install a
+credential-health workflow. Re-enter an existing bot PAT for its grant audit.
+An optional existing provider Secret that you choose to keep may remain
+`unverifiable`; check runtime health with `copilot doctor` after installation.
+Before Apply, the assistant also checks for changes to managed guidance files
+and their ownership manifest. This includes files that may be retired when
+repository agent guidance is turned off; if they changed after plan approval,
+setup stops before modifying them and asks you to review a fresh plan.
+In the browser questionnaire, an issue-workflow choice defaulted to **All**
+stays selected if you continue unchanged; clearing that selection submits
+**none** explicitly.
+
+If PR approval is enabled, the web assistant reads recent completed PR CI
+runs and proposes the exact check name, GitHub App ID, and producing workflow
+when the setup PAT has `Actions: read` and `Checks: read`. Open the linked run
+and verify the job and its mandatory coverage step before confirming the
+producer attestation. A green check is not evidence of a coverage threshold.
+If no reliable candidates can be read, enter the exact tuple manually; the
+assistant does not guess an App ID. The coverage check selector only offers
+checks you selected as trusted producers. `check` mode trusts a CI job that
+fails below your coverage budget; `numeric` mode additionally needs the
+`copilot-diff-coverage-v1` reporter artifact and explicit verification.
+When an active repository-owned ruleset for the configured development branch identifies an
+exact check/App pair as required, the assistant links that ruleset. Otherwise
+it says **not checked**; this does not mean the check is optional, because
+legacy branch protection, inherited organization rulesets, or inaccessible rules may also apply. The ruleset
+read uses repository Metadata access and does not add a broader PAT grant.
+
+If the assistant stops, the result page distinguishes cancellation, expired
+session, permission or storage blockers, and a potentially partial Apply.
+It shows the stopped stage and a next action. After Apply it lists setup files,
+Secrets, labels, issue types, Variables, and the initial tag as completed,
+skipped, not started, or needing inspection, without
+revealing PATs or provider error payloads. A diagnostic reference lets you
+find more detail in the terminal. A "no setup changes started"
+message does not mean a PAT created separately on GitHub was deleted. If
+the browser reports an unknown cause, inspect the terminal's final error
+before retrying. If a requested Secrets or Variables writer is unavailable,
+setup stops before changing any setup resource and marks operations **not
+started**. An attempted write that fails is marked **needs inspection**, since
+GitHub may have applied it before reporting the error.
+Secrets and Variables are **completed** only when GitHub reports a created or
+updated value; if every requested value was kept unchanged, they are **skipped**.
+An error shown after a rejected browser action stays visible during background
+updates; a successful next action clears it.
+
+Interactive `copilot setup` offers a guided GitHub link or manual entry for each
+PAT. The first link prepares a short-lived **setup PAT** for the person
+configuring the repository. Before showing it, guided setup asks only the local
+choices that affect its grants, shows an exact permission preview and notes
+what remains unknown until GitHub is inspected. The later questionnaire reuses
+those answers. The second link, after the setup plan, prepares the
+**workflow PAT** for the bot account.
+
+Projects are a two-stage choice: before creating the setup PAT, answer only
+whether you intend to use Projects so the link can include **Projects: read**.
+After entering the PAT, select accessible organization Projects from the
+browser checkboxes or terminal multi-select. The displayed number is the
+numeric Project number used by `project-ids`, not a GraphQL `PVT_` node ID.
+If GitHub cannot return a verifiable list, the assistant explains why and
+offers manual entry of a Project URL or number; it does not silently treat an
+empty list as proof that no Projects exist. Configure the exact **Status field
+options** (not visual board columns) used for newly created and in-progress
+items. Multiple selected Projects currently must share the selected Status
+values; if they use different Status vocabularies, choose compatible Projects
+or configure them separately. The assistant does not claim that a single value
+works in every Project when discovery shows otherwise. The bot PAT needs
+Project write access later, when the workflow runs.
+
+Explicit `features.release` and `features.hotfix` values from `--config` or
+CLI flags remain fixed during the pre-PAT permission review. The issue-workflow
+question shows those fixed choices before you answer and rejects a selection
+that contradicts them; it never quietly changes the configured feature or
+the PAT grant. If either is explicitly enabled, Issues must stay enabled.
+Edit the configuration or flags and restart if you intend to change that
+policy.
+
+The interactive terminal also shows your current phase: Repository → Setup
+choices → Setup PAT → Plan → Bot PAT & credentials → Apply. These are milestones,
+not a percentage or a fixed number of questions. Before a remote mutation
+attempt, it says that no changes have been made. Checking existing Secrets may
+attempt a temporary credential-health workflow before final Apply; from that
+point a failed run is marked partial, with branch-inspection guidance. After
+Apply starts, a failed run is likewise marked partial so
+you can inspect what was installed. The initial and guided PAT views show a
+compact list of required grants. Choose **view full permission table** during
+review to see reasons and conditional grants without restarting the questions;
+manual PAT entry shows that table directly. Supplied-token and unattended paths
+retain the full table. This display never includes token values.
+
+At the setup PAT permission review, **Review all setup choices again** starts
+another pass over the same in-memory answers. The terminal marks it as a review
+pass, temporarily returns to the Setup choices phase, and explains that Enter
+keeps each previous answer. When the pass ends, you return to the setup PAT
+permission summary with any changed grants recalculated. This is not a new
+setup run; no repository changes occur during these passes. The later full
+wizard still reuses these answers instead of asking them again.
+
+Open each link in the appropriate GitHub
+account, complete GitHub's sign-in/2FA, change **All repositories** to **Only
+select repositories**, and **select only the intended repository**
+on the form, review the grants, and paste the generated value into the hidden
+terminal prompt. The links prefill fields; they neither create a PAT nor select
+an individual repository. The setup PAT is suggested for one day and must be
+deleted by you in GitHub after the run. The bot PAT is suggested for 90 days,
+remains active as Actions Secret `PAT`, and needs renewal before expiry. See
+[authentication](/authentication) for permission and recovery details.
+
 If you previously installed Copilot from a local checkout, installing the published
 package with pnpm switches the same `copilot` command to the published package.
 Check which executable and package are active:
@@ -112,14 +305,14 @@ The complete command reference, including every supported option, is in [Workflo
     copilot setup
     ```
 
-    Before applying the plan, the wizard securely asks for the setup PAT. For automation, pass it explicitly or through the environment:
+    In guided interactive setup, answer the short permission-intent questions and review the proposed grants before creating the setup PAT in GitHub. The wizard then securely asks for the token and continues with the remaining plan questions. For automation, pass it explicitly or through the environment:
 
     ```bash
     PERSONAL_ACCESS_TOKEN=your_setup_pat copilot setup --non-interactive --yes --skip-secrets
     # or: copilot setup --token your_setup_pat
     ```
 
-    The wizard shows a reviewable plan and asks for confirmation. Its forward-only questionnaire keeps defaults and every answer immutable; cancel and rerun if you need to revise an earlier stage. `Ctrl-C` or end-of-input exits 130 with no writes, while declining the final plan exits 0 with no writes. Use `copilot setup --dry-run` to inspect the plan without a token or changes.
+    The wizard shows a reviewable plan and asks for confirmation. During either questionnaire, use `:back` in the terminal or **Previous question** in the browser to correct an answer; the final plan also offers **Change section** (terminal: `:edit`) without discarding other answers. Revisions recompute dependent questions and PAT grants, and a newly required grant must pass another audit before Apply. The web plan lists agent/model routes, issue workflows, exact trusted check/App/workflow identities, coverage evidence, Project Status transitions, scopes, files, Variables, and Secret names. Declining the plan makes no setup changes. The web assistant does not start writes before final Apply, but terminal credential-health verification can attempt a temporary workflow before then; heed any partial-change warning. `Ctrl-C` or end-of-input exits 130, while declining the final plan exits 0. Use `copilot setup --dry-run` to inspect the plan without a token or changes.
 
     In automation, `--non-interactive` creates no terminal. `--yes` approves only the final plan: it does not supply a missing setup PAT, workflow credential, provider credential, target, organization prerequisite, or permission acknowledgement. If every required read is verified or positively operationally usable but safe probes cannot prove required writes, inspect the PAT settings first and pass the separate `--confirm-unverifiable-write-permissions` flag. It never bypasses missing or unusable unverifiable read access.
 
@@ -153,7 +346,7 @@ The complete command reference, including every supported option, is in [Workflo
     **Optional but keep coherence:**
     - **Labels**: If you change any label input (e.g. `feature-label`, `bugfix-label`, `deploy-label`), use the **same** label names in your issue templates (`labels:` in each `.yml`) and when labeling issues manually. Otherwise the action will not recognize the type or flow.
     - **Branch name prefixes**: The action uses inputs like `feature-tree`, `bugfix-tree`, `release-tree`, `hotfix-tree` (defaults: `feature`, `bugfix`, `release`, `hotfix`) to create branch names. If you change them, branch names will follow the new prefixes; keep templates and docs in sync.
-    - **Project columns**: Default column names are "Todo" and "In Progress". If you rename columns in GitHub Projects, set the corresponding action inputs (`project-column-issue-created`, `project-column-issue-in-progress`, etc.) so the action moves issues/PRs to the correct columns.
+    - **Project Status options**: Default values are "Todo" and "In Progress". If you rename the options in the Project's **Status** single-select field, set the corresponding action inputs (`project-column-issue-created`, `project-column-issue-in-progress`, etc.) to the exact option names. These legacy input names say `column`, but ProjectV2 updates the Status field, not a visual board column.
 
     **Bugbot autofix (issue/PR comments):** Workflows that run on `issue_comment` or `pull_request_review_comment` (so users can ask the bot to fix reported findings) must grant **`contents: write`** so the action can commit and push. On **issue_comment**, the action resolves the branch from an open PR that references the issue and checks out that branch before applying fixes and pushing. See [Bugbot autofix](/bugbot/autofix) and [Troubleshooting](/security-operations/operations/troubleshooting).
   </Step>
@@ -363,7 +556,13 @@ installation itself validates the pinned provisioning inputs. The `copilot_crede
 read-only with respect to repository configuration: it executes provider-specific
 health checks and reports only whether each requested credential is usable. GitHub
 does not expose Secret values through its API, so `copilot doctor` dispatches this
-workflow when it is available on the repository's default branch.
+workflow when it is available on the repository's default branch. For a
+non-mutating inspection after a partial setup, use `copilot doctor --read-only`:
+it checks installed files, metadata, names, Variables and permissions but does
+**not** dispatch the credential-health Action. Secret values are therefore
+reported as unverified rather than healthy. The browser assistant recommends
+this mode; running plain `copilot doctor` is a separate, explicit choice when
+you want the workflow-based credential check.
 
 When Repository Variables are enabled, setup creates the common `AGENT_*` contract,
 the provider/model/effort variables for each configured `FINDINGS_*`, `FIXER_*`,
@@ -444,7 +643,7 @@ After the tutorial and file customization, you can:
 
 - Set **repository or organization variables** for the agent CLI contract (`AGENT_PROVIDER`, `AGENT_MODEL_PROVIDER`, `AGENT_MODEL`, `AGENT_EFFORT`, `AGENT_ALLOWED_MODEL_PROVIDERS`, and `AGENT_ALLOWED_MODELS`) and, when needed, independent task overrides for `FINDINGS_*`, `REVIEWER_*`, `PLANNER_*`, `FIXER_*`, and `TESTER_*`. The supplied Copilot workflow templates forward these values to the action. Keep `CURSOR_API_KEY` available only when one of the configured task providers is Cursor.
 - Enable the `inactiveIssueClosure` setup feature when you want the scheduled cleanup, and adjust `INACTIVITY_THRESHOLD_HOURS` (1–8760 hours) to match your retention policy. This feature is disabled by default because it closes GitHub issues.
-- Adjust **project column names** and **branch names** via action inputs so the action moves issues/PRs to the right columns and uses your branch naming.
+- Adjust **Project Status option names** and **branch names** via action inputs so the action sets the intended Status and uses your branch naming.
 - Customize **issue templates** (copy, add fields, change labels) while keeping label and workflow names consistent as above.
 - Add or modify **release/hotfix** workflow steps (e.g. build, deploy) while keeping the workflow **filenames** and the action inputs `release-workflow` and `hotfix-workflow` in sync.
 

@@ -9,6 +9,41 @@ If guarded PR approval is missing, run `copilot doctor` and inspect the ordered 
 
 This guide helps you resolve common issues you might encounter while using Copilot. Expand the section that matches your problem.
 
+If the guided setup PAT belongs to the wrong account, decline the account
+confirmation, delete the unintended PAT in [GitHub PAT Settings](https://github.com/settings/personal-access-tokens),
+and rerun setup in the correct browser account. If the final permission table
+requires more than the reviewed local-intent link, inspect the named grant
+delta, use the corrected link printed by setup, and rerun; no approved setup
+mutation has started. If the final plan removes grants, your existing PAT may
+have excess access; replace it for strict least privilege. A guided bot PAT
+created while signed into another account fails the numeric-ID check before
+the Secret is written. Delete that unused PAT and create one as the chosen bot.
+If setup fails after applying changes, inspect the Actions Secret name and
+scope before revoking or replacing the bot PAT: it may already be active.
+Cancelling setup never revokes either PAT. Delete an unused setup PAT in GitHub;
+renew an installed bot PAT before its suggested 90-day expiry.
+
+For `copilot setup --web`, an inaccessible page or failed browser launch does
+not imply a setup failure: open the exact `127.0.0.1` URL printed by the CLI.
+Enter the terminal's 16-character pairing code in the page; after a refresh,
+enter it again. Do not share the code. TCP loopback can be reached by other
+local OS users; the code, not the public URL or OS-user identification, grants
+access to this setup session. After five wrong codes, restart setup.
+If the local bind or bundled assets fail, stop and use `copilot setup` in the
+terminal. A second browser tab is read-only until you select **Take control
+in this tab**; the former tab then cannot submit decisions. A rejected stale
+answer means the page should refresh to the current decision, not replay it.
+If the page closes during Apply, inspect the terminal result and run
+`copilot doctor` before retrying; do not assume that completed local or remote
+writes were rolled back. No local session shutdown revokes a PAT in GitHub.
+
+If setup reports a lock belonging to a stopped process, it will not delete
+that lock automatically: another setup could have acquired the same path in
+the meantime. Verify that no setup process for this checkout is running,
+then remove **only the exact lock file path printed in the error** and retry.
+Never remove a lock for an active process or clear the entire temporary
+directory. The lock contains no PAT or other credential.
+
 <AccordionGroup>
   <Accordion title="Setup is cancelled or doctor shows skipped checks" icon="circle-exclamation">
     **Setup cancellation:** `Ctrl-C` or end-of-input intentionally exits 130 and
@@ -124,6 +159,16 @@ This guide helps you resolve common issues you might encounter while using Copil
     If another actor creates or changes the temporary workflow, setup does not
     overwrite or remove that actor's file; inspect the selected branch before
     retrying a reported cleanup failure.
+    Terminal setup marks the run partial as soon as it attempts a temporary
+    credential-health workflow create, even if the request fails ambiguously or
+    the file is later removed. Inspect the selected branch and GitHub workflow
+    history before retrying: the create/delete commits remain in history.
+    Browser setup never performs this bootstrap before final Apply.
+
+    If the final PAT audit says GitHub could not verify the repository owner
+    type, do not treat the earlier guided owner selection as proof. Confirm the
+    repository owner in GitHub, restore API access, and retry setup. No local
+    provisioning or bot Secret write should begin from that blocked audit.
     Expected missing or unconfirmed final PAT permissions return a blocked
     result with the chosen configuration and stop before storage validation or
     any mutation.

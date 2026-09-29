@@ -11,10 +11,12 @@ import type { BoundSetupWorkspacePort } from '../../ports/setup_workspace_ports'
 import { DEFAULT_INITIAL_TAG } from '../../../data/model/version_policy';
 import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
 import { getTaskEmoji } from '../../../utils/task_emoji';
-import type { SetupConfiguration } from '../../../domain/setup';
+import type { SetupConfiguration, SetupOperationEffect } from '../../../domain/setup';
 import type { SetupResourceProvisioningDependencies } from './setup_resource_provisioning';
 import type { InitialSetupContext } from '../push_single_action_contexts';
 import {
+    SECRET_PROVISIONING_UNAVAILABLE,
+    VARIABLE_PROVISIONING_UNAVAILABLE,
     ensureRepositorySecrets,
     ensureRepositoryVariables,
     resolveRemoteConfiguration,
@@ -52,21 +54,48 @@ export async function runInitialSetupWorkflow(
     logInfo(`${getTaskEmoji(TASK_ID)} Executing ${TASK_ID}.`);
     const steps: string[] = [];
     const errors: ApplicationError[] = [];
+    const configuration = request.setupConfiguration;
+    const effects: SetupOperationEffect[] = [
+        { id: 'files', state: 'not-started', scope: 'local' },
+        { id: 'secrets', state: 'not-started', scope: resourceScope(configuration, 'secrets') },
+        { id: 'labels', state: 'not-started', scope: 'repository' },
+        { id: 'issue-types', state: 'not-started', scope: 'repository' },
+        { id: 'variables', state: 'not-started', scope: resourceScope(configuration, 'variables') },
+        { id: 'initial-tag', state: 'not-started', scope: 'repository' },
+    ];
+    const mark = (id: SetupOperationEffect['id'], state: SetupOperationEffect['state']) => {
+        const index = effects.findIndex(effect => effect.id === id);
+        effects[index] = { ...effects[index], state };
+    };
+    const receipt = () => buildResult(errors, steps, effects);
 
     try {
         const setupConfiguration = request.setupConfiguration;
         if (!dependencies.setupWorkspacePort.hasValidToken()) {
             logInfo('  🛑 Setup requires the setup PAT provided for this command with a valid token.');
             errors.push(new ApplicationError('authorization.credential-invalid', 'A valid setup PAT must be provided to run setup. It is separate from the workflow PAT Secret.'));
-            return [buildResult(errors, steps)];
+            return [receipt()];
         }
         logInfo('🔐 Checking GitHub access...');
         const githubAccess = await verifyGitHubAccess(request, dependencies.authenticatedUserPort);
         if (!githubAccess.success) {
             errors.push(...githubAccess.errors);
-            return [buildResult(errors, steps)];
+            return [receipt()];
         }
         steps.push(`✅ GitHub access verified: ${githubAccess.user}`);
+
+        const secretValues = Number(Boolean(request.setupCredentials?.workflowPat)) + (request.setupCredentials?.apiKeys.length ?? 0);
+        const missingProvisioningPorts: ApplicationError[] = [];
+        if (setupConfiguration?.manageRepositorySecrets && secretValues > 0 && !dependencies.setupRepositorySecretsPort) {
+            missingProvisioningPorts.push(new ApplicationError('provider.unavailable', SECRET_PROVISIONING_UNAVAILABLE));
+        }
+        if (setupConfiguration?.manageRepositoryVariables && !dependencies.setupRepositoryVariablesPort) {
+            missingProvisioningPorts.push(new ApplicationError('provider.unavailable', VARIABLE_PROVISIONING_UNAVAILABLE));
+        }
+        if (missingProvisioningPorts.length > 0) {
+            errors.push(...missingProvisioningPorts);
+            return [receipt()];
+        }
 
         const remoteConfigurationErrors: string[] = [];
         const remoteConfiguration = await resolveRemoteConfiguration(
@@ -81,7 +110,7 @@ export async function runInitialSetupWorkflow(
                 if (remoteConfigurationErrors.length === 0) {
                     errors.push(new ApplicationError('provider.unavailable', 'Could not inspect existing GitHub Actions resource scopes. Restore inventory access and rerun setup.'));
                 }
-                return [buildResult(errors, steps)];
+                return [receipt()];
             }
             const inventoryErrors = [
                 ...validateSetupStorageAgainstRemote(setupConfiguration, remoteConfiguration),
@@ -92,7 +121,7 @@ export async function runInitialSetupWorkflow(
             ];
             if (inventoryErrors.length > 0) {
                 errors.push(...fromMessages(inventoryErrors, 'provider.unavailable'));
-                return [buildResult(errors, steps)];
+                return [receipt()];
             }
         }
 
@@ -105,15 +134,22 @@ export async function runInitialSetupWorkflow(
                 approvedWorkflowFiles: request.workflowUpdates,
             } : {}),
         };
+        mark('files', 'needs-inspection');
         const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
+        mark('files', filesResult.copied > 0 ? 'completed' : 'skipped');
         steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
 
+        if (setupConfiguration?.manageRepositorySecrets && secretValues > 0) mark('secrets', 'needs-inspection');
         const secrets = await ensureRepositorySecrets(request, dependencies, setupConfiguration, remoteConfiguration);
+        mark('secrets', secrets.errors.length ? 'needs-inspection' : secrets.writes > 0 ? 'completed' : 'skipped');
         if (secrets.step) steps.push(secrets.step);
         if (secrets.errors.length > 0) errors.push(...fromMessages(secrets.errors, 'authorization.credential-invalid'));
 
         logInfo('🏷️  Checking configured and progress labels...');
+        mark('labels', 'needs-inspection');
         const labels = await ensureInitialLabels(request, dependencies.initialLabelProvisioningPort, setupConfiguration);
+        mark('labels', !labels.completed || labels.configured.errors.length || labels.progress.errors.length
+            ? 'needs-inspection' : labels.configured.created + labels.progress.created > 0 ? 'completed' : 'skipped');
         if (!labels.completed) {
             errors.push(labels.error);
         } else {
@@ -122,26 +158,33 @@ export async function runInitialSetupWorkflow(
         }
 
         logInfo('📋 Checking issue types...');
+        mark('issue-types', 'needs-inspection');
         const issueTypes = await ensureIssueTypes(request, dependencies.issueTypeProvisioningPort, setupConfiguration);
+        mark('issue-types', !issueTypes.success ? 'needs-inspection' : issueTypes.created > 0 ? 'completed' : 'skipped');
         if (!issueTypes.success) {
             errors.push(...fromMessages(issueTypes.errors, 'provider.unavailable'));
         } else {
             steps.push(`✅ Issue types checked: ${issueTypes.created} created, ${issueTypes.existing} already existed`);
         }
 
+        if (setupConfiguration?.manageRepositoryVariables) mark('variables', 'needs-inspection');
         const variables = await ensureRepositoryVariables(request, dependencies, setupConfiguration, remoteConfiguration);
+        mark('variables', variables.errors.length ? 'needs-inspection' : variables.writes > 0 ? 'completed' : 'skipped');
         if (variables.step) steps.push(variables.step);
         if (variables.errors.length > 0) errors.push(...fromMessages(variables.errors, 'provider.unavailable'));
 
+        if (setupConfiguration?.createInitialTag !== false) mark('initial-tag', 'needs-inspection');
         const defaultVersion = await ensureDefaultVersion(request, dependencies, setupConfiguration);
+        mark('initial-tag', defaultVersion.error ? 'needs-inspection'
+            : defaultVersion.step?.includes('created on branch') ? 'completed' : 'skipped');
         if (defaultVersion.step) steps.push(defaultVersion.step);
         if (defaultVersion.error) errors.push(defaultVersion.error);
-        return [buildResult(errors, steps)];
+        return [receipt()];
     } catch (error) {
         const semanticError = toApplicationError(error, 'workflow.failed', 'Error running initial setup.');
         logError(semanticError);
         errors.push(semanticError);
-        return [buildResult(errors, steps)];
+        return [receipt()];
     }
 }
 
@@ -249,14 +292,21 @@ function appendLabelSummary(
     }
 }
 
-function buildResult(errors: ApplicationError[], steps: string[]): Result {
+function buildResult(errors: ApplicationError[], steps: string[], effects: readonly SetupOperationEffect[]): Result {
     return new Result({
         id: TASK_ID,
         success: errors.length === 0,
         executed: true,
         steps,
+        payload: { setupReceipt: { version: 1, effects: effects.map(effect => ({ ...effect })) } },
         errors: errors.length > 0 ? errors : undefined,
     });
+}
+
+function resourceScope(configuration: SetupConfiguration | undefined, kind: 'secrets' | 'variables'): SetupOperationEffect['scope'] {
+    const policy = configuration?.storage[kind];
+    if (!policy) return 'repository';
+    return Object.values(policy.overrides).some(scope => scope !== policy.defaultScope) ? 'mixed' : policy.defaultScope;
 }
 
 function fromMessages(messages: readonly string[], code: ApplicationErrorCode): ApplicationError[] {

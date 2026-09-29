@@ -1,0 +1,2 @@
+# Vite bundles are generated, minified artifacts; inspect their Svelte sources instead.
+build/web/assets/*.js -diff -whitespace

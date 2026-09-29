@@ -36,10 +36,20 @@ describe('setup and doctor architecture boundaries', () => {
       'src/application/policies/merge_queue_message_catalog.ts',
       'src/application/policies/setup_doctor_message_catalog.ts',
       'src/application/policies/setup_doctor_report_policy.ts',
+      'src/application/policies/setup_journey_policy.ts',
+      'src/application/policies/setup_permission_summary_policy.ts',
     ]) {
       const source = read(file);
       expect(source).not.toMatch(/from ['"]node:|\/cli\/|\/infrastructure\/|octokit|Execution/);
     }
+  });
+
+  it('keeps setup journey decisions in the application and terminal rendering in the CLI', () => {
+    const journey = read('src/application/usecases/setup/setup_journey_use_case.ts');
+    const renderer = read('src/cli/setup_journey_presenter.ts');
+    expect(journey).not.toMatch(/from ['"]node:|\/cli\/|\/infrastructure\/|console\.|process\./u);
+    expect(renderer).toContain('renderBox(');
+    expect(renderer).not.toMatch(/buildSetupPatCreationUrl|buildWorkflowPatPermissionRequirements/u);
   });
 
   it('resolves one doctor catalog and reuses it through readiness and presentation', () => {

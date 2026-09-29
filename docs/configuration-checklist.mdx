@@ -20,7 +20,10 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 
 ## Credentials
 
-- [ ] Before entering each PAT, the setup terminal table matches the intended repository/organization target, access level, selected features, and storage scope.
+- [ ] If using `copilot setup --web`, the repository shown in the local page is the intended checkout, the signed-in GitHub account and single selected repository are checked separately on each PAT form, and the final plan plus Apply step are explicitly reviewed.
+- [ ] System/Light/Dark mode is readable in the current browser; theme choice does not change permission, credential, or setup policy.
+
+- [ ] Before entering each PAT, the setup terminal table or local web permission panel matches the intended repository/organization target, access level, selected features, and storage scope.
 - [ ] After entry, every `❌ Missing` required permission has been corrected; required unverifiable reads have been retried; every `? Unverifiable` required write has been compared manually with the PAT settings and explicitly acknowledged without treating it as a pass.
 - [ ] A publicly readable endpoint has not been mistaken for PAT evidence. After valid identity, only the exact successful public-repository read may be operationally usable while still shown as `Unverifiable`; public organization Members, Issue Types and writes never gain that exception. Members read needs a verified, active self-membership response for the selected organization.
 - [ ] If the `PAT` Secret already exists, its value has been re-entered (or supplied again to unattended setup) and the full workflow-PAT permission report has completed; credential-health success alone is not treated as permission evidence.
@@ -57,7 +60,7 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 - [ ] Setup PAT and workflow PAT permission reports contain only stable permission IDs, target scopes, access levels, semantic statuses, and bounded reasons; tokens and raw provider responses are absent.
 - [ ] `copilot doctor` reports stable check IDs with `pass`, `warn`, `fail`, or dependency-blocked `skipped` and exits non-zero only for `fail`.
 - [ ] Invalid setup-PAT diagnosis still returns independent local checks; remote dependants identify their blocking check.
-- [ ] Doctor is wired only to query ports. Temporary credential-health workflow bootstrap remains setup-only.
+- [ ] `copilot doctor --read-only` uses metadata/resource queries only and marks Secret values unverified; plain doctor may dispatch the installed credential-health workflow but never bootstraps one. Temporary workflow bootstrap remains setup-only.
 - [ ] No legacy setup prompt adapter, compatibility result, dual reader/writer, state alias, or transitional flag is present.
 
 ## Release and hotfix orchestration

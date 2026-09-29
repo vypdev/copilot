@@ -19,6 +19,24 @@ New `copilot setup` runs offer `recommend` by default: Copilot assesses evidence
 
 Use `copilot setup` interactively to select an exact CI check, its GitHub App ID, and the workflow that produces it. The coverage check must enforce your repository's coverage budget; a successful advisory upload does not prove a percentage. Setup displays the selected names, target branches, Bugbot prerequisites, and branch-rule readiness before confirmation. The generated `copilot_pull_request_approval.yml` must reach the repository default branch before its `workflow_run` wakeups operate.
 
+With `copilot setup --web`, the setup PAT can request conditional `Actions:
+read` and `Checks: read` grants so the assistant can offer candidates from
+recent completed pull-request runs. Each candidate includes an exact job,
+source App ID, workflow name, observed result, and link to its run. Inspect
+the job's workflow and coverage-enforcing step yourself before attesting;
+Copilot never infers a coverage budget from a green check or job name. If
+GitHub cannot provide candidates, use the manual exact tuple entry.
+The coverage check dropdown is limited to your chosen trusted checks.
+You can retry the read-only GitHub lookup twice without restarting setup or
+re-entering the setup PAT. No recent runs, missing permissions and an API
+failure are distinct states; none proves that your repository has no CI.
+Every suggested producer shows the job, workflow, App ID, result, commit,
+observation time and run link. The wizard has **not** checked whether a branch
+rule requires that producer; confirm this in GitHub. If two selected producers
+share a check name, setup stops before coverage selection because the stored
+coverage setting has only one name. Choose one producer or give the CI jobs
+distinct names. See [GitHub status checks](https://docs.github.com/en/pull-requests/reference/status-checks).
+
 When testing this repository itself before a new package release, the source repository has a reviewed observer variant that checks out only its trusted default-branch revision and invokes `./`. Local setup preserves that variant instead of replacing it with the consumer template, whose `v3` reference cannot run unreleased changes. Consumer repositories need a published Action version containing this feature before enabling the generated observer.
 
 For non-interactive setup, supply the producer explicitly:

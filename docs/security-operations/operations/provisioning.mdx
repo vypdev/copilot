@@ -4,6 +4,12 @@ description: Pinned installation and verification of the selected agent CLI.
 ---
 # CLI provisioning
 
+For local repository onboarding, `copilot setup --web` serves the precompiled
+assistant from the installed CLI package on `127.0.0.1`; it does not start a
+Vite development server, download browser assets, or provision an agent CLI.
+If the browser opener is unavailable, use the loopback URL printed in the
+terminal. The default `copilot setup` remains a fully terminal-driven path.
+
 When running in GitHub Actions, the Action provisions and verifies only the
 selected runtime. `AGENT_PROVISIONING=auto` reuses any available operator-owned
 executable without replacing it. If the default Codex or OpenCode executable is
