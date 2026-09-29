@@ -71,7 +71,10 @@ export class PrepareSetupPatIntentUseCase {
       const intent = await this.ports.collect(createSetupPermissionIntentQuestionnaire(draft, context), context, pass);
       if (intent.terminal === 'cancelled') throw new SetupInteractionCancelledError();
       draft = intent.draft;
-      projectsWanted = Boolean(draft.projects.ids.trim()) || (intent.projectsWanted ?? projectsWanted);
+      projectsWanted = intent.projectsWanted ?? Boolean(draft.projects.ids.trim());
+      if (!projectsWanted && draft.projects.ids.trim()) {
+        draft = { ...draft, projects: { ...draft.projects, ids: '' } };
+      }
       const ownerKind = setupPatIntentNeedsOwnerKind(draft, projectsWanted) ? await this.ports.chooseOwnerKind() : 'User';
       if (ownerKind === 'unknown') {
         this.ports.onManual('owner-unknown');

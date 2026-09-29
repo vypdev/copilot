@@ -57066,7 +57066,10 @@ class PrepareSetupPatIntentUseCase {
             if (intent.terminal === 'cancelled')
                 throw new setup_interaction_cancelled_error_1.SetupInteractionCancelledError();
             draft = intent.draft;
-            projectsWanted = Boolean(draft.projects.ids.trim()) || (intent.projectsWanted ?? projectsWanted);
+            projectsWanted = intent.projectsWanted ?? Boolean(draft.projects.ids.trim());
+            if (!projectsWanted && draft.projects.ids.trim()) {
+                draft = { ...draft, projects: { ...draft.projects, ids: '' } };
+            }
             const ownerKind = (0, setup_pat_intent_policy_1.setupPatIntentNeedsOwnerKind)(draft, projectsWanted) ? await this.ports.chooseOwnerKind() : 'User';
             if (ownerKind === 'unknown') {
                 this.ports.onManual('owner-unknown');

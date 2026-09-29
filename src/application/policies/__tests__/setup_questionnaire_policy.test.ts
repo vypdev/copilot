@@ -304,6 +304,15 @@ describe('setup questionnaire policy', () => {
       .toContain('saved Status value');
   });
 
+  it('clears saved Project IDs when the operator changes Project intent to no', () => {
+    const defaults = createDefaultSetupConfiguration();
+    const selected = { ...defaults, projects: { ...defaults.projects, ids: '42' } };
+    const intent = advanceTo(createSetupPermissionIntentQuestionnaire(selected), 'projects.enabled');
+    const declined = transitionSetupQuestionnaire(intent, { kind: 'answer', value: 'no' });
+    expect(declined.projectsWanted).toBe(false);
+    expect(declined.draft.projects.ids).toBe('');
+  });
+
   it('rejects incompatible Projects and GraphQL IDs before leaving the question', () => {
     const context: SetupQuestionnaireContext = { projectOwner: 'acme', projectDiscovery: { status: 'observed', candidates: [
       { number: 2, title: 'First', owner: 'acme', url: 'https://github.com/orgs/acme/projects/2', statusOptions: ['Todo'] },

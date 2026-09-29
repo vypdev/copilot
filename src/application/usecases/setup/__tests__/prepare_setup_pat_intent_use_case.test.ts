@@ -73,6 +73,36 @@ describe('PrepareSetupPatIntentUseCase', () => {
     expect(result.permissionIntent.draft.projects.ids).toBe('');
   });
 
+  test('explicitly opting out of Projects on review clears earlier IDs and removes the organization grant', async () => {
+    const { ports, useCase } = harness();
+    jest.spyOn(ports, 'review').mockResolvedValueOnce('revise').mockResolvedValueOnce('continue');
+    jest.spyOn(ports, 'chooseOwnerKind').mockResolvedValue('User');
+    jest.spyOn(ports, 'collect')
+      .mockImplementationOnce(async initial => ({ ...initial, terminal: 'review', question: undefined,
+        projectsWanted: true, draft: { ...initial.draft, projects: { ...initial.draft.projects, ids: '42' } } }))
+      .mockImplementationOnce(async initial => ({ ...initial, terminal: 'review', question: undefined,
+        projectsWanted: false }));
+    const result = await useCase.execute(request);
+    expect(result.kind).toBe('guided');
+    if (result.kind !== 'guided') return;
+    expect(result.permissionIntent.projectsWanted).toBe(false);
+    expect(result.permissionIntent.draft.projects.ids).toBe('');
+    expect(result.url).not.toContain('organization_projects=');
+    expect(ports.showPreview).toHaveBeenLastCalledWith(expect.objectContaining({
+      projectsWanted: false, ownerConflict: false, draft: expect.objectContaining({ projects: expect.objectContaining({ ids: '' }) }),
+    }));
+  });
+
+  test('a fixed Project ID override still requests the organization read grant', async () => {
+    const { useCase } = harness();
+    const result = await useCase.execute({ ...request, overrides: { projects: { ids: '42' } } });
+    expect(result.kind).toBe('guided');
+    if (result.kind !== 'guided') return;
+    expect(result.permissionIntent.projectsWanted).toBe(true);
+    expect(result.permissionIntent.draft.projects.ids).toBe('42');
+    expect(result.url).toContain('organization_projects=read');
+  });
+
   test('revisiting choices re-collects with the next pass and retains one session', async () => {
     const { ports, useCase } = harness();
     jest.spyOn(ports, 'review').mockResolvedValueOnce('revise').mockResolvedValueOnce('continue');
@@ -104,7 +134,7 @@ describe('PrepareSetupPatIntentUseCase', () => {
     jest.spyOn(ports, 'chooseOwnerKind').mockResolvedValue('User');
     const collect = jest.spyOn(ports, 'collect');
     collect.mockImplementation(async initial => ({
-      ...initial, terminal: 'review', question: undefined,
+      ...initial, terminal: 'review', question: undefined, projectsWanted: true,
       draft: { ...initial.draft, projects: { ...initial.draft.projects, ids: '42' } },
     }));
     await expect(useCase.execute(request)).rejects.toThrow('Correct the reported setup intent');

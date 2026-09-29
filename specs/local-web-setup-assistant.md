@@ -853,7 +853,15 @@ actions. It accepts those IDs directly, preserves the current selection on
 empty Enter, and never implies that a row index is the Project number.
 
 The permission-intent pass asks only whether Projects integration is wanted;
-it must not ask for numbers before the setup PAT exists. The post-PAT pass
+it must not ask for numbers before the setup PAT exists.
+An explicit No on a revised Project-intent pass takes precedence over an
+earlier Project selection: clear saved Project numbers in the reviewed draft,
+remove the conditional organization Projects grant from the preview and URL,
+and do not reject a personal owner merely because of those old numbers.
+Fixed configuration overrides that keep Projects enabled remain visible as
+fixed decisions rather than an editable opt-out.
+
+The post-PAT pass
 shows a bounded, read-only list of Projects owned by the repository owner,
 each with title, owner, number and inspectable GitHub URL. Organization
 Projects use GitHub's paginated organization Projects endpoint and require
