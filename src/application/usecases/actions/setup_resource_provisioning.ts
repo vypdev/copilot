@@ -34,6 +34,7 @@ export interface SetupRepositoryContext {
 
 export type SetupResource = { name: string; value: string };
 export type SetupResourceGroup = { target: SetupResourceTarget; resources: SetupResource[] };
+export type SetupResourceProvisioningOutcome = { step?: string; errors: string[]; writes: number };
 
 export const VARIABLE_PROVISIONING_UNAVAILABLE = 'GitHub Actions Variable provisioning is unavailable; no Variables were changed.';
 export const SECRET_PROVISIONING_UNAVAILABLE = 'GitHub Actions Secret provisioning is unavailable; no Secrets were changed.';
@@ -43,21 +44,25 @@ export async function ensureRepositoryVariables(
     dependencies: SetupResourceProvisioningDependencies,
     setupConfiguration?: SetupConfiguration,
     remoteConfiguration?: SetupRemoteConfiguration,
-): Promise<{ step?: string; errors: string[] }> {
+): Promise<SetupResourceProvisioningOutcome> {
     if (!setupConfiguration?.manageRepositoryVariables) {
-        return { errors: [] };
+        return { errors: [], writes: 0 };
     }
     if (!dependencies.setupRepositoryVariablesPort) {
-        return { errors: [VARIABLE_PROVISIONING_UNAVAILABLE] };
+        return { errors: [VARIABLE_PROVISIONING_UNAVAILABLE], writes: 0 };
     }
     try {
         const desired = buildSetupRepositoryVariables(setupConfiguration);
         const groups = groupSetupResources(desired, 'variable', setupConfiguration, remoteConfiguration);
         const result = await upsertVariableGroups(context, dependencies.setupRepositoryVariablesPort, groups);
-        if (result.errors.length > 0) return { errors: result.errors };
+        const writes = result.created + result.updated;
+        if (result.errors.length > 0) return { errors: result.errors, writes };
         return {
-            step: `✅ GitHub Actions Variables: ${result.created} created, ${result.updated} updated; existing effective values preserved when no override was selected.`,
+            step: writes > 0
+                ? `✅ GitHub Actions Variables: ${result.created} created, ${result.updated} updated; existing effective values preserved when no override was selected.`
+                : '✅ GitHub Actions Variables kept unchanged; no values were created or updated.',
             errors: [],
+            writes,
         };
     } catch (error) {
         const semanticError = toApplicationError(
@@ -66,7 +71,7 @@ export async function ensureRepositoryVariables(
             'Unable to configure GitHub Actions Variables.',
         );
         logError(semanticError);
-        return { errors: [semanticError.message] };
+        return { errors: [semanticError.message], writes: 0 };
     }
 }
 
@@ -75,29 +80,33 @@ export async function ensureRepositorySecrets(
     dependencies: SetupResourceProvisioningDependencies,
     setupConfiguration?: SetupConfiguration,
     remoteConfiguration?: SetupRemoteConfiguration,
-): Promise<{ step?: string; errors: string[] }> {
+): Promise<SetupResourceProvisioningOutcome> {
     if (!setupConfiguration?.manageRepositorySecrets) {
-        return { errors: [] };
+        return { errors: [], writes: 0 };
     }
     const credentials = context.setupCredentials;
     if (!credentials) {
-        return { step: '⚠️  Repository Secrets were not changed: run interactive setup to validate and provide credentials.', errors: [] };
+        return { step: '⚠️  Repository Secrets were not changed: run interactive setup to validate and provide credentials.', errors: [], writes: 0 };
     }
     const values = [
         ...(credentials.workflowPat ? [credentials.workflowPat] : []),
         ...credentials.apiKeys,
     ];
-    if (values.length === 0) return { step: '✅ Existing Repository Secrets kept unchanged.', errors: [] };
+    if (values.length === 0) return { step: '✅ Existing Repository Secrets kept unchanged.', errors: [], writes: 0 };
     if (!dependencies.setupRepositorySecretsPort) {
-        return { errors: [SECRET_PROVISIONING_UNAVAILABLE] };
+        return { errors: [SECRET_PROVISIONING_UNAVAILABLE], writes: 0 };
     }
     try {
         const groups = groupSetupResources(values, 'secret', setupConfiguration, remoteConfiguration);
         const result = await upsertSecretGroups(context, dependencies.setupRepositorySecretsPort, groups);
-        if (result.errors.length > 0) return { errors: result.errors };
+        const writes = result.created + result.updated;
+        if (result.errors.length > 0) return { errors: result.errors, writes };
         return {
-            step: `✅ GitHub Actions Secrets: ${result.created} created, ${result.updated} updated; existing effective values kept when no replacement was selected.`,
+            step: writes > 0
+                ? `✅ GitHub Actions Secrets: ${result.created} created, ${result.updated} updated; existing effective values kept when no replacement was selected.`
+                : '✅ Existing GitHub Actions Secrets kept unchanged; no values were created or updated.',
             errors: [],
+            writes,
         };
     } catch (error) {
         const semanticError = toApplicationError(
@@ -106,7 +115,7 @@ export async function ensureRepositorySecrets(
             'Unable to configure GitHub Actions Secrets.',
         );
         logError(semanticError);
-        return { errors: [semanticError.message] };
+        return { errors: [semanticError.message], writes: 0 };
     }
 }
 

@@ -30,6 +30,12 @@ describe('setup question purpose', () => {
     expect(setupQuestionPurpose(question('projects.issueInProgressColumn', 'projects'))?.en).toContain('Status field option');
   });
 
+  test('Spanish provisioning guidance states Cursor is a runner prerequisite, not a setup install', () => {
+    const guidance = setupQuestionPresentation(question('ai.provisioningMode', 'agent-runtime'));
+    expect(guidance.es.effect).toContain('Cursor debe estar preinstalado en el runner');
+    expect(guidance.es.effect).not.toContain('se instala aparte');
+  });
+
   test('unknown questions retain section guidance without inventing semantics', () => {
     const presentation = setupQuestionPresentation(question('future.question', 'bugbot'));
     expect(presentation.en.summary).toContain('Bugbot');

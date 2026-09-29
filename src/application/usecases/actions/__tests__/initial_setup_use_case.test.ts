@@ -221,6 +221,29 @@ describe('InitialSetupUseCase', () => {
     expect(secretPort.upsertSecrets).toHaveBeenCalledTimes(2);
   });
 
+  it('marks Secrets and Variables skipped when providers report no created or updated values', async () => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    mockSetupVariablesUpsert.mockResolvedValueOnce({ created: 0, updated: 0, errors: [] });
+    const secretPort = { upsertSecrets: jest.fn().mockResolvedValue({ created: 0, updated: 0, skipped: 1, errors: [] }) };
+    const noOpProvisioning = new InitialSetupUseCase(
+      { getUser: mockGetUserFromToken, getUserDetails: jest.fn() },
+      { ensureInitialLabels: mockEnsureInitialLabels }, { ensureIssueTypes: mockEnsureIssueTypes },
+      { getLatestTag: mockGetLatestTag }, { getDefaultBranch: mockGetDefaultBranch } as any,
+      { createTag: mockCreateTag } as any,
+      { prepare: mockSetupPrepare, hasValidToken: mockSetupHasValidToken },
+      { upsert: mockSetupVariablesUpsert }, secretPort,
+    );
+    const result = await noOpProvisioning.invoke(baseParam({ inputs: { setupConfiguration, setupRemoteConfiguration: repositorySnapshot,
+      setupCredentials: { workflowPat: { name: 'PAT', value: 'fake-workflow-token' }, apiKeys: [] } } }));
+    expect(result[0].success).toBe(true);
+    expect(secretPort.upsertSecrets).toHaveBeenCalledTimes(1);
+    expect(mockSetupVariablesUpsert).toHaveBeenCalledTimes(1);
+    expect(getResultPayload(getResultPayload(result[0].payload)?.setupReceipt)?.effects).toEqual(expect.arrayContaining([
+      { id: 'secrets', state: 'skipped', scope: 'repository' },
+      { id: 'variables', state: 'skipped', scope: 'repository' },
+    ]));
+  });
+
   it('marks a failed Variable write for inspection and retains mixed scope even when setup stops early', async () => {
     const setupConfiguration = createDefaultSetupConfiguration();
     setupConfiguration.storage.variables.overrides = { AGENT_PROVIDER: 'organization' };

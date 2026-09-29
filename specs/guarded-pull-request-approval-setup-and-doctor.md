@@ -261,8 +261,8 @@ terms of whether Copilot only advises or can submit a native approval. For
 each producer it shows the exact job, workflow, App, and evidence link before
 requesting attestation. Coverage mode explains `check` as CI-enforced pass/fail
 and `numeric` as the reviewed `copilot-diff-coverage-v1` artifact plus a
-threshold. All these instructions are localized in the ten reviewed web setup
-catalogs defined by the local-web SDD; stable producer names, IDs, workflow names, and
+threshold. All these instructions are localized in the four supported web setup
+catalogs (English, Spanish, French, and Portuguese) defined by the local-web SDD; stable producer names, IDs, workflow names, and
 policy values are never translated. A blocked result must identify the
 failed prerequisite and mutation facts in the browser, not only in terminal
 output. See [local web setup assistant](./local-web-setup-assistant.md#93-first-time-comprehension-and-progressive-disclosure).

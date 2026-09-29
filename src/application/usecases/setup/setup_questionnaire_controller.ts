@@ -55,11 +55,14 @@ export class SetupQuestionnaireController implements SetupConfigurationCollector
       if (selectable && input.kind === 'value' && !input.value.trim()) {
         input = { kind: 'value', value: selected.join(',') || 'none' };
       }
-      if (state.question.kind === 'project-select' && input.kind === 'value' && input.value.split(',').includes('manual')
-        && !input.value.split(',').includes('retry')) {
+      const selectionTokens = selectable && input.kind === 'value'
+        ? input.value.split(',').map(value => value.trim()).filter(Boolean) : [];
+      const hasRetry = selectionTokens.some(value => value.toLowerCase() === 'retry');
+      if (state.question.kind === 'project-select' && input.kind === 'value'
+        && selectionTokens.some(value => value.toLowerCase() === 'manual') && !hasRetry) {
         const manual = await this.terminal.readText('Enter additional Project numbers or GitHub URLs, comma-separated (empty adds none): ');
         input = manual.kind === 'value'
-          ? { kind: 'value', value: [input.value.replace(/(?:^|,)manual(?:,|$)/gu, ',').replace(/^,|,$/gu, ''), manual.value]
+          ? { kind: 'value', value: [selectionTokens.filter(value => value.toLowerCase() !== 'manual').join(','), manual.value]
             .filter(value => value && value !== 'none').join(',') || 'none' } : manual;
       }
       if (input.kind === 'value' && input.value.trim() === '?') {
@@ -74,8 +77,8 @@ export class SetupQuestionnaireController implements SetupConfigurationCollector
       const kind = state.question.id === 'projects.ids' ? 'projects'
         : state.question.id === 'pullRequestApproval.testChecks' ? 'checks' : undefined;
       if (kind && input.kind === 'value' && (input.value.trim().toLowerCase() === 'r'
-        || input.value.split(',').includes('retry'))) {
-        if (kind === 'projects') pendingProjectSelection = input.value.split(',').filter(value => value !== 'retry');
+        || hasRetry)) {
+        if (kind === 'projects') pendingProjectSelection = selectionTokens.filter(value => !['retry', 'r'].includes(value.toLowerCase()));
         if (!state.question.discoveryRetryRemaining || !discoveryRefresh) {
           this.renderer.showValidation('No discovery retries remain. Use the manual option or continue.');
           continue;

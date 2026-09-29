@@ -149,7 +149,7 @@ describe('SetupQuestionnaireController', () => {
       projectOwner: 'owner', projectDiscovery: { status: 'observed' as const,
         candidates: [{ number: 5, title: 'Roadmap', owner: 'owner', url: 'https://github.com/orgs/owner/projects/5' }] },
       discoveryRetryRemaining: { checks: 0, projects: 1 } };
-    const input = terminal([{ kind: 'value', value: 'retry' }, { kind: 'value', value: '6' }]);
+    const input = terminal([{ kind: 'value', value: '5, ReTrY' }, { kind: 'value', value: '6' }]);
     const refresh = jest.fn(async () => ({ ...context,
       projectDiscovery: { status: 'observed' as const,
         candidates: [{ number: 6, title: 'Planning', owner: 'owner', url: 'https://github.com/orgs/owner/projects/6' }] },
@@ -162,6 +162,7 @@ describe('SetupQuestionnaireController', () => {
     expect(input.readText.mock.calls[0][0]).toContain('5 — Roadmap (https://github.com/orgs/owner/projects/5)');
     expect(input.readText.mock.calls[0][0]).toContain('retry — Retry GitHub Project discovery');
     expect(input.readText.mock.calls[1][0]).toContain('6 — Planning');
+    expect(input.readText.mock.calls[1][0]).toContain('Current selection: 5');
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
@@ -184,7 +185,7 @@ describe('SetupQuestionnaireController', () => {
       projectOwner: 'owner', projectDiscovery: { status: 'observed' as const,
         candidates: [{ number: 5, title: 'Roadmap', owner: 'owner', url: 'https://github.com/orgs/owner/projects/5' }] } };
     const input = { ...terminal([{ kind: 'value', value: 'https://github.com/orgs/owner/projects/7' }]),
-      readMultiSelect: jest.fn().mockResolvedValue({ kind: 'value', value: '5,manual' }) };
+      readMultiSelect: jest.fn().mockResolvedValue({ kind: 'value', value: '5, MANUAL' }) };
     const result = await new SetupQuestionnaireController(input, renderer()).collect(
       createSetupQuestionnaire(createDefaultSetupConfiguration(), context), context,
     );

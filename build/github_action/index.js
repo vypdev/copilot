@@ -52200,8 +52200,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
         if (setupConfiguration?.manageRepositorySecrets && secretValues > 0)
             mark('secrets', 'needs-inspection');
         const secrets = await (0, setup_resource_provisioning_1.ensureRepositorySecrets)(request, dependencies, setupConfiguration, remoteConfiguration);
-        mark('secrets', secrets.errors.length ? 'needs-inspection'
-            : setupConfiguration?.manageRepositorySecrets && secretValues > 0 ? 'completed' : 'skipped');
+        mark('secrets', secrets.errors.length ? 'needs-inspection' : secrets.writes > 0 ? 'completed' : 'skipped');
         if (secrets.step)
             steps.push(secrets.step);
         if (secrets.errors.length > 0)
@@ -52231,8 +52230,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
         if (setupConfiguration?.manageRepositoryVariables)
             mark('variables', 'needs-inspection');
         const variables = await (0, setup_resource_provisioning_1.ensureRepositoryVariables)(request, dependencies, setupConfiguration, remoteConfiguration);
-        mark('variables', variables.errors.length ? 'needs-inspection'
-            : setupConfiguration?.manageRepositoryVariables ? 'completed' : 'skipped');
+        mark('variables', variables.errors.length ? 'needs-inspection' : variables.writes > 0 ? 'completed' : 'skipped');
         if (variables.step)
             steps.push(variables.step);
         if (variables.errors.length > 0)
@@ -53202,59 +53200,67 @@ exports.VARIABLE_PROVISIONING_UNAVAILABLE = 'GitHub Actions Variable provisionin
 exports.SECRET_PROVISIONING_UNAVAILABLE = 'GitHub Actions Secret provisioning is unavailable; no Secrets were changed.';
 async function ensureRepositoryVariables(context, dependencies, setupConfiguration, remoteConfiguration) {
     if (!setupConfiguration?.manageRepositoryVariables) {
-        return { errors: [] };
+        return { errors: [], writes: 0 };
     }
     if (!dependencies.setupRepositoryVariablesPort) {
-        return { errors: [exports.VARIABLE_PROVISIONING_UNAVAILABLE] };
+        return { errors: [exports.VARIABLE_PROVISIONING_UNAVAILABLE], writes: 0 };
     }
     try {
         const desired = (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(setupConfiguration);
         const groups = groupSetupResources(desired, 'variable', setupConfiguration, remoteConfiguration);
         const result = await upsertVariableGroups(context, dependencies.setupRepositoryVariablesPort, groups);
+        const writes = result.created + result.updated;
         if (result.errors.length > 0)
-            return { errors: result.errors };
+            return { errors: result.errors, writes };
         return {
-            step: `✅ GitHub Actions Variables: ${result.created} created, ${result.updated} updated; existing effective values preserved when no override was selected.`,
+            step: writes > 0
+                ? `✅ GitHub Actions Variables: ${result.created} created, ${result.updated} updated; existing effective values preserved when no override was selected.`
+                : '✅ GitHub Actions Variables kept unchanged; no values were created or updated.',
             errors: [],
+            writes,
         };
     }
     catch (error) {
         const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to configure GitHub Actions Variables.');
         (0, logging_ports_1.logError)(semanticError);
-        return { errors: [semanticError.message] };
+        return { errors: [semanticError.message], writes: 0 };
     }
 }
 async function ensureRepositorySecrets(context, dependencies, setupConfiguration, remoteConfiguration) {
     if (!setupConfiguration?.manageRepositorySecrets) {
-        return { errors: [] };
+        return { errors: [], writes: 0 };
     }
     const credentials = context.setupCredentials;
     if (!credentials) {
-        return { step: '⚠️  Repository Secrets were not changed: run interactive setup to validate and provide credentials.', errors: [] };
+        return { step: '⚠️  Repository Secrets were not changed: run interactive setup to validate and provide credentials.', errors: [], writes: 0 };
     }
     const values = [
         ...(credentials.workflowPat ? [credentials.workflowPat] : []),
         ...credentials.apiKeys,
     ];
     if (values.length === 0)
-        return { step: '✅ Existing Repository Secrets kept unchanged.', errors: [] };
+        return { step: '✅ Existing Repository Secrets kept unchanged.', errors: [], writes: 0 };
     if (!dependencies.setupRepositorySecretsPort) {
-        return { errors: [exports.SECRET_PROVISIONING_UNAVAILABLE] };
+        return { errors: [exports.SECRET_PROVISIONING_UNAVAILABLE], writes: 0 };
     }
     try {
         const groups = groupSetupResources(values, 'secret', setupConfiguration, remoteConfiguration);
         const result = await upsertSecretGroups(context, dependencies.setupRepositorySecretsPort, groups);
+        const writes = result.created + result.updated;
         if (result.errors.length > 0)
-            return { errors: result.errors };
+            return { errors: result.errors, writes };
         return {
-            step: `✅ GitHub Actions Secrets: ${result.created} created, ${result.updated} updated; existing effective values kept when no replacement was selected.`,
+            step: writes > 0
+                ? `✅ GitHub Actions Secrets: ${result.created} created, ${result.updated} updated; existing effective values kept when no replacement was selected.`
+                : '✅ Existing GitHub Actions Secrets kept unchanged; no values were created or updated.',
             errors: [],
+            writes,
         };
     }
     catch (error) {
         const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to configure GitHub Actions Secrets.');
         (0, logging_ports_1.logError)(semanticError);
-        return { errors: [semanticError.message] };
+        return { errors: [semanticError.message], writes: 0 };
     }
 }
 async function resolveRemoteConfiguration(context, dependencies, setupConfiguration, errors) {

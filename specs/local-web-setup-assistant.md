@@ -785,7 +785,8 @@ attestation. The user may explicitly retry the **current** discovery question
 at most twice per setup run. A retry is read-only, retains unsent checkbox and
 manual-field input, never advances the questionnaire, and cannot apply a stale
 response after a new answer, cancellation, or controller takeover. CLI offers
-`r` or an equivalent numbered retry option. The current question updates in
+`r` or an equivalent numbered retry option; the text fallback trims spaces
+around comma-separated IDs and recognizes `retry` regardless of casing. The current question updates in
 place; prior answers and the PAT are not requested again. When retries are
 exhausted, explain the manual path rather than presenting a dead button. Do
 not offer retry for a personal-owner Projects endpoint that categorically
@@ -1142,6 +1143,9 @@ path. No step silently creates a PAT, issue, Action run, or Project item.
    `not-started`, never `completed`, and states that no values were changed.
    A port that attempted a write and returned an error
    remains `needs-inspection` because the provider may have applied it.
+   A successful Secret or Variable provisioning call with zero created and
+   zero updated values is `skipped`, not `completed`; the provider outcome,
+   not the presence of a configured port, determines that receipt state.
 7. **Comprehension and accessibility gate.** Every question needs a concrete
    recommendation, source of the expected value, consequence of alternatives,
    validation at the field, and targeted documentation. Generic `enter the

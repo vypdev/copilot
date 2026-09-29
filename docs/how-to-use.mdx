@@ -164,6 +164,8 @@ before retrying. If a requested Secrets or Variables writer is unavailable,
 setup stops before changing any setup resource and marks operations **not
 started**. An attempted write that fails is marked **needs inspection**, since
 GitHub may have applied it before reporting the error.
+Secrets and Variables are **completed** only when GitHub reports a created or
+updated value; if every requested value was kept unchanged, they are **skipped**.
 An error shown after a rejected browser action stays visible during background
 updates; a successful next action clears it.
 

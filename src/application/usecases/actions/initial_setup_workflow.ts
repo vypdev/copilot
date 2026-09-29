@@ -141,8 +141,7 @@ export async function runInitialSetupWorkflow(
 
         if (setupConfiguration?.manageRepositorySecrets && secretValues > 0) mark('secrets', 'needs-inspection');
         const secrets = await ensureRepositorySecrets(request, dependencies, setupConfiguration, remoteConfiguration);
-        mark('secrets', secrets.errors.length ? 'needs-inspection'
-            : setupConfiguration?.manageRepositorySecrets && secretValues > 0 ? 'completed' : 'skipped');
+        mark('secrets', secrets.errors.length ? 'needs-inspection' : secrets.writes > 0 ? 'completed' : 'skipped');
         if (secrets.step) steps.push(secrets.step);
         if (secrets.errors.length > 0) errors.push(...fromMessages(secrets.errors, 'authorization.credential-invalid'));
 
@@ -170,8 +169,7 @@ export async function runInitialSetupWorkflow(
 
         if (setupConfiguration?.manageRepositoryVariables) mark('variables', 'needs-inspection');
         const variables = await ensureRepositoryVariables(request, dependencies, setupConfiguration, remoteConfiguration);
-        mark('variables', variables.errors.length ? 'needs-inspection'
-            : setupConfiguration?.manageRepositoryVariables ? 'completed' : 'skipped');
+        mark('variables', variables.errors.length ? 'needs-inspection' : variables.writes > 0 ? 'completed' : 'skipped');
         if (variables.step) steps.push(variables.step);
         if (variables.errors.length > 0) errors.push(...fromMessages(variables.errors, 'provider.unavailable'));
 
