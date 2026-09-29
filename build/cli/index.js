@@ -57655,6 +57655,7 @@ class SetupWizardUseCase {
                 remoteConfiguration = unavailableRemoteConfiguration();
             }
         }
+        const projectOwnerType = remoteConfiguration?.ownerType ?? 'Unknown';
         const explicitMainBranch = request.overrides?.repository?.mainBranch !== undefined;
         if (!explicitMainBranch && remoteConfiguration?.defaultBranch) {
             initial.repository.mainBranch = remoteConfiguration.defaultBranch;
@@ -57669,7 +57670,7 @@ class SetupWizardUseCase {
         let projectDiscovery = request.mode === 'interactive'
             && (request.permissionIntent?.projectsWanted !== false || request.revision?.group === 'projects')
             && request.remoteTarget && this.dependencies.projectDiscovery
-            ? await this.dependencies.projectDiscovery.discover(request.remoteTarget.owner, remoteConfiguration?.ownerType ?? 'Unknown', request.remoteTarget.token).catch(() => ({ status: 'unavailable', candidates: [] })) : undefined;
+            ? await this.dependencies.projectDiscovery.discover(request.remoteTarget.owner, projectOwnerType, request.remoteTarget.token).catch(() => ({ status: 'unavailable', candidates: [] })) : undefined;
         let context = {
             ...(remoteConfiguration ? { remote: remoteConfiguration } : {}),
             branchSources: { main: explicitMainBranch ? 'configuration' : remoteConfiguration?.defaultBranch ? 'github' : 'default',
@@ -57710,7 +57711,7 @@ class SetupWizardUseCase {
                         discoveryRetryRemaining: { ...context.discoveryRetryRemaining, checks: remaining - 1 } };
                 }
                 else {
-                    projectDiscovery = await this.dependencies.projectDiscovery.discover(target.owner, remoteConfiguration?.ownerType ?? 'Unknown', target.token).catch(() => ({ status: 'unavailable', candidates: [] }));
+                    projectDiscovery = await this.dependencies.projectDiscovery.discover(target.owner, projectOwnerType, target.token).catch(() => ({ status: 'unavailable', candidates: [] }));
                     context = { ...context, projectDiscovery,
                         discoveryRetryRemaining: { ...context.discoveryRetryRemaining, projects: remaining - 1 } };
                 }
