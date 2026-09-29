@@ -47,6 +47,20 @@ describe('PrepareSetupPatIntentUseCase', () => {
     expect(ports.showDetails).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ role: 'setup' })]));
   });
 
+  test('previews Projects read from intent before any Project number can be discovered', async () => {
+    const { ports, useCase } = harness();
+    jest.spyOn(ports, 'collect').mockImplementation(async initial => ({
+      ...initial, terminal: 'review', question: undefined, projectsWanted: true,
+      draft: { ...initial.draft, projects: { ...initial.draft.projects, ids: '' } },
+    }));
+    const result = await useCase.execute(request);
+    expect(result.kind).toBe('guided');
+    if (result.kind !== 'guided') return;
+    expect(result.url).toContain('organization_projects=read');
+    expect(result.permissionIntent.projectsWanted).toBe(true);
+    expect(result.permissionIntent.draft.projects.ids).toBe('');
+  });
+
   test('revisiting choices re-collects with the next pass and retains one session', async () => {
     const { ports, useCase } = harness();
     jest.spyOn(ports, 'review').mockResolvedValueOnce('revise').mockResolvedValueOnce('continue');

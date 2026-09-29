@@ -147,6 +147,14 @@ describe('setup presenters and prompt-specific adapters', () => {
       kind: 'boolean',
       defaultValue: true,
     })).toContain('[Y]');
+    const help = renderer.renderHelp({
+      stateId: 'agent-model-defaults', id: 'agents.findings.executable',
+      label: 'Validated executable for all tasks', kind: 'text', defaultValue: '',
+    });
+    for (const heading of ['What:', 'When:', 'Where:', 'How:', 'Why:', 'Example:', 'Effect:', 'Verify:', 'Read more']) {
+      expect(help).toContain(heading);
+    }
+    expect(help).toContain('https://docs.page/vypdev/copilot/agents/cli-configuration');
     const log = jest.spyOn(console, 'log').mockImplementation();
     renderer.showIntroduction();
     renderer.showState('capabilities');
@@ -170,6 +178,20 @@ describe('setup presenters and prompt-specific adapters', () => {
     await expect(new SetupPlanConfirmationAdapter(undefined, true).confirm(plan)).resolves.toEqual({ kind: 'approved' });
     await expect(new SetupPlanConfirmationAdapter(undefined, false).confirm(plan)).resolves.toEqual({ kind: 'declined' });
     await expect(new DryRunSetupPlanConfirmation().confirm(plan)).resolves.toEqual({ kind: 'approved' });
+  });
+
+  it('explains final Apply on ? and re-asks without approving it', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([{ kind: 'value', value: '?' }, { kind: 'value', value: 'no' }]);
+      await expect(new SetupPlanConfirmationAdapter(input, false).confirm(buildSetupPlan(createDefaultSetupConfiguration())))
+        .resolves.toEqual({ kind: 'declined' });
+      expect(input.readText).toHaveBeenCalledTimes(2);
+      const output = log.mock.calls.flat().join('\n');
+      expect(output).toContain('This is the final approval');
+      expect(output).toContain('PATs created on GitHub are not deleted automatically');
+      expect(output).toContain('https://docs.page/vypdev/copilot/how-to-use');
+    } finally { log.mockRestore(); }
   });
 
   it('keeps non-interactive credential values separate from questionnaire and plan state', async () => {
@@ -293,6 +315,34 @@ describe('setup presenters and prompt-specific adapters', () => {
       const input = terminal([{ kind: 'value', value: '' }, { kind: 'value', value: selection }]);
       await expect(new SetupCredentialPromptAdapter(input, {}).chooseSetupOwnerKind()).resolves.toBe(expected);
       expect(input.readText).toHaveBeenCalledTimes(2);
+    } finally { log.mockRestore(); }
+  });
+
+  it('opens credential choice help with ? and then asks the same unanswered question', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([{ kind: 'value', value: '?' }, { kind: 'value', value: '2' }]);
+      await expect(new SetupCredentialPromptAdapter(input, {}).chooseSetupOwnerKind()).resolves.toBe('User');
+      expect(input.readText).toHaveBeenCalledTimes(2);
+      expect(String(input.readText.mock.calls[0][0])).toContain('Type ? for more detail');
+      expect(log.mock.calls.flat().join('\n')).toContain('owner/repository');
+      expect(log.mock.calls.flat().join('\n')).toContain('https://docs.page/vypdev/copilot/authentication');
+    } finally { log.mockRestore(); }
+  });
+
+  it('explains a bot login on ? without treating it as an account', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([
+        { kind: 'value', value: '1' }, { kind: 'value', value: '?' },
+        { kind: 'value', value: 'vypbot' }, { kind: 'value', value: 'bot-token' },
+      ]);
+      const adapter = new SetupCredentialPromptAdapter(input, {});
+      adapter.configureWorkflowPatGuide('https://github.com/settings/personal-access-tokens/new', async login => ({ login, id: 123 }));
+      await expect(adapter.requestWorkflowPat({ name: 'PAT', kind: 'workflowPat', description: 'runtime' }))
+        .resolves.toEqual({ name: 'PAT', value: 'bot-token' });
+      expect(log.mock.calls.flat().join('\n')).toContain('numeric account ID');
+      expect(input.readText).toHaveBeenCalledTimes(3);
     } finally { log.mockRestore(); }
   });
 

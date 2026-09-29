@@ -1,6 +1,6 @@
 .review-pass, .banner { padding: 14px 18px; margin: 0 0 20px; border-radius: 8px; font-size: 12px; line-height: 1.5; white-space: pre-line; }
 .review-pass { color: var(--accent-strong); background: var(--accent-tint); border: 1px solid var(--accent); }
-.review-pass span { margin-right: 8px; font-weight: 800; }
+.review-pass span { margin-inline-end: 8px; font-weight: 800; }
 .banner { background: var(--surface-soft); border: 1px solid var(--line); }
 .banner p { margin: 5px 0 0; }
 .banner.warning { color: var(--warn); background: var(--warn-bg); border-color: var(--warn); }
@@ -12,6 +12,13 @@
 .result-icon { display: grid; place-items: center; width: 43px; height: 43px; border-radius: 50%; background: var(--accent-tint); color: var(--accent-strong); font-size: 22px; }
 .result-card h2, .waiting-card h2 { font-size: 21px; margin: 18px 0 10px; }
 .result-card p, .waiting-card p { line-height: 1.6; color: var(--muted); font-size: 13px; }
+.result-facts { margin: 20px 0; border: 1px solid var(--line); border-radius: 8px; padding: 8px 17px; background: var(--surface-soft); }
+.result-facts p { margin: 8px 0; }
+.result-facts strong { color: var(--text); }
+.result-effects { margin: 20px 0; border: 1px solid var(--line); border-radius: 8px; padding: 14px 17px; background: var(--surface-soft); }
+.result-effects h3 { margin: 0 0 10px; color: var(--text); font-size: 13px; }
+.result-effects ul { margin: 0; padding-left: 20px; }
+.result-effects li { padding: 3px 0; overflow-wrap: anywhere; font-size: 12px; }
 .result-links { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; margin: 22px 0; font-size: 12px; }
 .result-links code { background: var(--surface-soft); padding: 8px; border-radius: 5px; }
 .spinner { width: 25px; height: 25px; border: 3px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }

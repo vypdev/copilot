@@ -43,6 +43,7 @@ export async function startWebSetupServer(bridge: WebSetupBridge, assets = join(
     if (idleTimer) clearTimeout(idleTimer);
     idleTimer = setTimeout(() => {
       if (!bridge.snapshot().journey?.mutationStarted && !bridge.snapshot().outcome) {
+        bridge.resultReason('session-expired');
         bridge.finish('blocked', 'This local setup session expired after 30 minutes without a decision. Start a new setup run; GitHub PATs are not revoked automatically.');
       }
     }, 30 * 60 * 1000);
@@ -124,6 +125,52 @@ export async function startWebSetupServer(bridge: WebSetupBridge, assets = join(
             : { error: 'This question changed. Refresh the current state.' });
         return;
       }
+      if (request.method === 'POST' && request.url === '/api/retry-discovery') {
+        const capability = String(request.headers['x-setup-capability'] ?? '');
+        if (!bridge.isController(capability)) { respond(response, 403, { error: 'This tab is read-only.' }); return; }
+        if (request.headers['content-type'] !== 'application/json') { respond(response, 415, { error: 'JSON required.' }); return; }
+        const body = await readJson(request);
+        if (!Number.isSafeInteger(body.revision) || (body.revision as number) <= 0) {
+          respond(response, 400, { error: 'Invalid question revision.' }); return;
+        }
+        if (!bridge.isController(capability)) { respond(response, 403, { error: 'Control moved to another tab.' }); return; }
+        const result = await bridge.retryDiscovery(body.revision as number);
+        if (!bridge.isController(capability)) { respond(response, 403, { error: 'Control moved to another tab.' }); return; }
+        if (result === 'updated') armIdle();
+        respond(response, result === 'updated' ? 200 : 409, result === 'updated'
+          ? { updated: true } : { error: result === 'stale' ? 'This question changed. Refresh the current state.'
+            : 'Discovery cannot be retried here. Use the manual option.' });
+        return;
+      }
+      if (request.method === 'POST' && request.url === '/api/back') {
+        const capability = String(request.headers['x-setup-capability'] ?? '');
+        if (!bridge.isController(capability)) { respond(response, 403, { error: 'This tab is read-only.' }); return; }
+        if (request.headers['content-type'] !== 'application/json') { respond(response, 415, { error: 'JSON required.' }); return; }
+        const body = await readJson(request);
+        if (!Number.isSafeInteger(body.revision) || (body.revision as number) <= 0) {
+          respond(response, 400, { error: 'Invalid question revision.' }); return;
+        }
+        if (!bridge.isController(capability)) { respond(response, 403, { error: 'Control moved to another tab.' }); return; }
+        const result = bridge.back(body.revision as number);
+        if (result === 'updated') armIdle();
+        respond(response, result === 'updated' ? 200 : 409, result === 'updated'
+          ? { updated: true } : { error: result === 'stale' ? 'This question changed. Refresh the current state.'
+            : 'No earlier question is available here.' });
+        return;
+      }
+      if (request.method === 'POST' && request.url === '/api/doctor') {
+        const capability = String(request.headers['x-setup-capability'] ?? '');
+        if (!bridge.isController(capability)) { respond(response, 403, { error: 'This tab is read-only.' }); return; }
+        if (request.headers['content-type'] !== 'application/json') { respond(response, 415, { error: 'JSON required.' }); return; }
+        await readJson(request);
+        if (!bridge.isController(capability)) { respond(response, 403, { error: 'Control moved to another tab.' }); return; }
+        const result = await bridge.runReadOnlyDoctor();
+        if (!bridge.isController(capability)) { respond(response, 403, { error: 'Control moved to another tab.' }); return; }
+        respond(response, result === 'complete' ? 200 : 409, result === 'complete'
+          ? { checked: true } : { error: result === 'failed' ? 'Read-only verification failed. Check the terminal.'
+            : 'Read-only verification is unavailable or already running.' });
+        return;
+      }
       if (request.method === 'POST' && request.url === '/api/cancel') {
         if (!bridge.isController(String(request.headers['x-setup-capability'] ?? ''))) { respond(response, 403, { error: 'This tab is read-only.' }); return; }
         if (request.headers['content-type'] !== 'application/json') { respond(response, 415, { error: 'JSON required.' }); return; }
@@ -197,6 +244,7 @@ export async function startWebSetupServer(bridge: WebSetupBridge, assets = join(
   armIdle();
   const hardTimer = setTimeout(() => {
     if (!bridge.snapshot().journey?.mutationStarted && !bridge.snapshot().outcome) {
+      bridge.resultReason('session-expired');
       bridge.finish('blocked', 'This local setup session reached its four-hour limit. Start a new run; no prior approval can be replayed.');
     }
   }, 4 * 60 * 60 * 1000);

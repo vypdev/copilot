@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execFileSync, execSync } from 'child_process';
 import { realpathSync } from 'node:fs';
 import { ERRORS } from './cli/cli_errors';
 import { canonicalGitObjectId } from './domain/git_object_id';
@@ -38,6 +38,18 @@ export function getCurrentAttachedBranch(cwd: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** Positive local evidence only; a missing ref says nothing about remote branches. */
+export function hasLocalOrTrackedGitBranch(cwd: string, branch: string): boolean {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$/u.test(branch) || branch.includes('..') || branch.endsWith('.lock')) return false;
+  for (const ref of [`refs/heads/${branch}`, `refs/remotes/origin/${branch}`]) {
+    try {
+      execFileSync('git', ['show-ref', '--verify', '--quiet', ref], { cwd, stdio: 'pipe' });
+      return true;
+    } catch { /* Try the other explicit ref. */ }
+  }
+  return false;
 }
 
 /** Returns the canonical object ID for the workspace revision being analyzed. */

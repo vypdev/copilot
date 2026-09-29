@@ -60,7 +60,7 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 - [ ] Setup PAT and workflow PAT permission reports contain only stable permission IDs, target scopes, access levels, semantic statuses, and bounded reasons; tokens and raw provider responses are absent.
 - [ ] `copilot doctor` reports stable check IDs with `pass`, `warn`, `fail`, or dependency-blocked `skipped` and exits non-zero only for `fail`.
 - [ ] Invalid setup-PAT diagnosis still returns independent local checks; remote dependants identify their blocking check.
-- [ ] Doctor is wired only to query ports. Temporary credential-health workflow bootstrap remains setup-only.
+- [ ] `copilot doctor --read-only` uses metadata/resource queries only and marks Secret values unverified; plain doctor may dispatch the installed credential-health workflow but never bootstraps one. Temporary workflow bootstrap remains setup-only.
 - [ ] No legacy setup prompt adapter, compatibility result, dual reader/writer, state alias, or transitional flag is present.
 
 ## Release and hotfix orchestration

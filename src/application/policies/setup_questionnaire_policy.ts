@@ -6,16 +6,18 @@ import type {
   SetupQuestionnaireEvent,
   SetupQuestionnaireState,
   SetupQuestionnaireStateId,
+  SetupQuestionnaireProgress,
 } from '../../domain/setup_questionnaire';
 import { cloneSetupConfiguration } from './setup_configuration_clone_policy';
-import { SETUP_AGENT_TASKS, SETUP_FEATURE_DESCRIPTIONS } from './setup_configuration_defaults';
+import { createDefaultSetupConfiguration, SETUP_AGENT_TASKS, SETUP_FEATURE_DESCRIPTIONS } from './setup_configuration_defaults';
 import { ISSUE_WORKFLOW_KINDS, ISSUE_WORKFLOW_CATALOG, createIssueWorkflowProfile, type IssueWorkflowKind } from '../../domain/issue_workflow_profile';
+import { parseSetupProjectSelection, sharedProjectStatusOptions } from './setup_project_selection_policy';
 
 const AGENT_PROVIDERS = ['codex', 'opencode', 'cursor'] as const;
 const MODEL_PROVIDERS = ['openai', 'anthropic', 'google', 'openrouter', 'opencode', 'local'] as const;
 const PERMISSION_INTENT_QUESTION_IDS = new Set([
   'features.issues', 'features.pullRequests', 'issueWorkflows.enabled',
-  'pullRequestApproval.mode', 'projects.ids', 'createInitialTag',
+  'pullRequestApproval.mode', 'projects.enabled', 'createInitialTag',
   'manageRepositoryVariables', 'manageRepositorySecrets',
   'storage.variables.defaultScope', 'storage.variables.preserveExisting',
   'storage.secrets.defaultScope', 'storage.secrets.preserveExisting',
@@ -28,7 +30,7 @@ interface QuestionDefinition {
   readonly kind: SetupQuestion['kind'];
   readonly choices?: readonly string[];
   readonly applies?: (draft: SetupConfiguration, independently: boolean, context: SetupQuestionnaireContext) => boolean;
-  readonly read?: (draft: SetupConfiguration) => string | number | boolean;
+  readonly read?: (draft: SetupConfiguration, context: SetupQuestionnaireContext) => string | number | boolean;
 }
 
 export function createSetupQuestionnaire(
@@ -36,10 +38,17 @@ export function createSetupQuestionnaire(
   context: SetupQuestionnaireContext = {},
 ): SetupQuestionnaireState {
   const draft = cloneSetupConfiguration(configuration);
-  const question = questions(draft, false, context, 'full')[0];
+  const independently = hasIndependentAgentSettings(draft);
+  const question = questions(draft, independently, context, 'full')[0];
   return question
-    ? { stateId: question.stateId, draft, question, terminal: 'collecting', configureIndependently: false, phase: 'full' }
-    : { stateId: 'review', draft, terminal: 'review', configureIndependently: false, phase: 'full' };
+    ? { stateId: question.stateId, draft, question, terminal: 'collecting', configureIndependently: independently, phase: 'full' }
+    : { stateId: 'review', draft, terminal: 'review', configureIndependently: independently, phase: 'full' };
+}
+
+function hasIndependentAgentSettings(draft: SetupConfiguration): boolean {
+  const shared = draft.agents.findings;
+  return SETUP_AGENT_TASKS.filter(task => task !== 'findings').some(task =>
+    (['modelProvider', 'model', 'effort', 'executable'] as const).some(field => draft.agents[task][field] !== shared[field]));
 }
 
 export function createSetupPermissionIntentQuestionnaire(
@@ -47,10 +56,11 @@ export function createSetupPermissionIntentQuestionnaire(
   context: SetupQuestionnaireContext = {},
 ): SetupQuestionnaireState {
   const draft = cloneSetupConfiguration(configuration);
+  const projectsWanted = context.projectsWanted ?? Boolean(draft.projects.ids.trim());
   const question = questions(draft, false, context, 'permission-intent')[0];
   return question
-    ? { stateId: question.stateId, draft, question, terminal: 'collecting', configureIndependently: false, phase: 'permission-intent', answeredQuestionIds: [] }
-    : { stateId: 'review', draft, terminal: 'review', configureIndependently: false, phase: 'permission-intent', answeredQuestionIds: [] };
+    ? { stateId: question.stateId, draft, question, terminal: 'collecting', configureIndependently: false, phase: 'permission-intent', answeredQuestionIds: [], projectsWanted }
+    : { stateId: 'review', draft, terminal: 'review', configureIndependently: false, phase: 'permission-intent', answeredQuestionIds: [], projectsWanted };
 }
 
 export function createSetupReviewState(configuration: SetupConfiguration): SetupQuestionnaireState {
@@ -60,6 +70,84 @@ export function createSetupReviewState(configuration: SetupConfiguration): Setup
     terminal: 'review',
     configureIndependently: false,
   };
+}
+
+/** Re-project the current question after a read-only discovery without replaying answers. */
+export function refreshSetupQuestionnaireQuestion(
+  state: SetupQuestionnaireState,
+  context: SetupQuestionnaireContext,
+): SetupQuestionnaireState {
+  if (state.terminal !== 'collecting' || !state.question) return state;
+  const question = questions(state.draft, state.configureIndependently, context, state.phase ?? 'full')
+    .find(candidate => candidate.id === state.question?.id);
+  return question ? { ...state, question, validation: undefined } : state;
+}
+
+/** The denominator follows the currently applicable, unskipped questions. */
+export function setupQuestionnaireProgress(
+  state: SetupQuestionnaireState,
+  context: SetupQuestionnaireContext,
+): SetupQuestionnaireProgress | undefined {
+  if (state.terminal !== 'collecting' || !state.question) return undefined;
+  const visible = questions(state.draft, state.configureIndependently, context, state.phase ?? 'full');
+  const index = visible.findIndex(item => item.id === state.question?.id);
+  if (index < 0) return undefined;
+  const group = state.question.stateId;
+  const groupQuestions = visible.filter(item => item.stateId === group);
+  return { position: index + 1, total: visible.length, groupPosition: groupQuestions.findIndex(item => item.id === state.question?.id) + 1,
+    groupTotal: groupQuestions.length, group };
+}
+
+/** Reopen an already answered group for final-plan correction without clearing unrelated values. */
+export function reopenSetupQuestionnaireGroup(
+  state: SetupQuestionnaireState,
+  group: SetupQuestion['stateId'],
+  context: SetupQuestionnaireContext,
+): SetupQuestionnaireState | undefined {
+  if (state.terminal !== 'review') return undefined;
+  const first = questions(state.draft, state.configureIndependently, context, 'full').find(item => item.stateId === group);
+  return first ? { ...state, stateId: first.stateId, terminal: 'collecting', question: first, validation: undefined,
+    phase: 'full', answeredQuestionIds: [] } : undefined;
+}
+
+export function setupQuestionIdsForGroup(group: SetupQuestion['stateId']): readonly string[] {
+  return definitions().filter(item => item.stateId === group).map(item => item.id);
+}
+
+/** Basic changes presentation only: security- and permission-driving decisions stay visible. */
+export function setupBasicSkippedQuestionIds(configuration?: SetupConfiguration): readonly string[] {
+  const defaults = configuration ? createDefaultSetupConfiguration() : undefined;
+  const advancedRepository = new Set([
+    'featureTree', 'bugfixTree', 'hotfixTree', 'releaseTree', 'docsTree', 'choreTree',
+    'reconciliationTree', 'reopenIssueOnPush', 'inactivityThresholdHours',
+    'issueLocale', 'pullRequestLocale', 'commitPrefixTransforms',
+  ]);
+  const advancedBugbot = new Set([
+    'pullRequestDescriptionMode', 'ignoreFiles', 'includeReasoning', 'bugbotCommentLimit',
+    'bugbotFixVerifyCommands', 'bugbotEffort', 'bugbotReviewDrafts', 'bugbotTraceRules',
+    'bugbotSuggestedChanges', 'bugbotOrganizationRules',
+  ]);
+  return definitions().filter(definition =>
+    definition.id === 'agents.findings.effort'
+    || definition.id === 'agents.findings.executable'
+    || (definition.id.startsWith('agents.') && definition.id.endsWith('.provider') && definition.id !== 'agents.findings.provider')
+    || (definition.id.startsWith('repository.') && advancedRepository.has(definition.id.slice('repository.'.length)))
+    || (definition.id.startsWith('ai.') && advancedBugbot.has(definition.id.slice('ai.'.length)))
+  ).filter(definition => !configuration || JSON.stringify(valueAtPath(configuration, definition.id))
+    === JSON.stringify(valueAtPath(defaults!, definition.id))
+  ).map(definition => definition.id);
+}
+
+function valueAtPath(value: unknown, path: string): unknown {
+  return path.split('.').reduce<unknown>((current, key) => current && typeof current === 'object'
+    ? (current as Record<string, unknown>)[key] : undefined, value);
+}
+
+export function setupEditableGroups(configuration: SetupConfiguration): readonly SetupQuestion['stateId'][] {
+  // Projects can be enabled at review even if the operator declined it before
+  // the PAT handoff. The re-run audits any newly required grant before Apply.
+  const visible = questions(configuration, hasIndependentAgentSettings(configuration), { projectsWanted: true }, 'full');
+  return [...new Set(visible.map(item => item.stateId))];
 }
 
 export function transitionSetupQuestionnaire(
@@ -76,7 +164,23 @@ export function transitionSetupQuestionnaire(
       configureIndependently: state.configureIndependently,
       phase: state.phase,
       answeredQuestionIds: state.answeredQuestionIds,
+      projectsWanted: state.projectsWanted,
     };
+  }
+  if (event.kind === 'back') {
+    const visible = questions(state.draft, state.configureIndependently, context, state.phase ?? 'full');
+    const index = visible.findIndex(item => item.id === state.question?.id);
+    if (index <= 0) return { ...state, validation: 'This is the first question in this pass. Review it or cancel setup.' };
+    const previous = visible[index - 1];
+    return { ...state, stateId: previous.stateId, question: previous, validation: undefined,
+      answeredQuestionIds: state.answeredQuestionIds?.filter(id => visible.findIndex(item => item.id === id) < index - 1) };
+  }
+  if (state.question.id === 'projects.statusVerified' && ['n', 'no', 'false', '0'].includes(event.value.normalize('NFKC').trim().toLowerCase())) {
+    const selection = questions(state.draft, state.configureIndependently, context, state.phase ?? 'full')
+      .find(question => question.id === 'projects.ids');
+    if (selection) return { ...state, question: selection, stateId: 'projects',
+      validation: 'Status values were not confirmed. Choose compatible Projects, then review their Status options again.',
+      answeredQuestionIds: state.answeredQuestionIds?.filter(id => id !== 'projects.ids' && !id.startsWith('projects.')) };
   }
   const parsed = parseAnswer(state.question, event.value);
   if ('error' in parsed) {
@@ -89,11 +193,16 @@ export function transitionSetupQuestionnaire(
   const configureIndependently = state.question.id === 'agents.configureIndependently'
     ? Boolean(parsed.value)
     : state.configureIndependently;
-  const draft = applyAnswer(state.draft, state.question, parsed.value);
+  const draft = applyAnswer(state.draft, state.question, parsed.value, state.configureIndependently);
+  const projectsWanted = state.question.id === 'projects.enabled' ? Boolean(parsed.value) : state.projectsWanted;
   const answeredQuestionIds = [...(state.answeredQuestionIds ?? []), state.question.id];
   const nextQuestions = questions(draft, configureIndependently, context, state.phase ?? 'full');
-  const nextIndex = nextQuestions.findIndex((question) => question.id === state.question?.id);
-  const next = nextQuestions[nextIndex + 1];
+  // A just-answered question may become inapplicable (for example, clearing
+  // Projects removes its dependent fields). Advance by canonical definition
+  // order; indexing the new visible list at -1 would restart the wizard.
+  const definitionOrder = definitions().map(definition => definition.id);
+  const currentOrder = definitionOrder.indexOf(state.question.id);
+  const next = nextQuestions.find(question => definitionOrder.indexOf(question.id) > currentOrder);
   return next
     ? {
         stateId: next.stateId,
@@ -103,8 +212,9 @@ export function transitionSetupQuestionnaire(
         configureIndependently,
         phase: state.phase,
         answeredQuestionIds,
+        projectsWanted,
       }
-    : { stateId: 'review', draft, terminal: 'review', configureIndependently, phase: state.phase, answeredQuestionIds };
+    : { stateId: 'review', draft, terminal: 'review', configureIndependently, phase: state.phase, answeredQuestionIds, projectsWanted };
 }
 
 export function enterSetupConfirmation(state: SetupQuestionnaireState): SetupQuestionnaireState {
@@ -152,7 +262,7 @@ function questions(
   phase: 'full' | 'permission-intent',
 ): SetupQuestion[] {
   return definitions().filter((definition) =>
-    (phase === 'full' || PERMISSION_INTENT_QUESTION_IDS.has(definition.id))
+    (phase === 'full' ? definition.id !== 'projects.enabled' : PERMISSION_INTENT_QUESTION_IDS.has(definition.id))
     && !context.skipQuestionIds?.includes(definition.id)
     && (definition.applies?.(draft, independently, context) ?? true))
     .map((definition) => toQuestion(definition, draft, context));
@@ -191,26 +301,43 @@ function definitions(): readonly QuestionDefinition[] {
     ...SETUP_AGENT_TASKS.map((task): QuestionDefinition => ({
       stateId: 'agent-runtime', id: `agents.${task}.provider`, label: `${formatTask(task)} runtime`, kind: 'choice', choices: AGENT_PROVIDERS,
     })),
-    { stateId: 'agent-model-defaults', id: 'agents.findings.modelProvider', label: 'Model provider for all tasks', kind: 'choice', choices: MODEL_PROVIDERS },
-    { stateId: 'agent-model-defaults', id: 'agents.findings.model', label: 'Model name for all tasks', kind: 'text' },
-    { stateId: 'agent-model-defaults', id: 'agents.findings.effort', label: 'Reasoning effort for all tasks (empty uses provider default)', kind: 'text' },
-    { stateId: 'agent-model-defaults', id: 'agents.findings.executable', label: 'Validated executable for all tasks (empty uses the manifest basename)', kind: 'text' },
-    { stateId: 'agent-model-defaults', id: 'agents.configureIndependently', label: 'Configure model provider, model, effort, and executable independently for every task?', kind: 'boolean', read: () => false },
+    { stateId: 'agent-model-defaults', id: 'agents.findings.modelProvider', label: 'Shared model provider (unless a role has its own setting)', kind: 'choice', choices: MODEL_PROVIDERS },
+    { stateId: 'agent-model-defaults', id: 'agents.findings.model', label: 'Shared model name (unless a role has its own setting)', kind: 'text' },
+    { stateId: 'agent-model-defaults', id: 'agents.findings.effort', label: 'Shared reasoning effort (empty uses provider default; per-role overrides stay separate)', kind: 'text' },
+    { stateId: 'agent-model-defaults', id: 'agents.findings.executable', label: 'Shared validated executable (empty uses manifest basename; per-role overrides stay separate)', kind: 'text' },
+    { stateId: 'agent-model-defaults', id: 'agents.configureIndependently', label: 'Configure model provider, model, effort, and executable independently for every task?', kind: 'boolean', read: draft => hasIndependentAgentSettings(draft) },
     ...SETUP_AGENT_TASKS.filter((task) => task !== 'findings').flatMap((task) => agentOverrideQuestions(task)),
     ...repositoryQuestions(),
     ...deploymentQuestions(),
     ...bugbotQuestions(),
     ...approvalQuestions(),
-    { stateId: 'projects', id: 'projects.ids', label: 'GitHub Project IDs (comma-separated, empty skips integration)', kind: 'text' },
+    { stateId: 'projects', id: 'projects.enabled', label: 'Integrate existing GitHub Projects with issue and pull-request automation?', kind: 'boolean',
+      read: (draft, context) => context.projectsWanted ?? Boolean(draft.projects.ids.trim()),
+      applies: draft => draft.features.issues !== false || draft.features.pullRequests !== false },
+    { stateId: 'projects', id: 'projects.ids', label: 'Select existing GitHub Projects (or enter Project numbers from their URLs)', kind: 'text',
+      applies: (draft, _independent, context) => (draft.features.issues !== false || draft.features.pullRequests !== false) && context.projectsWanted !== false },
     ...['issueCreatedColumn', 'pullRequestCreatedColumn', 'issueInProgressColumn', 'pullRequestInProgressColumn'].map((field): QuestionDefinition => ({
       stateId: 'projects', id: `projects.${field}`, label: projectLabel(field), kind: 'text', applies: (config) => Boolean(config.projects.ids.trim()),
     })),
+    { stateId: 'projects', id: 'projects.statusVerified',
+      label: 'Have you checked every selected Project in GitHub and confirmed all four exact Status values?',
+      kind: 'boolean', read: () => false,
+      applies: (draft, _independently, context) => Boolean(draft.projects.ids.trim())
+        && sharedProjectStatusOptions(draft.projects.ids, context.projectDiscovery?.candidates ?? []).state === 'unavailable',
+    },
     { stateId: 'provisioning', id: 'createInitialTag', label: 'Create v1.0.0 when no version tag exists?', kind: 'boolean' },
     { stateId: 'provisioning', id: 'manageRepositoryVariables', label: 'Create/update GitHub Actions Variables?', kind: 'boolean' },
     { stateId: 'provisioning', id: 'manageRepositorySecrets', label: 'Validate and provision required GitHub Actions Secrets?', kind: 'boolean' },
     ...storageQuestions('variables'),
     ...storageQuestions('secrets'),
   ];
+}
+
+/** Stable content inventory for documentation and localization audits; never answers questions. */
+export function setupQuestionContentInventory(): readonly SetupQuestion[] {
+  return definitions().map(({ stateId, id, label, kind, choices }) => ({
+    stateId, id, label, kind, choices, defaultValue: '',
+  }));
 }
 
 function agentOverrideQuestions(task: AgentTask): QuestionDefinition[] {
@@ -299,12 +426,6 @@ function approvalQuestions(): QuestionDefinition[] {
       applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off',
     },
     {
-      stateId: 'pull-request-approval', id: 'pullRequestApproval.producerAttested',
-      label: 'Have you verified each exact check, source App ID, workflow, and coverage-enforcing CI step?',
-      kind: 'boolean',
-      applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off',
-    },
-    {
       stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.mode',
       label: 'Coverage evidence mode', kind: 'choice', choices: ['check', 'numeric'],
       applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off',
@@ -312,7 +433,7 @@ function approvalQuestions(): QuestionDefinition[] {
     {
       stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.checkName',
       label: 'Exact trusted check that enforces the coverage budget (no inferred percentage)',
-      kind: 'text',
+      kind: 'choice',
       applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off',
     },
     {
@@ -338,6 +459,12 @@ function approvalQuestions(): QuestionDefinition[] {
         && draft.pullRequestApproval.coverage.reporterAttested,
       applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off'
         && draft.pullRequestApproval.coverage.mode === 'numeric',
+    },
+    {
+      stateId: 'pull-request-approval', id: 'pullRequestApproval.producerAttested',
+      label: 'Have you verified each exact check, source App ID, workflow, and coverage-enforcing CI step?',
+      kind: 'boolean',
+      applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off',
     },
   ];
 }
@@ -369,17 +496,56 @@ function choice(field: string, label: string, choices: readonly string[]): Quest
 }
 
 function toQuestion(definition: QuestionDefinition, draft: SetupConfiguration, context: SetupQuestionnaireContext): SetupQuestion {
+  const branchScopedCandidates = context.approvalCheckCandidates?.map(candidate =>
+    candidate.requiredByRuleset?.branch !== draft.repository.developmentBranch
+      ? { ...candidate, requiredByRuleset: undefined } : candidate);
+  const producerCandidates = definition.id === 'pullRequestApproval.testChecks' ? branchScopedCandidates
+    : definition.id === 'pullRequestApproval.coverage.checkName' ? branchScopedCandidates?.filter(candidate =>
+      draft.pullRequestApproval.testChecks.some(check => check.name === candidate.name
+        && check.sourceAppId === candidate.sourceAppId && check.workflowName === candidate.workflowName)) : undefined;
+  const coverageChoices = definition.id === 'pullRequestApproval.coverage.checkName'
+    ? [...new Set(draft.pullRequestApproval.testChecks.map(check => check.name))] : undefined;
   const allowedNames = definition.kind === 'scope-overrides'
     ? inheritedNames(definition.id.includes('.variables.') ? 'variables' : 'secrets', draft, context)
     : undefined;
+  const projectQuestion = definition.id === 'projects.ids';
+  const statusQuestion = /^projects\.(issue|pullRequest)(Created|InProgress)Column$/u.test(definition.id);
+  const projectCandidates = context.projectDiscovery?.candidates ?? [];
+  const projectStatus = statusQuestion
+    ? sharedProjectStatusOptions(draft.projects.ids, projectCandidates) : undefined;
   return {
     stateId: definition.stateId,
     id: definition.id,
     label: definition.label,
-    kind: definition.kind,
-    defaultValue: definition.read?.(draft) ?? readPath(draft, definition.id, allowedNames),
-    ...(definition.choices ? { choices: definition.choices } : {}),
+    kind: definition.id === 'pullRequestApproval.testChecks' ? 'producer-select'
+      : projectQuestion ? 'project-select'
+        : statusQuestion && projectStatus?.state === 'observed' ? 'choice' : definition.kind,
+    defaultValue: definition.read?.(draft, context) ?? readPath(draft, definition.id, allowedNames),
+    ...(coverageChoices ? { choices: coverageChoices } : projectStatus?.state === 'observed'
+      ? { choices: projectStatus.options } : definition.choices ? { choices: definition.choices } : {}),
     ...(allowedNames ? { allowedNames } : {}),
+    ...(producerCandidates?.length ? { producerCandidates } : {}),
+    ...(definition.id === 'pullRequestApproval.coverage.checkName'
+      ? { trustedProducers: draft.pullRequestApproval.testChecks } : {}),
+    ...(definition.id === 'pullRequestApproval.testChecks' && context.approvalCheckDiscoveryStatus
+      ? { discoveryStatus: context.approvalCheckDiscoveryStatus, discoveryTruncated: context.approvalCheckDiscoveryTruncated,
+        discoveryRetryRemaining: context.discoveryRetryRemaining?.checks ?? 0 } : {}),
+    ...(projectQuestion ? { discoveryStatus: context.projectDiscovery?.status ?? 'unavailable',
+      discoveryTruncated: context.projectDiscovery?.truncated,
+      ...(context.projectDiscovery && context.projectDiscovery.status !== 'unsupported' && context.discoveryRetryRemaining
+        ? { discoveryRetryRemaining: context.discoveryRetryRemaining.projects } : {}),
+      projectCandidates, projectOwner: context.projectOwner } : {}),
+    ...(statusQuestion && projectStatus ? { statusOptionState: projectStatus.state } : {}),
+    ...(definition.id === 'projects.statusVerified' ? { projectStatusValues: [
+      { transition: 'issueCreated' as const, value: draft.projects.issueCreatedColumn },
+      { transition: 'pullRequestCreated' as const, value: draft.projects.pullRequestCreatedColumn },
+      { transition: 'issueInProgress' as const, value: draft.projects.issueInProgressColumn },
+      { transition: 'pullRequestInProgress' as const, value: draft.projects.pullRequestInProgressColumn },
+    ] } : {}),
+    ...(definition.id === 'repository.mainBranch' && context.branchSources
+      ? { suggestionSource: context.branchSources.main } : {}),
+    ...(definition.id === 'repository.developmentBranch' && context.branchSources
+      ? { suggestionSource: context.branchSources.development } : {}),
   };
 }
 
@@ -399,6 +565,34 @@ function readPath(
 
 function parseAnswer(question: SetupQuestion, raw: string): { value: string | number | boolean | Record<string, string> } | { error: string } {
   const input = raw.normalize('NFKC').trim();
+  if (question.id === 'projects.statusVerified') return ['y', 'yes', 'true', '1'].includes(input.toLowerCase())
+    ? { value: true } : { error: 'Open every selected Project in GitHub and confirm that all four exact Status values exist. Answer Yes after checking, or No to choose Projects again.' };
+  if (question.id === 'projects.ids') {
+    const parsed = parseSetupProjectSelection(input || String(question.defaultValue), question.projectOwner);
+    if ('error' in parsed) return parsed;
+    const status = sharedProjectStatusOptions(parsed.value, question.projectCandidates ?? []);
+    if (status.state === 'incompatible') return { error: 'Selected Projects have no common Status option. Choose compatible Projects or configure them separately.' };
+    return parsed;
+  }
+  if (question.id === 'pullRequestApproval.testChecks') {
+    const entries = (input || String(question.defaultValue)).split(';').map(item => item.trim()).filter(Boolean)
+      .flatMap(item => item.split(',').map(value => value.trim()).filter(Boolean))
+      .map(item => {
+        const index = Number(item) - 1;
+        const candidate = Number.isSafeInteger(index) && /^[1-9]\d*$/u.test(item) ? question.producerCandidates?.[index] : undefined;
+        return candidate ? `${candidate.name}|${candidate.sourceAppId}|${candidate.workflowName}` : item;
+      });
+    if (entries.length < 1 || entries.length > 8 || entries.some(entry => !/^[^|;\r\n]{1,100}\|[1-9][0-9]*\|[^|;\r\n]{1,100}$/u.test(entry))) {
+      return { error: 'Select 1–8 observed checks or enter exact name|App ID|workflow tuples.' };
+    }
+    if (new Set(entries).size !== entries.length) return { error: 'A trusted check was selected more than once.' };
+    const names = entries.map(entry => entry.split('|', 1)[0]);
+    if (new Set(names).size !== names.length) return { error: 'Two trusted producers use the same check name. Coverage stores only one name; choose one producer or rename the CI jobs before continuing.' };
+    return { value: entries.join(';') };
+  }
+  if (!input && question.statusOptionState === 'observed' && !question.choices?.includes(String(question.defaultValue))) {
+    return { error: 'The saved Status value is not available in every selected Project. Choose a listed Status option.' };
+  }
   if (!input && question.kind !== 'scope-overrides') return { value: question.defaultValue };
   if (question.kind === 'text') return { value: input };
   if (question.kind === 'number') {
@@ -438,9 +632,22 @@ function applyAnswer(
   configuration: SetupConfiguration,
   question: SetupQuestion,
   value: string | number | boolean | Record<string, string>,
+  independently: boolean,
 ): SetupConfiguration {
   const draft = cloneSetupConfiguration(configuration);
-  if (question.id === 'agents.configureIndependently') return draft;
+  if (question.id === 'agents.configureIndependently') {
+    if (!value) for (const task of SETUP_AGENT_TASKS.filter(task => task !== 'findings')) {
+      draft.agents[task] = { ...draft.agents[task], modelProvider: draft.agents.findings.modelProvider,
+        model: draft.agents.findings.model, effort: draft.agents.findings.effort,
+        executable: draft.agents.findings.executable };
+    }
+    return draft;
+  }
+  if (question.id === 'projects.enabled') {
+    if (!value) draft.projects.ids = '';
+    return draft;
+  }
+  if (question.id === 'projects.statusVerified') return draft;
   if (question.id === 'features.issues' && value === false) {
     draft.features.issues = false;
     draft.features.release = false;
@@ -488,7 +695,9 @@ function applyAnswer(
   }
   if (['agents.findings.modelProvider', 'agents.findings.model', 'agents.findings.effort', 'agents.findings.executable'].includes(question.id)) {
     const field = question.id.split('.')[2] as 'modelProvider' | 'model' | 'effort' | 'executable';
-    for (const task of SETUP_AGENT_TASKS) draft.agents[task] = { ...draft.agents[task], [field]: value as string };
+    for (const task of independently ? (['findings'] as const) : SETUP_AGENT_TASKS) {
+      draft.agents[task] = { ...draft.agents[task], [field]: value as string };
+    }
     return draft;
   }
   const parts = question.id.split('.');

@@ -14,7 +14,7 @@ describe('setup PAT permission intent', () => {
     expect(grants(configuration, 'Organization')).toEqual(expect.arrayContaining([
       'repository:Metadata:read', 'repository:Contents:write', 'repository:Secrets:write',
       'repository:Variables:write', 'repository:Issues:write', 'repository:Administration:read',
-      'organization:Secrets:write', 'organization:Issue Types:write', 'organization:Projects:write',
+      'organization:Secrets:write', 'organization:Issue Types:write', 'organization:Projects:read',
     ]));
     expect(grants(configuration, 'Organization')).not.toContain('repository:Actions:write');
     expect(grants(configuration, 'Organization')).not.toContain('repository:Workflows:write');
@@ -73,7 +73,7 @@ describe('setup PAT permission intent', () => {
       pullRequestApproval: { mode: 'off' }, projects: { ids: '' },
       storage: { secrets: { preserveExisting: false }, variables: { preserveExisting: true } },
     }, false, false)).toEqual(expect.arrayContaining([
-      'pullRequestApproval.mode', 'projects.ids',
+      'pullRequestApproval.mode', 'projects.enabled', 'projects.ids',
       'storage.secrets.preserveExisting', 'storage.variables.preserveExisting',
     ]));
   });
@@ -107,7 +107,7 @@ describe('setup PAT permission intent', () => {
     configuration.projects.ids = 'PVT_example';
 
     expect(grants(configuration, 'Organization').filter(item => item.startsWith('organization:')))
-      .toEqual(['organization:Projects:write']);
+      .toEqual(['organization:Projects:read']);
     expect(setupPatIntentNeedsOwnerKind(configuration)).toBe(true);
     expect(setupPatIntentOwnerConflict(configuration, 'User')).toBe(true);
     expect(setupPatIntentOwnerConflict(configuration, 'Organization')).toBe(false);

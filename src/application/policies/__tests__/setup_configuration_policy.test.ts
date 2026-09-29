@@ -560,7 +560,7 @@ describe('setup configuration policy', () => {
         configuration.agents.findings.provider = 'cursor';
 
         expect(buildSetupPlan(configuration).warnings).toEqual(expect.arrayContaining([
-            expect.stringContaining('Project IDs'),
+            expect.stringContaining('Selected Project numbers'),
             expect.stringContaining('Always-provision mode reinstalls only default Codex/OpenCode runtimes'),
             expect.stringContaining('no automatic Cursor installer'),
             expect.stringContaining('Organization-level'),

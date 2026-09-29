@@ -4,7 +4,8 @@ import {
   buildSetupRepositoryVariables,
   createDefaultSetupConfiguration,
 } from '../../../policies/setup_configuration_policy';
-import { createSetupReviewState } from '../../../policies/setup_questionnaire_policy';
+import { createSetupReviewState, setupQuestionContentInventory } from '../../../policies/setup_questionnaire_policy';
+import type { SetupQuestionnaireContext, SetupQuestionnaireState } from '../../../../domain/setup_questionnaire';
 
 const remote = {
   ownerType: 'Organization' as const,
@@ -31,6 +32,45 @@ function dependencies(overrides: Record<string, unknown> = {}) {
 }
 
 describe('SetupWizardUseCase', () => {
+  it('suggests an observed GitHub default branch without overriding an explicit configured branch', async () => {
+    const collect = jest.fn(async (state: SetupQuestionnaireState, _context: SetupQuestionnaireContext) => createSetupReviewState(state.draft));
+    const deps = dependencies({ collector: { collect }, remoteConfiguration: { inspect: jest.fn().mockResolvedValue({ ...remote, defaultBranch: 'main' }) } });
+    const request = { mode: 'interactive' as const, remoteTarget: { owner: 'acme', repository: 'repo', token: 'setup-token' },
+      overrides: { pullRequestApproval: { mode: 'off' as const } } };
+    await new SetupWizardUseCase(deps).execute(request);
+    expect(collect.mock.calls[0][0].question?.id).toBe('features.issues');
+    expect(collect.mock.calls[0][0].draft.repository.mainBranch).toBe('main');
+    expect(collect.mock.calls[0][1].branchSources?.main).toBe('github');
+    expect(collect.mock.calls[0][1].branchSources?.development).toBe('default');
+    collect.mockClear();
+    await new SetupWizardUseCase(deps).execute({ ...request, developmentBranchObservedLocally: true });
+    expect(collect.mock.calls[0][1].branchSources?.development).toBe('local');
+    collect.mockClear();
+    await new SetupWizardUseCase(deps).execute({ ...request, overrides: { ...request.overrides, repository: { mainBranch: 'production' } } });
+    expect(collect.mock.calls[0][0].draft.repository.mainBranch).toBe('production');
+    expect(collect.mock.calls[0][1].branchSources?.main).toBe('configuration');
+  });
+  it('re-enters a chosen plan section, retains other answers and rebuilds the plan before approval', async () => {
+    let pass = 0;
+    const collect = jest.fn(async (state, _context) => {
+      pass += 1;
+      return pass === 1
+        ? { ...createSetupReviewState(state.draft), answeredQuestionIds: setupQuestionContentInventory().map(item => item.id) }
+        : createSetupReviewState({ ...state.draft, repository: { ...state.draft.repository, mainBranch: 'main' } });
+    });
+    const confirmation = { confirm: jest.fn().mockResolvedValueOnce({ kind: 'revise', group: 'repository' })
+      .mockResolvedValueOnce({ kind: 'approved' }) };
+    const deps = dependencies({ collector: { collect }, confirmation });
+    const result = await new SetupWizardUseCase(deps).execute({ mode: 'interactive',
+      overrides: { pullRequestApproval: { mode: 'off' } } });
+    expect(result.status).toBe('completed');
+    if (result.status === 'completed') expect(result.configuration.repository.mainBranch).toBe('main');
+    expect(collect).toHaveBeenCalledTimes(2);
+    expect(collect.mock.calls[1][0].question?.id).toBe('repository.mainBranch');
+    expect(collect.mock.calls[1][1].skipQuestionIds).toContain('features.issues');
+    expect(confirmation.confirm).toHaveBeenCalledTimes(2);
+    expect(deps.planPresenter.present).toHaveBeenCalledTimes(2);
+  });
   it('starts the main questionnaire from reviewed permission intent and skips its answered questions', async () => {
     const draft = buildInitialSetupConfiguration({ mode: 'interactive', overrides: { pullRequestApproval: { mode: 'off' } } });
     draft.createInitialTag = false;
@@ -47,6 +87,19 @@ describe('SetupWizardUseCase', () => {
     }
     expect(collect.mock.calls[0][0].question?.id).not.toBe('features.issues');
     expect(collect.mock.calls[0][1].skipQuestionIds).toEqual(['createInitialTag', 'manageRepositorySecrets', 'features.issues']);
+  });
+
+  it('lets interactive setup repair legacy duplicate check names before final validation', async () => {
+    const producer = { name: 'Tests', sourceAppId: 12, workflowName: 'CI' };
+    const collect = jest.fn(async state => createSetupReviewState({ ...state.draft,
+      pullRequestApproval: { ...state.draft.pullRequestApproval, testChecks: [producer] },
+    }));
+    const result = await new SetupWizardUseCase(dependencies({ collector: { collect } })).execute({
+      mode: 'interactive', overrides: { pullRequestApproval: { mode: 'recommend', coverage: { mode: 'check', checkName: 'Tests' },
+        testChecks: [producer, { name: 'Tests', sourceAppId: 13, workflowName: 'Other CI' }] } },
+    });
+    expect(collect).toHaveBeenCalledTimes(1);
+    expect(result.status).toBe('completed');
   });
 
   it('requires an explicit exact CI producer in non-interactive guarded setup', async () => {
@@ -194,7 +247,66 @@ describe('SetupWizardUseCase', () => {
       remote,
       variableNames: buildSetupRepositoryVariables(createDefaultSetupConfiguration()).map((item) => item.name),
       secretNames: buildSetupCredentialRequirements(createDefaultSetupConfiguration()).map((item) => item.name),
-    }));
+    }), expect.objectContaining({ refresh: expect.any(Function) }));
+  });
+
+  it('discovers Projects with the entered setup PAT only after intent and passes the inventory to the questionnaire', async () => {
+    const events: string[] = [];
+    const draft = buildInitialSetupConfiguration({ mode: 'interactive', overrides: { pullRequestApproval: { mode: 'off' } } });
+    const inspect = jest.fn(async () => { events.push('inspect'); return remote; });
+    const discover = jest.fn(async () => {
+      events.push('projects');
+      return { status: 'observed' as const, candidates: [{ number: 12, title: 'Roadmap', owner: 'owner',
+        url: 'https://github.com/orgs/owner/projects/12', statusOptions: ['Todo', 'In Progress'] }] };
+    });
+    const collect = jest.fn(async (state) => { events.push('collect'); return createSetupReviewState(state.draft); });
+    await new SetupWizardUseCase(dependencies({
+      collector: { collect }, remoteConfiguration: { inspect }, projectDiscovery: { discover },
+    })).execute({ mode: 'interactive', overrides: { pullRequestApproval: { mode: 'off' } },
+      permissionIntent: { draft, answeredQuestionIds: ['projects.enabled'], projectsWanted: true },
+      remoteTarget: { owner: 'owner', repository: 'repo', token: 'setup-token' } });
+    expect(events).toEqual(['inspect', 'projects', 'collect']);
+    expect(discover).toHaveBeenCalledWith('owner', 'Organization', 'setup-token');
+    expect(collect).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      projectsWanted: true, projectDiscovery: expect.objectContaining({ status: 'observed' }),
+    }), expect.objectContaining({ refresh: expect.any(Function) }));
+  });
+
+  it('discovers Projects when the operator enables them while revising a plan that originally skipped them', async () => {
+    const draft = buildInitialSetupConfiguration({ mode: 'interactive', overrides: { pullRequestApproval: { mode: 'off' } } });
+    const discover = jest.fn().mockResolvedValue({ status: 'empty', candidates: [] });
+    const collect = jest.fn(async state => createSetupReviewState(state.draft));
+    await new SetupWizardUseCase(dependencies({ collector: { collect },
+      remoteConfiguration: { inspect: jest.fn().mockResolvedValue(remote) },
+      projectDiscovery: { discover } })).execute({ mode: 'interactive', overrides: { pullRequestApproval: { mode: 'off' } },
+      permissionIntent: { draft, answeredQuestionIds: ['projects.enabled'], projectsWanted: false },
+      revision: { group: 'projects', answeredQuestionIds: ['projects.enabled'] },
+      remoteTarget: { owner: 'owner', repository: 'repo', token: 'setup-token' } });
+    expect(discover).toHaveBeenCalledWith('owner', 'Organization', 'setup-token');
+    expect(collect).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      projectsWanted: true, projectDiscovery: expect.objectContaining({ status: 'empty' }),
+    }), expect.anything());
+  });
+
+  it('bounds explicit Project discovery retries and never requests another PAT', async () => {
+    const draft = buildInitialSetupConfiguration({ mode: 'interactive', overrides: { pullRequestApproval: { mode: 'off' } } });
+    const discover = jest.fn().mockResolvedValueOnce({ status: 'unavailable', candidates: [] })
+      .mockResolvedValueOnce({ status: 'observed', candidates: [{ number: 4, owner: 'owner', title: 'Roadmap',
+        url: 'https://github.com/orgs/owner/projects/4', statusOptions: ['Todo', 'In Progress'] }] })
+      .mockResolvedValueOnce({ status: 'empty', candidates: [] });
+    const collect = jest.fn(async (state, context, refresh) => {
+      expect(context.discoveryRetryRemaining.projects).toBe(2);
+      expect((await refresh.refresh('projects'))?.projectDiscovery?.status).toBe('observed');
+      expect((await refresh.refresh('projects'))?.projectDiscovery?.status).toBe('empty');
+      expect(await refresh.refresh('projects')).toBeUndefined();
+      return createSetupReviewState(state.draft);
+    });
+    await new SetupWizardUseCase(dependencies({ collector: { collect }, remoteConfiguration: { inspect: jest.fn().mockResolvedValue(remote) },
+      projectDiscovery: { discover } })).execute({ mode: 'interactive', overrides: { pullRequestApproval: { mode: 'off' } },
+      permissionIntent: { draft, answeredQuestionIds: ['projects.enabled'], projectsWanted: true },
+      remoteTarget: { owner: 'owner', repository: 'repo', token: 'setup-token' } });
+    expect(discover).toHaveBeenCalledTimes(3);
+    expect(discover).toHaveBeenNthCalledWith(3, 'owner', 'Organization', 'setup-token');
   });
 
   it('adds live merge-queue readiness to the setup plan', async () => {
@@ -380,7 +492,7 @@ describe('SetupWizardUseCase', () => {
     });
     expect(collect).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       remote: expect.objectContaining({ repositoryVariablesAccess: 'unavailable' }),
-    }));
+    }), expect.objectContaining({ refresh: expect.any(Function) }));
     expect(deps.finalPermissionAudit.audit).toHaveBeenCalledTimes(1);
     expect(deps.planPresenter.present).not.toHaveBeenCalled();
     expect(deps.confirmation.confirm).not.toHaveBeenCalled();

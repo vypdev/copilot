@@ -221,6 +221,25 @@ describe('local web setup server', () => {
     expect(await (await fetch(`${server.url}api/state`)).text()).not.toContain('ghp_private');
   });
 
+  test('allows only the paired controller to explicitly retry the current discovery revision', async () => {
+    const boot = await (await fetch(`${server.url}api/bootstrap`)).json() as { capability: string };
+    const commit = jest.fn();
+    const pending = bridge.ask({ kind: 'text', title: 'Checks' }, async () => ({
+      prompt: { kind: 'text', title: 'Checks refreshed' }, commit,
+    }));
+    const revision = bridge.snapshot().promptRevision!;
+    expect((await jsonPost(server.url, 'api/retry-discovery', { revision }, { 'X-Setup-Capability': 'wrong' })).status).toBe(403);
+    expect((await jsonPost(server.url, 'api/retry-discovery', { revision: 'bad' }, { 'X-Setup-Capability': boot.capability })).status).toBe(400);
+    expect((await jsonPost(server.url, 'api/retry-discovery', { revision: revision + 1 }, { 'X-Setup-Capability': boot.capability })).status).toBe(409);
+    const response = await jsonPost(server.url, 'api/retry-discovery', { revision }, { 'X-Setup-Capability': boot.capability });
+    expect(response.status).toBe(200);
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect(bridge.snapshot().promptRevision).toBe(revision);
+    expect(bridge.snapshot().prompt?.title).toBe('Checks refreshed');
+    expect((await jsonPost(server.url, 'api/answer', { revision, value: 'selected' }, { 'X-Setup-Capability': boot.capability })).status).toBe(200);
+    expect(await pending).toBe('selected');
+  });
+
   test('rejects oversized answers, wrong method, and unsupported content type', async () => {
     const boot = await (await fetch(`${server.url}api/bootstrap`)).json() as { capability: string };
     const pending = bridge.ask({ kind: 'text', title: 'Answer' });
@@ -286,6 +305,22 @@ describe('local web setup server', () => {
     expect((await jsonPost(server.url, 'api/close', {}, { 'X-Setup-Capability': 'wrong' })).status).toBe(403);
     expect((await jsonPost(server.url, 'api/close', {}, { 'X-Setup-Capability': capability })).status).toBe(200);
     await server.closed;
+  });
+
+  test('post-success read-only verification requires the controller and returns only redacted counts', async () => {
+    const { capability } = await (await fetch(`${server.url}api/bootstrap`)).json() as { capability: string };
+    const run = jest.fn().mockResolvedValue({ healthy: false, pass: 4, warn: 1, fail: 0, skipped: 2,
+      secret: 'must-not-appear' });
+    bridge.configureReadOnlyDoctor(run);
+    expect((await jsonPost(server.url, 'api/doctor', {}, { 'X-Setup-Capability': capability })).status).toBe(409);
+    bridge.finish('complete', 'done');
+    expect((await jsonPost(server.url, 'api/doctor', {}, { 'X-Setup-Capability': 'wrong' })).status).toBe(403);
+    expect((await jsonPost(server.url, 'api/doctor', {}, { 'X-Setup-Capability': capability })).status).toBe(200);
+    const state = await (await fetch(`${server.url}api/state`)).text();
+    expect(state).toContain('"warn":1');
+    expect(state).not.toContain('must-not-appear');
+    expect((await jsonPost(server.url, 'api/doctor', {}, { 'X-Setup-Capability': capability })).status).toBe(200);
+    expect(run).toHaveBeenCalledTimes(1);
   });
 
   test.each([
@@ -362,6 +397,7 @@ describe('local web setup server', () => {
     expect((await wrongType('api/cancel')).status).toBe(415);
     bridge.finish('complete', 'done');
     expect((await wrongType('api/close')).status).toBe(415);
+    expect((await wrongType('api/doctor')).status).toBe(415);
   });
 
   test('mutating requests without a controller capability do nothing', async () => {
@@ -370,6 +406,7 @@ describe('local web setup server', () => {
     const revision = bridge.snapshot().promptRevision;
     expect((await jsonPost(server.url, 'api/answer', { revision, value: 'ignored' })).status).toBe(403);
     expect((await jsonPost(server.url, 'api/cancel', {})).status).toBe(403);
+    expect((await jsonPost(server.url, 'api/doctor', {})).status).toBe(403);
     expect((await jsonPost(server.url, 'api/takeover', { code: 42 })).status).toBe(403);
     expect((await fetch(`${server.url}api/answer`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ revision, value: 'ignored' }) })).status).toBe(403);
     expect(origin).toContain('127.0.0.1');

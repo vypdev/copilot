@@ -4,6 +4,11 @@ import {
   createSetupQuestionnaire,
   createSetupPermissionIntentQuestionnaire,
   createSetupReviewState,
+  refreshSetupQuestionnaireQuestion,
+  reopenSetupQuestionnaireGroup,
+  setupBasicSkippedQuestionIds,
+  setupEditableGroups,
+  setupQuestionnaireProgress,
   enterSetupConfirmation,
   finishSetupQuestionnaire,
   setupQuestionnaireStateLabel,
@@ -12,6 +17,63 @@ import {
 import type { SetupQuestionnaireContext, SetupQuestionnaireState } from '../../../domain/setup_questionnaire';
 
 describe('setup questionnaire policy', () => {
+  it('basic presentation omits only advanced defaults, never security or mutation choices', () => {
+    const skipped = setupBasicSkippedQuestionIds();
+    expect(skipped).toContain('agents.findings.executable');
+    expect(skipped).toContain('ai.bugbotCommentLimit');
+    expect(skipped.length).toBeGreaterThan(20);
+    for (const required of ['features.issues', 'features.pullRequests', 'projects.enabled', 'projects.ids',
+      'repository.mainBranch', 'repository.developmentBranch', 'pullRequestApproval.mode',
+      'ai.membersOnly', 'ai.bugbotTelemetry', 'ai.bugbotDryRun', 'createInitialTag',
+      'manageRepositoryVariables', 'manageRepositorySecrets', 'storage.secrets.defaultScope',
+      'storage.variables.defaultScope']) expect(skipped).not.toContain(required);
+    const configured = createDefaultSetupConfiguration();
+    configured.ai.bugbotCommentLimit = 12;
+    expect(setupBasicSkippedQuestionIds(configured)).not.toContain('ai.bugbotCommentLimit');
+  });
+  it('reports truthful conditional progress and returns to a saved answer without resetting later values', () => {
+    const first = createSetupQuestionnaire(createDefaultSetupConfiguration());
+    expect(setupQuestionnaireProgress(first, {})).toMatchObject({ position: 1, groupPosition: 1, group: 'capabilities' });
+    const second = transitionSetupQuestionnaire(first, { kind: 'answer', value: 'no' });
+    expect(second.question?.id).toBe('features.pullRequests');
+    expect(setupQuestionnaireProgress(second, {})?.position).toBe(2);
+    const back = transitionSetupQuestionnaire(second, { kind: 'back' });
+    expect(back.question?.id).toBe(first.question?.id);
+    expect(back.question?.defaultValue).toBe(false);
+    expect(back.draft.features.issues).toBe(false);
+    expect(transitionSetupQuestionnaire(back, { kind: 'answer', value: 'yes' }).draft.features.issues).toBe(true);
+    expect(transitionSetupQuestionnaire(first, { kind: 'back' }).validation).toContain('first question');
+  });
+
+  it('does not restart when answering a question makes that question disappear', () => {
+    const initial = createDefaultSetupConfiguration();
+    initial.projects.ids = '12';
+    const context = { projectsWanted: true };
+    const question = advanceTo(createSetupQuestionnaire(initial, context), 'projects.ids', context);
+    const next = transitionSetupQuestionnaire(question, { kind: 'answer', value: 'none' }, context);
+    expect(next.question?.id).not.toBe('features.issues');
+    expect(next.stateId).not.toBe('capabilities');
+  });
+
+  it('offers plan correction groups and reopens an existing review without clearing its draft', () => {
+    const draft = createDefaultSetupConfiguration();
+    expect(setupEditableGroups(draft)).toContain('repository');
+    expect(setupEditableGroups(draft)).toContain('projects');
+    const review = createSetupReviewState(draft);
+    const reopened = reopenSetupQuestionnaireGroup(review, 'repository', {});
+    expect(reopened).toMatchObject({ terminal: 'collecting', stateId: 'repository', draft });
+    expect(reopened?.question?.id).toBe('repository.mainBranch');
+    expect(reopenSetupQuestionnaireGroup(review, 'agent-role-overrides', {})).toBeUndefined();
+  });
+  it('preserves independent agent overrides on revisit and normalizes them only when explicitly disabled', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.agents.planner.model = 'different-model';
+    expect(setupEditableGroups(configuration)).toContain('agent-role-overrides');
+    const question = advanceTo(createSetupQuestionnaire(configuration), 'agents.configureIndependently');
+    expect(question.question?.defaultValue).toBe(true);
+    const disabled = transitionSetupQuestionnaire(question, { kind: 'answer', value: 'no' });
+    expect(disabled.draft.agents.planner.model).toBe(disabled.draft.agents.findings.model);
+  });
   it('collects only permission-driving questions and reuses their answers in the full wizard', () => {
     const defaults = createDefaultSetupConfiguration();
     const intentContext = { skipQuestionIds: ['createInitialTag', 'manageRepositorySecrets'] };
@@ -65,7 +127,7 @@ describe('setup questionnaire policy', () => {
   it('enters review immediately when the permission-intent phase has no open questions', () => {
     const ids = [
       'features.issues', 'features.pullRequests', 'issueWorkflows.enabled', 'pullRequestApproval.mode',
-      'projects.ids', 'createInitialTag', 'manageRepositoryVariables', 'manageRepositorySecrets',
+      'projects.enabled', 'createInitialTag', 'manageRepositoryVariables', 'manageRepositorySecrets',
       'storage.variables.defaultScope', 'storage.variables.preserveExisting',
       'storage.secrets.defaultScope', 'storage.secrets.preserveExisting',
     ];
@@ -125,6 +187,140 @@ describe('setup questionnaire policy', () => {
     expect(state.question?.defaultValue).toBe(false);
     state = transitionSetupQuestionnaire(state, { kind: 'answer', value: 'yes' });
     expect(state.draft.pullRequestApproval.producerAttested).toBe(true);
+  });
+
+  it('asks producer attestation only after the exact coverage check has been selected', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'recommend',
+      testChecks: [{ name: 'Tests', sourceAppId: 12, workflowName: 'CI' }] };
+    const check = advanceTo(createSetupQuestionnaire(configuration), 'pullRequestApproval.coverage.checkName');
+    expect(check.question?.choices).toEqual(['Tests']);
+    const next = transitionSetupQuestionnaire(check, { kind: 'answer', value: 'Tests' });
+    expect(next.question?.id).toBe('pullRequestApproval.producerAttested');
+  });
+
+  it('offers observed CI producers without treating a green check as attestation', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'recommend' };
+    const candidate = { name: 'Tests', sourceAppId: 12, workflowName: 'CI',
+      runUrl: 'https://github.com/acme/project/actions/runs/42', headSha: 'a'.repeat(40), conclusion: 'success' };
+    const context: SetupQuestionnaireContext = { approvalCheckCandidates: [candidate] };
+    const first = advanceTo(createSetupQuestionnaire(configuration, context), 'pullRequestApproval.testChecks', context);
+    expect(first.question).toMatchObject({ kind: 'producer-select', producerCandidates: [candidate] });
+    const invalid = transitionSetupQuestionnaire(first, { kind: 'answer', value: '' }, context);
+    expect(invalid.validation).toContain('Select 1–8 observed checks');
+    const selected = transitionSetupQuestionnaire(first, { kind: 'answer', value: 'Tests|12|CI' }, context);
+    expect(selected.draft.pullRequestApproval.testChecks).toEqual([{ name: 'Tests', sourceAppId: 12, workflowName: 'CI' }]);
+    expect(selected.draft.pullRequestApproval.producerAttested).toBe(false);
+    const coverage = advanceTo(selected, 'pullRequestApproval.coverage.checkName', context);
+    expect(coverage.question?.choices).toEqual(['Tests']);
+    expect(coverage.question?.producerCandidates).toEqual([candidate]);
+  });
+
+  it('rejects ambiguous trusted check names and preserves previous answers on discovery refresh', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'recommend' };
+    const context: SetupQuestionnaireContext = { approvalCheckDiscoveryStatus: 'unavailable',
+      discoveryRetryRemaining: { checks: 2, projects: 0 }, approvalCheckCandidates: [] };
+    const state = advanceTo(createSetupQuestionnaire(configuration, context), 'pullRequestApproval.testChecks', context);
+    const refreshed = refreshSetupQuestionnaireQuestion(state, { ...context, approvalCheckDiscoveryStatus: 'observed',
+      discoveryRetryRemaining: { checks: 1, projects: 0 }, approvalCheckCandidates: [{ name: 'Tests', sourceAppId: 12,
+        workflowName: 'CI', runUrl: 'https://github.com/acme/repo/actions/runs/5', headSha: 'a'.repeat(40), conclusion: 'success' }] });
+    expect(refreshed.question).toMatchObject({ id: state.question?.id, discoveryStatus: 'observed', discoveryRetryRemaining: 1 });
+    expect(refreshed.answeredQuestionIds).toEqual(state.answeredQuestionIds);
+    expect(refreshed.draft).toEqual(state.draft);
+    expect(transitionSetupQuestionnaire(refreshed, { kind: 'answer', value: 'Tests|12|CI;Tests|13|Other' }).validation)
+      .toContain('same check name');
+  });
+
+  it('does not label a required ruleset check as verified after the target development branch changes', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'recommend' };
+    configuration.repository.developmentBranch = 'release';
+    const context: SetupQuestionnaireContext = { approvalCheckCandidates: [{ name: 'Tests', sourceAppId: 12,
+      workflowName: 'CI', runUrl: 'https://github.com/acme/repo/actions/runs/5', headSha: 'a'.repeat(40), conclusion: 'success',
+      requiredByRuleset: { branch: 'develop', sourceUrl: 'https://github.com/acme/repo/rules/3' } }] };
+    const state = advanceTo(createSetupQuestionnaire(configuration, context), 'pullRequestApproval.testChecks', context);
+    expect(state.question?.producerCandidates?.[0].requiredByRuleset).toBeUndefined();
+    configuration.repository.developmentBranch = 'develop';
+    const matched = advanceTo(createSetupQuestionnaire(configuration, context), 'pullRequestApproval.testChecks', context);
+    expect(matched.question?.producerCandidates?.[0].requiredByRuleset?.branch).toBe('develop');
+  });
+
+  it('keeps manual check entry when discovery found no trusted producer', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'recommend' };
+    const state = advanceTo(createSetupQuestionnaire(configuration, { approvalCheckCandidates: [] }),
+      'pullRequestApproval.testChecks', { approvalCheckCandidates: [] });
+    expect(state.question?.kind).toBe('producer-select');
+    expect(transitionSetupQuestionnaire(state, { kind: 'answer', value: 'Tests|x|CI' }).validation).toContain('Select 1–8');
+  });
+
+  it('asks only Project intent before PAT and selects concrete Projects afterwards', () => {
+    const defaults = createDefaultSetupConfiguration();
+    const intent = advanceTo(createSetupPermissionIntentQuestionnaire(defaults), 'projects.enabled');
+    expect(intent.question?.kind).toBe('boolean');
+    const wanted = transitionSetupQuestionnaire(intent, { kind: 'answer', value: 'yes' });
+    expect(wanted.projectsWanted).toBe(true);
+    expect(wanted.draft.projects.ids).toBe('');
+    const context: SetupQuestionnaireContext = { projectsWanted: true, projectOwner: 'acme', projectDiscovery: {
+      status: 'observed', candidates: [
+        { number: 2, title: 'First', owner: 'acme', url: 'https://github.com/orgs/acme/projects/2', statusOptions: ['Todo', 'In Progress'] },
+        { number: 3, title: 'Second', owner: 'acme', url: 'https://github.com/orgs/acme/projects/3', statusOptions: ['In Progress'] },
+      ],
+    } };
+    const select = advanceTo(createSetupQuestionnaire(wanted.draft, context), 'projects.ids', context);
+    expect(select.question).toMatchObject({ kind: 'project-select', discoveryStatus: 'observed' });
+    const selected = transitionSetupQuestionnaire(select, { kind: 'answer', value: '2,3' }, context);
+    expect(selected.draft.projects.ids).toBe('2,3');
+    expect(selected.question).toMatchObject({ id: 'projects.issueCreatedColumn', kind: 'choice', choices: ['In Progress'] });
+    expect(transitionSetupQuestionnaire(selected, { kind: 'answer', value: '' }, context).validation)
+      .toContain('saved Status value');
+  });
+
+  it('rejects incompatible Projects and GraphQL IDs before leaving the question', () => {
+    const context: SetupQuestionnaireContext = { projectOwner: 'acme', projectDiscovery: { status: 'observed', candidates: [
+      { number: 2, title: 'First', owner: 'acme', url: 'https://github.com/orgs/acme/projects/2', statusOptions: ['Todo'] },
+      { number: 3, title: 'Second', owner: 'acme', url: 'https://github.com/orgs/acme/projects/3', statusOptions: ['Done'] },
+    ] } };
+    const state = advanceTo(createSetupQuestionnaire(createDefaultSetupConfiguration(), context), 'projects.ids', context);
+    expect(transitionSetupQuestionnaire(state, { kind: 'answer', value: '2,3' }, context).validation)
+      .toContain('no common Status option');
+    expect(transitionSetupQuestionnaire(state, { kind: 'answer', value: 'PVT_fake' }, context).validation)
+      .toContain('positive Project number');
+  });
+
+  it('does not offer a futile Project retry when the personal-owner listing is unsupported', () => {
+    const context: SetupQuestionnaireContext = { projectOwner: 'someone', projectDiscovery: {
+      status: 'unsupported', candidates: [],
+    }, discoveryRetryRemaining: { checks: 0, projects: 0 } };
+    const selection = advanceTo(createSetupQuestionnaire(createDefaultSetupConfiguration(), context), 'projects.ids', context);
+    expect(selection.question?.discoveryStatus).toBe('unsupported');
+    expect(selection.question?.discoveryRetryRemaining).toBeUndefined();
+  });
+
+  it('requires an explicit human check of all four Status values when Project fields were not observed', () => {
+    const context: SetupQuestionnaireContext = { projectOwner: 'acme', projectDiscovery: {
+      status: 'unsupported', candidates: [],
+    } };
+    const selection = advanceTo(createSetupQuestionnaire(createDefaultSetupConfiguration(), context), 'projects.ids', context);
+    const selected = transitionSetupQuestionnaire(selection, { kind: 'answer', value: '5' }, context);
+    const attestation = advanceTo(selected, 'projects.statusVerified', context);
+    expect(attestation.question?.projectStatusValues).toEqual([
+      { transition: 'issueCreated', value: 'Todo' },
+      { transition: 'pullRequestCreated', value: 'In Progress' },
+      { transition: 'issueInProgress', value: 'In Progress' },
+      { transition: 'pullRequestInProgress', value: 'In Progress' },
+    ]);
+    const retry = transitionSetupQuestionnaire(attestation, { kind: 'answer', value: 'no' }, context);
+    expect(retry.question?.id).toBe('projects.ids');
+    expect(retry.validation).toContain('not confirmed');
+    expect(retry.draft).toEqual(attestation.draft);
+    expect(retry.answeredQuestionIds).not.toContain('projects.statusVerified');
+    expect(transitionSetupQuestionnaire(attestation, { kind: 'answer', value: '' }, context).validation)
+      .toContain('Open every selected Project');
+    expect(transitionSetupQuestionnaire(attestation, { kind: 'answer', value: 'yes' }, context).question?.id)
+      .toBe('createInitialTag');
   });
 
   it('asks for numeric threshold, artifact workflow, and reporter attestation only in numeric mode', () => {
@@ -315,9 +511,9 @@ function advanceTo(
   let state = initial;
   for (let attempts = 0; attempts < 200 && state.terminal === 'collecting'; attempts += 1) {
     if (state.question?.id === questionId) return state;
-    state = transitionSetupQuestionnaire(state, { kind: 'answer', value: '' }, context);
+    state = transitionSetupQuestionnaire(state, { kind: 'answer', value: state.question?.id === 'pullRequestApproval.testChecks' ? 'Tests|12|CI' : '' }, context);
   }
-  throw new Error(`Question ${questionId} was not reached.`);
+  throw new Error(`Question ${questionId} was not reached; stopped at ${state.question?.id}: ${state.validation ?? 'no validation error'}.`);
 }
 
 function deepFreeze<T>(value: T): T {

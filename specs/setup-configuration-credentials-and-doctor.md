@@ -6,7 +6,7 @@
 - Catalog capability ID: `setup-and-doctor`
 - Last verified: 2026-09-28 (automated journey/presentation gates; live GitHub path remains external)
 - Owners: Copilot maintainers
-- Scope: interactive/non-interactive installation planning, file and resource provisioning, credential validation, and read-only diagnosis
+- Scope: interactive/non-interactive installation planning, file and resource provisioning, credential validation, and metadata-only diagnosis
 - Related issues/PRs: merge-queue readiness SDD; architecture quality and
   scalability hardening SDD
 - Required review gates: product UX, architecture, testing, documentation, security/operations
@@ -17,7 +17,10 @@
 `copilot setup` builds and previews a validated installation plan before writing
 workflows, templates, Variables, Secrets, labels, issue types, projects, or the
 initial tag. `copilot doctor` inspects the expected contract without changing
-repository configuration. The setup PAT is separate from the workflow PAT and
+repository configuration, but its normal credential check may dispatch an
+installed GitHub Action. `copilot doctor --read-only` skips that dispatch,
+reports Secret values as unverified, and performs only read operations. The
+setup PAT is separate from the workflow PAT and
 provider credentials; secret values never enter config files or plan objects.
 
 ```text
@@ -127,7 +130,7 @@ organization value that GitHub Actions will expose.
 | Credentials | one ambiguous token | setup/workflow/provider separation | least privilege |
 | Remote state | overwrite assumptions | inspect + preserve/replace decision | controlled drift |
 | Readiness | discovered during release | setup and doctor checks | earlier action |
-| Diagnosis | mutation required | read-only doctor | safe audit |
+| Diagnosis | mutation required | explicit metadata-only `doctor --read-only`; ordinary doctor may dispatch the installed health Action | safe inspection or separately authorized active check |
 
 The architecture hardening preserves the product contract while making
 cancellation, skipped diagnosis, ordering, and read-only authority explicit.
@@ -359,7 +362,7 @@ arbitrary warning text into the pure plan builder.
 | unverifiable credential | feature may be unsafe | name/scope only | yes | run health/manual check | none |
 | denied changed file | file unchanged | backup status | yes | approve/adapt | remove unused backup manually |
 | partial GitHub writes | subset installed | resource names/status | yes | rerun preserve-existing | no destructive rollback |
-| doctor fail | no mutation | diagnostic report | yes | run setup/fix access | none |
+| read-only doctor fail | no mutation or Action dispatch | diagnostic report | yes | fix access and rerun | none |
 
 ## 11. Security, permissions, and privacy
 
@@ -430,7 +433,10 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
    attempt, local and GitHub state are unchanged. With such an attempt, setup
    reports a partial result and requires branch/history inspection.
 6. Given a changed managed file, setup backs up before approved replacement.
-7. Given doctor, no mutation port is called and unhealthy state returns non-zero.
+7. Given `doctor --read-only`, no mutation or credential-health dispatch port
+   is called; installed Secret names are inspected but values are unverified,
+   and unhealthy state returns non-zero. Given ordinary doctor, any installed
+   credential-health dispatch is an explicit, separately chosen active check.
 8. Given merge-queue without proven support, setup/doctor reports fail closed.
 9. Given output inspection, no secret value appears.
 10. Given no explicit locale, doctor renders one complete English report.
@@ -488,7 +494,8 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 
 - [x] Every new option has default, bounds, precedence, persistence, retirement/rejection, and security rules.
 - [x] The 112-case budget and coverage thresholds pass.
-- [x] Setup cancel/retry/partial state and doctor read-only behavior pass.
+- [x] Setup cancel/retry/partial state and metadata-only `doctor --read-only`
+      behavior pass; ordinary doctor dispatch is disclosed separately.
 - [x] Secrets are absent from plans, config, logs, errors, and backups.
 - [x] Workflow/assets, documentation, and catalog checks pass.
 - [ ] Human terminal and permission-path UX evidence is captured.

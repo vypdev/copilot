@@ -3,7 +3,7 @@
 - Status: Implementation in progress — target contract, not yet release acceptance
 - Date: 2026-09-28
 - Catalog capability ID: `local-web-setup-assistant`
-- Last verified: 2026-09-28 (source/build tests; no live GitHub setup or dogfooding)
+- Last verified: 2026-09-29 (source/build tests and screenshot review; no live GitHub setup or dogfooding)
 - Owners: Copilot maintainers; product, security, and accessibility reviewers
 - Scope: optional, local Svelte-based presentation of the existing repository setup journey, sharing its policy, credential, and application engine with the terminal
 - Related issues/PRs: [PR #402](https://github.com/vypdev/copilot/pull/402) carries this implementation alongside the earlier guided PAT work; no test issue or Action is created
@@ -641,14 +641,483 @@ architecture guide documents these boundaries for future steps.
   visible external-destination warning. `Referrer-Policy: no-referrer` protects
   the local origin when a GitHub link opens. A copyable link may be shown
   when browser pop-ups are blocked; it contains no session or PAT value.
-- English is the initial setup locale, matching the terminal; Spanish is
-  added only with a reviewed complete catalog, not ad hoc strings. Unknown
-  locale falls back atomically to English. Account/repo names and remote
-  messages are escaped as text, never injected as HTML or Markdown.
+- English is the initial setup locale, matching the terminal. A visible
+  language selector offers four complete catalogs: English (`en`), Spanish
+  (`es`), French (`fr`), and Portuguese (`pt`). These languages are chosen for
+  direct maintainer translation; the earlier ten-language preview is retired
+  rather than advertised as complete. A locale MUST NOT appear until its
+  complete catalog and reviewed safety copy pass the release gate.
+  It changes explanatory UI text immediately without restarting setup,
+  changing repository/issue locale, modifying answers, or replaying an Apply.
+  Unsupported locale falls back atomically to English. Account/repo names
+  and remote messages are escaped as text, never injected as HTML or Markdown.
 - No issue/PR/check/comment is added by the web surface, so notification
   budget is zero. Progress updates in the page are coalesced and do not
   repeatedly steal focus or announce the same state. GitHub-side account
   switching and 2FA are explained, not reproduced in the local UI.
+
+### 9.3 First-time comprehension and progressive disclosure
+
+Every active question MUST explain, in the selected language: what this
+controls, when it applies, why the suggested answer is safe, a concrete
+example, what changes if selected, and how to inspect the result. The primary
+card uses one plain-language sentence and one recommendation; a reusable
+details panel holds deeper examples, security implications, and a documentation
+link. The semantic question ID is the stable key. Explanatory copy is owned by
+one reviewed application presentation catalog and projected into both terminal
+and web views; the browser MUST NOT own an independent copy of setup rules.
+Conditional visibility and validation stay in the existing questionnaire.
+Question IDs absent from a locale catalog fail the catalog completeness test.
+
+The same completeness rule applies to the English-only interactive CLI. Each
+CLI question shows its meaning, recommended answer and a descriptive reference
+link before accepting input; entering `?` opens its full `what / when / where /
+how / why / example / effect / verify` explanation and returns to the **same**
+unanswered question without changing the draft. The web shows the same semantic
+help in the selected one of four languages, with those headings in progressive
+disclosure and a contextual link beside the question. A link may point to a
+relevant Copilot configuration guide or official GitHub documentation, not an
+unrelated generic home page. The PAT/setup/bot/plan/Apply/blocked stages,
+credential prompts, conditional permission rows, dynamic choices, validation,
+and cleanup receive the same treatment. First-time comprehension is not
+declared complete while any first-party prompt falls back to English in a
+non-English web locale.
+
+The four-language release gate is all-or-nothing for each selectable locale.
+It covers every questionnaire ID and every displayed field (`label`, `summary`,
+`when`, `where`, `how`, `why`, `example`, `effect`, `verify`), selectable option
+labels, permission name/reason/condition/status, credential and confirmation
+prompts, plan warnings, progress and validation notices, and every terminal
+outcome. Stable wire values, GitHub-owned content, commands, product names,
+user-entered text and repository identifiers are not translated. A static
+catalog/key audit MUST reject a missing or unchanged English first-party
+sentence; render tests MUST traverse representative normal, conditional,
+blocked and partial paths in every locale. A persistent "translation preview"
+notice is a development warning only and MUST disappear only when these gates
+pass. A separate semantic review of safety-critical PAT, Apply and cleanup copy
+in each advertised language remains a release gate in addition to machine
+checks; direct translation is not its own independent review.
+
+Translation production is a development-time operation, never a setup-time
+dependency. This four-language slice is translated directly by maintainers and
+sends no content to a translation service. If future work explicitly
+authorizes external assistance, a translation provider may
+receive only an allowlisted export of static, publicly visible English UI copy
+and non-sensitive semantic context (message ID, UI location, placeholder names,
+and terminology guidance). The export MUST exclude PATs, API keys, cookies,
+repository/account names, questionnaire answers, GitHub responses, session
+state, logs, source code, and any other runtime or user-specific data. The
+export is reviewed before transmission; neither the web client, CLI, CI, nor
+published package calls a translation service. Returned text is committed as
+static catalogs only after placeholder/option-identity checks, a second-pass
+semantic review against the English source, and the safety-copy review above.
+An unavailable provider or failed review blocks advertising the affected
+locale; it never triggers an English-mixed view or sends runtime content as a
+fallback. Translation provenance and review status are recorded without
+storing provider credentials or submitted runtime data.
+
+Help links are selected by a closed, versioned registry keyed by semantic
+question/prompt IDs. Their HTTPS origin and path are allowlisted; user-supplied
+check names, provider messages, repository names and URLs never become a help
+destination. Every registered URL/anchor is verified in documentation/link
+tests, and the CLI prints the full safe URL. Browser links open separately
+with `noopener noreferrer`, a visible external destination, and no PAT/session
+parameters. If a destination is unavailable, setup remains usable and the
+local explanation is still complete. GitHub's own PAT form and account/2FA
+pages are outside Copilot's translation boundary; the wizard explains those
+handoffs in the selected language.
+
+The ordinary path MUST not force a beginner to understand provider executable
+paths, raw producer tuples, or rule syntax. Advanced controls remain reachable
+and explain why they matter. In particular:
+
+| Decision | Normal presentation | Expanded explanation and guard |
+|---|---|---|
+| Agent executable | `Use the standard agent command` (recommended) | `codex`, `opencode`, or `agent` runs on the Action runner, not this browser; a custom absolute path is advanced and bound to the chosen provider. Do not copy one explicit path to a different provider. |
+| Provider reasoning | Do not offer a misleading toggle while the current string-only CLI adapter cannot return separate reasoning parts | If a future adapter supports it, disclose actual text/retention behavior; never promise concision or metadata-only output without a bounded contract. |
+| Bugbot dry-run | `Publish Bugbot findings` (recommended) versus persistent `Analyze without publishing` | Not the same as `copilot setup --dry-run`; suppresses review publication/SCM effects and is incompatible with approval evidence. |
+| Organization Bugbot rules | Optional multiline rule editor, one rule per line | These rules take precedence over repository rules; their storage scope is shown separately. Never call a repository Variable an organization-wide policy. |
+| Agent CLI provisioning | `Automatic` (recommended) / `Use installed only` / advanced `Reinstall reviewed version` | Explain runner ownership, pinned Codex/OpenCode installs, Cursor's manual prerequisite, and explicit-path exemption. |
+
+Examples in the card must be clearly illustrative, not a real detected value.
+The reviewer can always see the current stored value, source (default/config/
+answer/remote evidence), and implications in the final plan. The web's existing
+one-line input MUST NOT be used for newline-delimited rule text.
+
+### 9.4 Assisted trusted-CI and coverage selection
+
+After the setup PAT is audited, a read-only discovery use case SHOULD propose
+recent, exact GitHub Actions job checks for the target repository. It joins
+observed check run IDs/App IDs to workflow run attempts and job check-run URLs;
+it does not infer a source from a name alone. Display each candidate as a
+checkbox/card with exact job/check name, workflow name, App name and numeric ID,
+observed SHA/date/conclusion, `required by branch` evidence when available,
+and an inspectable GitHub run link. Never suggest Copilot's own approval check
+or a generic commit status that the current approval observer cannot consume.
+Deduplicate only identical exact tuples, paginate/bound reads, and distinguish
+`observed`, `no recent PR runs`, `runs without verifiable jobs`, `permission
+denied`, and `unavailable`. Do not claim that a workflow is configured but has
+not run unless a separate workflow inventory actually proves it. An empty or
+failed discovery keeps a validated manual path; no list result is itself an
+attestation. The user may explicitly retry the **current** discovery question
+at most twice per setup run. A retry is read-only, retains unsent checkbox and
+manual-field input, never advances the questionnaire, and cannot apply a stale
+response after a new answer, cancellation, or controller takeover. CLI offers
+`r` or an equivalent numbered retry option. The current question updates in
+place; prior answers and the PAT are not requested again. When retries are
+exhausted, explain the manual path rather than presenting a dead button. Do
+not offer retry for a personal-owner Projects endpoint that categorically
+does not support the fine-grained PAT, or when no discovery adapter was run.
+
+Selection becomes 1–8 structured identities, not a semicolon-delimited text
+field. `coverage.checkName` MUST select one of those checks. Because the
+persisted coverage contract stores a check *name*, two trusted producers with
+the same name cannot be disambiguated for coverage: reject that selection with
+an actionable explanation before the coverage question, rather than
+silently displaying two producer cards for one name. An existing ambiguous
+configuration may enter interactive setup for repair, but final validation
+still forbids applying or installing it. The selector displays the
+full producer identity, recent SHA/date/conclusion and inspectable run, even
+though it persists the uniquely selected check name. Ask the explicit producer
+and coverage-step attestation **after** the final coverage identity and,
+where applicable, numeric reporter choices; it must never precede the
+choice it claims to attest. If branch-rule evidence
+was not fetched, label required-by-branch as **not checked**, never `not
+required`. In check mode,
+the UI asks which selected check *fails when the coverage budget fails*, shows
+the related workflow/job link and an explicit `I verified the enforcing CI
+step` action. A green check or filename containing `coverage` is suggestive,
+never proof. Numeric mode explains the exact
+`copilot-diff-coverage-v1` artifact, reporter, head/base binding, and threshold;
+it can show observed artifact evidence but never sets `reporterAttested`
+automatically. Recommendation mode may display unresolved prerequisites;
+guarded mode fails closed until exact identities and human attestations pass.
+
+Discovery MUST return a semantic state (`observed`, `no-recent-runs`,
+`permission-denied`, `unavailable`) independently of its candidates. The web
+and terminal explain which state occurred, the bounded sample (20 recent PR
+workflow runs, at most 15 inspected; up to 30 Projects over two pages), and the
+next action before asking for a manual tuple. A network/API failure must not
+masquerade as an empty repository. The manual path labels check name, numeric
+source App ID, and workflow name separately (or gives an equivalent CLI
+template), validates the exact tuple, and never treats it as verified.
+
+Private-repository discovery needs GitHub `Checks: read` and `Actions: read`
+from the setup PAT; these conditional read grants MUST be disclosed in the
+pre-PAT intent and generated URL when PR approval is enabled, because setup
+then inspects producer readiness and offers remote discovery.
+If the operator declines extra grants, local workflow inspection may propose
+unverified names but cannot invent App IDs or silently elevate the PAT. This
+choice is separate from runtime bot-PAT permissions. The GitHub API's check
+run and workflow-list endpoints are the provider boundary; the browser never
+receives the PAT. See [check runs](https://docs.github.com/en/rest/checks/runs)
+and [workflows](https://docs.github.com/en/rest/actions/workflows).
+
+### 9.4a GitHub Projects without opaque IDs
+
+The permission-intent pass asks only whether Projects integration is wanted;
+it must not ask for numbers before the setup PAT exists. The post-PAT pass
+shows a bounded, read-only list of Projects owned by the repository owner,
+each with title, owner, number and inspectable GitHub URL. Organization
+Projects use GitHub's paginated organization Projects endpoint and require
+organization `Projects: read` for discovery. Setup only reads Projects and
+stores their selected numbers/Status names in repository configuration, so its
+PAT does not need `Projects: write`. The separate runtime bot PAT needs
+`Projects: write` when automation later updates Project items.
+Personal-owner REST listing does not accept a fine-grained PAT, so the UI
+explicitly says discovery is unsupported and offers validated manual entry.
+Network failure, permission denial, no accessible Projects, and a genuinely
+empty list have different messages and recovery actions.
+
+Web Projects use checkboxes with descriptive links; CLI uses a numbered
+multi-select. The answer serializes **positive Project numbers** from
+`/orgs/OWNER/projects/NUMBER` or `/users/OWNER/projects/NUMBER`, not GraphQL
+`PVT_…` IDs. Manual fallback accepts a bounded comma-separated list of positive
+numbers or exact matching GitHub Project URLs; it rejects duplicates, wrong
+owners, GraphQL IDs and malformed URLs at the question and clearly marks
+unverified entries. Existing valid numeric configuration remains readable.
+No Project is created by selecting it.
+
+The four legacy “column” settings actually refer to the Projects V2 `Status`
+single-select option. The UI calls them **Status values**, explains the four
+issue/PR transitions, and proposes choices only when the selected Projects'
+Status options can be inspected and have a common intersection. Missing
+Status fields, inaccessible fields, incompatible options or manual entries
+are explicit validation/recovery states, not silently verified choices.
+The existing four shared values cannot map different vocabularies per Project;
+the selector must explicitly explain this and block incompatible discovered
+Projects before Apply. Per-Project mappings need a separate design. For manual
+Projects whose fields cannot be read, require the operator to check the exact
+Status option in each Project and answer a separate, non-defaulted attestation
+question after the four values. `No` returns to Project selection within the
+same run, Enter stays on the question with help, and only an explicit `Yes`
+proceeds. This is a run-scoped human assertion, not a fabricated
+remote verification or a new persisted Project field. Do not label it verified
+by GitHub. A beginner may skip
+Projects. `Empty` means the bounded API returned no *accessible* Projects; the
+API does not prove there are none, so neither web nor CLI may assert a
+genuinely empty organization. Show the applicable GitHub Project link and a
+specific recovery action for each discovery state.
+
+```text
+Want Projects? → audit setup PAT → list owner's Projects or explain why
+              → select by title/URL (or enter numbers manually)
+              → inspect common Status options → review effects → Apply
+```
+
+Text equivalent: decide before creating the PAT, choose existing Projects and
+Status values after authorization, review the plan, and only then apply.
+Add at least 18 distinct cases to the earlier 241-case budget: 5 policy, 3
+use-case, 4 adapter, 4 UI/CLI, and 2 security/integration. Include pagination
+limits, personal-owner unsupported, empty/403/5xx, manual normalization and
+owner checks, incompatible Status options, four locales, CLI parity, safe
+links and no PAT in browser views. User documentation shows a Project URL,
+explains number versus GraphQL ID, and says `Status` rather than “column”.
+Provider evidence: [GitHub Projects REST](https://docs.github.com/en/rest/projects/projects)
+and [Project fields](https://docs.github.com/en/rest/projects/fields).
+
+Representative recovery copy, with the same meaning in each advertised web
+language and English CLI:
+
+```text
+CI suggestion found: Tests · CI · GitHub App 15368 · success · abc1234 · Sep 29
+Required by branch rule: not checked. Open this CI run; confirm that its
+coverage step fails the job below your budget. Choose it only after inspection.
+Retry GitHub discovery (2 read-only attempts left), or add name/App ID/workflow.
+
+Projects query returned no accessible entries. That does not prove the owner
+has no Projects. Retry, check Projects: read and owner, or enter the positive
+number from github.com/orgs/OWNER/projects/12. The four selected Status values
+must exist in every chosen Project; different vocabularies cannot be mapped.
+```
+
+The read-only retry is an application-port operation triggered by the CLI or
+revision/capability-protected local browser endpoint. The current-question
+projection is pure; only the application use case owns GitHub discovery and
+the two-attempt budget. The browser keeps its prompt revision stable while the
+question's candidates/status update, preserving unsent choices. A concurrent
+answer, cancellation, or controller takeover prevents the old result from
+committing to the visible prompt. Discovery refresh never stores a PAT in the
+browser, changes the setup plan, or creates test issues/Actions.
+
+### 9.5 Language and truthful terminal outcomes
+
+The selector names the four supported languages; English is default
+and all four catalogs must be complete for the shipped setup shell, prompt actions,
+question labels/help, progress, PAT guidance, plan, validation, and all
+result/cleanup states. An unfinished development branch may preview a locale
+  only with an explicit persistent notice on untranslated technical content,
+  including outside the questionnaire; this is not
+release acceptance and such a preview must not be shipped as a complete
+translation. Translation is presentation-only: stable question IDs,
+enum values, API wire values, PAT URLs, and policy serialization remain
+locale-neutral. A language change preserves the current draft, pending prompt
+revision, pairing/controller capabilities, typed-but-unsubmitted non-secret
+answer, and focus. Do not translate user-supplied repository/workflow/check
+names or provider errors. Selection is tab-memory only, not a repository
+setting; reload returns to English. Set the document `lang` and announce the
+selected language accessibly. Unknown locale falls back to a
+complete English view; a missing key in any advertised locale fails the build.
+Dynamic provider/GitHub prose remains marked as external English when no
+trusted structured reason exists, never silently machine-translated.
+Translation catalogs are static packaged assets with no external fetch.
+Keep one module per language and copy area (shell, question guidance, options,
+permissions, prompts, progress, errors, and plan warnings); locale-neutral
+resolvers compose them without duplicating setup rules. CI compares the exact
+key set of every language against English, not just key counts, and checks
+interpolation placeholders, non-empty copy, static option coverage, and the
+full defined-question inventory. An equal count with a missing and an extra
+key MUST fail. Deliberately identical product names and technical identifiers
+are documented exceptions to the unchanged-English-copy audit.
+The CLI remains English-only, including the complete question/stage/credential
+help and links. First-party server-to-browser prose MUST instead carry a
+stable semantic message ID plus locale-neutral parameters so the web never
+renders an English CLI sentence as product copy. Technical identifiers,
+commands and user-supplied names remain verbatim with bidi isolation; values
+submitted back to setup remain the original locale-neutral option values.
+For errors with no known semantic ID, the page MUST identify the content as
+untranslated external/diagnostic text and still display a localized impact and
+recovery action. It MUST NOT silently treat an arbitrary English message as a
+translated explanation. Prompt choice labels and permission reasons use
+stable identifiers; their submitted values and policy inputs remain unchanged.
+
+Screenshot evidence on 2026-09-29 showed `PLAN 04/06`, `Setup needs attention`,
+and `No setup changes started`. That proves the page reported no Apply
+mutation, but hid the actual cause and made cancellation, expiry, and a
+blocking validation look identical. This is a product defect. The terminal
+may have printed the cause; the browser MUST show the same normalized,
+redacted reason and next action itself. A terminal outcome view is immutable
+and includes: outcome kind, stopped stage, mutation-started fact, safe reason
+code/message, completed local/remote effect names where known, next action,
+and PAT cleanup guidance. Never infer `nothing changed` merely from a generic
+`blocked` label if an earlier side effect is possible. Preserve the final
+cause against later cleanup reminders and close events. Example:
+
+```text
+Setup stopped before applying · Plan (4 of 6)
+What happened: The selected CI check could not be verified with this PAT.
+Already changed: Nothing in your repository or GitHub configuration.
+Next: Give the setup PAT Checks: read and retry, or enter an exact check manually.
+Your GitHub-created PAT still exists. Delete it in GitHub when finished.
+[See technical details] [Close local session]
+```
+
+Text equivalent: the user knows the verified cause, what did and did not
+change, the safe next action, and the separate GitHub PAT cleanup obligation.
+An unknown provider failure says `Cause not confirmed` and offers a bounded
+diagnostic code, never a false specific explanation. `copilot doctor` is a
+follow-up inspection tool, not a substitute for the result on this page.
+
+### 9.6 First-run completion: orientation, editing, evidence, and handoff
+
+This is a proposed extension of the current implementation slice. A developer
+must be able to complete setup without guessing whether a displayed value was
+read from GitHub, inherited from this checkout, or merely supplied as a product
+default. The same semantic decisions and recovery contract apply to English CLI
+and the four-language browser; presentation controls may differ.
+
+```text
+Confirm repository -> choose basic/custom scope -> permission preview -> setup PAT
+  -> inspect facts -> answer relevant groups -> review/edit -> bot PAT
+  -> Apply once -> inspect itemized receipt -> read-only verification/cleanup
+```
+
+Text equivalent: the operator sees the target, chooses the amount of optional
+configuration, authorizes only needed reads/writes, reviews detected facts and
+answers, corrects any group without restarting, explicitly approves mutation,
+then receives a durable-to-the-live-session receipt and a safe verification
+path. No step silently creates a PAT, issue, Action run, or Project item.
+
+1. **Orientation and progressive disclosure.** Start with a short capability
+   summary: what Copilot will install, what a basic path includes, and what
+   custom settings expose. Basic is the recommended presentation preset, not a
+   separate policy engine; it retains explicit choices for capabilities,
+   branches, Projects, guarded approval, storage scope, and all grants that can
+   change mutation or security. Advanced choices may retain documented defaults
+   only after the operator sees a grouped summary and can expand/edit them.
+   The UI MUST show current group and question position/remaining count, not
+   only six broad stages; conditional questions change the denominator
+   truthfully. CLI uses a textual equivalent. No fixed time estimate is
+   presented without measured evidence.
+2. **Editing and restart safety.** Back/Change never mutates GitHub, never
+   resurrects a secret input, and preserves unaffected answers. The final
+   review groups consequences (features, agents, branches, CI approval,
+   Projects, Secrets/Variables) and links to edit each group. Changing an
+   answer re-evaluates dependent questions, project/check evidence, PAT grants,
+   plan, and Apply revision. An increased grant invalidates previous PAT
+   readiness until re-audited; a reduced grant warns about excess access but
+   does not silently revoke a GitHub token. A live session can be rejoined;
+   after process exit the operator restarts and re-enters credentials. No draft
+   or approval is persisted to disk or browser storage in this release. A
+   future opt-in resume requires a separate credential/data-safety SDD with
+   non-secret data only, explicit consent, 0600 permissions, expiry and fresh
+   PAT/identity/remote audit. No browser localStorage for PATs, pairing
+   capabilities, or approval state.
+3. **Source-labelled suggestions.** A read-only fact port reports actual
+   default branch, available development branch, observed workflows/checks,
+   and selected owner/repository with `observed`, `inherited`, `suggested`, or
+   `unavailable` provenance plus a source link where safe. A configured
+   `master` default MUST NOT appear as GitHub-observed `main`. Missing or
+   inaccessible data is not an empty inventory. Before PAT, local Git facts
+   are labelled local; after PAT, remote facts may supersede suggestions but
+   never overwrite an explicit answer. The operator confirms branch roles.
+4. **Evidence-assisted CI and Projects.** Observed check identity includes
+   name, App ID, workflow, run/ref and bounded search scope. When branch
+   protection/rulesets are readable, mark required-check evidence with the
+   exact source; otherwise say `not checked` and link to the corresponding
+   GitHub settings page. A green run never establishes coverage enforcement;
+   the human attestation remains mandatory. Show the workflow file and run
+   when exact safe links are available. For several Projects whose Status
+   vocabularies differ, support an explicit per-Project mapping of all four
+   transitions or explain why that capability is not yet safe; never claim a
+   shared value works when it does not. The runtime model and PAT audit must
+   support per-Project mappings before the UI offers them. No broad grant is
+   added merely to make a suggestion appear.
+   In the first implementation slice, Basic skips only catalogued advanced
+   questions whose configuration still equals the product default; it never
+   suppresses a non-default override. The plan names every group with retained
+   defaults, exposes an edit control for it, and re-runs permission audit after
+   an edit. Selecting independent agent models exposes all per-role questions.
+   The web plan review also lists issue workflows, all agent/model routes,
+   exact trusted CI producer identities, coverage mode/check, each selected
+   Project Status transition, storage scopes, and issue-resource handling;
+   technical values remain unchanged while labels are localized.
+   An active repository-owned branch ruleset is positive required-check evidence
+   only when both check context and source App ID match the observed run;
+   inherited organization rulesets, branch protection, or an unreadable ruleset
+   remain `not checked`, never `optional`. A numeric
+   Project selection with incompatible Status options is blocked rather than
+   silently mapped to the wrong option. Per-Project mappings require a separate
+   runtime input and are not implied by the shared-Status selector.
+5. **PAT handoff and lifecycle.** Every GitHub form handoff displays the
+   expected operator/bot account, owner, exact repository selection, grants,
+   expiry, and the step to return to. Distinguish pending organization
+   approval, wrong account, insufficient scope, expired/revoked PAT, and
+   provider outage when evidenced. Setup PAT deletion is a user action in
+   GitHub, never implied by closing the local page. Bot PAT renewal is a
+   post-setup obligation; its Secret name/scope and renewal date (if known)
+   appear in the receipt without revealing value. CLI help prioritizes the
+   hidden prompt; command-line flags that expose a PAT in shell history are
+   advanced escape hatches with an explicit warning.
+6. **Structured results and read-only verification.** The terminal and web
+   receive one redacted semantic result: stage, cause, completed/skipped/
+   failed/potentially-applied resources, scope, mutation-started fact,
+   diagnostic reference, safe next action, and PAT cleanup. Unknown causes
+   remain explicitly unknown, not generic success/failure. An interrupted
+   Apply cannot claim nothing changed. A post-success `doctor` affordance
+   runs only read-only checks; it is separate from Apply and cannot silently
+   dispatch credential-health or create test resources. After a confirmed
+   successful Apply, the controller may run one bounded in-page read-only
+   inspection with at most one retry; the page exposes only redacted counts,
+   never raw doctor evidence or provider errors. The browser also gives the
+   explicit `copilot doctor --read-only` command; that mode must mark Secret
+   values unverified. Plain `copilot doctor` may dispatch the
+   installed credential-health workflow and must not be described as read-only.
+   The local setup workflow emits a versioned, value-free operation receipt
+   covering files, Secrets, labels, issue types, Variables and the initial tag.
+   A mutation attempt is `needs-inspection` until a confirmed return; a later
+   operation is `not-started` after an earlier exception. The CLI-to-browser
+   mapper accepts only these exact operation IDs, states and scopes and never
+   serializes raw provider errors or arbitrary result identifiers.
+7. **Comprehension and accessibility gate.** Every question needs a concrete
+   recommendation, source of the expected value, consequence of alternatives,
+   validation at the field, and targeted documentation. Generic `enter the
+   exact value` copy alone does not meet this requirement. The most important
+   consequence remains visible; expanded help adds detail. Errors identify
+   the field, cause and correction, preserving input. Dynamic progress/errors
+   use locale keys and accessible status announcements; an unknown provider or
+   validation message shows a localized, honest fallback with a terminal-
+   inspection instruction rather than unreviewed English text. Focus returns
+   to the current heading
+   or invalid control, and every state is usable by keyboard, screen reader,
+   at 200% zoom, and in both themes. English, Spanish, French and Portuguese
+   must pass semantic language review across success, partial, blocked,
+   validation and PAT cleanup; key parity is necessary but insufficient.
+
+Example review and receipt (labels localized in web; CLI English):
+
+```text
+Review setup for org/repo · 6 groups checked, no changes applied
+Branches: main (GitHub observed), develop (your answer) [Change]
+Trusted CI: Tests · App 15368 · CI (observed run; branch rule not checked) [Change]
+Projects: Engineering #12; four Status transitions verified [Change]
+Setup PAT: required grants re-audited · Bot PAT: still to be provided
+[Apply later] [Continue to bot PAT]
+
+Setup partially applied · 3 of 4 resource groups inspected
+Files: applied · Secret PAT (repository): potentially written · Variables: not started
+Cause: GitHub rejected the Variable write (403). No automatic replay.
+Next: inspect Secret PAT and Variables in GitHub, then run read-only doctor.
+Temporary setup PAT still exists in GitHub. [PAT settings] [Technical details]
+```
+
+The first view is a no-mutation decision point with editable facts and
+explicit provenance. The second is an itemized partial result that does not
+equate a failed operation with rollback and separates the two PAT lifecycles.
+Primary design references: [W3C multi-page forms](https://www.w3.org/WAI/tutorials/forms/multi-page/),
+[W3C error notifications](https://www.w3.org/WAI/tutorials/forms/notifications/),
+[GOV.UK check answers](https://design-system.service.gov.uk/patterns/check-answers/),
+and [GitHub PAT management](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
 
 ## 10. Failure, recovery, and cleanup
 
@@ -768,23 +1237,27 @@ still offers the terminal setup and doctor paths.
 
 ## 14. Testing strategy and numeric budget
 
-The floor is **103 distinct cases**, derived from shared-engine parity,
+The revised floor is **350 distinct cases** (the previous 274 plus 76
+first-run-completion cases), derived from shared-engine parity,
 six-stage transitions, two PAT roles, local HTTP abuse, packaged installs,
-drift, and partial mutation. Each test/parameterized behavior counts once;
+drift, partial mutation, CI discovery/attestation, complete four-language help,
+contextual documentation navigation, English CLI parity, bounded Project
+discovery, number/URL validation and shared Status options,
+and truthful terminal results. Each test/parameterized behavior counts once;
 existing CLI tests are retained, not re-counted as new web evidence.
 
 | Area | Minimum cases | Risk covered |
 |---|---:|---|
-| Pure choices/config/grant/plan projection | 14 | source locks, defaults, conditional questions, two PAT roles, grants, revision invalidation |
-| Session/use cases/idempotency/races | 20 | stages, saved-review pass, tab takeover, stale events, single-flight Apply, cancel, idle/crash replay boundaries, replacement-lock race |
-| GitHub/workspace/HTTP adapters | 10 | identity, missing/unknown grants, org approval, Secret scope, bounded errors and provider mapping |
-| CLI/packaging/workflow contracts | 10 | flag combinations, browser-open fallback, asset manifest, npm pack/global install, unchanged Action/API bundles |
-| UI/accessibility/localization/content | 18 | pending/action/blocked/partial/complete, plan diff, narrow/zoom/keyboard/focus/no-color, both palettes/system toggle and contrast, English fallback, escaping |
-| Integration/compatibility/recovery | 13 | terminal-web parity, manual/environment/dry-run, drift, partial write, doctor reconciliation, root-versus-subdirectory launch |
-| Security/abuse | 18 | Host/Origin/CSRF, terminal pairing and attempt cap, session-key enforcement on every other API route, CORS, replay, path traversal, XSS/CSP, secret leaks, no GET mutation, body/time/connection limits, atomic lock publication |
-| **Total** | **103** | No double counting |
+| Pure choices/config/grant/plan projection | 48 | prior rules plus source provenance, optional-step filtering, dependent invalidation and shared-Status compatibility |
+| Session/use cases/idempotency/races | 54 | prior stages plus back/edit/review, live reconnect/no-durable-resume boundaries, stale PAT grants, Apply races and immutable receipt |
+| GitHub/workspace/HTTP adapters | 40 | bounded discovery, branch/rule facts, provider error mapping, retry auth and 403/5xx differentiation |
+| CLI/packaging/workflow contracts | 37 | English progress/help/edit, PAT safety warnings, safe links and bundle isolation |
+| UI/accessibility/localization/content | 101 | four-language question/receipt content, progress, edit controls, validation, focus and blocked/partial states |
+| Integration/compatibility/recovery | 42 | live reconnect, preserved answers, incompatible-Project blocking and complete beginner replay in CLI/web |
+| Security/abuse | 28 | forged links, stale revisions/controller takeover, PAT exclusion, permissions and least-privilege fallback |
+| **Total** | **350** | No double counting |
 
-Within the 18 UI cases, cover at least one render/interaction for each prompt
+Within the 101 UI cases, cover at least one render/interaction for each prompt
 presenter, one revision-change form reset, secret clearing before dispatch,
 read-only disabling, all outcome variants, and both theme palettes. Static
 architecture tests additionally reject network/storage/provider calls from
@@ -892,6 +1365,53 @@ help for `--web` explains local-only scope and the `--non-interactive` conflict.
     the UI does not claim to recover its value and follows the current
     re-entry/preservation policy. Given an environment-supplied setup PAT,
     exit never claims to have removed it from the parent shell.
+17. Given any reachable questionnaire ID, a first-time operator can read
+    specific what/when/where/how/why/example/effect/verification help and a
+    directly relevant safe reference link in the CLI (English) and web (all
+    four locales); no help item silently falls back to a generic section.
+18. Given `?` at an interactive CLI question, expanded English help and its
+    URL appear without recording an answer or advancing the questionnaire;
+    the same question and default are then presented again. Credential-method,
+    repository-owner and bot-login prompts offer the same non-advancing help;
+    the final Apply prompt explains planned writes and partial-failure recovery
+    before returning to an unanswered approval; a PAT is never echoed while
+    showing help.
+19. Given a web language switch during a question, PAT, plan, validation or
+    result, all first-party copy and option labels switch together without
+    changing IDs, option values, typed input, permissions or Apply state.
+    Technical values retain their original identity in every locale.
+20. Given a dynamic GitHub or provider error, the page explains its structured
+    impact and next action in the selected language; raw external text is
+    separately labelled, escaped and never used as a documentation link.
+21. Given any question, Back or Change returns to the selected earlier answer
+    with unaffected non-secret answers retained; a changed dependency asks
+    newly applicable questions and re-audits grants before new Apply approval.
+22. Given a long or conditional question group, browser and CLI show the
+    current group and truthful remaining question count; a basic presentation
+    path exposes all security-significant choices and an editable advanced
+    summary without silently enabling a capability.
+23. Given an actual `main` default branch but a product `master` fallback,
+    the suggestion is labelled GitHub-observed `main`; if remote inspection
+    fails, the product fallback remains explicitly labelled unverified.
+24. Given a readable required-check rule, the exact source and matching
+    producer are visible; given unreadable rules, the UI says `not checked`
+    and retains manual attestation. Given incompatible Project Status values,
+    no shared mapping is applied to all Projects without explicit mapping.
+25. Given a wrong, pending, expired or insufficient PAT, the handoff names
+    the evidenced cause, expected account/owner and repair step; GitHub
+    cleanup and bot renewal remain separate human obligations.
+26. Given failure before or during Apply, browser and CLI render the same
+    redacted, itemized effect states; ambiguous writes are `potentially
+    applied`, not `rolled back` or `nothing changed`. A read-only doctor action
+    never dispatches or creates a test resource.
+27. Given a browser reconnect to a live process, it reads the current
+    server-owned state without replaying an answer or restoring a secret.
+    Given process exit, no durable draft, pairing authority, or approval is
+    written; restart revalidates PAT, identity, remote facts, and plan.
+28. Given a novice keyboard/screen-reader user in any supported web locale,
+    every high-risk question identifies source, recommendation and consequence,
+    errors identify the exact field and correction, and progress/result
+    changes are announced without relying on color or a terminal window.
 
 ## 17. Requirements traceability
 
@@ -904,6 +1424,8 @@ help for `--web` explains local-only scope and the `--non-interactive` conflict.
 | Revision-bound Apply/recovery (§6.1, §6.3, §10) | CLI root precondition + session coordinator + execution boundary | scenarios 1, 8–11; nested-path launch regression | troubleshooting, provisioning |
 | Browser security/privacy (§4.3, §11) | loopback HTTP/asset adapters + redacted presenter | scenarios 9, 12–13 | authentication, architecture |
 | Accessible truthful UX (§9) | Svelte presenter + message catalog | scenarios 5–7, 10–11, 13–14 | how-to-use, troubleshooting |
+| Complete question help and links (§9.3–9.5) | application semantic help catalog + English CLI renderer + four-language web presenter | scenarios 17–20; exhaustive ID/link/locale gates | how-to-use, configuration, authentication, agents |
+| First-run completion (§9.6) | pure questionnaire/evidence policies, application session/edit/receipt use cases, read-only provider ports, CLI/web presenters | scenarios 21–28; 76 added risk-derived cases plus human first-use review | how-to-use, authentication, troubleshooting, configuration |
 
 ## 18. Implementation sequence and current evidence
 
@@ -932,15 +1454,15 @@ application coordinator and full UI/accessibility acceptance gates.
 
 These facts are **not** release acceptance. The orchestration in
 `src/cli/commands/setup.ts` still needs extraction into the prescribed
-application-level session coordinator; the 103-case budget, full human
+      application-level session coordinator; the revised 350-case budget, full human
 cross-platform/accessibility review, exact per-resource progress/partial
 evidence, and adversarial concurrency/idle/crash suite remain open. The
 catalog stays `proposed` until the definition of done is evidenced. Existing
 terminal policy/use cases remain the authority; the current web path does not
 introduce its own permission catalog.
 
-The latest full local run on 2026-09-28 passed 502 Jest suites / 5,392 tests,
-with 95.95% statements, 90.88% branches, 96.53% functions, and 97.27% lines
+The latest full local run on 2026-09-29 passed 506 Jest suites / 5,484 tests,
+with 95.97% statements, 90.91% branches, 96.55% functions, and 97.27% lines
 repository-wide. The new setup-PAT intent, bootstrap audit, configured audit,
 remote-fact comparison, and override merge modules each reached 100% in all
 four metrics; final web Apply authorization reached 100% lines and 95.83%
@@ -951,9 +1473,86 @@ empty issue-workflow selection, drift, cancellation, and package isolation.
 Typecheck, lint, Svelte diagnostics, full build, catalog, documentation,
 workflow, npm-package validation, and package smoke checks passed without
 real PATs or setup dogfooding. Human browser/accessibility and cross-platform
-review, the formal 103-case-by-area acceptance mapping, and the complete
+review, the formal 350-case-by-area acceptance mapping, and the complete
 application-level session coordinator remain open release gates. The generated
 bundle synchronization check runs after the source/build commit is staged.
+
+The 2026-09-29 localization slice originally previewed ten languages, but
+product scope was reduced to English, Spanish, French, and Portuguese. The six
+discarded locale catalogs and browser-only high-risk-question overrides are
+removed. Separate language modules now own the web shell, question labels and
+specific purposes, option labels, prompt decisions, permission explanations,
+and progress/validation messages. The four-language question-help contract
+includes all defined questions and expanded fields. Tests check exact key
+parity, placeholders, static option coverage, permission-reason and plan-warning
+inventories, and unchanged wire values. Browser-originated session errors now
+have per-language catalogs and an explicitly translated unknown-error fallback;
+credential checks carry locale-neutral names and statuses for local display.
+These checks prove structural completeness, not linguistic quality or complete
+UI coverage. The persistent translation preview remains until dynamic provider
+text and normal/blocked/partial render review are closed. The source CI discovery
+adapter is a bounded suggestion source, not coverage enforcement or an
+attestation.
+
+The subsequent guidance slice gives all 108 defined questions a field-specific
+English/Spanish purpose, adds their contextual documentation links, and lets
+the terminal open non-advancing `?` help for questionnaire, credential and
+final Apply prompts. Inventory and link tests cover those definitions. Until
+every web state is localized and reviewed, every non-English locale displays a
+persistent translation-preview notice, including on PAT and result screens.
+The related documentation link is visible beside each question without opening
+the expanded help. This is a development affordance, **not** four-language
+release acceptance. Dynamic provider text and independent
+language/accessibility review remain open.
+
+The next 2026-09-29 discovery slice preserves the questionnaire draft across
+bounded, read-only retries; distinguishes unavailable CI/Projects data from
+no accessible results; shows the source, run, conclusion, and sampling limits
+of suggested checks; and validates unique producer names before selecting a
+coverage-enforcing check. Project choices are made from accessible numbered
+Projects when available, with an owner-checked URL/number fallback. Selected
+Projects retain their identity if they disappear from a later bounded listing,
+but are visibly unverified. Common `Status` options are checked when readable;
+otherwise an explicit, run-scoped human attestation is required before Apply.
+Personal-owner Projects do not offer a retry that the fine-grained PAT API
+cannot fulfill. The web and CLI share the same application-owned discovery
+contract; neither creates a test issue or dispatches a test Action.
+
+This slice passed 508 Jest suites / 5,591 tests on 2026-09-29. Repository-wide
+coverage was 95.8% statements, 90.64% branches, 96.41% functions, and 97.15%
+lines; all configured coverage budgets passed. Typecheck, lint, Svelte
+diagnostics, isolated web and CLI production builds, workflow/documentation
+validation, and specification validation also passed. These automated checks
+do not close the 274-case-by-area acceptance mapping, independent linguistic
+and accessibility review, real-browser/cross-platform trials, or the
+application-level session coordinator. The catalog remains `proposed`.
+
+The subsequent first-run slice implements Basic/Custom presentation with
+explicit permission-affecting decisions, per-question progress and contextual
+documentation, source-labelled branch suggestions, revision-bound Back and
+section editing, permission re-audit after edits, evidence-labelled check and
+Project discovery, a complete grouped plan, and an itemized redacted result.
+Web and English CLI use the same questionnaire and policies. The web result can
+run a bounded metadata-only doctor after confirmed success; its response
+contains counts only. `copilot doctor --read-only` is the matching terminal
+path and never dispatches credential-health Actions; plain doctor may dispatch
+the already-installed health workflow. The session/error and result copy has
+matching English, Spanish, French, and Portuguese catalogs. The latest full
+local run passed 509 Jest suites / 5,636 tests with 95.61% statements, 90.4%
+branches, 96.32% functions, and 97.05% lines overall; instrumented web
+TypeScript reached 100% statements, functions, and lines. Svelte components
+are not included in that TypeScript coverage claim. The result/doctor tests
+use fake ports and local loopback fixtures; no PAT, repository setup, test
+issue, or GitHub Action was created.
+
+These measurements do **not** close independent linguistic, keyboard/screen-
+reader, 200%-zoom, dark/light, real-browser/cross-platform, or full 350-case
+acceptance review. A disk-persisted resume remains a separately specified
+future capability; this slice supports reconnecting to a live session only.
+The CLI orchestration has not yet been extracted into the prescribed
+frontend-neutral coordinator. Until these gates are evidenced, the catalog
+remains `proposed` and the non-English browser notice remains a translation
+preview, not an unconditional release-quality claim.
 
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.
@@ -977,7 +1576,7 @@ bundle synchronization check runs after the source/build commit is staged.
       application decision engine with enforceable dependency rules.
 - [ ] Local HTTP, controller, PAT, plan revision, and Apply defenses pass the
       adversarial/security budget with no secret in browser storage or logs.
-- [ ] All 103 distinct new web cases by area pass without real PATs or
+- [ ] All 350 distinct setup-assistant cases by area pass without real PATs or
       dogfooding; the repository and changed-module coverage thresholds
       already pass for the current implementation slice.
 - [ ] Global npm-pack install serves complete local assets; Action/API bundles
@@ -1006,6 +1605,9 @@ bundle synchronization check runs after the source/build commit is staged.
   [Svelte overview](https://svelte.dev/docs/svelte/overview),
   [Vite static build](https://vite.dev/guide/build),
   [Node HTTP](https://nodejs.org/api/http.html).
+- Language-selection decision: this release deliberately supports English,
+  Spanish, French, and Portuguese, which maintainers can translate and review
+  directly. It makes no claim about a live ranking of speaker populations.
 - Security sources: [OWASP CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html),
   [CSP](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html),
   [HTML5 storage](https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html).

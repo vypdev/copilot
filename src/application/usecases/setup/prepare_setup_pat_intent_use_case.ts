@@ -26,6 +26,7 @@ export interface SetupPatIntentPreview {
   readonly ownerConflict: boolean;
   readonly errors: readonly string[];
   readonly pass: number;
+  readonly projectsWanted: boolean;
 }
 
 export interface PrepareSetupPatIntentPorts {
@@ -46,7 +47,7 @@ export type PrepareSetupPatIntentResult =
       readonly url: string;
       readonly requirements: readonly SetupTokenPermissionRequirement[];
       readonly ownerKind: 'Organization' | 'User';
-      readonly permissionIntent: { readonly draft: SetupConfiguration; readonly answeredQuestionIds: readonly string[] };
+      readonly permissionIntent: { readonly draft: SetupConfiguration; readonly answeredQuestionIds: readonly string[]; readonly projectsWanted: boolean };
     };
 
 /** Frontend-neutral preparation; GitHub still issues the PAT in its own UI. */
@@ -63,23 +64,25 @@ export class PrepareSetupPatIntentUseCase {
       skipRepositorySecrets: request.skipRepositorySecrets,
     });
     let pass = 1;
+    let projectsWanted = Boolean(draft.projects.ids.trim());
     while (true) {
-      const context = { skipQuestionIds: fixedQuestionIds };
+      const context = { skipQuestionIds: fixedQuestionIds, projectsWanted };
       const intent = await this.ports.collect(createSetupPermissionIntentQuestionnaire(draft, context), context, pass);
       if (intent.terminal === 'cancelled') throw new SetupInteractionCancelledError();
       draft = intent.draft;
-      const ownerKind = setupPatIntentNeedsOwnerKind(draft) ? await this.ports.chooseOwnerKind() : 'User';
+      projectsWanted = Boolean(draft.projects.ids.trim()) || (intent.projectsWanted ?? projectsWanted);
+      const ownerKind = setupPatIntentNeedsOwnerKind(draft, projectsWanted) ? await this.ports.chooseOwnerKind() : 'User';
       if (ownerKind === 'unknown') {
         this.ports.onManual('owner-unknown');
         return { kind: 'manual' };
       }
-      const ownerConflict = setupPatIntentOwnerConflict(draft, ownerKind);
+      const ownerConflict = setupPatIntentOwnerConflict(draft, ownerKind, projectsWanted);
       const errors = validateSetupConfiguration(draft, { allowIncompleteApproval: true });
-      const requirements = buildSetupPatIntentPermissionRequirements(draft, ownerKind);
+      const requirements = buildSetupPatIntentPermissionRequirements(draft, ownerKind, projectsWanted);
       this.ports.advanceToSetupPat();
       this.ports.showPreview({
         draft, requirements, uncertain: buildSetupPatIntentUncertainty(draft, ownerKind),
-        ownerConflict, errors, pass,
+        ownerConflict, errors, pass, projectsWanted,
       });
 
       let decision: Awaited<ReturnType<PrepareSetupPatIntentPorts['review']>>;
@@ -109,6 +112,7 @@ export class PrepareSetupPatIntentUseCase {
           ownerKind,
           permissionIntent: {
             draft,
+            projectsWanted,
             answeredQuestionIds: [...new Set([...fixedQuestionIds, ...(intent.answeredQuestionIds ?? [])])],
           },
         };

@@ -230,6 +230,81 @@ describe('browser session transport', () => {
     expect(JSON.parse(latest).busy).toBe(false);
   });
 
+  test('a discovery retry sends only the revision and controller capability, then reads updated state', async () => {
+    const requests: Array<{ path: string; options?: RequestInit }> = [];
+    globalThis.fetch = jest.fn(async (path: string, options?: RequestInit) => {
+      requests.push({ path, options });
+      if (path === '/api/bootstrap') return response({ controller: true, capability: 'controller' });
+      if (path === '/api/state') return response(view);
+      if (path === '/api/retry-discovery') return response({ updated: true });
+      throw new Error('Unexpected route');
+    }) as typeof fetch;
+    const session = createSetupSession(TEST_SESSION_KEY);
+    await session.connect();
+    await session.retryDiscovery(7);
+    expect(requests.map(request => request.path)).toEqual(['/api/bootstrap', '/api/state', '/api/retry-discovery', '/api/state']);
+    expect(JSON.parse(String(requests[2].options?.body))).toEqual({ revision: 7 });
+    expect(requests[2].options?.headers).toEqual(expect.objectContaining({ 'X-Setup-Capability': 'controller' }));
+    await session.retryDiscovery(8);
+    expect(requests).toHaveLength(4);
+  });
+
+  test('a rejected discovery retry retains the current question and explains the error', async () => {
+    const requests: string[] = [];
+    globalThis.fetch = jest.fn(async (path: string) => {
+      requests.push(path);
+      if (path === '/api/bootstrap') return response({ controller: true, capability: 'controller' });
+      if (path === '/api/state') return response(view);
+      if (path === '/api/retry-discovery') return response({ error: 'Discovery cannot be retried here. Use the manual option.' }, 409);
+      throw new Error('Unexpected route');
+    }) as typeof fetch;
+    const session = createSetupSession(TEST_SESSION_KEY);
+    let latest = {} as { error: string; view?: WebSetupView; busy: boolean };
+    session.subscribe(state => { latest = state; });
+    await session.connect();
+    await session.retryDiscovery(7);
+    expect(requests).toEqual(['/api/bootstrap', '/api/state', '/api/retry-discovery', '/api/state']);
+    expect(latest.error).toContain('manual option');
+    expect(latest.view?.promptRevision).toBe(7);
+    expect(latest.busy).toBe(false);
+  });
+
+  test('controller transfer during a discovery retry reconnects read-only and never replays it', async () => {
+    let bootstraps = 0;
+    const requests: string[] = [];
+    globalThis.fetch = jest.fn(async (path: string) => {
+      requests.push(path);
+      if (path === '/api/bootstrap') return response({ controller: ++bootstraps === 1, capability: 'controller' });
+      if (path === '/api/state') return response(view);
+      if (path === '/api/retry-discovery') return response({ error: 'Control moved to another tab.' }, 403);
+      throw new Error('Unexpected route');
+    }) as typeof fetch;
+    const session = createSetupSession(TEST_SESSION_KEY);
+    let latest = {} as { controller: boolean; busy: boolean };
+    session.subscribe(state => { latest = state; });
+    await session.connect();
+    await session.retryDiscovery(7);
+    expect(requests).toEqual(['/api/bootstrap', '/api/state', '/api/retry-discovery', '/api/bootstrap', '/api/state']);
+    expect(latest.controller).toBe(false);
+    expect(latest.busy).toBe(false);
+  });
+
+  test('a transport exception during discovery retry produces a bounded local error', async () => {
+    globalThis.fetch = jest.fn(async (path: string) => {
+      if (path === '/api/bootstrap') return response({ controller: true, capability: 'controller' });
+      if (path === '/api/state') return response(view);
+      if (path === '/api/retry-discovery') throw 'transport unavailable';
+      throw new Error('Unexpected route');
+    }) as typeof fetch;
+    const session = createSetupSession(TEST_SESSION_KEY);
+    let latest = {} as { error: string; busy: boolean };
+    session.subscribe(state => { latest = state; });
+    await session.connect();
+    await session.retryDiscovery(7);
+    expect(latest.error).toBe('Could not retry discovery.');
+    expect(latest.busy).toBe(false);
+  });
+
   test('control transfer reconnects as read-only and does not replay an answer', async () => {
     let bootstraps = 0;
     const requests: string[] = [];
@@ -469,5 +544,91 @@ describe('browser session transport', () => {
   test('failure to close the browser session can be handled in the terminal', async () => {
     globalThis.fetch = jest.fn(async () => { throw new Error('CLI stopped'); }) as typeof fetch;
     await expect(createSetupSession(TEST_SESSION_KEY).close()).resolves.toBeUndefined();
+  });
+
+  test('read-only doctor is available only after success to the controller, refreshes redacted results, and cannot run twice concurrently', async () => {
+    const complete: WebSetupView = { ...view, outcome: 'complete' };
+    let releaseDoctor!: (value: Response) => void;
+    const pendingDoctor = new Promise<Response>(resolve => { releaseDoctor = resolve; });
+    let currentView = complete;
+    const requests: Array<{ path: string; options?: RequestInit }> = [];
+    globalThis.fetch = jest.fn(async (path: string, options?: RequestInit) => {
+      requests.push({ path, options });
+      if (path === '/api/bootstrap') return response({ controller: true, capability: 'doctor-capability' });
+      if (path === '/api/state') return response(currentView);
+      if (path === '/api/doctor') return pendingDoctor;
+      throw new Error('Unexpected route');
+    }) as typeof fetch;
+    const session = createSetupSession(TEST_SESSION_KEY);
+    let latest = {} as { busy: boolean; error: string; view?: WebSetupView };
+    session.subscribe(next => { latest = next; });
+    await session.runDoctor();
+    expect(requests).toHaveLength(0);
+    await session.connect();
+    const first = session.runDoctor();
+    await session.runDoctor();
+    expect(requests.filter(request => request.path === '/api/doctor')).toHaveLength(1);
+    expect(latest.view?.doctor?.status).toBe('running');
+    expect(requests.find(request => request.path === '/api/doctor')?.options?.headers)
+      .toEqual(expect.objectContaining({ 'X-Setup-Capability': 'doctor-capability' }));
+    currentView = { ...complete, doctor: { status: 'complete', healthy: true, pass: 3, warn: 1, fail: 0, skipped: 2 } };
+    releaseDoctor(response({ ok: true }));
+    await first;
+    expect(latest).toMatchObject({ busy: false, error: '', view: { doctor: { status: 'complete', pass: 3 } } });
+  });
+
+  test('doctor failure preserves success, reports the error, and refreshes the failed status', async () => {
+    const complete: WebSetupView = { ...view, outcome: 'complete' };
+    let currentView = complete;
+    globalThis.fetch = jest.fn(async (path: string) => {
+      if (path === '/api/bootstrap') return response({ controller: true, capability: 'doctor-capability' });
+      if (path === '/api/state') return response(currentView);
+      if (path === '/api/doctor') {
+        currentView = { ...complete, doctor: { status: 'failed' } };
+        return response({ error: 'Read-only diagnosis is unavailable.' }, 503);
+      }
+      throw new Error('Unexpected route');
+    }) as typeof fetch;
+    const session = createSetupSession(TEST_SESSION_KEY);
+    let latest = {} as { busy: boolean; error: string; view?: WebSetupView };
+    session.subscribe(next => { latest = next; });
+    await session.connect();
+    await session.runDoctor();
+    expect(latest).toMatchObject({ busy: false, error: 'Read-only diagnosis is unavailable.', view: { outcome: 'complete', doctor: { status: 'failed' } } });
+  });
+
+  test('Back is revision-bound, preserves the server-owned question, and handles stale control safely', async () => {
+    let controller = true;
+    let failBack = false;
+    const previous: WebSetupView = { ...view, promptRevision: 8, prompt: { kind: 'question', title: 'Production branch', phase: 'plan', pass: 1, question: {
+      stateId: 'repository', id: 'repository.mainBranch', label: 'Production branch', kind: 'text', defaultValue: 'main',
+    } } };
+    let currentView = view;
+    const paths: string[] = [];
+    globalThis.fetch = jest.fn(async (path: string) => {
+      paths.push(path);
+      if (path === '/api/bootstrap') return response({ controller, ...(controller ? { capability: 'controller-capability' } : {}) });
+      if (path === '/api/state') return response(currentView);
+      if (path === '/api/back') {
+        if (failBack) { controller = false; return response({ error: 'Control moved to another tab.' }, 403); }
+        currentView = previous;
+        return response({ accepted: true });
+      }
+      throw new Error('Unexpected route');
+    }) as typeof fetch;
+    const session = createSetupSession(TEST_SESSION_KEY);
+    let latest = {} as { controller: boolean; busy: boolean; view?: WebSetupView };
+    session.subscribe(next => { latest = next; });
+    await session.back(7);
+    expect(paths).toHaveLength(0);
+    await session.connect();
+    await session.back(6);
+    expect(paths).not.toContain('/api/back');
+    await session.back(7);
+    expect(latest).toMatchObject({ busy: false, view: { promptRevision: 8 } });
+    failBack = true;
+    await session.back(8);
+    expect(latest.controller).toBe(false);
+    expect(paths.filter(path => path === '/api/back')).toHaveLength(2);
   });
 });

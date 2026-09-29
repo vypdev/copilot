@@ -1,9 +1,11 @@
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
+import { setupQuestionPresentation } from '../../application/policies/setup_question_guidance_policy';
+import type { SetupQuestion } from '../../domain/setup_questionnaire';
 
-function markup(name: string, props: Record<string, unknown>): string {
+function markup(name: string, props: Record<string, unknown>, locale = 'en'): string {
   return execFileSync(process.execPath, [
-    resolve(__dirname, '../../../scripts/render-web-setup-component.cjs'), name, JSON.stringify(props),
+    resolve(__dirname, '../../../scripts/render-web-setup-component.cjs'), name, JSON.stringify(props), locale,
   ], { encoding: 'utf8' });
 }
 
@@ -19,6 +21,23 @@ describe('web setup component semantics', () => {
     expect(html).not.toContain('setup-key');
   });
   test.each([
+    ['en', 'Pair this browser'], ['es', 'Vincula este navegador'],
+    ['fr', 'Associer ce navigateur'], ['pt', 'Emparelhar este navegador'],
+  ])('%s has a localized pairing screen', (locale, label) => {
+    const html = markup('PairingPanel', { busy: false }, locale);
+    expect(html).toContain(label);
+    expect(html).toContain('copilot setup --web');
+  });
+  test('language selector lists exactly the four supported languages, with English first', () => {
+    const html = markup('LanguageSwitch', {});
+    for (const code of ['en', 'es', 'fr', 'pt']) {
+      expect(html).toContain(`value="${code}"`);
+    }
+    expect(html.indexOf('value="en"')).toBeLessThan(html.indexOf('value="es"'));
+    expect(html).not.toContain('value="ar"');
+    expect(html).toContain('aria-live="polite"');
+  });
+  test.each([
     ['complete', 'Your configuration was applied', 'not revoked automatically'],
     ['dry-run', 'No changes were made', 'did not begin applying'],
     ['cancelled', 'No setup changes started', 'did not begin applying'],
@@ -30,6 +49,154 @@ describe('web setup component semantics', () => {
     expect(html).toContain(explanation);
     expect(html).toContain('Close local session');
     expect(html).toContain('copilot doctor');
+  });
+  test('completed Spanish result offers safe in-page verification and explains unverified Secret values', () => {
+    const before = markup('ResultPanel', { outcome: 'complete', controller: true, onClose: noOp }, 'es');
+    expect(before).toContain('Comprobar instalación (solo lectura)');
+    const html = markup('ResultPanel', { outcome: 'complete', controller: true, onClose: noOp,
+      doctor: { status: 'complete', healthy: false, pass: 4, warn: 1, fail: 0, skipped: 2 } }, 'es');
+    expect(html).toContain('4 correctas');
+    expect(html).toContain('Este modo no puede verificar los valores de Secrets.');
+    expect(html).toContain('copilot doctor --read-only');
+    expect(html).not.toContain('private GitHub diagnostic');
+  });
+
+  test('blocked page identifies the cause and next action in the chosen language', () => {
+    const detail = { reasonCode: 'permissions', stoppedStage: 'Plan', mutationStarted: false };
+    const html = markup('ResultPanel', { outcome: 'blocked', detail, controller: true }, 'es');
+    expect(html).toContain('Faltan permisos del PAT');
+    expect(html).toContain('Plan');
+    expect(html).toContain('Comprueba los permisos mostrados');
+    expect(html).toContain('No se iniciaron cambios');
+  });
+
+  test('partial result shows structured cause, safe effects, and diagnostic reference', () => {
+    const html = markup('ResultPanel', { outcome: 'partial', controller: true, onClose: noOp,
+      detail: { reasonCode: 'provider', stoppedStage: 'Apply', mutationStarted: true,
+        diagnosticRef: '12345678-1234-4123-8123-123456789abc',
+        effects: [{ id: 'files', state: 'completed' }, { id: 'secret', state: 'needs-inspection' }] } });
+    expect(html).toContain('GitHub or another provider did not complete');
+    expect(html).toContain('Reported completed');
+    expect(html).toContain('Outcome needs inspection');
+    expect(html).toContain('12345678-1234-4123-8123-123456789abc');
+  });
+
+  test('French technical question guidance is complete, not a mixed-language preview', () => {
+    const question: SetupQuestion = { stateId: 'pull-request-approval', id: 'pullRequestApproval.testChecks',
+      label: 'Trusted checks', kind: 'text', defaultValue: '' };
+    const html = markup('QuestionPrompt', { prompt: {
+      kind: 'question', title: 'Approval', phase: 'full', pass: 1,
+      question, presentation: setupQuestionPresentation(question),
+    }, controller: true, busy: false }, 'fr');
+    expect(html).toContain('Quelles vérifications CI sont fiables pour approuver ?');
+    expect(html).toContain('jobs CI');
+    expect(html).not.toContain('Detailed guidance below is currently available in English');
+  });
+
+  test('question details explain where, how and why, with a safe contextual link', () => {
+    const html = markup('QuestionPrompt', { prompt: {
+      kind: 'question', title: 'Repository', phase: 'full', pass: 1,
+      question: { stateId: 'repository', id: 'repository.mainBranch', label: 'Production branch', kind: 'text', defaultValue: 'main' },
+      presentation: {
+        en: { label: 'Production branch', summary: 'Choose the production branch.', when: 'Before release.',
+          where: 'Repository settings.', how: 'Enter its exact name.', why: 'Releases target this branch.',
+          example: 'main', effect: 'Changes release target.', verify: 'Review plan.',
+          documentation: { title: 'Copilot configuration', url: 'https://docs.page/vypdev/copilot/configuration' } },
+        es: { label: 'Rama de producción', summary: 'Elige la rama de producción.', when: 'Antes de publicar.',
+          where: 'Configuración del repositorio.', how: 'Escribe el nombre exacto.', why: 'La publicación usa esta rama.',
+          example: 'main', effect: 'Cambia el destino.', verify: 'Revisa el plan.',
+          documentation: { title: 'Configuración de Copilot', url: 'https://docs.page/vypdev/copilot/configuration' } },
+      },
+    }, controller: true, busy: false }, 'es');
+    expect(html).toContain('Dónde se configura');
+    expect(html).toContain('Cómo elegir');
+    expect(html).toContain('Por qué importa');
+    expect(html).toContain('https://docs.page/vypdev/copilot/configuration');
+    expect(html).toContain('rel="noopener noreferrer"');
+    expect(html.indexOf('question-help-link')).toBeLessThan(html.indexOf('<details'));
+  });
+
+  test.each([
+    ['en', 'Retry GitHub discovery'], ['es', 'Reintentar búsqueda en GitHub'],
+    ['fr', 'Relancer la recherche GitHub'], ['pt', 'Repetir pesquisa no GitHub'],
+  ])('%s Project discovery offers a localized bounded retry without claiming the organization is empty', (locale, retryLabel) => {
+    const html = markup('QuestionPrompt', { prompt: {
+      kind: 'question', title: 'Projects', phase: 'full', pass: 1,
+      question: { stateId: 'projects', id: 'projects.ids', label: 'Projects', kind: 'project-select', defaultValue: '',
+        discoveryStatus: 'empty', discoveryRetryRemaining: 2, projectCandidates: [], projectOwner: 'acme' },
+    }, controller: true, busy: false }, locale);
+    expect(html).toContain(retryLabel);
+    expect(html).toContain('2');
+    expect(html).toContain('discovery-actions');
+  });
+
+  test('discovery scope is specific and unsupported personal Projects do not offer retry', () => {
+    const checkNotice = markup('DiscoveryNotice', { kind: 'checks', status: 'observed' }, 'en');
+    expect(checkNotice).toContain('20 recent pull-request workflow runs');
+    expect(checkNotice).toContain('15 runs');
+    const projectNotice = markup('DiscoveryNotice', { kind: 'projects', status: 'observed' }, 'en');
+    expect(projectNotice).toContain('30 accessible organization Projects');
+    const unsupported = markup('QuestionPrompt', { prompt: { kind: 'question', title: 'Projects', phase: 'full', pass: 1,
+      question: { stateId: 'projects', id: 'projects.ids', label: 'Projects', kind: 'project-select', defaultValue: '',
+        discoveryStatus: 'unsupported', projectCandidates: [], projectOwner: 'owner' } }, controller: true, busy: false }, 'en');
+    expect(unsupported).not.toContain('Retry GitHub discovery');
+    expect(unsupported).toContain('fine-grained PAT');
+  });
+
+  test('coverage selector shows the selected producer identity and the observation limitation', () => {
+    const html = markup('QuestionPrompt', { prompt: {
+      kind: 'question', title: 'Coverage', phase: 'full', pass: 1,
+      question: { stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.checkName',
+        label: 'Coverage check', kind: 'choice', defaultValue: 'Tests', choices: ['Tests'],
+        trustedProducers: [{ name: 'Tests', workflowName: 'CI', sourceAppId: 12 }],
+        producerCandidates: [{ name: 'Tests', workflowName: 'CI', sourceAppId: 12,
+          runUrl: 'https://github.com/acme/repo/actions/runs/7', headSha: 'a'.repeat(40),
+          conclusion: 'success', observedAt: '2026-09-29T10:00:00Z' }] },
+    }, controller: true, busy: false }, 'en');
+    expect(html).toContain('Tests — CI · App 12');
+    expect(html).toContain('2026-09-29T10:00:00Z');
+    expect(html).toContain('Required by branch rule: not checked');
+  });
+
+  test('a Project retained across discovery refresh remains visible as unverified and removable', () => {
+    const html = markup('ProjectSelector', { candidates: [], selected: ['12'], value: '', controller: true }, 'en');
+    expect(html).toContain('#12');
+    expect(html).toContain('no longer appear in this GitHub result');
+    expect(html).toContain('Remove selection');
+  });
+
+  test('manual Project Status attestation displays every transition and exact value', () => {
+    const question: SetupQuestion = { stateId: 'projects', id: 'projects.statusVerified', label: 'Verify Status',
+      kind: 'boolean', defaultValue: false, projectStatusValues: [
+        { transition: 'issueCreated', value: 'Todo' },
+        { transition: 'pullRequestCreated', value: 'Doing' },
+        { transition: 'issueInProgress', value: 'Started' },
+        { transition: 'pullRequestInProgress', value: 'Active' },
+      ] };
+    const html = markup('QuestionPrompt', { prompt: { kind: 'question', title: 'Projects', phase: 'full', pass: 1,
+      question, presentation: setupQuestionPresentation(question) }, controller: true, busy: false }, 'es');
+    for (const value of ['Todo', 'Doing', 'Started', 'Active']) expect(html).toContain(value);
+    expect(html).toContain('Issue nuevo');
+    expect(html).toContain('Pull request en curso');
+  });
+
+  test('boolean recommendations use the selected language rather than raw true or false', () => {
+    const html = markup('QuestionPrompt', { prompt: {
+      kind: 'question', title: 'Features', phase: 'full', pass: 1,
+      question: { stateId: 'capabilities', id: 'features.issues', label: 'Issue automation?', kind: 'boolean', defaultValue: false },
+    }, controller: true, busy: false }, 'es');
+    expect(html).toContain('Respuesta sugerida: No');
+    expect(html).not.toContain('Respuesta sugerida: false');
+  });
+
+  test('choice recommendations translate their display label without changing the option value', () => {
+    const html = markup('QuestionPrompt', { prompt: {
+      kind: 'question', title: 'Provisioning', phase: 'full', pass: 1,
+      question: { stateId: 'provisioning', id: 'ai.provisioningMode', label: 'Provisioning mode',
+        kind: 'choice', defaultValue: 'always', choices: ['auto', 'always', 'disabled'] },
+    }, controller: true, busy: false }, 'es');
+    expect(html).toContain('Respuesta sugerida: Reinstalar siempre');
+    expect(html).toContain('value="always"');
   });
 
   test('read-only result cannot show its close control', () => {
@@ -44,6 +211,19 @@ describe('web setup component semantics', () => {
     expect(html).toContain('&lt;script>');
     expect(html).not.toContain('<script>');
     expect(html.match(/disabled/g)?.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('non-question decisions show their purpose before the choices', () => {
+    const html = markup('PromptCard', {
+      prompt: { kind: 'choice', title: 'How will you provide your setup PAT?',
+        description: 'Choose the account that will configure this repository.',
+        choices: ['Guided GitHub link', 'Manual PAT'] },
+      revision: 1, promptRevision: 1, controller: true, busy: false,
+    });
+    expect(html).toContain('<h2>How will you provide your setup PAT?</h2>');
+    expect(html.indexOf('How will you provide your setup PAT?'))
+      .toBeLessThan(html.indexOf('Guided GitHub link'));
+    expect(html).toContain('Choose the account that will configure this repository.');
   });
 
   test('secret presenter uses a password input and only an allowlisted GitHub URL', () => {
@@ -69,11 +249,33 @@ describe('web setup component semantics', () => {
   test('review plan shows only selected resource names and requires an explicit control', () => {
     const html = markup('PlanPrompt', {
       prompt: { kind: 'plan', title: 'Review', plan: {
+        presentationDefaults: [],
+        decisions: { enabledCapabilities: ['issues'], agentRouting: [{ role: 'planner', provider: 'codex', modelProvider: 'openai', model: 'o3' }],
+          issueWorkflows: ['bugfix'], productionBranch: 'main', developmentBranch: 'develop',
+          approvalMode: 'recommend', trustedChecks: [{ name: 'Tests', sourceAppId: 15368, workflowName: 'CI' }], producerAttested: true,
+          coverageMode: 'check', coverageCheck: 'Tests', projectNumbers: ['12'],
+          projectStatuses: [{ transition: 'issueCreated', value: 'Todo' }],
+          variableScope: 'repository', secretScope: 'repository', initialTag: false },
         files: ['AGENTS.md'], workflows: ['copilot.yml'], variables: ['MAIN_BRANCH'], secrets: ['PAT'], warnings: [],
       } }, controller: true, busy: false, onSubmit: noOp,
     });
     for (const item of ['AGENTS.md', 'copilot.yml', 'MAIN_BRANCH', 'PAT']) expect(html).toContain(item);
+    expect(html).toContain('main');
+    for (const item of ['Planner', 'o3', 'Tests', '15368', 'Todo', '#12']) expect(html).toContain(item);
     expect(html).toContain('Approve');
+  });
+
+  test('numeric coverage plan review includes the exact threshold, reporter and operator attestation in Spanish', () => {
+    const html = markup('PlanDecisionSummary', { decisions: {
+      enabledCapabilities: ['pullRequests'], issueWorkflows: [], agentRouting: [],
+      productionBranch: 'main', developmentBranch: 'develop', approvalMode: 'guarded',
+      trustedChecks: [{ name: 'Coverage', sourceAppId: 15368, workflowName: 'CI' }], producerAttested: true,
+      coverageMode: 'numeric', coverageCheck: 'Coverage', coverageMinimum: 87,
+      coverageArtifactWorkflow: 'CI', coverageReporterAttested: true,
+      projectNumbers: [], projectStatuses: [], variableScope: 'repository', secretScope: 'repository', initialTag: false,
+    } }, 'es');
+    for (const value of ['Cobertura mínima de líneas modificadas', '87%', 'Workflow que publica el artefacto',
+      'Generador de cobertura comprobado por ti', 'Coverage', '15368']) expect(html).toContain(value);
   });
 
   test('status banner displays an error without turning arbitrary links into actions', () => {
@@ -98,6 +300,9 @@ describe('web setup component semantics', () => {
     expect(html).toContain('Bot PAT');
     expect(html).toContain('Contents');
     expect(html).toContain('owner/repo');
+    const translated = markup('ContextPanel', { view: base }, 'es');
+    expect(translated).toContain('Contenido');
+    expect(translated).toContain('GitHub · Contents');
   });
 
   test('permission evidence labels missing grants instead of implying access', () => {
@@ -106,8 +311,8 @@ describe('web setup component semantics', () => {
         applicability: 'required', reason: 'Provision Actions Secret', status: 'missing' }] },
     } } });
     expect(html).toContain('Setup PAT');
-    expect(html).toContain('required');
-    expect(html).toContain('missing');
+    expect(html).toContain('Required');
+    expect(html).toContain('Missing');
     expect(html).toContain('Provision Actions Secret');
   });
 
@@ -136,6 +341,74 @@ describe('web setup component semantics', () => {
     expect(html).toContain('PERMISSION PREVIEW');
     expect(html).toContain('Continue');
     expect(html).not.toMatch(/<button[^>]*disabled[^>]*>Continue/);
+  });
+  test('coverage choice links back to the selected exact CI producer', () => {
+    const html = markup('QuestionPrompt', { prompt: {
+      kind: 'question', title: 'Coverage', phase: 'full', pass: 1,
+      question: { stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.checkName',
+        label: 'Coverage check', kind: 'choice', defaultValue: 'Tests', choices: ['Tests'],
+        producerCandidates: [{ name: 'Tests', sourceAppId: 12, workflowName: 'CI',
+          runUrl: 'https://github.com/acme/repo/actions/runs/42', headSha: 'a'.repeat(40), conclusion: 'success' }] },
+    }, controller: true, busy: false });
+    expect(html).toContain('GitHub App 12');
+    expect(html).toContain('https://github.com/acme/repo/actions/runs/42');
+  });
+  test('suggested check card shows observed App, revision, date, and safe run link', () => {
+    const html = markup('QuestionPrompt', { prompt: {
+      kind: 'question', title: 'Trusted checks', phase: 'full', pass: 1,
+      question: { stateId: 'pull-request-approval', id: 'pullRequestApproval.testChecks',
+        label: 'Trusted checks', kind: 'producer-select', defaultValue: '',
+        producerCandidates: [{ name: 'Tests', sourceAppId: 12, sourceAppName: 'GitHub Actions', workflowName: 'CI',
+          runUrl: 'https://github.com/acme/repo/actions/runs/42', headSha: 'a'.repeat(40), conclusion: 'success',
+          observedAt: '2026-09-29T00:00:00Z' }] },
+    }, controller: true, busy: false });
+    expect(html).toContain('GitHub Actions 12');
+    expect(html).toContain('aaaaaaa');
+    expect(html).toContain('https://github.com/acme/repo/actions/runs/42');
+    expect(html).toContain('Check/job name');
+    expect(html).toContain('Source GitHub App ID');
+    expect(html).toContain('Workflow name');
+  });
+
+  test.each([
+    ['en', 'GitHub did not allow Project discovery'],
+    ['es', 'GitHub no permitió consultar Projects'],
+    ['fr', 'GitHub a refusé la découverte des Projects'],
+    ['pt', 'O GitHub recusou a consulta de Projects'],
+  ])('%s Project selector explains permission denial and manual fallback', (locale, copy) => {
+    const html = markup('QuestionPrompt', { prompt: {
+      kind: 'question', title: 'Projects', phase: 'full', pass: 1,
+      question: { stateId: 'projects', id: 'projects.ids', label: 'Projects', kind: 'project-select', defaultValue: '',
+        discoveryStatus: 'permission-denied', projectCandidates: [], projectOwner: 'acme' },
+    }, controller: true, busy: false }, locale);
+    expect(html).toContain(copy);
+    expect(html).toContain('PVT_');
+    expect(html).toContain('manual-project');
+  });
+
+  test('Project cards show title, number and only safe official links', () => {
+    const html = markup('ProjectSelector', { candidates: [
+      { title: 'Roadmap', number: 5, owner: 'acme', url: 'https://github.com/orgs/acme/projects/5', statusOptions: ['Todo'] },
+      { title: '<unsafe>', number: 7, owner: 'acme', url: 'https://evil.example/phish' },
+    ], selected: ['5'], value: '', controller: true });
+    expect(html).toContain('Roadmap');
+    expect(html).toContain('#5');
+    expect(html).toContain('https://github.com/orgs/acme/projects/5');
+    expect(html).not.toContain('https://evil.example/phish');
+    expect(html).toContain('&lt;unsafe>');
+    expect(html).toContain('checked');
+  });
+
+  test('Status choice is explicit when Project options are verified', () => {
+    const statusQuestion: SetupQuestion = { stateId: 'projects', id: 'projects.issueCreatedColumn', label: 'Status for new issues',
+      kind: 'choice', defaultValue: 'Todo', choices: ['Todo', 'In Progress'], statusOptionState: 'observed' };
+    const html = markup('QuestionPrompt', { prompt: {
+      kind: 'question', title: 'Projects', phase: 'full', pass: 1,
+      question: statusQuestion, presentation: setupQuestionPresentation(statusQuestion),
+    }, controller: true, busy: false }, 'es');
+    expect(html).toContain('Estado Status de nuevos issues');
+    expect(html).toContain('value="Todo"');
+    expect(html).toContain('value="In Progress"');
   });
 
   test('successive question revisions render their own default values', () => {

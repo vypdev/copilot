@@ -39,7 +39,6 @@ export function createSetupSession(initialSessionKey?: string) {
       loading = false;
     }
   }
-
   async function connect(): Promise<void> {
     if (!sessionKey) return;
     try {
@@ -55,7 +54,6 @@ export function createSetupSession(initialSessionKey?: string) {
       set({ view: undefined, paired: false, controller: false, error: 'Could not connect to the local setup session. Check the terminal and pair again.' });
     }
   }
-
   async function pair(code: string): Promise<void> {
     if (current.busy || current.paired) return;
     set({ busy: true, error: '' });
@@ -76,7 +74,6 @@ export function createSetupSession(initialSessionKey?: string) {
       set({ busy: false });
     }
   }
-
   async function post(path: string, body: Record<string, unknown>, authorized = true): Promise<Record<string, unknown>> {
     const response = await fetch(path, {
       method: 'POST', cache: 'no-store',
@@ -88,6 +85,12 @@ export function createSetupSession(initialSessionKey?: string) {
     if (!response.ok) throw new Error(String(data.error ?? 'The request was rejected.'));
     return data;
   }
+  async function recoverMutation(cause: unknown, fallback: string): Promise<void> {
+    const message = cause instanceof Error ? cause.message : fallback;
+    set({ error: message });
+    if (/read-only|Control moved/.test(message)) await connect();
+    else await refresh(true);
+  }
 
   async function submit(revision: number, value: string): Promise<void> {
     if (current.busy || !current.controller || current.view?.promptRevision !== revision) return;
@@ -96,10 +99,33 @@ export function createSetupSession(initialSessionKey?: string) {
       await post('/api/answer', { revision, value });
       await refresh();
     } catch (cause) {
-      const message = cause instanceof Error ? cause.message : 'Could not submit this answer.';
-      set({ error: message });
-      if (/read-only|Control moved/.test(message)) await connect();
-      else await refresh(true);
+      await recoverMutation(cause, 'Could not submit this answer.');
+    } finally {
+      set({ busy: false });
+    }
+  }
+
+  async function retryDiscovery(revision: number): Promise<void> {
+    if (current.busy || !current.controller || current.view?.promptRevision !== revision) return;
+    set({ busy: true, error: '' });
+    try {
+      await post('/api/retry-discovery', { revision });
+      await refresh();
+    } catch (cause) {
+      await recoverMutation(cause, 'Could not retry discovery.');
+    } finally {
+      set({ busy: false });
+    }
+  }
+
+  async function back(revision: number): Promise<void> {
+    if (current.busy || !current.controller || current.view?.promptRevision !== revision) return;
+    set({ busy: true, error: '' });
+    try {
+      await post('/api/back', { revision });
+      await refresh();
+    } catch (cause) {
+      await recoverMutation(cause, 'Could not return to the previous question.');
     } finally {
       set({ busy: false });
     }
@@ -141,5 +167,13 @@ export function createSetupSession(initialSessionKey?: string) {
     catch { /* The CLI can also be stopped in the terminal. */ }
   }
 
-  return { subscribe: state.subscribe, pair, connect, refresh, submit, cancel, takeOver, close };
+  async function runDoctor(): Promise<void> {
+    if (current.busy || !current.controller || current.view?.outcome !== 'complete') return;
+    set({ busy: true, error: '', view: { ...current.view, doctor: { status: 'running' } } });
+    try { await post('/api/doctor', {}); }
+    catch (cause) { set({ error: cause instanceof Error ? cause.message : 'Read-only verification failed.' }); }
+    finally { await refresh(true); set({ busy: false }); }
+  }
+
+  return { subscribe: state.subscribe, pair, connect, refresh, submit, retryDiscovery, back, cancel, takeOver, close, runDoctor };
 }

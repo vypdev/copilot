@@ -60,7 +60,7 @@ describe('buildSetupPatCreationUrl', () => {
 
     it('keeps even the largest valid owner, repository, and grant set within a practical terminal URL', () => {
         const grants = [
-            ...['Metadata', 'Contents', 'Secrets', 'Variables', 'Issues', 'Actions', 'Administration', 'Workflows', 'Pull requests']
+            ...['Metadata', 'Contents', 'Secrets', 'Variables', 'Issues', 'Actions', 'Checks', 'Administration', 'Workflows', 'Pull requests']
                 .map(name => permission('workflow', 'repository', name, name === 'Metadata' ? 'read' : 'write')),
             ...['Secrets', 'Variables', 'Issue Types', 'Projects', 'Members']
                 .map(name => permission('workflow', 'organization', name, 'write')),
@@ -72,11 +72,12 @@ describe('buildSetupPatCreationUrl', () => {
         expect(url.length).toBeLessThan(2_048);
     });
 
-    it('rejects unsupported Checks instead of producing an incomplete guarded link', () => {
-        expect(() => buildSetupPatCreationUrl({
+    it('offers Checks read on setup and bot links while still requiring GitHub form and token audit', () => {
+        const url = new URL(buildSetupPatCreationUrl({
             role: 'workflow', owner: 'vypdev', repository: 'copilot', expiresIn: 90,
             requirements: [permission('workflow', 'repository', 'Checks', 'read')],
-        })).toThrow(UnsupportedSetupPatLinkError);
+        }));
+        expect(url.searchParams.get('checks')).toBe('read');
     });
 
     it.each([

@@ -11,6 +11,7 @@ const QUERY_PERMISSIONS: Readonly<Record<SetupTokenPermissionScope, Readonly<Rec
         Issues: 'issues',
         Actions: 'actions',
         Administration: 'administration',
+        Checks: 'checks',
         Workflows: 'workflows',
         'Pull requests': 'pull_requests',
     },
@@ -31,7 +32,7 @@ export class UnsupportedSetupPatLinkError extends Error {
     }
 }
 
-/** Builds only documented GitHub form fields; never accepts credential material. */
+/** Builds known GitHub form fields; Checks is accepted by the form but omitted from the published URL table. Never accepts credential material. */
 export function buildSetupPatCreationUrl(input: Readonly<{
     role: 'setup' | 'workflow';
     owner: string;

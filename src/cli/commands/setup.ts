@@ -3,7 +3,7 @@ import { runLocalAction } from '../../actions/local_action';
 import { TITLE } from '../../application/contracts/product_identity';
 import { getSetupToken } from '../../utils/setup_files';
 import { logError, logInfo } from '../../utils/logger';
-import { getCurrentAttachedBranch, getCurrentHeadSha, getGitInfo, getGitRepositoryRoot, isGitRepositoryRoot, isInsideGitRepo } from '../../cli_context';
+import { getCurrentAttachedBranch, getCurrentHeadSha, getGitInfo, getGitRepositoryRoot, hasLocalOrTrackedGitBranch, isGitRepositoryRoot, isInsideGitRepo } from '../../cli_context';
 import { buildSetupParams } from './setup_policy';
 import { collectApprovalCheck, collectScope, collectSecret, loadSetupOverrides } from '../setup_command_options';
 import { SetupQuestionnaireController, SetupWizardUseCase } from '../../application/usecases/setup';
@@ -17,9 +17,11 @@ import {
   buildWorkflowPatPermissionRequirements,
 } from '../../application/policies/setup_token_permission_policy';
 import { createSetupCredentialsUseCase, createSetupRemoteConfigurationReadPort } from '../../infrastructure/composition/setup_credentials_composition_root';
-import { createSetupMergeQueueReadinessUseCase } from '../../infrastructure/composition/setup_doctor_composition_root';
+import { createSetupDoctorUseCase, createSetupMergeQueueReadinessUseCase } from '../../infrastructure/composition/setup_doctor_composition_root';
 import { SetupDoctorWorkspaceQueryAdapter } from '../../infrastructure/setup_workspace_adapter';
 import { GithubSetupApprovalReadinessAdapter } from '../../infrastructure/setup_approval_readiness_adapter';
+import { GithubSetupApprovalCheckDiscoveryAdapter } from '../../infrastructure/github_setup_approval_check_discovery_adapter';
+import { GithubSetupProjectDiscoveryAdapter } from '../../infrastructure/github_setup_project_discovery_adapter';
 import type { SetupConfiguration } from '../../domain/setup';
 import { ApplicationError, toApplicationError } from '../../application/errors/application_error';
 import { createInteractiveTerminalDriver } from '../setup_terminal_driver';
@@ -46,6 +48,7 @@ import {
   WebSetupPlanConfirmation, WebSetupPlanPresenter, WebSetupQuestionnaireCollector,
   WebSetupWorkflowUpdatePrompt,
 } from '../web_setup_adapters';
+import { setupActionResultFailure, setupResultEffects, setupResultReason } from '../setup_result_receipt';
 
 export function registerSetupCommand(program: Command): void {
   program
@@ -138,7 +141,7 @@ export function registerSetupCommand(program: Command): void {
           journey = new SetupJourneyUseCase(`${gitInfo.owner}/${gitInfo.repo}`,
             webBridge ? new WebSetupJourneyPresenter(webBridge) : new ConsoleSetupJourneyPresenter());
           if (webBridge) {
-            const target = await webBridge.ask({ kind: 'confirm', title: 'Confirm this repository',
+            const target = await webBridge.ask({ kind: 'confirm', title: 'Confirm this repository', copyId: 'repository.confirm', copyValues: { repository: `${gitInfo.owner}/${gitInfo.repo}`, branch: initialBranch ?? '' },
               description: `This local checkout resolves to ${gitInfo.owner}/${gitInfo.repo} on branch ${initialBranch}. Confirm the target before configuring PAT access or files.`,
               choices: ['Yes, this is my repository', 'Stop and choose another checkout'] });
             if (target === undefined) throw new SetupTerminalCancelledError();
@@ -147,10 +150,21 @@ export function registerSetupCommand(program: Command): void {
           journey.advance('choices');
         }
         const overrides = loadSetupOverrides(options);
+        let presentationMode: 'basic' | 'custom' = 'custom';
+        if (!options.nonInteractive && !options.dryRun) {
+          if (webBridge) {
+            const depth = await webBridge.ask({ kind: 'choice', title: 'Choose setup detail', copyId: 'setup.depth',
+              choices: ['Basic guided setup', 'Customize every setting'], defaultValue: 'Basic guided setup' });
+            if (depth === undefined) throw new SetupTerminalCancelledError();
+            presentationMode = depth === 'Basic guided setup' ? 'basic' : 'custom';
+          } else if (credentialPrompt instanceof SetupCredentialPromptAdapter) {
+            presentationMode = await credentialPrompt.chooseSetupPresentationMode();
+          }
+        }
         let setupPatPermissions = buildSetupPatPermissionRequirements();
         let token = getSetupToken(cwd, options.token);
         if (webBridge && token) {
-          const choice = await webBridge.ask({ kind: 'choice', title: 'An environment setup PAT is available',
+          const choice = await webBridge.ask({ kind: 'choice', title: 'An environment setup PAT is available', copyId: 'setup.environmentPat',
             description: 'Its value stays in the CLI process and is never sent to this page. Exiting Copilot cannot unset your parent shell variable.',
             choices: ['Use the environment PAT', 'Create or enter a different PAT'] });
           if (choice === undefined) throw new SetupTerminalCancelledError();
@@ -159,7 +173,7 @@ export function registerSetupCommand(program: Command): void {
         if (token || options.nonInteractive) permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
         else permissionPresenter.showRequirements('setup', setupPatPermissions);
         let setupPatAccount: string | undefined;
-        let permissionIntent: { draft: SetupConfiguration; answeredQuestionIds: readonly string[] } | undefined;
+        let permissionIntent: { draft: SetupConfiguration; answeredQuestionIds: readonly string[]; projectsWanted: boolean } | undefined;
         let assertedOwnerKind: 'Organization' | 'User' | undefined;
         if (!token && !options.nonInteractive && !options.dryRun) {
           if (await credentialPrompt.chooseSetupPatMethod() === 'guided') {
@@ -170,14 +184,20 @@ export function registerSetupCommand(program: Command): void {
                 .collect(initial, context),
               chooseOwnerKind: () => credentialPrompt.chooseSetupOwnerKind(),
               review: () => credentialPrompt.reviewSetupPatIntent(),
-              showPreview: ({ draft, requirements, uncertain, ownerConflict, errors, pass }) => {
+              showPreview: ({ draft, requirements, uncertain, ownerConflict, errors, pass, projectsWanted }) => {
                 if (ownerConflict) logInfo('This plan selects organization storage or Projects, but the owner was declared a personal account. Revise the choices or use the manual PAT path.');
                 if (errors.length) logInfo(`The selected local configuration needs correction before a guided link can be generated:\n${errors.map(item => `  - ${item}`).join('\n')}`);
                 if (pass > 1) logInfo('Choice review complete. Returning to setup PAT permission review.');
                 logInfo('Permission intent:');
                 logInfo(`  Initial tag: ${draft.createInitialTag ? 'yes' : 'no'}; issue workflows: ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval: ${draft.pullRequestApproval.mode}`);
-                logInfo(`  Secrets: ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables: ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects: ${draft.projects.ids.trim() || 'none'}`);
-                webBridge?.message(`Permission preview: issue workflows ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval ${draft.pullRequestApproval.mode}; Secrets ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects ${draft.projects.ids.trim() || 'none'}.`, 'info');
+                logInfo(`  Secrets: ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables: ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects: ${projectsWanted ? 'yes (choose exact Projects after PAT)' : 'none'}`);
+                webBridge?.message(`Permission preview: issue workflows ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval ${draft.pullRequestApproval.mode}; Secrets ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects ${projectsWanted ? 'yes (choose after PAT)' : 'none'}.`, 'info', undefined, 'permission.preview', {
+                  issues: draft.features.issues ? draft.issueWorkflows.enabled.join('|') || 'none' : 'disabled',
+                  approval: draft.pullRequestApproval.mode,
+                  secrets: draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off',
+                  variables: draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off',
+                  projects: projectsWanted ? 'yes' : 'none',
+                });
                 permissionPresenter.showRequirements('setup', requirements);
                 if (uncertain.length) logInfo(`May need after GitHub inspection:\n${uncertain.map(item => `  - ${item}`).join('\n')}`);
               },
@@ -257,6 +277,8 @@ export function registerSetupCommand(program: Command): void {
           remoteConfiguration: remoteConfigurationReader,
           mergeQueueReadiness: createSetupMergeQueueReadinessUseCase(),
           approvalReadiness: new GithubSetupApprovalReadinessAdapter(),
+          approvalCheckDiscovery: new GithubSetupApprovalCheckDiscoveryAdapter(),
+          projectDiscovery: new GithubSetupProjectDiscoveryAdapter(),
         });
         const result = await wizard.execute({
           mode: options.nonInteractive ? 'non-interactive' : 'interactive',
@@ -265,6 +287,8 @@ export function registerSetupCommand(program: Command): void {
           skipRepositoryVariables: Boolean(options.skipVariables),
           skipRepositorySecrets: Boolean(options.skipSecrets),
           previewOnly: Boolean(options.dryRun),
+          presentationMode,
+          developmentBranchObservedLocally: hasLocalOrTrackedGitBranch(cwd, overrides.repository?.developmentBranch ?? 'develop'),
           ...(token ? { remoteTarget: { owner: gitInfo.owner, repository: gitInfo.repo, token } } : {}),
         });
         if (result.status === 'cancelled') {
@@ -277,6 +301,7 @@ export function registerSetupCommand(program: Command): void {
         }
         if (result.status === 'blocked') {
           journey?.finish('blocked');
+          webBridge?.resultReason(result.reason === 'setup-permissions-unavailable' ? 'permissions' : 'storage');
           logError(new ApplicationError(
             result.reason === 'setup-permissions-unavailable' ? 'authorization.credential-invalid' : 'provider.unavailable',
             `${result.reason === 'setup-permissions-unavailable'
@@ -349,7 +374,7 @@ export function registerSetupCommand(program: Command): void {
           }
           const authorization = await new VerifyWebSetupApplyUseCase({
             confirm: async () => {
-              const answer = await webBridge.ask({ kind: 'confirm', title: 'Apply this setup now?',
+              const answer = await webBridge.ask({ kind: 'confirm', title: 'Apply this setup now?', copyId: 'apply.confirm',
                 description: 'This is the final approval. Local files and selected GitHub resources may change. A partial result may require inspection before retrying.',
                 choices: ['Apply setup', 'Stop without applying'] });
               return answer === undefined ? undefined : answer === 'Apply setup' ? 'apply' : 'stop';
@@ -390,15 +415,30 @@ export function registerSetupCommand(program: Command): void {
         journey?.markMutationStarted();
         setupApplyStarted = true;
         const actionResults = await runLocalAction(params);
+        webBridge?.effects(setupResultEffects(actionResults));
         if (actionResults.some(actionResult => !actionResult.success || actionResult.errors.length > 0)) {
+          const failure = setupActionResultFailure(actionResults);
+          if (failure) webBridge?.resultReason(failure.reasonCode, failure.diagnosticRef);
           journey?.finish('partial');
           logInfo('Setup reported failures or partial completion. If a bot PAT was supplied, its Secret may already have been written; inspect the result and GitHub Secret name/scope before retrying or revoking it.');
           process.exitCode = 1;
         } else {
+          if (webBridge && token) {
+            const doctorToken = token;
+            webBridge.configureReadOnlyDoctor(async () => {
+              const diagnosis = await createSetupDoctorUseCase().execute({ owner: gitInfo.owner,
+                repository: gitInfo.repo, setupToken: doctorToken, configuration, readOnly: true });
+              return { healthy: diagnosis.report.healthy, ...diagnosis.report.totals };
+            });
+          }
           journey?.finish('complete');
         }
       } catch (error) {
         journey?.finish(setupMutationStarted ? 'partial' : error instanceof SetupTerminalCancelledError ? 'cancelled' : 'blocked');
+        const normalizedError = error instanceof SetupTerminalCancelledError ? undefined
+          : toApplicationError(error, 'workflow.failed', 'Setup failed.');
+        webBridge?.resultReason(error instanceof SetupTerminalCancelledError ? 'cancelled'
+          : setupResultReason(normalizedError!.code), normalizedError?.correlationId);
         if (setupMutationStarted && !setupApplyStarted) {
           logInfo('A temporary credential-health workflow create was attempted before Apply. Inspect the selected branch and GitHub workflow history before retrying; a failed request may still have reached GitHub.');
         }
@@ -424,7 +464,7 @@ export function registerSetupCommand(program: Command): void {
           webBridge.finish(outcome, outcome === 'complete'
             ? 'Setup completed. Delete the temporary setup PAT in GitHub; keep the bot PAT while its Secret is in use.'
             : outcome === 'dry-run' ? 'Dry run complete. No files or GitHub resources changed.'
-              : outcome === 'partial' ? 'Setup may be partial. Inspect GitHub resources and run copilot doctor before retrying.'
+              : outcome === 'partial' ? 'Setup may be partial. Inspect GitHub resources and run copilot doctor --read-only before retrying.'
                 : 'No further setup changes will be applied. Any PAT already created in GitHub still exists until you delete it there.');
           logInfo('The local browser page shows the result. Choose “Close local session” there, or stop this command with Ctrl+C.');
           await webServer.closed;

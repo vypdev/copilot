@@ -7,6 +7,27 @@
 .question-heading h2, .decision-card > label { display: block; font-weight: 700; font-size: 15px; line-height: 1.4; margin: 0 0 10px; }
 .phase-tag { color: var(--accent-strong); background: var(--accent-tint); font-size: 9px; font-weight: 900; padding: 6px 8px; border-radius: 5px; letter-spacing: .07em; }
 input[type="text"], input[type="password"], input[type="number"], select { width: 100%; min-height: 46px; border: 1px solid var(--control-line); border-radius: 8px; background: var(--surface-soft); color: var(--text); padding: 10px 13px; }
+textarea { width: 100%; min-height: 120px; resize: vertical; border: 1px solid var(--control-line); border-radius: 8px; background: var(--surface-soft); color: var(--text); padding: 12px 13px; font: inherit; line-height: 1.5; }
+.language-switch { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; font-weight: 700; white-space: nowrap; }
+.language-switch select { width: auto; min-height: 32px; max-width: 140px; padding: 5px 8px; font-size: 11px; }
+.question-details { border: 1px solid var(--line); background: var(--surface-soft); border-radius: 8px; padding: 13px 15px; margin-bottom: 20px; font-size: 12px; }
+.question-details summary { cursor: pointer; color: var(--accent-strong); font-weight: 800; }
+.question-details dl { display: grid; grid-template-columns: minmax(90px, 130px) minmax(0, 1fr); gap: 10px 14px; margin: 14px 0 0; line-height: 1.55; }
+.question-details dt { font-weight: 750; color: var(--text); }
+.question-details dd { margin: 0; color: var(--muted); }
+.question-help-link { margin: -12px 0 18px; font-size: 12px; font-weight: 700; }
+.discovery-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 4px 0 16px; }
+.discovery-actions .field-help { margin: 0; }
+.secondary-button { border: 1px solid var(--control-line); border-radius: 8px; background: var(--surface-soft); color: var(--accent-strong); padding: 9px 13px; font: inherit; font-size: 12px; font-weight: 750; }
+.secondary-button:hover:not(:disabled), .secondary-button:focus-visible { border-color: var(--accent); background: var(--accent-tint); }
+.secondary-button:disabled { opacity: .55; cursor: not-allowed; }
+.status-review-list { margin: 6px 0 18px; padding-inline-start: 20px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.status-review-list strong { color: var(--text); }
+.producer-grid { max-height: 330px; margin-bottom: 15px; }
+.producer-option { align-items: flex-start; cursor: pointer; }
+.producer-option > span { min-width: 0; display: grid; gap: 5px; overflow-wrap: anywhere; }
+.producer-option small { color: var(--muted); font-size: 10px; line-height: 1.5; }
+.producer-option a { font-size: 11px; }
 input[type="checkbox"] { accent-color: var(--accent); width: 17px; height: 17px; }
 .field-help { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 14px 0 24px; }
 .segmented { display: flex; gap: 9px; }
@@ -20,9 +41,18 @@ input[type="checkbox"] { accent-color: var(--accent); width: 17px; height: 17px;
 .github-link { display: block; padding: 14px; background: var(--accent-tint); border-radius: 8px; border: 1px solid var(--accent); font-size: 13px; font-weight: 800; text-decoration: none; margin: 0 0 12px; }
 .github-link span { float: right; }
 .plan-sections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.plan-decisions { background: var(--surface-soft); border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin-bottom: 15px; }
+.plan-decisions h3 { margin: 0 0 10px; font-size: 13px; }
+.plan-decisions dl { margin: 0; display: grid; gap: 8px; }
+.plan-decisions dl > div { display: grid; grid-template-columns: minmax(130px, 35%) 1fr; gap: 12px; font-size: 12px; }
+.plan-decisions dt { color: var(--muted); }
+.plan-decisions dd { margin: 0; overflow-wrap: anywhere; }
 .plan-sections > div, .plan-warnings { background: var(--surface-soft); border: 1px solid var(--line); border-radius: 8px; padding: 13px; }
 .plan-sections h3, .plan-warnings h3 { font-size: 12px; margin: 0 0 8px; display: flex; justify-content: space-between; }
 .plan-sections h3 span { color: var(--accent-strong); }
-.plan-sections ul, .plan-warnings ul { margin: 0; padding-left: 18px; max-height: 120px; overflow: auto; font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
+.plan-sections ul, .plan-warnings ul { margin: 0; padding-inline-start: 18px; max-height: 120px; overflow: auto; font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
 .plan-warnings { margin-top: 10px; color: var(--warn); background: var(--warn-bg); }
+.plan-edit { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 14px; }
+.plan-edit h3 { margin: 0 0 4px; font-size: 14px; }
+.plan-edit-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .button-row { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; }

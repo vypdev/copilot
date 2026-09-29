@@ -94,6 +94,7 @@ export class NodeTerminalDriver implements TerminalDriver {
     prompt: string,
     choices: readonly string[],
     selected: readonly string[],
+    helpText?: string,
   ): Promise<TerminalReadResult> {
     if (this.closed) return { kind: 'end-of-input' };
     const input = stdin as typeof stdin & { setRawMode?: (mode: boolean) => void };
@@ -136,6 +137,13 @@ export class NodeTerminalDriver implements TerminalDriver {
           if (data.startsWith('\u001b[B', offset)) { index = Math.min(choices.length - 1, index + 1); offset += 2; render(); continue; }
           if (character === '\u0003') { finish({ kind: 'cancel' }); return; }
           if (character === '\u0004') { finish({ kind: 'end-of-input' }); return; }
+          if (character === 'b' || character === 'B') { finish({ kind: 'value', value: ':back' }); return; }
+          if (character === '?' && helpText) {
+            stdout.write(`\n${helpText}\n\n`);
+            rendered = false;
+            render();
+            continue;
+          }
           if (character === ' ') {
             const id = choices[index] === 'All' ? 'all' : choices[index].split(' — ')[0];
             if (id === 'all') value = value.size === choices.length - 1 ? new Set() : new Set(choices.slice(1).map(choice => choice.split(' — ')[0]));

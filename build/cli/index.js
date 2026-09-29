@@ -46657,7 +46657,7 @@ function buildSetupWarnings(configuration) {
         warnings.push('Inactive issue closure is enabled; waiting issues are closed after the configured inactivity threshold and can be reopened with a new comment.');
     }
     if (configuration.projects.ids.trim()) {
-        warnings.push('Project IDs must be accessible to the PAT and use the expected project column names.');
+        warnings.push('Selected Project numbers must be accessible to the bot PAT, and all four configured Status values must exist in every selected Project.');
     }
     if ((0, setup_configuration_defaults_1.setupAgentTasksForFeatures)(configuration).some(task => configuration.agents[task].provider === 'cursor')) {
         warnings.push('Cursor is an experimental runtime in Copilot and requires a compatible preinstalled CLI plus CURSOR_API_KEY; Copilot has no automatic Cursor installer.');
@@ -46951,8 +46951,20 @@ const locale_1 = __nccwpck_require__(15386);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+const setup_project_selection_policy_1 = __nccwpck_require__(73750);
 function validateSetupConfiguration(configuration, options = {}) {
     const errors = [];
+    const projectSelection = (0, setup_project_selection_policy_1.parseSetupProjectSelection)(configuration.projects.ids);
+    if ('error' in projectSelection || projectSelection.value !== configuration.projects.ids) {
+        errors.push('Project IDs must be a comma-separated list of 1–10 distinct positive Project URL numbers; PVT_ node IDs are not accepted.');
+    }
+    if (configuration.projects.ids) {
+        for (const [name, value] of Object.entries(configuration.projects).filter(([name]) => name.endsWith('Column'))) {
+            if (typeof value !== 'string' || !value.trim() || value.length > 100 || /[\p{Cc}\p{Cf}]/u.test(value)) {
+                errors.push(`Project ${name} must name one existing single-line Status option (1–100 characters).`);
+            }
+        }
+    }
     errors.push(...(0, pull_request_approval_policy_1.validatePullRequestApprovalPolicy)(configuration.pullRequestApproval, options.allowIncompleteApproval === true));
     if (configuration.actionInputs['pr-approval-policy'] !== undefined) {
         errors.push('pr-approval-policy cannot be overridden through actionInputs.');
@@ -47854,6 +47866,7 @@ const QUERY_PERMISSIONS = {
         Issues: 'issues',
         Actions: 'actions',
         Administration: 'administration',
+        Checks: 'checks',
         Workflows: 'workflows',
         'Pull requests': 'pull_requests',
     },
@@ -47874,7 +47887,7 @@ class UnsupportedSetupPatLinkError extends Error {
     }
 }
 exports.UnsupportedSetupPatLinkError = UnsupportedSetupPatLinkError;
-/** Builds only documented GitHub form fields; never accepts credential material. */
+/** Builds known GitHub form fields; Checks is accepted by the form but omitted from the published URL table. Never accepts credential material. */
 function buildSetupPatCreationUrl(input) {
     if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(input.owner)
         || !/^[A-Za-z0-9._-]{1,100}$/.test(input.repository)
@@ -47938,7 +47951,7 @@ function fixedSetupPatIntentQuestionIds(overrides, skipVariables, skipSecrets) {
     if (overrides.pullRequestApproval?.mode !== undefined)
         fixed.push('pullRequestApproval.mode');
     if (overrides.projects?.ids !== undefined)
-        fixed.push('projects.ids');
+        fixed.push('projects.enabled', 'projects.ids');
     if (overrides.createInitialTag !== undefined)
         fixed.push('createInitialTag');
     if (skipVariables || overrides.manageRepositoryVariables !== undefined)
@@ -47953,18 +47966,18 @@ function fixedSetupPatIntentQuestionIds(overrides, skipVariables, skipSecrets) {
     }
     return fixed;
 }
-function setupPatIntentNeedsOwnerKind(configuration) {
-    return (0, setup_token_permission_policy_1.buildSetupPatIntentPermissionRequirements)(configuration, 'Organization')
+function setupPatIntentNeedsOwnerKind(configuration, projectsWanted = configuration.projects.ids.trim().length > 0) {
+    return (0, setup_token_permission_policy_1.buildSetupPatIntentPermissionRequirements)(configuration, 'Organization', projectsWanted)
         .some(requirement => requirement.scope === 'organization')
         || (configuration.manageRepositorySecrets && configuration.storage.secrets.preserveExisting)
         || (configuration.manageRepositoryVariables && configuration.storage.variables.preserveExisting);
 }
-function setupPatIntentOwnerConflict(configuration, ownerKind) {
+function setupPatIntentOwnerConflict(configuration, ownerKind, projectsWanted = configuration.projects.ids.trim().length > 0) {
     return ownerKind === 'User' && ((configuration.manageRepositorySecrets && (configuration.storage.secrets.defaultScope === 'organization'
         || Object.values(configuration.storage.secrets.overrides).includes('organization')))
         || (configuration.manageRepositoryVariables && (configuration.storage.variables.defaultScope === 'organization'
             || Object.values(configuration.storage.variables.overrides).includes('organization')))
-        || configuration.projects.ids.trim().length > 0);
+        || projectsWanted);
 }
 
 
@@ -47989,6 +48002,1142 @@ function summarizeSetupPermissions(requirements) {
 
 /***/ }),
 
+/***/ 73750:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parseSetupProjectSelection = parseSetupProjectSelection;
+exports.sharedProjectStatusOptions = sharedProjectStatusOptions;
+exports.validateDiscoveredProjectStatuses = validateDiscoveredProjectStatuses;
+function parseSetupProjectSelection(raw, owner) {
+    const input = raw.normalize('NFKC').trim();
+    if (!input || input.toLowerCase() === 'none')
+        return { value: '' };
+    const parts = input.split(',').map(part => part.trim());
+    if (parts.length > 10 || parts.some(part => !part))
+        return { error: 'Choose at most 10 Projects; separate numbers or URLs with commas.' };
+    const numbers = [];
+    for (const part of parts) {
+        let numberText = part;
+        if (part.startsWith('https://')) {
+            if (!owner)
+                return { error: 'A Project URL needs a known repository owner; enter its positive number instead.' };
+            try {
+                const url = new URL(part);
+                const match = url.pathname.match(/^\/(?:orgs|users)\/([^/]+)\/projects\/([1-9]\d*)\/?$/u);
+                if (url.origin !== 'https://github.com' || url.search || url.hash || url.username || url.password
+                    || !match || decodeURIComponent(match[1]).toLowerCase() !== owner.toLowerCase()) {
+                    return { error: `Use a GitHub Project URL belonging to ${owner}, without query parameters.` };
+                }
+                numberText = match[2];
+            }
+            catch {
+                return { error: 'Enter a valid GitHub Project URL or positive Project number.' };
+            }
+        }
+        if (!/^[1-9]\d*$/u.test(numberText))
+            return { error: 'Enter the positive Project number from its GitHub URL, not a PVT_ GraphQL ID.' };
+        const number = Number(numberText);
+        if (!Number.isSafeInteger(number) || number > 2147483647)
+            return { error: 'Project numbers must be positive integers at most 2147483647.' };
+        if (numbers.includes(number))
+            return { error: `Project ${number} was selected more than once.` };
+        numbers.push(number);
+    }
+    return { value: numbers.join(',') };
+}
+function sharedProjectStatusOptions(projectNumbers, projects) {
+    const numbers = projectNumbers.split(',').map(Number).filter(Boolean);
+    if (!numbers.length)
+        return { state: 'unavailable', options: [] };
+    const selected = numbers.map(number => projects.find(project => project.number === number));
+    if (selected.some(project => !project?.statusOptions?.length))
+        return { state: 'unavailable', options: [] };
+    const [first, ...rest] = selected;
+    const common = first.statusOptions.filter(option => rest.every(project => project.statusOptions.includes(option)));
+    return common.length ? { state: 'observed', options: common } : { state: 'incompatible', options: [] };
+}
+/** A discovered mismatch is unsafe even if values arrived through --config rather than the interactive selector. */
+function validateDiscoveredProjectStatuses(configuration, discovery) {
+    if (!configuration.projects.ids || !discovery || discovery.status !== 'observed')
+        return [];
+    const common = sharedProjectStatusOptions(configuration.projects.ids, discovery.candidates);
+    if (common.state === 'incompatible')
+        return ['Selected Projects have no common Status option. Choose compatible Projects.'];
+    if (common.state !== 'observed')
+        return [];
+    const names = [configuration.projects.issueCreatedColumn, configuration.projects.pullRequestCreatedColumn,
+        configuration.projects.issueInProgressColumn, configuration.projects.pullRequestInProgressColumn];
+    return names.filter(name => !common.options.includes(name)).map(name => `Status value "${name}" is not available in every selected Project.`);
+}
+
+
+/***/ }),
+
+/***/ 75280:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.setupQuestionDocumentation = setupQuestionDocumentation;
+const docs = {
+    features: { title: 'Copilot features and workflow triggers', url: 'https://docs.page/vypdev/copilot/features' },
+    issueWorkflows: { title: 'Copilot issue workflow setup', url: 'https://docs.page/vypdev/copilot/issues/workflow-setup' },
+    branchManagement: { title: 'Issue branch management', url: 'https://docs.page/vypdev/copilot/issues/branch-management' },
+    preBranchSdd: { title: 'Pre-branch design documents', url: 'https://docs.page/vypdev/copilot/issues/pre-branch-sdds' },
+    issueLifecycle: { title: 'Issue notifications and automatic closure', url: 'https://docs.page/vypdev/copilot/issues/notifications-and-auto-close' },
+    assignments: { title: 'Assignees and GitHub Projects', url: 'https://docs.page/vypdev/copilot/issues/assignees-and-projects' },
+    pullRequestWorkflows: { title: 'Pull-request workflow setup', url: 'https://docs.page/vypdev/copilot/pull-requests/workflow-setup' },
+    pullRequestDescription: { title: 'AI pull-request descriptions', url: 'https://docs.page/vypdev/copilot/pull-requests/ai-description' },
+    repositoryGuidance: { title: 'Repository guidance for agents', url: 'https://docs.page/vypdev/copilot/agents/repository-collaboration' },
+    runtime: { title: 'Agent runtime selection', url: 'https://docs.page/vypdev/copilot/agents/runtime-selection' },
+    model: { title: 'Agent model selection', url: 'https://docs.page/vypdev/copilot/agents/model-selection' },
+    command: { title: 'Agent CLI configuration', url: 'https://docs.page/vypdev/copilot/agents/cli-configuration' },
+    repository: { title: 'Copilot repository configuration', url: 'https://docs.page/vypdev/copilot/configuration' },
+    deployment: { title: 'Release and hotfix orchestration', url: 'https://docs.page/vypdev/copilot/issues/deployment-orchestration' },
+    bugbot: { title: 'Bugbot configuration', url: 'https://docs.page/vypdev/copilot/bugbot/configuration' },
+    bugbotVerification: { title: 'Bugbot autofix verification commands', url: 'https://docs.page/vypdev/copilot/bugbot/verification-commands' },
+    approval: { title: 'Guarded pull-request approval', url: 'https://docs.page/vypdev/copilot/pull-requests/guarded-approval' },
+    githubStatusChecks: { title: 'GitHub: status checks and required checks', url: 'https://docs.github.com/en/pull-requests/reference/status-checks' },
+    projects: { title: 'Assignees and GitHub Projects', url: 'https://docs.page/vypdev/copilot/issues/assignees-and-projects' },
+    githubProjects: { title: 'GitHub: About Projects', url: 'https://docs.github.com/en/issues/planning-and-tracking-with-projects/learning-about-projects/about-projects' },
+    githubStatus: { title: 'GitHub: About single-select fields', url: 'https://docs.github.com/en/issues/planning-and-tracking-with-projects/understanding-fields/about-single-select-fields' },
+    provisioning: { title: 'Copilot setup and provisioning', url: 'https://docs.page/vypdev/copilot/how-to-use' },
+    storage: { title: 'GitHub Actions Secrets and Variables', url: 'https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets' },
+};
+/** Links are selected from source-controlled constants, never derived from answers or remote text. */
+function setupQuestionDocumentation(question) {
+    const id = question.id;
+    if (id === 'issueWorkflows.enabled')
+        return docs.issueWorkflows;
+    if (id === 'features.issues')
+        return docs.issueWorkflows;
+    if (id === 'features.pullRequests')
+        return docs.pullRequestWorkflows;
+    if (id === 'repository.issueManagedBranches' || /^repository\.(feature|bugfix|hotfix|release|docs|chore)Tree$/u.test(id))
+        return docs.branchManagement;
+    if (id === 'repository.preBranchSdd')
+        return docs.preBranchSdd;
+    if (id === 'repository.inactivityThresholdHours' || id === 'features.inactiveIssueClosure')
+        return docs.issueLifecycle;
+    if (id === 'repository.desiredAssigneesCount' || id === 'repository.desiredReviewersCount')
+        return docs.assignments;
+    if (id === 'ai.pullRequestDescriptionMode')
+        return docs.pullRequestDescription;
+    if (id === 'ai.bugbotFixVerifyCommands')
+        return docs.bugbotVerification;
+    if (id === 'projects.ids')
+        return docs.githubProjects;
+    if (id === 'pullRequestApproval.testChecks')
+        return docs.githubStatusChecks;
+    if (/^projects\.(issue|pullRequest)(Created|InProgress)Column$/u.test(id) || id === 'projects.statusVerified')
+        return docs.githubStatus;
+    if (id.startsWith('repositoryAgentGuidance.'))
+        return docs.repositoryGuidance;
+    if (id.startsWith('agents.')) {
+        if (id.endsWith('.provider'))
+            return docs.runtime;
+        if (id.endsWith('.executable'))
+            return docs.command;
+        return docs.model;
+    }
+    if (id === 'ai.provisioningMode')
+        return docs.command;
+    const byState = {
+        capabilities: docs.features,
+        'agent-runtime': docs.runtime,
+        'agent-model-defaults': docs.model,
+        'agent-role-overrides': docs.model,
+        repository: docs.repository,
+        deployment: docs.deployment,
+        bugbot: docs.bugbot,
+        'pull-request-approval': docs.approval,
+        projects: docs.projects,
+        provisioning: docs.provisioning,
+        storage: docs.storage,
+    };
+    return byState[question.stateId] ?? docs.provisioning;
+}
+
+
+/***/ }),
+
+/***/ 49513:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.frenchQuestionExplanation = frenchQuestionExplanation;
+const setup_question_labels_fr_pt_1 = __nccwpck_require__(28247);
+const setup_question_purpose_fr_pt_1 = __nccwpck_require__(98807);
+const where = {
+    capabilities: 'La configuration écrit les workflows choisis dans ce dépôt et ne demande que les autorisations GitHub nécessaires.',
+    'agent-runtime': 'Les workflows GitHub Actions générés lancent cet agent sur leur runner ; rien n’est installé sur cet ordinateur.',
+    'agent-model-defaults': 'Le modèle et la commande communs sont enregistrés dans la configuration du dépôt lue par les workflows.',
+    'agent-role-overrides': 'Cette exception propre à une tâche est enregistrée dans le dépôt et lue uniquement lorsque cette tâche s’exécute.',
+    repository: 'Le profil du dépôt et les workflows générés utilisent cette valeur pour les futurs événements de branches, tickets et pull requests.',
+    deployment: 'Le profil du dépôt commande les futurs workflows de version et de correctif urgent ; répondre ne publie rien.',
+    bugbot: 'Le workflow généré lit ce réglage dans la configuration du dépôt ou les Variables GitHub Actions sélectionnées.',
+    'pull-request-approval': 'L’approbation encadrée utilise les identités exactes des producteurs CI et les preuves des exécutions GitHub.',
+    projects: 'Les Projects choisis et leurs valeurs du champ Status seront utilisés par l’automatisation future des tickets et pull requests.',
+    provisioning: 'Après la confirmation finale, la configuration peut créer ou mettre à jour les fichiers et ressources GitHub Actions choisis.',
+    storage: 'GitHub Actions stocke ces ressources au niveau du dépôt ou de l’organisation ; ce choix change leur visibilité et les autorisations du PAT.',
+};
+const section = {
+    capabilities: { summary: 'Choisissez les automatisations que Copilot installera.', when: 'Ce choix influence les workflows, les autorisations GitHub et les questions suivantes.', example: 'Désactivez une fonction que vous ne prévoyez pas d’utiliser.', effect: 'Seules les fonctions sélectionnées figureront dans le plan.', verify: 'Examinez le plan avant d’appliquer les changements.' },
+    'agent-runtime': { summary: 'Choisissez l’agent CLI pour cette tâche.', when: 'Il sera utilisé lorsque la fonction sélectionnée s’exécutera dans GitHub Actions.', example: 'Codex est lancé avec la commande codex.', effect: 'L’Action lance le fournisseur choisi, sans solution de remplacement implicite.', verify: 'Vérifiez que le runner dispose du CLI et des identifiants nécessaires.' },
+    'agent-model-defaults': { summary: 'Définissez les modèles utilisés par défaut pour les tâches de l’agent.', when: 'Ils s’appliquent sauf si vous configurez chaque tâche séparément.', example: 'Gardez le modèle proposé si vous n’avez pas de besoin particulier.', effect: 'L’Action transmet ces valeurs au CLI sélectionné.', verify: 'Examinez le plan et les modèles autorisés sur le runner.' },
+    'agent-role-overrides': { summary: 'Personnalisez cette tâche de l’agent.', when: 'Uniquement si vous avez activé la configuration indépendante des tâches.', example: 'Utilisez un modèle différent pour la revue et la planification.', effect: 'Seule cette tâche utilise cette exception.', verify: 'Examinez les valeurs de chaque tâche dans le plan.' },
+    repository: { summary: 'Définissez comment Copilot traite votre dépôt.', when: 'Ce réglage agit sur les workflows et futurs événements de tickets ou pull requests.', example: 'Indiquez le véritable nom de votre branche de développement.', effect: 'L’automatisation future suivra les branches et règles choisies.', verify: 'Examinez les fichiers prévus et le profil du dépôt.' },
+    deployment: { summary: 'Définissez le comportement des versions et correctifs urgents.', when: 'Ce réglage n’importe que si ces workflows sont activés.', example: 'Gardez la stratégie par défaut sauf si votre organisation des branches diffère.', effect: 'Il modifie la gestion des branches et pull requests de réconciliation.', verify: 'Examinez la partie versions et correctifs du plan.' },
+    bugbot: { summary: 'Définissez comment Bugbot analyse et signale les changements.', when: 'Ce réglage sert lorsque les fonctions de revue IA s’exécutent.', example: 'Par défaut, les résultats admissibles sont publiés sans bloquer toutes les pull requests.', effect: 'Il change les futures publications et diagnostics de revue.', verify: 'Examinez les Variables Bugbot du plan et les résultats de revue.' },
+    'pull-request-approval': { summary: 'Choisissez les preuves exigées avant que le bot recommande ou soumette une approbation.', when: 'Ce réglage ne s’applique que si l’automatisation des pull requests est activée.', example: '« Recommend » informe une personne ; « guarded » peut approuver sur GitHub.', effect: 'Une vérification verte affichée ici ne suffit jamais à approuver une pull request.', verify: 'Inspectez les preuves CI, Bugbot et les règles de branche.' },
+    projects: { summary: 'Choisissez une valeur Status existante pour une transition de ticket ou PR.', when: 'Seulement si vous intégrez des Projects.', example: 'Todo à la création ; In Progress au début du travail.', effect: 'L’automatisation modifiera le champ Status, pas une colonne visuelle.', verify: 'Vérifiez les options Status de chaque Project choisi.' },
+    provisioning: { summary: 'Choisissez les ressources GitHub Actions gérées par la configuration.', when: 'Cela influence les autorisations du PAT et les écritures prévues.', example: 'Gardez les Secrets activés si le PAT du bot doit être installé.', effect: 'Les ressources sélectionnées pourront être créées ou mises à jour après approbation.', verify: 'Examinez les noms exacts des ressources dans le plan.' },
+    storage: { summary: 'Choisissez où résident les Variables et Secrets GitHub Actions.', when: 'Ce réglage s’applique quand leur création est activée.', example: 'Le dépôt est le périmètre par défaut le plus simple.', effect: 'Il change la visibilité, les autorisations et l’ordre de priorité.', verify: 'Examinez le périmètre et les avertissements de masquage dans le plan.' },
+};
+const special = {
+    'agents.findings.executable': { summary: 'Choisissez la commande de l’agent sur le runner GitHub Actions, pas sur cet ordinateur.', when: 'Ne la changez que si un agent personnalisé est délibérément installé sur le runner.', example: 'Laissez vide pour codex, opencode ou agent selon le fournisseur.', effect: 'Le chemin personnalisé est utilisé pour les tâches choisies et n’est jamais installé automatiquement.', verify: 'Vérifiez que le runner possède exactement cet exécutable avant d’activer le workflow.' },
+    'ai.includeReasoning': { summary: 'Demandez des explications supplémentaires si la réponse du fournisseur les contient.', when: 'Réservé aux diagnostics avancés ; le parcours CLI actuel ne fournit pas de parties de raisonnement séparées.', example: 'Laissez désactivé pour une configuration normale.', effect: 'Cela peut ajouter du texte du fournisseur, sans garantir des métadonnées brèves.', verify: 'Inspectez une réponse structurée contrôlée ; ne supposez pas que l’option a produit plus de texte.' },
+    'ai.bugbotDryRun': { summary: 'Gardez Bugbot en mode analyse seule pour ses futures exécutions.', when: 'Utile pour une évaluation ; incompatible avec les preuves nécessaires à l’approbation.', example: 'Choisissez Non pour publier les revues normales.', effect: 'Bugbot analyse sans publier de résultat ni modifier le dépôt. Ce n’est pas setup --dry-run.', verify: 'Inspectez le résultat du workflow Bugbot : le mode analyse seule ne publie ni revue ni vérification.' },
+    'ai.bugbotOrganizationRules': { summary: 'Définissez des consignes générales pour Bugbot, une règle par ligne.', when: 'Utile si l’équipe partage des critères de revue dans le dépôt configuré.', example: 'Signaler les changements qui contournent l’isolation des clients.', effect: 'Ces règles précèdent celles du dépôt ; le périmètre de la Variable détermine le stockage.', verify: 'Inspectez la Variable configurée et activez le traçage des sources de règles.' },
+    'ai.provisioningMode': { summary: 'Décidez comment l’Action trouve ou installe l’agent CLI.', when: 'Ce choix s’applique sur le runner au démarrage d’une tâche IA activée.', example: 'Auto réutilise un CLI installé ou installe une version fixée de Codex/OpenCode.', effect: 'Always réinstalle les versions examinées ; Disabled exige un CLI préinstallé. Cursor doit être préinstallé.', verify: 'Inspectez l’étape de préparation et la version du binaire rapportée par le runner.' },
+    'pullRequestApproval.testChecks': { summary: 'Choisissez les jobs CI que le bot peut considérer comme preuve de tests indépendante.', when: 'Obligatoire pour les modes Recommend et Guarded.', example: 'Sélectionnez le job Tests exact, son ID d’App GitHub et son workflow dans une exécution récente.', effect: 'Seules les identités exactes listées satisfont la condition d’approbation.', verify: 'Ouvrez l’exécution liée et vérifiez le job, l’App et le résultat pour le commit courant.' },
+    'pullRequestApproval.producerAttested': { summary: 'Confirmez avoir inspecté le producteur CI exact et son étape obligatoire de couverture.', when: 'Obligatoire avant que le mode Guarded puisse approuver.', example: 'Vérifiez que le job Tests échoue si le seuil de couverture n’est pas atteint.', effect: 'Votre confirmation est enregistrée ; Copilot ne la déduit pas d’une vérification verte.', verify: 'Inspectez le fichier du workflow et une exécution réelle avant de répondre Oui.' },
+    'pullRequestApproval.coverage.mode': { summary: 'Choisissez comment prouver la couverture exigée du code modifié.', when: 'Ce choix s’applique lorsque l’approbation de PR est activée.', example: 'Check : le CI impose le seuil. Numeric : un workflow fiable publie des décomptes limités.', effect: 'Check fait confiance au garde CI ; Numeric lit copilot-diff-coverage-v1 et compare un seuil.', verify: 'Inspectez respectivement la condition d’échec du CI ou l’artefact du rapporteur.' },
+    'pullRequestApproval.coverage.checkName': { summary: 'Sélectionnez la vérification fiable qui échoue sous le seuil de couverture.', when: 'Obligatoire dans les deux modes de preuve.', example: 'Utilisez le même job Tests exact que dans l’étape précédente.', effect: 'Le succès d’une autre vérification ou App ne remplace pas ce garde.', verify: 'Vérifiez que l’étape de couverture est obligatoire, pas seulement informative.' },
+    'projects.enabled': { summary: 'Décidez si les futurs tickets et PR doivent utiliser des Projects GitHub existants.', when: 'Avant de créer le PAT de configuration pour prévoir le droit de lecture des Projects.', example: 'Oui si l’équipe utilise un Project de l’organisation ; Non pour ignorer cette intégration.', effect: 'Oui prévoit Projects: read de l’organisation si nécessaire. Aucun Project n’est modifié maintenant.', verify: 'Vérifiez les droits du PAT ; les Projects précis seront choisis après son autorisation.' },
+    'projects.ids': { summary: 'Choisissez les Projects existants que Copilot pourra actualiser plus tard.', when: 'Après la vérification du PAT ; si la liste est inaccessible, utilisez la saisie manuelle.', example: 'Pour https://github.com/orgs/acme/projects/5, choisissez la carte ou saisissez 5, jamais PVT_…', effect: 'Leurs numéros seront enregistrés ; aucun élément Project n’est modifié maintenant.', verify: 'Ouvrez chaque Project et vérifiez propriétaire et numéro avant de confirmer le plan.' },
+};
+function howToChoose(question) {
+    if (question.id === 'pullRequestApproval.coverage.checkName')
+        return 'Choisissez l’une des vérifications fiables ci-dessus. Ouvrez son exécution et son workflow : l’étape de couverture doit faire échouer le job si le seuil n’est pas atteint. Un résultat vert ne suffit pas.';
+    if (question.id === 'pullRequestApproval.producerAttested')
+        return 'Répondez Oui uniquement après avoir vérifié chaque nom, ID d’App et workflow choisis, ainsi que l’étape de couverture obligatoire du check retenu. Sinon, répondez Non et restez en mode recommandation.';
+    if (question.id === 'pullRequestApproval.coverage.artifactWorkflowName')
+        return 'Saisissez le nom exact d’un workflow fiable choisi qui publie copilot-diff-coverage-v1 pour cette PR et ses commits de base et de tête. Ne devinez pas le nom du workflow.';
+    if (question.id === 'projects.statusVerified')
+        return 'Ouvrez chaque Project choisi sur GitHub, inspectez son champ Status et comparez les quatre valeurs exactes ci-dessus. Répondez Oui uniquement si toutes existent dans chaque Project ; Non revient au choix des Projects.';
+    if (/^projects\.(issue|pullRequest)(Created|InProgress)Column$/u.test(question.id))
+        return 'Choisissez une option du champ Status présente dans tous les Projects sélectionnés. Si les options ne sont pas lisibles, ouvrez chaque Project sur GitHub et saisissez la même valeur existante ; des valeurs différentes par Project ne sont pas prises en charge.';
+    switch (question.kind) {
+        case 'boolean': return 'Choisissez Oui pour activer ou Non pour désactiver ; la réponse suggérée apparaît plus bas.';
+        case 'producer-select': return 'Inspectez chaque exécution candidate sur GitHub, puis choisissez le job, l’ID d’App et le workflow exacts. Ne saisissez manuellement que si aucun candidat vérifié n’apparaît.';
+        case 'project-select': return 'Choisissez par titre et URL. Saisissez le numéro positif ou l’URL GitHub exacte si un Project manque ; les ID PVT_ sont invalides.';
+        case 'scope-overrides': return 'Sélectionnez uniquement les noms hérités à remplacer volontairement dans le dépôt. Laissez vide pour conserver les valeurs de l’organisation.';
+        case 'multi-select': return 'Cochez les workflows que vous utiliserez. Vous pouvez en choisir plusieurs ; vérifiez leurs autorisations avant de créer un PAT.';
+        case 'choice': return 'Choisissez une valeur après avoir lu ses conséquences ; la valeur enregistrée n’est pas traduite.';
+        case 'number': return 'Saisissez un entier dans la plage indiquée ; gardez la valeur suggérée en cas de doute.';
+        default: return 'Saisissez la valeur exacte utilisée par votre dépôt ou runner ; ne laissez vide que si la question le permet.';
+    }
+}
+function frenchQuestionExplanation(question, documentation) {
+    const copy = special[question.id] ?? section[question.stateId];
+    return {
+        label: (0, setup_question_labels_fr_pt_1.translatedQuestionLabel)(question, 'fr'),
+        ...copy,
+        summary: special[question.id] ? copy.summary : ((0, setup_question_purpose_fr_pt_1.setupQuestionPurposeFrPt)(question, 'fr') ?? copy.summary),
+        where: where[question.stateId],
+        how: howToChoose(question),
+        why: `Cette décision permet d’accorder le plan, les autorisations du PAT et l’automatisation future avant d’appliquer des changements. ${copy.when}`,
+        documentation: { title: 'Documentation de cette option', url: documentation.url },
+    };
+}
+
+
+/***/ }),
+
+/***/ 42775:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.setupQuestionPresentation = setupQuestionPresentation;
+const setup_question_translations_1 = __nccwpck_require__(3927);
+const setup_question_documentation_policy_1 = __nccwpck_require__(75280);
+const setup_question_purpose_policy_1 = __nccwpck_require__(77947);
+const setup_question_guidance_fr_1 = __nccwpck_require__(49513);
+const setup_question_guidance_pt_1 = __nccwpck_require__(14440);
+const location = {
+    capabilities: { en: 'Setup writes the selected workflow files into this repository and requests only the GitHub permissions those workflows need.', es: 'Setup escribe los workflows seleccionados en este repositorio y solicita solo los permisos de GitHub necesarios.' },
+    'agent-runtime': { en: 'The generated GitHub Actions workflows invoke this agent on their runner; this does not install an agent on your computer.', es: 'Los workflows de GitHub Actions invocan este agente en su runner; no se instala en tu ordenador.' },
+    'agent-model-defaults': { en: 'The shared model and command defaults are stored in the repository configuration consumed by the generated workflows.', es: 'Los valores comunes de modelo y comando se guardan en la configuración del repositorio que usan los workflows.' },
+    'agent-role-overrides': { en: 'This task-specific override is stored in the repository configuration and read only when that task runs.', es: 'Esta excepción por tarea se guarda en la configuración del repositorio y se lee cuando se ejecuta esa tarea.' },
+    repository: { en: 'The repository profile and generated workflows use this value for future branch, issue and pull-request events.', es: 'El perfil del repositorio y los workflows generados usan este valor en futuros eventos de ramas, issues y pull requests.' },
+    deployment: { en: 'The repository profile controls later release and hotfix workflows; nothing is released by answering this question.', es: 'El perfil del repositorio controla los futuros workflows de release y hotfix; responder no publica ninguna versión.' },
+    bugbot: { en: 'The generated workflow reads this setting from repository configuration or selected GitHub Actions Variables when Bugbot runs.', es: 'El workflow lee este ajuste de la configuración o las Variables de GitHub Actions seleccionadas al ejecutar Bugbot.' },
+    'pull-request-approval': { en: 'The guarded-approval configuration uses exact CI producer identities and evidence from GitHub pull-request runs.', es: 'La aprobación protegida usa identidades exactas de los productores de CI y pruebas de las ejecuciones de PR en GitHub.' },
+    projects: { en: 'Future issue and pull-request automation uses the selected GitHub Projects and their Status field values.', es: 'La automatización futura de issues y pull requests usa los GitHub Projects y los valores de su campo Status.' },
+    provisioning: { en: 'After the final Apply confirmation, setup may create or update the selected files and GitHub Actions resources.', es: 'Tras confirmar Aplicar, setup podrá crear o actualizar los archivos y recursos de GitHub Actions elegidos.' },
+    storage: { en: 'GitHub Actions stores these resources at repository or organization scope; the scope changes visibility and required PAT grants.', es: 'GitHub Actions guarda estos recursos en el repositorio o la organización; el ámbito cambia la visibilidad y los permisos del PAT.' },
+};
+const special = {
+    'agents.findings.executable': {
+        en: { summary: 'Choose the agent command used on the GitHub Actions runner, not on this computer.', when: 'Only change this for a runner with a deliberately installed custom agent binary.', example: 'Leave empty for codex, opencode, or agent according to the provider.', effect: 'A custom path is shared unless a task has its own override; it is never installed automatically.', verify: 'Check the runner has this exact executable before enabling the workflow.' },
+        es: { summary: 'Elige el comando del agente en el runner de GitHub Actions, no en este ordenador.', when: 'Cámbialo solo si el runner tiene instalado expresamente otro binario.', example: 'Déjalo vacío para usar codex, opencode o agent según el proveedor.', effect: 'La ruta personalizada se comparte salvo que una tarea tenga su propia excepción; nunca se instala automáticamente.', verify: 'Comprueba que el runner tiene exactamente ese ejecutable.' },
+    },
+    'ai.includeReasoning': {
+        en: { summary: 'Ask for additional provider reasoning when the agent response exposes it.', when: 'Advanced diagnostics only; the current string-only CLI path does not provide separate reasoning parts.', example: 'Keep this off for normal setup.', effect: 'May add provider-produced explanation text, not guaranteed concise metadata.', verify: 'Inspect a controlled structured response; do not assume this toggle produced extra text.' },
+        es: { summary: 'Solicita razonamiento adicional si la respuesta del proveedor lo ofrece.', when: 'Solo para diagnósticos avanzados; el CLI actual devuelve texto sin partes de razonamiento separadas.', example: 'Déjalo desactivado en una configuración normal.', effect: 'Podría añadir texto del proveedor; no garantiza metadatos breves.', verify: 'Comprueba una respuesta estructurada controlada; no presupongas que la opción tuvo efecto.' },
+    },
+    'ai.bugbotDryRun': {
+        en: { summary: 'Keep Bugbot in analysis-only mode for future runs.', when: 'Useful during evaluation; incompatible with PR approval evidence.', example: 'Choose No to publish normal reviews.', effect: 'Bugbot analyzes but does not publish findings or make SCM changes. This is not setup --dry-run.', verify: 'Inspect the Bugbot workflow result; no published review or Check should appear from dry-run.' },
+        es: { summary: 'Mantiene Bugbot en modo solo análisis para las futuras ejecuciones.', when: 'Útil durante una evaluación; incompatible con la evidencia de aprobación de PR.', example: 'Elige No para publicar revisiones normalmente.', effect: 'Bugbot analiza pero no publica hallazgos ni modifica el repositorio. No es setup --dry-run.', verify: 'Revisa el resultado de Bugbot; el modo ensayo no publica revisión ni Check.' },
+    },
+    'ai.bugbotOrganizationRules': {
+        en: { summary: 'Set broad Bugbot review instructions, one rule per line.', when: 'Use when your team needs review criteria shared across its configured repository.', example: 'Flag changes that bypass tenant isolation.', effect: 'These rules run before repository rules; the selected Variable scope determines storage, not the title.', verify: 'Inspect the configured Variable and enable rule-source tracing for a review.' },
+        es: { summary: 'Define criterios generales de revisión para Bugbot, una regla por línea.', when: 'Úsalo si el equipo necesita criterios comunes en el repositorio configurado.', example: 'Señala cambios que omitan el aislamiento entre clientes.', effect: 'Se aplican antes que las reglas del repositorio; el ámbito de la Variable determina dónde se guardan.', verify: 'Revisa la Variable configurada y activa el rastreo de fuentes de reglas.' },
+    },
+    'ai.provisioningMode': {
+        en: { summary: 'Decide how the Action finds or installs the selected agent CLI.', when: 'Applies on the runner when an enabled AI task starts.', example: 'Auto reuses an installed CLI or installs pinned Codex/OpenCode when missing.', effect: 'Always reinstalls reviewed defaults; Disabled requires a preinstalled CLI. Cursor must be preinstalled.', verify: 'Inspect the runner provisioning step and its reported binary version.' },
+        es: { summary: 'Decide cómo encuentra o instala la Action el agente CLI.', when: 'Se aplica en el runner cuando empieza una tarea de IA.', example: 'Auto reutiliza el CLI existente o instala una versión fijada de Codex/OpenCode si falta.', effect: 'Always reinstala versiones fijadas; Disabled exige instalación previa. Cursor siempre se instala aparte.', verify: 'Revisa el paso de preparación y la versión del binario en el runner.' },
+    },
+    'pullRequestApproval.testChecks': {
+        en: { summary: 'Choose CI jobs the approval bot may trust as independent test evidence.', when: 'Required for recommend or guarded approval.', example: 'Select the exact Tests job, its GitHub App ID, and parent workflow from a recent run.', effect: 'Only the listed exact producer identities can satisfy the approval gate.', verify: 'Open the linked workflow run and confirm the job, App, and current-head result.' },
+        es: { summary: 'Selecciona los jobs de CI que el bot puede considerar pruebas fiables.', when: 'Obligatorio para las aprobaciones recomendadas o protegidas.', example: 'Elige el job Tests, su ID de GitHub App y el workflow de una ejecución reciente.', effect: 'Solo esas identidades exactas podrán satisfacer la condición de aprobación.', verify: 'Abre la ejecución vinculada y comprueba job, App y resultado para el commit actual.' },
+    },
+    'pullRequestApproval.producerAttested': {
+        en: { summary: 'Confirm that you inspected the exact CI producer and its coverage-enforcing step.', when: 'Required before guarded mode can ever submit an approval.', example: 'Verify the selected Tests job fails when the coverage budget fails.', effect: 'Your assertion is recorded; Copilot does not infer it from a green check.', verify: 'Inspect the workflow file and an actual CI run before selecting Yes.' },
+        es: { summary: 'Confirma que comprobaste el productor exacto de CI y su paso obligatorio de cobertura.', when: 'Necesario antes de que el modo protegido pueda aprobar.', example: 'Comprueba que el job Tests falla cuando no se alcanza la cobertura mínima.', effect: 'Se registra tu confirmación; Copilot no la deduce de un check verde.', verify: 'Revisa el workflow y una ejecución real antes de elegir Sí.' },
+    },
+    'pullRequestApproval.coverage.mode': {
+        en: { summary: 'Choose how approval proves the changed-code coverage requirement.', when: 'Applies when PR approval is enabled.', example: 'Check: CI enforces the budget. Numeric: a trusted workflow publishes bounded counts.', effect: 'Check mode trusts a selected CI gate; numeric mode reads copilot-diff-coverage-v1 and compares a threshold.', verify: 'Inspect the CI failure condition or the reporter artifact, respectively.' },
+        es: { summary: 'Elige cómo se demuestra la cobertura del código modificado.', when: 'Se aplica si habilitas la aprobación de PR.', example: 'Check: CI exige el mínimo. Numeric: un workflow fiable publica recuentos de líneas.', effect: 'Check confía en una condición de CI; numeric lee copilot-diff-coverage-v1 y compara un umbral.', verify: 'Comprueba la condición de fallo del CI o el artefacto del reporter.' },
+    },
+    'pullRequestApproval.coverage.checkName': {
+        en: { summary: 'Select the trusted check that fails when coverage is below budget.', when: 'Required for both coverage evidence modes.', example: 'Use the same exact Tests check selected in the previous step.', effect: 'A success from another check or App cannot substitute for this gate.', verify: 'Inspect the selected job and confirm its coverage step is mandatory, not advisory.' },
+        es: { summary: 'Selecciona el check fiable que falla si no se alcanza la cobertura mínima.', when: 'Obligatorio en ambos modos de evidencia.', example: 'Usa el mismo check Tests elegido en el paso anterior.', effect: 'Un éxito de otro check o App no sustituye esta condición.', verify: 'Comprueba que el paso de cobertura es obligatorio, no solo informativo.' },
+    },
+    'projects.enabled': {
+        en: { summary: 'Decide whether future issue and PR automation should use existing GitHub Projects.', when: 'Ask now, before creating the setup PAT, so its Project read permission can be scoped correctly.', example: 'Choose Yes if your team already tracks work in an organization Project; choose No to skip it.', effect: 'Yes includes organization Projects: read in the setup PAT when applicable. No Project is changed now.', verify: 'Review the PAT permission table; exact Projects are selected after GitHub authorizes the PAT.' },
+        es: { summary: 'Decide si la automatización futura de issues y PR usará Projects existentes.', when: 'Se pregunta antes de crear el PAT de configuración para ajustar el permiso de lectura de Projects.', example: 'Elige Sí si tu equipo usa un Project de la organización; No para omitirlo.', effect: 'Sí incluye Projects: read de la organización en el PAT cuando aplica. Ahora no se modifica ningún Project.', verify: 'Revisa los permisos del PAT; elegirás los Projects concretos tras autorizarlo en GitHub.' },
+    },
+    'projects.ids': {
+        en: { summary: 'Choose the existing Projects that Copilot may update in future issue and PR workflows.', when: 'After the setup PAT is checked, GitHub may list accessible organization Projects. Personal Projects or unavailable lists need manual entry.', example: 'For https://github.com/orgs/acme/projects/5, select the project card or enter 5; never enter PVT_…', effect: 'Setup stores Project numbers in repository configuration; it does not create or edit Project items now.', verify: 'Open each linked Project and check its owner and URL number before approving the plan.' },
+        es: { summary: 'Elige los Projects existentes que Copilot podrá actualizar en futuros flujos de issues y PR.', when: 'Después de comprobar el PAT, GitHub puede listar Projects accesibles de la organización. Para Projects personales o fallos de consulta, introdúcelos manualmente.', example: 'Para https://github.com/orgs/acme/projects/5, marca la tarjeta o escribe 5; nunca PVT_…', effect: 'Setup guarda números de Project en la configuración; ahora no crea ni edita elementos.', verify: 'Abre cada Project enlazado y comprueba el dueño y número de la URL antes de aprobar el plan.' },
+    },
+};
+const section = {
+    capabilities: { en: { summary: 'Choose which automation Copilot will install.', when: 'This affects workflows, GitHub permissions, and later questions.', example: 'Disable a feature you do not plan to use.', effect: 'Only selected capabilities are planned.', verify: 'Review the generated setup plan before Apply.' }, es: { summary: 'Elige qué automatizaciones instalará Copilot.', when: 'Afecta a workflows, permisos de GitHub y preguntas posteriores.', example: 'Desactiva una función que no vayas a usar.', effect: 'Solo se planifican las funciones seleccionadas.', verify: 'Revisa el plan antes de aplicar cambios.' } },
+    'agent-runtime': { en: { summary: 'Choose the agent CLI for this task.', when: 'Applies when the selected feature runs in GitHub Actions.', example: 'Codex runs through the codex CLI.', effect: 'The Action invokes the selected provider, never an implicit fallback.', verify: 'Check the runner has the selected CLI and credentials.' }, es: { summary: 'Elige el agente CLI para esta tarea.', when: 'Se aplica al ejecutar la función elegida en GitHub Actions.', example: 'Codex usa el CLI codex.', effect: 'La Action usa ese proveedor, sin sustitución implícita.', verify: 'Comprueba el CLI y las credenciales del runner.' } },
+    'agent-model-defaults': { en: { summary: 'Set the model defaults shared by agent tasks.', when: 'Used unless you configure each task separately.', example: 'Keep the reviewed model by accepting the suggested value.', effect: 'The Action passes these values to the selected CLI.', verify: 'Check the plan and runner model allowlist.' }, es: { summary: 'Define el modelo común para las tareas del agente.', when: 'Se usa salvo que configures cada tarea por separado.', example: 'Acepta el modelo revisado que aparece como sugerencia.', effect: 'La Action pasa estos valores al CLI elegido.', verify: 'Revisa el plan y la lista de modelos permitidos.' } },
+    'agent-role-overrides': { en: { summary: 'Override this one agent task.', when: 'Only when independent task configuration is enabled.', example: 'Use a different model for review than for planning.', effect: 'Only this task uses the override.', verify: 'Inspect the per-task plan values.' }, es: { summary: 'Personaliza esta tarea del agente.', when: 'Solo si activaste la configuración independiente por tarea.', example: 'Usa un modelo distinto para revisión y planificación.', effect: 'Solo esta tarea usa el valor personalizado.', verify: 'Revisa los valores de cada tarea en el plan.' } },
+    repository: { en: { summary: 'Set how Copilot treats your repository.', when: 'Applies to generated workflows and future issue/PR events.', example: 'Use your actual development branch name.', effect: 'Future automation follows the chosen branch and workflow rules.', verify: 'Review the planned files and repository profile.' }, es: { summary: 'Define cómo Copilot tratará tu repositorio.', when: 'Se aplica a los workflows y futuros eventos de issues/PR.', example: 'Indica el nombre real de tu rama de desarrollo.', effect: 'La automatización seguirá las ramas y reglas elegidas.', verify: 'Revisa los archivos del plan y el perfil del repositorio.' } },
+    deployment: { en: { summary: 'Choose release and hotfix behavior.', when: 'Only matters when those workflows are enabled.', example: 'Keep the default strategy unless your branching policy differs.', effect: 'Changes how release branches and reconciliation PRs are managed.', verify: 'Inspect the release/hotfix section of the plan.' }, es: { summary: 'Define el comportamiento de releases y hotfixes.', when: 'Importa si activaste esos workflows.', example: 'Conserva la estrategia predeterminada salvo que tus ramas funcionen distinto.', effect: 'Cambia la gestión de ramas y PR de reconciliación.', verify: 'Revisa la sección de releases y hotfixes del plan.' } },
+    bugbot: { en: { summary: 'Choose how Bugbot analyzes and reports code changes.', when: 'Used when AI review features run.', example: 'The default publishes eligible findings without blocking all PRs.', effect: 'Changes future review publication and diagnostics.', verify: 'Inspect the Bugbot Variables in the plan and later review results.' }, es: { summary: 'Define cómo Bugbot analiza y comunica cambios de código.', when: 'Se usa cuando se ejecutan funciones de revisión con IA.', example: 'Por defecto publica hallazgos aptos sin bloquear todos los PR.', effect: 'Cambia futuras revisiones y diagnósticos.', verify: 'Revisa las Variables de Bugbot en el plan y sus resultados.' } },
+    'pull-request-approval': { en: { summary: 'Choose evidence required before the bot recommends or submits PR approval.', when: 'Only applies if PR automation is enabled.', example: 'Recommend informs a human; guarded may submit a native approval.', effect: 'No PR is approved solely because this page shows green checks.', verify: 'Inspect the trusted CI, Bugbot, and branch-rule evidence.' }, es: { summary: 'Elige las pruebas necesarias para recomendar o aprobar un PR.', when: 'Solo se aplica si activaste la automatización de PR.', example: 'Recommend informa a una persona; guarded puede publicar una aprobación.', effect: 'Ningún PR se aprueba solo porque esta pantalla muestre checks verdes.', verify: 'Revisa CI, Bugbot y las reglas de rama.' } },
+    projects: { en: { summary: 'Choose an existing Project Status value for an issue or PR transition.', when: 'Only when Projects integration is selected.', example: 'Todo when an issue is created; In Progress when work starts.', effect: 'Future automation updates the Status field, not a visual board column.', verify: 'Open each selected Project and inspect its Status field options.' }, es: { summary: 'Elige un valor Status existente para una transición de issue o PR.', when: 'Solo si elegiste integrar Projects.', example: 'Todo al crear un issue; In Progress al empezar el trabajo.', effect: 'La automatización futura actualiza el campo Status, no una columna visual.', verify: 'Abre cada Project y revisa las opciones de su campo Status.' } },
+    provisioning: { en: { summary: 'Choose which GitHub Actions resources setup manages.', when: 'Affects PAT grants and setup writes.', example: 'Keep Secrets enabled if the bot PAT must be installed.', effect: 'Selected resources may be created or updated after approval.', verify: 'Inspect exact resource names in the plan.' }, es: { summary: 'Elige qué recursos de GitHub Actions gestionará setup.', when: 'Afecta a permisos del PAT y cambios de configuración.', example: 'Mantén Secrets si hay que instalar el PAT del bot.', effect: 'Los recursos seleccionados podrán crearse o actualizarse tras aprobar.', verify: 'Revisa los nombres exactos en el plan.' } },
+    storage: { en: { summary: 'Choose where GitHub Actions Variables and Secrets live.', when: 'Applies when provisioning is enabled.', example: 'Repository scope is the simplest default.', effect: 'Affects visibility, permission grants, and precedence.', verify: 'Check the selected scope and shadow warnings in the plan.' }, es: { summary: 'Elige dónde se guardan Variables y Secrets de GitHub Actions.', when: 'Se aplica si activaste su configuración.', example: 'El ámbito de repositorio es el predeterminado más sencillo.', effect: 'Afecta a visibilidad, permisos y precedencia.', verify: 'Revisa el ámbito y los avisos de superposición en el plan.' } },
+};
+function setupQuestionPresentation(question) {
+    const copy = special[question.id] ?? section[question.stateId];
+    const purpose = (0, setup_question_purpose_policy_1.setupQuestionPurpose)(question);
+    const documentation = (0, setup_question_documentation_policy_1.setupQuestionDocumentation)(question);
+    const genericHow = question.kind === 'boolean'
+        ? { en: 'Choose Yes to enable this behavior or No to leave it off; the suggested answer appears below.', es: 'Elige Sí para activarlo o No para dejarlo desactivado; abajo verás la respuesta sugerida.' }
+        : question.kind === 'producer-select'
+            ? { en: 'Inspect each candidate run on GitHub, then select its exact job, source App ID and workflow. A listed run is observed, not proof of a required coverage gate; use manual entry for a missing producer.', es: 'Abre cada ejecución candidata en GitHub y comprueba el job, la App y el workflow exactos. Una ejecución listada es observada, no prueba que exija cobertura; usa la entrada manual si falta un productor.' }
+            : question.kind === 'project-select'
+                ? { en: 'Select Projects by title and URL. If one is missing, enter its positive URL number or exact GitHub URL; PVT_ IDs are not valid.', es: 'Marca Projects por título y URL. Si falta uno, introduce su número positivo o URL exacta de GitHub; los IDs PVT_ no valen.' }
+                : question.kind === 'scope-overrides'
+                    ? { en: 'Select only inherited names you deliberately want to replace at repository scope. Leave empty to keep organization values.', es: 'Selecciona solo los nombres heredados que quieras sustituir en el repositorio. Vacío conserva los valores de la organización.' }
+                    : question.kind === 'multi-select'
+                        ? { en: 'Toggle the listed workflows you intend to use. You can select more than one; review their GitHub permissions before creating a PAT.', es: 'Marca los workflows que usarás. Puedes elegir varios; revisa sus permisos de GitHub antes de crear el PAT.' }
+                        : question.kind === 'choice'
+                            ? { en: 'Select one of the listed values after reading its consequence; the stored value is not translated.', es: 'Elige una de las opciones tras revisar sus consecuencias; el valor guardado no se traduce.' }
+                            : question.kind === 'number'
+                                ? { en: 'Enter a whole number within the range described in the question; accept the suggested value when unsure.', es: 'Introduce un número entero dentro del intervalo indicado; acepta el sugerido si tienes dudas.' }
+                                : { en: 'Enter the exact value used by your repository or runner; leave it empty only when the question says empty is allowed.', es: 'Introduce el valor exacto de tu repositorio o runner; déjalo vacío solo si la pregunta lo permite.' };
+    const howById = {
+        'pullRequestApproval.coverage.checkName': {
+            en: 'Select one of the trusted checks above. Open its linked run and workflow file; the coverage step must fail this job when the budget fails. A green result alone is not proof.',
+            es: 'Elige uno de los checks fiables anteriores. Abre su ejecución y workflow; el paso de cobertura debe hacer fallar el job si no se alcanza el mínimo. Un resultado verde no basta.',
+        },
+        'pullRequestApproval.producerAttested': {
+            en: 'Answer Yes only after inspecting every selected name, App ID and workflow, plus the coverage-enforcing step of the check you just chose. Otherwise answer No and stay in recommendation mode.',
+            es: 'Responde Sí solo tras comprobar cada nombre, ID de App y workflow, además del paso obligatorio de cobertura del check elegido. Si no, responde No y mantén el modo recomendación.',
+        },
+        'pullRequestApproval.coverage.artifactWorkflowName': {
+            en: 'Enter the exact name of a trusted selected workflow that publishes copilot-diff-coverage-v1 for this PR/head/base. Do not enter an artifact filename or a guessed workflow name.',
+            es: 'Escribe el nombre exacto de un workflow fiable seleccionado que publique copilot-diff-coverage-v1 para este PR/head/base. No pongas un archivo ni un nombre supuesto.',
+        },
+        'projects.statusVerified': {
+            en: 'Open every selected Project in GitHub, inspect its Status field, and compare the exact four values shown above. Choose Yes only when all four exist in every Project; No returns to Project selection.',
+            es: 'Abre cada Project elegido en GitHub, revisa su campo Status y compara los cuatro valores exactos anteriores. Elige Sí solo si todos existen en cada Project; No vuelve a la selección de Projects.',
+        },
+    };
+    const statusHow = /^projects\.(issue|pullRequest)(Created|InProgress)Column$/u.test(question.id)
+        ? { en: 'Choose an option shown in every selected Project’s Status field. If options cannot be read, open each Project in GitHub and enter the same exact existing option; different names per Project are not supported.',
+            es: 'Elige una opción del campo Status de todos los Projects seleccionados. Si no se pueden consultar, abre cada Project y escribe el mismo valor existente; no se admiten nombres distintos por Project.' }
+        : undefined;
+    const how = howById[question.id] ?? statusHow ?? genericHow;
+    const where = location[question.stateId];
+    return {
+        en: { label: question.label.replace(' (Space toggles, Enter confirms)', ''), ...copy.en,
+            summary: special[question.id] ? copy.en.summary : (purpose?.en ?? copy.en.summary),
+            where: where.en, how: how.en, why: `This choice is requested now so the plan, token permissions and future automation agree. ${copy.en.when}`, documentation },
+        es: { label: (0, setup_question_translations_1.spanishQuestionLabel)(question), ...copy.es,
+            summary: special[question.id] ? copy.es.summary : (purpose?.es ?? copy.es.summary),
+            where: where.es, how: how.es, why: `Esta elección permite ajustar el plan, los permisos del PAT y la automatización futura antes de aplicar cambios. ${copy.es.when}`, documentation },
+        fr: (0, setup_question_guidance_fr_1.frenchQuestionExplanation)(question, documentation),
+        pt: (0, setup_question_guidance_pt_1.portugueseQuestionExplanation)(question, documentation),
+    };
+}
+
+
+/***/ }),
+
+/***/ 14440:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.portugueseQuestionExplanation = portugueseQuestionExplanation;
+const setup_question_labels_fr_pt_1 = __nccwpck_require__(28247);
+const setup_question_purpose_fr_pt_1 = __nccwpck_require__(98807);
+const where = {
+    capabilities: 'A configuração escreve os fluxos escolhidos neste repositório e pede apenas as permissões GitHub necessárias.',
+    'agent-runtime': 'Os fluxos GitHub Actions gerados executam este agente no respetivo runner; nada é instalado neste computador.',
+    'agent-model-defaults': 'O modelo e o comando comuns são guardados na configuração do repositório usada pelos fluxos gerados.',
+    'agent-role-overrides': 'Esta exceção para uma tarefa é guardada no repositório e lida apenas quando essa tarefa é executada.',
+    repository: 'O perfil do repositório e os fluxos gerados usam este valor em futuros eventos de ramos, questões e pull requests.',
+    deployment: 'O perfil do repositório controla futuros fluxos de release e hotfix; responder não publica nada.',
+    bugbot: 'O fluxo gerado lê esta definição da configuração ou das Variables do GitHub Actions selecionadas.',
+    'pull-request-approval': 'A aprovação protegida usa identidades exatas dos produtores CI e provas das execuções de pull requests no GitHub.',
+    projects: 'Os Projects escolhidos e os valores do campo Status serão usados pela futura automatização de questões e pull requests.',
+    provisioning: 'Após a confirmação final, a configuração pode criar ou atualizar os ficheiros e recursos do GitHub Actions escolhidos.',
+    storage: 'O GitHub Actions guarda estes recursos no repositório ou na organização; o âmbito altera a visibilidade e as permissões do PAT.',
+};
+const section = {
+    capabilities: { summary: 'Escolha as automatizações que o Copilot irá instalar.', when: 'Isto afeta os fluxos, as permissões GitHub e as perguntas seguintes.', example: 'Desative uma função que não pretende utilizar.', effect: 'Só as funções selecionadas entram no plano.', verify: 'Reveja o plano antes de aplicar alterações.' },
+    'agent-runtime': { summary: 'Escolha o agente CLI para esta tarefa.', when: 'Aplica-se quando a função selecionada é executada no GitHub Actions.', example: 'O Codex é executado através do comando codex.', effect: 'A Action executa o fornecedor escolhido, sem substituição implícita.', verify: 'Confirme que o runner tem o CLI e as credenciais necessárias.' },
+    'agent-model-defaults': { summary: 'Defina os modelos predefinidos comuns às tarefas do agente.', when: 'Usam-se salvo se configurar cada tarefa separadamente.', example: 'Mantenha o modelo sugerido se não tiver uma necessidade específica.', effect: 'A Action passa estes valores ao CLI escolhido.', verify: 'Reveja o plano e os modelos permitidos no runner.' },
+    'agent-role-overrides': { summary: 'Personalize esta tarefa do agente.', when: 'Apenas se tiver ativado a configuração independente por tarefa.', example: 'Use um modelo diferente para revisão e planeamento.', effect: 'A exceção só se aplica a esta tarefa.', verify: 'Reveja os valores de cada tarefa no plano.' },
+    repository: { summary: 'Defina como o Copilot trata o seu repositório.', when: 'Aplica-se aos fluxos gerados e a futuros eventos de questões ou pull requests.', example: 'Indique o nome real do ramo de desenvolvimento.', effect: 'A futura automatização segue os ramos e as regras escolhidos.', verify: 'Reveja os ficheiros planeados e o perfil do repositório.' },
+    deployment: { summary: 'Defina o comportamento de releases e hotfixes.', when: 'Só importa se esses fluxos estiverem ativados.', example: 'Mantenha a estratégia predefinida salvo se a política de ramos for diferente.', effect: 'Altera a gestão de ramos e pull requests de reconciliação.', verify: 'Reveja a secção de releases e hotfixes do plano.' },
+    bugbot: { summary: 'Defina como o Bugbot analisa e comunica alterações.', when: 'Usa-se quando as funções de revisão por IA são executadas.', example: 'Por predefinição, publica resultados elegíveis sem bloquear todas as pull requests.', effect: 'Altera futuras publicações e diagnósticos de revisão.', verify: 'Reveja as Variables do Bugbot no plano e os resultados posteriores.' },
+    'pull-request-approval': { summary: 'Escolha as provas exigidas antes de o bot recomendar ou submeter uma aprovação.', when: 'Só se aplica se a automatização de pull requests estiver ativa.', example: '«Recommend» informa uma pessoa; «guarded» pode aprovar no GitHub.', effect: 'Uma verificação verde nesta página nunca aprova uma pull request por si só.', verify: 'Inspecione as provas CI, o Bugbot e as regras de ramos.' },
+    projects: { summary: 'Escolha um valor Status existente para uma transição de questão ou PR.', when: 'Apenas se integrar Projects.', example: 'Todo na criação; In Progress no início do trabalho.', effect: 'A automatização atualiza o campo Status, não uma coluna visual.', verify: 'Verifique as opções Status de cada Project escolhido.' },
+    provisioning: { summary: 'Escolha os recursos do GitHub Actions geridos pela configuração.', when: 'Isto afeta as permissões do PAT e as alterações previstas.', example: 'Mantenha os Secrets ativos se for necessário instalar o PAT do bot.', effect: 'Os recursos selecionados poderão ser criados ou atualizados após aprovação.', verify: 'Reveja os nomes exatos dos recursos no plano.' },
+    storage: { summary: 'Escolha onde ficam as Variables e Secrets do GitHub Actions.', when: 'Aplica-se quando a sua criação está ativa.', example: 'O âmbito do repositório é a opção predefinida mais simples.', effect: 'Altera visibilidade, permissões e precedência.', verify: 'Confirme o âmbito e os avisos de sobreposição no plano.' },
+};
+const special = {
+    'agents.findings.executable': { summary: 'Escolha o comando do agente no runner GitHub Actions, não neste computador.', when: 'Altere-o apenas se tiver instalado deliberadamente outro agente no runner.', example: 'Deixe vazio para codex, opencode ou agent, conforme o fornecedor.', effect: 'O caminho personalizado é usado pelas tarefas escolhidas e nunca é instalado automaticamente.', verify: 'Confirme que o runner tem exatamente este executável antes de ativar o fluxo.' },
+    'ai.includeReasoning': { summary: 'Peça explicações adicionais se a resposta do fornecedor as disponibilizar.', when: 'Só para diagnóstico avançado; o percurso CLI atual não fornece partes de raciocínio separadas.', example: 'Mantenha desativado numa configuração normal.', effect: 'Pode acrescentar texto do fornecedor, sem garantir metadados breves.', verify: 'Inspecione uma resposta estruturada controlada; não presuma que a opção produziu texto adicional.' },
+    'ai.bugbotDryRun': { summary: 'Mantenha o Bugbot em modo apenas de análise nas próximas execuções.', when: 'Útil numa avaliação; incompatível com provas de aprovação.', example: 'Escolha Não para publicar revisões normais.', effect: 'O Bugbot analisa sem publicar resultados nem alterar o repositório. Não é setup --dry-run.', verify: 'Inspecione o resultado do fluxo Bugbot: a simulação não publica revisão nem verificação.' },
+    'ai.bugbotOrganizationRules': { summary: 'Defina instruções gerais para o Bugbot, uma regra por linha.', when: 'Use se a equipa precisar de critérios de revisão partilhados no repositório configurado.', example: 'Assinalar alterações que contornem o isolamento entre clientes.', effect: 'Estas regras precedem as do repositório; o âmbito da Variable determina o armazenamento.', verify: 'Inspecione a Variable configurada e ative o rastreio das fontes das regras.' },
+    'ai.provisioningMode': { summary: 'Decida como a Action encontra ou instala o agente CLI.', when: 'Aplica-se no runner quando começa uma tarefa de IA ativa.', example: 'Auto reutiliza um CLI instalado ou instala uma versão fixa de Codex/OpenCode.', effect: 'Always reinstala as versões revistas; Disabled exige um CLI pré-instalado. Cursor tem de estar pré-instalado.', verify: 'Inspecione a etapa de preparação e a versão do binário comunicada pelo runner.' },
+    'pullRequestApproval.testChecks': { summary: 'Escolha os jobs CI que o bot pode aceitar como prova independente de testes.', when: 'Obrigatório para os modos Recommend e Guarded.', example: 'Selecione o job Tests exato, o ID da App GitHub e o workflow de uma execução recente.', effect: 'Só as identidades exatas listadas satisfazem a condição de aprovação.', verify: 'Abra a execução associada e confirme job, App e resultado do commit atual.' },
+    'pullRequestApproval.producerAttested': { summary: 'Confirme que inspecionou o produtor CI exato e a sua etapa obrigatória de cobertura.', when: 'Obrigatório antes de o modo Guarded poder aprovar.', example: 'Confirme que o job Tests falha se o limite de cobertura não for atingido.', effect: 'A sua confirmação fica registada; o Copilot não a deduz de uma verificação verde.', verify: 'Inspecione o ficheiro do workflow e uma execução real antes de escolher Sim.' },
+    'pullRequestApproval.coverage.mode': { summary: 'Escolha como comprovar a cobertura exigida do código alterado.', when: 'Aplica-se quando a aprovação de PR está ativa.', example: 'Check: o CI exige o limite. Numeric: um workflow fiável publica contagens limitadas.', effect: 'Check confia numa condição CI; Numeric lê copilot-diff-coverage-v1 e compara o limite.', verify: 'Inspecione, respetivamente, a condição de falha CI ou o artefacto do relatório.' },
+    'pullRequestApproval.coverage.checkName': { summary: 'Selecione a verificação fiável que falha abaixo do limite de cobertura.', when: 'Obrigatório nos dois modos de prova.', example: 'Use o mesmo job Tests exato da etapa anterior.', effect: 'O sucesso de outra verificação ou App não substitui esta condição.', verify: 'Confirme que a etapa de cobertura é obrigatória e não apenas informativa.' },
+    'projects.enabled': { summary: 'Decida se futuras questões e PR devem usar Projects GitHub existentes.', when: 'Antes de criar o PAT de configuração para prever o acesso de leitura a Projects.', example: 'Sim se a equipa usa um Project da organização; Não para ignorar.', effect: 'Sim inclui Projects: read da organização quando necessário. Nenhum Project é alterado agora.', verify: 'Reveja as permissões do PAT; escolherá os Projects concretos depois de o autorizar.' },
+    'projects.ids': { summary: 'Selecione os Projects existentes que o Copilot poderá atualizar futuramente.', when: 'Após verificar o PAT; se a lista não estiver disponível, introduza os dados manualmente.', example: 'Para https://github.com/orgs/acme/projects/5, marque o cartão ou introduza 5, nunca PVT_…', effect: 'Os números ficam guardados; nenhum item de Project é alterado agora.', verify: 'Abra cada Project e confirme proprietário e número antes de aprovar o plano.' },
+};
+function howToChoose(question) {
+    if (question.id === 'pullRequestApproval.coverage.checkName')
+        return 'Escolha uma das verificações fiáveis acima. Abra a execução e o workflow: o passo de cobertura tem de fazer falhar o job quando o limite não é atingido. Um resultado verde não basta.';
+    if (question.id === 'pullRequestApproval.producerAttested')
+        return 'Responda Sim apenas depois de verificar cada nome, ID da App e workflow escolhido, bem como o passo obrigatório de cobertura do check selecionado. Caso contrário, responda Não e mantenha o modo de recomendação.';
+    if (question.id === 'pullRequestApproval.coverage.artifactWorkflowName')
+        return 'Introduza o nome exato de um workflow fiável selecionado que publique copilot-diff-coverage-v1 para este PR e os seus commits base e head. Não adivinhe o nome do workflow.';
+    if (question.id === 'projects.statusVerified')
+        return 'Abra cada Project escolhido no GitHub, inspecione o campo Status e compare os quatro valores exatos acima. Responda Sim apenas se todos existirem em cada Project; Não regressa à seleção de Projects.';
+    if (/^projects\.(issue|pullRequest)(Created|InProgress)Column$/u.test(question.id))
+        return 'Escolha uma opção do campo Status presente em todos os Projects selecionados. Se não conseguir consultar as opções, abra cada Project no GitHub e introduza o mesmo valor existente; valores diferentes por Project não são suportados.';
+    switch (question.kind) {
+        case 'boolean': return 'Escolha Sim para ativar ou Não para desativar; a resposta sugerida aparece abaixo.';
+        case 'producer-select': return 'Inspecione cada execução candidata no GitHub e escolha o job, ID da App e workflow exatos. Introduza manualmente apenas se não houver candidato verificado.';
+        case 'project-select': return 'Selecione pelo título e URL. Se faltar um Project, introduza o número positivo ou URL exato do GitHub; IDs PVT_ não são válidos.';
+        case 'scope-overrides': return 'Selecione apenas os nomes herdados que pretende substituir no repositório. Deixe vazio para conservar os valores da organização.';
+        case 'multi-select': return 'Assinale os fluxos que pretende usar. Pode escolher vários; reveja as permissões antes de criar um PAT.';
+        case 'choice': return 'Escolha um valor após ler as consequências; o valor guardado não é traduzido.';
+        case 'number': return 'Introduza um número inteiro no intervalo indicado; mantenha o valor sugerido se tiver dúvidas.';
+        default: return 'Introduza o valor exato usado pelo repositório ou runner; deixe vazio apenas se a pergunta o permitir.';
+    }
+}
+function portugueseQuestionExplanation(question, documentation) {
+    const copy = special[question.id] ?? section[question.stateId];
+    return {
+        label: (0, setup_question_labels_fr_pt_1.translatedQuestionLabel)(question, 'pt'),
+        ...copy,
+        summary: special[question.id] ? copy.summary : ((0, setup_question_purpose_fr_pt_1.setupQuestionPurposeFrPt)(question, 'pt') ?? copy.summary),
+        where: where[question.stateId],
+        how: howToChoose(question),
+        why: `Esta decisão permite alinhar o plano, as permissões do PAT e a futura automatização antes de aplicar alterações. ${copy.when}`,
+        documentation: { title: 'Documentação desta opção', url: documentation.url },
+    };
+}
+
+
+/***/ }),
+
+/***/ 55765:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.questionLabelsFr = void 0;
+/** French presentation labels; semantic question IDs remain unchanged. */
+exports.questionLabelsFr = {
+    'features.issues': 'Automatiser les tickets : branches, étiquettes, projets et cycle de vie',
+    'features.pullRequests': 'Automatiser les pull requests : revue, description et cycle de vie',
+    'features.commits': 'Automatiser les commits : progression, taille et analyse Bugbot',
+    'features.issueComments': 'Répondre aux commentaires des tickets et permettre les corrections Bugbot',
+    'features.pullRequestComments': 'Répondre aux commentaires des pull requests et permettre les corrections Bugbot',
+    'features.agentProvisioning': 'Vérifier l’installation des agents CLI dans GitHub Actions',
+    'features.credentialHealth': 'Vérifier l’état des identifiants distants',
+    'features.inactiveIssueClosure': 'Fermer les tickets inactifs après le délai défini',
+    'features.issueTemplates': 'Installer les modèles de ticket',
+    'features.pullRequestTemplate': 'Installer le modèle de pull request',
+    'issueWorkflows.enabled': 'Types de workflows de ticket à activer',
+    'repositoryAgentGuidance.enabled': 'Générer des instructions pour les agents dans le dépôt ?',
+    'repositoryAgentGuidance.agentsPointer': 'Comment trouver les instructions depuis AGENTS.md',
+    'agents.findings.modelProvider': 'Fournisseur de modèle partagé (sauf réglage propre à une tâche)',
+    'agents.findings.model': 'Modèle partagé (sauf réglage propre à une tâche)',
+    'agents.findings.effort': 'Effort de raisonnement partagé (les réglages par tâche sont conservés)',
+    'agents.findings.executable': 'Exécutable partagé validé (les réglages par tâche sont conservés)',
+    'agents.configureIndependently': 'Configurer le modèle et la commande séparément pour chaque tâche ?',
+    'repository.mainBranch': 'Branche de production',
+    'repository.developmentBranch': 'Branche de développement',
+    'repository.featureTree': 'Préfixe des branches de fonctionnalité',
+    'repository.bugfixTree': 'Préfixe des branches de correction',
+    'repository.hotfixTree': 'Préfixe des branches de correctif urgent',
+    'repository.releaseTree': 'Préfixe des branches de version',
+    'repository.docsTree': 'Préfixe des branches de documentation',
+    'repository.choreTree': 'Préfixe des branches de maintenance',
+    'repository.issueManagedBranches': 'L’Action peut-elle créer des branches liées aux tickets ?',
+    'repository.preBranchSdd': 'Exiger un SDD avant de créer certaines branches ?',
+    'repository.reopenIssueOnPush': 'Rouvrir un ticket fermé quand sa branche reçoit des commits ?',
+    'repository.desiredAssigneesCount': 'Nombre souhaité de responsables par ticket',
+    'repository.desiredReviewersCount': 'Nombre souhaité de réviseurs par pull request',
+    'repository.inactivityThresholdHours': 'Heures d’inactivité avant la fermeture d’un ticket en attente',
+    'repository.repositoryLocale': 'Langue des messages du dépôt',
+    'repository.issueLocale': 'Langue des tickets (vide : hériter)',
+    'repository.pullRequestLocale': 'Langue des pull requests (vide : hériter)',
+    'repository.commitPrefixTransforms': 'Transformation des préfixes de commit',
+    'repository.releaseReconciliationStrategy': 'Stratégie de réconciliation des versions',
+    'repository.hotfixReconciliationStrategy': 'Stratégie de réconciliation des correctifs urgents',
+    'repository.reconciliationPullRequestMode': 'Mode des pull requests de réconciliation',
+    'repository.reconciliationBackmergeMode': 'Mode de fusion de retour',
+    'repository.hotfixActiveReleasePolicy': 'Destination du correctif pendant une version active',
+    'repository.reconciliationTree': 'Préfixe des branches de réconciliation',
+    'repository.reconciliationCleanup': 'Nettoyage des branches après réconciliation',
+    'repository.reconciliationIssueCompletion': 'Sort du ticket après réconciliation',
+    'repository.orchestrationPresentationMode': 'Niveau de détail du centre de contrôle des versions',
+    'repository.orchestrationDiagrams': 'Afficher des diagrammes accessibles pour les versions ?',
+    'repository.orchestrationCommentMode': 'Comment publier les commentaires du cycle de version',
+    'ai.pullRequestDescriptionMode': 'Comment mettre à jour la description des pull requests',
+    'ai.ignoreFiles': 'Fichiers que l’IA doit ignorer',
+    'ai.membersOnly': 'Limiter le traitement par IA aux membres du dépôt ?',
+    'ai.includeReasoning': 'Inclure des explications supplémentaires du fournisseur ?',
+    'ai.bugbotSeverity': 'Gravité minimale des résultats publiés par Bugbot',
+    'ai.bugbotCommentLimit': 'Nombre maximal de commentaires Bugbot par exécution',
+    'ai.bugbotFixVerifyCommands': 'Commandes de vérification des corrections Bugbot',
+    'ai.bugbotDryRun': 'Analyser avec Bugbot sans publier de changements ?',
+    'ai.bugbotEffort': 'Profondeur de l’analyse Bugbot',
+    'ai.bugbotReviewDrafts': 'Analyser les pull requests en brouillon ?',
+    'ai.bugbotTraceRules': 'Indiquer quelles sources de règles ont été appliquées ?',
+    'ai.bugbotSuggestedChanges': 'Publier des suggestions de modification sûres ?',
+    'ai.bugbotTelemetry': 'Enregistrer des métriques Bugbot sans contenu ?',
+    'ai.bugbotFailOnUnresolved': 'Faire échouer la vérification si des résultats restent ouverts ?',
+    'ai.bugbotOrganizationRules': 'Règles Bugbot communes, une par ligne',
+    'ai.provisioningMode': 'Comment préparer l’agent CLI sur le runner',
+    'pullRequestApproval.mode': 'Que peut faire le bot pour approuver les pull requests ?',
+    'pullRequestApproval.testChecks': 'Quelles vérifications CI sont fiables pour approuver ?',
+    'pullRequestApproval.producerAttested': 'Avez-vous vérifié le job, l’App et l’étape obligatoire de couverture ?',
+    'pullRequestApproval.coverage.mode': 'Comment prouver la couverture requise',
+    'pullRequestApproval.coverage.checkName': 'Vérification fiable imposant la couverture',
+    'pullRequestApproval.coverage.minDiffPercent': 'Couverture minimale des lignes modifiées (0–100)',
+    'pullRequestApproval.coverage.artifactWorkflowName': 'Workflow publiant copilot-diff-coverage-v1',
+    'pullRequestApproval.coverage.reporterAttested': 'Avez-vous vérifié l’installation du rapporteur numérique ?',
+    'projects.enabled': 'Intégrer des Projects GitHub existants ?',
+    'projects.ids': 'Choisir des Projects existants ou saisir leurs numéros d’URL',
+    'projects.statusVerified': 'Avez-vous vérifié sur GitHub les quatre valeurs Status exactes de chaque Project choisi ?',
+    'projects.issueCreatedColumn': 'Valeur Status des nouveaux tickets',
+    'projects.pullRequestCreatedColumn': 'Valeur Status des nouvelles pull requests',
+    'projects.issueInProgressColumn': 'Valeur Status des tickets en cours',
+    'projects.pullRequestInProgressColumn': 'Valeur Status des pull requests en cours',
+    createInitialTag: 'Créer v1.0.0 si aucune étiquette de version n’existe ?',
+    manageRepositoryVariables: 'Créer ou mettre à jour les Variables GitHub Actions ?',
+    manageRepositorySecrets: 'Valider et configurer les Secrets GitHub Actions ?',
+};
+
+
+/***/ }),
+
+/***/ 6958:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.questionLabelsPt = void 0;
+/** Portuguese presentation labels; semantic question IDs remain unchanged. */
+exports.questionLabelsPt = {
+    'features.issues': 'Automatizar questões: ramos, etiquetas, projetos e ciclo de vida',
+    'features.pullRequests': 'Automatizar pull requests: revisão, descrição e ciclo de vida',
+    'features.commits': 'Automatizar commits: progresso, tamanho e análise do Bugbot',
+    'features.issueComments': 'Responder a comentários de questões e permitir correções do Bugbot',
+    'features.pullRequestComments': 'Responder a comentários de pull requests e permitir correções do Bugbot',
+    'features.agentProvisioning': 'Verificar a instalação dos agentes CLI no GitHub Actions',
+    'features.credentialHealth': 'Verificar o estado das credenciais remotas',
+    'features.inactiveIssueClosure': 'Fechar questões inativas após o prazo definido',
+    'features.issueTemplates': 'Instalar modelos de questão',
+    'features.pullRequestTemplate': 'Instalar o modelo de pull request',
+    'issueWorkflows.enabled': 'Tipos de fluxo de questões a ativar',
+    'repositoryAgentGuidance.enabled': 'Gerar instruções para agentes no repositório?',
+    'repositoryAgentGuidance.agentsPointer': 'Como encontrar as instruções a partir de AGENTS.md',
+    'agents.findings.modelProvider': 'Fornecedor de modelo partilhado (salvo definição própria de uma tarefa)',
+    'agents.findings.model': 'Modelo partilhado (salvo definição própria de uma tarefa)',
+    'agents.findings.effort': 'Esforço de raciocínio partilhado (as definições por tarefa são preservadas)',
+    'agents.findings.executable': 'Executável partilhado validado (as definições por tarefa são preservadas)',
+    'agents.configureIndependently': 'Configurar modelo e comando separadamente para cada tarefa?',
+    'repository.mainBranch': 'Ramo de produção',
+    'repository.developmentBranch': 'Ramo de desenvolvimento',
+    'repository.featureTree': 'Prefixo dos ramos de funcionalidade',
+    'repository.bugfixTree': 'Prefixo dos ramos de correção',
+    'repository.hotfixTree': 'Prefixo dos ramos de hotfix',
+    'repository.releaseTree': 'Prefixo dos ramos de release',
+    'repository.docsTree': 'Prefixo dos ramos de documentação',
+    'repository.choreTree': 'Prefixo dos ramos de manutenção',
+    'repository.issueManagedBranches': 'A Action pode criar ramos associados a questões?',
+    'repository.preBranchSdd': 'Exigir um SDD antes de criar determinados ramos?',
+    'repository.reopenIssueOnPush': 'Reabrir uma questão fechada quando o seu ramo recebe commits?',
+    'repository.desiredAssigneesCount': 'Número pretendido de responsáveis por questão',
+    'repository.desiredReviewersCount': 'Número pretendido de revisores por pull request',
+    'repository.inactivityThresholdHours': 'Horas de inatividade antes de fechar uma questão em espera',
+    'repository.repositoryLocale': 'Idioma das mensagens do repositório',
+    'repository.issueLocale': 'Idioma das questões (vazio: herdar)',
+    'repository.pullRequestLocale': 'Idioma das pull requests (vazio: herdar)',
+    'repository.commitPrefixTransforms': 'Transformação dos prefixos dos commits',
+    'repository.releaseReconciliationStrategy': 'Estratégia de reconciliação de releases',
+    'repository.hotfixReconciliationStrategy': 'Estratégia de reconciliação de hotfixes',
+    'repository.reconciliationPullRequestMode': 'Modo das pull requests de reconciliação',
+    'repository.reconciliationBackmergeMode': 'Modo da fusão de retorno',
+    'repository.hotfixActiveReleasePolicy': 'Destino do hotfix durante uma release ativa',
+    'repository.reconciliationTree': 'Prefixo dos ramos de reconciliação',
+    'repository.reconciliationCleanup': 'Limpeza de ramos após a reconciliação',
+    'repository.reconciliationIssueCompletion': 'O que fazer à questão após a reconciliação',
+    'repository.orchestrationPresentationMode': 'Nível de detalhe do centro de controlo de releases',
+    'repository.orchestrationDiagrams': 'Mostrar diagramas acessíveis para releases?',
+    'repository.orchestrationCommentMode': 'Como publicar os comentários do ciclo de release',
+    'ai.pullRequestDescriptionMode': 'Como atualizar a descrição das pull requests',
+    'ai.ignoreFiles': 'Ficheiros que a IA deve ignorar',
+    'ai.membersOnly': 'Limitar o processamento por IA aos membros do repositório?',
+    'ai.includeReasoning': 'Incluir explicações adicionais do fornecedor?',
+    'ai.bugbotSeverity': 'Gravidade mínima dos resultados publicados pelo Bugbot',
+    'ai.bugbotCommentLimit': 'Número máximo de comentários do Bugbot por execução',
+    'ai.bugbotFixVerifyCommands': 'Comandos de verificação das correções do Bugbot',
+    'ai.bugbotDryRun': 'Analisar com o Bugbot sem publicar alterações?',
+    'ai.bugbotEffort': 'Profundidade da análise do Bugbot',
+    'ai.bugbotReviewDrafts': 'Rever pull requests em rascunho?',
+    'ai.bugbotTraceRules': 'Indicar que fontes de regras foram aplicadas?',
+    'ai.bugbotSuggestedChanges': 'Publicar sugestões de alteração seguras?',
+    'ai.bugbotTelemetry': 'Registar métricas do Bugbot sem conteúdo?',
+    'ai.bugbotFailOnUnresolved': 'Fazer falhar a verificação se houver resultados por resolver?',
+    'ai.bugbotOrganizationRules': 'Regras Bugbot partilhadas, uma por linha',
+    'ai.provisioningMode': 'Como preparar o agente CLI no runner',
+    'pullRequestApproval.mode': 'O que pode o bot fazer na aprovação de pull requests?',
+    'pullRequestApproval.testChecks': 'Que verificações CI são fiáveis para aprovar?',
+    'pullRequestApproval.producerAttested': 'Verificou o job, a App e a etapa obrigatória de cobertura?',
+    'pullRequestApproval.coverage.mode': 'Como comprovar a cobertura exigida',
+    'pullRequestApproval.coverage.checkName': 'Verificação fiável que exige cobertura',
+    'pullRequestApproval.coverage.minDiffPercent': 'Cobertura mínima das linhas alteradas (0–100)',
+    'pullRequestApproval.coverage.artifactWorkflowName': 'Workflow que publica copilot-diff-coverage-v1',
+    'pullRequestApproval.coverage.reporterAttested': 'Verificou a instalação do relatório numérico?',
+    'projects.enabled': 'Integrar Projects GitHub existentes?',
+    'projects.ids': 'Selecionar Projects existentes ou introduzir os números dos URL',
+    'projects.statusVerified': 'Confirmou no GitHub os quatro valores Status exatos de cada Project escolhido?',
+    'projects.issueCreatedColumn': 'Valor Status das novas questões',
+    'projects.pullRequestCreatedColumn': 'Valor Status das novas pull requests',
+    'projects.issueInProgressColumn': 'Valor Status das questões em curso',
+    'projects.pullRequestInProgressColumn': 'Valor Status das pull requests em curso',
+    createInitialTag: 'Criar v1.0.0 se ainda não existir uma etiqueta de versão?',
+    manageRepositoryVariables: 'Criar ou atualizar as Variables do GitHub Actions?',
+    manageRepositorySecrets: 'Validar e configurar os Secrets do GitHub Actions?',
+};
+
+
+/***/ }),
+
+/***/ 28247:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.questionLabelsFrPt = void 0;
+exports.translatedQuestionLabel = translatedQuestionLabel;
+const setup_question_translations_1 = __nccwpck_require__(3927);
+const fr_1 = __nccwpck_require__(55765);
+const pt_1 = __nccwpck_require__(6958);
+exports.questionLabelsFrPt = { fr: fr_1.questionLabelsFr, pt: pt_1.questionLabelsPt };
+const roleNames = {
+    fr: { planner: 'Planification', findings: 'Résultats', reviewer: 'Revue', fixer: 'Correction', tester: 'Tests' },
+    pt: { planner: 'Planeamento', findings: 'Resultados', reviewer: 'Revisão', fixer: 'Correção', tester: 'Testes' },
+};
+function translatedQuestionLabel(question, locale) {
+    if (locale === 'en')
+        return question.label.replace(' (Space toggles, Enter confirms)', '');
+    if (locale === 'es')
+        return (0, setup_question_translations_1.spanishQuestionLabel)(question);
+    const exact = exports.questionLabelsFrPt[locale][question.id];
+    if (exact)
+        return exact;
+    const agent = question.id.match(/^agents\.(planner|findings|reviewer|fixer|tester)\.(provider|modelProvider|model|effort|executable)$/u);
+    if (agent) {
+        const fields = {
+            fr: { provider: 'agent CLI', modelProvider: 'fournisseur du modèle', model: 'modèle', effort: 'effort de raisonnement', executable: 'commande exécutable' },
+            pt: { provider: 'agente CLI', modelProvider: 'fornecedor do modelo', model: 'modelo', effort: 'esforço de raciocínio', executable: 'comando executável' },
+        };
+        return `${roleNames[locale][agent[1]]} : ${fields[locale][agent[2]]}`;
+    }
+    const storage = question.id.match(/^storage\.(variables|secrets)\.(defaultScope|organizationVisibility|preserveExisting|overrides)$/u);
+    if (storage) {
+        const resources = { fr: { variables: 'Variables', secrets: 'Secrets' }, pt: { variables: 'Variables', secrets: 'Secrets' } };
+        const fields = {
+            fr: { defaultScope: 'périmètre par défaut', organizationVisibility: 'visibilité dans l’organisation', preserveExisting: 'conserver les ressources existantes', overrides: 'exceptions de périmètre' },
+            pt: { defaultScope: 'âmbito predefinido', organizationVisibility: 'visibilidade na organização', preserveExisting: 'conservar recursos existentes', overrides: 'exceções de âmbito' },
+        };
+        return `${resources[locale][storage[1]]} : ${fields[locale][storage[2]]}`;
+    }
+    return question.label;
+}
+
+
+/***/ }),
+
+/***/ 92139:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.purposesFr = void 0;
+/** French question-specific purposes. */
+exports.purposesFr = {
+    'issueWorkflows.enabled': 'Choisissez les workflows de ticket que Copilot pourra exécuter ; chacun agit différemment sur les branches, étiquettes et automatisations.',
+    'repositoryAgentGuidance.enabled': 'Générez des instructions pour aider les agents IA à travailler en sécurité dans ce projet.',
+    'repositoryAgentGuidance.agentsPointer': 'Décidez si le fichier AGENTS.md racine renvoie aux instructions générées, est créé s’il manque, ou reste intact.',
+    'agents.configureIndependently': 'Attribuez des fournisseurs et modèles distincts à la planification, aux résultats, à la revue, à la correction et aux tests.',
+    'repository.mainBranch': 'Indiquez la branche de production utilisée comme référence par les versions et correctifs urgents.',
+    'repository.developmentBranch': 'Indiquez la branche d’intégration habituelle visée par la création de branches et la réconciliation.',
+    'repository.issueManagedBranches': 'Autorisez l’Action à créer une branche liée lorsqu’un ticket passe en cours.',
+    'repository.preBranchSdd': 'Exigez un document de conception approuvé avant certaines branches de fonctionnalité ou de changement de contrat.',
+    'repository.reopenIssueOnPush': 'Rouvrez un ticket terminé quand de nouveaux commits arrivent sur sa branche liée.',
+    'repository.desiredAssigneesCount': 'Définissez combien de personnes Copilot affecte à un nouveau ticket ; zéro désactive l’affectation automatique.',
+    'repository.desiredReviewersCount': 'Définissez combien de réviseurs Copilot sollicite pour une pull request ; zéro désactive les demandes automatiques.',
+    'repository.inactivityThresholdHours': 'Définissez combien de temps un ticket reste sans activité avant que le workflow activé puisse le fermer.',
+    'repository.repositoryLocale': 'Choisissez la balise de langue BCP-47 des messages Copilot sur GitHub ; elle ne change pas la langue de cette page.',
+    'repository.issueLocale': 'Changez la langue des messages GitHub pour les tickets ; laissez vide pour hériter de la langue du dépôt.',
+    'repository.pullRequestLocale': 'Changez la langue des messages GitHub pour les pull requests ; laissez vide pour hériter de la langue du dépôt.',
+    'repository.commitPrefixTransforms': 'Définissez les substitutions de préfixes de commit ; laissez vide si vos conventions n’en ont pas besoin.',
+    'repository.releaseReconciliationStrategy': 'Choisissez comment les changements d’une version terminée reviennent dans le développement sans perdre leur filiation.',
+    'repository.hotfixReconciliationStrategy': 'Choisissez comment un correctif urgent de production est reporté sur les branches en cours.',
+    'repository.reconciliationPullRequestMode': 'Choisissez si les pull requests de réconciliation sont créées, fusionnées, mises en file ou laissées à une personne.',
+    'repository.reconciliationBackmergeMode': 'Choisissez une fusion de retour directe ou passant par une branche de synchronisation.',
+    'repository.hotfixActiveReleasePolicy': 'Choisissez où propager un correctif urgent lorsqu’une branche de version est déjà active.',
+    'repository.reconciliationCleanup': 'Choisissez les branches temporaires à supprimer après une réconciliation réussie.',
+    'repository.reconciliationIssueCompletion': 'Choisissez si le ticket à l’origine de la réconciliation se ferme ou reste ouvert pour suivi.',
+    'repository.orchestrationPresentationMode': 'Choisissez le niveau de progression et de détail affiché dans le centre de contrôle GitHub des versions.',
+    'repository.orchestrationDiagrams': 'Incluez des diagrammes Mermaid accessibles dans les informations de version.',
+    'repository.orchestrationCommentMode': 'Choisissez si les commentaires de version sont mis à jour ou publiés à chaque étape importante.',
+    'ai.pullRequestDescriptionMode': 'Choisissez si l’IA remplace, complète, préserve ou ne modifie jamais les descriptions des pull requests.',
+    'ai.ignoreFiles': 'Indiquez les motifs de fichiers à exclure de la revue IA ; ces fichiers restent visibles sur GitHub.',
+    'ai.membersOnly': 'N’autorisez le traitement IA que pour les demandes des membres du dépôt, pas pour tous les contributeurs externes.',
+    'ai.bugbotSeverity': 'Fixez la gravité minimale publiée par Bugbot ; les résultats moins graves restent non publiés.',
+    'ai.bugbotCommentLimit': 'Limitez les commentaires Bugbot par exécution pour ne pas submerger une pull request.',
+    'ai.bugbotFixVerifyCommands': 'Indiquez les commandes qui doivent réussir avant qu’une correction automatique Bugbot soit considérée comme vérifiée.',
+    'ai.bugbotEffort': 'Choisissez la profondeur des revues Bugbot ; un effort supérieur peut durer et consommer davantage.',
+    'ai.bugbotReviewDrafts': 'Décidez si Bugbot analyse les pull requests en brouillon avant qu’elles soient prêtes.',
+    'ai.bugbotTraceRules': 'Ajoutez l’origine de chaque règle de revue appliquée dans les résumés Bugbot pour faciliter l’audit.',
+    'ai.bugbotSuggestedChanges': 'Autorisez Bugbot à joindre des suggestions de code sûres aux résultats publiés.',
+    'ai.bugbotTelemetry': 'Enregistrez des métriques opérationnelles Bugbot sans stocker le contenu du dépôt.',
+    'ai.bugbotFailOnUnresolved': 'Faites échouer la vérification Bugbot tant que des résultats exploitables restent ouverts.',
+    'pullRequestApproval.mode': 'Choisissez si le bot recommande une approbation, peut approuver GitHub sous garde, ou n’intervient pas.',
+    'pullRequestApproval.coverage.minDiffPercent': 'Définissez le pourcentage minimal de lignes modifiées couvertes qu’un rapporteur numérique fiable doit prouver.',
+    'pullRequestApproval.coverage.artifactWorkflowName': 'Indiquez le workflow fiable exact qui publie l’artefact copilot-diff-coverage-v1.',
+    'pullRequestApproval.coverage.reporterAttested': 'Confirmez avoir inspecté le rapporteur numérique dans ce workflow exact, et non seulement sa vérification verte.',
+    'projects.enabled': 'Décidez si Copilot doit ajouter tickets et pull requests à des Projects existants ; le PAT servira ensuite à lister ceux de l’organisation.',
+    'projects.ids': 'Choisissez des Projects existants par leur titre ou saisissez le numéro positif de leur URL ; les ID PVT_ ne conviennent pas.',
+    'projects.statusVerified': 'Confirmez que les quatre options Status choisies existent dans chaque Project lorsque GitHub n’a pas pu vérifier leurs champs.',
+    createInitialTag: 'Créez v1.0.0 seulement si le dépôt n’a encore aucune étiquette de version.',
+    manageRepositoryVariables: 'Autorisez la création ou mise à jour des Variables GitHub Actions nécessaires aux workflows choisis.',
+    manageRepositorySecrets: 'Autorisez la validation et l’installation des Secrets GitHub Actions requis, dont le PAT du bot si nécessaire.',
+};
+
+
+/***/ }),
+
+/***/ 48284:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.purposesPt = void 0;
+/** Portuguese question-specific purposes. */
+exports.purposesPt = {
+    'issueWorkflows.enabled': 'Escolha os fluxos de questões que o Copilot poderá executar; cada um afeta de forma diferente ramos, etiquetas e automatizações.',
+    'repositoryAgentGuidance.enabled': 'Gere instruções para ajudar os agentes de IA a trabalhar com segurança neste projeto.',
+    'repositoryAgentGuidance.agentsPointer': 'Decida se o AGENTS.md da raiz aponta para as instruções geradas, é criado se faltar ou permanece intacto.',
+    'agents.configureIndependently': 'Defina fornecedores e modelos distintos para planeamento, resultados, revisão, correção e testes.',
+    'repository.mainBranch': 'Indique o ramo de produção usado como referência por releases e hotfixes.',
+    'repository.developmentBranch': 'Indique o ramo de integração habitual usado na criação de ramos e na reconciliação.',
+    'repository.issueManagedBranches': 'Permita que a Action crie um ramo associado quando uma questão passa a estar em curso.',
+    'repository.preBranchSdd': 'Exija um documento de desenho aprovado antes de determinados ramos de funcionalidade ou de alteração de contratos.',
+    'repository.reopenIssueOnPush': 'Reabra uma questão concluída quando forem enviados novos commits para o ramo associado.',
+    'repository.desiredAssigneesCount': 'Defina quantas pessoas o Copilot atribui a uma nova questão; zero desativa a atribuição automática.',
+    'repository.desiredReviewersCount': 'Defina quantos revisores o Copilot solicita para uma pull request; zero desativa os pedidos automáticos.',
+    'repository.inactivityThresholdHours': 'Defina quanto tempo uma questão fica sem atividade antes de o fluxo ativado a poder fechar.',
+    'repository.repositoryLocale': 'Escolha a etiqueta BCP-47 das mensagens do Copilot no GitHub; não altera o idioma desta página.',
+    'repository.issueLocale': 'Altere o idioma das mensagens GitHub para questões; deixe vazio para herdar o idioma do repositório.',
+    'repository.pullRequestLocale': 'Altere o idioma das mensagens GitHub para pull requests; deixe vazio para herdar o idioma do repositório.',
+    'repository.commitPrefixTransforms': 'Defina substituições dos prefixos dos commits; deixe vazio se as suas convenções não precisarem delas.',
+    'repository.releaseReconciliationStrategy': 'Escolha como as alterações de uma release concluída regressam ao desenvolvimento sem perder a sua origem.',
+    'repository.hotfixReconciliationStrategy': 'Escolha como um hotfix de produção é propagado para os ramos em curso.',
+    'repository.reconciliationPullRequestMode': 'Escolha se as pull requests de reconciliação são criadas, integradas, colocadas em fila ou deixadas a uma pessoa.',
+    'repository.reconciliationBackmergeMode': 'Escolha uma fusão de retorno direta ou através de um ramo de sincronização.',
+    'repository.hotfixActiveReleasePolicy': 'Escolha para onde propagar um hotfix quando já existe um ramo de release ativo.',
+    'repository.reconciliationCleanup': 'Escolha que ramos temporários serão eliminados após uma reconciliação bem-sucedida.',
+    'repository.reconciliationIssueCompletion': 'Escolha se a questão que iniciou a reconciliação é fechada ou fica aberta para acompanhamento.',
+    'repository.orchestrationPresentationMode': 'Escolha o nível de progresso e detalhe apresentado no centro de controlo GitHub das releases.',
+    'repository.orchestrationDiagrams': 'Inclua diagramas Mermaid acessíveis na informação sobre releases.',
+    'repository.orchestrationCommentMode': 'Escolha se os comentários da release são atualizados ou publicados em cada marco.',
+    'ai.pullRequestDescriptionMode': 'Escolha se a IA substitui, acrescenta, preserva ou nunca altera as descrições das pull requests.',
+    'ai.ignoreFiles': 'Indique padrões de ficheiros a excluir da revisão por IA; continuam visíveis no GitHub.',
+    'ai.membersOnly': 'Permita o processamento por IA apenas para pedidos de membros do repositório, não de quaisquer colaboradores externos.',
+    'ai.bugbotSeverity': 'Defina a gravidade mínima publicada pelo Bugbot; resultados menos graves não são publicados.',
+    'ai.bugbotCommentLimit': 'Limite os comentários do Bugbot por execução para não sobrecarregar uma pull request.',
+    'ai.bugbotFixVerifyCommands': 'Indique os comandos que têm de passar antes de uma correção automática do Bugbot ser considerada verificada.',
+    'ai.bugbotEffort': 'Escolha a profundidade das revisões do Bugbot; mais esforço pode demorar e consumir mais recursos.',
+    'ai.bugbotReviewDrafts': 'Decida se o Bugbot revê pull requests em rascunho antes de estarem prontas.',
+    'ai.bugbotTraceRules': 'Inclua a origem de cada regra de revisão aplicada nos resumos do Bugbot para facilitar auditorias.',
+    'ai.bugbotSuggestedChanges': 'Permita ao Bugbot anexar sugestões de código seguras aos resultados publicados.',
+    'ai.bugbotTelemetry': 'Registe métricas operacionais do Bugbot sem guardar conteúdo do repositório.',
+    'ai.bugbotFailOnUnresolved': 'Faça falhar a verificação do Bugbot enquanto existirem resultados acionáveis por resolver.',
+    'pullRequestApproval.mode': 'Escolha se o bot recomenda aprovação, pode aprovar no GitHub sob condições ou não intervém.',
+    'pullRequestApproval.coverage.minDiffPercent': 'Defina a percentagem mínima de linhas alteradas cobertas que um relatório numérico fiável tem de provar.',
+    'pullRequestApproval.coverage.artifactWorkflowName': 'Indique o workflow fiável exato que publica o artefacto copilot-diff-coverage-v1.',
+    'pullRequestApproval.coverage.reporterAttested': 'Confirme que inspecionou o relatório numérico nesse workflow exato, e não apenas uma verificação verde.',
+    'projects.enabled': 'Decida se o Copilot deve adicionar questões e pull requests a Projects existentes; o PAT será usado depois para listar os da organização.',
+    'projects.ids': 'Selecione Projects existentes pelo título ou introduza o número positivo do URL; IDs PVT_ não são usados.',
+    'projects.statusVerified': 'Confirme que as quatro opções Status escolhidas existem em todos os Projects quando o GitHub não conseguiu verificar os campos.',
+    createInitialTag: 'Crie v1.0.0 apenas se o repositório ainda não tiver uma etiqueta de versão.',
+    manageRepositoryVariables: 'Permita criar ou atualizar as Variables do GitHub Actions necessárias aos fluxos escolhidos.',
+    manageRepositorySecrets: 'Permita validar e instalar os Secrets do GitHub Actions necessários, incluindo o PAT do bot quando aplicável.',
+};
+
+
+/***/ }),
+
+/***/ 98807:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.purposesFrPt = void 0;
+exports.setupQuestionPurposeFrPt = setupQuestionPurposeFrPt;
+const fr_1 = __nccwpck_require__(92139);
+const pt_1 = __nccwpck_require__(48284);
+exports.purposesFrPt = { fr: fr_1.purposesFr, pt: pt_1.purposesPt };
+function setupQuestionPurposeFrPt(question, locale) {
+    const exact = exports.purposesFrPt[locale][question.id];
+    if (exact)
+        return exact;
+    if (question.id.startsWith('features.'))
+        return locale === 'fr'
+            ? 'Activez ou désactivez cette fonction. Si vous la désactivez, cette configuration n’installera ni son automatisation ni ses autorisations conditionnelles.'
+            : 'Ative ou desative esta função. Se a desativar, esta configuração não instalará a automatização nem pedirá as permissões condicionais correspondentes.';
+    if (/^agents\.[^.]+\.provider$/u.test(question.id))
+        return locale === 'fr'
+            ? 'Choisissez l’agent CLI de cette tâche dans GitHub Actions ; ce fournisseur détermine la commande et les identifiants du runner.'
+            : 'Escolha o agente CLI desta tarefa no GitHub Actions; o fornecedor determina o comando e as credenciais do runner.';
+    const setting = question.id.match(/^agents\.[^.]+\.(modelProvider|model|effort|executable)$/u)?.[1];
+    if (setting) {
+        const fields = {
+            fr: { modelProvider: 'le service fournissant le modèle et ses identifiants', model: 'le nom exact du modèle autorisé par le fournisseur', effort: 'l’effort de raisonnement (ou vide pour la valeur du fournisseur)', executable: 'la commande présente sur le runner GitHub Actions, pas sur cet ordinateur' },
+            pt: { modelProvider: 'o serviço que fornece o modelo e as suas credenciais', model: 'o nome exato do modelo permitido pelo fornecedor', effort: 'o esforço de raciocínio (ou vazio para usar a predefinição do fornecedor)', executable: 'o comando disponível no runner GitHub Actions, não neste computador' },
+        };
+        const scope = question.stateId === 'agent-model-defaults'
+            ? (locale === 'fr' ? 'pour toutes les tâches actives' : 'para todas as tarefas ativas')
+            : (locale === 'fr' ? 'pour cette tâche' : 'para esta tarefa');
+        return `${locale === 'fr' ? 'Définissez' : 'Defina'} ${fields[locale][setting]} ${scope}.`;
+    }
+    if (/^repository\.(feature|bugfix|hotfix|release|docs|chore|reconciliation)Tree$/u.test(question.id))
+        return locale === 'fr'
+            ? 'Définissez le préfixe des branches créées par Copilot pour ce type de travail ; il doit suivre votre convention de nommage.'
+            : 'Defina o prefixo dos ramos criados pelo Copilot para este tipo de trabalho; deve seguir as suas regras de nomes.';
+    if (/^projects\.(issue|pullRequest)(Created|InProgress)Column$/u.test(question.id))
+        return locale === 'fr'
+            ? 'Choisissez la valeur du champ Status appliquée à la création ou au début du travail ; ce n’est pas le nom d’une colonne visuelle.'
+            : 'Escolha o valor do campo Status aplicado na criação ou no início do trabalho; não é o nome de uma coluna visual.';
+    const storage = question.id.match(/^storage\.(variables|secrets)\.(defaultScope|organizationVisibility|preserveExisting|overrides)$/u);
+    if (storage) {
+        const resource = storage[1] === 'variables' ? 'Variables' : 'Secrets';
+        const field = storage[2];
+        if (field === 'defaultScope')
+            return locale === 'fr'
+                ? `Choisissez si les nouvelles ${resource} sont stockées dans le dépôt ou l’organisation ; ce dernier périmètre peut exiger davantage d’autorisations du PAT.`
+                : `Escolha se as novas ${resource} ficam no repositório ou na organização; este último âmbito pode exigir mais permissões do PAT.`;
+        if (field === 'organizationVisibility')
+            return locale === 'fr'
+                ? `Choisissez les dépôts pouvant utiliser les ${resource} de l’organisation ; « selected » est l’accès le plus restreint.`
+                : `Escolha os repositórios que podem usar as ${resource} da organização; «selected» é a visibilidade mais restrita.`;
+        if (field === 'preserveExisting')
+            return locale === 'fr'
+                ? `Conservez les ${resource} existantes déjà applicables au lieu de les écraser pendant la configuration.`
+                : `Conserve as ${resource} existentes e aplicáveis em vez de as substituir durante a configuração.`;
+        return locale === 'fr'
+            ? `Sélectionnez les ${resource} héritées de l’organisation à définir plutôt dans le dépôt.`
+            : `Selecione as ${resource} herdadas da organização que pretende definir no repositório.`;
+    }
+    return undefined;
+}
+
+
+/***/ }),
+
+/***/ 77947:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.setupQuestionPurposes = void 0;
+exports.setupQuestionPurpose = setupQuestionPurpose;
+/** Field-specific meaning for choices whose label alone is easy to misinterpret. */
+exports.setupQuestionPurposes = {
+    'issueWorkflows.enabled': { en: 'Choose the issue workflows Copilot may run; each type has different branch, label and automation effects.', es: 'Elige los flujos de issues que podrá ejecutar Copilot; cada tipo tiene efectos distintos sobre ramas, etiquetas y automatización.' },
+    'repositoryAgentGuidance.enabled': { en: 'Generate repository instructions that tell AI agents how to work safely in this project.', es: 'Genera instrucciones para que los agentes de IA trabajen con seguridad en este proyecto.' },
+    'repositoryAgentGuidance.agentsPointer': { en: 'Choose whether the root AGENTS.md points to generated instructions, is created if missing, or stays untouched.', es: 'Elige si el AGENTS.md raíz apunta a las instrucciones generadas, se crea si falta o permanece intacto.' },
+    'agents.configureIndependently': { en: 'Give planning, findings, review, fixing and testing separate provider and model settings instead of shared defaults.', es: 'Da a planificación, hallazgos, revisión, corrección y pruebas ajustes distintos de proveedor y modelo.' },
+    'repository.mainBranch': { en: 'Name the production branch; release and hotfix automation use it as their production reference.', es: 'Indica la rama de producción; las automatizaciones de release y hotfix la usan como referencia.' },
+    'repository.developmentBranch': { en: 'Name the normal integration branch; branch creation and reconciliation target it.', es: 'Indica la rama de integración habitual; la creación de ramas y la reconciliación la usan.' },
+    'repository.issueManagedBranches': { en: 'Allow the Action to create a linked branch when an issue enters an in-progress state.', es: 'Permite a la Action crear una rama vinculada cuando un issue pasa a «en curso».' },
+    'repository.preBranchSdd': { en: 'Require an approved design document before feature or contract-changing branches are created.', es: 'Exige un diseño aprobado antes de crear ramas de funcionalidad o cambios de contrato.' },
+    'repository.reopenIssueOnPush': { en: 'Reopen a completed issue when someone pushes more work to its linked branch.', es: 'Reabre un issue completado si alguien añade cambios a su rama vinculada.' },
+    'repository.desiredAssigneesCount': { en: 'Set how many people Copilot assigns to a new issue; zero disables automatic assignment.', es: 'Define cuántas personas asigna Copilot a un issue nuevo; cero desactiva la asignación automática.' },
+    'repository.desiredReviewersCount': { en: 'Set how many reviewers Copilot requests for a pull request; zero disables automatic requests.', es: 'Define cuántos revisores solicita Copilot para un pull request; cero desactiva la solicitud automática.' },
+    'repository.inactivityThresholdHours': { en: 'Set how long an issue waits without activity before the enabled inactivity workflow may close it.', es: 'Define cuánto tiempo espera sin actividad un issue antes de que el flujo habilitado pueda cerrarlo.' },
+    'repository.repositoryLocale': { en: 'Choose the BCP-47 language tag for Copilot messages on GitHub; this does not change the setup page language.', es: 'Elige la etiqueta BCP-47 de los mensajes de Copilot en GitHub; no cambia el idioma de esta página.' },
+    'repository.issueLocale': { en: 'Override the GitHub message language for issues; leave empty to inherit the repository language.', es: 'Cambia el idioma de los mensajes de issues; vacío hereda el idioma del repositorio.' },
+    'repository.pullRequestLocale': { en: 'Override the GitHub message language for pull requests; leave empty to inherit the repository language.', es: 'Cambia el idioma de los mensajes de pull requests; vacío hereda el idioma del repositorio.' },
+    'repository.commitPrefixTransforms': { en: 'Define commit-prefix rewrites used by commit automation; leave empty if your conventions need no mapping.', es: 'Define sustituciones de prefijos de commits; déjalo vacío si tus convenciones no necesitan cambios.' },
+    'repository.releaseReconciliationStrategy': { en: 'Choose how completed release changes return to development without losing production lineage.', es: 'Elige cómo vuelven los cambios de una release a desarrollo sin perder su relación con producción.' },
+    'repository.hotfixReconciliationStrategy': { en: 'Choose how an emergency production fix is carried back to ongoing branches.', es: 'Elige cómo se incorpora un arreglo urgente de producción a las demás ramas activas.' },
+    'repository.reconciliationPullRequestMode': { en: 'Choose whether reconciliation PRs are created, merged automatically, queued, or left for a human.', es: 'Elige si los PR de reconciliación se crean, fusionan automáticamente, encolan o quedan para una persona.' },
+    'repository.reconciliationBackmergeMode': { en: 'Choose whether the return merge is direct or goes through a synchronization branch.', es: 'Elige si la integración de vuelta es directa o pasa por una rama de sincronización.' },
+    'repository.hotfixActiveReleasePolicy': { en: 'Choose where a hotfix propagates when a release branch is already active.', es: 'Elige a dónde se propaga un hotfix si ya hay una rama de release activa.' },
+    'repository.reconciliationCleanup': { en: 'Choose which temporary branches are deleted after successful reconciliation.', es: 'Elige qué ramas temporales se eliminan tras una reconciliación correcta.' },
+    'repository.reconciliationIssueCompletion': { en: 'Choose whether the issue that launched reconciliation closes or stays open for follow-up.', es: 'Elige si el issue que inició la reconciliación se cierra o sigue abierto.' },
+    'repository.orchestrationPresentationMode': { en: 'Choose how much release progress and detail appears in the GitHub control-center view.', es: 'Elige cuánto progreso y detalle muestra el centro de control de releases en GitHub.' },
+    'repository.orchestrationDiagrams': { en: 'Include accessible Mermaid diagrams in release status information.', es: 'Incluye diagramas Mermaid accesibles en la información de releases.' },
+    'repository.orchestrationCommentMode': { en: 'Choose whether release lifecycle comments update in place or are posted at milestones.', es: 'Elige si los comentarios de la release se actualizan o se publican en cada hito.' },
+    'ai.pullRequestDescriptionMode': { en: 'Choose whether AI replaces, appends to, preserves, or never edits pull-request descriptions.', es: 'Elige si la IA sustituye, amplía, conserva o nunca modifica las descripciones de pull requests.' },
+    'ai.ignoreFiles': { en: 'List file patterns the AI review should skip; this does not hide those files on GitHub.', es: 'Indica patrones de archivos que la revisión con IA debe omitir; no los oculta en GitHub.' },
+    'ai.membersOnly': { en: 'Allow AI processing only for requests from repository members, not arbitrary external contributors.', es: 'Permite el procesamiento con IA solo para miembros del repositorio, no para colaboradores externos.' },
+    'ai.bugbotSeverity': { en: 'Set the lowest severity Bugbot publishes; lower-severity findings remain unpublished.', es: 'Define la gravedad mínima que publica Bugbot; los hallazgos menores no se publican.' },
+    'ai.bugbotCommentLimit': { en: 'Cap the number of Bugbot review comments in one run to avoid overwhelming a pull request.', es: 'Limita los comentarios de Bugbot por ejecución para no saturar un pull request.' },
+    'ai.bugbotFixVerifyCommands': { en: 'Specify commands that must pass before Bugbot considers an automatic fix verified.', es: 'Indica los comandos que deben pasar antes de considerar verificada una corrección de Bugbot.' },
+    'ai.bugbotEffort': { en: 'Choose the depth of Bugbot reviews; higher effort can take longer and use more model capacity.', es: 'Elige la profundidad de las revisiones de Bugbot; más esfuerzo puede tardar y consumir más.' },
+    'ai.bugbotReviewDrafts': { en: 'Decide whether Bugbot reviews draft pull requests before they are marked ready.', es: 'Decide si Bugbot revisa pull requests en borrador antes de que estén listos.' },
+    'ai.bugbotTraceRules': { en: 'Include the source of each applied review rule in Bugbot summaries for auditability.', es: 'Incluye la procedencia de las reglas aplicadas en los resúmenes de Bugbot para facilitar auditorías.' },
+    'ai.bugbotSuggestedChanges': { en: 'Allow Bugbot to attach safe inline code suggestions to published findings.', es: 'Permite a Bugbot adjuntar sugerencias de código seguras a los hallazgos publicados.' },
+    'ai.bugbotTelemetry': { en: 'Record operational Bugbot metrics without recording repository content.', es: 'Registra métricas operativas de Bugbot sin guardar contenido del repositorio.' },
+    'ai.bugbotFailOnUnresolved': { en: 'Make the Bugbot workflow check fail while actionable findings remain unresolved.', es: 'Hace fallar el check de Bugbot mientras queden hallazgos accionables sin resolver.' },
+    'pullRequestApproval.mode': { en: 'Choose whether the bot recommends approval, may submit a guarded GitHub approval, or does neither.', es: 'Elige si el bot recomienda aprobar, puede publicar una aprobación protegida o no interviene.' },
+    'pullRequestApproval.coverage.minDiffPercent': { en: 'Set the minimum percentage of changed lines that a trusted numeric reporter must prove are covered.', es: 'Define el porcentaje mínimo de líneas modificadas cubiertas que debe acreditar un reporter numérico fiable.' },
+    'pullRequestApproval.coverage.artifactWorkflowName': { en: 'Name the exact trusted workflow that publishes the copilot-diff-coverage-v1 artifact.', es: 'Indica el workflow fiable exacto que publica el artefacto copilot-diff-coverage-v1.' },
+    'pullRequestApproval.coverage.reporterAttested': { en: 'Confirm you inspected the numeric coverage reporter in that exact workflow, not just its green check.', es: 'Confirma que revisaste el reporter numérico en ese workflow exacto, no solo su check verde.' },
+    'projects.enabled': { en: 'Decide whether Copilot should add issues and pull requests to existing GitHub Projects; the setup PAT is needed to list private organization Projects later.', es: 'Decide si Copilot debe añadir issues y pull requests a Projects existentes; el PAT de setup hará falta después para consultar Projects privados de la organización.' },
+    'projects.ids': { en: 'Choose existing Projects by title after PAT verification, or enter the positive number in each Project URL; PVT_ node IDs are not used.', es: 'Elige Projects existentes por título tras verificar el PAT o introduce el número positivo de cada URL; no se usan IDs de nodo PVT_.' },
+    'projects.statusVerified': { en: 'Confirm that all four chosen Status options actually exist in every selected Project when GitHub could not verify their fields.', es: 'Confirma que las cuatro opciones Status existen en todos los Projects elegidos cuando GitHub no pudo comprobar sus campos.' },
+    createInitialTag: { en: 'Create v1.0.0 only if this repository has no version tag yet.', es: 'Crea v1.0.0 solo si este repositorio todavía no tiene un tag de versión.' },
+    manageRepositoryVariables: { en: 'Allow setup to create or update GitHub Actions Variables required by selected workflows.', es: 'Permite a setup crear o actualizar Variables de GitHub Actions necesarias para los workflows elegidos.' },
+    manageRepositorySecrets: { en: 'Allow setup to validate and install required GitHub Actions Secrets, including the bot PAT when needed.', es: 'Permite a setup validar e instalar Secrets de GitHub Actions, incluido el PAT del bot cuando haga falta.' },
+};
+function setupQuestionPurpose(question) {
+    const exact = exports.setupQuestionPurposes[question.id];
+    if (exact)
+        return exact;
+    if (question.id.startsWith('features.'))
+        return {
+            en: `Enable or disable ${question.label.toLowerCase()}. Disabling it removes its automation and conditional permission needs from this setup.`,
+            es: 'Activa o desactiva esta función. Si la desactivas, setup no instalará su automatización ni solicitará sus permisos condicionales.',
+        };
+    if (/^agents\.[^.]+\.provider$/u.test(question.id))
+        return {
+            en: 'Choose the agent CLI for this task in GitHub Actions; the provider determines the runner command and credentials.',
+            es: 'Elige el agente CLI de esta tarea en GitHub Actions; determina el comando y las credenciales del runner.',
+        };
+    const agentSetting = question.id.match(/^agents\.[^.]+\.(modelProvider|model|effort|executable)$/u)?.[1];
+    if (agentSetting) {
+        const shared = question.stateId === 'agent-model-defaults';
+        const scope = shared ? { en: 'enabled agent tasks without a per-role override', es: 'las tareas activas del agente sin una excepción propia' }
+            : { en: 'this agent task', es: 'esta tarea del agente' };
+        const setting = {
+            modelProvider: { en: 'the service that supplies the model and its credentials', es: 'el servicio que proporciona el modelo y sus credenciales' },
+            model: { en: 'the exact model name allowed by the selected provider', es: 'el nombre exacto del modelo permitido por el proveedor elegido' },
+            effort: { en: 'the reasoning-effort level, or leave empty for the provider default', es: 'el nivel de razonamiento, o vacío para usar el valor del proveedor' },
+            executable: { en: 'the executable available on the GitHub Actions runner, not this computer', es: 'el ejecutable disponible en el runner de GitHub Actions, no en este ordenador' },
+        };
+        return {
+            en: `Set ${setting[agentSetting].en} for ${scope.en}.`,
+            es: `Define ${setting[agentSetting].es} para ${scope.es}.`,
+        };
+    }
+    if (/^repository\.(feature|bugfix|hotfix|release|docs|chore|reconciliation)Tree$/u.test(question.id))
+        return {
+            en: 'Set the prefix of branches Copilot creates for this work type; it must match your naming policy.',
+            es: 'Define el prefijo de las ramas que Copilot crea para este tipo de trabajo; debe seguir tus reglas de nombres.',
+        };
+    if (/^projects\.(issue|pullRequest)(Created|InProgress)Column$/u.test(question.id))
+        return {
+            en: 'Choose the existing Status field option applied when this issue or pull request is created or enters progress; it is not a board-view column name.',
+            es: 'Elige la opción existente del campo Status al crear este issue o pull request o pasarlo a «en curso»; no es el nombre de una columna visual.',
+        };
+    const storageSetting = question.id.match(/^storage\.(variables|secrets)\.(defaultScope|organizationVisibility|preserveExisting|overrides)$/u);
+    if (storageSetting) {
+        const resource = storageSetting[1] === 'variables' ? 'Variables' : 'Secrets';
+        const setting = {
+            defaultScope: { en: `Choose whether new ${resource} live in the repository or organization; organization storage can need extra PAT grants.`, es: `Elige si los ${resource} nuevos se guardan en el repositorio o la organización; este último ámbito puede exigir más permisos del PAT.` },
+            organizationVisibility: { en: `Choose which repositories can use organization ${resource}; selected is the narrowest visibility.`, es: `Elige qué repositorios pueden usar los ${resource} de la organización; «selected» es la visibilidad más restringida.` },
+            preserveExisting: { en: `Keep effective existing ${resource} instead of overwriting them during setup.`, es: `Conserva los ${resource} existentes que ya se aplican, en lugar de sobrescribirlos durante setup.` },
+            overrides: { en: `Select inherited organization ${resource} that should instead be set at repository scope.`, es: `Selecciona los ${resource} heredados de la organización que quieras definir en el repositorio.` },
+        };
+        return setting[storageSetting[2]];
+    }
+    return undefined;
+}
+
+
+/***/ }),
+
+/***/ 3927:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.spanishQuestionLabels = void 0;
+exports.spanishQuestionLabel = spanishQuestionLabel;
+exports.spanishQuestionLabels = {
+    'features.issues': 'Automatizar issues: ramas, etiquetas, proyectos y ciclo de vida',
+    'features.pullRequests': 'Automatizar pull requests: revisión, descripción y ciclo de vida',
+    'features.commits': 'Automatizar commits: progreso, tamaño y análisis de Bugbot',
+    'features.issueComments': 'Responder a comentarios de issues y permitir correcciones de Bugbot',
+    'features.pullRequestComments': 'Responder a comentarios de pull requests y permitir correcciones de Bugbot',
+    'features.agentProvisioning': 'Comprobar la instalación de agentes CLI en GitHub Actions',
+    'features.credentialHealth': 'Comprobar el estado de las credenciales remotas',
+    'features.inactiveIssueClosure': 'Cerrar issues sin actividad tras el plazo configurado',
+    'features.issueTemplates': 'Instalar plantillas de issues',
+    'features.pullRequestTemplate': 'Instalar plantilla de pull request',
+    'issueWorkflows.enabled': 'Tipos de flujo de issues que quieres activar',
+    'repositoryAgentGuidance.enabled': '¿Generar instrucciones para agentes en el repositorio?',
+    'repositoryAgentGuidance.agentsPointer': 'Cómo descubrir las instrucciones desde AGENTS.md',
+    'agents.findings.modelProvider': 'Proveedor de modelo compartido (salvo configuración propia de una tarea)',
+    'agents.findings.model': 'Modelo compartido (salvo configuración propia de una tarea)',
+    'agents.findings.effort': 'Esfuerzo de razonamiento compartido (los ajustes por tarea se conservan)',
+    'agents.findings.executable': 'Ejecutable compartido validado (los ajustes por tarea se conservan)',
+    'agents.configureIndependently': '¿Configurar modelo y comando por tarea?',
+    'repository.mainBranch': 'Rama de producción',
+    'repository.developmentBranch': 'Rama de desarrollo',
+    'repository.featureTree': 'Prefijo de ramas de funcionalidad',
+    'repository.bugfixTree': 'Prefijo de ramas de corrección',
+    'repository.hotfixTree': 'Prefijo de ramas de hotfix',
+    'repository.releaseTree': 'Prefijo de ramas de release',
+    'repository.docsTree': 'Prefijo de ramas de documentación',
+    'repository.choreTree': 'Prefijo de ramas de mantenimiento',
+    'repository.issueManagedBranches': '¿Puede la Action crear ramas vinculadas a issues?',
+    'repository.preBranchSdd': '¿Exigir un SDD antes de crear ciertas ramas?',
+    'repository.reopenIssueOnPush': '¿Reabrir issues cerrados al actualizar su rama?',
+    'repository.desiredAssigneesCount': 'Número deseado de personas asignadas a issues',
+    'repository.desiredReviewersCount': 'Número deseado de revisores de pull requests',
+    'repository.inactivityThresholdHours': 'Horas sin actividad antes de cerrar un issue en espera',
+    'repository.repositoryLocale': 'Idioma de los mensajes del repositorio',
+    'repository.issueLocale': 'Idioma de los issues (vacío: heredar)',
+    'repository.pullRequestLocale': 'Idioma de los pull requests (vacío: heredar)',
+    'repository.commitPrefixTransforms': 'Transformación de prefijos de commits',
+    'repository.releaseReconciliationStrategy': 'Estrategia para reconciliar releases',
+    'repository.hotfixReconciliationStrategy': 'Estrategia para reconciliar hotfixes',
+    'repository.reconciliationPullRequestMode': 'Modo de pull requests de reconciliación',
+    'repository.reconciliationBackmergeMode': 'Modo de integración de vuelta',
+    'repository.hotfixActiveReleasePolicy': 'Destino del hotfix durante una release activa',
+    'repository.reconciliationTree': 'Prefijo de ramas de reconciliación',
+    'repository.reconciliationCleanup': 'Limpieza de ramas tras reconciliar',
+    'repository.reconciliationIssueCompletion': 'Qué hacer con el issue al terminar',
+    'repository.orchestrationPresentationMode': 'Nivel de detalle del centro de control de releases',
+    'repository.orchestrationDiagrams': '¿Mostrar diagramas accesibles de releases?',
+    'repository.orchestrationCommentMode': 'Cómo publicar comentarios del ciclo de release',
+    'ai.pullRequestDescriptionMode': 'Cómo actualizar la descripción de los pull requests',
+    'ai.ignoreFiles': 'Archivos que la IA debe ignorar',
+    'ai.membersOnly': '¿Limitar el procesamiento de IA a miembros del repositorio?',
+    'ai.includeReasoning': '¿Incluir el razonamiento adicional del proveedor?',
+    'ai.bugbotSeverity': 'Gravedad mínima para publicar hallazgos de Bugbot',
+    'ai.bugbotCommentLimit': 'Máximo de comentarios de Bugbot por ejecución',
+    'ai.bugbotFixVerifyCommands': 'Comandos para verificar correcciones de Bugbot',
+    'ai.bugbotDryRun': '¿Analizar sin publicar cambios de Bugbot?',
+    'ai.bugbotEffort': 'Profundidad del análisis de Bugbot',
+    'ai.bugbotReviewDrafts': '¿Revisar pull requests en borrador?',
+    'ai.bugbotTraceRules': '¿Indicar qué fuentes de reglas se aplicaron?',
+    'ai.bugbotSuggestedChanges': '¿Publicar sugerencias de cambio seguras?',
+    'ai.bugbotTelemetry': '¿Registrar métricas de Bugbot sin contenido?',
+    'ai.bugbotFailOnUnresolved': '¿Bloquear el check si quedan hallazgos sin resolver?',
+    'ai.bugbotOrganizationRules': 'Reglas generales de Bugbot, una por línea',
+    'ai.provisioningMode': 'Cómo preparar el agente CLI en el runner',
+    'pullRequestApproval.mode': '¿Qué puede hacer el bot con las aprobaciones de PR?',
+    'pullRequestApproval.testChecks': '¿Qué checks de CI son fiables para aprobar PRs?',
+    'pullRequestApproval.producerAttested': '¿Has comprobado el job, la App y el paso obligatorio de cobertura?',
+    'pullRequestApproval.coverage.mode': 'Cómo demostrar que se cumple la cobertura',
+    'pullRequestApproval.coverage.checkName': 'Check fiable que exige la cobertura',
+    'pullRequestApproval.coverage.minDiffPercent': 'Cobertura mínima de líneas modificadas (0–100)',
+    'pullRequestApproval.coverage.artifactWorkflowName': 'Workflow que publica copilot-diff-coverage-v1',
+    'pullRequestApproval.coverage.reporterAttested': '¿Has comprobado que el reporter numérico está instalado?',
+    'projects.enabled': '¿Quieres integrar Projects de GitHub?',
+    'projects.ids': 'Selecciona Projects existentes o indica los números de sus URL',
+    'projects.statusVerified': '¿Has comprobado en GitHub los cuatro valores Status exactos de cada Project elegido?',
+    'projects.issueCreatedColumn': 'Estado Status de nuevos issues',
+    'projects.pullRequestCreatedColumn': 'Estado Status de nuevos pull requests',
+    'projects.issueInProgressColumn': 'Estado Status de issues en curso',
+    'projects.pullRequestInProgressColumn': 'Estado Status de pull requests en curso',
+    createInitialTag: '¿Crear v1.0.0 si todavía no existe ningún tag?',
+    manageRepositoryVariables: '¿Crear o actualizar Variables de GitHub Actions?',
+    manageRepositorySecrets: '¿Validar y configurar Secrets de GitHub Actions?',
+};
+const roleNames = {
+    planner: 'Planificación', findings: 'Hallazgos', reviewer: 'Revisión', fixer: 'Corrección', tester: 'Pruebas',
+};
+function spanishQuestionLabel(question) {
+    if (exports.spanishQuestionLabels[question.id])
+        return exports.spanishQuestionLabels[question.id];
+    const agent = question.id.match(/^agents\.(planner|findings|reviewer|fixer|tester)\.(provider|modelProvider|model|effort|executable)$/u);
+    if (agent) {
+        const field = { provider: 'agente CLI', modelProvider: 'proveedor del modelo', model: 'modelo', effort: 'esfuerzo', executable: 'comando ejecutable' };
+        return `${roleNames[agent[1]]}: ${field[agent[2]]}`;
+    }
+    const storage = question.id.match(/^storage\.(variables|secrets)\.(defaultScope|organizationVisibility|preserveExisting|overrides)$/u);
+    if (storage) {
+        const resource = storage[1] === 'variables' ? 'Variables' : 'Secrets';
+        const field = { defaultScope: 'ámbito predeterminado', organizationVisibility: 'visibilidad en la organización', preserveExisting: 'conservar los existentes', overrides: 'excepciones de ámbito' };
+        return `${resource}: ${field[storage[2]]}`;
+    }
+    return question.label;
+}
+
+
+/***/ }),
+
 /***/ 6009:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -47998,35 +49147,49 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createSetupQuestionnaire = createSetupQuestionnaire;
 exports.createSetupPermissionIntentQuestionnaire = createSetupPermissionIntentQuestionnaire;
 exports.createSetupReviewState = createSetupReviewState;
+exports.refreshSetupQuestionnaireQuestion = refreshSetupQuestionnaireQuestion;
+exports.setupQuestionnaireProgress = setupQuestionnaireProgress;
+exports.reopenSetupQuestionnaireGroup = reopenSetupQuestionnaireGroup;
+exports.setupQuestionIdsForGroup = setupQuestionIdsForGroup;
+exports.setupBasicSkippedQuestionIds = setupBasicSkippedQuestionIds;
+exports.setupEditableGroups = setupEditableGroups;
 exports.transitionSetupQuestionnaire = transitionSetupQuestionnaire;
 exports.enterSetupConfirmation = enterSetupConfirmation;
 exports.finishSetupQuestionnaire = finishSetupQuestionnaire;
 exports.setupQuestionnaireStateLabel = setupQuestionnaireStateLabel;
+exports.setupQuestionContentInventory = setupQuestionContentInventory;
 const setup_configuration_clone_policy_1 = __nccwpck_require__(85881);
 const setup_configuration_defaults_1 = __nccwpck_require__(23381);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const setup_project_selection_policy_1 = __nccwpck_require__(73750);
 const AGENT_PROVIDERS = ['codex', 'opencode', 'cursor'];
 const MODEL_PROVIDERS = ['openai', 'anthropic', 'google', 'openrouter', 'opencode', 'local'];
 const PERMISSION_INTENT_QUESTION_IDS = new Set([
     'features.issues', 'features.pullRequests', 'issueWorkflows.enabled',
-    'pullRequestApproval.mode', 'projects.ids', 'createInitialTag',
+    'pullRequestApproval.mode', 'projects.enabled', 'createInitialTag',
     'manageRepositoryVariables', 'manageRepositorySecrets',
     'storage.variables.defaultScope', 'storage.variables.preserveExisting',
     'storage.secrets.defaultScope', 'storage.secrets.preserveExisting',
 ]);
 function createSetupQuestionnaire(configuration, context = {}) {
     const draft = (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration);
-    const question = questions(draft, false, context, 'full')[0];
+    const independently = hasIndependentAgentSettings(draft);
+    const question = questions(draft, independently, context, 'full')[0];
     return question
-        ? { stateId: question.stateId, draft, question, terminal: 'collecting', configureIndependently: false, phase: 'full' }
-        : { stateId: 'review', draft, terminal: 'review', configureIndependently: false, phase: 'full' };
+        ? { stateId: question.stateId, draft, question, terminal: 'collecting', configureIndependently: independently, phase: 'full' }
+        : { stateId: 'review', draft, terminal: 'review', configureIndependently: independently, phase: 'full' };
+}
+function hasIndependentAgentSettings(draft) {
+    const shared = draft.agents.findings;
+    return setup_configuration_defaults_1.SETUP_AGENT_TASKS.filter(task => task !== 'findings').some(task => ['modelProvider', 'model', 'effort', 'executable'].some(field => draft.agents[task][field] !== shared[field]));
 }
 function createSetupPermissionIntentQuestionnaire(configuration, context = {}) {
     const draft = (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration);
+    const projectsWanted = context.projectsWanted ?? Boolean(draft.projects.ids.trim());
     const question = questions(draft, false, context, 'permission-intent')[0];
     return question
-        ? { stateId: question.stateId, draft, question, terminal: 'collecting', configureIndependently: false, phase: 'permission-intent', answeredQuestionIds: [] }
-        : { stateId: 'review', draft, terminal: 'review', configureIndependently: false, phase: 'permission-intent', answeredQuestionIds: [] };
+        ? { stateId: question.stateId, draft, question, terminal: 'collecting', configureIndependently: false, phase: 'permission-intent', answeredQuestionIds: [], projectsWanted }
+        : { stateId: 'review', draft, terminal: 'review', configureIndependently: false, phase: 'permission-intent', answeredQuestionIds: [], projectsWanted };
 }
 function createSetupReviewState(configuration) {
     return {
@@ -48035,6 +49198,68 @@ function createSetupReviewState(configuration) {
         terminal: 'review',
         configureIndependently: false,
     };
+}
+/** Re-project the current question after a read-only discovery without replaying answers. */
+function refreshSetupQuestionnaireQuestion(state, context) {
+    if (state.terminal !== 'collecting' || !state.question)
+        return state;
+    const question = questions(state.draft, state.configureIndependently, context, state.phase ?? 'full')
+        .find(candidate => candidate.id === state.question?.id);
+    return question ? { ...state, question, validation: undefined } : state;
+}
+/** The denominator follows the currently applicable, unskipped questions. */
+function setupQuestionnaireProgress(state, context) {
+    if (state.terminal !== 'collecting' || !state.question)
+        return undefined;
+    const visible = questions(state.draft, state.configureIndependently, context, state.phase ?? 'full');
+    const index = visible.findIndex(item => item.id === state.question?.id);
+    if (index < 0)
+        return undefined;
+    const group = state.question.stateId;
+    const groupQuestions = visible.filter(item => item.stateId === group);
+    return { position: index + 1, total: visible.length, groupPosition: groupQuestions.findIndex(item => item.id === state.question?.id) + 1,
+        groupTotal: groupQuestions.length, group };
+}
+/** Reopen an already answered group for final-plan correction without clearing unrelated values. */
+function reopenSetupQuestionnaireGroup(state, group, context) {
+    if (state.terminal !== 'review')
+        return undefined;
+    const first = questions(state.draft, state.configureIndependently, context, 'full').find(item => item.stateId === group);
+    return first ? { ...state, stateId: first.stateId, terminal: 'collecting', question: first, validation: undefined,
+        phase: 'full', answeredQuestionIds: [] } : undefined;
+}
+function setupQuestionIdsForGroup(group) {
+    return definitions().filter(item => item.stateId === group).map(item => item.id);
+}
+/** Basic changes presentation only: security- and permission-driving decisions stay visible. */
+function setupBasicSkippedQuestionIds(configuration) {
+    const defaults = configuration ? (0, setup_configuration_defaults_1.createDefaultSetupConfiguration)() : undefined;
+    const advancedRepository = new Set([
+        'featureTree', 'bugfixTree', 'hotfixTree', 'releaseTree', 'docsTree', 'choreTree',
+        'reconciliationTree', 'reopenIssueOnPush', 'inactivityThresholdHours',
+        'issueLocale', 'pullRequestLocale', 'commitPrefixTransforms',
+    ]);
+    const advancedBugbot = new Set([
+        'pullRequestDescriptionMode', 'ignoreFiles', 'includeReasoning', 'bugbotCommentLimit',
+        'bugbotFixVerifyCommands', 'bugbotEffort', 'bugbotReviewDrafts', 'bugbotTraceRules',
+        'bugbotSuggestedChanges', 'bugbotOrganizationRules',
+    ]);
+    return definitions().filter(definition => definition.id === 'agents.findings.effort'
+        || definition.id === 'agents.findings.executable'
+        || (definition.id.startsWith('agents.') && definition.id.endsWith('.provider') && definition.id !== 'agents.findings.provider')
+        || (definition.id.startsWith('repository.') && advancedRepository.has(definition.id.slice('repository.'.length)))
+        || (definition.id.startsWith('ai.') && advancedBugbot.has(definition.id.slice('ai.'.length)))).filter(definition => !configuration || JSON.stringify(valueAtPath(configuration, definition.id))
+        === JSON.stringify(valueAtPath(defaults, definition.id))).map(definition => definition.id);
+}
+function valueAtPath(value, path) {
+    return path.split('.').reduce((current, key) => current && typeof current === 'object'
+        ? current[key] : undefined, value);
+}
+function setupEditableGroups(configuration) {
+    // Projects can be enabled at review even if the operator declined it before
+    // the PAT handoff. The re-run audits any newly required grant before Apply.
+    const visible = questions(configuration, hasIndependentAgentSettings(configuration), { projectsWanted: true }, 'full');
+    return [...new Set(visible.map(item => item.stateId))];
 }
 function transitionSetupQuestionnaire(state, event, context = {}) {
     if (state.terminal !== 'collecting' || !state.question)
@@ -48047,7 +49272,25 @@ function transitionSetupQuestionnaire(state, event, context = {}) {
             configureIndependently: state.configureIndependently,
             phase: state.phase,
             answeredQuestionIds: state.answeredQuestionIds,
+            projectsWanted: state.projectsWanted,
         };
+    }
+    if (event.kind === 'back') {
+        const visible = questions(state.draft, state.configureIndependently, context, state.phase ?? 'full');
+        const index = visible.findIndex(item => item.id === state.question?.id);
+        if (index <= 0)
+            return { ...state, validation: 'This is the first question in this pass. Review it or cancel setup.' };
+        const previous = visible[index - 1];
+        return { ...state, stateId: previous.stateId, question: previous, validation: undefined,
+            answeredQuestionIds: state.answeredQuestionIds?.filter(id => visible.findIndex(item => item.id === id) < index - 1) };
+    }
+    if (state.question.id === 'projects.statusVerified' && ['n', 'no', 'false', '0'].includes(event.value.normalize('NFKC').trim().toLowerCase())) {
+        const selection = questions(state.draft, state.configureIndependently, context, state.phase ?? 'full')
+            .find(question => question.id === 'projects.ids');
+        if (selection)
+            return { ...state, question: selection, stateId: 'projects',
+                validation: 'Status values were not confirmed. Choose compatible Projects, then review their Status options again.',
+                answeredQuestionIds: state.answeredQuestionIds?.filter(id => id !== 'projects.ids' && !id.startsWith('projects.')) };
     }
     const parsed = parseAnswer(state.question, event.value);
     if ('error' in parsed) {
@@ -48060,11 +49303,16 @@ function transitionSetupQuestionnaire(state, event, context = {}) {
     const configureIndependently = state.question.id === 'agents.configureIndependently'
         ? Boolean(parsed.value)
         : state.configureIndependently;
-    const draft = applyAnswer(state.draft, state.question, parsed.value);
+    const draft = applyAnswer(state.draft, state.question, parsed.value, state.configureIndependently);
+    const projectsWanted = state.question.id === 'projects.enabled' ? Boolean(parsed.value) : state.projectsWanted;
     const answeredQuestionIds = [...(state.answeredQuestionIds ?? []), state.question.id];
     const nextQuestions = questions(draft, configureIndependently, context, state.phase ?? 'full');
-    const nextIndex = nextQuestions.findIndex((question) => question.id === state.question?.id);
-    const next = nextQuestions[nextIndex + 1];
+    // A just-answered question may become inapplicable (for example, clearing
+    // Projects removes its dependent fields). Advance by canonical definition
+    // order; indexing the new visible list at -1 would restart the wizard.
+    const definitionOrder = definitions().map(definition => definition.id);
+    const currentOrder = definitionOrder.indexOf(state.question.id);
+    const next = nextQuestions.find(question => definitionOrder.indexOf(question.id) > currentOrder);
     return next
         ? {
             stateId: next.stateId,
@@ -48074,8 +49322,9 @@ function transitionSetupQuestionnaire(state, event, context = {}) {
             configureIndependently,
             phase: state.phase,
             answeredQuestionIds,
+            projectsWanted,
         }
-        : { stateId: 'review', draft, terminal: 'review', configureIndependently, phase: state.phase, answeredQuestionIds };
+        : { stateId: 'review', draft, terminal: 'review', configureIndependently, phase: state.phase, answeredQuestionIds, projectsWanted };
 }
 function enterSetupConfirmation(state) {
     if (state.terminal !== 'review')
@@ -48112,7 +49361,7 @@ function setupQuestionnaireStateLabel(stateId) {
     })[stateId];
 }
 function questions(draft, independently, context, phase) {
-    return definitions().filter((definition) => (phase === 'full' || PERMISSION_INTENT_QUESTION_IDS.has(definition.id))
+    return definitions().filter((definition) => (phase === 'full' ? definition.id !== 'projects.enabled' : PERMISSION_INTENT_QUESTION_IDS.has(definition.id))
         && !context.skipQuestionIds?.includes(definition.id)
         && (definition.applies?.(draft, independently, context) ?? true))
         .map((definition) => toQuestion(definition, draft, context));
@@ -48150,26 +49399,42 @@ function definitions() {
         ...setup_configuration_defaults_1.SETUP_AGENT_TASKS.map((task) => ({
             stateId: 'agent-runtime', id: `agents.${task}.provider`, label: `${formatTask(task)} runtime`, kind: 'choice', choices: AGENT_PROVIDERS,
         })),
-        { stateId: 'agent-model-defaults', id: 'agents.findings.modelProvider', label: 'Model provider for all tasks', kind: 'choice', choices: MODEL_PROVIDERS },
-        { stateId: 'agent-model-defaults', id: 'agents.findings.model', label: 'Model name for all tasks', kind: 'text' },
-        { stateId: 'agent-model-defaults', id: 'agents.findings.effort', label: 'Reasoning effort for all tasks (empty uses provider default)', kind: 'text' },
-        { stateId: 'agent-model-defaults', id: 'agents.findings.executable', label: 'Validated executable for all tasks (empty uses the manifest basename)', kind: 'text' },
-        { stateId: 'agent-model-defaults', id: 'agents.configureIndependently', label: 'Configure model provider, model, effort, and executable independently for every task?', kind: 'boolean', read: () => false },
+        { stateId: 'agent-model-defaults', id: 'agents.findings.modelProvider', label: 'Shared model provider (unless a role has its own setting)', kind: 'choice', choices: MODEL_PROVIDERS },
+        { stateId: 'agent-model-defaults', id: 'agents.findings.model', label: 'Shared model name (unless a role has its own setting)', kind: 'text' },
+        { stateId: 'agent-model-defaults', id: 'agents.findings.effort', label: 'Shared reasoning effort (empty uses provider default; per-role overrides stay separate)', kind: 'text' },
+        { stateId: 'agent-model-defaults', id: 'agents.findings.executable', label: 'Shared validated executable (empty uses manifest basename; per-role overrides stay separate)', kind: 'text' },
+        { stateId: 'agent-model-defaults', id: 'agents.configureIndependently', label: 'Configure model provider, model, effort, and executable independently for every task?', kind: 'boolean', read: draft => hasIndependentAgentSettings(draft) },
         ...setup_configuration_defaults_1.SETUP_AGENT_TASKS.filter((task) => task !== 'findings').flatMap((task) => agentOverrideQuestions(task)),
         ...repositoryQuestions(),
         ...deploymentQuestions(),
         ...bugbotQuestions(),
         ...approvalQuestions(),
-        { stateId: 'projects', id: 'projects.ids', label: 'GitHub Project IDs (comma-separated, empty skips integration)', kind: 'text' },
+        { stateId: 'projects', id: 'projects.enabled', label: 'Integrate existing GitHub Projects with issue and pull-request automation?', kind: 'boolean',
+            read: (draft, context) => context.projectsWanted ?? Boolean(draft.projects.ids.trim()),
+            applies: draft => draft.features.issues !== false || draft.features.pullRequests !== false },
+        { stateId: 'projects', id: 'projects.ids', label: 'Select existing GitHub Projects (or enter Project numbers from their URLs)', kind: 'text',
+            applies: (draft, _independent, context) => (draft.features.issues !== false || draft.features.pullRequests !== false) && context.projectsWanted !== false },
         ...['issueCreatedColumn', 'pullRequestCreatedColumn', 'issueInProgressColumn', 'pullRequestInProgressColumn'].map((field) => ({
             stateId: 'projects', id: `projects.${field}`, label: projectLabel(field), kind: 'text', applies: (config) => Boolean(config.projects.ids.trim()),
         })),
+        { stateId: 'projects', id: 'projects.statusVerified',
+            label: 'Have you checked every selected Project in GitHub and confirmed all four exact Status values?',
+            kind: 'boolean', read: () => false,
+            applies: (draft, _independently, context) => Boolean(draft.projects.ids.trim())
+                && (0, setup_project_selection_policy_1.sharedProjectStatusOptions)(draft.projects.ids, context.projectDiscovery?.candidates ?? []).state === 'unavailable',
+        },
         { stateId: 'provisioning', id: 'createInitialTag', label: 'Create v1.0.0 when no version tag exists?', kind: 'boolean' },
         { stateId: 'provisioning', id: 'manageRepositoryVariables', label: 'Create/update GitHub Actions Variables?', kind: 'boolean' },
         { stateId: 'provisioning', id: 'manageRepositorySecrets', label: 'Validate and provision required GitHub Actions Secrets?', kind: 'boolean' },
         ...storageQuestions('variables'),
         ...storageQuestions('secrets'),
     ];
+}
+/** Stable content inventory for documentation and localization audits; never answers questions. */
+function setupQuestionContentInventory() {
+    return definitions().map(({ stateId, id, label, kind, choices }) => ({
+        stateId, id, label, kind, choices, defaultValue: '',
+    }));
 }
 function agentOverrideQuestions(task) {
     const applies = (_draft, independently) => independently;
@@ -48253,12 +49518,6 @@ function approvalQuestions() {
             applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off',
         },
         {
-            stateId: 'pull-request-approval', id: 'pullRequestApproval.producerAttested',
-            label: 'Have you verified each exact check, source App ID, workflow, and coverage-enforcing CI step?',
-            kind: 'boolean',
-            applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off',
-        },
-        {
             stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.mode',
             label: 'Coverage evidence mode', kind: 'choice', choices: ['check', 'numeric'],
             applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off',
@@ -48266,7 +49525,7 @@ function approvalQuestions() {
         {
             stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.checkName',
             label: 'Exact trusted check that enforces the coverage budget (no inferred percentage)',
-            kind: 'text',
+            kind: 'choice',
             applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off',
         },
         {
@@ -48292,6 +49551,12 @@ function approvalQuestions() {
                 && draft.pullRequestApproval.coverage.reporterAttested,
             applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off'
                 && draft.pullRequestApproval.coverage.mode === 'numeric',
+        },
+        {
+            stateId: 'pull-request-approval', id: 'pullRequestApproval.producerAttested',
+            label: 'Have you verified each exact check, source App ID, workflow, and coverage-enforcing CI step?',
+            kind: 'boolean',
+            applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off',
         },
     ];
 }
@@ -48320,17 +49585,54 @@ function choice(field, label, choices) {
     return { stateId: 'deployment', id: `repository.${field}`, label, kind: 'choice', choices };
 }
 function toQuestion(definition, draft, context) {
+    const branchScopedCandidates = context.approvalCheckCandidates?.map(candidate => candidate.requiredByRuleset?.branch !== draft.repository.developmentBranch
+        ? { ...candidate, requiredByRuleset: undefined } : candidate);
+    const producerCandidates = definition.id === 'pullRequestApproval.testChecks' ? branchScopedCandidates
+        : definition.id === 'pullRequestApproval.coverage.checkName' ? branchScopedCandidates?.filter(candidate => draft.pullRequestApproval.testChecks.some(check => check.name === candidate.name
+            && check.sourceAppId === candidate.sourceAppId && check.workflowName === candidate.workflowName)) : undefined;
+    const coverageChoices = definition.id === 'pullRequestApproval.coverage.checkName'
+        ? [...new Set(draft.pullRequestApproval.testChecks.map(check => check.name))] : undefined;
     const allowedNames = definition.kind === 'scope-overrides'
         ? inheritedNames(definition.id.includes('.variables.') ? 'variables' : 'secrets', draft, context)
         : undefined;
+    const projectQuestion = definition.id === 'projects.ids';
+    const statusQuestion = /^projects\.(issue|pullRequest)(Created|InProgress)Column$/u.test(definition.id);
+    const projectCandidates = context.projectDiscovery?.candidates ?? [];
+    const projectStatus = statusQuestion
+        ? (0, setup_project_selection_policy_1.sharedProjectStatusOptions)(draft.projects.ids, projectCandidates) : undefined;
     return {
         stateId: definition.stateId,
         id: definition.id,
         label: definition.label,
-        kind: definition.kind,
-        defaultValue: definition.read?.(draft) ?? readPath(draft, definition.id, allowedNames),
-        ...(definition.choices ? { choices: definition.choices } : {}),
+        kind: definition.id === 'pullRequestApproval.testChecks' ? 'producer-select'
+            : projectQuestion ? 'project-select'
+                : statusQuestion && projectStatus?.state === 'observed' ? 'choice' : definition.kind,
+        defaultValue: definition.read?.(draft, context) ?? readPath(draft, definition.id, allowedNames),
+        ...(coverageChoices ? { choices: coverageChoices } : projectStatus?.state === 'observed'
+            ? { choices: projectStatus.options } : definition.choices ? { choices: definition.choices } : {}),
         ...(allowedNames ? { allowedNames } : {}),
+        ...(producerCandidates?.length ? { producerCandidates } : {}),
+        ...(definition.id === 'pullRequestApproval.coverage.checkName'
+            ? { trustedProducers: draft.pullRequestApproval.testChecks } : {}),
+        ...(definition.id === 'pullRequestApproval.testChecks' && context.approvalCheckDiscoveryStatus
+            ? { discoveryStatus: context.approvalCheckDiscoveryStatus, discoveryTruncated: context.approvalCheckDiscoveryTruncated,
+                discoveryRetryRemaining: context.discoveryRetryRemaining?.checks ?? 0 } : {}),
+        ...(projectQuestion ? { discoveryStatus: context.projectDiscovery?.status ?? 'unavailable',
+            discoveryTruncated: context.projectDiscovery?.truncated,
+            ...(context.projectDiscovery && context.projectDiscovery.status !== 'unsupported' && context.discoveryRetryRemaining
+                ? { discoveryRetryRemaining: context.discoveryRetryRemaining.projects } : {}),
+            projectCandidates, projectOwner: context.projectOwner } : {}),
+        ...(statusQuestion && projectStatus ? { statusOptionState: projectStatus.state } : {}),
+        ...(definition.id === 'projects.statusVerified' ? { projectStatusValues: [
+                { transition: 'issueCreated', value: draft.projects.issueCreatedColumn },
+                { transition: 'pullRequestCreated', value: draft.projects.pullRequestCreatedColumn },
+                { transition: 'issueInProgress', value: draft.projects.issueInProgressColumn },
+                { transition: 'pullRequestInProgress', value: draft.projects.pullRequestInProgressColumn },
+            ] } : {}),
+        ...(definition.id === 'repository.mainBranch' && context.branchSources
+            ? { suggestionSource: context.branchSources.main } : {}),
+        ...(definition.id === 'repository.developmentBranch' && context.branchSources
+            ? { suggestionSource: context.branchSources.development } : {}),
     };
 }
 function readPath(configuration, path, allowedNames) {
@@ -48343,6 +49645,39 @@ function readPath(configuration, path, allowedNames) {
 }
 function parseAnswer(question, raw) {
     const input = raw.normalize('NFKC').trim();
+    if (question.id === 'projects.statusVerified')
+        return ['y', 'yes', 'true', '1'].includes(input.toLowerCase())
+            ? { value: true } : { error: 'Open every selected Project in GitHub and confirm that all four exact Status values exist. Answer Yes after checking, or No to choose Projects again.' };
+    if (question.id === 'projects.ids') {
+        const parsed = (0, setup_project_selection_policy_1.parseSetupProjectSelection)(input || String(question.defaultValue), question.projectOwner);
+        if ('error' in parsed)
+            return parsed;
+        const status = (0, setup_project_selection_policy_1.sharedProjectStatusOptions)(parsed.value, question.projectCandidates ?? []);
+        if (status.state === 'incompatible')
+            return { error: 'Selected Projects have no common Status option. Choose compatible Projects or configure them separately.' };
+        return parsed;
+    }
+    if (question.id === 'pullRequestApproval.testChecks') {
+        const entries = (input || String(question.defaultValue)).split(';').map(item => item.trim()).filter(Boolean)
+            .flatMap(item => item.split(',').map(value => value.trim()).filter(Boolean))
+            .map(item => {
+            const index = Number(item) - 1;
+            const candidate = Number.isSafeInteger(index) && /^[1-9]\d*$/u.test(item) ? question.producerCandidates?.[index] : undefined;
+            return candidate ? `${candidate.name}|${candidate.sourceAppId}|${candidate.workflowName}` : item;
+        });
+        if (entries.length < 1 || entries.length > 8 || entries.some(entry => !/^[^|;\r\n]{1,100}\|[1-9][0-9]*\|[^|;\r\n]{1,100}$/u.test(entry))) {
+            return { error: 'Select 1–8 observed checks or enter exact name|App ID|workflow tuples.' };
+        }
+        if (new Set(entries).size !== entries.length)
+            return { error: 'A trusted check was selected more than once.' };
+        const names = entries.map(entry => entry.split('|', 1)[0]);
+        if (new Set(names).size !== names.length)
+            return { error: 'Two trusted producers use the same check name. Coverage stores only one name; choose one producer or rename the CI jobs before continuing.' };
+        return { value: entries.join(';') };
+    }
+    if (!input && question.statusOptionState === 'observed' && !question.choices?.includes(String(question.defaultValue))) {
+        return { error: 'The saved Status value is not available in every selected Project. Choose a listed Status option.' };
+    }
     if (!input && question.kind !== 'scope-overrides')
         return { value: question.defaultValue };
     if (question.kind === 'text')
@@ -48383,9 +49718,23 @@ function parseAnswer(question, raw) {
         return { error: `Unknown inherited resource name(s): ${unknown.join(', ')}.` };
     return { value: Object.fromEntries(requested.map((name) => [name, 'repository'])) };
 }
-function applyAnswer(configuration, question, value) {
+function applyAnswer(configuration, question, value, independently) {
     const draft = (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration);
-    if (question.id === 'agents.configureIndependently')
+    if (question.id === 'agents.configureIndependently') {
+        if (!value)
+            for (const task of setup_configuration_defaults_1.SETUP_AGENT_TASKS.filter(task => task !== 'findings')) {
+                draft.agents[task] = { ...draft.agents[task], modelProvider: draft.agents.findings.modelProvider,
+                    model: draft.agents.findings.model, effort: draft.agents.findings.effort,
+                    executable: draft.agents.findings.executable };
+            }
+        return draft;
+    }
+    if (question.id === 'projects.enabled') {
+        if (!value)
+            draft.projects.ids = '';
+        return draft;
+    }
+    if (question.id === 'projects.statusVerified')
         return draft;
     if (question.id === 'features.issues' && value === false) {
         draft.features.issues = false;
@@ -48434,8 +49783,9 @@ function applyAnswer(configuration, question, value) {
     }
     if (['agents.findings.modelProvider', 'agents.findings.model', 'agents.findings.effort', 'agents.findings.executable'].includes(question.id)) {
         const field = question.id.split('.')[2];
-        for (const task of setup_configuration_defaults_1.SETUP_AGENT_TASKS)
+        for (const task of independently ? ['findings'] : setup_configuration_defaults_1.SETUP_AGENT_TASKS) {
             draft.agents[task] = { ...draft.agents[task], [field]: value };
+        }
         return draft;
     }
     const parts = question.id.split('.');
@@ -48638,20 +49988,24 @@ const requirement = (input) => ({
  * interactive configuration does not exist before the setup PAT prompt.
  */
 function buildSetupPatPermissionRequirements() {
-    return normalizePermissionRequirements([
+    // Keep conditional read and write paths separate here: collapsing Actions
+    // into one write row would hide the approval-only read requirement.
+    return [
         requirement({ role: 'setup', scope: 'repository', permission: 'Metadata', level: 'read', reason: 'Resolve repository identity and visibility.', probe: 'metadata' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'read', reason: 'Inspect installed workflows and repository files.', probe: 'contents' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Secrets', level: 'write', applicability: 'conditional', condition: 'Secret provisioning enabled', reason: 'Inspect and provision selected GitHub Actions Secrets.', probe: 'secrets' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Variables', level: 'write', applicability: 'conditional', condition: 'Variable provisioning enabled', reason: 'Inspect and provision selected GitHub Actions Variables.', probe: 'variables' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Issues', level: 'write', applicability: 'conditional', condition: 'Issue workflows enabled', reason: 'Provision labels and issue resources.', probe: 'issues' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'write', applicability: 'conditional', condition: 'Credential health enabled', reason: 'Inspect and dispatch credential-health workflows.', probe: 'actions' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'read', applicability: 'conditional', condition: 'Pull-request approval enabled', reason: 'Inspect CI workflow runs and jobs for exact producer identities.', probe: 'actions' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Checks', level: 'read', applicability: 'conditional', condition: 'Pull-request approval enabled', reason: 'Discover exact CI check and producer identities.', probe: 'checks' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Administration', level: 'read', applicability: 'conditional', condition: 'Release, hotfix, or guarded approval enabled', reason: 'Inspect branch protection and rulesets.', probe: 'administration' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write', applicability: 'conditional', condition: 'Temporary health workflow required', reason: 'Bootstrap a missing credential-health workflow.', probe: 'workflows' }),
         requirement({ role: 'setup', scope: 'organization', permission: 'Secrets', level: 'write', applicability: 'conditional', condition: 'Organization Secret storage selected', reason: 'Inspect and provision organization Actions Secrets.', probe: 'secrets' }),
         requirement({ role: 'setup', scope: 'organization', permission: 'Variables', level: 'write', applicability: 'conditional', condition: 'Organization Variable storage selected', reason: 'Inspect and provision organization Actions Variables.', probe: 'variables' }),
         requirement({ role: 'setup', scope: 'organization', permission: 'Issue Types', level: 'write', applicability: 'conditional', condition: 'Issue type automation enabled', reason: 'Provision and assign configured issue types.', probe: 'issue-types' }),
-        requirement({ role: 'setup', scope: 'organization', permission: 'Projects', level: 'write', applicability: 'conditional', condition: 'Organization Projects selected', reason: 'Inspect and configure selected Projects.', probe: 'projects' }),
-    ]);
+        requirement({ role: 'setup', scope: 'organization', permission: 'Projects', level: 'read', applicability: 'conditional', condition: 'Organization Projects selected', reason: 'Inspect selected Projects and their Status options; setup does not edit Project items.', probe: 'projects' }),
+    ];
 }
 /**
  * Recomputes setup-PAT permissions after the operator has approved the final
@@ -48664,8 +50018,8 @@ function buildConfiguredSetupPatPermissionRequirements(configuration, remote) {
     return buildSetupPatRequirements(configuration, remote?.ownerType === 'Organization' || remote?.ownerType === 'Unknown', remote);
 }
 /** Grants justified by local choices alone; remote-only conditions stay unresolved. */
-function buildSetupPatIntentPermissionRequirements(configuration, ownerKind) {
-    return buildSetupPatRequirements(configuration, ownerKind === 'Organization');
+function buildSetupPatIntentPermissionRequirements(configuration, ownerKind, projectsWanted = configuration.projects.ids.trim().length > 0) {
+    return buildSetupPatRequirements(configuration, ownerKind === 'Organization', undefined, projectsWanted);
 }
 function buildSetupPatIntentUncertainty(configuration, ownerKind) {
     const unknown = [];
@@ -48691,7 +50045,7 @@ function requiredSetupPatPermissionDelta(before, after) {
             || (previous.get(`${item.scope}:${item.permission.toLowerCase()}`) === 'read' && item.level === 'write')))
         .map(item => `${item.scope} ${item.permission} ${item.level}`);
 }
-function buildSetupPatRequirements(configuration, organization, remote) {
+function buildSetupPatRequirements(configuration, organization, remote, projectsWanted = configuration.projects.ids.trim().length > 0) {
     const repositorySecretNames = (0, setup_credential_requirement_policy_1.buildSetupCredentialRequirements)(configuration)
         .map(credential => credential.name);
     const repositoryVariableNames = (0, setup_configuration_plan_1.buildSetupRepositoryVariables)(configuration)
@@ -48708,6 +50062,7 @@ function buildSetupPatRequirements(configuration, organization, remote) {
         || configuration.features.hotfix
         || enabledIssueWorkflowKinds.some(kind => kind === 'release' || kind === 'hotfix');
     const guardedApproval = configuration.pullRequestApproval.mode === 'guarded';
+    const approvalEnabled = configuration.pullRequestApproval.mode !== 'off';
     const hasExistingCredential = repositorySecretNames.some(name => remote?.repositorySecrets.includes(name) || remote?.organizationSecrets.includes(name));
     const needsCredentialHealth = configuration.manageRepositorySecrets && hasExistingCredential;
     const needsCredentialHealthBootstrap = needsCredentialHealth
@@ -48735,6 +50090,10 @@ function buildSetupPatRequirements(configuration, organization, remote) {
                 role: 'setup', scope: 'repository', permission: 'Actions', level: 'write',
                 reason: 'Dispatch credential-health checks for existing Secrets.', probe: 'actions',
             })] : []),
+        ...(approvalEnabled ? [
+            requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'read', reason: 'Inspect CI workflow runs and jobs for approval evidence.', probe: 'actions' }),
+            requirement({ role: 'setup', scope: 'repository', permission: 'Checks', level: 'read', reason: 'Discover exact CI check and producer identities.', probe: 'checks' }),
+        ] : []),
         ...(needsCredentialHealthBootstrap ? [
             requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'write', reason: 'Temporarily install credential health when its workflow is not confirmed installed.', probe: 'contents' }),
             requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write', reason: 'Temporarily install credential health when its workflow is not confirmed installed.', probe: 'workflows' }),
@@ -48755,9 +50114,9 @@ function buildSetupPatRequirements(configuration, organization, remote) {
                 role: 'setup', scope: 'organization', permission: 'Issue Types', level: 'write',
                 reason: 'Provision native issue types for the selected workflows.', probe: 'issue-types',
             })] : []),
-        ...(organization && configuration.projects.ids.trim().length > 0 ? [requirement({
-                role: 'setup', scope: 'organization', permission: 'Projects', level: 'write',
-                reason: 'Inspect and configure the selected organization Projects.', probe: 'projects',
+        ...(organization && projectsWanted ? [requirement({
+                role: 'setup', scope: 'organization', permission: 'Projects', level: 'read',
+                reason: 'Inspect selected Projects and their Status options; setup does not edit Project items.', probe: 'projects',
             })] : []),
     ]);
 }
@@ -50825,18 +52184,32 @@ async function runInitialSetupWorkflow(request, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(TASK_ID)} Executing ${TASK_ID}.`);
     const steps = [];
     const errors = [];
+    const configuration = request.setupConfiguration;
+    const effects = [
+        { id: 'files', state: 'not-started', scope: 'local' },
+        { id: 'secrets', state: 'not-started', scope: resourceScope(configuration, 'secrets') },
+        { id: 'labels', state: 'not-started', scope: 'repository' },
+        { id: 'issue-types', state: 'not-started', scope: 'repository' },
+        { id: 'variables', state: 'not-started', scope: resourceScope(configuration, 'variables') },
+        { id: 'initial-tag', state: 'not-started', scope: 'repository' },
+    ];
+    const mark = (id, state) => {
+        const index = effects.findIndex(effect => effect.id === id);
+        effects[index] = { ...effects[index], state };
+    };
+    const receipt = () => buildResult(errors, steps, effects);
     try {
         const setupConfiguration = request.setupConfiguration;
         if (!dependencies.setupWorkspacePort.hasValidToken()) {
             (0, logging_ports_1.logInfo)('  🛑 Setup requires the setup PAT provided for this command with a valid token.');
             errors.push(new application_error_1.ApplicationError('authorization.credential-invalid', 'A valid setup PAT must be provided to run setup. It is separate from the workflow PAT Secret.'));
-            return [buildResult(errors, steps)];
+            return [receipt()];
         }
         (0, logging_ports_1.logInfo)('🔐 Checking GitHub access...');
         const githubAccess = await verifyGitHubAccess(request, dependencies.authenticatedUserPort);
         if (!githubAccess.success) {
             errors.push(...githubAccess.errors);
-            return [buildResult(errors, steps)];
+            return [receipt()];
         }
         steps.push(`✅ GitHub access verified: ${githubAccess.user}`);
         const remoteConfigurationErrors = [];
@@ -50847,7 +52220,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
                 if (remoteConfigurationErrors.length === 0) {
                     errors.push(new application_error_1.ApplicationError('provider.unavailable', 'Could not inspect existing GitHub Actions resource scopes. Restore inventory access and rerun setup.'));
                 }
-                return [buildResult(errors, steps)];
+                return [receipt()];
             }
             const inventoryErrors = [
                 ...(0, setup_configuration_policy_1.validateSetupStorageAgainstRemote)(setupConfiguration, remoteConfiguration),
@@ -50858,7 +52231,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
             ];
             if (inventoryErrors.length > 0) {
                 errors.push(...fromMessages(inventoryErrors, 'provider.unavailable'));
-                return [buildResult(errors, steps)];
+                return [receipt()];
             }
         }
         (0, logging_ports_1.logInfo)('📋 Ensuring .github and copying setup files...');
@@ -50870,15 +52243,25 @@ async function runInitialSetupWorkflow(request, dependencies) {
                 approvedWorkflowFiles: request.workflowUpdates,
             } : {}),
         };
+        mark('files', 'needs-inspection');
         const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
+        mark('files', filesResult.copied > 0 ? 'completed' : 'skipped');
         steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
+        const secretValues = Number(Boolean(request.setupCredentials?.workflowPat)) + (request.setupCredentials?.apiKeys.length ?? 0);
+        if (setupConfiguration?.manageRepositorySecrets && secretValues > 0)
+            mark('secrets', 'needs-inspection');
         const secrets = await (0, setup_resource_provisioning_1.ensureRepositorySecrets)(request, dependencies, setupConfiguration, remoteConfiguration);
+        mark('secrets', secrets.errors.length ? 'needs-inspection'
+            : setupConfiguration?.manageRepositorySecrets && secretValues > 0 ? 'completed' : 'skipped');
         if (secrets.step)
             steps.push(secrets.step);
         if (secrets.errors.length > 0)
             errors.push(...fromMessages(secrets.errors, 'authorization.credential-invalid'));
         (0, logging_ports_1.logInfo)('🏷️  Checking configured and progress labels...');
+        mark('labels', 'needs-inspection');
         const labels = await ensureInitialLabels(request, dependencies.initialLabelProvisioningPort, setupConfiguration);
+        mark('labels', !labels.completed || labels.configured.errors.length || labels.progress.errors.length
+            ? 'needs-inspection' : labels.configured.created + labels.progress.created > 0 ? 'completed' : 'skipped');
         if (!labels.completed) {
             errors.push(labels.error);
         }
@@ -50887,30 +52270,40 @@ async function runInitialSetupWorkflow(request, dependencies) {
             appendLabelSummary(steps, errors, labels.progress, 'Progress labels');
         }
         (0, logging_ports_1.logInfo)('📋 Checking issue types...');
+        mark('issue-types', 'needs-inspection');
         const issueTypes = await ensureIssueTypes(request, dependencies.issueTypeProvisioningPort, setupConfiguration);
+        mark('issue-types', !issueTypes.success ? 'needs-inspection' : issueTypes.created > 0 ? 'completed' : 'skipped');
         if (!issueTypes.success) {
             errors.push(...fromMessages(issueTypes.errors, 'provider.unavailable'));
         }
         else {
             steps.push(`✅ Issue types checked: ${issueTypes.created} created, ${issueTypes.existing} already existed`);
         }
+        if (setupConfiguration?.manageRepositoryVariables)
+            mark('variables', 'needs-inspection');
         const variables = await (0, setup_resource_provisioning_1.ensureRepositoryVariables)(request, dependencies, setupConfiguration, remoteConfiguration);
+        mark('variables', variables.errors.length ? 'needs-inspection'
+            : setupConfiguration?.manageRepositoryVariables ? 'completed' : 'skipped');
         if (variables.step)
             steps.push(variables.step);
         if (variables.errors.length > 0)
             errors.push(...fromMessages(variables.errors, 'provider.unavailable'));
+        if (setupConfiguration?.createInitialTag !== false)
+            mark('initial-tag', 'needs-inspection');
         const defaultVersion = await ensureDefaultVersion(request, dependencies, setupConfiguration);
+        mark('initial-tag', defaultVersion.error ? 'needs-inspection'
+            : defaultVersion.step?.includes('created on branch') ? 'completed' : 'skipped');
         if (defaultVersion.step)
             steps.push(defaultVersion.step);
         if (defaultVersion.error)
             errors.push(defaultVersion.error);
-        return [buildResult(errors, steps)];
+        return [receipt()];
     }
     catch (error) {
         const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Error running initial setup.');
         (0, logging_ports_1.logError)(semanticError);
         errors.push(semanticError);
-        return [buildResult(errors, steps)];
+        return [receipt()];
     }
 }
 async function verifyGitHubAccess(_request, repository) {
@@ -50988,14 +52381,21 @@ function appendLabelSummary(steps, errors, summary, labelType) {
         steps.push(`✅ ${labelType} checked: ${summary.created} created, ${summary.existing} already existed`);
     }
 }
-function buildResult(errors, steps) {
+function buildResult(errors, steps, effects) {
     return new result_1.Result({
         id: TASK_ID,
         success: errors.length === 0,
         executed: true,
         steps,
+        payload: { setupReceipt: { version: 1, effects: effects.map(effect => ({ ...effect })) } },
         errors: errors.length > 0 ? errors : undefined,
     });
+}
+function resourceScope(configuration, kind) {
+    const policy = configuration?.storage[kind];
+    if (!policy)
+        return 'repository';
+    return Object.values(policy.overrides).some(scope => scope !== policy.defaultScope) ? 'mixed' : policy.defaultScope;
 }
 function fromMessages(messages, code) {
     return messages.map(message => new application_error_1.ApplicationError(code, message));
@@ -55180,7 +56580,7 @@ class SetupDoctorUseCase {
         const remoteSecrets = new Set([...remote.repositorySecrets, ...remote.organizationSecrets]);
         const present = requirements.filter((requirement) => remoteSecrets.has(requirement.name));
         let health;
-        if (present.length > 0) {
+        if (present.length > 0 && !request.readOnly) {
             try {
                 health = await this.dependencies.remoteHealth.validateExisting(request.owner, request.repository, request.setupToken, request.configuration.repository.mainBranch, present);
             }
@@ -55628,24 +57028,26 @@ class PrepareSetupPatIntentUseCase {
             skipRepositorySecrets: request.skipRepositorySecrets,
         });
         let pass = 1;
+        let projectsWanted = Boolean(draft.projects.ids.trim());
         while (true) {
-            const context = { skipQuestionIds: fixedQuestionIds };
+            const context = { skipQuestionIds: fixedQuestionIds, projectsWanted };
             const intent = await this.ports.collect((0, setup_questionnaire_policy_1.createSetupPermissionIntentQuestionnaire)(draft, context), context, pass);
             if (intent.terminal === 'cancelled')
                 throw new setup_interaction_cancelled_error_1.SetupInteractionCancelledError();
             draft = intent.draft;
-            const ownerKind = (0, setup_pat_intent_policy_1.setupPatIntentNeedsOwnerKind)(draft) ? await this.ports.chooseOwnerKind() : 'User';
+            projectsWanted = Boolean(draft.projects.ids.trim()) || (intent.projectsWanted ?? projectsWanted);
+            const ownerKind = (0, setup_pat_intent_policy_1.setupPatIntentNeedsOwnerKind)(draft, projectsWanted) ? await this.ports.chooseOwnerKind() : 'User';
             if (ownerKind === 'unknown') {
                 this.ports.onManual('owner-unknown');
                 return { kind: 'manual' };
             }
-            const ownerConflict = (0, setup_pat_intent_policy_1.setupPatIntentOwnerConflict)(draft, ownerKind);
+            const ownerConflict = (0, setup_pat_intent_policy_1.setupPatIntentOwnerConflict)(draft, ownerKind, projectsWanted);
             const errors = (0, setup_configuration_policy_1.validateSetupConfiguration)(draft, { allowIncompleteApproval: true });
-            const requirements = (0, setup_token_permission_policy_1.buildSetupPatIntentPermissionRequirements)(draft, ownerKind);
+            const requirements = (0, setup_token_permission_policy_1.buildSetupPatIntentPermissionRequirements)(draft, ownerKind, projectsWanted);
             this.ports.advanceToSetupPat();
             this.ports.showPreview({
                 draft, requirements, uncertain: (0, setup_token_permission_policy_1.buildSetupPatIntentUncertainty)(draft, ownerKind),
-                ownerConflict, errors, pass,
+                ownerConflict, errors, pass, projectsWanted,
             });
             let decision;
             do {
@@ -55675,6 +57077,7 @@ class PrepareSetupPatIntentUseCase {
                     ownerKind,
                     permissionIntent: {
                         draft,
+                        projectsWanted,
                         answeredQuestionIds: [...new Set([...fixedQuestionIds, ...(intent.answeredQuestionIds ?? [])])],
                     },
                 };
@@ -56006,12 +57409,14 @@ class SetupQuestionnaireController {
         this.terminal = terminal;
         this.renderer = renderer;
     }
-    async collect(initial, context) {
+    async collect(initial, context, discoveryRefresh) {
         if (!this.terminal.isInteractive()) {
             throw new application_error_1.ApplicationError('configuration.invalid', 'Interactive setup requires an interactive terminal. Use --non-interactive with explicit configuration.');
         }
         this.renderer.showIntroduction();
         let state = initial;
+        let currentContext = context;
+        let pendingProjectSelection;
         let visibleState;
         while (state.terminal === 'collecting' && state.question) {
             if (visibleState !== state.stateId) {
@@ -56020,10 +57425,48 @@ class SetupQuestionnaireController {
             }
             if (state.validation)
                 this.renderer.showValidation(state.validation);
-            const input = state.question.kind === 'multi-select' && this.terminal.readMultiSelect
-                ? await this.terminal.readMultiSelect(this.renderer.renderPrompt(state.question), state.question.choices ?? [], parseSelectedDefaults(state.question.defaultValue))
-                : await this.terminal.readText(this.renderer.renderPrompt(state.question));
-            state = (0, setup_questionnaire_policy_1.transitionSetupQuestionnaire)(state, toEvent(input), context);
+            let input = (state.question.kind === 'multi-select' || state.question.kind === 'project-select') && this.terminal.readMultiSelect
+                ? await this.terminal.readMultiSelect(this.renderer.renderPrompt(state.question, (0, setup_questionnaire_policy_1.setupQuestionnaireProgress)(state, currentContext)), state.question.kind === 'project-select'
+                    ? [...(state.question.projectCandidates ?? []).map(candidate => `${candidate.number} — ${candidate.title} (${candidate.url})`), 'manual — Enter Project number or URL',
+                        ...(state.question.discoveryRetryRemaining ? ['retry — Retry GitHub Project discovery'] : [])]
+                    : state.question.choices ?? [], state.question.kind === 'project-select' && pendingProjectSelection
+                    ? pendingProjectSelection : parseSelectedDefaults(state.question.defaultValue), this.renderer.renderHelp(state.question))
+                : await this.terminal.readText(this.renderer.renderPrompt(state.question, (0, setup_questionnaire_policy_1.setupQuestionnaireProgress)(state, currentContext)));
+            if (state.question.kind === 'project-select' && input.kind === 'value' && input.value.split(',').includes('manual')
+                && !input.value.split(',').includes('retry')) {
+                const manual = await this.terminal.readText('Enter additional Project numbers or GitHub URLs, comma-separated (empty adds none): ');
+                input = manual.kind === 'value'
+                    ? { kind: 'value', value: [input.value.replace(/(?:^|,)manual(?:,|$)/gu, ',').replace(/^,|,$/gu, ''), manual.value]
+                            .filter(value => value && value !== 'none').join(',') || 'none' } : manual;
+            }
+            if (input.kind === 'value' && input.value.trim() === '?') {
+                this.renderer.showHelp(state.question);
+                continue;
+            }
+            if (input.kind === 'value' && input.value.trim().toLowerCase() === ':back') {
+                pendingProjectSelection = undefined;
+                state = (0, setup_questionnaire_policy_1.transitionSetupQuestionnaire)(state, { kind: 'back' }, currentContext);
+                continue;
+            }
+            const kind = state.question.id === 'projects.ids' ? 'projects'
+                : state.question.id === 'pullRequestApproval.testChecks' ? 'checks' : undefined;
+            if (kind && input.kind === 'value' && (input.value.trim().toLowerCase() === 'r'
+                || input.value.split(',').includes('retry'))) {
+                if (kind === 'projects')
+                    pendingProjectSelection = input.value.split(',').filter(value => value !== 'retry');
+                if (!state.question.discoveryRetryRemaining || !discoveryRefresh) {
+                    this.renderer.showValidation('No discovery retries remain. Use the manual option or continue.');
+                    continue;
+                }
+                const refreshed = await discoveryRefresh.refresh(kind);
+                if (refreshed) {
+                    currentContext = refreshed;
+                    state = (0, setup_questionnaire_policy_1.refreshSetupQuestionnaireQuestion)(state, currentContext);
+                }
+                continue;
+            }
+            pendingProjectSelection = undefined;
+            state = (0, setup_questionnaire_policy_1.transitionSetupQuestionnaire)(state, toEvent(input), currentContext);
         }
         if (state.terminal === 'cancelled')
             this.renderer.showCancelled();
@@ -56119,6 +57562,7 @@ const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
 const setup_configuration_clone_policy_1 = __nccwpck_require__(85881);
 const setup_doctor_message_catalog_1 = __nccwpck_require__(80226);
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+const setup_project_selection_policy_1 = __nccwpck_require__(73750);
 class SetupWizardUseCase {
     constructor(dependencies) {
         this.dependencies = dependencies;
@@ -56127,6 +57571,8 @@ class SetupWizardUseCase {
         const defaults = buildInitialSetupConfiguration(request);
         const effectiveOverrides = request.overrides;
         const initial = request.permissionIntent ? (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(request.permissionIntent.draft) : defaults;
+        const basicSkippedQuestionIds = request.presentationMode === 'basic'
+            ? request.basicSkippedQuestionIds ?? (0, setup_questionnaire_policy_1.setupBasicSkippedQuestionIds)(initial) : [];
         let remoteConfiguration;
         if (request.remoteTarget) {
             try {
@@ -56136,18 +57582,73 @@ class SetupWizardUseCase {
                 remoteConfiguration = unavailableRemoteConfiguration();
             }
         }
+        const explicitMainBranch = request.overrides?.repository?.mainBranch !== undefined;
+        if (!explicitMainBranch && remoteConfiguration?.defaultBranch) {
+            initial.repository.mainBranch = remoteConfiguration.defaultBranch;
+        }
         const defaultValidationErrors = (0, setup_configuration_policy_1.validateSetupConfiguration)(initial, { allowIncompleteApproval: true });
         if (defaultValidationErrors.length > 0) {
             throw new application_error_1.ApplicationError('configuration.invalid', `Invalid setup configuration:\n${defaultValidationErrors.map((error) => `- ${error}`).join('\n')}`);
         }
-        const context = {
+        let approvalDiscovery = request.mode === 'interactive' && initial.pullRequestApproval.mode !== 'off'
+            && request.remoteTarget && this.dependencies.approvalCheckDiscovery
+            ? await this.dependencies.approvalCheckDiscovery.discover(request.remoteTarget.owner, request.remoteTarget.repository, request.remoteTarget.token, initial.repository.developmentBranch).catch(() => ({ status: 'unavailable', candidates: [], truncated: false })) : undefined;
+        let projectDiscovery = request.mode === 'interactive'
+            && (request.permissionIntent?.projectsWanted !== false || request.revision?.group === 'projects')
+            && request.remoteTarget && this.dependencies.projectDiscovery
+            ? await this.dependencies.projectDiscovery.discover(request.remoteTarget.owner, remoteConfiguration?.ownerType ?? 'Unknown', request.remoteTarget.token).catch(() => ({ status: 'unavailable', candidates: [] })) : undefined;
+        let context = {
             ...(remoteConfiguration ? { remote: remoteConfiguration } : {}),
+            branchSources: { main: explicitMainBranch ? 'configuration' : remoteConfiguration?.defaultBranch ? 'github' : 'default',
+                development: request.overrides?.repository?.developmentBranch !== undefined ? 'configuration'
+                    : request.developmentBranchObservedLocally ? 'local' : 'default' },
             variableNames: (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(initial).map((variable) => variable.name),
             secretNames: (0, setup_configuration_policy_1.buildSetupCredentialRequirements)(initial).map((requirement) => requirement.name),
-            ...(request.permissionIntent ? { skipQuestionIds: request.permissionIntent.answeredQuestionIds } : {}),
+            ...(request.revision ? { skipQuestionIds: [...new Set([
+                        ...request.revision.answeredQuestionIds,
+                        ...basicSkippedQuestionIds,
+                    ])].filter(id => !(0, setup_questionnaire_policy_1.setupQuestionIdsForGroup)(request.revision.group).includes(id)),
+                projectsWanted: request.revision.group === 'projects' || Boolean(initial.projects.ids.trim()) } : {}),
+            ...(!request.revision ? { skipQuestionIds: [...new Set([
+                        ...(request.permissionIntent?.answeredQuestionIds ?? []),
+                        ...(request.permissionIntent?.projectsWanted === false ? ['projects.ids'] : []),
+                        ...basicSkippedQuestionIds,
+                    ])], ...(request.permissionIntent ? { projectsWanted: request.permissionIntent.projectsWanted } : {}) } : {}),
+            ...(approvalDiscovery ? { approvalCheckCandidates: approvalDiscovery.candidates,
+                approvalCheckDiscoveryStatus: approvalDiscovery.status,
+                approvalCheckDiscoveryTruncated: approvalDiscovery.truncated } : {}),
+            ...(projectDiscovery ? { projectDiscovery } : {}),
+            ...(request.remoteTarget ? { projectOwner: request.remoteTarget.owner } : {}),
+            discoveryRetryRemaining: { checks: approvalDiscovery ? 2 : 0,
+                projects: projectDiscovery && projectDiscovery.status !== 'unsupported' ? 2 : 0 },
+        };
+        const discoveryRefresh = {
+            refresh: async (kind) => {
+                const target = request.remoteTarget;
+                const remaining = context.discoveryRetryRemaining?.[kind] ?? 0;
+                if (!target || remaining <= 0)
+                    return undefined;
+                if (kind === 'checks') {
+                    if (!this.dependencies.approvalCheckDiscovery)
+                        return undefined;
+                    approvalDiscovery = await this.dependencies.approvalCheckDiscovery.discover(target.owner, target.repository, target.token, initial.repository.developmentBranch).catch(() => ({ status: 'unavailable', candidates: [], truncated: false }));
+                    context = { ...context, approvalCheckCandidates: approvalDiscovery.candidates,
+                        approvalCheckDiscoveryStatus: approvalDiscovery.status,
+                        approvalCheckDiscoveryTruncated: approvalDiscovery.truncated,
+                        discoveryRetryRemaining: { ...context.discoveryRetryRemaining, checks: remaining - 1 } };
+                }
+                else {
+                    if (!this.dependencies.projectDiscovery)
+                        return undefined;
+                    projectDiscovery = await this.dependencies.projectDiscovery.discover(target.owner, remoteConfiguration?.ownerType ?? 'Unknown', target.token).catch(() => ({ status: 'unavailable', candidates: [] }));
+                    context = { ...context, projectDiscovery,
+                        discoveryRetryRemaining: { ...context.discoveryRetryRemaining, projects: remaining - 1 } };
+                }
+                return context;
+            },
         };
         const questionnaire = request.mode === 'interactive'
-            ? await this.collectInteractive(initial, context)
+            ? await this.collectInteractive(initial, context, discoveryRefresh)
             : (0, setup_questionnaire_policy_1.createSetupReviewState)(initial);
         if (questionnaire.terminal === 'cancelled') {
             return {
@@ -56164,7 +57665,10 @@ class SetupWizardUseCase {
             // default must not outlive an explicit decision to disable PR automation.
             collectedConfiguration.pullRequestApproval = { ...collectedConfiguration.pullRequestApproval, mode: 'off' };
         }
-        const validationErrors = (0, setup_configuration_policy_1.validateSetupConfiguration)(collectedConfiguration, { allowIncompleteApproval: request.previewOnly === true });
+        const validationErrors = [
+            ...(0, setup_configuration_policy_1.validateSetupConfiguration)(collectedConfiguration, { allowIncompleteApproval: request.previewOnly === true }),
+            ...(0, setup_project_selection_policy_1.validateDiscoveredProjectStatuses)(collectedConfiguration, projectDiscovery),
+        ];
         if (validationErrors.length > 0) {
             throw new application_error_1.ApplicationError('configuration.invalid', `Invalid setup configuration:\n${validationErrors.map((error) => `- ${error}`).join('\n')}`);
         }
@@ -56261,9 +57765,30 @@ class SetupWizardUseCase {
             }
         }
         const plan = (0, setup_configuration_policy_1.buildSetupPlan)(configuration, readiness, approvalReadiness);
+        if (basicSkippedQuestionIds.length) {
+            const byGroup = new Map();
+            for (const item of (0, setup_questionnaire_policy_1.setupQuestionContentInventory)()) {
+                if (basicSkippedQuestionIds.includes(item.id) && !request.reviewedGroups?.includes(item.stateId)
+                    && request.revision?.group !== item.stateId)
+                    byGroup.set(item.stateId, (byGroup.get(item.stateId) ?? 0) + 1);
+            }
+            plan.presentationDefaults = [...byGroup].map(([group, count]) => ({ group, count }));
+        }
         this.dependencies.planPresenter.present(plan);
         const confirmation = (0, setup_questionnaire_policy_1.enterSetupConfirmation)(questionnaire);
         const decision = await this.dependencies.confirmation.confirm(plan);
+        if (decision.kind === 'revise') {
+            if (request.mode !== 'interactive')
+                throw new application_error_1.ApplicationError('configuration.invalid', 'Plan editing requires interactive setup.');
+            const answeredQuestionIds = [...new Set([
+                    ...(request.revision?.answeredQuestionIds ?? []),
+                    ...(request.permissionIntent?.answeredQuestionIds ?? []),
+                    ...(questionnaire.answeredQuestionIds ?? []),
+                ])];
+            return this.execute({ ...request, overrides: (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration), permissionIntent: undefined,
+                basicSkippedQuestionIds, reviewedGroups: [...new Set([...(request.reviewedGroups ?? []), decision.group])],
+                revision: { group: decision.group, answeredQuestionIds } });
+        }
         const completed = (0, setup_questionnaire_policy_1.finishSetupQuestionnaire)(confirmation, decision.kind === 'approved');
         if (completed.terminal === 'cancelled') {
             return {
@@ -56281,11 +57806,11 @@ class SetupWizardUseCase {
             ...(remoteConfiguration ? { remoteConfiguration } : {}),
         };
     }
-    collectInteractive(defaults, context) {
+    collectInteractive(defaults, context, discoveryRefresh) {
         if (!this.dependencies.collector) {
             throw new application_error_1.ApplicationError('configuration.invalid', 'Interactive setup requires a questionnaire collector.');
         }
-        return this.dependencies.collector.collect((0, setup_questionnaire_policy_1.createSetupQuestionnaire)(defaults, context), context);
+        return this.dependencies.collector.collect((0, setup_questionnaire_policy_1.createSetupQuestionnaire)(defaults, context), context, discoveryRefresh);
     }
 }
 exports.SetupWizardUseCase = SetupWizardUseCase;
@@ -65594,9 +67119,10 @@ const setup_credential_prompt_adapter_1 = __nccwpck_require__(93232);
 function registerDoctorCommand(program) {
     program
         .command('doctor')
-        .description('Verify Copilot workflows, Variables, Secrets, and setup PAT without changing repository configuration')
+        .description('Verify Copilot resources; use --read-only to avoid dispatching credential-health Actions')
         .option('-t, --token <token>', 'Setup PAT (or PERSONAL_ACCESS_TOKEN from the environment)')
         .option('--config <path>', 'YAML or JSON setup configuration used as the expected contract')
+        .option('--read-only', 'Inspect metadata and installed resources without dispatching credential-health Actions', false)
         .option('--non-interactive', 'Do not prompt; use --token or PERSONAL_ACCESS_TOKEN', false)
         .action(async (options) => {
         const terminal = options.nonInteractive ? undefined : (0, setup_terminal_driver_1.createInteractiveTerminalDriver)();
@@ -65624,6 +67150,7 @@ function registerDoctorCommand(program) {
                 repository: gitInfo.repo,
                 setupToken: token,
                 configuration: expected,
+                readOnly: Boolean(options.readOnly),
             });
             new setup_doctor_presenter_1.SetupDoctorPresenter(diagnosis.catalog).present(diagnosis.report);
             if (!diagnosis.report.healthy)
@@ -65866,6 +67393,8 @@ const setup_credentials_composition_root_1 = __nccwpck_require__(69084);
 const setup_doctor_composition_root_1 = __nccwpck_require__(56360);
 const setup_workspace_adapter_1 = __nccwpck_require__(5729);
 const setup_approval_readiness_adapter_1 = __nccwpck_require__(78572);
+const github_setup_approval_check_discovery_adapter_1 = __nccwpck_require__(42294);
+const github_setup_project_discovery_adapter_1 = __nccwpck_require__(29564);
 const application_error_1 = __nccwpck_require__(75999);
 const setup_terminal_driver_1 = __nccwpck_require__(5462);
 const setup_question_renderer_1 = __nccwpck_require__(89481);
@@ -65887,6 +67416,7 @@ const setup_apply_snapshot_1 = __nccwpck_require__(84136);
 const setup_session_guard_1 = __nccwpck_require__(53104);
 const web_setup_server_1 = __nccwpck_require__(63080);
 const web_setup_adapters_1 = __nccwpck_require__(60574);
+const setup_result_receipt_1 = __nccwpck_require__(44132);
 function registerSetupCommand(program) {
     program
         .command('setup')
@@ -65977,7 +67507,7 @@ function registerSetupCommand(program) {
             if (!options.nonInteractive) {
                 journey = new setup_journey_use_case_1.SetupJourneyUseCase(`${gitInfo.owner}/${gitInfo.repo}`, webBridge ? new web_setup_adapters_1.WebSetupJourneyPresenter(webBridge) : new setup_journey_presenter_1.ConsoleSetupJourneyPresenter());
                 if (webBridge) {
-                    const target = await webBridge.ask({ kind: 'confirm', title: 'Confirm this repository',
+                    const target = await webBridge.ask({ kind: 'confirm', title: 'Confirm this repository', copyId: 'repository.confirm', copyValues: { repository: `${gitInfo.owner}/${gitInfo.repo}`, branch: initialBranch ?? '' },
                         description: `This local checkout resolves to ${gitInfo.owner}/${gitInfo.repo} on branch ${initialBranch}. Confirm the target before configuring PAT access or files.`,
                         choices: ['Yes, this is my repository', 'Stop and choose another checkout'] });
                     if (target === undefined)
@@ -65990,10 +67520,23 @@ function registerSetupCommand(program) {
                 journey.advance('choices');
             }
             const overrides = (0, setup_command_options_1.loadSetupOverrides)(options);
+            let presentationMode = 'custom';
+            if (!options.nonInteractive && !options.dryRun) {
+                if (webBridge) {
+                    const depth = await webBridge.ask({ kind: 'choice', title: 'Choose setup detail', copyId: 'setup.depth',
+                        choices: ['Basic guided setup', 'Customize every setting'], defaultValue: 'Basic guided setup' });
+                    if (depth === undefined)
+                        throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
+                    presentationMode = depth === 'Basic guided setup' ? 'basic' : 'custom';
+                }
+                else if (credentialPrompt instanceof setup_credential_prompt_adapter_1.SetupCredentialPromptAdapter) {
+                    presentationMode = await credentialPrompt.chooseSetupPresentationMode();
+                }
+            }
             let setupPatPermissions = (0, setup_token_permission_policy_1.buildSetupPatPermissionRequirements)();
             let token = (0, setup_files_1.getSetupToken)(cwd, options.token);
             if (webBridge && token) {
-                const choice = await webBridge.ask({ kind: 'choice', title: 'An environment setup PAT is available',
+                const choice = await webBridge.ask({ kind: 'choice', title: 'An environment setup PAT is available', copyId: 'setup.environmentPat',
                     description: 'Its value stays in the CLI process and is never sent to this page. Exiting Copilot cannot unset your parent shell variable.',
                     choices: ['Use the environment PAT', 'Create or enter a different PAT'] });
                 if (choice === undefined)
@@ -66017,7 +67560,7 @@ function registerSetupCommand(program) {
                             .collect(initial, context),
                         chooseOwnerKind: () => credentialPrompt.chooseSetupOwnerKind(),
                         review: () => credentialPrompt.reviewSetupPatIntent(),
-                        showPreview: ({ draft, requirements, uncertain, ownerConflict, errors, pass }) => {
+                        showPreview: ({ draft, requirements, uncertain, ownerConflict, errors, pass, projectsWanted }) => {
                             if (ownerConflict)
                                 (0, logger_1.logInfo)('This plan selects organization storage or Projects, but the owner was declared a personal account. Revise the choices or use the manual PAT path.');
                             if (errors.length)
@@ -66026,8 +67569,14 @@ function registerSetupCommand(program) {
                                 (0, logger_1.logInfo)('Choice review complete. Returning to setup PAT permission review.');
                             (0, logger_1.logInfo)('Permission intent:');
                             (0, logger_1.logInfo)(`  Initial tag: ${draft.createInitialTag ? 'yes' : 'no'}; issue workflows: ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval: ${draft.pullRequestApproval.mode}`);
-                            (0, logger_1.logInfo)(`  Secrets: ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables: ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects: ${draft.projects.ids.trim() || 'none'}`);
-                            webBridge?.message(`Permission preview: issue workflows ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval ${draft.pullRequestApproval.mode}; Secrets ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects ${draft.projects.ids.trim() || 'none'}.`, 'info');
+                            (0, logger_1.logInfo)(`  Secrets: ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables: ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects: ${projectsWanted ? 'yes (choose exact Projects after PAT)' : 'none'}`);
+                            webBridge?.message(`Permission preview: issue workflows ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval ${draft.pullRequestApproval.mode}; Secrets ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects ${projectsWanted ? 'yes (choose after PAT)' : 'none'}.`, 'info', undefined, 'permission.preview', {
+                                issues: draft.features.issues ? draft.issueWorkflows.enabled.join('|') || 'none' : 'disabled',
+                                approval: draft.pullRequestApproval.mode,
+                                secrets: draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off',
+                                variables: draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off',
+                                projects: projectsWanted ? 'yes' : 'none',
+                            });
                             permissionPresenter.showRequirements('setup', requirements);
                             if (uncertain.length)
                                 (0, logger_1.logInfo)(`May need after GitHub inspection:\n${uncertain.map(item => `  - ${item}`).join('\n')}`);
@@ -66114,6 +67663,8 @@ function registerSetupCommand(program) {
                 remoteConfiguration: remoteConfigurationReader,
                 mergeQueueReadiness: (0, setup_doctor_composition_root_1.createSetupMergeQueueReadinessUseCase)(),
                 approvalReadiness: new setup_approval_readiness_adapter_1.GithubSetupApprovalReadinessAdapter(),
+                approvalCheckDiscovery: new github_setup_approval_check_discovery_adapter_1.GithubSetupApprovalCheckDiscoveryAdapter(),
+                projectDiscovery: new github_setup_project_discovery_adapter_1.GithubSetupProjectDiscoveryAdapter(),
             });
             const result = await wizard.execute({
                 mode: options.nonInteractive ? 'non-interactive' : 'interactive',
@@ -66122,6 +67673,8 @@ function registerSetupCommand(program) {
                 skipRepositoryVariables: Boolean(options.skipVariables),
                 skipRepositorySecrets: Boolean(options.skipSecrets),
                 previewOnly: Boolean(options.dryRun),
+                presentationMode,
+                developmentBranchObservedLocally: (0, cli_context_1.hasLocalOrTrackedGitBranch)(cwd, overrides.repository?.developmentBranch ?? 'develop'),
                 ...(token ? { remoteTarget: { owner: gitInfo.owner, repository: gitInfo.repo, token } } : {}),
             });
             if (result.status === 'cancelled') {
@@ -66135,6 +67688,7 @@ function registerSetupCommand(program) {
             }
             if (result.status === 'blocked') {
                 journey?.finish('blocked');
+                webBridge?.resultReason(result.reason === 'setup-permissions-unavailable' ? 'permissions' : 'storage');
                 (0, logger_1.logError)(new application_error_1.ApplicationError(result.reason === 'setup-permissions-unavailable' ? 'authorization.credential-invalid' : 'provider.unavailable', `${result.reason === 'setup-permissions-unavailable'
                     ? 'Setup is blocked by missing or unconfirmed PAT permissions:'
                     : 'Setup is blocked by unavailable remote storage:'}\n${result.errors.map(error => `- ${error}`).join('\n')}`));
@@ -66206,7 +67760,7 @@ function registerSetupCommand(program) {
                 }
                 const authorization = await new verify_web_setup_apply_use_case_1.VerifyWebSetupApplyUseCase({
                     confirm: async () => {
-                        const answer = await webBridge.ask({ kind: 'confirm', title: 'Apply this setup now?',
+                        const answer = await webBridge.ask({ kind: 'confirm', title: 'Apply this setup now?', copyId: 'apply.confirm',
                             description: 'This is the final approval. Local files and selected GitHub resources may change. A partial result may require inspection before retrying.',
                             choices: ['Apply setup', 'Stop without applying'] });
                         return answer === undefined ? undefined : answer === 'Apply setup' ? 'apply' : 'stop';
@@ -66243,17 +67797,33 @@ function registerSetupCommand(program) {
             journey?.markMutationStarted();
             setupApplyStarted = true;
             const actionResults = await (0, local_action_1.runLocalAction)(params);
+            webBridge?.effects((0, setup_result_receipt_1.setupResultEffects)(actionResults));
             if (actionResults.some(actionResult => !actionResult.success || actionResult.errors.length > 0)) {
+                const failure = (0, setup_result_receipt_1.setupActionResultFailure)(actionResults);
+                if (failure)
+                    webBridge?.resultReason(failure.reasonCode, failure.diagnosticRef);
                 journey?.finish('partial');
                 (0, logger_1.logInfo)('Setup reported failures or partial completion. If a bot PAT was supplied, its Secret may already have been written; inspect the result and GitHub Secret name/scope before retrying or revoking it.');
                 process.exitCode = 1;
             }
             else {
+                if (webBridge && token) {
+                    const doctorToken = token;
+                    webBridge.configureReadOnlyDoctor(async () => {
+                        const diagnosis = await (0, setup_doctor_composition_root_1.createSetupDoctorUseCase)().execute({ owner: gitInfo.owner,
+                            repository: gitInfo.repo, setupToken: doctorToken, configuration, readOnly: true });
+                        return { healthy: diagnosis.report.healthy, ...diagnosis.report.totals };
+                    });
+                }
                 journey?.finish('complete');
             }
         }
         catch (error) {
             journey?.finish(setupMutationStarted ? 'partial' : error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError ? 'cancelled' : 'blocked');
+            const normalizedError = error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError ? undefined
+                : (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Setup failed.');
+            webBridge?.resultReason(error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError ? 'cancelled'
+                : (0, setup_result_receipt_1.setupResultReason)(normalizedError.code), normalizedError?.correlationId);
             if (setupMutationStarted && !setupApplyStarted) {
                 (0, logger_1.logInfo)('A temporary credential-health workflow create was attempted before Apply. Inspect the selected branch and GitHub workflow history before retrying; a failed request may still have reached GitHub.');
             }
@@ -66280,7 +67850,7 @@ function registerSetupCommand(program) {
                 webBridge.finish(outcome, outcome === 'complete'
                     ? 'Setup completed. Delete the temporary setup PAT in GitHub; keep the bot PAT while its Secret is in use.'
                     : outcome === 'dry-run' ? 'Dry run complete. No files or GitHub resources changed.'
-                        : outcome === 'partial' ? 'Setup may be partial. Inspect GitHub resources and run copilot doctor before retrying.'
+                        : outcome === 'partial' ? 'Setup may be partial. Inspect GitHub resources and run copilot doctor --read-only before retrying.'
                             : 'No further setup changes will be applied. Any PAT already created in GitHub still exists until you delete it there.');
                 (0, logger_1.logInfo)('The local browser page shows the result. Choose “Close local session” there, or stop this command with Ctrl+C.');
                 await webServer.closed;
@@ -66939,6 +68509,7 @@ function containsCredentialMaterial(value, insideStorage = false) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DryRunSetupPlanConfirmation = exports.SetupPlanConfirmationAdapter = void 0;
 const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
 class SetupPlanConfirmationAdapter {
     constructor(terminal, assumeYes) {
         this.terminal = terminal;
@@ -66949,14 +68520,38 @@ class SetupPlanConfirmationAdapter {
             return { kind: 'approved' };
         if (!this.terminal)
             return { kind: 'declined' };
-        const target = plan.configuration.manageRepositoryVariables
-            ? 'the repository and GitHub Variables'
-            : 'the repository';
+        const target = plan.configuration.manageRepositoryVariables || plan.configuration.manageRepositorySecrets
+            ? 'repository files and selected GitHub Actions resources'
+            : 'repository files';
+        const groups = (0, setup_questionnaire_policy_1.setupEditableGroups)(plan.configuration);
         while (true) {
-            const result = await this.terminal.readText(`Apply this setup plan to ${target}? ${(0, setup_prompt_rendering_1.color)('[N]', 90)}: `);
+            const result = await this.terminal.readText(`Apply this setup plan to ${target}? Type ? for details or :edit to change an answer. ${(0, setup_prompt_rendering_1.color)('[N]', 90)}: `);
             if (result.kind !== 'value')
                 return { kind: 'cancelled' };
             const value = result.value.normalize('NFKC').trim().toLowerCase();
+            if (value === '?') {
+                console.log((0, setup_prompt_rendering_1.renderBox)([
+                    `This is the final approval. The plan lists ${plan.selectedFiles.length} file(s), ${plan.variables.length} Variable(s), and ${plan.requiredSecrets.length} Secret name(s).`,
+                    'Yes starts the listed local and GitHub setup writes. No leaves the plan unapplied.',
+                    'A failure after writes begin may leave partial changes; inspect the result and run copilot doctor --read-only before retrying.',
+                    'PATs created on GitHub are not deleted automatically if you decline or cancel.',
+                    'Read more: https://docs.page/vypdev/copilot/how-to-use',
+                ].join('\n'), 'Before applying setup'));
+                continue;
+            }
+            if (value === ':edit') {
+                console.log(groups.map((group, index) => `  ${index + 1}) ${(0, setup_questionnaire_policy_1.setupQuestionnaireStateLabel)(group)}`).join('\n'));
+                const selected = await this.terminal.readText('Choose a section number (empty returns to the plan): ');
+                if (selected.kind !== 'value')
+                    return { kind: 'cancelled' };
+                const index = Number(selected.value.trim()) - 1;
+                if (/^[1-9]\d*$/u.test(selected.value.trim()) && Number.isSafeInteger(index) && groups[index]) {
+                    return { kind: 'revise', group: groups[index] };
+                }
+                if (selected.value.trim())
+                    console.log((0, setup_prompt_rendering_1.color)('Choose one of the listed section numbers.', 33));
+                continue;
+            }
             if (!value || ['n', 'no', 'false', '0'].includes(value))
                 return { kind: 'declined' };
             if (['y', 'yes', 'true', '1'].includes(value))
@@ -66988,6 +68583,8 @@ const setup_token_permission_presenter_1 = __nccwpck_require__(63206);
 const setup_interaction_cancelled_error_1 = __nccwpck_require__(38313);
 /** @deprecated Use the presentation-neutral cancellation signal in new adapters. */
 exports.SetupTerminalCancelledError = setup_interaction_cancelled_error_1.SetupInteractionCancelledError;
+const AUTHENTICATION_GUIDE = 'https://docs.page/vypdev/copilot/authentication';
+const GITHUB_PAT_SETTINGS = 'https://github.com/settings/personal-access-tokens';
 class SetupCredentialPromptAdapter {
     constructor(terminal, credentialValues, confirmUnverifiableWritePermissions = false) {
         this.terminal = terminal;
@@ -66998,24 +68595,30 @@ class SetupCredentialPromptAdapter {
     }
     configureSetupPatGuide(url) { this.setupPatGuide = url; }
     get usedGuidedSetupPat() { return this.guidedSetup; }
+    async chooseSetupPresentationMode() {
+        if (!this.terminal)
+            return 'custom';
+        const choice = await this.readChoice('How much configuration detail would you like to review now?', ['Basic guided setup', 'Customize every setting'], 'Basic guided setup', 'Basic keeps every permission, security, branch-role, Projects, approval, and storage decision visible. It uses existing defaults for selected advanced agent, branch-prefix, and Bugbot settings. The final plan shows their consequences and lets you edit any section before Apply. Customize asks every applicable question. Neither path changes GitHub before your final approval.');
+        return choice === 'Basic guided setup' ? 'basic' : 'custom';
+    }
     async chooseSetupPatMethod() {
         if (!this.terminal)
             return 'manual';
         this.setupMethodChosen = true;
-        this.guidedSetup = (await this.readChoice('How would you like to provide the setup PAT?', ['guided link', 'manual PAT'], 'guided link')) === 'guided link';
+        this.guidedSetup = (await this.readChoice('How would you like to provide the setup PAT?', ['guided link', 'manual PAT'], 'guided link', `Guided opens GitHub's official fine-grained PAT form with proposed grants. Manual means you create the PAT yourself and enter it here. In either case GitHub handles account sign-in and 2FA; Copilot never revokes the token automatically.\nRead more: ${AUTHENTICATION_GUIDE}`)) === 'guided link';
         return this.guidedSetup ? 'guided' : 'manual';
     }
     useManualSetupPat() { this.guidedSetup = false; this.setupPatGuide = undefined; this.setupMethodChosen = true; }
     async chooseSetupOwnerKind() {
         if (!this.terminal)
             return 'unknown';
-        const choice = await this.readChoice('Is the GitHub repository owner an organization or a personal account?', ['organization', 'personal account', 'not sure']);
+        const choice = await this.readChoice('Is the GitHub repository owner an organization or a personal account?', ['organization', 'personal account', 'not sure'], undefined, `The owner is the name before / in owner/repository. Organization-owned repositories can require organization-level grants or SSO approval; a personal account cannot. Check the repository header on GitHub if unsure.\nRead more: ${AUTHENTICATION_GUIDE}`);
         return choice === 'organization' ? 'Organization' : choice === 'personal account' ? 'User' : 'unknown';
     }
     async reviewSetupPatIntent() {
         if (!this.terminal)
             return 'manual';
-        const choice = await this.readChoice('Review these intended grants before opening GitHub. What would you like to do?', ['continue to GitHub', 'review all setup choices again', 'view full permission table', 'enter a PAT manually']);
+        const choice = await this.readChoice('Review these intended grants before opening GitHub. What would you like to do?', ['continue to GitHub', 'review all setup choices again', 'view full permission table', 'enter a PAT manually'], undefined, `These grants are provisional: your choices and GitHub visibility determine the final least-privilege PAT permissions. Reviewing choices does not restart this setup run or apply changes.\nRead more: ${AUTHENTICATION_GUIDE}`);
         if (choice === 'review all setup choices again')
             return 'revise';
         if (choice === 'view full permission table')
@@ -67036,7 +68639,7 @@ class SetupCredentialPromptAdapter {
         if (!account || !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(account))
             return false;
         console.log(`GitHub authenticated the setup PAT as @${account}.`);
-        return (await this.readChoice('Is this the account you intended to configure with?', ['yes', 'no'], 'yes')) === 'yes';
+        return (await this.readChoice('Is this the account you intended to configure with?', ['yes', 'no'], 'yes', `Use the operator account that is authorized to configure this repository and organization. A different account's PAT may have different access even if the form looked correct. Select no to stop safely.\nRead more: ${AUTHENTICATION_GUIDE}`)) === 'yes';
     }
     showSetupPatCleanupReminder() {
         if (!this.guidedSetup || !this.setupPatGuide)
@@ -67058,7 +68661,7 @@ class SetupCredentialPromptAdapter {
         if (!this.terminal)
             return undefined;
         if (this.setupPatGuide && !this.setupMethodChosen) {
-            this.guidedSetup = (await this.readChoice('How would you like to provide the setup PAT?', ['guided link', 'manual PAT'], 'guided link')) === 'guided link';
+            this.guidedSetup = (await this.readChoice('How would you like to provide the setup PAT?', ['guided link', 'manual PAT'], 'guided link', `Guided opens GitHub's official form; manual uses a PAT you made yourself. Both are entered only into this local command.\nRead more: ${AUTHENTICATION_GUIDE}`)) === 'guided link';
             if (this.guidedSetup) {
                 console.log((0, setup_prompt_rendering_1.renderBox)('Provisional link: Open this GitHub link in your browser, sign in as the account configuring this repository, complete any 2FA or SSO, and review the prefilled fine-grained permissions. GitHub owns token creation; Copilot never handles your web session. Change All repositories to Only select repositories and select ONLY this repository. Remote inspection may require a corrected token later.', 'Create setup PAT in GitHub', 33));
                 console.log(this.setupPatGuide);
@@ -67071,6 +68674,7 @@ class SetupCredentialPromptAdapter {
             console.log('Copy the one-time token from GitHub and paste it below. It is hidden and used only for this setup run.');
         }
         console.log((0, setup_prompt_rendering_1.renderBox)('Enter a GitHub setup PAT. It is used in memory for this run only and is never stored. The workflow PAT is a different bot-account token and is requested separately.', 'Setup PAT', 33));
+        console.log(`PAT creation and cleanup: ${AUTHENTICATION_GUIDE}\nGitHub PAT settings: ${GITHUB_PAT_SETTINGS}`);
         return this.readSecret('Setup PAT');
     }
     async confirmUnverifiableTokenPermissions(report) {
@@ -67108,12 +68712,13 @@ class SetupCredentialPromptAdapter {
             return;
         console.log((0, setup_prompt_rendering_1.renderBox)('The workflow PAT is not the setup PAT. Runtime credentials are stored remotely as GitHub Actions Secrets. GitHub never reveals existing Secret values; health is checked through the repository workflow.', 'Workflow credentials', 33));
         console.log(`Credential options: ${requirements.map((requirement) => requirement.name).join(', ')}`);
+        console.log(`Why these credentials are separate: ${AUTHENTICATION_GUIDE}`);
     }
     async requestWorkflowPat(requirement, current) {
         if (this.terminal && !this.credentialValues[requirement.name]?.trim() && this.workflowPatGuide) {
             let choice;
             do {
-                choice = await this.readChoice('How would you like to provide the bot workflow PAT?', ['guided link', 'manual PAT', 'view full permission table'], 'guided link');
+                choice = await this.readChoice('How would you like to provide the bot workflow PAT?', ['guided link', 'manual PAT', 'view full permission table'], 'guided link', `Use a PAT from the dedicated bot account, not the operator setup PAT. Guided opens GitHub's form; manual keeps the permission table visible. The bot PAT is installed as an Actions Secret only after Apply.\nRead more: ${AUTHENTICATION_GUIDE}`);
                 if (choice === 'view full permission table' && this.workflowPatRequirements) {
                     console.log((0, setup_token_permission_presenter_1.renderSetupTokenPermissionRequirements)('workflow', this.workflowPatRequirements));
                 }
@@ -67136,10 +68741,14 @@ class SetupCredentialPromptAdapter {
     }
     async readBotLogin() {
         while (true) {
-            const result = await this.terminal.readText('Expected GitHub bot login (without @): ');
+            const result = await this.terminal.readText('Expected GitHub bot login (without @; type ? for help): ');
             if (result.kind !== 'value')
                 throw new exports.SetupTerminalCancelledError();
             const login = result.value.trim();
+            if (login === '?') {
+                console.log((0, setup_prompt_rendering_1.renderBox)(`Enter the exact GitHub username of the separate bot account, without @. Copilot resolves its numeric account ID and compares it with the PAT before any Secret is written. It does not sign in as the bot or store its web credentials.\nRead more: ${AUTHENTICATION_GUIDE}`, 'About the bot account'));
+                continue;
+            }
             if (/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(login))
                 return login;
             console.log((0, setup_prompt_rendering_1.color)('Enter a valid GitHub account login.', 33));
@@ -67154,7 +68763,7 @@ class SetupCredentialPromptAdapter {
         if (!this.terminal)
             return 'keep';
         console.log(`Existing ${requirement.name}: ${check.status}. ${check.message}`);
-        return this.readChoice(`How should Copilot handle the existing ${requirement.name}?`, ['keep', 'replace', 'skip'], check.status === 'valid' ? 'keep' : 'replace');
+        return this.readChoice(`How should Copilot handle the existing ${requirement.name}?`, ['keep', 'replace', 'skip'], check.status === 'valid' ? 'keep' : 'replace', `Keep retains the existing Secret; GitHub does not reveal its value for inspection. Replace asks for a new credential and may update the Secret after Apply. Skip leaves this optional credential unconfigured. Check the plan before approving writes.\nRead more: ${AUTHENTICATION_GUIDE}`);
     }
     showCredentialChecks(checks) {
         if (checks.length === 0)
@@ -67178,16 +68787,21 @@ class SetupCredentialPromptAdapter {
             throw new exports.SetupTerminalCancelledError();
         return result.value.trim();
     }
-    async readChoice(label, choices, defaultValue) {
+    async readChoice(label, choices, defaultValue, help) {
         while (true) {
             const lines = choices.map((choice, index) => `  ${index + 1}) ${choice}${choice === defaultValue ? (0, setup_prompt_rendering_1.color)(' (default)', 90) : ''}`);
             const result = await this.terminal.readText([
                 label,
                 ...lines,
+                ...(help ? ['Type ? for more detail without selecting an answer.'] : []),
                 `Select 1-${choices.length}${defaultValue ? ` ${(0, setup_prompt_rendering_1.color)(`[${choices.indexOf(defaultValue) + 1}]`, 90)}` : ''}: `,
             ].join('\n'));
             if (result.kind !== 'value')
                 throw new exports.SetupTerminalCancelledError();
+            if (result.value.trim() === '?' && help) {
+                console.log((0, setup_prompt_rendering_1.renderBox)(help, 'About this credential choice'));
+                continue;
+            }
             if (!result.value.trim() && defaultValue)
                 return defaultValue;
             const index = Number(result.value) - 1;
@@ -67369,6 +68983,8 @@ function renderSetupPlan(plan) {
         `  Outcome: ${approval.mode === 'off' ? 'disabled' : approval.mode === 'recommend' ? 'recommendation only' : 'eligible PRs may be approved after default-branch installation and live evidence'}`,
         '  Native approval still requires readable stale-dismissal rules and a distinct runtime PAT bot.', '',
         (0, setup_prompt_rendering_1.color)('Repository changes', 36),
+        `  Production/development branches: ${plan.configuration.repository.mainBranch} / ${plan.configuration.repository.developmentBranch}`,
+        `  Projects: ${plan.configuration.projects.ids || '(none)'}`,
         `  Files selected: ${plan.selectedFiles.length}`,
         `  Variables to upsert: ${plan.configuration.manageRepositoryVariables ? plan.variables.length : 0}`,
         `  Secret options to validate/provision: ${plan.configuration.manageRepositorySecrets ? plan.credentialRequirements.length : 0}`,
@@ -67376,6 +68992,8 @@ function renderSetupPlan(plan) {
         `  Secret storage: ${storageLabel(plan.configuration.storage.secrets)}`,
         '  Labels and issue types: always checked by Copilot setup',
         `  Initial tag: ${plan.configuration.createInitialTag ? 'v1.0.0 when no version tag exists' : 'disabled'}`, '',
+        ...(plan.presentationDefaults?.length ? [(0, setup_prompt_rendering_1.color)('Advanced defaults retained in basic setup', 36),
+            ...plan.presentationDefaults.map(item => `  ${item.group}: ${item.count} settings not asked; use :edit at plan confirmation to review or change.`), ''] : []),
         ...(plan.mergeQueueReadiness.length > 0 ? [
             (0, setup_prompt_rendering_1.color)('Merge queue readiness', 36),
             ...plan.mergeQueueReadiness.map((check) => `  ${(0, setup_prompt_rendering_1.doctorIcon)(check.status)} ${check.id}: ${check.summary}`),
@@ -67554,6 +69172,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ConsoleSetupQuestionRenderer = void 0;
 const setup_prompt_rendering_1 = __nccwpck_require__(83434);
 const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
+const setup_question_guidance_policy_1 = __nccwpck_require__(42775);
 class ConsoleSetupQuestionRenderer {
     constructor(phase = 'full', choiceReviewPass = 1) {
         this.phase = phase;
@@ -67581,27 +69200,65 @@ class ConsoleSetupQuestionRenderer {
     showState(stateId) {
         console.log((0, setup_prompt_rendering_1.color)(`\n${(0, setup_questionnaire_policy_1.setupQuestionnaireStateLabel)(stateId)}\n`, 36));
     }
-    renderPrompt(question) {
+    renderPrompt(question, progress) {
+        const help = (0, setup_question_guidance_policy_1.setupQuestionPresentation)(question).en;
+        const step = progress ? `${(0, setup_questionnaire_policy_1.setupQuestionnaireStateLabel)(progress.group)} — question ${progress.groupPosition} of ${progress.groupTotal} (overall ${progress.position} of ${progress.total}).\n` : '';
+        const source = question.suggestionSource === 'github' ? ' (observed from authenticated GitHub repository metadata)'
+            : question.suggestionSource === 'local' ? ' (observed in this local checkout; confirm it exists on GitHub)'
+                : question.suggestionSource === 'configuration' ? ' (provided by your configuration)'
+                    : question.suggestionSource === 'default' ? ' (product default; not verified against GitHub)' : '';
+        const heading = `${step}${question.label}\n  ${help.summary}\n  Suggested: ${formatDefault(question.defaultValue)}${source}. ${help.documentation.title}: ${help.documentation.url}\n  Type ? for detailed help; type :back to return to the previous question without clearing saved answers.${discoveryNote(question)}`;
+        const reviewedStatuses = question.projectStatusValues?.map(item => `  ${item.transition}: ${item.value}`).join('\n');
         const fallback = formatDefault(question.defaultValue);
         if (question.kind === 'choice') {
             const choices = question.choices ?? [];
-            const lines = choices.map((choice, index) => `  ${index + 1}) ${choice}${choice === question.defaultValue ? (0, setup_prompt_rendering_1.color)(' (default)', 90) : ''}`);
-            return [question.label, ...lines, `Select 1-${choices.length} ${(0, setup_prompt_rendering_1.color)(`[${choices.indexOf(String(question.defaultValue)) + 1}]`, 90)}: `].join('\n');
+            const lines = choices.map((choice, index) => `  ${index + 1}) ${choice}${question.id === 'pullRequestApproval.coverage.checkName'
+                ? (() => {
+                    const producer = question.trustedProducers?.find(item => item.name === choice);
+                    return producer ? ` — ${producer.workflowName} · App ${producer.sourceAppId}` : '';
+                })() : ''}${choice === question.defaultValue ? (0, setup_prompt_rendering_1.color)(' (default)', 90) : ''}`);
+            return [heading, ...lines, `Select 1-${choices.length} ${(0, setup_prompt_rendering_1.color)(`[${choices.indexOf(String(question.defaultValue)) + 1}]`, 90)}: `].join('\n');
         }
         if (question.kind === 'multi-select') {
-            const selected = new Set(formatDefault(question.defaultValue).split(',').map(item => item.trim()).filter(Boolean));
-            const choices = question.choices ?? [];
-            const lines = choices.map((choice, index) => {
-                const workflowId = choice === 'All' ? 'all' : choice.split(' — ')[0];
-                const checked = selected.has('all') || selected.has(workflowId) ? '●' : '○';
-                return `  ${checked} ${index === 0 ? 'All' : choice}`;
-            });
-            return [question.label, ...lines, 'Use ↑/↓ and Space to toggle; Enter to confirm.'].join('\n');
+            return [heading, 'Use ↑/↓ and Space to toggle; Enter to confirm. Press ? for help or B for the previous question.'].join('\n');
+        }
+        if (question.kind === 'producer-select') {
+            const choices = question.producerCandidates ?? [];
+            const lines = choices.map((candidate, index) => `  ${index + 1}) ${candidate.name} · App ${candidate.sourceAppId} · ${candidate.workflowName} · ${candidate.conclusion} · ${candidate.headSha.slice(0, 7)} · ${candidate.observedAt ?? 'date unavailable'}\n     ${candidate.runUrl}\n     ${candidate.requiredByRuleset ? `Required on ${candidate.requiredByRuleset.branch} by active ruleset: ${candidate.requiredByRuleset.sourceUrl}` : 'Required by branch rule: not checked'}`);
+            return [heading, ...lines, 'Enter check numbers separated by commas (for example 1,2), or exact name|App ID|workflow tuples separated by semicolons.',
+                'A listed ruleset proves only the exact required check/App pair on that target branch. "Not checked" is not evidence that the check is optional; inspect branch protection too.',
+                'A suggested check is not proof of coverage. Inspect its workflow and required step before attesting.',
+                `  ${(0, setup_prompt_rendering_1.color)(`[${fallback}]`, 90)}: `].join('\n');
+        }
+        if (question.kind === 'project-select') {
+            return [heading,
+                'Use ↑/↓ and Space to choose Projects; B returns to the previous question. Their numbers come from the GitHub URL, not PVT_ node IDs.',
+                'Select "Manual entry" if a Project is missing. Select "Retry" to query GitHub again without restarting setup.',
+                'All selected Projects must share each chosen Status value; this setup cannot map different values per Project.'].join('\n');
         }
         if (question.kind === 'scope-overrides' && question.allowedNames?.length) {
-            return `${question.label}\n  Available: ${question.allowedNames.join(', ')}; enter "none" to inherit all\n  ${(0, setup_prompt_rendering_1.color)(`[${fallback}]`, 90)}: `;
+            return `${heading}\n  Available: ${question.allowedNames.join(', ')}; enter "none" to inherit all\n  ${(0, setup_prompt_rendering_1.color)(`[${fallback}]`, 90)}: `;
         }
-        return `${question.label} ${(0, setup_prompt_rendering_1.color)(`[${fallback}]`, 90)}: `;
+        return `${heading}${reviewedStatuses ? `\n  Verify these exact Status values in every selected Project:\n${reviewedStatuses}` : ''}${question.statusOptionState === 'unavailable'
+            ? '\n  Status options could not be verified for every Project. Check the exact existing value in every selected Project before continuing.' : ''}${question.statusOptionState === 'incompatible'
+            ? '\n  Selected Projects have no common Status values. Return to Project selection and choose compatible Projects.' : ''}\n  ${(0, setup_prompt_rendering_1.color)(`[${fallback}]`, 90)}: `;
+    }
+    renderHelp(question) {
+        const help = (0, setup_question_guidance_policy_1.setupQuestionPresentation)(question).en;
+        return [
+            `What: ${help.summary}`,
+            `When: ${help.when}`,
+            `Where: ${help.where}`,
+            `How: ${help.how}`,
+            `Why: ${help.why}`,
+            `Example: ${help.example}`,
+            `Effect: ${help.effect}`,
+            `Verify: ${help.verify}`,
+            `Read more — ${help.documentation.title}: ${help.documentation.url}`,
+        ].join('\n');
+    }
+    showHelp(question) {
+        console.log((0, setup_prompt_rendering_1.renderBox)(this.renderHelp(question), 'About this setup choice'));
     }
     showValidation(message) {
         console.log((0, setup_prompt_rendering_1.color)(message, 33));
@@ -67615,6 +69272,100 @@ function formatDefault(value) {
     if (typeof value === 'boolean')
         return value ? 'Y' : 'N';
     return String(value) || 'none';
+}
+function discoveryNote(question) {
+    const status = question.discoveryStatus;
+    if (!status)
+        return '';
+    const check = {
+        observed: 'Recent CI jobs were found. Inspect the linked runs before trusting a producer.',
+        'no-recent-runs': 'No recent PR CI runs were found. Run normal CI or enter an exact producer manually.',
+        'no-verifiable-checks': 'Recent runs exist, but exact job/App identity could not be verified. Use manual entry after inspecting GitHub.',
+        'permission-denied': 'GitHub denied CI discovery. Give the setup PAT Actions: read and Checks: read, or enter a verified producer manually.',
+        unavailable: 'CI discovery failed; this does not mean there are no checks. Retry or use verified manual entry.',
+    };
+    const project = {
+        observed: 'Existing organization Projects are listed below. Inspect each GitHub URL before selecting it.',
+        empty: 'The bounded GitHub query returned no accessible Projects; this does not prove none exist. Check organization access or enter a verified number manually.',
+        'permission-denied': 'GitHub denied Project discovery. Check organization Projects: read on the setup PAT, or enter numbers manually.',
+        unavailable: 'Project discovery failed; this does not mean no Projects exist. Use a verified number or retry.',
+        unsupported: 'Fine-grained PATs cannot list personal Projects through this GitHub API. Use the number in an existing Project URL.',
+    };
+    const note = question.id === 'projects.ids' ? project[status] : check[status];
+    const sample = status === 'observed' || status === 'empty' || status === 'no-recent-runs' || status === 'no-verifiable-checks'
+        ? question.id === 'projects.ids'
+            ? '\n  Search scope: at most 30 accessible organization Projects from two pages; up to 100 fields per Project.'
+            : '\n  Search scope: up to 20 recent PR workflow runs; at most 15 runs and 100 checks per commit are inspected.'
+        : '';
+    return note ? `\n  ${note}${sample}${question.discoveryTruncated ? '\n  Only a bounded sample was inspected; use manual entry for missing items.' : ''}${question.discoveryRetryRemaining ? `\n  Type r to retry GitHub discovery (${question.discoveryRetryRemaining} read-only attempts left).` : ''}` : '';
+}
+
+
+/***/ }),
+
+/***/ 44132:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.setupResultReason = setupResultReason;
+exports.setupResultEffects = setupResultEffects;
+exports.setupActionResultFailure = setupActionResultFailure;
+const result_1 = __nccwpck_require__(73817);
+function setupResultReason(code) {
+    if (!code)
+        return 'unknown';
+    if (code.startsWith('authorization.'))
+        return 'permissions';
+    if (code.startsWith('configuration.') || code === 'validation.invalid-input')
+        return 'configuration';
+    if (code === 'provider.rate-limited')
+        return 'rate-limit';
+    if (code.startsWith('provider.') || code === 'timeout')
+        return 'provider';
+    return 'unknown';
+}
+/** Provider errors are never serialized; failed steps remain potentially applied. */
+function setupResultEffects(results) {
+    for (const result of results) {
+        const receipt = (0, result_1.getResultPayload)((0, result_1.getResultPayload)(result.payload)?.setupReceipt);
+        if (receipt?.version !== 1 || !Array.isArray(receipt.effects))
+            continue;
+        const parsed = receipt.effects.map(parseEffect);
+        if (parsed.length === EFFECT_IDS.length && parsed.every(Boolean)
+            && EFFECT_IDS.every(id => parsed.some(effect => effect?.id === id)))
+            return parsed;
+    }
+    return results.map((result, index) => ({
+        id: safeEffectId(result.id, index),
+        state: !result.success || result.errors.length > 0 ? 'needs-inspection'
+            : result.executed ? 'completed' : 'skipped',
+    }));
+}
+const EFFECT_IDS = ['files', 'secrets', 'labels', 'issue-types', 'variables', 'initial-tag'];
+const EFFECT_STATES = ['completed', 'skipped', 'needs-inspection', 'not-started'];
+const EFFECT_SCOPES = ['local', 'repository', 'organization', 'mixed'];
+function parseEffect(value) {
+    const effect = (0, result_1.getResultPayload)(value);
+    if (!effect || !EFFECT_IDS.includes(effect.id)
+        || !EFFECT_STATES.includes(effect.state)
+        || !EFFECT_SCOPES.includes(effect.scope))
+        return undefined;
+    return { id: effect.id, state: effect.state, scope: effect.scope };
+}
+function setupActionResultFailure(results) {
+    const first = results.flatMap(result => result.errors)[0];
+    if (!first)
+        return results.some(result => !result.success) ? { reasonCode: 'unknown' } : undefined;
+    if (typeof first !== 'object')
+        return { reasonCode: 'unknown' };
+    return { reasonCode: setupResultReason(first.code),
+        ...(first.correlationId ? { diagnosticRef: first.correlationId } : {}) };
+}
+function safeEffectId(value, index) {
+    return EFFECT_IDS.includes(value) ? value
+        : value === 'InitialSetupUseCase' ? 'setup-workflow' : `step-${index + 1}`;
 }
 
 
@@ -67820,7 +69571,7 @@ class NodeTerminalDriver {
             input.once('end', onEnd);
         });
     }
-    async readMultiSelect(prompt, choices, selected) {
+    async readMultiSelect(prompt, choices, selected, helpText) {
         if (this.closed)
             return { kind: 'end-of-input' };
         const input = node_process_1.stdin;
@@ -67880,6 +69631,16 @@ class NodeTerminalDriver {
                     if (character === '\u0004') {
                         finish({ kind: 'end-of-input' });
                         return;
+                    }
+                    if (character === 'b' || character === 'B') {
+                        finish({ kind: 'value', value: ':back' });
+                        return;
+                    }
+                    if (character === '?' && helpText) {
+                        node_process_1.stdout.write(`\n${helpText}\n\n`);
+                        rendered = false;
+                        render();
+                        continue;
                     }
                     if (character === ' ') {
                         const id = choices[index] === 'All' ? 'all' : choices[index].split(' — ')[0];
@@ -68094,7 +69855,9 @@ exports.SetupWorkflowUpdatePromptAdapter = SetupWorkflowUpdatePromptAdapter;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WebSetupCredentialPrompt = exports.WebSetupJourneyPresenter = exports.WebSetupPermissionPresenter = exports.WebSetupWorkflowUpdatePrompt = exports.WebSetupPlanConfirmation = exports.WebSetupPlanPresenter = exports.WebSetupQuestionnaireCollector = void 0;
+exports.validationCopy = validationCopy;
 const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
+const setup_question_guidance_policy_1 = __nccwpck_require__(42775);
 const setup_interaction_cancelled_error_1 = __nccwpck_require__(38313);
 const web_setup_bridge_1 = __nccwpck_require__(21518);
 class WebSetupQuestionnaireCollector {
@@ -68102,16 +69865,45 @@ class WebSetupQuestionnaireCollector {
         this.bridge = bridge;
         this.pass = pass;
     }
-    async collect(initial, context) {
+    async collect(initial, context, discoveryRefresh) {
         let state = initial;
+        let currentContext = context;
         while (state.terminal === 'collecting' && state.question) {
-            if (state.validation)
-                this.bridge.message(state.validation, 'warning');
+            if (state.validation) {
+                const copy = validationCopy(state.validation) ?? { id: 'validation.unknown' };
+                this.bridge.message(state.validation, 'warning', undefined, copy.id, copy.values);
+            }
             const value = await this.bridge.ask({
                 kind: 'question', title: (0, setup_questionnaire_policy_1.setupQuestionnaireStateLabel)(state.stateId),
-                question: state.question, phase: state.phase ?? 'full', pass: this.pass,
+                question: state.question, presentation: (0, setup_question_guidance_policy_1.setupQuestionPresentation)(state.question), phase: state.phase ?? 'full', pass: this.pass,
+                progress: (0, setup_questionnaire_policy_1.setupQuestionnaireProgress)(state, currentContext), canGoBack: ((0, setup_questionnaire_policy_1.setupQuestionnaireProgress)(state, currentContext)?.position ?? 1) > 1,
+            }, discoveryRefresh && state.question.discoveryRetryRemaining ? async () => {
+                const kind = state.question?.id === 'projects.ids' ? 'projects'
+                    : state.question?.id === 'pullRequestApproval.testChecks' ? 'checks' : undefined;
+                if (!kind)
+                    return undefined;
+                const refreshed = await discoveryRefresh.refresh(kind);
+                if (!refreshed)
+                    return undefined;
+                const refreshedState = (0, setup_questionnaire_policy_1.refreshSetupQuestionnaireQuestion)(state, refreshed);
+                return refreshedState.question ? { prompt: { kind: 'question',
+                        title: (0, setup_questionnaire_policy_1.setupQuestionnaireStateLabel)(refreshedState.stateId),
+                        question: refreshedState.question, presentation: (0, setup_question_guidance_policy_1.setupQuestionPresentation)(refreshedState.question),
+                        phase: refreshedState.phase ?? 'full', pass: this.pass,
+                        progress: (0, setup_questionnaire_policy_1.setupQuestionnaireProgress)(refreshedState, refreshed),
+                        canGoBack: ((0, setup_questionnaire_policy_1.setupQuestionnaireProgress)(refreshedState, refreshed)?.position ?? 1) > 1 },
+                    commit: () => { currentContext = refreshed; state = refreshedState; } } : undefined;
+            } : undefined, () => {
+                const previous = (0, setup_questionnaire_policy_1.transitionSetupQuestionnaire)(state, { kind: 'back' }, currentContext);
+                if (previous.question?.id === state.question?.id || !previous.question)
+                    return undefined;
+                return { prompt: { kind: 'question', title: (0, setup_questionnaire_policy_1.setupQuestionnaireStateLabel)(previous.stateId),
+                        question: previous.question, presentation: (0, setup_question_guidance_policy_1.setupQuestionPresentation)(previous.question),
+                        phase: previous.phase ?? 'full', pass: this.pass, progress: (0, setup_questionnaire_policy_1.setupQuestionnaireProgress)(previous, currentContext),
+                        canGoBack: ((0, setup_questionnaire_policy_1.setupQuestionnaireProgress)(previous, currentContext)?.position ?? 1) > 1 },
+                    commit: () => { state = previous; } };
             });
-            state = (0, setup_questionnaire_policy_1.transitionSetupQuestionnaire)(state, value === undefined ? { kind: 'cancel' } : { kind: 'answer', value }, context);
+            state = (0, setup_questionnaire_policy_1.transitionSetupQuestionnaire)(state, value === undefined ? { kind: 'cancel' } : { kind: 'answer', value }, currentContext);
         }
         return state;
     }
@@ -68122,7 +69914,7 @@ class WebSetupPlanPresenter {
         this.bridge = bridge;
     }
     present(plan) {
-        this.bridge.message(`Plan ready: ${plan.selectedFiles.length} files, ${plan.variables.length} Variables and ${plan.requiredSecrets.length} Secret names. Review it before continuing.`);
+        this.bridge.message(`Plan ready: ${plan.selectedFiles.length} files, ${plan.variables.length} Variables and ${plan.requiredSecrets.length} Secret names. Review it before continuing.`, 'info', undefined, 'plan.ready', { files: String(plan.selectedFiles.length), variables: String(plan.variables.length), secrets: String(plan.requiredSecrets.length) });
     }
 }
 exports.WebSetupPlanPresenter = WebSetupPlanPresenter;
@@ -68131,7 +69923,14 @@ class WebSetupPlanConfirmation {
         this.bridge = bridge;
     }
     async confirm(plan) {
-        const response = await this.bridge.ask({ kind: 'plan', title: 'Review your setup plan', plan: (0, web_setup_bridge_1.toWebSetupPlan)(plan) });
+        const groups = (0, setup_questionnaire_policy_1.setupEditableGroups)(plan.configuration);
+        const response = await this.bridge.ask({ kind: 'plan', title: 'Review your setup plan', copyId: 'plan.review', plan: (0, web_setup_bridge_1.toWebSetupPlan)(plan), editGroups: groups });
+        if (response?.startsWith('revise:')) {
+            const group = response.slice('revise:'.length);
+            if (groups.includes(group))
+                return { kind: 'revise', group };
+            throw new Error('Invalid setup section.');
+        }
         return { kind: response === undefined ? 'cancelled' : response === 'approve' ? 'approved' : 'declined' };
     }
 }
@@ -68150,6 +69949,7 @@ class WebSetupWorkflowUpdatePrompt {
             kind: 'confirm', title: 'Update existing workflows?',
             description: changed.map(item => `${item.destination} (${item.status})`).join('\n'),
             choices: ['Keep existing', 'Update setup-managed workflows'],
+            copyId: 'workflow.update', copyValues: { files: changed.map(item => item.destination).join(', ') },
         });
         if (answer === undefined)
             throw new setup_interaction_cancelled_error_1.SetupInteractionCancelledError();
@@ -68183,40 +69983,40 @@ class WebSetupCredentialPrompt {
     configureSetupPatGuide(url) { this.setupGuide = url; }
     useManualSetupPat() { this.guidedSetup = false; this.setupGuide = undefined; }
     async chooseSetupPatMethod() {
-        this.guidedSetup = await this.choice('How will you provide your setup PAT?', ['Guided GitHub link', 'Manual PAT']) === 'Guided GitHub link';
+        this.guidedSetup = await this.choice('How will you provide your setup PAT?', ['Guided GitHub link', 'Manual PAT'], undefined, 'setupPat.method') === 'Guided GitHub link';
         return this.guidedSetup ? 'guided' : 'manual';
     }
     async chooseSetupOwnerKind() {
-        const answer = await this.choice('What kind of GitHub account owns this repository?', ['Organization', 'Personal account', 'Not sure']);
+        const answer = await this.choice('What kind of GitHub account owns this repository?', ['Organization', 'Personal account', 'Not sure'], undefined, 'setupPat.ownerKind');
         return answer === 'Organization' ? 'Organization' : answer === 'Personal account' ? 'User' : 'unknown';
     }
     async reviewSetupPatIntent() {
-        const answer = await this.choice('Review these provisional setup PAT grants', ['Continue to GitHub', 'Review setup choices again', 'View full permission table', 'Enter a PAT manually']);
+        const answer = await this.choice('Review these provisional setup PAT grants', ['Continue to GitHub', 'Review setup choices again', 'View full permission table', 'Enter a PAT manually'], undefined, 'setupPat.review');
         return answer === 'Review setup choices again' ? 'revise' : answer === 'View full permission table' ? 'details'
             : answer === 'Enter a PAT manually' ? 'manual' : 'continue';
     }
     async requestSetupPat() {
-        return this.secret('Temporary setup PAT', 'Use the operator account in GitHub. Complete 2FA there, switch to Only select repositories, select this repository, and copy the generated token here. This token is for this run only; delete it in GitHub afterwards.', this.guidedSetup ? this.setupGuide : undefined);
+        return this.secret('Temporary setup PAT', 'Use the operator account in GitHub. Complete 2FA there, switch to Only select repositories, select this repository, and copy the generated token here. This token is for this run only; delete it in GitHub afterwards.', this.guidedSetup ? this.setupGuide : undefined, false, 'setupPat.entry');
     }
     async confirmGuidedSetupAccount(account) {
         if (!this.guidedSetup)
             return true;
         if (!account)
             return false;
-        return await this.choice(`GitHub authenticated the setup PAT as @${account}. Is that the intended operator account?`, ['Yes, continue', 'No, stop']) === 'Yes, continue';
+        return await this.choice(`GitHub authenticated the setup PAT as @${account}. Is that the intended operator account?`, ['Yes, continue', 'No, stop'], undefined, 'setupPat.confirmAccount', { account }) === 'Yes, continue';
     }
     showUpdatedSetupPatLink(url, stage, delta) {
-        this.bridge.message(`Setup PAT ${stage === 'final' ? 'permissions changed' : 'access failed'}. No setup mutation started. ${delta?.join(', ') ?? ''} Create a corrected PAT using the updated GitHub link.`, 'warning', url);
+        this.bridge.message(`Setup PAT ${stage === 'final' ? 'permissions changed' : 'access failed'}. No setup mutation started. ${delta?.join(', ') ?? ''} Create a corrected PAT using the updated GitHub link.`, 'warning', url, stage === 'final' ? 'setupPat.corrected.final' : 'setupPat.corrected.bootstrap', { grants: delta?.join(', ') ?? '' });
     }
     showSetupPatCleanupReminder() {
         if (this.guidedSetup)
-            this.bridge.message('Delete the temporary setup PAT in GitHub Settings after this run. Closing Copilot does not revoke it.', 'warning', 'https://github.com/settings/personal-access-tokens');
+            this.bridge.message('Delete the temporary setup PAT in GitHub Settings after this run. Closing Copilot does not revoke it.', 'warning', 'https://github.com/settings/personal-access-tokens', 'setupPat.cleanup');
     }
     async confirmUnverifiableTokenPermissions(report) {
         const writes = report.checks.filter(item => item.applicability === 'required' && item.level === 'write' && item.status === 'unverifiable');
         if (!report.confirmationRequired || writes.length === 0)
             return false;
-        return await this.choice('GitHub cannot safely prove these write grants without a mutation. Confirm they are configured exactly as shown.', ['No, stop', 'Yes, I checked them']) === 'Yes, I checked them';
+        return await this.choice('GitHub cannot safely prove these write grants without a mutation. Confirm they are configured exactly as shown.', ['No, stop', 'Yes, I checked them'], undefined, 'setupPat.confirmWrites') === 'Yes, I checked them';
     }
     configureWorkflowPatGuide(url, resolveIdentity, requirements) {
         this.workflowGuide = url;
@@ -68224,15 +70024,15 @@ class WebSetupCredentialPrompt {
         this.workflowRequirements = requirements;
     }
     explainCredentialSeparation(requirements) {
-        this.bridge.message(`The bot PAT is separate from your setup PAT. Runtime credentials (${requirements.map(item => item.name).join(', ')}) become GitHub Actions Secrets; existing Secret values cannot be read back. This browser flow will not dispatch or install a credential-health workflow before Apply. Re-enter an existing bot PAT so its grants can be audited.`, 'info');
+        this.bridge.message(`The bot PAT is separate from your setup PAT. Runtime credentials (${requirements.map(item => item.name).join(', ')}) become GitHub Actions Secrets; existing Secret values cannot be read back. This browser flow will not dispatch or install a credential-health workflow before Apply. Re-enter an existing bot PAT so its grants can be audited.`, 'info', undefined, 'botPat.separation', { names: requirements.map(item => item.name).join(', ') });
     }
     async requestWorkflowPat(requirement, current) {
         let guide;
         let botInfo = '';
         if (this.workflowGuide) {
-            const method = await this.choice('How will you provide the bot PAT?', ['Guided GitHub link', 'Manual PAT']);
+            const method = await this.choice('How will you provide the bot PAT?', ['Guided GitHub link', 'Manual PAT'], undefined, 'botPat.method');
             if (method === 'Guided GitHub link') {
-                const login = await this.text('Expected GitHub bot login', 'Enter the bot account login, without @. We will verify its numeric account ID against the token.');
+                const login = await this.text('Expected GitHub bot login', 'Enter the bot account login, without @. We will verify its numeric account ID against the token.', 'botPat.login');
                 if (!login || !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(login))
                     throw new Error('Enter a valid GitHub bot login.');
                 this.botIdentity = await this.resolveBot(login);
@@ -68242,42 +70042,77 @@ class WebSetupCredentialPrompt {
             else if (this.workflowRequirements)
                 this.bridge.requirements('workflow', this.workflowRequirements);
         }
-        const value = await this.secret(`${requirement.name} — bot account PAT`, `${botInfo}Use the bot account, select only the intended repository and review all grants. Suggested expiry is 90 days. ${current ? `Existing Secret: ${current.status}; its value cannot be read back.` : ''}`, guide);
+        const value = await this.secret(`${requirement.name} — bot account PAT`, `${botInfo}Use the bot account, select only the intended repository and review all grants. Suggested expiry is 90 days. ${current ? `Existing Secret: ${current.status}; its value cannot be read back.` : ''}`, guide, false, guide ? 'botPat.entry.guided' : 'botPat.entry.manual', { name: requirement.name, account: this.botIdentity?.login ?? '', accountId: String(this.botIdentity?.id ?? ''), existing: current?.status ?? '' });
         return value ? { name: requirement.name, value } : undefined;
     }
     async requestApiKey(requirement, current) {
-        const value = await this.secret(`${requirement.name} — ${requirement.provider ?? 'provider'} API key`, current?.message, undefined, Boolean(requirement.alternativeGroups?.length));
+        const value = await this.secret(`${requirement.name} — ${requirement.provider ?? 'provider'} API key`, current?.message, undefined, Boolean(requirement.alternativeGroups?.length), 'credential.apiKey', { name: requirement.name, provider: requirement.provider ?? 'provider' });
         return value ? { name: requirement.name, value } : undefined;
     }
     async chooseExistingCredential(requirement, check) {
-        const answer = await this.choice(`Existing ${requirement.name}: ${check.status}`, ['keep', 'replace', 'skip'], check.message);
+        const answer = await this.choice(`Existing ${requirement.name}: ${check.status}`, ['keep', 'replace', 'skip'], check.message, 'credential.existing', { name: requirement.name, status: check.status });
         return answer;
     }
     showCredentialChecks(checks) {
-        this.bridge.message(checks.map(item => `${item.name}: ${item.status} — ${item.message}`).join('\n'), checks.some(item => item.status === 'invalid') ? 'warning' : 'success');
+        this.bridge.message(checks.map(item => `${item.name}: ${item.status} — ${item.message}`).join('\n'), checks.some(item => item.status === 'invalid') ? 'warning' : 'success', undefined, 'credential.checks', { names: checks.map(item => item.name).join(', '), count: String(checks.length) }, checks.map(item => ({ name: item.name, status: item.status })));
     }
-    async choice(title, choices, description) {
-        const answer = await this.bridge.ask({ kind: 'choice', title, choices, description });
+    async choice(title, choices, description, copyId, copyValues) {
+        const answer = await this.bridge.ask({ kind: 'choice', title, choices, description, copyId, copyValues });
         if (answer === undefined)
             throw new setup_interaction_cancelled_error_1.SetupInteractionCancelledError();
         if (!choices.includes(answer))
             throw new Error('Invalid setup choice.');
         return answer;
     }
-    async text(title, description) {
-        const answer = await this.bridge.ask({ kind: 'text', title, description });
+    async text(title, description, copyId) {
+        const answer = await this.bridge.ask({ kind: 'text', title, description, copyId });
         if (answer === undefined)
             throw new setup_interaction_cancelled_error_1.SetupInteractionCancelledError();
         return answer.trim();
     }
-    async secret(title, description, link, optional = false) {
-        const answer = await this.bridge.ask({ kind: 'secret', title, description, optional, link });
+    async secret(title, description, link, optional = false, copyId, copyValues) {
+        const answer = await this.bridge.ask({ kind: 'secret', title, description, optional, link, copyId, copyValues });
         if (answer === undefined)
             throw new setup_interaction_cancelled_error_1.SetupInteractionCancelledError();
         return answer.trim();
     }
 }
 exports.WebSetupCredentialPrompt = WebSetupCredentialPrompt;
+function validationCopy(message) {
+    const fixed = {
+        'Select 1–8 observed checks or enter exact name|App ID|workflow tuples.': 'validation.producers',
+        'Two trusted producers use the same check name. Coverage stores only one name; choose one producer or rename the CI jobs before continuing.': 'validation.duplicateNames',
+        'Open every selected Project in GitHub and confirm that all four exact Status values exist. Answer Yes after checking, or No to choose Projects again.': 'validation.projectStatusVerified',
+        'Status values were not confirmed. Choose compatible Projects, then review their Status options again.': 'validation.projectStatusRedo',
+        'Enter a non-negative whole number.': 'validation.number',
+        'Enter yes or no.': 'validation.boolean',
+        'Select one of the listed options.': 'validation.choice',
+        'This is the first question in this pass. Review it or cancel setup.': 'validation.firstQuestion',
+        'A trusted check was selected more than once.': 'validation.duplicateProducer',
+        'The saved Status value is not available in every selected Project. Choose a listed Status option.': 'validation.savedStatus',
+        'Selected Projects have no common Status option. Choose compatible Projects or configure them separately.': 'validation.projectIncompatible',
+        'Choose at most 10 Projects; separate numbers or URLs with commas.': 'validation.projectLimit',
+        'A Project URL needs a known repository owner; enter its positive number instead.': 'validation.projectOwnerNeeded',
+        'Enter a valid GitHub Project URL or positive Project number.': 'validation.projectUrl',
+        'Enter the positive Project number from its GitHub URL, not a PVT_ GraphQL ID.': 'validation.projectNumber',
+        'Project numbers must be positive integers at most 2147483647.': 'validation.projectNumberRange',
+    };
+    if (fixed[message])
+        return { id: fixed[message] };
+    const inherited = message.match(/^Unknown inherited resource name\(s\): (.+)\.$/u);
+    if (inherited)
+        return { id: 'validation.unknownResource', values: { names: inherited[1] } };
+    const workflows = message.match(/^Unknown issue workflow\(s\): (.+)\.$/u);
+    if (workflows)
+        return { id: 'validation.unknownWorkflow', values: { names: workflows[1] } };
+    const owner = message.match(/^Use a GitHub Project URL belonging to ([^,]+), without query parameters\.$/u);
+    if (owner)
+        return { id: 'validation.projectOwnerMismatch', values: { owner: owner[1] } };
+    const duplicate = message.match(/^Project ([1-9]\d*) was selected more than once\.$/u);
+    if (duplicate)
+        return { id: 'validation.projectDuplicate', values: { number: duplicate[1] } };
+    return undefined;
+}
 
 
 /***/ }),
@@ -68296,6 +70131,7 @@ class WebSetupBridge {
     constructor(repository) {
         this.revision = 0;
         this.subscribers = new Set();
+        this.doctorAttempts = 0;
         this.bootstrapped = false;
         this.view = { revision: 0, repository };
     }
@@ -68315,24 +70151,64 @@ class WebSetupBridge {
     }
     takeOver() {
         this.controller = (0, node_crypto_1.randomBytes)(32).toString('hex');
-        this.publish({ message: { tone: 'info', text: 'Control moved to this tab. The previous tab is now read-only.' } });
+        this.publish({ message: { tone: 'info', text: 'Control moved to this tab. The previous tab is now read-only.', copyId: 'session.controlMoved' } });
         return this.controller;
     }
     isController(capability) {
         return Boolean(this.controller && sameCapability(capability, this.controller));
     }
-    async ask(prompt) {
+    async ask(prompt, refresh, navigateBack) {
         if (this.pending || this.view.outcome)
             throw new Error('A setup decision is already pending or the session has ended.');
         const revision = this.revision + 1;
         this.publish({ prompt, promptRevision: revision });
-        return new Promise(resolve => { this.pending = { revision, resolve }; });
+        return new Promise(resolve => { this.pending = { revision, resolve, refresh, navigateBack }; });
+    }
+    back(revision) {
+        const pending = this.pending;
+        if (!pending || pending.revision !== revision || this.view.outcome)
+            return 'stale';
+        if (!pending.navigateBack || pending.refreshing)
+            return 'unavailable';
+        const result = pending.navigateBack();
+        if (!result)
+            return 'unavailable';
+        result.commit();
+        pending.revision = this.revision + 1;
+        this.publish({ prompt: result.prompt, promptRevision: pending.revision, message: undefined });
+        return 'updated';
+    }
+    async retryDiscovery(revision) {
+        const pending = this.pending;
+        if (!pending || pending.revision !== revision || this.view.outcome)
+            return 'stale';
+        if (!pending.refresh || pending.refreshing)
+            return 'unavailable';
+        const controller = this.controller;
+        pending.refreshing = true;
+        try {
+            const result = await pending.refresh();
+            if (this.pending !== pending || this.view.outcome || controller !== this.controller)
+                return 'stale';
+            if (!result)
+                return 'unavailable';
+            result.commit();
+            // Keep promptRevision stable so the browser retains unsent manual and checkbox input.
+            this.publish({ prompt: result.prompt });
+            return 'updated';
+        }
+        finally {
+            pending.refreshing = false;
+        }
     }
     answer(revision, value) {
-        if (!this.pending || this.pending.revision !== revision || this.view.outcome)
+        if (!this.pending || this.pending.revision !== revision || this.pending.refreshing || this.view.outcome)
             return false;
         const prompt = this.view.prompt;
         if (prompt && (prompt.kind === 'choice' || prompt.kind === 'confirm') && !prompt.choices.includes(value))
+            return false;
+        if (prompt?.kind === 'plan' && value !== 'approve' && value !== 'decline'
+            && !prompt.editGroups?.some(group => value === `revise:${group}`))
             return false;
         const pending = this.pending;
         this.pending = undefined;
@@ -68342,18 +70218,48 @@ class WebSetupBridge {
         return true;
     }
     wasAnswered(revision) { return this.lastAnsweredRevision === revision; }
+    configureReadOnlyDoctor(run) {
+        this.readOnlyDoctor = run;
+    }
+    async runReadOnlyDoctor() {
+        if (this.view.outcome !== 'complete' || !this.readOnlyDoctor)
+            return 'unavailable';
+        if (this.view.doctor?.status === 'running')
+            return 'busy';
+        if (this.view.doctor?.status === 'complete')
+            return 'complete';
+        if (this.doctorAttempts >= 2)
+            return 'unavailable';
+        this.doctorAttempts += 1;
+        this.publish({ doctor: { status: 'running' } });
+        try {
+            const summary = await this.readOnlyDoctor();
+            const counts = [summary.pass, summary.warn, summary.fail, summary.skipped];
+            if (counts.some(value => !Number.isSafeInteger(value) || value < 0))
+                throw new Error('Invalid doctor summary.');
+            this.publish({ doctor: { status: 'complete', healthy: summary.healthy === true,
+                    pass: summary.pass, warn: summary.warn, fail: summary.fail, skipped: summary.skipped } });
+            return 'complete';
+        }
+        catch {
+            this.publish({ doctor: { status: 'failed' } });
+            return 'failed';
+        }
+    }
     cancel() {
         if (this.view.journey?.mutationStarted || this.view.outcome)
             return false;
         const pending = this.pending;
         this.pending = undefined;
-        this.publish({ prompt: undefined, promptRevision: undefined, outcome: 'cancelled', message: { tone: 'warning', text: 'Setup cancelled before applying further changes. Any PAT created at GitHub still exists until you delete it there.' } });
+        this.publish({ prompt: undefined, promptRevision: undefined, outcome: 'cancelled', resultDetail: {
+                reasonCode: 'cancelled', stoppedStage: this.view.journey?.current ?? 'Preparation', mutationStarted: false,
+            }, message: { tone: 'warning', text: 'Setup cancelled before applying further changes. Any PAT created at GitHub still exists until you delete it there.', copyId: 'session.cancelled' } });
         pending?.resolve(undefined);
         return true;
     }
     setJourney(journey) { this.publish({ journey }); }
-    message(text, tone = 'info', link) {
-        this.publish({ message: { tone, text, ...(link ? { link } : {}) } });
+    message(text, tone = 'info', link, copyId, copyValues, credentialChecks) {
+        this.publish({ message: { tone, text, ...(link ? { link } : {}), copyId, copyValues, credentialChecks } });
     }
     requirements(role, requirements) {
         this.publish({ permissions: { role, requirements, report: undefined } });
@@ -68361,12 +70267,37 @@ class WebSetupBridge {
     report(report) {
         this.publish({ permissions: { role: report.role, requirements: this.view.permissions?.requirements, report } });
     }
+    resultReason(reasonCode, diagnosticRef) {
+        if (this.view.outcome)
+            return;
+        this.publish({ resultDetail: {
+                reasonCode,
+                stoppedStage: this.view.journey?.current ?? 'Preparation',
+                mutationStarted: this.view.journey?.mutationStarted === true,
+                ...(this.view.resultDetail?.effects ? { effects: this.view.resultDetail.effects } : {}),
+                ...(diagnosticRef && /^[0-9a-f-]{36}$/u.test(diagnosticRef) ? { diagnosticRef } : {}),
+            } });
+    }
+    effects(effects) {
+        if (this.view.outcome)
+            return;
+        this.publish({ resultDetail: { reasonCode: this.view.resultDetail?.reasonCode ?? 'unknown',
+                stoppedStage: this.view.journey?.current ?? 'Preparation',
+                mutationStarted: this.view.journey?.mutationStarted === true, effects,
+                ...(this.view.resultDetail?.diagnosticRef ? { diagnosticRef: this.view.resultDetail.diagnosticRef } : {}) } });
+    }
     finish(outcome, text) {
         if (this.view.outcome)
             return;
         this.pending?.resolve(undefined);
         this.pending = undefined;
-        this.publish({ prompt: undefined, promptRevision: undefined, outcome, message: { tone: outcome === 'complete' || outcome === 'dry-run' ? 'success' : 'warning', text } });
+        this.publish({ prompt: undefined, promptRevision: undefined, outcome, message: { tone: outcome === 'complete' || outcome === 'dry-run' ? 'success' : 'warning', text },
+            ...(this.view.resultDetail ? {} : { resultDetail: {
+                    reasonCode: outcome === 'cancelled' ? 'cancelled' : outcome === 'blocked' ? 'unknown' : 'unknown',
+                    stoppedStage: this.view.journey?.current ?? 'Preparation',
+                    mutationStarted: this.view.journey?.mutationStarted === true,
+                } }),
+        });
     }
     publish(change) {
         this.revision += 1;
@@ -68389,6 +70320,36 @@ function sameCapability(provided, expected) {
 }
 function toWebSetupPlan(plan) {
     return {
+        presentationDefaults: plan.presentationDefaults ?? [],
+        decisions: {
+            enabledCapabilities: Object.entries(plan.configuration.features).filter(([, enabled]) => enabled).map(([name]) => name),
+            agentRouting: Object.entries(plan.configuration.agents).map(([role, agent]) => ({ role,
+                provider: agent.provider, modelProvider: agent.modelProvider, model: agent.model })),
+            issueWorkflows: plan.configuration.features.issues ? plan.configuration.issueWorkflows.enabled : [],
+            productionBranch: plan.configuration.repository.mainBranch,
+            developmentBranch: plan.configuration.repository.developmentBranch,
+            approvalMode: plan.configuration.pullRequestApproval.mode,
+            trustedChecks: plan.configuration.pullRequestApproval.testChecks.map(check => ({ name: check.name,
+                sourceAppId: check.sourceAppId, workflowName: check.workflowName })),
+            producerAttested: plan.configuration.pullRequestApproval.producerAttested,
+            coverageMode: plan.configuration.pullRequestApproval.coverage.mode,
+            coverageCheck: plan.configuration.pullRequestApproval.coverage.checkName,
+            ...(plan.configuration.pullRequestApproval.coverage.mode === 'numeric' ? {
+                coverageMinimum: plan.configuration.pullRequestApproval.coverage.minDiffPercent,
+                coverageArtifactWorkflow: plan.configuration.pullRequestApproval.coverage.artifactWorkflowName,
+                coverageReporterAttested: plan.configuration.pullRequestApproval.coverage.reporterAttested,
+            } : {}),
+            projectNumbers: plan.configuration.projects.ids.split(',').filter(Boolean),
+            projectStatuses: [
+                { transition: 'issueCreated', value: plan.configuration.projects.issueCreatedColumn },
+                { transition: 'pullRequestCreated', value: plan.configuration.projects.pullRequestCreatedColumn },
+                { transition: 'issueInProgress', value: plan.configuration.projects.issueInProgressColumn },
+                { transition: 'pullRequestInProgress', value: plan.configuration.projects.pullRequestInProgressColumn },
+            ],
+            variableScope: plan.configuration.manageRepositoryVariables ? plan.configuration.storage.variables.defaultScope : 'disabled',
+            secretScope: plan.configuration.manageRepositorySecrets ? plan.configuration.storage.secrets.defaultScope : 'disabled',
+            initialTag: plan.configuration.createInitialTag,
+        },
         files: plan.selectedFiles,
         workflows: plan.workflowFiles,
         variables: plan.variables.map(variable => variable.name),
@@ -68446,6 +70407,7 @@ async function startWebSetupServer(bridge, assets = (0, node_path_1.join)(__dirn
             clearTimeout(idleTimer);
         idleTimer = setTimeout(() => {
             if (!bridge.snapshot().journey?.mutationStarted && !bridge.snapshot().outcome) {
+                bridge.resultReason('session-expired');
                 bridge.finish('blocked', 'This local setup session expired after 30 minutes without a decision. Start a new setup run; GitHub PATs are not revoked automatically.');
             }
         }, 30 * 60 * 1000);
@@ -68545,6 +70507,89 @@ async function startWebSetupServer(bridge, assets = (0, node_path_1.join)(__dirn
                     armIdle();
                 respond(response, accepted || duplicate ? 200 : 409, accepted || duplicate ? { accepted: true, ...(duplicate ? { duplicate: true } : {}) }
                     : { error: 'This question changed. Refresh the current state.' });
+                return;
+            }
+            if (request.method === 'POST' && request.url === '/api/retry-discovery') {
+                const capability = String(request.headers['x-setup-capability'] ?? '');
+                if (!bridge.isController(capability)) {
+                    respond(response, 403, { error: 'This tab is read-only.' });
+                    return;
+                }
+                if (request.headers['content-type'] !== 'application/json') {
+                    respond(response, 415, { error: 'JSON required.' });
+                    return;
+                }
+                const body = await readJson(request);
+                if (!Number.isSafeInteger(body.revision) || body.revision <= 0) {
+                    respond(response, 400, { error: 'Invalid question revision.' });
+                    return;
+                }
+                if (!bridge.isController(capability)) {
+                    respond(response, 403, { error: 'Control moved to another tab.' });
+                    return;
+                }
+                const result = await bridge.retryDiscovery(body.revision);
+                if (!bridge.isController(capability)) {
+                    respond(response, 403, { error: 'Control moved to another tab.' });
+                    return;
+                }
+                if (result === 'updated')
+                    armIdle();
+                respond(response, result === 'updated' ? 200 : 409, result === 'updated'
+                    ? { updated: true } : { error: result === 'stale' ? 'This question changed. Refresh the current state.'
+                        : 'Discovery cannot be retried here. Use the manual option.' });
+                return;
+            }
+            if (request.method === 'POST' && request.url === '/api/back') {
+                const capability = String(request.headers['x-setup-capability'] ?? '');
+                if (!bridge.isController(capability)) {
+                    respond(response, 403, { error: 'This tab is read-only.' });
+                    return;
+                }
+                if (request.headers['content-type'] !== 'application/json') {
+                    respond(response, 415, { error: 'JSON required.' });
+                    return;
+                }
+                const body = await readJson(request);
+                if (!Number.isSafeInteger(body.revision) || body.revision <= 0) {
+                    respond(response, 400, { error: 'Invalid question revision.' });
+                    return;
+                }
+                if (!bridge.isController(capability)) {
+                    respond(response, 403, { error: 'Control moved to another tab.' });
+                    return;
+                }
+                const result = bridge.back(body.revision);
+                if (result === 'updated')
+                    armIdle();
+                respond(response, result === 'updated' ? 200 : 409, result === 'updated'
+                    ? { updated: true } : { error: result === 'stale' ? 'This question changed. Refresh the current state.'
+                        : 'No earlier question is available here.' });
+                return;
+            }
+            if (request.method === 'POST' && request.url === '/api/doctor') {
+                const capability = String(request.headers['x-setup-capability'] ?? '');
+                if (!bridge.isController(capability)) {
+                    respond(response, 403, { error: 'This tab is read-only.' });
+                    return;
+                }
+                if (request.headers['content-type'] !== 'application/json') {
+                    respond(response, 415, { error: 'JSON required.' });
+                    return;
+                }
+                await readJson(request);
+                if (!bridge.isController(capability)) {
+                    respond(response, 403, { error: 'Control moved to another tab.' });
+                    return;
+                }
+                const result = await bridge.runReadOnlyDoctor();
+                if (!bridge.isController(capability)) {
+                    respond(response, 403, { error: 'Control moved to another tab.' });
+                    return;
+                }
+                respond(response, result === 'complete' ? 200 : 409, result === 'complete'
+                    ? { checked: true } : { error: result === 'failed' ? 'Read-only verification failed. Check the terminal.'
+                        : 'Read-only verification is unavailable or already running.' });
                 return;
             }
             if (request.method === 'POST' && request.url === '/api/cancel') {
@@ -68648,6 +70693,7 @@ async function startWebSetupServer(bridge, assets = (0, node_path_1.join)(__dirn
     armIdle();
     const hardTimer = setTimeout(() => {
         if (!bridge.snapshot().journey?.mutationStarted && !bridge.snapshot().outcome) {
+            bridge.resultReason('session-expired');
             bridge.finish('blocked', 'This local setup session reached its four-hour limit. Start a new run; no prior approval can be replayed.');
         }
     }, 4 * 60 * 60 * 1000);
@@ -68701,6 +70747,7 @@ exports.cleanCliArg = cleanCliArg;
 exports.getGitInfo = getGitInfo;
 exports.getCurrentBranch = getCurrentBranch;
 exports.getCurrentAttachedBranch = getCurrentAttachedBranch;
+exports.hasLocalOrTrackedGitBranch = hasLocalOrTrackedGitBranch;
 exports.getCurrentHeadSha = getCurrentHeadSha;
 exports.isInsideGitRepo = isInsideGitRepo;
 exports.getGitRepositoryRoot = getGitRepositoryRoot;
@@ -68744,6 +70791,19 @@ function getCurrentAttachedBranch(cwd) {
     catch {
         return undefined;
     }
+}
+/** Positive local evidence only; a missing ref says nothing about remote branches. */
+function hasLocalOrTrackedGitBranch(cwd, branch) {
+    if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$/u.test(branch) || branch.includes('..') || branch.endsWith('.lock'))
+        return false;
+    for (const ref of [`refs/heads/${branch}`, `refs/remotes/origin/${branch}`]) {
+        try {
+            (0, child_process_1.execFileSync)('git', ['show-ref', '--verify', '--quiet', ref], { cwd, stdio: 'pipe' });
+            return true;
+        }
+        catch { /* Try the other explicit ref. */ }
+    }
+    return false;
 }
 /** Returns the canonical object ID for the workspace revision being analyzed. */
 function getCurrentHeadSha() {
@@ -77225,6 +79285,7 @@ const github_error_policy_1 = __nccwpck_require__(58791);
 const credential_health_workflow_visibility_1 = __nccwpck_require__(57628);
 const tweetnacl_1 = __importDefault(__nccwpck_require__(24258));
 const node_crypto_1 = __nccwpck_require__(6005);
+const deployment_configuration_1 = __nccwpck_require__(22495);
 class GithubActionsResourceTransport {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -77260,6 +79321,8 @@ class GithubActionsResourceTransport {
         const credentialHealthWorkflow = await this.inspectDefaultCredentialHealthWorkflow(client, owner, repository);
         return {
             ownerType,
+            ...(typeof metadata.default_branch === 'string' && (0, deployment_configuration_1.isSafeBranchTree)(metadata.default_branch)
+                ? { defaultBranch: metadata.default_branch } : {}),
             repositoryId: metadata.id,
             repositoryVisibility,
             repositorySecrets: repositorySecretsResult.resources,
@@ -80537,6 +82600,7 @@ function validatePullRequestApprovalPolicy(value, allowIncomplete = false) {
     }
     else {
         const identities = new Set();
+        const names = new Set();
         for (const item of value.testChecks) {
             if (!isRecord(item)) {
                 errors.push('Each test check must be an object.');
@@ -80550,6 +82614,9 @@ function validatePullRequestApprovalPolicy(value, allowIncomplete = false) {
             if (identities.has(identity))
                 errors.push('Test checks cannot contain duplicate producer identities.');
             identities.add(identity);
+            if (value.mode !== 'off' && !allowIncomplete && names.has(String(item.name)))
+                errors.push('Trusted check names must be unique because coverage stores only a check name.');
+            names.add(String(item.name));
         }
     }
     if (typeof value.producerAttested !== 'boolean')
@@ -83758,6 +85825,274 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PROJECT_BOARD_ITEM_PAGE_LIMIT = void 0;
 // GitHub Projects currently permits up to 50,000 items per project.
 exports.PROJECT_BOARD_ITEM_PAGE_LIMIT = 500;
+
+
+/***/ }),
+
+/***/ 42294:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GithubSetupApprovalCheckDiscoveryAdapter = void 0;
+const github = __importStar(__nccwpck_require__(78227));
+/** Bounded, read-only GitHub evidence. Unavailable permissions yield no suggestions, never invented identities. */
+class GithubSetupApprovalCheckDiscoveryAdapter {
+    async discover(owner, repository, token, targetBranch) {
+        const octokit = github.getOctokit(token);
+        // Active rules need only Metadata: read. Only repository-owned rulesets
+        // get an exact, safe detail link; inherited rules remain unverified here.
+        let required = new Map();
+        if (targetBranch && /^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$/u.test(targetBranch)) {
+            try {
+                const response = await octokit.request('GET /repos/{owner}/{repo}/rules/branches/{branch}', {
+                    owner, repo: repository, branch: targetBranch, per_page: 100,
+                });
+                for (const rule of response.data) {
+                    if (rule.type !== 'required_status_checks' || rule.ruleset_source_type !== 'Repository'
+                        || rule.ruleset_source?.toLowerCase() !== `${owner}/${repository}`.toLowerCase()
+                        || !Number.isSafeInteger(rule.ruleset_id) || rule.ruleset_id <= 0)
+                        continue;
+                    for (const check of rule.parameters?.required_status_checks ?? []) {
+                        if (safeProducerName(check.context ?? '') && Number.isSafeInteger(check.integration_id) && check.integration_id > 0) {
+                            required.set(`${check.context}\u0000${check.integration_id}`, `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/rules/${rule.ruleset_id}`);
+                        }
+                    }
+                }
+            }
+            catch {
+                required = new Map();
+            }
+        }
+        let recent;
+        try {
+            recent = await octokit.rest.actions.listWorkflowRunsForRepo({ owner, repo: repository, event: 'pull_request', per_page: 20 });
+        }
+        catch (error) {
+            return { status: discoveryFailure(error), candidates: [] };
+        }
+        if (recent.data.workflow_runs.length === 0)
+            return { status: 'no-recent-runs', candidates: [] };
+        const candidates = new Map();
+        const checksByHead = new Map();
+        try {
+            for (const run of recent.data.workflow_runs.slice(0, 15)) {
+                const headSha = run.head_sha;
+                if (!/^[a-f0-9]{40}$/iu.test(headSha))
+                    continue;
+                if (!run.name || run.name.startsWith('Copilot -') || run.status !== 'completed')
+                    continue;
+                let checks = checksByHead.get(headSha);
+                if (!checks) {
+                    const response = await octokit.rest.checks.listForRef({ owner, repo: repository, ref: headSha, filter: 'all', per_page: 100 });
+                    checks = response.data.check_runs;
+                    checksByHead.set(headSha, checks);
+                }
+                const jobs = await octokit.rest.actions.listJobsForWorkflowRunAttempt({
+                    owner, repo: repository, run_id: run.id, attempt_number: run.run_attempt, per_page: 100,
+                });
+                for (const job of jobs.data.jobs) {
+                    const id = Number(job.check_run_url?.match(/\/check-runs\/(\d+)$/u)?.[1]);
+                    const check = checks.find(item => item.id === id && item.head_sha === run.head_sha);
+                    if (!check?.app?.id || !Number.isSafeInteger(check.app.id)
+                        || !safeProducerName(check.name) || !safeProducerName(run.name)
+                        || check.name === 'Copilot / Approval')
+                        continue;
+                    const identity = `${check.name}\u0000${check.app.id}\u0000${run.name}`;
+                    if (!candidates.has(identity))
+                        candidates.set(identity, {
+                            name: check.name, sourceAppId: check.app.id, workflowName: run.name,
+                            ...(check.app.name && safeProducerName(check.app.name) ? { sourceAppName: check.app.name } : {}),
+                            runUrl: `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/actions/runs/${run.id}`,
+                            headSha, conclusion: check.conclusion ?? 'unknown',
+                            ...(run.created_at && Number.isFinite(Date.parse(run.created_at)) ? { observedAt: run.created_at } : {}),
+                            ...(required.has(`${check.name}\u0000${check.app.id}`) ? { requiredByRuleset: {
+                                    branch: targetBranch, sourceUrl: required.get(`${check.name}\u0000${check.app.id}`),
+                                } } : {}),
+                        });
+                    if (candidates.size >= 30)
+                        return { status: 'observed', candidates: [...candidates.values()], truncated: true };
+                }
+            }
+        }
+        catch (error) {
+            return { status: discoveryFailure(error), candidates: [] };
+        }
+        return { status: candidates.size > 0 ? 'observed' : 'no-verifiable-checks', candidates: [...candidates.values()],
+            ...(recent.data.workflow_runs.length > 15 ? { truncated: true } : {}) };
+    }
+}
+exports.GithubSetupApprovalCheckDiscoveryAdapter = GithubSetupApprovalCheckDiscoveryAdapter;
+function discoveryFailure(error) {
+    const status = typeof error === 'object' && error !== null && 'status' in error ? Number(error.status) : undefined;
+    return status === 401 || status === 403 ? 'permission-denied' : 'unavailable';
+}
+function safeProducerName(value) {
+    return typeof value === 'string' && value.trim() === value && /^[^\p{Cc}\p{Cf}${}<>|;]{1,100}$/u.test(value);
+}
+
+
+/***/ }),
+
+/***/ 29564:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GithubSetupProjectDiscoveryAdapter = void 0;
+const github = __importStar(__nccwpck_require__(78227));
+/** Bounded, read-only organization Project inventory; personal fine-grained PATs cannot use GitHub's user REST listing. */
+class GithubSetupProjectDiscoveryAdapter {
+    async discover(owner, ownerType, token) {
+        if (ownerType === 'User')
+            return { status: 'unsupported', candidates: [] };
+        if (ownerType !== 'Organization')
+            return { status: 'unavailable', candidates: [] };
+        const octokit = github.getOctokit(token);
+        const candidates = [];
+        let after;
+        let truncated = false;
+        try {
+            for (let page = 0; page < 2; page += 1) {
+                const response = await octokit.request('GET /orgs/{org}/projectsV2', {
+                    org: owner, per_page: 50, ...(after ? { after } : {}),
+                });
+                for (const row of response.data) {
+                    if (!Number.isSafeInteger(row.number) || Number(row.number) < 1 || row.state === 'closed'
+                        || typeof row.title !== 'string' || !safeDisplayText(row.title))
+                        continue;
+                    const number = Number(row.number);
+                    candidates.push({ number, title: row.title, owner,
+                        url: `https://github.com/orgs/${encodeURIComponent(owner)}/projects/${number}` });
+                }
+                after = nextCursor(response.headers.link);
+                if (!after)
+                    break;
+                if (candidates.length >= 30) {
+                    truncated = true;
+                    break;
+                }
+                if (page === 1)
+                    truncated = true;
+            }
+        }
+        catch (error) {
+            return { status: discoveryFailure(error), candidates: [] };
+        }
+        const unique = [...new Map(candidates.map(candidate => [candidate.number, candidate])).values()];
+        if (unique.length > 30)
+            truncated = true;
+        const inspected = await Promise.all(unique.slice(0, 30).map(async (candidate) => {
+            try {
+                const response = await octokit.request('GET /orgs/{org}/projectsV2/{project_number}/fields', {
+                    org: owner, project_number: candidate.number, per_page: 100,
+                });
+                if (nextCursor(response.headers.link))
+                    return candidate;
+                const status = response.data.find(field => field.name === 'Status' && field.data_type === 'single_select');
+                const options = status?.options?.map(option => typeof option.name === 'string' ? option.name : option.name?.raw)
+                    .filter((name) => typeof name === 'string' && safeDisplayText(name));
+                return options?.length ? { ...candidate, statusOptions: [...new Set(options)] } : candidate;
+            }
+            catch {
+                return candidate;
+            }
+        }));
+        return { status: inspected.length ? 'observed' : 'empty', candidates: inspected, ...(truncated ? { truncated: true } : {}) };
+    }
+}
+exports.GithubSetupProjectDiscoveryAdapter = GithubSetupProjectDiscoveryAdapter;
+function nextCursor(link) {
+    if (typeof link !== 'string')
+        return undefined;
+    const next = link.split(',').find(part => /;\s*rel="next"/u.test(part));
+    const urlText = next?.match(/<([^>]+)>/u)?.[1];
+    if (!urlText)
+        return undefined;
+    try {
+        const url = new URL(urlText);
+        const cursor = url.searchParams.get('after');
+        return url.hostname === 'api.github.com' && cursor && cursor.length <= 200 ? cursor : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+function safeDisplayText(value) {
+    return value.trim() === value && value.length > 0 && value.length <= 120 && !/[\p{Cc}\p{Cf}<>]/u.test(value);
+}
+function discoveryFailure(error) {
+    const status = typeof error === 'object' && error !== null && 'status' in error ? Number(error.status) : undefined;
+    return status === 401 || status === 403 ? 'permission-denied' : 'unavailable';
+}
 
 
 /***/ }),

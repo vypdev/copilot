@@ -1,5 +1,9 @@
 import type { WebSetupPrompt } from '../../application/contracts/web_setup_view';
-import { safeGithubLink } from '../../../web/src/lib/githubLink';
+import { safeGithubLink, safeGithubRunLink, safeGithubProjectLink, safeGithubRulesetLink } from '../../../web/src/lib/githubLink';
+import { checkConclusionLabel } from '../../../web/src/i18n/checkEvidence';
+import { featureName } from '../../../web/src/i18n/featureNames';
+import { focusOnRevision } from '../../../web/src/lib/focusOnRevision';
+import { safeHelpLink } from '../../../web/src/lib/helpLink';
 import { initialQuestionAnswer, submittedQuestionAnswer, toggleSelection } from '../../../web/src/lib/questionAnswer';
 
 function question(kind: Extract<WebSetupPrompt, { kind: 'question' }>['question']['kind'], defaultValue: string): Extract<WebSetupPrompt, { kind: 'question' }> {
@@ -10,6 +14,38 @@ function question(kind: Extract<WebSetupPrompt, { kind: 'question' }>['question'
 }
 
 describe('web setup presentation helpers', () => {
+  test('focus follows a new prompt revision but not background status polls', async () => {
+    const focus = jest.fn();
+    const action = focusOnRevision({ isConnected: true, focus }, 1);
+    await Promise.resolve();
+    expect(focus).toHaveBeenCalledTimes(1);
+    action.update(1);
+    await Promise.resolve();
+    expect(focus).toHaveBeenCalledTimes(1);
+    action.update(2);
+    await Promise.resolve();
+    expect(focus).toHaveBeenCalledTimes(2);
+    action.update(3);
+    action.destroy();
+    await Promise.resolve();
+    expect(focus).toHaveBeenCalledTimes(2);
+  });
+  test('localizes observed check outcomes and feature names without inventing unknown outcomes', () => {
+    expect(checkConclusionLabel('success', 'es')).toBe('Correcto');
+    expect(checkConclusionLabel('future-state', 'fr')).toBe('Résultat inconnu');
+    expect(featureName('credentialHealth', 'pt')).toBe('Estado das credenciais');
+    expect(featureName('future-capability', 'en')).toBe('future-capability');
+  });
+
+  test.each([
+    ['https://github.com/acme/repo/rules/7', true],
+    ['https://github.com/acme/repo/rules/7?token=x', false],
+    ['https://evil.example/acme/repo/rules/7', false],
+    ['https://github.com/acme/repo/rules/0', false],
+    ['not-a-url', false],
+  ])('ruleset link allowlist %s: %s', (link, allowed) => {
+    expect(Boolean(safeGithubRulesetLink(link))).toBe(allowed);
+  });
   test('preselects matching multi-select defaults without selecting All', () => {
     expect(initialQuestionAnswer(question('multi-select', 'One,Two'))).toEqual({
       value: 'One,Two', selected: ['One — details', 'Two — details'],
@@ -46,6 +82,38 @@ describe('web setup presentation helpers', () => {
     expect(submittedQuestionAnswer(prompt, '', ['one'])).toBe('one');
   });
 
+  test('observed producer defaults select exact identities and can add a manual tuple', () => {
+    const prompt = { ...question('producer-select', 'Tests|12|CI'), question: {
+      ...question('producer-select', 'Tests|12|CI').question,
+      producerCandidates: [{ name: 'Tests', sourceAppId: 12, workflowName: 'CI',
+        runUrl: 'https://github.com/acme/repo/actions/runs/1', headSha: 'a'.repeat(40), conclusion: 'success' }],
+    } };
+    expect(initialQuestionAnswer(prompt)).toEqual({ value: '', selected: ['Tests|12|CI'] });
+    expect(submittedQuestionAnswer(prompt, 'Lint|12|CI; ', ['Tests|12|CI'])).toBe('Tests|12|CI;Lint|12|CI');
+    const unmatched = { ...prompt, question: { ...prompt.question, defaultValue: 'Other|13|CI' } };
+    expect(initialQuestionAnswer(unmatched)).toEqual({ value: '', selected: ['Other|13|CI'] });
+  });
+
+  test('Project defaults distinguish discovered checkboxes from manually entered numbers', () => {
+    const prompt = { ...question('project-select', '2,9'), question: {
+      ...question('project-select', '2,9').question, id: 'projects.ids',
+      projectCandidates: [{ number: 2, title: 'Roadmap', owner: 'acme', url: 'https://github.com/orgs/acme/projects/2' }],
+    } };
+    expect(initialQuestionAnswer(prompt)).toEqual({ selected: ['2'], value: '9' });
+    expect(submittedQuestionAnswer(prompt, '9', ['2'])).toBe('2,9');
+    expect(submittedQuestionAnswer(prompt, '', [])).toBe('none');
+  });
+
+  test.each([
+    ['https://github.com/orgs/acme/projects/2', true],
+    ['https://github.com/users/acme/projects/2', true],
+    ['https://github.com/orgs/acme/projects/2?token=x', false],
+    ['https://evil.example/orgs/acme/projects/2', false],
+    ['not-a-url', false],
+  ])('safe Project detail link %s: %s', (link, allowed) => {
+    expect(Boolean(safeGithubProjectLink(link))).toBe(allowed);
+  });
+
   test('All is mutually exclusive with individual choices', () => {
     expect(toggleSelection(['one'], 'All')).toEqual(['All']);
     expect(toggleSelection(['All'], 'one')).toEqual(['one']);
@@ -70,5 +138,37 @@ describe('web setup presentation helpers', () => {
     ['not-a-url', false],
   ])('allowlisted GitHub link %s: %s', (link, allowed) => {
     expect(Boolean(safeGithubLink(link))).toBe(allowed);
+  });
+
+  test.each([
+    ['https://github.com/acme/repo/actions/runs/42', true],
+    ['https://github.com/acme/repo/actions/runs/42?x=1', false],
+    ['https://github.com/acme/repo/actions/runs/42#secret', false],
+    ['https://evil.example/acme/repo/actions/runs/42', false],
+    ['https://github.com/acme/repo/settings/secrets', false],
+    ['https://github.com@evil.example/acme/repo/actions/runs/42', false],
+    ['javascript:alert(1)', false],
+    ['not-a-url', false],
+  ])('CI run link allowlist %s: %s', (link, allowed) => {
+    expect(Boolean(safeGithubRunLink(link))).toBe(allowed);
+  });
+
+  test.each([
+    ['https://docs.page/vypdev/copilot/agents/model-selection', true],
+    ['https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets', true],
+    ['https://docs.page/vypdev/copilot/pull-requests/guarded-approval#coverage', true],
+    ['https://docs.page/vypdev/copilot/agents/model-selection?token=secret', false],
+    ['https://docs.page.evil.example/vypdev/copilot/agents', false],
+    ['https://docs.page@evil.example/vypdev/copilot/agents', false],
+    ['http://docs.page/vypdev/copilot/agents', false],
+    ['https://docs.github.com/other/guide', false],
+    ['javascript:alert(1)', false],
+    ['not-a-url', false],
+  ])('documentation link allowlist %s: %s', (link, allowed) => {
+    expect(Boolean(safeHelpLink(link))).toBe(allowed);
+  });
+
+  test('absent documentation link remains absent', () => {
+    expect(safeHelpLink(undefined)).toBeUndefined();
   });
 });

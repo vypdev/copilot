@@ -8,9 +8,21 @@ import { canonicalizeLocaleTag } from '../../domain/locale';
 import { ISSUE_WORKFLOW_KINDS } from '../../domain/issue_workflow_profile';
 import { effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
 import { validatePullRequestApprovalPolicy } from '../../domain/pull_request_approval_policy';
+import { parseSetupProjectSelection } from './setup_project_selection_policy';
 
 export function validateSetupConfiguration(configuration: SetupConfiguration, options: { allowIncompleteApproval?: boolean } = {}): string[] {
     const errors: string[] = [];
+    const projectSelection = parseSetupProjectSelection(configuration.projects.ids);
+    if ('error' in projectSelection || projectSelection.value !== configuration.projects.ids) {
+        errors.push('Project IDs must be a comma-separated list of 1–10 distinct positive Project URL numbers; PVT_ node IDs are not accepted.');
+    }
+    if (configuration.projects.ids) {
+        for (const [name, value] of Object.entries(configuration.projects).filter(([name]) => name.endsWith('Column'))) {
+            if (typeof value !== 'string' || !value.trim() || value.length > 100 || /[\p{Cc}\p{Cf}]/u.test(value)) {
+                errors.push(`Project ${name} must name one existing single-line Status option (1–100 characters).`);
+            }
+        }
+    }
     errors.push(...validatePullRequestApprovalPolicy(configuration.pullRequestApproval, options.allowIncompleteApproval === true));
     if (configuration.actionInputs['pr-approval-policy'] !== undefined) {
         errors.push('pr-approval-policy cannot be overridden through actionInputs.');

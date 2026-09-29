@@ -304,7 +304,7 @@ function buildSetupWarnings(configuration: SetupConfiguration): string[] {
         warnings.push('Inactive issue closure is enabled; waiting issues are closed after the configured inactivity threshold and can be reopened with a new comment.');
     }
     if (configuration.projects.ids.trim()) {
-        warnings.push('Project IDs must be accessible to the PAT and use the expected project column names.');
+        warnings.push('Selected Project numbers must be accessible to the bot PAT, and all four configured Status values must exist in every selected Project.');
     }
     if (setupAgentTasksForFeatures(configuration).some(task => configuration.agents[task].provider === 'cursor')) {
         warnings.push('Cursor is an experimental runtime in Copilot and requires a compatible preinstalled CLI plus CURSOR_API_KEY; Copilot has no automatic Cursor installer.');

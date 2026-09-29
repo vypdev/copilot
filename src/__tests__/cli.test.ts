@@ -224,6 +224,10 @@ describe('CLI', () => {
   });
 
   describe('doctor', () => {
+    it('passes the read-only choice to diagnosis without dispatching health checks from the command', async () => {
+      await program.parseAsync(['node', 'cli', 'doctor', '--non-interactive', '--read-only', '--token', 'github_pat_doctor_test_token']);
+      expect(mockDoctorExecute).toHaveBeenCalledWith(expect.objectContaining({ readOnly: true }));
+    });
     it('presents the report with its resolved catalog and returns a failing exit code when unhealthy', async () => {
       const catalog = { locale: 'es-ES', message: jest.fn() };
       const report = { healthy: false, checks: [], totals: { pass: 0, warn: 0, fail: 1, skipped: 0 } };
@@ -501,6 +505,7 @@ describe('CLI', () => {
 
       const answerWebPrompt = async (prompt: WebSetupPrompt): Promise<string> => {
         if (prompt.title === 'Confirm this repository') return 'Yes, this is my repository';
+        if (prompt.title === 'Choose setup detail') return 'Basic guided setup';
         if (prompt.title === 'How will you provide your setup PAT?') return 'Manual PAT';
         if (prompt.title === 'Temporary setup PAT') return 'github_pat_web_setup_test_token';
         if (prompt.kind === 'plan') return 'approve';
@@ -1106,7 +1111,7 @@ describe('CLI', () => {
       const loadConfig = jest.spyOn(configFile, 'loadSetupConfigurationOverrides').mockReturnValue({
         createInitialTag: false,
         features: { issues: false, release: false, hotfix: false },
-        projects: { ids: 'PVT_example' },
+        projects: { ids: '42' },
       });
       const input = guidedTerminal(prompt => prompt.includes('repository owner an organization') ? '1' : undefined);
       const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
@@ -1117,7 +1122,7 @@ describe('CLI', () => {
           '--skip-variables', '--skip-secrets', '--pr-approval-mode', 'off']);
         expect(input.readText.mock.calls.some(([prompt]) => String(prompt).includes('repository owner an organization'))).toBe(true);
         expect(mockTokenPermissionInspect.mock.calls[0][0].requirements.filter((item: SetupTokenPermissionRequirement) => item.scope === 'organization'))
-          .toEqual([expect.objectContaining({ permission: 'Projects', level: 'write' })]);
+          .toEqual([expect.objectContaining({ permission: 'Projects', level: 'read' })]);
         expect(input.readSecret).toHaveBeenCalledWith('Setup PAT');
         expect(process.exitCode).toBe(1);
       } finally { loadConfig.mockRestore(); createTerminal.mockRestore(); }
@@ -1420,7 +1425,8 @@ describe('CLI', () => {
       });
       try {
         await program.parseAsync(['node', 'cli', 'setup']);
-        expect(terminal.readText).toHaveBeenCalledTimes(1);
+        expect(terminal.readText).toHaveBeenCalledTimes(2);
+        expect(terminal.readText).toHaveBeenCalledWith(expect.stringContaining('How much configuration detail'));
         expect(terminal.readSecret).toHaveBeenCalledWith('Setup PAT');
         expect(consoleLogSpy.mock.calls.flat().join('\n')).not.toContain('Revoke temporary setup PAT');
         expect(runLocalAction).not.toHaveBeenCalled();

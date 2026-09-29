@@ -1,5 +1,5 @@
 import { SetupQuestionnaireController } from '../setup_questionnaire_controller';
-import { createSetupQuestionnaire } from '../../../policies/setup_questionnaire_policy';
+import { createSetupQuestionnaire, setupQuestionContentInventory } from '../../../policies/setup_questionnaire_policy';
 import { createDefaultSetupConfiguration } from '../../../policies/setup_configuration_policy';
 import type { SetupQuestionRenderer, TerminalDriver, TerminalReadResult } from '../../../ports/setup_terminal_ports';
 
@@ -8,6 +8,8 @@ function renderer(): jest.Mocked<SetupQuestionRenderer> {
     showIntroduction: jest.fn(),
     showState: jest.fn(),
     renderPrompt: jest.fn((question) => `${question.id}: `),
+    renderHelp: jest.fn((question) => `Help for ${question.id}`),
+    showHelp: jest.fn(),
     showValidation: jest.fn(),
     showCancelled: jest.fn(),
   };
@@ -58,6 +60,17 @@ describe('SetupQuestionnaireController', () => {
     expect(input.readText.mock.calls[0][0]).toBe(input.readText.mock.calls[1][0]);
   });
 
+  it('shows question help and repeats the same unanswered question without mutating the draft', async () => {
+    const output = renderer();
+    const input = terminal([{ kind: 'value', value: '?' }, { kind: 'value', value: '' }]);
+    const initial = createSetupQuestionnaire(createDefaultSetupConfiguration());
+    const result = await new SetupQuestionnaireController(input, output).collect(initial, {});
+    expect(result.terminal).toBe('review');
+    expect(output.showHelp).toHaveBeenCalledWith(initial.question);
+    expect(input.readText.mock.calls[0][0]).toBe(input.readText.mock.calls[1][0]);
+    expect(initial.answeredQuestionIds).toBeUndefined();
+  });
+
   it.each([
     ['Ctrl-C', { kind: 'cancel' } as const],
     ['EOF', { kind: 'end-of-input' } as const],
@@ -82,5 +95,26 @@ describe('SetupQuestionnaireController', () => {
       {},
     )).rejects.toThrow('requires an interactive terminal');
     expect(input.readText).not.toHaveBeenCalled();
+  });
+
+  it('retries Project discovery in the CLI without advancing or replaying prior questions', async () => {
+    const context = { skipQuestionIds: setupQuestionContentInventory().map(item => item.id).filter(id => id !== 'projects.ids'),
+      projectOwner: 'owner', projectDiscovery: { status: 'unavailable' as const, candidates: [] },
+      discoveryRetryRemaining: { checks: 0, projects: 1 } };
+    const initial = createSetupQuestionnaire(createDefaultSetupConfiguration(), context);
+    expect(initial.question?.id).toBe('projects.ids');
+    const input = { ...terminal([]), readMultiSelect: jest.fn()
+      .mockResolvedValueOnce({ kind: 'value', value: 'retry' })
+      .mockResolvedValueOnce({ kind: 'value', value: 'none' }) };
+    const refresh = jest.fn(async () => ({ ...context,
+      projectDiscovery: { status: 'observed' as const, candidates: [{ number: 5, title: 'Roadmap', owner: 'owner',
+        url: 'https://github.com/orgs/owner/projects/5' }] },
+      discoveryRetryRemaining: { checks: 0, projects: 0 } }));
+    const result = await new SetupQuestionnaireController(input, renderer()).collect(initial, context, { refresh });
+    expect(result.terminal).toBe('review');
+    expect(result.draft.projects.ids).toBe('');
+    expect(refresh).toHaveBeenCalledWith('projects');
+    expect(input.readMultiSelect).toHaveBeenCalledTimes(2);
+    expect(input.readMultiSelect.mock.calls[1][1]).toEqual(expect.arrayContaining([expect.stringContaining('Roadmap')]));
   });
 });

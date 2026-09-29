@@ -4,6 +4,7 @@ import type {
   SetupQuestionnaireContext,
   SetupQuestionnaireState,
   SetupQuestionnaireStateId,
+  SetupQuestionnaireProgress,
 } from '../../domain/setup_questionnaire';
 
 export type TerminalReadResult =
@@ -16,7 +17,7 @@ export interface TerminalDriver {
   isInteractive(): boolean;
   readText(prompt: string): Promise<TerminalReadResult>;
   /** Optional raw-mode selector. Drivers without it fall back to text parsing. */
-  readMultiSelect?(prompt: string, choices: readonly string[], selected: readonly string[]): Promise<TerminalReadResult>;
+  readMultiSelect?(prompt: string, choices: readonly string[], selected: readonly string[], helpText?: string): Promise<TerminalReadResult>;
   readSecret(prompt: string): Promise<TerminalReadResult>;
   close(): void;
 }
@@ -24,7 +25,9 @@ export interface TerminalDriver {
 export interface SetupQuestionRenderer {
   showIntroduction(): void;
   showState(stateId: SetupQuestionnaireStateId): void;
-  renderPrompt(question: SetupQuestion): string;
+  renderPrompt(question: SetupQuestion, progress?: SetupQuestionnaireProgress): string;
+  renderHelp(question: SetupQuestion): string;
+  showHelp(question: SetupQuestion): void;
   showValidation(message: string): void;
   showCancelled(): void;
 }
@@ -33,7 +36,13 @@ export interface SetupConfigurationCollectorPort {
   collect(
     initial: SetupQuestionnaireState,
     context: SetupQuestionnaireContext,
+    discoveryRefresh?: SetupDiscoveryRefreshPort,
   ): Promise<SetupQuestionnaireState>;
+}
+
+/** Read-only, explicitly requested discovery; undefined means the retry budget is exhausted. */
+export interface SetupDiscoveryRefreshPort {
+  refresh(kind: 'checks' | 'projects'): Promise<SetupQuestionnaireContext | undefined>;
 }
 
 export interface SetupPlanPresenterPort {
@@ -45,5 +54,6 @@ export interface SetupPlanConfirmationPort {
     | { readonly kind: 'approved' }
     | { readonly kind: 'declined' }
     | { readonly kind: 'cancelled' }
+    | { readonly kind: 'revise'; readonly group: SetupQuestion['stateId'] }
   >;
 }

@@ -41,10 +41,11 @@ describe('setup token permission policy', () => {
         const requirements = buildSetupPatPermissionRequirements();
         expect(requirements.map(item => `${item.scope}:${item.permission}:${item.level}`)).toEqual([
             'repository:Metadata:read', 'repository:Contents:read', 'repository:Secrets:write',
-            'repository:Variables:write', 'repository:Issues:write', 'repository:Actions:write',
+            'repository:Variables:write', 'repository:Issues:write', 'repository:Actions:write', 'repository:Actions:read',
+            'repository:Checks:read',
             'repository:Administration:read', 'repository:Workflows:write',
             'organization:Secrets:write', 'organization:Variables:write',
-            'organization:Issue Types:write', 'organization:Projects:write',
+            'organization:Issue Types:write', 'organization:Projects:read',
         ]);
     });
 
@@ -58,6 +59,8 @@ describe('setup token permission policy', () => {
     it('keeps feature-dependent setup grants conditional with visible conditions', () => {
         const administration = buildSetupPatPermissionRequirements().find(item => item.permission === 'Administration');
         expect(administration).toMatchObject({ applicability: 'conditional', condition: expect.stringContaining('Release') });
+        const approvalRead = buildSetupPatPermissionRequirements().find(item => item.permission === 'Actions' && item.level === 'read');
+        expect(approvalRead).toMatchObject({ applicability: 'conditional', condition: 'Pull-request approval enabled' });
     });
 
     it('recomputes only repository setup mutations selected by the approved configuration', () => {
@@ -87,7 +90,7 @@ describe('setup token permission policy', () => {
             ...organization, ownerType: 'Unknown',
         }).map(item => `${item.scope}:${item.permission}:${item.level}`);
         expect(unknown).toEqual(expect.arrayContaining([
-            'organization:Secrets:write', 'organization:Issue Types:write', 'organization:Projects:write',
+            'organization:Secrets:write', 'organization:Issue Types:write', 'organization:Projects:read',
         ]));
         const personal = buildConfiguredSetupPatPermissionRequirements(configuration, {
             ...organization, ownerType: 'User',
@@ -148,7 +151,7 @@ describe('setup token permission policy', () => {
         expect(permissions).toEqual(expect.arrayContaining([
             'repository:Actions:write',
             'repository:Workflows:write',
-            'organization:Projects:write',
+            'organization:Projects:read',
         ]));
     });
 

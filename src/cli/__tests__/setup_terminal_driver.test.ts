@@ -145,6 +145,15 @@ describe('NodeTerminalDriver', () => {
     expect(mockStdin.setRawMode).toHaveBeenLastCalledWith(false);
   });
 
+  it('shows raw-mode help without losing the current multi-selection', async () => {
+    const pending = new NodeTerminalDriver().readMultiSelect(
+      'Issue workflows', ['All', 'feature — Feature', 'help — Help'], [], 'What: choose issue workflows',
+    );
+    mockInputHandlers.get('data')?.(Buffer.from('\u001b[B ?\n'));
+    await expect(pending).resolves.toEqual({ kind: 'value', value: 'feature' });
+    expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('What: choose issue workflows'));
+  });
+
   it.each([
     ['data', '\u0003', 'cancel'],
     ['data', '\u0004', 'end-of-input'],

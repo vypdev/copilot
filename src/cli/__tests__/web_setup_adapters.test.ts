@@ -48,7 +48,7 @@ describe('semantic web setup adapters', () => {
     const ask = jest.spyOn(bridge, 'ask').mockResolvedValueOnce(undefined);
     const initial = createSetupPermissionIntentQuestionnaire(buildInitialSetupConfiguration({ mode: 'interactive' }));
     const result = await new WebSetupQuestionnaireCollector(bridge).collect({ ...initial, phase: undefined }, {});
-    expect(ask).toHaveBeenCalledWith(expect.objectContaining({ phase: 'full', pass: 1 }));
+    expect(ask).toHaveBeenCalledWith(expect.objectContaining({ phase: 'full', pass: 1 }), undefined, expect.any(Function));
     expect(result.terminal).toBe('cancelled');
   });
 

@@ -1,5 +1,5 @@
 import { InitialSetupUseCase } from '../initial_setup_use_case';
-import { Result } from '../../../../data/model/result';
+import { Result, getResultPayload } from '../../../../data/model/result';
 import type { Execution } from '../../../../data/model/execution';
 import { createDefaultSetupConfiguration } from '../../../policies/setup_configuration_policy';
 import { projectInitialSetupContext } from '../../push_single_action_contexts';
@@ -140,6 +140,8 @@ describe('InitialSetupUseCase', () => {
       );
       expect(mockSetupHasValidToken).toHaveBeenCalledTimes(1);
       expect(mockSetupPrepare).not.toHaveBeenCalled();
+      expect(getResultPayload(getResultPayload(results[0].payload)?.setupReceipt)?.effects)
+        .toEqual(expect.arrayContaining([{ id: 'files', state: 'not-started', scope: 'local' }]));
     } finally {
       mockSetupHasValidToken.mockReturnValue(true);
     }
@@ -170,6 +172,26 @@ describe('InitialSetupUseCase', () => {
       param.labels,
     );
     expect(results[0].steps?.some((s) => s.includes('Issue types'))).toBe(true);
+    expect(getResultPayload(getResultPayload(results[0].payload)?.setupReceipt)?.effects).toEqual([
+      { id: 'files', state: 'completed', scope: 'local' },
+      { id: 'secrets', state: 'skipped', scope: 'repository' },
+      { id: 'labels', state: 'skipped', scope: 'repository' },
+      { id: 'issue-types', state: 'skipped', scope: 'repository' },
+      { id: 'variables', state: 'skipped', scope: 'repository' },
+      { id: 'initial-tag', state: 'skipped', scope: 'repository' },
+    ]);
+  });
+
+  it('marks a failed local write as needing inspection and later resources as not started', async () => {
+    mockSetupPrepare.mockImplementationOnce(() => { throw new Error('write may have happened'); });
+    const results = await useCase.invoke(baseParam());
+    const effects = getResultPayload(getResultPayload(results[0].payload)?.setupReceipt)?.effects;
+    expect(results[0].success).toBe(false);
+    expect(effects).toEqual(expect.arrayContaining([
+      { id: 'files', state: 'needs-inspection', scope: 'local' },
+      { id: 'secrets', state: 'not-started', scope: 'repository' },
+      { id: 'labels', state: 'not-started', scope: 'repository' },
+    ]));
   });
 
   it('creates default tag v1.0.0 when no version tags exist', async () => {
@@ -197,6 +219,9 @@ describe('InitialSetupUseCase', () => {
       expect.arrayContaining([{ name: 'AGENT_PROVIDER', value: 'codex' }]),
     );
     expect(results[0].steps).toContain('⏭️  Initial version tag creation disabled by setup configuration.');
+    expect(getResultPayload(getResultPayload(results[0].payload)?.setupReceipt)?.effects)
+      .toEqual(expect.arrayContaining([{ id: 'initial-tag', state: 'skipped', scope: 'repository' },
+        { id: 'variables', state: 'completed', scope: 'repository' }]));
   });
 
   it('provisions Variables at organization scope when the configuration selects it', async () => {

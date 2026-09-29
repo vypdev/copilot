@@ -302,10 +302,11 @@ Checks: 1 pass, 0 warn, 1 fail, 0 skipped.
 No repository configuration was changed.
 ```
 
-Doctor's composition contains query ports only: it never creates, updates, deletes, or overwrites repository configuration. The credential health query may dispatch the already-installed `copilot_credential_health.yml` workflow, which creates an Actions run but does not modify repository configuration or expose Secret values. Only setup owns the separate temporary health-workflow bootstrap capability.
+Doctor never creates, updates, deletes, or overwrites repository configuration. Plain `copilot doctor` may dispatch the already-installed `copilot_credential_health.yml` workflow, creating an Actions run to check otherwise unreadable Secret values. For metadata-only inspection without any Action dispatch, use `--read-only`; Secret values are then reported as unverified. Only setup owns the separate temporary health-workflow bootstrap capability.
 
 ```bash
 copilot doctor
+copilot doctor --read-only
 copilot doctor --token "$SETUP_PAT"
 copilot doctor --config .copilot-setup.yml --non-interactive
 ```

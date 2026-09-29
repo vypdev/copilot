@@ -86,6 +86,17 @@ describe('SetupDoctorUseCase', () => {
     expect(report.totals.fail).toBe(0);
   });
 
+  it('read-only mode never dispatches credential-health Actions and marks Secret values unverified', async () => {
+    const configuration = createDefaultSetupConfiguration();
+    const deps = dependencies(configuration);
+    const { report } = await new SetupDoctorUseCase(deps).execute({ ...request(configuration), readOnly: true });
+    expect(deps.remoteHealth.validateExisting).not.toHaveBeenCalled();
+    expect(deps.remoteConfiguration.inspect).toHaveBeenCalledTimes(1);
+    expect(report.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'credential.pat', status: 'warn', evidence: expect.objectContaining({ present: true }) }),
+    ]));
+  });
+
   it('uses repository locale for the whole report and reuses its catalog in merge readiness', async () => {
     const configuration = createDefaultSetupConfiguration();
     configuration.repository.repositoryLocale = 'es-ES';

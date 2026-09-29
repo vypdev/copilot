@@ -10,59 +10,76 @@
   import ResultPanel from './components/ResultPanel.svelte';
   import WaitingPanel from './components/WaitingPanel.svelte';
   import PairingPanel from './components/PairingPanel.svelte';
+  import { tr } from './i18n/catalog';
+  import { setupLocale } from './i18n/localeStore';
+  import { localizedMessage } from './i18n/messageCopy';
+  import { localizedSessionError } from './i18n/sessionErrors';
 
   const session = createSetupSession();
   onMount(() => {
+    const unsubscribe = setupLocale.subscribe(language => {
+      document.documentElement.lang = language;
+      document.documentElement.dir = 'ltr';
+      document.title = `Copilot · ${tr('studio', language)}`;
+    });
     const interval = window.setInterval(() => { if ($session.paired && !$session.view?.outcome) void session.refresh(); }, 900);
-    return () => window.clearInterval(interval);
+    return () => { window.clearInterval(interval); unsubscribe(); };
   });
 
   async function cancel(): Promise<void> {
-    if (window.confirm('Cancel this local setup session? PATs already created in GitHub will still exist.')) await session.cancel();
+    if (window.confirm(tr('cancelConfirm', $setupLocale))) await session.cancel();
   }
 
   async function submit(value: string): Promise<void> {
     const revision = $session.view?.promptRevision;
     if (revision !== undefined) await session.submit(revision, value);
   }
-</script>
 
-<svelte:head>
-  <meta name="description" content="A local, guided setup for Copilot. GitHub handles PAT creation; this page stays on your computer." />
-</svelte:head>
+  async function retryDiscovery(): Promise<void> {
+    const revision = $session.view?.promptRevision;
+    if (revision !== undefined) await session.retryDiscovery(revision);
+  }
+  async function back(): Promise<void> {
+    const revision = $session.view?.promptRevision;
+    if (revision !== undefined) await session.back(revision);
+  }
+</script>
 
 <div class="shell">
   <SetupSidebar journey={$session.view?.journey} />
   <main class="main">
     <SetupHeader repository={$session.view?.repository} />
     <div class="content">
+      {#if $setupLocale !== 'en'}
+        <StatusBanner tone="warning" title={tr('translationPreviewTitle', $setupLocale)} message={tr('translationPreviewBody', $setupLocale)} />
+      {/if}
       {#if $session.paired}<SetupIntro view={$session.view} />{/if}
       {#if $session.view?.journey?.choiceReviewPass && $session.view.journey.choiceReviewPass > 1 && !$session.view.outcome}
-        <div class="review-pass" role="status"><span aria-hidden="true">↺</span> Reviewing saved choices — pass {$session.view.journey.choiceReviewPass}. This is the same setup run, not a restart.</div>
+        <div class="review-pass" role="status"><span aria-hidden="true">↺</span> {tr('reviewPass', $setupLocale, { pass: String($session.view.journey.choiceReviewPass) })}</div>
       {/if}
       {#if !$session.controller && $session.view}
-        <StatusBanner tone="warning" title="Read-only tab" message="Another tab controls this session. Enter the pairing code from the launching terminal to take over." />
+        <StatusBanner tone="warning" title={tr('readOnly', $setupLocale)} message={tr('readOnlyBody', $setupLocale)} />
         <PairingPanel mode="takeover" busy={$session.busy} onPair={session.takeOver} />
       {/if}
-      {#if $session.error}<StatusBanner tone="error" title="Needs attention" message={$session.error} />{/if}
-      {#if $session.view?.message}
-        <StatusBanner tone={$session.view.message.tone} title={$session.view.message.tone === 'success' ? 'Checked' : $session.view.message.tone === 'warning' ? 'Please note' : $session.view.message.tone === 'error' ? 'Needs attention' : 'Progress update'} message={$session.view.message.text} link={$session.view.message.link} />
+      {#if $session.error}<StatusBanner tone="error" title={tr('attention', $setupLocale)} message={localizedSessionError($session.error, $setupLocale)} />{/if}
+      {#if $session.view?.message && !$session.view.outcome}
+        <StatusBanner tone={$session.view.message.tone} title={tr($session.view.message.tone === 'success' ? 'checked' : $session.view.message.tone === 'warning' ? 'pleaseNote' : $session.view.message.tone === 'error' ? 'attention' : 'progressUpdate', $setupLocale)} message={localizedMessage($session.view.message, $setupLocale)} link={$session.view.message.link} />
       {/if}
 
       {#if !$session.paired}
         <PairingPanel busy={$session.busy} onPair={session.pair} />
       {:else if $session.view?.outcome}
-        <ResultPanel outcome={$session.view.outcome} controller={$session.controller} onClose={session.close} />
+        <ResultPanel outcome={$session.view.outcome} detail={$session.view.resultDetail} doctor={$session.view.doctor} controller={$session.controller} onDoctor={session.runDoctor} onClose={session.close} />
       {:else if $session.view?.prompt}
         <div class="workspace-grid">
-          <PromptCard prompt={$session.view.prompt} revision={$session.view.revision} promptRevision={$session.view.promptRevision!} controller={$session.controller} busy={$session.busy} onSubmit={submit} />
+          <PromptCard prompt={$session.view.prompt} revision={$session.view.revision} promptRevision={$session.view.promptRevision!} controller={$session.controller} busy={$session.busy} onSubmit={submit} onRetryDiscovery={retryDiscovery} onBack={back} />
           <ContextPanel view={$session.view} />
         </div>
-        {#if $session.controller && $session.view.journey?.current !== 'Apply'}<button class="cancel-link" onclick={cancel} disabled={$session.busy}>Cancel setup</button>{/if}
+        {#if $session.controller && $session.view.journey?.current !== 'Apply'}<button class="cancel-link" onclick={cancel} disabled={$session.busy}>{tr('cancelSetup', $setupLocale)}</button>{/if}
       {:else}
         <WaitingPanel />
       {/if}
-      <footer>LOCALHOST ONLY <span aria-hidden="true">·</span> NO CLOUD SETUP ACCOUNT <span aria-hidden="true">·</span> GITHUB OWNS PAT ISSUANCE</footer>
+      <footer>{tr('footerLocal', $setupLocale)} <span aria-hidden="true">·</span> {tr('footerCloud', $setupLocale)} <span aria-hidden="true">·</span> {tr('footerGithub', $setupLocale)}</footer>
     </div>
   </main>
 </div>
